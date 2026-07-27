@@ -1,0 +1,1138 @@
+<!-- templates/tax_report.html -->
+{% extends "base.html" %}
+{% block title %}Tờ Khai Thuế 01/CNKD (TT 50/2026){% endblock %}
+{% block head_extra %}
+<style>
+@media print {
+    .no-print, nav, .navbar, .sidebar, footer, .btn, #taxTab { display: none !important; }
+    .tab-pane { display: block !important; opacity: 1 !important; }
+    .card { border: none !important; box-shadow: none !important; }
+    input, select, textarea { border: none !important; background: transparent !important; }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">
+            <i class="fas fa-file-invoice-dollar text-primary"></i>
+            Tờ Khai Thuế 01/CNKD
+            <small class="text-muted fs-6">— HKD doanh thu trên 1 tỷ/năm (TT 50/2026)</small>
+        </h3>
+        <div class="no-print">
+            <button class="btn btn-outline-info me-2" id="autoFetchBtn">
+                <i class="fas fa-sync-alt"></i> Tự động lấy dữ liệu
+            </button>
+            <button class="btn btn-outline-primary me-2" id="loadChinhThucBtn" style="display: none;">
+                <i class="fas fa-download"></i> Tải từ tờ khai chính thức
+            </button>
+            <button class="btn btn-outline-warning me-2" id="signXMLBtn">
+                <i class="fas fa-pen-nib"></i> Ký số eSign
+            </button>
+            <button class="btn btn-outline-secondary me-2" id="exportPDFBtn">
+                <i class="fas fa-print"></i> In PDF
+            </button>
+            <button type="button" class="btn btn-success" id="exportXMLBtn">
+                <i class="fas fa-file-code"></i> Tạo File XML
+            </button>
+        </div>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="POST" id="taxForm" action="{{ url_for('tax_report') }}">
+                <input type="hidden" name="pbanTKhaiXML" value="2.8.3">
+                <input type="hidden" name="kyKKhai" id="hiddenKyKKhai">
+                <ul class="nav nav-tabs mb-4" id="taxTab" role="tablist">
+                    <li class="nav-item"><button type="button" class="nav-link active" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#tab1">Thông tin & Doanh thu</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#tab2">Phụ lục 01/BK-STK</button></li>
+                    <li class="nav-item" id="tab3-li" style="display: none;"><button type="button" class="nav-link" id="tab3-tab" data-bs-toggle="tab" data-bs-target="#tab3">Phụ lục bổ sung</button></li>
+                </ul>
+                <div class="tab-content" id="taxTabContent">
+                    <!-- TAB 1: THÔNG TIN CHUNG & DOANH THU -->
+                    <div class="tab-pane fade show active" id="tab1">
+                        <div class="row g-3 mb-4 p-3 bg-light rounded">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Loại tờ khai</label>
+                                <select name="loaiTKhai" class="form-select" onchange="toggleBoSung()">
+                                    <option value="C" selected>Chính thức</option>
+                                    <option value="B">Bổ sung</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Kỳ kê khai (Quý)</label>
+                                <select name="quarter" id="quarterSelect" class="form-select" required>
+                                    <option value="">-- Chọn quý --</option>
+                                    {% for q in range(1, 5) %}
+                                    <option value="{{ q }}" {% if q == current_quarter %}selected{% endif %}>Quý {{ q }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Năm kê khai</label>
+                                <input type="number" name="year" id="yearInput" class="form-control" min="2020" max="2035" required value="{{ current_year }}">
+                            </div>
+                            <div class="col-md-4" id="soLanGroup" style="display: none;">
+                                <label class="form-label fw-bold">Lần bổ sung</label>
+                                <input type="number" name="soLan" class="form-control" min="1" value="1">
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3 p-3 border rounded bg-white">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ct01b" id="ct01b" value="1">
+                                    <label class="form-check-label fw-bold" for="ct01b">
+                                        [01b] Hộ KD/CNKD có doanh thu năm trên 01 tỷ đến 50 tỷ đồng
+                                    </label>
+                                </div>
+                                <small class="text-muted">
+                                    GTGT tính trên toàn bộ DT quý. TNCN chỉ tính khi DT <strong>lũy kế năm</strong> vượt 1 tỷ
+                                    (trên phần chênh lệch vượt ngưỡng).
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-info py-2 mb-2 small">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Doanh thu lấy từ sổ S2a-HKD (phân nhóm G1–G4 theo TT 152/2025).
+                                    <a href="{{ url_for('SoChiTietDoanhThu_S2a') }}" target="_blank">Xem sổ chi tiết</a>
+                                </div>
+                                <div id="tncnThresholdBanner" class="alert alert-warning py-2 mb-0 small d-none"></div>
+                            </div>
+                        </div>
+                        <div class="alert alert-light border py-2 mb-3 small">
+                            <i class="fas fa-cog me-1 text-primary"></i>
+                            MST, tên HKD, chủ hộ, địa chỉ, điện thoại lấy từ
+                            <a href="{{ url_for('settings_page') }}">Cài đặt → Cửa hàng, VietQR &amp; Ngân hàng ĐT</a>.
+                        </div>
+                        <h5 class="text-primary mb-3">[07] Thông Tin Người Nộp Thuế</h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3"><label>Mã Số Thuế Cũ</label><input type="text" name="mst_cu" class="form-control" value="{{ company_info.mst_cu or '' }}"></div>
+                            <div class="col-md-3"><label>Mã Số Thuế *</label><input type="text" name="mst" class="form-control" required value="{{ company_info.mst or '' }}"></div>
+                            <div class="col-md-6"><label>Tên NNT *</label><input type="text" name="tenNNT" class="form-control" required value="{{ company_info.tenNNT or '' }}"></div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12"><label>[05] Tên cửa hàng / Đơn vị kinh doanh</label><input type="text" name="ct05" class="form-control" value="{{ company_info.ct05 or '' }}"></div>
+                        </div>
+                        <h5 class="text-primary mb-3">[08] Ngành nghề kinh doanh</h5>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-bordered table-sm" id="nganhNgheTable">
+                                <thead class="table-light"><tr><th>STT</th><th>Mã ngành nghề</th><th>Tên ngành nghề</th><th>Hành động</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addNganhNgheRow()"><i class="fas fa-plus"></i> Thêm ngành nghề</button>
+                        </div>
+                        <h5 class="text-secondary mb-2">Tỷ lệ thuế theo nhóm ngành (TT 50/2026)</h5>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th>Nhóm</th>
+                                        <th>Ngành nghề</th>
+                                        <th>Thuế GTGT</th>
+                                        <th>Thuế TNCN</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="small">
+                                    <tr><td class="fw-bold">G1</td><td>Phân phối, cung cấp hàng hóa</td><td class="text-center">1%</td><td class="text-center">0,5%</td></tr>
+                                    <tr><td class="fw-bold">G2</td><td>Dịch vụ, xây dựng không bao thầu NVL</td><td class="text-center">5%</td><td class="text-center">2%</td></tr>
+                                    <tr><td class="fw-bold">G3</td><td>SX, vận tải, xây dựng có bao thầu NVL</td><td class="text-center">3%</td><td class="text-center">1,5%</td></tr>
+                                    <tr><td class="fw-bold">G4</td><td>Hoạt động kinh doanh khác</td><td class="text-center">2%</td><td class="text-center">1%</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <input type="hidden" name="ct09" value="1.00">
+                        <input type="hidden" name="ct09a" value="0.50">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4"><label>[10] Số lao động thường xuyên</label><input type="number" name="ct10" class="form-control" min="0" value="{{ company_info.ct10 or '0' }}"></div>
+                        </div>
+                        <h5 class="text-primary mb-3">[11] Giờ mở cửa</h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3"><label>Từ giờ</label><input type="number" name="tuGio" class="form-control" min="0" max="23" value="{{ company_info.tuGio or '7' }}"></div>
+                            <div class="col-md-3"><label>Từ phút</label><input type="number" name="tuPhut" class="form-control" min="0" max="59" value="{{ company_info.tuPhut or '0' }}"></div>
+                            <div class="col-md-3"><label>Đến giờ</label><input type="number" name="denGio" class="form-control" min="0" max="23" value="{{ company_info.denGio or '18' }}"></div>
+                            <div class="col-md-3"><label>Đến phút</label><input type="number" name="denPhut" class="form-control" min="0" max="59" value="{{ company_info.denPhut or '0' }}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Mã CQT Nộp</label>
+                            <input type="text" name="maCQTNoiNop" class="form-control" placeholder="VD: 70134" value="{{ company_info.maCQTNoiNop or '' }}">
+                        </div>
+                        <h5 class="text-success mt-4 mb-2">[12] Địa chỉ kinh doanh</h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6"><label>Số nhà / Địa chỉ</label><input type="text" name="ct12b_soNha" class="form-control" value="{{ company_info.ct12b_soNha or '' }}"></div>
+                            <div class="col-md-6"><label>Mã Phường</label><input type="text" name="ct12c_maPhuong" class="form-control" value="{{ company_info.ct12c_maPhuong or '' }}"></div>
+                            <div class="col-md-6"><label>Tên Phường</label><input type="text" name="ct12c_tenPhuong" class="form-control" value="{{ company_info.ct12c_tenPhuong or '' }}"></div>
+                            <div class="col-md-6"><label>Mã Tỉnh</label><input type="text" name="ct12d_maTinh" class="form-control" value="{{ company_info.ct12d_maTinh or '' }}"></div>
+                            <div class="col-md-6"><label>Tên Tỉnh</label><input type="text" name="ct12d_tenTinh" class="form-control" value="{{ company_info.ct12d_tenTinh or '' }}"></div>
+                        </div>
+                        <h5 class="text-info mt-4 mb-2">[13] Địa chỉ cư trú</h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6"><label>Số nhà / Địa chỉ</label><input type="text" name="ct13a_soNha" class="form-control" value="{{ company_info.ct13a_soNha or '' }}"></div>
+                            <div class="col-md-6"><label>Mã Phường</label><input type="text" name="ct13b_maPhuong" class="form-control" value="{{ company_info.ct13b_maPhuong or '' }}"></div>
+                            <div class="col-md-6"><label>Tên Phường</label><input type="text" name="ct13b_tenPhuong" class="form-control" value="{{ company_info.ct13b_tenPhuong or '' }}"></div>
+                            <div class="col-md-6"><label>Mã Tỉnh</label><input type="text" name="ct13d_maTinh" class="form-control" value="{{ company_info.ct13d_maTinh or '' }}"></div>
+                            <div class="col-md-6"><label>Tên Tỉnh</label><input type="text" name="ct13d_tenTinh" class="form-control" value="{{ company_info.ct13d_tenTinh or '' }}"></div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4"><label>Điện thoại</label><input type="text" name="dthoaiNNT" class="form-control" value="{{ company_info.dthoaiNNT or '' }}"></div>
+                            <div class="col-md-4"><label>Email</label><input type="email" name="emailNNT" class="form-control" value="{{ company_info.emailNNT or '' }}"></div>
+                        </div>
+                        <h5 class="text-primary mb-3">Thông tin chung — Tờ khai</h5>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label>Ngày lập tờ khai</label>
+                                <input type="text" name="ngayLapTKhai" class="form-control flatpickr-vn" placeholder="dd/mm/yyyy" autocomplete="off" value="{{ today_vn }}">
+                            </div>
+                            <div class="col-md-4"><label>Người ký</label><input type="text" name="nguoiKy" class="form-control" value="{{ company_info.nguoiKy or '' }}"></div>
+                            <div class="col-md-4">
+                                <label>Ngày ký</label>
+                                <input type="text" name="ngayKy" class="form-control flatpickr-vn" placeholder="dd/mm/yyyy" autocomplete="off" value="{{ today_vn }}">
+                            </div>
+                        </div>
+                        <h5 class="text-success mt-4 mb-3">[28] Doanh thu &amp; Thuế theo nhóm ngành nghề</h5>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-bordered table-sm align-middle" id="sectorTaxTable">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th style="min-width:220px">Chỉ tiêu</th>
+                                        <th>G1<br><small class="fw-normal text-muted">Hàng hóa</small></th>
+                                        <th>G2<br><small class="fw-normal text-muted">Dịch vụ</small></th>
+                                        <th>G3<br><small class="fw-normal text-muted">SX, vận tải</small></th>
+                                        <th>G4<br><small class="fw-normal text-muted">KD khác</small></th>
+                                        <th class="table-secondary">Tổng cộng</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold">[28a–31a] Doanh thu tính thuế GTGT</td>
+                                        <td><input type="text" name="dt_g1" id="dt_g1" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="dt_g2" id="dt_g2" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="dt_g3" id="dt_g3" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="dt_g4" id="dt_g4" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="dt_gtgt_ct28" id="doanhthu" class="form-control form-control-sm text-end fw-bold sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                    </tr>
+                                    <tr class="table-warning">
+                                        <td class="fw-bold">[28b–31b] Số thuế GTGT phải nộp</td>
+                                        <td><input type="text" name="thue_gtgt_g1" id="thue_gtgt_g1" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="thue_gtgt_g2" id="thue_gtgt_g2" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="thue_gtgt_g3" id="thue_gtgt_g3" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="thue_gtgt_g4" id="thue_gtgt_g4" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="so_gtgt_ct28" id="thue_gtgt" class="form-control form-control-sm text-end fw-bold sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">[28c–31c] Doanh thu tính thuế TNCN</td>
+                                        <td><input type="text" id="dt_tncn_g1" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" id="dt_tncn_g2" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" id="dt_tncn_g3" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" id="dt_tncn_g4" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" id="dt_tncn_total" class="form-control form-control-sm text-end fw-bold sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                    </tr>
+                                    <tr class="table-danger bg-opacity-10">
+                                        <td class="fw-bold">[28d–31d] Số thuế TNCN phải nộp</td>
+                                        <td><input type="text" name="thue_tncn_g1" id="thue_tncn_g1" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="thue_tncn_g2" id="thue_tncn_g2" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="thue_tncn_g3" id="thue_tncn_g3" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="thue_tncn_g4" id="thue_tncn_g4" class="form-control form-control-sm text-end sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                        <td><input type="text" name="so_tncn_ct28" id="thue_tncn" class="form-control form-control-sm text-end fw-bold sector-amount input-number-vn" data-decimals="0" readonly></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-muted small mb-0" id="sectorTaxNote">
+                            <i class="fas fa-calculator me-1"></i>
+                            GTGT: DT cả quý. TNCN: chỉ phần DT quý thuộc phần lũy kế năm vượt 1 tỷ.
+                            Nhấn <strong>Tự động lấy dữ liệu</strong> sau khi chọn quý/năm.
+                        </p>
+                    </div>
+                    <!-- TAB 2: PHỤ LỤC 01/BK-STK -->
+                    <div class="tab-pane fade" id="tab2">
+                        <h5 class="text-primary mb-2">Phụ lục 01/BK-STK — Thông báo số tài khoản / ví điện tử</h5>
+                        <p class="text-muted small mb-3">
+                            Dòng đầu tiên mặc định lấy <strong>số tài khoản VietQR</strong> dùng khi bán hàng (Cài đặt → Cửa hàng, VietQR &amp; Ngân hàng ĐT).
+                            Nếu HKD còn dùng thêm tài khoản/ví khác, nhấn <strong>Thêm tài khoản</strong> để kê khai bổ sung.
+                        </p>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm" id="bankAccountTable">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th>STT</th>
+                                        <th>[04] Tên địa điểm KD</th>
+                                        <th>[05] Mã địa điểm KD</th>
+                                        <th>[06] Số TK / ví ĐT</th>
+                                        <th>[07] Tên chủ TK</th>
+                                        <th>[08] Nơi mở (NH/TCTGTT)</th>
+                                        <th>[09] Trạng thái</th>
+                                        <th>Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addBankAccountRow()">
+                                <i class="fas fa-plus"></i> Thêm tài khoản
+                            </button>
+                        </div>
+                    </div>
+                    <!-- TAB 3: PHỤ LỤC BỔ SUNG -->
+                    <div class="tab-pane fade" id="tab3">
+                        <h5 class="text-warning mb-3">Phụ Lục Bổ Sung (PL01_1_KHBS)</h5>
+                        <p class="text-muted">Dữ liệu sẽ được tải từ tờ khai chính thức khi nhấn nút "Tải từ tờ khai chính thức".</p>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm" id="adjustmentTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>STT</th>
+                                        <th>Chỉ tiêu</th>
+                                        <th>Giá trị cũ</th>
+                                        <th>Giá trị mới</th>
+                                        <th>Chênh lệch</th>
+                                        <th>Ghi chú</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end mt-4 no-print">
+                    <button type="button" class="btn btn-secondary me-2" onclick="resetForm()">Làm mới form</button>
+                    <button type="button" class="btn btn-dark me-2" id="saveDraftBtn">
+                        <i class="fas fa-save"></i> Lưu tờ khai
+                    </button>
+                    <button type="button" class="btn btn-primary btn-lg" id="exportXMLBtn2">
+                        <i class="fas fa-paper-plane"></i> Tạo File XML
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Modal xuất XML — 1 file, 2 tab xem trước ở footer -->
+<div class="modal fade" id="taxXmlModal" tabindex="-1" aria-labelledby="taxXmlModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taxXmlModalLabel"><i class="fas fa-file-code me-2"></i>Xuất XML tờ khai</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <span class="small text-muted" id="xmlExportFilename">—</span>
+                </div>
+                <pre class="bg-light border rounded p-2 small mb-0" id="xmlPreview" style="max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-all"></pre>
+            </div>
+            <div class="modal-footer d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
+                <ul class="nav nav-pills" id="xmlExportTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="xml-tab-main" type="button" role="tab" data-preview="main">
+                            Tờ khai chính
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation" id="xml-tab-pluc-li" style="display:none">
+                        <button class="nav-link" id="xml-tab-pluc" type="button" role="tab" data-preview="pluc">
+                            Phụ lục
+                        </button>
+                    </li>
+                </ul>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-success" id="downloadXmlBtn">
+                        <i class="fas fa-download"></i> Tải file XML
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Toast container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+// Biến toàn cục
+const CURRENT_YEAR = {{ current_year }};
+const CURRENT_QUARTER = {{ current_quarter }};
+let bankAccountCounter = 0;
+let nganhNgheCounter = 0;
+let adjustmentCounter = 0;
+function showToast(message, bg = 'success') {
+    const toastEl = document.getElementById('liveToast');
+    if (!toastEl) {
+        console.warn('Toast element not found, using alert fallback');
+        alert(message);
+        return;
+    }
+    const toastBody = toastEl.querySelector('.toast-body');
+    toastBody.textContent = message;
+    toastEl.className = `toast align-items-center text-white bg-${bg} border-0`;
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+}
+// Thêm dòng ngành nghề kinh doanh (giữ nguyên)
+function addNganhNgheRow(ma = '', ten = '') {
+    nganhNgheCounter++;
+    const tbody = document.querySelector('#nganhNgheTable tbody');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>${nganhNgheCounter}</td>
+        <td><input type="text" name="maNNghe_${nganhNgheCounter}" class="form-control form-control-sm" value="${ma}"></td>
+        <td><input type="text" name="tenNNghe_${nganhNgheCounter}" class="form-control form-control-sm" value="${ten}"></td>
+        <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this, '#nganhNgheTable')"><i class="bi bi-trash"></i></button></td>
+    `;
+    tbody.appendChild(row);
+}
+// Phụ lục 01/BK-STK — thêm dòng tài khoản
+function addBankAccountRow(data = {}) {
+    bankAccountCounter++;
+    const tbody = document.querySelector('#bankAccountTable tbody');
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td class="text-center">${bankAccountCounter}</td>
+        <td><input type="text" name="stk_ten_ddkd_${bankAccountCounter}" class="form-control form-control-sm" value="${data.ten_ddkd || ''}"></td>
+        <td><input type="text" name="stk_ma_ddkd_${bankAccountCounter}" class="form-control form-control-sm" value="${data.ma_ddkd || ''}"></td>
+        <td><input type="text" name="stk_so_tk_${bankAccountCounter}" class="form-control form-control-sm" value="${data.so_tk || ''}"></td>
+        <td><input type="text" name="stk_chu_tk_${bankAccountCounter}" class="form-control form-control-sm" value="${data.chu_tk || ''}"></td>
+        <td><input type="text" name="stk_noi_mo_${bankAccountCounter}" class="form-control form-control-sm" value="${data.noi_mo || ''}"></td>
+        <td>
+            <select name="stk_trang_thai_${bankAccountCounter}" class="form-select form-select-sm">
+                <option value="KhaiLanDau" ${(data.trang_thai || 'KhaiLanDau') === 'KhaiLanDau' ? 'selected' : ''}>Khai lần đầu</option>
+                <option value="ThayDoi" ${data.trang_thai === 'ThayDoi' ? 'selected' : ''}>Thay đổi</option>
+                <option value="Dong" ${data.trang_thai === 'Dong' ? 'selected' : ''}>Đóng</option>
+            </select>
+        </td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this, '#bankAccountTable')">X</button></td>
+    `;
+    tbody.appendChild(row);
+}
+
+/** Dòng 1 = STK VietQR/POS; giữ nguyên các dòng người dùng đã thêm (từ dòng 2). */
+function applyDefaultQrBankAccount(data, keepExtraRows = true) {
+    if (!data || !data.so_tk) return false;
+    const tbody = document.querySelector('#bankAccountTable tbody');
+    const extraRows = [];
+    if (keepExtraRows) {
+        tbody.querySelectorAll('tr').forEach((tr, idx) => {
+            if (idx === 0) return;
+            extraRows.push({
+                ten_ddkd: tr.querySelector('input[name^="stk_ten_ddkd_"]')?.value || '',
+                ma_ddkd: tr.querySelector('input[name^="stk_ma_ddkd_"]')?.value || '',
+                so_tk: tr.querySelector('input[name^="stk_so_tk_"]')?.value || '',
+                chu_tk: tr.querySelector('input[name^="stk_chu_tk_"]')?.value || '',
+                noi_mo: tr.querySelector('input[name^="stk_noi_mo_"]')?.value || '',
+                trang_thai: tr.querySelector('select[name^="stk_trang_thai_"]')?.value || 'KhaiLanDau',
+            });
+        });
+    }
+    tbody.innerHTML = '';
+    bankAccountCounter = 0;
+    addBankAccountRow({
+        ten_ddkd: data.ten_ddkd || formVal('ct05') || '',
+        ma_ddkd: data.ma_ddkd || '',
+        so_tk: data.so_tk || '',
+        chu_tk: data.chu_tk || formVal('tenNNT') || '',
+        noi_mo: data.noi_mo || '',
+        trang_thai: data.trang_thai || 'KhaiLanDau',
+    });
+    extraRows.forEach(row => addBankAccountRow(row));
+    syncHeaderBankAccount();
+    return true;
+}
+
+function syncHeaderBankAccount() {
+    const first = document.querySelector('[name="stk_so_tk_1"]');
+    let hidden = document.querySelector('[name="ct06"]');
+    if (!hidden) {
+        hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'ct06';
+        document.getElementById('taxForm').appendChild(hidden);
+    }
+    hidden.value = first ? first.value.trim() : '';
+}
+// Xóa dòng trong bảng (giữ nguyên)
+function removeRow(btn, tableId) {
+    btn.closest('tr').remove();
+    document.querySelectorAll(`${tableId} tbody tr`).forEach((tr, i) => {
+        tr.cells[0].textContent = i + 1;
+    });
+    syncHeaderBankAccount();
+}
+// Cập nhật tổng hợp (doanh thu, thuế GTGT/TNCN, chi phí) (giữ nguyên)
+const SECTOR_KEYS = ['g1', 'g2', 'g3', 'g4'];
+
+const TNCN_YTD_THRESHOLD = 1000000000;
+
+function updateTncnThresholdBanner(meta) {
+    const el = document.getElementById('tncnThresholdBanner');
+    if (!el || !meta || meta.ytd_after == null) {
+        if (el) el.classList.add('d-none');
+        return;
+    }
+    const fmt = n => formatNumber(n, 0);
+    if (meta.below_threshold) {
+        el.className = 'alert alert-warning py-2 mb-0 small';
+        el.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>
+            DT lũy kế năm: <strong>${fmt(meta.ytd_after)}</strong> đ — chưa đến 1 tỷ → <strong>TNCN = 0</strong>.
+            Lũy kế đầu quý: ${fmt(meta.ytd_before)} đ.`;
+    } else if ((meta.tncn_taxable_revenue || 0) > 0) {
+        el.className = 'alert alert-success py-2 mb-0 small';
+        el.innerHTML = `<i class="fas fa-check-circle me-1"></i>
+            DT lũy kế: <strong>${fmt(meta.ytd_after)}</strong> đ (vượt 1 tỷ).
+            DT tính TNCN trong quý: <strong>${fmt(meta.tncn_taxable_revenue)}</strong> đ.`;
+    } else {
+        el.className = 'alert alert-info py-2 mb-0 small';
+        el.innerHTML = `<i class="fas fa-info-circle me-1"></i>
+            DT lũy kế năm: <strong>${fmt(meta.ytd_after)}</strong> đ.`;
+    }
+    el.classList.remove('d-none');
+}
+
+function setSectorTaxData(sectors, totals, taxes, tncnMeta) {
+    SECTOR_KEYS.forEach(k => {
+        const row = (sectors || []).find(s => (s.code || '').toLowerCase() === k) || {};
+        const rev = row.revenue || (totals && totals[k]) || 0;
+        const gtgt = row.gtgt || (taxes && taxes[k] && taxes[k].gtgt) || 0;
+        const tncn = row.tncn || (taxes && taxes[k] && taxes[k].tncn) || 0;
+        const dtTncn = row.dt_tncn ?? (taxes && taxes[k] && taxes[k].dt_tncn) ?? 0;
+
+        const dtEl = document.getElementById(`dt_${k}`);
+        if (dtEl) dtEl.value = formatNumber(rev, 0);
+
+        const dtTncnEl = document.getElementById(`dt_tncn_${k}`);
+        if (dtTncnEl) dtTncnEl.value = formatNumber(dtTncn, 0);
+
+        const gtgtEl = document.getElementById(`thue_gtgt_${k}`);
+        if (gtgtEl) gtgtEl.value = formatNumber(gtgt, 0);
+
+        const tncnEl = document.getElementById(`thue_tncn_${k}`);
+        if (tncnEl) tncnEl.value = formatNumber(tncn, 0);
+    });
+
+    const totalRev = Math.round((totals && totals.total) || 0);
+    const totalGtgt = Math.round((taxes && taxes.total_gtgt) || 0);
+    const totalTncn = Math.round((taxes && taxes.total_tncn) || 0);
+
+    document.getElementById('doanhthu').value = formatNumber(totalRev, 0);
+    document.getElementById('thue_gtgt').value = formatNumber(totalGtgt, 0);
+    document.getElementById('thue_tncn').value = formatNumber(totalTncn, 0);
+    const dtTncnTotal = document.getElementById('dt_tncn_total');
+    const meta = tncnMeta || (taxes && taxes.tncn_meta) || {};
+    if (dtTncnTotal) dtTncnTotal.value = formatNumber(meta.tncn_taxable_revenue || 0, 0);
+
+    const ct01bEl = document.getElementById('ct01b');
+    if (ct01bEl && meta.ytd_after != null) {
+        ct01bEl.checked = meta.ytd_after >= TNCN_YTD_THRESHOLD;
+    }
+    updateTncnThresholdBanner(meta);
+}
+
+function updateTotals() {
+    syncHeaderBankAccount();
+}
+
+function formVal(name) {
+    const el = document.querySelector(`[name="${name}"]`);
+    if (!el) return '';
+    if (el.type === 'checkbox') return el.checked ? el.value : '';
+    return (el.value || '').trim();
+}
+
+function formNum(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    return Math.round(parseNumberVN(el.value));
+}
+
+/** Chuẩn hóa ngày hiển thị trên form → dd/mm/yyyy */
+function toFormDateVN(value) {
+    if (!value) return '';
+    return formatDate(String(value).trim());
+}
+
+/** Gán ngày vào ô flatpickr (ngayLapTKhai, ngayKy) theo định dạng Việt Nam */
+function setTaxDateField(name, value) {
+    const el = document.querySelector(`[name="${name}"]`);
+    if (!el) return;
+    const todayVn = formatDate(new Date().toISOString().slice(0, 10));
+    const vn = toFormDateVN(value) || todayVn;
+    if (el._flatpickr) {
+        el._flatpickr.setDate(vn, true, 'd/m/Y');
+    } else {
+        el.value = vn;
+    }
+}
+
+/** Trước khi gửi form: chuyển ô số đã định dạng về giá trị thuần cho server */
+function normalizeTaxFormNumbers(form) {
+    form.querySelectorAll('.input-number-vn, .sector-amount').forEach(input => {
+        if (input.value != null && String(input.value).trim() !== '') {
+            input.value = String(Math.round(parseNumberVN(input.value)));
+        }
+    });
+}
+
+function buildNganhNghePrintRows() {
+    const rows = [];
+    document.querySelectorAll('#nganhNgheTable tbody tr').forEach((tr, i) => {
+        const ma = tr.querySelector('input[name^="maNNghe_"]')?.value || '';
+        const ten = tr.querySelector('input[name^="tenNNghe_"]')?.value || '';
+        if (ma || ten) rows.push(`<tr><td class="text-center">${i + 1}</td><td>${ma}</td><td>${ten}</td></tr>`);
+    });
+    return rows.length ? rows.join('') : '<tr><td colspan="3" class="text-center text-muted">—</td></tr>';
+}
+
+function buildBankAccountPrintRows() {
+    const statusLabels = { KhaiLanDau: 'Khai lần đầu', ThayDoi: 'Thay đổi', Dong: 'Đóng' };
+    const rows = [];
+    document.querySelectorAll('#bankAccountTable tbody tr').forEach((tr, i) => {
+        const tenDdkd = tr.querySelector('input[name^="stk_ten_ddkd_"]')?.value || '';
+        const maDdkd = tr.querySelector('input[name^="stk_ma_ddkd_"]')?.value || '';
+        const soTk = tr.querySelector('input[name^="stk_so_tk_"]')?.value || '';
+        const chuTk = tr.querySelector('input[name^="stk_chu_tk_"]')?.value || '';
+        const noiMo = tr.querySelector('input[name^="stk_noi_mo_"]')?.value || '';
+        const trangThai = tr.querySelector('select[name^="stk_trang_thai_"]')?.value || '';
+        if (tenDdkd || soTk) {
+            rows.push(`<tr>
+                <td class="text-center">${i + 1}</td>
+                <td>${tenDdkd}</td>
+                <td class="text-center">${maDdkd}</td>
+                <td>${soTk}</td>
+                <td>${chuTk}</td>
+                <td>${noiMo}</td>
+                <td class="text-center">${statusLabels[trangThai] || trangThai}</td>
+            </tr>`);
+        }
+    });
+    return rows.length ? rows.join('') : '<tr><td colspan="7" class="text-center text-muted">Chưa khai báo tài khoản</td></tr>';
+}
+
+function exportTaxPDF() {
+    const quarter = document.getElementById('quarterSelect')?.value;
+    const year = document.getElementById('yearInput')?.value;
+    if (!quarter || !year) {
+        showToast('Vui lòng chọn Quý và Năm trước khi in', 'danger');
+        return;
+    }
+    const ky = `${quarter}/${year}`;
+    const loai = formVal('loaiTKhai') === 'B' ? 'Bổ sung' : 'Chính thức';
+    const today = new Date();
+    const printDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+    const ngayLap = toFormDateVN(formVal('ngayLapTKhai')) || printDate;
+    const ngayKy = toFormDateVN(formVal('ngayKy')) || printDate;
+
+    const kkRows = [
+        ['Doanh thu tính thuế GTGT', ...SECTOR_KEYS.map(k => formNum(`dt_${k}`)), formNum('doanhthu')],
+        ['Số thuế GTGT phải nộp', ...SECTOR_KEYS.map(k => formNum(`thue_gtgt_${k}`)), formNum('thue_gtgt')],
+        ['Doanh thu tính thuế TNCN', ...SECTOR_KEYS.map(k => formNum(`dt_tncn_${k}`)), formNum('dt_tncn_total')],
+        ['Số thuế TNCN phải nộp', ...SECTOR_KEYS.map(k => formNum(`thue_tncn_${k}`)), formNum('thue_tncn')],
+    ].map(cols => `<tr>${cols.map((c, i) => i === 0
+        ? `<td>${c}</td>`
+        : `<td class="text-end">${formatNumber(c, 0)}</td>`).join('')}</tr>`).join('');
+
+    const addrKD = [formVal('ct12b_soNha'), formVal('ct12c_tenPhuong'), formVal('ct12d_tenTinh')].filter(Boolean).join(', ');
+    const addrCT = [formVal('ct13a_soNha'), formVal('ct13b_tenPhuong'), formVal('ct13d_tenTinh')].filter(Boolean).join(', ');
+    const ct01b = formVal('ct01b') === '1';
+
+    const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+<title>Tờ khai 01/CNKD — Quý ${ky}</title>
+<style>
+body{font-family:"Times New Roman",Times,serif;font-size:13px;color:#000;margin:24px;line-height:1.4}
+h1{font-size:17px;text-align:center;margin:8px 0 4px;text-transform:uppercase}
+h2{font-size:14px;margin:16px 0 6px;border-bottom:1px solid #333;padding-bottom:3px}
+.subtitle{text-align:center;font-size:12px;margin-bottom:12px}
+table{border-collapse:collapse;width:100%;margin-bottom:10px}
+th,td{border:1px solid #333;padding:4px 6px;vertical-align:middle}
+th{background:#f0f0f0;text-align:center;font-size:12px}
+.text-end{text-align:right}.text-center{text-align:center}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;margin-bottom:10px}
+.info-grid p{margin:2px 0}
+.checklist{margin:8px 0;font-size:12px}
+.checklist p{margin:3px 0}
+.sign{margin-top:36px;text-align:right}
+.sign .name{margin-top:50px;font-weight:bold;text-transform:uppercase}
+@media print{body{margin:12mm} .no-print{display:none}}
+</style></head><body>
+<div class="no-print" style="text-align:center;margin-bottom:16px">
+<button onclick="window.print()" style="padding:8px 20px;font-size:14px;cursor:pointer">🖨 In / Lưu PDF</button>
+<button onclick="window.close()" style="padding:8px 20px;font-size:14px;margin-left:8px;cursor:pointer">Đóng</button>
+</div>
+<p style="text-align:right;font-size:12px"><strong>Mẫu số 01/CNKD</strong><br>
+<em>(Ban hành kèm theo Thông tư số 50/2026/TT-BTC ngày 13/5/2026 sửa đổi, bổ sung Thông tư 18/2026/TT-BTC)</em></p>
+<h1>Tờ khai thuế đối với hộ kinh doanh, cá nhân kinh doanh</h1>
+<p class="subtitle"><strong>Kỳ kê khai: Quý ${ky}</strong> &nbsp;|&nbsp; Loại: ${loai} &nbsp;|&nbsp; HTKK XML 2.8.3</p>
+
+<h2>Thông tin chung</h2>
+<div class="info-grid">
+<p><strong>MST:</strong> ${formVal('mst') || '—'}</p>
+<p><strong>MST cũ:</strong> ${formVal('mst_cu') || '—'}</p>
+<p><strong>Tên NNT:</strong> ${formVal('tenNNT') || '—'}</p>
+<p><strong>Điện thoại:</strong> ${formVal('dthoaiNNT') || '—'}</p>
+<p><strong>Email:</strong> ${formVal('emailNNT') || '—'}</p>
+<p><strong>Địa chỉ NNT:</strong> ${addrKD || '—'}</p>
+<p><strong>Ngày lập tờ khai:</strong> ${ngayLap}</p>
+<p><strong>Ngày ký:</strong> ${ngayKy}</p>
+<p><strong>Người ký:</strong> ${formVal('nguoiKy') || '—'}</p>
+</div>
+
+<h2>Header — Thông tin kê khai</h2>
+<div class="checklist">
+<p>[01] HKD/CNKD nộp thuế theo phương pháp kê khai: <strong>Có</strong></p>
+<p>[01b] HKD/CNKD có doanh thu năm trên 01 tỷ đến 50 tỷ đồng: <strong>${ct01b ? 'Có' : 'Không'}</strong></p>
+</div>
+<div class="info-grid">
+<p><strong>[05] Tên cửa hàng/ĐVKD:</strong> ${formVal('ct05') || '—'}</p>
+<p><strong>[06] Số tài khoản:</strong> ${formVal('ct06') || '—'}</p>
+<p><strong>[11] Giờ hoạt động:</strong> ${formVal('tuGio') || '7'}:${String(formVal('tuPhut') || '0').padStart(2,'0')} — ${formVal('denGio') || '18'}:${String(formVal('denPhut') || '0').padStart(2,'0')}</p>
+<p><strong>[12] Địa chỉ kinh doanh:</strong> ${addrKD || '—'}</p>
+<p><strong>[13] Địa chỉ cư trú:</strong> ${addrCT || '—'}</p>
+</div>
+
+<h2>[08] Ngành nghề kinh doanh</h2>
+<table><thead><tr><th>STT</th><th>Mã ngành</th><th>Tên ngành nghề</th></tr></thead>
+<tbody>${buildNganhNghePrintRows()}</tbody></table>
+
+<h2>KKThueGTGT_TNCN — Doanh thu và thuế (ct28–ct32)</h2>
+<table><thead><tr>
+<th>Chỉ tiêu</th><th>ct28<br>G1</th><th>ct29<br>G2</th><th>ct30<br>G3</th><th>ct31<br>G4</th><th>ct32<br>Tổng</th>
+</tr></thead><tbody>${kkRows}</tbody></table>
+<p><em>Đơn vị tính: Đồng</em></p>
+
+<div class="sign">
+<p>Ngày ${printDate}</p>
+<p><strong>CHỦ HỘ KINH DOANH / NGƯỜI NỘP THUẾ</strong></p>
+<p><em>(Ký, ghi rõ họ tên)</em></p>
+<p class="name">${formVal('nguoiKy') || formVal('tenNNT') || ''}</p>
+</div>
+<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>
+</body></html>`;
+
+    const win = window.open('', '_blank');
+    if (!win) {
+        showToast('Trình duyệt chặn cửa sổ pop-up. Vui lòng cho phép pop-up.', 'danger');
+        return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    showToast('Đã mở bản in — chọn "Lưu thành PDF" trong hộp thoại in', 'info');
+}
+
+function toggleBoSung() {
+    const loai = document.querySelector('[name="loaiTKhai"]')?.value;
+    const isBS = loai === 'B';
+    document.getElementById('soLanGroup').style.display = isBS ? 'block' : 'none';
+    document.getElementById('loadChinhThucBtn').style.display = isBS ? 'inline-block' : 'none';
+    document.getElementById('tab3-li').style.display = isBS ? 'list-item' : 'none';
+    if (isBS) {
+        document.querySelector('#adjustmentTable tbody').innerHTML = '';
+        adjustmentCounter = 0;
+    }
+}
+
+function populateCompanyInfo(info, options = {}) {
+    if (!info) return false;
+    const fields = [
+        'mst', 'mst_cu', 'tenNNT', 'dthoaiNNT', 'emailNNT', 'ct05', 'tuGio', 'tuPhut', 'denGio', 'denPhut', 'ct10',
+        'ct12b_soNha', 'ct12c_maPhuong', 'ct12c_tenPhuong', 'ct12d_maTinh', 'ct12d_tenTinh',
+        'ct13a_soNha', 'ct13b_maPhuong', 'ct13b_tenPhuong', 'ct13d_maTinh', 'ct13d_tenTinh',
+        'nguoiKy', 'maCQTNoiNop', 'tenCQTNoiNop',
+    ];
+    fields.forEach(key => {
+        const el = document.querySelector(`[name="${key}"]`);
+        if (el && info[key] !== undefined && info[key] !== null && info[key] !== '') {
+            el.value = info[key];
+        }
+    });
+
+    if (info.nganh_nghe && Array.isArray(info.nganh_nghe) && info.nganh_nghe.length > 0) {
+        document.querySelector('#nganhNgheTable tbody').innerHTML = '';
+        nganhNgheCounter = 0;
+        info.nganh_nghe.forEach(item => addNganhNgheRow(item.ma || '', item.ten || ''));
+    }
+
+    if (options.applyQr !== false && info.default_qr_bank && info.default_qr_bank[0]) {
+        applyDefaultQrBankAccount(info.default_qr_bank[0], true);
+    }
+    return true;
+}
+
+async function loadCompanyInfoFromSettings(showMessages = false) {
+    try {
+        const res = await fetch('/api/company_info');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!json.success || !json.data) {
+            if (showMessages) showToast(json.message || 'Chưa cấu hình thông tin HKD trong Cài đặt', 'warning');
+            return null;
+        }
+        populateCompanyInfo(json.data);
+        if (showMessages && json.data.nganh_nghe && json.data.nganh_nghe.length) {
+            showToast(`Đã tải thông tin HKD từ Cài đặt (${json.data.nganh_nghe.length} ngành nghề)`, 'success');
+        } else if (showMessages) {
+            showToast('Đã tải thông tin HKD từ Cài đặt', 'success');
+        }
+        return json.data;
+    } catch (err) {
+        if (showMessages) showToast(`Không tải được thông tin Cài đặt: ${err.message}`, 'danger');
+        return null;
+    }
+}
+
+async function fetchTaxDataForPeriod(ky, options = {}) {
+    const res = await fetch(`/api/tax_data?ky=${encodeURIComponent(ky)}`);
+    if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || `Lỗi lấy dữ liệu thuế: ${res.status}`);
+    }
+    const result = await res.json();
+    if (!result.success) {
+        throw new Error(result.error || result.message || 'Không tổng hợp được dữ liệu');
+    }
+
+    let qrBankApplied = false;
+    const infoRes = options.companyInfo
+        ? { success: true, data: options.companyInfo }
+        : await fetch('/api/company_info').then(r => r.json()).catch(() => ({}));
+    const qrAcc = (result.default_qr_bank && result.default_qr_bank[0])
+        || (infoRes.success && infoRes.data && infoRes.data.default_qr_bank && infoRes.data.default_qr_bank[0]);
+    if (qrAcc) {
+        qrBankApplied = applyDefaultQrBankAccount(qrAcc);
+    }
+
+    setSectorTaxData(result.sectors, result.totals, result.taxes, result.tncn_meta);
+    updateTotals();
+
+    if (options.showToast !== false) {
+        const orderCount = (result.summary && result.summary.order_count) || 0;
+        const qrNote = qrBankApplied ? ', STK VietQR đã điền' : '';
+        showToast(`Đã tải dữ liệu: ${orderCount} chứng từ, DT ${formatNumber(result.doanhthu || 0, 0)}đ${qrNote}`, 'success');
+        if (!qrBankApplied) {
+            showToast('Chưa cấu hình STK VietQR — vào Cài đặt → Cửa hàng, VietQR để thiết lập', 'warning');
+        }
+    }
+    return result;
+}
+
+let _lastXmlPackages = null;
+let _xmlPreviewTab = 'main';
+
+function downloadTextFile(content, filename) {
+    const blob = new Blob([content], { type: 'application/xml;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function setXmlPreviewTab(tab) {
+    if (!_lastXmlPackages) return;
+    _xmlPreviewTab = tab;
+    const mainBtn = document.getElementById('xml-tab-main');
+    const plucBtn = document.getElementById('xml-tab-pluc');
+    mainBtn?.classList.toggle('active', tab === 'main');
+    plucBtn?.classList.toggle('active', tab === 'pluc');
+    const preview = document.getElementById('xmlPreview');
+    if (!preview) return;
+    if (tab === 'pluc' && _lastXmlPackages.preview_pluc) {
+        preview.textContent = _lastXmlPackages.preview_pluc;
+    } else {
+        preview.textContent = _lastXmlPackages.preview_main || _lastXmlPackages.xml || '';
+    }
+}
+
+function showTaxXmlModal(packages) {
+    _lastXmlPackages = packages;
+    _xmlPreviewTab = 'main';
+    document.getElementById('xmlExportFilename').textContent = packages.filename || '—';
+    const plucLi = document.getElementById('xml-tab-pluc-li');
+    if (packages.has_pluc) {
+        plucLi.style.display = 'list-item';
+    } else {
+        plucLi.style.display = 'none';
+    }
+    setXmlPreviewTab('main');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('taxXmlModal')).show();
+}
+
+async function exportTaxXML() {
+    const form = document.getElementById('taxForm');
+    if (!form) return;
+    normalizeTaxFormNumbers(form);
+    updateKyKKhai();
+    const formData = new FormData(form);
+    const btns = [document.getElementById('exportXMLBtn'), document.getElementById('exportXMLBtn2')];
+    btns.forEach(b => { if (b) b.disabled = true; });
+    showToast('Đang tạo file XML...', 'info');
+    try {
+        const res = await fetch('/api/tax_export_xml', { method: 'POST', body: formData });
+        const result = await res.json();
+        if (!result.success) {
+            const msg = (result.errors && result.errors.length)
+                ? result.errors.join('\n')
+                : (result.error || 'Không tạo được XML');
+            throw new Error(msg);
+        }
+        showTaxXmlModal(result);
+        showToast(
+            result.has_pluc
+                ? 'Đã tạo 1 file XML — chọn tab Tờ khai / Phụ lục để xem'
+                : 'Đã tạo file XML tờ khai',
+            'success'
+        );
+    } catch (err) {
+        console.error(err);
+        showToast(err.message || 'Lỗi tạo XML', 'danger');
+    } finally {
+        btns.forEach(b => { if (b) b.disabled = false; });
+    }
+}
+
+function bindTaxReportEvents() {
+    document.getElementById('exportXMLBtn')?.addEventListener('click', exportTaxXML);
+    document.getElementById('exportXMLBtn2')?.addEventListener('click', exportTaxXML);
+    document.getElementById('xml-tab-main')?.addEventListener('click', () => setXmlPreviewTab('main'));
+    document.getElementById('xml-tab-pluc')?.addEventListener('click', () => setXmlPreviewTab('pluc'));
+    document.getElementById('downloadXmlBtn')?.addEventListener('click', () => {
+        if (_lastXmlPackages?.xml) {
+            downloadTextFile(_lastXmlPackages.xml, _lastXmlPackages.filename);
+        }
+    });
+    document.getElementById('taxForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        exportTaxXML();
+    });
+
+    document.getElementById('autoFetchBtn')?.addEventListener('click', async () => {
+        const quarter = document.getElementById('quarterSelect').value;
+        const year = document.getElementById('yearInput').value;
+        if (!quarter || !year) {
+            showToast('Vui lòng chọn Quý và Năm', 'danger');
+            return;
+        }
+        const ky = `${quarter}/${year}`;
+        const btn = document.getElementById('autoFetchBtn');
+        const form = document.getElementById('taxForm');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải...';
+        form.classList.add('loading');
+        showToast('Đang tải dữ liệu...', 'info');
+
+        try {
+            await loadCompanyInfoFromSettings(false);
+            await fetchTaxDataForPeriod(ky);
+        } catch (err) {
+            console.error('Lỗi khi tự động lấy dữ liệu:', err);
+            showToast(`Lỗi: ${err.message || 'Không kết nối được server'}`, 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Tự động lấy dữ liệu';
+            form.classList.remove('loading');
+        }
+    });
+
+    document.getElementById('loadChinhThucBtn')?.addEventListener('click', async () => {
+        const quarter = document.getElementById('quarterSelect').value;
+        const year = document.getElementById('yearInput').value;
+        if (!quarter || !year) {
+            showToast('Vui lòng chọn Quý và Năm', 'danger');
+            return;
+        }
+        const ky = `${quarter}/${year}`;
+
+        try {
+            const res = await fetch(`/api/tax_original?ky=${encodeURIComponent(ky)}`);
+            const result = await res.json();
+
+            if (result.success) {
+                const oldData = result.data;
+                const labels = {
+                    dt_g1: '[28a] Doanh thu GTGT G1',
+                    dt_g2: '[29a] Doanh thu GTGT G2',
+                    dt_g3: '[30a] Doanh thu GTGT G3',
+                    dt_g4: '[31a] Doanh thu GTGT G4',
+                    doanhthu: '[28] Tổng doanh thu GTGT',
+                    thue_gtgt_g1: '[28b] Thuế GTGT G1',
+                    thue_gtgt_g2: '[29b] Thuế GTGT G2',
+                    thue_gtgt_g3: '[30b] Thuế GTGT G3',
+                    thue_gtgt_g4: '[31b] Thuế GTGT G4',
+                    thue_gtgt: '[28] Tổng thuế GTGT',
+                    thue_tncn_g1: '[28d] Thuế TNCN G1',
+                    thue_tncn_g2: '[29d] Thuế TNCN G2',
+                    thue_tncn_g3: '[30d] Thuế TNCN G3',
+                    thue_tncn_g4: '[31d] Thuế TNCN G4',
+                    thue_tncn: '[28] Tổng thuế TNCN',
+                };
+                const fieldMap = {
+                    dt_g1: 'dt_g1', dt_g2: 'dt_g2', dt_g3: 'dt_g3', dt_g4: 'dt_g4',
+                    doanhthu: 'doanhthu',
+                    thue_gtgt_g1: 'thue_gtgt_g1', thue_gtgt_g2: 'thue_gtgt_g2',
+                    thue_gtgt_g3: 'thue_gtgt_g3', thue_gtgt_g4: 'thue_gtgt_g4',
+                    thue_gtgt: 'thue_gtgt',
+                    thue_tncn_g1: 'thue_tncn_g1', thue_tncn_g2: 'thue_tncn_g2',
+                    thue_tncn_g3: 'thue_tncn_g3', thue_tncn_g4: 'thue_tncn_g4',
+                    thue_tncn: 'thue_tncn',
+                };
+
+                document.querySelector('#adjustmentTable tbody').innerHTML = '';
+                adjustmentCounter = 0;
+
+                Object.keys(labels).forEach(key => {
+                    const elId = fieldMap[key];
+                    const giaTriCu = parseFloat(oldData[key] || 0);
+                    const giaTriMoi = parseFloat(document.getElementById(elId)?.value || 0);
+                    const chenhLech = Math.round(giaTriMoi - giaTriCu);
+                    if (chenhLech === 0 && giaTriCu === 0 && giaTriMoi === 0) return;
+                    addAdjustmentRow(
+                        labels[key],
+                        giaTriCu,
+                        giaTriMoi,
+                        chenhLech >= 0 ? `Tăng ${formatNumber(chenhLech, 0)}` : `Giảm ${formatNumber(Math.abs(chenhLech), 0)}`,
+                    );
+                });
+
+                showToast('Đã so sánh doanh thu/thuế G1–G4 với tờ khai chính thức!', 'success');
+            } else {
+                showToast(result.message || 'Không tìm thấy tờ khai chính thức', 'warning');
+            }
+        } catch (err) {
+            console.error('Lỗi tải tờ khai chính thức:', err);
+            showToast('Lỗi kết nối hoặc tải dữ liệu', 'danger');
+        }
+    });
+
+    document.getElementById('saveDraftBtn')?.addEventListener('click', async () => {
+        const ky = document.getElementById('hiddenKyKKhai').value;
+        const loai = document.querySelector('[name="loaiTKhai"]')?.value;
+        if (!ky || !loai) {
+            showToast('Vui lòng chọn Kỳ và Loại tờ khai', 'danger');
+            return;
+        }
+        const form = document.getElementById('taxForm');
+        const formData = new FormData(form);
+        try {
+            const res = await fetch('/api/save_tax_declaration', {
+                method: 'POST',
+                body: formData,
+            });
+            const result = await res.json();
+            if (result.success) {
+                showToast('Đã lưu tờ khai thành công!', 'success');
+            } else {
+                showToast(result.error || 'Lưu thất bại', 'danger');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Lỗi kết nối server', 'danger');
+        }
+    });
+}
+
+function updateKyKKhai() {
+    const q = document.getElementById('quarterSelect')?.value;
+    const y = document.getElementById('yearInput')?.value;
+    const hidden = document.getElementById('hiddenKyKKhai');
+    if (hidden) {
+        hidden.value = q && y ? `${q}/${y}` : '';
+    }
+}
+
+function resetForm() {
+    document.getElementById('taxForm').reset();
+    document.querySelectorAll('table tbody').forEach(tb => { tb.innerHTML = ''; });
+    bankAccountCounter = nganhNgheCounter = adjustmentCounter = 0;
+    const yrInput = document.getElementById('yearInput');
+    const quarterSelect = document.getElementById('quarterSelect');
+    if (yrInput) yrInput.value = CURRENT_YEAR;
+    if (quarterSelect) quarterSelect.value = String(CURRENT_QUARTER);
+    setSectorTaxData([], {}, {}, null);
+    document.getElementById('ct01b').checked = false;
+    updateTncnThresholdBanner(null);
+    updateTotals();
+    toggleBoSung();
+    updateKyKKhai();
+    setTaxDateField('ngayLapTKhai');
+    setTaxDateField('ngayKy');
+}
+
+function addAdjustmentRow(chiTieu, giaTriCu, giaTriMoi, ghiChu = '') {
+    adjustmentCounter++;
+    const tbody = document.querySelector('#adjustmentTable tbody');
+    const row = document.createElement('tr');
+    const chenhLech = Math.round(giaTriMoi - giaTriCu);
+    row.innerHTML = `
+        <td>${adjustmentCounter}</td>
+        <td>${chiTieu}</td>
+        <td>${Math.round(giaTriCu)}</td>
+        <td>${Math.round(giaTriMoi)}</td>
+        <td>${chenhLech}</td>
+        <td><input type="text" name="ghiChu_${adjustmentCounter}" class="form-control form-control-sm" value="${ghiChu}"></td>
+    `;
+    tbody.appendChild(row);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    bindTaxReportEvents();
+
+    const yrInput = document.getElementById('yearInput');
+    if (yrInput && !yrInput.value) {
+        yrInput.value = CURRENT_YEAR;
+    }
+    const quarterSelect = document.getElementById('quarterSelect');
+    if (quarterSelect && !quarterSelect.value) {
+        quarterSelect.value = String(CURRENT_QUARTER);
+    }
+    const yearInput = document.getElementById('yearInput');
+    if (quarterSelect && yearInput) {
+        quarterSelect.addEventListener('change', updateKyKKhai);
+        yearInput.addEventListener('change', updateKyKKhai);
+        updateKyKKhai();
+    }
+
+    toggleBoSung();
+
+    const serverCompanyInfo = {{ company_info | default({}) | tojson }};
+    if (serverCompanyInfo && (serverCompanyInfo.mst || serverCompanyInfo.ct05)) {
+        populateCompanyInfo(serverCompanyInfo);
+    } else {
+        loadCompanyInfoFromSettings(false);
+    }
+
+    document.getElementById('exportPDFBtn')?.addEventListener('click', exportTaxPDF);
+    document.getElementById('bankAccountTable')?.addEventListener('input', syncHeaderBankAccount);
+    document.getElementById('bankAccountTable')?.addEventListener('change', syncHeaderBankAccount);
+
+    flatpickr('.flatpickr-vn', {
+        locale: 'vn',
+        dateFormat: 'd/m/Y',
+        allowInput: true,
+        weekStart: 1,
+        disableMobile: true,
+        parseDate: (datestr) => {
+            const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec((datestr || '').trim());
+            if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+            const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec((datestr || '').trim());
+            if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3]);
+            return null;
+        },
+        formatDate: (date) => {
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            return `${d}/${m}/${date.getFullYear()}`;
+        },
+    });
+
+    setTaxDateField('ngayLapTKhai', document.querySelector('input[name="ngayLapTKhai"]')?.value);
+    setTaxDateField('ngayKy', document.querySelector('input[name="ngayKy"]')?.value);
+});
+</script>
+{% endblock %}

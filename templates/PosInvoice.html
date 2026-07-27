@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+
+    {% set invoice_no = "%08d"|format((sale.get('invoice_number') or sale.get('id') or 0)|int) %}
+
+    <title>Hóa Đơn Bán Hàng #{{ invoice_no }}</title>
+
+    <style>
+        body {
+            font-family: "Times New Roman", serif;
+            font-size: 13.5pt;
+            margin: 0;
+            padding: 15px 25px;
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+        .uppercase { text-transform: uppercase; }
+
+        .title {
+            font-size: 22pt;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid black;
+            padding: 6px;
+            font-size: 13pt;
+        }
+
+        th {
+            background: #f2f2f2;
+            text-align: center;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14pt;
+        }
+
+        .signature {
+            margin-top: 70px;
+            width: 50%;
+            float: left;
+            text-align: center;
+        }
+
+        .fake-sign {
+            font-family: "Brush Script MT", cursive;
+            font-size: 30px;
+            margin-top: 20px;
+        }
+
+        .clear { clear: both; }
+
+        .amount-words {
+            margin-top: 20px;
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        .no-print {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        button {
+            padding: 8px 18px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+
+<body>
+
+{% if sale.get('date') %}
+    {% set d = sale.get('date').split(' ')[0].split('-') %}
+    {% set year = d[0] %}
+    {% set month = "%02d"|format(d[1]|int) %}
+    {% set day = "%02d"|format(d[2]|int) %}
+{% else %}
+    {% set day = "01" %}
+    {% set month = "01" %}
+    {% set year = "2025" %}
+{% endif %}
+
+<div class="text-center title uppercase">HÓA ĐƠN BÁN HÀNG</div>
+<br><br>
+
+<div class="info-row">
+    <div>
+        <div class="bold">Đơn vị bán hàng: CỬA HÀNG MỸ DUNG</div>
+        <div class="bold">Mã số thuế: 084079015035</div>
+        <div class="bold">Địa chỉ: 123 Nguyễn Sơn, Phường Phú Thọ Hòa, TP.HCM</div>
+        <div class="bold">Số tài khoản:06010550656 tại Ngân Hàng Sacombank </div>
+    </div>
+    <div class="text-right">
+        <div>Mẫu số: 01GTKT3/001</div>
+        <div>Ký hiệu: {{ sale.get('symbol', '2K25MMD') }}</div>
+        <div>Số: <strong>{{ invoice_no }}</strong></div>
+        <div>Ngày: {{ day }}/{{ month }}/{{ year }}</div>
+    </div>
+</div>
+
+<br>
+
+<div class="bold">Thông tin khách hàng:</div>
+<div>Họ tên người mua hàng: {{ sale.get('customer_name', 'Bán cho người tiêu dùng') }}</div>
+<div>Đơn vị mua: {{ sale.get('company_name', '') }}</div>
+<div>Mã số thuế: {{ sale.get('tax_code', '') }}</div>
+<div>Địa chỉ: {{ sale.get('address', '') }}</div>
+<div>Điện thoại: {{ sale.get('customer_phone', '') }}</div>
+<div>Thanh toán: {{ ('TM/CK') }}</div>
+
+<table>
+<thead>
+<tr>
+    <th>Stt</th>
+    <th>Tên hàng hóa</th>
+    <th>ĐVT</th>
+    <th>Số Lượng</th>
+    <th>Đơn giá</th>
+    <th>Chiết khấu</th>
+    <th>Thành tiền</th>
+</tr>
+</thead>
+
+<tbody>
+{% set ns = namespace(total=0) %}
+{% for item in sale.get('items') or [] %}
+
+    {% set name = item.get('product_name') or item.get('name') or '---' %}
+    {% set qty = item.get('quantity') or 0 %}
+    {% set price = item.get('unit_price') or item.get('price') or 0 %}
+
+    {# ==== ĐƠN VỊ THEO UseSaleUnit ==== #}
+    {% if item.get('UseSaleUnit') == 1 %}
+        {% set unit = item.get('unit1') %}
+    {% else %}
+        {% set unit = item.get('unit') %}
+    {% endif %}
+
+    {% set discount = item.get('discount_value') or 0 %}
+    {% set amount = qty * price %}
+    {% set line_total = amount - discount %}
+    {% set ns.total = ns.total + line_total %}
+
+<tr>
+    <td class="text-center">{{ loop.index }}</td>
+    <td>{{ name }}</td>
+    <td class="text-center">{{ unit }}</td>
+    <td class="text-right">{{ qty }}</td>
+    <td class="text-right">{{ price|vnd }}</td>
+    <td class="text-right">{{ discount|vnd }}</td>
+    <td class="text-right">{{ line_total|vnd }}</td>
+</tr>
+
+{% endfor %}
+</tbody>
+
+<tfoot>
+<tr class="bold">
+    <td colspan="6" class="text-right">Tổng tiền thanh toán</td>
+    <td class="text-right">{{ ns.total|vnd }}</td>
+</tr>
+</tfoot>
+</table>
+
+<div class="amount-words">
+    Số tiền viết bằng chữ:
+    <strong>{{ ns.total|so_thanh_chu|capitalize }} đồng chẵn.</strong>
+</div>
+
+<!-- ===== CHỮ KÝ ===== -->
+
+<div class="signature">
+    <div class="bold">Người mua hàng</div>
+    (Ký điện tử nếu có)
+</div>
+
+<div class="signature">
+    <div class="bold">Người bán hàng</div>
+
+    {% if sale.get('signed_mock') %}
+        <div class="fake-sign">Trần Thị Mỹ Dung</div>
+        <small>Đã ký (giả lập)</small>
+    {% else %}
+        <br><br><br>
+        Trần Thị Mỹ Dung
+    {% endif %}
+</div>
+
+<div class="clear"></div>
+
+<!-- ===== NÚT ===== -->
+<div class="no-print">
+    <button onclick="window.print()">🖨️ In hóa đơn</button>
+    <button onclick="mockSign({{ sale.get('id') }})">✍️ Ký giả lập</button>
+    <button onclick="realSign({{ sale.get('id') }})">🔐 Ký số thật</button>
+</div>
+
+<script>
+function mockSign(id) {
+    if (!confirm("Ký giả lập và xuất XML test?")) return;
+
+    fetch(`/api/invoice/mock-sign/${id}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+            // Nếu bạn dùng CSRF (ví dụ Flask-WTF), thêm token ở đây
+        }
+    })
+    .then(response => {
+        // Kiểm tra response có OK không (status 200-299)
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(res => {
+        if (!res.success) {
+            alert("❌ " + (res.message || res.error || "Lỗi không xác định"));
+            return;
+        }
+
+        alert("✅ Đã ký giả lập thành công!\nFile XML đã được tạo.");
+        
+        // Nếu server trả về URL tải XML
+        if (res.download_url || res.xml_url) {
+            window.location.href = res.download_url || res.xml_url;
+        }
+
+        // Reload trang sau chút để cập nhật trạng thái (nếu cần)
+        setTimeout(() => location.reload(), 800);
+    })
+    .catch(err => {
+        console.error("Mock sign error:", err);
+        alert("❌ Lỗi kết nối hoặc server:\n" + err.message);
+    });
+}
+function realSign(id) {
+    if (!id || id === 'null') {
+        alert("⛔ Không thể ký số thật: Chưa có ID hóa đơn hợp lệ");
+        return;
+    }
+    // Khi sẵn sàng tích hợp thật:
+    // window.location.href = `/IssueInvoice/${id}`;
+    alert("⛔ Chưa tích hợp ký số thật (sẽ mở /IssueInvoice/" + id + ")");
+}
+</script>
+
+</body>
+</html>

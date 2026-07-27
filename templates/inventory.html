@@ -1,0 +1,590 @@
+{% extends "base.html" %}
+{% block title %}Tồn kho{% endblock %}
+
+{% block head_extra %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+{% include 'partials/data_list_table_assets.html' %}
+{% endblock %}
+
+{% block extra_style %}
+<style>
+    body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+    :root { --primary: #4361ee; }
+    .card { border: none; border-radius: 16px; box-shadow: 0 8px 25px rgba(0,0,0,0.08); overflow: hidden; }
+    .card-header { background: var(--primary); color: white; font-weight: 600; border: none; padding: 1rem 1.5rem; }
+    .btn-primary { background: var(--primary); border: none; border-radius: 12px; font-weight: 600; }
+    .btn-primary:hover { background: #3a56d4; }
+    .form-control { border-radius: 12px; border: 1.5px solid #ddd; }
+    .stock-low { background-color: #fff3cd; }
+    .stock-zero { background-color: #f8d7da; color: #721c24; }
+    .total-row { font-weight: 700; background: #e3f2fd !important; font-size: 1.1rem; }
+    .loading {
+        display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9);
+        z-index: 9999; justify-content: center; align-items: center; flex-direction: column;
+    }
+    .summary-card {
+        background: white; border-radius: 16px; padding: 1.5rem; text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    .summary-value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+    .flatpickr-calendar { z-index: 9999 !important; }
+    @media (max-width: 767.98px) {
+        .display-5 { font-size: 1.65rem !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-5">
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold text-dark mb-2 page-hero-title">
+            <i class="bi bi-box-seam-fill text-primary"></i> Tổng Quan Tồn Kho
+        </h1>
+        <p class="text-muted">Theo dõi tồn kho theo thời gian thực</p>
+    </div>
+    <div class="row mb-4">
+        <div class="col-12 col-md-6 mx-auto">
+            <div class="summary-card stat-card-mobile">
+                <div class="text-muted small text-uppercase">Tổng giá trị tồn kho</div>
+                <div class="summary-value display-value" id="totalValue">0 ₫</div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-funnel"></i> Bộ lọc dữ liệu</div>
+        <div class="card-body">
+            <form id="filterForm" class="row g-3 align-items-end filter-toolbar">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label fw-semibold">Từ ngày</label>
+                    <input type="text" class="form-control text-center" id="startDate" placeholder="dd/mm/yyyy" required />
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label fw-semibold">Đến ngày</label>
+                    <input type="text" class="form-control text-center" id="endDate" placeholder="dd/mm/yyyy" required />
+                </div>
+                <div class="col-12 col-lg-4">
+                    <label class="form-label fw-semibold">Tìm kiếm</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Tên, mã hàng..." />
+                </div>
+                <div class="col-12 col-lg-2">
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i> Xem</button>
+                </div>
+            </form>
+            <div class="pivot-panel mt-2 mb-0">
+                <div class="pivot-label"><i class="bi bi-filter"></i> Lọc tồn kho</div>
+                <div class="pivot-chips" id="stockPivotChips"></div>
+                <div class="pivot-summary" id="inventoryPivotSummary"></div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span><i class="bi bi-inboxes"></i> Tồn kho hiện tại</span>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                {% if current_user.role in ['admin', 'admin*', 'adminFB', 'master'] %}
+                <button type="button" class="btn btn-sm btn-outline-warning" id="btnReconcile" onclick="reconcileInventory()" title="Cập nhật inventory theo sổ cái stock_moves">
+                    <i class="bi bi-arrow-repeat"></i> Đối soát tồn kho
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-info" id="btnReconcileWac" onclick="reconcileWac()" title="Tính lại giá vốn trung bình (WAC) từ lịch sử stock_moves">
+                    <i class="bi bi-calculator"></i> Đối soát WAC (Tính Giá Vốn)
+                </button>
+                {% endif %}
+                <span class="badge bg-light text-dark fs-6" id="stockCount">0 sản phẩm</span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive table-desktop-only">
+                <table class="table table-hover mb-0" id="currentStockTable">
+                    <thead><tr></tr></thead>
+                    <tbody></tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="5" class="text-end text-dark"><strong>Tổng giá trị tồn:</strong></td>
+                            <td class="text-end text-primary" id="totalStockValue">0 ₫</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="mobile-card-list p-3" id="stockMobileList"></div>
+            <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="enhanced-table-toolbar">
+                    <span class="text-muted small">Hiển thị <strong id="stockTableCount">0</strong> sản phẩm</span>
+                    <span id="stockColFilters" class="active-filters-badge d-none"></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearStockColFilters">Xóa lọc cột</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><i class="bi bi-clock-history"></i> Lịch sử nhập xuất</div>
+        <div class="card-body p-0">
+            <div class="table-responsive table-desktop-only" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-sm mb-0" id="historyTable">
+                    <thead><tr></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="mobile-card-list p-3" id="historyMobileList"></div>
+            <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="enhanced-table-toolbar">
+                    <span class="text-muted small">Hiển thị <strong id="historyTableCount">0</strong> giao dịch</span>
+                    <span id="historyColFilters" class="active-filters-badge d-none"></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearHistoryColFilters">Xóa lọc cột</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="loading" id="loading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3 fw-semibold text-primary">Đang tải dữ liệu tồn kho...</p>
+</div>
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+    <div id="inventoryToast" class="toast align-items-center text-white border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="inventoryToastBody"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+let searchTimer = null;
+let stockFilter = 'all';
+let lastStock = [];
+let lastHistory = [];
+let stockTableCtrl = null;
+let historyTableCtrl = null;
+const inventoryToast = bootstrap.Toast.getOrCreateInstance(document.getElementById('inventoryToast'));
+
+const STOCK_PIVOT_ITEMS = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'in_stock', label: 'Còn hàng' },
+    { value: 'low', label: 'Sắp hết (<5)' },
+    { value: 'out', label: 'Hết hàng' },
+];
+
+function showInventoryToast(message, isError = false) {
+    const el = document.getElementById('inventoryToast');
+    document.getElementById('inventoryToastBody').textContent = message;
+    el.classList.toggle('bg-danger', isError);
+    el.classList.toggle('bg-success', !isError);
+    inventoryToast.show();
+}
+
+function formatQty(value) {
+    return formatVND(value, 0);
+}
+
+function formatCost(value) {
+    return formatVND(value, 2);
+}
+
+function formatAmount(value) {
+    return formatMoney(value, 2);
+}
+
+function stockLevel(qty) {
+    const n = Number(qty) || 0;
+    if (n <= 0) return 'out';
+    if (n < 5) return 'low';
+    return 'in_stock';
+}
+
+function filterStock(list) {
+    if (stockFilter === 'all') return list;
+    return (list || []).filter(item => stockLevel(item.quantity) === stockFilter);
+}
+
+function parseDateInputToISO(dateStr) {
+    if (!dateStr) return '';
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(dateStr).trim());
+    if (!m) return '';
+    return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+}
+
+function formatHistoryDate(value) {
+    if (!value) return '—';
+    const raw = String(value).trim();
+    const iso = raw.split(/[\sT]/)[0];
+    return formatDate(iso) || raw;
+}
+
+function bindStockPivotChips() {
+    renderPivotChips(
+        document.getElementById('stockPivotChips'),
+        STOCK_PIVOT_ITEMS,
+        stockFilter,
+        val => {
+            stockFilter = val;
+            bindStockPivotChips();
+            renderCurrentStock(lastStock);
+        }
+    );
+}
+
+function scheduleLoadInventory(delayMs = 400) {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadInventory, delayMs);
+}
+
+function initializeDateInput(id, dateObj) {
+    const input = document.getElementById(id);
+    if (!input || !dateObj) return;
+    const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
+    if (Number.isNaN(d.getTime())) return;
+
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    input.value = formatDate(iso);
+    input.setAttribute('data-iso-value', iso);
+
+    flatpickr(input, {
+        dateFormat: 'd/m/Y',
+        locale: 'vn',
+        allowInput: true,
+        disableMobile: true,
+        onChange(selectedDates) {
+            if (selectedDates[0]) {
+                const picked = selectedDates[0];
+                const iso = `${picked.getFullYear()}-${String(picked.getMonth() + 1).padStart(2, '0')}-${String(picked.getDate()).padStart(2, '0')}`;
+                input.setAttribute('data-iso-value', iso);
+                scheduleLoadInventory(200);
+            }
+        }
+    });
+
+    input.addEventListener('blur', function onBlur() {
+        const isoValue = parseDateInputToISO(this.value);
+        if (isoValue && isoValue !== this.getAttribute('data-iso-value')) {
+            this.value = formatDate(isoValue);
+            this.setAttribute('data-iso-value', isoValue);
+            scheduleLoadInventory(200);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initInventoryTables();
+    document.getElementById('btnClearStockColFilters')?.addEventListener('click', () => stockTableCtrl?.clearColumnFilters());
+    document.getElementById('btnClearHistoryColFilters')?.addEventListener('click', () => historyTableCtrl?.clearColumnFilters());
+    bindStockPivotChips();
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    initializeDateInput('startDate', start);
+    initializeDateInput('endDate', now);
+    document.getElementById('filterForm').addEventListener('submit', e => {
+        e.preventDefault();
+        loadInventory();
+    });
+    document.getElementById('searchInput').addEventListener('input', () => scheduleLoadInventory(500));
+    loadInventory();
+});
+
+async function loadInventory() {
+    const start = document.getElementById('startDate').getAttribute('data-iso-value');
+    const end = document.getElementById('endDate').getAttribute('data-iso-value');
+    const q = document.getElementById('searchInput').value.trim();
+    if (!start || !end) {
+        showInventoryToast('Vui lòng chọn đủ Từ ngày và Đến ngày', true);
+        return;
+    }
+
+    document.getElementById('loading').style.display = 'flex';
+    try {
+        const data = await fetchJSON(
+            `/api/inventory?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&q=${encodeURIComponent(q)}`
+        );
+        lastStock = data.current_stock || [];
+        lastHistory = data.history || [];
+        renderCurrentStock(lastStock);
+        renderHistory(lastHistory);
+    } catch (err) {
+        console.error(err);
+        showInventoryToast(err.message || 'Không tải được dữ liệu tồn kho', true);
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+}
+
+function renderStockRows(data, tbody) {
+    const el = tbody || document.querySelector('#currentStockTable tbody');
+    if (!el) return;
+    if (!data.length) {
+        el.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Không tìm thấy sản phẩm phù hợp.</td></tr>';
+        return;
+    }
+    el.innerHTML = data.map(item => {
+        const qty = Number(item.quantity) || 0;
+        const cost = Number(item.avg_cost) || 0;
+        const value = qty * cost;
+        const rowClass = qty <= 0 ? 'stock-zero' : (qty < 5 ? 'stock-low' : '');
+        return `
+        <tr class="${rowClass}">
+            <td><code>${escapeHtml(item.product_code || '—')}</code></td>
+            <td><strong>${escapeHtml(item.name)}</strong></td>
+            <td><span class="badge bg-light text-dark">${escapeHtml(item.unit || '—')}</span></td>
+            <td class="text-end fw-semibold">${formatQty(qty)}</td>
+            <td class="text-end">${formatCost(cost)}</td>
+            <td class="text-end text-primary fw-bold">${formatAmount(value)}</td>
+        </tr>`;
+    }).join('');
+}
+
+function renderHistoryRows(data, tbody) {
+    const el = tbody || document.querySelector('#historyTable tbody');
+    if (!el) return;
+    if (!data.length) {
+        el.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Không có lịch sử trong khoảng thời gian này.</td></tr>';
+        return;
+    }
+    const badges = {
+        'Nhập': 'bg-success',
+        'Bán': 'bg-danger',
+        'Khách Trả': 'bg-warning text-dark',
+        'Trả HN': 'bg-warning text-dark',
+    };
+    el.innerHTML = data.map(item => {
+        const qty = Number(item.quantity) || 0;
+        const isOut = qty < 0;
+        const absQty = Math.abs(qty);
+        const absValue = Math.abs(Number(item.total_value) || 0);
+        return `
+        <tr class="${isOut ? 'table-danger' : 'table-success'}">
+            <td><small class="fw-semibold">${formatHistoryDate(item.date)}</small></td>
+            <td><small>${escapeHtml(item.name)}</small></td>
+            <td><span class="badge ${badges[item.type] || 'bg-info'}">${escapeHtml(item.type || '—')}</span></td>
+            <td class="text-end"><strong>${isOut ? '-' : ''}${formatQty(absQty)}</strong></td>
+            <td class="text-end">${formatCost(item.cost_price)}</td>
+            <td class="text-end">${isOut ? '-' : ''}${formatAmount(absValue)}</td>
+            <td><small class="text-muted">${escapeHtml(item.source || '—')}</small></td>
+        </tr>`;
+    }).join('');
+}
+
+function initInventoryTables() {
+    stockTableCtrl = DataListTable.create({
+        table: '#currentStockTable',
+        countSelector: '#stockTableCount',
+        activeFiltersSelector: '#stockColFilters',
+        defaultSort: { key: 'name', dir: 'asc' },
+        columns: [
+            { key: 'product_code', label: 'Mã hàng', sortable: true, filterType: 'text', width: '100px',
+              getValue: i => i.product_code || '' },
+            { key: 'name', label: 'Tên sản phẩm', sortable: true, filterType: 'text', width: '240px',
+              getValue: i => i.name || '' },
+            { key: 'unit', label: 'ĐVT', filterType: 'text', width: '80px', align: 'center',
+              getValue: i => i.unit || '' },
+            { key: 'quantity', label: 'SL tồn', sortable: true, filterType: 'number', width: '110px', align: 'end',
+              getValue: i => i.quantity, sortValue: i => Number(i.quantity) || 0 },
+            { key: 'avg_cost', label: 'Giá vốn', sortable: true, filterType: 'number', width: '120px', align: 'end',
+              getValue: i => i.avg_cost, sortValue: i => Number(i.avg_cost) || 0 },
+            { key: 'stock_value', label: 'Thành tiền', sortable: true, filterType: 'number', width: '130px', align: 'end',
+              getValue: i => (Number(i.quantity) || 0) * (Number(i.avg_cost) || 0),
+              sortValue: i => (Number(i.quantity) || 0) * (Number(i.avg_cost) || 0) },
+        ],
+        renderRows: renderStockRows,
+        onFiltered: rows => updateStockSummary(rows),
+    });
+
+    historyTableCtrl = DataListTable.create({
+        table: '#historyTable',
+        countSelector: '#historyTableCount',
+        activeFiltersSelector: '#historyColFilters',
+        defaultSort: { key: 'date', dir: 'desc' },
+        columns: [
+            { key: 'date', label: 'Ngày', sortable: true, filterType: 'date', width: '110px',
+              getValue: i => i.date || '', sortValue: i => i.date ? new Date(i.date) : new Date(0) },
+            { key: 'name', label: 'Sản phẩm', filterType: 'text', width: '220px', getValue: i => i.name || '' },
+            { key: 'type', label: 'Loại', filterType: 'select', width: '100px',
+              getValue: i => i.type || '',
+              filterOptions: ['Nhập', 'Bán', 'Khách Trả', 'Trả HN'] },
+            { key: 'quantity', label: 'Số lượng', sortable: true, filterType: 'number', width: '100px', align: 'end',
+              getValue: i => Math.abs(Number(i.quantity) || 0), sortValue: i => Number(i.quantity) || 0 },
+            { key: 'cost_price', label: 'Giá vốn', sortable: true, filterType: 'number', width: '110px', align: 'end',
+              getValue: i => i.cost_price, sortValue: i => Number(i.cost_price) || 0 },
+            { key: 'total_value', label: 'Thành tiền', sortable: true, filterType: 'number', width: '120px', align: 'end',
+              getValue: i => Math.abs(Number(i.total_value) || 0), sortValue: i => Number(i.total_value) || 0 },
+            { key: 'source', label: 'Nguồn', filterType: 'text', width: '140px', getValue: i => i.source || '' },
+        ],
+        renderRows: renderHistoryRows,
+    });
+}
+
+function updateStockSummary(filteredRows) {
+    const rows = filteredRows || (stockTableCtrl ? stockTableCtrl.getFilteredData() : []);
+    const visibleTotal = rows.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.avg_cost) || 0), 0);
+    const formattedTotal = formatAmount(visibleTotal);
+    document.getElementById('totalStockValue').textContent = formattedTotal;
+    document.getElementById('totalValue').textContent = formattedTotal;
+    document.getElementById('stockCount').textContent = `${rows.length} sản phẩm`;
+}
+
+function renderCurrentStock(stock) {
+    lastStock = stock || [];
+    const filtered = filterStock(lastStock);
+    const summary = document.getElementById('inventoryPivotSummary');
+    const counts = { in_stock: 0, low: 0, out: 0 };
+    lastStock.forEach(i => counts[stockLevel(i.quantity)]++);
+    if (summary) {
+        summary.textContent = `Hiển thị ${filtered.length}/${lastStock.length} · Còn: ${counts.in_stock} · Sắp hết: ${counts.low} · Hết: ${counts.out}`;
+    }
+    if (stockTableCtrl) {
+        stockTableCtrl.setData(filtered);
+    } else {
+        renderStockRows(filtered);
+        updateStockSummary(filtered);
+    }
+    renderStockMobile(filtered);
+}
+
+function renderStockMobile(filtered) {
+    const mobile = document.getElementById('stockMobileList');
+    if (!mobile) return;
+    if (!filtered.length) {
+        mobile.innerHTML = '<div class="text-center text-muted py-3">Không tìm thấy sản phẩm phù hợp.</div>';
+        return;
+    }
+    mobile.innerHTML = filtered.map(item => {
+        const qty = Number(item.quantity) || 0;
+        const cost = Number(item.avg_cost) || 0;
+        const value = qty * cost;
+        const badge = stockLevel(qty);
+        const labels = { in_stock: 'success', low: 'warning', out: 'danger' };
+        const texts = { in_stock: 'Còn', low: 'Sắp hết', out: 'Hết' };
+        return `
+        <div class="mobile-card">
+            <div class="d-flex justify-content-between">
+                <div class="card-title">${escapeHtml(item.name)}</div>
+                <span class="badge bg-${labels[badge]}">${texts[badge]}</span>
+            </div>
+            <div class="card-row"><span class="label">Mã hàng</span><span class="value">${escapeHtml(item.product_code || '—')}</span></div>
+            <div class="card-row"><span class="label">Tên SP</span><span class="value">${escapeHtml(item.name)}</span></div>
+            <div class="card-row"><span class="label">SL tồn</span><span class="value fw-bold">${formatQty(qty)} ${escapeHtml(item.unit || '')}</span></div>
+            <div class="card-row"><span class="label">Giá vốn</span><span class="value">${formatCost(cost)}</span></div>
+            <div class="card-row"><span class="label">Thành tiền</span><span class="value text-primary fw-bold">${formatAmount(value)}</span></div>
+        </div>`;
+    }).join('');
+}
+
+function renderHistory(history) {
+    lastHistory = history || [];
+    if (historyTableCtrl) {
+        historyTableCtrl.setData(lastHistory);
+    } else {
+        renderHistoryRows(lastHistory);
+    }
+    renderHistoryMobile(lastHistory);
+}
+
+function renderHistoryMobile(rows) {
+    const mobile = document.getElementById('historyMobileList');
+    if (!mobile) return;
+    if (!rows.length) {
+        mobile.innerHTML = '<div class="text-center text-muted py-3">Không có lịch sử.</div>';
+        return;
+    }
+    mobile.innerHTML = rows.slice(0, 50).map(item => {
+        const qty = Number(item.quantity) || 0;
+        const isOut = qty < 0;
+        const absQty = Math.abs(qty);
+        const absValue = Math.abs(Number(item.total_value) || 0);
+        return `
+        <div class="mobile-card border-start border-3 border-${isOut ? 'danger' : 'success'}">
+            <div class="card-title">${escapeHtml(item.name)}</div>
+            <div class="card-row"><span class="label">Mã hàng</span><span class="value">${escapeHtml(item.product_code || '—')}</span></div>
+            <div class="card-row"><span class="label">Ngày</span><span class="value">${formatHistoryDate(item.date)}</span></div>
+            <div class="card-row"><span class="label">Loại</span><span class="value">${escapeHtml(item.type || '—')}</span></div>
+            <div class="card-row"><span class="label">SL</span><span class="value fw-bold">${isOut ? '-' : ''}${formatQty(absQty)}</span></div>
+            <div class="card-row"><span class="label">Giá vốn</span><span class="value">${formatCost(item.cost_price)}</span></div>
+            <div class="card-row"><span class="label">Thành tiền</span><span class="value">${isOut ? '-' : ''}${formatAmount(absValue)}</span></div>
+        </div>`;
+    }).join('');
+}
+
+async function reconcileInventory() {
+    const ok = confirm(
+        'Đối soát sẽ cập nhật số lượng tồn (bảng inventory) theo sổ cái stock_moves.\n\n'
+        + 'Chỉ sửa các sản phẩm đang lệch. Tiếp tục?'
+    );
+    if (!ok) return;
+
+    const btn = document.getElementById('btnReconcile');
+    if (btn) btn.disabled = true;
+    document.getElementById('loading').style.display = 'flex';
+    try {
+        const res = await fetch('/api/inventory/reconcile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Không đối soát được tồn kho');
+        }
+        let msg = data.message || `Đã xử lý ${data.fixed_count || 0} sản phẩm.`;
+        if (data.fixed_count > 0 && Array.isArray(data.fixes)) {
+            const preview = data.fixes.slice(0, 5).map(f => {
+                const code = f.product_code || `#${f.product_id}`;
+                return `${code}: ${f.old_qty} → ${f.new_qty}`;
+            }).join('; ');
+            msg += ` (${preview}${data.fixed_count > 5 ? '…' : ''})`;
+        } else if (data.fixed_count === 0) {
+            msg = 'Tồn kho đã khớp — không cần sửa.';
+        }
+        showInventoryToast(msg, false);
+        await loadInventory();
+    } catch (err) {
+        showInventoryToast(err.message || 'Lỗi đối soát tồn kho', true);
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function reconcileWac() {
+    const ok = confirm(
+        'Đối soát WAC sẽ:\n'
+        + '• Cập nhật số lượng tồn theo stock_moves (nếu lệch)\n'
+        + '• Tính lại giá vốn trung bình (avg_cost) từ toàn bộ lịch sử nhập/xuất\n\n'
+        + 'Thao tác này dùng cho dữ liệu cũ hoặc khi giá vốn bị lệch. Tiếp tục?'
+    );
+    if (!ok) return;
+
+    const btn = document.getElementById('btnReconcileWac');
+    if (btn) btn.disabled = true;
+    document.getElementById('loading').style.display = 'flex';
+    try {
+        const res = await fetch('/api/inventory/reconcile-wac', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Không đối soát được WAC');
+        }
+
+        let msg = data.message || `SL: ${data.qty_fixed_count || 0} SP; WAC: ${data.wac_fixed_count || 0} SP.`;
+        if (data.wac_fixed_count > 0 && Array.isArray(data.wac_fixes)) {
+            const preview = data.wac_fixes.slice(0, 5).map(f =>
+                `#${f.product_id}: ${Number(f.old_wac || 0).toLocaleString('vi-VN')} → ${Number(f.new_wac || 0).toLocaleString('vi-VN')}`
+            ).join('; ');
+            msg += ` (${preview}${data.wac_fixed_count > 5 ? '…' : ''})`;
+        } else if ((data.qty_fixed_count || 0) === 0 && (data.wac_fixed_count || 0) === 0) {
+            msg = 'Tồn kho và giá vốn đã khớp — không cần sửa.';
+        }
+        showInventoryToast(msg, false);
+        await loadInventory();
+    } catch (err) {
+        showInventoryToast(err.message || 'Lỗi đối soát WAC', true);
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+        if (btn) btn.disabled = false;
+    }
+}
+</script>
+{% endblock %}

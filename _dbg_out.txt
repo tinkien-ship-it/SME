@@ -1,0 +1,22 @@
+﻿=== invoice 10 ===
+python : Traceback (most recent call last):
+At C:\Users\TÍN\AppData\Local\Temp\ps-script-e19d664a-da6c-4ea4-8803-d8969c17a2c2.ps1:104 char:1
++ python C:\SME\_dbg_inv2.py 2>&1 | Out-File -Encoding utf8 C:\SME\_dbg ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\SME\_dbg_inv2.py", line 17, in <module>
+    show('=== invoice 10 ===', c.execute(
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        "SELECT id,sale_id,sale_no,invoice_no,invoice_id,status,pdf_url FROM outward_invoices WHERE invoice_no='10'"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall())
+    ^^^^^^^^^^^^^
+  File "C:\SME\_dbg_inv2.py", line 15, in show
+    print(d)
+    ~~~~~^^^
+  File "C:\Users\TÍN\AppData\Local\Python\pythoncore-3.14-64\Lib\encodings\cp1258.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u1ea1' in position 106: character maps to <undefined>

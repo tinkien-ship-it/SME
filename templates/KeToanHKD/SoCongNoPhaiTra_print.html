@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Sổ Chi Tiết Công Nợ - {{ supplier }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 13px; color: #000; background-color: #f0f2f5; margin: 0;
+        }
+        .no-print-zone {
+            background: #ffffff; padding: 10px 0; border-bottom: 2px solid #dee2e6;
+            position: sticky; top: 0; z-index: 1000; display: flex;
+            justify-content: center; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .print-container {
+            width: 277mm; margin: 20px auto; padding: 10mm 15mm;
+            background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); min-height: 190mm;
+        }
+        .table-print { border-collapse: collapse; width: 100%; margin-top: 10px; table-layout: fixed; }
+        .table-print th, .table-print td {
+            border: 1px solid black !important; padding: 6px;
+            vertical-align: middle; word-wrap: break-word;
+        }
+        .text-end { text-align: right !important; }
+        .text-center { text-align: center !important; }
+        .fw-bold { font-weight: bold; }
+        .bg-light-gray { background-color: #f9f9f9 !important; }
+        
+        @media print {
+            .no-print-zone { display: none !important; }
+            body { background: none; margin: 0; }
+            .print-container { width: 100%; margin: 0; padding: 0; box-shadow: none; }
+            .table-print th { background-color: #eee !important; -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print-zone">
+    <button onclick="window.print()" class="btn btn-primary px-4">
+        <i class="bi bi-printer-fill me-2"></i>XÁC NHẬN IN SỔ (A4 NGANG)
+    </button>
+    <button onclick="window.close()" class="btn btn-secondary px-4">ĐÓNG</button>
+</div>
+
+<div class="print-container">
+    <div class="row">
+        <div class="col-7">
+            <p class="mb-0 fw-bold text-uppercase">HỘ KINH DOANH: {{ info.business_name if info else '................................' }}</p>
+            <p class="mb-0">Địa chỉ: {{ info.address if info else '................................' }}</p>
+            <p class="mb-0">MST: {{ info.tax_code if info else '................................' }}</p>
+        </div>
+        <div class="col-5 text-end">
+            <p class="mb-0 fw-bold">Mẫu số S1-HKD</p>
+            <small>(Ban hành kèm theo Thông tư số 152/2025/TT-BTC)</small>
+        </div>
+    </div>
+
+    <div class="text-center my-4">
+        <h4 class="fw-bold">SỔ CHI TIẾT CÔNG NỢ PHẢI TRẢ</h4>
+        <p class="mb-1">Tài khoản: 331 - Phải trả cho người bán</p>
+        <p class="mb-1">Nhà cung cấp: <span class="fw-bold text-uppercase">{{ supplier }}</span></p>
+        <p id="timeRangeDisplay" class="fw-bold"></p>
+    </div>
+
+    <table class="table-print">
+        <thead class="text-center fw-bold bg-light">
+            <tr>
+                <th colspan="2" style="width: 160px;">CHỨNG TỪ</th>
+                <th rowspan="2">DIỄN GIẢI</th>
+                <th rowspan="2" style="width: 80px;">TK ĐỐI ỨNG</th>
+                <th colspan="2">SỐ TIỀN PHÁT SINH</th>
+                <th rowspan="2" style="width: 130px;">SỐ DƯ</th>
+            </tr>
+            <tr>
+                <th style="width: 90px;">SỐ HIỆU</th>
+                <th style="width: 70px;">NGÀY</th>
+                <th style="width: 115px;">NỢ (Phát sinh)</th>
+                <th style="width: 115px;">CÓ (Thanh toán)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="fw-bold bg-light-gray">
+                <td class="text-center"></td>
+                <td class="text-center" id="openingDate">---</td>
+                <td>Số dư đầu kỳ</td>
+                <td class="text-center"></td>
+                <td></td>
+                <td></td>
+                <td class="text-end format-money">{{ totals.opening }}</td>
+            </tr>
+
+            {% set running_bal = totals.opening %}
+            {% for r in rows %}
+                {% set running_bal = running_bal + r.no - r.co %}
+                <tr>
+                    <td class="text-center">{{ r.purchase_no }}</td>
+                    <td class="text-center">{{ r.date.split(' ')[0] if r.date else '—' }}</td>
+                    <td>{{ r.dien_giai }}</td>
+                    <td class="text-center">156</td>
+                    <td class="text-end format-money">{{ r.no }}</td>
+                    <td class="text-end format-money">{{ r.co }}</td>
+                    <td class="text-end format-money fw-bold">
+                        {{ running_bal if running_bal > 0.5 else 0 }}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot class="fw-bold">
+            <tr>
+                <td colspan="4" class="text-center">TỔNG CỘNG PHÁT SINH TRONG KỲ</td>
+                <td class="text-end format-money">{{ totals.no }}</td>
+                <td class="text-end format-money">{{ totals.co }}</td>
+                <td class="bg-light"></td>
+            </tr>
+            <tr class="bg-light-gray">
+                <td colspan="4" class="text-center">SỐ DƯ CUỐI KỲ</td>
+                <td colspan="2"></td>
+                <td class="text-end format-money" style="font-size: 14px; color: red;">{{ totals.closing }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="row mt-5 text-center" style="page-break-inside: avoid;">
+        <div class="col-6">
+            <p class="fw-bold mb-1">NGƯỜI GHI SỔ</p>
+            <p class="fst-italic">(Ký, họ tên)</p>
+            <div style="height: 80px;"></div>
+            <p class="fw-bold"></p>
+        </div>
+        <div class="col-6">
+            <p class="mb-1">
+                Ngày <span id="sigDay">......</span>
+                tháng <span id="sigMonth">......</span>
+                năm <span id="sigYear">20...</span>
+            </p>
+            <p class="fw-bold text-uppercase mb-1">CHỦ HỘ KINH DOANH</p>
+            <p class="fst-italic">(Ký, họ tên)</p>
+            <div style="height: 80px;"></div>
+            <p class="fw-bold text-uppercase">{{ info.representative_name or '................................' }}</p>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Hàm định dạng tiền tệ: 1234567 -> 1.234.567
+ */
+function formatVN(num) {
+    let val = Math.round(parseFloat(num) || 0);
+    if (val === 0) return '0';
+    return val.toLocaleString('vi-VN');
+}
+
+/**
+ * Chuyển đổi YYYY-MM-DD sang DD/MM/YYYY
+ */
+function formatToVNODate(dateStr) {
+    if (!dateStr || dateStr === "None" || dateStr === "—" || dateStr === "") return "—";
+    const cleanDate = dateStr.trim().split(' ')[0];
+    const parts = cleanDate.split('-');
+    if (parts.length !== 3) return dateStr;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Định dạng toàn bộ các ô tiền tệ trong bảng
+    document.querySelectorAll('.format-money').forEach(el => {
+        const raw = el.innerText.trim();
+        // Xử lý cả trường hợp rỗng hoặc có chữ đ
+        const val = parseFloat(raw.replace(/[^0-9.-]+/g, '')) || 0;
+        el.innerText = formatVN(val);
+    });
+
+    // 2. Lấy tham số từ URL để hiển thị dải thời gian
+    const urlParams = new URLSearchParams(window.location.search);
+    let start = urlParams.get('start');
+    let end = urlParams.get('end');
+
+    const now = new Date();
+    // Nếu không có ngày bắt đầu, mặc định là mùng 1 tháng hiện tại
+    if (!start || start === "None") {
+        start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    }
+    // Nếu không có ngày kết thúc, mặc định là hôm nay
+    if (!end || end === "None") {
+        end = now.toISOString().split('T')[0];
+    }
+
+    // Hiển thị dải thời gian trên tiêu đề
+    const displayElement = document.getElementById('timeRangeDisplay');
+    if (displayElement) {
+        displayElement.innerText = `Từ ngày: ${formatToVNODate(start)} đến ngày: ${formatToVNODate(end)}`;
+    }
+
+    // Hiển thị ngày đầu kỳ
+    const openingDateCell = document.getElementById('openingDate');
+    if (openingDateCell) {
+        openingDateCell.innerText = formatToVNODate(start);
+    }
+
+    // Điền ngày tháng năm vào phần chữ ký dựa trên ngày kết thúc (end)
+    const sigDateParts = end.split('-');
+    if (sigDateParts.length === 3) {
+        const [y, m, d] = sigDateParts;
+        document.getElementById('sigDay').innerText = d;
+        document.getElementById('sigMonth').innerText = m;
+        document.getElementById('sigYear').innerText = y;
+    }
+});
+</script>
+</body>
+</html>

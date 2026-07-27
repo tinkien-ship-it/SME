@@ -1,0 +1,1032 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://npmcdn.com/flatpickr/dist/themes/material_blue.css">
+
+<style>
+    :root {
+        --primary-dark: #1e3799; 
+        --success-dark: #079992; 
+        --danger-dark: #b71540;  
+        --bg-light: #f4f7f6;
+    }
+
+    body { background: var(--bg-light); font-size: 13px; font-family: 'Segoe UI', sans-serif; }
+    
+    .salary-header { background: white; border-bottom: 4px solid var(--primary-dark); border-radius: 10px 10px 0 0; }
+    .toolbar-box { background: #ffffff; border-radius: 8px; padding: 15px; border: 1px solid #dcdde1; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    
+    .table-main thead th { 
+        background-color: var(--primary-dark); color: #ffffff !important; 
+        font-weight: 700; text-transform: uppercase; font-size: 11px;
+        letter-spacing: 0.5px; border: none; vertical-align: middle;
+    }
+    .money { font-family: 'JetBrains Mono', 'Consolas', monospace; text-align: right; font-weight: 700; color: #2d3436; }
+    input.money-input { background: #fffde7 !important; border: 1.5px solid #ffe082 !important; font-weight: 800; text-align: right; }
+    
+    .text-tax { color: var(--danger-dark) !important; }
+    .text-ins { color: var(--primary-dark) !important; }
+    .bg-final { background-color: #e3f2fd !important; font-size: 14px; border-left: 2px solid var(--primary-dark) !important; }
+    .total-row { background: #2d3436 !important; color: white !important; font-weight: 800; }
+    
+    .btn-action { font-weight: 700; letter-spacing: 0.3px; padding: 0.5rem 1.25rem; transition: all 0.2s ease; border: none; border-radius: 8px; }
+    .btn-add-emp { background: linear-gradient(135deg, #079992, #38ada9); color: white; box-shadow: 0 2px 8px rgba(7, 153, 146, 0.35); }
+    .btn-add-emp:hover { background: linear-gradient(135deg, #38ada9, #079992); transform: translateY(-1px); color: white; box-shadow: 0 4px 12px rgba(7, 153, 146, 0.45); }
+    .btn-load-data { background: #2d3436; color: white; }
+    .btn-load-data:hover { background: #636e72; color: white; transform: translateY(-1px); }
+    .btn-save-all { background: linear-gradient(135deg, #b71540, #eb2f06); color: white; box-shadow: 0 4px 15px rgba(183, 21, 64, 0.35); }
+    .btn-save-all:hover { background: linear-gradient(135deg, #eb2f06, #b71540); transform: translateY(-1px); color: white; }
+
+    .toolbar-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #576574; margin-bottom: 0.35rem; display: block; }
+    .toolbar-label.primary { color: var(--primary-dark); }
+    .toolbar-field .form-select,
+    .toolbar-field .form-control { border-radius: 8px; border-color: #dfe6e9; }
+    .toolbar-field .form-select:focus,
+    .toolbar-field .form-control:focus { border-color: var(--primary-dark); box-shadow: 0 0 0 0.2rem rgba(30, 55, 153, 0.12); }
+    .toolbar-actions { border-top: 1px dashed #dfe6e9; }
+    .toolbar-hint { min-height: 1.25rem; flex: 1; }
+    .page-title-badge { font-size: 0.65rem; letter-spacing: 0.5px; }
+    .card-footer-salary { background: linear-gradient(to top, #fafbfc, #fff); border-top: 1px solid #eee; }
+    .footer-total-box { background: #fff5f5; border: 1px solid #ffc9c9; border-radius: 10px; padding: 0.75rem 1.25rem; }
+
+    .modal-xl { max-width: 1140px; }
+    .nav-tabs .nav-link.active { border-top: 3px solid var(--primary-dark); color: var(--primary-dark) !important; }
+    .bh-preview-table { font-size: 12px; margin-bottom: 0; }
+    .bh-preview-table th { font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.3px; white-space: nowrap; }
+    .bh-preview-table td, .bh-preview-table th { vertical-align: middle; padding: 0.45rem 0.6rem; }
+    .bh-preview-table .col-loai { width: 38%; text-align: left; }
+    .bh-preview-table .col-tien { width: 31%; text-align: right; font-family: 'JetBrains Mono', 'Consolas', monospace; font-weight: 700; }
+    .bh-preview-table tfoot td { border-top: 2px solid #dee2e6; font-weight: 800; }
+    #tabGeneral .money { text-align: right; }
+</style>
+
+<div class="container-fluid py-3">
+    <div class="card shadow-lg border-0">
+        <div class="salary-header p-4 pb-3">
+            <div class="row align-items-start g-3">
+                <div class="col-lg-3 col-md-12">
+                    <h4 class="mb-1 text-primary fw-bold">
+                        <i class="fa-solid fa-receipt me-2"></i>Bảng Lương 05-LĐTL
+                    </h4>
+                    <span class="badge bg-danger page-title-badge">Hệ thống 2026</span>
+                </div>
+                
+                <div class="col-lg-9 col-md-12">
+                    <div class="toolbar-box">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-xl-2 col-md-4 col-6 toolbar-field">
+                                <label class="toolbar-label primary">Thanh toán</label>
+                                <a href="/SoCongNoPhaiTraNhanVien" class="btn btn-sm btn-outline-success w-100 fw-semibold">
+                                    <i class="fa fa-money-bill-wave me-1"></i> Trả lương NV
+                                </a>
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-6 toolbar-field">
+                                <label class="toolbar-label primary">Bảo hiểm</label>
+                                <a href="/SoCongNoBaoHiem" class="btn btn-sm btn-outline-info w-100 fw-semibold">
+                                    <i class="fa fa-shield-heart me-1"></i> Nộp BH
+                                </a>
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-6 toolbar-field">
+                                <label class="toolbar-label">Kỳ lương</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light border-end-0 text-muted small">T</span>
+                                    <input id="m" type="number" class="form-control text-center fw-bold border-start-0" placeholder="Tháng" min="1" max="12">
+                                    <input id="y" type="number" class="form-control text-center fw-bold" placeholder="Năm">
+                                </div>
+                            </div>
+                            <div class="col-xl-4 col-md-8 col-12 toolbar-field">
+                                <label class="toolbar-label primary">Nguồn ngày công</label>
+                                <select id="workdays_source" class="form-select form-select-sm fw-semibold">
+                                    <option value="default">Mặc định (ngày trong tháng − Chủ Nhật)</option>
+                                    <option value="attendance">Từ Bảng Chấm Công</option>
+                                </select>
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-6 toolbar-field">
+                                <label class="toolbar-label">Ngày lập biểu</label>
+                                <input id="date_input" type="text" class="form-control form-control-sm fw-semibold">
+                            </div>
+                        </div>
+
+                        <div class="toolbar-actions mt-3 pt-3 d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 gap-md-3">
+                            <div id="workdaysHint" class="toolbar-hint small text-muted"></div>
+                            <div class="d-flex flex-wrap gap-2 ms-md-auto">
+                                <button type="button" onclick="fetchInitialData()" class="btn btn-sm btn-load-data btn-action">
+                                    <i class="fa fa-sync me-1"></i> Tải dữ liệu
+                                </button>
+                                <button type="button" onclick="openAddModal()" class="btn btn-sm btn-add-emp btn-action">
+                                    <i class="fa fa-user-plus me-1"></i> Thêm Nhân Viên Mới
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-main table-hover mb-0">
+                    <thead class="text-center">
+                        <tr>
+                            <th rowspan="2" style="width: 280px;">Thông tin nhân sự</th>
+                            <th rowspan="2">Lương đóng BH</th>
+                            <th rowspan="2" style="width: 80px;">Ngày Công</th>
+                            <th rowspan="2">Lương TG</th>
+                            <th rowspan="2" style="width:72px">PC Lương</th>
+                            <th rowspan="2" style="width:72px">PC Khác</th>
+                            <th rowspan="2" style="width:72px">Thưởng</th>
+                            <th rowspan="2" style="background-color: #273c75;">Tổng Thu Nhập</th>
+                            <th colspan="3" style="background-color: #4b6584;">Khoản khấu trừ</th>
+                            <th rowspan="2" style="background-color: #c23616;">Thực lĩnh</th>
+                            <th rowspan="2" style="width: 60px;">Sửa</th>
+                            <th rowspan="2" style="width: 60px;">Xóa</th>
+                        </tr>
+                        <tr style="background-color: #718093;">
+                            <th class="small py-1" id="bhColHeader">BH NLĐ</th>
+                            <th class="small py-1">Thuế TNCN</th>
+                            <th class="small py-1">Tổng trừ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inputBody"></tbody>
+                    <tfoot>
+                        <tr class="total-row shadow-sm">
+                            <td colspan="7" class="text-end py-3 fs-6">TỔNG CỘNG THANH TOÁN KỲ NÀY:</td>
+                            <td id="totalTN" class="money text-white fs-5">0</td>
+                            <td id="totalBH" class="money" style="color: #00d2d3 !important;">0</td>
+                            <td id="totalTax" class="money" style="color: #ff7675 !important;">0</td>
+                            <td id="totalDeduct" class="money text-muted">0</td>
+                            <td id="grandTotal" class="money text-warning fs-4 px-3">0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="small text-muted px-3 pb-2 mb-0">
+                <i class="fa fa-info-circle me-1"></i>
+                Cột <strong>BH NLĐ</strong> chỉ gồm phần người lao động đóng (khấu trừ lương).
+                Phần Chủ hộ kinh doanh nộp xem tab <strong>2. Chi phí BH chủ nộp</strong> tại
+                <a href="/SoTheoDoiTienLuong" target="_blank">Sổ S5</a>.
+            </p>
+        </div>
+
+        <div class="card-footer card-footer-salary py-3 px-4 d-flex flex-column flex-lg-row justify-content-between align-items-stretch align-items-lg-center gap-3">
+            <button type="button" onclick="location.href='/DanhSachBangLuong_05LDTL'" class="btn btn-outline-secondary px-4 fw-semibold">
+                <i class="fa-solid fa-arrow-left me-2"></i>Danh sách lương
+            </button>
+            <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-3">
+                <div class="footer-total-box text-center text-sm-end">
+                    <div class="small text-muted fw-semibold mb-0">Tổng tiền phải chi</div>
+                    <div id="display_final" class="h4 mb-0 text-danger fw-bold">0 ₫</div>
+                </div>
+                <button type="button" onclick="saveSalary()" class="btn btn-save-all btn-action px-4 py-2 align-self-sm-center">
+                    <i class="fa fa-check-double me-2"></i>Chốt bảng lương
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="employeeModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content border-0 shadow-lg">
+            <div id="modalHeader" class="modal-header py-2 text-white bg-primary">
+                <h6 class="modal-title fw-bold" id="modalLabel">
+                    <i class="fas fa-user-edit me-2"></i>HỒ SƠ NHÂN VIÊN CHI TIẾT
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-light">
+                <ul class="nav nav-tabs bg-white px-3 pt-2" id="empTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active fw-bold" data-bs-toggle="tab" href="#tabGeneral">THÔNG TIN CHUNG</a>
+                    </li>
+                    <li id="tabHistoryLink" class="nav-item">
+                        <a class="nav-link fw-bold text-danger" data-bs-toggle="tab" href="#tabHistory" onclick="loadSalaryHistory()">LỊCH SỬ BIẾN ĐỘNG LƯƠNG</a>
+                    </li>
+                </ul>
+                <div class="tab-content p-4">
+                    <div class="tab-pane fade show active" id="tabGeneral">
+                        <form id="employeeForm">
+                            <input type="hidden" id="f_id">
+                            <input type="hidden" id="f_index">
+
+                            <div class="row g-4">
+                                <!-- Cột trái -->
+                                <div class="col-md-6 border-end pe-4">
+                                    <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">HÀNH CHÍNH & LIÊN HỆ</h6>
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <label class="small fw-bold">Họ tên nhân viên *</label>
+                                            <input type="text" id="f_fullname" class="form-control border-2" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="small fw-bold">Số ID/Card (CCCD) *</label>
+                                            <input type="text" id="f_id_card" class="form-control">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="small fw-bold">Điện thoại</label>
+                                            <input type="text" id="f_phone" class="form-control">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="small fw-bold">Địa chỉ thường trú</label>
+                                            <input type="text" id="f_address" class="form-control">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="small fw-bold">Chức vụ</label>
+                                            <input type="text" id="f_position" class="form-control">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="small fw-bold">Ngày vào làm</label>
+                                            <input type="text" id="f_join_date" class="form-control bg-white border-primary">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Cột phải -->
+                                <div class="col-md-6 ps-4">
+                                    <h6 class="fw-bold text-success mb-3 border-bottom pb-2">CHÍNH SÁCH LƯƠNG & THUẾ</h6>
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <label class="small fw-bold text-danger">Mức Lương Tháng *</label>
+                                            <input type="number" id="f_base_salary" class="form-control border-danger fw-bold text-danger">
+                                        </div>
+
+                                        <div class="col-12 mt-2">
+                                            <h6 class="fw-bold text-secondary mb-2 border-bottom pb-2 small text-uppercase">
+                                                Phụ cấp &amp; thưởng mặc định (Mẫu 05-LĐTL)
+                                            </h6>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="small fw-bold">Phụ cấp lương</label>
+                                            <input type="number" id="f_allowance_fund" class="form-control" value="0" min="0" step="1000">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="small fw-bold">Phụ cấp khác</label>
+                                            <input type="number" id="f_allowance_other" class="form-control" value="0" min="0" step="1000">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="small fw-bold">Tiền thưởng</label>
+                                            <input type="number" id="f_default_bonus" class="form-control" value="0" min="0" step="1000">
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="text-muted" style="font-size:10px">
+                                                Tự điền vào bảng lương khi tải dữ liệu · In ra mẫu 05-LĐTL cột 8, 9, 10 · Có thể sửa từng kỳ trên lưới.
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="small fw-bold text-success">Giảm trừ bản thân</label>
+                                            <input type="number" id="f_self_deduction" class="form-control border-success fw-bold" value="11000000">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="small fw-bold">Số người phụ thuộc</label>
+                                            <input type="number" id="f_dependents" class="form-control" value="0">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="small fw-bold">Mức giảm trừ NPT</label>
+                                            <input type="number" id="f_dependent_deduction" class="form-control" value="4400000">
+                                        </div>
+
+                                        <!-- Chủ hộ: tự động từ Cài đặt -->
+                                        <div class="col-12 mt-2">
+                                            <div id="ownerSyncPanel" class="alert alert-light border py-2 small mb-2">
+                                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                                    <span><i class="fa fa-user-tie me-1 text-primary"></i>
+                                                        <strong>Chủ hộ (Cài đặt):</strong>
+                                                        <span id="ownerRepName" class="text-primary">—</span>
+                                                    </span>
+                                                    <span id="chuHoBadge" class="badge bg-secondary">Chưa xác định</span>
+                                                </div>
+                                                <div class="text-muted mt-1" style="font-size:11px">
+                                                    Khớp họ tên NV với Người đại diện → tự gán Chủ hộ (không tính BHTN).
+                                                    Cập nhật tại <a href="/settings" target="_blank">Cài đặt</a>.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Xem trước BH -->
+                                        <div class="col-12">
+                                            <div class="bg-white p-3 rounded border border-primary-subtle">
+                                                <div class="small fw-bold text-primary mb-2">
+                                                    <i class="fa fa-shield-heart me-1"></i>Xem trước bảo hiểm theo kỳ lương hiện tại
+                                                </div>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-bordered bh-preview-table mb-2">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th class="col-loai">Khoản</th>
+                                                                <th class="col-tien text-end"><span class="d-block fw-normal text-muted" style="font-size:9px" id="hdr_nld_bhxh_pct">{{ info.rate_bhxh|default(8) }}%</span>BHXH</th>
+                                                                <th class="col-tien text-end"><span class="d-block fw-normal text-muted" style="font-size:9px" id="hdr_nld_bhyt_pct">{{ info.rate_bhyt|default(1.5) }}%</span>BHYT</th>
+                                                                <th class="col-tien text-end"><span class="d-block fw-normal text-muted" style="font-size:9px" id="hdr_nld_bhtn_pct">{{ info.rate_bhtn|default(1) }}%</span>BHTN</th>
+                                                                <th class="col-tien text-end">Tổng</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td class="col-loai">
+                                                                    <span class="badge bg-primary-subtle text-primary me-1">NLĐ</span>
+                                                                    Khấu trừ lương
+                                                                </td>
+                                                                <td id="prev_nld_bhxh" class="col-tien">0</td>
+                                                                <td id="prev_nld_bhyt" class="col-tien">0</td>
+                                                                <td id="prev_nld_bhtn" class="col-tien">0</td>
+                                                                <td id="prev_nld_total" class="col-tien text-primary">0</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="col-loai">
+                                                                    <span class="badge bg-danger-subtle text-danger me-1">Chủ hộ</span>
+                                                                    HKD nộp thêm
+                                                                    <div class="text-muted fw-normal" style="font-size:9px">
+                                                                        <span id="lbl_chu_bhxh_pct">{{ info.rate_bhxh_chu|default(17.5) }}%</span> ·
+                                                                        <span id="lbl_chu_bhyt_pct">{{ info.rate_bhyt_chu|default(3) }}%</span> ·
+                                                                        <span id="lbl_chu_bhtn_pct">{{ info.rate_bhtn_chu|default(1) }}%</span>
+                                                                        trên lương TG
+                                                                    </div>
+                                                                </td>
+                                                                <td id="prev_chu_bhxh" class="col-tien">0</td>
+                                                                <td id="prev_chu_bhyt" class="col-tien">0</td>
+                                                                <td id="prev_chu_bhtn" class="col-tien">0</td>
+                                                                <td id="prev_chu_total" class="col-tien text-danger">0</td>
+                                                            </tr>
+                                                        </tbody>
+                                                        <tfoot class="table-light">
+                                                            <tr>
+                                                                <td class="col-loai fw-bold">Tổng phải nộp BH</td>
+                                                                <td id="prev_sum_bhxh" class="col-tien">0</td>
+                                                                <td id="prev_sum_bhyt" class="col-tien">0</td>
+                                                                <td id="prev_sum_bhtn" class="col-tien">0</td>
+                                                                <td id="prev_sum_total" class="col-tien text-danger">0</td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                </div>
+                                                <div class="text-muted" style="font-size:10px">
+                                                    Cơ sở tính cả NLĐ và Chủ hộ: <strong>lương thời gian</strong>
+                                                    = (Mức lương tháng ÷ ngày công chuẩn) × ngày công
+                                                    · Hiện tại: <strong id="prev_time_salary">0</strong> ₫
+                                                    · NV Chủ hộ không tính BHTN.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12 mt-2">
+                                            <div class="alert alert-info py-2 small mb-0">
+                                                <i class="fa fa-info-circle me-1"></i>
+                                                Trên bảng lương chỉ khấu trừ <strong>BH NLĐ</strong>.
+                                                <strong>Chủ hộ</strong> không tính BHTN.
+                                            </div>
+                                        </div>
+
+                                        <!-- THÊM MỚI: TÌNH TRẠNG NHÂN VIÊN -->
+                                        <div class="col-12 mt-3">
+                                            <label class="small fw-bold">Tình trạng nhân viên</label>
+                                            <select id="f_status" class="form-select border-2 fw-bold">
+                                                <option value="1">🟢 Đang làm việc</option>
+                                                <option value="0">🔴 Đã nghỉ việc</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-12 mt-3 bg-white p-3 rounded border">
+                                            <label class="small fw-bold text-muted">Lý do thay đổi lương / nghỉ việc (nếu có)</label>
+                                            <textarea id="f_reason" class="form-control border-0 p-0" rows="2" 
+                                                placeholder="Nhập lý do điều chỉnh lương hoặc nghỉ việc..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="tabHistory">
+                        <div class="table-responsive" style="max-height: 400px;">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Ngày thay đổi</th>
+                                        <th class="text-end">Lương cũ</th>
+                                        <th class="text-end">Lương mới</th>
+                                        <th class="text-center">Biến động</th>
+                                        <th>Lý do ghi nhận</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-white shadow-sm">
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">ĐÓNG</button>
+                <button type="button" class="btn btn-primary fw-bold px-5" onclick="commitSaveEmployee()">
+                    <i class="fa fa-save me-2"></i>LƯU HỒ SƠ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/vn.js"></script>
+
+<script>
+// Cấu hình tỷ lệ bảo hiểm
+const RATES = {
+    bhxh: parseFloat("{{ info.rate_bhxh|default(8) }}") / 100,
+    bhyt: parseFloat("{{ info.rate_bhyt|default(1.5) }}") / 100,
+    bhtn: parseFloat("{{ info.rate_bhtn|default(1) }}") / 100
+};
+const RATES_CHU = {
+    bhxh: parseFloat("{{ info.rate_bhxh_chu|default(17.5) }}") / 100,
+    bhyt: parseFloat("{{ info.rate_bhyt_chu|default(3) }}") / 100,
+    bhtn: parseFloat("{{ info.rate_bhtn_chu|default(1) }}") / 100
+};
+const RATE_NLD_TOTAL = (RATES.bhxh + RATES.bhyt + RATES.bhtn) * 100;
+const RATE_CHU_TOTAL = (RATES_CHU.bhxh + RATES_CHU.bhyt + RATES_CHU.bhtn) * 100;
+
+function fmtPct(rate) {
+    const v = rate * 100;
+    return Number.isInteger(v) ? String(v) : v.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+}
+
+function syncBhRateLabels() {
+    const map = {
+        hdr_nld_bhxh_pct: RATES.bhxh,
+        hdr_nld_bhyt_pct: RATES.bhyt,
+        hdr_nld_bhtn_pct: RATES.bhtn,
+        lbl_chu_bhxh_pct: RATES_CHU.bhxh,
+        lbl_chu_bhyt_pct: RATES_CHU.bhyt,
+        lbl_chu_bhtn_pct: RATES_CHU.bhtn,
+    };
+    Object.entries(map).forEach(([id, rate]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = fmtPct(rate) + '%';
+    });
+}
+
+let OWNER = { representative_name: '{{ info.representative_name|default("", true)|e }}' };
+
+let localData = [];
+let rawEmployees = [];
+let standardDaysCache = 0;
+let hasAttendanceData = false;
+const WORKDAYS_STORAGE_KEY = 'salary_workdays_source';
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n || 0));
+
+// Hàm tính số ngày công chuẩn (Tổng ngày trong tháng - các ngày Chủ Nhật) — giữ nguyên logic cũ
+function getStandardWorkingDays(month, year) {
+    let daysInMonth = new Date(year, month, 0).getDate();
+    let sundays = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+        if (new Date(year, month - 1, d).getDay() === 0) {
+            sundays++;
+        }
+    }
+    return daysInMonth - sundays;
+}
+
+function getWorkdaysSource() {
+    return document.getElementById('workdays_source').value || 'default';
+}
+
+function resolveWorkDays(employee, source, standardDays) {
+    if (source === 'attendance') {
+        return Number(employee.attendance_work_days) || 0;
+    }
+    return standardDays;
+}
+
+function normalizeName(s) {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').trim();
+}
+
+function willMatchChuHo(fullname) {
+    const owner = normalizeName(OWNER.representative_name);
+    return owner && normalizeName(fullname) === owner;
+}
+
+function modalChuHoFlag() {
+    const idx = document.getElementById('f_index').value;
+    if (idx !== '' && localData[idx]) {
+        return isChuHoRow(localData[idx]) || willMatchChuHo(document.getElementById('f_fullname').value);
+    }
+    return willMatchChuHo(document.getElementById('f_fullname').value);
+}
+
+function updateBhColHeader() {
+    const el = document.getElementById('bhColHeader');
+    if (el) el.textContent = `BH NLĐ (${RATE_NLD_TOTAL}%)`;
+}
+
+function updateOwnerSyncPanel() {
+    const repEl = document.getElementById('ownerRepName');
+    const badge = document.getElementById('chuHoBadge');
+    if (!repEl || !badge) return;
+    repEl.textContent = OWNER.representative_name || '(Chưa cấu hình trong Cài đặt)';
+    const isChu = modalChuHoFlag();
+    const fullname = (document.getElementById('f_fullname').value || '').trim();
+    if (!OWNER.representative_name) {
+        badge.className = 'badge bg-secondary';
+        badge.textContent = 'Chưa có Chủ hộ trong Cài đặt';
+    } else if (isChu && fullname) {
+        badge.className = 'badge bg-warning text-dark';
+        badge.textContent = 'Chủ hộ — không tính BHTN';
+    } else if (fullname) {
+        badge.className = 'badge bg-success';
+        badge.textContent = 'NLĐ thường';
+    } else {
+        badge.className = 'badge bg-secondary';
+        badge.textContent = 'Nhập họ tên để kiểm tra';
+    }
+}
+
+function setPreviewCell(id, val, dashIfZero) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = (dashIfZero && !val) ? '—' : fmt(val);
+}
+
+function updateModalBhPreview() {
+    const salary = parseFloat(document.getElementById('f_base_salary').value) || 0;
+    const m = parseInt(document.getElementById('m').value, 10);
+    const y = parseInt(document.getElementById('y').value, 10);
+    const std = standardDaysCache || getStandardWorkingDays(m, y);
+    const idx = document.getElementById('f_index').value;
+    let days = std;
+    if (idx !== '' && localData[idx]) {
+        days = Number(localData[idx].actual_working_days) || std;
+    }
+    const timeSalary = std > 0 ? Math.round((salary / std) * days) : 0;
+    const chuHo = modalChuHoFlag();
+
+    const nld = {
+        bhxh: Math.round(timeSalary * RATES.bhxh),
+        bhyt: Math.round(timeSalary * RATES.bhyt),
+        bhtn: chuHo ? 0 : Math.round(timeSalary * RATES.bhtn),
+    };
+    const chu = {
+        bhxh: Math.round(timeSalary * RATES_CHU.bhxh),
+        bhyt: Math.round(timeSalary * RATES_CHU.bhyt),
+        bhtn: chuHo ? 0 : Math.round(timeSalary * RATES_CHU.bhtn),
+    };
+    const nldTotal = nld.bhxh + nld.bhyt + nld.bhtn;
+    const chuTotal = chu.bhxh + chu.bhyt + chu.bhtn;
+
+    setPreviewCell('prev_nld_bhxh', nld.bhxh);
+    setPreviewCell('prev_nld_bhyt', nld.bhyt);
+    setPreviewCell('prev_nld_bhtn', nld.bhtn, chuHo);
+    setPreviewCell('prev_nld_total', nldTotal);
+    setPreviewCell('prev_chu_bhxh', chu.bhxh);
+    setPreviewCell('prev_chu_bhyt', chu.bhyt);
+    setPreviewCell('prev_chu_bhtn', chu.bhtn, chuHo);
+    setPreviewCell('prev_chu_total', chuTotal);
+    setPreviewCell('prev_sum_bhxh', nld.bhxh + chu.bhxh);
+    setPreviewCell('prev_sum_bhyt', nld.bhyt + chu.bhyt);
+    setPreviewCell('prev_sum_bhtn', nld.bhtn + chu.bhtn, chuHo);
+    setPreviewCell('prev_sum_total', nldTotal + chuTotal);
+
+    const timeEl = document.getElementById('prev_time_salary');
+    if (timeEl) timeEl.textContent = fmt(timeSalary);
+    updateOwnerSyncPanel();
+}
+
+function isChuHoRow(r) {
+    return r.is_chu_ho == 1 || r.is_chu_ho === true;
+}
+
+function getEmployeeProfile(empId) {
+    if (!empId) return null;
+    return rawEmployees.find(x => String(x.id || x.employee_id) === String(empId)) || null;
+}
+
+function buildLocalDataFromRaw() {
+    const m = parseInt(document.getElementById('m').value, 10);
+    const y = parseInt(document.getElementById('y').value, 10);
+    const standardDays = standardDaysCache || getStandardWorkingDays(m, y);
+    const source = getWorkdaysSource();
+
+    localData = rawEmployees.map(e => ({
+        ...e,
+        employee_id: e.id,
+        actual_working_days: resolveWorkDays(e, source, standardDays),
+        workdays_source: source,
+        attendance_from_machine: source === 'attendance' && (Number(e.attendance_work_days) || 0) > 0,
+        allowance_fund: Number(e.allowance_fund) || 0,
+        allowance_other: Number(e.allowance_other) || 0,
+        bonus: Number(e.default_bonus) || 0,
+        self_deduction: e.self_deduction || 11000000,
+        dependents: e.dependents || 0,
+        dependent_deduction: e.dependent_deduction || 4400000,
+    }));
+}
+
+function updateWorkdaysHint() {
+    const hint = document.getElementById('workdaysHint');
+    const m = parseInt(document.getElementById('m').value, 10);
+    const y = parseInt(document.getElementById('y').value, 10);
+    const std = standardDaysCache || getStandardWorkingDays(m, y);
+    const source = getWorkdaysSource();
+
+    if (source === 'default') {
+        hint.className = 'small text-muted mt-2';
+        hint.textContent = `Đang dùng ngày công mặc định: ${std} ngày/tháng (tổng ngày trong tháng trừ Chủ Nhật).`;
+        return;
+    }
+
+    if (!hasAttendanceData) {
+        hint.className = 'small text-warning mt-2';
+        hint.textContent = 'Chế độ Bảng Chấm Công nhưng chưa có dữ liệu tháng này — ô Ngày Công = 0, bạn có thể sửa tay hoặc chuyển về Mặc định.';
+        return;
+    }
+
+    const missing = rawEmployees.filter(e => !(Number(e.attendance_work_days) > 0)).length;
+    hint.className = 'small text-success mt-2';
+    hint.textContent = missing > 0
+        ? `Đang lấy ngày công từ Bảng Chấm Công. ${missing} nhân viên chưa có dữ liệu chấm công (Ngày Công = 0).`
+        : 'Đang lấy ngày công từ Bảng Chấm Công cho tất cả nhân viên.';
+}
+
+function onWorkdaysSourceChange() {
+    localStorage.setItem(WORKDAYS_STORAGE_KEY, getWorkdaysSource());
+    if (!rawEmployees.length) {
+        updateWorkdaysHint();
+        return;
+    }
+    const prevBonus = Object.fromEntries(localData.map(r => [r.employee_id || r.id, r.bonus ?? 0]));
+    const prevAF = Object.fromEntries(localData.map(r => [r.employee_id || r.id, r.allowance_fund ?? 0]));
+    const prevAO = Object.fromEntries(localData.map(r => [r.employee_id || r.id, r.allowance_other ?? 0]));
+    buildLocalDataFromRaw();
+    localData.forEach(r => {
+        const id = r.employee_id || r.id;
+        if (prevBonus[id] != null) r.bonus = prevBonus[id];
+        if (prevAF[id] != null) r.allowance_fund = prevAF[id];
+        if (prevAO[id] != null) r.allowance_other = prevAO[id];
+    });
+    updateWorkdaysHint();
+    render();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const monthEl = document.getElementById('m');
+    const yearEl = document.getElementById('y');
+    const sourceEl = document.getElementById('workdays_source');
+
+    monthEl.value = {{ month|default(0) }} || (new Date().getMonth() + 1);
+    yearEl.value = {{ year|default(0) }} || new Date().getFullYear();
+
+    const savedSource = localStorage.getItem(WORKDAYS_STORAGE_KEY);
+    if (savedSource === 'default' || savedSource === 'attendance') {
+        sourceEl.value = savedSource;
+    }
+
+    const fpConfig = { locale: "vn", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", defaultDate: "today" };
+    flatpickr("#date_input", fpConfig);
+    flatpickr("#f_join_date", fpConfig);
+
+    monthEl.addEventListener('change', fetchInitialData);
+    yearEl.addEventListener('change', fetchInitialData);
+    sourceEl.addEventListener('change', onWorkdaysSourceChange);
+
+    ['f_fullname', 'f_base_salary'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateModalBhPreview);
+    });
+
+    updateBhColHeader();
+    syncBhRateLabels();
+    fetchInitialData();
+});
+
+async function fetchInitialData() {
+    try {
+        const m = parseInt(document.getElementById('m').value, 10);
+        const y = parseInt(document.getElementById('y').value, 10);
+        if (!m || !y) return alert('Vui lòng chọn tháng và năm');
+
+        const r = await fetch(`/api/salary/prepare?month=${m}&year=${y}`);
+        const payload = await r.json();
+        if (!r.ok || !payload.success) {
+            throw new Error(payload.message || payload.error || 'Lỗi tải dữ liệu');
+        }
+
+        standardDaysCache = payload.standard_days ?? getStandardWorkingDays(m, y);
+        hasAttendanceData = !!payload.has_attendance_data;
+        if (payload.owner) {
+            OWNER.representative_name = payload.owner.representative_name || OWNER.representative_name;
+        }
+        rawEmployees = payload.employees || [];
+
+        buildLocalDataFromRaw();
+        updateWorkdaysHint();
+        render();
+    } catch (err) {
+        alert(err.message || 'Lỗi tải dữ liệu!');
+    }
+}
+
+// Logic tính thuế TNCN theo biểu thuế lũy tiến từng phần
+function calculateTNCN(income) {
+    if (income <= 0) return 0;
+    if (income <= 5000000) return income * 0.05;
+    if (income <= 10000000) return income * 0.1 - 250000;
+    if (income <= 18000000) return income * 0.15 - 750000;
+    if (income <= 32000000) return income * 0.2 - 1650000;
+    if (income <= 52000000) return income * 0.25 - 3250000;
+    if (income <= 80000000) return income * 0.3 - 5850000;
+    return income * 0.35 - 9850000;
+}
+
+function render() {
+    const body = document.getElementById("inputBody");
+    const m = parseInt(document.getElementById('m').value);
+    const y = parseInt(document.getElementById('y').value);
+    const standardDays = standardDaysCache || getStandardWorkingDays(m, y);
+    const source = getWorkdaysSource();
+    
+    let sums = { tn:0, bh:0, tax:0, ded:0, final:0 };
+
+    if (!localData.length) {
+        body.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">Chưa có dữ liệu — bấm Tải Dữ Liệu</td></tr>';
+        return;
+    }
+
+    body.innerHTML = localData.map((r, i) => {
+        const time_salary = Math.round((r.base_salary / standardDays) * r.actual_working_days);
+        const allowance_fund = parseFloat(r.allowance_fund) || 0;
+        const allowance_other = parseFloat(r.allowance_other) || 0;
+        const bonus = parseFloat(r.bonus) || 0;
+        const total_income = time_salary + allowance_fund + allowance_other + bonus;
+        const chuHo = isChuHoRow(r);
+        const rateBhtn = chuHo ? 0 : RATES.bhtn;
+        const bh_total = Math.round(time_salary * (RATES.bhxh + RATES.bhyt + rateBhtn));
+        const taxable = total_income - bh_total - (r.self_deduction + (r.dependents * r.dependent_deduction));
+        const tncn_tax = Math.max(0, Math.round(calculateTNCN(taxable)));
+        const total_deduct = bh_total + tncn_tax;
+        const final_amount = total_income - total_deduct;
+
+        localData[i].time_salary = time_salary;
+        localData[i].allowance_fund = allowance_fund;
+        localData[i].allowance_other = allowance_other;
+        localData[i].bonus = bonus;
+        localData[i].total_income = total_income;
+        localData[i].bh_total = bh_total;
+        localData[i].tncn_tax = tncn_tax;
+        localData[i].total_deduct = total_deduct;
+        localData[i].final_amount = final_amount;
+        localData[i].bhxh = Math.round(time_salary * RATES.bhxh);
+        localData[i].bhyt = Math.round(time_salary * RATES.bhyt);
+        localData[i].bhtn = chuHo ? 0 : Math.round(time_salary * RATES.bhtn);
+
+        sums.tn += total_income; sums.bh += bh_total; sums.tax += tncn_tax; sums.ded += total_deduct; sums.final += final_amount;
+
+        const attDays = Number(r.attendance_work_days) || 0;
+        let workdaysMeta = `Công chuẩn: ${standardDays}`;
+        if (source === 'attendance') {
+            workdaysMeta += attDays > 0
+                ? ` | <span class="text-success">Chấm công: ${attDays} ngày</span>`
+                : ' | <span class="text-warning">Chưa có CC</span>';
+        }
+
+        const workdaysTitle = source === 'attendance'
+            ? (attDays > 0 ? 'Lấy từ Bảng Chấm Công' : 'Chưa có dữ liệu chấm công tháng này')
+            : `Ngày công mặc định (${standardDays} ngày, trừ Chủ Nhật)`;
+
+        return `
+        <tr class="align-middle">
+            <td class="ps-3 border-start border-4 border-primary">
+                <div class="fw-bold text-dark fs-6">${r.fullname}${chuHo ? ' <span class="badge bg-warning text-dark" style="font-size:9px">Chủ hộ</span>' : ''}</div>
+                <div class="small text-muted" style="font-size:10px">${r.position || 'Nhân viên'} | ${workdaysMeta}</div>
+            </td>
+            <td class="money text-muted">${fmt(r.base_salary)}</td>
+            <td>
+                <input type="number" step="0.5" class="form-control form-control-sm text-center fw-bold border-primary" 
+                    value="${r.actual_working_days}" onchange="localData[${i}].actual_working_days=parseFloat(this.value)||0; localData[${i}].manual_override=true; render()"
+                    title="${workdaysTitle}">
+                ${source === 'attendance' && attDays > 0 && !r.manual_override ? '<div class="text-success text-center" style="font-size:9px">Từ chấm công</div>' : ''}
+                ${source === 'default' ? '<div class="text-muted text-center" style="font-size:9px">Mặc định</div>' : ''}
+            </td>
+            <td class="money">${fmt(time_salary)}</td>
+            <td>
+                <input type="number" class="form-control form-control-sm money money-input" style="min-width:68px"
+                    value="${allowance_fund}" onchange="localData[${i}].allowance_fund=parseFloat(this.value)||0; render()">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm money money-input" style="min-width:68px"
+                    value="${allowance_other}" onchange="localData[${i}].allowance_other=parseFloat(this.value)||0; render()">
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm money money-input" style="min-width:68px"
+                    value="${bonus}" onchange="localData[${i}].bonus=parseFloat(this.value)||0; render()">
+            </td>
+            <td class="money fw-bold text-primary">${fmt(total_income)}</td>
+            <td class="money text-ins">${fmt(bh_total)}</td>
+            <td class="money text-tax">${fmt(tncn_tax)}</td>
+            <td class="money text-muted small">${fmt(total_deduct)}</td>
+            <td class="money fw-bolder bg-final text-danger">${fmt(final_amount)}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary" onclick="openEditModal(${i})"><i class="fa fa-edit"></i></button>
+            </td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-danger" onclick="removeEmployee(${i})" title="Xóa khỏi bảng lương">
+            <i class="fa fa-trash"></i>
+    </button>
+</td>
+        </tr>`;
+    }).join("");
+
+    document.getElementById("totalTN").innerText = fmt(sums.tn);
+    document.getElementById("totalBH").innerText = fmt(sums.bh);
+    document.getElementById("totalTax").innerText = fmt(sums.tax);
+    document.getElementById("totalDeduct").innerText = fmt(sums.ded);
+    document.getElementById("grandTotal").innerText = fmt(sums.final);
+    document.getElementById("display_final").innerText = fmt(sums.final) + " ₫";
+}
+
+// Các hàm Modal và Save giữ nguyên logic backend của bạn
+function openAddModal() {
+    document.getElementById('employeeForm').reset();
+    document.getElementById('f_id').value = "";
+    document.getElementById('f_index').value = "";
+    document.getElementById('f_status').value = "1";
+    document.getElementById('f_allowance_fund').value = 0;
+    document.getElementById('f_allowance_other').value = 0;
+    document.getElementById('f_default_bonus').value = 0;
+    document.getElementById('tabHistoryLink').classList.add('d-none');
+    document.getElementById('historyBody').innerHTML = '';
+
+    document.getElementById('modalHeader').className = "modal-header py-2 text-white bg-success";
+    document.getElementById('modalLabel').innerText = "Thêm Nhân Viên Mới";
+
+    updateModalBhPreview();
+    new bootstrap.Modal(document.getElementById('employeeModal')).show();
+}
+
+function openEditModal(index) {
+    const e = localData[index];
+    document.getElementById('f_index').value = index;
+    document.getElementById('f_id').value = e.employee_id || e.id || "";
+    document.getElementById('f_fullname').value = e.fullname || "";
+    document.getElementById('f_id_card').value = e.id_card || "";
+    document.getElementById('f_phone').value = e.phone || "";
+    document.getElementById('f_address').value = e.address || "";
+    document.getElementById('f_position').value = e.position || "";
+    document.getElementById('f_join_date').value = e.join_date || "";
+    document.getElementById('f_base_salary').value = e.base_salary || 0;
+    document.getElementById('f_self_deduction').value = e.self_deduction || 11000000;
+    document.getElementById('f_dependents').value = e.dependents || 0;
+    document.getElementById('f_dependent_deduction').value = e.dependent_deduction || 4400000;
+    document.getElementById('f_reason').value = "";
+    document.getElementById('f_status').value = (e.status !== undefined && e.status !== null) ? e.status : 1;
+
+    const profile = getEmployeeProfile(e.employee_id || e.id);
+    document.getElementById('f_allowance_fund').value = profile?.allowance_fund ?? e.allowance_fund ?? 0;
+    document.getElementById('f_allowance_other').value = profile?.allowance_other ?? e.allowance_other ?? 0;
+    document.getElementById('f_default_bonus').value = profile?.default_bonus ?? e.bonus ?? 0;
+
+    document.getElementById('tabHistoryLink').classList.remove('d-none');
+    document.getElementById('modalHeader').className = "modal-header py-2 text-white bg-primary";
+    document.getElementById('modalLabel').innerText = "CHỈNH SỬA HỒ SƠ";
+
+    updateModalBhPreview();
+    new bootstrap.Modal(document.getElementById('employeeModal')).show();
+}
+
+async function loadSalaryHistory() {
+    const empId = document.getElementById('f_id').value;
+    const body = document.getElementById('historyBody');
+    if (!empId) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Lưu hồ sơ trước để xem lịch sử</td></tr>';
+        return;
+    }
+    body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Đang tải...</td></tr>';
+    try {
+        const r = await fetch(`/api/get_salary_history/${empId}`);
+        const rows = await r.json();
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Chưa có biến động lương</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.map(h => {
+            const oldS = Number(h.old_salary) || 0;
+            const newS = Number(h.new_salary) || 0;
+            const diff = newS - oldS;
+            const pct = oldS ? ((diff / oldS) * 100).toFixed(1) : '—';
+            return `<tr>
+                <td>${h.change_date || '—'}</td>
+                <td class="text-end money">${fmt(oldS)}</td>
+                <td class="text-end money fw-bold">${fmt(newS)}</td>
+                <td class="text-center ${diff >= 0 ? 'text-success' : 'text-danger'}">${diff >= 0 ? '+' : ''}${fmt(diff)} (${pct}%)</td>
+                <td>${h.reason || '—'}</td>
+            </tr>`;
+        }).join('');
+    } catch (err) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Lỗi tải lịch sử</td></tr>';
+    }
+}
+async function commitSaveEmployee() {
+    const payload = {
+        id: document.getElementById('f_id').value,
+        fullname: document.getElementById('f_fullname').value,
+        id_card: document.getElementById('f_id_card').value,
+        phone: document.getElementById('f_phone').value,
+        address: document.getElementById('f_address').value,
+        position: document.getElementById('f_position').value,
+        join_date: document.getElementById('f_join_date').value,
+        base_salary: parseFloat(document.getElementById('f_base_salary').value) || 0,
+        self_deduction: parseFloat(document.getElementById('f_self_deduction').value) || 11000000,
+        dependents: parseInt(document.getElementById('f_dependents').value) || 0,
+        dependent_deduction: parseFloat(document.getElementById('f_dependent_deduction').value) || 4400000,
+        allowance_fund: parseFloat(document.getElementById('f_allowance_fund').value) || 0,
+        allowance_other: parseFloat(document.getElementById('f_allowance_other').value) || 0,
+        default_bonus: parseFloat(document.getElementById('f_default_bonus').value) || 0,
+        status: parseInt(document.getElementById('f_status').value),
+        reason_change: document.getElementById('f_reason').value
+    };
+
+    if (!payload.fullname) return alert("Họ tên không được để trống!");
+
+    try {
+        const url = payload.id ? '/api/update_employee' : '/api/add_employee';
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const res = await response.json();
+        
+        if (res.success) {
+            bootstrap.Modal.getInstance(document.getElementById('employeeModal')).hide();
+            const idx = document.getElementById('f_index').value;
+            const empKey = payload.id || res.id;
+            if (empKey) {
+                const prof = {
+                    allowance_fund: payload.allowance_fund,
+                    allowance_other: payload.allowance_other,
+                    default_bonus: payload.default_bonus,
+                };
+                const raw = getEmployeeProfile(empKey);
+                if (raw) Object.assign(raw, prof);
+                else if (res.id) rawEmployees.push({ id: res.id, employee_id: res.id, ...payload, ...prof });
+            }
+            if (idx !== '' && localData[idx]) {
+                Object.assign(localData[idx], {
+                    fullname: payload.fullname,
+                    id_card: payload.id_card,
+                    phone: payload.phone,
+                    address: payload.address,
+                    position: payload.position,
+                    join_date: payload.join_date,
+                    base_salary: payload.base_salary,
+                    self_deduction: payload.self_deduction,
+                    dependents: payload.dependents,
+                    dependent_deduction: payload.dependent_deduction,
+                    allowance_fund: payload.allowance_fund,
+                    allowance_other: payload.allowance_other,
+                    bonus: payload.default_bonus,
+                    status: payload.status,
+                    is_chu_ho: res.is_chu_ho ? 1 : 0,
+                });
+                if (res.owner_representative_name) {
+                    OWNER.representative_name = res.owner_representative_name;
+                }
+                render();
+            }
+            fetchInitialData();
+        } else {
+            alert(res.message || "Lưu thất bại");
+        }
+    } catch (e) {
+        alert("Lỗi kết nối server");
+    }
+}
+
+async function saveSalary() {
+    if(!localData.length) return alert("Bảng lương trống!");
+    const payload = {
+        month: document.getElementById('m').value,
+        year: document.getElementById('y').value,
+        date: document.getElementById('date_input').value,
+        records: localData
+    };
+    try {
+        const r = await fetch("/api/save_salary", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        });
+        const res = await r.json();
+        if(res.success) {
+            alert(res.message || "Đã chốt bảng lương thành công!");
+            location.href = "/SoCongNoPhaiTraNhanVien";
+        }
+    } catch (e) { alert("Lỗi kết nối"); }
+}
+
+function removeEmployee(index) {
+    const employee = localData[index];
+    if (!employee) return;
+
+    if (confirm(`Bạn có chắc muốn xóa nhân viên "${employee.fullname}" khỏi bảng lương tháng này không?\n\nHành động này chỉ ảnh hưởng đến kỳ lương hiện tại.`)) {
+        localData.splice(index, 1);
+        render();
+    }
+}
+</script>
+{% endblock %}

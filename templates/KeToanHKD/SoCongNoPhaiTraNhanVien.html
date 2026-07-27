@@ -1,0 +1,406 @@
+{% extends "KeToanHKD/_layout.html" %}
+{% block title %}Công Nợ Phải Trả Nhân Viên{% endblock %}
+
+{% block hkd_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .money-lg { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.35rem; }
+    .debt { color: #ef4444; }
+    .flatpickr-calendar { z-index: 10000 !important; }
+    .period-row { cursor: pointer; }
+    .period-row:hover { background: #f8f9fa; }
+    .emp-detail-row { background: #fafbfc; font-size: 0.92rem; }
+</style>
+{% endblock %}
+
+{% block hkd_content %}
+<div class="container-fluid py-2">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h3 class="fw-bold text-primary mb-1">Công Nợ Phải Trả Nhân Viên</h3>
+            <p class="text-muted small mb-0">
+                <strong>Mặc định:</strong> trả lương cả kỳ (1 phiếu chi) —
+                <strong>Trả lẻ</strong> chỉ khi tất toán / trường hợp đặc biệt
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('salary_create') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-calculator me-1"></i> Lập bảng lương
+            </a>
+            <a href="{{ url_for('DanhSachBangLuong_05LDTL') }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-file-earmark-text me-1"></i> Danh sách bảng lương
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <div class="small text-muted text-uppercase fw-bold">Kỳ lương chưa trả đủ</div>
+                <div id="periodCount" class="money-lg debt mt-1">0</div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm text-center p-3 bg-primary text-white">
+                <div class="small text-white-50 text-uppercase fw-bold">Tổng lương chưa thanh toán</div>
+                <div id="totalUnpaid" class="money-lg fw-bold mt-1">0 ₫</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden mb-4">
+        <div class="card-header bg-white fw-bold">
+            <i class="bi bi-calendar3 me-2 text-primary"></i>Kỳ lương chưa thanh toán
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Kỳ lương</th>
+                        <th class="text-center">Số NV</th>
+                        <th class="text-end">Phải trả</th>
+                        <th class="text-end">Đã trả</th>
+                        <th class="text-end">Còn lại</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th>Phiếu chi</th>
+                        <th class="text-center" style="width:140px">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="periodBody">
+                    <tr><td colspan="8" class="text-center text-muted py-4">Đang tải...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden" id="detailCard" style="display:none">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span class="fw-bold" id="detailTitle">Chi tiết kỳ lương</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="hidePeriodDetail()">Đóng</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nhân viên</th>
+                        <th class="text-end">Thực lĩnh</th>
+                        <th class="text-end">Đã trả</th>
+                        <th class="text-end">Còn lại</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th class="text-center" style="width:90px">Trả lẻ</th>
+                    </tr>
+                </thead>
+                <tbody id="empDetailBody"></tbody>
+            </table>
+        </div>
+        <div class="card-footer small text-muted">
+            Trả lẻ từng nhân viên chỉ dùng khi tất toán lương riêng lẻ, không thay cho trả cả kỳ.
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="payPeriodModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-success shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-people-fill me-2"></i>Trả lương cả kỳ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="pp_month">
+                <input type="hidden" id="pp_year">
+                <div class="alert alert-success py-2 small mb-3">
+                    Một phiếu chi tổng cho toàn bộ nhân viên trong kỳ — phù hợp quy mô lớn.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Kỳ lương</label>
+                    <input type="text" class="form-control bg-light" id="pp_label" readonly>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Số nhân viên</label>
+                        <input type="text" class="form-control bg-light" id="pp_emp_count" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Còn phải trả</label>
+                        <input type="text" class="form-control fw-bold text-danger bg-light" id="pp_amount_display" readonly>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Ngày chi trả <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="pp_pay_date">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Người nhận <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="pp_receiver" value="Tập thể cán bộ nhân viên">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Lý do chi</label>
+                    <textarea class="form-control" id="pp_reason" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phương thức thanh toán</label>
+                    <select class="form-select" id="pp_pay_method">
+                        <option value="112" selected>Chuyển khoản (112)</option>
+                        <option value="111">Tiền mặt (111)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-success px-4" onclick="confirmPeriodPayment()">
+                    <i class="bi bi-check2-circle me-1"></i> Lập phiếu chi cả kỳ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="payEmpModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-warning shadow-lg">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-check me-2"></i>Trả lương lẻ (NV)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="pe_employee_id">
+                <input type="hidden" id="pe_month">
+                <input type="hidden" id="pe_year">
+                <div class="alert alert-warning py-2 small mb-3">
+                    Chỉ dùng khi trả riêng một nhân viên (nghỉ việc, tất toán…). Kỳ đang trả lẻ vẫn có thể trả nốt phần còn lại bằng 「Trả cả kỳ」.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Nhân viên / Kỳ</label>
+                    <input type="text" class="form-control bg-light" id="pe_label" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Ngày chi trả <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="pe_pay_date">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Số tiền trả</label>
+                    <input type="text" class="form-control fw-bold text-danger bg-light" id="pe_amount_display" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Người nhận <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="pe_receiver">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Lý do chi</label>
+                    <textarea class="form-control" id="pe_reason" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phương thức</label>
+                    <select class="form-select" id="pe_pay_method">
+                        <option value="112">Chuyển khoản (112)</option>
+                        <option value="111">Tiền mặt (111)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-warning px-4" onclick="confirmEmpPayment()">Xác nhận trả lẻ</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block hkd_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+const fmt = n => (Number(n) || 0).toLocaleString('vi-VN') + ' ₫';
+const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+let periods = [];
+let activePeriod = null;
+const fpCfg = { locale: 'vn', dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, defaultDate: 'today' };
+
+async function loadPeriods() {
+    const res = await fetch('/api/debt/salary-periods');
+    const data = await res.json();
+    periods = data.periods || [];
+    document.getElementById('periodCount').textContent = data.summary?.unpaid_periods || 0;
+    document.getElementById('totalUnpaid').textContent = fmt(data.summary?.total_unpaid || 0);
+    renderPeriods();
+}
+
+function renderPeriods() {
+    const body = document.getElementById('periodBody');
+    if (!periods.length) {
+        body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không có kỳ lương chưa thanh toán đủ.</td></tr>';
+        return;
+    }
+    body.innerHTML = periods.map(p => {
+        const vLink = p.voucher_no && p.phieu_chi_id
+            ? `<a href="/PhieuChi/in/${p.phieu_chi_id}" target="_blank" class="fw-bold text-primary">${esc(p.voucher_no)}</a>`
+            : '—';
+        return `<tr class="period-row">
+            <td class="fw-bold text-primary">${esc(p.period_label)}</td>
+            <td class="text-center"><span class="badge bg-light text-dark border">${p.employee_count}</span></td>
+            <td class="text-end">${fmt(p.phai_nop)}</td>
+            <td class="text-end text-success">${fmt(p.da_nop)}</td>
+            <td class="text-end fw-bold debt">${fmt(p.con_lai)}</td>
+            <td class="text-center"><span class="badge ${p.status_class}">${esc(p.status)}</span></td>
+            <td>${vLink}</td>
+            <td class="text-center text-nowrap">
+                <button class="btn btn-sm btn-success btn-pay-period" data-month="${p.month}" data-year="${p.year}" title="Trả cả kỳ">
+                    <i class="bi bi-cash-stack"></i> Trả cả kỳ
+                </button>
+                <button class="btn btn-sm btn-outline-primary btn-view-period" data-month="${p.month}" data-year="${p.year}" title="Chi tiết NV">
+                    <i class="bi bi-list-ul"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function showPeriodDetail(month, year) {
+    const res = await fetch(`/api/debt/salary-period-detail?month=${month}&year=${year}`);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+        Swal.fire('Lỗi', data.error || 'Không tải được chi tiết', 'error');
+        return;
+    }
+    activePeriod = data.period;
+    document.getElementById('detailCard').style.display = 'block';
+    document.getElementById('detailTitle').textContent =
+        `${data.period.period_label} — ${data.period.employee_count} nhân viên — còn ${fmt(data.period.con_lai)}`;
+    document.getElementById('empDetailBody').innerHTML = (data.employees || []).map(e => `
+        <tr class="emp-detail-row">
+            <td><strong>${esc(e.fullname)}</strong><div class="small text-muted">${esc(e.position || '')}</div></td>
+            <td class="text-end">${fmt(e.phai_nop)}</td>
+            <td class="text-end text-success">${fmt(e.da_nop)}</td>
+            <td class="text-end fw-bold ${e.con_lai > 0 ? 'debt' : ''}">${fmt(e.con_lai)}</td>
+            <td class="text-center"><span class="badge ${e.status_class}">${esc(e.status)}</span></td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-warning btn-pay-emp ${e.con_lai <= 0 ? 'disabled' : ''}"
+                    data-employee-id="${e.employee_id}" data-month="${month}" data-year="${year}"
+                    data-amount="${e.con_lai}" data-fullname="${esc(e.fullname)}" data-period="${esc(data.period.period_label)}"
+                    title="Trả lẻ">
+                    <i class="bi bi-person-lines-fill"></i>
+                </button>
+            </td>
+        </tr>`).join('');
+    document.getElementById('detailCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hidePeriodDetail() {
+    document.getElementById('detailCard').style.display = 'none';
+    activePeriod = null;
+}
+
+function openPayPeriodModal(month, year) {
+    const p = periods.find(x => x.month == month && x.year == year);
+    if (!p) return;
+    document.getElementById('pp_month').value = month;
+    document.getElementById('pp_year').value = year;
+    document.getElementById('pp_label').value = p.period_label;
+    document.getElementById('pp_emp_count').value = p.employee_count + ' nhân viên';
+    document.getElementById('pp_amount_display').value = fmt(p.con_lai);
+    document.getElementById('pp_reason').value = `Thanh toán lương ${p.period_label} (${p.employee_count} nhân viên)`;
+    new bootstrap.Modal('#payPeriodModal').show();
+}
+
+function openPayEmpModal(employeeId, month, year, amount, fullname, periodLabel) {
+    document.getElementById('pe_employee_id').value = employeeId;
+    document.getElementById('pe_month').value = month;
+    document.getElementById('pe_year').value = year;
+    document.getElementById('pe_label').value = `${fullname} — ${periodLabel}`;
+    document.getElementById('pe_amount_display').value = fmt(amount);
+    document.getElementById('pe_receiver').value = fullname;
+    document.getElementById('pe_reason').value = `Thanh toán lương lẻ ${periodLabel} — ${fullname}`;
+    new bootstrap.Modal('#payEmpModal').show();
+}
+
+async function confirmPeriodPayment() {
+    const payload = {
+        month: document.getElementById('pp_month').value,
+        year: document.getElementById('pp_year').value,
+        pay_date: document.getElementById('pp_pay_date').value,
+        amount: parseFloat(document.getElementById('pp_amount_display').value.replace(/\D/g, '')),
+        receiver: document.getElementById('pp_receiver').value.trim(),
+        reason: document.getElementById('pp_reason').value.trim(),
+        pay_method: document.getElementById('pp_pay_method').value,
+    };
+    const res = await fetch('/api/salary/pay-period', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.success) {
+        bootstrap.Modal.getInstance('#payPeriodModal').hide();
+        hidePeriodDetail();
+        await loadPeriods();
+        Swal.fire('Thành công', `Đã lập phiếu chi ${data.voucher}`, 'success');
+    } else {
+        Swal.fire('Lỗi', data.error || 'Không thể lập phiếu chi', 'error');
+    }
+}
+
+async function confirmEmpPayment() {
+    const payload = {
+        employee_id: document.getElementById('pe_employee_id').value,
+        month: document.getElementById('pe_month').value,
+        year: document.getElementById('pe_year').value,
+        pay_date: document.getElementById('pe_pay_date').value,
+        amount: parseFloat(document.getElementById('pe_amount_display').value.replace(/\D/g, '')),
+        receiver: document.getElementById('pe_receiver').value.trim(),
+        reason: document.getElementById('pe_reason').value.trim(),
+        pay_method: document.getElementById('pe_pay_method').value,
+    };
+    if (!payload.receiver) {
+        Swal.fire('Lưu ý', 'Vui lòng nhập người nhận', 'warning');
+        return;
+    }
+    const res = await fetch('/api/salary/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.success) {
+        bootstrap.Modal.getInstance('#payEmpModal').hide();
+        await loadPeriods();
+        if (activePeriod) showPeriodDetail(activePeriod.month, activePeriod.year);
+        Swal.fire('Thành công', `Đã lập phiếu chi ${data.voucher}`, 'success');
+    } else {
+        Swal.fire('Lỗi', data.error || 'Không thể lập phiếu chi', 'error');
+    }
+}
+
+document.getElementById('periodBody').addEventListener('click', (e) => {
+    const payBtn = e.target.closest('.btn-pay-period');
+    if (payBtn) {
+        e.stopPropagation();
+        openPayPeriodModal(payBtn.dataset.month, payBtn.dataset.year);
+        return;
+    }
+    const viewBtn = e.target.closest('.btn-view-period');
+    if (viewBtn) {
+        showPeriodDetail(viewBtn.dataset.month, viewBtn.dataset.year);
+    }
+});
+
+document.getElementById('empDetailBody').addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-pay-emp');
+    if (!btn || btn.classList.contains('disabled')) return;
+    openPayEmpModal(btn.dataset.employeeId, btn.dataset.month, btn.dataset.year,
+        btn.dataset.amount, btn.dataset.fullname, btn.dataset.period);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    flatpickr('#pp_pay_date', fpCfg);
+    flatpickr('#pe_pay_date', fpCfg);
+    loadPeriods();
+    const q = new URLSearchParams(location.search);
+    if (q.get('month') && q.get('year')) {
+        showPeriodDetail(q.get('month'), q.get('year'));
+    }
+});
+</script>
+{% endblock %}

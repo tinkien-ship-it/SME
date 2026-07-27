@@ -1,0 +1,2265 @@
+{% extends "base.html" %}
+{% block title %}KETO 68 POS - Quản Lý F&B Chuyên Nghiệp{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    :root { --fb-primary: #1e3a8a; --fb-success: #10b981; --fb-danger: #ef4444; --fb-bg: #f8fafc; }
+    body { background-color: var(--fb-bg); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    .table-card { border: none; border-radius: 15px; transition: all 0.3s; cursor: pointer; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .table-card:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0,0,0,0.1); }
+    .table-available { border-top: 6px solid var(--fb-success); }
+    .table-busy { border-top: 6px solid var(--fb-danger); background: #fff1f2; }
+    
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; max-height: 65vh; overflow-y: auto; padding: 5px; }
+    .product-item { background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; position: relative; padding-bottom: 45px; }
+    .product-item:hover { border-color: var(--fb-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    
+    /* Grid riêng cho order tại bàn không cần padding dưới vì không có nút định mức */
+    .order-product-item { background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; position: relative; }
+    .order-product-item:hover { border-color: var(--fb-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+    .cart-container { background: white; border-radius: 16px; height: calc(100vh - 160px); display: flex; flex-direction: column; border: 1px solid #e2e8f0; }
+    .cart-items { flex-grow: 1; overflow-y: auto; padding: 15px; }
+    .cart-item { padding: 12px 0; border-bottom: 1px dashed #e2e8f0; }
+    
+    .w-fit-content { width: fit-content; }
+    .btn-recipe-trigger { position: absolute; bottom: 8px; left: 8px; right: 8px; z-index: 10; font-size: 0.75rem; padding: 4px 8px; background: rgba(30, 58, 138, 0.9); color: white; border: none; border-radius: 6px; }
+    .btn-recipe-trigger:hover { background: #1e3a8a; color: white; }
+
+    .customer-qr-screen {
+        position: fixed; inset: 0; z-index: 20000; background: #fff;
+        display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px;
+    }
+    .customer-qr-screen.active { display: flex; }
+    .customer-qr-screen__label {
+        font-size: 1.1rem; font-weight: 700; color: #64748b;
+        letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 24px;
+    }
+    .customer-qr-screen__img {
+        width: min(78vw, 420px); height: min(78vw, 420px); object-fit: contain;
+        border: 8px solid #f1f5f9; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    }
+    .customer-qr-screen__amount {
+        margin-top: 28px; font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 800; color: #059669;
+    }
+    .customer-qr-screen__staff {
+        position: fixed; bottom: 0; left: 0; right: 0; padding: 14px 20px;
+        background: rgba(248, 250, 252, 0.96); border-top: 1px solid #e2e8f0;
+        display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 bg-white p-3 rounded-4 shadow-sm border-start border-primary border-5">
+        <div class="d-flex align-items-center">
+            <div class="bg-primary text-white p-2 rounded-3 me-3"><i class="bi bi-cup-hot-fill fs-4"></i></div>
+            <h4 class="mb-0 fw-bold text-primary">KETO 68 <span class="text-primary">CHO NHÀ HÀNG, QUÁN ĂN VÀ QUÁN CÀ PHÊ</span></h4>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary fw-bold" data-bs-toggle="modal" data-bs-target="#setupTableModal" onclick="loadAreaSelect()"><i class="bi bi-gear-wide-connected"></i> Nhập Khu Vực và Số Bàn</button>
+            <button class="btn btn-outline-dark fw-bold" data-bs-toggle="modal" data-bs-target="#menuMgmtModal"><i class="bi bi-file-earmark-excel"></i> Nhập Menu Excel</button>
+            <button class="btn btn-primary fw-bold" onclick="openModalForCreateMenu()"><i class="bi bi-plus-circle"></i> Thêm Món Thủ Công</button>
+        </div>
+    </div>
+
+    <ul class="nav nav-pills mb-4 p-1 bg-white rounded-pill shadow-sm w-fit-content" id="fbTab">
+        <li class="nav-item"><button class="nav-link active rounded-pill px-4 fw-bold" data-bs-toggle="tab" data-bs-target="#tables-pane">Sơ đồ bàn</button></li>
+        <li class="nav-item"><button class="nav-link rounded-pill px-4 fw-bold" data-bs-toggle="tab" data-bs-target="#menu-pane">Quản lý Menu & Định mức</button></li>
+        <li class="nav-item"><button class="nav-link rounded-pill px-4 fw-bold" data-bs-toggle="tab" data-bs-target="#service-tab">Theo dõi Phục vụ</button></li>
+        <li class="nav-item"><button class="nav-link rounded-pill px-4 fw-bold" data-bs-toggle="tab" data-bs-target="#draft-inv-pane">Kiểm kê NVL cuối ngày</button></li>
+        <li class="nav-item"><button class="nav-link rounded-pill px-4 fw-bold text-danger" data-bs-toggle="tab" data-bs-target="#checkout-pane">Chốt doanh thu</button></li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="tables-pane">
+            <div id="areaContainer" class="row"></div>
+        </div>
+
+        <div class="tab-pane fade" id="menu-pane">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-primary mb-0"><i class="bi bi-journal-text me-2"></i>Danh sách Thực đơn & Định mức NVL</h5>
+                    <div style="max-width: 300px;" class="input-group shadow-sm rounded-pill overflow-hidden">
+                        <span class="input-group-text bg-white border-0 ps-3"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-0" placeholder="Tìm món thiết lập..." id="mgmtMenuSearch" onkeyup="filterMgmtMenu()">
+                    </div>
+                </div>
+                <div class="product-grid" id="mgmtMenuArea"></div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="draft-inv-pane">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <h5 class="fw-bold text-primary mb-1"><i class="bi bi-clipboard-check me-2"></i>Kiểm kê NVL cuối ngày</h5>
+                        <p class="text-muted small mb-0">
+                            Cuối ca, nhân viên đếm <strong>tồn thực tế</strong> còn lại. Hệ thống tính
+                            <strong>Đã dùng = Tồn sổ − Tồn thực</strong>, gom tất cả NVL vào
+                            <strong>một phiếu xuất kho</strong> khi bấm Chốt cuối ngày.
+                            (Áp dụng món chế biến <em>chưa thiết lập định mức</em> — món có định mức đã trừ kho lúc thanh toán.)
+                        </p>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-light text-dark border" id="stocktakeDateLabel">—</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-hover align-middle" id="stocktakeTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nguyên vật liệu</th>
+                                <th class="text-end">Tồn sổ</th>
+                                <th class="text-end" style="min-width:130px">Tồn thực kiểm</th>
+                                <th class="text-end">Đã dùng (tính)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stocktakeBody">
+                            <tr><td colspan="4" class="text-center text-muted py-4">Đang tải danh sách NVL...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    <button type="button" class="btn btn-primary fw-bold" onclick="saveStocktakeBatch()">
+                        <i class="bi bi-save me-1"></i> Lưu kiểm kê
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="loadStocktakeSheet()">
+                        <i class="bi bi-arrow-clockwise"></i> Tải lại
+                    </button>
+                </div>
+
+                <hr>
+                <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-list-check me-1"></i>Danh sách chờ chốt (sẽ vào 1 phiếu xuất)</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Thời gian</th>
+                                <th>Nguyên liệu</th>
+                                <th class="text-end">SL xuất</th>
+                                <th>Ghi chú</th>
+                                <th class="text-center">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="draftHistoryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="checkout-pane">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-5 mx-auto" style="max-width: 500px;">
+                <i class="bi bi-shield-lock text-danger display-1 mb-3"></i>
+                <h3 class="fw-bold">Chốt kho & Doanh thu</h3>
+                <p class="text-muted">Sau khi kiểm kê NVL ở tab bên cạnh, bấm chốt để trừ kho và lập <strong>một phiếu xuất kho duy nhất</strong> cho toàn bộ nguyên liệu đã dùng trong ngày.</p>
+                <button class="btn btn-danger btn-lg w-100 rounded-pill mt-3 fw-bold" onclick="finalizeDailyInventory()">CHỐT CUỐI NGÀY</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="setupTableModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">Cấu hình Sơ đồ Quán</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="card bg-light border-0 mb-4">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3 text-success"><i class="bi bi-file-earmark-excel"></i> Nhập nhanh bằng Excel</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <button class="btn btn-sm btn-outline-success w-100" onclick="downloadTableTemplate()">Tải mẫu</button>
+                            </div>
+                            <div class="col-6">
+                                <input type="file" id="tableExcelFile" class="d-none" onchange="importTableExcel()">
+                                <button class="btn btn-sm btn-success w-100" onclick="document.getElementById('tableExcelFile').click()">Nhập Excel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold mb-3">Thêm thủ công</h6>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Tên Khu vực (Tầng, Khu...)</label>
+                    <div class="input-group">
+                        <input type="text" id="areaName" class="form-control" placeholder="Tầng trệt...">
+                        <button class="btn btn-primary" onclick="saveArea()">Thêm KV</button>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Thêm Bàn vào Khu vực</label>
+                    <select id="areaSelect" class="form-select mb-2"></select>
+                    <input type="text" id="tableNameInput" class="form-control mb-2" placeholder="Tên bàn (Bàn 01...)">
+                    <button class="btn btn-dark w-100" onclick="saveTable()">Xác nhận thêm Bàn</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="menuMgmtModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white"><h5>Nhập Menu Bằng File Excel</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body text-center p-4">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <button class="btn btn-outline-success w-100 py-3" onclick="downloadMenuTemplate()">
+                            <i class="bi bi-cloud-download fs-3 d-block"></i> Tải Menu
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <input type="file" id="menuExcelFile" class="d-none" onchange="importMenuExcel()">
+                        <button class="btn btn-success w-100 py-3" onclick="document.getElementById('menuExcelFile').click()">
+                            <i class="bi bi-cloud-upload fs-3 d-block"></i> Nhập Menu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tab 3: THEO DÕI PHỤC VỤ (MỚI) -->
+        <div class="tab-pane fade" id="service-tab">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-clipboard-check"></i> Theo dõi Phục vụ Theo Bàn</h5>
+                <div id="serviceTrackingArea" class="order-status-grid"></div>
+            </div>
+        </div>
+
+
+<div class="modal fade" id="addMenuModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="menuModalTitle"><i class="bi bi-plus-circle me-2"></i>Thêm Món Ăn Mới</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="manualMenuForm" enctype="multipart/form-data">
+                <input type="hidden" id="m_mode" value="add">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Mã món (*)</label>
+                            <input type="text" class="form-control" id="m_item_code" name="item_code" placeholder="Hệ thống tự tạo mã">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Tên món ăn / Thức uống (*)</label>
+                            <input type="text" class="form-control" id="m_name" name="name" placeholder="Ví dụ: Cà phê sữa đá" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Đơn vị tính (*)</label>
+                            <input type="text" class="form-control" id="m_unit" name="unit" placeholder="Ly, Đĩa, Chai..." required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Giá bán lẻ (VND) (*)</label>
+                            <input type="number" class="form-control" id="m_base_price" name="base_price" value="0" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Đơn vị sỉ</label>
+                            <input type="text" class="form-control" id="m_unit1" name="unit1" placeholder="Thùng, Két,...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Giá bán sỉ (VND)</label>
+                            <input type="number" class="form-control" id="m_price" name="price" value="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Đồ uống hay Món ăn</label>
+                            <select class="form-select" id="m_product_category" name="product_category">
+                                <option value="Món ăn">Món ăn</option>
+                                <option value="Đồ uống">Đồ uống</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Loại sản phẩm</label>
+                            <select class="form-select" id="m_product_type" name="product_type">
+                                <option value="processed">Món chế biến (Bếp/Pha chế)</option>
+                                <option value="ready_made">Hàng bán sẵn (Đóng chai/lon)</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Hình ảnh món ăn</label>
+                            <input type="file" class="form-control" id="m_image" name="image" accept="image/*">
+                            <div class="form-text">Ảnh sẽ được lưu tự động vào thư mục hệ thống.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Lưu thực đơn</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="recipeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-sliders me-2"></i>Định mức NVL: <span id="recipeMenuName" class="text-warning">---</span></h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="recipeItemForm" class="row g-2 align-items-end mb-4 bg-light p-3 rounded-3 border">
+                    <input type="hidden" id="recipeMenuId">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Chọn nguyên liệu / hàng hóa thành phần</label>
+                        <select class="form-select select2" id="recipeProductSelect" required></select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Số lượng tiêu hao</label>
+                        <input type="number" step="0.0001" class="form-control" id="recipeQty" placeholder="0.00" required>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-plus-lg"></i> Thêm định mức</button>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tên hàng hóa / Nguyên vật liệu</th>
+                                <th class="text-end" style="width: 150px;">Lượng tiêu hao</th>
+                                <th class="text-center" style="width: 100px;">ĐVT</th>
+                                <th class="text-center" style="width: 100px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recipeTableBody">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">Chưa cấu hình định mức cho món này</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="orderModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header border-0 shadow-sm">
+                <h5 class="fw-bold">Bàn: <span id="currentTableName" class="text-primary">---</span></h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-light">
+                <div class="row g-0 h-100">
+                    <div class="col-md-8 p-3">
+                        <div class="input-group mb-3 shadow-sm rounded-pill overflow-hidden">
+                            <span class="input-group-text bg-white border-0 ps-3"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control border-0" placeholder="Tìm món nhanh..." id="menuSearch" onkeyup="filterOrderMenu()">
+                        </div>
+                        <div class="product-grid" id="orderMenuArea"></div>
+                    </div>
+                    <div class="col-md-4 p-3 border-start bg-white">
+                        <div class="cart-container shadow-sm">
+                            <div class="p-3 border-bottom fw-bold"><i class="bi bi-list-check me-2"></i>Chi tiết gọi món</div>
+                            <div class="cart-items" id="cartItems"></div>
+                            <div class="p-4 border-top">
+                                <div class="d-flex justify-content-between h4 mb-4"><span>Tổng cộng:</span><span id="cartTotal" class="text-danger fw-bold">0đ</span></div>
+                                <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 fs-5" onclick="openPaymentModal()">THANH TOÁN</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-wallet2 me-2"></i>Thanh Toán & Hóa Đơn</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-7 border-end">
+                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2">Thông tin khách hàng</h6>
+                        <div class="row g-2">
+                            <div class="col-12 mb-2">
+                                <label class="small fw-bold">Tên Khách Hàng / Đơn vị</label>
+                                <input type="text" class="form-control" id="pay_customer_name" placeholder="Ví dụ: Nguyễn Văn A">
+                            </div>
+                            <div class="col-12 mb-2">
+                                <label class="small fw-bold">Tên Công Ty (Nếu có)</label>
+                                <input type="text" class="form-control" id="pay_company_name">
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="small fw-bold">MST / CCCD</label>
+                                <input type="text" class="form-control" id="pay_tax_authority_code">
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="small fw-bold">Số điện thoại</label>
+                                <input type="text" class="form-control" id="pay_phone">
+                            </div>
+                            <div class="col-12 mb-2">
+                                <label class="small fw-bold">Địa chỉ</label>
+                                <input type="text" class="form-control" id="pay_address">
+                            </div>
+                            <div class="col-12 mb-2">
+                                <label class="small fw-bold">Email nhận hóa đơn</label>
+                                <input type="email" class="form-control" id="pay_email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <h6 class="fw-bold mb-3 text-primary border-bottom pb-2">Hình thức thanh toán</h6>
+                        <div class="mb-3">
+                            <label class="small fw-bold">Phương thức</label>
+                            <select class="form-select form-select-lg fw-bold text-primary" id="pay_method">
+                                <option value="111">Tiền mặt (111)</option>
+                                <option value="112">Chuyển khoản (112)</option>
+                                <option value="131">Ghi nợ công nợ (131)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="p-3 bg-light rounded mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Tổng tiền:</span>
+                                <span id="pay_total_display" class="fw-bold text-danger fs-5">0đ</span>
+                            </div>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="pay_is_einvoice">
+                                <label class="form-check-label fw-bold text-success" for="pay_is_einvoice">Xuất hóa đơn điện tử</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="small fw-bold">Ghi chú</label>
+                            <textarea class="form-control" id="pay_note" rows="2"></textarea>
+                        </div>
+                        
+                        <button class="btn btn-primary w-100 py-3 fw-bold shadow" onclick="executeCheckout()">
+                            <i class="bi bi-check-circle me-2"></i>HOÀN TẤT THANH TOÁN
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="customerQrScreen" class="customer-qr-screen" aria-hidden="true">
+    <div class="customer-qr-screen__label">Quét mã để thanh toán</div>
+    <div id="customerQrCode" class="text-muted small mb-2"></div>
+    <img id="customerQrImage" class="customer-qr-screen__img" src="" alt="Mã QR thanh toán">
+    <div id="customerQrAmount" class="customer-qr-screen__amount">0 ₫</div>
+    <div class="customer-qr-screen__staff">
+        <button type="button" class="btn btn-success btn-lg px-4 fw-bold" onclick="confirmCustomerQrPayment()">
+            <i class="bi bi-check-circle me-1"></i> Đã nhận tiền
+        </button>
+        <button type="button" class="btn btn-outline-secondary" onclick="closeCustomerQrScreen()">Đóng</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    let activeTableId = null;   
+    let activeSaleId = null;    
+    let currentTotal = 0;       
+    let allItems = [];
+    let currentPendingSaleId = null;
+    let customerQrOnConfirm = null;
+    let qrPollTimer = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    $('.select2').select2({ width: '100%' });
+    
+    loadTables();
+    loadIngredients();
+    loadStocktakeSheet();
+    loadDraftHistory();
+    fetchMenu();
+    setupManualMenuForm();
+    setInterval(loadServiceTracking, 3000);
+
+    document.querySelector('[data-bs-target="#draft-inv-pane"]')?.addEventListener('shown.bs.tab', () => {
+        loadStocktakeSheet();
+        loadDraftHistory();
+    });
+});
+
+
+// ==================== THEO DÕI PHỤC VỤ ====================
+async function loadServiceTracking() {
+    try {
+        const res = await fetch('/api/fb/active-orders');
+        if (!res.ok) throw new Error('Lỗi server');
+        const data = await res.json();
+        if (data.success) {
+            renderServiceTracking(data.orders || []);
+        } else {
+            renderServiceTracking([]);
+        }
+    } catch (e) {
+        console.error('Lỗi tải theo dõi phục vụ:', e);
+        renderServiceTracking([]);
+    }
+}
+
+function renderServiceTracking(orders) {
+    const container = document.getElementById('serviceTrackingArea');
+    
+    if (!orders || orders.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5 text-muted bg-white rounded-3 shadow-sm border">
+                <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary"></i>
+                <span class="fw-medium">Chưa có đơn hàng nào đang phục vụ</span>
+            </div>`;
+        return;
+    }
+
+    let html = '';
+
+    orders.forEach(order => {
+        let itemsHtml = '';
+        
+        order.items.forEach(item => {
+            const minutes = item.minutes_waiting || 0;
+            const timePlaced = item.created_at ? new Date(item.created_at).toLocaleTimeString('vi-VN', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }) : '--:--';
+
+            // CHUẨN HÓA HIỂN THỊ THỜI GIAN CHỜ (Nếu >= 60 phút thì chuyển đổi sang dạng tiếng Việt trực quan)
+            let waitingTimeText = `${minutes} phút`;
+            if (minutes >= 60) {
+                const hrs = Math.floor(minutes / 60);
+                const mins = Math.round(minutes % 60);
+                waitingTimeText = mins > 0 ? `${hrs} tiếng ${mins} phút` : `${hrs} tiếng`;
+            }
+
+            // Chuẩn hóa dữ liệu số lượng thành kiểu số thực
+            const totalQty = parseFloat(item.quantity || 0);
+            const qtyServed = parseFloat(item.qty_served || item.quantity_served || 0);
+            
+            // LẤY CHÍNH XÁC GIÁ TRỊ TỪ CỘT unit ĐƯỢC BACKEND TRẢ VỀ TỪ BẢNG sale_items
+            const displayUnit = item.unit ? item.unit : 'Món';
+
+            // Nhận diện trạng thái sỉ hay lẻ dựa trên trường UseSaleUnit của sale_items để đồng bộ nút bấm
+            const useSaleUnitRaw = item.UseSaleUnit !== undefined ? item.UseSaleUnit : item.use_sale_unit;
+            const isWholesale = (useSaleUnitRaw === 1 || useSaleUnitRaw === '1' || useSaleUnitRaw === true || useSaleUnitRaw === 'true');
+
+            // Tính số lượng gọi thêm khi đã có phần được phục vụ trước đó (qtyServed > 0).
+            const qtyExtra = (qtyServed > 0 && totalQty > qtyServed) ? (totalQty - qtyServed) : 0;
+
+            let statusHtml = '';
+            let buttonHtml = '';
+            let rowClass = '';
+
+            // LỰA CHỌN TRẠNG THÁI HIỂN THỊ VÀ TRUYỀN THÊM BIẾN isWholesale VÀO HÀM markItemServed
+if (qtyServed > 0 && totalQty > qtyServed) {
+    rowClass = 'table-warning-custom';
+    statusHtml = `<span class="badge bg-info text-dark border border-info px-3 py-2 rounded-pill fw-bold text-uppercase fs-6" style="animation: pulse-info 2s infinite; white-space: nowrap;">
+                    <i class="fa-solid fa-bell me-1"></i> Khách gọi thêm
+                  </span>`;
+    buttonHtml = `
+        <button class="btn btn-sm btn-warning text-dark px-3 py-2 shadow-sm fw-bold border border-warning-subtle fs-6" style="white-space: nowrap;" 
+                onclick="markItemServed('${order.sale_id}', '${item.menu_id}', ${isWholesale})">
+            <i class="fa-solid fa-circle-question me-1"></i> Xong chưa?
+        </button>`;
+} else if (qtyServed >= totalQty && totalQty > 0) {
+    rowClass = 'table-success-custom opacity-75';
+    statusHtml = `<span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fs-6" style="white-space: nowrap;">
+                    <i class="fa-solid fa-circle-check me-1"></i> Đã phục vụ
+                  </span>`;
+    buttonHtml = `<span class="badge bg-light text-success border border-success px-3 py-2 fw-semibold fs-6" style="white-space: nowrap;">
+                    <i class="fa-solid fa-check me-1"></i> Hoàn thành
+                  </span>`;
+} else if (minutes > 30) {
+    rowClass = 'table-danger-custom';
+    statusHtml = `<span class="badge bg-danger text-white border border-danger px-3 py-2 rounded-pill fw-bold fs-6" style="white-space: nowrap;">
+                    <i class="fa-solid fa-triangle-exclamation fa-bounce me-1"></i> Trễ ${minutes} phút
+                  </span>`;
+    buttonHtml = `
+        <button class="btn btn-sm btn-danger px-3 py-2 shadow-sm fw-bold border-2 border-white fs-6" style="white-space: nowrap;" 
+                onclick="markItemServed('${order.sale_id}', '${item.menu_id}', ${isWholesale})">
+            <i class="fa-solid fa-face-angry fa-shake me-1"></i> Khách Đang Hối
+        </button>`;
+} else {
+    statusHtml = `<span class="badge bg-warning text-primary border border-warning px-3 py-2 rounded-pill fw-bold shadow-xs animate-pulse-warning fs-6" style="white-space: nowrap;">
+                    <i class="fa-solid fa-hourglass-half fa-spin me-1 text-dark"></i> Chưa Phục Vụ
+                  </span>`;
+    buttonHtml = `
+        <button class="btn btn-sm btn-warning text-primary px-3 py-2 shadow-sm fw-bold border border-warning-subtle fs-6" style="white-space: nowrap;" 
+                onclick="markItemServed('${order.sale_id}', '${item.menu_id}', ${isWholesale})">
+            <i class="fa-solid fa-hourglass-half me-1"></i> Xong Chưa?
+        </button>`;
+}
+
+            itemsHtml += `
+                <tr class="align-middle ${rowClass}">
+                    <td class="ps-3">
+                        <span class="badge bg-primary text-white me-2 px-2 py-1 fs-7 fw-bold">${order.table_name}</span>
+                        <span class="fw-bold text-dark fs-6">${item.product_name}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="fw-bold text-dark fs-5">${totalQty}</span>
+                        <span class="text-secondary fw-semibold small ms-1">${displayUnit}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="fw-bold text-success fs-5">${qtyServed}</span>
+                        <span class="text-secondary fw-semibold small ms-1">${displayUnit}</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="fw-bold ${qtyExtra > 0 ? 'text-danger' : 'text-muted'} fs-5">${qtyExtra}</span>
+                        <span class="text-secondary fw-semibold small ms-1">${displayUnit}</span>
+                    </td>
+                    <td class="text-center text-secondary fw-medium">${timePlaced}</td>
+                    <td class="text-center">
+                        <span class="${minutes > 30 && qtyServed < totalQty ? 'text-danger fw-bold' : 'text-dark fw-medium'}">${waitingTimeText}</span>
+                    </td>
+                    <td class="text-center">${statusHtml}</td>
+                    <td class="text-end pe-3">${buttonHtml}</td>
+                </tr>`;
+        });
+
+        const hasUrgent = order.items.some(i => parseFloat(i.quantity || 0) > parseFloat(i.qty_served || 0) && (i.minutes_waiting || 0) > 30);
+
+        html += `
+            <div class="card border-0 shadow-sm mb-4 overflow-hidden rounded-3 border-start border-4 ${hasUrgent ? 'border-danger animate-pulse-border' : 'border-primary'}">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light py-3 border-bottom">
+                    <div>
+                        <h5 class="fw-bold text-white mb-0 d-inline-block">${order.table_name}</h5>
+                        <span class="badge bg-dark-subtle text-dark-emphasis ms-2 px-2 py-1 rounded">Đơn #${order.sale_id}</span>
+                    </div>
+                    <span class="badge bg-white text-secondary border px-3 py-2 rounded-pill fw-medium shadow-xs">
+                        <i class="fa-solid fa-utensils me-1 text-primary"></i> ${order.items.length} loại món ăn
+                    </span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light border-bottom text-uppercase fs-7 text-secondary tracking-wider">
+                            <tr>
+                                <th class="ps-3 py-3" style="width: 24%;">Tên món</th>
+                                <th class="text-center py-3" style="width: 12%;">Tổng đặt</th>
+                                <th class="text-center py-3" style="width: 12%;">Đã phục vụ</th>
+                                <th class="text-center py-3" style="width: 12%;">Gọi thêm</th>
+                                <th class="text-center py-3" style="width: 11%;">Thời điểm đặt</th>
+                                <th class="text-center py-3" style="width: 11%;">Thời gian chờ</th>
+                                <th class="text-center py-3" style="width: 11%;">Trạng thái</th>
+                                <th class="text-end pe-3 py-3" style="width: 12%;">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+async function markItemServed(saleId, menuId) {
+    if (!confirm('Xác nhận món này đã phục vụ?')) return;
+    try {
+        const res = await fetch(`/api/fb/mark-served/${saleId}/${menuId}`, { 
+            method: 'POST' 
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            loadServiceTracking();
+        } else {
+            Swal.fire('Lỗi', result.message, 'error');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không thể kết nối server', 'error');
+    }
+}
+
+    // --- LOGIC BÀN & KHU VỰC ---
+    async function loadTables() {
+        try {
+            const res = await fetch('/api/fb/tables');
+            const data = await res.json();
+            let html = '';
+            
+            const areas = [...new Set(data.map(t => t.area_name))];
+            
+            areas.forEach(area => {
+                html += `<div class="col-12 mt-3 mb-2"><h5 class="fw-bold text-secondary"><i class="bi bi-geo-alt-fill"></i> ${area || 'Mặc định'}</h5></div>`;
+                
+                data.filter(t => t.area_name === area).forEach(t => {
+                    const statusClass = t.status === 'Busy' ? 'table-busy' : 'table-available';
+                    const saleParam = t.current_sale_id ? `'${t.current_sale_id}'` : 'null';
+                    
+                    html += `
+                        <div class="col-6 col-md-3 col-lg-2 mb-3">
+                            <div class="card h-100 table-card ${statusClass}" 
+                                 id="table-${t.id}"
+                                 style="cursor:pointer"
+                                 onclick="openOrder('${t.id}', '${t.name}', ${saleParam})">
+                                <div class="card-body text-center p-4">
+                                    <div class="fw-bold fs-5">${t.name}</div>
+                                    <small class="text-muted">${t.status === 'Busy' ? 'Đang phục vụ' : 'Bàn trống'}</small>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            });
+            document.getElementById('areaContainer').innerHTML = html;
+        } catch (error) {
+            console.error("Lỗi tải danh sách bàn:", error);
+        }
+    }
+
+    async function loadAreaSelect() {
+        try {
+            const res = await fetch('/api/fb/areas');
+            const areas = await res.json();
+            let html = '<option value="">-- Chọn Khu Vực --</option>';
+            areas.forEach(a => { html += `<option value="${a.id}">${a.name}</option>`; });
+            document.getElementById('areaSelect').innerHTML = html;
+        } catch (error) {
+            console.error("Lỗi tải dữ liệu khu vực:", error);
+        }
+    }
+
+    async function saveArea() {
+        const name = document.getElementById('areaName').value.trim();
+        if (!name) return Swal.fire('Chú ý', 'Vui lòng nhập tên khu vực', 'warning');
+        try {
+            const res = await fetch('/api/fb/save-area', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const data = await res.json();
+            if (res.ok && (data.success || data.status === 'success')) {
+                document.getElementById('areaName').value = '';
+                await loadAreaSelect();
+                loadTables();
+                Swal.fire({ icon: 'success', title: 'Đã thêm khu vực', text: data.message || name, timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire('Lỗi', data.message || 'Không thể lưu khu vực', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', 'Không kết nối được máy chủ', 'error');
+        }
+    }
+
+    async function saveTable() {
+        const area_id = document.getElementById('areaSelect').value;
+        const name = document.getElementById('tableNameInput').value.trim();
+        if (!area_id || !name) return Swal.fire('Lỗi', 'Chọn khu vực và nhập tên bàn', 'warning');
+        try {
+            const res = await fetch('/api/fb/save-table', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ area_id, name })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                document.getElementById('tableNameInput').value = '';
+                loadTables();
+                Swal.fire({ icon: 'success', title: 'Đã thêm bàn', text: data.message || name, timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire('Lỗi', data.message || 'Không thể thêm bàn', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', 'Không kết nối được máy chủ', 'error');
+        }
+    }
+
+    // --- POS ORDER & MENU ---
+async function fetchMenu() {
+    try {
+        const res = await fetch('/api/menu?active=1');
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        
+        // Lưu dữ liệu vào biến toàn cục gốc
+        allItems = await res.json();
+        
+        // Cập nhật lại giao diện dựa theo các bộ lọc đang chọn hiện tại 
+        // để tránh việc reload menu làm reset mất bộ lọc của người dùng
+        if (typeof filterMgmtMenu === 'function') {
+            filterMgmtMenu(); 
+        } else {
+            renderMgmtMenu(allItems);
+        }
+
+        if (typeof filterOrderMenu === 'function') {
+            // Giữ nguyên danh mục đang chọn (Món ăn/Đồ uống) thay vì reset về 'all'
+            filterOrderMenu(null); 
+        } else {
+            renderOrderMenu(allItems);
+        }
+        
+        console.log("--- POS: Menu đã tải và đồng bộ bộ lọc thành công ---");
+    } catch (error) {
+        console.error("Lỗi khi tải menu:", error);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Lỗi', 'Không thể tải danh sách thực đơn', 'error');
+        }
+    }
+}
+    // 1. Giao diện quản lý Menu (Có nút Định mức)
+function renderMgmtMenu(items) {
+    const mgmtMenuArea = document.getElementById('mgmtMenuArea');
+    if (!mgmtMenuArea) return;
+
+    if (!items || items.length === 0) {
+        mgmtMenuArea.innerHTML = '<div class="col-12 text-center p-5 text-muted">Không tìm thấy món ăn nào.</div>';
+        return;
+    }
+
+    // 1. GỠ BỎ HOÀN TOÀN LỖI HIỂN THỊ: Ép lại kiểu hiển thị khối block, tràn màn hình góc-đến-góc
+    mgmtMenuArea.style.display = 'block';
+    mgmtMenuArea.style.maxHeight = 'none';
+    mgmtMenuArea.style.overflow = 'visible';
+    mgmtMenuArea.style.width = '100%';
+
+    // 2. Phân loại danh mục (hỗ trợ cả category và product_category từ DB)
+    const foods = [];
+    const drinks = [];
+
+    items.forEach(p => {
+        const cat = (p.category || p.product_category || '').trim();
+        const isDrink = (cat === 'Đồ uống');
+        const hasWholesale = p.product_type === 'ready_made' && p.unit1 && p.price;
+
+        if (hasWholesale) {
+            // Thẻ bán lẻ cho Đồ uống
+            drinks.push({ 
+                ...p, 
+                name: `${p.name} (Lẻ)`, 
+                _isWholesaleCard: false 
+            });
+            // Thẻ bán sỉ cho Đồ uống
+            drinks.push({ 
+                ...p, 
+                name: `${p.name} (Sỉ)`, 
+                base_price: p.price, 
+                unit: p.unit1,       
+                _isWholesaleCard: true 
+            });
+        } else {
+            if (isDrink) {
+                drinks.push({ ...p, _isWholesaleCard: false });
+            } else {
+                foods.push({ ...p, _isWholesaleCard: false });
+            }
+        }
+    });
+
+    // Hàm helper sinh mã HTML cho từng thẻ sản phẩm
+    function generateMgmtCards(menuItems) {
+        let cardsHtml = '';
+        menuItems.forEach(p => {
+            const displayPrice = p.base_price || 0;
+            
+            // Khôi phục dữ liệu gốc an toàn truyền vào Form Edit
+            const origItem = { ...p };
+            if (p._isWholesaleCard !== undefined) {
+                origItem.name = p.name.replace(' (Lẻ)', '').replace(' (Sỉ)', '');
+            }
+            const itemJSON = JSON.stringify(origItem).replace(/"/g, '&quot;');
+            
+            const badgeColor = p._isWholesaleCard ? 'bg-success' : 'bg-dark';
+            const badgeText = p._isWholesaleCard ? `${p.item_code} - SỈ` : p.item_code;
+
+            /* PHÂN TÍCH HỆ LƯỚI RESPONSIVE MỚI:
+               - col-4: Chiếm 4/12 phần => Hiển thị ĐÚNG 3 items trên một dòng ở Mobile.
+               - col-md-2: Chiếm 2/12 phần => Hiển thị 6 items trên màn hình iPad/Tablet.
+               - col-lg-1: Chiếm 1/12 phần => Hiển thị ĐÚNG 12 items trên một dòng ở Laptop/PC.
+            */
+            cardsHtml += `
+                <div class="col-4 col-md-2 col-lg-1 mb-3 px-1">
+                    <div class="product-item" style="padding-bottom: 100px; margin: 0; width: 100%; height: 100%; position: relative;">
+                        <div class="position-relative" style="height: 125px; overflow: hidden; border-radius: 8px 8px 0 0;">
+                            <img src="${p.image_path || '/static/img/default-food.png'}" 
+                                 style="height: 100%; width: 100%; object-fit: cover;"
+                                 onerror="this.src='/static/img/default-food.png'">
+                            <span class="badge ${badgeColor} position-absolute top-0 start-0 m-1" style="font-size: 0.65rem; z-index: 2;">${badgeText}</span>
+                        </div>
+                        <div class="p-1 text-center">
+                            <div class="fw-bold text-dark text-truncate mb-1" style="font-size: 0.75rem;" title="${p.name}">${p.name}</div>
+                            <div class="text-danger fw-bold" style="font-size: 0.8rem;">${formatCurrency(displayPrice)}</div>
+                            <div class="text-muted" style="font-size: 0.7rem;">ĐVT: ${p.unit}</div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-warning w-100 position-absolute start-50 translate-middle-x text-white fw-bold py-1" 
+                                style="bottom: 34px; font-size: 0.65rem; border-radius: 4px; width: 90% !important;"
+                                onclick="openModalForEditMenu('${itemJSON}')">
+                            <i class="bi bi-pencil-square"></i> Sửa
+                        </button>
+                        <button type="button" class="btn btn-recipe-trigger"
+                                style="bottom: 5px; font-size: 0.65rem; padding: 2px 0; width: 90%; margin: 0 auto; left: 5%; right: 5%;"
+                                onclick="openRecipeModal('${p.id}', '${p.name.replace(/"/g, '&quot;')}')">
+                            <i class="bi bi-sliders"></i> Định mức
+                        </button>
+                    </div>
+                </div>`;
+        });
+        return cardsHtml;
+    }
+
+    // 3. Kết xuất chuỗi HTML giao diện tràn rộng theo cấu trúc lưới Row/Col của Bootstrap
+    let html = '<div class="row w-100 m-0 p-0">';
+
+    // NHÓM 1: MÓN ĂN
+    if (foods.length > 0) {
+        html += `
+            <div class="col-12 px-1 my-2">
+                <div class="d-flex align-items-center text-primary fw-bold mb-1">
+                    <i class="bi bi-egg-fried fs-5 me-2"></i>
+                    <span class="fs-5 text-uppercase" style="letter-spacing: 0.5px;">Danh Mục Món Ăn</span>
+                    <span class="badge bg-primary ms-2 opacity-75" style="font-size: 0.75rem;">${foods.length} món</span>
+                </div>
+                <hr class="mt-0 mb-3 opacity-25 border-primary">
+            </div>
+            <div class="col-12 p-0 m-0">
+                <div class="row w-100 m-0 g-1">
+                    ${generateMgmtCards(foods)}
+                </div>
+            </div>
+        `;
+    }
+
+    // NHÓM 2: ĐỒ UỐNG & GIẢI KHÁT (Đã tự động tách sỉ và lẻ thành các thẻ riêng biệt)
+    if (drinks.length > 0) {
+        html += `
+            <div class="col-12 px-1 mt-4 my-2">
+                <div class="d-flex align-items-center text-success fw-bold mb-1">
+                    <i class="bi bi-cup-straw fs-5 me-2"></i>
+                    <span class="fs-5 text-uppercase" style="letter-spacing: 0.5px;">Danh Mục Đồ Uống & Giải Khát</span>
+                    <span class="badge bg-success ms-2 opacity-75" style="font-size: 0.75rem;">${drinks.length} mặt hàng</span>
+                </div>
+                <hr class="mt-0 mb-3 opacity-25 border-success">
+            </div>
+            <div class="col-12 p-0 m-0">
+                <div class="row w-100 m-0 g-1">
+                    ${generateMgmtCards(drinks)}
+                </div>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    mgmtMenuArea.innerHTML = html;
+}
+
+    // 2. Giao diện order tại bàn (BỎ NÚT ĐỊNH MỨC)
+function renderOrderMenu(items) {
+    const orderMenuArea = document.getElementById('orderMenuArea');
+    if (!orderMenuArea) return;
+
+    if (!items || items.length === 0) {
+        orderMenuArea.innerHTML = '<div class="col-12 text-center p-5 text-muted">Không tìm thấy món ăn nào.</div>';
+        return;
+    }
+
+    // 1. SỬA LỖI HIỂN THỊ: Ép lại kiểu hiển thị block, phá bỏ CSS cũ để chuẩn hóa hệ thống lưới Row/Col
+    orderMenuArea.style.display = 'block';
+    orderMenuArea.style.maxHeight = 'none';
+    orderMenuArea.style.overflow = 'visible';
+    orderMenuArea.style.width = '100%';
+
+    // 2. Phân loại danh mục và tự động tách Item sỉ/lẻ thành các ô độc lập
+    const foods = [];
+    const drinks = [];
+
+    items.forEach(p => {
+        const cat = (p.category || p.product_category || '').trim();
+        const isDrink = (cat === 'Đồ uống');
+        const hasWholesale = p.product_type === 'ready_made' && p.unit1 && p.price;
+
+        if (hasWholesale) {
+            // --- THẺ GỌI MÓN BÁN LẺ ---
+            drinks.push({ 
+                ...p, 
+                name: `${p.name} (Lẻ)`, 
+                _isWholesaleCard: false 
+            });
+
+            // --- THẺ GỌI MÓN BÁN SỈ ---
+            drinks.push({ 
+                ...p, 
+                name: `${p.name} (Sỉ)`, 
+                base_price: p.price, // Áp giá sỉ
+                unit: p.unit1,       // Áp ĐVT sỉ
+                _isWholesaleCard: true 
+            });
+        } else {
+            if (isDrink) {
+                drinks.push({ ...p, _isWholesaleCard: false });
+            } else {
+                foods.push({ ...p, _isWholesaleCard: false });
+            }
+        }
+    });
+
+    // Hàm helper tạo HTML thẻ gọi món (3 items/dòng trên Mobile, 12 items/dòng trên Laptop)
+    function generateOrderCards(menuItems) {
+        let cardsHtml = '';
+        menuItems.forEach(p => {
+            const isInactive = p.is_active === 0;
+            // Đối với hàng bán sỉ, logic tồn kho có thể điều chỉnh linh hoạt (tạm thời tính theo stock_qty chung)
+            const isOutOfStock = (p.product_type === 'ready_made' && (p.stock_qty || 0) <= 0);
+            const isDisabled = isInactive || isOutOfStock;
+            const displayPrice = p.base_price || 0;
+
+            let stockBadge = '';
+            if (p.product_type === 'ready_made') {
+                const stockColor = p.stock_qty > 5 ? 'bg-success' : 'bg-danger';
+                // Nếu là thẻ sỉ, hiển thị thêm chữ Thùng/Két hoặc giữ nguyên số lượng tồn gốc
+                const stockLabel = p._isWholesaleCard ? `Tồn gốc: ${p.stock_qty}` : `Tồn: ${p.stock_qty}`;
+                stockBadge = `<span class="badge ${stockColor} position-absolute top-0 end-0 m-1" style="font-size: 0.65rem; z-index: 2;">${stockLabel}</span>`;
+            }
+
+            const badgeColor = p._isWholesaleCard ? 'bg-success' : 'bg-dark';
+            const badgeText = p._isWholesaleCard ? `${p.item_code} - SỈ` : p.item_code;
+
+            // Xử lý sự kiện click gọi món
+            let clickAction = '';
+            if (isDisabled) {
+                clickAction = `Swal.fire('Thông báo', 'Món này hiện không khả dụng', 'info')`;
+            } else {
+                // Nếu hàm addItem của bạn nhận nhiều tham số, truyền thêm cờ sỉ để xử lý hóa đơn (nếu cần)
+                clickAction = `addItem('${p.id}', ${p._isWholesaleCard})`;
+            }
+
+            cardsHtml += `
+                <div class="col-4 col-md-2 col-lg-1 mb-3 px-1">
+                    <div class="order-product-item ${isDisabled ? 'out-of-stock' : ''}" 
+                         style="margin: 0; width: 100%; height: 100%; cursor: pointer;"
+                         onclick="${clickAction}">
+                        
+                        <div class="position-relative" style="height: 125px; overflow: hidden; border-radius: 8px 8px 0 0;">
+                            <img src="${p.image_path || '/static/img/default-food.png'}" 
+                                 style="height: 100%; width: 100%; object-fit: cover;"
+                                 onerror="this.src='/static/img/default-food.png'">
+                            <span class="badge ${badgeColor} position-absolute top-0 start-0 m-1" style="font-size: 0.65rem; z-index: 2;">${badgeText}</span>
+                            ${stockBadge}
+                            
+                            ${isDisabled ? `
+                                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.5); z-index: 3;">
+                                    <span class="badge bg-dark p-1" style="font-size: 0.65rem;">${isInactive ? 'NGỪNG BÁN' : 'HẾT HÀNG'}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="p-1 text-center">
+                            <div class="fw-bold text-dark text-truncate mb-1" style="font-size: 0.75rem;" title="${p.name}">${p.name}</div>
+                            <div class="text-danger fw-bold" style="font-size: 0.8rem;">${formatCurrency(displayPrice)}</div>
+                            <div class="text-muted" style="font-size: 0.7rem;">ĐVT: ${p.unit}</div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        return cardsHtml;
+    }
+
+    // 3. Kết xuất chuỗi HTML ra vùng hiển thị được phân chia 2 nhóm Món ăn / Đồ uống chuyên nghiệp
+    let html = '<div class="row w-100 m-0 p-0">';
+
+    // KHU VỰC 1: MÓN ĂN
+    if (foods.length > 0) {
+        html += `
+            <div class="col-12 px-1 my-2">
+                <div class="d-flex align-items-center text-primary fw-bold mb-1">
+                    <i class="bi bi-egg-fried fs-5 me-2"></i>
+                    <span class="fs-6 text-uppercase" style="letter-spacing: 0.5px;">Món Ăn</span>
+                    <span class="badge bg-primary ms-2 opacity-75" style="font-size: 0.7rem;">${foods.length}</span>
+                </div>
+                <hr class="mt-0 mb-2 opacity-25 border-primary">
+            </div>
+            <div class="col-12 p-0 m-0">
+                <div class="row w-100 m-0 g-1">
+                    ${generateOrderCards(foods)}
+                </div>
+            </div>
+        `;
+    }
+
+    // KHU VỰC 2: ĐỒ UỐNG & GIẢI KHÁT (Tách lẻ/sỉ)
+    if (drinks.length > 0) {
+        html += `
+            <div class="col-12 px-1 mt-3 my-2">
+                <div class="d-flex align-items-center text-success fw-bold mb-1">
+                    <i class="bi bi-cup-straw fs-5 me-2"></i>
+                    <span class="fs-6 text-uppercase" style="letter-spacing: 0.5px;">Đồ Uống & Giải Khát</span>
+                    <span class="badge bg-success ms-2 opacity-75" style="font-size: 0.7rem;">${drinks.length}</span>
+                </div>
+                <hr class="mt-0 mb-2 opacity-25 border-success">
+            </div>
+            <div class="col-12 p-0 m-0">
+                <div class="row w-100 m-0 g-1">
+                    ${generateOrderCards(drinks)}
+                </div>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    orderMenuArea.innerHTML = html;
+}
+
+    // Bộ lọc cho màn hình quản lý Menu
+    function filterMgmtMenu() {
+        const key = document.getElementById('mgmtMenuSearch').value.toLowerCase().trim();
+        if (!allItems) return;
+        const filtered = allItems.filter(p => p.name.toLowerCase().includes(key) || (p.item_code && p.item_code.toLowerCase().includes(key)));
+        renderMgmtMenu(filtered);
+    }
+
+    // Bộ lọc cho màn hình gọi món tại bàn
+    function filterOrderMenu() {
+        const key = document.getElementById('menuSearch').value.toLowerCase().trim();
+        if (!allItems) return;
+        const filtered = allItems.filter(p => p.name.toLowerCase().includes(key) || (p.item_code && p.item_code.toLowerCase().includes(key)));
+        renderOrderMenu(filtered);
+    }
+
+    async function openOrder(tableId, tableName, saleId) {
+        activeTableId = tableId;
+        activeSaleId = saleId;
+        
+        document.getElementById('currentTableName').innerText = tableName;
+        
+        document.querySelectorAll('.table-card').forEach(el => el.classList.remove('border-primary', 'shadow'));
+        const activeEl = document.getElementById(`table-${tableId}`);
+        if (activeEl) activeEl.classList.add('border-primary', 'shadow');
+
+        const orderModal = new bootstrap.Modal(document.getElementById('orderModal'));
+        orderModal.show();
+        
+        refreshCart();
+    }
+
+async function addItem(menuId, isWholesale = false) {
+    if (!activeTableId) {
+        Swal.fire({ 
+            icon: 'warning', 
+            title: 'Chưa chọn bàn', 
+            text: 'Vui lòng chọn bàn trước khi thêm món!', 
+            confirmButtonColor: '#1E40AF' 
+        });
+        return;
+    }
+
+    // Chuyển đổi cờ boolean từ frontend (true/false) sang định dạng số (1/0) theo yêu cầu của Backend
+    const useSaleUnit = isWholesale ? 1 : 0;
+
+    try {
+        const response = await fetch('/api/fb/add-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                table_id: activeTableId, 
+                menu_id: menuId, 
+                quantity: 1,
+                use_sale_unit: useSaleUnit // Truyền tham số chính xác cho Backend nhận diện
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            activeSaleId = data.sale_id;
+            await refreshCart(); 
+            loadTables(); 
+
+            const Toast = Swal.mixin({ 
+                toast: true, 
+                position: 'top-end', 
+                showConfirmButton: false, 
+                timer: 1000, 
+                timerProgressBar: true 
+            });
+            Toast.fire({ icon: 'success', title: data.message || 'Đã thêm món' });
+        } else {
+            Swal.fire('Lỗi', data.message || 'Không thể thêm món', 'error');
+        }
+    } catch (error) {
+        console.error("Lỗi kết nối khi thêm món:", error);
+        Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+    }
+}
+
+async function updateQuantity(menuId, change, isWholesale = false) {
+    if (!activeTableId) return;
+
+    // 1. CHUẨN HÓA KIỂU DỮ LIỆU SỐ LƯỢNG THAY ĐỔI
+    const numericChange = parseFloat(change);
+    if (isNaN(numericChange)) {
+        console.error("Số lượng thay đổi không hợp lệ:", change);
+        return;
+    }
+
+    // 2. CHUẨN HÓA CỜ SỈ/LẺ: Chấp nhận cả kiểu Boolean true và chuỗi "true" từ HTML gửi sang
+    const checkWholesale = (isWholesale === true || isWholesale === 'true' || isWholesale === 1);
+    const useSaleUnit = checkWholesale ? 1 : 0;
+
+    try {
+        const res = await fetch('/api/fb/update-item-quantity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                table_id: parseInt(activeTableId), 
+                menu_id: parseInt(menuId), // Nếu menuId của bạn là UUID (chuỗi), hãy bỏ parseInt() đi, để nguyên menu_id: menuId
+                change: numericChange,
+                use_sale_unit: useSaleUnit // Đồng bộ chính xác 0 hoặc 1 lên backend
+            })
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            await refreshCart();
+            if (typeof loadTables === 'function') {
+                loadTables();
+            }
+            if (data.is_empty) {
+                activeSaleId = null;
+            }
+            
+            if (typeof Swal !== 'undefined' && Swal.mixin) {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 1000,
+                    timerProgressBar: true
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: data.message || 'Cập nhật thành công!'
+                });
+            }
+        } else {
+            console.error("Backend trả về lỗi khi cập nhật số lượng:", data.message);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Không thể cập nhật', data.message, 'warning');
+            }
+        }
+    } catch (error) {
+        console.error("Lỗi kết nối API cập nhật số lượng:", error);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Lỗi hệ thống', 'Không thể kết nối đến máy chủ', 'error');
+        }
+    }
+}
+async function refreshCart() {
+    if (!activeTableId) return;
+
+    try {
+        const res = await fetch(`/api/fb/get-sale/${activeTableId}`);
+        const data = await res.json();
+
+        const cartItemsEle = document.getElementById('cartItems');
+        const cartTotalEle = document.getElementById('cartTotal');
+
+        if (data.success && data.items && data.items.length > 0) {
+            currentTotal = data.total_amount;
+            let html = '';
+            
+            data.items.forEach(item => {
+                // 1. Kiểm tra trạng thái Sỉ/Lẻ dựa vào UseSaleUnit từ Backend (1: sỉ, 0: lẻ)
+                const useSaleUnitRaw = item.UseSaleUnit !== undefined ? item.UseSaleUnit : item.use_sale_unit;
+                const isWholesale = (useSaleUnitRaw === 1 || useSaleUnitRaw === '1' || useSaleUnitRaw === true || useSaleUnitRaw === 'true');
+
+                // 2. LẤY TRỰC TIẾP ĐƠN VỊ TÍNH TỪ CỘT unit CỦA BẢNG sale_items
+                // Nếu dữ liệu trống (phòng hờ bản ghi cũ lỗi), sẽ tự động lấy theo loại sỉ/lẻ
+                const displayUnit = item.unit ? item.unit : (isWholesale ? 'Sỉ' : 'Lẻ');
+
+                // 3. Tạo nhãn màu nhỏ (Badge) kế bên tên món ăn để dễ nhìn thấy hình thức bán
+                const unitBadge = isWholesale
+                    ? `<span class="badge bg-success-subtle text-success border border-success-subtle ms-2" style="font-size: 0.7rem; padding: 2px 6px;">Sỉ</span>`
+                    : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-2" style="font-size: 0.7rem; padding: 2px 6px;"></span>`;
+
+                html += `
+                    <div class="cart-item d-flex justify-content-between align-items-center p-3 mb-2 border-bottom shadow-sm bg-white rounded">
+                        <div style="flex: 1; min-width: 0;">
+                            <div class="fw-bold text-dark text-truncate d-flex align-items-center" title="${item.product_name}">
+                                ${item.product_name}
+                                ${unitBadge}
+                            </div>
+                            <div class="text-primary small fw-semibold mt-1">
+                                ${formatCurrency(item.price || item.unit_price || 0)} 
+                                <span class="text-muted fw-normal">/ ${displayUnit}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex align-items-center mx-3">
+                            <button class="btn btn-sm btn-outline-secondary rounded-circle px-2" 
+                                    onclick="updateQuantity('${item.menu_id}', -1, ${isWholesale})">-</button>
+                            
+                            <div class="text-center mx-3" style="min-width: 45px;">
+                                <span class="fw-bold d-block">${item.quantity}</span>
+                                <span class="text-muted d-block small" style="font-size: 0.7rem; margin-top: -2px;">${displayUnit}</span>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-outline-secondary rounded-circle px-2" 
+                                    onclick="updateQuantity('${item.menu_id}', 1, ${isWholesale})">+</button>
+                        </div>
+
+                        <div class="text-end" style="min-width: 100px;">
+                            <div class="fw-bold">${formatCurrency(item.line_total)}</div>
+                            <button class="btn btn-sm text-danger p-0 mt-1" 
+                                    onclick="updateQuantity('${item.menu_id}', 0, ${isWholesale})">
+                                <i class="bi bi-trash"></i> Xóa
+                            </button>
+                        </div>
+                    </div>`;
+            });
+            cartItemsEle.innerHTML = html;
+            cartTotalEle.innerText = formatCurrency(currentTotal);
+        } else {
+            currentTotal = 0;
+            cartItemsEle.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="bi bi-cart-x fs-1 text-muted"></i>
+                    <p class="text-muted mt-2">Bàn chưa có món nào</p>
+                </div>`;
+            cartTotalEle.innerText = '0đ';
+        }
+    } catch (error) {
+        console.error("Lỗi làm mới giỏ hàng:", error);
+    }
+}
+
+    // --- THANH TOÁN ---
+    function openPaymentModal() {
+        if (!activeTableId) {
+            Swal.fire('Thông báo', 'Vui lòng chọn bàn trước khi thanh toán', 'info');
+            return;
+        }
+
+        const cartTotalEl = document.getElementById('cartTotal');
+        const payTotalDisplay = document.getElementById('pay_total_display');
+        
+        if (cartTotalEl && payTotalDisplay) {
+            payTotalDisplay.innerText = cartTotalEl.innerText;
+        }
+
+        document.getElementById('pay_customer_name').value = "Bán cho người tiêu dùng";
+        document.getElementById('pay_is_einvoice').checked = false;
+        document.getElementById('pay_method').value = "111"; 
+
+        let payModalEl = document.getElementById('paymentModal');
+        let payModal = bootstrap.Modal.getInstance(payModalEl); 
+        if (!payModal) payModal = new bootstrap.Modal(payModalEl);
+        payModal.show();
+    }
+
+    function stopPaymentPolling() {
+        if (qrPollTimer) {
+            clearInterval(qrPollTimer);
+            qrPollTimer = null;
+        }
+    }
+
+    async function finishBankPayment(saleId) {
+        const res = await fetch(`/api/payment/complete/${saleId}`, { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Không thể xác nhận thanh toán');
+        }
+        window.open(`/sale/print/${saleId}?autoprint=1`, '_blank');
+    }
+
+    function startPaymentPolling(saleId, onPaid) {
+        stopPaymentPolling();
+        qrPollTimer = setInterval(async () => {
+            try {
+                const r = await fetch(`/api/payment/status/${saleId}`);
+                const d = await r.json();
+                if (d.success && d.paid) {
+                    stopPaymentPolling();
+                    closeCustomerQrScreen();
+                    Swal.fire({ title: 'Đã nhận tiền', text: 'Hệ thống tự in hóa đơn', icon: 'success', timer: 2000 });
+                    window.open(`/sale/print/${saleId}?autoprint=1`, '_blank');
+                    if (typeof onPaid === 'function') onPaid();
+                }
+            } catch (e) { /* bỏ qua */ }
+        }, 2500);
+    }
+
+    function showCustomerQrScreen(saleId, amount, onConfirm) {
+        currentPendingSaleId = saleId;
+        customerQrOnConfirm = onConfirm || null;
+        const screen = document.getElementById('customerQrScreen');
+        const img = document.getElementById('customerQrImage');
+        const amountEl = document.getElementById('customerQrAmount');
+        const codeEl = document.getElementById('customerQrCode');
+        if (!screen || !img) return;
+
+        amountEl.textContent = typeof formatCurrency === 'function'
+            ? formatCurrency(amount)
+            : (Number(amount) || 0).toLocaleString('vi-VN') + ' ₫';
+        if (codeEl) codeEl.textContent = 'Nội dung CK: DH' + String(saleId).padStart(6, '0');
+        img.src = `/qr_payment/${saleId}?t=${Date.now()}`;
+        img.onerror = () => {
+            Swal.fire('Lỗi', 'Chưa cấu hình VietQR trong Cài đặt cửa hàng', 'error');
+            closeCustomerQrScreen();
+        };
+        screen.classList.add('active');
+        screen.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        startPaymentPolling(saleId, onConfirm);
+    }
+
+    function closeCustomerQrScreen() {
+        stopPaymentPolling();
+        const screen = document.getElementById('customerQrScreen');
+        if (screen) {
+            screen.classList.remove('active');
+            screen.setAttribute('aria-hidden', 'true');
+        }
+        document.body.style.overflow = '';
+        currentPendingSaleId = null;
+        customerQrOnConfirm = null;
+    }
+
+    async function confirmCustomerQrPayment() {
+        if (!currentPendingSaleId) return;
+        const saleId = currentPendingSaleId;
+        const afterFn = customerQrOnConfirm;
+        try {
+            await finishBankPayment(saleId);
+            closeCustomerQrScreen();
+            if (typeof afterFn === 'function') afterFn();
+            Swal.fire({ title: 'Hoàn tất', text: 'Đã xác nhận thanh toán và in hóa đơn', icon: 'success', timer: 1500 });
+        } catch (e) {
+            Swal.fire('Lỗi', e.message || 'Không thể xác nhận thanh toán', 'error');
+        }
+    }
+
+async function executeCheckout() {
+    if (!activeTableId) return;
+
+    const items = [];
+    try {
+        const saleRes = await fetch(`/api/fb/get-sale/${activeTableId}`);
+        const saleData = await saleRes.json();
+        if (saleData.success && saleData.items) {
+            saleData.items.forEach(i => {
+                // Ép kiểu dữ liệu UseSaleUnit về dạng số (1 cho sỉ, 0 cho lẻ)
+                let useSaleUnitVal = 0;
+                if (i.UseSaleUnit === 1 || i.UseSaleUnit === '1' || i.UseSaleUnit === true || i.UseSaleUnit === 'true') {
+                    useSaleUnitVal = 1;
+                } else if (i.use_sale_unit === 1 || i.use_sale_unit === '1' || i.use_sale_unit === true || i.use_sale_unit === 'true') {
+                    useSaleUnitVal = 1;
+                }
+
+                // Lấy chính xác giá trị cột unit từ bảng sale_items
+                let displayUnit = 'Món';
+                if (i.unit !== undefined && i.unit !== null && String(i.unit).trim() !== '') {
+                    displayUnit = String(i.unit).trim();
+                }
+
+                items.push({
+                    menu_id: i.menu_id,             // Thêm menu_id để Backend tìm sản phẩm trong kho
+                    item_name: i.product_name,
+                    quantity: parseFloat(i.quantity || 0),
+                    unit_price: parseFloat(i.unit_price || 0),
+                    unit: displayUnit,              // Đơn vị tính thực tế của dòng hàng
+                    UseSaleUnit: useSaleUnitVal,    // TRUYỀN CHÍNH XÁC BIẾN SỈ LẺ LÊN BACKEND
+                    total: parseFloat(i.line_total || 0)
+                });
+            });
+        }
+    } catch (e) { 
+        console.error("Lỗi đồng bộ sản phẩm checkout:", e); 
+    }
+
+    const payload = {
+        table_id: activeTableId,
+        customer_name: document.getElementById('pay_customer_name').value || "Bán cho người tiêu dùng",
+        company_name: document.getElementById('pay_company_name').value,
+        tax_authority_code: document.getElementById('pay_tax_authority_code').value,
+        customer_phone: document.getElementById('pay_phone').value,
+        address: document.getElementById('pay_address').value,
+        email: document.getElementById('pay_email').value,
+        payment_method: document.getElementById('pay_method').value,
+        note: document.getElementById('pay_note').value,
+        is_einvoice: document.getElementById('pay_is_einvoice').checked ? 1 : 0,
+        items: items, // Danh sách items chứa đầy đủ thông tin định lượng quy đổi
+        business_line: 'fb_service'
+    };
+
+    const confirm = await Swal.fire({
+        title: 'Xác nhận thanh toán?',
+        text: `Tổng tiền: ${document.getElementById('pay_total_display').innerText}`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#1e3a8a',
+        confirmButtonText: 'Xác nhận',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+        const res = await fetch('/api/fb/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+            const paymentMethod = payload.payment_method;
+            const payTotalText = document.getElementById('pay_total_display')?.innerText || '0đ';
+
+            const paymentModalEl = document.getElementById('paymentModal');
+            const orderModalEl = document.getElementById('orderModal');
+            if (paymentModalEl) bootstrap.Modal.getInstance(paymentModalEl)?.hide();
+            if (orderModalEl) bootstrap.Modal.getInstance(orderModalEl)?.hide();
+
+            if (paymentMethod === '112' && result.sale_id) {
+                const amountNum = currentTotal || parseFloat(String(payTotalText).replace(/[^\d]/g, '')) || 0;
+                showCustomerQrScreen(result.sale_id, amountNum, () => {
+                    if (payload.is_einvoice === 1 && result.sale_id) {
+                        fetch(`/api/invoice/issue/${result.sale_id}`, { method: 'POST' }).catch(() => {});
+                    }
+                    loadTables();
+                });
+                return;
+            }
+
+            Swal.fire({ title: 'Thành công', text: `Đã thanh toán hóa đơn ${result.sale_no}`, icon: 'success', timer: 1500 });
+
+            if (result.sale_id) window.open(`/sale/print/${result.sale_id}`, '_blank');
+
+            if (payload.is_einvoice === 1 && result.sale_id) {
+                fetch(`/api/invoice/issue/${result.sale_id}`, { method: 'POST' })
+                    .then(r => r.json())
+                    .catch(e => console.error("Lỗi HĐĐT:", e));
+            }
+
+            loadTables();
+        } else {
+            Swal.fire('Lỗi', result.message || 'Thanh toán thất bại', 'error');
+        }
+    } catch (err) {
+        console.error("Lỗi thực thi thanh toán:", err);
+        Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ', 'error');
+    }
+}
+
+// --- HÀM CHI TIẾT 1: KHI BẤM NÚT "THÊM MÓN THỦ CÔNG" ---
+async function openModalForCreateMenu() {
+    const form = document.getElementById('manualMenuForm');
+    if (form) form.reset();
+
+    // 1. Thiết lập trạng thái ban đầu cho hành động THÊM MỚI
+    document.getElementById('m_mode').value = "add";
+    
+    const modalTitle = document.getElementById('menuModalTitle') || document.getElementById('manualModalTitle');
+    if (modalTitle) {
+        modalTitle.innerHTML = '<i class="bi bi-plus-circle me-2"></i>Thêm Món Mới Vào Thực Đơn';
+    }
+
+    // Đặt lại ảnh preview về mặc định khi thêm món mới
+    const imgPreview = document.getElementById('m_image_preview');
+    if (imgPreview) {
+        imgPreview.src = '/static/img/default-food.png';
+        imgPreview.style.display = 'block';
+    }
+
+    // 2. GÁN GIÁ TRỊ TẠM THỜI TRONG LÚC ĐỢI TẢI
+    const itemCodeInput = document.getElementById('m_item_code');
+    if (itemCodeInput) {
+        itemCodeInput.value = 'Đang lấy mã...';
+        itemCodeInput.readOnly = true; // Khóa tạm thời tránh người dùng gõ đè lúc đang lấy dữ liệu
+    }
+
+    // Kích hoạt hiển thị Modal lên màn hình trước để người dùng không cảm thấy bị lag
+    const addModal = new bootstrap.Modal(document.getElementById('addMenuModal'));
+    addModal.show();
+
+    // 3. GỌI API BACKEND ĐỂ LẤY MÃ MÓN TỰ ĐỘNG THỰC TẾ
+    try {
+        const res = await fetch('/api/fb/get-next-code');
+        const data = await res.json();
+        
+        if (data.success && itemCodeInput) {
+            itemCodeInput.value = data.next_code;   // Điền mã thực tế (Ví dụ: M021) vào ô input luôn
+            itemCodeInput.readOnly = false;         // Mở khóa ra để người dùng thích thì vẫn sửa theo ý họ được
+        } else if (itemCodeInput) {
+            itemCodeInput.value = 'M001';
+            itemCodeInput.readOnly = false;
+        }
+    } catch (error) {
+        console.error("Lỗi khi tải mã món tự động từ máy chủ:", error);
+        if (itemCodeInput) {
+            itemCodeInput.value = 'M001';
+            itemCodeInput.readOnly = false;
+        }
+    }
+}
+
+    // --- HÀM CHI TIẾT 2: KHI BẤM NÚT "CHỈNH SỬA" TRÊN CARD MÓN ĂN ---
+function openModalForEditMenu(menuItemJSON) {
+    try {
+        const item = typeof menuItemJSON === 'string' ? JSON.parse(menuItemJSON) : menuItemJSON;
+        const form = document.getElementById('manualMenuForm');
+        if (form) form.reset();
+
+        // Thiết lập trạng thái ban đầu cho hành động SỬA (CẬP NHẬT)
+        document.getElementById('m_mode').value = "edit";
+        
+        // Fix lỗi hiển thị title (Sử dụng innerHTML thay vì gán nhầm đối tượng)
+        const modalTitle = document.getElementById('menuModalTitle') || document.getElementById('manualModalTitle');
+        if (modalTitle) {
+            modalTitle.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Chỉnh Sửa Thông Tin Món';
+        }
+        
+        // Đổ chính xác dữ liệu cũ vào các trường input theo đúng ID trong HTML của bạn
+        document.getElementById('m_item_code').value = item.item_code || '';
+        document.getElementById('m_name').value = item.name || '';
+        document.getElementById('m_unit').value = item.unit || '';
+        document.getElementById('m_base_price').value = item.base_price || 0;
+        document.getElementById('m_unit1').value = item.unit1 || '';
+        document.getElementById('m_price').value = item.price || 0;
+        
+        // --- TÁCH THÀNH 2 DÒNG RIÊNG BIỆT ĐỂ LẤY PRODUCT_CATEGORY VÀ PRODUCT_TYPE ---
+        // Dòng 1: Đổ dữ liệu Danh mục sản phẩm (Món ăn / Đồ uống) dựa theo name hoặc thuộc tính dự phòng
+        const categorySelect = document.querySelector('#manualMenuForm select[name="product_category"]') || document.querySelectorAll('#manualMenuForm select')[0];
+        if (categorySelect) {
+            categorySelect.value = item.product_category || item.category || 'Món ăn';
+        }
+
+        // Dòng 2: Đổ dữ liệu Loại thành phẩm/nguyên liệu (processed, ready_made, raw_materials)
+        const typeSelect = document.querySelector('#manualMenuForm select[name="product_type"]') || document.querySelectorAll('#manualMenuForm select')[1];
+        if (typeSelect) {
+            typeSelect.value = item.product_type || 'processed';
+        }
+        // ----------------------------------------------------------------------------
+
+        // --- XỬ LÝ HIỂN THỊ ẢNH CŨ ---
+        // Làm sạch ô chọn file (Bắt buộc để trống, không gán chuỗi text đường dẫn vào đây)
+        const fileInput = document.getElementById('m_image');
+        if (fileInput) fileInput.value = '';
+
+        // Kiểm tra xem thẻ hiển thị ảnh xem trước đã tồn tại trong HTML chưa
+        let imgPreview = document.getElementById('m_image_preview');
+        if (!imgPreview) {
+            // Nếu chưa có, tự tạo một thẻ img nhỏ nằm ngay dưới ô chọn file
+            imgPreview = document.createElement('img');
+            imgPreview.id = 'm_image_preview';
+            imgPreview.style.width = '80px';
+            imgPreview.style.height = '80px';
+            imgPreview.style.objectFit = 'cover';
+            imgPreview.style.borderRadius = '8px';
+            imgPreview.style.marginTop = '10px';
+            imgPreview.style.display = 'block';
+            if (fileInput && fileInput.parentNode) {
+                fileInput.parentNode.appendChild(imgPreview);
+            }
+        }
+
+        // Đổ đường dẫn ảnh từ database vào thẻ hiển thị xem trước
+        if (item.image_path) {
+            imgPreview.src = item.image_path;
+            imgPreview.style.display = 'block';
+        } else {
+            // Nếu món ăn chưa có ảnh, hiển thị ảnh mặc định hoặc ẩn đi
+            imgPreview.src = '/static/img/default-food.png'; 
+            imgPreview.style.display = 'block';
+        }
+        // ------------------------------
+
+        // QUAN TRỌNG: Khóa ô nhập mã món (readOnly) vì mã món là khóa chính để tìm bản ghi cập nhật
+        document.getElementById('m_item_code').readOnly = true;
+
+        // Kích hoạt hiển thị Modal lên màn hình
+        const addModal = new bootstrap.Modal(document.getElementById('addMenuModal'));
+        addModal.show();
+    } catch (error) {
+        console.error("Lỗi trích xuất dữ liệu món ăn lên form sửa:", error);
+        Swal.fire('Lỗi', 'Không thể hiển thị thông tin chỉnh sửa món ăn', 'error');
+    }
+}
+
+// --- HÀM CHI TIẾT 3: XỬ LÝ LƯU FORM (ĐIỀU HƯỚNG TỰ ĐỘNG THÊM ĐƠN THỦ CÔNG/ SỬA) ---
+function setupManualMenuForm() {
+    const form = document.getElementById('manualMenuForm');
+    if (!form) return;
+
+    // Gỡ bỏ sự kiện cũ để tránh lặp bộ nhớ, bảo vệ luồng tránh submit 2 lần
+    form.onsubmit = null;
+
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        // 1. Khởi tạo đối tượng FormData từ form HTML hiện tại
+        const formData = new FormData(form);
+        
+        // 2. ÉP BUỘC ĐỒNG BỘ: Bốc tách tệp tin vật lý thực tế dựa theo ID m_image
+        const imageInput = document.getElementById('m_image');
+        if (imageInput && imageInput.files.length > 0) {
+            // Xóa bỏ triệt để các khóa cũ để loại bỏ trùng lặp dữ liệu gửi lên
+            formData.delete('image');
+            
+            // Đút tệp tin vật lý thực tế vào trường tên 'image' gửi lên Flask
+            formData.append('image', imageInput.files[0]);
+            console.log("--- KETO POS: Đã đóng gói File ảnh thành công vào FormData ---");
+        }
+        
+        // 3. Kiểm tra biến trạng thái m_mode để quyết định gọi URL API nào
+        const mode = document.getElementById('m_mode').value;
+        const apiUrl = (mode === 'edit') ? '/api/fb/edit-menu-manual' : '/api/fb/add-menu-manual';
+        const actionText = (mode === 'edit') ? 'Cập nhật thông tin' : 'Thêm món mới';
+
+        try {
+            const res = await fetch(apiUrl, {
+                method: 'POST',
+                body: formData // Tuyệt đối KHÔNG thêm headers 'Content-Type' ở đây
+            });
+            const data = await res.json();
+            
+            if (data.success || res.ok) {
+                Swal.fire({
+                    title: 'Thành công',
+                    text: data.message || `Đã ${actionText.toLowerCase()} thành công!`,
+                    icon: 'success',
+                    confirmButtonColor: '#1e3a8a'
+                });
+                
+                form.reset();
+                
+                // Ẩn modal chỉnh sửa đi
+                const modalEl = document.getElementById('addMenuModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+                
+                // Tải lại danh sách thực đơn toàn hệ thống
+                fetchMenu();
+            } else {
+                Swal.fire('Lỗi', data.message || `Không thể hoàn tất tác vụ ${actionText.toLowerCase()}`, 'error');
+            }
+        } catch (error) {
+            console.error(`Lỗi kết nối khi gửi yêu cầu ${actionText}:`, error);
+            Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ dữ liệu localhost', 'error');
+        }
+    };
+}
+
+    // --- KHO THỰC TẾ & NHÁP ---
+async function loadIngredients() {
+    try {
+        console.log("Đang gọi API lấy danh sách nguyên vật liệu...");
+        const res = await fetch('/api/inventory/ingredients');
+        if (!res.ok) throw new Error(`Lỗi kết nối API: ${res.status}`);
+        
+        const responseData = await res.json();
+        console.log("Dữ liệu nhận được từ API:", responseData);
+        
+        // CƠ CHẾ AN TOÀN: Tự động bóc tách dữ liệu dù API trả về dạng Mảng hay Object chứa Mảng
+        let ingredientsArray = [];
+        if (Array.isArray(responseData)) {
+            ingredientsArray = responseData;
+        } else if (responseData && Array.isArray(responseData.data)) {
+            ingredientsArray = responseData.data;
+        } else if (responseData && Array.isArray(responseData.ingredients)) {
+            ingredientsArray = responseData.ingredients;
+        } else {
+            console.error("Dữ liệu API không đúng định dạng mảng mong muốn:", responseData);
+            return "";
+        }
+
+        // Tạo chuỗi HTML chứa các tùy chọn option
+        // Lưu ý: Select2 yêu cầu phải có một option trống hoặc rỗng ở đầu nếu muốn dùng placeholder
+        let html = '<option value=""></option>'; 
+        
+        ingredientsArray.forEach(ing => { 
+            const stock = ing.current_stock !== undefined ? ing.current_stock : 0;
+            const codeDisplay = ing.product_code ? `[${ing.product_code}] ` : '';
+            
+            // Render option với đầy đủ mã, tên, đvt và số lượng tồn thực tế
+            html += `<option value="${ing.id}">${codeDisplay}${ing.name} (${ing.unit} - Tồn: ${stock})</option>`; 
+        });
+        
+        // 1. Đổ dữ liệu vào Modal Định Mức (tab kiểm kê dùng bảng riêng)
+        const recipeProductSelect = document.getElementById('recipeProductSelect');
+        if (recipeProductSelect) {
+            if ($.fn.select2 && $(recipeProductSelect).data('select2')) {
+                $(recipeProductSelect).select2('destroy');
+            }
+            recipeProductSelect.innerHTML = html;
+            // Không khởi tạo Select2 tại đây cho phần tử trong modal để tránh lỗi "No results found"
+        }
+        
+        return html;
+    } catch (error) { 
+        console.error("Lỗi hệ thống khi render danh mục nguyên vật liệu:", error); 
+        return "";
+    }
+}
+    async function loadStocktakeSheet() {
+        const tbody = document.getElementById('stocktakeBody');
+        const dateLabel = document.getElementById('stocktakeDateLabel');
+        if (!tbody) return;
+        try {
+            const res = await fetch('/api/fb/stocktake-sheet');
+            const data = await res.json();
+            if (!data.success || !data.items || !data.items.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Chưa có NVL F&B trong kho. Hãy nhập nguyên liệu trước.</td></tr>';
+                return;
+            }
+            if (dateLabel) dateLabel.textContent = 'Ngày ' + (data.date || '');
+            let html = '';
+            data.items.forEach(item => {
+                const book = parseFloat(item.book_stock || 0);
+                const suggested = item.suggested_count !== undefined ? item.suggested_count : book;
+                html += `
+                    <tr data-product-id="${item.product_id}">
+                        <td>
+                            <div class="fw-bold">${item.name}</div>
+                            <small class="text-muted">${item.product_code || ''} · ${item.unit}</small>
+                        </td>
+                        <td class="text-end"><span class="badge bg-light text-dark border">${book} ${item.unit}</span></td>
+                        <td class="text-end">
+                            <input type="number" step="0.001" min="0" class="form-control form-control-sm text-end stocktake-count"
+                                   data-book="${book}" data-unit="${item.unit}"
+                                   value="${suggested !== '' ? suggested : ''}" placeholder="Đếm thực tế">
+                        </td>
+                        <td class="text-end fw-bold text-danger stocktake-used">—</td>
+                    </tr>`;
+            });
+            tbody.innerHTML = html;
+            tbody.querySelectorAll('.stocktake-count').forEach(inp => {
+                inp.addEventListener('input', () => updateStocktakeUsedCell(inp));
+                updateStocktakeUsedCell(inp);
+            });
+        } catch (e) {
+            console.error('Lỗi tải phiếu kiểm kê:', e);
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-4">Không tải được danh sách NVL</td></tr>';
+        }
+    }
+
+    function updateStocktakeUsedCell(input) {
+        const row = input.closest('tr');
+        const usedCell = row?.querySelector('.stocktake-used');
+        if (!usedCell) return;
+        const book = parseFloat(input.dataset.book || 0);
+        const counted = input.value === '' ? NaN : parseFloat(input.value);
+        const unit = input.dataset.unit || '';
+        if (isNaN(counted)) {
+            usedCell.textContent = '—';
+            usedCell.className = 'text-end fw-bold text-muted stocktake-used';
+            return;
+        }
+        const used = Math.round((book - counted) * 1000) / 1000;
+        if (used < 0) {
+            usedCell.textContent = `+${Math.abs(used)} ${unit} (thừa)`;
+            usedCell.className = 'text-end fw-bold text-warning stocktake-used';
+        } else if (used === 0) {
+            usedCell.textContent = `0 ${unit}`;
+            usedCell.className = 'text-end fw-bold text-muted stocktake-used';
+        } else {
+            usedCell.textContent = `${used} ${unit}`;
+            usedCell.className = 'text-end fw-bold text-danger stocktake-used';
+        }
+    }
+
+    async function saveStocktakeBatch() {
+        const rows = document.querySelectorAll('#stocktakeBody tr[data-product-id]');
+        const items = [];
+        rows.forEach(row => {
+            const input = row.querySelector('.stocktake-count');
+            if (!input || input.value === '') return;
+            items.push({
+                product_id: parseInt(row.dataset.productId, 10),
+                counted_qty: parseFloat(input.value)
+            });
+        });
+        if (!items.length) {
+            return Swal.fire('Chú ý', 'Nhập tồn thực kiểm ít nhất một NVL', 'warning');
+        }
+        try {
+            const res = await fetch('/api/fb/stocktake-batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                let detail = data.message;
+                if (data.skipped && data.skipped.length) {
+                    detail += '\n\nBỏ qua: ' + data.skipped.map(s => s.reason || s.name).join('; ');
+                }
+                Swal.fire({ icon: 'success', title: 'Đã lưu kiểm kê', text: detail, confirmButtonColor: '#1e3a8a' });
+                loadDraftHistory();
+                loadStocktakeSheet();
+            } else {
+                Swal.fire('Lỗi', data.message || 'Không lưu được kiểm kê', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', 'Không kết nối được máy chủ', 'error');
+        }
+    }
+
+    async function loadDraftHistory() {
+        try {
+            const res = await fetch('/api/fb/get-draft-history');
+            const data = await res.json();
+            let html = '';
+            (data || []).forEach(item => {
+                html += `
+                    <tr>
+                        <td>${new Date(item.created_at).toLocaleString('vi-VN')}</td>
+                        <td class="fw-bold">${item.ingredient_name}</td>
+                        <td class="text-end fw-bold text-danger">${item.quantity} ${item.unit || ''}</td>
+                        <td><small class="text-muted">${item.note || ''}</small></td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteDraftItem(${item.id})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+            document.getElementById('draftHistoryBody').innerHTML = html || '<tr><td colspan="5" class="text-center text-muted">Chưa có NVL chờ chốt — hãy lưu kiểm kê trước</td></tr>';
+        } catch (error) {
+            console.error('Lỗi tải lịch sử nháp:', error);
+        }
+    }
+
+    async function deleteDraftItem(id) {
+        const res = await fetch(`/api/fb/delete-draft/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            loadDraftHistory();
+            loadStocktakeSheet();
+        }
+    }
+
+    async function finalizeDailyInventory() {
+        const confirm = await Swal.fire({
+            title: 'Chốt cuối ngày?',
+            html: 'Hệ thống sẽ trừ kho chính thức và lập <b>một phiếu xuất kho</b> gom tất cả NVL đã kiểm kê.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Chốt ngay',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (!confirm.isConfirmed) return;
+        try {
+            const res = await fetch('/api/fb/finalize-inventory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customer_name: 'Xuất NVL chế biến cuối ngày' })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Chốt thành công',
+                    text: data.message || 'Đã lập phiếu xuất kho',
+                    confirmButtonColor: '#1e3a8a'
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('Lỗi', data.message || 'Không chốt được', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', 'Không kết nối được máy chủ', 'error');
+        }
+    }
+
+    async function importMenuExcel() {
+        const fileInput = document.getElementById('menuExcelFile');
+        const file = fileInput.files[0];
+        if (!file) return; 
+
+        const confirmImport = confirm(`Bạn có chắc chắn muốn nhập dữ liệu từ file "${file.name}"?`);
+        if (!confirmImport) { fileInput.value = ""; return; }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/fb/import-menu', { method: 'POST', body: formData });
+            const result = await response.json();
+
+            if (response.ok) {
+                alert("Thành công: " + result.message);
+                bootstrap.Modal.getInstance(document.getElementById('menuMgmtModal')).hide();
+                location.reload(); 
+            } else {
+                alert("Lỗi: " + (result.message || "Không thể xử lý file"));
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Lỗi kết nối hệ thống. Vui lòng thử lại.");
+        } finally {
+            fileInput.value = "";
+        }
+    }
+
+async function importTableExcel(buttonElement = null) {
+    // 1. Tạo một thẻ input file ẩn để kích hoạt trình chọn file của hệ điều hành
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.xlsx, .xls'; // Chỉ chấp nhận các định dạng file Excel
+
+    // Khởi tạo sự kiện khi người dùng đã chọn xong file và nhấn "Open"
+    fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Lưu lại trạng thái giao diện ban đầu của nút bấm (nếu có)
+        const originalHtml = buttonElement ? buttonElement.innerHTML : '';
+        const originalDisabled = buttonElement ? buttonElement.disabled : false;
+
+        try {
+            // 2. Hiển thị trạng thái Loading trực quan trên nút bấm
+            if (buttonElement) {
+                buttonElement.disabled = true;
+                buttonElement.innerHTML = `
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Đang xử lý dữ liệu...
+                `;
+            }
+
+            // 3. Đọc thử file Excel ở Frontend bằng thư viện SheetJS (Tùy chọn - Giúp kiểm tra cấu trúc file trước khi gửi)
+            const isExcelValid = await validateExcelStructure(file);
+            if (!isExcelValid) {
+                // Sử dụng SweetAlert2 để thông báo nếu bạn có cài đặt, hoặc dùng alert thường
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('Thất bại', 'Cấu trúc file Excel không đúng mẫu (Thiếu sheet Khu vực hoặc Bàn)!', 'error');
+                } else {
+                    alert('Cấu trúc file Excel không đúng mẫu (Thiếu các Sheet danh mục)!');
+                }
+                resetButton(buttonElement, originalHtml, originalDisabled);
+                return;
+            }
+
+            // 4. Đóng gói file vào FormData để chuẩn bị gửi lên Backend
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // 5. Gửi Request lên API Backend bằng Fetch
+            const response = await fetch('/api/fb/import-table', {
+                method: 'POST',
+                body: formData,
+                // Lưu ý: Không thêm header 'Content-Type', trình duyệt sẽ tự động nhận diện và gán Boundary cho FormData
+            });
+
+            const result = await response.json();
+
+            // 6. Xử lý kết quả trả về từ Máy chủ
+            if (response.ok && result.success) {
+                if (typeof Swal !== 'undefined') {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công',
+                        text: result.message || 'Import danh mục bàn thành công!',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(result.message || 'Import thành công!');
+                }
+                
+                // Tự động tải lại trang hoặc gọi hàm render lại danh sách bàn để cập nhật giao diện
+                window.location.reload();
+            } else {
+                throw new Error(result.message || 'Có lỗi xảy ra trong quá trình nạp dữ liệu từ file.');
+            }
+
+        } catch (error) {
+            console.error("Lỗi Import Excel:", error);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Lỗi hệ thống', error.message, 'error');
+            } else {
+                alert('Lỗi: ' + error.message);
+            }
+        } finally {
+            // Khôi phục lại trạng thái ban đầu của nút bấm
+            resetButton(buttonElement, originalHtml, originalDisabled);
+        }
+    };
+
+    // Kích hoạt click mở cửa sổ chọn file
+    fileInput.click();
+}
+
+/**
+ * Hàm kiểm tra cấu trúc file Excel trước khi upload để tiết kiệm băng thông mạng
+ */
+function validateExcelStructure(file) {
+    return new Promise((resolve) => {
+        if (typeof XLSX === 'undefined') {
+            // Nếu frontend không nhúng thư viện SheetJS, bỏ qua bước kiểm tra này (luôn cho qua)
+            resolve(true);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetNames = workbook.SheetNames;
+                
+                // Kiểm tra xem file tải lên có chứa đủ tên các sheet mẫu quy định không
+                const hasAreaSheet = sheetNames.some(name => name.includes("Khu vuc"));
+                const hasTableSheet = sheetNames.some(name => name.includes("Ban"));
+                
+                resolve(hasAreaSheet || hasTableSheet);
+            } catch (err) {
+                resolve(false);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+function resetButton(btn, html, disabled) {
+    if (btn) {
+        btn.innerHTML = html;
+        btn.disabled = disabled;
+    }
+}
+
+    // --- XỬ LÝ ĐỊNH MỨC NGUYÊN VẬT LIỆU ---
+async function openRecipeModal(menuId, menuName) {
+    if (!menuId) {
+        return Swal.fire('Lỗi', 'Không tìm thấy ID món ăn', 'error');
+    }
+
+    try {
+        document.getElementById('recipeMenuId').value = menuId;
+        document.getElementById('recipeMenuName').innerText = menuName || 'Không có tên';
+        document.getElementById('recipeItemForm').reset();
+
+        // Bước 1: Nạp HTML vào phần tử select trước khi hiển thị modal
+        await loadIngredients();
+        
+        // Bước 2: Tải bảng dữ liệu định mức hiện tại của món ăn này
+        await loadRecipeTable(menuId);
+
+        // Bước 3: Thiết lập Modal Bootstrap 5
+        const modalEl = document.getElementById('recipeModal');
+        let modal = bootstrap.Modal.getInstance(modalEl);
+        if (!modal) modal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+        
+        // LẮNG NGHE SỰ KIỆN: Khi modal đã hiển thị lên màn hình (shown.bs.modal) thì mới kích hoạt Select2
+        // Điều này đảm bảo Select2 tính toán chính xác kích thước vùng chọn và không bao giờ bị lỗi trống danh sách
+        modalEl.addEventListener('shown.bs.modal', function onModalShown() {
+            if ($.fn.select2) {
+                $('#recipeProductSelect').select2({
+                    dropdownParent: $('#recipeModal'), // Ràng buộc để ô tìm kiếm hoạt động tốt trên modal
+                    width: '100%',
+                    placeholder: "-- Chọn nguyên liệu / hàng hóa --",
+                    allowClear: true
+                }).trigger('change');
+            }
+            modalEl.removeEventListener('shown.bs.modal', onModalShown); // Hủy lắng nghe để tránh lặp bộ nhớ
+        });
+
+        // Bước 4: Hiển thị modal
+        modal.show();
+
+    } catch (error) {
+        console.error("Lỗi mở modal định mức:", error);
+        Swal.fire('Lỗi', 'Không thể mở cửa sổ định mức NVL', 'error');
+    }
+}
+    async function loadRecipeTable(menuId) {
+        try {
+            const res = await fetch(`/api/fb/recipe/${menuId}`);
+            const data = await res.json();
+            const tbody = document.getElementById('recipeTableBody');
+
+            if (data.success && data.recipe && data.recipe.length > 0) {
+                let html = '';
+                data.recipe.forEach(r => {
+                    html += `
+                        <tr>
+                            <td class="fw-bold">${r.product_name}</td>
+                            <td class="text-end fw-bold text-primary">${r.quantity}</td>
+                            <td class="text-center text-muted small">${r.unit || ''}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteRecipeItem('${menuId}', '${r.product_id}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+                tbody.innerHTML = html;
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Chưa cấu hình định mức cho món này</td></tr>`;
+            }
+        } catch (error) {
+            console.error("Lỗi load bảng định mức:", error);
+        }
+    }
+
+    document.getElementById('recipeItemForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const menuId = document.getElementById('recipeMenuId').value;
+        
+        const payload = {
+            menu_id: menuId,
+            product_id: document.getElementById('recipeProductSelect').value, 
+            quantity: parseFloat(document.getElementById('recipeQty').value)
+        };
+
+        try {
+            const res = await fetch('/api/fb/recipe/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (result.success) {
+                document.getElementById('recipeQty').value = ''; 
+                loadRecipeTable(menuId); 
+            } else {
+                Swal.fire('Thất bại', result.message, 'error');
+            }
+        } catch (error) {
+            console.error("Lỗi gửi yêu cầu lưu định mức:", error);
+        }
+    };
+
+    async function deleteRecipeItem(menuId, productId) {
+        try {
+            const res = await fetch(`/api/fb/recipe/delete/${menuId}/${productId}`, { method: 'DELETE' });
+            const result = await res.json();
+            if (result.success) {
+                loadRecipeTable(menuId);
+            } else {
+                Swal.fire('Lỗi', result.message, 'error');
+            }
+        } catch (error) {
+            console.error("Lỗi thực thi tác vụ xóa định mức NVL:", error);
+        }
+    }
+
+    function formatCurrency(val) { 
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val); 
+    }
+    
+    function downloadTableTemplate() { window.location.href = '/api/fb/table-setup/template'; }
+    function downloadMenuTemplate() { window.location.href = '/api/fb/download-sample-menu'; }
+</script>
+{% endblock %}

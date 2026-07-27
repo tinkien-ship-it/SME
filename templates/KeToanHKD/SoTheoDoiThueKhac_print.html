@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Sổ theo dõi nghĩa vụ thuế khác</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        /* Thiết lập trang in nằm ngang và lề chuẩn */
+        @page { 
+            size: A4 landscape; 
+            margin: 8mm; 
+        }
+        
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 10.5pt; /* Giảm nhẹ font để bảng biểu trông thoáng hơn trên khổ ngang */
+            line-height: 1.3;
+            color: #000;
+            background-color: #f0f2f5;
+        }
+
+        .no-print-zone {
+            background: #fff; padding: 10px; border-bottom: 2px solid #dee2e6;
+            position: sticky; top: 0; z-index: 1000; display: flex; justify-content: center; gap: 10px;
+        }
+
+        /* Container cho trang in - độ rộng chuẩn cho A4 ngang */
+        .print-container {
+            width: 277mm; 
+            margin: 20px auto; 
+            padding: 10mm;
+            background: #fff; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .table-custom { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        
+        .table-custom th, .table-custom td {
+            border: 1px solid black !important; 
+            padding: 4px 2px; /* Tối ưu padding cho bảng nhiều cột */
+            text-align: center; 
+            vertical-align: middle;
+            word-wrap: break-word;
+        }
+
+        .table-custom th { 
+            font-weight: bold; 
+            font-size: 9.5pt; 
+            background: #f8f9fa !important; 
+        }
+
+        .text-left { text-align: left !important; padding-left: 5px !important; }
+        .text-right { text-align: right !important; padding-right: 5px !important; }
+        .sign-space { height: 85px; }
+
+        @media print {
+            .no-print-zone { display: none !important; }
+            body { background: #fff; margin: 0; }
+            .print-container { 
+                width: 100%; 
+                margin: 0; 
+                padding: 0; 
+                box-shadow: none; 
+            }
+            /* Đảm bảo trình duyệt bắt buộc in ngang */
+            html, body {
+                width: 297mm;
+                height: 210mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print-zone">
+    <button onclick="window.print()" class="btn btn-primary"><i class="bi bi-printer"></i> IN SỔ (A4 NGANG)</button>
+    <button onclick="window.close()" class="btn btn-secondary"><i class="bi bi-x-circle"></i> ĐÓNG</button>
+</div>
+
+<div class="print-container">
+    {# Logic xử lý định dạng ngày Việt Nam (DD/MM/YYYY) #}
+    {% set d_from = from_date.split('-') %}
+    {% set d_to = to_date.split('-') %}
+    {% set formatted_from = d_from[2] ~ '/' ~ d_from[1] ~ '/' ~ d_from[0] %}
+    {% set formatted_to = d_to[2] ~ '/' ~ d_to[1] ~ '/' ~ d_to[0] %}
+
+    <div class="row">
+        <div class="col-8">
+            <p class="mb-0 fw-bold">HỘ KINH DOANH: <span class="text-uppercase">{{ info.business_name }}</span></p>
+            <p class="mb-0 fw-bold">Mã số thuế: {{ info.tax_code }}</p>
+            <p class="mb-0">Địa chỉ: {{ info.address }}</p>
+        </div>
+        <div class="col-4 text-end">
+            <p class="mb-0 fw-bold">Mẫu số S3a-HKD</p>
+            <small class="fst-italic">(Kèm theo Thông tư số 152/2025/TT-BTC)</small>
+        </div>
+    </div>
+
+    <div class="text-center my-4">
+        <h3 class="fw-bold mb-1">SỔ THEO DÕI NGHĨA VỤ THUẾ KHÁC</h3>
+        <p class="mb-1">Địa điểm kinh doanh: {{ info.address }}</p>
+        <p class="mb-1 fst-italic">Kỳ báo cáo: Từ ngày {{ formatted_from }} đến ngày {{ formatted_to }}</p>
+        <div class="text-end fst-italic" style="font-size: 10pt;">Đơn vị tính: VNĐ</div>
+    </div>
+
+    <table class="table-custom">
+        <thead>
+            <tr>
+                <th rowspan="2" style="width: 80px;">Ngày tháng ghi sổ</th>
+                <th rowspan="2" style="width: 180px;">Diễn giải</th>
+                <th rowspan="2">Lượng hàng hóa DV</th>
+                <th rowspan="2">Mức thuế tuyệt đối</th>
+                <th rowspan="2">Giá tính thuế đơn vị</th>
+                <th rowspan="2">Thuế suất</th>
+                <th colspan="3">Thuế XK, NK, TT ĐẶC BIỆT</th>
+                <th rowspan="2">Thuế BV môi trường</th>
+                <th rowspan="2">Thuế tài nguyên</th>
+                <th rowspan="2">Thuế sử dụng đất</th>
+            </tr>
+            <tr>
+                <th>PP %</th>
+                <th>PP Tuyệt đối</th>
+                <th>Số phải nộp</th>
+            </tr>
+            <tr class="fst-italic small">
+                <td>A</td><td>B</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.ngay_ghi_so }}</td>
+                <td class="text-left">{{ item.dien_giai }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(item.so_luong|default(0)).replace(',', '.') if item.so_luong }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(item.muc_thue_tuyet_doi|default(0)).replace(',', '.') if item.muc_thue_tuyet_doi }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(item.gia_tinh_thue|default(0)).replace(',', '.') if item.gia_tinh_thue }}</td>
+                <td>{{ item.thue_suat }}{{ '%' if item.thue_suat }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(item.thue_xk_nk_ptram|default(0)).replace(',', '.') if item.thue_xk_nk_ptram }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(item.thue_xk_nk_tuyet_doi|default(0)).replace(',', '.') if item.thue_xk_nk_tuyet_doi }}</td>
+                <td class="text-right fw-bold">{{ "{:,.0f}".format(item.tong_thue_nk_xk_ttdb|default(0)).replace(',', '.') if item.tong_thue_nk_xk_ttdb }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(item.thue_bvmt|default(0)).replace(',', '.') if item.thue_bvmt }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(item.thue_tai_nguyen|default(0)).replace(',', '.') if item.thue_tai_nguyen }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(item.thue_sd_dat|default(0)).replace(',', '.') if item.thue_sd_dat }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="fw-bold bg-light">
+                <td colspan="2">TỔNG CỘNG</td>
+                <td></td><td>X</td><td>X</td><td>X</td>
+                <td class="text-right">{{ "{:,.0f}".format(totals.tax_ptram).replace(',', '.') }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(totals.tax_tuyetdoi).replace(',', '.') }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(totals.tax_total).replace(',', '.') }}</td>  {# Tổng tax_ptram + tax_tuyetdoi#}
+                <td class="text-right">{{ "{:,.0f}".format(totals.env_tax).replace(',', '.') }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(totals.resource_tax).replace(',', '.') }}</td>
+                <td class="text-right">{{ "{:,.0f}".format(totals.land_tax).replace(',', '.') }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="row mt-4">
+        <div class="col-7"></div>
+        <div class="col-5 text-center">
+            <p class="fst-italic">Ngày {{ d_to[2] }} tháng {{ d_to[1] }} năm {{ d_to[0] }}</p>
+            <p class="fw-bold mb-0">NGƯỜI ĐẠI DIỆN HỘ KINH DOANH</p>
+            <p class="fst-italic small">(Ký, họ tên, đóng dấu)</p>
+            <div class="sign-space"></div>
+            <p class="fw-bold">{{ info.representative_name }}</p>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

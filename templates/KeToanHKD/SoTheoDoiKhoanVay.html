@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<style>
+    .flatpickr-calendar { z-index: 1060 !important; }
+    #dateRangeGroup { display: none; }
+    .stat-card { transition: transform 0.2s; cursor: default; border-left: 4px solid rgba(255,255,255,0.3); }
+    .stat-card:hover { transform: translateY(-3px); }
+    .table-responsive { border-radius: 12px; }
+    .table thead th { background-color: #f8f9fa; font-weight: 600; text-transform: uppercase; font-size: 0.65rem; color: #495057; letter-spacing: 0.5px; white-space: nowrap; }
+    .badge { font-weight: 500; padding: 0.5em 0.8em; border-radius: 6px; }
+    .text-numeric { font-family: 'Roboto Mono', monospace; font-size: 0.9rem; }
+</style>
+
+<div class="container-fluid py-4 px-lg-5">
+    <div class="row g-4 mb-4 text-center">
+        <div class="col-md-3">
+            <div class="p-3 bg-primary text-white rounded shadow-sm stat-card">
+                <small class="opacity-75 fw-bold">TỔNG VỐN VAY</small>
+                <div class="h4 mb-0 fw-bold" id="stat-total-principal">0 ₫</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 bg-danger text-white rounded shadow-sm stat-card">
+                <small class="opacity-75 fw-bold">DƯ NỢ HIỆN TẠI</small>
+                <div class="h4 mb-0 fw-bold" id="stat-total-remaining">0 ₫</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 bg-success text-white rounded shadow-sm stat-card">
+                <small class="opacity-75 fw-bold">LÃI ĐÃ TRẢ</small>
+                <div class="h4 mb-0 fw-bold" id="stat-total-paid-interest">0 ₫</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 bg-info text-white rounded shadow-sm stat-card">
+                <small class="opacity-75 fw-bold">LÃI DỰ KIẾN THÁNG</small>
+                <div class="h4 mb-0 fw-bold" id="stat-total-interest">0 ₫</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <h5 class="fw-bold mb-0 text-primary d-flex align-items-center">
+                    <i class="bi bi-wallet2 me-2"></i>DANH MỤC KHOẢN VAY
+                </h5>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-primary rounded-pill px-4 shadow-sm me-2" onclick="openAddLoanModal()">
+                        <i class="bi bi-plus-lg me-1"></i> Thêm khoản vay
+                    </button>
+                    <select id="timeFilter" class="form-select w-auto">
+                        <option value="this_year" selected>Năm nay</option>
+                        <option value="last_year">Năm trước</option>
+                        <option value="custom">Tùy chọn</option>
+                    </select>
+                    <div id="dateRangeGroup" class="d-flex align-items-center gap-2">
+                        <input type="text" id="from_date" class="form-control" style="width: 120px;" placeholder="Từ">
+                        <input type="text" id="to_date" class="form-control" style="width: 120px;" placeholder="Đến">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center">
+                <thead>
+                    <tr>
+                        <th class="text-start ps-4">Hợp Đồng</th>
+                        <th class="text-start">Ngày Vay</th>
+                        <th class="text-start">Bên Cho Vay</th>
+                        <th class="text-center bg-light-subtle">Lãi Suất</th> <th class="text-center bg-light-subtle">Kỳ Hạn</th> <th class="text-end">Nợ Gốc</th>
+                        <th class="text-end text-primary">Đã Trả Gốc</th>
+                        <th class="text-end text-success">Lãi Đã Trả</th>
+                        <th class="text-center">Đã Trả</th>
+                        <th class="text-end text-danger">Lãi/Tháng</th>
+                        <th class="text-center">Hạn Trả Lãi</th>
+                        <th style="min-width: 160px;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody id="loanListBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addLoanModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">TẠO KHOẢN VAY</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="addLoanForm" class="row g-3">
+                    <div class="col-12"><label class="small fw-bold">Số hợp đồng</label><input type="text" id="addContractNumber" class="form-control" required></div>
+                    <div class="col-12"><label class="small fw-bold">Bên cho vay</label><input type="text" id="addLenderName" class="form-control" required></div>
+                    <div class="col-12"><label class="small fw-bold">Số tiền vay (VNĐ)</label><input type="number" id="addLoanAmount" class="form-control fw-bold" required></div>
+                    <div class="col-6"><label class="small fw-bold">Lãi suất (%/năm)</label><input type="number" step="0.1" id="addInterestRate" class="form-control" required></div>
+                    <div class="col-6"><label class="small fw-bold">Kỳ hạn (Tháng)</label><input type="number" id="addTermMonths" class="form-control" required></div>
+                    <div class="col-12"><label class="small fw-bold">Ngày phát sinh nợ</label><input type="text" id="addStartDate" class="form-control bg-white"></div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" onclick="confirmAddLoan()" class="btn btn-primary w-100 rounded-pill py-2">Xác nhận tạo</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editLoanModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">SỬA THÔNG TIN KHOẢN VAY</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="editLoanId">
+                <div class="row g-3">
+                    <div class="col-12"><label class="small fw-bold">Bên cho vay</label><input type="text" id="editLenderName" class="form-control"></div>
+                    <div class="col-12"><label class="small fw-bold">Ngày phát sinh nợ</label><input type="text" id="editStartDate" class="form-control bg-white"></div>
+                    <div class="col-12"><label class="small fw-bold">Tổng gốc vay</label><input type="number" id="editLoanAmount" class="form-control fw-bold text-primary"></div>
+                    <div class="col-6"><label class="small fw-bold">Lãi suất (%/năm)</label><input type="number" step="0.1" id="editInterestRate" class="form-control"></div>
+                    <div class="col-6"><label class="small fw-bold">Kỳ hạn (Tháng)</label><input type="number" id="editTermMonths" class="form-control"></div>
+                    <hr class="my-2">
+                    <div class="col-12"><label class="small fw-bold text-primary">Nợ gốc ĐÃ TRẢ (Điều chỉnh)</label><input type="number" id="editAmountPaid" class="form-control border-primary"></div>
+                    <div class="col-6"><label class="small fw-bold text-success">Lãi đã trả (VNĐ)</label><input type="number" id="editInterestPaid" class="form-control border-success"></div>
+                    <div class="col-6"><label class="small fw-bold text-info">Số kỳ đã trả lãi</label><input type="number" id="editPaidInterestPeriod" class="form-control border-info"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" onclick="confirmUpdateLoan()" class="btn btn-dark w-100 rounded-pill py-2">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div id="modalHeader" class="modal-header text-white">
+                <h5 class="modal-title fw-bold" id="paymentTitle">THANH TOÁN</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="payLoanId"><input type="hidden" id="payType">
+                <div class="row g-3">
+                    <div class="col-6"><label class="small fw-bold">Nợ (TK)</label><input type="text" id="debitAccDisplay" class="form-control bg-light" readonly></div>
+                    <div class="col-6"><label class="small fw-bold">Có (TK)</label>
+                        <select id="creditAccount" class="form-select">
+                            <option value="111">111 - Tiền mặt</option>
+                            <option value="112">112 - Ngân hàng</option>
+                        </select>
+                    </div>
+                    <div class="col-12"><label class="small fw-bold">Số tiền</label><input type="number" id="payAmount" class="form-control form-control-lg fw-bold text-primary"></div>
+                    <div class="col-12"><label class="small fw-bold">Ngày thực hiện</label><input type="text" id="payDate" class="form-control bg-white"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" onclick="confirmPayment()" class="btn btn-primary w-100 rounded-pill py-2">Xác nhận xuất phiếu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    let fromPicker, toPicker, payPicker, editStartDatePicker, addStartDatePicker;
+    const todayIso = new Date().toISOString().split('T')[0];
+    window.currentLoans = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const vnc = { locale: "vn", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", static: true };
+        fromPicker = flatpickr("#from_date", { ...vnc, onChange: (ds, str) => { toPicker.set('minDate', str); loadLoanData(); } });
+        toPicker = flatpickr("#to_date", { ...vnc, onChange: () => loadLoanData() });
+        payPicker = flatpickr("#payDate", { ...vnc, defaultDate: "today" });
+        editStartDatePicker = flatpickr("#editStartDate", vnc);
+        addStartDatePicker = flatpickr("#addStartDate", { ...vnc, defaultDate: "today" });
+
+        document.getElementById('timeFilter').addEventListener('change', function() {
+            const val = this.value;
+            document.getElementById('dateRangeGroup').style.display = (val === 'custom' ? 'flex' : 'none');
+            const year = new Date().getFullYear();
+            if (val === 'this_year') { fromPicker.setDate(`${year}-01-01`); toPicker.setDate(`${year}-12-31`); }
+            else if (val === 'last_year') { fromPicker.setDate(`${year-1}-01-01`); toPicker.setDate(`${year-1}-12-31`); }
+            if (val !== 'custom') loadLoanData();
+        });
+        document.getElementById('timeFilter').dispatchEvent(new Event('change'));
+    });
+
+    async function loadLoanData() {
+        const from = document.getElementById('from_date').value;
+        const to = document.getElementById('to_date').value;
+        const res = await fetch(`/api/loans/list?from_date=${from}&to_date=${to}`);
+        const loans = await res.json();
+        window.currentLoans = loans;
+        
+        let html = '', s_p = 0, s_r = 0, s_i = 0, s_pi = 0;
+        loans.forEach((loan, index) => {
+            const remaining = loan.loan_amount - (loan.amount_paid || 0);
+            const monthlyInt = remaining > 0 ? (remaining * (loan.interest_rate_year / 100)) / 12 : 0;
+            s_p += loan.loan_amount; s_r += remaining; s_i += monthlyInt; s_pi += (loan.interest_paid || 0);
+
+            const startDateStr = loan.start_date ? loan.start_date.split('-').reverse().join('/') : '-';
+
+            html += `<tr>
+                <td class="ps-4 fw-bold text-start">${loan.contract_number}</td>
+                <td class="text-start small">${startDateStr}</td>
+                <td class="text-start text-muted small">${loan.lender_name || '-'}</td>
+                <td class="text-center"><span class="badge bg-secondary-subtle text-secondary">${loan.interest_rate_year}%</span></td>
+                <td class="text-center"><span class="badge bg-light text-dark">${loan.term_months} T</span></td>
+                <td class="text-end text-numeric">${formatCurrency(loan.loan_amount)}</td>
+                <td class="text-end text-primary fw-bold text-numeric">${formatCurrency(loan.amount_paid)}</td>
+                <td class="text-end text-success fw-bold text-numeric">${formatCurrency(loan.interest_paid)}</td>
+                <td class="text-center">
+                    <span class="badge bg-info-subtle text-info border border-info-subtle">${loan.paid_interest_period || 0} kỳ</span>
+                </td>
+                <td class="text-end text-danger fw-bold text-numeric">${formatCurrency(monthlyInt)}</td>
+                <td class="text-center">
+                    <span class="badge ${loan.next_payment_iso < todayIso ? 'bg-danger' : 'bg-light text-dark'} p-2">
+                        ${loan.next_payment_vn}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button onclick="openPayModal(${index}, 'interest')" class="btn btn-outline-danger" title="Trả Lãi"><i class="bi bi-cash-stack"></i></button>
+                        <button onclick="openPayModal(${index}, 'principal')" class="btn btn-outline-primary" title="Trả Gốc"><i class="bi bi-piggy-bank"></i></button>
+                        <button onclick="openEditModal(${index})" class="btn btn-outline-secondary" title="Sửa"><i class="bi bi-pencil"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('loanListBody').innerHTML = html || '<tr><td colspan="12" class="py-4 text-muted">Không có dữ liệu</td></tr>';
+        document.getElementById('stat-total-principal').innerText = formatCurrency(s_p);
+        document.getElementById('stat-total-remaining').innerText = formatCurrency(s_r);
+        document.getElementById('stat-total-paid-interest').innerText = formatCurrency(s_pi);
+        document.getElementById('stat-total-interest').innerText = formatCurrency(s_i);
+    }
+
+    // -- LOGIC CÁC MODAL (ADD/EDIT/PAY) GIỮ NGUYÊN NHƯ TRƯỚC --
+    function openAddLoanModal() { document.getElementById('addLoanForm').reset(); addStartDatePicker.setDate(new Date()); new bootstrap.Modal('#addLoanModal').show(); }
+
+    async function confirmAddLoan() {
+        const data = {
+            contract_number: document.getElementById('addContractNumber').value,
+            lender_name: document.getElementById('addLenderName').value,
+            loan_amount: document.getElementById('addLoanAmount').value,
+            interest_rate_year: document.getElementById('addInterestRate').value,
+            term_months: document.getElementById('addTermMonths').value,
+            start_date: document.getElementById('addStartDate').value
+        };
+        const res = await fetch('/api/loans/add', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+        if((await res.json()).success) { Swal.fire('Thành công', '', 'success'); bootstrap.Modal.getInstance('#addLoanModal').hide(); loadLoanData(); }
+    }
+
+    function openEditModal(index) {
+        const loan = window.currentLoans[index];
+        document.getElementById('editLoanId').value = loan.id;
+        document.getElementById('editLenderName').value = loan.lender_name || '';
+        document.getElementById('editLoanAmount').value = loan.loan_amount;
+        document.getElementById('editInterestRate').value = loan.interest_rate_year;
+        document.getElementById('editTermMonths').value = loan.term_months;
+        document.getElementById('editAmountPaid').value = loan.amount_paid || 0;
+        document.getElementById('editInterestPaid').value = loan.interest_paid || 0;
+        document.getElementById('editPaidInterestPeriod').value = loan.paid_interest_period || 0;
+        editStartDatePicker.setDate(loan.start_date);
+        new bootstrap.Modal('#editLoanModal').show();
+    }
+
+    async function confirmUpdateLoan() {
+        const data = {
+            id: document.getElementById('editLoanId').value,
+            lender_name: document.getElementById('editLenderName').value,
+            loan_amount: document.getElementById('editLoanAmount').value,
+            interest_rate_year: document.getElementById('editInterestRate').value,
+            term_months: document.getElementById('editTermMonths').value,
+            start_date: document.getElementById('editStartDate').value,
+            amount_paid: document.getElementById('editAmountPaid').value,
+            interest_paid: document.getElementById('editInterestPaid').value,
+            paid_interest_period: document.getElementById('editPaidInterestPeriod').value
+        };
+        const res = await fetch('/api/loans/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+        if((await res.json()).success) { Swal.fire('Đã cập nhật', '', 'success'); bootstrap.Modal.getInstance('#editLoanModal').hide(); loadLoanData(); }
+    }
+
+    function openPayModal(index, type) {
+        const loan = window.currentLoans[index];
+        const remaining = loan.loan_amount - (loan.amount_paid || 0);
+        document.getElementById('payLoanId').value = loan.id;
+        document.getElementById('payType').value = type;
+        document.getElementById('payAmount').value = Math.round(type === 'interest' ? (remaining * (loan.interest_rate_year / 100) / 12) : remaining);
+        document.getElementById('modalHeader').className = 'modal-header text-white ' + (type === 'interest' ? 'bg-danger' : 'bg-primary');
+        document.getElementById('paymentTitle').innerText = (type === 'interest' ? 'TRẢ LÃI VAY' : 'TRẢ GỐC VAY');
+        document.getElementById('debitAccDisplay').value = (type === 'interest' ? '635' : '341');
+        new bootstrap.Modal('#paymentModal').show();
+    }
+
+    async function confirmPayment() {
+        const data = { id: document.getElementById('payLoanId').value, type: document.getElementById('payType').value, amount: parseFloat(document.getElementById('payAmount').value), payment_method: document.getElementById('creditAccount').value, date: document.getElementById('payDate').value };
+        const res = await fetch('/api/loans/action', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+        const result = await res.json();
+        if(result.success) { Swal.fire('Thành công', `Số phiếu: ${result.voucher}`, 'success'); bootstrap.Modal.getInstance('#paymentModal').hide(); loadLoanData(); }
+    }
+
+    function formatCurrency(v) { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0); }
+</script>
+{% endblock %}

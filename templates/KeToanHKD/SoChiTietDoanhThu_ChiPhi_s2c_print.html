@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Sổ S2c-HKD - {{ info.business_name or info.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 13.5px;
+            line-height: 1.4;
+            color: #000;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        .paper {
+            width: 297mm;
+            min-height: 210mm;
+            padding: 12mm 15mm;
+            margin: 15px auto;
+            background: white;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+        .table-print {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+            table-layout: fixed;
+        }
+        .table-print th, .table-print td {
+            border: 1px solid black !important;
+            padding: 7px 9px;
+            vertical-align: middle;
+        }
+        .table-print thead th {
+            background-color: #ececec !important;
+            text-align: center;
+            font-weight: bold;
+        }
+        .header-info p { margin: 0 0 2px 0; font-weight: bold; }
+        .section-row { background-color: #f9f9f9; font-weight: bold; }
+        .indent { padding-left: 30px !important; }
+        .total-row { background-color: #f2f2f2; font-weight: bold; }
+        .tax-row { font-weight: bold; color: #d32f2f; }
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            body { background: none; padding: 0; }
+            .paper { box-shadow: none; margin: 0; width: 100%; padding: 10mm; }
+            @page { size: A4 landscape; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print container mt-3 text-center">
+    <button class="btn btn-primary btn-lg px-5 shadow me-2" onclick="window.print()">
+        <i class="fas fa-print me-2"></i> IN SỔ CHI TIẾT (S2c-HKD)
+    </button>
+    <button class="btn btn-secondary btn-lg px-4 shadow" onclick="window.close()">
+        <i class="fas fa-times me-2"></i> ĐÓNG TRANG
+    </button>
+</div>
+
+<div class="paper">
+    <div class="row mb-3">
+        <div class="col-8 header-info">
+            <p class="text-uppercase">HỘ, CÁ NHÂN KINH DOANH: {{ info.business_name or info.name or '................................' }}</p>
+            <p>Mã số thuế: {{ info.tax_code or '................................' }}</p>
+            <p>Địa chỉ: {{ info.address or '................................' }}</p>
+        </div>
+        <div class="col-4 text-end">
+            <p class="fw-bold mb-0">Mẫu số S2c-HKD</p>
+            <small>(Kèm theo Thông tư số 152/2025/TT-BTC <br> ngày 31 tháng 12 năm 2025 của Bộ trưởng Bộ Tài chính)</small>
+        </div>
+    </div>
+
+    <div class="text-center mb-3">
+        <h4 class="fw-bold mb-1">SỔ CHI TIẾT DOANH THU, CHI PHÍ</h4>
+        <p class="mb-1">Địa điểm kinh doanh: {{ info.location or info.address or '................................' }}</p>
+        <p class="fw-bold">Kỳ kê khai: <span id="timeRangeDisplay">....................</span></p>
+    </div>
+
+    <div class="text-end mb-1">
+        <span class="fst-italic">Đơn vị tính: Đồng</span>
+    </div>
+
+    <table class="table-print">
+        <thead>
+            <tr>
+                <th colspan="2" style="width: 22%;">Chứng từ</th>
+                <th rowspan="2" style="width: 60%;">Diễn giải</th>
+                <th rowspan="2" style="width: 12%;">Số tiền</th>
+            </tr>
+            <tr style="font-size: 12px;">
+                <th style="width: 11%;">Số hiệu</th>
+                <th style="width: 11%;">Ngày, tháng</th>
+            </tr>
+            <tr class="text-center small">
+                <td>A</td>
+                <td>B</td>
+                <td>C</td>
+                <td>1</td>
+            </tr>
+        </thead>
+        <tbody id="printContent">
+            <tr><td colspan="4" class="text-center p-5">Đang tải dữ liệu báo cáo...</td></tr>
+        </tbody>
+    </table>
+
+    <div class="row mt-5">
+        <div class="col-7"></div>
+        <div class="col-5 text-center">
+            <p>Ngày <span id="sigDay">...</span> tháng <span id="sigMonth">...</span> năm <span id="sigYear">...</span></p>
+            <p class="fw-bold text-uppercase mb-1">NGƯỜI ĐẠI DIỆN HỘ KINH DOANH</p>
+            <p class="fst-italic small mb-5">(Ký, họ tên, đóng dấu)</p>
+            <div style="height: 70px;"></div>
+            <p class="fw-bold fs-5">{{ info.representative_name or info.name or '................................' }}</p>
+        </div>
+    </div>
+</div>
+
+<script>
+function formatVND(v) { 
+    const val = parseFloat(v) || 0;
+    return val === 0 ? '-' : val.toLocaleString('vi-VN'); 
+}
+
+function formatDate(d) {
+    if (!d) return '';
+    const p = d.split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
+}
+
+async function loadData() {
+    const qs = new URLSearchParams(location.search);
+    const start = qs.get('start');
+    const end = qs.get('end');
+    
+    let suffix = '';
+    let displayDate = '';
+    if (end) {
+        const d = end.split('-');
+        suffix = `${d[2]}${d[1]}${d[0].substring(2)}`; // DDMMYY
+        displayDate = `${d[2]}/${d[1]}/${d[0]}`;
+        
+        document.getElementById('timeRangeDisplay').innerText = `Từ ngày ${formatDate(start)} đến ngày ${formatDate(end)}`;
+        document.getElementById('sigDay').innerText = d[2];
+        document.getElementById('sigMonth').innerText = d[1];
+        document.getElementById('sigYear').innerText = d[0];
+    }
+
+    const tbody = document.getElementById('printContent');
+    try {
+        const res = await fetch(`/api/reports/s2c?start=${start}&end=${end}`);
+        const data = await res.json();
+        const costs = data.costs || {};
+        
+        let html = '';
+
+        // 1. Doanh thu
+        const revVal = parseFloat(data.revenue) || 0;
+        html += `
+            <tr class="section-row">
+                <td class="text-center">${revVal > 0 ? 'GSDT-' + suffix : ''}</td>
+                <td class="text-center">${revVal > 0 ? displayDate : ''}</td>
+                <td>1. Doanh thu bán hàng hóa, dịch vụ</td>
+                <td class="text-end">${formatVND(revVal)}</td>
+            </tr>
+            <tr class="section-row">
+                <td colspan="2"></td>
+                <td>2. Chi phí hợp lý</td>
+                <td class="text-end">${formatVND(data.total_expenses)}</td>
+            </tr>
+        `;
+
+        // 2. Danh sách tiểu mục chi phí (Luôn hiển thị đầy đủ)
+        const costItems = [
+            { id: 'a', text: 'a) Chi phí nguyên liệu, vật liệu, nhiên liệu, năng lượng, hàng hóa sử dụng vào sản xuất, kinh doanh.' },
+            { id: 'b', text: 'b) Chi phí tiền lương, tiền công, các khoản phụ cấp, bảo hiểm bắt buộc và các khoản chỉ trả cho người lao động có đóng bảo hiểm bắt buộc theo quy định; chi phí tiền lương, tiền công, các khoản phụ cấp và các khoản chi trả cho người lao động dưới 01 tháng.' },
+            { id: 'c', text: 'c) Chi phí khấu hao tài sản cố định phục vụ cho hoạt động sản xuất, kinh doanh theo chế độ quản lý, sử dụng và trích khấu hao tài sản cố định (nếu có).' },
+            { id: 'd', text: 'd) Chi phí dịch vụ mua ngoài như điện, nước, điện thoại, internet, vận chuyển, thuê tài sản, sửa chữa, bảo dưỡng.' },
+            { id: 'dh', text: 'đ) Chi phí trả lãi tiền vay vốn sản xuất, kinh doanh của tổ chức tín dụng theo lãi suất thực tế. Chi phí trả lãi tiền vay vốn sản xuất, kinh doanh của đối tượng không phải là tổ chức tín dụng không vượt quá mức quy định tại Bộ luật Dân sự.' },
+            { id: 'e', text: 'e) Các khoản chi khác phục vụ trực tiếp hoạt động sản xuất, kinh doanh...' }
+        ];
+
+        costItems.forEach(item => {
+            const val = parseFloat(costs[item.id]) || 0;
+            const hasValue = val > 0;
+            html += `
+                <tr>
+                    <td class="text-center">${hasValue ? 'GSCP-' + item.id.toUpperCase() + '-' + suffix : ''}</td>
+                    <td class="text-center">${hasValue ? displayDate : ''}</td>
+                    <td class="indent small">${item.text}</td>
+                    <td class="text-end">${formatVND(val)}</td>
+                </tr>
+            `;
+        });
+
+        // 3. Chênh lệch và Thuế
+        const diff = revVal - (parseFloat(data.total_expenses) || 0);
+        html += `
+            <tr class="total-row">
+                <td colspan="2"></td>
+                <td>3. Chênh lệch [Lãi/ Lỗ] {(3) = (1) - (2)}</td>
+                <td class="text-end">${formatVND(diff)}</td>
+            </tr>
+            <tr class="tax-row">
+                <td colspan="2"></td>
+                <td>4. Tổng số thuế TNCN phải nộp {(4) = (3) x thuế suất(17%)}</td>
+                <td class="text-end">${formatVND(data.tax_tncn)}</td>
+            </tr>
+        `;
+
+        tbody.innerHTML = html;
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">Lỗi: ${err.message}</td></tr>`;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>

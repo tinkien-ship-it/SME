@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+{% block title %}Đăng Nhập - KETO ALL IN ONE{% endblock %}
+
+{% block content %}
+<style>
+    /* Ẩn navbar và footer chỉ trên trang login */
+    nav.navbar,
+    footer.footer {
+        display: none !important;
+    }
+
+    .login-page {
+        min-height: 100vh;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 15px;
+    }
+
+    .login-card {
+        width: 100%;
+        max-width: 1200px;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        border-radius: 12px;
+    }
+
+    .intro-column {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+        color: white;
+        padding: 50px 40px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-column {
+        background: white;
+        padding: 40px 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .brand-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 8px;
+    }
+
+    .brand-subtitle {
+        font-size: 1.6rem;
+        font-weight: 300;
+        opacity: 0.95;
+    }
+
+    .feature-list li {
+        margin-bottom: 16px;
+        display: flex;
+        align-items: flex-start;
+        font-size: 1.02rem;
+        line-height: 1.5;
+    }
+
+    .feature-list i {
+        font-size: 1.3rem;
+        margin-right: 12px;
+        margin-top: 3px;
+        flex-shrink: 0;
+    }
+
+    /* Nút chuyển giữa Đăng nhập và Bảng giá */
+    .switch-btn {
+        flex: 1;
+        padding: 16px 20px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        border: none;
+        background: #f8f9fa;
+        color: #6c757d;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .switch-btn.active {
+        background: #0d6efd;
+        color: white;
+        border-bottom: 4px solid #0d6efd;
+    }
+
+    .switch-container {
+        display: flex;
+        margin-bottom: 25px;
+        border-bottom: 3px solid #e9ecef;
+        border-radius: 8px 8px 0 0;
+        overflow: hidden;
+    }
+
+    /* Password toggle */
+    .password-wrapper {
+        position: relative;
+    }
+    .password-toggle {
+        position: absolute;
+        right: 18px;
+        top: 68%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #6c757d;
+        font-size: 1.35rem;
+        padding: 5px;
+        z-index: 10;
+    }
+
+    .form-control-lg {
+        padding: 14px 20px;
+        font-size: 1.05rem;
+        padding-right: 55px !important;
+    }
+
+    .forgot-link {
+        color: #0d6efd;
+        text-decoration: none;
+        font-size: 0.97rem;
+    }
+
+    .trial-register-box {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 10px;
+        padding: 14px 16px;
+        font-size: 0.95rem;
+        line-height: 1.55;
+        color: #166534;
+    }
+
+    .trial-register-link {
+        color: #15803d;
+        font-weight: 700;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    .trial-register-link:hover {
+        color: #14532d;
+    }
+
+    #googleRegisterWrap {
+        min-height: 44px;
+    }
+
+    .pricing-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 22px;
+        border: 1px solid #e9ecef;
+    }
+
+    .pricing-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0d6efd;
+        text-align: center;
+        margin-bottom: 18px;
+    }
+
+    .pricing-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 11px 0;
+        border-bottom: 1px dashed #dee2e6;
+        font-size: 0.97rem;
+        line-height: 1.4;
+    }
+
+    .pricing-item:last-child {
+        border-bottom: none;
+    }
+
+    @media (max-width: 576px) {
+        .switch-btn {
+            padding: 14px 10px;
+            font-size: 1.05rem;
+        }
+        .form-column {
+            padding: 30px 18px;
+        }
+    }
+</style>
+
+<div class="login-page">
+    <div class="login-card card">
+        <div class="row g-0">
+         
+            <!-- Cột bên trái - Giới thiệu -->
+            <div class="col-lg-7 intro-column">
+                <div class="mb-5">
+                    <h1 class="brand-title">KETO</h1>
+                    <h2 class="brand-subtitle">ALL IN ONE</h2>
+                </div>
+                <h4 class="mb-5 fw-light">Phần mềm quản lý bán hàng, kế toán và kê khai thuế toàn diện cho Hộ Kinh Doanh Việt Nam</h4>
+              
+                <div class="mb-auto">
+                    <h5 class="fw-bold mb-4">Ưu điểm nổi bật:</h5>
+                    <ul class="feature-list list-unstyled">
+                        <li><i class="fas fa-check-circle text-light"></i><span>Chỉ cần lập phiếu nhập kho và bán hàng, hệ thống <strong>tự động lập toàn bộ sổ sách kế toán</strong>.</span></li>
+                        <li><i class="fas fa-check-circle text-light"></i><span>In mã vạch, quản lý đơn tạm, trả hàng linh hoạt.</span></li>
+                        <li><i class="fas fa-check-circle text-light"></i><span>Bán hàng và quét mã vạch bằng camera điện thoại, không cần máy quét riêng.</span></li>
+                        <li><i class="fas fa-check-circle text-light"></i><span>Tự động kê khai thuế, xác định doanh thu, tổng hợp chi phí và số thuế phải nộp.</span></li>
+                        <li><i class="fas fa-check-circle text-light"></i><span>Tự động xuất hóa đơn điện tử & gửi email cho khách hàng.</span></li>
+                        <li><i class="fas fa-check-circle text-light"></i><span>Quản lý tồn kho, công nợ, tài sản cố định, khoản vay, bảng lương.</span></li>
+                        <li><i class="fas fa-check-circle text-light"></i><span>Hỗ trợ nhập tồn kho cũ nhanh chóng qua file Excel.</span></li>
+                        <li><i class="fas fa-check-circle text-light"></i><span>Giao diện đơn giản, dễ sử dụng cho cả bán lẻ & bán sỉ.</span></li>
+                        <li><i class="fas fa-check-circle text-light"></i><span>Hãy đăng ký bằng Google để được mở tài khoản dùng thử <strong>6 tháng miễn phí</strong>. Hết hạn có thể gia hạn trả phí ngay trên hệ thống.</span></li>
+                    </ul>
+                </div>
+                <div class="mt-5 pt-4 border-top border-light border-opacity-25">
+                    <small class="opacity-75">KETO POS - Giải pháp quản lý All in One cho kinh doanh hiện đại</small>
+                </div>
+            </div>
+
+            <!-- Cột bên phải -->
+            <div class="col-lg-5 form-column">
+
+                <!-- Nút chuyển -->
+                <div class="switch-container">
+                    <button id="btnLogin" class="switch-btn active">ĐĂNG NHẬP</button>
+                    <button id="btnPricing" class="switch-btn">BẢNG GIÁ</button>
+                </div>
+
+                <!-- Nội dung Đăng Nhập -->
+                <div id="contentLogin">
+                    <div class="text-center mb-4">
+                        <h3 class="fw-bold text-primary">ĐĂNG NHẬP</h3>
+                        <p class="text-muted">Hệ thống quản lý bán hàng & kế toán</p>
+                    </div>
+                    <form method="POST">
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">Tên đăng nhập</label>
+                            <input type="text" name="username" class="form-control form-control-lg" required autofocus>
+                        </div>
+                        <div class="mb-4 password-wrapper">
+                            <label class="form-label fw-medium">Mật khẩu</label>
+                            <input type="password" id="password" name="password" class="form-control form-control-lg" required>
+                            <span class="password-toggle" id="togglePassword">
+                                <i class="fas fa-eye" id="eyeIcon"></i>
+                            </span>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold py-3 mb-3">
+                            ĐĂNG NHẬP
+                        </button>
+                        <div class="text-end mb-3">
+                            <a href="{{ url_for('forgot_password') }}" class="forgot-link">Quên mật khẩu?</a>
+                        </div>
+                    </form>
+
+                    {% if google_visible %}
+                    <div class="text-center text-muted small my-3">hoặc đăng nhập nhanh bằng Google</div>
+                    {% if google_client_id %}
+                    <div id="googleSignInWrap" class="d-flex justify-content-center mb-2"></div>
+                    <p class="text-muted small text-center mb-3">
+                        Có thể chọn email Google khác mỗi lần đăng nhập / đăng ký.
+                    </p>
+
+                    <div class="trial-register-box mb-3">
+                        Nếu <strong>chưa có tài khoản</strong>, hãy đăng ký dùng thử
+                        <strong>6 tháng miễn phí</strong> bằng tài khoản Google —
+                        <a href="#" id="linkTrialRegister" class="trial-register-link">chỉ cần nhấn vào link này</a>.
+                    </div>
+                    <div id="googleRegisterWrap" class="d-flex justify-content-center mb-2 d-none"></div>
+                    <p id="registerHint" class="text-success small text-center d-none mb-0">
+                        Chọn tài khoản Google bên dưới để mở form đăng ký.
+                    </p>
+                    {% elif google_config_error %}
+                    <div class="alert alert-warning border small text-center mb-0 py-2">
+                        <i class="fab fa-google text-danger me-1"></i>
+                        {{ google_config_error }}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-light border small text-center mb-0 py-2">
+                        <i class="fab fa-google text-danger me-1"></i>
+                        Quản trị viên cần cấu hình <strong>Google Client ID</strong> một lần
+                        (Master Settings → Đăng nhập &amp; OTP) để bật đăng nhập Google.
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+
+                <!-- Nội dung Bảng Giá -->
+                <div id="contentPricing" style="display: none;">
+                    <div class="pricing-section">
+                        <h5 class="pricing-title">BẢNG GIÁ PHẦN MỀM</h5>
+                        {% for p in subscription_plans|default([]) %}
+                        <div class="pricing-item">
+                            <span>{{ p.name }}</span>
+                            <strong>{{ "{:,}".format(p.price|int).replace(",", ".") }} đ/năm</strong>
+                        </div>
+                        {% endfor %}
+
+                        <hr class="my-4">
+                        <h5 class="pricing-title mb-3" style="font-size: 1.15rem;">HÓA ĐƠN ĐIỆN TỬ & CHỮ KÝ SỐ</h5>
+                        
+                        <div class="pricing-item">
+                            <span>Chữ ký số + 1.000 HĐ điện tử</span>
+                            <strong>1.602.904 đ/năm</strong>
+                        </div>
+                        <div class="pricing-item">
+                            <span>Chữ ký số + 2.000 HĐ điện tử</span>
+                            <strong>1.702.904 đ/năm</strong>
+                        </div>
+                        <div class="pricing-item">
+                            <span>Chữ ký số + 3.000 HĐ điện tử</span>
+                            <strong>1.702.904 đ/năm</strong>
+                        </div>
+                        <div class="pricing-item">
+                            <span>Chữ ký số + 5.000 HĐ điện tử</span>
+                            <strong>2.102.904 đ/năm</strong>
+                        </div>
+                        <div class="pricing-item">
+                            <span>Chỉ chữ ký số tự động</span>
+                            <strong>1.103.904 đ/năm</strong>
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <small class="text-muted">Giá đã bao gồm VAT. Liên hệ để được tư vấn gói phù hợp nhất.</small>
+                    </div>
+                </div>
+
+                <!-- Bản quyền -->
+                <div class="text-center mt-auto pt-5">
+                    <small class="text-muted">
+                        KETO <strong>"ALL IN ONE"</strong> @ V.1<br>
+                        Bản quyền thuộc về: <strong>KIÊN TRUNG TÍN</strong><br>
+                        Hỗ trợ Zalo: <strong>0908870287</strong>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Chuyển đổi giữa Đăng nhập và Bảng giá
+    document.getElementById('btnLogin').addEventListener('click', function() {
+        document.getElementById('contentLogin').style.display = 'block';
+        document.getElementById('contentPricing').style.display = 'none';
+        this.classList.add('active');
+        document.getElementById('btnPricing').classList.remove('active');
+    });
+
+    document.getElementById('btnPricing').addEventListener('click', function() {
+        document.getElementById('contentLogin').style.display = 'none';
+        document.getElementById('contentPricing').style.display = 'block';
+        this.classList.add('active');
+        document.getElementById('btnLogin').classList.remove('active');
+    });
+
+    // Toggle mật khẩu
+    document.addEventListener('DOMContentLoaded', function() {
+        const passwordInput = document.getElementById('password');
+        const togglePassword = document.getElementById('togglePassword');
+        const eyeIcon = document.getElementById('eyeIcon');
+
+        if (togglePassword && eyeIcon) {
+            togglePassword.addEventListener('click', function() {
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    eyeIcon.classList.remove('fa-eye');
+                    eyeIcon.classList.add('fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    eyeIcon.classList.remove('fa-eye-slash');
+                    eyeIcon.classList.add('fa-eye');
+                }
+            });
+        }
+    });
+</script>
+
+{% if google_visible and google_client_id %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="/static/js/hkd-sector-form.js"></script>
+<script>
+const GOOGLE_CLIENT_ID = '{{ google_client_id }}';
+let pendingGoogleMode = 'login';
+let googleInitialized = false;
+
+function showGoogleLoginError(msg) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({ icon: 'error', title: 'Không đăng nhập được', text: msg, confirmButtonText: 'Đóng' });
+    } else {
+        alert(msg);
+    }
+}
+
+function handleGoogleCredential(response, mode) {
+    const url = mode === 'register' ? '/api/trial/google-check' : '{{ url_for("login_google_credential") }}';
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential })
+    })
+    .then(r => r.json().then(data => ({ ok: r.ok, data })))
+    .then(({ ok, data }) => {
+        if (mode === 'register') {
+            if (data.status === 'new') {
+                openTrialRegisterModal(response.credential, data);
+                return;
+            }
+            if (data.status === 'expired') {
+                window.location.href = data.redirect || '/renewal';
+                return;
+            }
+            if (data.status === 'active') {
+                showGoogleLoginError('Email này đã có tài khoản. Hãy dùng nút «Đăng nhập bằng Google» phía trên.');
+                return;
+            }
+            showGoogleLoginError(data.error || 'Không kiểm tra được tài khoản');
+            return;
+        }
+        if (ok && data.success && data.redirect) {
+            window.location.href = data.redirect;
+            return;
+        }
+        if (data.needs_renewal && data.redirect) {
+            window.location.href = data.redirect;
+            return;
+        }
+        if (data.needs_registration) {
+            openTrialRegisterModal(response.credential, {
+                email: data.email || '',
+                name: data.name || '',
+            });
+            return;
+        }
+        showGoogleLoginError(data.error || 'Đăng nhập Google thất bại');
+    })
+    .catch(() => showGoogleLoginError('Không kết nối được máy chủ'));
+}
+
+function openTrialRegisterModal(credential, info) {
+    HkdSectorForm.loadProfileOptions().then(function (sectorPayload) {
+        const sectors = sectorPayload.nn_sectors || sectorPayload.hkd_sectors || [];
+        const legalIntro = sectorPayload.nn_sector_legal_intro || sectorPayload.hkd_sector_legal_intro || '';
+        const blOptions = `
+        <option value="pos">Bán Hàng - Dịch Vụ - Sản Xuất</option>
+        <option value="fb_service">Dịch Vụ Ăn Uống</option>
+        <option value="rental_service">Dịch Vụ Lưu Trú</option>`;
+        const dtOptions = HkdSectorForm.buildDtTierOptions('DT1');
+        const nnField = HkdSectorForm.buildNnCheckboxGroup('swal-nn-box', 'swal-nn-help', sectors, ['NN1'], legalIntro);
+        const safeEmail = (info.email || '').replace(/"/g, '&quot;');
+        const safeName = (info.name || '').replace(/"/g, '&quot;');
+        Swal.fire({
+            title: 'Đăng ký dùng thử 6 tháng',
+            width: 720,
+            html: `
+            <div class="text-start small">
+                <div class="alert alert-light py-2 mb-3">Email Google: <strong>${safeEmail || '(đã xác minh)'}</strong></div>
+                <div class="mb-2"><label class="form-label">Tên hộ kinh doanh *</label>
+                <input id="swal-biz-name" class="form-control" value="${safeName}"></div>
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label">Số điện thoại *</label>
+                    <input id="swal-phone" class="form-control" placeholder="0908870287"></div>
+                    <div class="col-6"><label class="form-label">Mã số thuế</label>
+                    <input id="swal-tax" class="form-control"></div>
+                </div>
+                <div class="mb-2 mt-2"><label class="form-label">Email liên hệ</label>
+                <input id="swal-email" class="form-control" value="${safeEmail}"></div>
+                <div class="mb-2"><label class="form-label">Địa chỉ</label>
+                <input id="swal-address" class="form-control"></div>
+                <div class="mb-2"><label class="form-label">Ngành nghiệp vụ *</label>
+                <select id="swal-bl" class="form-select">${blOptions}</select></div>
+                <div class="mb-2">${nnField}</div>
+                <div class="mb-2"><label class="form-label">Nhóm doanh thu (DT1–DT4) *</label>
+                <select id="swal-revenue-tier" class="form-select">${dtOptions}</select>
+                <div class="form-text">DT = ngưỡng doanh thu pháp lý (kỳ kê khai, miễn giảm thuế).</div></div>
+                <p class="text-muted mt-2 mb-0">Mã cửa hàng = SĐT đăng ký. Mật khẩu gửi qua email.</p>
+            </div>`,
+            showCancelButton: true,
+            confirmButtonText: 'Tạo tài khoản',
+            cancelButtonText: 'Hủy',
+            didOpen: function () {
+                HkdSectorForm.bindNnSectorHelp('swal-nn-box', 'swal-nn-help', sectors, legalIntro);
+                HkdSectorForm.bindBusinessLineNnSuggest('swal-bl', 'swal-nn-box', 'swal-nn-help', sectors, legalIntro);
+            },
+            preConfirm: () => ({
+                business_name: document.getElementById('swal-biz-name').value.trim(),
+                phone: document.getElementById('swal-phone').value.trim(),
+                tax_code: document.getElementById('swal-tax').value.trim(),
+                email: document.getElementById('swal-email').value.trim(),
+                address: document.getElementById('swal-address').value.trim(),
+                business_line: document.getElementById('swal-bl').value,
+                enabled_nn_sectors: HkdSectorForm.getSelectedNnSectors('swal-nn-box'),
+                revenue_tier: document.getElementById('swal-revenue-tier').value,
+            })
+        }).then(result => {
+            if (!result.isConfirmed) return;
+            const f = result.value;
+            if (!f.business_name || !f.phone) {
+                Swal.fire('Thiếu thông tin', 'Vui lòng nhập tên HKD và số điện thoại', 'warning');
+                return;
+            }
+            Swal.fire({ title: 'Đang tạo tài khoản...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            fetch('/api/trial/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential, ...f })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('Thành công', data.message, 'success').then(() => {
+                        window.location.href = data.redirect || '/login';
+                    });
+                } else {
+                    Swal.fire('Lỗi', data.error || 'Đăng ký thất bại', 'error');
+                }
+            })
+            .catch(() => Swal.fire('Lỗi', 'Không kết nối được máy chủ', 'error'));
+        });
+    }).catch(function () {
+        showGoogleLoginError('Không tải được danh mục ngành nghề NN1–NN4. Vui lòng thử lại.');
+    });
+}
+
+function ensureGoogleInitialized() {
+    if (googleInitialized) {
+        return true;
+    }
+    if (!window.google || !google.accounts || !google.accounts.id) {
+        return false;
+    }
+    google.accounts.id.disableAutoSelect();
+    google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (resp) => handleGoogleCredential(resp, pendingGoogleMode),
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        itp_support: true,
+    });
+    googleInitialized = true;
+    return true;
+}
+
+function renderGoogleLoginButton() {
+    if (!ensureGoogleInitialized()) return;
+    const wrap = document.getElementById('googleSignInWrap');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    wrap.addEventListener('mousedown', () => { pendingGoogleMode = 'login'; }, true);
+    google.accounts.id.renderButton(wrap, {
+        theme: 'filled_blue',
+        size: 'large',
+        width: 320,
+        text: 'signin_with',
+        locale: 'vi',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+    });
+}
+
+function showGoogleRegisterButton() {
+    if (!ensureGoogleInitialized()) return;
+    const wrap = document.getElementById('googleRegisterWrap');
+    const hint = document.getElementById('registerHint');
+    if (!wrap) return;
+
+    pendingGoogleMode = 'register';
+    wrap.classList.remove('d-none');
+    if (hint) hint.classList.remove('d-none');
+
+    wrap.innerHTML = '';
+    wrap.addEventListener('mousedown', () => { pendingGoogleMode = 'register'; }, true);
+    google.accounts.id.renderButton(wrap, {
+        theme: 'filled_green',
+        size: 'large',
+        width: 320,
+        text: 'signup_with',
+        locale: 'vi',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+    });
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function initGoogleSignIn() {
+    if (!ensureGoogleInitialized()) {
+        setTimeout(initGoogleSignIn, 200);
+        return;
+    }
+    renderGoogleLoginButton();
+
+    document.getElementById('linkTrialRegister')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showGoogleRegisterButton();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,557 @@
+{% extends "base.html" %}
+{% block head_extra %}
+{% include 'partials/data_list_table_assets.html' %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+.att-device-url { font-family: monospace; font-size: 0.85rem; word-break: break-all; }
+.tab-pane { min-height: 200px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h3 class="fw-bold text-primary mb-1">Bảng Chấm Công</h3>
+            <p class="text-muted mb-0 small">Thu thập dữ liệu từ máy chấm công (ZKTeco ADMS) hoặc nhập file Excel/CSV</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <input type="file" id="importCsvFile" accept=".csv,.txt" class="d-none" onchange="importCsv(event)">
+            <input type="file" id="importXlsxFile" accept=".xlsx,.xls" class="d-none" onchange="importExcel(event)">
+            <button class="btn btn-outline-info" onclick="document.getElementById('importCsvFile').click()">
+                <i class="bi bi-filetype-csv me-1"></i> Nhập CSV
+            </button>
+            <button class="btn btn-outline-success" onclick="document.getElementById('importXlsxFile').click()">
+                <i class="bi bi-file-earmark-excel me-1"></i> Nhập Excel
+            </button>
+            <button class="btn btn-primary" onclick="openManualModal()">
+                <i class="bi bi-plus-circle me-1"></i> Chấm công thủ công
+            </button>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-3" id="attTabs">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabSummary" type="button">Tổng hợp ngày công</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLogs" type="button">Chi tiết chấm công</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabDevices" type="button" onclick="loadDevices()">Thiết bị &amp; cấu hình</button>
+        </li>
+    </ul>
+
+    <div class="row g-2 mb-3 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label small mb-1">Từ ngày</label>
+            <input type="text" class="form-control" id="filterStart" placeholder="dd/mm/yyyy">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small mb-1">Đến ngày</label>
+            <input type="text" class="form-control" id="filterEnd" placeholder="dd/mm/yyyy">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small mb-1">Nhân viên</label>
+            <select class="form-select" id="filterEmployee">
+                <option value="">Tất cả nhân viên</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small mb-1">Tìm kiếm</label>
+            <input type="text" class="form-control" id="filterQ" placeholder="Mã máy, tên, serial...">
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button class="btn btn-outline-primary w-100" onclick="reloadActiveTab()">Lọc</button>
+        </div>
+    </div>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="tabSummary">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle" id="summaryTable">
+                            <thead><tr></tr></thead>
+                            <tbody>
+                                <tr><td colspan="8" class="text-center text-muted py-4">Chọn khoảng ngày và bấm Lọc</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="enhanced-table-toolbar">
+                            <span class="text-muted small">Hiển thị <strong id="summaryTableCount">0</strong> dòng</span>
+                            <span id="summaryColFilters" class="active-filters-badge d-none"></span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearSummaryColFilters">Xóa lọc cột</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabLogs">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle" id="logsTable">
+                            <thead><tr></tr></thead>
+                            <tbody>
+                                <tr><td colspan="10" class="text-center text-muted py-4">Đang tải...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="enhanced-table-toolbar">
+                            <span class="text-muted small">Hiển thị <strong id="logsTableCount">0</strong> lượt chấm</span>
+                            <span id="logsColFilters" class="active-filters-badge d-none"></span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearLogsColFilters">Xóa lọc cột</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabDevices">
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header fw-bold">Cấu hình máy chấm công (ZKTeco ADMS)</div>
+                        <div class="card-body small">
+                            <p class="mb-2">Trên máy hoặc phần mềm ADMS, cấu hình:</p>
+                            <ul class="mb-3">
+                                <li><strong>Server IP / Domain:</strong> địa chỉ máy chủ đang chạy phần mềm</li>
+                                <li><strong>Port:</strong> cổng web (mặc định 5000 hoặc cổng bạn triển khai)</li>
+                                <li><strong>URL path:</strong> <code>/iclock/cdata</code></li>
+                            </ul>
+                            <p class="mb-1 fw-semibold">URL đầy đủ (mẫu):</p>
+                            <div class="alert alert-light border att-device-url mb-3" id="pushUrlDisplay">—</div>
+                            <p class="text-muted mb-0">
+                                Máy sẽ tự gửi log chấm công về server. Liên kết mã PIN trên máy với nhân viên qua trường
+                                <strong>Mã máy chấm công</strong> tại Danh Sách Nhân Viên.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card shadow-sm">
+                        <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                            <span>Thiết bị đã kết nối</span>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadDevices()">Tải lại</button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Serial (SN)</th>
+                                            <th>IP gần nhất</th>
+                                            <th>Lần cuối online</th>
+                                            <th>Trạng thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="devicesBody">
+                                        <tr><td colspan="4" class="text-center text-muted py-3">Chưa có thiết bị</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="manualModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chấm công thủ công</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="manualForm" class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Nhân viên</label>
+                        <select class="form-select" id="manualEmployee" required></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ngày giờ</label>
+                        <input type="text" class="form-control" id="manualDateTime" required placeholder="dd/mm/yyyy HH:mm">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Loại</label>
+                        <select class="form-select" id="manualType">
+                            <option value="in">Vào</option>
+                            <option value="out">Ra</option>
+                            <option value="auto">Tự động</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" onclick="saveManual()">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+let summaryData = [];
+let logsData = [];
+let employees = [];
+let summaryTableCtrl = null;
+let logsTableCtrl = null;
+const manualModal = new bootstrap.Modal(document.getElementById('manualModal'));
+
+function escHtml(s) {
+    return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function fmtDate(v) {
+    if (!v) return '—';
+    const s = String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        const [y, m, d] = s.slice(0, 10).split('-');
+        return `${d}/${m}/${y}`;
+    }
+    return s;
+}
+
+function fmtDateTime(v) {
+    if (!v) return '—';
+    const s = String(v).trim();
+    const m = /^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/.exec(s);
+    if (m) return `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`;
+    return s;
+}
+
+function toIsoDate(val) {
+    if (!val) return '';
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(val).trim());
+    if (!m) return val;
+    return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+}
+
+function toIsoDateTime(val) {
+    if (!val) return '';
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/.exec(String(val).trim());
+    if (!m) return val;
+    return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')} ${m[4].padStart(2, '0')}:00`;
+}
+
+function punchTypeLabel(t) {
+    const map = { in: 'Vào', out: 'Ra', auto: 'Tự động' };
+    return map[t] || t || '—';
+}
+
+function sourceLabel(s) {
+    const map = { adms: 'Máy ADMS', import: 'Nhập Excel', import_csv: 'CSV', manual: 'Thủ công' };
+    return map[s] || s || '—';
+}
+
+function getFilterParams() {
+    return {
+        start: toIsoDate(document.getElementById('filterStart').value),
+        end: toIsoDate(document.getElementById('filterEnd').value),
+        employee_id: document.getElementById('filterEmployee').value,
+        q: document.getElementById('filterQ').value.trim(),
+    };
+}
+
+function renderSummaryRows(data, tbody) {
+    const el = tbody || document.querySelector('#summaryTable tbody');
+    if (!data.length) {
+        el.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không có dữ liệu trong khoảng đã chọn.</td></tr>';
+        return;
+    }
+    el.innerHTML = data.map(r => `
+        <tr>
+            <td class="text-center small">${fmtDate(r.punch_date)}</td>
+            <td><strong>${escHtml(r.fullname)}</strong></td>
+            <td class="text-center small">${escHtml(r.device_user_id || '—')}</td>
+            <td class="text-center small">${fmtDateTime(r.first_punch)}</td>
+            <td class="text-center small">${fmtDateTime(r.last_punch)}</td>
+            <td class="text-center">${r.punch_count ?? 0}</td>
+            <td class="text-end">${(r.work_hours ?? 0).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
+            <td class="text-center">
+                ${r.employee_id ? '' : '<span class="badge bg-warning text-dark">Chưa map NV</span>'}
+            </td>
+        </tr>`).join('');
+}
+
+function renderLogRows(data, tbody) {
+    const el = tbody || document.querySelector('#logsTable tbody');
+    if (!data.length) {
+        el.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Không có lượt chấm công.</td></tr>';
+        return;
+    }
+    el.innerHTML = data.map(r => `
+        <tr>
+            <td class="text-center small">${r.id}</td>
+            <td class="text-center small">${fmtDateTime(r.punch_time)}</td>
+            <td><strong>${escHtml(r.mapped_name || r.employee_name || '—')}</strong></td>
+            <td class="text-center small">${escHtml(r.device_user_id || '—')}</td>
+            <td class="text-center">${punchTypeLabel(r.punch_type)}</td>
+            <td class="text-center small">${escHtml(r.device_sn || '—')}</td>
+            <td class="text-center small">${sourceLabel(r.source)}</td>
+            <td class="text-center">
+                ${r.employee_id ? '<span class="badge bg-success">Đã map</span>' : '<span class="badge bg-warning text-dark">Chưa map</span>'}
+            </td>
+        </tr>`).join('');
+}
+
+function initTables() {
+    summaryTableCtrl = DataListTable.create({
+        table: '#summaryTable',
+        countSelector: '#summaryTableCount',
+        activeFiltersSelector: '#summaryColFilters',
+        defaultSort: { key: 'punch_date', dir: 'desc' },
+        columns: [
+            { key: 'punch_date', label: 'Ngày', sortable: true, filterType: 'date', width: '100px', align: 'center',
+              getValue: r => r.punch_date, sortValue: r => r.punch_date ? new Date(r.punch_date) : new Date(0) },
+            { key: 'fullname', label: 'Nhân viên', sortable: true, filterType: 'text', width: '160px',
+              getValue: r => r.fullname || '' },
+            { key: 'device_user_id', label: 'Mã máy', filterType: 'text', width: '90px', align: 'center',
+              getValue: r => r.device_user_id || '' },
+            { key: 'first_punch', label: 'Giờ vào', sortable: true, filterType: 'text', width: '130px', align: 'center',
+              getValue: r => r.first_punch || '' },
+            { key: 'last_punch', label: 'Giờ ra', sortable: true, filterType: 'text', width: '130px', align: 'center',
+              getValue: r => r.last_punch || '' },
+            { key: 'punch_count', label: 'Số lần', sortable: true, filterType: 'number', width: '80px', align: 'center',
+              getValue: r => r.punch_count, sortValue: r => Number(r.punch_count) || 0 },
+            { key: 'work_hours', label: 'Giờ công (ước)', sortable: true, filterType: 'number', width: '110px', align: 'end',
+              getValue: r => r.work_hours, sortValue: r => Number(r.work_hours) || 0 },
+            { key: 'map', label: 'Map NV', filter: false, sortable: false, resizable: false, width: '100px', align: 'center' },
+        ],
+        renderRows: renderSummaryRows,
+    });
+
+    logsTableCtrl = DataListTable.create({
+        table: '#logsTable',
+        countSelector: '#logsTableCount',
+        activeFiltersSelector: '#logsColFilters',
+        defaultSort: { key: 'punch_time', dir: 'desc' },
+        columns: [
+            { key: 'id', label: '#', sortable: true, filterType: 'number', width: '60px', align: 'center',
+              getValue: r => r.id, sortValue: r => Number(r.id) || 0 },
+            { key: 'punch_time', label: 'Thời gian', sortable: true, filterType: 'text', width: '140px', align: 'center',
+              getValue: r => r.punch_time || '' },
+            { key: 'name', label: 'Nhân viên', sortable: true, filterType: 'text', width: '150px',
+              getValue: r => r.mapped_name || r.employee_name || '' },
+            { key: 'device_user_id', label: 'Mã máy', filterType: 'text', width: '90px', align: 'center',
+              getValue: r => r.device_user_id || '' },
+            { key: 'punch_type', label: 'Loại', filterType: 'select', width: '90px', align: 'center',
+              getValue: r => r.punch_type || '',
+              filterOptions: [{ value: 'in', label: 'Vào' }, { value: 'out', label: 'Ra' }, { value: 'auto', label: 'Tự động' }] },
+            { key: 'device_sn', label: 'Thiết bị', filterType: 'text', width: '100px', align: 'center',
+              getValue: r => r.device_sn || '' },
+            { key: 'source', label: 'Nguồn', filterType: 'select', width: '100px', align: 'center',
+              getValue: r => r.source || '',
+              filterOptions: [
+                { value: 'adms', label: 'Máy ADMS' },
+                { value: 'import', label: 'Nhập Excel' },
+                { value: 'import_csv', label: 'CSV' },
+                { value: 'manual', label: 'Thủ công' },
+              ] },
+            { key: 'map', label: 'Map', filter: false, sortable: false, resizable: false, width: '90px', align: 'center' },
+        ],
+        renderRows: renderLogRows,
+    });
+}
+
+async function loadEmployees() {
+    const res = await fetch('/api/employees/manage?status=1');
+    employees = await res.json();
+    const sel = document.getElementById('filterEmployee');
+    const manualSel = document.getElementById('manualEmployee');
+    const opts = employees.map(e =>
+        `<option value="${e.id}">${escHtml(e.fullname)}${e.attendance_code ? ' (Mã máy: ' + escHtml(e.attendance_code) + ')' : ''}</option>`
+    ).join('');
+    sel.innerHTML = '<option value="">Tất cả nhân viên</option>' + opts;
+    manualSel.innerHTML = employees.map(e =>
+        `<option value="${e.id}" data-code="${escHtml(e.attendance_code || e.id)}">${escHtml(e.fullname)}</option>`
+    ).join('');
+}
+
+async function loadSummary() {
+    const p = getFilterParams();
+    if (!p.start || !p.end) {
+        alert('Vui lòng chọn từ ngày và đến ngày');
+        return;
+    }
+    const params = new URLSearchParams({ start: p.start, end: p.end });
+    if (p.employee_id) params.set('employee_id', p.employee_id);
+    const res = await fetch(`/api/attendance/summary?${params}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Lỗi tải tổng hợp');
+    summaryData = data;
+    summaryTableCtrl?.setData(summaryData);
+}
+
+async function loadLogs() {
+    const p = getFilterParams();
+    const params = new URLSearchParams();
+    if (p.start) params.set('start', p.start);
+    if (p.end) params.set('end', p.end);
+    if (p.employee_id) params.set('employee_id', p.employee_id);
+    if (p.q) params.set('q', p.q);
+    const res = await fetch(`/api/attendance/logs?${params}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Lỗi tải chi tiết');
+    logsData = data;
+    logsTableCtrl?.setData(logsData);
+}
+
+async function loadDevices() {
+    const res = await fetch('/api/attendance/devices');
+    const data = await res.json();
+    const body = document.getElementById('devicesBody');
+    if (!data.length) {
+        body.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Chưa có thiết bị kết nối. Cấu hình máy trỏ về URL bên trái.</td></tr>';
+        return;
+    }
+    body.innerHTML = data.map(d => {
+        const active = d.last_seen_at && (Date.now() - new Date(d.last_seen_at).getTime() < 3600000);
+        return `<tr>
+            <td><code>${escHtml(d.serial_no)}</code></td>
+            <td>${escHtml(d.ip_address || '—')}</td>
+            <td class="small">${escHtml(d.last_seen_at || '—')}</td>
+            <td>${active ? '<span class="badge bg-success">Online gần đây</span>' : '<span class="badge bg-secondary">Offline</span>'}</td>
+        </tr>`;
+    }).join('');
+}
+
+function reloadActiveTab() {
+    const active = document.querySelector('#attTabs .nav-link.active');
+    if (active?.getAttribute('data-bs-target') === '#tabSummary') loadSummary().catch(e => alert(e.message));
+    else if (active?.getAttribute('data-bs-target') === '#tabLogs') loadLogs().catch(e => alert(e.message));
+    else loadSummary().catch(() => {});
+}
+
+function openManualModal() {
+    document.getElementById('manualForm').reset();
+    manualDatePicker?.setDate(new Date());
+    manualModal.show();
+}
+
+async function saveManual() {
+    const sel = document.getElementById('manualEmployee');
+    const emp = employees.find(e => e.id == sel.value);
+    const payload = {
+        employee_id: parseInt(sel.value, 10),
+        device_user_id: emp?.attendance_code || String(emp?.id || ''),
+        employee_name: emp?.fullname || '',
+        datetime: toIsoDateTime(document.getElementById('manualDateTime').value),
+        punch_type: document.getElementById('manualType').value,
+    };
+    const res = await fetch('/api/attendance/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) return alert(data.error || 'Lỗi lưu');
+    manualModal.hide();
+    await loadLogs();
+    alert('Đã lưu chấm công thủ công');
+}
+
+async function importCsv(ev) {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/attendance/import-csv', { method: 'POST', body: fd });
+    const data = await res.json();
+    ev.target.value = '';
+    if (!res.ok) return alert(data.error || 'Lỗi nhập CSV');
+    alert(`Đã nhập ${data.imported}/${data.total_rows} dòng`);
+    reloadActiveTab();
+}
+
+function parseExcelRow(row) {
+    const lower = {};
+    Object.keys(row).forEach(k => { lower[String(k).trim().toLowerCase()] = row[k]; });
+    function pick(...keys) {
+        for (const key of keys) {
+            for (const [col, val] of Object.entries(lower)) {
+                if (col.includes(key)) return String(val ?? '').trim();
+            }
+        }
+        return '';
+    }
+    const pin = pick('pin', 'mã', 'ma', 'userid', 'user id', 'id nv', 'mã nv', 'code');
+    const name = pick('name', 'tên', 'ten', 'họ tên', 'ho ten', 'fullname');
+    let dt = pick('datetime', 'date time', 'ngày giờ', 'ngay gio', 'time');
+    if (!dt) {
+        const d = pick('date', 'ngày', 'ngay');
+        const t = pick('time', 'giờ', 'gio');
+        if (d && t) dt = `${d} ${t}`;
+        else if (d) dt = d;
+    }
+    const status = pick('status', 'trạng thái', 'trang thai', 'type');
+    if (!pin && !dt) return null;
+    return { device_user_id: pin, employee_name: name, datetime: dt, punch_type: status };
+}
+
+async function importExcel(ev) {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    const records = rows.map(parseExcelRow).filter(Boolean);
+    if (!records.length) {
+        ev.target.value = '';
+        return alert('Không đọc được dòng hợp lệ từ file Excel');
+    }
+    const res = await fetch('/api/attendance/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records, device_sn: 'EXCEL' }),
+    });
+    const data = await res.json();
+    ev.target.value = '';
+    if (!res.ok) return alert(data.error || 'Lỗi nhập Excel');
+    alert(`Đã nhập ${data.imported} lượt chấm công (${data.skipped} bỏ qua)`);
+    reloadActiveTab();
+}
+
+let manualDatePicker = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    flatpickr('#filterStart', { locale: 'vn', dateFormat: 'd/m/Y', defaultDate: monthStart });
+    flatpickr('#filterEnd', { locale: 'vn', dateFormat: 'd/m/Y', defaultDate: now });
+    manualDatePicker = flatpickr('#manualDateTime', {
+        locale: 'vn',
+        enableTime: true,
+        dateFormat: 'd/m/Y H:i',
+        time_24hr: true,
+        defaultDate: now,
+    });
+    initTables();
+    await loadEmployees();
+    const base = `${window.location.protocol}//${window.location.host}`;
+    document.getElementById('pushUrlDisplay').textContent = `${base}/iclock/cdata`;
+    try {
+        await loadSummary();
+        await loadLogs();
+    } catch (e) {
+        console.warn(e);
+    }
+});
+</script>
+{% endblock %}

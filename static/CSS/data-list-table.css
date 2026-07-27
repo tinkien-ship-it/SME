@@ -1,0 +1,161 @@
+/* Bảng danh sách nâng cao — sort, resize, lọc theo cột */
+.enhanced-data-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.enhanced-data-table thead th {
+    background-color: #f9fafb;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #6b7280;
+    padding: 0;
+    position: relative;
+    border-bottom: 2px solid #e5e7eb;
+    vertical-align: bottom;
+    user-select: none;
+}
+
+.enhanced-data-table thead th .th-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 10px 12px;
+    min-height: 44px;
+}
+
+.enhanced-data-table thead th.text-center .th-inner { justify-content: center; }
+.enhanced-data-table thead th.text-end .th-inner { justify-content: flex-end; }
+
+.enhanced-data-table thead th.sortable .th-label {
+    cursor: pointer;
+}
+
+.enhanced-data-table thead th.sortable .th-label:hover {
+    color: #4f46e5;
+}
+
+.enhanced-data-table thead th .sort-icon {
+    font-size: 0.75rem;
+    opacity: 0.35;
+    margin-left: 2px;
+}
+
+.enhanced-data-table thead th.sorted-asc .sort-icon::after { content: "↑"; opacity: 1; color: #4f46e5; }
+.enhanced-data-table thead th.sorted-desc .sort-icon::after { content: "↓"; opacity: 1; color: #4f46e5; }
+
+.enhanced-data-table thead th .th-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.enhanced-data-table .col-filter-btn {
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    padding: 0;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.enhanced-data-table .col-filter-btn:hover {
+    background: #e5e7eb;
+    color: #4f46e5;
+}
+
+.enhanced-data-table .col-filter-btn.active {
+    background: #eef2ff;
+    color: #4f46e5;
+}
+
+.enhanced-data-table .col-resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 5px;
+    cursor: col-resize;
+    user-select: none;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.enhanced-data-table .col-resizer:hover {
+    background: #4f46e5;
+}
+
+.enhanced-data-table tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f3f4f6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.enhanced-data-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.col-filter-popover {
+    position: fixed;
+    z-index: 1080;
+    min-width: 240px;
+    max-width: 320px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    padding: 12px;
+}
+
+.col-filter-popover .popover-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.col-filter-popover .form-control,
+.col-filter-popover .form-select {
+    font-size: 0.875rem;
+    border-radius: 8px !important;
+}
+
+.col-filter-popover .popover-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.col-filter-popover .popover-actions .btn {
+    flex: 1;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 8px !important;
+}
+
+.enhanced-table-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.enhanced-table-toolbar .active-filters-badge {
+    font-size: 0.75rem;
+    background: #eef2ff;
+    color: #4338ca;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-weight: 600;
+}

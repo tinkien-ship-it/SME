@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    {% set voucher_no = receipt.voucher_display or 'PT......' %}
+    <title>Phiếu Thu - {{ voucher_no }}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <style>
+        /* Cấu hình trang in A4 */
+        @page { 
+            size: A4; 
+            margin: 10mm; 
+        }
+        
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 12pt;
+            line-height: 1.4;
+            margin: 0;
+            color: #000;
+            background-color: #f4f4f4;
+        }
+
+        /* Thanh công cụ điều khiển */
+        .no-print-zone {
+            text-align: center;
+            padding: 15px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .btn-action {
+            padding: 10px 25px;
+            font-weight: 600;
+            font-size: 11pt;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        /* Nút In - Màu xanh đặc trưng Phiếu Thu */
+        .btn-print { 
+            background: linear-gradient(135deg, #007bff, #0056b3); 
+            color: white; 
+        }
+        .btn-print:hover { 
+            background: linear-gradient(135deg, #0056b3, #004085);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+            color: white;
+        }
+
+        /* Nút Đóng */
+        .btn-close-action { 
+            background: linear-gradient(135deg, #6c757d, #495057); 
+            color: white; 
+        }
+        .btn-close-action:hover { 
+            background: linear-gradient(135deg, #495057, #343a40);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+            color: white;
+        }
+
+        /* Container mô phỏng giấy A4 */
+        .print-container {
+            width: 210mm;
+            margin: 15px auto;
+            padding: 15mm 20mm;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* Header Info */
+        .header-table { width: 100%; margin-bottom: 10px; border: none; }
+        .info-hkd { width: 60%; vertical-align: top; text-align: left; }
+        .mau-so { width: 40%; text-align: center; vertical-align: top; }
+
+        /* Title & Date */
+        .title { 
+            text-align: center; 
+            font-weight: bold; 
+            font-size: 18pt; 
+            margin: 15px 0 5px; 
+            text-transform: uppercase; 
+        }
+        .date-line { text-align: center; font-style: italic; margin-bottom: 5px; }
+        .number-line { text-align: center; margin-bottom: 20px; }
+
+        /* Dòng kẻ chấm */
+        .dot-row {
+            display: flex;
+            margin-bottom: 8px;
+            align-items: baseline;
+        }
+        .dot-label { white-space: nowrap; padding-right: 5px; }
+        .dotted {
+            flex: 1;
+            border-bottom: 1px dotted #000;
+            padding-left: 5px;
+            min-height: 22px;
+        }
+
+        /* Signature Table */
+        .footer-sign { width: 100%; margin-top: 30px; border: none; }
+        .footer-sign td { text-align: center; vertical-align: top; width: 25%; border: none; }
+        .sign-title { font-weight: bold; display: block; }
+        .sign-space { height: 75px; }
+
+        @media print {
+            body { background-color: #fff; }
+            .no-print-zone { display: none; }
+            .print-container { 
+                width: 100%; 
+                margin: 0; 
+                padding: 5mm; 
+                box-shadow: none; 
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print-zone">
+    <button class="btn-action btn-print" onclick="window.print()">
+        <i class="bi bi-printer-fill"></i> IN PHIẾU THU
+    </button>
+    <button class="btn-action btn-close-action" onclick="window.close()">
+        <i class="bi bi-x-circle-fill"></i> ĐÓNG TRANG
+    </button>
+</div>
+
+<div class="print-container">
+    {# --- XỬ LÝ NGÀY THÁNG --- #}
+    {% set date_str = receipt.formatted_date | string %}
+    {% if date_str and date_str != 'None' %}
+        {% set date_only = date_str.split(' ')[0] %}
+        {% if '/' in date_only %}
+            {% set dmy = date_only.split('/') %}
+            {% set day, month, year = dmy[0], dmy[1], dmy[2] %}
+        {% else %}
+            {% set dmy = date_only.split('-') %}
+            {% set year, month, day = dmy[0], dmy[1], dmy[2] %}
+        {% endif %}
+    {% else %}
+        {% set day, month, year = "...", "...", "20..." %}
+    {% endif %}
+
+    {# --- XỬ LÝ SỐ TIỀN --- #}
+    {% set amount_raw = receipt.amount | float %}
+    {% set formatted_money = "{:,.0f}".format(amount_raw).replace(',', '.') %}
+
+    <table class="header-table">
+        <tr>
+            <td class="info-hkd">
+                <div class="fw-bold text-uppercase">HỘ KINH DOANH: {{ info.business_name|default('CỬA HÀNG') }}</div>
+                <div>Địa chỉ: {{ info.address|default('') }}</div>
+                <div class="fw-bold">MST: {{ info.tax_code|default('') }}</div>
+            </td>
+            <td class="mau-so">
+                <div class="fw-bold" style="font-size: 11pt;">Mẫu số 01 - TT</div>
+                <small class="fst-italic" style="font-size: 9pt; display: block;">
+                    (Ban hành kèm theo Thông tư số 88/2021/TT-BTC)
+                </small>
+            </td>
+        </tr>
+    </table>
+
+    <div class="title">PHIẾU THU</div>
+    <div class="date-line">Ngày {{ day }} tháng {{ month }} năm {{ year }}</div>
+    <div class="number-line">
+        <span class="me-4">Quyển số: 01</span>
+        <span>Số: <b class="text-danger">{{ voucher_no }}</b></span>
+    </div>
+
+    <div class="content-body">
+        <div class="dot-row">
+            <span class="dot-label">Họ và tên người nộp tiền:</span>
+            <span class="dotted fw-bold">{{ receipt.payer_name|default('Bán cho người tiêu dùng') }}</span>
+        </div>
+
+        <div class="dot-row">
+            <span class="dot-label">Đơn vị:</span>
+            <span class="dotted">{{ receipt.company_name|default('') }}</span>
+        </div>
+
+        <div class="dot-row">
+            <span class="dot-label">Địa chỉ:</span>
+            <span class="dotted">{{ receipt.address|default('') }}</span>
+        </div>
+
+        <div class="dot-row">
+            <span class="dot-label">Lý do nộp:</span>
+            <span class="dotted">{{ receipt.reason|default('Thu tiền bán hàng') }}</span>
+        </div>
+
+        <div class="dot-row">
+            <span class="dot-label">Số tiền:</span>
+            <span class="dotted fw-bold">{{ formatted_money }} VNĐ</span>
+        </div>
+
+        <div class="dot-row">
+            <span class="dot-label">Bằng chữ:</span>
+            <span class="dotted fst-italic fw-bold">{{ amount_raw | so_thanh_chu | capitalize }}.</span>
+        </div>
+
+        <div class="dot-row">
+            <span class="dot-label">Kèm theo:</span>
+            <span class="dotted" style="flex: 0.4;">
+                {{ receipt.reference_document if receipt.reference_document else '..........' }}
+            </span>
+            <span class="dot-label" style="padding-left: 10px;">Chứng từ gốc.</span>
+            <span class="dotted"></span>
+        </div>
+    </div>
+
+    <div class="text-end fst-italic mt-2" style="padding-right: 50px;">
+        Ngày {{ day }} tháng {{ month }} năm {{ year }}
+    </div>
+
+    <table class="footer-sign">
+        <tr>
+            <td>
+                <span class="sign-title">Người đại diện HKD</span>
+                <small class="fst-italic">(Ký, họ tên, đóng dấu)</small>
+                <div class="sign-space"></div>
+                <div class="fw-bold">{{ info.representative_name }}</div>
+            </td>
+            <td>
+                <span class="sign-title">Người lập biểu</span>
+                <small class="fst-italic">(Ký, họ tên)</small>
+                <div class="sign-space"></div>
+                <div class="fw-bold">{{ session.get('user_name') or '' }}</div>
+            </td>
+            <td>
+                <span class="sign-title">Người nộp tiền</span>
+                <small class="fst-italic">(Ký, họ tên)</small>
+                <div class="sign-space"></div>
+                <div>.........................</div>
+            </td>
+            <td>
+                <span class="sign-title">Thủ quỹ</span>
+                <small class="fst-italic">(Ký, họ tên)</small>
+                <div class="sign-space"></div>
+                <div class="fw-bold">{{ info.representative_name }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="mt-5 pt-3" style="border-top: 1px dashed #000;">
+        <div class="dot-row">
+            <span class="dot-label fw-bold">Đã nhận đủ số tiền (viết bằng chữ):</span>
+            <span class="dotted fst-italic">{{ amount_raw | so_thanh_chu | capitalize }}.</span>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

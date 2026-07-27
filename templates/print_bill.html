@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>HÓA ĐƠN #{{ sale.sale_no }}</title>
+    <style>
+        body {
+            font-family: 'Arial', 'DejaVu Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            font-size: 11px;
+            line-height: 1.2;
+            color: #000;
+            width: 80mm;
+        }
+        .bill {
+            width: 100%;
+            max-width: 280px;
+            margin: 0 auto;
+            border: 1px solid #000;
+        }
+        .header {
+            background: #ff6b6b;
+            color: white;
+            padding: 5px 6px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .header .bill-title {
+            display: block;
+            font-size: 13px;
+            font-weight: 900;
+            margin-top: 3px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            padding-top: 3px;
+        }
+        .header p {
+            margin: 2px 0 0;
+            font-size: 10px;
+            opacity: 0.9;
+        }
+        .info {
+            padding: 4px 5px;
+            background: #f8f9fa;
+            font-size: 11px;
+            border-bottom: 1px dashed #ccc;
+        }
+        .items { padding: 3px 5px; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        th { 
+            text-align: left; 
+            padding: 3px 0;
+            font-size: 10px; 
+            border-bottom: 1px solid #333; 
+        }
+        td { 
+            padding: 3px 0;
+            vertical-align: top; 
+        }
+        .text-right { text-align: right; }
+        .line { 
+            border-top: 1px dashed #333; 
+            margin: 4px 0;
+        }
+        .summary {
+            padding: 5px 8px;
+            background: #f8f9fa;
+            font-size: 11px;
+        }
+        .big-total {
+            font-size: 15px;
+            font-weight: bold;
+            color: #c41e3a;
+            text-align: center;
+            padding: 4px 0;
+            border-top: 1px solid #ddd;
+        }
+        .qr-section {
+            text-align: center;
+            padding: 5px 0;
+            border-top: 1px dashed #333;
+        }
+        .footer {
+            text-align: center;
+            padding: 6px;
+            background: #2c3e50;
+            color: white;
+            font-size: 10px;
+        }
+        .badge-unit {
+            background: #6c757d;
+            color: white;
+            padding: 0px 3px;
+            border-radius: 2px;
+            font-size: 8px;
+            margin-left: 2px;
+            vertical-align: middle;
+        }
+        @media print {
+            body { padding: 0; margin: 0; }
+            .bill { border: none; }
+            .qr-section, .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body> 
+<div class="bill">
+    <div class="header">
+        <h1>{{ info.business_name if info.business_name else '' }}</h1>
+        <p>
+            {{ info.address if info.address else '' }}<br>
+            {% if info.phone %}Hotline: {{ info.phone }}{% endif %}
+        </p>
+        <span class="bill-title">
+            {{ "PHIẾU THANH TOÁN TIỀN PHÒNG" if sale.business_line == 'rental_service' else "PHIẾU THANH TOÁN" }}
+        </span>
+    </div>
+
+    <div class="info">
+        <div><strong>Số phiếu:</strong> {{ sale.sale_no }}</div>
+        <div><strong>Ngày:</strong> {{ sale.date_formatted }}</div>
+        <div><strong>Khách hàng:</strong> {{ sale.customer_name }}</div>
+        {% if sale.customer_phone %}<div><strong>Điện thoại:</strong> {{ sale.customer_phone }}</div>{% endif %}
+        {% if sale.address %}<div><strong>Địa chỉ:</strong> {{ sale.address }}</div>{% endif %}
+    </div>
+
+    <div class="items">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nội dung</th>
+                    <th class="text-right">SL</th>
+                    <th class="text-right">Đ.Giá</th>
+                    <th class="text-right">T.Tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in items %}
+                <tr>
+                    <td>
+                        {{ it.display_name }}
+                        {% if it.display_unit %}<span class="badge-unit">{{ it.display_unit }}</span>{% endif %}
+                    </td>
+                    <td class="text-right">{{ it.quantity }}</td>
+                    <td class="text-right">{{ "{:,.0f}".format(it.sold_price)|replace(",", ".") }}</td>
+                    <td class="text-right">{{ "{:,.0f}".format(it.line_total)|replace(",", ".") }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="summary">
+        <div style="display:flex; justify-content:space-between; margin-bottom: 2px;">
+            <span>Tiền hàng:</span>
+            <span>{{ "{:,.0f}".format(sale.subtotal)|replace(",", ".") }}đ</span>
+        </div>
+        
+        {% if sale.discount_amount > 0 %}
+        <div style="display:flex; justify-content:space-between; color:#dc3545; margin-bottom: 2px;">
+            <span>Chiết khấu:</span>
+            <span>-{{ "{:,.0f}".format(sale.discount_amount)|replace(",", ".") }}đ</span>
+        </div>
+        {% endif %}
+
+        {% if sale.tax_amount > 0 %}
+        <div style="display:flex; justify-content:space-between; margin-bottom: 2px;">
+            <span>Thuế/Phí:</span>
+            <span>+{{ "{:,.0f}".format(sale.tax_amount)|replace(",", ".") }}đ</span>
+        </div>
+        {% endif %}
+
+        <div class="big-total">
+            Tổng cộng: {{ "{:,.0f}".format(sale.final_amount)|replace(",", ".") }}đ
+        </div>
+    </div>
+    
+    <div class="qr-section">
+        <p style="font-size: 9px; margin-bottom: 4px;">Quét mã để thanh toán nhanh</p>
+        <img id="qrBillImage" src="/qr_payment/{{ sale.id }}" alt="QR Code" style="width: 130px; height: 130px;">
+    </div>
+    
+    <div class="footer">
+        Cảm ơn quý khách! Hẹn gặp lại.
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.4/qz-tray.js"></script>
+
+<script>
+    // Nhận cấu hình trực tiếp từ database settings thông qua Flask Jinja2
+    const isAutoPrint = {{ 'true' if autoprint else 'false' }};
+    console.log('Chế độ nhận diện từ POS:', isAutoPrint ? 'TỰ ĐỘNG' : 'THỦ CÔNG');
+
+    function cleanupAfterPrint() {
+        localStorage.removeItem('auto_print_bill');
+    }
+
+    window.addEventListener('load', function() {
+        // Trì hoãn 300ms ngắn để đảm bảo ảnh QR và CSS font chữ nạp xong đầy đủ
+        setTimeout(() => {
+            if (isAutoPrint === true) {
+                // ==================== CHẾ ĐỘ 1: TỰ ĐỘNG IN NGẦM QUA MÁY IN MẶC ĐỊNH O.S ====================
+                console.log('🚀 Đang kết nối QZ Tray lấy máy in mặc định của Hệ Điều Hành...');
+                
+                qz.websocket.connect().then(() => {
+                    // 🎯 TỐI ƯU: Gọi máy in mặc định được cài đặt trên hệ điều hành, không hardcode tên riêng
+                    return qz.printers.getDefault(); 
+                }).then((printerName) => {
+                    console.log('🖨️ Đã tìm thấy máy in mặc định của hệ thống:', printerName);
+                    
+                    const config = qz.configs.create(printerName);
+                    const printData = [{
+                        type: 'html',
+                        format: 'plain',
+                        data: document.documentElement.innerHTML // Đẩy toàn bộ HTML hóa đơn hiện tại để in ngầm
+                    }];
+                    return qz.print(config, printData);
+                }).then(() => {
+                    console.log("In ngầm thành công!");
+                    cleanupAfterPrint();
+                    window.close(); // Ép tab tự động đóng siêu tốc
+                }).catch((err) => {
+                    console.error("Lỗi luồng in ngầm (Có thể chưa bật QZ Tray hoặc chưa cài Default Printer):", err);
+                    // Phương án dự phòng nếu có sự cố phần cứng: Quay về hộp thoại in mặc định của Chrome
+                    window.print();
+                    setTimeout(() => { window.close(); }, 1000);
+                });
+
+            } else {
+                // ==================== CHẾ ĐỘ 2: THỦ CÔNG HIỂN THỊ PRINT PREVIEW CỦA CHROME ====================
+                console.log('🖨️ Chế độ thủ công: Hiện hộp thoại xem trước nguyên bản.');
+                window.print();
+                cleanupAfterPrint();
+                // Giữ nguyên tab không đóng để thu ngân kiểm tra dữ liệu đơn hàng nếu cần
+            }
+        }, 300);
+    });
+
+//== Cài QZ Tray để in bill tự động. Bước 1: Bật chế độ in tự động, khi thanh toán QZ Tray sẽ hiện hộp thoại và hãy tích chọn vào ô "Remember this decision" (Ghi nhớ quyết định này), rồi bấm ALLOW hoặc Trust. Bước 2: Vào Windows (Start) -> gõ Printers & scanners và nhấn Enter, rồi chọn máy in nhiệt mặc định (Chọn Set as default). Bước 3: Vào Taskbar tìm QZ Tray, nhấn chuột phải và chọn Automatically Start (để chạy ngầm khi khởi động máy tính); cách 2: Bấm chuột phải vào trình duyệt chrome, dán đường link này ["C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing] vào Target trong tab Shortcut (Khi dán vào bỏ đi 2 dấu móc [...]).
+</script>
+</body>
+</html>

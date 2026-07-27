@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>In Tem Giá 50x28mm (40 tem) – SÁT NHAU + CÓ MÃ VẠCH</title>
+
+    <style>
+        @page {
+            size: A4;
+            margin: 6mm 8mm 6mm 6mm;   /* Căn lề chuẩn cho giấy 40 tem */
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        td {
+            width: 50mm;
+            height: 28mm;
+            padding: 0;
+            vertical-align: top;
+            text-align: center;
+        }
+
+        .label {
+            width: 48mm;
+            height: 26mm;
+            margin: 1mm auto;
+            border: 1px dashed #aaa;
+            background: white;
+            padding: 1mm 1mm 0.5mm;     /* Padding nhỏ nhất có thể */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 0.8mm;                /* KHOẢNG CÁCH GIỮA CÁC DÒNG – CHỈ 0.8mm */
+        }
+
+        .barcode {
+            width: 100%;
+            height: 44px;              /* Cao nhất có thể trong tem 28mm */
+            margin: 0 0 0.8mm 0;        /* Chỉ cách tên sản phẩm 0.8mm */
+        }
+
+        .name {
+            font-weight: bold;
+            font-size: 11.5px;
+            line-height: 1.1;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .price-line {
+            margin: 0;
+            line-height: 1;
+        }
+
+        .price {
+            font-weight: 900;
+            color: #d32f2f;
+            font-size: 16px;           /* To nhất có thể */
+        }
+
+        .unit {
+            font-size: 12px;
+            color: #d32f2f;
+            font-weight: bold;
+            margin-left: 1px;
+        }
+
+        .code {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            font-weight: bold;
+            color: #000;
+            margin: 0;
+            line-height: 1;
+        }
+    </style>
+
+    <!-- JsBarcode phiên bản hoạt động ổn định nhất -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+</head>
+<body onload="printAndGenerateBarcodes()">
+
+<table>
+    {% for i in range(0, barcodes|length, 4) %}
+    <tr>
+        {% for j in range(4) %}
+        {% set idx = i + j %}
+        {% if idx < barcodes|length %}
+        <td>
+            <div class="label">
+                <!-- MÃ VẠCH -->
+                <svg class="barcode" id="barcode-{{ idx }}"></svg>
+
+                <!-- TÊN SẢN PHẨM -->
+                <div class="name">{{ barcodes[idx].name }}</div>
+
+                <!-- GIÁ + ĐƠN VỊ TÍNH -->
+                <div class="price-line">
+                    <span class="price">
+                        {{ "{:,.0f}".format(barcodes[idx].price|float).replace(',', '.') }}đ
+                    </span>
+                    {% if barcodes[idx].unit %}
+                    <span class="unit">/{{ barcodes[idx].unit }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- MÃ SẢN PHẨM -->
+                <div class="code">{{ barcodes[idx].code }}</div>
+            </div>
+        </td>
+        {% else %}
+        <td></td>
+        {% endif %}
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+
+<script>
+    function printAndGenerateBarcodes() {
+        // Tạo mã vạch
+        {% for b in barcodes %}
+        JsBarcode("#barcode-{{ loop.index0 }}", "{{ b.code|trim }}", {
+            format: "CODE128",
+            width: 2.3,          // Đậm, dễ quét
+            height: 44,
+            displayValue: false,
+            margin: 6,
+            flat: true
+        });
+        {% endfor %}
+
+        // Tự động in ngay khi load xong
+        setTimeout(() => window.print(), 300);
+    }
+</script>
+
+</body>
+</html>

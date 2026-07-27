@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% block title %}Sổ Chi Tiết Doanh Thu, Chi Phí (S2c-HKD){% endblock %}
+{% block head_extra %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+    .page-header { background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 2.5rem 0; margin-bottom: -3.5rem; color: white; }
+    .filter-bar { background: white; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+    .form-control-custom { border-radius: 0.6rem; border: 1px solid #d1d5db; padding: 0.6rem 1rem; transition: all 0.2s; }
+    .main-card { background: white; border-radius: 1.25rem; border: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    .amount-val { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.4rem; }
+    .stat-card { transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-5px); }
+    .flatpickr-calendar { z-index: 9999 !important; }
+    .positive { color: #198754; }
+    .negative { color: #dc3545; }
+    .indent { padding-left: 2.5rem !important; }
+    .section-title { font-weight: 700; background-color: #f8f9fa; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-primary">
+            <i class="fas fa-book-open text-primary me-2"></i>
+            Sổ Chi Tiết Doanh Thu, Chi Phí S2c-HKD (Nhóm 3 - Doanh Thu trên 3 Tỷ/năm)
+        </h3>
+        <button class="btn btn-success shadow-sm" onclick="printReport()">
+            <i class="fas fa-print me-2"></i>In Sổ Chi Tiết
+        </button>
+    </div>
+
+    <div class="card filter-bar border-0 shadow-sm">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-primary">Lọc nhanh kỳ báo cáo</label>
+                    <select class="form-select form-control-custom border-primary" id="quickFilter" onchange="applyQuickFilter()">
+                        <option value="q1">Quý 1 (01/01 - 31/03)</option>
+                        <option value="q2">Quý 2 (01/04 - 30/06)</option>
+                        <option value="q3">Quý 3 (01/07 - 30/09)</option>
+                        <option value="q4">Quý 4 (01/10 - 31/12)</option>
+                        <option value="this_month">Tháng này</option>
+                        <option value="last_month">Tháng trước</option>
+                        <option value="this_year">Năm nay</option>
+                        <option value="last_year">Năm trước</option>
+                        <option value="custom">-- Tùy chọn ngày --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Từ ngày</label>
+                    <input type="text" class="form-control text-center form-control-custom" id="startDate" placeholder="dd/mm/yyyy" onchange="checkCustomMode()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Đến ngày</label>
+                    <input type="text" class="form-control text-center form-control-custom" id="endDate" placeholder="dd/mm/yyyy" onchange="checkCustomMode()">
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100 shadow-sm fw-bold" onclick="loadReport()">
+                        <i class="fas fa-search me-2"></i>XEM BÁO CÁO
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card stat-card border-0 shadow-sm text-center h-100">
+                <div class="card-body p-4">
+                    <h6 class="text-muted fw-bold">TỔNG DOANH THU</h6>
+                    <h2 id="revenueStat" class="positive amount-val fw-bold">0đ</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card border-0 shadow-sm text-center h-100">
+                <div class="card-body p-4">
+                    <h6 class="text-muted fw-bold">TỔNG CHI PHÍ</h6>
+                    <h2 id="expenseStat" class="negative amount-val fw-bold">0đ</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card border-0 shadow-sm text-center h-100">
+                <div class="card-body p-4">
+                    <h6 class="text-muted fw-bold">CHÊNH LỆCH (LÃI/LỖ)</h6>
+                    <h2 id="profitStat" class="amount-val fw-bold">0đ</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card main-card shadow-lg border-0">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <strong>Chi tiết các khoản mục theo TT 152/2025</strong>
+            <span id="recordSummary" class="badge bg-light text-dark border">0 khoản mục</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Diễn giải</th>
+                            <th class="text-end pe-4">Số tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportBody">
+                        <tr><td colspan="2" class="text-center p-5 text-muted">Vui lòng chọn kỳ báo cáo</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+function formatVND(v) {
+    return (parseFloat(v) || 0).toLocaleString('vi-VN') + 'đ';
+}
+
+function VNStringToISOString(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.trim().split('/');
+    if (parts.length !== 3) return '';
+    const [d, m, y] = parts;
+    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
+function checkCustomMode() {
+    // Nếu người dùng tương tác trực tiếp vào ô ngày, chuyển select sang custom
+    if (event && event.type === 'change') {
+        document.getElementById('quickFilter').value = 'custom';
+    }
+}
+
+async function loadReport() {
+    const startInput = document.getElementById('startDate').value.trim();
+    const endInput = document.getElementById('endDate').value.trim();
+    if (!startInput || !endInput) {
+        alert('Vui lòng chọn khoảng thời gian!');
+        return;
+    }
+    const start = VNStringToISOString(startInput);
+    const end = VNStringToISOString(endInput);
+
+    const tbody = document.getElementById('reportBody');
+    tbody.innerHTML = '<tr><td colspan="2" class="text-center p-5"><div class="spinner-border text-primary"></div> Đang tải...</td></tr>';
+
+    try {
+        const res = await fetch(`/api/reports/s2c?start=${start}&end=${end}`);
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const data = await res.json();
+
+        const revenue = data.revenue || 0;
+        const totalExpense = data.total_expenses || 0;
+        const profit = revenue - totalExpense;
+        const taxTncn = data.tax_tncn || 0;
+
+        const costs = data.costs || {};
+
+        document.getElementById('revenueStat').textContent = formatVND(revenue);
+        document.getElementById('expenseStat').textContent = formatVND(totalExpense);
+        document.getElementById('profitStat').textContent = formatVND(profit);
+        document.getElementById('profitStat').className = `amount-val fw-bold ${profit >= 0 ? 'positive' : 'negative'}`;
+
+        const tableRows = [
+            { label: '1. Doanh thu bán hàng hóa, dịch vụ', amount: revenue, bold: true, class: 'positive section-title' },
+            { label: '2. Chi phí hợp lý', amount: totalExpense, bold: true, class: 'negative section-title' },
+            { label: 'a) Chi phí nguyên liệu, vật liệu, nhiên liệu, năng lượng, hàng hóa sử dụng vào sản xuất, kinh doanh.', amount: costs.a || 0, indent: true, class: 'negative' },
+            { label: 'b) Chi phí tiền lương, tiền công, các khoản phụ cấp, bảo hiểm bắt buộc và các khoản chỉ trả cho người lao động có đóng bảo hiểm bắt buộc theo quy định; chi phí tiền lương, tiền công, các khoản phụ cấp và các khoản chi trả cho người lao động dưới 01 tháng.', amount: costs.b || 0, indent: true, class: 'negative' },
+            { label: 'c) Chi phí khấu hao tài sản cố định phục vụ cho hoạt động sản xuất, kinh doanh theo chế độ quản lý, sử dụng và trích khấu hao tài sản cố định (nếu có).', amount: costs.c || 0, indent: true, class: 'negative' },
+            { label: 'd) Chi phí dịch vụ mua ngoài như điện, nước, điện thoại, internet, vận chuyển, thuê tài sản, sửa chữa, bảo dưỡng.', amount: costs.d || 0, indent: true, class: 'negative' },
+            { label: 'đ) Chi phí trả lãi tiền vay vốn sản xuất, kinh doanh của tổ chức tín dụng theo lãi suất thực tế. Chi phí trả lãi tiền vay vốn sản xuất, kinh doanh của đối tượng không phải là tổ chức tín dụng không vượt quá mức quy định tại Bộ luật Dân sự.', amount: costs.dh || 0, indent: true, class: 'negative' },
+            { label: 'e)  Các khoản chi khác phục vụ trực tiếp hoạt động sản xuất, kinh doanh...', amount: costs.e || 0, indent: true, class: 'negative' },
+            { label: '3. Chênh lệch [Lãi/ Lỗ] {(3) = (1) - (2)}', amount: profit, bold: true, class: profit >= 0 ? 'positive' : 'negative' },
+            { label: '4. Tổng số thuế TNCN phải nộp (17% Lợi Nhuận)', amount: taxTncn, bold: true, class: 'negative' }
+        ];
+
+        tbody.innerHTML = tableRows.map(r => `
+            <tr ${r.bold ? 'class="fw-bold"' : ''}>
+                <td class="${r.indent ? 'indent' : ''}">${r.label}</td>
+                <td class="text-end pe-4 ${r.class || ''}">${formatVND(r.amount)}</td>
+            </tr>
+        `).join('');
+
+        document.getElementById('recordSummary').textContent = `${tableRows.length} khoản mục`;
+
+    } catch (err) {
+        console.error('Lỗi tải báo cáo S2c:', err);
+        tbody.innerHTML = '<tr><td colspan="2" class="text-center p-5 text-danger">Lỗi tải dữ liệu.</td></tr>';
+    }
+}
+
+function applyQuickFilter() {
+    const filter = document.getElementById('quickFilter').value;
+    if (filter === 'custom') return;
+    
+    const now = new Date();
+    const year = now.getFullYear();
+    let start = new Date();
+    let end = new Date();
+
+    switch (filter) {
+        case 'q1': start = new Date(year, 0, 1); end = new Date(year, 2, 31); break;
+        case 'q2': start = new Date(year, 3, 1); end = new Date(year, 5, 30); break;
+        case 'q3': start = new Date(year, 6, 1); end = new Date(year, 8, 30); break;
+        case 'q4': start = new Date(year, 9, 1); end = new Date(year, 11, 31); break;
+        case 'this_month':
+            start = new Date(now.getFullYear(), now.getMonth(), 1);
+            end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            break;
+        case 'last_month':
+            start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            end = new Date(now.getFullYear(), now.getMonth(), 0);
+            break;
+        case 'this_year':
+            start = new Date(year, 0, 1);
+            end = new Date(year, 11, 31);
+            break;
+        case 'last_year':
+            start = new Date(year - 1, 0, 1);
+            end = new Date(year - 1, 11, 31);
+            break;
+    }
+    
+    const sStr = `${String(start.getDate()).padStart(2,'0')}/${String(start.getMonth()+1).padStart(2,'0')}/${start.getFullYear()}`;
+    const eStr = `${String(end.getDate()).padStart(2,'0')}/${String(end.getMonth()+1).padStart(2,'0')}/${end.getFullYear()}`;
+    
+    document.getElementById('startDate')._flatpickr.setDate(sStr);
+    document.getElementById('endDate')._flatpickr.setDate(eStr);
+    loadReport();
+}
+
+function printReport() {
+    const s = VNStringToISOString(document.getElementById('startDate').value);
+    const e = VNStringToISOString(document.getElementById('endDate').value);
+    if (!s || !e) { alert("Vui lòng chọn khoảng thời gian!"); return; }
+    window.open(`/reports/print-s2c?start=${s}&end=${e}`, '_blank');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Cấu hình Flatpickr chung
+    const fpConfig = {
+        dateFormat: "d/m/Y",
+        locale: "vn",
+        allowInput: true
+    };
+    flatpickr("#startDate", fpConfig);
+    flatpickr("#endDate", fpConfig);
+
+    // Xác định Quý hiện tại khi vừa load trang
+    const month = new Date().getMonth();
+    let currentQ = "q1";
+    if (month >= 3 && month <= 5) currentQ = "q2";
+    else if (month >= 6 && month <= 8) currentQ = "q3";
+    else if (month >= 9 && month <= 11) currentQ = "q4";
+
+    document.getElementById('quickFilter').value = currentQ;
+    applyQuickFilter();
+});
+</script>
+{% endblock %}

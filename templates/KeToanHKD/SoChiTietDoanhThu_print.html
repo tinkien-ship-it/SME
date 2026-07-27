@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>In Sổ S1a-HKD - {{ info.business_name or info.name }}</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #000;
+        }
+
+        .table-print {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .table-print th,
+        .table-print td {
+            border: 1px solid black !important;
+            padding: 4px 6px;
+            vertical-align: middle;
+        }
+
+        .header-info p {
+            margin-bottom: 0;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .text-uppercase {
+            text-transform: uppercase;
+        }
+
+        /* Định dạng cột số tiền để dễ đọc */
+        .text-end {
+            text-align: right !important;
+            white-space: nowrap;
+        }
+
+        @media print {
+            nav, .sidebar, .navbar, .footer, .btn, .no-print, header {
+                display: none !important;
+            }
+
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+
+            .bg-light {
+                background: white !important;
+            }
+
+            .shadow {
+                box-shadow: none !important;
+            }
+
+            .table-print th {
+                background-color: #f8f9fa !important;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container no-print text-center mt-3 mb-3">
+    <button class="btn btn-primary btn-lg" onclick="window.print()">
+        <i class="fas fa-print"></i> IN SỔ
+    </button>
+    <button class="btn btn-secondary btn-lg" onclick="window.close()">
+        <i class="fas fa-times"></i> ĐÓNG
+    </button>
+</div>
+
+<div class="bg-white p-5 mx-auto shadow" style="width:297mm; min-height:210mm;">
+
+    <div class="row">
+        <div class="col-8 header-info">
+            <p class="text-uppercase">
+                HỘ, CÁ NHÂN KINH DOANH: {{ info.business_name or info.name or '................................' }}
+            </p>
+            <p>Địa chỉ: {{ info.address or '................................' }}</p>
+            <p>Mã số thuế: {{ info.tax_code or '................................' }}</p>
+        </div>
+        <div class="col-4 text-end">
+            <p class="fw-bold">Mẫu số S1a-HKD</p>
+            <small>(Ban hành kèm theo Thông tư số 152/2025/TT-BTC <br> ngày 31/12/2025 của Bộ Tài chính)</small>
+        </div>
+    </div>
+
+    <div class="text-center mt-4 mb-4">
+        <h4 class="fw-bold">SỔ CHI TIẾT DOANH THU BÁN HÀNG HÓA, DỊCH VỤ</h4>
+        <p>Tên địa điểm kinh doanh: {{ info.location or info.address or 'Tại địa chỉ trên' }}</p>
+        <p id="timeRangeDisplay" class="fw-bold"></p>
+        <p class="text-end fst-italic">Đơn vị tính: Đồng</p>
+    </div>
+
+    <table class="table-print">
+        <thead class="text-center align-middle bg-light">
+        <tr>
+            <th colspan="2">CHỨNG TỪ</th>
+            <th rowspan="2">DIỄN GIẢI</th>
+            <th colspan="4">DOANH THU BÁN HÀNG HÓA, DỊCH VỤ THEO NGÀNH NGHỀ</th>
+        </tr>
+        <tr>
+            <th style="width:90px;">SỐ HIỆU</th>
+            <th style="width:100px;">NGÀY, THÁNG</th>
+            <th>Phân phối, cung cấp Hàng hóa (1)</th>
+            <th>Dịch vụ, xây dựng không bao thầu NVL (2)</th>
+            <th>Sản xuất, vận tải, bao thầu NVL (3)</th>
+            <th>Kinh doanh khác (4)</th>
+        </tr>
+        </thead>
+
+        <tbody id="printContent">
+        <tr>
+            <td colspan="7" class="text-center p-4">Đang tải dữ liệu…</td>
+        </tr>
+        </tbody>
+
+        <tfoot id="printFooter" class="fw-bold bg-light"></tfoot>
+    </table>
+
+    <div class="row mt-5 text-center">
+        <div class="col-8"></div>
+        <div class="col-4">
+            <p>
+                Ngày <span id="sigDay">…</span>
+                tháng <span id="sigMonth">…</span>
+                năm <span id="sigYear">…</span>
+            </p>
+            <p class="fw-bold text-uppercase">CHỦ HỘ KINH DOANH</p>
+            <p class="fst-italic">(Ký, họ tên)</p>
+            <div style="height:80px"></div>
+            <p class="fw-bold text-uppercase">
+                {{ info.representative_name or info.name }}
+            </p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+/**
+ * Hàm định dạng tiền tệ: 1.000.000
+ */
+function vnFormat(num) {
+    if (num === null || num === undefined || isNaN(num)) return '0';
+    // Sử dụng Intl.NumberFormat với cấu hình Việt Nam (vi-VN)
+    // Sẽ đảm bảo dấu chấm là ngăn cách hàng ngàn
+    return new Intl.NumberFormat('vi-VN').format(num);
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.substring(0, 10).split('-');
+    return `${d}/${m}/${y}`;
+}
+
+async function loadData() {
+    const params = new URLSearchParams(window.location.search);
+    const start = params.get('start');
+    const end = params.get('end');
+
+    if (start && end) {
+        document.getElementById('timeRangeDisplay').innerText =
+            `Từ ngày ${formatDate(start)} đến ngày ${formatDate(end)}`;
+
+        const [y, m, d] = end.split('-');
+        document.getElementById('sigDay').innerText = d;
+        document.getElementById('sigMonth').innerText = m;
+        document.getElementById('sigYear').innerText = y;
+    }
+
+    try {
+        const res = await fetch(`/api/sale/list?start=${start}&end=${end}&limit=2000`);
+        const data = await res.json();
+
+        const tbody = document.getElementById('printContent');
+        const tfoot = document.getElementById('printFooter');
+
+        if (!data.orders || data.orders.length === 0) {
+            tbody.innerHTML =
+                `<tr><td colspan="7" class="text-center">Không có dữ liệu phát sinh</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.orders.map(o => `
+            <tr>
+                <td class="text-center">${o.sale_no || 'ĐH' + o.id}</td>
+                <td class="text-center">${formatDate(o.date)}</td>
+                <td>Bán hàng cho ${o.customer_name || 'Bán cho người tiêu dùng'}</td>
+                <td class="text-end">${vnFormat(o.total_amount)}</td>
+                <td class="text-center">0</td>
+                <td class="text-center">0</td>
+                <td class="text-center">0</td>
+            </tr>
+        `).join('');
+
+        tfoot.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center">TỔNG CỘNG</td>
+                <td class="text-end">${vnFormat(data.stats?.revenue || 0)}</td>
+                <td class="text-center">0</td>
+                <td class="text-center">0</td>
+                <td class="text-center">0</td>
+            </tr>
+        `;
+    } catch (e) {
+        document.getElementById('printContent').innerHTML =
+            `<tr><td colspan="7" class="text-danger text-center">Lỗi tải dữ liệu</td></tr>`;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
+
+</body>
+</html>

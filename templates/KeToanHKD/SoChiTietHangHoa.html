@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block title %}Sổ Chi Tiết Vật Tư (S2d-HKD){% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+<style>
+    :root {
+        --primary-blue: #2563eb;
+        --success-green: #059669;
+        --danger-red: #dc2626;
+    }
+
+    .select2-container .select2-selection--single { 
+        height: 42px !important; 
+        border-radius: 8px; 
+        border: 1px solid #d1d5db; 
+        display: flex;
+        align-items: center;
+    }
+    
+    .text-neg { color: var(--danger-red); font-weight: 700; }
+    .table-sm-custom td, .table-sm-custom th { padding: 0.6rem 0.5rem; font-size: 0.88rem; }
+    
+    .bg-light-success { background-color: #f0fdf4 !important; }
+    .bg-light-danger { background-color: #fef2f2 !important; }
+    
+    /* Sửa lỗi hiển thị: Đảm bảo bảng có thanh cuộn và không bị giới hạn ngầm */
+    .table-responsive-custom { 
+        max-height: 75vh; 
+        overflow-y: auto; 
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+    }
+    
+    .sticky-thead th { 
+        position: sticky; 
+        top: 0; 
+        background: #f9fafb !important; 
+        z-index: 20; 
+        box-shadow: inset 0 -1px 0 #e5e7eb;
+    }
+
+    /* Hiệu ứng loading */
+    .loading-overlay { display: none; text-align: center; padding: 3rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold text-primary m-0">
+            <i class="fas fa-boxes-stacked text-primary me-2"></i>SỔ CHI TIẾT VẬT TƯ, SẢN PHẨM (S2d-HKD)
+        </h4>
+        <button id="printBtn" class="btn btn-success px-4 shadow-sm fw-bold" disabled onclick="handlePrint()">
+            <i class="fas fa-print me-2"></i> IN SỔ CHI TIẾT
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-lg-5 col-md-12">
+                    <label class="form-label small fw-bold text-secondary">Chọn sản phẩm/vật tư</label>
+                    <select id="productSelect" class="form-select select2">
+                        <option value="">-- Tìm kiếm tên hoặc mã --</option>
+                        {% for p in products %}
+                        <option value="{{ p.id }}">[{{ p.sku or p.id }}] {{ p.name }} ({{ p.unit }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-4 col-md-8">
+                    <label class="form-label small fw-bold text-secondary">Khoảng thời gian báo cáo</label>
+                    <div class="input-group">
+                        <input id="dateFrom" class="form-control" placeholder="Từ ngày" readonly>
+                        <span class="input-group-text bg-white border-start-0 border-end-0"><i class="fas fa-arrow-right text-muted"></i></span>
+                        <input id="dateTo" class="form-control" placeholder="Đến ngày" readonly>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-4 d-flex align-items-end">
+                    <button id="loadBtn" class="btn btn-primary w-100 fw-bold py-2" onclick="loadData()">
+                        <i class="fas fa-magnifying-glass me-2"></i> TRUY XUẤT DỮ LIỆU
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive-custom">
+            <table class="table table-bordered align-middle table-sm-custom mb-0" id="mainTable">
+                <thead class="text-center small text-uppercase fw-bold sticky-thead">
+                    <tr class="table-light">
+                        <th colspan="2">CHỨNG TỪ</th>
+                        <th rowspan="2" style="min-width: 250px;">DIỄN GIẢI</th>
+                        <th rowspan="2">GIÁ VỐN</th>
+                        <th colspan="2" class="text-success bg-light-success">NHẬP</th>
+                        <th colspan="2" class="text-danger bg-light-danger">XUẤT</th>
+                        <th colspan="2" class="table-info">TỒN CUỐI</th>
+                    </tr>
+                    <tr class="table-light">
+                        <th style="width: 100px;">SỐ PHIẾU</th>
+                        <th style="width: 110px;">NGÀY</th>
+                        <th class="bg-light-success">SL</th>
+                        <th class="bg-light-success">THÀNH TIỀN</th>
+                        <th class="bg-light-danger">SL</th>
+                        <th class="bg-light-danger">THÀNH TIỀN</th>
+                        <th class="table-info">SL</th>
+                        <th class="table-info">THÀNH TIỀN</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody">
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-5">
+                            <i class="fas fa-info-circle me-2"></i>Chọn sản phẩm và thời gian để xem báo cáo
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot id="tfoot" class="fw-bold bg-light"></tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+<script>
+// Định dạng tiền tệ và số
+const fmt = v => v ? Number(v).toLocaleString('vi-VN') : '0';
+const negClass = v => v < 0 ? 'text-neg' : '';
+
+let fpFrom, fpTo;
+
+$(document).ready(() => {
+    // Khởi tạo Select2
+    $('#productSelect').select2({
+        placeholder: "-- Chọn sản phẩm --",
+        allowClear: true
+    });
+
+    // Cấu hình Flatpickr
+    const flatpickrConfig = {
+        dateFormat: 'd/m/Y',
+        locale: 'vn',
+        allowInput: true
+    };
+
+    fpFrom = flatpickr('#dateFrom', flatpickrConfig);
+    fpTo = flatpickr('#dateTo', flatpickrConfig);
+
+    // Thiết lập ngày mặc định (Đầu tháng đến Hiện tại)
+    const today = new Date();
+    fpFrom.setDate(new Date(today.getFullYear(), today.getMonth(), 1));
+    fpTo.setDate(today);
+});
+
+async function loadData() {
+    const pid = $('#productSelect').val();
+    if (!pid) return alert('Vui lòng chọn sản phẩm');
+
+    // Hiển thị trạng thái loading
+    const loadBtn = $('#loadBtn');
+    loadBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span> ĐANG TRUY XUẤT...');
+    $('#tbody').html('<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>');
+
+    try {
+        // Lấy ngày chuẩn ISO YYYY-MM-DD
+        const start = moment(fpFrom.selectedDates[0]).format('YYYY-MM-DD');
+        const end = moment(fpTo.selectedDates[0]).format('YYYY-MM-DD');
+        
+        const res = await fetch(`/api/SoChiTietHangHoa/S2-HKD?product_id=${pid}&start=${start}&end=${end}`);
+        const data = await res.json();
+
+        if (data.error) throw new Error(data.error);
+
+        // Sử dụng Array để render không giới hạn
+        let rows = [];
+
+        // 1. Dòng tồn đầu kỳ
+        rows.push(`
+            <tr class="fw-bold bg-light">
+                <td class="text-center">-</td>
+                <td class="text-center">${moment(start).format('DD/MM/YYYY')}</td>
+                <td colspan="6" class="ps-3 text-uppercase">Số dư đầu kỳ</td>
+                <td class="text-center ${negClass(data.opening.qty)}">${fmt(data.opening.qty)}</td>
+                <td class="text-end ${negClass(data.opening.val)}">${fmt(data.opening.val)}</td>
+            </tr>
+        `);
+
+        // 2. Các giao dịch chi tiết
+        if (data.details && data.details.length > 0) {
+            data.details.forEach(item => {
+                rows.push(`
+                    <tr>
+                        <td class="text-center fw-bold text-primary">${item.ref}</td>
+                        <td class="text-center">${moment(item.date).format('DD/MM/YYYY')}</td>
+                        <td class="ps-3">${item.note || ''}</td>
+                        <td class="text-end text-muted small">${fmt(item.price)}</td>
+                        <td class="text-center bg-light-success fw-bold">${item.in_qty || ''}</td>
+                        <td class="text-end bg-light-success">${fmt(item.in_val)}</td>
+                        <td class="text-center bg-light-danger fw-bold">${item.out_qty || ''}</td>
+                        <td class="text-end bg-light-danger">${fmt(item.out_val)}</td>
+                        <td class="text-center ${negClass(item.bal_qty)}">${fmt(item.bal_qty)}</td>
+                        <td class="text-end ${negClass(item.bal_val)}">${fmt(item.bal_val)}</td>
+                    </tr>
+                `);
+            });
+        } else {
+            rows.push(`<tr><td colspan="10" class="text-center py-4 text-muted">Không có phát sinh giao dịch trong khoảng thời gian này</td></tr>`);
+        }
+
+        // Đổ toàn bộ dữ liệu vào bảng cùng lúc (Tránh treo trình duyệt)
+        $('#tbody').html(rows.join(''));
+
+        // 3. Render Footer (Tổng cộng)
+        $('#tfoot').html(`
+            <tr class="table-light">
+                <td colspan="4" class="text-center text-uppercase">Cộng phát sinh trong kỳ</td>
+                <td class="text-center text-success">${fmt(data.summary.in_qty)}</td>
+                <td class="text-end text-success">${fmt(data.summary.in_val)}</td>
+                <td class="text-center text-danger">${fmt(data.summary.out_qty)}</td>
+                <td class="text-end text-danger">${fmt(data.summary.out_val)}</td>
+                <td colspan="2"></td>
+            </tr>
+            <tr class="table-primary border-top border-dark">
+                <td colspan="4" class="text-center text-uppercase">Số dư cuối kỳ</td>
+                <td colspan="4"></td>
+                <td class="text-center ${negClass(data.summary.closing_qty)}">${fmt(data.summary.closing_qty)}</td>
+                <td class="text-end ${negClass(data.summary.closing_val)}">${fmt(data.summary.closing_val)}</td>
+            </tr>
+        `);
+
+        $('#printBtn').prop('disabled', false);
+
+    } catch (err) {
+        alert("Không thể tải dữ liệu: " + err.message);
+        $('#tbody').html(`<tr><td colspan="10" class="text-danger text-center p-4">Lỗi: ${err.message}</td></tr>`);
+    } finally {
+        loadBtn.prop('disabled', false).html('<i class="fas fa-magnifying-glass me-2"></i> TRUY XUẤT DỮ LIỆU');
+    }
+}
+
+function handlePrint() {
+    const pid = $('#productSelect').val();
+    const start = moment(fpFrom.selectedDates[0]).format('YYYY-MM-DD');
+    const end = moment(fpTo.selectedDates[0]).format('YYYY-MM-DD');
+    window.open(`/report/print-S2-HKD?product_id=${pid}&start=${start}&end=${end}`, '_blank');
+}
+</script>
+{% endblock %}

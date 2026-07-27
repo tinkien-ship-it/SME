@@ -1,0 +1,565 @@
+{% extends "base.html" %}
+{% block title %}Sổ theo dõi nghĩa vụ thuế khác (S3a-HKD){% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<style>
+    .flatpickr-calendar { z-index: 10000 !important; }
+    
+    @media (min-width: 1200px) {
+        .modal-custom-wide { max-width: 1350px !important; }
+    }
+
+    .table th { 
+        font-size: 11px; 
+        background-color: #f8f9fa; 
+        vertical-align: middle !important; 
+        text-transform: uppercase; 
+        border-bottom: 2px solid #dee2e6; 
+    }
+    .table td { font-size: 13px; vertical-align: middle !important; }
+    #dateRangeGroup { display: none; }
+    
+    .stat-card { transition: transform 0.2s; border: none; }
+    .stat-card:hover { transform: translateY(-3px); }
+    
+    .bg-primary-custom { background-color: #0d6efd; }
+    .bg-danger-custom { background-color: #dc3545; }
+    .bg-success-custom { background-color: #198754; }
+    .bg-info-custom { background-color: #0dcaf0; }
+    
+    .calc-auto { background-color: #e9ecef !important; font-weight: bold; }
+    .form-label-full { font-weight: 600; font-size: 0.85rem; color: #444; margin-bottom: 4px; display: block; }
+    .table-responsive { border-radius: 8px; overflow: hidden; }
+
+    /* Custom style cho bảng ghi chú dưới modal */
+    .formula-note {
+        background-color: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+        font-size: 0.85rem;
+    }
+    .badge-formula {
+        background-color: #fff;
+        color: #333;
+        border: 1px solid #dee2e6;
+        font-weight: 600;
+        padding: 2px 6px;
+    }
+</style>
+
+<div class="container-fluid py-4 px-lg-5">
+    <div class="row g-4 mb-4 text-center text-white">
+        <div class="col-md-3">
+            <div class="p-3 bg-primary-custom rounded shadow-sm stat-card">
+                <small class="opacity-75">TỔNG THUẾ PHẢI NỘP</small>
+                <div class="h4 mb-0 fw-bold" id="stat-total-tax">0 ₫</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 bg-danger-custom rounded shadow-sm stat-card">
+                <small class="opacity-75">THUẾ CÒN NỢ</small>
+                <div class="h4 mb-0 fw-bold" id="stat-tax-debt">0 ₫</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 bg-success-custom rounded shadow-sm stat-card">
+                <small class="opacity-75">THUẾ ĐÃ NỘP</small>
+                <div class="h4 mb-0 fw-bold" id="stat-tax-paid">0 ₫</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="p-3 bg-info-custom rounded shadow-sm stat-card">
+                <small class="opacity-75">SỐ LƯỢNG NGHIỆP VỤ</small>
+                <div class="h4 mb-0 fw-bold" id="stat-count">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <h5 class="fw-bold mb-0 text-primary">
+                    <i class="bi bi-journal-text me-2"></i>SỔ THEO DÕI NGHĨA VỤ THUẾ KHÁC (S3a-HKD)
+                </h5>
+                <div class="d-flex align-items-center gap-2">
+                    <select id="timeFilter" class="form-select w-auto shadow-sm">
+                        <option value="this_year" selected>Năm nay</option>
+                        <option value="last_year">Năm trước</option>
+                        <option value="custom">Tùy chọn</option>
+                    </select>
+                    <div id="dateRangeGroup" class="d-flex align-items-center gap-2">
+                        <input type="text" id="from_date" class="form-control" placeholder="Từ ngày" style="width: 120px;">
+                        <input type="text" id="to_date" class="form-control" placeholder="Đến ngày" style="width: 120px;">
+                    </div>
+                    <div class="btn-group shadow-sm ms-2">
+                        <button class="btn btn-primary" onclick="openAddModal()"><i class="bi bi-plus-circle me-1"></i>Thêm mới</button>
+                        <button class="btn btn-outline-secondary" onclick="printReport()"><i class="bi bi-printer me-1"></i>In sổ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center table-bordered">
+                <thead>
+                    <tr>
+                        <th rowspan="2">Ngày ghi (A)</th>
+                        <th rowspan="2" class="text-start" style="min-width: 200px;">Diễn giải (B)</th>
+                        <th rowspan="2">Lượng hàng (1)</th>
+                        <th rowspan="2">Thuế T.đối (2)</th>
+                        <th rowspan="2">Giá tính thuế (3)</th>
+                        <th rowspan="2">Thuế suất (4)</th>
+                        <th colspan="3" class="bg-primary text-white">Thuế XK, NK, TTĐB</th>
+                        <th rowspan="2">Thuế BVMT (8)</th>
+                        <th rowspan="2">Thuế TN (9)</th>
+                        <th rowspan="2">Thuế Đất (10)</th>
+                        <th rowspan="2" class="bg-warning-subtle">Tổng phải nộp</th>
+                        <th rowspan="2">Chứng từ</th>
+                        <th rowspan="2">Tình trạng</th>
+                        <th rowspan="2">Thao tác</th>
+                    </tr>
+                    <tr>
+                        <th class="bg-light">Tỷ lệ% (5)</th>
+                        <th class="bg-light">T.đối (6)</th>
+                        <th class="bg-danger text-white">Cộng (7)</th>
+                    </tr>
+                </thead>
+                <tbody id="taxListData"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addTaxModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-custom-wide">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">NHẬP THÔNG TIN THUẾ KHÁC</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="taxForm">
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label-full">Ngày ghi sổ <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="ngay_ghi_so">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label-full">Diễn giải nội dung <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="dien_giai" placeholder="Ví dụ: Nhập khẩu lô hàng A...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label-full">Loại thuế áp dụng</label>
+                            <select class="form-select border-primary fw-bold" id="tax_type_selector" onchange="autoCalculate('')">
+                                <option value="xk_nk">Thuế Xuất khẩu / Nhập khẩu / TTĐB</option>
+                                <option value="bvmt">Thuế Bảo vệ môi trường</option>
+                                <option value="tai_nguyen">Thuế Tài nguyên</option>
+                                <option value="dat">Thuế Sử dụng đất phi nông nghiệp</option>
+                            </select>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="form-label-full">(1) Lượng hàng</label>
+                            <input type="number" step="any" class="form-control calc" id="c1" value="0" title="Số lượng đơn vị hàng hóa">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label-full">(2) Thuế t.đối/đơn vị</label>
+                            <input type="number" step="any" class="form-control calc" id="c2" value="0" title="Mức thuế tuyệt đối ấn định trên 1 đơn vị">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label-full">(3) Giá tính thuế/đv</label>
+                            <input type="number" step="any" class="form-control calc" id="c3" value="0" title="Giá trị tính thuế của 1 đơn vị hàng hóa">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label-full">(4) Thuế suất (%)</label>
+                            <input type="number" step="any" class="form-control calc" id="c4" value="0" title="Tỷ lệ % thuế suất áp dụng">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label-full">(5) Thuế XK (%)</label>
+                            <input type="number" class="form-control calc-auto" id="c5" readonly value="0" title="Công thức: (1) x (3) x (4)">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label-full">(6) Thuế XK T.đối</label>
+                            <input type="number" class="form-control calc-auto" id="c6" readonly value="0" title="Công thức: (1) x (2)">
+                        </div>
+                    </div>
+                    <div class="row mt-3 g-3 border-bottom pb-4">
+                        <div class="col-md-3">
+                            <label class="form-label-full text-danger fw-bold">(7) CỘNG THUẾ XK/NK</label>
+                            <input type="number" class="form-control border-danger fw-bold text-danger calc-auto" id="c7" readonly value="0" title="Tổng cộng: (5) + (6)">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label-full">(8) Thuế BVMT</label>
+                            <input type="number" class="form-control calc-auto" id="c8" readonly value="0" title="Công thức: (1) x (2)">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label-full">(9) Thuế Tài nguyên</label>
+                            <input type="number" class="form-control calc-auto" id="c9" readonly value="0" title="Công thức: (1) x (3) x (4)">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label-full">(10) Thuế SD Đất</label>
+                            <input type="number" class="form-control calc-auto" id="c10" readonly value="0" title="Công thức: (1) x (3) x (4)">
+                        </div>
+                    </div>
+
+                    <div class="formula-note mt-3 p-3 rounded">
+                        <div class="row">
+                            <div class="col-md-6 border-end">
+                                <p class="mb-1 fw-bold text-primary"><i class="bi bi-calculator me-2"></i>Thuế XK, NK, TTĐB:</p>
+                                <ul class="small mb-0 list-unstyled">
+                                    <li>- Cột (5) = (1) x (3) x (4)</li>
+                                    <li>- Cột (6) = (1) x (2)</li>
+                                    <li>- Cột (7) = (5) + (6)</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6 ps-4">
+                                <p class="mb-1 fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>Các loại thuế khác:</p>
+                                <ul class="small mb-0 list-unstyled">
+                                    <li>- Thuế BVMT (8) = (1) x (2)</li>
+                                    <li>- Thuế Tài nguyên (9) = (1) x (3) x (4)</li>
+                                    <li>- Thuế SD Đất (10) = (1) x (3) x (4)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary px-4" onclick="submitAddTax()"><i class="bi bi-save me-2"></i>Lưu nghiệp vụ</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-custom-wide">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>CẬP NHẬT NGHIỆP VỤ THUẾ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editForm">
+                    <input type="hidden" id="e_tax_id">
+                    <div class="row mb-4">
+                        <div class="col-md-3"><label class="form-label-full">Ngày ghi sổ</label><input type="text" class="form-control" id="e_ngay_ghi_so"></div>
+                        <div class="col-md-5"><label class="form-label-full">Diễn giải</label><input type="text" class="form-control" id="e_dien_giai"></div>
+                        <div class="col-md-4">
+                            <label class="form-label-full">Loại thuế</label>
+                            <select class="form-select border-dark fw-bold" id="e_tax_type_selector" onchange="autoCalculate('e_')">
+                                <option value="xk_nk">Thuế Xuất khẩu / Nhập khẩu / TTĐB</option>
+                                <option value="bvmt">Thuế Bảo vệ môi trường</option>
+                                <option value="tai_nguyen">Thuế Tài nguyên</option>
+                                <option value="dat">Thuế Sử dụng đất phi nông nghiệp</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-2"><label class="form-label-full">(1) Lượng</label><input type="number" step="any" class="form-control e-calc" id="e_c1" title="Số lượng đơn vị"></div>
+                        <div class="col-md-2"><label class="form-label-full">(2) T.đối</label><input type="number" step="any" class="form-control e-calc" id="e_c2" title="Mức tuyệt đối"></div>
+                        <div class="col-md-2"><label class="form-label-full">(3) Giá tính</label><input type="number" step="any" class="form-control e-calc" id="e_c3" title="Giá tính thuế/đơn vị"></div>
+                        <div class="col-md-2"><label class="form-label-full">(4) Suất (%)</label><input type="number" step="any" class="form-control e-calc" id="e_c4" title="Tỷ lệ %"></div>
+                        <div class="col-md-2"><label class="form-label-full">(5) Tỷ lệ%</label><input type="number" class="form-control calc-auto" id="e_c5" readonly title="=(1)x(3)x(4)"></div>
+                        <div class="col-md-2"><label class="form-label-full">(6) Tuyệt đối</label><input type="number" class="form-control calc-auto" id="e_c6" readonly title="=(1)x(2)"></div>
+                    </div>
+                    <div class="row mt-3 g-3 border-bottom pb-4">
+                        <div class="col-md-3"><label class="form-label-full text-danger fw-bold">(7) TỔNG CỘNG</label><input type="number" class="form-control border-danger fw-bold text-danger calc-auto" id="e_c7" readonly title="=(5)+(6)"></div>
+                        <div class="col-md-3"><label class="form-label-full">(8) BVMT</label><input type="number" class="form-control calc-auto" id="e_c8" readonly title="=(1)x(2)"></div>
+                        <div class="col-md-3"><label class="form-label-full">(9) Tài nguyên</label><input type="number" class="form-control calc-auto" id="e_c9" readonly title="=(1)x(3)x(4)"></div>
+                        <div class="col-md-3"><label class="form-label-full">(10) Đất</label><input type="number" class="form-control calc-auto" id="e_c10" readonly title="=(1)x(3)x(4)"></div>
+                    </div>
+                    
+                    <div class="formula-note mt-3 p-3 rounded">
+                        <p class="mb-1 small text-muted"><strong>Công thức S3a-HKD:</strong> Thuế tính theo tỷ lệ = (1)x(3)x(4) | Thuế tuyệt đối = (1)x(2)</p>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-dark px-4" onclick="submitEditTax()">Cập nhật thay đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-success shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-money-bill-wave me-2"></i>LẬP PHIẾU CHI NỘP THUẾ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="pay_row_id">
+                <div class="mb-3">
+                    <label class="form-label-full">Ngày nộp thuế <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="pay_date">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label-full">Số tiền nộp <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control fw-bold text-danger bg-light" id="pay_amount_display" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label-full">Đơn vị nhận (Kho bạc/Ngân hàng) <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="receiver_name" placeholder="Ví dụ: Kho bạc Nhà nước...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label-full">Lý do nộp</label>
+                    <textarea class="form-control" id="pay_reason" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label-full">Phương thức thanh toán</label>
+                    <select class="form-select" id="pay_method">
+                        <option value="111">Tiền mặt (111)</option>
+                        <option value="112">Chuyển khoản (112)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-success px-4" onclick="confirmPayment()">Xác nhận thanh toán</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // TOÀN BỘ LOGIC JAVASCRIPT GIỮ NGUYÊN NHƯ FILE CŨ
+    let fromPicker, toPicker, addDatePicker, editDatePicker, payDatePicker;
+
+    $(document).ready(function() {
+        const vnCfg = { 
+            locale: "vn", 
+            dateFormat: "Y-m-d", 
+            altInput: true, 
+            altFormat: "d/m/Y",
+            allowInput: true
+        };
+
+        fromPicker = flatpickr("#from_date", { ...vnCfg, onChange: () => loadTaxList() });
+        toPicker = flatpickr("#to_date", { ...vnCfg, onChange: () => loadTaxList() });
+        addDatePicker = flatpickr("#ngay_ghi_so", vnCfg);
+        editDatePicker = flatpickr("#e_ngay_ghi_so", vnCfg);
+        payDatePicker = flatpickr("#pay_date", { ...vnCfg, defaultDate: "today" });
+
+        $('#timeFilter').on('change', function() {
+            const val = this.value;
+            $('#dateRangeGroup').toggle(val === 'custom');
+            const y = new Date().getFullYear();
+            if (val === 'this_year') { fromPicker.setDate(`${y}-01-01`); toPicker.setDate(`${y}-12-31`); }
+            else if (val === 'last_year') { fromPicker.setDate(`${y-1}-01-01`); toPicker.setDate(`${y-1}-12-31`); }
+            if (val !== 'custom') loadTaxList();
+        }).trigger('change');
+
+        $('.calc').on('input', function() { autoCalculate(''); });
+        $('.e-calc').on('input', function() { autoCalculate('e_'); });
+    });
+
+    function autoCalculate(prefix = '') {
+        const c1 = parseFloat($(`#${prefix}c1`).val()) || 0;
+        const c2 = parseFloat($(`#${prefix}c2`).val()) || 0;
+        const c3 = parseFloat($(`#${prefix}c3`).val()) || 0;
+        const c4 = parseFloat($(`#${prefix}c4`).val()) || 0;
+        const type = $(`#${prefix}tax_type_selector`).val();
+
+        $(`#${prefix}c5, #${prefix}c6, #${prefix}c7, #${prefix}c8, #${prefix}c9, #${prefix}c10`).val(0);
+
+        if (type === 'xk_nk') {
+            const c5 = Math.round(c1 * c3 * (c4 / 100));
+            const c6 = Math.round(c1 * c2);
+            $(`#${prefix}c5`).val(c5);
+            $(`#${prefix}c6`).val(c6);
+            $(`#${prefix}c7`).val(c5 + c6);
+        } else if (type === 'bvmt') {
+            $(`#${prefix}c8`).val(Math.round(c1 * c2));
+        } else if (type === 'tai_nguyen') {
+            $(`#${prefix}c9`).val(Math.round(c1 * c3 * (c4 / 100)));
+        } else if (type === 'dat') {
+            $(`#${prefix}c10`).val(Math.round(c1 * c3 * (c4 / 100)));
+        }
+    }
+
+    async function loadTaxList() {
+        const from = $('#from_date').val(), to = $('#to_date').val();
+        try {
+            const res = await fetch(`/api/thue-khac/list?from_date=${from}&to_date=${to}`);
+            const data = await res.json();
+            let html = '', s_phai = 0, s_da = 0;
+
+            data.forEach(item => {
+                const conLai = (item.thue_phai_nop || 0) - (item.paid_amount || 0);
+                s_phai += item.thue_phai_nop; s_da += (item.paid_amount || 0);
+                
+                let vLink = item.voucher_no ? `<a href="/PhieuChi/in/${item.phieu_chi_id}" target="_blank" class="fw-bold text-primary">${item.voucher_no}</a>` : '-';
+
+                html += `<tr>
+                    <td>${formatDateVN(item.ngay_ghi_so)}</td>
+                    <td class="text-start fw-bold">${item.dien_giai}</td>
+                    <td>${formatNum(item.luong_hang)}</td>
+                    <td>${formatNum(item.muc_thue_tuyet_doi)}</td>
+                    <td>${formatNum(item.gia_tinh_thue)}</td>
+                    <td>${item.thue_suat}%</td>
+                    <td>${formatNum(item.thue_xk_nk_ptram)}</td>
+                    <td>${formatNum(item.thue_xk_nk_tuyet_doi)}</td>
+                    <td class="bg-danger-subtle fw-bold">${formatNum(item.tong_thue_nk_xk_ttdb)}</td>
+                    <td>${formatNum(item.thue_bvmt)}</td>
+                    <td>${formatNum(item.thue_tai_nguyen)}</td>
+                    <td>${formatNum(item.thue_sd_dat)}</td>
+                    <td class="bg-warning-subtle fw-bold text-danger">${formatNum(item.thue_phai_nop)}</td>
+                    <td>${vLink}</td>
+                    <td><span class="badge ${item.status_class}">${item.tinh_trang}</span></td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button onclick="openPayModal(${item.id}, ${conLai}, '${item.dien_giai}')" class="btn btn-outline-success" ${conLai <= 0 ? 'disabled' : ''} title="Nộp thuế"><i class="bi bi-cash-stack"></i></button>
+                            <button onclick='openEditModal(${JSON.stringify(item)})' class="btn btn-outline-primary" title="Sửa"><i class="bi bi-pencil"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+            $('#taxListData').html(html || '<tr><td colspan="16" class="py-4 text-muted">Không tìm thấy dữ liệu trong khoảng thời gian này</td></tr>');
+            
+            $('#stat-total-tax').text(formatNum(s_phai) + ' ₫');
+            $('#stat-tax-paid').text(formatNum(s_da) + ' ₫');
+            $('#stat-tax-debt').text(formatNum(s_phai - s_da) + ' ₫');
+            $('#stat-count').text(data.length);
+        } catch (e) { console.error(e); }
+    }
+
+    function getPayload(prefix = '') {
+        const type = $(`#${prefix}tax_type_selector`).val();
+        let thue_phai_nop = 0;
+        
+        if(type === 'xk_nk') thue_phai_nop = parseFloat($(`#${prefix}c7`).val()) || 0;
+        else if(type === 'bvmt') thue_phai_nop = parseFloat($(`#${prefix}c8`).val()) || 0;
+        else if(type === 'tai_nguyen') thue_phai_nop = parseFloat($(`#${prefix}c9`).val()) || 0;
+        else if(type === 'dat') thue_phai_nop = parseFloat($(`#${prefix}c10`).val()) || 0;
+
+        return {
+            id: $(`#${prefix}tax_id`).val() || null,
+            ngay_ghi_so: $(`#${prefix}ngay_ghi_so`).val(),
+            dien_giai: $(`#${prefix}dien_giai`).val(),
+            luong_hang: $(`#${prefix}c1`).val(),
+            muc_thue_tuyet_doi: $(`#${prefix}c2`).val(),
+            gia_tinh_thue: $(`#${prefix}c3`).val(),
+            thue_suat: $(`#${prefix}c4`).val(),
+            thue_xk_nk_ptram: $(`#${prefix}c5`).val(),
+            thue_xk_nk_tuyet_doi: $(`#${prefix}c6`).val(),
+            tong_thue_nk_xk_ttdb: $(`#${prefix}c7`).val(),
+            thue_bvmt: $(`#${prefix}c8`).val(),
+            thue_tai_nguyen: $(`#${prefix}c9`).val(),
+            thue_sd_dat: $(`#${prefix}c10`).val(),
+            thue_phai_nop: thue_phai_nop
+        };
+    }
+
+    async function submitAddTax() {
+        const payload = getPayload('');
+        if(!payload.ngay_ghi_so || !payload.dien_giai) return Swal.fire('Lỗi', 'Vui lòng điền đủ Ngày và Diễn giải', 'error');
+        
+        const res = await fetch('/api/thue-khac/add', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(payload)
+        });
+        if((await res.json()).success) {
+            bootstrap.Modal.getInstance('#addTaxModal').hide();
+            loadTaxList();
+            Swal.fire('Thành công', 'Đã lưu nghiệp vụ thuế', 'success');
+        }
+    }
+
+    function openEditModal(item) {
+        $('#e_tax_id').val(item.id);
+        editDatePicker.setDate(item.ngay_ghi_so);
+        $('#e_dien_giai').val(item.dien_giai);
+        $('#e_c1').val(item.luong_hang);
+        $('#e_c2').val(item.muc_thue_tuyet_doi || 0);
+        $('#e_c3').val(item.gia_tinh_thue);
+        $('#e_c4').val(item.thue_suat);
+        
+        if(item.thue_bvmt > 0) $('#e_tax_type_selector').val('bvmt');
+        else if(item.thue_tai_nguyen > 0) $('#e_tax_type_selector').val('tai_nguyen');
+        else if(item.thue_sd_dat > 0) $('#e_tax_type_selector').val('dat');
+        else $('#e_tax_type_selector').val('xk_nk');
+        
+        autoCalculate('e_');
+        new bootstrap.Modal('#editModal').show();
+    }
+
+    async function submitEditTax() {
+        const payload = getPayload('e_');
+        payload.id = $('#e_tax_id').val();
+        const res = await fetch('/api/thue-khac/update', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(payload)
+        });
+        if((await res.json()).success) {
+            bootstrap.Modal.getInstance('#editModal').hide();
+            loadTaxList();
+            Swal.fire('Thành công', 'Đã cập nhật dữ liệu', 'success');
+        }
+    }
+
+    function openPayModal(id, amount, dien_giai) {
+        $('#pay_row_id').val(id);
+        $('#pay_amount_display').val(formatNum(amount) + ' ₫');
+        $('#pay_reason').val(`Nộp thuế khác: ${dien_giai}`);
+        new bootstrap.Modal('#payModal').show();
+    }
+
+    async function confirmPayment() {
+        const payload = {
+            id: $('#pay_row_id').val(),
+            pay_date: $('#pay_date').val(),
+            amount: parseFloat($('#pay_amount_display').val().replace(/\D/g,'')),
+            receiver: $('#receiver_name').val(),
+            reason: $('#pay_reason').val(),
+            pay_method: $('#pay_method').val(),
+            debit_account: '333'
+        };
+        if(!payload.receiver) return Swal.fire('Lưu ý', 'Vui lòng nhập đơn vị nhận tiền', 'warning');
+        
+        const res = await fetch('/api/thue-khac/pay', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(payload)
+        });
+        if((await res.json()).success) {
+            bootstrap.Modal.getInstance('#payModal').hide();
+            loadTaxList();
+            Swal.fire('Thành công', 'Đã lập phiếu chi nộp thuế', 'success');
+        }
+    }
+
+    function openAddModal() {
+        $('#taxForm')[0].reset();
+        addDatePicker.clear();
+        autoCalculate('');
+        new bootstrap.Modal('#addTaxModal').show();
+    }
+
+    function formatNum(n) { return n ? parseFloat(n).toLocaleString('vi-VN') : '0'; }
+    function formatDateVN(s) { 
+        if(!s) return ''; 
+        const d = new Date(s);
+        return !isNaN(d) ? d.toLocaleDateString('vi-VN') : s;
+    }
+    function printReport() {
+        window.open(`/api/thue-khac/print?from_date=${$('#from_date').val()}&to_date=${$('#to_date').val()}`, '_blank');
+    }
+</script>
+{% endblock %}

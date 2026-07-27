@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}{% if is_service_import %}Số chứng từ {{ imp.import_no }}{% else %}Số phiếu nhập kho {{ imp.import_no }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">
+            {% if is_service_import %}
+            Số chứng từ: <span class="text-primary">{{ imp.import_no }}</span>
+            <span class="badge bg-info text-dark ms-2">Dịch vụ mua vào</span>
+            {% else %}
+            Số phiếu nhập kho: <span class="text-primary">{{ imp.import_no }}</span>
+            {% endif %}
+        </h3>
+        <div class="btn-group" role="group">
+            <a href="/print_import/{{ imp.id }}" target="_blank" class="btn btn-primary">
+                <i class="bi bi-printer"></i> In Phiếu Nhập
+            </a>
+            <button type="button" onclick="openBarcodePrint({{ imp.id }})" class="btn btn-success">
+                <i class="bi bi-upc-scan"></i> In Mã Vạch (Tommy 40 Tem)
+            </button>
+            <a href="{{ url_for('import_list') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Quay Lại
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white"><strong>Thông Tin Phiếu</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr><td><strong>Ngày nhập:</strong></td><td id="viewDate">—</td></tr>
+                        <tr><td><strong>Nhà cung cấp:</strong></td><td>{{ imp.supplier_name or '—' }}</td></tr>
+                        <tr><td><strong>Mã số thuế:</strong></td><td>{{ imp.tax_code or '—' }}</td></tr>
+                        <tr><td><strong>Địa chỉ:</strong></td><td>{{ imp.address or '—' }}</td></tr>
+                        <tr><td><strong>Số hóa đơn:</strong></td><td>{{ imp.bill_no or '—' }}</td></tr>
+                        <tr><td><strong>Tình trạng:</strong></td><td><span class="badge" id="viewStatusBadge">—</span></td></tr>
+                        <tr><td><strong>Ghi chú:</strong></td><td>{{ imp.note or '—' }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white"><strong>Tổng Kết</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr><td><strong>Tổng tiền hàng:</strong></td><td class="text-end" id="viewTotalPayment">0đ</td></tr>
+                        <tr><td><strong>Chi phí khác:</strong></td><td class="text-end" id="viewExtraCost">0đ</td></tr>
+                        <tr class="border-top">
+                            <td class="border-top"><strong>TỔNG GIÁ TRỊ:</strong></td>
+                            <td class="text-end text-primary fw-bold border-top" id="viewTotalValue">0đ</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BẢNG CHI TIẾT -->
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <strong>Chi Tiết Nhập Kho</strong>
+            <small class="text-muted"><span id="itemCount">0</span> dòng</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center">ID</th>
+                            <th class="text-center">Mã Vạch</th>
+                            <th class="text-center">Tên hàng / Dịch vụ</th>
+                            <th class="text-center">ĐV</th>
+                            <th class="text-center">SL</th>
+                            <th class="text-center">Đơn Giá</th>
+                            <th class="text-center">Thành Tiền</th>
+                            <th class="text-center">% CK</th>
+                            <th class="text-center">Tiền CK</th>
+                            <th class="text-center">% VAT</th>
+                            <th class="text-center">VAT</th>
+                            <th class="text-center">Tiền TT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// Dữ liệu từ backend (đã được tojson an toàn)
+const imp = {{ imp | tojson }};
+const items = {{ items | tojson }};
+const isServiceImport = {{ is_service_import | default(false) | tojson }};
+
+// Format ngày
+function formatVNDate(d) {
+    if (!d) return "—";
+    const text = String(d).trim();
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(text)) return text.split(' ')[0];
+    const parts = text.split("T")[0].split(" ")[0].split("-");
+    if (parts.length >= 3) {
+        return `${parts[2].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[0]}`;
+    }
+    return text;
+}
+
+// Format tiền Việt Nam
+function money(n) {
+    return (parseFloat(n) || 0).toLocaleString("vi-VN") + "đ";
+}
+
+// Bơm thông tin phiếu
+document.getElementById("viewDate").textContent = formatVNDate(imp.date);
+const badge = document.getElementById("viewStatusBadge");
+const status = (imp.payment_status || "Không xác định").trim();
+badge.textContent = status;
+badge.className = "badge " + (status === "Đã thanh toán" ? "bg-success" : "bg-warning text-dark");
+
+document.getElementById("viewTotalPayment").textContent = money(imp.total_payment);
+document.getElementById("viewExtraCost").textContent = money(imp.extra_cost);
+document.getElementById("viewTotalValue").textContent = money(imp.total_value);
+
+document.getElementById("itemCount").textContent = items.length;
+
+// Render bảng chi tiết
+const tbody = document.getElementById("itemsTableBody");
+if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4">Không có chi tiết phiếu nhập</td></tr>`;
+} else {
+    tbody.innerHTML = items.map(item => {
+        const qty = parseFloat(item.qty || item.quantity || 0);
+        const price = parseFloat(item.buyprice || item.import_price || 0);
+        const discount_amount = parseFloat(item.discount_amount || item.discount || 0);
+        const tax_amount = parseFloat(item.tax_amount || item.tax || 0);
+        const line_total = parseFloat(item.line_total || (qty * price) || 0);
+        const subtotal = parseFloat(item.subtotal || (line_total - discount_amount) || 0);
+        const payment_amount = parseFloat(item.payment_amount || (subtotal + tax_amount) || 0);
+        const isService = (item.line_type || '').toLowerCase() === 'service' || !item.product_id;
+
+        // Tính ngược % (chỉ hiển thị)
+        const discount_pct = line_total > 0 ? (discount_amount / line_total * 100).toFixed(1) : 0;
+        const tax_pct = subtotal > 0 ? (tax_amount / subtotal * 100).toFixed(0) : 0;
+
+        const idCell = isService
+            ? '<span class="badge bg-info text-dark">DV</span>'
+            : (item.product_id ?? '—');
+        const barcodeCell = isService ? '—' : (item.barcode || '—');
+        const nameCell = item.product_name || item.name || '—';
+
+        return `
+            <tr>
+                <td class="text-center">${idCell}</td>
+                <td class="text-center">${barcodeCell}</td>
+                <td>${nameCell}</td>
+                <td class="text-center">${item.display_unit || item.unit || item.base_unit || "Cái"}</td>
+                <td class="text-end">${qty.toFixed(3)}</td>
+                <td class="text-end">${money(price)}</td>
+                <td class="text-end">${money(line_total)}</td>
+                <td class="text-center">${discount_pct}%</td>
+                <td class="text-end">${money(discount_amount)}</td>
+                <td class="text-center">${tax_pct}%</td>
+                <td class="text-end">${money(tax_amount)}</td>
+                <td class="text-end">${money(payment_amount)}</td>
+            </tr>
+        `;
+    }).join("");
+}
+
+/* ==================== IN MÃ VẠCH - CHUẨN TOMMY 40 TEM ==================== */
+function openBarcodePrint(import_id) {
+    const win = window.open(`/print_barcode_import_select/${import_id}`, '_blank');
+    if (!win) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi',
+            text: 'Vui lòng cho phép popup để in mã vạch!'
+        });
+    }
+}
+</script>
+{% endblock %}

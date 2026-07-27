@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>In Sổ S2b-HKD - {{ info.business_name or info.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #000;
+        }
+        .table-print {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .table-print th, .table-print td {
+            border: 1px solid black !important;
+            padding: 4px 6px;
+            vertical-align: middle;
+        }
+        .header-info p {
+            margin-bottom: 0;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .bg-tax {
+            background-color: #fcfcfc !important;
+            font-style: italic;
+        }
+        /* Định dạng cột số tiền */
+        .text-end-money {
+            text-align: right !important;
+            white-space: nowrap;
+        }
+        @media print {
+            nav, .navbar, .sidebar, .footer, .no-print {
+                display: none !important;
+            }
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+            body { background: white !important; padding: 0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div class="no-print container mt-3 text-center">
+    <button class="btn btn-primary btn-lg" onclick="window.print()">
+        <i class="fas fa-print"></i> IN SỔ
+    </button>
+    <button class="btn btn-secondary btn-lg" onclick="window.close()">
+        <i class="fas fa-times"></i> ĐÓNG
+    </button>
+</div>
+<div class="bg-white p-5 mx-auto shadow" style="width:297mm;min-height:210mm;">
+    <div class="row">
+        <div class="col-8 header-info">
+            <p class="text-uppercase">HỘ, CÁ NHÂN KINH DOANH:
+                {{ info.business_name or info.name or '........................' }}</p>
+            <p>Địa chỉ: {{ info.address or '........................' }}</p>
+            <p>Mã số thuế: {{ info.tax_code or '........................' }}</p>
+        </div>
+        <div class="col-4 text-end">
+            <p class="fw-bold">Mẫu số S2b-HKD</p>
+            <small>(Ban hành kèm theo Thông tư số 152/2025/TT-BTC<br>ngày 31/12/2025 của Bộ Tài chính)</small>
+        </div>
+    </div>
+    <div class="text-center mt-4 mb-4">
+        <h4 class="fw-bold">SỔ DOANH THU BÁN HÀNG HÓA, DỊCH VỤ</h4>
+        <p id="timeRangeDisplay" class="fw-bold"></p>
+        <p class="text-end fst-italic">Đơn vị tính: Đồng</p>
+    </div>
+    <table class="table-print">
+        <thead class="text-center fw-bold bg-light">
+        <tr>
+            <th colspan="2">CHỨNG TỪ</th>
+            <th rowspan="2">DIỄN GIẢI</th>
+            <th colspan="4">DOANH THU THEO NGÀNH NGHỀ</th>
+        </tr>
+        <tr>
+            <th style="width: 80px;">SỐ</th>
+            <th style="width: 90px;">NGÀY</th>
+            <th>Phân phối, cung cấp Hàng hóa (1)</th>
+            <th>Dịch vụ, xây dựng không bao thầu NVL (2)</th>
+            <th>Sản xuất, vận tải, bao thầu NVL (3)</th>
+            <th>Kinh doanh khác (4)</th>
+        </tr>
+        </thead>
+        <tbody id="printContent">
+        <tr>
+            <td colspan="7" class="text-center p-4">Đang tải dữ liệu...</td>
+        </tr>
+        </tbody>
+        <tfoot id="printFooter"></tfoot>
+    </table>
+    <div class="row mt-5">
+        <div class="col-8"></div>
+        <div class="col-4 text-center">
+            <p>
+                Ngày <span id="sigDay">...</span>
+                tháng <span id="sigMonth">...</span>
+                năm <span id="sigYear">...</span>
+            </p>
+            <p class="fw-bold">CHỦ HỘ KINH DOANH</p>
+            <p class="fst-italic">(Ký, họ tên)</p>
+            <div style="height:80px;"></div>
+            <p class="fw-bold text-uppercase">{{ info.representative_name or info.name }}</p>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Hàm định dạng số kiểu Việt Nam: 1.000.000
+ */
+function vnFormat(num) {
+    if (num === null || num === undefined || isNaN(num)) return '0';
+    return new Intl.NumberFormat('vi-VN').format(Math.round(num));
+}
+
+function formatDate(d) {
+    if (!d) return '';
+    const p = d.substring(0,10).split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
+}
+
+async function loadData() {
+    const qs = new URLSearchParams(location.search);
+    const start = qs.get('start');
+    const end = qs.get('end');
+    if (start && end) {
+        timeRangeDisplay.innerText = `Từ ngày ${formatDate(start)} đến ngày ${formatDate(end)}`;
+        const d = end.split('-');
+        sigDay.innerText = d[2];
+        sigMonth.innerText = d[1];
+        sigYear.innerText = d[0];
+    }
+
+    const tbody = document.getElementById('printContent');
+    const tfoot = document.getElementById('printFooter');
+
+    try {
+        const res = await fetch(`/api/hkd/revenue-ledger?start=${start}&end=${end}`);
+        const data = await res.json();
+
+        if (!data.success) throw new Error(data.error || 'Lỗi tải dữ liệu');
+
+        const rows = data.rows || [];
+        if (rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center">Không có phát sinh</td></tr>`;
+            return;
+        }
+
+        const money = (v) => {
+            const n = parseFloat(v) || 0;
+            return n > 0 ? vnFormat(n) : '0';
+        };
+
+        tbody.innerHTML = rows.map(r => `
+            <tr>
+                <td class="text-center">${r.sale_no || 'ĐH' + r.sale_id}</td>
+                <td class="text-center">${formatDate(r.date)}</td>
+                <td>${r.description || ''}</td>
+                <td class="text-end-money">${money(r.g1)}</td>
+                <td class="text-end-money">${money(r.g2)}</td>
+                <td class="text-end-money">${money(r.g3)}</td>
+                <td class="text-end-money">${money(r.g4)}</td>
+            </tr>`).join('');
+
+        const totals = data.totals || {};
+        const taxes = data.taxes || {};
+
+        tfoot.innerHTML = `
+            <tr class="fw-bold bg-light">
+                <td colspan="3" class="text-center">TỔNG DOANH THU</td>
+                <td class="text-end-money">${vnFormat(totals.g1 || 0)}</td>
+                <td class="text-end-money">${vnFormat(totals.g2 || 0)}</td>
+                <td class="text-end-money">${vnFormat(totals.g3 || 0)}</td>
+                <td class="text-end-money">${vnFormat(totals.g4 || 0)}</td>
+            </tr>
+            <tr class="bg-tax">
+                <td colspan="3" class="text-center">Thuế GTGT phải nộp từng ngành nghề</td>
+                <td class="text-end-money">${vnFormat(taxes.g1?.gtgt || 0)}</td>
+                <td class="text-end-money">${vnFormat(taxes.g2?.gtgt || 0)}</td>
+                <td class="text-end-money">${vnFormat(taxes.g3?.gtgt || 0)}</td>
+                <td class="text-end-money">${vnFormat(taxes.g4?.gtgt || 0)}</td>
+            </tr>
+            <tr class="bg-tax">
+                <td colspan="3" class="text-center">Thuế thu nhập cá nhân phải nộp từng ngành nghề</td>
+                <td class="text-end-money">${vnFormat(taxes.g1?.tncn || 0)}</td>
+                <td class="text-end-money">${vnFormat(taxes.g2?.tncn || 0)}</td>
+                <td class="text-end-money">${vnFormat(taxes.g3?.tncn || 0)}</td>
+                <td class="text-end-money">${vnFormat(taxes.g4?.tncn || 0)}</td>
+            </tr>
+            <tr class="fw-bold text-primary">
+                <td colspan="3" class="text-center text-uppercase">Tổng số thuế GTGT phải nộp</td>
+                <td colspan="4" class="text-center fs-5">${vnFormat(taxes.total_gtgt || 0)} VNĐ</td>
+            </tr>
+            <tr class="fw-bold text-danger">
+                <td colspan="3" class="text-center text-uppercase">Tổng số thuế thu nhập cá nhân phải nộp</td>
+                <td colspan="4" class="text-center fs-5">${vnFormat(taxes.total_tncn || 0)} VNĐ</td>
+            </tr>
+            ${(taxes.tncn_meta && taxes.tncn_meta.below_threshold) ? `
+            <tr><td colspan="7" class="text-center small text-muted">
+                DT lũy kế năm ${vnFormat(taxes.tncn_meta.ytd_after || 0)} đ — chưa đến 1 tỷ → TNCN = 0
+            </td></tr>` : ''}
+        `;
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>';
+    }
+}
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>

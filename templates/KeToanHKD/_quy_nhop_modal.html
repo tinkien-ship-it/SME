@@ -1,0 +1,68 @@
+{# Modal nộp quỹ: Phiếu Thu Nợ 111|112 — Có 411
+   Biến bắt buộc: modal_id, debit_account, debit_label, modal_title, help_text, default_reason, btn_open_id #}
+<div class="modal fade" id="{{ modal_id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="modal-title fw-bold text-success">
+                    <i class="fas fa-hand-holding-usd me-2"></i>{{ modal_title }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <form class="quy-nhop-form needs-validation" novalidate data-modal-id="{{ modal_id }}">
+                <div class="modal-body p-4">
+                    <div class="alert alert-info border-0 mb-3 alert-persistent quy-nhop-help">
+                        <div class="fw-bold mb-2"><i class="fas fa-info-circle me-1"></i>Ghi chú</div>
+                        <p class="mb-0">{{ help_text }}</p>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Ngày ghi sổ <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control quy-nhop-date" required placeholder="dd/mm/yyyy">
+                            <div class="invalid-feedback">Vui lòng chọn ngày.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Số phiếu</label>
+                            <input type="text" class="form-control bg-light" readonly placeholder="Tự động (PT...)">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Người nộp quỹ <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control quy-nhop-payer" required
+                                   value="{{ info.representative_name or info.business_name or 'Chủ hộ kinh doanh' }}">
+                            <div class="invalid-feedback">Vui lòng nhập người nộp quỹ.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Tài khoản Nợ</label>
+                            <input type="text" class="form-control bg-light fw-semibold text-primary" readonly
+                                   value="{{ debit_account }} — {{ debit_label }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Tài khoản Có</label>
+                            <input type="text" class="form-control bg-light fw-semibold text-success" readonly
+                                   value="411 — Chủ Nộp Quỹ">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Số tiền (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control fw-bold text-success fs-5 quy-nhop-amount-display" required placeholder="0">
+                            <input type="hidden" class="quy-nhop-amount-actual" value="0">
+                            <div class="invalid-feedback">Nhập số tiền lớn hơn 0.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Diễn giải <span class="text-danger">*</span></label>
+                            <textarea class="form-control quy-nhop-reason" rows="2" required
+                                      placeholder="{{ default_reason }}">{{ default_reason }}</textarea>
+                            <div class="invalid-feedback">Vui lòng nhập diễn giải.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success px-4 fw-bold quy-nhop-submit">
+                        <span class="quy-nhop-save-text"><i class="fas fa-save me-1"></i>Lưu Phiếu Thu</span>
+                        <span class="quy-nhop-save-loading d-none spinner-border spinner-border-sm"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

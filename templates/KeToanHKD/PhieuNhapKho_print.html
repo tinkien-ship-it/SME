@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Phiếu Nhập Kho - {{ imp.voucher_no }}</title>
+    <style>
+        @page { 
+            size: A4; 
+            margin: 10mm; 
+        }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            line-height: 1.3;
+            margin: 0;
+            color: #000;
+            background-color: #f4f4f4;
+        }
+        .print-container {
+            width: 210mm;
+            margin: 10px auto;
+            padding: 15mm;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .no-print-zone {
+            text-align: center;
+            padding: 15px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .btn {
+            padding: 8px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            margin: 0 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-print { background-color: #007bff; color: white; }
+        .btn-close { background-color: #6c757d; color: white; }
+        
+        .header-table { width: 100%; margin-bottom: 10px; }
+        .info-hkd { width: 65%; vertical-align: top; }
+        .mau-so { width: 35%; text-align: center; font-size: 9pt; }
+        
+        .title { 
+            text-align: center; 
+            font-weight: bold; 
+            font-size: 16pt; 
+            margin: 10px 0 5px; 
+            text-transform: uppercase; 
+        }
+        .date-line { text-align: center; font-style: italic; margin-bottom: 5px; }
+        .number-line { text-align: center; margin-bottom: 15px; }
+        
+        .info-group { margin-bottom: 10px; }
+        .info-line { display: flex; margin-bottom: 4px; align-items: baseline; }
+        .info-label { white-space: nowrap; min-width: 150px; }
+        .dotted { flex: 1; border-bottom: 1px dotted #000; padding-left: 5px; }
+        
+        table.content-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            table-layout: fixed;
+        }
+        table.content-table th, table.content-table td {
+            border: 1px solid black;
+            padding: 5px 3px;
+            word-wrap: break-word;
+            font-size: 10pt;
+        }
+        table.content-table th { background: #f2f2f2; text-align: center; font-weight: bold; }
+        .sub-header td { font-size: 8pt; font-style: italic; text-align: center; }
+        
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+        .uppercase { text-transform: uppercase; }
+        
+        .footer-sign { width: 100%; margin-top: 30px; border: none; }
+        .footer-sign td { text-align: center; vertical-align: top; width: 25%; border: none; }
+        .sign-title { font-weight: bold; display: block; margin-bottom: 2px; }
+        .sign-space { height: 65px; }
+
+        @media print {
+            body { background-color: #fff; }
+            .no-print-zone { display: none; }
+            .print-container { 
+                width: 100%; 
+                margin: 0; 
+                padding: 0; 
+                box-shadow: none; 
+            }
+            /* Ngăn việc cắt ngang dòng trong bảng khi chuyển trang */
+            tr { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print-zone">
+    <button class="btn btn-print" onclick="window.print()">🖨️ IN PHIẾU</button>
+    <button class="btn btn-close" onclick="window.close()">ĐÓNG</button>
+</div>
+
+<div class="print-container">
+    {# FIX: Cắt lấy 10 ký tự đầu YYYY-MM-DD để loại bỏ phần giờ nếu có #}
+    {% set date_part = imp.date[:10] %}
+    {% set d = date_part.split('-') %}
+
+    <table class="header-table">
+        <tr>
+            <td class="info-hkd">
+                <div class="bold">{{ info.business_name|upper }}</div>
+                <div>Địa chỉ: {{ info.address }}</div>
+                <div class="bold">MST: {{ info.tax_code }}</div>
+            </td>
+            <td class="mau-so">
+                <div class="bold">Mẫu số 02 - VT</div>
+                <div>(Ban hành kèm theo Thông tư số 88/2021/TT-BTC)</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="title">PHIẾU NHẬP KHO</div>
+    <div class="date-line">Ngày {{ d[2] }} tháng {{ d[1] }} năm {{ d[0] }}</div>
+    <div class="number-line">Số: <strong>{{ imp.voucher_no }}</strong></div>
+
+<div class="info-group">
+    <div class="info-line">
+        <span class="info-label">- {{ imp.partner_label or 'Người giao hàng' }}:</span>
+        <span class="dotted bold">
+            {{ (imp.supplier_name or '........................')|trim }}
+            {% if imp.company_name %}
+                <br>
+                <span style="font-size: 0.9em; font-weight: normal; font-style: italic; margin-left: 10px;">
+                    (Đơn vị: {{ imp.company_name }})
+                </span>
+            {% endif %}
+        </span>
+    </div>
+    <div class="info-line">
+        <span class="info-label">- Theo chứng từ:</span>
+        <span class="dotted">{{ imp.bill_no or '........' }}</span>
+    </div>
+    <div class="info-line">
+        <span class="info-label">- Nhập tại kho:</span>
+        <span class="dotted">{{ imp.warehouse_location or 'Kho tổng' }}</span>
+    </div>
+    {% if imp.note %}
+    <div class="info-line">
+        <span class="info-label">- Ghi chú:</span>
+        <span class="dotted">{{ imp.note }}</span>
+    </div>
+    {% endif %}
+</div>
+
+    <table class="content-table">
+        <thead>
+            <tr>
+                <th style="width: 35px;">TT</th>
+                <th>Tên, nhãn hiệu, quy cách, phẩm chất hàng hóa</th>
+                <th style="width: 50px;">ĐVT</th>
+                <th style="width: 60px;">Số lượng</th>
+                <th style="width: 100px;">Giá vốn</th>
+                <th style="width: 120px;">Thành tiền</th>
+            </tr>
+            <tr class="sub-header">
+                <td>A</td><td>B</td><td>C</td><td>1</td><td>2</td><td>3 = 1×2</td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="text-center">{{ loop.index }}</td>
+                <td>
+                    {{ item.product_name }}
+                    {% if item.barcode %}<br><small>Mã: {{ item.barcode }}</small>{% endif %}
+                </td>
+                <td class="text-center">{{ item.base_unit or 'Cái' }}</td>
+                <td class="text-right">{{ item.quantity }}</td>
+                <td class="text-right">{{ item.cost_price|vnd }}</td>
+                <td class="text-right bold">{{ item.total_amount|vnd }}</td>
+            </tr>
+            {% endfor %}
+            
+            <tr class="bold">
+                <td colspan="5" class="text-right uppercase">Tổng cộng tiền thanh toán:</td>
+                <td class="text-right" style="background:#f9f9f9;">{{ imp.total_amount|vnd }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="info-line" style="margin-top:15px">
+        <span class="info-label">- Tổng số tiền (viết bằng chữ):</span>
+        <span class="dotted" style="font-style: italic;">{{ imp.total_amount|so_thanh_chu }}.</span>
+    </div>
+
+    <div style="text-align: right; font-style: italic; margin-top: 15px; padding-right: 30px;">
+        Ngày {{ d[2] }} tháng {{ d[1] }} năm {{ d[0] }}
+    </div>
+
+    <table class="footer-sign">
+        <tr>
+            <td>
+                <span class="sign-title">Người lập phiếu</span>
+                <i>(Ký, họ tên)</i>
+                <div class="sign-space"></div>
+                <div class="bold">{{ info.representative_name or '...' }}</div>
+            </td>
+            <td>
+                <span class="sign-title">Người giao hàng</span>
+                <i>(Ký, họ tên)</i>
+                <div class="sign-space"></div>
+            </td>
+            <td>
+                <span class="sign-title">Thủ kho</span>
+                <i>(Ký, họ tên)</i>
+                <div class="sign-space"></div>
+            </td>
+            <td>
+                <span class="sign-title">Kế toán trưởng</span>
+                <i>(Ký, họ tên)</i>
+                <div class="sign-space"></div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+</body>
+</html>

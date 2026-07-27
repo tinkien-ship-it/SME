@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>In Sổ S2d-HKD - {{ product.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        body { 
+            font-family: "Times New Roman", Times, serif; 
+            font-size: 12px; 
+            color: #000; 
+            background-color: #f0f2f5; 
+            margin: 0;
+        }
+        .no-print-zone {
+            background: #ffffff; padding: 10px 0; border-bottom: 2px solid #dee2e6;
+            position: sticky; top: 0; z-index: 1000; display: flex;
+            justify-content: center; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .print-container {
+            width: 277mm; margin: 20px auto; padding: 10mm 15mm;
+            background: white; box-shadow: 0 0 15px rgba(0,0,0,0.2); min-height: 190mm;
+        }
+        .table-print { border-collapse: collapse; width: 100%; margin-top: 10px; table-layout: fixed; }
+        .table-print th, .table-print td { 
+            border: 1px solid black !important; 
+            padding: 4px; 
+            vertical-align: middle;
+            word-wrap: break-word;
+        }
+        .text-end { text-align: right !important; }
+        .text-center { text-align: center !important; }
+        .fw-bold { font-weight: bold; }
+        .text-uppercase { text-transform: uppercase; }
+
+        @media print {
+            .no-print-zone { display: none !important; }
+            body { background: none; margin: 0; }
+            .print-container { width: 100%; margin: 0; padding: 0; box-shadow: none; }
+            .table-print th { background-color: #eee !important; -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print-zone">
+        <button onclick="window.print()" class="btn btn-primary shadow-sm" style="padding: 10px 25px;">
+            <i class="bi bi-printer-fill"></i> IN SỔ (A4 NGANG)
+        </button>
+        <button onclick="window.close()" class="btn btn-secondary shadow-sm" style="padding: 10px 25px; margin-left: 10px;">
+            <i class="bi bi-x-circle-fill"></i> ĐÓNG
+        </button>
+    </div>
+
+    <div class="print-container">
+        <div class="row">
+            <div class="col-7">
+                <p class="mb-0 fw-bold text-uppercase">HỘ, CÁ NHÂN KINH DOANH: {{ info.business_name or info.name }}</p>
+                <p class="mb-0">Địa chỉ: {{ info.address }}</p>
+                <p class="mb-0">MST: {{ info.tax_code }}</p>
+            </div>
+            <div class="col-5 text-end">
+                <p class="mb-0 fw-bold">Mẫu số S2d-HKD</p>
+                <small>(Ban hành kèm theo Thông tư số 152/2025/TT-BTC)</small>
+            </div>
+        </div>
+
+        <div class="text-center my-3">
+            <h4 class="fw-bold">SỔ CHI TIẾT VẬT LIỆU, DỤNG CỤ, SẢN PHẨM, HÀNG HÓA</h4>
+            <p class="mb-1">Tên hàng hóa: <span class="fw-bold">{{ product.name }}</span></p>
+            <p>Kỳ báo cáo: 
+                {% if start_date and start_date|length >= 10 %}
+                    {% set s = start_date[:10].split('-') %}Từ {{ s[2] }}/{{ s[1] }}/{{ s[0] }}
+                {% endif %}
+                {% if end_date and end_date|length >= 10 %}
+                    {% set e = end_date[:10].split('-') %} đến {{ e[2] }}/{{ e[1] }}/{{ e[0] }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="row">
+            <div class="col-12 text-end">
+                <p class="mb-0">Đơn vị tính: Đồng</p>
+            </div>
+        </div>
+
+        <table class="table-print" id="data-table">
+            <thead class="text-center fw-bold bg-light" style="font-size: 11px;">
+                <tr>
+                    <th colspan="2" style="width: 140px;">CHỨNG TỪ</th>
+                    <th rowspan="2" style="width: 180px;">DIỄN GIẢI</th>
+                    <th rowspan="2" style="width: 60px;">ĐVT</th>
+                    <th rowspan="2" style="width: 80px;">ĐƠN GIÁ</th>
+                    <th colspan="2">NHẬP</th>
+                    <th colspan="2">XUẤT</th>
+                    <th colspan="2">TỒN</th>
+                </tr>
+                <tr>
+                    <th>SỐ HIỆU</th>
+                    <th>NGÀY</th>
+                    <th style="width: 60px;">SL</th>
+                    <th style="width: 90px;">THÀNH TIỀN</th>
+                    <th style="width: 60px;">SL</th>
+                    <th style="width: 90px;">THÀNH TIỀN</th>
+                    <th style="width: 60px;">SL</th>
+                    <th style="width: 95px;">THÀNH TIỀN</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td></td><td></td>
+                    <td class="fw-bold">Số dư đầu kỳ</td>
+                    <td class="text-center">{{ product.unit }}</td>
+                    <td></td><td></td><td></td><td></td><td></td>
+                    <td class="text-center fw-bold format-qty">{{ opening.qty }}</td>
+                    <td class="text-end fw-bold format-money">{{ opening.val }}</td>
+                </tr>
+
+                {% for row in details %}
+                <tr>
+                    <td class="text-center">{{ row.ref }}</td>
+                    <td class="text-center">{{ row.date }}</td>
+                    <td>{{ row.note }}</td>
+                    <td class="text-center">{{ product.unit }}</td>
+                    <td class="text-end format-money">{{ row.price }}</td>
+                    <td class="text-center format-qty">{{ row.in_qty|abs if row.in_qty != 0 else '' }}</td>
+                    <td class="text-end format-money">{{ row.in_val|abs if row.in_val != 0 else '' }}</td>
+                    <td class="text-center format-qty">{{ row.out_qty|abs if row.out_qty != 0 else '' }}</td>
+                    <td class="text-end format-money">{{ row.out_val|abs if row.out_val != 0 else '' }}</td>
+                    <td class="text-center format-qty">{{ row.bal_qty }}</td>
+                    <td class="text-end format-money">{{ row.bal_val }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="fw-bold bg-light">
+                <tr>
+                    <td colspan="5" class="text-center">CỘNG PHÁT SINH TRONG KỲ</td>
+                    <td class="text-center format-qty">{{ summary.in_qty|abs }}</td>
+                    <td class="text-end format-money">{{ summary.in_val|abs }}</td>
+                    <td class="text-center format-qty">{{ summary.out_qty|abs }}</td>
+                    <td class="text-end format-money">{{ summary.out_val|abs }}</td>
+                    <td colspan="2" style="background: #eee;"></td>
+                </tr>
+                <tr>
+                    <td colspan="5" class="text-center">SỐ DƯ CUỐI KỲ</td>
+                    <td colspan="4"></td>
+                    <td class="text-center format-qty">{{ summary.closing_qty }}</td>
+                    <td class="text-end format-money">{{ summary.closing_val }}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="row mt-4 text-center" style="page-break-inside: avoid;">
+            <div class="col-6">
+                <p class="fw-bold mb-1"></p>
+                <p class="fst-italic"></p>
+                <div style="height: 70px;"></div>
+                <p class="fw-bold"></p>
+            </div>
+            <div class="col-6">
+                <p class="mb-1">Ngày {{ current_day }} tháng {{ current_month }} năm {{ current_year }}</p>
+                <p class="fw-bold text-uppercase mb-1">CHỦ HỘ KINH DOANH</p>
+                <p class="fst-italic">(Ký, họ tên)</p>
+                <div style="height: 70px;"></div>
+                <p class="fw-bold text-uppercase">{{ info.representative_name or info.name }}</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Hàm định dạng số chuẩn Việt Nam: 1.234.567,89
+        function formatVN(val, decimals) {
+            if (val === "" || val === null || isNaN(val) || val == 0) return "";
+            return new Intl.NumberFormat('vi-VN', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            }).format(val);
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Định dạng các ô tiền (0 chữ số thập phân)
+            document.querySelectorAll('.format-money').forEach(el => {
+                const val = parseFloat(el.innerText);
+                el.innerText = formatVN(val, 0);
+            });
+
+            // Định dạng các ô số lượng (2 chữ số thập phân)
+            document.querySelectorAll('.format-qty').forEach(el => {
+                const val = parseFloat(el.innerText);
+                el.innerText = formatVN(val, 2);
+            });
+        });
+    </script>
+</body>
+</html>

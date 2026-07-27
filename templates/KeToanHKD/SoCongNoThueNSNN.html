@@ -1,0 +1,466 @@
+{% extends "KeToanHKD/_layout.html" %}
+{% block title %}Công Nợ Thuế & NSNN{% endblock %}
+
+{% block hkd_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .money-lg { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.25rem; }
+    .money-cell { font-family: 'JetBrains Mono', monospace; font-weight: 700; text-align: right; white-space: nowrap; }
+    .debt { color: #ef4444; }
+    .flatpickr-calendar { z-index: 10000 !important; }
+    .src-nsnn { border-left: 4px solid #6f42c1; }
+    .src-s3a { border-left: 4px solid #198754; }
+    .detail-table th, .detail-table td { vertical-align: middle; }
+</style>
+{% endblock %}
+
+{% block hkd_content %}
+<div class="container-fluid py-2">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h3 class="fw-bold text-primary mb-1">Công Nợ Thuế & NSNN</h3>
+            <p class="text-muted small mb-0">
+                Tổng hợp nghĩa vụ thuế từ <strong>S4 NSNN</strong> (GTGT, TNCN theo quý) và
+                <strong>S3a Thuế khác</strong>. Chi tiết kê khai tại
+                <a href="{{ url_for('SoTheoDoiNSNN') }}">Sổ NSNN</a> ·
+                <a href="{{ url_for('SoTheoDoiThueKhac') }}">Sổ Thuế khác</a>.
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('SoTheoDoiNSNN') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-bank me-1"></i> Sổ S4
+            </a>
+            <a href="{{ url_for('SoTheoDoiThueKhac') }}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-file-earmark-text me-1"></i> Sổ S3a
+            </a>
+        </div>
+    </div>
+
+    <form method="get" action="{{ url_for('SoCongNoThueNSNN') }}" class="row g-3 mb-3 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label small fw-bold text-muted">Năm</label>
+            <select name="year" class="form-select">
+                {% for y in year_options %}
+                <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>Năm {{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-bold text-muted">Nhóm doanh thu (DT1–DT4)</label>
+            <div class="form-control bg-light">
+                <strong></strong> {{ revenue_tier_label }}
+                <span class="text-muted small d-block">
+                    Ngành Nghề: {{ (tenant_profile.enabled_nn_sectors or [])|join(', ') }}
+                    · Cấu hình bởi KETO POS
+                </span>
+            </div>
+        </div>
+        <div class="col-md-1">
+            <label class="form-label small fw-bold text-muted d-block">&nbsp;</label>
+            <button type="submit" class="btn btn-primary w-100" title="Xem báo cáo">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+        <div class="col-md-7">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm text-center p-3">
+                        <div class="small text-muted text-uppercase fw-bold">Khoản chưa nộp đủ</div>
+                        <div class="money-lg debt mt-1">{{ summary.unpaid_count|default(0) }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm text-center p-3 src-nsnn">
+                        <div class="small text-primary text-uppercase fw-bold">NSNN còn nợ</div>
+                        <div class="money-lg debt mt-1">{{ summary.nsnn_unpaid|default(0)|vnd(0) }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm text-center p-3 src-s3a">
+                        <div class="small text-success text-uppercase fw-bold">S3a còn nợ</div>
+                        <div class="money-lg debt mt-1">{{ summary.s3a_unpaid|default(0)|vnd(0) }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm text-center p-3 bg-danger text-white">
+                        <div class="small text-white-50 text-uppercase fw-bold">Tổng còn nộp</div>
+                        <div class="money-lg fw-bold mt-1">{{ summary.total_unpaid|default(0)|vnd(0) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if tax_error %}
+    <div class="alert alert-danger">{{ tax_error }}</div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm overflow-hidden mb-4">
+        <div class="card-header bg-white fw-bold">
+            <i class="bi bi-bank text-primary me-2"></i>NSNN — GTGT & TNCN theo quý (S4)
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 detail-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Kỳ quý</th>
+                        <th class="money-cell">Doanh thu kỳ</th>
+                        <th class="money-cell">Phải nộp</th>
+                        <th class="money-cell">Đã nộp</th>
+                        <th class="money-cell">Còn lại</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th class="text-center" style="width:180px">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if nsnn_periods %}
+                        {% for p in nsnn_periods %}
+                        <tr>
+                            <td class="fw-bold">
+                                {{ p.label }}
+                                <div class="small text-muted">{{ p.start|format_date }} → {{ p.end|format_date }}</div>
+                            </td>
+                            <td class="money-cell">{{ p.revenue|vnd(0) }}</td>
+                            <td class="money-cell text-danger">{{ p.phai_nop|vnd(0) }}</td>
+                            <td class="money-cell text-success">{{ p.da_nop|vnd(0) }}</td>
+                            <td class="money-cell fw-bold {% if p.con_lai > 0 %}debt{% endif %}">{{ p.con_lai|vnd(0) }}</td>
+                            <td class="text-center">
+                                {% if p.phai_nop <= 0 %}
+                                <span class="badge bg-secondary-subtle text-secondary">Không phát sinh</span>
+                                {% elif p.con_lai <= 0 %}
+                                <span class="badge bg-success-subtle text-success">Đã nộp đủ</span>
+                                {% elif p.da_nop > 0 %}
+                                <span class="badge bg-warning-subtle text-warning">Nộp một phần</span>
+                                {% else %}
+                                <span class="badge bg-danger-subtle text-danger">Chưa nộp</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-nsnn-detail"
+                                        data-period-idx="{{ loop.index0 }}" title="Chi tiết GTGT/TNCN">
+                                    <i class="bi bi-list-ul"></i>
+                                </button>
+                                <a href="{{ url_for('SoTheoDoiNSNN') }}" class="btn btn-sm btn-outline-secondary" title="Mở S4">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% elif tax_error %}
+                        <tr><td colspan="7" class="text-center text-danger py-4">{{ tax_error }}</td></tr>
+                    {% else %}
+                        <tr><td colspan="7" class="text-center text-muted py-4">Không có phát sinh NSNN trong năm {{ selected_year }}</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden mb-4" id="detailCard" style="display:none">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="fw-bold" id="detailTitle">Chi tiết kỳ NSNN</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnHideDetail">Đóng</button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 detail-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Loại thuế</th>
+                            <th class="money-cell">Phải nộp</th>
+                            <th class="money-cell">Đã nộp</th>
+                            <th class="money-cell">Còn lại</th>
+                            <th>Phiếu chi</th>
+                            <th class="text-center">TT</th>
+                            <th class="text-center">Nộp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taxDetailBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden">
+        <div class="card-header bg-white fw-bold">
+            <i class="bi bi-file-earmark-text text-success me-2"></i>Thuế khác (S3a)
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 detail-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ngày GS</th>
+                        <th>Diễn giải</th>
+                        <th class="money-cell">Phải nộp</th>
+                        <th class="money-cell">Đã nộp</th>
+                        <th class="money-cell">Còn lại</th>
+                        <th>Phiếu chi</th>
+                        <th class="text-center">TT</th>
+                        <th class="text-center" style="width:100px">Nộp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if s3a_items %}
+                        {% for item in s3a_items %}
+                        <tr>
+                            <td>{{ item.ngay_ghi_so|format_date }}</td>
+                            <td class="text-start fw-semibold">{{ item.dien_giai or '—' }}</td>
+                            <td class="money-cell text-danger">{{ item.phai_nop|vnd(0) }}</td>
+                            <td class="money-cell text-success">{{ item.da_nop|vnd(0) }}</td>
+                            <td class="money-cell fw-bold {% if item.con_lai > 0 %}debt{% endif %}">{{ item.con_lai|vnd(0) }}</td>
+                            <td>
+                                {% if item.voucher_no and item.phieu_chi_id %}
+                                <a href="{{ url_for('expense_print', expense_id=item.phieu_chi_id) }}" target="_blank" class="fw-bold text-primary">{{ item.voucher_no }}</a>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="text-center"><span class="badge {{ item.status_class }}">{{ item.status }}</span></td>
+                            <td class="text-center">
+                                {% if item.con_lai > 0 %}
+                                <button type="button" class="btn btn-sm btn-outline-success btn-s3a-pay"
+                                        data-id="{{ item.id }}" data-amount="{{ item.con_lai }}"
+                                        data-label="{{ item.dien_giai|e }}">
+                                    <i class="bi bi-cash-stack"></i>
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-success" disabled>
+                                    <i class="bi bi-cash-stack"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% elif tax_error %}
+                        <tr><td colspan="8" class="text-center text-danger py-4">{{ tax_error }}</td></tr>
+                    {% else %}
+                        <tr><td colspan="8" class="text-center text-muted py-4">Không có nghiệp vụ thuế khác trong năm {{ selected_year }}</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if tax_data %}
+<script id="tax-periods-json" type="application/json">{{ tax_data.nsnn_periods|tojson }}</script>
+{% endif %}
+
+<div class="modal fade" id="nsnnPayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-success shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cash-stack me-2"></i>Nộp thuế NSNN</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="nsnn_tax_type">
+                <input type="hidden" id="nsnn_start">
+                <input type="hidden" id="nsnn_end">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Loại thuế</label>
+                    <input type="text" class="form-control bg-light" id="nsnn_tax_label" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Ngày nộp <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="nsnn_pay_date">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Số tiền nộp</label>
+                    <input type="text" class="form-control fw-bold text-danger bg-light" id="nsnn_pay_amount" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Đơn vị nhận <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="nsnn_receiver" placeholder="Kho bạc Nhà nước..." value="Kho bạc Nhà nước">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Lý do nộp</label>
+                    <textarea class="form-control" id="nsnn_reason" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phương thức</label>
+                    <select class="form-select" id="nsnn_pay_method">
+                        <option value="111">Tiền mặt (111)</option>
+                        <option value="112" selected>Chuyển khoản (112)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-success px-4" id="btnConfirmNsnnPay">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="s3aPayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-success shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cash-stack me-2"></i>Nộp thuế khác (S3a)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="s3a_id">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Diễn giải</label>
+                    <input type="text" class="form-control bg-light" id="s3a_label" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Ngày nộp <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="s3a_pay_date">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Số tiền nộp</label>
+                    <input type="text" class="form-control fw-bold text-danger bg-light" id="s3a_pay_amount" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Đơn vị nhận <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="s3a_receiver" placeholder="Cơ quan thuế / Kho bạc...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Lý do nộp</label>
+                    <textarea class="form-control" id="s3a_reason" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phương thức</label>
+                    <select class="form-select" id="s3a_pay_method">
+                        <option value="111">Tiền mặt (111)</option>
+                        <option value="112" selected>Chuyển khoản (112)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-success px-4" id="btnConfirmS3aPay">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block hkd_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function () {
+    const fmt = n => (parseFloat(n) || 0).toLocaleString('vi-VN') + ' ₫';
+    const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+    let nsnnPeriods = [];
+    let currentDetail = null;
+
+    const jsonEl = document.getElementById('tax-periods-json');
+    if (jsonEl && jsonEl.textContent) {
+        try { nsnnPeriods = JSON.parse(jsonEl.textContent); } catch (e) { console.warn(e); }
+    }
+
+    function initPayDates() {
+        if (typeof flatpickr !== 'function') return;
+        try {
+            const cfg = { locale: 'vn', dateFormat: 'd/m/Y', defaultDate: new Date() };
+            flatpickr('#nsnn_pay_date', cfg);
+            flatpickr('#s3a_pay_date', cfg);
+        } catch (e) { console.warn(e); }
+    }
+
+    function showDetail(idx) {
+        currentDetail = nsnnPeriods[idx];
+        if (!currentDetail) return;
+        document.getElementById('detailTitle').textContent = 'Chi tiết NSNN — ' + currentDetail.label;
+        let html = '';
+        (currentDetail.tax_rows || []).forEach(row => {
+            const vLink = row.voucher_no && row.phieu_chi_id
+                ? '<a href="/PhieuChi/in/' + row.phieu_chi_id + '" target="_blank">' + esc(row.voucher_no) + '</a>'
+                : '—';
+            html += '<tr>' +
+                '<td><strong>' + esc(row.tax_type) + '</strong><div class="small text-muted">' + esc(row.note || '') + '</div></td>' +
+                '<td class="money-cell">' + fmt(row.phai_nop) + '</td>' +
+                '<td class="money-cell">' + fmt(row.da_nop) + '</td>' +
+                '<td class="money-cell fw-bold">' + fmt(row.con_lai) + '</td>' +
+                '<td>' + vLink + '</td>' +
+                '<td class="text-center"><span class="badge ' + esc(row.status_class) + '">' + esc(row.status) + '</span></td>' +
+                '<td class="text-center">' +
+                (row.con_lai > 0
+                    ? '<button type="button" class="btn btn-sm btn-outline-success btn-nsnn-pay" data-type="' + esc(row.tax_type) + '" data-amount="' + row.con_lai + '" data-label="' + esc(row.dien_giai) + '"><i class="bi bi-cash-stack"></i></button>'
+                    : '<button type="button" class="btn btn-sm btn-outline-success" disabled><i class="bi bi-cash-stack"></i></button>') +
+                '</td></tr>';
+        });
+        document.getElementById('taxDetailBody').innerHTML = html;
+        document.getElementById('detailCard').style.display = '';
+    }
+
+    document.querySelectorAll('.btn-nsnn-detail').forEach(btn => {
+        btn.addEventListener('click', () => showDetail(parseInt(btn.dataset.periodIdx, 10)));
+    });
+    document.getElementById('btnHideDetail')?.addEventListener('click', () => {
+        document.getElementById('detailCard').style.display = 'none';
+        currentDetail = null;
+    });
+
+    document.body.addEventListener('click', e => {
+        const s3aBtn = e.target.closest('.btn-s3a-pay');
+        if (s3aBtn) {
+            document.getElementById('s3a_id').value = s3aBtn.dataset.id;
+            document.getElementById('s3a_label').value = s3aBtn.dataset.label || '';
+            document.getElementById('s3a_pay_amount').value = fmt(s3aBtn.dataset.amount);
+            document.getElementById('s3a_reason').value = 'Nộp thuế: ' + (s3aBtn.dataset.label || '');
+            new bootstrap.Modal('#s3aPayModal').show();
+            return;
+        }
+        const nsnnBtn = e.target.closest('.btn-nsnn-pay');
+        if (nsnnBtn && currentDetail) {
+            document.getElementById('nsnn_tax_type').value = nsnnBtn.dataset.type;
+            document.getElementById('nsnn_start').value = currentDetail.start;
+            document.getElementById('nsnn_end').value = currentDetail.end;
+            document.getElementById('nsnn_tax_label').value = nsnnBtn.dataset.type + ' — ' + (nsnnBtn.dataset.label || '');
+            document.getElementById('nsnn_pay_amount').value = fmt(nsnnBtn.dataset.amount);
+            document.getElementById('nsnn_reason').value = 'Nộp thuế ' + nsnnBtn.dataset.type + ' kỳ ' + currentDetail.label;
+            new bootstrap.Modal('#nsnnPayModal').show();
+        }
+    });
+
+    document.getElementById('btnConfirmNsnnPay')?.addEventListener('click', async () => {
+        const payload = {
+            tax_type: document.getElementById('nsnn_tax_type').value,
+            start: document.getElementById('nsnn_start').value,
+            end: document.getElementById('nsnn_end').value,
+            group: '{{ selected_group }}',
+            amount: parseFloat(document.getElementById('nsnn_pay_amount').value.replace(/[^\d]/g, '')) || 0,
+            pay_date: document.getElementById('nsnn_pay_date').value,
+            receiver: document.getElementById('nsnn_receiver').value.trim(),
+            reason: document.getElementById('nsnn_reason').value.trim(),
+            pay_method: document.getElementById('nsnn_pay_method').value,
+        };
+        if (!payload.pay_date || !payload.receiver || !payload.reason) {
+            return Swal.fire('Lỗi', 'Vui lòng nhập đầy đủ các trường bắt buộc', 'error');
+        }
+        const res = await fetch('/api/nsnn/pay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (!data.success) return Swal.fire('Lỗi', data.error || 'Thanh toán thất bại', 'error');
+        bootstrap.Modal.getInstance('#nsnnPayModal').hide();
+        Swal.fire('Thành công', 'Đã ghi nhận nộp thuế NSNN', 'success').then(() => location.reload());
+    });
+
+    document.getElementById('btnConfirmS3aPay')?.addEventListener('click', async () => {
+        const payload = {
+            id: document.getElementById('s3a_id').value,
+            amount: parseFloat(document.getElementById('s3a_pay_amount').value.replace(/[^\d]/g, '')) || 0,
+            pay_date: document.getElementById('s3a_pay_date').value,
+            receiver: document.getElementById('s3a_receiver').value.trim(),
+            reason: document.getElementById('s3a_reason').value.trim(),
+            pay_method: document.getElementById('s3a_pay_method').value,
+        };
+        if (!payload.pay_date || !payload.receiver || !payload.reason) {
+            return Swal.fire('Lỗi', 'Vui lòng nhập đầy đủ các trường bắt buộc', 'error');
+        }
+        const res = await fetch('/api/thue-khac/pay', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (!data.success) return Swal.fire('Lỗi', data.error || 'Thanh toán thất bại', 'error');
+        bootstrap.Modal.getInstance('#s3aPayModal').hide();
+        Swal.fire('Thành công', 'Đã ghi nhận nộp thuế S3a', 'success').then(() => location.reload());
+    });
+
+    initPayDates();
+})();
+</script>
+{% endblock %}

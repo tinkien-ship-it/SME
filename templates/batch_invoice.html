@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Xuất Hóa Đơn Hàng Loạt - {{ date }}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h3 class="text-center mb-4">DANH SÁCH HÓA ĐƠN NGÀY {{ date | strftime('%d/%m/%Y') }}</h3>
+    <table class="table table-bordered">
+        <thead class="table-primary">
+            <tr>
+                <th>STT</th>
+                <th>Mã ĐH</th>
+                <th>Số HĐ</th>
+                <th>Khách hàng</th>
+                <th>Tổng tiền</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in orders %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>ĐH{{ "%06d"|format(o.id) }}</td>
+                <td>{{ o.invoice_number }}</td>
+                <td>{{ o.customer }}</td>
+                <td class="text-end">{{ o.total | format_currency }}</td>
+                <td><a href="/invoice/print/{{ o.id }}" target="_blank" class="btn btn-sm btn-success">In</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="text-center mt-4">
+        <button class="btn btn-primary btn-lg" onclick="window.print()">In Tất Cả</button>
+        <button class="btn btn-success btn-lg">Xuất Excel</button>
+    </div>
+</div>
+{% endblock %}

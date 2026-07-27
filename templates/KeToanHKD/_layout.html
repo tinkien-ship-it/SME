@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/accounting-hub.css') }}">
+{% block hkd_head %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="accounting-hub-container">
+    {% include 'KeToanHKD/_sidebar.html' %}
+
+    <div class="accounting-hub-content">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <button type="button" class="btn btn-outline-primary btn-sm accounting-hub-mobile-toggle"
+                    id="hkdSidebarToggle" aria-label="Mở menu">
+                <i class="fas fa-bars me-1"></i> Menu
+            </button>
+            {% block hkd_breadcrumb %}{% endblock %}
+        </div>
+        {% block hkd_content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const search = document.getElementById('hkdMenuSearch');
+    const sidebar = document.getElementById('hkdSidebar');
+    const toggle = document.getElementById('hkdSidebarToggle');
+
+    if (toggle && sidebar) {
+        toggle.addEventListener('click', () => sidebar.classList.toggle('show-mobile'));
+    }
+
+    if (search) {
+        search.addEventListener('input', function () {
+            const q = this.value.trim().toLowerCase();
+            document.querySelectorAll('.hkd-menu-item').forEach(el => {
+                const label = el.getAttribute('data-label') || '';
+                el.style.display = !q || label.includes(q) ? '' : 'none';
+            });
+            if (q) {
+                document.querySelectorAll('.hkd-menu-group .collapse').forEach(c => c.classList.add('show'));
+            }
+        });
+    }
+})();
+</script>
+{% block hkd_scripts %}{% endblock %}
+{% endblock %}

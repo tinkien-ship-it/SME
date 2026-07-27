@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+    <!-- Flatpickr CSS + Theme -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        .form-control, .btn { 
+            border-radius: 8px !important; 
+        }
+        .flatpickr-calendar { 
+            z-index: 9999 !important; 
+        }
+
+        /* === Cải tiến bảng và cột hành động === */
+        #importTable td, #importTable th {
+            vertical-align: middle;
+        }
+
+        .action-column {
+            width: 140px;
+            min-width: 130px;
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        .action-btn-group {
+            display: inline-flex;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .action-btn-group .btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn-group .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Responsive mobile */
+        @media (max-width: 768px) {
+            .action-column {
+                width: 115px;
+                min-width: 110px;
+            }
+            .action-btn-group .btn {
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+            }
+        }
+
+        /* Độ rộng các cột khác (giữ nguyên logic cũ nhưng tối ưu) */
+        #importTable th:nth-child(1), #importTable td:nth-child(1) { width: 10%; min-width: 100px; }
+        #importTable th:nth-child(2), #importTable td:nth-child(2) { width: 12%; min-width: 110px; }
+        #importTable th:nth-child(3), #importTable td:nth-child(3) { width: 22%; min-width: 180px; }
+        #importTable th:nth-child(4), #importTable td:nth-child(4) { width: 12%; min-width: 100px; }
+        #importTable th:nth-child(5), #importTable td:nth-child(5) { width: 13%; }
+        #importTable th:nth-child(6), #importTable td:nth-child(6) { width: 13%; }
+        #importTable th:nth-child(7), #importTable td:nth-child(7) { width: 10%; min-width: 100px; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<!-- Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+    <div id="liveToast" class="toast hide" role="alert">
+        <div class="toast-header">
+            <strong class="me-auto" id="toastHeader">Thông báo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toastBody"></div>
+    </div>
+</div>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0 text-primary fw-bold">Danh Sách Phiếu Nhập Kho Theo Hóa Đơn Mua Hàng</h3>
+        <a href="{{ url_for('import_stock') }}" class="btn btn-success shadow-sm px-4 py-2">
+            <i class="bi bi-plus-circle me-2"></i>Tạo Phiếu Nhập
+        </a>
+    </div>
+
+    <!-- Bộ lọc -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small fw-semibold">Từ ngày</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="startDate" placeholder="dd/mm/yyyy">
+                        <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small fw-semibold">Đến ngày</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="endDate" placeholder="dd/mm/yyyy">
+                        <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Tìm kiếm</label>
+                    <input type="text" id="searchImport" class="form-control" 
+                           placeholder="Số phiếu, hóa đơn, nhà cung cấp..." 
+                           onkeyup="if(event.key==='Enter') loadImport()">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="loadImport()">
+                        <i class="bi bi-filter me-2"></i>Lọc
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bảng -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="importTable">
+                    <thead class="table-light text-secondary small text-uppercase">
+                        <tr>
+                            <th class="text-center">Số Phiếu</th>
+                            <th class="text-center">Ngày Nhập</th>
+                            <th class="text-start">Nhà Cung Cấp</th>
+                            <th class="text-center">Số HĐ</th>
+                            <th class="text-end">Tổng Tiền Hàng</th>
+                            <th class="text-end">Tổng Giá Trị Nhập</th>
+                            <th class="text-center">Tình Trạng</th>
+                            <th class="text-center action-column">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="8" class="text-center text-muted py-5">Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Flatpickr -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+
+<script>
+const toastEl = document.getElementById('liveToast');
+const toast = new bootstrap.Toast(toastEl);
+
+function showToast(msg, isError = false) {
+    document.getElementById('toastHeader').textContent = isError ? 'Lỗi' : 'Thành công';
+    document.getElementById('toastBody').textContent = msg;
+    toastEl.classList.toggle('bg-danger', isError);
+    toastEl.classList.toggle('text-white', isError);
+    toast.show();
+}
+
+function formatNumber(num) {
+    return (parseFloat(num) || 0).toLocaleString('vi-VN');
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+}
+
+function toISO(dateStr) {
+    if (!dateStr) return '';
+    const [d, m, y] = dateStr.split('/');
+    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
+async function loadImport() {
+    const q = $('#searchImport').val().trim();
+    const start = toISO($('#startDate').val());
+    const end = toISO($('#endDate').val());
+
+    let url = '/api/import?';
+    if (start) url += `start=${start}&`;
+    if (end) url += `end=${end}&`;
+    if (q) url += `q=${encodeURIComponent(q)}&`;
+    url = url.replace(/&$/, '');
+
+    const tbody = $('#importTable tbody');
+    tbody.html('<tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>');
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        tbody.empty();
+        if (!data || data.length === 0) {
+            tbody.html('<tr><td colspan="8" class="text-center text-muted py-5">Không có phiếu nhập nào.</td></tr>');
+            return;
+        }
+
+        data.forEach(item => {
+            const statusClass = item.payment_status === 'Đã thanh toán' ? 'bg-success' : 'bg-warning text-dark';
+            const importNo = item.import_no || item.id;
+
+            tbody.append(`
+                <tr data-id="${item.id}">
+                    <td class="text-center"><strong>${importNo}</strong></td>
+                    <td class="text-center">${formatDate(item.date)}</td>
+                    <td class="text-start text-truncate" title="${item.supplier_name || ''}">${item.supplier_name || '—'}</td>
+                    <td class="text-center">${item.bill_no || '—'}</td>
+                    <td class="text-end">${formatNumber(item.payment_amt)}</td>
+                    <td class="text-end text-primary fw-bold">${formatNumber(item.total_value)}</td>
+                    <td class="text-center"><span class="badge ${statusClass}">${item.payment_status || '—'}</span></td>
+                    <td class="text-center action-column">
+                        <div class="action-btn-group">
+                            <button class="btn btn-sm btn-outline-primary" title="Xem" onclick="viewImport(${item.id})">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" title="Sửa" onclick="editImport(${item.id})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteImport(${item.id}, '${importNo}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `);
+        });
+    } catch (err) {
+        console.error(err);
+        tbody.html('<tr><td colspan="8" class="text-center text-danger py-5">Lỗi tải dữ liệu</td></tr>');
+        showToast('Không tải được danh sách phiếu nhập!', true);
+    }
+}
+
+function viewImport(id) { location.href = `/import/view/${id}`; }
+function editImport(id) { location.href = `/import/edit/${id}`; }
+
+async function deleteImport(id, importNo) {
+    const displayNo = importNo || id;
+    const result = await Swal.fire({
+        title: 'Xác nhận xóa?',
+        html: `Xóa phiếu nhập <strong>#${displayNo}</strong><br>Không thể khôi phục sau khi xóa!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: '#d33',
+        reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const res = await fetch(`/api/import/delete/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            $(`tr[data-id="${id}"]`).fadeOut(400, function() { $(this).remove(); });
+            showToast(data.message || `Đã xóa phiếu nhập #${displayNo}`);
+        } else {
+            throw new Error(data.error || 'Xóa thất bại');
+        }
+    } catch (err) {
+        showToast(err.message || 'Xóa phiếu nhập thất bại!', true);
+    }
+}
+
+// Khởi tạo
+$(document).ready(function() {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const fpConfig = {
+        dateFormat: "d/m/Y",
+        locale: "vn",
+        allowInput: true,
+        clickOpens: true,
+        onChange: function() {
+            if ($('#startDate').val() && $('#endDate').val()) loadImport();
+        }
+    };
+
+    flatpickr("#startDate", fpConfig).setDate(firstDayOfMonth);
+    flatpickr("#endDate", fpConfig).setDate(today);
+
+    loadImport();
+});
+</script>
+{% endblock %}

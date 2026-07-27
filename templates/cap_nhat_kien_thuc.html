@@ -1,0 +1,107 @@
+{% extends "KeToanHKD/_layout.html" %}
+{% block title %}Cập Nhật Kiến Thức - KETO POS{% endblock %}
+
+{% block hkd_content %}
+<style>
+    .knowledge-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        transition: transform 0.2s;
+    }
+    .knowledge-card:hover {
+        transform: translateY(-2px);
+    }
+    .knowledge-tag {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+    }
+    .knowledge-body {
+        font-size: 1.05rem;
+        line-height: 1.75;
+        color: #334155;
+    }
+</style>
+
+<div class="mb-4">
+    <h4 class="fw-bold text-dark mb-1">
+        <i class="fas fa-newspaper text-primary me-2"></i>Cập Nhật Kiến Thức
+    </h4>
+    <p class="text-muted mb-0">Tổng hợp chính sách pháp luật, thuế và hướng dẫn nghiệp vụ mới cho hộ kinh doanh và doanh nghiệp.</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card knowledge-card h-100 border-start border-4 border-primary">
+            <div class="card-body">
+                <span class="badge bg-primary bg-opacity-10 text-primary knowledge-tag mb-2">Thuế HKD</span>
+                <h6 class="fw-bold">Kê khai thuế theo từng kỳ</h6>
+                <p class="text-muted small mb-0">Theo dõi hạn nộp tờ khai thuế GTGT, TNCN và các loại thuế khác theo quy định hiện hành.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card knowledge-card h-100 border-start border-4 border-success">
+            <div class="card-body">
+                <span class="badge bg-success bg-opacity-10 text-success knowledge-tag mb-2">Hóa đơn</span>
+                <h6 class="fw-bold">Hóa đơn điện tử &amp; chứng từ</h6>
+                <p class="text-muted small mb-0">Cập nhật quy trình lập, ký và lưu trữ hóa đơn điện tử; đối chiếu hóa đơn mua — bán trong phần mềm.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card knowledge-card h-100 border-start border-4 border-warning">
+            <div class="card-body">
+                <span class="badge bg-warning bg-opacity-10 text-warning knowledge-tag mb-2">Lương &amp; BHXH</span>
+                <h6 class="fw-bold">Lương tối thiểu vùng</h6>
+                <p class="text-muted small mb-0">Tham chiếu mức lương, bảo hiểm và các khoản khấu trừ khi lập bảng lương và sổ theo dõi tiền lương (S5).</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card knowledge-card">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-bullhorn text-primary me-2"></i>Bản tin cập nhật</h5>
+    </div>
+    <div class="card-body knowledge-body">
+        <div class="alert alert-info border-0 mb-4">
+            <i class="fas fa-info-circle me-2"></i>
+            Mục này sẽ được bổ sung các bài viết, thông tư và hướng dẫn mới nhất. Quý khách có thể liên hệ bộ phận hỗ trợ để đề xuất chủ đề cần cập nhật.
+        </div>
+
+        <div class="list-group list-group-flush">
+            <div class="list-group-item px-0 py-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-1">
+                    <strong>Sổ sách kế toán HKD — Thông tư 88/2021/TT-BTC</strong>
+                    <span class="text-muted small">Tham chiếu</span>
+                </div>
+                <p class="mb-0 text-muted">Hệ thống sổ S1a, S2a–S2e, S3, S3a, S4, S5 và sổ phụ SP1–SP4 được thiết kế theo mẫu sổ kế toán cho hộ kinh doanh. Xem trực tiếp tại menu <strong>Sổ Sách Kế Toán</strong>.</p>
+            </div>
+            <div class="list-group-item px-0 py-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-1">
+                    <strong>Chấm công &amp; tính lương</strong>
+                    <span class="text-muted small">Tính năng mới</span>
+                </div>
+                <p class="mb-0 text-muted">Đồng bộ dữ liệu máy chấm công ZKTeco hoặc nhập Excel để tính ngày công thực tế khi lập bảng lương.</p>
+            </div>
+            <div class="list-group-item px-0 py-3 border-bottom-0">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-1">
+                    <strong>Công nợ nhân viên</strong>
+                    <span class="text-muted small">Nghiệp vụ</span>
+                </div>
+                <p class="mb-0 text-muted">Theo dõi khoản lương đã hạch toán nhưng chưa chi trả qua sổ công nợ phải trả nhân viên.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer bg-light text-center py-3">
+        <a href="{{ url_for('huong_dan_su_dung') }}" class="btn btn-outline-primary btn-sm me-2">
+            <i class="fas fa-question-circle me-1"></i>Hướng Dẫn Sử Dụng
+        </a>
+        <a href="{{ url_for('HKD_dashboard') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-chart-pie me-1"></i>Về Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

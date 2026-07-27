@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+{% block title %}Trả Hàng Nhập{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+    :root { --ri-primary: #3b71ca; --ri-success: #14a44d; --ri-border: #e0e6ed; }
+    body { background: #f4f7f6; }
+    .ri-card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.05); margin-bottom: 15px; }
+    .ri-card-header { font-weight: 700; background: #fff; border-bottom: 1px solid var(--ri-border); }
+    .return-line { background: #fff; border: 1px solid var(--ri-border); border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+    .return-line-header { display: flex; justify-content: space-between; align-items: start; border-bottom: 1px dashed #eee; padding-bottom: 6px; margin-bottom: 8px; }
+    .return-controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: flex-end; }
+    .ctrl-group { display: flex; flex-direction: column; align-items: flex-end; }
+    .ctrl-label { font-size: .65rem; color: #888; text-transform: uppercase; }
+    .input-ri { height: 32px; padding: 2px 6px; text-align: right; font-weight: 600; border: 1px solid #ddd; border-radius: 5px; width: 80px; }
+    .total-box { font-size: 1.6rem; font-weight: 800; color: var(--ri-success); }
+    .supplier-readonly input { background: #f8f9fa; }
+    #returnCartWrap { max-height: calc(100vh - 420px); overflow-y: auto; }
+    .flatpickr-calendar { z-index: 9999 !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 px-3 px-lg-4">
+    <h3 class="mb-3 text-primary fw-bold"><i class="bi bi-arrow-repeat"></i> TRẢ HÀNG NHẬP (XUẤT TRẢ NCC)</h3>
+
+    <div class="ri-card card">
+        <div class="card-body py-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-0">Từ ngày</label>
+                    <input type="text" class="form-control form-control-sm" id="startDate" placeholder="dd/mm/yyyy">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-0">Đến ngày</label>
+                    <input type="text" class="form-control form-control-sm" id="endDate" placeholder="dd/mm/yyyy">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-0">Tìm phiếu nhập</label>
+                    <input type="text" id="searchImport" class="form-control form-control-sm" placeholder="Số PN, HĐ, NCC..." onkeydown="if(event.key==='Enter')loadImportList()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-0">Phiếu nhập gốc</label>
+                    <select class="form-select form-select-sm" id="importId" disabled>
+                        <option value="">-- Chọn phiếu nhập --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" id="loadReturnBtn" onclick="loadIntoReturnCart()" disabled>
+                        <i class="bi bi-box-arrow-in-right"></i> Nạp phiếu trả
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="ri-card card">
+                <div class="card-header ri-card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-cart-check"></i> CHI TIẾT HÀNG TRẢ NCC</span>
+                    <button class="btn btn-sm btn-outline-danger border-0" onclick="clearReturnCart()" id="clearCartBtn" disabled>
+                        <i class="bi bi-trash"></i> Xóa tất cả
+                    </button>
+                </div>
+                <div class="card-body p-2">
+                    <div id="returnCartWrap">
+                        <div class="text-center text-muted py-5" id="emptyCartMsg">
+                            Chọn phiếu nhập và bấm <strong>Nạp phiếu trả</strong> để điền hàng
+                        </div>
+                        <div id="returnCart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="ri-card card supplier-readonly">
+                <div class="card-header ri-card-header"><i class="bi bi-building"></i> NGƯỜI MUA (NCC)</div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="small text-muted fw-bold">Tên / Liên hệ</label>
+                        <input type="text" class="form-control form-control-sm" id="customerName" readonly>
+                    </div>
+                    <div class="mb-2">
+                        <label class="small text-muted fw-bold">Tên công ty (NCC)</label>
+                        <input type="text" class="form-control form-control-sm" id="customerCompany" readonly>
+                    </div>
+                    <div class="mb-2">
+                        <input type="email" class="form-control form-control-sm" id="customerEmail" placeholder="Email" readonly>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-7">
+                            <input type="text" class="form-control form-control-sm" id="customerAddress" placeholder="Địa chỉ" readonly>
+                        </div>
+                        <div class="col-5">
+                            <input type="text" class="form-control form-control-sm" id="customerTaxCode" placeholder="MST" readonly>
+                        </div>
+                    </div>
+                    <div class="mb-0">
+                        <input type="text" class="form-control form-control-sm" id="customerPhone" placeholder="Điện thoại" readonly>
+                    </div>
+                    <div class="small text-muted mt-2" id="importMeta"></div>
+                </div>
+            </div>
+
+            <div class="ri-card card">
+                <div class="card-body">
+                    <div class="mb-2">
+                        <label class="small text-muted fw-bold">Lý do trả</label>
+                        <textarea class="form-control form-control-sm" id="reason" rows="2" placeholder="Lý do trả hàng NCC"></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-baseline mb-3">
+                        <span class="fw-semibold">TỔNG HOÀN (HĐ)</span>
+                        <span class="total-box" id="totalDisplay">0 ₫</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small text-muted fw-bold d-block mb-1">HÌNH THỨC THANH TOÁN</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="payMethod" id="payCash" value="111" checked>
+                            <label class="btn btn-outline-primary btn-sm" for="payCash">Tiền mặt</label>
+                            <input type="radio" class="btn-check" name="payMethod" id="payBank" value="112">
+                            <label class="btn btn-outline-primary btn-sm" for="payBank">CK</label>
+                            <input type="radio" class="btn-check" name="payMethod" id="payDebt" value="131">
+                            <label class="btn btn-outline-warning btn-sm" for="payDebt">Công nợ</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small text-muted fw-bold d-block mb-1">XUẤT HÓA ĐƠN BÁN TRẢ NCC</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="invoiceMode" id="invOfficial" value="1" checked>
+                            <label class="btn btn-outline-success btn-sm" for="invOfficial">Chính thức</label>
+                            <input type="radio" class="btn-check" name="invoiceMode" id="invDraft" value="0">
+                            <label class="btn btn-outline-secondary btn-sm" for="invDraft">Nháp</label>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-danger btn-lg" id="submitBtn" onclick="submitReturnCheckout(true)" disabled>
+                            <i class="bi bi-receipt"></i> Trả hàng + Xuất HĐ
+                        </button>
+                        <button class="btn btn-outline-danger" id="submitNoInvBtn" onclick="submitReturnCheckout(false)" disabled>
+                            Trả hàng (không xuất HĐ)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+let returnCart = [];
+let currentImportId = null;
+let importHeader = null;
+
+const fmt = new Intl.NumberFormat('vi-VN');
+function formatVND(v) { return fmt.format(Math.round(v || 0)) + ' ₫'; }
+
+function toISO(str) {
+    if (!str) return '';
+    const p = str.split('/');
+    if (p.length !== 3) return '';
+    return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+}
+
+function lineAmount(item) {
+    const sub = item.quantity * item.buyprice;
+    const disc = Math.round(sub * (item.discount_pct / 100));
+    const taxable = sub - disc;
+    const tax = Math.round(taxable * (item.tax_pct / 100));
+    return taxable + tax;
+}
+
+function calcTotal() {
+    return returnCart.reduce((s, it) => s + lineAmount(it), 0);
+}
+
+function updateTotals() {
+    document.getElementById('totalDisplay').textContent = formatVND(calcTotal());
+    const has = returnCart.some(it => it.quantity > 0);
+    document.getElementById('submitBtn').disabled = !has;
+    document.getElementById('submitNoInvBtn').disabled = !has;
+    document.getElementById('clearCartBtn').disabled = returnCart.length === 0;
+}
+
+function loadImportList() {
+    const q = document.getElementById('searchImport').value.trim();
+    const start = toISO(document.getElementById('startDate').value);
+    const end = toISO(document.getElementById('endDate').value);
+    let url = `/api/import?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}`;
+    if (q) url += `&q=${encodeURIComponent(q)}`;
+
+    const sel = document.getElementById('importId');
+    sel.innerHTML = '<option value="">-- Đang tải... --</option>';
+    sel.disabled = true;
+    document.getElementById('loadReturnBtn').disabled = true;
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            sel.innerHTML = '<option value="">-- Chọn phiếu nhập --</option>';
+            (data || []).forEach(imp => {
+                const label = (imp.import_no || `PN${String(imp.id).padStart(6,'0')}`) + ' — ' + (imp.supplier_name || 'NCC');
+                sel.innerHTML += `<option value="${imp.id}">${label}</option>`;
+            });
+            sel.disabled = false;
+            sel.onchange = () => {
+                document.getElementById('loadReturnBtn').disabled = !sel.value;
+            };
+        })
+        .catch(() => alert('Không tải được danh sách phiếu nhập'));
+}
+
+function fillSupplier(data) {
+    const s = data.supplier || {};
+    document.getElementById('customerName').value = s.name || data.supplier_name || '';
+    document.getElementById('customerCompany').value = s.name || data.supplier_name || '';
+    document.getElementById('customerEmail').value = s.email || '';
+    document.getElementById('customerAddress').value = s.address || '';
+    document.getElementById('customerTaxCode').value = s.tax_code || '';
+    document.getElementById('customerPhone').value = s.phone || '';
+    document.getElementById('importMeta').textContent =
+        `PN: ${data.import_no || ''} | HĐ mua: ${data.bill_no || '—'} | Ngày nhập: ${data.date || ''}`;
+}
+
+function loadIntoReturnCart() {
+    const importId = document.getElementById('importId').value;
+    if (!importId) return;
+
+    fetch(`/api/import/${importId}`)
+        .then(r => r.json().then(d => ({ ok: r.ok, d })))
+        .then(({ ok, d }) => {
+            if (!ok) throw new Error(d.error || 'Lỗi tải phiếu');
+            importHeader = d;
+            currentImportId = parseInt(importId, 10);
+            fillSupplier(d);
+
+            returnCart = (d.items || [])
+                .filter(it => (it.remaining_qty || 0) > 0)
+                .map(it => ({
+                    product_id: it.product_id,
+                    name: it.name,
+                    unit: it.unit || '—',
+                    unit_type: parseInt(it.unit_type || 0, 10),
+                    unit_ratio: parseFloat(it.unit_ratio || 1),
+                    buyprice: parseFloat(it.buyprice || 0),
+                    discount_pct: parseFloat(it.discount_pct || 0),
+                    tax_pct: parseFloat(it.tax_pct || 0),
+                    max_qty: parseFloat(it.remaining_qty || 0),
+                    import_qty: parseFloat(it.quantity || 0),
+                    quantity: parseFloat(it.remaining_qty || 0),
+                }));
+
+            renderReturnCart();
+        })
+        .catch(err => alert(err.message));
+}
+
+function renderReturnCart() {
+    const wrap = document.getElementById('returnCart');
+    const empty = document.getElementById('emptyCartMsg');
+    wrap.innerHTML = '';
+
+    if (!returnCart.length) {
+        empty.style.display = 'block';
+        updateTotals();
+        return;
+    }
+    empty.style.display = 'none';
+
+    returnCart.forEach((item, idx) => {
+        const el = document.createElement('div');
+        el.className = 'return-line';
+        el.innerHTML = `
+            <div class="return-line-header">
+                <div>
+                    <div class="fw-bold">${item.name}</div>
+                    <small class="text-muted">Mã SP: ${item.product_id} · ĐVT: ${item.unit} · Nhập: ${item.import_qty} · Còn trả: ${item.max_qty}</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLine(${idx})" title="Bỏ dòng">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="return-controls">
+                <div class="ctrl-group">
+                    <span class="ctrl-label">SL trả</span>
+                    <input type="number" class="input-ri" min="0" max="${item.max_qty}" step="any"
+                        value="${item.quantity}" onchange="setQty(${idx}, this.value)">
+                </div>
+                <div class="ctrl-group">
+                    <span class="ctrl-label">Đơn giá</span>
+                    <input type="text" class="input-ri" value="${formatVND(item.buyprice)}" readonly style="width:100px;background:#f8f9fa">
+                </div>
+                <div class="ctrl-group">
+                    <span class="ctrl-label">CK %</span>
+                    <input type="text" class="input-ri" value="${item.discount_pct}" readonly style="width:55px;background:#f8f9fa">
+                </div>
+                <div class="ctrl-group">
+                    <span class="ctrl-label">VAT %</span>
+                    <input type="text" class="input-ri" value="${item.tax_pct}" readonly style="width:55px;background:#f8f9fa">
+                </div>
+                <div class="ctrl-group">
+                    <span class="ctrl-label">Thành tiền</span>
+                    <span class="fw-bold text-primary">${formatVND(lineAmount(item))}</span>
+                </div>
+            </div>`;
+        wrap.appendChild(el);
+    });
+    updateTotals();
+}
+
+function setQty(idx, val) {
+    const q = parseFloat(val) || 0;
+    const max = returnCart[idx].max_qty;
+    returnCart[idx].quantity = Math.min(Math.max(0, q), max);
+    renderReturnCart();
+}
+
+function removeLine(idx) {
+    returnCart.splice(idx, 1);
+    renderReturnCart();
+}
+
+function clearReturnCart() {
+    if (!confirm('Xóa toàn bộ dòng trả?')) return;
+    returnCart = [];
+    renderReturnCart();
+}
+
+function submitReturnCheckout(issueInvoice) {
+    if (!currentImportId || !returnCart.length) {
+        alert('Chưa có hàng trả');
+        return;
+    }
+    const items = returnCart
+        .filter(it => it.quantity > 0)
+        .map(it => ({
+            product_id: it.product_id,
+            quantity: it.quantity,
+            buyprice: it.buyprice,
+            discount_pct: it.discount_pct,
+            tax_pct: it.tax_pct,
+            unit_type: it.unit_type,
+        }));
+    if (!items.length) {
+        alert('Nhập số lượng trả > 0');
+        return;
+    }
+
+    const now = new Date();
+    const dateStr = now.getFullYear() + '-' +
+        String(now.getMonth()+1).padStart(2,'0') + '-' +
+        String(now.getDate()).padStart(2,'0') + ' ' +
+        now.toTimeString().split(' ')[0];
+
+    const payload = {
+        import_id: currentImportId,
+        items,
+        payment_method: document.querySelector('input[name="payMethod"]:checked')?.value || '111',
+        reason: document.getElementById('reason').value.trim() || 'Trả hàng NCC',
+        date: dateStr,
+        issue_invoice: issueInvoice,
+        loai_hdon: parseInt(document.querySelector('input[name="invoiceMode"]:checked')?.value || '1', 10),
+        customer_name: document.getElementById('customerName').value,
+        company_name: document.getElementById('customerCompany').value,
+        email: document.getElementById('customerEmail').value,
+        address: document.getElementById('customerAddress').value,
+        tax_code: document.getElementById('customerTaxCode').value,
+        customer_phone: document.getElementById('customerPhone').value,
+    };
+
+    const btn1 = document.getElementById('submitBtn');
+    const btn2 = document.getElementById('submitNoInvBtn');
+    btn1.disabled = btn2.disabled = true;
+
+    fetch('/api/return/import/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    })
+    .then(r => r.json().then(d => ({ ok: r.ok, d })))
+    .then(({ ok, d }) => {
+        if (!ok || !d.success) throw new Error(d.error || 'Lỗi xử lý');
+        let msg = `Trả NCC thành công!\nMã: ${d.sale_no}\nTổng: ${formatVND(d.total_amount)}`;
+        if (d.px_voucher) msg += `\nPX: ${d.px_voucher}`;
+        if (d.pt_voucher) msg += `\nPT: ${d.pt_voucher}`;
+        if (d.invoice && d.invoice.success) {
+            msg += `\nHĐ: ${d.invoice.invoice_number || 'Đã xuất'}`;
+        } else if (d.invoice && !d.invoice.success) {
+            msg += `\nHĐ lỗi: ${d.invoice.error || ''}`;
+        }
+        alert(msg);
+        returnCart = [];
+        currentImportId = null;
+        loadImportList();
+        renderReturnCart();
+    })
+    .catch(err => alert('Lỗi: ' + err.message))
+    .finally(() => { btn1.disabled = btn2.disabled = false; });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const fp = { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true,
+        onChange: () => { if (document.getElementById('startDate').value) loadImportList(); } };
+    const today = new Date();
+    const first = new Date(today.getFullYear(), today.getMonth(), 1);
+    flatpickr('#startDate', fp).setDate(first);
+    flatpickr('#endDate', fp).setDate(today);
+    loadImportList();
+});
+</script>
+{% endblock %}

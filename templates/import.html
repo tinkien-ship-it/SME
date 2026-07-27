@@ -1,0 +1,1022 @@
+{% extends "base.html" %}
+{% block title %}{% if import_mode|default('stock') == 'service' %}Hạch Toán Dịch Vụ{% else %}Phiếu Nhập Kho{% endif %}{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+    :root { --primary-color: #2563eb; --header-bg: #f8fafc; }
+    .container-fluid { max-width: 100%; padding: 10px 15px !important; }
+    
+    /* Header styling */
+    .info-header { background: var(--header-bg); border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .form-label.small { margin-bottom: 2px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    /* Table styling */
+    #itemsTable { font-size: 13px; table-layout: fixed; width: 2800px; min-width: 100%; }
+    #itemsTable th { background: #f1f5f9; color: #475569; font-weight: 600; padding: 10px 5px; text-align: center; border-bottom: 2px solid #cbd5e1; }
+    #itemsTable td { padding: 3px !important; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    
+    .format-input { text-align: right !important; }
+    .hidden-field { display: none !important; }
+
+    /* Sticky Summary Bar */
+    .summary-bar {
+        position: sticky; 
+        bottom: 0; 
+        background: #1e3a8a; 
+        color: white;
+        padding: 12px 25px; 
+        display: flex; 
+        justify-content: space-between;
+        align-items: center; 
+        border-radius: 12px 12px 0 0; 
+        z-index: 1001; 
+        box-shadow: 0 -4px 15px rgba(30, 58, 138, 0.2);
+        border-top: 2px solid #3b82f6;
+    }
+    
+    .summary-value { 
+        font-size: 22px; 
+        font-weight: 700; 
+        color: #60a5fa; 
+    }
+
+    .btn-save-final { 
+        background: #f59e0b; 
+        color: #000; 
+        border: none; 
+        padding: 10px 30px; 
+        border-radius: 8px; 
+        font-weight: 800; 
+        transition: 0.3s;
+        text-transform: uppercase;
+    }
+    .btn-save-final:hover { 
+        background: #fbce03; 
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .xml-upload-zone { border: 1px dashed #3b82f6; background: #eff6ff; border-radius: 8px; }
+
+    #itemsTable th { position: relative; }
+    .resizer {
+        position: absolute; right: 0; top: 0; height: 100%;
+        width: 4px; cursor: col-resize; user-select: none;
+    }
+    .resizer:hover { background: var(--primary-color); }
+
+    .import-mode-service .service-mode-hide { display: none !important; }
+
+    tr.row-exact-match { background-color: #ecfdf5 !important; }
+    tr.row-suggested { background-color: #fffbeb !important; }
+    .line-type-select, .warehouse-select { font-size: 12px; font-weight: 600; }
+    .product-code-preview { font-size: 11px; color: #64748b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid{% if import_mode == 'service' %} import-mode-service{% endif %}">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="text-primary fw-bold m-0" id="pageTitle">
+            {% if import_mode == 'service' %}
+            <i class="bi bi-calculator"></i> HẠCH TOÁN CHI PHÍ DỊCH VỤ
+            {% else %}
+            <i class="bi bi-box-arrow-in-right"></i> LẬP PHIẾU NHẬP KHO
+            {% endif %}
+        </h5>
+        <div class="d-flex align-items-center gap-2">
+            <a href="/DanhSachPhieuChi" id="serviceReturnLink" class="btn btn-sm btn-outline-secondary d-none">
+                <i class="bi bi-arrow-left"></i> Quay lại Phiếu Chi
+            </a>
+            <div class="badge bg-white text-dark border p-2">SỐ PHIẾU: <b id="import_no_val" class="text-danger">{{ next_import_no|default('---') }}</b></div>
+        </div>
+    </div>
+
+    <div id="manualServiceHint" class="alert alert-warning py-2 small mb-2 d-none">
+        <i class="bi bi-info-circle me-1"></i>
+        Chi phí phát sinh <strong>không có hóa đơn điện tử</strong>: nhập NCC, chi tiết dịch vụ và thanh toán.
+        Dữ liệu sẽ ghi vào <strong>Chi tiết mua hàng hóa và dịch vụ</strong> (hạch toán dịch vụ).
+    </div>
+
+    <div class="card xml-upload-zone mb-2" id="xmlUploadZone">
+        <div class="card-body py-1">
+            <div class="row align-items-center g-2">
+                <div class="col-md-auto small fw-bold text-primary">NHẬP TỪ XML (HĐĐT):</div>
+                <div class="col-md-5">
+                    <div class="input-group input-group-sm">
+                        <label class="input-group-text btn btn-primary fw-bold text-white" for="xmlFile">Chọn file</label>
+                        <input type="file" id="xmlFile" class="form-control" accept=".xml" style="display: none;">
+                        <span id="fileNameDisplay" class="form-control bg-white text-muted" style="line-height: 24px;">Chưa có file được chọn</span>
+                        <button class="btn btn-primary fw-bold" type="button" id="btnUploadXML">TỰ ĐỘNG LẬP</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="importForm">
+        <input type="hidden" id="import_no" value="{{ next_import_no|default('') }}">
+        <input type="hidden" id="supplierId">
+        <input type="hidden" id="fromInvoiceId">
+
+        <div class="info-header shadow-sm">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Nhà cung cấp *</label>
+                    <input class="form-control form-control-sm fw-bold border-primary" list="supplierOptions" id="supplierSearch" placeholder="Tìm NCC..." required>
+                    <datalist id="supplierOptions"></datalist>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Địa chỉ</label>
+                    <input type="text" class="form-control form-control-sm bg-light" id="supplierAddress" readonly>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Mã số thuế</label>
+                    <input type="text" class="form-control form-control-sm bg-light" id="taxCode" readonly>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small fw-bold">Số hóa đơn</label>
+                    <input type="text" class="form-control form-control-sm" id="bill_no">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Ngày hóa đơn</label>
+                    <input type="text" class="form-control form-control-sm text-center border-primary" id="bill_date" placeholder="dd/mm/yyyy">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Ngày nhập</label>
+                    <input type="text" class="form-control form-control-sm text-center" id="importDate" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Trạng thái thanh toán</label>
+                    <select class="form-select form-select-sm fw-bold" id="paymentStatus" onchange="togglePaymentMethod()">
+                        <option value="Chưa thanh toán">Chưa thanh toán</option>
+                        <option value="Đã thanh toán" selected>Đã thanh toán</option>
+                    </select>
+                </div>
+                <div class="col-md-2" id="methodWrapper">
+                    <label class="form-label small fw-bold">Hình thức thanh toán</label>
+                    <select class="form-select form-select-sm fw-bold text-primary" id="paymentMethod">
+                        <option value="cash">Tiền mặt (111)</option>
+                        <option value="bank">Chuyển khoản (112)</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">CP Khác (Vận chuyển...)</label>
+                    <input type="text" class="form-control form-control-sm text-end format-input fw-bold text-success" id="extraCost" value="0">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Ghi chú phiếu nhập</label>
+                    <input type="text" class="form-control form-control-sm" id="note" placeholder="Nhập ghi chú...">
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-5">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <span class="small fw-bold text-primary uppercase"><i class="bi bi-list-ul"></i>
+                    {% if import_mode == 'service' %}Chi tiết dịch vụ / chi phí{% else %}Chi tiết mặt hàng{% endif %}
+                </span>
+                <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="addRow()">
+                    <i class="bi bi-plus-lg"></i> THÊM DÒNG
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 50vh;">
+                    <table class="table table-bordered table-sm mb-0" id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th style="width:60px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>ID<div class="resizer"></div></th>
+                                <th style="width:110px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Kho<div class="resizer"></div></th>
+                                <th style="width:130px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Loại Hàng<div class="resizer"></div></th>
+                                <th style="width:280px;">Tên {% if import_mode == 'service' %}dịch vụ{% else %}hàng{% endif %}<div class="resizer"></div></th>
+                                <th style="width:100px;">ĐVT Phiếu<div class="resizer"></div></th>
+                                <th style="width:90px;">Số Lượng<div class="resizer"></div></th>
+                                <th style="width:120px;">Đơn giá<div class="resizer"></div></th>
+                                <th style="width:130px;">Thành tiền<div class="resizer"></div></th>
+                                <th style="width:70px;">% CK<div class="resizer"></div></th>
+                                <th style="width:110px;">Tiền CK<div class="resizer"></div></th>
+                                <th style="width:80px;">% VAT<div class="resizer"></div></th>
+                                <th style="width:110px;">Tiền VAT<div class="resizer"></div></th>
+                                <th style="width:140px; background:#fff7ed;">Tiền TT<div class="resizer"></div></th>
+                                <th style="width:100px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã SP<div class="resizer"></div></th>
+                                <th style="width:100px;" class="service-mode-hide">ĐV Cơ bản<div class="resizer"></div></th>
+                                <th style="width:100px;" class="service-mode-hide">ĐV Sỉ<div class="resizer"></div></th>
+                                <th style="width:80px;" class="service-mode-hide">Tỷ lệ<div class="resizer"></div></th>
+                                <th style="width:130px; background:#f0fdf4;" class="service-mode-hide">Giá lẻ mới<div class="resizer"></div></th>
+                                <th style="width:130px; background:#eff6ff;" class="service-mode-hide">Giá sỉ mới<div class="resizer"></div></th>
+                                <th style="width:60px;">Xóa<div class="resizer"></div></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-bar">
+            <div class="d-flex gap-5 align-items-center">
+                <div>
+                    <div class="small opacity-75">TỔNG TIỀN HÀNG</div>
+                    <div id="totalPayment" class="fw-bold text-warning h5 mb-0">0</div>
+                </div>
+                <div class="vr opacity-25"></div>
+                <div>
+                    <div class="small opacity-75">TỔNG THANH TOÁN (GỒM CP Khác)</div>
+                    <div id="totalImport" class="summary-value mb-0">0</div>
+                </div>
+            </div>
+            <button type="submit" class="btn-save-final shadow-lg" id="btnSubmitImport">
+                <i class="bi bi-floppy-fill"></i>
+                {% if import_mode == 'service' %} LƯU HẠCH TOÁN {% else %} LƯU PHIẾU NHẬP {% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    .suggest-box {
+        position: fixed !important;
+        z-index: 99999 !important;
+        background: white;
+        border: 1px solid #86b7fe;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        max-height: 480px;
+        overflow-y: auto;
+        border-radius: 8px;
+        padding: 6px 0;
+        min-width: 480px;
+        max-width: 680px;
+        font-size: 14.5px;
+    }
+    .suggest-item {
+        padding: 13px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f1f1;
+        line-height: 1.45;
+    }
+    .suggest-item:hover { 
+        background-color: #f0f8ff; 
+    }
+    .suggest-item:last-child { border-bottom: none; }
+    .match-tag {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 12px;
+        background: #28a745;
+        color: white;
+        float: right;
+    }
+</style>
+
+<script>
+// ====================== 1. BIẾN TOÀN CỤC ======================
+const IS_SERVICE_MODE = {{ 'true' if import_mode|default('stock') == 'service' else 'false' }};
+const WAREHOUSES = {{ warehouses|default([])|tojson }};
+const LINE_TYPE_OPTIONS = [
+    { value: 'goods', label: 'Hàng Hóa' },
+    { value: 'materials', label: 'Vật Tư' },
+    { value: 'service', label: 'Dịch Vụ' },
+    { value: 'fixed_asset', label: 'TSCĐ' },
+    { value: 'tools', label: 'CCDC' },
+];
+let currentCashBalance = 0;
+let currentBankBalance = 0;
+let suppliersCache = [];
+
+// ====================== 2. UTILITY FUNCTIONS ======================
+const formatVNDCustom = (val) => {
+    if (val === undefined || val === null || val === '') return "0";
+    let num = parseFloat(String(val).replace(/,/g, '.'));
+    if (isNaN(num)) return "0";
+    return num.toLocaleString('vi-VN');
+};
+
+const parseNumber = (v) => {
+    if (v === undefined || v === null || v === '') return 0;
+    let clean = String(v).replace(/\./g, '').replace(/,/g, '.');
+    return parseFloat(clean) || 0;
+};
+
+const toast = (msg, type = 'success') => {
+    Toastify({
+        text: msg,
+        duration: 4000,
+        gravity: "top",
+        position: "right",
+        style: { background: type === 'error' ? "#dc3545" : "#198754" }
+    }).showToast();
+};
+
+const initResizer = () => {
+    const table = document.getElementById('itemsTable');
+    if (!table) return;
+    table.querySelectorAll('th').forEach(col => {
+        const resizer = col.querySelector('.resizer');
+        if (!resizer) return;
+        let x = 0, w = 0;
+        const mouseDown = e => { x = e.clientX; w = col.offsetWidth; document.addEventListener('mousemove', mouseMove); document.addEventListener('mouseup', mouseUp); };
+        const mouseMove = e => col.style.width = `${w + (e.clientX - x)}px`;
+        const mouseUp = () => { document.removeEventListener('mousemove', mouseMove); document.removeEventListener('mouseup', mouseUp); };
+        resizer.addEventListener('mousedown', mouseDown);
+    });
+};
+
+// ====================== DEBOUNCE ======================
+function debounce(func, delay = 250) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// ====================== TÍNH ĐIỂM KHỚP - ĐÃ TỐI ƯU (KHÔNG PHÂN BIỆT HOA THƯỜNG) ======================
+function calculateMatchScore(searchText, productName) {
+    if (!searchText || !productName) return 0;
+
+    const search = searchText.toLowerCase().trim();
+    const name = productName.toLowerCase().trim();
+
+    // Ưu tiên cao nhất: khớp chính xác
+    if (name === search) return 1000;
+
+    // Khớp toàn bộ từ tìm kiếm trong tên sản phẩm
+    if (name.includes(search)) return 700;
+
+    let score = 0;
+    const searchWords = search.split(/\s+/).filter(w => w.length > 1);
+
+    searchWords.forEach(word => {
+        if (name.includes(word)) {
+            score += 180;                    // Mỗi từ khớp cho điểm cao
+        }
+    });
+
+    // Bonus nếu bắt đầu bằng từ tìm kiếm
+    if (name.startsWith(search)) score += 100;
+
+    return Math.min(score, 999);
+}
+
+// ====================== SHOW SUGGESTIONS (ĐÃ CẢI TIẾN) ======================
+const showSuggestions = debounce(async function(inputEl) {
+    console.log('%c[Gợi ý] Tìm kiếm: "' + inputEl.value + '"', 'color: blue; font-weight: bold');
+
+    const row = inputEl.closest('tr');
+    const searchVal = inputEl.value.trim();
+
+    document.querySelectorAll('.suggest-box').forEach(el => el.remove());
+
+    if (!searchVal || searchVal.length < 1) return;
+
+    try {
+        const res = await fetch(`/api/products/manage?q=${encodeURIComponent(searchVal)}`);
+        const products = await res.json();
+
+        if (!products || products.length === 0) return;
+
+        const scoredProducts = products.map(p => ({
+            ...p,
+            matchScore: calculateMatchScore(searchVal, p.name)
+        }))
+        .filter(p => p.matchScore > 0)
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 50);
+
+        if (scoredProducts.length === 0) return;
+
+        const box = document.createElement('div');
+        box.className = 'suggest-box';
+
+        scoredProducts.forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'suggest-item';
+            item.innerHTML = `
+                <span class="match-tag">${p.matchScore}</span>
+                <div class="fw-bold text-dark">${p.name}</div>
+                <div class="small text-muted">ĐVT: ${p.unit || '—'} | Giá: ${formatVNDCustom(p.price)}</div>
+            `;
+            item.onclick = (e) => {
+                e.stopPropagation();
+                inputEl.value = p.name;
+                setProductToRow(row, p, 'suggest');
+                box.remove();
+            };
+            box.appendChild(item);
+        });
+
+        // Đẩy ra body
+        document.body.appendChild(box);
+
+        const rect = inputEl.getBoundingClientRect();
+        const boxHeight = Math.min(scoredProducts.length * 55 + 20, 460); // ước lượng chiều cao
+        let top = rect.bottom + window.scrollY + 8;
+        let left = rect.left + window.scrollX;
+
+        // ƯU TIÊN: Nếu hiển thị phía dưới sẽ che ô input hoặc gần mép dưới → hiển thị phía trên
+        const spaceBelow = window.innerHeight - rect.bottom;
+        if (spaceBelow < boxHeight + 50) {
+            top = rect.top + window.scrollY - boxHeight - 8;   // Hiện lên trên ô input
+        }
+
+        box.style.left = `${left}px`;
+        box.style.top = `${top}px`;
+        box.style.width = `${Math.max(rect.width, 500)}px`;
+
+        // Click ngoài đóng
+        setTimeout(() => {
+            const closeHandler = (e) => {
+                if (!box.contains(e.target) && e.target !== inputEl) {
+                    box.remove();
+                    document.removeEventListener('click', closeHandler);
+                }
+            };
+            document.addEventListener('click', closeHandler);
+        }, 10);
+
+        console.log(`%c[Gợi ý] ĐÃ HIỂN THỊ ${scoredProducts.length} sản phẩm`, 'color: green; font-weight: bold');
+
+    } catch (e) {
+        console.error("[Gợi ý] Lỗi:", e);
+    }
+}, 250);
+
+// ====================== CÁC HÀM CÒN LẠI (GIỮ NGUYÊN) ======================
+function buildWarehouseOptions(selected) {
+    const list = WAREHOUSES.length ? WAREHOUSES : [{ code: 'KHO_001', name: 'Kho mặc định', is_default: 1 }];
+    const def = list.find(w => w.is_default) || list[0];
+    const sel = selected || def.code;
+    return list.map(w =>
+        `<option value="${w.code}" ${w.code === sel ? 'selected' : ''}>${w.code}</option>`
+    ).join('');
+}
+
+function buildLineTypeOptions(selected) {
+    const sel = selected || (IS_SERVICE_MODE ? 'service' : 'goods');
+    return LINE_TYPE_OPTIONS.map(o =>
+        `<option value="${o.value}" ${o.value === sel ? 'selected' : ''}>${o.label}</option>`
+    ).join('');
+}
+
+function isServiceLineType(type) {
+    return (type || '').toLowerCase() === 'service';
+}
+
+function updateCodePreview(row) {
+    const type = row.querySelector('.line-type-select')?.value || 'goods';
+    const pid = row.querySelector('.p-id')?.value;
+    const codeEl = row.querySelector('.product-code-preview');
+    if (!codeEl || pid) return;
+    if (isServiceLineType(type)) {
+        codeEl.value = '';
+        return;
+    }
+    fetch(`/api/products/next-code?type=${encodeURIComponent(type)}`)
+        .then(r => r.json())
+        .then(d => { if (d.success) codeEl.value = d.next_code || ''; })
+        .catch(() => {});
+}
+
+function applyLineTypeUI(row) {
+    const type = row.querySelector('.line-type-select')?.value || 'goods';
+    const isSvc = isServiceLineType(type);
+    row.querySelectorAll('.stock-only-cell').forEach(el => {
+        el.classList.toggle('hidden-field', isSvc);
+    });
+    const nameInput = row.querySelector('.product-name');
+    if (nameInput) {
+        nameInput.placeholder = isSvc ? 'Tên dịch vụ trên HĐ...' : 'Gõ tên sản phẩm để tìm...';
+    }
+    if (isSvc) {
+        row.querySelector('.p-id').value = '';
+        row.classList.remove('row-exact-match', 'row-suggested', 'row-not-found');
+    }
+    updateCodePreview(row);
+}
+
+async function performInitialMatch(row, name, invUnit = '') {
+    if (!name || isServiceLineType(row.querySelector('.line-type-select')?.value)) return;
+    try {
+        const queryKey = name.split(' ')[0];
+        const res = await fetch(`/api/products/manage?q=${encodeURIComponent(queryKey)}`);
+        const products = await res.json();
+        const exactMatch = products.find(p => p.name.toLowerCase() === name.toLowerCase().trim());
+        if (exactMatch) {
+            setProductToRow(row, exactMatch, 'exact', invUnit);
+        } else {
+            setProductToRow(row, null, 'none', invUnit);
+            row.classList.add('row-suggested');
+        }
+    } catch (e) {
+        console.warn("Initial match error:", e);
+        setProductToRow(row, null, 'none', invUnit);
+    }
+}
+
+function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
+    if (invoiceUnit) row.querySelector('.invoice-unit').value = invoiceUnit;
+    row.classList.remove('row-exact-match', 'row-suggested', 'row-not-found');
+    const codeEl = row.querySelector('.product-code-preview');
+    if (product) {
+        row.querySelector('.p-id').value = product.id;
+        row.querySelector('.product-name').value = product.name;
+        row.querySelector('.base-unit').value = product.unit || invoiceUnit || '';
+        row.querySelector('.wholesale-unit').value = product.unit1 || '';
+        row.querySelector('.ratio').value = product.unit_ratio || 1;
+        row.querySelector('.base-sale-price').value = formatVNDCustom(product.base_price);
+        row.querySelector('.sale-price').value = formatVNDCustom(product.price);
+        if (codeEl) codeEl.value = product.product_code || '';
+        if (product.product_type && row.querySelector('.line-type-select')) {
+            row.querySelector('.line-type-select').value = product.product_type;
+            applyLineTypeUI(row);
+        }
+        if (matchType === 'exact') row.classList.add('row-exact-match');
+        else if (matchType === 'suggest') row.classList.add('row-suggested');
+    } else {
+        row.querySelector('.p-id').value = '';
+        row.querySelector('.base-unit').value = invoiceUnit || '';
+        row.querySelector('.ratio').value = 1;
+        row.classList.add('row-not-found');
+        updateCodePreview(row);
+    }
+    calcRow(row);
+}
+
+function addRow(data = {}) {
+    const tbody = document.querySelector('#itemsTable tbody');
+    const tr = document.createElement('tr');
+    tr.className = 'import-row';
+    const svcHide = IS_SERVICE_MODE ? 'service-mode-hide' : '';
+    const lineType = data.line_type || (IS_SERVICE_MODE ? 'service' : 'goods');
+    const whCode = data.warehouse_code || '';
+    tr.innerHTML = `
+        <td class="${svcHide}"><input type="text" class="p-id form-control form-control-sm bg-light text-center border-0" readonly value="${data.product_id || ''}"></td>
+        <td class="${svcHide}">
+            <select class="warehouse-select form-select form-select-sm border-0">${buildWarehouseOptions(whCode)}</select>
+        </td>
+        <td class="${svcHide}">
+            <select class="line-type-select form-select form-select-sm border-0">${buildLineTypeOptions(lineType)}</select>
+        </td>
+        <td>
+            <input type="text" class="product-name form-control form-control-sm border-0" value="${data.invoice_name || ''}" placeholder="Gõ tên sản phẩm...">
+            <input type="hidden" class="invoice-name-hidden" value="${data.invoice_name || ''}">
+        </td>
+        <td><input type="text" class="invoice-unit form-control form-control-sm text-center border-0" value="${data.unit || ''}"></td>
+        <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty || 1}"></td>
+        <td><input type="text" class="buy-price form-control form-control-sm text-end border-0" value="${formatVNDCustom(data.price || 0)}"></td>
+        <td class="line-total text-end fw-bold pe-2">0</td>
+        <td><input type="number" class="disc-pct form-control form-control-sm text-center border-0" value="${data.discount_pct || 0}" step="0.01"></td>
+        <td class="disc-amt text-end pe-2">0</td>
+        <td><select class="tax-pct form-select form-select-sm border-0">
+            <option value="0" ${data.tax_pct == '0' ? 'selected' : ''}>0%</option>
+            <option value="5" ${data.tax_pct == '5' ? 'selected' : ''}>5%</option>
+            <option value="8" ${data.tax_pct == '8' ? 'selected' : ''}>8%</option>
+            <option value="10" ${data.tax_pct == '10' || !data.tax_pct ? 'selected' : ''}>10%</option>
+        </select></td>
+        <td class="tax-amt text-end pe-2">0</td>
+        <td class="pay-amt text-end fw-bold text-danger pe-2">0</td>
+        <td class="${svcHide}"><input type="text" class="product-code-preview form-control form-control-sm bg-light text-center border-0" readonly placeholder="Mã..."></td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="base-unit form-control form-control-sm text-center border-0"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="1"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="0"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="0"></td>
+        <td class="text-center"><button type="button" class="btn btn-sm text-danger" onclick="this.closest('tr').remove(); calcTotal()"><i class="bi bi-trash"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+
+    const nameInput = tr.querySelector('.product-name');
+    if (!IS_SERVICE_MODE) {
+        nameInput.addEventListener('input', function() {
+            if (!isServiceLineType(tr.querySelector('.line-type-select')?.value)) showSuggestions(this);
+        });
+        nameInput.addEventListener('click', function() {
+            if (!isServiceLineType(tr.querySelector('.line-type-select')?.value)) showSuggestions(this);
+        });
+        nameInput.addEventListener('focus', function() {
+            if (!isServiceLineType(tr.querySelector('.line-type-select')?.value) && this.value.trim().length >= 1) showSuggestions(this);
+        });
+        tr.querySelector('.line-type-select')?.addEventListener('change', () => applyLineTypeUI(tr));
+        tr.querySelector('.wholesale-unit')?.addEventListener('input', () => updateCodePreview(tr));
+        if (data.invoice_name) performInitialMatch(tr, data.invoice_name, data.unit);
+    } else if (data.unit) {
+        tr.querySelector('.invoice-unit').value = data.unit;
+    }
+    applyLineTypeUI(tr);
+    attachRowEvents(tr);
+    calcRow(tr);
+}
+
+function attachRowEvents(row) {
+    row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', () => calcRow(row)));
+}
+
+function calcRow(row) {
+    const qty = parseNumber(row.querySelector('.qty').value);
+    const price = parseNumber(row.querySelector('.buy-price').value);
+    const discPct = parseFloat(row.querySelector('.disc-pct').value) || 0;
+    const rawTotal = Math.round(qty * price);
+    const discAmt = Math.round(rawTotal * (discPct / 100));
+    const afterDisc = rawTotal - discAmt;
+    const vatPct = parseFloat(row.querySelector('.tax-pct').value) || 0;
+    const vatAmt = Math.round(afterDisc * (vatPct / 100));
+    const finalPay = afterDisc + vatAmt;
+
+    row.querySelector('.line-total').textContent = formatVNDCustom(rawTotal);
+    row.querySelector('.disc-amt').textContent = formatVNDCustom(discAmt);
+    row.querySelector('.tax-amt').textContent = formatVNDCustom(vatAmt);
+    row.querySelector('.pay-amt').textContent = formatVNDCustom(finalPay);
+    calcTotal();
+}
+
+function calcTotal() {
+    let totalItemsPay = 0;
+    document.querySelectorAll('.pay-amt').forEach(el => totalItemsPay += parseNumber(el.textContent));
+    const extra = parseNumber(document.getElementById('extraCost').value);
+    document.getElementById('totalPayment').textContent = formatVNDCustom(totalItemsPay);
+    document.getElementById('totalImport').textContent = formatVNDCustom(totalItemsPay + extra);
+}
+
+async function loadQuySoDu() {
+    try {
+        const res = await fetch('/api/quy-so-du');
+        const data = await res.json();
+        if (data.success) {
+            currentCashBalance = Number(data.so_du_tien_mat || 0);
+            currentBankBalance = Number(data.so_du_ngan_hang || 0);
+        }
+    } catch (e) { console.warn("Lỗi tải số dư quỹ:", e); }
+}
+
+function checkSoDu(amount, paymentMethod) {
+    if (!paymentMethod) return { ok: true };
+    const isCash = paymentMethod.includes('Tiền mặt') || paymentMethod.includes('111') || paymentMethod === 'cash';
+    const isBank = paymentMethod.includes('Chuyển khoản') || paymentMethod.includes('112') || paymentMethod === 'bank';
+    let available = 0, methodText = "";
+    if (isCash) { available = currentCashBalance; methodText = "tiền mặt (111)"; }
+    else if (isBank) { available = currentBankBalance; methodText = "ngân hàng (112)"; }
+    else return { ok: true };
+    if (amount > available) {
+        return { ok: false, message: `Số dư ${methodText} (${formatVNDCustom(available)} ₫) không đủ.` };
+    }
+    return { ok: true };
+}
+
+// ====================== NCC — TẢI DANH SÁCH & TỰ ĐIỀN ======================
+async function loadSuppliersList() {
+    try {
+        const res = await fetch('/api/suppliers');
+        if (!res.ok) return;
+        suppliersCache = await res.json();
+        const dl = document.getElementById('supplierOptions');
+        if (!dl) return;
+        dl.innerHTML = '';
+        (suppliersCache || []).forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.name || '';
+            dl.appendChild(opt);
+        });
+    } catch (e) {
+        console.warn('loadSuppliersList:', e);
+    }
+}
+
+function applySupplierByName(name) {
+    const q = (name || '').trim().toLowerCase();
+    if (!q || !suppliersCache.length) return;
+    const found = suppliersCache.find(s => (s.name || '').trim().toLowerCase() === q)
+        || suppliersCache.find(s => (s.name || '').toLowerCase().includes(q));
+    if (!found) return;
+    document.getElementById('supplierId').value = found.id || '';
+    document.getElementById('taxCode').value = found.tax_code || '';
+    document.getElementById('supplierAddress').value = found.address || '';
+}
+
+async function fetchNextImportNo() {
+    try {
+        const res = await fetch('/api/import/next_sequence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: IS_SERVICE_MODE ? 'service' : 'stock' }),
+        });
+        const d = await res.json();
+        if (d.success && d.next_no) {
+            document.getElementById('import_no').value = d.next_no;
+            document.getElementById('import_no_val').textContent = d.next_no;
+        } else if (d.next_no) {
+            document.getElementById('import_no').value = d.next_no;
+            document.getElementById('import_no_val').textContent = d.next_no;
+        }
+    } catch (e) {
+        console.warn('fetchNextImportNo:', e);
+    }
+}
+
+function bindImportFormSubmit() {
+    const form = document.getElementById('importForm');
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = '1';
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const paymentStatus = document.getElementById('paymentStatus').value;
+        const paymentMethod = document.getElementById('paymentMethod').value;
+        const totalAmount = parseNumber(document.getElementById('totalImport').textContent);
+        if (paymentStatus === 'Đã thanh toán') {
+            await loadQuySoDu();
+            const check = checkSoDu(totalAmount, paymentMethod);
+            if (!check.ok) return Swal.fire('Không đủ tiền', check.message, 'warning');
+        }
+        const btn = this.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang lưu...';
+        try {
+            const finalItems = getConsolidatedItems();
+            if (finalItems.length === 0) throw new Error(IS_SERVICE_MODE ? "Vui lòng nhập ít nhất một dòng dịch vụ!" : "Vui lòng nhập ít nhất một mặt hàng!");
+            if (!IS_SERVICE_MODE) {
+                for (let item of finalItems) {
+                    if (isServiceLineType(item.line_type)) continue;
+                    item.product_id = await upsertProduct(item);
+                }
+            }
+            const defaultWh = document.querySelector('#itemsTable tbody tr .warehouse-select')?.value || 'KHO_001';
+            const payload = {
+                supplier_id: parseInt(document.getElementById('supplierId').value),
+                import_no: document.getElementById('import_no').value,
+                date: document.getElementById('importDate').value.split('/').reverse().join('-'),
+                bill_date: document.getElementById('bill_date').value ? document.getElementById('bill_date').value.split('/').reverse().join('-') : null,
+                bill_no: document.getElementById('bill_no').value,
+                tax_code: document.getElementById('taxCode').value,
+                items: finalItems,
+                note: document.getElementById('note').value,
+                payment_status: paymentStatus,
+                payment_method: (paymentStatus === 'Đã thanh toán') ? document.getElementById('paymentMethod').value : null,
+                extra_cost: parseNumber(document.getElementById('extraCost').value),
+                from_invoice_id: parseInt(document.getElementById('fromInvoiceId')?.value) || null,
+                warehouse_code: defaultWh,
+            };
+            const apiUrl = IS_SERVICE_MODE ? '/api/import/service' : '/api/import';
+            const resImport = await fetch(apiUrl, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await resImport.json();
+            if (result.success) {
+                toast(IS_SERVICE_MODE ? 'Hạch toán dịch vụ thành công!' : 'Lưu phiếu nhập thành công!');
+                const returnTo = new URLSearchParams(window.location.search).get('return_to');
+                if (IS_SERVICE_MODE) {
+                    setTimeout(() => {
+                        window.location.href = returnTo || '/inward-invoice';
+                    }, 1200);
+                } else {
+                    setTimeout(() => location.reload(), 1200);
+                }
+            } else throw new Error(result.error || result.message);
+        } catch (err) {
+            toast(err.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = IS_SERVICE_MODE
+                ? '<i class="bi bi-floppy-fill"></i> LƯU HẠCH TOÁN'
+                : '<i class="bi bi-floppy-fill"></i> LƯU PHIẾU NHẬP';
+        }
+    });
+}
+
+// ====================== KHỞI TẠO ======================
+document.addEventListener('DOMContentLoaded', () => {
+    flatpickr('#importDate', { dateFormat: 'd/m/Y', defaultDate: 'today', locale: 'vn' });
+    flatpickr('#bill_date', { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true });
+
+    fetchNextImportNo();
+    loadSuppliersList();
+    bindImportFormSubmit();
+
+    loadQuySoDu();
+
+    const btnUploadXML = document.getElementById('btnUploadXML');
+    if (btnUploadXML) btnUploadXML.addEventListener('click', handleXMLUpload);
+
+    const xmlFileInput = document.getElementById('xmlFile');
+    if (xmlFileInput) {
+        xmlFileInput.addEventListener('change', function() {
+            const display = document.getElementById('fileNameDisplay');
+            if (this.files?.[0]) display.textContent = this.files[0].name;
+        });
+    }
+
+    const extraCostEl = document.getElementById('extraCost');
+    if (extraCostEl) extraCostEl.addEventListener('input', calcTotal);
+
+    const supplierSearch = document.getElementById('supplierSearch');
+    if (supplierSearch) {
+        supplierSearch.addEventListener('change', () => applySupplierByName(supplierSearch.value));
+        supplierSearch.addEventListener('input', debounce(() => applySupplierByName(supplierSearch.value), 200));
+    }
+
+    initResizer();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const invoiceId = urlParams.get('invoice_id');
+    const returnTo = urlParams.get('return_to');
+    if (IS_SERVICE_MODE && returnTo) {
+        const returnLink = document.getElementById('serviceReturnLink');
+        if (returnLink) {
+            returnLink.href = returnTo;
+            returnLink.classList.remove('d-none');
+        }
+        const hint = document.getElementById('manualServiceHint');
+        if (hint && !invoiceId) hint.classList.remove('d-none');
+    }
+    if (IS_SERVICE_MODE) {
+        const noteEl = document.getElementById('note');
+        if (noteEl && !noteEl.value) {
+            noteEl.value = invoiceId ? 'Hạch toán chi phí dịch vụ' : 'Chi phí phát sinh (không có HĐĐT)';
+        }
+    }
+    if (invoiceId) loadInvoiceFromServer(invoiceId);
+    else addRow();
+
+    togglePaymentMethod();
+});
+
+async function handleXMLUpload() {
+    const fileInput = document.getElementById('xmlFile');
+    if (!fileInput?.files?.[0]) return toast('Vui lòng chọn file XML!', 'error');
+    const btn = document.getElementById('btnUploadXML');
+    btn.disabled = true;
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    try {
+        const response = await fetch('/api/parse-xml-invoice', { method: 'POST', body: formData });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+        const realId = await updateSupplierFromXML(data.supplier);
+        document.getElementById('supplierId').value = realId || '';
+        document.getElementById('supplierSearch').value = data.supplier?.name || '';
+        document.getElementById('taxCode').value = data.supplier?.tax_code || '';
+        document.getElementById('supplierAddress').value = data.supplier?.address || '';
+        document.getElementById('bill_no').value = data.invoice?.invoice_no || '';
+        if (data.invoice?.invoice_date) {
+            let d = data.invoice.invoice_date.split('T')[0];
+            const formattedDate = d.split('-').reverse().join('/');
+            if (document.getElementById('bill_date')._flatpickr) document.getElementById('bill_date')._flatpickr.setDate(formattedDate);
+        }
+        const tbody = document.querySelector('#itemsTable tbody');
+        tbody.innerHTML = '';
+        for (const item of data.items) {
+            addRow();
+            const row = tbody.lastElementChild;
+            const name = item.name?.trim();
+            const unit = item.unit || '';
+            row.querySelector('.product-name').value = name;
+            row.querySelector('.invoice-name-hidden').value = name;
+            row.querySelector('.qty').value = formatVNDCustom(item.quantity);
+            row.querySelector('.buy-price').value = formatVNDCustom(item.price);
+            row.querySelector('.disc-pct').value = parseFloat(item.discount_percent) || 0;
+            const taxVal = String(item.vat_rate || '0').replace('%', '').trim();
+            const selTax = row.querySelector('.tax-pct');
+            if (selTax) selTax.value = [...selTax.options].some(o => o.value === taxVal) ? taxVal : '10';
+            await performInitialMatch(row, name, unit);
+            calcRow(row);
+        }
+        calcTotal();
+        toast('Nạp dữ liệu XML thành công!');
+    } catch (err) { toast(err.message, 'error'); }
+    finally { btn.disabled = false; }
+}
+
+async function updateSupplierFromXML(sup) {
+    if (!sup || !sup.name) return null;
+    try {
+        const res = await fetch('/api/suppliers/upsert', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tax_code: sup.tax_code, name: sup.name, address: sup.address })
+        });
+        const result = await res.json();
+        return result.success ? result.supplier_id : null;
+    } catch(e) { return null; }
+}
+
+async function loadInvoiceFromServer(invoiceId) {
+    try {
+        const res = await fetch(`/api/invoice/${invoiceId}/xml`);
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+        const data = result.data;
+        const realId = await updateSupplierFromXML({ name: data.NBanTen, tax_code: data.NBanMST, address: data.NBanDChi });
+        document.getElementById('supplierId').value = realId || '';
+        document.getElementById('supplierSearch').value = data.NBanTen || '';
+        document.getElementById('taxCode').value = data.NBanMST || '';
+        document.getElementById('supplierAddress').value = data.NBanDChi || '';
+        document.getElementById('fromInvoiceId').value = invoiceId;
+        document.getElementById('bill_no').value = data.SHDon || '';
+        if (data.NLap) {
+            let d = data.NLap.split('T')[0];
+            const formattedDate = d.split('-').reverse().join('/');
+            if (document.getElementById('bill_date')._flatpickr) document.getElementById('bill_date')._flatpickr.setDate(formattedDate);
+        }
+        const tbody = document.querySelector('#itemsTable tbody');
+        tbody.innerHTML = '';
+        const lines = data.DSHHDVu || [];
+        if (!lines.length) {
+            toast('Hóa đơn không có dòng chi tiết — thêm dòng thủ công', 'error');
+            addRow();
+            return;
+        }
+        lines.forEach(item => {
+            addRow({
+                invoice_name: item.THHDVu,
+                unit: item.DVTinh,
+                qty: item.SLuong,
+                price: item.DGia,
+                discount_pct: parseFloat(item.TyLeCK) || 0,
+                tax_pct: String(item.TSuat || '0').replace('%', '').trim()
+            });
+        });
+    } catch (err) { toast(err.message, 'error'); }
+}
+
+function getConsolidatedItems() {
+    const rows = document.querySelectorAll('#itemsTable tbody tr');
+    const consolidatedMap = new Map();
+    rows.forEach(tr => {
+        const name = tr.querySelector('.product-name').value.trim();
+        const invName = tr.querySelector('.invoice-name-hidden').value.trim() || name;
+        const unit = (tr.querySelector('.invoice-unit')?.value || tr.querySelector('.base-unit')?.value || '').trim();
+        const line_type = tr.querySelector('.line-type-select')?.value || (IS_SERVICE_MODE ? 'service' : 'goods');
+        const warehouse_code = tr.querySelector('.warehouse-select')?.value || 'KHO_001';
+        if (!name) return;
+        const qty = parseNumber(tr.querySelector('.qty').value);
+        const price = parseNumber(tr.querySelector('.buy-price').value);
+        const tax_pct = parseFloat(tr.querySelector('.tax-pct').value) || 0;
+        const disc_pct = parseFloat(tr.querySelector('.disc-pct').value) || 0;
+        const rowTotal = qty * price;
+        const key = `${line_type}|${warehouse_code}|${name.toLowerCase()}|${unit.toLowerCase()}|${IS_SERVICE_MODE ? price : ''}`;
+        if (consolidatedMap.has(key)) {
+            const existing = consolidatedMap.get(key);
+            existing.qty += qty;
+            existing.totalValue += rowTotal;
+            if (price > 0) { existing.tax_pct = tax_pct; existing.discountPct = disc_pct; }
+        } else {
+            consolidatedMap.set(key, {
+                product_id: isServiceLineType(line_type) ? null : (parseInt(tr.querySelector('.p-id')?.value) || null),
+                name: name,
+                invoice_name: invName,
+                unit: unit,
+                qty: qty,
+                totalValue: rowTotal,
+                tax_pct: tax_pct,
+                discountPct: disc_pct,
+                line_type: line_type,
+                warehouse_code: warehouse_code,
+                base_unit: (tr.querySelector('.base-unit')?.value || '').trim() || unit,
+                wholesale_unit: (tr.querySelector('.wholesale-unit')?.value || '').trim(),
+                ratio: parseFloat(tr.querySelector('.ratio')?.value) || 1,
+                base_sale_price: parseNumber(tr.querySelector('.base-sale-price')?.value),
+                sale_price: parseNumber(tr.querySelector('.sale-price')?.value)
+            });
+        }
+    });
+    return Array.from(consolidatedMap.values()).map(item => ({
+        ...item,
+        buyprice: item.qty > 0 ? Math.round(item.totalValue / item.qty) : 0
+    }));
+}
+
+async function upsertProduct(item) {
+    const res = await fetch('/api/products/upsert', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            id: item.product_id,
+            name: item.name,
+            unit: item.base_unit || item.unit,
+            base_price: item.base_sale_price,
+            buyprice: item.buyprice,
+            unit1: item.wholesale_unit || null,
+            unit_ratio: item.ratio,
+            price: item.sale_price,
+            product_type: item.line_type || 'goods'
+        })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Không thể lưu sản phẩm');
+    return data.product.id;
+}
+
+function togglePaymentMethod() {
+    const status = document.getElementById('paymentStatus').value;
+    document.getElementById('methodWrapper').classList.toggle('hidden-field', status === 'Chưa thanh toán');
+    if (status !== 'Chưa thanh toán') loadQuySoDu();
+}
+</script>
+{% endblock %}

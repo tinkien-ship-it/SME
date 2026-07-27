@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}In Tem Mã Vạch{% if product_only %} — {{ imp.import_no }}{% else %} - Phiếu Nhập #{{ imp.import_no }}{% endif %}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4">In Tem Mã Vạch{% if product_only %} — {{ imp.import_no }}{% else %} — Phiếu Nhập #{{ imp.import_no }}{% endif %}</h3>
+
+    <form method="POST" action="">
+
+        <!-- DANH SÁCH SẢN PHẨM TRONG PHIẾU -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-info text-white fw-bold">
+                {% if product_only %}Sản phẩm{% else %}Sản Phẩm Trong Phiếu Nhập ({{ items|length }} sản phẩm){% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tên hàng</th>
+                                <th class="text-center">{% if product_only %}Số lượng tồn kho{% else %}Số lượng nhập{% endif %}</th>
+                                <th class="text-center">In Tem Lẻ</th>
+                                <th class="text-center">In Tem Sỉ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            {% set qty_max = item.quantity|int if product_only else item.quantity %}
+                            {% set qty_retail_default = item.default_qty_retail|default(0) if product_only else 0 %}
+                            {% set qty_wholesale_default = item.default_qty_wholesale|default(0) if product_only else 0 %}
+                            {% set qty_wholesale_max = (qty_max // item.unit_ratio) if item.unit_ratio and item.unit_ratio > 1 else 0 %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item.name }}</strong><br>
+                                    <small class="text-muted">
+                                        {% if item.barcode %}{{ item.barcode }}{% else %}—{% endif %}
+                                        {% if item.barcode1 %} | Sỉ: {{ item.barcode1 }}{% endif %}
+                                    </small>
+                                </td>
+                                <td class="text-center fw-bold">{{ item.quantity_display if product_only else item.quantity }}</td>
+                                <td class="text-center">
+                                    <input type="number"
+                                           name="qty_retail_{{ item.product_id }}"
+                                           min="0" max="{{ qty_max }}" value="{{ qty_retail_default }}"
+                                           class="form-control form-control-sm">
+                                    <small class="text-muted d-block mt-1">Tối đa: {{ qty_max }}</small>
+                                    <small class="text-success d-block mt-1">
+                                        Giá: {{ item.base_price_formatted }}₫
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    {% if item.barcode1 and item.unit_ratio and item.unit_ratio > 1 %}
+                                    <input type="number"
+                                           name="qty_wholesale_{{ item.product_id }}"
+                                           min="0" max="{{ qty_wholesale_max }}" value="{{ qty_wholesale_default }}"
+                                           class="form-control form-control-sm">
+                                    <small class="text-muted d-block mt-1">Tối đa: {{ qty_wholesale_max }}</small>
+                                    <small class="text-danger d-block mt-1">
+                                        {% if item.unit1 %}{{ item.unit1 }}{% else %}Thùng{% endif %}: {{ item.price_formatted }}₫
+                                    </small>
+                                    {% else %}
+                                    <input type="text" class="form-control form-control-sm bg-light" value="— Không có sỉ" disabled>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- THÊM SẢN PHẨM KHÁC – GÕ LÀ HIỆN GỢI Ý (KHÔNG CẦN MODAL) -->
+        {% if not product_only %}
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <span>Thêm sản phẩm khác (gõ tên để chọn ngay)</span>
+                <button type="button" class="btn btn-light btn-sm" onclick="addExtraRow()">
+                    + Thêm dòng
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="extraContainer"></div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- TÙY CHỌN HIỂN THỊ -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">Canh lề tem</div>
+                    <div class="card-body">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="alignment" value="left" id="left"><label class="form-check-label" for="left">Trái</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="alignment" value="center" checked><label class="form-check-label">Giữa</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="alignment" value="right"><label class="form-check-label">Phải</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">Hiển thị trên tem</div>
+                    <div class="card-body">
+                        <div class="form-check"><input class="form-check-input" type="checkbox" name="show_name" checked><label>Tên hàng</label></div>
+                        <div class="form-check"><input class="form-check-input" type="checkbox" name="show_unit" checked><label>Đơn vị</label></div>
+                        <div class="form-check"><input class="form-check-input" type="checkbox" name="show_price" checked><label>Giá bán</label></div>
+                        <div class="form-check"><input class="form-check-input" type="checkbox" name="show_code" checked><label>Mã code</label></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mb-5">
+            <button type="submit" class="btn btn-success btn-lg px-5">
+                TẠO & IN TEM NGAY (40 Tem Tommy)
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+let extraIndex = 0;
+
+// Tạo một dòng nhập + gợi ý ngay tại chỗ
+function addExtraRow() {
+    extraIndex++;
+    const div = document.createElement('div');
+    div.className = 'position-relative mb-3';
+    div.id = 'extraWrapper' + extraIndex;
+
+    div.innerHTML = `
+        <div class="input-group input-group-sm">
+            <input type="text" class="form-control" placeholder="Gõ tên hoặc mã vạch..." autocomplete="off"
+                   oninput="searchProduct(this, ${extraIndex})" onfocus="this.select()">
+            <input type="hidden" name="extra_product_id_${extraIndex}">
+            <input type="number" name="extra_qty_retail_${extraIndex}" min="0" value="0" class="form-control text-center" placeholder="Số lượng lẻ">
+            <input type="number" name="extra_qty_wholesale_${extraIndex}" min="0" value="0" class="form-control text-center" placeholder="Số lượng sỉ">
+            <button type="button" class="btn btn-danger btn-sm" onclick="document.getElementById('extraWrapper${extraIndex}').remove()">×</button>
+        </div>
+        <div id="suggestions${extraIndex}" class="position-absolute start-0 end-0 bg-white border rounded shadow-lg mt-1" 
+             style="z-index:9999; max-height:300px; overflow-y:auto; display:none;"></div>
+        <div id="info${extraIndex}" class="text-center small text-muted mt-1"></div>
+    `;
+
+    document.getElementById('extraContainer').appendChild(div);
+}
+
+// Tìm kiếm và hiển thị gợi ý
+async function searchProduct(input, idx) {
+    const q = input.value.trim();
+    const box = document.getElementById('suggestions' + idx);
+    const info = document.getElementById('info' + idx);
+
+    if (q.length < 2) {
+        box.style.display = 'none';
+        info.textContent = '';
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        if (data.length === 0) {
+            box.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy sản phẩm</div>';
+            box.style.display = 'block';
+            return;
+        }
+
+        let html = '';
+        data.slice(0, 10).forEach(p => {
+            const name = p.name.replace(/'/g, "\\'");
+            const priceDisplay = p.base_price && p.base_price > 0 ? p.base_price : p.price;
+
+            html += `
+                <div class="p-2 border-bottom hover-bg-light" style="cursor:pointer; font-size:0.95rem"
+                     onclick="pickProduct(${idx}, ${p.id}, '${p.barcode||''}', '${p.barcode1||''}', '${name}', 
+                                         ${p.base_price||0}, ${p.price||0}, '${p.unit||'Cái'}', '${p.unit1||'Thùng'}')">
+                    <strong>${p.barcode || '—'}</strong> - ${p.name}
+                    <span class="float-end text-success fw-bold">
+                        ${Number(priceDisplay).toLocaleString('vi-VN')}₫
+                    </span>
+                </div>`;
+        });
+
+        box.innerHTML = html;
+        box.style.display = 'block';
+
+    } catch (e) {
+        console.error(e);
+        box.innerHTML = '<div class="p-2 text-danger small">Lỗi kết nối</div>';
+        box.style.display = 'block';
+    }
+}
+
+// Khi chọn sản phẩm từ gợi ý
+function pickProduct(idx, id, barcode, barcode1, name, priceRetail, priceWholesale, unit, unit1) {
+    const wrapper = document.getElementById('extraWrapper' + idx);
+    const input = wrapper.querySelector('input[type=text]');
+    const hidden = wrapper.querySelector('input[type=hidden]');
+    const info = document.getElementById('info' + idx);
+    const box = document.getElementById('suggestions' + idx);
+
+    input.value = `${barcode || '—'} - ${name}`;
+    hidden.value = id;
+    box.style.display = 'none';
+
+    info.innerHTML = `
+        <span class="text-success">Lẻ: ${Number(priceRetail).toLocaleString('vi-VN')}₫ / ${unit}</span>
+        ${barcode1 ? ` | <span class="text-danger">Sỉ: ${Number(priceWholesale).toLocaleString('vi-VN')}₫ / ${unit1}</span>` : ''}
+    `;
+}
+
+// Ẩn tất cả gợi ý khi click ra ngoài
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('input[type=text]') && !e.target.closest('[id^="suggestions"]')) {
+        document.querySelectorAll('[id^="suggestions"]').forEach(el => el.style.display = 'none');
+    }
+});
+</script>
+{% endblock %}

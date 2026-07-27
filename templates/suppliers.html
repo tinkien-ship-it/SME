@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block head_extra %}
+{% include 'partials/data_list_table_assets.html' %}
+{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Quản Lý Nhà Cung Cấp</h3>
+        <div class="d-flex gap-2">
+            <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;" onchange="importSuppliers(event)">
+            <button class="btn btn-info text-white" onclick="document.getElementById('importFile').click()">
+                <i class="bi bi-upload"></i> Nhập Excel
+            </button>
+            <button class="btn btn-success" onclick="exportSuppliers()">
+                <i class="bi bi-download"></i> Xuất Excel
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#supplierModal" onclick="addSupplier()">
+                + Thêm NCC
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" placeholder="Tìm theo Mã hoặc Tên..." id="searchInput">
+                <button class="btn btn-outline-secondary" onclick="searchSuppliers()">Tìm</button>
+                <button class="btn btn-outline-secondary" onclick="loadSuppliers()">Tải lại</button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle" id="suppliersTable">
+                    <thead><tr></tr></thead>
+                    <tbody>
+                        <tr><td colspan="7" class="text-center text-muted">Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="enhanced-table-toolbar">
+                    <span class="text-muted small">Hiển thị <strong id="supplierTableCount">0</strong> nhà cung cấp</span>
+                    <span id="supplierColFilters" class="active-filters-badge d-none"></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearSupplierColFilters">Xóa lọc cột</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="supplierModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Thêm Nhà Cung Cấp</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="supplierForm">
+                    <input type="hidden" id="supplierId">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Mã NCC</label>
+                            <input type="text" class="form-control" id="code" placeholder="VD: NCC001">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tên <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Mã số thuế</label>
+                            <input type="text" class="form-control" id="taxCode" placeholder="VD: 0301234567">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Điện thoại</label>
+                            <input type="text" class="form-control" id="phone">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Địa chỉ</label>
+                            <input type="text" class="form-control" id="address">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Ghi chú</label>
+                            <textarea class="form-control" id="note" rows="2"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" onclick="saveSupplier()">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+let suppliers = [];
+let supplierId = null;
+let supplierTableCtrl = null;
+const modal = new bootstrap.Modal(document.getElementById('supplierModal'));
+
+function renderSupplierRows(data, tbody) {
+    const el = tbody || document.querySelector('#suppliersTable tbody');
+    if (!el) return;
+    if (!data.length) {
+        el.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Không tìm thấy nhà cung cấp nào.</td></tr>';
+        return;
+    }
+    el.innerHTML = data.map(s => `
+        <tr data-id="${s.id}">
+            <td class="text-center small">${escapeHtml(s.code || '—')}</td>
+            <td class="text-start"><strong>${escapeHtml(s.name)}</strong></td>
+            <td class="text-center small">${escapeHtml(s.tax_code || '—')}</td>
+            <td class="text-center small">${escapeHtml(s.phone || '—')}</td>
+            <td class="text-start small">${escapeHtml(s.email || '—')}</td>
+            <td class="text-start small">${escapeHtml(s.address || '—')}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-warning me-1" onclick="editSupplier(${s.id})">Sửa</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteSupplier(${s.id})">Xóa</button>
+            </td>
+        </tr>`).join('');
+}
+
+function initSupplierTable() {
+    supplierTableCtrl = DataListTable.create({
+        table: '#suppliersTable',
+        countSelector: '#supplierTableCount',
+        activeFiltersSelector: '#supplierColFilters',
+        defaultSort: { key: 'name', dir: 'asc' },
+        columns: [
+            { key: 'code', label: 'Mã NCC', sortable: true, filterType: 'text', width: '100px', align: 'center',
+              getValue: s => s.code || '' },
+            { key: 'name', label: 'Tên', sortable: true, filterType: 'text', width: '220px',
+              getValue: s => s.name || '' },
+            { key: 'tax_code', label: 'Mã số thuế', filterType: 'text', width: '120px', align: 'center',
+              getValue: s => s.tax_code || '' },
+            { key: 'phone', label: 'Điện thoại', filterType: 'text', width: '110px', align: 'center',
+              getValue: s => s.phone || '' },
+            { key: 'email', label: 'Email', filterType: 'text', width: '150px',
+              getValue: s => s.email || '' },
+            { key: 'address', label: 'Địa chỉ', filterType: 'text', width: '200px',
+              getValue: s => s.address || '' },
+            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '140px', align: 'center' },
+        ],
+        renderRows: renderSupplierRows,
+    });
+}
+
+// === RENDER TABLE ===
+function renderSuppliersTable(data) {
+    suppliers = data || [];
+    if (supplierTableCtrl) {
+        supplierTableCtrl.setData(suppliers);
+    } else {
+        renderSupplierRows(suppliers);
+    }
+}
+
+// === LOAD & SEARCH ===
+function loadSuppliers() {
+    const tbody = document.querySelector('#suppliersTable tbody');
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Đang tải...</td></tr>';
+    fetch('/api/suppliers')
+        .then(r => r.ok ? r.json() : Promise.reject('Lỗi tải dữ liệu'))
+        .then(data => {
+            suppliers = data;
+            renderSuppliersTable(data);
+        })
+        .catch(() => {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Lỗi kết nối!</td></tr>';
+        });
+}
+
+function searchSuppliers() {
+    const query = document.getElementById('searchInput').value.trim();
+    fetch(`/api/suppliers?q=${encodeURIComponent(query)}`)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => renderSuppliersTable(data))
+        .catch(() => alert('Lỗi tìm kiếm!'));
+}
+
+// === ADD / EDIT ===
+function addSupplier() {
+    supplierId = null;
+    document.getElementById('modalTitle').textContent = 'Thêm Nhà Cung Cấp';
+    document.getElementById('supplierForm').reset();
+    document.getElementById('supplierId').value = '';
+    modal.show();
+}
+
+function editSupplier(id) {
+    const s = suppliers.find(x => x.id == id);
+    if (!s) return;
+    supplierId = id;
+    document.getElementById('modalTitle').textContent = 'Sửa Nhà Cung Cấp';
+    document.getElementById('supplierId').value = id;
+    document.getElementById('code').value = s.code || '';
+    document.getElementById('name').value = s.name;
+    document.getElementById('taxCode').value = s.tax_code || '';
+    document.getElementById('phone').value = s.phone || '';
+    document.getElementById('email').value = s.email || '';
+    document.getElementById('address').value = s.address || '';
+    document.getElementById('note').value = s.note || '';
+    modal.show();
+}
+
+function saveSupplier() {
+    const data = {
+        id: document.getElementById('supplierId').value || undefined,
+        code: document.getElementById('code').value.trim(),
+        name: document.getElementById('name').value.trim(),
+        tax_code: document.getElementById('taxCode').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        note: document.getElementById('note').value.trim()
+    };
+
+    if (!data.name) return alert('Tên nhà cung cấp không được để trống!');
+
+    const method = data.id ? 'PUT' : 'POST';
+    fetch('/api/suppliers', {
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+    })
+    .then(r => r.ok ? r.json() : r.json().then(err => Promise.reject(err.error)))
+    .then(() => {
+        modal.hide();
+        loadSuppliers();
+        alert('Lưu thành công!');
+    })
+    .catch(err => alert('Lỗi: ' + err));
+}
+
+function deleteSupplier(id) {
+    if (!confirm('Xóa nhà cung cấp này?')) return;
+    fetch('/api/suppliers', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+    })
+    .then(() => loadSuppliers())
+    .catch(() => alert('Lỗi xóa!'));
+}
+
+// === EXPORT EXCEL ===
+function exportSuppliers() {
+    if (!XLSX) return alert('Thư viện Excel chưa tải!');
+    const data = suppliers.map(s => ({
+        'Mã NCC': s.code || '',
+        'Tên': s.name,
+        'Mã số thuế': s.tax_code || '',
+        'Điện thoại': s.phone || '',
+        'Email': s.email || '',
+        'Địa chỉ': s.address || '',
+        'Ghi chú': s.note || ''
+    }));
+    if (data.length === 0) return alert('Không có dữ liệu!');
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "NhaCungCap");
+    XLSX.writeFile(wb, "Danh_Sach_Nha_Cung_Cap.xlsx");
+}
+
+// === IMPORT EXCEL (THEO CHÍNH XÁC MẪU CỦA BẠN) ===
+async function importSuppliers(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    event.target.value = '';
+
+    const loading = document.createElement('div');
+    loading.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+    loading.innerHTML = '<div class="text-center text-white"><div class="spinner-border"></div><p>Đang nhập dữ liệu...</p></div>';
+    document.body.appendChild(loading);
+
+    try {
+        const data = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = () => reject(new Error('Lỗi đọc file'));
+            reader.readAsArrayBuffer(file);
+        });
+
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        if (rows.length < 2) throw new Error('File không có dữ liệu!');
+
+        const headers = rows[0].map(h => String(h).trim().toUpperCase());
+        const importData = [];
+        const headerMap = {
+            'MÃ NCC': 'code', 'TÊN': 'name', 'MÃ SỐ THUẾ': 'tax_code',
+            'ĐIỆN THOẠI': 'phone', 'EMAIL': 'email', 'ĐỊA CHỈ': 'address', 'GHI CHÚ': 'note'
+        };
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            const obj = {};
+            Object.keys(headerMap).forEach(key => {
+                const idx = headers.indexOf(key);
+                if (idx !== -1) obj[headerMap[key]] = String(row[idx] || '').trim();
+            });
+            if (obj.name) importData.push(obj);
+        }
+
+        if (importData.length === 0) throw new Error('Không có dữ liệu hợp lệ!');
+
+        const res = await fetch('/api/suppliers/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(importData)
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Lỗi server');
+
+        alert(`Nhập thành công ${result.count} nhà cung cấp!`);
+        if (result.errors?.length) {
+            console.warn("Lỗi chi tiết:", result.errors);
+            alert(`Có ${result.errors.length} lỗi. Xem console để biết chi tiết.`);
+        }
+        loadSuppliers();
+
+    } catch (err) {
+        alert('Lỗi nhập: ' + err.message);
+    } finally {
+        document.body.removeChild(loading);
+    }
+}
+
+// === INIT ===
+document.addEventListener('DOMContentLoaded', () => {
+    initSupplierTable();
+    document.getElementById('btnClearSupplierColFilters')?.addEventListener('click', () => supplierTableCtrl?.clearColumnFilters());
+    loadSuppliers();
+    document.getElementById('searchInput').addEventListener('keyup', e => {
+        if (e.key === 'Enter') searchSuppliers();
+    });
+});
+// Kiểm tra đăng nhập trước khi gọi API
+function checkLogin() {
+    return fetch('/api/suppliers')
+        .then(r => {
+            if (r.status === 403 || r.redirected) {
+                window.location.href = '/login';
+                return false;
+            }
+            return true;
+        })
+        .catch(() => {
+            window.location.href = '/login';
+            return false;
+        });
+}
+
+// Gọi trước khi load
+document.addEventListener('DOMContentLoaded', async () => {
+    const loggedIn = await checkLogin();
+    if (loggedIn) loadSuppliers();
+});
+</script>
+{% endblock %}

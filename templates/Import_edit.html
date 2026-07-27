@@ -1,0 +1,987 @@
+{% extends "base.html" %}
+{% block title %}Sửa Phiếu Nhập #{{ import_no }}{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+    :root { --primary-color: #2563eb; --header-bg: #f8fafc; }
+    .container-fluid { max-width: 100%; padding: 10px 15px !important; }
+    
+    /* Header styling */
+    .info-header { background: var(--header-bg); border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .form-label.small { margin-bottom: 2px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    /* Table styling */
+    #itemsTable { font-size: 13px; table-layout: fixed; width: 2400px; min-width: 100%; }
+    #itemsTable th { background: #f1f5f9; color: #475569; font-weight: 600; padding: 10px 5px; text-align: center; border-bottom: 2px solid #cbd5e1; }
+    #itemsTable td { padding: 3px !important; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    
+    .format-input { text-align: right !important; }
+    .hidden-field { display: none !important; }
+
+    /* Sticky Summary Bar */
+    .summary-bar {
+        position: sticky; 
+        bottom: 0; 
+        background: #1e3a8a; 
+        color: white;
+        padding: 12px 25px; 
+        display: flex; 
+        justify-content: space-between;
+        align-items: center; 
+        border-radius: 12px 12px 0 0; 
+        z-index: 1001; 
+        box-shadow: 0 -4px 15px rgba(30, 58, 138, 0.2);
+        border-top: 2px solid #3b82f6;
+    }
+    
+    .summary-value { 
+        font-size: 22px; 
+        font-weight: 700; 
+        color: #60a5fa; 
+    }
+
+    .btn-save-final { 
+        background: #f59e0b; 
+        color: #000; 
+        border: none; 
+        padding: 10px 30px; 
+        border-radius: 8px; 
+        font-weight: 800; 
+        transition: 0.3s;
+        text-transform: uppercase;
+    }
+    .btn-save-final:hover:not(:disabled) { 
+        background: #fbce03; 
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .btn-save-final:disabled {
+        background: #cbd5e1;
+        color: #94a3b8;
+        cursor: not-allowed;
+    }
+
+    .suggest-box {
+        position: fixed !important;
+        z-index: 99999 !important;
+        background: white;
+        border: 1px solid #86b7fe;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        max-height: 480px;
+        overflow-y: auto;
+        border-radius: 8px;
+        padding: 6px 0;
+        min-width: 480px;
+        max-width: 680px;
+        font-size: 14.5px;
+    }
+    .suggest-item {
+        padding: 13px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f1f1;
+        line-height: 1.45;
+    }
+    .suggest-item:hover { 
+        background-color: #f0f8ff; 
+    }
+    .suggest-item:last-child { border-bottom: none; }
+    .match-tag {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 12px;
+        background: #28a745;
+        color: white;
+        float: right;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="text-primary fw-bold m-0"><i class="bi bi-pencil-square"></i> CẬP NHẬT PHIẾU NHẬP KHO</h5>
+        <div class="d-flex gap-2 align-items-center">
+            <a href="/import_list" class="btn btn-secondary btn-sm fw-bold"><i class="bi bi-arrow-left"></i> QUAY LẠI</a>
+            <div class="badge bg-white text-dark border p-2">SỐ PHIẾU: <b id="import_no_val" class="text-danger">{{ import_no }}</b></div>
+        </div>
+    </div>
+
+    <form id="importForm" onsubmit="event.preventDefault(); saveChanges();">
+        <input type="hidden" id="supplierId" value="">
+        <input type="hidden" id="fromInvoiceId" value="">
+
+        <div class="info-header shadow-sm">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Nhà cung cấp *</label>
+                    <input class="form-control form-control-sm fw-bold border-primary" list="supplierOptions" id="supplierSearch" value="" placeholder="Tìm NCC..." required disabled>
+                    <datalist id="supplierOptions"></datalist>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Địa chỉ</label>
+                    <input type="text" class="form-control form-control-sm bg-light" id="supplierAddress" value="" readonly>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Mã số thuế</label>
+                    <input type="text" class="form-control form-control-sm bg-light" id="taxCode" value="" readonly>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small fw-bold">Số hóa đơn</label>
+                    <input type="text" class="form-control form-control-sm" id="bill_no" value="" disabled>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Ngày hóa đơn</label>
+                    <input type="text" class="form-control form-control-sm text-center border-primary" id="bill_date" placeholder="dd/mm/yyyy" disabled>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Ngày nhập *</label>
+                    <input type="text" class="form-control form-control-sm text-center" id="importDate" required disabled>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Trạng thái thanh toán</label>
+                    <select class="form-select form-select-sm fw-bold" id="paymentStatus" onchange="togglePaymentMethod()" disabled>
+                        <option value="Chưa thanh toán">Chưa thanh toán</option>
+                        <option value="Thanh toán một phần">Thanh toán một phần</option>
+                        <option value="Đã thanh toán">Đã thanh toán</option>
+                    </select>
+                </div>
+                <div class="col-md-2" id="methodWrapper">
+                    <label class="form-label small fw-bold">Hình thức thanh toán</label>
+                    <select class="form-select form-select-sm fw-bold text-primary" id="paymentMethod" disabled>
+                        <option value="cash">Tiền mặt (111)</option>
+                        <option value="bank">Chuyển khoản (112)</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">CP Khác (Vận chuyển...)</label>
+                    <input type="text" class="form-control form-control-sm text-end format-input fw-bold text-success" id="extraCost" value="0" disabled>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">Ghi chú phiếu nhập</label>
+                    <input type="text" class="form-control form-control-sm" id="note" value="" placeholder="Nhập ghi chú..." disabled>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-5">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
+                <span class="small fw-bold text-primary uppercase"><i class="bi bi-list-ul"></i> Chi tiết mặt hàng</span>
+                <button type="button" class="btn btn-warning btn-sm fw-bold" id="btnAddRow" onclick="addRow()">
+                    <i class="bi bi-plus-lg"></i> THÊM DÒNG
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 50vh;">
+                    <table class="table table-bordered table-sm mb-0" id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th style="width:60px;">ID</th>
+                                <th style="width:300px;">Tên hàng</th>
+                                <th style="width:100px;">ĐVT Phiếu</th>
+                                <th style="width:90px;">Số Lượng</th>
+                                <th style="width:120px;">Đơn giá</th>
+                                <th style="width:130px;">Thành tiền</th>
+                                <th style="width:70px;">% CK</th>
+                                <th style="width:110px;">Tiền CK</th>
+                                <th style="width:80px;">% VAT</th>
+                                <th style="width:110px;">Tiền VAT</th>
+                                <th style="width:140px; background:#fff7ed;">Tiền TT</th>
+                                <th style="width:100px;">ĐV Cơ bản</th>
+                                <th style="width:100px;">ĐV Sỉ</th>
+                                <th style="width:80px;">Tỷ lệ</th>
+                                <th style="width:130px; background:#f0fdf4;">Giá lẻ mới</th>
+                                <th style="width:130px; background:#eff6ff;">Giá sỉ mới</th>
+                                <th style="width:60px;">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-bar">
+            <div class="d-flex gap-5 align-items-center">
+                <div>
+                    <div class="small opacity-75">TỔNG TIỀN HÀNG</div>
+                    <div id="totalPayment" class="fw-bold text-warning h5 mb-0">0</div>
+                </div>
+                <div class="vr opacity-25"></div>
+                <div>
+                    <div class="small opacity-75">TỔNG THANH TOÁN (GỒM CP Khác)</div>
+                    <div id="totalImport" class="summary-value mb-0">0</div>
+                </div>
+            </div>
+            <button type="submit" id="btnSave" class="btn-save-final shadow-lg" disabled>
+                <i class="bi bi-floppy-fill"></i> LƯU THAY ĐỔI
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// ====================== 1. BIẾN TOÀN CỤC & DỮ LIỆU GỐC ======================
+const IMPORT_ID = {{ import_id }};
+let imp = {};
+let currentCashBalance = 0;
+let currentBankBalance = 0;
+let isEditMode = true;
+let isServiceImport = false;
+let items = [];
+
+function normalizeDateForPicker(raw) {
+    if (!raw) return '';
+    const text = String(raw).trim();
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(text)) {
+        return text.split(' ')[0];
+    }
+    const base = text.split('T')[0].split(' ')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(base)) {
+        const [y, m, d] = base.split('-');
+        return `${d}/${m}/${y}`;
+    }
+    return text;
+}
+
+function buildItemsFromImp(rawItems) {
+    return (rawItems || []).map(it => {
+        const qty = Number(it.qty || 0);
+        const price = Number(it.buyprice || 0);
+        const lineTotal = qty * price;
+
+        const discountMoney = Number(it.discount_amount || it.discount || 0);
+        const taxMoney = Number(it.tax_amount || it.tax || 0);
+
+        const discountPct = lineTotal > 0 ? (discountMoney / lineTotal) * 100 : Number(it.discount_pct || 0);
+        const afterDiscount = lineTotal - discountMoney;
+        const taxPct = afterDiscount > 0
+            ? (taxMoney / afterDiscount) * 100
+            : Number(it.tax_pct || 0);
+
+        const baseUnitVal = it.base_unit || it.detail_unit || '';
+        const wholesaleUnitVal = it.wholesale_unit || '';
+
+        let unitDisplay = it.unit || it.invoice_unit || baseUnitVal || 'Cái';
+        const unitType = Number(it.unit_type || 0);
+        if (unitType === 1 && wholesaleUnitVal && wholesaleUnitVal !== '—') {
+            unitDisplay = wholesaleUnitVal;
+        }
+
+        return {
+            id: it.id || null,
+            product_id: it.product_id || '',
+            invoice_name: it.product_name || it.name || '',
+            unit: unitDisplay,
+            qty: qty,
+            price: price,
+            discount_pct: Number(discountPct.toFixed(2)),
+            tax_pct: String(Math.round(Number(taxPct))),
+            base_unit: baseUnitVal,
+            wholesale_unit: wholesaleUnitVal,
+            ratio: it.unit_ratio || it.ratio || 1,
+            base_sale_price: it.base_sale_price || it.base_price || 0,
+            sale_price: it.sale_price || it.price || 0,
+            line_type: it.line_type || (it.product_id ? 'goods' : 'service'),
+            is_deleted: false
+        };
+    });
+}
+
+function populateFormFromImp() {
+    document.getElementById('supplierId').value = imp.supplier_id || '';
+    document.getElementById('fromInvoiceId').value = imp.from_invoice_id || '';
+    document.getElementById('supplierSearch').value = imp.supplier_name || '';
+    document.getElementById('supplierAddress').value = imp.address || '';
+    document.getElementById('taxCode').value = imp.tax_code || '';
+    document.getElementById('bill_no').value = imp.bill_no || '';
+    document.getElementById('note').value = imp.note || '';
+
+    if (imp.payment_status) {
+        document.getElementById('paymentStatus').value = imp.payment_status;
+    }
+    const method = String(imp.payment_method || 'cash').toLowerCase();
+    document.getElementById('paymentMethod').value = method.includes('bank') || method.includes('112') ? 'bank' : 'cash';
+
+    if (imp.import_no) {
+        document.getElementById('import_no_val').textContent = imp.import_no;
+    }
+    document.getElementById('extraCost').value = formatVNDCustom(imp.extra_cost || 0);
+
+    const importDateStr = normalizeDateForPicker(imp.date);
+    const billDateStr = normalizeDateForPicker(imp.bill_date);
+    const importDateEl = document.getElementById('importDate');
+    const billDateEl = document.getElementById('bill_date');
+    if (importDateStr && importDateEl) {
+        if (importDateEl._flatpickr) {
+            importDateEl._flatpickr.setDate(importDateStr, false);
+        } else {
+            importDateEl.value = importDateStr;
+        }
+    }
+    if (billDateStr && billDateEl) {
+        if (billDateEl._flatpickr) {
+            billDateEl._flatpickr.setDate(billDateStr, false);
+        } else {
+            billDateEl.value = billDateStr;
+        }
+    }
+}
+
+function renderImportItems() {
+    const tbody = document.querySelector('#itemsTable tbody');
+    tbody.innerHTML = '';
+    if (items.length > 0) {
+        items.forEach(it => addRow(it));
+    } else {
+        addRow();
+    }
+    applyEditMode();
+    togglePaymentMethod();
+    calcTotal();
+}
+
+function mapLegacyImportResponse(data) {
+    const rawItems = data.items || [];
+    const items = rawItems.map(it => ({
+        id: it.id || null,
+        product_id: it.product_id ?? null,
+        product_name: it.product_name || it.name || '',
+        name: it.product_name || it.name || '',
+        qty: it.qty ?? it.quantity ?? 0,
+        buyprice: it.buyprice ?? it.unit_price ?? 0,
+        discount: it.discount ?? it.discount_amount ?? 0,
+        tax: it.tax ?? it.tax_amount ?? 0,
+        discount_pct: it.discount_pct ?? 0,
+        tax_pct: it.tax_pct ?? 0,
+        unit: it.unit || it.import_unit || it.base_unit || 'Cái',
+        invoice_unit: it.unit || it.import_unit || it.base_unit || 'Cái',
+        base_unit: it.base_unit || it.unit || it.import_unit || '',
+        wholesale_unit: it.wholesale_unit || '',
+        unit_type: it.unit_type ?? 0,
+        unit_ratio: it.unit_ratio ?? 1,
+        line_type: it.line_type || (it.product_id ? 'goods' : 'service'),
+        base_sale_price: it.base_sale_price || it.base_price || 0,
+        sale_price: it.sale_price || it.price || 0,
+    }));
+    const isAllService = items.length > 0 && items.every(
+        it => (it.line_type || '').toLowerCase() === 'service' || !it.product_id
+    );
+    return {
+        ...data,
+        supplier_name: data.supplier_name || data.supplier?.name || '',
+        address: data.supplier_address || data.address || data.supplier?.address || '',
+        tax_code: data.supplier_tax_code || data.tax_code || data.supplier?.tax_code || '',
+        payment_method: data.payment_method || 'cash',
+        payment_status: data.payment_status || data.payment_status_display || 'Chưa thanh toán',
+        items,
+        is_service_import: isAllService,
+    };
+}
+
+async function loadImportData() {
+    const tbody = document.querySelector('#itemsTable tbody');
+    tbody.innerHTML = '<tr><td colspan="16" class="text-center py-4 text-muted">Đang tải dữ liệu phiếu nhập...</td></tr>';
+
+    try {
+        const res = await fetch(`/api/import/${IMPORT_ID}/edit`, { credentials: 'same-origin' });
+        const raw = await res.text();
+        let payload;
+        try {
+            payload = JSON.parse(raw);
+        } catch (parseErr) {
+            const looksLikeLogin = /<\s*html/i.test(raw) || /login/i.test(raw);
+            if (looksLikeLogin) {
+                throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng tải lại trang hoặc đăng nhập lại.');
+            }
+            throw new Error(
+                res.ok
+                    ? 'Máy chủ trả về dữ liệu không hợp lệ'
+                    : `Không gọi được API sửa phiếu (HTTP ${res.status}). Hãy khởi động lại ứng dụng Flask.`
+            );
+        }
+
+        if (res.ok && payload.success && payload.data) {
+            imp = payload.data;
+        } else {
+            const resLegacy = await fetch(`/api/import/${IMPORT_ID}`, { credentials: 'same-origin' });
+            const legacyRaw = await resLegacy.text();
+            let legacyPayload;
+            try {
+                legacyPayload = JSON.parse(legacyRaw);
+            } catch (legacyErr) {
+                throw new Error(payload.error || 'Không tải được phiếu nhập');
+            }
+            if (!resLegacy.ok || legacyPayload.error) {
+                throw new Error(
+                    payload.error || legacyPayload.error || legacyPayload.detail || 'Không tải được phiếu nhập'
+                );
+            }
+            imp = mapLegacyImportResponse(legacyPayload);
+        }
+
+        isServiceImport = !!imp.is_service_import;
+        items = buildItemsFromImp(imp.items || []);
+        populateFormFromImp();
+        renderImportItems();
+        if (isServiceImport) {
+            document.querySelector('h5.text-primary')?.insertAdjacentHTML(
+                'beforeend',
+                ' <span class="badge bg-info text-dark ms-2">DỊCH VỤ MUA VÀO</span>'
+            );
+        }
+    } catch (err) {
+        console.error('loadImportData:', err);
+        tbody.innerHTML = '<tr><td colspan="16" class="text-center py-4 text-danger">Không tải được dữ liệu phiếu nhập</td></tr>';
+        Swal.fire('Lỗi', err.message || 'Không tải được dữ liệu phiếu nhập', 'error');
+    }
+}
+
+// ====================== 2. UTILITY FUNCTIONS ======================
+const formatVNDCustom = (val) => {
+    if (val === undefined || val === null || val === '') return "0";
+    let num = parseFloat(String(val).replace(/,/g, '.'));
+    if (isNaN(num)) return "0";
+    return num.toLocaleString('vi-VN');
+};
+
+const parseNumber = (v) => {
+    if (v === undefined || v === null || v === '') return 0;
+    let clean = String(v).replace(/\./g, '').replace(/,/g, '.');
+    return parseFloat(clean) || 0;
+};
+
+const escapeAttr = (val) => String(val ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;');
+
+const toast = (msg, type = 'success') => {
+    Toastify({
+        text: msg,
+        duration: 4000,
+        gravity: "top",
+        position: "right",
+        style: { background: type === 'error' ? "#dc3545" : "#198754" }
+    }).showToast();
+};
+
+function debounce(func, delay = 250) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// ====================== 3. SEARCH SUGGESTIONS NÂNG CAO ======================
+function calculateMatchScore(searchText, productName) {
+    if (!searchText || !productName) return 0;
+    const search = searchText.toLowerCase().trim();
+    const name = productName.toLowerCase().trim();
+
+    if (name === search) return 1000;
+    if (name.includes(search)) return 700;
+
+    let score = 0;
+    const searchWords = search.split(/\s+/).filter(w => w.length > 1);
+    searchWords.forEach(word => {
+        if (name.includes(word)) score += 180;
+    });
+    if (name.startsWith(search)) score += 100;
+    return Math.min(score, 999);
+}
+
+const showSuggestions = debounce(async function(inputEl) {
+    if (!isEditMode || isServiceImport) return;
+    const row = inputEl.closest('tr');
+    const searchVal = inputEl.value.trim();
+
+    document.querySelectorAll('.suggest-box').forEach(el => el.remove());
+    if (!searchVal || searchVal.length < 1) return;
+
+    try {
+        const res = await fetch(`/api/products/manage?q=${encodeURIComponent(searchVal)}`);
+        const products = await res.json();
+        if (!products || products.length === 0) return;
+
+        const scoredProducts = products.map(p => ({
+            ...p,
+            matchScore: calculateMatchScore(searchVal, p.name)
+        }))
+        .filter(p => p.matchScore > 0)
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 50);
+
+        if (scoredProducts.length === 0) return;
+
+        const box = document.createElement('div');
+        box.className = 'suggest-box';
+
+        scoredProducts.forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'suggest-item';
+            item.innerHTML = `
+                <span class="match-tag">${p.matchScore}</span>
+                <div class="fw-bold text-dark">${p.name}</div>
+                <div class="small text-muted">ĐVT: ${p.unit || '—'} | Giá: ${formatVND(p.price)}</div>
+            `;
+            item.onclick = (e) => {
+                e.stopPropagation();
+                inputEl.value = p.name;
+                setProductToRow(row, p, 'suggest');
+                box.remove();
+            };
+            box.appendChild(item);
+        });
+
+        document.body.appendChild(box);
+        const rect = inputEl.getBoundingClientRect();
+        const boxHeight = Math.min(scoredProducts.length * 55 + 20, 460);
+        let top = rect.bottom + window.scrollY + 8;
+        let left = rect.left + window.scrollX;
+
+        if (window.innerHeight - rect.bottom < boxHeight + 50) {
+            top = rect.top + window.scrollY - boxHeight - 8;
+        }
+
+        box.style.left = `${left}px`;
+        box.style.top = `${top}px`;
+        box.style.width = `${Math.max(rect.width, 500)}px`;
+
+        setTimeout(() => {
+            const closeHandler = (e) => {
+                if (!box.contains(e.target) && e.target !== inputEl) {
+                    box.remove();
+                    document.removeEventListener('click', closeHandler);
+                }
+            };
+            document.addEventListener('click', closeHandler);
+        }, 10);
+    } catch (e) { console.error("[Gợi ý] Lỗi:", e); }
+}, 250);
+
+// ====================== 4. XỬ LÝ DÒNG VÀ ĐỒNG BỘ MẶT HÀNG ======================
+async function performInitialMatch(row, name, invUnit = '') {
+    if (!name) return;
+    try {
+        const queryKey = name.split(' ')[0];
+        const res = await fetch(`/api/products/manage?q=${encodeURIComponent(queryKey)}`);
+        const products = await res.json();
+        const exactMatch = products.find(p => p.name.toLowerCase() === name.toLowerCase().trim());
+        if (exactMatch) {
+            setProductToRow(row, exactMatch, 'exact', invUnit);
+        } else {
+            setProductToRow(row, null, 'none', invUnit);
+        }
+    } catch (e) {
+        setProductToRow(row, null, 'none', invUnit);
+    }
+}
+
+function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
+    if (invoiceUnit) {
+        row.querySelector('.invoice-unit').value = invoiceUnit;
+    }
+    
+    row.classList.remove('row-exact-match', 'row-suggested', 'row-not-found');
+    
+    if (product) {
+        row.querySelector('.p-id').value = product.id;
+        row.querySelector('.product-name').value = product.name || '';
+        
+        // Nhận dữ liệu và map chính xác các trường đơn vị
+        row.querySelector('.base-unit').value = product.base_unit || '';
+        row.querySelector('.wholesale-unit').value = product.wholesale_unit || '';
+        row.querySelector('.ratio').value = product.unit_ratio || product.ratio || 1;
+        
+        // Gán chính xác giá bán lẻ (base-sale-price) và bán sỉ (sale-price)
+        const basePriceVal = product.base_sale_price !== undefined ? product.base_sale_price : (product.base_price || 0);
+        const salePriceVal = product.sale_price !== undefined ? product.sale_price : (product.price || 0);
+        
+        row.querySelector('.base-sale-price').value = formatVNDCustom(basePriceVal);
+        row.querySelector('.sale-price').value = formatVNDCustom(salePriceVal);
+        
+        if (matchType === 'exact') {
+            row.classList.add('row-exact-match');
+        } else if (matchType === 'suggest') {
+            row.classList.add('row-suggested');
+        }
+    } else {
+        row.querySelector('.p-id').value = '';
+        row.querySelector('.base-unit').value = '';
+        row.querySelector('.wholesale-unit').value = '';
+        row.querySelector('.ratio').value = 1;
+        row.querySelector('.base-sale-price').value = '0';
+        row.querySelector('.sale-price').value = '0';
+        row.classList.add('row-not-found');
+    }
+    
+    calcRow(row);
+}
+
+function addRow(data = {}) {
+    const tbody = document.querySelector('#itemsTable tbody');
+    const tr = document.createElement('tr');
+    tr.className = 'import-row';
+    
+    // Gắn thuộc tính id ẩn để nhận diện bản ghi cũ khi cập nhật
+    if(data.id) tr.dataset.id = data.id;
+
+    tr.innerHTML = `
+        <td><input type="text" class="p-id form-control form-control-sm bg-light text-center border-0" readonly value="${escapeAttr(data.product_id || '')}"></td>
+        <td>
+            <input type="text" class="product-name form-control form-control-sm border-0" value="${escapeAttr(data.invoice_name || '')}" placeholder="Gõ tên sản phẩm...">
+            <input type="hidden" class="invoice-name-hidden" value="${escapeAttr(data.invoice_name || '')}">
+        </td>
+        <td><input type="text" class="invoice-unit form-control form-control-sm text-center border-0" value="${escapeAttr(data.unit || '')}"></td>
+        <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty || 1}"></td>
+        <td><input type="text" class="buy-price form-control form-control-sm text-end border-0" value="${formatVND(data.price || 0)}"></td>
+        <td class="line-total text-end fw-bold pe-2">0</td>
+        <td><input type="number" class="disc-pct form-control form-control-sm text-center border-0" value="${data.discount_pct || 0}" step="0.01"></td>
+        <td class="disc-amt text-end pe-2">0</td>
+        <td><select class="tax-pct form-select form-select-sm border-0">
+            <option value="0" ${String(data.tax_pct) === '0' ? 'selected' : ''}>0%</option>
+            <option value="5" ${String(data.tax_pct) === '5' ? 'selected' : ''}>5%</option>
+            <option value="8" ${String(data.tax_pct) === '8' ? 'selected' : ''}>8%</option>
+            <option value="10" ${String(data.tax_pct) === '10' || data.tax_pct === undefined || data.tax_pct === null || data.tax_pct === '' ? 'selected' : ''}>10%</option>
+        </select></td>
+        <td class="tax-amt text-end pe-2">0</td>
+        <td class="pay-amt text-end fw-bold text-danger pe-2">0</td>
+        <td><input type="text" class="base-unit form-control form-control-sm text-center border-0" value="${data.base_unit || ''}"></td>
+        <td><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0" value="${data.wholesale_unit || ''}"></td>
+        <td><input type="number" class="ratio form-control form-control-sm text-center border-0" value="${data.ratio || 1}"></td>
+        <td><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="${formatVNDCustom(data.base_sale_price || 0)}"></td>
+        <td><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="${formatVNDCustom(data.sale_price || 0)}"></td>
+        <td class="text-center"><button type="button" class="btn btn-sm text-danger btn-delete" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+
+    const nameInput = tr.querySelector('.product-name');
+    nameInput.addEventListener('input', function() { showSuggestions(this); });
+    nameInput.addEventListener('click', function() { showSuggestions(this); });
+    nameInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 1) showSuggestions(this);
+    });
+
+    attachRowEvents(tr);
+    calcRow(tr);
+}
+
+function removeRow(btn) {
+    const tr = btn.closest('tr');
+    if (confirm('Xóa dòng này? Khi lưu, tồn kho và các định mức giá trị của mặt hàng sẽ được điều chỉnh lại.')) {
+        tr.remove();
+        calcTotal();
+    }
+}
+
+function attachRowEvents(row) {
+    row.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('input', () => calcRow(row));
+    });
+}
+
+function calcRow(row) {
+    const qty = parseNumber(row.querySelector('.qty').value);
+    const price = parseNumber(row.querySelector('.buy-price').value);
+    const discPct = parseFloat(row.querySelector('.disc-pct').value) || 0;
+    
+    const rawTotal = Math.round(qty * price);
+    const discAmt = Math.round(rawTotal * (discPct / 100));
+    const afterDisc = rawTotal - discAmt;
+    const vatPct = parseFloat(row.querySelector('.tax-pct').value) || 0;
+    const vatAmt = Math.round(afterDisc * (vatPct / 100));
+    const finalPay = afterDisc + vatAmt;
+
+    row.querySelector('.line-total').textContent = formatVNDCustom(rawTotal);
+    row.querySelector('.disc-amt').textContent = formatVNDCustom(discAmt);
+    row.querySelector('.tax-amt').textContent = formatVNDCustom(vatAmt);
+    row.querySelector('.pay-amt').textContent = formatVNDCustom(finalPay);
+    calcTotal();
+}
+
+function calcTotal() {
+    let totalItemsPay = 0;
+    document.querySelectorAll('.pay-amt').forEach(el => totalItemsPay += parseNumber(el.textContent));
+    const extra = parseNumber(document.getElementById('extraCost').value);
+    document.getElementById('totalPayment').textContent = formatVNDCustom(totalItemsPay);
+    document.getElementById('totalImport').textContent = formatVNDCustom(totalItemsPay + extra);
+}
+
+// ====================== 5. QUẢN LÝ SỐ DƯ & THANH TOÁN ======================
+async function loadQuySoDu() {
+    try {
+        const res = await fetch('/api/quy-so-du');
+        const data = await res.json();
+        if (data.success) {
+            currentCashBalance = Number(data.so_du_tien_mat || 0);
+            currentBankBalance = Number(data.so_du_ngan_hang || 0);
+        }
+    } catch (e) { console.warn("Lỗi tải số dư quỹ:", e); }
+}
+
+function checkSoDu(amount, paymentMethod) {
+    if (!paymentMethod) return { ok: true };
+    const isCash = paymentMethod === 'cash';
+    const isBank = paymentMethod === 'bank';
+    let available = 0, methodText = "";
+    if (isCash) { available = currentCashBalance; methodText = "tiền mặt (111)"; }
+    else if (isBank) { available = currentBankBalance; methodText = "ngân hàng (112)"; }
+    else return { ok: true };
+    if (amount > available) {
+        return { ok: false, message: `Số dư ${methodText} (${formatVNDCustom(available)} ₫) không đủ.` };
+    }
+    return { ok: true };
+}
+
+function togglePaymentMethod() {
+    const status = document.getElementById('paymentStatus').value;
+    document.getElementById('methodWrapper').classList.toggle('hidden-field', status === 'Chưa thanh toán');
+    if (status !== 'Chưa thanh toán') loadQuySoDu();
+}
+
+// ====================== 6. BẬT FORM CHỈNH SỬA SAU KHI TẢI DỮ LIỆU ======================
+function applyEditMode() {
+    isEditMode = true;
+    const fromInvoiceId = (document.getElementById('fromInvoiceId')?.value || '').trim();
+
+    document.querySelectorAll('#itemsTable thead th:nth-child(n+12), #itemsTable tbody td:nth-child(n+12)').forEach(el => {
+        el.classList.toggle('hidden-field', isServiceImport);
+    });
+    document.querySelectorAll('#itemsTable .p-id').forEach(el => {
+        el.closest('td')?.classList.toggle('hidden-field', isServiceImport);
+    });
+    document.querySelectorAll('#itemsTable thead th:first-child').forEach(el => {
+        el.classList.toggle('hidden-field', isServiceImport);
+    });
+
+    document.querySelectorAll('#importForm input, #importForm select, #importForm textarea').forEach(el => {
+        if (fromInvoiceId && (el.id === 'bill_no' || el.id === 'bill_date')) {
+            el.disabled = true;
+            return;
+        }
+        el.disabled = false;
+        el.readOnly = false;
+    });
+
+    document.querySelectorAll('#itemsTable tbody input:not(.p-id), #itemsTable tbody select, #itemsTable tbody .btn-delete').forEach(el => {
+        el.disabled = false;
+    });
+
+    ['importDate', 'bill_date'].forEach(id => {
+        const el = document.getElementById(id);
+        const fp = el?._flatpickr;
+        if (!fp?.input) return;
+        const lockBill = fromInvoiceId && id === 'bill_date';
+        fp.input.disabled = lockBill;
+        fp.input.readOnly = lockBill;
+        fp.set('clickOpens', !lockBill);
+        fp.set('allowInput', !lockBill);
+    });
+
+    document.getElementById('btnAddRow').disabled = false;
+    document.getElementById('btnSave').disabled = false;
+}
+
+function initDatePickers() {
+    if (typeof flatpickr !== 'function') {
+        console.warn('flatpickr chưa tải — dùng input ngày thường');
+        return;
+    }
+    flatpickr('#importDate', { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true });
+    flatpickr('#bill_date', { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        initDatePickers();
+    } catch (err) {
+        console.warn('initDatePickers:', err);
+    }
+    loadImportData();
+});
+
+// ====================== 7. ĐÓNG GÓI & GỬI DỮ LIỆU CẬP NHẬT ======================
+function getConsolidatedItems() {
+    const rows = document.querySelectorAll('#itemsTable tbody tr');
+    const consolidatedMap = new Map();
+    
+    rows.forEach(tr => {
+        const name = tr.querySelector('.product-name').value.trim();
+        const invName = tr.querySelector('.invoice-name-hidden').value.trim() || name;
+        const unit = tr.querySelector('.invoice-unit').value.trim();
+        if (!name) return;
+
+        const qty = parseNumber(tr.querySelector('.qty').value);
+        const price = parseNumber(tr.querySelector('.buy-price').value);
+        
+        // --- Bổ sung đọc dữ liệu Thuế & Chiết khấu từ giao diện dòng ---
+        const tax_pct = parseFloat(tr.querySelector('.tax-pct').value) || 0;
+        const disc_pct = parseFloat(tr.querySelector('.disc-pct').value) || 0;
+        
+        // Tính toán số tiền chiết khấu và tiền thuế của dòng hiện tại để truyền về backend
+        const rowTotal = qty * price;
+        const discAmt = Math.round(rowTotal * (disc_pct / 100));
+        const afterDisc = rowTotal - discAmt;
+        const vatAmt = Math.round(afterDisc * (tax_pct / 100));
+        
+        const dbId = tr.dataset.id ? parseInt(tr.dataset.id) : null;
+        const key = `${name.toLowerCase()}|${unit.toLowerCase()}`;
+        
+        if (consolidatedMap.has(key)) {
+            const existing = consolidatedMap.get(key);
+            existing.qty += qty;
+            existing.totalValue += rowTotal;
+            // Cộng dồn giá trị chiết khấu và thuế nếu bị trùng gộp dòng
+            existing.discount_amount += discAmt;
+            existing.tax_amount += vatAmt;
+            
+            if (price > 0) { 
+                existing.tax_pct = tax_pct; 
+                existing.discount_pct = disc_pct; 
+            }
+        } else {
+            consolidatedMap.set(key, {
+                id: dbId,
+                product_id: isServiceImport ? null : (parseInt(tr.querySelector('.p-id').value) || null),
+                name: name,
+                invoice_name: invName,
+                unit: unit,
+                qty: qty,
+                totalValue: rowTotal,
+                line_type: isServiceImport ? 'service' : 'goods',
+                
+                // --- Đóng gói các trường tài chính của dòng mới ---
+                discount_pct: disc_pct,
+                discount_amount: discAmt,
+                tax_pct: tax_pct,
+                tax_amount: vatAmt,
+                
+                base_unit: tr.querySelector('.base-unit').value.trim(),
+                wholesale_unit: tr.querySelector('.wholesale-unit').value.trim(),
+                ratio: parseFloat(tr.querySelector('.ratio').value) || 1,
+                base_sale_price: parseNumber(tr.querySelector('.base-sale-price').value),
+                sale_price: parseNumber(tr.querySelector('.sale-price').value),
+                is_deleted: false
+            });
+        }
+    });
+
+    return Array.from(consolidatedMap.values()).map(item => ({
+        ...item,
+        buyprice: item.qty > 0 ? Math.round(item.totalValue / item.qty) : 0
+    }));
+}
+
+async function upsertProduct(item) {
+    const res = await fetch('/api/products/upsert', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            id: item.product_id,
+            name: item.name,
+            unit: item.base_unit || item.unit,
+            base_price: item.base_sale_price,
+            unit1: item.wholesale_unit || null,
+            unit_ratio: item.ratio,
+            price: item.sale_price,
+            product_type: 'goods'
+        })
+    });
+    const data = await res.json();
+    return data.product.id;
+}
+
+async function saveChanges() {
+    const paymentStatus = document.getElementById('paymentStatus').value;
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    const totalAmount = parseNumber(document.getElementById('totalImport').textContent);
+
+    if (paymentStatus === 'Đã thanh toán') {
+        await loadQuySoDu();
+        const check = checkSoDu(totalAmount, paymentMethod);
+        if (!check.ok) return Swal.fire('Không đủ tiền', check.message, 'warning');
+    }
+
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> ĐANG CẬP NHẬT...';
+
+    try {
+        const finalItems = getConsolidatedItems();
+        if (finalItems.length === 0) throw new Error("Vui lòng nhập ít nhất một mặt hàng!");
+
+        // Khớp nối hoặc tạo mới ID sản phẩm trước khi đưa vào Payload chính thức (chỉ phiếu hàng hóa)
+        if (!isServiceImport) {
+            for (let item of finalItems) {
+                item.product_id = await upsertProduct(item);
+            }
+        } else {
+            for (let item of finalItems) {
+                item.line_type = 'service';
+                item.product_id = null;
+            }
+        }
+
+        // Tạo danh sách các mặt hàng cũ đã bị xóa khỏi UI nhằm truyền thông tin về DB xử lý giảm trừ
+        const currentActiveIds = finalItems.filter(x => x.id).map(x => x.id);
+        const deletedItems = items.filter(oldIt => oldIt.id && !currentActiveIds.includes(oldIt.id)).map(oldIt => ({
+            id: oldIt.id,
+            product_id: oldIt.product_id,
+            is_deleted: true,
+            qty: oldIt.qty,
+            buyprice: oldIt.price
+        }));
+
+        const fullPayloadItems = [...finalItems, ...deletedItems];
+
+        const payload = {
+            supplier_id: parseInt(document.getElementById('supplierId').value) || null,
+            supplier_name: document.getElementById('supplierSearch').value.trim(),
+            address: document.getElementById('supplierAddress').value.trim(),
+            tax_code: document.getElementById('taxCode').value.trim(),
+            import_no: document.getElementById('import_no_val').textContent,
+            date: document.getElementById('importDate').value.split('/').reverse().join('-'),
+            bill_date: document.getElementById('bill_date').value ? document.getElementById('bill_date').value.split('/').reverse().join('-') : null,
+            bill_no: document.getElementById('bill_no').value || null,
+            items: fullPayloadItems,
+            note: document.getElementById('note').value,
+            payment_status: paymentStatus,
+            payment_method: (paymentStatus === 'Đã thanh toán' || paymentStatus === 'Thanh toán một phần') ? paymentMethod : null,
+            extra_cost: parseNumber(document.getElementById('extraCost').value),
+            from_invoice_id: parseInt(document.getElementById('fromInvoiceId').value) || null
+        };
+
+        const resImport = await fetch(`/api/import/update/${IMPORT_ID}`, {
+            method: 'PUT', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await resImport.json();
+
+        if (resImport.ok && result.success) {
+            Swal.fire('Thành công!', 'Phiếu nhập đã được cập nhật chính xác.', 'success');
+            setTimeout(() => location.reload(), 1200);
+        } else {
+            throw new Error(result.error || 'Cập nhật thất bại');
+        }
+    } catch (err) {
+        toast(err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-floppy-fill"></i> LƯU THAY ĐỔI';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,629 @@
+{% extends "base.html" %}
+{% block title %}Chi Tiết Hàng Bán{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<style>
+    body { background: #f5f7fa; }
+    .card { border-radius: 14px; overflow: hidden; }
+    .section-title { font-weight: 700; color: #333; }
+    .preset-btn { border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
+    .preset-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .table thead th { font-size: 0.85rem; font-weight: 600; white-space: nowrap; text-align: center; vertical-align: middle; }
+    .table thead th.th-left { text-align: left; }
+    .table thead th.th-right { text-align: right; }
+    .table-responsive { max-height: 62vh; overflow-y: auto; }
+    .sticky-top { position: sticky; top: 0; z-index: 10; }
+    .summary-box { transition: 0.2s ease; }
+    .summary-box:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .flatpickr-calendar { z-index: 9999 !important; }
+    #customDateRow .form-control[readonly] { background: #f8f9fa; }
+    .sale-order-link, .invoice-pdf-link { font-weight: 600; text-decoration: none; }
+    .sale-order-link:hover, .invoice-pdf-link:hover { text-decoration: underline; }
+    .detail-report-table { table-layout: fixed; width: 100%; min-width: 1280px; }
+    .detail-report-table thead th {
+        position: relative;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .detail-report-table tbody td {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+    .detail-report-table tbody td.col-name {
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.35;
+    }
+    .detail-report-table .col-resizer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 7px;
+        height: 100%;
+        cursor: col-resize;
+        z-index: 3;
+        touch-action: none;
+    }
+    .detail-report-table .col-resizer::after {
+        content: '';
+        position: absolute;
+        top: 18%;
+        bottom: 18%;
+        right: 3px;
+        width: 1px;
+        background: #cbd5e1;
+    }
+    .detail-report-table .col-resizer:hover,
+    .detail-report-table.detail-resizing .col-resizer:hover {
+        background: rgba(37, 99, 235, 0.12);
+    }
+    .detail-report-table.detail-resizing {
+        cursor: col-resize;
+    }
+    .detail-report-table.detail-resizing th,
+    .detail-report-table.detail-resizing td {
+        pointer-events: none;
+    }
+    .detail-report-table.detail-resizing .col-resizer {
+        pointer-events: auto;
+    }
+    .detail-table-hint { font-size: 0.78rem; color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4 mb-5 px-3 px-md-4">
+    <h3 class="mb-4 text-primary section-title">
+        <i class="fas fa-receipt"></i> Chi Tiết Hàng Bán
+    </h3>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="mb-3">
+                <label class="form-label fw-bold mb-2">Khoảng thời gian</label>
+                <div class="d-flex flex-wrap gap-2" id="presetButtons">
+                    <button type="button" class="btn btn-outline-primary preset-btn" data-preset="this_week">Tuần này</button>
+                    <button type="button" class="btn btn-outline-primary preset-btn active" data-preset="this_month">Tháng này</button>
+                    <button type="button" class="btn btn-outline-primary preset-btn" data-preset="q1">Quý 1</button>
+                    <button type="button" class="btn btn-outline-primary preset-btn" data-preset="q2">Quý 2</button>
+                    <button type="button" class="btn btn-outline-primary preset-btn" data-preset="q3">Quý 3</button>
+                    <button type="button" class="btn btn-outline-primary preset-btn" data-preset="q4">Quý 4</button>
+                    <button type="button" class="btn btn-outline-primary preset-btn" data-preset="last_year">Năm trước</button>
+                    <button type="button" class="btn btn-outline-primary preset-btn" data-preset="this_year">Năm nay</button>
+                    <button type="button" class="btn btn-outline-secondary preset-btn" data-preset="custom">Tùy chọn</button>
+                </div>
+            </div>
+
+            <div class="row g-3 align-items-end" id="customDateRow">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Từ ngày</label>
+                    <input type="text" class="form-control text-center" id="startDate" placeholder="dd/mm/yyyy" readonly>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Đến ngày</label>
+                    <input type="text" class="form-control text-center" id="endDate" placeholder="dd/mm/yyyy" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Tìm kiếm</label>
+                    <input type="text" class="form-control" id="searchQuery" placeholder="Mã hàng, tên, số đơn, số HĐ...">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100 py-2" type="button" onclick="loadReport()">
+                        <i class="fas fa-search"></i> Xem
+                    </button>
+                </div>
+            </div>
+            <div class="text-muted small mt-2" id="periodLabel"></div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="p-3 border rounded summary-box bg-white text-center">
+                <small class="text-muted d-block">Số dòng</small>
+                <h4 class="mt-1 mb-0 text-primary" id="sumLines">0</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="p-3 border rounded summary-box bg-white text-center">
+                <small class="text-muted d-block">Tổng số lượng</small>
+                <h4 class="mt-1 mb-0 text-secondary" id="sumQty">0</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="p-3 border rounded summary-box bg-white text-center">
+                <small class="text-muted d-block">Tổng chiết khấu + thuế</small>
+                <h4 class="mt-1 mb-0 text-info" id="sumDiscTax">0</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="p-3 border rounded summary-box bg-white text-center">
+                <small class="text-muted d-block">Tổng thanh toán</small>
+                <h4 class="mt-1 mb-0 text-success" id="sumTotal">0</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2 bg-light">
+            <div>
+                <h5 class="mb-0 fw-bold">Danh sách chi tiết</h5>
+                <div class="detail-table-hint mt-1 text-white">Kéo mép tiêu đề cột để chỉnh độ rộng — tự lưu theo trình duyệt</div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary btn-sm px-3" type="button" id="resetColWidthsBtn" title="Khôi phục độ rộng cột mặc định">
+                    <i class="fas fa-columns text-white"></i> <span class="text-white">Đặt lại cột</span>
+                </button>
+                <button class="btn btn-success btn-sm px-3" type="button" onclick="exportToExcel()" id="btnExport" disabled>
+                    <i class="fas fa-file-excel"></i> Xuất Excel
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive table-desktop-only">
+                <table class="table table-sm table-hover mb-0 detail-report-table" id="detailTable">
+                    <colgroup id="detailColgroup">
+                        <col data-col="stt"><col data-col="doc_no"><col data-col="invoice_no"><col data-col="date">
+                        <col data-col="product_code"><col data-col="product_name"><col data-col="unit"><col data-col="quantity">
+                        <col data-col="unit_price"><col data-col="discount_pct"><col data-col="discount_amount">
+                        <col data-col="tax_pct"><col data-col="tax_amount"><col data-col="line_total">
+                    </colgroup>
+                    <thead class="table-light sticky-top shadow-sm">
+                        <tr>
+                            <th data-col="stt" class="col-stt">STT<span class="col-resizer" data-col="stt"></span></th>
+                            <th data-col="doc_no">Số đơn hàng<span class="col-resizer" data-col="doc_no"></span></th>
+                            <th data-col="invoice_no">Số hóa đơn<span class="col-resizer" data-col="invoice_no"></span></th>
+                            <th data-col="date">Ngày bán hàng<span class="col-resizer" data-col="date"></span></th>
+                            <th data-col="product_code">Mã hàng<span class="col-resizer" data-col="product_code"></span></th>
+                            <th data-col="product_name" class="th-left">Tên hàng<span class="col-resizer" data-col="product_name"></span></th>
+                            <th data-col="unit">ĐVT<span class="col-resizer" data-col="unit"></span></th>
+                            <th data-col="quantity">Số lượng<span class="col-resizer" data-col="quantity"></span></th>
+                            <th data-col="unit_price" class="th-right">Đơn giá<span class="col-resizer" data-col="unit_price"></span></th>
+                            <th data-col="discount_pct" class="th-right">% chiết khấu<span class="col-resizer" data-col="discount_pct"></span></th>
+                            <th data-col="discount_amount" class="th-right">Chiết khấu<span class="col-resizer" data-col="discount_amount"></span></th>
+                            <th data-col="tax_pct" class="th-right">% thuế<span class="col-resizer" data-col="tax_pct"></span></th>
+                            <th data-col="tax_amount" class="th-right">Thuế<span class="col-resizer" data-col="tax_amount"></span></th>
+                            <th data-col="line_total" class="th-right">Tổng thanh toán<span class="col-resizer" data-col="line_total"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailBody">
+                        <tr>
+                            <td colspan="14" class="text-center text-muted py-4">Chọn khoảng thời gian và bấm Xem</td>
+                        </tr>
+                    </tbody>
+                    <tfoot class="table-light fw-bold" id="detailFoot" style="display:none;">
+                        <tr>
+                            <td colspan="7" class="text-end">Tổng cộng</td>
+                            <td class="text-end" id="footQty">0</td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-end" id="footDisc">0</td>
+                            <td></td>
+                            <td class="text-end" id="footTax">0</td>
+                            <td class="text-end text-success" id="footTotal">0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="mobile-card-list p-3" id="detailMobileList"></div>
+            <div id="loadingIndicator" class="text-center p-4" style="display:none;">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 mb-0">Đang tải dữ liệu...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/detail_report_table.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+let reportCache = [];
+let currentPreset = 'this_month';
+let startFp, endFp;
+
+const PRESET_LABELS = {
+    this_week: 'Tuần này',
+    this_month: 'Tháng này',
+    q1: 'Quý 1',
+    q2: 'Quý 2',
+    q3: 'Quý 3',
+    q4: 'Quý 4',
+    last_year: 'Năm trước',
+    this_year: 'Năm nay',
+    custom: 'Tùy chọn',
+};
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function toISO(d) {
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function toDMY(d) {
+    return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+function isoToDMY(iso) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+}
+
+function getPresetRange(preset) {
+    const now = new Date();
+    const y = now.getFullYear();
+    let start, end;
+
+    switch (preset) {
+        case 'this_week': {
+            const day = now.getDay();
+            const diffMon = day === 0 ? -6 : 1 - day;
+            start = new Date(now);
+            start.setDate(now.getDate() + diffMon);
+            end = new Date(now);
+            break;
+        }
+        case 'this_month':
+            start = new Date(y, now.getMonth(), 1);
+            end = new Date(y, now.getMonth() + 1, 0);
+            break;
+        case 'q1':
+            start = new Date(y, 0, 1);
+            end = new Date(y, 2, 31);
+            break;
+        case 'q2':
+            start = new Date(y, 3, 1);
+            end = new Date(y, 5, 30);
+            break;
+        case 'q3':
+            start = new Date(y, 6, 1);
+            end = new Date(y, 8, 30);
+            break;
+        case 'q4':
+            start = new Date(y, 9, 1);
+            end = new Date(y, 11, 31);
+            break;
+        case 'last_year':
+            start = new Date(y - 1, 0, 1);
+            end = new Date(y - 1, 11, 31);
+            break;
+        case 'this_year':
+            start = new Date(y, 0, 1);
+            end = new Date(y, 11, 31);
+            break;
+        default:
+            return null;
+    }
+    return { start, end };
+}
+
+function setDateInputsEditable(editable) {
+    [startFp, endFp].forEach(fp => {
+        if (!fp) return;
+        fp.set('clickOpens', editable);
+        fp.set('allowInput', editable);
+        fp.input.readOnly = !editable;
+    });
+}
+
+function applyPreset(preset, reload = true) {
+    currentPreset = preset;
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.preset === preset);
+    });
+
+    const isCustom = preset === 'custom';
+    setDateInputsEditable(isCustom);
+
+    if (!isCustom) {
+        const range = getPresetRange(preset);
+        if (range) {
+            startFp.setDate(range.start, false);
+            endFp.setDate(range.end, false);
+        }
+    }
+
+    updatePeriodLabel();
+    if (reload && preset !== 'custom') loadReport();
+}
+
+function updatePeriodLabel() {
+    const start = document.getElementById('startDate').value;
+    const end = document.getElementById('endDate').value;
+    const label = PRESET_LABELS[currentPreset] || 'Tùy chọn';
+    document.getElementById('periodLabel').textContent =
+        `${label}: ${start || '—'} → ${end || '—'}`;
+}
+
+function formatMoney(value) {
+    return formatVND(Number(value || 0));
+}
+
+function formatQty(value) {
+    const n = Number(value || 0);
+    return n.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+}
+
+function formatPct(value) {
+    const n = Number(value || 0);
+    return n.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
+}
+
+function renderSaleNoCell(item) {
+    const label = escapeHtml(item.sale_no || `ĐH${String(item.sale_id || '').padStart(6, '0')}`);
+    return `<a href="/sale/view/${item.sale_id}" target="_blank" rel="noopener" class="sale-order-link text-primary">${label}</a>`;
+}
+
+function renderInvoiceCell(item) {
+    if (!item.invoice_number) return '<span class="text-muted">—</span>';
+    const inv = escapeHtml(item.invoice_number);
+    const pdf = encodeURIComponent(item.invoice_pdf_url || '');
+    const invEnc = encodeURIComponent(item.invoice_number);
+    return `<a href="#" class="invoice-pdf-link text-danger" data-invoice="${invEnc}" data-pdf="${pdf}">${inv}</a>`;
+}
+
+async function openInvoicePdf(invoiceEnc, pdfEnc) {
+    const invoiceNumber = decodeURIComponent(invoiceEnc || '');
+    let pdfUrl = decodeURIComponent(pdfEnc || '');
+    if (!pdfUrl && invoiceNumber) {
+        try {
+            const res = await fetch(`/api/sale/invoice_pdf_url?invoice_number=${encodeURIComponent(invoiceNumber)}`);
+            const data = await res.json();
+            if (data.success) pdfUrl = data.pdf_url;
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    if (!pdfUrl) {
+        alert('Không tìm thấy link PDF hóa đơn.');
+        return;
+    }
+    window.open(`/api/view-pdf?url=${encodeURIComponent(pdfUrl)}`, '_blank');
+}
+
+function renderReport(data, summary) {
+    const tbody = document.getElementById('detailBody');
+    const mobile = document.getElementById('detailMobileList');
+    const foot = document.getElementById('detailFoot');
+    const btnExport = document.getElementById('btnExport');
+
+    if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">Không có dữ liệu trong khoảng thời gian này</td></tr>';
+        if (mobile) mobile.innerHTML = '<div class="text-center text-muted py-3">Không có dữ liệu</div>';
+        foot.style.display = 'none';
+        btnExport.disabled = true;
+        return;
+    }
+
+    tbody.innerHTML = data.map((item, idx) => `
+        <tr>
+            <td class="text-center col-stt">${idx + 1}</td>
+            <td class="text-center">${renderSaleNoCell(item)}</td>
+            <td class="text-center">${renderInvoiceCell(item)}</td>
+            <td class="text-center"><small>${escapeHtml(item.sale_date_display || item.sale_date || '')}</small></td>
+            <td class="text-center"><small>${escapeHtml(item.product_code || '—')}</small></td>
+            <td class="col-name">${escapeHtml(item.product_name || '')}</td>
+            <td class="text-center">${escapeHtml(item.unit || '')}</td>
+            <td class="text-end">${formatQty(item.quantity)}</td>
+            <td class="text-end">${formatMoney(item.unit_price)}</td>
+            <td class="text-end">${formatPct(item.discount_pct)}</td>
+            <td class="text-end">${formatMoney(item.discount_amount)}</td>
+            <td class="text-end">${formatPct(item.tax_pct)}</td>
+            <td class="text-end">${formatMoney(item.tax_amount)}</td>
+            <td class="text-end fw-bold text-success">${formatMoney(item.line_total)}</td>
+        </tr>`).join('');
+
+    if (mobile) {
+        mobile.innerHTML = data.map((item, idx) => `
+            <div class="mobile-card">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div class="card-title mb-0">${escapeHtml(item.product_name || '')}</div>
+                    <span class="badge bg-secondary">#${idx + 1}</span>
+                </div>
+                <div class="card-row"><span class="label">Đơn hàng</span><span class="value">${renderSaleNoCell(item)}</span></div>
+                <div class="card-row"><span class="label">Hóa đơn</span><span class="value">${renderInvoiceCell(item)}</span></div>
+                <div class="card-row"><span class="label">Ngày bán</span><span class="value">${escapeHtml(item.sale_date_display || item.sale_date || '')}</span></div>
+                <div class="card-row"><span class="label">Mã hàng</span><span class="value">${escapeHtml(item.product_code || '—')}</span></div>
+                <div class="card-row"><span class="label">SL · ĐG</span><span class="value">${formatQty(item.quantity)} ${escapeHtml(item.unit || '')} · ${formatMoney(item.unit_price)}</span></div>
+                <div class="card-row"><span class="label">%CK · CK</span><span class="value">${formatPct(item.discount_pct)} · ${formatMoney(item.discount_amount)}</span></div>
+                <div class="card-row"><span class="label">%Thuế · Thuế</span><span class="value">${formatPct(item.tax_pct)} · ${formatMoney(item.tax_amount)}</span></div>
+                <div class="card-row"><span class="label">Tổng TT</span><span class="value fw-bold text-success">${formatMoney(item.line_total)}</span></div>
+            </div>`).join('');
+    }
+
+    foot.style.display = '';
+    document.getElementById('footQty').textContent = formatQty(summary.total_quantity);
+    document.getElementById('footDisc').textContent = formatMoney(summary.total_discount);
+    document.getElementById('footTax').textContent = formatMoney(summary.total_tax);
+    document.getElementById('footTotal').textContent = formatMoney(summary.total_payment);
+    btnExport.disabled = false;
+}
+
+function updateSummaryBoxes(summary) {
+    document.getElementById('sumLines').textContent = (summary.line_count || 0).toLocaleString('vi-VN');
+    document.getElementById('sumQty').textContent = formatQty(summary.total_quantity);
+    document.getElementById('sumDiscTax').textContent = formatMoney((summary.total_discount || 0) + (summary.total_tax || 0));
+    document.getElementById('sumTotal').textContent = formatMoney(summary.total_payment);
+}
+
+function formatDateToISO(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return '';
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
+
+async function loadReport() {
+    const startDate = formatDateToISO(document.getElementById('startDate').value);
+    const endDate = formatDateToISO(document.getElementById('endDate').value);
+    const q = document.getElementById('searchQuery').value.trim();
+
+    if (!startDate || !endDate) {
+        alert('Vui lòng chọn đủ từ ngày và đến ngày!');
+        return;
+    }
+
+    updatePeriodLabel();
+    document.getElementById('loadingIndicator').style.display = 'block';
+    document.getElementById('detailBody').innerHTML = '';
+
+    try {
+        const res = await fetch('/api/sale/details-report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ start_date: startDate, end_date: endDate, q: q || undefined }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Lỗi tải dữ liệu');
+
+        reportCache = json.data || [];
+        const summary = json.summary || {};
+        renderReport(reportCache, summary);
+        updateSummaryBoxes(summary);
+    } catch (err) {
+        alert(err.message || 'Lỗi kết nối server');
+        document.getElementById('detailBody').innerHTML =
+            '<tr><td colspan="14" class="text-center text-danger py-4">Không tải được dữ liệu</td></tr>';
+    } finally {
+        document.getElementById('loadingIndicator').style.display = 'none';
+    }
+}
+
+async function exportToExcel() {
+    if (!reportCache.length) return alert('Không có dữ liệu để xuất!');
+
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const presetLabel = PRESET_LABELS[currentPreset] || 'Tùy chọn';
+
+    const workbook = new ExcelJS.Workbook();
+    const ws = workbook.addWorksheet('Chi tiet hang ban');
+
+    ws.mergeCells('A1:N1');
+    ws.getCell('A1').value = 'BÁO CÁO CHI TIẾT HÀNG BÁN';
+    ws.getCell('A1').font = { bold: true, size: 14 };
+    ws.getCell('A1').alignment = { horizontal: 'center' };
+
+    ws.mergeCells('A2:N2');
+    ws.getCell('A2').value = `${presetLabel} · Từ ${startDate} đến ${endDate}`;
+    ws.getCell('A2').alignment = { horizontal: 'center' };
+
+    const headers = [
+        'STT', 'Số đơn hàng', 'Số hóa đơn', 'Ngày bán hàng',
+        'Mã hàng', 'Tên hàng', 'ĐVT', 'Số lượng', 'Đơn giá',
+        '% chiết khấu', 'Chiết khấu', '% thuế', 'Thuế', 'Tổng thanh toán',
+    ];
+    ws.getRow(4).values = headers;
+
+    let rowIdx = 5;
+    let sumQty = 0, sumDisc = 0, sumTax = 0, sumTotal = 0;
+
+    reportCache.forEach((item, idx) => {
+        ws.getRow(rowIdx).values = [
+            idx + 1,
+            item.sale_no || '',
+            item.invoice_number || '',
+            item.sale_date_display || item.sale_date || '',
+            item.product_code || '',
+            item.product_name || '',
+            item.unit || '',
+            item.quantity,
+            item.unit_price,
+            item.discount_pct,
+            item.discount_amount,
+            item.tax_pct,
+            item.tax_amount,
+            item.line_total,
+        ];
+        sumQty += item.quantity;
+        sumDisc += item.discount_amount;
+        sumTax += item.tax_amount;
+        sumTotal += item.line_total;
+        rowIdx++;
+    });
+
+    ws.getRow(rowIdx).values = ['TỔNG CỘNG', '', '', '', '', '', '', sumQty, '', '', sumDisc, '', sumTax, sumTotal];
+    ws.getRow(rowIdx).font = { bold: true };
+
+    ws.columns = [
+        { width: 6 }, { width: 14 }, { width: 16 }, { width: 18 },
+        { width: 12 }, { width: 36 }, { width: 10 }, { width: 12 },
+        { width: 14 }, { width: 12 }, { width: 14 }, { width: 10 }, { width: 14 }, { width: 16 },
+    ];
+
+    [4, rowIdx].forEach(rn => {
+        ws.getRow(rn).eachCell(cell => {
+            cell.font = { ...(cell.font || {}), bold: true };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF7' } };
+        });
+    });
+
+    for (let r = 5; r < rowIdx; r++) {
+        ['H', 'I', 'J', 'K', 'L', 'M', 'N'].forEach(col => {
+            ws.getCell(`${col}${r}`).numFmt = col === 'J' || col === 'L' ? '0.##"%"' : '#,##0';
+        });
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ChiTietHangBan_${startDate.replace(/\//g, '-')}_${endDate.replace(/\//g, '-')}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const fpOpts = {
+        dateFormat: 'd/m/Y',
+        locale: 'vn',
+        allowInput: false,
+        onChange() {
+            updatePeriodLabel();
+            if (currentPreset === 'custom') loadReport();
+        },
+    };
+
+    startFp = flatpickr('#startDate', fpOpts);
+    endFp = flatpickr('#endDate', fpOpts);
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+    });
+
+    document.getElementById('searchQuery').addEventListener('keydown', e => {
+        if (e.key === 'Enter') loadReport();
+    });
+
+    document.getElementById('detailBody').addEventListener('click', e => {
+        const link = e.target.closest('.invoice-pdf-link');
+        if (!link) return;
+        e.preventDefault();
+        openInvoicePdf(link.dataset.invoice, link.dataset.pdf);
+    });
+    document.getElementById('detailMobileList').addEventListener('click', e => {
+        const link = e.target.closest('.invoice-pdf-link');
+        if (!link) return;
+        e.preventDefault();
+        openInvoicePdf(link.dataset.invoice, link.dataset.pdf);
+    });
+
+    applyPreset('this_month', true);
+
+    initDetailReportTable({
+        storageKey: 'sale_details_col_widths_v1',
+        defaults: DETAIL_REPORT_COL_DEFAULTS,
+        resetBtnId: 'resetColWidthsBtn',
+    });
+});
+</script>
+{% endblock %}

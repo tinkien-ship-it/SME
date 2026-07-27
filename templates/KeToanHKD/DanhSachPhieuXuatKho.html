@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+{% block title %}Quản Lý Xuất Kho{% endblock %}
+
+{% block head_extra %}
+{% include 'partials/data_list_table_assets.html' %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
+<style>
+    :root { --primary: #4f46e5; --danger: #ef4444; --success: #10b981; --warning: #f59e0b; }
+    body { background: #f8fafc !important; font-family: 'Inter', sans-serif; }
+    
+    .page-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 1.5rem 0; margin-bottom: 2rem; }
+    .card { border: none; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    
+    .voucher-no { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #e11d48; }
+    
+    /* Badge Styles */
+    .badge-custom { padding: 0.5em 0.8em; border-radius: 6px; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; border: 1px solid transparent; }
+    .type-tscd { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+    .type-material { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+    .type-sale { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .type-return { background: #fffbeb; color: #b45309; border-color: #fef3c7; }
+
+    /* Tom Select Custom */
+    .ts-control { border-radius: 0.5rem; padding: 0.65rem; border: 1px solid #d1d5db; transition: border-color 0.2s; }
+    .ts-control:focus { border-color: var(--primary); box-shadow: none; }
+    
+    .border-dashed { border-style: dashed !important; }
+    .flatpickr-calendar { z-index: 1060 !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header shadow-sm">
+    <div class="container-fluid">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h3 class="fw-bold text-primary mb-1">DANH SÁCH PHIẾU XUẤT KHO</h3>
+                <p class="text-muted small mb-0">Quản lý bán hàng, TSCĐ và vật tư sản xuất</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button onclick="openModalTSCD()" class="btn btn-outline-danger d-flex align-items-center gap-2 fw-semibold">
+                    <i class="bi bi-cpu"></i> XUẤT TSCĐ
+                </button>
+                <button onclick="openModalVatTu()" class="btn btn-outline-success d-flex align-items-center gap-2 fw-semibold">
+                    <i class="bi bi-tools"></i> XUẤT VẬT TƯ SX
+                </button>
+                <button onclick="location.href='/sale'" class="btn btn-primary d-flex align-items-center gap-2 fw-semibold">
+                    <i class="bi bi-cart-plus"></i> BÁN HÀNG
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small text-muted text-uppercase">Tìm kiếm</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Số phiếu, khách hàng, ghi chú...">
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-bold small text-muted text-uppercase">Khoảng thời gian</label>
+                    <div class="input-group">
+                        <input type="text" id="startDate" class="form-control text-center bg-white" readonly>
+                        <span class="input-group-text border-x-0 bg-light">đến</span>
+                        <input type="text" id="endDate" class="form-control text-center bg-white" readonly>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100 py-2 fw-bold" onclick="loadData()">
+                        <i class="bi bi-funnel me-1"></i> LỌC DỮ LIỆU
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="exportListTable">
+                <thead><tr></tr></thead>
+                <tbody id="stockMovesTableBody"></tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white py-3 border-top">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span class="text-muted small">Hiển thị dữ liệu từ <b id="displayRange">...</b></span>
+                <div class="enhanced-table-toolbar">
+                    <span class="text-dark small fw-bold"><span id="totalCount">0</span> / <span id="totalRecords">0</span> phiếu</span>
+                    <span id="activeColFilters" class="active-filters-badge d-none"></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearColFilters">Xóa lọc cột</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalTSCD" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cpu me-2"></i>XUẤT KHO TSCĐ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formTSCD">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">CHỌN TÀI SẢN (Gõ tên/mã để tìm)</label>
+                        <select id="select_tscd_id" name="product_id" required></select>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Ngày bắt đầu sử dụng</label>
+                            <input type="date" name="ngay_xuat" class="form-control" id="ngay_xuat_ts" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Số tháng khấu hao</label>
+                            <input type="number" name="months" class="form-control" value="36" min="1">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Nhóm thuế GTGT</label>
+                            <select class="form-select" name="co_khau_tru" id="tscd_tax_mode">
+                                <option value="0">Nhóm 2 & 3: Nguyên Giá gồm thuế GTGT (PPKK Trực Tiếp)</option>
+                                <option value="1">Nhóm 3: Nguyên Giá không bao gồm thuế GTGT (PPKK Khấu Trừ)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="tscdPreview" class="mt-4 p-3 rounded border border-danger border-dashed d-none" style="background-color: #fff5f5;">
+                        <div class="row align-items-center">
+                            <div class="col-7 border-end">
+                                <div class="small mb-1">Giá mua: <span id="pre_buyprice" class="fw-bold float-end">0</span></div>
+                                <div class="small mb-1">Thuế: <span id="pre_tax" class="fw-bold float-end">0</span></div>
+                                <div class="small">Chiết khấu: <span id="pre_discount" class="fw-bold float-end">0</span></div>
+                            </div>
+                            <div class="col-5 text-center">
+                                <div class="small text-muted">NGUYÊN GIÁ DỰ KIẾN</div>
+                                <h4 class="fw-bold text-danger mb-0" id="pre_final_cost">0 ₫</h4>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">HỦY</button>
+                <button type="button" onclick="submitTSCD()" id="btnSubmitTSCD" class="btn btn-danger fw-bold px-4">XÁC NHẬN</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalVatTu" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-tools me-2"></i>XUẤT VẬT TƯ SẢN XUẤT</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formVatTu">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">CHỌN VẬT TƯ (Gõ tên/mã để tìm)</label>
+                        <select id="select_material_id" name="product_id" required></select>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Số lượng xuất</label>
+                            <input type="number" name="quantity" class="form-control" value="1" step="any" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Ngày xuất</label>
+                            <input type="date" name="ngay_xuat" id="ngay_xuat_vt" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label small fw-bold">Ghi chú mục đích</label>
+                        <textarea name="production_note" class="form-control" rows="2" placeholder="Ví dụ: Xuất linh kiện lắp ráp..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ĐÓNG</button>
+                <button type="button" onclick="submitVatTu()" id="btnSubmitVatTu" class="btn btn-success fw-bold px-4">XÁC NHẬN</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+<script>
+    let tscdSelect, materialSelect;
+    let exportListData = [];
+    let exportListCtrl = null;
+
+    function getExportTypeName(item) {
+        if (item.move_type === 'export') {
+            if (item.note && item.note.includes('TSCĐ')) return 'Xuất dùng TSCĐ';
+            if (item.note && item.note.includes('Vật tư')) return 'Xuất Vật tư SX';
+            return 'Kiểm Kê';
+        }
+        if (['RETURN_IMPORT', 'DELETE_IMPORT'].includes(item.move_type)) return 'Trả hàng NCC';
+        return 'Bán hàng';
+    }
+
+    function renderExportRows(data, tbody) {
+        const $tbody = tbody ? $(tbody) : $('#stockMovesTableBody');
+        $tbody.empty();
+        if (!data.length) {
+            $tbody.html('<tr><td colspan="6" class="text-center py-5 text-muted">Không có dữ liệu phù hợp.</td></tr>');
+            return;
+        }
+        data.forEach(item => {
+            let badgeClass = 'type-sale', typeName = getExportTypeName(item);
+            if (item.move_type === 'export') {
+                if (item.note && item.note.includes('TSCĐ')) badgeClass = 'type-tscd';
+                else if (item.note && item.note.includes('Vật tư')) badgeClass = 'type-material';
+                else badgeClass = 'bg-secondary-subtle text-secondary';
+            } else if (['RETURN_IMPORT', 'DELETE_IMPORT'].includes(item.move_type)) badgeClass = 'type-return';
+            const mainDisplay = item.company_name ? item.company_name : item.partner_name;
+            const subDisplay = (item.company_name && item.partner_name) ? item.partner_name : '';
+            $tbody.append(`
+                <tr>
+                    <td class="text-center"><span class="voucher-no">${escapeHtml(item.doc_no)}</span></td>
+                    <td class="text-center small">${escapeHtml(item.date || '')}</td>
+                    <td>
+                        <div class="fw-bold text-dark text-uppercase" style="font-size: 0.9rem;">${escapeHtml(mainDisplay || 'NỘI BỘ')}</div>
+                        ${subDisplay ? `<div class="text-muted small"><i class="bi bi-person me-1"></i>${escapeHtml(subDisplay)}</div>` : ''}
+                    </td>
+                    <td class="text-center"><span class="badge-custom ${badgeClass}">${typeName}</span></td>
+                    <td class="text-end fw-bold text-danger">${formatMoney(item.total_value)}</td>
+                    <td class="text-center">
+                        <button onclick="window.open('/in-phieu-xuat/${item.id}?type=${item.move_type}')" class="btn btn-sm btn-light border shadow-sm"><i class="bi bi-printer text-primary"></i></button>
+                    </td>
+                </tr>`);
+        });
+    }
+
+    function initExportListTable() {
+        exportListCtrl = DataListTable.create({
+            table: '#exportListTable',
+            countSelector: '#totalCount',
+            activeFiltersSelector: '#activeColFilters',
+            defaultSort: { key: 'date', dir: 'desc' },
+            columns: [
+                { key: 'doc_no', label: 'Số phiếu', sortable: true, filterType: 'text', width: '140px', align: 'center', getValue: r => r.doc_no || '' },
+                { key: 'date', label: 'Ngày xuất', sortable: true, filterType: 'date', width: '130px', align: 'center', getValue: r => r.date || '', sortValue: r => r.date ? new Date(r.date) : new Date(0) },
+                { key: 'partner', label: 'Đối tượng / Lý do', filterType: 'text', getValue: r => `${r.company_name || ''} ${r.partner_name || ''} ${r.note || ''}`.trim() },
+                { key: 'type_name', label: 'Loại phiếu', filterType: 'text', width: '180px', align: 'center', getValue: r => getExportTypeName(r) },
+                { key: 'total_value', label: 'Giá trị xuất', sortable: true, filterType: 'number', width: '180px', align: 'end', getValue: r => r.total_value, sortValue: r => parseFloat(r.total_value || 0) },
+                { key: 'actions', label: 'In', filter: false, sortable: false, resizable: false, width: '100px', align: 'center' },
+            ],
+            renderRows: renderExportRows,
+            onFiltered: (rows, total) => { $('#totalRecords').text(total); },
+        });
+    }
+
+    function getTscdModal() {
+        return bootstrap.Modal.getOrCreateInstance(document.getElementById('modalTSCD'));
+    }
+    function getVatTuModal() {
+        return bootstrap.Modal.getOrCreateInstance(document.getElementById('modalVatTu'));
+    }
+
+    function getDateFromInput(selector) {
+        const val = $(selector).val()?.trim();
+        if (!val) return '';
+        const parts = val.split('/');
+        if (parts.length !== 3) return '';
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+
+async function loadData() {
+    const tbody = $('#stockMovesTableBody');
+    tbody.html('<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary spinner-border-sm"></div> Đang tải...</td></tr>');
+
+    const start = getDateFromInput('#startDate');
+    const end = getDateFromInput('#endDate');
+    if (!start || !end) {
+        tbody.html('<tr><td colspan="6" class="text-center py-4 text-muted">Vui lòng chọn khoảng thời gian</td></tr>');
+        return;
+    }
+
+    const params = new URLSearchParams({ start, end, q: $('#searchInput').val().trim() });
+    $('#displayRange').text(`${$('#startDate').val()} - ${$('#endDate').val()}`);
+
+    try {
+        const data = await fetchJSON(`/api/stock-moves/exports?${params.toString()}`);
+        exportListData = data || [];
+        exportListCtrl.setData(exportListData);
+    } catch (e) {
+        console.error(e);
+        tbody.html('<tr><td colspan="6" class="text-center text-danger py-5">Lỗi kết nối API.</td></tr>'); 
+    }
+}
+    // --- 2. QUẢN LÝ TÌM KIẾM (TOM SELECT) ---
+    async function initSelects() {
+        if (tscdSelect && materialSelect) return;
+        try {
+            const products = await fetchJSON('/api/products/for-tscd');
+            const config = {
+                valueField: 'id', labelField: 'name', searchField: ['name', 'product_code'],
+                options: products,
+                render: {
+                    option: (d, escape) => `<div class="p-2 border-bottom">
+                        <b>[${escape(d.product_code)}]</b> ${escape(d.name)}<br>
+                        <small class="text-muted">Tồn: ${d.stock_qty} | Nhập: ${formatMoney(d.buyprice)}</small>
+                    </div>`,
+                    item: (d, escape) => `<div><b class="text-primary">[${escape(d.product_code)}]</b> ${escape(d.name)}</div>`
+                }
+            };
+            if (!tscdSelect) tscdSelect = new TomSelect("#select_tscd_id", { ...config, onChange: updateTSCDPreview });
+            if (!materialSelect) materialSelect = new TomSelect("#select_material_id", config);
+        } catch (e) { console.error("Lỗi khởi tạo Select", e); }
+    }
+
+    function openModalTSCD() {
+        $('#ngay_xuat_ts').val(new Date().toISOString().split('T')[0]);
+        initSelects().then(() => getTscdModal().show());
+    }
+
+    function updateTSCDPreview() {
+        if (!tscdSelect) return;
+        const id = tscdSelect.getValue();
+        if (!id) return $('#tscdPreview').addClass('d-none');
+        
+        const item = tscdSelect.options[id];
+        $('#tscdPreview').removeClass('d-none');
+        const isNhom3 = $('#tscd_tax_mode').val() === "1";
+        const final = (parseFloat(item.subtotal) - parseFloat(item.discount)) + (isNhom3 ? 0 : parseFloat(item.tax));
+
+        $('#pre_buyprice').text(formatMoney(item.buyprice));
+        $('#pre_tax').text(formatMoney(item.tax));
+        $('#pre_discount').text(formatMoney(item.discount));
+        $('#pre_final_cost').text(formatMoney(final));
+    }
+
+    async function submitTSCD() {
+        if (!tscdSelect || !tscdSelect.getValue()) return alert("Hãy chọn sản phẩm!");
+        const btn = $('#btnSubmitTSCD');
+        btn.prop('disabled', true).text('Đang lưu...');
+        const payload = {
+            product_id: tscdSelect.getValue(),
+            ngay_xuat: $('#ngay_xuat_ts').val(),
+            months: $('input[name="months"]', '#formTSCD').val(),
+            co_khau_tru: $('#tscd_tax_mode').val()
+        };
+        try {
+            const result = await fetchJSON('/api/tscd/export-and-create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (result.success) {
+                alert(`Đã tạo phiếu ${result.px_no}`);
+                getTscdModal().hide();
+                loadData();
+            } else {
+                alert(result.error || 'Không thể xuất TSCĐ');
+            }
+        } catch (e) {
+            alert(e.message || 'Lỗi kết nối');
+        } finally {
+            btn.prop('disabled', false).text('XÁC NHẬN');
+        }
+    }
+
+    function openModalVatTu() {
+        $('#ngay_xuat_vt').val(new Date().toISOString().split('T')[0]);
+        initSelects().then(() => getVatTuModal().show());
+    }
+
+    async function submitVatTu() {
+        if (!materialSelect || !materialSelect.getValue()) return alert("Hãy chọn vật tư!");
+        const btn = $('#btnSubmitVatTu');
+        btn.prop('disabled', true).text('Đang lưu...');
+        const payload = {
+            product_id: materialSelect.getValue(),
+            quantity: $('input[name="quantity"]', '#formVatTu').val(),
+            ngay_xuat: $('#ngay_xuat_vt').val(),
+            production_note: $('textarea[name="production_note"]', '#formVatTu').val()
+        };
+        try {
+            const result = await fetchJSON('/api/materials/export', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if (result.success) {
+                alert(`Đã tạo phiếu ${result.px_no}`);
+                getVatTuModal().hide();
+                loadData();
+            } else {
+                alert(result.error || 'Không thể xuất vật tư');
+            }
+        } catch (e) {
+            alert(e.message || 'Lỗi kết nối');
+        } finally {
+            btn.prop('disabled', false).text('XÁC NHẬN');
+        }
+    }
+
+    $(document).ready(function() {
+        $('#tscd_tax_mode').on('change', updateTSCDPreview);
+
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const config = { dateFormat: "d/m/Y", locale: "vn", allowInput: false };
+
+        flatpickr("#startDate", config).setDate(firstDay);
+        flatpickr("#endDate", config).setDate(now);
+
+        $('#searchInput').on('input', _.debounce(loadData, 500));
+        initExportListTable();
+        $('#btnClearColFilters').on('click', () => exportListCtrl?.clearColumnFilters());
+        initSelects();
+        loadData();
+    });
+</script>
+{% endblock %}

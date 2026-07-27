@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Sổ Công Nợ - {{ display_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        body { font-family: "Times New Roman", Times, serif; font-size: 13px; color: #000; background: #fff; }
+        .print-container { width: 277mm; margin: auto; padding: 10mm; }
+        .table-print { width: 100%; border-collapse: collapse; margin-top: 15px; border: 1px solid #000; }
+        .table-print th, .table-print td { border: 1px solid #000 !important; padding: 6px; vertical-align: middle; }
+        .signature-table { width: 100%; margin-top: 30px; table-layout: fixed; border: none !important; }
+        .signature-table td { text-align: center; border: none !important; padding: 5px; }
+        .sign-space { height: 80px; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+
+<div class="no-print text-center py-3">
+    <button onclick="window.print()" class="btn btn-primary">XÁC NHẬN IN SỔ (A4 NGANG)</button>
+</div>
+
+<div class="print-container">
+    <div class="row">
+        <div class="col-7">
+            <p class="mb-0 fw-bold text-uppercase">HỘ KINH DOANH: {{ info.business_name }}</p>
+            <p class="mb-0">Địa chỉ: {{ info.address }}</p>
+            <p class="mb-0">MST: {{ info.tax_code }}</p>
+        </div>
+        <div class="col-5 text-end">
+            <p class="mb-0 fw-bold">Mẫu số SP1-HKD</p>
+            <small class="fst-italic" style="font-size: 12pt; display: block;">(Sổ Phụ Nội Bộ)</small>
+        </div>
+    </div>
+
+    <div class="text-center my-4">
+        <h4 class="fw-bold">SỔ CHI TIẾT CÔNG NỢ PHẢI THU</h4>
+        <p class="mb-1">Khách hàng: <span class="fw-bold text-uppercase">{{ display_name }}</span></p>
+        <p class="fw-bold">Từ ngày: {{ start }} đến ngày: {{ end }}</p>
+    </div>
+
+    <table class="table-print">
+        <thead class="text-center fw-bold bg-light">
+            <tr>
+                <th colspan="2">CHỨNG TỪ</th>
+                <th rowspan="2">DIỄN GIẢI</th>
+                <th rowspan="2">TK ĐỐI ỨNG</th>
+                <th colspan="2">SỐ TIỀN PHÁT SINH</th>
+                <th rowspan="2">SỐ DƯ</th>
+            </tr>
+            <tr>
+                <th style="width: 100px;">SỐ HIỆU</th>
+                <th style="width: 100px;">NGÀY</th>
+                <th>NỢ</th>
+                <th>CÓ</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="fw-bold">
+                <td></td><td class="text-center">{{ start }}</td>
+                <td>Số dư đầu kỳ</td><td></td><td></td><td></td>
+                <td class="text-end format-money">{{ totals.opening }}</td>
+            </tr>
+            {% for r in rows %}
+            <tr>
+                <td class="text-center">{{ r.sale_no }}</td>
+                <td class="text-center">{{ r.safe_date }}</td>
+                <td>
+                    {{ r.dien_giai }}
+                    {% if r.company_name and r.company_name != customer %}
+                    <div class="small text-muted" style="font-size: 10px;">(Người mua: {{ customer }})</div>
+                    {% endif %}
+                </td>
+                <td class="text-center">511</td>
+                <td class="text-end format-money">{{ r.no }}</td>
+                <td class="text-end format-money">{{ r.co }}</td>
+                <td class="text-end format-money fw-bold">{{ r.running_balance }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot class="fw-bold bg-light">
+            <tr>
+                <td colspan="4" class="text-center">TỔNG CỘNG PHÁT SINH</td>
+                <td class="text-end format-money">{{ totals.no }}</td>
+                <td class="text-end format-money">{{ totals.co }}</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4" class="text-center text-uppercase">Số dư cuối kỳ</td>
+                <td colspan="2"></td>
+                <td class="text-end format-money text-primary" style="font-size: 14px;">{{ totals.closing }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="text-end fst-italic mt-3" style="padding-right: 50px;">
+        Ngày {{ day }} tháng {{ month }} năm {{ year }}
+    </div>
+
+    <table class="signature-table fw-bold">
+        <tr>
+            <td>Người đại diện HKD</td>
+            <td>Người lập biểu</td>
+            <td>Người nộp tiền</td>
+            <td>Thủ quỹ</td>
+        </tr>
+        <tr class="fst-italic" style="font-size: 10pt; font-weight: normal;">
+            <td>(Ký, đóng dấu)</td><td>(Ký, họ tên)</td><td>(Ký, họ tên)</td><td>(Ký, họ tên)</td>
+        </tr>
+        <tr class="sign-space"><td></td><td></td><td></td><td></td></tr>
+        <tr>
+            <td>{{ info.representative_name }}</td>
+            <td>{{ session.get('user_name') or '' }}</td>
+            <td></td>
+            <td>{{ info.representative_name }}</td>
+        </tr>
+    </table>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.format-money').forEach(el => {
+            let val = parseFloat(el.innerText) || 0;
+            el.innerText = val.toLocaleString('vi-VN') + ' đ';
+        });
+    });
+</script>
+</body>
+</html>

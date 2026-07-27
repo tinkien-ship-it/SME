@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Danh sách Phiếu Nhập Kho{% endblock %}
+
+{% block head_extra %}
+    {% include 'partials/data_list_table_assets.html' %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .badge-type { min-width: 110px; font-weight: 500; }
+        @media print { .no-print { display: none !important; } }
+        .flatpickr-calendar { z-index: 1060 !important; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 no-print">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-primary mb-0">DANH SÁCH PHIẾU NHẬP KHO</h3>
+            <p class="text-muted small mb-0">Quản lý nhập mua, nhập tồn và hàng trả lại</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">KHOẢNG THỜI GIAN</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control text-center" id="startDate" readonly>
+                        <span class="input-group-text bg-light border-x-0"><i class="bi bi-arrow-right"></i></span>
+                        <input type="text" class="form-control text-center" id="endDate" readonly>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-muted">TÌM KIẾM NHANH</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Mã phiếu, đối tác, ghi chú...">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100 fw-bold" onclick="loadData()"><i class="bi bi-funnel me-2"></i>LỌC</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="importListTable">
+                <thead><tr></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="enhanced-table-toolbar">
+                <span class="text-muted small" id="recordCount">Hiển thị 0 phiếu nhập</span>
+                <span id="activeColFilters" class="active-filters-badge d-none"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearColFilters">Xóa lọc cột</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+<script>
+let importListData = [];
+let importListCtrl = null;
+
+function getDateFromInput(selector) {
+    const val = $(selector).val()?.trim();
+    if (!val) return '';
+    const parts = val.split('/');
+    if (parts.length !== 3) return '';
+    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+}
+
+function getImportTypeMeta(item) {
+    const mType = (item.move_type || 'import').toLowerCase();
+    const rType = (item.ref_type || '').toLowerCase();
+    if (mType === 'return_sale' || mType === 'delete_sale') {
+        return { label: 'Khách trả hàng', cls: 'bg-warning-subtle text-warning border-warning' };
+    }
+    if (rType === 'initial_import') {
+        return { label: 'Nhập tồn cũ', cls: 'bg-secondary-subtle text-secondary border-secondary' };
+    }
+    return { label: 'Nhập mua hàng', cls: 'bg-primary-subtle text-primary border-primary' };
+}
+
+function renderImportRows(data, tbody) {
+    const $tbody = tbody ? $(tbody) : $('#importListTable tbody');
+    $tbody.empty();
+    if (!data.length) {
+        $tbody.html('<tr><td colspan="7" class="text-center py-5 text-muted">Không có dữ liệu phù hợp</td></tr>');
+        return;
+    }
+    data.forEach(item => {
+        const meta = getImportTypeMeta(item);
+        const partner = item.partner_name || '—';
+        const company = item.company_name || '';
+        const companyHtml = (company && company !== partner)
+            ? `<div class="text-muted small" style="font-size: 0.75rem; margin-top: 2px;">${company}</div>` : '';
+        const dateFmt = item.date ? item.date.split('-').reverse().join('/') : '—';
+        const mType = (item.move_type || 'import').toLowerCase();
+        const rType = (item.ref_type || '').toLowerCase();
+        const printUrl = `/in-phieu-nhap/${item.id}?type=${mType}&ref_type=${rType}`;
+        $tbody.append(`
+            <tr>
+                <td class="text-center fw-bold text-primary">${item.doc_no}</td>
+                <td class="text-center small">${dateFmt}</td>
+                <td class="text-center"><span class="badge border badge-type ${meta.cls}">${meta.label}</span></td>
+                <td><div class="fw-semibold">${partner}</div>${companyHtml}</td>
+                <td class="text-center small">${item.display_hd || ''}</td>
+                <td class="text-end fw-bold text-success">${formatMoney(item.total_value)}</td>
+                <td class="text-center no-print">
+                    <a href="${printUrl}" target="_blank" class="btn btn-sm btn-outline-primary shadow-sm"><i class="bi bi-printer me-1"></i> In</a>
+                </td>
+            </tr>`);
+    });
+}
+
+function initImportListTable() {
+    importListCtrl = DataListTable.create({
+        table: '#importListTable',
+        activeFiltersSelector: '#activeColFilters',
+        defaultSort: { key: 'date', dir: 'desc' },
+        columns: [
+            { key: 'doc_no', label: 'Mã phiếu', sortable: true, filterType: 'text', width: '130px', align: 'center', getValue: r => r.doc_no || '' },
+            { key: 'date', label: 'Ngày nhập', sortable: true, filterType: 'date', width: '110px', align: 'center', getValue: r => r.date || '', sortValue: r => r.date ? new Date(r.date) : new Date(0) },
+            { key: 'type_label', label: 'Loại phiếu', filterType: 'text', width: '140px', align: 'center', getValue: r => getImportTypeMeta(r).label },
+            { key: 'partner', label: 'Đối tác / NCC', filterType: 'text', getValue: r => `${r.partner_name || ''} ${r.company_name || ''}`.trim() },
+            { key: 'display_hd', label: 'Số HĐ / Mã ĐH', filterType: 'text', width: '140px', align: 'center', getValue: r => r.display_hd || '' },
+            { key: 'total_value', label: 'Tổng tiền', sortable: true, filterType: 'number', width: '140px', align: 'end',
+              getValue: r => r.total_value, sortValue: r => parseFloat(r.total_value || 0) },
+            { key: 'actions', label: 'Thao tác', filter: false, sortable: false, resizable: false, width: '100px', align: 'center' },
+        ],
+        renderRows: renderImportRows,
+        onFiltered: (rows, total) => {
+            $('#recordCount').text(`Hiển thị ${rows.length} / ${total} phiếu nhập`);
+        },
+    });
+}
+
+async function loadData() {
+    const tbody = $('#importListTable tbody');
+    tbody.html('<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>');
+    const start = getDateFromInput('#startDate');
+    const end = getDateFromInput('#endDate');
+    if (!start || !end) {
+        tbody.html('<tr><td colspan="7" class="text-center py-4 text-muted">Vui lòng chọn khoảng thời gian</td></tr>');
+        return;
+    }
+    const params = new URLSearchParams({ start, end, q: $('#searchInput').val().trim() });
+    try {
+        const res = await fetch(`/api/stock-moves/imports?${params.toString()}`);
+        importListData = await res.json();
+        importListCtrl.setData(importListData || []);
+    } catch (err) {
+        tbody.html('<tr><td colspan="7" class="text-center text-danger py-4">Lỗi tải dữ liệu</td></tr>');
+    }
+}
+
+$(document).ready(function() {
+    const fpCfg = { dateFormat: 'd/m/Y', locale: 'vn', allowInput: false };
+    flatpickr('#startDate', { ...fpCfg, defaultDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1) });
+    flatpickr('#endDate', { ...fpCfg, defaultDate: new Date() });
+    initImportListTable();
+    $('#btnClearColFilters').on('click', () => importListCtrl?.clearColumnFilters());
+    $('#searchInput').on('input', _.debounce(loadData, 500));
+    loadData();
+});
+</script>
+{% endblock %}

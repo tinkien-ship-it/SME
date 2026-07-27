@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Quản Lý Người Dùng{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('settings_page') }}">Cấu hình chung</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active">Quản lý người dùng</a>
+        </li>
+    </ul>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Quản Lý Người Dùng</h3>
+        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#userModal">
+            + Thêm người dùng
+        </button>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên đăng nhập</th>
+                            <th>Vai trò</th>
+                            <th>Trạng thái</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr>
+                            <td>{{ u.id }}</td>
+                            <td><strong>{{ u.username }}</strong></td>
+                            <td>
+                                <span class="badge 
+                                    {% if u.role == 'admin' %}bg-danger
+                                    {% elif u.role == 'quanly' %}bg-warning text-dark
+                                    {% elif u.role == 'thukho' %}bg-info
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ {'admin':'Quản trị','quanly':'Quản lý','thukho':'Thủ kho','nhanvien':'Nhân viên'}[u.role] }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if u.is_active %}
+                                <span class="badge bg-success">Hoạt động</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Đã khóa</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser({{ u.id }})">Sửa</button>
+                                <button class="btn btn-sm btn-outline-{{ 'danger' if u.is_active else 'success' }}"
+                                        onclick="toggleUser({{ u.id }}, {{ u.is_active }})">
+                                    {{ 'Khóa' if u.is_active else 'Mở khóa' }}
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal thêm/sửa người dùng -->
+<div class="modal fade" id="userModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Người dùng</h5>
+                    <button type="button" class="btn-close text-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="user_id" id="user_id">
+                    <div class="mb-3">
+                        <label class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
+                        <input type="text" name="username" id="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mật khẩu <small class="text-muted">(Để trống nếu không đổi)</small></label>
+                        <input type="password" name="password" id="password" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Vai trò <span class="text-danger">*</span></label>
+                        <select name="role" id="role" class="form-select" required>
+                            <option value="nhanvien">Nhân viên</option>
+                            <option value="thukho">Thủ kho</option>
+                            <option value="quanly">Quản lý</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function editUser(id) {
+    fetch(`/api/user/${id}`)
+        .then(r => r.json())
+        .then(u => {
+            document.getElementById('user_id').value = u.id;
+            document.getElementById('username').value = u.username;
+            document.getElementById('role').value = u.role;
+            document.getElementById('password').placeholder = 'Để trống nếu không đổi mật khẩu';
+            new bootstrap.Modal(document.getElementById('userModal')).show();
+        });
+}
+function toggleUser(id, active) {
+    if (confirm(active ? 'Khóa tài khoản này?' : 'Mở khóa tài khoản này?')) {
+        fetch(`/api/user/${id}/toggle`, {method: 'POST'})
+            .then(() => location.reload());
+    }
+}
+</script>
+{% endblock %}

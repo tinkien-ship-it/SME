@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Tài Sản Cố Định - Năm {{ year }}{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+    .ts-control { border-radius: 0.5rem; padding: 0.65rem; border: 1px solid #d1d5db; }
+    .border-dashed { border-style: dashed !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0"><i class="fas fa-university"></i> DANH MỤC TÀI SẢN CỐ ĐỊNH - NĂM {{ year }}</h5>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" onclick="openModalTSCD()" class="btn btn-light btn-sm fw-bold text-danger">
+                    <i class="bi bi-cpu me-1"></i> ĐƯA TSCĐ VÀO SỬ DỤNG
+                </button>
+                <span class="badge bg-light text-primary">Dữ liệu hệ thống</span>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <ul class="nav nav-tabs mb-3" id="tscdTab" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-quy">
+                        <b><i class="far fa-calendar-alt"></i> TAB 1: Theo dõi khấu hao Quý</b>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-chitiet">
+                        <b><i class="fas fa-list-ol"></i> TAB 2: Sổ chi tiết TSCĐ (Chuẩn Kế Toán)</b>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="tab-quy">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover text-center align-middle" style="font-size: 0.9rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th rowspan="2">STT</th>
+                                    <th colspan="2">Chứng từ</th>
+                                    <th rowspan="2">Tên tài sản</th>
+                                    <th rowspan="2">Nguyên giá</th>
+                                    <th rowspan="2">Lũy kế kỳ trước</th>
+                                    <th colspan="4">Khấu hao năm hiện tại ({{ year }})</th>
+                                    <th rowspan="2">Tổng lũy kế</th>
+                                    <th rowspan="2">Giá trị còn lại</th>
+                                </tr>
+                                <tr>
+                                    <th>Mã Tài Sản</th>
+                                    <th>Ngày Bắt đầu sử dụng</th>
+                                    <th>Quý 1</th>
+                                    <th>Quý 2</th>
+                                    <th>Quý 3</th>
+                                    <th>Quý 4</th>
+                                </tr>
+                            </thead>
+                            <tbody id="render-tab-1">
+                                <tr><td colspan="12" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-chitiet">
+                    <div class="table-responsive">
+                        <table class="table table-bordered text-center align-middle">
+                            <thead class="bg-dark text-white">
+                                <tr>
+                                    <th>Mã TS</th>
+                                    <th>Tên tài sản</th>
+                                    <th>Ngày bắt đầu sử dụng</th>
+                                    <th>Nguyên giá</th>
+                                    <th>Số tháng Khấu Hao</th>
+                                    <th>Khấu hao/Tháng</th>
+                                    <th>Tình trạng</th>
+                                </tr>
+                            </thead>
+                            <tbody id="render-tab-2">
+                                <tr><td colspan="7" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalTSCD" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cpu me-2"></i>ĐƯA TSCĐ VÀO SỬ DỤNG</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formTSCD">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">CHỌN TÀI SẢN (Gõ tên/mã để tìm)</label>
+                        <select id="select_tscd_id" name="product_id" required></select>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Ngày bắt đầu sử dụng</label>
+                            <input type="date" name="ngay_xuat" class="form-control" id="ngay_xuat_ts" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Số tháng khấu hao</label>
+                            <input type="number" name="months" class="form-control" value="36" min="1">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Nhóm thuế GTGT</label>
+                            <select class="form-select" name="co_khau_tru" id="tscd_tax_mode">
+                                <option value="0">Nhóm 2 & 3: Nguyên Giá gồm thuế GTGT (PPKK Trực Tiếp)</option>
+                                <option value="1">Nhóm 3: Nguyên Giá không bao gồm thuế GTGT (PPKK Khấu Trừ)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="tscdPreview" class="mt-4 p-3 rounded border border-danger border-dashed d-none" style="background-color: #fff5f5;">
+                        <div class="row align-items-center">
+                            <div class="col-7 border-end">
+                                <div class="small mb-1">Giá mua: <span id="pre_buyprice" class="fw-bold float-end">0</span></div>
+                                <div class="small mb-1">Thuế: <span id="pre_tax" class="fw-bold float-end">0</span></div>
+                                <div class="small">Chiết khấu: <span id="pre_discount" class="fw-bold float-end">0</span></div>
+                            </div>
+                            <div class="col-5 text-center">
+                                <div class="small text-muted">NGUYÊN GIÁ DỰ KIẾN</div>
+                                <h4 class="fw-bold text-danger mb-0" id="pre_final_cost">0 ₫</h4>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">HỦY</button>
+                <button type="button" onclick="submitTSCD()" id="btnSubmitTSCD" class="btn btn-danger fw-bold px-4">XÁC NHẬN</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+let tscdSelect = null;
+
+function getTscdModal() {
+    return bootstrap.Modal.getOrCreateInstance(document.getElementById('modalTSCD'));
+}
+
+function formatDateVN(dateStr) {
+    if (!dateStr) return '';
+    const cleanDate = String(dateStr).split(' ')[0];
+    const parts = cleanDate.split('-');
+    if (parts.length !== 3) return dateStr;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+async function loadTableData() {
+    const tab1 = document.getElementById('render-tab-1');
+    const tab2 = document.getElementById('render-tab-2');
+
+    try {
+        const data = await fetchJSON('/api/tscd/list?year={{ year }}');
+        let html1 = '', html2 = '';
+
+        data.forEach((ts, i) => {
+            const nguyenGia = ts.nguyen_gia_tinh_khau_hao || 0;
+            const soThangKH = ts.so_thang_khau_hao || 1;
+            const khThang = nguyenGia / soThangKH;
+
+            const luyKeKyTruoc = ts.luy_ke_dau_nam || 0;
+            const q1 = ts.q1 || 0;
+            const q2 = ts.q2 || 0;
+            const q3 = ts.q3 || 0;
+            const q4 = ts.q4 || 0;
+            const tongLuyKe = ts.total_acc != null ? ts.total_acc : (luyKeKyTruoc + q1 + q2 + q3 + q4);
+            const giaTriConLai = ts.con_lai != null ? ts.con_lai : (nguyenGia - tongLuyKe);
+
+            const tinhTrangVN = ts.tinh_trang === 'Active' ? 'Đang khấu hao' : (ts.tinh_trang || 'Ngừng khấu hao');
+            const badgeClass = ts.tinh_trang === 'Active' ? 'bg-success' : 'bg-secondary';
+
+            html1 += `<tr>
+                <td>${i + 1}</td>
+                <td class="fw-bold">${escapeHtml(ts.ma_tai_san)}</td>
+                <td>${formatDateVN(ts.ngay_bat_dau_su_dung)}</td>
+                <td class="text-start">${escapeHtml(ts.ten_tai_san)}</td>
+                <td class="text-end">${formatVND(nguyenGia)}</td>
+                <td class="text-end">${formatVND(luyKeKyTruoc)}</td>
+                <td class="text-primary">${formatVND(q1)}</td>
+                <td class="text-primary">${formatVND(q2)}</td>
+                <td class="text-primary">${formatVND(q3)}</td>
+                <td class="text-primary">${formatVND(q4)}</td>
+                <td class="fw-bold">${formatVND(tongLuyKe)}</td>
+                <td class="text-danger fw-bold">${formatVND(giaTriConLai)}</td>
+            </tr>`;
+
+            html2 += `<tr>
+                <td class="fw-bold">${escapeHtml(ts.ma_tai_san)}</td>
+                <td class="text-start">${escapeHtml(ts.ten_tai_san)}</td>
+                <td>${formatDateVN(ts.ngay_bat_dau_su_dung)}</td>
+                <td class="text-end">${formatVND(nguyenGia)}</td>
+                <td>${soThangKH}</td>
+                <td class="text-end">${formatVND(khThang)}</td>
+                <td>
+                    <span class="badge ${badgeClass}">${escapeHtml(tinhTrangVN)}</span>
+                </td>
+            </tr>`;
+        });
+
+        tab1.innerHTML = html1 || '<tr><td colspan="12" class="text-center text-muted py-4">Không có dữ liệu</td></tr>';
+        tab2.innerHTML = html2 || '<tr><td colspan="7" class="text-center text-muted py-4">Không có dữ liệu</td></tr>';
+    } catch (error) {
+        console.error('Error:', error);
+        tab1.innerHTML = '<tr><td colspan="12" class="text-danger text-center py-4">Lỗi tải dữ liệu.</td></tr>';
+        tab2.innerHTML = '<tr><td colspan="7" class="text-danger text-center py-4">Lỗi tải dữ liệu.</td></tr>';
+    }
+}
+
+async function initTscdSelect() {
+    if (tscdSelect) return;
+    const products = await fetchJSON('/api/products/for-tscd');
+    tscdSelect = new TomSelect('#select_tscd_id', {
+        valueField: 'id',
+        labelField: 'name',
+        searchField: ['name', 'product_code'],
+        options: products,
+        onChange: updateTSCDPreview,
+        render: {
+            option: (d, escape) => `<div class="p-2 border-bottom">
+                <b>[${escape(d.product_code)}]</b> ${escape(d.name)}<br>
+                <small class="text-muted">Chờ SD: ${d.stock_qty} | Nhập: ${formatMoney(d.buyprice)}${d.voucher_no ? ' | PN: ' + escape(d.voucher_no) : ''}</small>
+            </div>`,
+            item: (d, escape) => `<div><b class="text-primary">[${escape(d.product_code)}]</b> ${escape(d.name)}</div>`
+        }
+    });
+}
+
+function openModalTSCD() {
+    document.getElementById('ngay_xuat_ts').value = new Date().toISOString().split('T')[0];
+    $('#tscdPreview').addClass('d-none');
+    initTscdSelect()
+        .then(() => getTscdModal().show())
+        .catch(err => alert(err.message || 'Không thể tải danh sách sản phẩm'));
+}
+
+function updateTSCDPreview() {
+    if (!tscdSelect) return;
+    const id = tscdSelect.getValue();
+    if (!id) return $('#tscdPreview').addClass('d-none');
+
+    const item = tscdSelect.options[id];
+    $('#tscdPreview').removeClass('d-none');
+    const isNhom3 = $('#tscd_tax_mode').val() === '1';
+    const final = (parseFloat(item.subtotal) - parseFloat(item.discount)) + (isNhom3 ? 0 : parseFloat(item.tax));
+
+    $('#pre_buyprice').text(formatMoney(item.buyprice));
+    $('#pre_tax').text(formatMoney(item.tax));
+    $('#pre_discount').text(formatMoney(item.discount));
+    $('#pre_final_cost').text(formatMoney(final));
+}
+
+async function submitTSCD() {
+    if (!tscdSelect || !tscdSelect.getValue()) {
+        alert('Hãy chọn sản phẩm!');
+        return;
+    }
+    const btn = document.getElementById('btnSubmitTSCD');
+    btn.disabled = true;
+    btn.textContent = 'Đang lưu...';
+
+    const payload = {
+        product_id: tscdSelect.getValue(),
+        ngay_xuat: document.getElementById('ngay_xuat_ts').value,
+        months: document.querySelector('#formTSCD input[name="months"]').value,
+        co_khau_tru: document.getElementById('tscd_tax_mode').value
+    };
+
+    try {
+        const result = await fetchJSON('/api/tscd/export-and-create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (result.success) {
+            const msg = result.mode === 'fixed_assets_register'
+                ? `Đã đưa TSCĐ vào sử dụng — Mã: ${result.ma_ts || ''}`
+                : `Đã tạo phiếu ${result.px_no} — Mã TSCĐ: ${result.ma_ts || ''}`;
+            alert(msg);
+            getTscdModal().hide();
+            tscdSelect.clear();
+            $('#tscdPreview').addClass('d-none');
+            loadTableData();
+        } else {
+            alert(result.error || 'Không thể xuất TSCĐ');
+        }
+    } catch (e) {
+        alert(e.message || 'Lỗi kết nối');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'XÁC NHẬN';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('tscd_tax_mode').addEventListener('change', updateTSCDPreview);
+    loadTableData();
+});
+</script>
+{% endblock %}

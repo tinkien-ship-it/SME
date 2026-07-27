@@ -1,0 +1,1587 @@
+{% extends "base.html" %}
+{% block title %}Cài Đặt Hệ Thống - POS{% endblock %}
+{% block extra_style %}
+<style>
+    :root {
+        --primary-soft: #e7f1ff;
+        --danger-soft: #fff5f5;
+        --warning-soft: #fff8e1;
+    }
+    .setting-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        overflow: hidden;
+    }
+    .nav-pills .nav-link {
+        color: #495057;
+        font-weight: 500;
+        border-radius: 10px;
+        padding: 14px 20px;
+        margin-bottom: 8px;
+        transition: all 0.25s;
+    }
+    .nav-pills .nav-link:hover {
+        background: #f1f3f5;
+    }
+    .nav-pills .nav-link.active {
+        background: var(--primary);
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+    }
+    .form-label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #444;
+        margin-bottom: 6px;
+    }
+    .perm-group {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 16px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 1.25rem;
+    }
+    .perm-check {
+        margin-bottom: 0.75rem;
+    }
+    .perm-check label {
+        font-size: 0.95rem;
+    }
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+    }
+    .section-header {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin: 1.5rem 0 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--primary-soft);
+    }
+    .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid var(--primary);
+        padding: 12px;
+        margin: 12px 0;
+        border-radius: 4px;
+    }
+    .alert-security {
+        background: #fff3cd;
+        border-color: #ffeeba;
+        color: #856404;
+    }
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+    @media (max-width: 992px) {
+        .nav-pills .nav-link { padding: 12px 16px; font-size: 0.95rem; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-primary mb-1">
+                <i class="fas fa-cog me-2"></i>Cài Đặt Hệ Thống
+            </h2>
+            <p class="text-muted mb-0">Quản lý thông tin cửa hàng, nhân viên, phân quyền & cấu hình nâng cao</p>
+        </div>
+        <div class="badge bg-light text-success border px-3 py-2">
+            <span class="status-dot bg-success"></span>
+            Hệ thống sẵn sàng • <span id="current-time"></span>
+        </div>
+    </div>
+    <div class="row">
+        <!-- Sidebar menu -->
+        <div class="col-lg-3 mb-4">
+            <div class="card setting-card sticky-top" style="top: 80px;">
+                <div class="nav flex-column nav-pills p-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link text-start mb-2" data-bs-toggle="pill" data-bs-target="#tab-business">
+                        <i class="fas fa-store me-2"></i> Cửa hàng, VietQR & Ngân hàng ĐT
+                    </button>
+                    <button class="nav-link text-start mb-2" data-bs-toggle="pill" data-bs-target="#tab-users">
+                        <i class="fas fa-users-cog me-2"></i> Nhân viên & Phân quyền
+                    </button>
+                    <button class="nav-link text-start mb-2" data-bs-toggle="pill" data-bs-target="#tab-system">
+                        <i class="fas fa-server me-2"></i> Hệ thống & Sao lưu
+                    </button>
+                    <button class="nav-link active text-start" data-bs-toggle="pill" data-bs-target="#tab-esign">
+                        <i class="fas fa-file-invoice-dollar me-2"></i> Hóa đơn điện tử & eSign
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Nội dung chính -->
+        <div class="col-lg-9">
+            <div class="tab-content">
+                <!-- Tab 1: Thông tin cửa hàng & VietQR -->
+                <div class="tab-pane fade" id="tab-business">
+                    <div class="card setting-card shadow-sm p-4">
+                        <form id="businessForm">
+                            <h5 class="section-header">Thông Tin Hộ Kinh Doanh</h5>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label required">Tên doanh nghiệp/Hộ kinh doanh</label>
+                                    <input type="text" name="business_name" class="form-control shadow-sm" value="{{ info.business_name or '' }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Mã số thuế</label>
+                                    <input type="text" name="tax_code" class="form-control shadow-sm" value="{{ info.tax_code or '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label required">Số điện thoại</label>
+                                    <input type="tel" name="phone" class="form-control shadow-sm" value="{{ info.phone or '' }}" placeholder="Ví dụ: 0912345678 hoặc 028.1234.5678"
+                           pattern="[0-9+\-\s()]{8,15}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email (tờ khai thuế / liên hệ)</label>
+                                    <input type="email" name="email" class="form-control shadow-sm" value="{{ info.email or '' }}" placeholder="example@domain.com">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Người đại diện / Chủ hộ kinh doanh</label>
+                                    <input type="text" name="representative_name" class="form-control shadow-sm" value="{{ info.representative_name or '' }}" placeholder="Họ và tên">
+                                    <div class="form-text">Dùng để tự động nhận diện Chủ hộ trên bảng lương (không tính BHTN) khi trùng tên nhân viên.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Địa chỉ trụ sở</label>
+                                    <input type="text" name="address" class="form-control shadow-sm" value="{{ info.address or '' }}">
+                                </div>
+                                <div class="col-12 mt-4">
+                                    <h6 class="fw-bold text-primary"><i class="fas fa-warehouse me-2"></i>Vị trí kho hàng</h6>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Kho 1 (chính)</label>
+                                    <input type="text" name="warehouse_location" class="form-control shadow-sm" value="{{ info.warehouse_location or '' }}" placeholder="Ví dụ: 123 Đường ABC, Q.1">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Kho 2</label>
+                                    <input type="text" name="warehouse_location1" class="form-control shadow-sm" value="{{ info.warehouse_location1 or '' }}" placeholder="Ví dụ: 456 Đường XYZ, Q.7">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Kho 3</label>
+                                    <input type="text" name="warehouse_location2" class="form-control shadow-sm" value="{{ info.warehouse_location2 or '' }}" placeholder="Nếu có">
+                                </div>
+                                <div class="col-12"><hr class="my-4 opacity-50"></div>
+                                <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <h6 class="fw-bold text-primary mb-0"><i class="fas fa-university me-2"></i>Tài khoản VietQR (đồng bộ SePay / Casso)</h6>
+                                    <span id="vietqrStatusBadge" class="badge bg-secondary">Đang kiểm tra...</span>
+                                </div>
+                                <div class="col-12">
+                                    <div class="alert alert-info py-2 small mb-0">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Số tài khoản và mã BIN dùng để tạo mã QR cho khách. Khi bật SePay/Casso, <strong>STK phải trùng</strong> tài khoản đã liên kết trên my.sepay.vn hoặc casso.vn.
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-primary fw-bold">Chọn ngân hàng</label>
+                                    <select id="bank_code_select" class="form-select shadow-sm border-primary-subtle" onchange="onBankBinChange(this)">
+                                        <option value="">-- Chọn ngân hàng --</option>
+                                        <option value="970436" data-name="Vietcombank">Vietcombank (970436)</option>
+                                        <option value="970407" data-name="Techcombank">Techcombank (970407)</option>
+                                        <option value="970418" data-name="BIDV">BIDV (970418)</option>
+                                        <option value="970415" data-name="VietinBank">VietinBank (970415)</option>
+                                        <option value="970405" data-name="Agribank">Agribank (970405)</option>
+                                        <option value="970422" data-name="MB Bank">MB Bank (970422)</option>
+                                        <option value="970416" data-name="ACB">ACB (970416)</option>
+                                        <option value="970403" data-name="Sacombank">Sacombank (970403)</option>
+                                        <option value="970432" data-name="VPBank">VPBank (970432)</option>
+                                        <option value="970423" data-name="TPBank">TPBank (970423)</option>
+                                        <option value="970437" data-name="HDBank">HDBank (970437)</option>
+                                        <option value="970441" data-name="VIB">VIB (970441)</option>
+                                        <option value="970448" data-name="OCB">OCB (970448)</option>
+                                        <option value="custom" data-name="">Khác — nhập tay bên dưới</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-primary fw-bold">Tên ngân hàng</label>
+                                    <input type="text" name="bank_name" id="bank_name_input" class="form-control shadow-sm border-primary-subtle" value="{{ info.bank_name or '' }}" placeholder="Ví dụ: Ngân hàng Sacombank">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-primary fw-bold">Chủ tài khoản (IN HOA)</label>
+                                    <input type="text" name="account_holder" class="form-control shadow-sm border-primary-subtle" value="{{ info.account_holder or '' }}" placeholder="NGUYEN VAN A">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-primary fw-bold">Số tài khoản ngân hàng</label>
+                                    <input type="text" name="bank_account" id="bank_account_input" class="form-control shadow-sm border-primary-subtle" value="{{ info.bank_account or '' }}" placeholder="Liên kết cùng STK trên SePay/Casso">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-primary fw-bold">Mã BIN (VietQR)</label>
+                                    <input type="text" name="bank_code" id="bank_code_input" class="form-control shadow-sm border-primary-subtle" value="{{ info.bank_code or '' }}" placeholder="970403">
+                                </div>
+                                <div class="col-md-8 d-flex align-items-end">
+                                    <div id="qrPreviewBox" class="border rounded p-2 bg-light w-100 text-center small text-muted">
+                                        Lưu cấu hình để xem mẫu VietQR
+                                    </div>
+                                </div>
+
+                                <div class="col-12"><hr class="my-4 opacity-50"></div>
+                                <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <h6 class="fw-bold text-success mb-0"><i class="fas fa-link me-2"></i>Ngân hàng điện tử — SePay / Casso</h6>
+                                    <span id="providerStatusBadge" class="badge bg-secondary">Đang kiểm tra...</span>
+                                </div>
+                                <div class="col-12">
+                                    <p class="text-muted small mb-0">Hệ thống tự nhận tiền chuyển khoản (mã nội dung <strong>DH000123</strong>) và in hóa đơn. Cấu hình webhook trên SePay/Casso bằng URL bên dưới.</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Nhà cung cấp</label>
+                                    <select name="payment_provider" id="payment_provider" class="form-select" onchange="togglePaymentFields()">
+                                        <option value="none" {% if payment_provider == 'none' %}selected{% endif %}>Tắt — xác nhận thủ công</option>
+                                        <option value="sepay" {% if payment_provider == 'sepay' %}selected{% endif %}>SePay</option>
+                                        <option value="casso" {% if payment_provider == 'casso' %}selected{% endif %}>Casso</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 payment-field-sepay">
+                                    <label class="form-label">SePay API Key</label>
+                                    <input type="password" name="sepay_api_key" id="sepay_api_key" class="form-control" value="" autocomplete="off"
+                                           placeholder="{% if has_sepay_key %}******** (đã lưu){% else %}Token từ my.sepay.vn{% endif %}">
+                                </div>
+                                <div class="col-md-4 payment-field-casso">
+                                    <label class="form-label">Casso API Key</label>
+                                    <input type="password" name="casso_api_key" id="casso_api_key" class="form-control" value="" autocomplete="off"
+                                           placeholder="{% if has_casso_key %}******** (đã lưu){% else %}Apikey từ casso.vn{% endif %}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Sai số khớp tiền (VNĐ)</label>
+                                    <input type="number" name="payment_amount_tolerance" class="form-control" value="{{ payment_tolerance or '1000' }}" min="0" step="1000">
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label">Webhook SePay <button type="button" class="btn btn-link btn-sm p-0" onclick="copyWebhookUrl('webhookSepayUrl')">Sao chép</button></label>
+                                    <input type="text" id="webhookSepayUrl" class="form-control bg-light font-monospace small" readonly value="{{ request.url_root.rstrip('/') }}/api/payment/webhook/sepay">
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label">Webhook Casso <button type="button" class="btn btn-link btn-sm p-0" onclick="copyWebhookUrl('webhookCassoUrl')">Sao chép</button></label>
+                                    <input type="text" id="webhookCassoUrl" class="form-control bg-light font-monospace small" readonly value="{{ request.url_root.rstrip('/') }}/api/payment/webhook/casso">
+                                </div>
+                            </div>
+                            <div class="mt-4 d-flex flex-wrap gap-2 justify-content-end">
+                                <button type="button" class="btn btn-outline-success" onclick="testPaymentConnection()">
+                                    <i class="fas fa-plug me-1"></i>Kiểm tra kết nối
+                                </button>
+                                <button type="button" onclick="savePaymentBankSettings()" class="btn btn-primary px-5 py-2">
+                                    <i class="fas fa-save me-2"></i>Lưu toàn bộ cấu hình
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Nhân viên & Phân quyền -->
+                <div class="tab-pane fade" id="tab-users">
+                    {% if current_user.role in ['admin', 'admin*', 'adminFB', 'master'] %}
+                    <div class="row g-4">
+                        <div class="col-lg-7">
+                            <div class="card setting-card shadow-sm">
+                                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3 px-4">
+                                    <h6 class="mb-0">Danh sách tài khoản nhân viên</h6>
+                                    <button class="btn btn-sm btn-outline-light" onclick="resetUserForm()">
+                                        <i class="fas fa-plus me-1"></i> Thêm nhân viên
+                                    </button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0 align-middle">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Tên đăng nhập</th>
+                                                <th>Họ tên</th>
+                                                <th>Vai trò</th>
+                                                <th>Trạng thái</th>
+                                                <th class="text-end">Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="userTableBody">
+                                            <tr><td colspan="5" class="text-center py-4 text-muted">Chọn tab để tải danh sách...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="card setting-card shadow-sm p-4 border-top border-primary border-4 border-top-0">
+                                <h5 id="userFormTitle" class="fw-bold mb-4 text-primary">Thêm nhân viên mới</h5>
+                                <form id="userForm">
+                                    <input type="hidden" id="u_id" name="user_id">
+                                    <div class="mb-3">
+                                        <label class="form-label required">Tên đăng nhập</label>
+                                        <input type="text" id="u_username" name="username" class="form-control" required autocomplete="off">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Mật khẩu <small class="text-muted">(để trống nếu không đổi)</small></label>
+                                        <input type="password" id="u_password" name="password" class="form-control" autocomplete="new-password">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Họ và tên</label>
+                                        <input type="text" id="u_fullname" name="full_name" class="form-control" placeholder="Nguyễn Văn A">
+                                    </div>
+
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Email</label>
+                                            <input type="email" id="u_email" name="email" class="form-control" placeholder="example@domain.com">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Số điện thoại</label>
+                                            <input type="tel" id="u_phone" name="phone" class="form-control" placeholder="0901234567">
+                                        </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label">Vai trò</label>
+                                        <select id="u_role" name="role" class="form-select">
+                                            <option value="staff">Nhân Viên Bán Hàng</option>
+                                            <option value="staff*">Nhân Viên Dịch Vụ Lưu Trú</option>
+                                            <option value="staff**">Nhân Viên Dịch Vụ Ăn Uống</option>
+                                            <option value="accountant">Kế Toán</option>
+                                            <option value="manager">Quản Lý Cửa Hàng POS</option>
+                                            <option value="manager*">Quản lý Dịch Vụ Lưu Trú</option>
+                                            <option value="managerFB">Quản lý Dịch Vụ Ăn Uống</option>
+                                            <option value="admin">Quản Trị Viên Cửa Hàng POS</option>
+                                            <option value="admin*">Quản Trị Viên Dịch Vụ Lưu Trú</option>
+                                            <option value="adminFB">Quản Trị Viên Dịch Vụ Ăn Uống</option>
+                                            <option value="master">Master</option>
+                                        </select>
+                                    </div>
+                                    <div class="perm-group">
+                                        <p class="small fw-bold text-primary mb-3">PHÂN QUYỀN CHI TIẾT</p>
+                                        <div class="perm-check form-check">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="view_sale" id="p_sale">
+                                            <label class="form-check-label" for="p_sale">Truy cập trang Bán hàng</label>
+                                        </div>
+                                        <div class="perm-check form-check">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="view_order" id="p_order">
+                                            <label class="form-check-label" for="p_order">Xem & quản lý đơn hàng</label>
+                                        </div>
+                                        <div class="perm-check form-check">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="view_products" id="p_prod">
+                                            <label class="form-check-label" for="p_prod">Quản lý sản phẩm & giá bán</label>
+                                        </div>
+                                        <div class="perm-check form-check">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="view_import" id="p_import">
+                                            <label class="form-check-label" for="p_import">Nhập kho & phiếu nhập</label>
+                                        </div>
+                                        <div class="perm-check form-check">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="view_inventory" id="p_inv">
+                                            <label class="form-check-label" for="p_inv">Xem tồn kho & kiểm kê</label>
+                                        </div>
+                                        <div class="perm-check form-check">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="view_return" id="p_return">
+                                            <label class="form-check-label" for="p_return">Trả Hàng</label>
+                                        </div>
+                                        <div class="perm-check form-check">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="view_reports" id="p_rep">
+                                            <label class="form-check-label" for="p_rep">Xem báo cáo & doanh thu</label>
+                                        </div>
+                                        <hr class="my-3">
+                                        <div class="perm-check form-check text-warning">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="edit_data" id="p_edit">
+                                            <label class="form-check-label fw-bold" for="p_edit">Cho phép SỬA dữ liệu</label>
+                                        </div>
+                                        <div class="perm-check form-check text-danger">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="delete_data" id="p_del">
+                                            <label class="form-check-label fw-bold" for="p_del">Cho phép XÓA dữ liệu</label>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="saveUser()" class="btn btn-success w-100 py-3 mt-3">
+                                        <i class="fas fa-user-check me-2"></i>Lưu tài khoản
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning text-center py-5 my-4">
+                        <i class="fas fa-lock fa-3x mb-3 d-block text-warning"></i>
+                        <h5 class="mb-2">Bạn không có quyền truy cập phần này</h5>
+                        <p class="mb-0">Chỉ <strong>Quản trị viên (admin & master)</strong> mới có thể quản lý nhân viên & phân quyền.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Tab 3: Hệ thống & Sao lưu -->
+                <div class="tab-pane fade" id="tab-system">
+                    <div class="card setting-card shadow-sm p-4">
+                        <form id="systemForm">
+                            <h5 class="section-header text-success">Cấu Hình Vận Hành</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch p-3 bg-light rounded mb-3">
+                                        <input class="form-check-input" type="checkbox" name="auto_print" id="auto_print" {% if get_setting('auto_print') == '1' %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold" for="auto_print">Tự động in hóa đơn sau khi thanh toán</label>
+                                    </div>
+                                    <div class="form-check form-switch p-3 bg-light rounded mb-3">
+                                        <input class="form-check-input" type="checkbox" name="low_stock_alert" id="low_stock_alert" {% if get_setting('low_stock_alert') == '1' %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold" for="low_stock_alert">Cảnh báo tồn kho thấp</label>
+                                    </div>
+                                    <div class="form-check form-switch p-3 bg-light rounded">
+                                        <input class="form-check-input" type="checkbox" name="auto_backup" id="auto_backup" {% if get_setting('auto_backup') == '1' %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold" for="auto_backup">Tự động sao lưu dữ liệu hàng ngày (9:00 AM)</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Vendor ID Máy in (Hex)</label>
+                                    <input type="text" name="printer_vendor_id" class="form-control" value="{{ get_setting('printer_vendor_id', '0x28e9') }}">
+                                    <small class="form-text text-muted">Ví dụ: 0x28e9 cho một số máy in phổ biến</small>
+                                    <label class="form-label mt-3">Product ID Máy in (Hex)</label>
+                                    <input type="text" name="printer_product_id" class="form-control" value="{{ get_setting('printer_product_id', '0x0289') }}">
+                                    <small class="form-text text-muted">Ví dụ: 0x0289</small>
+                                </div>
+                            </div>
+
+                            <h5 class="section-header text-warning mt-4">Cân điện tử (POS)</h5>
+                            <p class="text-muted small">Kết nối cân qua cổng USB/Serial (Chrome/Edge). Sản phẩm bán theo cân cần bật 「Bán theo cân」 trong Quản lý sản phẩm.</p>
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <div class="form-check form-switch p-3 bg-light rounded">
+                                        <input class="form-check-input" type="checkbox" name="scale_enabled" id="scale_enabled" {% if get_setting('scale_enabled') == '1' %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold" for="scale_enabled">Bật cân điện tử</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check form-switch p-3 bg-light rounded">
+                                        <input class="form-check-input" type="checkbox" name="scale_auto_add" id="scale_auto_add" {% if get_setting('scale_auto_add') == '1' %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold" for="scale_auto_add">Tự thêm giỏ khi ổn định</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Giao thức cân</label>
+                                    <select name="scale_protocol" class="form-select">
+                                        <option value="generic" {% if get_setting('scale_protocol', 'generic') == 'generic' %}selected{% endif %}>Generic (kg/g)</option>
+                                        <option value="cas" {% if get_setting('scale_protocol') == 'cas' %}selected{% endif %}>CAS</option>
+                                        <option value="mettler" {% if get_setting('scale_protocol') == 'mettler' %}selected{% endif %}>Mettler Toledo</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Tiền tố mã vạch cân</label>
+                                    <input type="text" name="scale_barcode_prefix" class="form-control" value="{{ get_setting('scale_barcode_prefix', '2') }}" maxlength="2">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Số lần đọc ổn định</label>
+                                    <input type="number" name="scale_stable_reads" class="form-control" value="{{ get_setting('scale_stable_reads', '3') }}" min="2" max="10">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Số lẻ khối lượng</label>
+                                    <input type="number" name="scale_decimal_places" class="form-control" value="{{ get_setting('scale_decimal_places', '3') }}" min="1" max="4">
+                                </div>
+                            </div>
+
+                            <div class="text-end mt-4">
+                                <button type="button" onclick="saveSettings('/api/settings/system', 'systemForm')" class="btn btn-success px-5 py-2">
+                                    <i class="fas fa-sync-alt me-2"></i>Cập nhật cấu hình
+                                </button>
+                            </div>
+                        </form>
+                        <!-- Lịch sử sao lưu -->
+                        <div class="mt-5 pt-4 border-top">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-success mb-0"><i class="fas fa-database me-2"></i>Lịch sử sao lưu gần đây</h6>
+                                <button onclick="manualBackup()" class="btn btn-sm btn-outline-danger shadow-sm">
+                                    <i class="fas fa-cloud-upload-alt me-1"></i>Backup & Gửi Email Ngay
+                                </button>
+                            </div>
+                            <div class="table-responsive rounded border bg-white">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-3">Thời gian</th>
+                                            <th>Tên file</th>
+                                            <th>Dung lượng</th>
+                                            <th class="text-end pe-3">Tải</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="backupList">
+                                        <tr><td colspan="4" class="text-center py-3">Đang tải...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- XÓA TOÀN BỘ DATABASE -->
+                        <div class="mt-5 pt-4 border-top">
+                            <h5 class="section-header text-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Nguy Hiểm - Xóa Toàn Bộ Dữ Liệu
+                            </h5>
+                            <div class="alert alert-danger">
+                                <strong>CẢNH BÁO:</strong> Hành động này sẽ xóa sạch tất cả dữ liệu bán hàng, tồn kho, hóa đơn, phiếu thu, công nợ...
+                                <br><strong>Không thể khôi phục</strong> trừ khi bạn có bản sao lưu.
+                            </div>
+                            <button onclick="resetFullDatabase()" class="btn btn-danger btn-lg px-5 py-3 shadow-sm">
+                                <i class="fas fa-trash-alt me-2"></i>
+                                XÓA TOÀN BỘ DỮ LIỆU DATABASE
+                            </button>
+                            <small class="text-muted d-block mt-2">Hệ thống sẽ tự động sao lưu trước khi xóa.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Hóa đơn điện tử & eSign (đã bổ sung 3 trường eTax) -->
+                <div class="tab-pane fade show active" id="tab-esign">
+                    <div class="card setting-card shadow-sm p-4 border-top border-danger border-4 border-top-0">
+                        <h5 class="section-header text-danger">Cấu hình Hóa Đơn Điện Tử & Chữ ký số</h5>
+                        <div class="info-box mb-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Chọn nhà cung cấp và nhập đầy đủ thông tin tài khoản/chứng thư số. Hỗ trợ tất cả nhà cung cấp uy tín tại Việt Nam. Sau khi lưu, POS sẽ tự động xuất & ký HĐĐT khi thanh toán hoàn tất (nếu bật).
+                        </div>
+                        <div class="alert alert-security mb-4">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            <strong>Cảnh báo bảo mật:</strong> Mật khẩu, App Secret, PIN chữ ký số sẽ được lưu an toàn trong cơ sở dữ liệu. Không chia sẻ trang này cho người không có quyền admin.
+                        </div>
+                        <form id="esignForm">
+                            <div class="row g-3">
+                                <!-- Nhà cung cấp -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold required">Nhà cung cấp dịch vụ</label>
+                                    <select name="provider_name" class="form-select" required id="einvoiceProviderSelect">
+                                        <option value="">-- Chọn nhà cung cấp --</option>
+                                        {% for p in invoice_providers %}
+                                        <option value="{{ p.code }}"
+                                            data-default-url="{{ p.default_api_url }}"
+                                            data-status="{{ p.status }}"
+                                            data-draft="{{ '1' if p.supports_draft else '0' }}"
+                                            {% if esign.provider_name == p.code %}selected{% endif %}>
+                                            {{ p.label }}
+                                            {% if p.status == 'ready' %} ✓{% elif p.status == 'beta' %} (beta){% else %} (sắp có){% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="text-muted" id="einvoiceProviderHint">Chọn provider → nhập API URL tương ứng. Mắt Bão: hỗ trợ đầy đủ nháp + đồng bộ portal.</small>
+                                </div>
+                                <!-- API URL -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold required" id="labelApiUrl">API Endpoint (URL)</label>
+                                    <input type="url" name="api_url" id="inputApiUrl" class="form-control" value="{{ esign.api_url or '' }}" placeholder="Ví dụ: https://testapi.meinvoice.vn/api/v3" required>
+                                    <small class="form-text text-muted" id="hintApiUrl">Dùng URL test khi thử nghiệm (nếu có)</small>
+                                </div>
+                                <!-- Mã số thuế -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold required">Mã số thuế doanh nghiệp</label>
+                                    <input type="text" name="tax_code" id="inputTaxCode" class="form-control" value="{{ esign.tax_code or '' }}" placeholder="0101234567" maxlength="14" required>
+                                </div>
+                                <!-- Tên đăng nhập -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold required">Tên đăng nhập / Username</label>
+                                    <input type="text" name="username" id="inputUsername" class="form-control" value="{{ esign.username or '' }}" placeholder="Tài khoản đăng nhập nhà cung cấp" required>
+                                    <small class="form-text text-muted" id="hintUsername"></small>
+                                </div>
+                                <!-- Mật khẩu -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Mật khẩu</label>
+                                    <input type="password" name="password" class="form-control" value="" placeholder="{% if esign.has_password %}******** (Đã lưu, nhập mới để thay đổi){% else %}Chưa có dữ liệu{% endif %}" autocomplete="new-password">
+                                    <small class="form-text text-muted">Chỉ nhập khi cần thay đổi hoặc lần đầu</small>
+                                </div>
+                                <!-- Api Key (Token) -->
+                                <div class="col-md-6" id="wrapApiKey">
+                                    <label class="form-label fw-bold required" id="labelApiKey">Api Key (Token)</label>
+                                    <input type="text" name="api_key" id="inputApiKey" class="form-control" value="{{ esign.api_key or '' }}" placeholder="Lấy từ nhà cung cấp">
+                                    <small class="form-text text-muted" id="hintApiKey"></small>
+                                </div>
+                                <!-- App Secret -->
+                                <div class="col-md-6" id="wrapAppSecret">
+                                    <label class="form-label fw-bold" id="labelAppSecret">App Secret / Client Secret</label>
+                                    <input type="password" name="app_secret" id="inputAppSecret" class="form-control" value="" placeholder="{% if esign.has_app_secret %}******** (Đã lưu, nhập mới để thay đổi){% else %}Lấy từ portal nhà cung cấp{% endif %}" autocomplete="new-password">
+                                    <small class="form-text text-muted" id="hintAppSecret">Để trống nếu không thay đổi</small>
+                                </div>
+                                <!-- Serial chứng thư số -->
+                                <div class="col-md-6" id="wrapSerialNumber">
+                                    <label class="form-label fw-bold text-danger" id="labelSerialNumber">Serial chứng thư số eSign</label>
+                                    <input type="text" name="serial_number" id="inputSerialNumber" class="form-control border-danger" value="{{ esign.serial_number or '' }}" placeholder="Ví dụ: 1234567890ABCDEF">
+                                    <small class="form-text text-danger" id="hintSerialNumber">Lấy từ chứng thư số đã đăng ký</small>
+                                </div>
+                                <!-- PIN chữ ký số -->
+                                <div class="col-md-6" id="wrapEsignPin">
+                                    <label class="form-label fw-bold text-danger" id="labelEsignPin">PIN chữ ký số</label>
+                                    <input type="password" name="esign_pin" id="inputEsignPin" class="form-control border-danger" value="" placeholder="{% if esign.has_esign_pin %}******** (Đã lưu, nhập mới để thay đổi){% else %}Mã PIN chứng thư số{% endif %}" autocomplete="new-password">
+                                    <small class="form-text text-danger" id="hintEsignPin">Bắt buộc để ký tự động</small>
+                                </div>
+
+                                <!-- Cấu hình bổ sung MISA meInvoice -->
+                                <div class="col-12 d-none" id="misaExtraBlock">
+                                    <div class="row g-3 mt-1 p-3 bg-primary-subtle rounded border border-primary-subtle">
+                                        <div class="col-12">
+                                            <h6 class="fw-bold text-primary mb-0">
+                                                <i class="fas fa-plug me-2"></i>Cấu hình MISA meInvoice
+                                            </h6>
+                                            <small class="text-muted">Tài liệu: <a href="https://doc.meinvoice.vn/" target="_blank" rel="noopener">doc.meinvoice.vn</a></small>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <label class="form-label fw-bold">URL MISA SignedService</label>
+                                            <input type="url" name="sign_service_url" id="inputSignServiceUrl" class="form-control"
+                                                   value="{{ esign.sign_service_url or '' }}"
+                                                   placeholder="http://127.0.0.1:12019">
+                                            <small class="form-text text-muted">
+                                                Máy cài USB token + MISA SignedService. Port thường 12019–12023.
+                                            </small>
+                                        </div>
+                                        <div class="col-md-4 d-flex align-items-center pt-2">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="misa_has_code" id="misaHasCode" value="1"
+                                                       {% if esign.misa_has_code in ('1', 1, True) %}checked{% endif %}>
+                                                <label class="form-check-label fw-bold" for="misaHasCode">
+                                                    Doanh nghiệp có mã CQT
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Cấu hình bổ sung VNPT Invoice (demo) -->
+                                <div class="col-12 d-none" id="vnptExtraBlock">
+                                    <div class="row g-3 mt-1 p-3 bg-warning-subtle rounded border border-warning-subtle">
+                                        <div class="col-12">
+                                            <h6 class="fw-bold text-warning-emphasis mb-0">
+                                                <i class="fas fa-flask me-2"></i>Tài khoản test VNPT (HCM demo TT78)
+                                            </h6>
+                                            <small class="text-muted">
+                                                Portal:
+                                                <a href="https://vnpthcmc-tt78admindemo.vnpt-invoice.com.vn/" target="_blank" rel="noopener">
+                                                    vnpthcmc-tt78admindemo.vnpt-invoice.com.vn
+                                                </a>
+                                            </small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="small">
+                                                <strong>cAdmin</strong> (quản trị portal web — không dùng cho SOAP):<br>
+                                                User: <code>vnpthcmcadmin_demo</code> · Pass: <code>Admin@1234</code>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="small">
+                                                <strong>Account phát hành</strong> (Api Key / ACPass — khác ServiceRole):<br>
+                                                Demo: <code>vnpthcmcadmin_demo</code> / <code>Admin@1234</code><br>
+                                                Nhân viên <code>phanquyen</code> cần mật khẩu riêng (không phải Admin@1234 nếu chưa reset).
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="small text-muted mb-0">
+                                                MST demo: <code>8334913444</code> ·
+                                                API URL: <code>…/PublishService.asmx</code> trên cùng host portal (không dùng tt78api generic).
+                                                Account/ACPass = nhân viên phát hành trên portal (vd. <code>phanquyen</code>, <code>minhnh</code>).
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Cấu hình bổ sung M-Invoice (Mobifone) -->
+                                <div class="col-12 d-none" id="mobifoneExtraBlock">
+                                    <div class="row g-3 mt-1 p-3 bg-success-subtle rounded border border-success-subtle">
+                                        <div class="col-12">
+                                            <h6 class="fw-bold text-success mb-0">
+                                                <i class="fas fa-mobile-alt me-2"></i>Cấu hình M-Invoice (Mobifone)
+                                            </h6>
+                                            <small class="text-muted">
+                                                Tài liệu:
+                                                <a href="https://wiki.minvoice.com.vn/" target="_blank" rel="noopener">wiki.minvoice.com.vn</a>
+                                                ·
+                                                <a href="https://support-minvoice.tawk.help/category/tai-lieu-tich-hop-m-invoice" target="_blank" rel="noopener">Hướng dẫn tích hợp</a>
+                                            </small>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <label class="form-label fw-bold">ID dải ký hiệu (cctbao_id / qlkhsdung_id)</label>
+                                            <input type="text" name="minvoice_cctbao_id" id="inputMinvoiceCctbaoId" class="form-control"
+                                                   value="{{ esign.minvoice_cctbao_id or '' }}"
+                                                   placeholder="Để trống — hệ thống tự tra theo Ký hiệu HĐ">
+                                            <small class="form-text text-muted">
+                                                Lấy từ API GetDataReferencesByRefId (RF00059) hoặc portal M-Invoice.
+                                            </small>
+                                        </div>
+                                        <div class="col-md-4 d-flex align-items-center pt-2">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="minvoice_has_code" id="minvoiceHasCode" value="1"
+                                                       {% if esign.minvoice_has_code is not defined or esign.minvoice_has_code in ('1', 1, True) %}checked{% endif %}>
+                                                <label class="form-check-label fw-bold" for="minvoiceHasCode">
+                                                    Hóa đơn có mã CQT
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- === BỔ SUNG: Thông tin đăng nhập eTax === -->
+                                <div class="col-12 mt-4">
+                                    <h6 class="fw-bold text-danger"><i class="fas fa-shield-virus me-2"></i>Thông tin đăng nhập eTax (Cổng thuế điện tử)</h6>
+                                    <small class="text-muted d-block mb-3">Dùng để nộp tờ khai, tra cứu hóa đơn, kết nối Tổng cục Thuế (nếu nhà cung cấp yêu cầu)</small>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold text-danger">Mật khẩu tài khoản eTax</label>
+                                    <input type="password" name="etax_password" class="form-control border-danger" value=""
+                                           placeholder="{% if esign.has_etax_password %}******** (Đã lưu, nhập mới để thay đổi){% else %}Mật khẩu https://thuedientu.gdt.gov.vn{% endif %}"
+                                           autocomplete="new-password">
+                                    <small class="form-text text-danger">Bắt buộc nếu dùng tính năng nộp tờ khai tự động</small>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Mã đọc Captcha (cvalue)</label>
+                                    <input type="text" name="etax_cvalue" class="form-control"
+                                           value="{{ esign.etax_cvalue or '' }}"
+                                           placeholder="Giá trị captcha đã giải (thường 4-6 ký tự)">
+                                    <small class="form-text text-muted">Có thể để trống nếu hệ thống tự động giải captcha</small>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Mã key Captcha (ckey)</label>
+                                    <input type="text" name="etax_ckey" class="form-control"
+                                           value="{{ esign.etax_ckey or '' }}"
+                                           placeholder="Session key hoặc captcha token">
+                                    <small class="form-text text-muted">Thường được cung cấp kèm captcha từ cổng thuế</small>
+                                </div>
+
+                                <!-- Series & Loại hóa đơn (nâng cao) -->
+                                <div class="col-md-6 mt-3">
+                                    <label class="form-label" id="labelInvoiceSeries">Series hóa đơn (nếu có)</label>
+                                    <input type="text" name="invoice_series" id="inputInvoiceSeries" class="form-control" value="{{ esign.invoice_series or 'AA/26E' }}" placeholder="AA/26E">
+                                    <small class="form-text text-muted" id="hintInvoiceSeries"></small>
+                                </div>
+                                <div class="col-md-6 mt-3">
+                                    <label class="form-label" id="labelInvoiceType">Loại hóa đơn</label>
+                                    <input type="text" name="invoice_type" id="inputInvoiceType" class="form-control" value="{{ esign.invoice_type or '01GTKT0/001' }}" placeholder="01GTKT0/001">
+                                    <small class="form-text text-muted" id="hintInvoiceType"></small>
+                                </div>
+                                <!-- Tự động phát hành -->
+                                <div class="col-12 mt-3">
+                                    <div class="form-check form-switch p-3 bg-danger-subtle rounded border border-danger-subtle">
+                                        <input class="form-check-input" type="checkbox" name="auto_issue_invoice" id="auto_issue" {% if esign.auto_issue_invoice == '1' %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold text-danger" for="auto_issue">Tự động xuất & ký HĐĐT khi hoàn tất thanh toán</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="alert alert-info mt-4 small">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Sau khi lưu, hệ thống sẽ tự động sử dụng cấu hình này để xuất hóa đơn điện tử. Bạn có thể kiểm tra kết nối ngay bằng nút bên dưới.
+                            </div>
+                            <div class="text-end mt-4">
+                                <button type="button" class="btn btn-info" onclick="testConnection()">
+                                    <i class="fas fa-sync"></i>Kiểm tra kết nối
+                                </button>
+                                <audio id="error-sound" preload="auto">
+                                    <source src="/static/sounds/error.mp3" type="audio/mpeg">
+                                </audio>
+                                <button type="button" onclick="saveSettings('/api/settings/esign', 'esignForm')" class="btn btn-danger px-5 py-2">
+                                    <i class="fas fa-save me-2"></i>Lưu cấu hình
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// =============================================
+// TIỆN ÍCH CHUNG
+// =============================================
+let usersCache = {};
+let esignLoaded = false;
+let backupLoaded = false;
+
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function showSettingsError(msg) {
+    Swal.fire({ icon: 'error', title: 'Lỗi', text: msg || 'Không thể kết nối server' });
+}
+
+async function postSettingsJSON(url, data) {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    let json;
+    try {
+        json = await res.json();
+    } catch (e) {
+        throw new Error('Phản hồi server không hợp lệ');
+    }
+    if (!res.ok) {
+        throw new Error(json.error || json.message || ('HTTP ' + res.status));
+    }
+    return json;
+}
+
+function collectFormData(form) {
+    const data = Object.fromEntries(new FormData(form).entries());
+    form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        if (cb.name) data[cb.name] = cb.checked ? 1 : 0;
+    });
+    return data;
+}
+
+function markEsignPasswordsSaved() {
+    const form = document.getElementById('esignForm');
+    if (!form) return;
+    ['password', 'app_secret', 'esign_pin', 'etax_password'].forEach(fieldName => {
+        const input = form.querySelector(`input[name="${fieldName}"]`);
+        if (input) {
+            input.value = '';
+            input.placeholder = '******** (Đã lưu, nhập mới để thay đổi)';
+        }
+    });
+}
+
+async function saveSettings(url, formId) {
+    const form = document.getElementById(formId);
+    if (!form || !form.checkValidity()) {
+        form?.reportValidity();
+        return;
+    }
+
+    Swal.fire({ title: 'Đang lưu cấu hình...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        const res = await postSettingsJSON(url, collectFormData(form));
+        if (!res.success) {
+            Swal.fire('Lỗi', res.error || 'Không thể lưu cấu hình', 'error');
+            return;
+        }
+
+        if (formId === 'systemForm') {
+            const autoPrint = document.getElementById('auto_print');
+            if (autoPrint) {
+                localStorage.setItem('auto_print_bill', autoPrint.checked ? 'true' : 'false');
+            }
+        }
+        if (formId === 'esignForm') {
+            markEsignPasswordsSaved();
+        }
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Thành công',
+            text: res.message || 'Cấu hình đã được lưu',
+            timer: 1800,
+            showConfirmButton: false,
+        });
+    } catch (err) {
+        showSettingsError(err.message);
+    }
+}
+
+async function testConnection() {
+    const form = document.getElementById('esignForm');
+    if (!form) return;
+
+    Swal.fire({ title: 'Đang kết nối...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        const res = await postSettingsJSON('/api/settings/test_invoice_connection', collectFormData(form));
+        if (res.success) {
+            Swal.fire('Thành công', res.message, 'success');
+        } else {
+            Swal.fire('Thất bại', res.error || res.message, 'error');
+            playNotificationSound();
+        }
+    } catch (err) {
+        showSettingsError(err.message);
+        playNotificationSound();
+    }
+}
+
+const playNotificationSound = () => {
+    const audioEl = document.getElementById('error-sound');
+    if (audioEl) audioEl.play().catch(() => {});
+};
+
+// =============================================
+// QUẢN LÝ NHÂN VIÊN
+// =============================================
+const ROLE_LABELS = {
+    master: ['bg-danger', 'Master'],
+    admin: ['bg-danger', 'Quản Trị Viên'],
+    'admin*': ['bg-danger', 'Quản Trị Viên'],
+    adminFB: ['bg-danger', 'Quản Trị Viên'],
+    manager: ['bg-danger', 'Quản Lý'],
+    'manager*': ['bg-warning', 'Quản lý'],
+    managerFB: ['bg-warning', 'Quản lý'],
+    accountant: ['bg-info', 'Kế toán'],
+};
+
+async function loadUsers() {
+    const tbody = document.getElementById('userTableBody');
+    if (!tbody) return;
+
+    try {
+        const data = await fetchJSON('/api/settings/list_users');
+        const list = Array.isArray(data) ? data : (data.data || []);
+        usersCache = {};
+        list.forEach(u => { usersCache[u.id] = u; });
+
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Chưa có tài khoản nhân viên nào</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = list.map(u => {
+            const [roleBadge, roleName] = ROLE_LABELS[u.role] || ['bg-secondary', 'Nhân viên'];
+            const canDelete = !['master', 'admin', 'admin*', 'adminFB'].includes(u.role);
+            return `
+                <tr>
+                    <td class="fw-bold">${escapeHtml(u.username)}</td>
+                    <td>
+                        <div>${escapeHtml(u.full_name) || '<span class="text-muted">—</span>'}</div>
+                        <small class="text-muted">${escapeHtml(u.email)}</small>
+                        <small class="text-muted">${escapeHtml(u.phone)}</small>
+                    </td>
+                    <td><span class="badge ${roleBadge}">${roleName}</span></td>
+                    <td><span class="badge bg-success">Hoạt động</span></td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editUserById(${u.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${canDelete ? `
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteUserById(${u.id})">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>` : ''}
+                    </td>
+                </tr>`;
+        }).join('');
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Không thể tải danh sách</td></tr>';
+        showSettingsError(err.message);
+    }
+}
+
+function editUserById(id) {
+    const user = usersCache[id];
+    if (!user) return;
+    editUser(user);
+}
+
+function editUser(user) {
+    resetUserForm();
+    document.getElementById('userFormTitle').textContent = `Chỉnh sửa: ${user.username}`;
+    document.getElementById('u_id').value = user.id;
+    document.getElementById('u_username').value = user.username;
+    document.getElementById('u_fullname').value = user.full_name || '';
+    document.getElementById('u_email').value = user.email || '';
+    document.getElementById('u_phone').value = user.phone || '';
+    document.getElementById('u_role').value = user.role;
+    const perms = user.permissions ? user.permissions.split(',') : [];
+    document.querySelectorAll('.perm-cb').forEach(cb => {
+        cb.checked = perms.includes(cb.value);
+    });
+    document.getElementById('u_password').placeholder = 'Nhập mật khẩu mới nếu muốn thay đổi';
+}
+
+function resetUserForm() {
+    document.getElementById('userForm').reset();
+    document.getElementById('u_id').value = '';
+    document.getElementById('userFormTitle').textContent = 'Thêm nhân viên mới';
+    document.getElementById('u_password').placeholder = 'Mật khẩu cho tài khoản mới';
+    document.querySelectorAll('.perm-cb').forEach(cb => { cb.checked = false; });
+}
+
+async function saveUser() {
+    const username = document.getElementById('u_username').value.trim();
+    if (!username) {
+        Swal.fire('Cảnh báo', 'Tên đăng nhập không được để trống', 'warning');
+        return;
+    }
+
+    const perms = [];
+    document.querySelectorAll('.perm-cb:checked').forEach(cb => perms.push(cb.value));
+
+    try {
+        const res = await postSettingsJSON('/api/settings/save_user', {
+            user_id: document.getElementById('u_id').value || null,
+            username,
+            full_name: document.getElementById('u_fullname').value.trim(),
+            email: document.getElementById('u_email').value.trim(),
+            phone: document.getElementById('u_phone').value.trim(),
+            password: document.getElementById('u_password').value,
+            role: document.getElementById('u_role').value,
+            permissions: perms.join(','),
+        });
+        if (res.success) {
+            Swal.fire('Thành công', res.message || 'Đã lưu tài khoản', 'success');
+            loadUsers();
+            resetUserForm();
+        } else {
+            Swal.fire('Lỗi', res.error || 'Không thể lưu', 'error');
+        }
+    } catch (err) {
+        showSettingsError(err.message);
+    }
+}
+
+function deleteUserById(id) {
+    const u = usersCache[id];
+    if (!u) return;
+    deleteUser(id, u.username);
+}
+
+function deleteUser(id, username) {
+    Swal.fire({
+        title: 'Xác nhận xóa?',
+        html: `Bạn có chắc muốn xóa tài khoản <strong>${escapeHtml(username)}</strong>?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy',
+    }).then(async result => {
+        if (!result.isConfirmed) return;
+        try {
+            const res = await fetchJSON(`/api/settings/delete_user/${id}`, { method: 'DELETE' });
+            if (res.success) {
+                Swal.fire('Đã xóa', '', 'success');
+                loadUsers();
+            } else {
+                Swal.fire('Lỗi', res.error || 'Không xóa được', 'error');
+            }
+        } catch (err) {
+            showSettingsError(err.message);
+        }
+    });
+}
+
+// =============================================
+// BACKUP & RESTORE
+// =============================================
+async function loadBackupHistory() {
+    const tbody = document.getElementById('backupList');
+    if (!tbody) return;
+    backupLoaded = true;
+
+    try {
+        const data = await fetchJSON('/api/settings/list_backups');
+        const list = Array.isArray(data) ? data : (data.data || []);
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">Chưa có bản sao lưu nào</td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(f => `
+            <tr>
+                <td class="ps-3 text-muted">${escapeHtml(f.time)}</td>
+                <td class="fw-bold">${escapeHtml(f.name)}</td>
+                <td><span class="badge bg-light text-dark border">${escapeHtml(f.size)}</span></td>
+                <td class="text-end pe-3">
+                    <a href="/api/settings/download_backup/${encodeURIComponent(f.name)}" class="text-primary" download>
+                        <i class="fas fa-download"></i>
+                    </a>
+                </td>
+            </tr>`).join('');
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-danger">Không thể tải lịch sử sao lưu</td></tr>';
+    }
+}
+
+async function manualBackup() {
+    Swal.fire({ title: 'Đang sao lưu...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+        const res = await postSettingsJSON('/api/settings/backup_now', {});
+        if (res.success) {
+            Swal.fire('Thành công', 'Đã sao lưu và gửi email!', 'success');
+            loadBackupHistory();
+        } else {
+            Swal.fire('Lỗi', res.error || 'Không thể sao lưu', 'error');
+        }
+    } catch (err) {
+        showSettingsError(err.message);
+    }
+}
+
+function updateEinvoiceProviderHint() {
+    const sel = document.getElementById('einvoiceProviderSelect');
+    const hint = document.getElementById('einvoiceProviderHint');
+    const apiInput = document.getElementById('inputApiUrl');
+    if (!sel || !hint) return;
+
+    const opt = sel.options[sel.selectedIndex];
+    const code = opt && opt.value ? opt.value : '';
+    applyEinvoiceProviderUi(code, opt);
+
+    if (!code) {
+        hint.textContent = 'Chọn provider → nhập API URL tương ứng.';
+        return;
+    }
+    const status = opt.dataset.status || 'planned';
+    const draft = opt.dataset.draft === '1';
+    const statusText = status === 'ready'
+        ? 'Sẵn sàng xuất HĐ'
+        : (status === 'beta' ? 'Beta — cần kiểm thử' : 'Chưa tích hợp đầy đủ');
+    hint.textContent = `${opt.textContent.trim()}: ${statusText}${draft ? ', có nháp' : ''}.`;
+    if (apiInput && !apiInput.value && opt.dataset.defaultUrl) {
+        apiInput.placeholder = opt.dataset.defaultUrl;
+    }
+}
+
+const EINVOICE_PROVIDER_UI = {
+    default: {
+        apiKeyLabel: 'Api Key (Token)',
+        apiKeyPlaceholder: 'Lấy từ nhà cung cấp',
+        apiKeyHint: '',
+        apiUrlPlaceholder: 'https://api.example.com',
+        apiUrlHint: 'Dùng URL test khi thử nghiệm (nếu có)',
+        invoiceSeriesLabel: 'Series hóa đơn (nếu có)',
+        invoiceSeriesPlaceholder: 'AA/26E',
+        invoiceSeriesHint: '',
+        invoiceTypeLabel: 'Loại hóa đơn',
+        invoiceTypePlaceholder: '01GTKT0/001',
+        invoiceTypeHint: '',
+        serialLabel: 'Serial chứng thư số eSign',
+        serialHint: 'Lấy từ chứng thư số đã đăng ký',
+        serialRequired: false,
+        pinLabel: 'PIN chữ ký số',
+        pinHint: 'Bắt buộc để ký tự động',
+        pinRequired: false,
+        showAppSecret: true,
+        showMisaExtra: false,
+        showMobifoneExtra: false,
+    },
+    misa: {
+        apiKeyLabel: 'App ID MISA',
+        apiKeyPlaceholder: 'App ID do MISA cấp (portal Kết nối API)',
+        apiKeyHint: 'Dùng cho POST /auth/token — không phải Bearer token.',
+        apiUrlPlaceholder: 'https://testapi.meinvoice.vn/api/v3',
+        apiUrlHint: 'Test: testapi.meinvoice.vn/api/v3 · Chính thức: api.meinvoice.vn/api/v3',
+        invoiceSeriesLabel: 'Ký hiệu HĐ (InvSeries)',
+        invoiceSeriesPlaceholder: '1C26TAA',
+        invoiceSeriesHint: 'Ký hiệu đã đăng ký trên meInvoice, VD: 1K21TAA',
+        invoiceTypeLabel: 'Tên hóa đơn (InvoiceName)',
+        invoiceTypePlaceholder: 'Hóa đơn giá trị gia tăng',
+        invoiceTypeHint: 'Tên loại HĐ hiển thị trên meInvoice — không phải mẫu số TT78.',
+        serialLabel: 'Serial chứng thư số (tùy chọn)',
+        serialHint: 'MISA ký qua SignedService — serial không bắt buộc.',
+        serialRequired: false,
+        pinLabel: 'PIN USB Token (SignedService)',
+        pinHint: 'PIN chữ ký số trên máy cài MISA SignedService.',
+        pinRequired: true,
+        showAppSecret: false,
+        showMisaExtra: true,
+    },
+    matbao: {
+        apiKeyLabel: 'Api Key / Token Mắt Bão',
+        apiUrlPlaceholder: 'https://api.matbao.net',
+        serialRequired: false,
+        showMisaExtra: false,
+    },
+    easyinvoice: {
+        apiKeyLabel: 'Partner Key / Api Key',
+        apiKeyHint: 'Partner Key ký HMAC (có thể đặt ở App Secret).',
+        apiUrlPlaceholder: 'https://api.easyinvoice.vn/api/publish/importInvoice',
+        showAppSecret: true,
+        showMisaExtra: false,
+        showMobifoneExtra: false,
+    },
+    vnpt: {
+        apiKeyLabel: 'Account phát hành (VNPT)',
+        apiKeyPlaceholder: 'vnpthcmcadmin_demo (demo) hoặc phanquyen',
+        apiKeyHint: 'Account nhân viên phát hành — demo: dùng cAdmin vnpthcmcadmin_demo.',
+        apiUrlPlaceholder: 'https://vnpthcmc-tt78admindemo.vnpt-invoice.com.vn/PublishService.asmx',
+        apiUrlHint: 'Demo HCM: host portal + /PublishService.asmx · Prod: tenant-tt78api.vnpt-invoice.com.vn',
+        usernamePlaceholder: 'vnpthcmc_service (ServiceRole)',
+        usernameHint: 'Username = tài khoản ServiceRole, không phải cAdmin.',
+        taxCodePlaceholder: '8334913444',
+        invoiceSeriesLabel: 'Ký hiệu HĐ (serial)',
+        invoiceSeriesPlaceholder: 'C26TAA',
+        invoiceSeriesHint: 'Ký hiệu đã đăng ký trên VNPT Invoice.',
+        invoiceTypeLabel: 'Mẫu số HĐ (pattern)',
+        invoiceTypePlaceholder: '1/001',
+        invoiceTypeHint: 'Mẫu TT78 đầy đủ, VD: 1/001 (GTGT demo). Không chỉ nhập số 1.',
+        serialLabel: 'Serial chứng thư số (token)',
+        serialHint: 'Chỉ cần khi ký USB Token (getHashInvWithToken, type=0 chính thức / type=1 thay thế). HSM để trống.',
+        pinRequired: false,
+        showAppSecret: true,
+        labelAppSecret: 'ACPass (mật khẩu Account)',
+        hintAppSecret: 'Mật khẩu tài khoản Account phát hành trên VNPT.',
+        showMisaExtra: false,
+        showMobifoneExtra: false,
+        showVnptExtra: true,
+    },
+    mobifone: {
+        apiKeyLabel: 'Mã đơn vị (ma_dvcs) — tùy chọn',
+        apiKeyPlaceholder: 'Tự lấy sau Login nếu để trống',
+        apiKeyHint: 'ma_dvcs trả về từ POST /api/Account/Login.',
+        apiUrlPlaceholder: 'https://hoadon.minvoice.com.vn',
+        apiUrlHint: 'Test: hoadon.minvoice.com.vn · Chính thức: https://{MST}.minvoice.com.vn',
+        invoiceSeriesLabel: 'Ký hiệu HĐ (khhdon)',
+        invoiceSeriesPlaceholder: '1C26TYY',
+        invoiceSeriesHint: 'Khớp dải ký hiệu đã khai báo trên M-Invoice.',
+        invoiceTypeLabel: 'Ghi chú / loại HĐ (tùy chọn)',
+        invoiceTypePlaceholder: '',
+        showAppSecret: false,
+        serialHint: 'Serial CKS (cer_serial) — dùng khi ký file mềm/USB.',
+        pinRequired: false,
+        showMisaExtra: false,
+        showMobifoneExtra: true,
+    },
+};
+
+function applyEinvoiceProviderUi(code, opt) {
+    const cfg = { ...EINVOICE_PROVIDER_UI.default, ...(EINVOICE_PROVIDER_UI[code] || {}) };
+
+    const setText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el && text !== undefined) el.textContent = text;
+    };
+    const setPlaceholder = (id, text) => {
+        const el = document.getElementById(id);
+        if (el && text) el.placeholder = text;
+    };
+    const setVisible = (id, show) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('d-none', !show);
+    };
+    const setRequired = (id, required) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (required) el.classList.add('required');
+        else el.classList.remove('required');
+    };
+
+    setText('labelApiKey', cfg.apiKeyLabel);
+    setPlaceholder('inputApiKey', cfg.apiKeyPlaceholder);
+    setText('hintApiKey', cfg.apiKeyHint || '');
+
+    setPlaceholder('inputUsername', cfg.usernamePlaceholder || 'Tài khoản đăng nhập nhà cung cấp');
+    setText('hintUsername', cfg.usernameHint || '');
+
+    setPlaceholder('inputTaxCode', cfg.taxCodePlaceholder || '0101234567');
+
+    setPlaceholder('inputApiUrl', cfg.apiUrlPlaceholder || (opt && opt.dataset.defaultUrl) || '');
+    setText('hintApiUrl', cfg.apiUrlHint || 'Dùng URL test khi thử nghiệm (nếu có)');
+
+    setText('labelInvoiceSeries', cfg.invoiceSeriesLabel);
+    setPlaceholder('inputInvoiceSeries', cfg.invoiceSeriesPlaceholder);
+    setText('hintInvoiceSeries', cfg.invoiceSeriesHint || '');
+
+    setText('labelInvoiceType', cfg.invoiceTypeLabel);
+    setPlaceholder('inputInvoiceType', cfg.invoiceTypePlaceholder);
+    setText('hintInvoiceType', cfg.invoiceTypeHint || '');
+
+    setText('labelSerialNumber', cfg.serialLabel);
+    setText('hintSerialNumber', cfg.serialHint || 'Lấy từ chứng thư số đã đăng ký');
+    setRequired('labelSerialNumber', !!cfg.serialRequired);
+
+    setText('labelEsignPin', cfg.pinLabel);
+    setText('hintEsignPin', cfg.pinHint || 'Bắt buộc để ký tự động');
+    setRequired('labelEsignPin', !!cfg.pinRequired);
+
+    setVisible('wrapAppSecret', cfg.showAppSecret !== false);
+    setText('labelAppSecret', cfg.labelAppSecret || 'App Secret / Client Secret');
+    setText('hintAppSecret', cfg.hintAppSecret || 'Để trống nếu không thay đổi');
+    setVisible('misaExtraBlock', !!cfg.showMisaExtra);
+    setVisible('mobifoneExtraBlock', !!cfg.showMobifoneExtra);
+    setVisible('vnptExtraBlock', !!cfg.showVnptExtra);
+}
+
+async function loadInvoiceSettings() {
+    const form = document.getElementById('esignForm');
+    if (!form) return;
+
+    function setField(name, value) {
+        const el = form.querySelector(`[name="${name}"]`);
+        if (el) el.value = value ?? '';
+    }
+
+    try {
+        const result = await fetchJSON('/api/settings/esign');
+        if (!result.success) {
+            showSettingsError(result.error || 'Không thể tải cấu hình hóa đơn.');
+            return;
+        }
+        if (!result.data) {
+            updateEinvoiceProviderHint();
+            return;
+        }
+
+        const data = result.data;
+        setField('provider_name', data.provider_name || '');
+        setField('api_url', data.api_url || '');
+        setField('tax_code', data.tax_code || '');
+        setField('username', data.username || '');
+        setField('api_key', data.api_key || '');
+        setField('serial_number', data.serial_number || '');
+        setField('invoice_series', data.invoice_series || 'AA/26E');
+        setField('invoice_type', data.invoice_type || '01GTKT0/001');
+        setField('sign_service_url', data.sign_service_url || '');
+        setField('etax_cvalue', data.etax_cvalue || '');
+        setField('etax_ckey', data.etax_ckey || '');
+        const misaHasCode = form.querySelector('#misaHasCode');
+        if (misaHasCode) misaHasCode.checked = data.misa_has_code == 1 || data.misa_has_code === true;
+        const minvoiceCctbao = form.querySelector('#inputMinvoiceCctbaoId');
+        if (minvoiceCctbao) minvoiceCctbao.value = data.minvoice_cctbao_id || '';
+        const minvoiceHasCode = form.querySelector('#minvoiceHasCode');
+        if (minvoiceHasCode) minvoiceHasCode.checked = data.minvoice_has_code != 0;
+
+        const autoCheckbox = document.getElementById('auto_issue');
+        if (autoCheckbox) autoCheckbox.checked = data.auto_issue_invoice == 1;
+
+        ['password', 'app_secret', 'esign_pin', 'etax_password'].forEach(fieldName => {
+            const input = form.querySelector(`input[name="${fieldName}"]`);
+            if (!input) return;
+            input.value = '';
+            if (data[fieldName] === '********' || data[fieldName]) {
+                input.placeholder = '******** (Đã lưu, nhập mới để thay đổi)';
+            } else {
+                input.placeholder = 'Chưa có dữ liệu';
+            }
+        });
+        updateEinvoiceProviderHint();
+    } catch (err) {
+        showSettingsError('Không thể tải cấu hình hóa đơn: ' + (err.message || ''));
+    }
+}
+
+function ensureEsignLoaded() {
+    if (esignLoaded) return;
+    esignLoaded = true;
+    loadInvoiceSettings();
+}
+
+async function resetFullDatabase() {
+    const confirm1 = await Swal.fire({
+        title: 'CẢNH BÁO NGUY HIỂM!',
+        html: 'Bạn sắp <strong>xóa toàn bộ dữ liệu</strong> trong database.<br><br>Bao gồm: đơn hàng, tồn kho, hóa đơn, công nợ, lịch sử giao dịch...',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Tôi hiểu, tiếp tục',
+        cancelButtonText: 'Hủy bỏ',
+        confirmButtonColor: '#d33',
+    });
+    if (!confirm1.isConfirmed) return;
+
+    const { value: password } = await Swal.fire({
+        title: 'Nhập mật khẩu xác nhận',
+        input: 'password',
+        inputLabel: 'Mật khẩu bảo vệ (RESET123)',
+        inputPlaceholder: 'Nhập mật khẩu',
+        showCancelButton: true,
+        confirmButtonText: 'XÓA DATABASE',
+        cancelButtonText: 'Hủy',
+        showLoaderOnConfirm: true,
+        preConfirm: (pwd) => {
+            if (!pwd) Swal.showValidationMessage('Vui lòng nhập mật khẩu');
+            return pwd;
+        },
+    });
+    if (!password) return;
+
+    Swal.fire({ title: 'Đang sao lưu dữ liệu trước khi xóa...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        const data = await postSettingsJSON('/api/database/reset', { password });
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Hoàn tất',
+                text: 'Đã sao lưu và xóa toàn bộ dữ liệu thành công!',
+                timer: 2500,
+            }).then(() => location.reload());
+        } else {
+            Swal.fire('Thất bại', data.error || 'Không thể thực hiện', 'error');
+        }
+    } catch (err) {
+        showSettingsError(err.message);
+    }
+}
+
+// =============================================
+// VIETQR & NGÂN HÀNG ĐIỆN TỬ (SePay / Casso)
+// =============================================
+function onBankBinChange(selectEl) {
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const bin = opt.value;
+    const bankNameInput = document.getElementById('bank_name_input');
+    const bankCodeInput = document.getElementById('bank_code_input');
+    if (!bankCodeInput) return;
+    if (bin && bin !== 'custom') {
+        bankCodeInput.value = bin;
+        if (bankNameInput && opt.dataset.name) {
+            bankNameInput.value = opt.dataset.name;
+        }
+    }
+    updateQrPreview();
+}
+
+function syncBankSelectFromInputs() {
+    const bankCodeInput = document.getElementById('bank_code_input');
+    const bankSelect = document.getElementById('bank_code_select');
+    if (!bankCodeInput || !bankSelect) return;
+    const code = (bankCodeInput.value || '').trim();
+    let matched = false;
+    for (const opt of bankSelect.options) {
+        if (opt.value && opt.value === code) {
+            bankSelect.value = code;
+            matched = true;
+            break;
+        }
+    }
+    if (!matched && code) bankSelect.value = 'custom';
+}
+
+function togglePaymentFields() {
+    const provider = document.getElementById('payment_provider')?.value || 'none';
+    document.querySelectorAll('.payment-field-sepay').forEach(el => {
+        el.style.display = (provider === 'sepay' || provider === 'none') ? '' : 'none';
+    });
+    document.querySelectorAll('.payment-field-casso').forEach(el => {
+        el.style.display = (provider === 'casso' || provider === 'none') ? '' : 'none';
+    });
+}
+
+function updateQrPreview() {
+    const box = document.getElementById('qrPreviewBox');
+    const bin = document.getElementById('bank_code_input')?.value?.trim();
+    const acc = document.getElementById('bank_account_input')?.value?.trim();
+    if (!box) return;
+    if (!bin || !acc) {
+        box.innerHTML = 'Nhập STK và mã BIN để xem mẫu VietQR';
+        return;
+    }
+    const url = `https://img.vietqr.io/image/${bin}-${acc}-compact2.jpg?amount=100000&addInfo=DH000001&accountName=`;
+    box.innerHTML = `<img src="${url}" alt="Mẫu VietQR" style="max-height:120px" onerror="this.parentElement.innerHTML='Không tạo được QR — kiểm tra BIN/STK'">`;
+}
+
+function copyWebhookUrl(inputId) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    navigator.clipboard.writeText(el.value).then(() => {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã sao chép URL', showConfirmButton: false, timer: 1500 });
+    }).catch(() => {
+        el.select();
+        document.execCommand('copy');
+    });
+}
+
+function updatePaymentStatusBadges(data) {
+    const vqrBadge = document.getElementById('vietqrStatusBadge');
+    const provBadge = document.getElementById('providerStatusBadge');
+    if (vqrBadge && data?.vietqr) {
+        if (data.vietqr.ready) {
+            vqrBadge.className = 'badge bg-success';
+            vqrBadge.textContent = 'VietQR: Sẵn sàng';
+        } else {
+            vqrBadge.className = 'badge bg-warning text-dark';
+            vqrBadge.textContent = 'VietQR: Thiếu ' + (data.vietqr.missing || []).join(', ');
+        }
+    }
+    if (provBadge && data?.provider_status) {
+        const st = data.provider_status;
+        if (st.ready) {
+            provBadge.className = 'badge bg-success';
+            provBadge.textContent = st.message || 'Ngân hàng ĐT: OK';
+        } else {
+            provBadge.className = 'badge bg-warning text-dark';
+            provBadge.textContent = st.message || 'Chưa cấu hình';
+        }
+    }
+}
+
+async function loadPaymentBankStatus() {
+    try {
+        const res = await fetch('/api/settings/payment-bank');
+        const data = await res.json();
+        if (data.success) updatePaymentStatusBadges(data);
+    } catch (e) { /* ignore */ }
+}
+
+async function savePaymentBankSettings() {
+    const form = document.getElementById('businessForm');
+    if (!form || !form.checkValidity()) {
+        form?.reportValidity();
+        return;
+    }
+    Swal.fire({ title: 'Đang lưu...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+        const res = await postSettingsJSON('/api/settings/payment-bank', collectFormData(form));
+        if (!res.success) {
+            Swal.fire('Lỗi', res.error || 'Không thể lưu', 'error');
+            return;
+        }
+        ['sepay_api_key', 'casso_api_key'].forEach(id => {
+            const inp = document.getElementById(id);
+            if (inp && inp.value) {
+                inp.value = '';
+                inp.placeholder = '******** (đã lưu)';
+            }
+        });
+        updatePaymentStatusBadges(res);
+        await loadPaymentBankStatus();
+        updateQrPreview();
+        Swal.fire({ icon: 'success', title: 'Đã lưu', text: res.message, timer: 2000, showConfirmButton: false });
+    } catch (err) {
+        showSettingsError(err.message);
+    }
+}
+
+async function testPaymentConnection() {
+    const provider = document.getElementById('payment_provider')?.value || 'none';
+    Swal.fire({ title: 'Đang kiểm tra kết nối...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+        const res = await postSettingsJSON('/api/settings/test_payment_connection', { payment_provider: provider });
+        Swal.fire(res.success ? 'Thành công' : 'Thất bại', res.message || '', res.success ? 'success' : 'error');
+    } catch (err) {
+        showSettingsError(err.message);
+    }
+}
+
+// =============================================
+// KHỞI TẠO & TAB EVENT
+// =============================================
+document.addEventListener('DOMContentLoaded', () => {
+    const timeEl = document.getElementById('current-time');
+    if (timeEl) {
+        const updateTime = () => {
+            timeEl.textContent = new Date().toLocaleString('vi-VN', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: false,
+            });
+        };
+        updateTime();
+        setInterval(updateTime, 60000);
+    }
+
+    const providerSelect = document.getElementById('einvoiceProviderSelect');
+    if (providerSelect) {
+        providerSelect.addEventListener('change', updateEinvoiceProviderHint);
+        updateEinvoiceProviderHint();
+    }
+
+    const tabNav = document.getElementById('v-pills-tab');
+    if (tabNav) {
+        tabNav.addEventListener('shown.bs.tab', (e) => {
+            const target = e.target.getAttribute('data-bs-target');
+            if (target === '#tab-users') loadUsers();
+            else if (target === '#tab-system' && !backupLoaded) loadBackupHistory();
+            else if (target === '#tab-esign') ensureEsignLoaded();
+        });
+        const activeTab = tabNav.querySelector('.nav-link.active');
+        if (activeTab?.getAttribute('data-bs-target') === '#tab-esign') {
+            ensureEsignLoaded();
+        }
+    }
+
+    const autoPrintCheckbox = document.getElementById('auto_print');
+    if (autoPrintCheckbox) {
+        localStorage.setItem('auto_print_bill', autoPrintCheckbox.checked ? 'true' : 'false');
+        autoPrintCheckbox.addEventListener('change', function() {
+            localStorage.setItem('auto_print_bill', this.checked ? 'true' : 'false');
+        });
+    }
+
+    syncBankSelectFromInputs();
+    togglePaymentFields();
+    updateQrPreview();
+    loadPaymentBankStatus();
+    ['bank_code_input', 'bank_account_input'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', updateQrPreview);
+    });
+});
+</script>
+{% endblock %}

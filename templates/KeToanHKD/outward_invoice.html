@@ -1,0 +1,407 @@
+{% extends "base.html" %}
+{% block title %}Quản lý Hóa đơn đầu ra{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    .table th { 
+        font-size: 1.10rem; 
+        text-transform: uppercase; 
+        color: #666; 
+        letter-spacing: 0.5px; 
+        white-space: nowrap; 
+    }
+    .table td { font-size: 1.10rem; vertical-align: middle; }
+    .btn-xs { padding: 0.55rem 0.65rem; font-size: 0.75rem; }
+    .invoice-link { cursor: pointer; color: #0d6efd; font-weight: 600; text-decoration: none; }
+    .invoice-link:hover { text-decoration: underline; }
+    .status-badge { font-size: 0.85rem; padding: 0.35em 0.65em; }
+</style>
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <h5 class="mb-0 text-primary">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>Quản lý Hóa đơn đầu ra
+                    </h5>
+                    <small class="text-muted">
+                        NCC đang xuất HĐ: <strong>{{ provider_label }}</strong>
+                        · Hiển thị mọi NCC đã cấu hình · Tối đa {{ max_range_days }} ngày/lần tải
+                    </small>
+                </div>
+                <div class="col-md-8 d-flex flex-wrap justify-content-end align-items-center gap-2">
+                    <div class="input-group input-group-sm" style="width: 220px;">
+                        <span class="input-group-text bg-light">NCC HĐ</span>
+                        <select id="providerFilter" class="form-select">
+                            {% for opt in provider_options %}
+                            <option value="{{ opt.code }}">{{ opt.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="input-group input-group-sm" style="width: 180px;">
+                        <span class="input-group-text bg-light">Từ</span>
+                        <input type="text" id="fromDate" class="form-control bg-white">
+                    </div>
+                    <div class="input-group input-group-sm" style="width: 180px;">
+                        <span class="input-group-text bg-light">Đến</span>
+                        <input type="text" id="toDate" class="form-control bg-white">
+                    </div>
+                    <button class="btn btn-sm btn-primary px-3" id="loadBtn" onclick="loadInvoices()">
+                        <i class="fas fa-sync-alt me-1"></i> Tải dữ liệu
+                    </button>
+                </div>
+            </div>
+        </div>
+      
+        <div class="card-body p-0">
+            <div id="errorAlert" class="alert alert-danger d-none m-3"></div>
+            <div id="infoAlert" class="alert alert-info d-none m-3"></div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light border-bottom">
+                        <tr>
+                            <th class="ps-3">Số Đơn Hàng</th>
+                            <th>Số Hóa Đơn</th>
+                            <th>NCC HĐ</th>
+                            <th>Ngày lập</th>
+                            <th>Khách hàng</th>
+                            <th class="text-end">Tổng tiền (VNĐ)</th>
+                            <th class="text-center">Trạng thái CQT</th>
+                            <th class="text-center">Tác vụ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoiceBody">
+                        <tr><td colspan="8" class="text-center py-5 text-muted">Bấm "Tải dữ liệu" để hiển thị danh sách hóa đơn</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="loading" class="text-center py-5 d-none">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted small">Đang tải dữ liệu...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+const OUTWARD_PROVIDER = {{ invoice_provider|tojson }};
+const ACTIVE_INVOICE_PROVIDER = {{ active_provider|tojson }};
+const OUTWARD_MAX_DAYS = {{ max_range_days|int }};
+
+// ====================== KHỞI TẠO ======================
+let fpFrom, fpTo;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    const defaultDaysAgo = new Date(today);
+    defaultDaysAgo.setDate(today.getDate() - OUTWARD_MAX_DAYS);
+
+    fpFrom = flatpickr("#fromDate", {
+        dateFormat: "d/m/Y",
+        locale: "vn",
+        defaultDate: defaultDaysAgo,
+        maxDate: today
+    });
+
+    fpTo = flatpickr("#toDate", {
+        dateFormat: "d/m/Y",
+        locale: "vn",
+        defaultDate: today,
+        maxDate: today
+    });
+
+    loadInvoices();
+});
+
+// ====================== TẢI DANH SÁCH HÓA ĐƠN ======================
+let invoiceRows = [];
+
+async function loadInvoices() {
+    const btn = document.getElementById('loadBtn');
+    const loading = document.getElementById('loading');
+    const tbody = document.getElementById('invoiceBody');
+    const err = document.getElementById('errorAlert');
+    const info = document.getElementById('infoAlert');
+    const provider = document.getElementById('providerFilter')?.value || 'all';
+
+    if (!fpFrom.selectedDates[0] || !fpTo.selectedDates[0]) return;
+
+    const fromStr = fpFrom.formatDate(fpFrom.selectedDates[0], "Y-m-d");
+    const toStr = fpTo.formatDate(fpTo.selectedDates[0], "Y-m-d");
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    loading.classList.remove('d-none');
+    err.classList.add('d-none');
+    info.classList.add('d-none');
+    tbody.innerHTML = '';
+
+    try {
+        const response = await fetch(`/api/outward-invoices?from=${fromStr}&to=${toStr}&provider=${encodeURIComponent(provider)}`);
+        const result = await response.json();
+
+        if (!result.success) throw new Error(result.error);
+
+        if (result.message) {
+            info.textContent = result.message;
+            info.classList.remove('d-none');
+        }
+        if (result.sync_errors && result.sync_errors.length) {
+            info.classList.remove('d-none');
+            info.innerHTML = (result.message ? result.message + '<br>' : '')
+                + '<span class="text-warning">' + result.sync_errors.join('; ') + '</span>';
+        }
+
+        if (result.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Không có dữ liệu trong khoảng thời gian này</td></tr>';
+            invoiceRows = [];
+            return;
+        }
+
+        invoiceRows = result.data;
+
+        result.data.forEach((inv, idx) => {
+            const amount = new Intl.NumberFormat('vi-VN').format(inv.amount || 0);
+            const isDraft = inv.is_draft
+                || String(inv.invoice_no || '') === '0'
+                || (inv.ten_LoaiHDon && inv.ten_LoaiHDon.toLowerCase().includes('nháp'));
+            const badgeClass = isDraft
+                ? 'bg-secondary'
+                : (inv.tax_authority_status?.includes("Chưa gửi CQT") ? "bg-success" : "bg-warning text-dark");
+            const saleNo = inv.sale_no || '---';
+            const invNo = isDraft ? '0 (Nháp)' : (inv.invoice_no || '---');
+            const displayCustomer = inv.company || inv.customer || 'Bán cho người tiêu dùng';
+            const providerLabel = inv.provider_label || inv.provider || '—';
+            const isReplaced = inv.ten_LoaiHDon === "Hóa đơn bị thay thế";
+            const saleId = inv.sale_id || '';
+            const invId = inv.invoice_id || '';
+
+            let actionHtml = '';
+            if (isDraft) {
+                actionHtml = `
+                    <div class="d-flex justify-content-center gap-1 flex-wrap">
+                        <button onclick="viewDraftInvoice(${idx})" class="btn btn-xs btn-outline-secondary">
+                            <i class="fas fa-eye"></i> Xem nháp
+                        </button>
+                        <button onclick="openCustomizeDraft('${saleId}')" class="btn btn-xs btn-warning fw-bold" ${saleId ? '' : 'disabled'}>
+                            <i class="fas fa-edit"></i> Tùy chỉnh
+                        </button>
+                        <button onclick="publishOfficialInvoice('${saleId}')" class="btn btn-xs btn-success fw-bold" ${saleId ? '' : 'disabled'}>
+                            <i class="fas fa-file-signature"></i> Xuất HĐ chính thức
+                        </button>
+                    </div>`;
+            } else {
+                const disabledAttr = isReplaced ? 'disabled' : '';
+                const blurStyle = isReplaced ? 'style="opacity: 0.5; cursor: not-allowed;"' : '';
+                const buttonText = isReplaced ? '<i class="fas fa-ban"></i> Đã bị thay thế' : '<i class="fas fa-exchange-alt"></i> Xuất HĐ Thay Thế';
+                actionHtml = `
+                    <div class="d-flex justify-content-center gap-1 flex-wrap">
+                        <button onclick="viewPdfOnly('${inv.invoice_no}')" class="btn btn-xs btn-outline-secondary">
+                            <i class="fas fa-eye"></i> Xem
+                        </button>
+                        <button onclick="downloadFile('${inv.invoice_no}', 'pdf')" class="btn btn-xs btn-danger fw-bold">PDF</button>
+                        <button onclick="downloadFile('${inv.invoice_no}', 'xml')" class="btn btn-xs btn-success fw-bold">XML</button>
+                        <button onclick="openReplacePage('${inv.invoice_no}', '${saleId}')"
+                                class="btn btn-xs btn-warning fw-bold"
+                                ${disabledAttr} ${blurStyle}>${buttonText}</button>
+                    </div>`;
+            }
+
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr class="${isDraft ? 'table-warning' : ''}">
+                    <td class="ps-3 fw-bold text-dark" style="font-size: 0.85rem;">${saleNo}</td>
+                    <td>
+                        ${isDraft
+                            ? `<span class="badge bg-secondary">${invNo}</span>`
+                            : `<a href="javascript:void(0)" onclick="viewPdfOnly('${inv.invoice_no}')" class="invoice-link">${invNo}</a>`}
+                    </td>
+                    <td class="small"><span class="badge bg-light text-dark border">${providerLabel}</span></td>
+                    <td class="small text-muted">${formatDateVN(inv.invoice_date)}</td>
+                    <td>
+                        <div class="fw-bold small">${displayCustomer}</div>
+                        <div class="text-muted" style="font-size: 13px;">Loại: ${inv.ten_LoaiHDon || (isDraft ? 'Hóa đơn nháp' : '-')}</div>
+                    </td>
+                    <td class="text-end fw-bold text-danger">${amount} đ</td>
+                    <td class="text-center">
+                        <span class="badge ${badgeClass} status-badge">${isDraft ? 'Nháp' : (inv.tax_authority_status || '—')}</span>
+                    </td>
+                    <td class="text-center">${actionHtml}</td>
+                </tr>
+            `);
+        });
+    } catch (e) {
+        err.textContent = 'Lỗi tải dữ liệu: ' + e.message;
+        err.classList.remove('d-none');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Tải dữ liệu';
+        loading.classList.add('d-none');
+    }
+}
+
+// ====================== HÀM ĐỊNH DẠNG NGÀY dd/mm/yyyy ======================
+function formatDateVN(dateStr) {
+    if (!dateStr) return '---';
+    
+    try {
+        // Xử lý cả ISO string (2025-05-13T...) và YYYY-MM-DD
+        let date;
+        
+        if (dateStr.includes('T')) {
+            date = new Date(dateStr);
+        } else {
+            // YYYY-MM-DD
+            const [year, month, day] = dateStr.split('-');
+            date = new Date(year, month - 1, day);
+        }
+
+        if (isNaN(date.getTime())) return '---';
+
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+
+        return `${day}/${month}/${year}`;
+    } catch (e) {
+        return dateStr || '---';
+    }
+}
+// ====================== CHUYỂN ĐẾN TRANG THAY THẾ ======================
+function openReplacePage(invoiceNo, saleId = '') {
+    let url = `/sale/edit-reissue?invoice_no=${encodeURIComponent(invoiceNo)}`;
+    if (saleId) url += `&sale_id=${saleId}`;
+    window.location.href = url;
+}
+
+function openCustomizeDraft(saleId) {
+    if (!saleId) {
+        Swal.fire('Lỗi', 'Không xác định được đơn hàng gốc', 'error');
+        return;
+    }
+    window.location.href = `/sale?edit_id=${encodeURIComponent(saleId)}`;
+}
+
+async function publishOfficialInvoice(saleId) {
+    if (!saleId) {
+        Swal.fire('Lỗi', 'Không xác định được đơn hàng', 'error');
+        return;
+    }
+    const providerLabel = ACTIVE_INVOICE_PROVIDER === 'vnpt' ? 'VNPT Invoice' : (ACTIVE_INVOICE_PROVIDER === 'matbao' ? 'Mắt Bão' : ACTIVE_INVOICE_PROVIDER);
+    const confirm = await Swal.fire({
+        title: 'Xuất hóa đơn chính thức?',
+        text: `Hệ thống sẽ ký và cấp số hóa đơn trên ${providerLabel}. Thao tác không thể hoàn tác.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Phát hành',
+        cancelButtonText: 'Hủy',
+    });
+    if (!confirm.isConfirmed) return;
+
+    Swal.fire({ title: 'Đang phát hành...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+        const res = await fetch(`/api/invoice/publish-draft/${saleId}`, { method: 'POST' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Lỗi phát hành');
+        await Swal.fire('Thành công', json.message || `Hóa đơn ${json.invoice_no} đã phát hành`, 'success');
+        loadInvoices();
+    } catch (e) {
+        Swal.fire('Lỗi', e.message, 'error');
+    }
+}
+
+// ====================== XEM VÀ TẢI FILE ======================
+async function fetchUrl(params, type) {
+    const endpoint = type === 'pdf' ? '/api/sale/invoice_pdf_url' : '/api/sale/invoice_xml_file';
+    const qs = new URLSearchParams();
+    if (params.invoiceNo) qs.set('invoice_number', params.invoiceNo);
+    if (params.saleId) qs.set('sale_id', params.saleId);
+    if (params.invoiceId) qs.set('invoice_id', params.invoiceId);
+    try {
+        const res = await fetch(`${endpoint}?${qs.toString()}`);
+        const result = await res.json();
+        return result.success ? (type === 'pdf' ? result.pdf_url : result.xml_file) : null;
+    } catch (err) {
+        console.error(err);
+        return null;
+    }
+}
+
+async function viewDraftInvoice(index) {
+    const inv = invoiceRows[index];
+    if (!inv) {
+        Swal.fire('Lỗi', 'Không tìm thấy dữ liệu hóa đơn nháp', 'error');
+        return;
+    }
+
+    if (inv.pdf_url) {
+        await openInvoiceFileUrl(inv.pdf_url, true);
+        return;
+    }
+
+    if (OUTWARD_PROVIDER === 'vnpt' && inv.invoice_id) {
+        const fkey = encodeURIComponent(inv.invoice_id);
+        window.open(`/api/vnpt/download-file?fkey=${fkey}&type=pdf&draft=1&inline=1`, '_blank');
+        return;
+    }
+
+    const invProvider = (inv.provider || '').toLowerCase();
+    if (inv.invoice_id && invProvider === 'vnpt') {
+        const fkey = encodeURIComponent(inv.invoice_id);
+        window.open(`/api/vnpt/download-file?fkey=${fkey}&type=pdf&draft=1&inline=1`, '_blank');
+        return;
+    }
+
+    if (inv.invoice_id && (invProvider === 'matbao' || OUTWARD_PROVIDER === 'matbao')) {
+        window.open(
+            `/api/matbao/download-file/${encodeURIComponent(inv.invoice_id)}?type=pdf&inline=1`,
+            '_blank'
+        );
+        return;
+    }
+
+    Swal.fire('Lỗi', 'Không tìm thấy file PDF nháp. Thử bấm Tải dữ liệu để đồng bộ lại.', 'error');
+}
+
+async function openInvoiceFileUrl(url, inline) {
+    if (!url) return false;
+    if (url.startsWith('/api/vnpt/') || url.startsWith('/api/matbao/')) {
+        const sep = url.includes('?') ? '&' : '?';
+        window.open(`${url}${sep}inline=${inline ? '1' : '0'}`, '_blank');
+        return true;
+    }
+    if (inline) {
+        window.open(`/api/view-pdf?url=${encodeURIComponent(url)}`, '_blank');
+    } else {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    return true;
+}
+
+async function viewPdfOnly(invoiceNo) {
+    const url = await fetchUrl({ invoiceNo }, 'pdf');
+    if (url) await openInvoiceFileUrl(url, true);
+    else Swal.fire('Lỗi', 'Không tìm thấy file PDF', 'error');
+}
+
+async function downloadFile(invoiceNo, type) {
+    const url = await fetchUrl({ invoiceNo }, type);
+    if (url) await openInvoiceFileUrl(url, false);
+    else Swal.fire('Lỗi', 'Không tìm thấy file để tải', 'error');
+}
+</script>
+{% endblock %}

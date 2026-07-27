@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block title %}Kiểm Kê Kho & Khởi Tạo Tồn Kho Ban Đầu{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<style>
+    :root { --primary: #2563eb; --success: #16a34a; --danger: #dc2626; --warning: #d97706; --light: #f8fafc; }
+    .container-fluid { padding: 12px 16px !important; }
+    .section-header { background: var(--light); border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+    #itemsTable { font-size: 13.5px; min-width: 900px; }
+    #itemsTable th { background: #f1f5f9; color: #334155; font-weight: 600; text-align: center; padding: 10px 6px; border-bottom: 2px solid #cbd5e1; }
+    #itemsTable td { padding: 8px 6px !important; vertical-align: middle; }
+    .current-qty { font-weight: 600; color: #475569; }
+    .diff { font-weight: 700; min-width: 110px; }
+    .diff.positive { color: var(--success); }
+    .diff.negative { color: var(--danger); }
+    .summary-bar { position: sticky; bottom: 0; left: 0; right: 0; background: linear-gradient(135deg, #1e40af, #1e3a8a); color: white; padding: 14px 24px; border-radius: 12px 12px 0 0; box-shadow: 0 -6px 20px rgba(30,58,138,0.25); z-index: 1000; display: flex; justify-content: flex-end; align-items: center; }
+    .btn-save { background: var(--warning); color: black; font-weight: 800; padding: 12px 36px; border-radius: 10px; border: none; transition: all 0.25s; }
+    .btn-save:hover { background: #fbbf24; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
+    .excel-zone { border: 2px dashed var(--primary); background: #eff6ff; border-radius: 10px; padding: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold text-primary m-0"><i class="bi bi-clipboard-check me-2"></i>KIỂM KÊ KHO</h4>
+        <div class="badge bg-light text-dark border px-3 py-2">Ngày: <strong id="today"></strong></div>
+    </div>
+
+    <div class="excel-zone mb-4">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="fw-bold text-primary small">TỒN KHO BAN ĐẦU (chỉ thực hiện 1 lần):</div>
+            <a href="/initial_stock/template" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-file-earmark-arrow-down"></i> Tải mẫu Excel
+            </a>
+            <div class="input-group input-group-sm" style="max-width: 520px;">
+                <label class="input-group-text btn btn-outline-primary fw-bold" for="excelFile">
+                    <i class="bi bi-folder2-open me-1"></i> Chọn file
+                </label>
+                <input type="file" class="form-control d-none" id="excelFile" accept=".xlsx,.xls" />
+                <span class="form-control bg-white text-muted d-flex align-items-center" id="fileNameDisplay">
+                    Chưa có file được chọn
+                </span>
+                <button class="btn btn-primary" id="btnImportInitial">
+                    <i class="bi bi-upload"></i> Xác Nhận Nhập Tồn Kho Ban Đầu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <form id="inventoryCheckForm">
+        <div class="section-header">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label small fw-bold text-uppercase">Ngày kiểm kê</label>
+                    <input type="text" class="form-control form-control-sm text-center" id="checkDate" required />
+                </div>
+                <div class="col-md-9 col-lg-10">
+                    <label class="form-label small fw-bold text-uppercase">Ghi chú / Lý do kiểm kê</label>
+                    <input type="text" class="form-control form-control-sm" id="note" placeholder="Ví dụ: Kiểm kê định kỳ cuối tháng 2/2026..." />
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                <span class="fw-bold text-white small text-uppercase"><i class="bi bi-box-seam me-2"></i>DANH SÁCH HÀNG HÓA</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 58vh;">
+                    <table class="table table-bordered table-hover table-sm mb-0" id="itemsTable">
+                        <thead class="sticky-top">
+                            <tr>
+                                <th style="width:70px">ID</th>
+                                <th style="width:340px">Tên hàng hóa</th>
+                                <th style="width:90px">ĐVT</th>
+                                <th style="width:140px">SL Hệ thống</th>
+                                <th style="width:140px">SL Thực tế</th>
+                                <th style="width:140px">Chênh lệch</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in products %}
+                            <tr data-product-id="{{ p.id }}">
+                                <td class="text-center fw-bold">{{ p.id }}</td>
+                                <td>{{ p.name }}</td>
+                                <td class="text-center">{{ p.unit or '-' }}</td>
+                                <td class="text-end current-qty pe-3">{{ p.quantity|float|round(2) if p.quantity else 0 }}</td>
+                                <td><input type="number" step="any" min="0" class="form-control form-control-sm text-end checked-qty" value="{{ p.quantity|float|round(2) if p.quantity else 0 }}"></td>
+                                <td class="text-end fw-bold diff pe-3">0</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-bar mt-4">
+            <button type="submit" class="btn-save shadow" id="btnSaveCheck">
+                <i class="bi bi-floppy2-fill me-2"></i>LƯU KẾT QUẢ KIỂM KÊ
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+<script>
+// Utility
+const parseNum = v => parseFloat(String(v).replace(/[^0-9.-]+/g,'')) || 0;
+const formatNum = n => isNaN(n) ? '0' : n.toLocaleString('vi-VN', {minimumFractionDigits: 2, maximumFractionDigits: 3});
+const toast = (msg, type='success') => Toastify({
+    text: msg,
+    duration: 2800,
+    gravity: "top",
+    position: "right",
+    style: { background: type === 'error' ? "#dc2626" : "#16a34a" },
+    stopOnFocus: true
+}).showToast();
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('today').textContent = new Date().toLocaleDateString('vi-VN');
+
+    const dateInput = document.getElementById('checkDate');
+    if (dateInput) {
+        flatpickr(dateInput, {
+            dateFormat: "d/m/Y",
+            defaultDate: "today",
+            locale: "vn",
+            allowInput: true
+        });
+    }
+
+    document.querySelectorAll('.checked-qty').forEach(el => {
+        el.addEventListener('input', function() {
+            const tr = this.closest('tr');
+            const sysQty = parseNum(tr.querySelector('.current-qty').textContent);
+            const realQty = parseNum(this.value);
+            const diff = realQty - sysQty;
+            const diffCell = tr.querySelector('.diff');
+            diffCell.textContent = formatNum(diff);
+            diffCell.className = 'text-end fw-bold diff pe-3';
+            if (diff > 0) diffCell.classList.add('positive');
+            else if (diff < 0) diffCell.classList.add('negative');
+        });
+        el.dispatchEvent(new Event('input'));
+    });
+
+    document.getElementById('excelFile')?.addEventListener('change', function() {
+        const display = document.getElementById('fileNameDisplay');
+        if (this.files?.length > 0) {
+            display.textContent = this.files[0].name;
+            display.classList.remove('text-muted');
+            display.classList.add('text-dark', 'fw-bold');
+        } else {
+            display.textContent = 'Chưa có file được chọn';
+            display.classList.remove('text-dark', 'fw-bold');
+            display.classList.add('text-muted');
+        }
+    });
+});
+
+// Submit kiểm kê
+document.getElementById('inventoryCheckForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('btnSaveCheck');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>ĐANG LƯU...';
+
+    try {
+        const rows = document.querySelectorAll('#itemsTable tbody tr');
+        const items = Array.from(rows).map(row => ({
+            product_id: parseInt(row.dataset.productId),
+            checked_qty: parseNum(row.querySelector('.checked-qty').value)
+        })).filter(i => !isNaN(i.checked_qty));
+
+        const payload = {
+            check_date: document.getElementById('checkDate').value.split('/').reverse().join('-'),
+            note: document.getElementById('note').value.trim(),
+            items
+        };
+
+        const res = await fetch('/inventory/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Lỗi server ${res.status}: ${text.substring(0, 200)}...`);
+        }
+
+        const data = await res.json();
+        if (data.success) {
+            toast('Kiểm kê lưu thành công!', 'success');
+            setTimeout(() => location.reload(), 1400);
+        } else {
+            throw new Error(data.error || 'Lỗi không xác định');
+        }
+    } catch (err) {
+        toast('Lỗi: ' + err.message, 'error');
+        console.error(err);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-floppy2-fill me-2"></i>LƯU KẾT QUẢ KIỂM KÊ';
+    }
+});
+
+// Import tồn kho ban đầu
+document.getElementById('btnImportInitial')?.addEventListener('click', async function() {
+    const fileInput = document.getElementById('excelFile');
+    if (!fileInput.files?.length) return toast('Vui lòng chọn file Excel!', 'error');
+
+    if (!confirm('Xác nhận import tồn kho ban đầu?\nChỉ thực hiện 1 lần khi khởi tạo hệ thống.')) return;
+
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Đang xử lý...';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        const res = await fetch('/api/initial_stock/import', { method: 'POST', body: formData });
+
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Lỗi server ${res.status}: ${text.substring(0, 200)}...`);
+        }
+
+        const data = await res.json();
+        if (data.success) {
+            toast('Import thành công!', 'success');
+            setTimeout(() => location.reload(), 1800);
+        } else {
+            throw new Error(data.error || 'Lỗi xử lý file');
+        }
+    } catch (err) {
+        toast('Lỗi: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-upload"></i> Xác Nhận Nhập Tồn Kho Ban Đầu';
+    }
+});
+</script>
+{% endblock %}

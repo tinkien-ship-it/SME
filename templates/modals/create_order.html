@@ -1,0 +1,113 @@
+<!-- MODAL TẠO ĐƠN HÀNG MỚI – SIÊU ĐẸP, DROPDOWN BAY RA NGOÀI, KHÔNG BỊ CẮT -->
+<div class="modal fade" id="createOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content rounded-3xl shadow-3xl overflow-hidden border-0">
+            <!-- Header xanh lá sang trọng -->
+            <div class="bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-700 text-white p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-white/20 backdrop-blur rounded-2xl">
+                            <i class="bi bi-cart-plus text-4xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-black mb-1">TẠO ĐƠN HÀNG MỚI</h3>
+                            <p class="text-base opacity-90">Nhanh chóng • Chính xác • Tự động xuất hóa đơn</p>
+                        </div>
+                    </div>
+                    <button type="button" class="text-white/80 hover:text-white text-4xl transition" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-8 bg-gray-50">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- CỘT TRÁI -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Thông tin khách hàng -->
+                        <div class="bg-white rounded-3xl shadow-lg p-6 border border-gray-100">
+                            <h4 class="text-xl font-bold text-gray-800 mb-5 flex items-center gap-2">
+                                <i class="bi bi-person-badge-fill text-emerald-600"></i> Thông tin khách hàng
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block font-semibold text-red-600 mb-1">Họ tên *</label>
+                                    <input type="text" id="new_customer_name" class="w-full px-4 py-3 rounded-xl border-2 border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100 transition" placeholder="Bắt buộc" required>
+                                </div>
+                                <div>
+                                    <label class="block font-semibold mb-1">Số điện thoại</label>
+                                    <input type="text" id="new_phone" class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-gray-500 focus:ring-4 focus:ring-gray-100 transition">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold mb-1">Công ty</label>
+                                    <input type="text" id="new_company_name" class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-gray-500 focus:ring-4 focus:ring-gray-100 transition">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold mb-1">Mã số thuế</label>
+                                    <input type="text" id="new_tax_code" class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-gray-500 focus:ring-4 focus:ring-gray-100 transition">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block font-semibold mb-1">Địa chỉ giao hàng</label>
+                                    <input type="text" id="new_address" class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-gray-500 focus:ring-4 focus:ring-gray-100 transition">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bảng sản phẩm -->
+                        <div class="bg-white rounded-3xl shadow-lg p-6 border border-gray-100">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                    <i class="bi bi-basket3-fill text-emerald-600"></i> Sản phẩm trong đơn
+                                </h4>
+                                <button onclick="addProductRow()" class="px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition flex items-center gap-2 text-sm">
+                                    <i class="bi bi-plus-lg"></i> Thêm sản phẩm
+                                </button>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm" id="modalItemsTable">
+                                    <thead class="bg-gray-100 text-gray-700 font-bold text-left">
+                                        <tr class="h-12">
+                                            <th class="px-4">Sản phẩm</th>
+                                            <th class="px-4 text-center w-20">SL</th>
+                                            <th class="px-4 text-right w-28">Đơn giá</th>
+                                            <th class="px-4 text-center w-20">CK %</th>
+                                            <th class="px-4 text-right w-32 text-orange-600 font-bold">Tiền CK</th>
+                                            <th class="px-4 text-right w-36 text-emerald-600 font-black">Thành tiền</th>
+                                            <th class="w-12"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="modalItemsTableBody" class="divide-y divide-gray-200">
+                                        <!-- JS thêm dòng -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CỘT PHẢI: Tổng tiền -->
+                    <div class="space-y-6">
+                        <div class="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-3xl shadow-2xl p-8 text-center">
+                            <p class="text-2xl font-bold opacity-90">TỔNG TIỀN ĐƠN HÀNG</p>
+                            <p id="modalGrandTotal" class="text-6xl font-black mt-5">0 ₫</p>
+                            <div class="mt-6 space-y-4 text-lg">
+                                <div class="flex justify-between px-6"><span>Tạm tính:</span><span id="subTotal">0 ₫</span></div>
+                                <div class="flex justify-between px-6"><span class="text-yellow-300">Chiết khấu:</span><span id="totalDiscount" class="text-yellow-300 font-bold">-0 ₫</span></div>
+                                <div class="border-t-2 border-white/30 my-4"></div>
+                                <div class="text-3xl font-black">Phải thu: <span id="finalTotal">0 ₫</span></div>
+                            </div>
+                        </div>
+
+                        <button onclick="createOrderFromModal()" id="btnCreateOrder"
+                                class="w-full py-7 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-black text-2xl rounded-3xl shadow-2xl transform hover:scale-105 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3" disabled>
+                            <i class="bi bi-check-circle-fill text-3xl"></i> TẠO ĐƠN HÀNG NGAY
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DROPDOWN TOÀN MÀN HÌNH - BAY RA NGOÀI MODAL -->
+<div id="globalProductDropdown" class="fixed bg-white border border-gray-300 rounded-2xl shadow-2xl z-[999999] hidden" style="width:520px; max-height:520px; overflow-y:auto;"></div>

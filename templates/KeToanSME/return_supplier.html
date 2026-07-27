@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% block title %}Trả Hàng Nhập{% endblock %}
+
+{% block head_extra %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .form-control, .btn { border-radius: 8px !important; }
+        .flatpickr-calendar { z-index: 9999 !important; }
+        .text-danger { color: #dc3545 !important; }
+        .spinner-border { width: 2rem; height: 2rem; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+    <div id="liveToast" class="toast hide" role="alert">
+        <div class="toast-header">
+            <strong class="me-auto" id="toastHeader">Thông báo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toastBody"></div>
+    </div>
+</div>
+
+<h3 class="mb-4 text-primary fw-bold">
+    <i class="bi bi-arrow-repeat"></i> TRẢ HÀNG NHẬP
+</h3>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Từ ngày</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="startDate" placeholder="dd/mm/yyyy">
+                    <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Đến ngày</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="endDate" placeholder="dd/mm/yyyy">
+                    <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Tìm kiếm</label>
+                <input type="text" id="searchImport" class="form-control" placeholder="Số phiếu, hóa đơn, nhà cung cấp..." onkeyup="if(event.key==='Enter') loadImport()">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" onclick="loadImport()">Lọc</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label"><strong>Phiếu nhập</strong></label>
+                <select class="form-select" id="importId" onchange="loadImportDetails()" disabled>
+                    <option value="">-- Đang tải phiếu nhập... --</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><strong>Sản phẩm</strong></label>
+                <select class="form-select" id="productId" onchange="updateMaxQuantity()" disabled>
+                    <option value="">-- Chọn sản phẩm --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label"><strong>Số lượng trả</strong></label>
+                <input type="number" class="form-control" id="quantity" min="0.001" step="any" value="1" disabled>
+                <small id="maxQty" class="text-muted"></small>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label"><strong>Lý do trả</strong></label>
+                <textarea class="form-control" id="reason" rows="2" placeholder="Lý do trả hàng (không bắt buộc)"></textarea>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-danger w-100" id="submitBtn" onclick="submitReturn()" disabled>Trả Hàng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header"><h6 class="mb-0">Chi Tiết Phiếu Nhập Đã Chọn</h6></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0" id="itemsTable">
+                <thead class="table-light sticky-top text-center">
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên hàng</th>
+                        <th>ĐV</th>
+                        <th>SL</th>
+                        <th>Đơn giá</th>
+                        <th>Thành tiền</th>
+                        <th>% CK</th>
+                        <th>Tiền CK</th>
+                        <th>% VAT</th>
+                        <th>Tiền VAT</th>
+                        <th>Tiền TT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="11" class="text-center text-muted py-4">Chọn phiếu nhập để xem chi tiết</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer text-end fw-bold" id="importTotals"></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+
+<script>
+// Toast handler
+const toast = new bootstrap.Toast(document.getElementById('liveToast'));
+function showToast(msg, isError = false) {
+    document.getElementById('toastHeader').textContent = isError ? 'Lỗi' : 'Thành công';
+    document.getElementById('toastBody').textContent = msg;
+    const toastEl = document.getElementById('liveToast');
+    if (isError) {
+        toastEl.classList.add('bg-danger', 'text-white');
+    } else {
+        toastEl.classList.remove('bg-danger', 'text-white');
+    }
+    toast.show();
+}
+
+// Format số tiền Việt Nam
+const formatter = new Intl.NumberFormat('vi-VN');
+function formatCurrency(v) {
+    return formatter.format(Math.round(v || 0));
+}
+
+// Chuyển ngày dd/mm/yyyy sang ISO
+function toISO(str, isEndOfDay = false) {
+    if (!str) return '';
+    const parts = str.split('/');
+    if (parts.length !== 3) return '';
+    const timePart = isEndOfDay ? "23:59:59" : "00:00:00";
+    return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')} ${timePart}`;
+}
+
+// Load danh sách phiếu nhập
+function loadImport() {
+    const q = $('#searchImport').val().trim();
+    const start = toISO($('#startDate').val(), false);
+    const end = toISO($('#endDate').val(), true);
+
+    let url = `/api/import?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}`;
+    if (q) url += `&q=${encodeURIComponent(q)}`;
+
+    const select = $('#importId');
+    select.html('<option value="">-- Đang tải phiếu... --</option>').prop('disabled', true);
+
+    fetch(url)
+        .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        })
+        .then(data => {
+            select.html('<option value="">-- Chọn phiếu nhập --</option>');
+            if (!Array.isArray(data) || data.length === 0) {
+                select.append('<option disabled>Không có phiếu nào</option>');
+                return;
+            }
+            data.forEach(imp => {
+                const label = imp.import_no || `PN${String(imp.id).padStart(6, '0')}`;
+                select.append(`<option value="${imp.id}">${label} - ${imp.supplier_name || 'NCC'} - ${imp.date || ''}</option>`);
+            });
+            select.prop('disabled', false);
+        })
+        .catch(err => {
+            console.error("Lỗi tải danh sách phiếu:", err);
+            showToast('Không tải được danh sách phiếu nhập', true);
+            select.html('<option value="">-- Lỗi tải dữ liệu --</option>');
+        });
+}
+
+// Load chi tiết phiếu
+function loadImportDetails() {
+    const importId = $('#importId').val();
+    const tbody = $('#itemsTable tbody');
+    const totals = $('#importTotals');
+    const prodSelect = $('#productId');
+
+    prodSelect.html('<option value="">-- Chọn sản phẩm --</option>').prop('disabled', true);
+    $('#quantity, #submitBtn').prop('disabled', true);
+    $('#maxQty').text('');
+
+    if (!importId) {
+        tbody.html('<tr><td colspan="11" class="text-center text-muted py-4">Chọn phiếu nhập để xem chi tiết</td></tr>');
+        totals.html('');
+        return;
+    }
+
+    tbody.html('<tr><td colspan="11" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>');
+
+    fetch(`/api/import/${importId}`)
+        .then(r => {
+            if (!r.ok) {
+                return r.json().then(errData => {
+                    throw new Error(errData.error || `HTTP ${r.status}`);
+                });
+            }
+            return r.json();
+        })
+        .then(data => {
+            const items = data.items || [];
+            renderTable(items);
+
+            prodSelect.html('<option value="">-- Chọn sản phẩm --</option>');
+            items.forEach(it => {
+                const remain = parseFloat(it.remaining_qty ?? it.quantity ?? 0);
+                if (remain > 0) {
+                    prodSelect.append(`
+                        <option value="${it.product_id}" data-max="${remain}">
+                            ${it.name} (còn trả: ${remain} ${it.unit || ''})
+                        </option>
+                    `);
+                }
+            });
+            prodSelect.prop('disabled', false);
+        })
+        .catch(err => {
+            console.error("Lỗi tải chi tiết phiếu:", err);
+            showToast(err.message || 'Lỗi tải chi tiết phiếu', true);
+            tbody.html('<tr><td colspan="11" class="text-center text-danger">Không tải được dữ liệu</td></tr>');
+        });
+}
+
+// Render bảng chi tiết
+function renderTable(items) {
+    const tbody = $('#itemsTable tbody');
+    const totals = $('#importTotals');
+    tbody.empty();
+
+    if (!items.length) {
+        tbody.html('<tr><td colspan="11" class="text-center text-muted">Không có sản phẩm</td></tr>');
+        totals.html('');
+        return;
+    }
+
+    let totalGoods = 0, totalDisc = 0, totalVat = 0, totalNet = 0;
+
+    items.forEach(it => {
+        const qty = parseFloat(it.quantity || 0);
+        const price = parseFloat(it.buyprice || 0);
+        const disc = parseFloat(it.discount || 0);
+        const vat = parseFloat(it.tax || 0);
+
+        const goods = qty * price;
+        const taxable = goods - disc;
+        const net = taxable + vat;
+
+        const discPct = goods > 0 ? (disc / goods) * 100 : 0;
+        const vatPct = taxable > 0 ? (vat / taxable) * 100 : 0;
+
+        totalGoods += goods;
+        totalDisc += disc;
+        totalVat += vat;
+        totalNet += net;
+
+        tbody.append(`
+            <tr class="text-end">
+                <td class="text-center">${it.product_id}</td>
+                <td class="text-start">${it.name}</td>
+                <td class="text-center">${it.unit || '—'}</td>
+                <td>${qty}</td>
+                <td>${formatCurrency(price)}</td>
+                <td>${formatCurrency(goods)}</td>
+                <td>${discPct}%</td>
+                <td>${formatCurrency(disc)}</td>
+                <td>${vatPct}%</td>
+                <td>${formatCurrency(vat)}</td>
+                <td class="fw-bold">${formatCurrency(net)}</td>
+            </tr>
+        `);
+    });
+
+    totals.html(`
+        Tổng tiền hàng: ${formatCurrency(totalGoods)} ₫ —
+        Chiết khấu: ${formatCurrency(totalDisc)} ₫ —
+        VAT: ${formatCurrency(totalVat)} ₫ <br>
+        <span class="text-primary fs-5">Tổng thanh toán: ${formatCurrency(totalNet)} ₫</span>
+    `);
+}
+
+// Cập nhật giới hạn số lượng trả
+function updateMaxQuantity() {
+    const opt = $('#productId')[0].selectedOptions[0];
+    const qtyInput = $('#quantity');
+    const maxSpan = $('#maxQty');
+    const btn = $('#submitBtn');
+
+    if (!opt || !opt.value) {
+        qtyInput.prop('disabled', true).val(1);
+        btn.prop('disabled', true);
+        maxSpan.text('');
+        return;
+    }
+
+    const max = parseFloat(opt.dataset.max || 0);
+    qtyInput.prop({disabled: false, max: max, step: 'any'}).val(max > 0 ? max : 1);
+    btn.prop('disabled', max <= 0);
+    maxSpan.text(`Tối đa: ${max}`);
+}
+
+// Gửi yêu cầu trả hàng
+function submitReturn() {
+    const importId = $('#importId').val();
+    const productId = $('#productId').val();
+    const qty = parseFloat($('#quantity').val());
+    const reason = $('#reason').val().trim();
+
+    const now = new Date();
+    const dateStr = now.getFullYear() + '-' +
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(now.getDate()).padStart(2, '0') + ' ' +
+                    now.toTimeString().split(' ')[0];
+
+    if (!importId || !productId || isNaN(qty) || qty <= 0) {
+        showToast('Vui lòng chọn phiếu, sản phẩm và nhập số lượng hợp lệ', true);
+        return;
+    }
+
+    const payload = {
+        import_id: parseInt(importId),
+        product_id: parseInt(productId),
+        quantity: qty,
+        reason: reason || 'Không có lý do',
+        date: dateStr
+    };
+
+    const btn = $('#submitBtn');
+    btn.prop('disabled', true).text('Đang xử lý...');
+
+    fetch('/api/return/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json().then(d => ({ok: r.ok, data: d})))
+    .then(res => {
+        if (!res.ok) throw new Error(res.data.error || 'Lỗi server');
+        showToast('Trả hàng thành công!');
+        setTimeout(() => location.reload(), 1500);
+    })
+    .catch(err => {
+        console.error("Lỗi trả hàng:", err);
+        showToast('Lỗi: ' + err.message, true);
+        btn.prop('disabled', false).text('Trả Hàng');
+    });
+}
+
+// Khởi tạo
+document.addEventListener('DOMContentLoaded', () => {
+    const fpConfig = {
+        dateFormat: "d/m/Y",
+        locale: "vn",
+        allowInput: true,
+        onChange: function() {
+            if ($('#startDate').val() && $('#endDate').val()) {
+                loadImport();
+            }
+        }
+    };
+
+    // Ngày mặc định: 01/01/2026 - 12/01/2026 (theo ngày hiện tại là 12/01/2026)
+    flatpickr("#startDate", fpConfig).setDate(new Date(2026, 0, 1));
+    flatpickr("#endDate", fpConfig).setDate(new Date(2026, 0, 12));
+
+    loadImport();
+});
+</script>
+{% endblock %}

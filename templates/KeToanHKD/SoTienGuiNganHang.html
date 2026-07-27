@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .bank-ledger-page {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 1.25rem 1.5rem 2.5rem;
+    }
+
+    .bank-ledger-hero {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 55%, #084298 100%);
+        border-radius: 16px;
+        color: #fff;
+        padding: 1.35rem 1.5rem;
+        box-shadow: 0 10px 28px rgba(13, 110, 253, 0.22);
+    }
+
+    .bank-ledger-hero .hero-sub {
+        opacity: 0.9;
+        font-size: 0.92rem;
+    }
+
+    .bank-stat-card {
+        border: 0;
+        border-radius: 14px;
+        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+        height: 100%;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .bank-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+    }
+
+    .bank-stat-card .stat-label {
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .bank-stat-card .stat-value {
+        font-family: 'JetBrains Mono', 'Consolas', monospace;
+        font-size: 1.35rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .bank-stat-card.stat-open .stat-value { color: #475569; }
+    .bank-stat-card.stat-in .stat-value { color: #198754; }
+    .bank-stat-card.stat-out .stat-value { color: #dc3545; }
+    .bank-stat-card.stat-close .stat-value { color: #0d6efd; }
+
+    .bank-toolbar {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+        padding: 0.9rem 1.1rem;
+    }
+
+    .bank-info-note {
+        border-radius: 14px;
+        border: 1px solid #cfe2ff;
+        background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+    }
+
+    .bank-ledger-paper {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
+        padding: 2rem 2.25rem;
+        font-family: "Times New Roman", Times, serif;
+        color: #000;
+        line-height: 1.45;
+    }
+
+    .bank-account-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 0.35rem 0.9rem;
+        font-size: 0.9rem;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .table-s7 {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        font-size: 14px;
+    }
+
+    .table-s7 th {
+        border: 1px solid #334155 !important;
+        padding: 10px 6px;
+        background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%) !important;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 12px;
+        text-align: center !important;
+        vertical-align: middle;
+    }
+
+    .table-s7 td {
+        border: 1px solid #cbd5e1 !important;
+        padding: 8px 6px;
+        vertical-align: middle;
+    }
+
+    .table-s7 tbody tr:not(.row-summary):not(.row-opening):hover td {
+        background: #f8fafc;
+    }
+
+    .table-s7 .row-opening td {
+        background: #f1f5f9;
+        font-weight: 600;
+    }
+
+    .table-s7 .row-summary td {
+        background: #f8fafc;
+        font-weight: 700;
+    }
+
+    .table-s7 .row-close td {
+        background: #0d6efd !important;
+        color: #fff !important;
+        font-weight: 700;
+        border-color: #0a58ca !important;
+    }
+
+    .val-cell {
+        text-align: right !important;
+        font-family: "JetBrains Mono", "Consolas", monospace;
+        white-space: nowrap;
+    }
+
+    .text-left { text-align: left !important; padding-left: 10px !important; }
+    .text-center-cell { text-align: center !important; }
+
+    .header-info p { margin-bottom: 4px; font-size: 15px; }
+    .title-main { font-size: 22pt; font-weight: bold; letter-spacing: 0.02em; }
+
+    @media (max-width: 991.98px) {
+        .bank-ledger-paper { padding: 1.25rem 1rem; }
+        .bank-stat-card .stat-value { font-size: 1.1rem; }
+    }
+
+    @media print {
+        @page {
+            size: A4 portrait;
+            margin: 10mm 10mm 15mm 15mm;
+        }
+        body { background: none !important; }
+        .no-print, nav, footer, .btn, .navbar, .breadcrumb { display: none !important; }
+        .bank-ledger-page {
+            max-width: none;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .bank-ledger-paper {
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+        .table-s7 { font-size: 12px; }
+        .table-s7 th {
+            background-color: #f2f2f2 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .table-s7 td { border-color: #000 !important; }
+        .table-s7 .row-close td {
+            background: #f2f2f2 !important;
+            color: #000 !important;
+        }
+        .table-s7 tbody tr:hover td { background: transparent !important; }
+    }
+</style>
+
+<div class="bank-ledger-page">
+    <div class="bank-ledger-hero no-print mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="rounded-circle bg-white bg-opacity-25 d-inline-flex align-items-center justify-content-center"
+                          style="width: 42px; height: 42px;">
+                        <i class="fas fa-building-columns fs-5"></i>
+                    </span>
+                    <div>
+                        <h4 class="fw-bold mb-0">Sổ Tiền Gửi Ngân Hàng</h4>
+                        <div class="hero-sub">Mẫu S2e-HKD · Năm {{ year }}</div>
+                    </div>
+                </div>
+                {% if info.bank_name or info.bank_account %}
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    {% if info.bank_name %}
+                    <span class="bank-account-badge text-dark">
+                        <i class="fas fa-university text-primary"></i>{{ info.bank_name }}
+                    </span>
+                    {% endif %}
+                    {% if info.bank_account %}
+                    <span class="bank-account-badge text-dark">
+                        <i class="fas fa-hashtag text-secondary"></i>{{ info.bank_account }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <button type="button" class="btn btn-light fw-semibold shadow-sm" id="btnOpenBankFundModal">
+                    <i class="fas fa-plus-circle me-1 text-success"></i>Nộp Tiền Vào Tài Khoản
+                </button>
+                <form method="GET" class="d-flex">
+                    <select name="year" class="form-select form-select-sm shadow-sm" style="min-width: 120px;" onchange="this.form.submit()">
+                        {% for y in range(current_year_today + 1, 2019, -1) %}
+                            <option value="{{ y }}" {% if y == year %}selected{% endif %}>Năm {{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+                <button type="button" onclick="window.print()" class="btn btn-outline-light fw-semibold">
+                    <i class="fas fa-print me-1"></i>In A4
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4 no-print">
+        <div class="col-6 col-xl-3">
+            <div class="card bank-stat-card stat-open">
+                <div class="card-body py-3">
+                    <div class="stat-label mb-1">Số dư đầu kỳ</div>
+                    <div class="stat-value">{{ "{:,.0f}".format(so_du_dau_ky)|replace(',', '.') }} ₫</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card bank-stat-card stat-in">
+                <div class="card-body py-3">
+                    <div class="stat-label mb-1">Tổng thu (gửi vào)</div>
+                    <div class="stat-value">{{ "{:,.0f}".format(tong_thu_trong_ky)|replace(',', '.') }} ₫</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card bank-stat-card stat-out">
+                <div class="card-body py-3">
+                    <div class="stat-label mb-1">Tổng chi (rút ra)</div>
+                    <div class="stat-value">{{ "{:,.0f}".format(tong_chi_trong_ky)|replace(',', '.') }} ₫</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <div class="card bank-stat-card stat-close">
+                <div class="card-body py-3">
+                    <div class="stat-label mb-1">Số dư cuối kỳ</div>
+                    <div class="stat-value">{{ "{:,.0f}".format(so_du_cuoi_ky)|replace(',', '.') }} ₫</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bank-info-note p-3 mb-4 no-print">
+        <div class="fw-bold mb-1 text-primary">
+            <i class="fas fa-info-circle me-1"></i>Ghi chú — Nộp tiền vào tài khoản
+        </div>
+        <p class="mb-0 small text-secondary">
+            HKD mới: nhập số dư tiền gửi ngân hàng tại ngày bắt đầu kinh doanh.
+            HKD đang hoạt động: ghi các lần nộp tiền theo từng ngày biến động số dư.
+            Bấm <strong>Nộp Tiền Vào Tài Khoản</strong> để lập Phiếu Thu (Nợ 112 / Có 411).
+        </p>
+    </div>
+
+    <div class="bank-ledger-paper">
+        <div class="row header-info">
+            <div class="col-lg-7">
+                <p class="fw-bold text-uppercase mb-1">{{ info.business_name or 'Hộ kinh doanh: ................................' }}</p>
+                <p class="mb-1">Mã số thuế: {{ info.tax_code or '................' }}</p>
+                <p class="mb-0">Địa chỉ: {{ info.address or '................' }}</p>
+            </div>
+            <div class="col-lg-5 text-lg-end text-center mt-3 mt-lg-0">
+                <p class="fw-bold mb-0">Mẫu số S2e – HKD</p>
+                <p class="fst-italic small mb-0">(Ban hành kèm theo Thông tư 152/2025/TT-BTC)</p>
+            </div>
+        </div>
+
+        <div class="text-center my-4">
+            <div class="title-main">SỔ TIỀN GỬI NGÂN HÀNG</div>
+            <p class="fs-5 mb-1">Năm: <strong>{{ year }}</strong></p>
+            <p class="mb-0">Nơi mở tài khoản: <strong>{{ info.bank_name or '................' }}</strong></p>
+            <p class="mb-0">Số hiệu tài khoản: <strong>{{ info.bank_account or '................' }}</strong></p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table-s7">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="width: 11%;">Ngày ghi sổ</th>
+                        <th colspan="2">Chứng từ</th>
+                        <th rowspan="2">Diễn giải</th>
+                        <th rowspan="2" style="width: 13%;">Thu<br>(Gửi vào)</th>
+                        <th rowspan="2" style="width: 13%;">Chi<br>(Rút ra)</th>
+                        <th rowspan="2" style="width: 13%;">Còn lại</th>
+                    </tr>
+                    <tr>
+                        <th style="width: 9%;">Số hiệu</th>
+                        <th style="width: 9%;">Ngày</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="row-opening">
+                        <td class="text-center-cell">01/01/{{ year }}</td>
+                        <td class="text-center-cell">-</td>
+                        <td class="text-center-cell">-</td>
+                        <td class="text-left">SỐ DƯ ĐẦU KỲ</td>
+                        <td class="val-cell">-</td>
+                        <td class="val-cell">-</td>
+                        <td class="val-cell">{{ "{:,.0f}".format(so_du_dau_ky)|replace(',', '.') }}</td>
+                    </tr>
+
+                    {% for item in ds_phat_sinh %}
+                    <tr>
+                        <td class="text-center-cell">{{ item.date[8:10] }}/{{ item.date[5:7] }}</td>
+                        <td class="text-center-cell fw-bold">{{ item.so_hieu }}</td>
+                        <td class="text-center-cell">{{ item.date[8:10] }}/{{ item.date[5:7] }}</td>
+                        <td class="text-left">{{ item.dien_giai }}</td>
+                        <td class="val-cell">{{ "{:,.0f}".format(item.thu)|replace(',', '.') if item.thu > 0 else '-' }}</td>
+                        <td class="val-cell">{{ "{:,.0f}".format(item.chi)|replace(',', '.') if item.chi > 0 else '-' }}</td>
+                        <td class="val-cell">{{ "{:,.0f}".format(item.ton)|replace(',', '.') }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="row-summary">
+                        <td colspan="4" class="text-center-cell py-3">CỘNG PHÁT SINH TRONG KỲ</td>
+                        <td class="val-cell">{{ "{:,.0f}".format(tong_thu_trong_ky)|replace(',', '.') }}</td>
+                        <td class="val-cell">{{ "{:,.0f}".format(tong_chi_trong_ky)|replace(',', '.') }}</td>
+                        <td class="val-cell">-</td>
+                    </tr>
+                    <tr class="row-close">
+                        <td colspan="4" class="text-center-cell py-3">SỐ DƯ CUỐI KỲ</td>
+                        <td colspan="2" class="text-center-cell">×</td>
+                        <td class="val-cell" style="font-size: 16px;">{{ "{:,.0f}".format(so_du_cuoi_ky)|replace(',', '.') }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row mt-5 pt-3">
+            <div class="col-6 text-center">
+                <p class="fw-bold mb-1"></p>
+                <p class="small fst-italic mb-5"></p>
+                <div style="height: 60px;"></div>
+                <p class="fw-bold">{{ session.get('user_name') or '' }}</p>
+            </div>
+            <div class="col-6 text-center">
+                {% set parts = ngay_in.split('/') %}
+                <p class="fst-italic mb-1">Ngày {{ parts[0] }} tháng {{ parts[1] }} năm {{ parts[2] }}</p>
+                <p class="fw-bold mb-1">Đại diện hộ kinh doanh</p>
+                <p class="small fst-italic mb-5">(Ký, họ tên, đóng dấu)</p>
+                <div style="height: 60px;"></div>
+                <p class="fw-bold text-uppercase">{{ info.representative_name or '................' }}</p>
+            </div>
+        </div>
+
+        <div class="mt-5 small fst-italic border-top pt-2">
+            <p class="mb-0">- Sổ này có ... trang, đánh số từ trang 01 đến trang ...</p>
+            <p class="mb-0">- Ngày mở sổ: 01/01/{{ year }}</p>
+        </div>
+    </div>
+</div>
+
+{% with modal_id='bankFundModal', debit_account='112', debit_label='Tiền Gửi Ngân Hàng', modal_title='Nộp Tiền Vào Tài Khoản', help_text='Nếu là hộ kinh doanh mới, vui lòng nhập số dư tiền gửi tại tài khoản ngân hàng vào ngày bắt đầu kinh doanh. Nếu là hộ kinh doanh đang hoạt động hãy nhập số tiền mà bạn đã nộp vào tài khoản ngân hàng vào những ngày tương ứng theo thông báo biến động số dư.', default_reason='Nộp tiền vào tài khoản ngân hàng phục vụ kinh doanh' %}
+{% include 'KeToanHKD/_quy_nhop_modal.html' %}
+{% endwith %}
+
+{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+(function () {
+    const modalEl = document.getElementById('bankFundModal');
+    if (!modalEl) return;
+
+    const form = modalEl.querySelector('.quy-nhop-form');
+    const dateInput = modalEl.querySelector('.quy-nhop-date');
+    const amountDisplay = modalEl.querySelector('.quy-nhop-amount-display');
+    const amountActual = modalEl.querySelector('.quy-nhop-amount-actual');
+    const debitAccount = '112';
+
+    const fp = flatpickr(dateInput, {
+        locale: 'vn',
+        dateFormat: 'd/m/Y',
+        defaultDate: new Date(),
+        allowInput: true
+    });
+
+    amountDisplay.addEventListener('input', function () {
+        const num = parseInt(this.value.replace(/\D/g, ''), 10) || 0;
+        amountActual.value = num;
+        this.value = num ? num.toLocaleString('vi-VN') : '';
+    });
+
+    document.getElementById('btnOpenBankFundModal')?.addEventListener('click', () => {
+        form.classList.remove('was-validated');
+        form.reset();
+        modalEl.querySelector('.quy-nhop-payer').value = {{ (info.representative_name or info.business_name or 'Chủ hộ kinh doanh') | tojson }};
+        modalEl.querySelector('.quy-nhop-reason').value = 'Nộp tiền vào tài khoản ngân hàng phục vụ kinh doanh';
+        amountActual.value = 0;
+        amountDisplay.value = '';
+        fp.setDate(new Date());
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+
+    function getIsoDate() {
+        const val = dateInput.value.trim();
+        const p = val.split('/');
+        if (p.length !== 3) return null;
+        return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const amount = parseInt(amountActual.value, 10) || 0;
+        if (amount <= 0) amountActual.value = 0;
+
+        if (!form.checkValidity() || amount <= 0) {
+            form.classList.add('was-validated');
+            return;
+        }
+
+        const btn = form.querySelector('.quy-nhop-submit');
+        const saveText = form.querySelector('.quy-nhop-save-text');
+        const saveLoading = form.querySelector('.quy-nhop-save-loading');
+        btn.disabled = true;
+        saveText.classList.add('d-none');
+        saveLoading.classList.remove('d-none');
+
+        try {
+            const res = await fetch('/api/receipt/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: getIsoDate(),
+                    payer_name: modalEl.querySelector('.quy-nhop-payer').value.trim(),
+                    address: '',
+                    tax_code: '',
+                    amount: amount,
+                    debit_account: debitAccount,
+                    credit_account: '411',
+                    reason: modalEl.querySelector('.quy-nhop-reason').value.trim(),
+                    reference_document: ''
+                })
+            });
+            const result = await res.json();
+            if (result.success) {
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+                const year = new URLSearchParams(window.location.search).get('year') || '{{ year }}';
+                window.location.href = `/SoTienGuiNganHang?year=${year}`;
+            } else {
+                Swal.fire('Lỗi', result.error || 'Không lưu được phiếu thu.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Lỗi', 'Không kết nối được máy chủ.', 'error');
+        } finally {
+            btn.disabled = false;
+            saveText.classList.remove('d-none');
+            saveLoading.classList.add('d-none');
+        }
+    });
+})();
+</script>
+{% endblock %}

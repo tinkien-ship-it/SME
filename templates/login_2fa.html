@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác minh thiết bị | Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .auth-card {
+            background: #ffffff;
+            border: none;
+            border-radius: 28px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .auth-header {
+            background: #fcfcfd;
+            padding: 40px 40px 20px;
+            text-align: center;
+        }
+
+        .shield-icon {
+            width: 64px;
+            height: 64px;
+            background: #fff4e5;
+            color: #f59e0b;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            margin: 0 auto 20px;
+        }
+
+        .auth-body {
+            padding: 0 40px 40px;
+        }
+
+        .btn-auth-option {
+            border-radius: 14px;
+            padding: 14px 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        /* Nút Google */
+        .btn-google {
+            background: #ffffff;
+            color: #374151;
+            border-color: #e5e7eb;
+        }
+        .btn-google:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+            transform: translateY(-2px);
+        }
+
+        /* Nút Email */
+        .btn-email {
+            background: #4f46e5;
+            color: #ffffff;
+        }
+        .btn-email:hover {
+            background: #4338ca;
+            box-shadow: 0 8px 15px rgba(79, 70, 229, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .separator {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 0.85rem;
+            margin: 25px 0;
+        }
+        .separator::before, .separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .separator:not(:empty)::before { margin-right: .5em; }
+        .separator:not(:empty)::after { margin-left: .5em; }
+
+        .back-link {
+            color: #6b7280;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #111827; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
+            <div class="card auth-card shadow">
+                
+                <div class="auth-header">
+                    <div class="shield-icon">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <h4 class="fw-bold mb-2">Xác minh thiết bị</h4>
+                    <p class="text-muted small mb-0">Chúng tôi phát hiện bạn đang đăng nhập từ một thiết bị mới. Vui lòng xác minh danh tính để tiếp tục.</p>
+                </div>
+
+                <div class="auth-body">
+                    <div class="d-grid gap-3">
+                        
+                        {% if auth.google_allowed and auth.google_client_id %}
+                        <div id="google2faWrap" class="d-flex justify-content-center mb-2"></div>
+                        <p class="text-muted small text-center mb-0">Xác minh bằng Gmail đang đăng nhập trên trình duyệt</p>
+                        {% elif auth.google_allowed and auth.google_config_error %}
+                        <div class="alert alert-warning border small text-center mb-0 py-2">
+                            <i class="fab fa-google text-danger me-1"></i>
+                            {{ auth.google_config_error }}
+                        </div>
+                        {% elif auth.google_allowed %}
+                        <p class="text-muted small text-center mb-0">Chưa cấu hình Google Client ID (Master Settings → Đăng nhập &amp; OTP)</p>
+                        {% endif %}
+                        
+                        {% if auth.google_allowed %}
+                        <div class="separator">Hoặc dùng mã bảo mật</div>
+                        {% endif %}
+
+                        <form action="{{ url_for('send_otp_email') }}" method="POST" class="mb-3">
+                            <button type="submit" class="btn btn-auth-option btn-email w-100 shadow-sm">
+                                <i class="fa-solid fa-paper-plane me-3"></i>
+                                Nhận mã OTP qua Email
+                            </button>
+                        </form>
+
+                        {% if auth.sms_allowed %}
+                        {% if auth.sms_ready %}
+                        <form action="{{ url_for('send_otp_sms_route') }}" method="POST">
+                            <button type="submit" class="btn btn-auth-option btn-outline-primary w-100 shadow-sm">
+                                <i class="fa-solid fa-mobile-screen me-3"></i>
+                                Nhận mã OTP qua SMS
+                            </button>
+                        </form>
+                        {% else %}
+                        <button type="button" class="btn btn-auth-option btn-outline-primary w-100 shadow-sm" disabled>
+                            <i class="fa-solid fa-mobile-screen me-3"></i>
+                            OTP qua SMS (chưa cấu hình API)
+                        </button>
+                        {% endif %}
+                        {% endif %}
+
+                    </div>
+
+                    <div class="text-center mt-4 pt-2">
+                        <a href="{{ url_for('login') }}" class="back-link">
+                            <i class="fa-solid fa-chevron-left me-1 small"></i> Quay lại đăng nhập
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+            
+            <p class="text-center text-muted small mt-4">
+                &copy; 2026 KETO POS. Bảo mật bởi Gemini Shield.
+            </p>
+        </div>
+    </div>
+</div>
+
+{% if auth.google_allowed and auth.google_client_id %}
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+function handleGoogle2faCredential(response) {
+    fetch('{{ url_for("login_google_2fa_credential") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success && data.redirect) {
+            window.location.href = data.redirect;
+            return;
+        }
+        alert(data.error || 'Xác thực Google thất bại');
+    })
+    .catch(() => alert('Không kết nối được máy chủ'));
+}
+
+function initGoogle2faSignIn() {
+    if (!window.google || !google.accounts || !google.accounts.id) {
+        setTimeout(initGoogle2faSignIn, 200);
+        return;
+    }
+    google.accounts.id.initialize({
+        client_id: '{{ auth.google_client_id }}',
+        callback: handleGoogle2faCredential,
+        auto_select: false,
+        context: 'signin'
+    });
+    google.accounts.id.renderButton(
+        document.getElementById('google2faWrap'),
+        { theme: 'outline', size: 'large', width: 320, text: 'continue_with', locale: 'vi' }
+    );
+}
+document.addEventListener('DOMContentLoaded', initGoogle2faSignIn);
+</script>
+{% endif %}
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# --- Virtual env ---
+venv/
+pos_env/
+env/
+.venv/
+
+# --- Secrets & local config ---
+.env
+.env.*
+!.env.txt
+config/auth.local.json
+*.pem
+*.key
+
+# --- Database (KHÔNG đưa lên Git — VPS giữ DB riêng) ---
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+tenants/
+
+# --- Logs & temp ---
+logs/
+*.log
+_tmp_*.py
+*.tmp
+.cache/
+
+# --- OS / IDE ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+
+# --- Node (nếu có) ---
+node_modules/
+
+# --- Backup archives ---
+*.tar.gz
+*.zip
+pos_backup_*
+
+# --- Windows-only (VPS Linux không cần) ---
+*.exe
+*.dll
+
+# --- Uploads runtime (tùy chọn — bỏ comment nếu muốn sync uploads) ---
+# uploads/

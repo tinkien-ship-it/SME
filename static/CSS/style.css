@@ -1,0 +1,121 @@
+body { font-family: Arial, sans-serif; }
+.card { box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+{% block styles %}
+<style>
+/* === RESIZABLE COLUMNS === */
+.resizable {
+    position: relative;
+}
+.resizable .resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    background: transparent;
+}
+.resizable .resizer:hover {
+    background: #007bff;
+}
+.resizable .resizer::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1px;
+    height: 30px;
+    background: #ccc;
+    transform: translate(-50%, -50%);
+    display: none;
+}
+.resizable .resizer:hover::after {
+    display: block;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// === RESIZABLE COLUMNS WITH LOCAL STORAGE ===
+document.addEventListener('DOMContentLoaded', () => {
+    const table = document.querySelector('#itemsTable');
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    const ths = thead.querySelectorAll('th');
+
+    // Tải thiết lập độ rộng từ localStorage
+    const savedWidths = JSON.parse(localStorage.getItem('importTableColumnWidths') || '{}');
+
+    ths.forEach((th, index) => {
+        if (index === ths.length - 1) return; // Bỏ cột X
+
+        // Áp dụng độ rộng đã lưu
+        if (savedWidths[index]) {
+            th.style.width = savedWidths[index];
+            th.style.minWidth = savedWidths[index];
+        }
+
+        // Thêm class resizable
+        th.classList.add('resizable');
+
+        // Tạo thanh kéo
+        const resizer = document.createElement('div');
+        resizer.classList.add('resizer');
+        th.appendChild(resizer);
+
+        // Gắn sự kiện kéo
+        let startX, startWidth;
+        resizer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            startX = e.pageX;
+            startWidth = th.offsetWidth;
+
+            const onMouseMove = (e) => {
+                const diff = e.pageX - startX;
+                const newWidth = startWidth + diff;
+                if (newWidth > 50) { // Giới hạn tối thiểu
+                    th.style.width = newWidth + 'px';
+                    th.style.minWidth = newWidth + 'px';
+
+                    // Đồng bộ với tbody
+                    tbody.querySelectorAll(`tr td:nth-child(${index + 1})`).forEach(td => {
+                        td.style.width = newWidth + 'px';
+                        td.style.minWidth = newWidth + 'px';
+                    });
+                }
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+
+                // Lưu độ rộng mới
+                const currentWidths = JSON.parse(localStorage.getItem('importTableColumnWidths') || '{}');
+                currentWidths[index] = th.style.width;
+                localStorage.setItem('importTableColumnWidths', JSON.stringify(currentWidths));
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+    });
+
+    // Đồng bộ tbody khi có thay đổi từ thead
+    const syncTbodyWidths = () => {
+        ths.forEach((th, index) => {
+            if (index === ths.length - 1) return;
+            const width = th.offsetWidth + 'px';
+            tbody.querySelectorAll(`tr td:nth-child(${index + 1})`).forEach(td => {
+                td.style.width = width;
+                td.style.minWidth = width;
+            });
+        });
+    };
+
+    // Đồng bộ ban đầu
+    setTimeout(syncTbodyWidths, 100);
+});
+</script>
+{% endblock %}

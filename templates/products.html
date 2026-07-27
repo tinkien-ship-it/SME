@@ -1,0 +1,1102 @@
+{% extends "base.html" %}
+{% block head_extra %}
+{% include 'partials/data_list_table_assets.html' %}
+{% endblock %}
+{% block extra_style %}
+<style>
+    .products-page {
+        max-width: 100%;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .products-table-wrap {
+        overflow-x: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+    }
+
+    .products-table {
+        table-layout: fixed;
+        width: 100%;
+        min-width: 1180px;
+        margin-bottom: 0;
+    }
+
+    .products-table th {
+        position: relative;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+        user-select: none;
+        background: #f8f9fa;
+        font-size: 0.82rem;
+    }
+
+    .products-table td {
+        overflow: hidden;
+        vertical-align: middle;
+        font-size: 0.88rem;
+    }
+
+    .products-table .col-name {
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.35;
+    }
+
+    .products-table .col-resizer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 7px;
+        height: 100%;
+        cursor: col-resize;
+        z-index: 2;
+        touch-action: none;
+    }
+
+    .products-table .col-resizer::after {
+        content: '';
+        position: absolute;
+        top: 20%;
+        bottom: 20%;
+        right: 3px;
+        width: 1px;
+        background: #cbd5e1;
+    }
+
+    .products-table .col-resizer:hover,
+    .products-table.resizing .col-resizer:hover {
+        background: rgba(13, 110, 253, 0.12);
+    }
+
+    .products-table.resizing {
+        cursor: col-resize;
+    }
+
+    .products-table.resizing th,
+    .products-table.resizing td {
+        pointer-events: none;
+    }
+
+    .products-table-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .products-table-hint {
+        font-size: 0.78rem;
+        color: #6c757d;
+    }
+
+    @media (max-width: 767.98px) {
+        #productForm .col-md-1, #productForm .col-md-2,
+        #productForm .col-md-3, #productForm .col-md-4 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        #productForm .d-flex.justify-content-end {
+            justify-content: stretch !important;
+        }
+        #productForm .d-flex.justify-content-end .btn {
+            flex: 1;
+        }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid products-page mt-4">
+    <h3 class="page-hero-title">Quản Lý Sản Phẩm & Dịch Vụ</h3>
+    
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body py-3">
+            <ul class="nav nav-tabs mb-3" id="productTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-goods-btn" data-bs-toggle="tab" data-bs-target="#tabGoods" type="button" role="tab">Hàng hóa</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-finished-btn" data-bs-toggle="tab" data-bs-target="#tabFinished" type="button" role="tab">Thành phẩm</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-service-btn" data-bs-toggle="tab" data-bs-target="#tabService" type="button" role="tab">Dịch vụ</button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- TAB HÀNG HÓA -->
+                <div class="tab-pane fade show active" id="tabGoods" role="tabpanel">
+                    <h5 id="formTitle" class="mb-3">Thêm Sản Phẩm Mới</h5>
+                    <form id="productForm">
+                        <input type="hidden" id="productId">
+                        
+                        <div class="row g-2 mb-3 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Mã hàng</small></label>
+                                <input type="text" class="form-control form-control-sm" id="productCode" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label mb-0"><small>Tên sản phẩm <span class="text-danger">*</span></small></label>
+                                <input type="text" class="form-control form-control-sm" id="name" required>
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label mb-0"><small>Đơn vị</small></label>
+                                <input type="text" class="form-control form-control-sm" id="unit" value="Cái">
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label mb-0"><small>Tồn kho</small></label>
+                                <input type="number" class="form-control form-control-sm" id="quantity" value="0" min="0" readonly> 
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small id="basePriceLabel">Giá bán lẻ (Cơ bản) <span class="text-danger">*</span></small></label>
+                                <input type="text" class="form-control form-control-sm format-input" id="basePrice" value="0" required>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check mt-4 pt-1">
+                                    <input class="form-check-input" type="checkbox" id="sellByWeight" onchange="toggleWeightFields()">
+                                    <label class="form-check-label" for="sellByWeight"><small>Bán theo cân</small></label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-2 align-items-end d-none" id="weightPluRow">
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>PLU cân (5 số)</small></label>
+                                <input type="text" class="form-control form-control-sm" id="weightPlu" maxlength="5" placeholder="01234">
+                            </div>
+                            <div class="col-md-10">
+                                <small class="text-muted">Giá cơ bản = giá / kg. Đơn vị nên để kg. Mã vạch cân in từ cân phải khớp PLU.</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label mb-0"><small>Đơn vị chuyển đổi</small></label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" id="unit1" placeholder="VD: thùng, lốc...">
+                                    <button class="btn btn-outline-primary" type="button" onclick="addUnit1()" title="Thêm nhanh tên đơn vị">
+                                        <i class="fas fa-plus fa-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Tỷ lệ (x Cơ bản)</small></label>
+                                <input type="number" class="form-control form-control-sm" id="unitRatio" value="1" min="1">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-0"><small>Giá bán sỉ (Đơn vị sỉ)</small></label>
+                                <input type="text" class="form-control form-control-sm format-input" id="price" value="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Mã vạch (ĐV Sỉ)</small></label>
+                                <input type="text" id="barcode1" name="barcode1" class="form-control form-control-sm" readonly>
+                            </div>
+                            <div class="col-md-2 d-flex justify-content-end">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="resetForm()">Hủy</button>
+                                <button type="submit" class="btn btn-sm btn-success ms-2">Lưu</button>
+                            </div>
+                        </div>
+                        <div class="row mt-1">
+                            <div class="col-md-10 offset-md-5">
+                                <small class="form-text text-muted">Nhóm ngành mặc định: <strong>NN1</strong> — Phân phối, cung cấp hàng hóa (tự động khi nhập kho/bán hàng).</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB THÀNH PHẨM -->
+                <div class="tab-pane fade" id="tabFinished" role="tabpanel">
+                    <h5 id="fgFormTitle" class="mb-3">Thêm Thành Phẩm Mới</h5>
+                    <form id="finishedGoodsForm">
+                        <input type="hidden" id="fgProductId">
+                        <div class="row g-2 mb-3 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Mã thành phẩm</small></label>
+                                <input type="text" class="form-control form-control-sm bg-light" id="fgProductCode" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label mb-0"><small>Tên thành phẩm <span class="text-danger">*</span></small></label>
+                                <input type="text" class="form-control form-control-sm" id="fgName" required>
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label mb-0"><small>Đơn vị</small></label>
+                                <input type="text" class="form-control form-control-sm" id="fgUnit" value="Cái">
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label mb-0"><small>Tồn kho</small></label>
+                                <input type="number" class="form-control form-control-sm" id="fgQuantity" value="0" min="0" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small id="fgBasePriceLabel">Giá bán lẻ (Cơ bản) <span class="text-danger">*</span></small></label>
+                                <input type="text" class="form-control form-control-sm format-input" id="fgBasePrice" value="0" required>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check mt-4 pt-1">
+                                    <input class="form-check-input" type="checkbox" id="fgSellByWeight" onchange="toggleFgWeightFields()">
+                                    <label class="form-check-label" for="fgSellByWeight"><small>Bán theo cân</small></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-2 align-items-end d-none" id="fgWeightPluRow">
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>PLU cân (5 số)</small></label>
+                                <input type="text" class="form-control form-control-sm" id="fgWeightPlu" maxlength="5" placeholder="01234">
+                            </div>
+                            <div class="col-md-10">
+                                <small class="text-muted">Giá cơ bản = giá / kg. Đơn vị nên để kg.</small>
+                            </div>
+                        </div>
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label mb-0"><small>Đơn vị chuyển đổi</small></label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" id="fgUnit1" placeholder="VD: thùng, lốc...">
+                                    <button class="btn btn-outline-primary" type="button" onclick="addFgUnit1()" title="Thêm nhanh tên đơn vị">
+                                        <i class="fas fa-plus fa-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Tỷ lệ (x Cơ bản)</small></label>
+                                <input type="number" class="form-control form-control-sm" id="fgUnitRatio" value="1" min="1">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-0"><small>Giá bán sỉ (Đơn vị sỉ)</small></label>
+                                <input type="text" class="form-control form-control-sm format-input" id="fgPrice" value="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Mã vạch (ĐV Sỉ)</small></label>
+                                <input type="text" id="fgBarcode1" class="form-control form-control-sm" readonly>
+                            </div>
+                            <div class="col-md-2 d-flex justify-content-end">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="resetFinishedForm()">Hủy</button>
+                                <button type="submit" class="btn btn-sm btn-success ms-2">Lưu</button>
+                            </div>
+                        </div>
+                        <div class="row mt-1">
+                            <div class="col-md-10 offset-md-5">
+                                <small class="form-text text-muted">Mã tự sinh: <strong>TP001</strong>, mã vạch lẻ <strong>TP00101</strong>, sỉ <strong>TP00102</strong>. Nhóm ngành: <strong>NN3</strong> (Sản xuất).</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB DỊCH VỤ -->
+                <div class="tab-pane fade" id="tabService" role="tabpanel">
+                    <h5 id="serviceFormTitle" class="mb-3">Thêm Dịch Vụ Mới</h5>
+                    <form id="serviceForm">
+                        <input type="hidden" id="serviceProductId">
+                        <div class="row g-2 mb-3 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Mã dịch vụ</small></label>
+                                <input type="text" class="form-control form-control-sm" id="serviceCode" placeholder="VD: DV001">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label mb-0"><small>Tên dịch vụ <span class="text-danger">*</span></small></label>
+                                <input type="text" class="form-control form-control-sm" id="serviceName" placeholder="VD: Sửa chữa, cho thuê, tư vấn..." required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Đơn vị tính <span class="text-danger">*</span></small></label>
+                                <input type="text" class="form-control form-control-sm" id="serviceUnit" value="Lần" placeholder="Lần, giờ, tháng...">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Đơn giá <span class="text-danger">*</span></small></label>
+                                <input type="text" class="form-control form-control-sm format-input" id="servicePrice" value="0" required>
+                            </div>
+                        </div>
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-8">
+                                <label class="form-label mb-0"><small>Nhóm ngành (NN1–NN4) <span class="text-danger">*</span></small></label>
+                                <select class="form-select form-select-sm" id="serviceSector" required>
+                                    <option value="">— Chọn nhóm ngành —</option>
+                                </select>
+                                <small class="text-muted">Mã dịch vụ có thể sửa trực tiếp (VD: <strong>DV001</strong>, mã vạch <strong>DV00101</strong>). Gói subscription hiển thị trên trang đăng nhập / gia hạn theo dữ liệu bảng này.</small>
+                            </div>
+                            <div class="col-md-4 d-flex justify-content-end">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="resetServiceForm()">Hủy</button>
+                                <button type="submit" class="btn btn-sm btn-success ms-2">Lưu dịch vụ</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- KHỐI DANH MỤC SẢN PHẨM -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" placeholder="Tìm tên/mã hàng/dịch vụ..." id="searchInput">
+                <button class="btn btn-outline-secondary" type="button" onclick="searchProducts()">Tìm</button>
+            </div>
+            <div class="pivot-panel">
+                <div class="pivot-label"><i class="fas fa-filter me-1"></i> Lọc theo tồn kho</div>
+                <div class="pivot-chips" id="stockPivotChips"></div>
+                <div class="pivot-summary" id="productPivotSummary"></div>
+            </div>
+            <div class="table-responsive table-desktop-only products-table-wrap">
+                <table class="table table-sm table-hover products-table" id="productsTableEl">
+                    <thead><tr></tr></thead>
+                    <tbody id="productsTable"></tbody>
+                </table>
+            </div>
+            <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="enhanced-table-toolbar">
+                    <span class="text-muted small">Hiển thị <strong id="productTableCount">0</strong> sản phẩm</span>
+                    <span id="productColFilters" class="active-filters-badge d-none"></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearProductColFilters">Xóa lọc cột</button>
+                </div>
+            </div>
+            <div class="mobile-card-list" id="productsMobileList"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+let products = [];
+let productId = null;
+let fgProductId = null;
+let serviceProductId = null;
+let searchTimeout;
+let stockFilter = 'all';
+let hkdSectorOptions = [];
+let productTableCtrl = null;
+
+const HKD_SECTOR_FALLBACK = [
+    { code: 'NN1', storage_code: 'G1', label: 'NN1 — Phân phối, cung cấp hàng hóa (GTGT 1%, TNCN 0,5%)' },
+    { code: 'NN2', storage_code: 'G2', label: 'NN2 — Dịch vụ, xây dựng không bao thầu NVL (GTGT 5%, TNCN 2%)' },
+    { code: 'NN3', storage_code: 'G3', label: 'NN3 — Sản xuất, vận tải, thầu XD có vật tư (GTGT 3%, TNCN 1,5%)' },
+    { code: 'NN4', storage_code: 'G4', label: 'NN4 — Hoạt động kinh doanh khác (GTGT 2%, TNCN 1%)' },
+];
+
+const LEGACY_G_TO_NN = { G1: 'NN1', G2: 'NN2', G3: 'NN3', G4: 'NN4' };
+
+function nnDisplayCode(code) {
+    if (!code) return '—';
+    return LEGACY_G_TO_NN[code] || code;
+}
+
+function sectorStorageCode(opt) {
+    return opt.storage_code || opt.legacy_code || opt.code;
+}
+
+function isServiceProduct(p) {
+    return (p.product_type || '').trim() === 'service';
+}
+
+function isSubscriptionPlan(p) {
+    return parseInt(p.is_subscription_plan || 0) === 1;
+}
+
+function isFinishedGoodsProduct(p) {
+    return (p.product_type || '').trim() === 'finished_goods';
+}
+
+function defaultSector(p) {
+    if (isServiceProduct(p)) return p.hkd_sector_code || '';
+    if (isFinishedGoodsProduct(p)) return p.hkd_sector_code || 'G3';
+    return p.hkd_sector_code || 'G1';
+}
+
+function sectorBadge(code) {
+    const display = nnDisplayCode(code);
+    const colors = { NN1: 'primary', NN2: 'success', NN3: 'warning', NN4: 'secondary', G1: 'primary', G2: 'success', G3: 'warning', G4: 'secondary' };
+    return `<span class="badge bg-${colors[display] || 'light text-dark'}">${escapeHtml(display)}</span>`;
+}
+
+function kindBadge(p) {
+    if (isSubscriptionPlan(p)) return '<span class="badge bg-dark">Gói subscription</span>';
+    if (isServiceProduct(p)) return '<span class="badge bg-info">Dịch vụ</span>';
+    if (isFinishedGoodsProduct(p)) return '<span class="badge bg-warning text-dark">Thành phẩm</span>';
+    return '<span class="badge bg-primary">Hàng hóa</span>';
+}
+
+function populateSectorSelect(selectedCode = '') {
+    const sel = document.getElementById('serviceSector');
+    if (!sel) return;
+    const opts = hkdSectorOptions.length ? hkdSectorOptions : HKD_SECTOR_FALLBACK;
+    const normalized = selectedCode || '';
+    sel.innerHTML = '<option value="">— Chọn nhóm ngành —</option>' +
+        opts.map(o => {
+            const val = sectorStorageCode(o);
+            const selAttr = (val === normalized || o.code === normalized) ? ' selected' : '';
+            return `<option value="${val}"${selAttr}>${escapeHtml(o.label)}</option>`;
+        }).join('');
+}
+
+async function loadHkdSectorOptions() {
+    try {
+        const data = await fetchJSON('/api/hkd/sector-options');
+        hkdSectorOptions = Array.isArray(data) ? data : [];
+    } catch (e) {
+        hkdSectorOptions = HKD_SECTOR_FALLBACK.slice();
+    }
+    populateSectorSelect();
+}
+
+function switchToGoodsTab() {
+    const btn = document.getElementById('tab-goods-btn');
+    if (btn && window.bootstrap?.Tab) bootstrap.Tab.getOrCreateInstance(btn).show();
+    else if (btn) btn.click();
+}
+
+function switchToFinishedTab() {
+    const btn = document.getElementById('tab-finished-btn');
+    if (btn && window.bootstrap?.Tab) bootstrap.Tab.getOrCreateInstance(btn).show();
+    else if (btn) btn.click();
+}
+
+function switchToServiceTab() {
+    const btn = document.getElementById('tab-service-btn');
+    if (btn && window.bootstrap?.Tab) bootstrap.Tab.getOrCreateInstance(btn).show();
+    else if (btn) btn.click();
+}
+
+const STOCK_PIVOT_ITEMS = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'in_stock', label: 'Còn hàng' },
+    { value: 'low', label: 'Sắp hết' },
+    { value: 'out', label: 'Hết hàng' },
+];
+
+const PRODUCT_COL_WIDTHS_KEY = 'products_col_widths_v1';
+const PRODUCT_COL_DEFAULTS = {
+    kind: 92,
+    code: 108,
+    name: 360,
+    unit: 88,
+    sector: 96,
+    qty: 118,
+    base_price: 138,
+    wholesale: 118,
+    actions: 158,
+};
+const PRODUCT_COL_MIN = {
+    kind: 70,
+    code: 80,
+    name: 180,
+    unit: 60,
+    sector: 72,
+    qty: 88,
+    base_price: 100,
+    wholesale: 90,
+    actions: 120,
+};
+
+function loadProductColWidths() {
+    try {
+        const raw = localStorage.getItem(PRODUCT_COL_WIDTHS_KEY);
+        if (!raw) return { ...PRODUCT_COL_DEFAULTS };
+        const parsed = JSON.parse(raw);
+        return { ...PRODUCT_COL_DEFAULTS, ...parsed };
+    } catch (e) {
+        return { ...PRODUCT_COL_DEFAULTS };
+    }
+}
+
+function saveProductColWidths(widths) {
+    localStorage.setItem(PRODUCT_COL_WIDTHS_KEY, JSON.stringify(widths));
+}
+
+function applyProductColWidths(widths) {
+    const colgroup = document.getElementById('productsColgroup');
+    if (!colgroup) return;
+    colgroup.querySelectorAll('col[data-col]').forEach(col => {
+        const key = col.dataset.col;
+        const px = widths[key] || PRODUCT_COL_DEFAULTS[key];
+        col.style.width = `${px}px`;
+    });
+}
+
+function initProductColumnResize() {
+    const table = document.getElementById('productsTableEl');
+    if (!table) return;
+
+    let widths = loadProductColWidths();
+    applyProductColWidths(widths);
+
+    let activeCol = null;
+    let startX = 0;
+    let startWidth = 0;
+
+    function onMouseMove(e) {
+        if (!activeCol) return;
+        const delta = e.clientX - startX;
+        const min = PRODUCT_COL_MIN[activeCol] || 60;
+        const next = Math.max(min, startWidth + delta);
+        widths[activeCol] = next;
+        applyProductColWidths(widths);
+    }
+
+    function onMouseUp() {
+        if (!activeCol) return;
+        saveProductColWidths(widths);
+        activeCol = null;
+        table.classList.remove('resizing');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    }
+
+    table.querySelectorAll('.col-resizer').forEach(handle => {
+        handle.addEventListener('mousedown', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            activeCol = handle.dataset.col;
+            startX = e.clientX;
+            startWidth = widths[activeCol] || PRODUCT_COL_DEFAULTS[activeCol] || 100;
+            table.classList.add('resizing');
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+    });
+
+    document.getElementById('resetColWidthsBtn')?.addEventListener('click', () => {
+        widths = { ...PRODUCT_COL_DEFAULTS };
+        saveProductColWidths(widths);
+        applyProductColWidths(widths);
+    });
+}
+
+function getStockLevel(qty) {
+    if (qty <= 0) return 'out';
+    if (qty <= 5) return 'low';
+    return 'in_stock';
+}
+
+function filterProductsByStock(list) {
+    if (stockFilter === 'all') return list;
+    return list.filter(p => getStockLevel(parseFloat(p.quantity ?? 0) || 0) === stockFilter);
+}
+
+function toggleWeightFields() {
+    const checked = document.getElementById('sellByWeight')?.checked;
+    const row = document.getElementById('weightPluRow');
+    const unitInput = document.getElementById('unit');
+    const label = document.getElementById('basePriceLabel');
+    if (row) row.classList.toggle('d-none', !checked);
+    if (checked && unitInput && (unitInput.value === 'Cái' || !unitInput.value.trim())) {
+        unitInput.value = 'kg';
+    }
+    if (label) {
+        label.innerHTML = checked
+            ? 'Giá bán / kg <span class="text-danger">*</span>'
+            : 'Giá bán lẻ (Cơ bản) <span class="text-danger">*</span>';
+    }
+}
+
+function toggleFgWeightFields() {
+    const checked = document.getElementById('fgSellByWeight')?.checked;
+    const row = document.getElementById('fgWeightPluRow');
+    const unitInput = document.getElementById('fgUnit');
+    const label = document.getElementById('fgBasePriceLabel');
+    if (row) row.classList.toggle('d-none', !checked);
+    if (checked && unitInput && (unitInput.value === 'Cái' || !unitInput.value.trim())) {
+        unitInput.value = 'kg';
+    }
+    if (label) {
+        label.innerHTML = checked
+            ? 'Giá bán / kg <span class="text-danger">*</span>'
+            : 'Giá bán lẻ (Cơ bản) <span class="text-danger">*</span>';
+    }
+}
+
+function renderProductRow(p) {
+    const qty = parseFloat(p.quantity ?? 0) || 0;
+    const qtyDisplay = isServiceProduct(p) ? '—' : qty.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+    const rowClass = isServiceProduct(p) ? '' : (qty <= 0 ? 'table-danger' : qty <= 5 ? 'table-warning' : '');
+    const stockBadge = qty <= 0 ? 'danger' : qty <= 5 ? 'warning' : 'success';
+    const stockText = qty <= 0 ? 'Hết' : qty <= 5 ? 'Sắp hết' : 'Còn';
+    const deleteBtn = isSubscriptionPlan(p)
+        ? ''
+        : `<button class="btn btn-sm btn-danger ms-1" onclick="deleteProduct(${p.id})">Xóa</button>`;
+    const barcodeBtn = isServiceProduct(p)
+        ? ''
+        : `<button class="btn btn-sm btn-success ms-1" title="In mã vạch Tommy 40 tem" onclick="openBarcodePrintProduct(${p.id})"><i class="bi bi-upc-scan"></i></button>`;
+    return `
+        <tr data-id="${p.id}" class="${rowClass}">
+            <td class="text-center">${kindBadge(p)}</td>
+            <td class="text-center"><small>${escapeHtml(p.product_code || '—')}</small></td>
+            <td class="fw-bold col-name">${escapeHtml(p.name || 'Chưa đặt tên')}${parseInt(p.sell_by_weight) === 1 ? ' <span class="badge bg-info">Cân</span>' : ''}</td>
+            <td class="text-center">${escapeHtml(p.unit || 'Cái')}</td>
+            <td class="text-center">${sectorBadge(defaultSector(p))}</td>
+            <td class="text-center fw-bold ${isServiceProduct(p) ? 'text-muted' : `text-${stockBadge}`}">
+                ${isServiceProduct(p) ? '—' : `${qtyDisplay} <span class="badge bg-${stockBadge}">${stockText}</span>`}
+            </td>
+            <td class="text-end text-primary">${formatMoney(p.base_price ?? p.price ?? 0)}</td>
+            <td class="text-end text-danger">${isServiceProduct(p) ? '—' : formatMoney(p.price ?? 0)}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-warning" onclick="editProduct(${p.id})">Sửa</button>
+                ${barcodeBtn}
+                ${deleteBtn}
+            </td>
+        </tr>`;
+}
+
+function renderProductMobileCard(p) {
+    const qty = parseFloat(p.quantity ?? 0) || 0;
+    const stockBadge = qty <= 0 ? 'danger' : qty <= 5 ? 'warning' : 'success';
+    const stockText = qty <= 0 ? 'Hết' : qty <= 5 ? 'Sắp hết' : 'Còn';
+    const deleteBtn = isSubscriptionPlan(p)
+        ? ''
+        : `<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">Xóa</button>`;
+    const barcodeBtn = isServiceProduct(p)
+        ? ''
+        : `<button class="btn btn-sm btn-success" onclick="openBarcodePrintProduct(${p.id})"><i class="bi bi-upc-scan"></i> In tem</button>`;
+    return `
+        <div class="mobile-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="card-title">${escapeHtml(p.name || 'Chưa đặt tên')}</div>
+                ${isServiceProduct(p) ? kindBadge(p) : `<span class="badge bg-${stockBadge}">${stockText}</span>`}
+            </div>
+            <div class="card-row"><span class="label">Loại</span><span class="value">${kindBadge(p)}</span></div>
+            <div class="card-row"><span class="label">Mã</span><span class="value">${escapeHtml(p.product_code || '—')}</span></div>
+            <div class="card-row"><span class="label">Nhóm HKD</span><span class="value">${sectorBadge(defaultSector(p))}</span></div>
+            ${isServiceProduct(p) ? '' : `<div class="card-row"><span class="label">Tồn kho</span><span class="value fw-bold">${qty.toLocaleString('vi-VN')}</span></div>`}
+            <div class="card-row"><span class="label">Đơn giá</span><span class="value text-primary">${formatMoney(p.base_price ?? p.price ?? 0)}</span></div>
+            ${isServiceProduct(p) ? '' : `<div class="card-row"><span class="label">Giá sỉ</span><span class="value text-danger">${formatMoney(p.price ?? 0)}</span></div>`}
+            <div class="card-actions">
+                <button class="btn btn-sm btn-warning" onclick="editProduct(${p.id})">Sửa</button>
+                ${barcodeBtn}
+                ${deleteBtn}
+            </div>
+        </div>`;
+}
+
+function updateProductPivotSummary(all, filtered) {
+    const el = document.getElementById('productPivotSummary');
+    if (!el) return;
+    const counts = { in_stock: 0, low: 0, out: 0 };
+    all.forEach(p => counts[getStockLevel(parseFloat(p.quantity ?? 0) || 0)]++);
+    el.textContent = `Hiển thị ${filtered.length}/${all.length} · Còn: ${counts.in_stock} · Sắp hết: ${counts.low} · Hết: ${counts.out}`;
+}
+
+function renderProductRows(data, tbody) {
+    const el = tbody || document.getElementById('productsTable');
+    if (!el) return;
+    if (!data.length) {
+        el.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted">Không có sản phẩm phù hợp bộ lọc.</td></tr>';
+        return;
+    }
+    el.innerHTML = data.map(renderProductRow).join('');
+}
+
+function initProductTable() {
+    productTableCtrl = DataListTable.create({
+        table: '#productsTableEl',
+        countSelector: '#productTableCount',
+        activeFiltersSelector: '#productColFilters',
+        defaultSort: { key: 'name', dir: 'asc' },
+        columns: [
+            { key: 'kind', label: 'Loại', filterType: 'select', width: '120px', align: 'center',
+              getValue: p => isServiceProduct(p) ? 'service' : (isFinishedGoodsProduct(p) ? 'finished_goods' : (isSubscriptionPlan(p) ? 'subscription' : 'goods')),
+              filterOptions: [
+                  { value: 'goods', label: 'Hàng hóa' },
+                  { value: 'service', label: 'Dịch vụ' },
+                  { value: 'finished_goods', label: 'Thành phẩm' },
+                  { value: 'subscription', label: 'Gói subscription' },
+              ] },
+            { key: 'product_code', label: 'Mã', sortable: true, filterType: 'text', width: '100px', align: 'center',
+              getValue: p => p.product_code || '' },
+            { key: 'name', label: 'Tên', sortable: true, filterType: 'text', width: '240px',
+              getValue: p => p.name || '' },
+            { key: 'unit', label: 'Đơn vị', filterType: 'text', width: '80px', align: 'center',
+              getValue: p => p.unit || '' },
+            { key: 'sector', label: 'Nhóm NN', filterType: 'select', width: '90px', align: 'center',
+              getValue: p => nnDisplayCode(defaultSector(p)),
+              filterOptions: ['NN1', 'NN2', 'NN3', 'NN4'] },
+            { key: 'quantity', label: 'SL tồn', sortable: true, filterType: 'number', width: '100px', align: 'center',
+              getValue: p => isServiceProduct(p) ? null : (p.quantity ?? 0),
+              sortValue: p => Number(p.quantity) || 0 },
+            { key: 'base_price', label: 'Đơn giá / Giá lẻ', sortable: true, filterType: 'number', width: '130px', align: 'end',
+              getValue: p => p.base_price ?? p.price ?? 0, sortValue: p => Number(p.base_price ?? p.price ?? 0) },
+            { key: 'wholesale', label: 'Giá sỉ', sortable: true, filterType: 'number', width: '110px', align: 'end',
+              getValue: p => isServiceProduct(p) ? null : (p.price ?? 0), sortValue: p => Number(p.price) || 0 },
+            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '160px', align: 'center' },
+        ],
+        renderRows: (rows, tbody) => {
+            renderProductRows(rows, tbody);
+            const mobile = document.getElementById('productsMobileList');
+            if (mobile) {
+                mobile.innerHTML = rows.length
+                    ? rows.map(renderProductMobileCard).join('')
+                    : '<div class="text-center py-4 text-muted">Không có sản phẩm phù hợp bộ lọc.</div>';
+            }
+        },
+    });
+}
+
+function renderProductsList(list) {
+    const filtered = filterProductsByStock(list);
+    updateProductPivotSummary(list, filtered);
+    if (productTableCtrl) {
+        productTableCtrl.setData(filtered);
+    } else {
+        renderProductRows(filtered);
+        const mobile = document.getElementById('productsMobileList');
+        if (mobile) mobile.innerHTML = filtered.map(renderProductMobileCard).join('');
+    }
+}
+
+function formatInputNumber(input) {
+    input.value = formatVND(parseNumberVN(input.value));
+}
+
+function showProductMsg(msg, isError) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({ icon: isError ? 'error' : 'success', title: isError ? 'Lỗi' : 'Thành công', text: msg, timer: isError ? undefined : 2000, showConfirmButton: isError });
+    } else {
+        alert(msg);
+    }
+}
+
+async function loadProducts(filter = '') {
+    const url = filter
+        ? `/api/products/manage?q=${encodeURIComponent(filter)}&_t=${Date.now()}`
+        : `/api/products/manage?_t=${Date.now()}`;
+
+    const tbody = document.getElementById('productsTable');
+    try {
+        const data = await fetchJSON(url);
+        products = Array.isArray(data) ? data : (data.data || []);
+        renderProductsList(products);
+    } catch (err) {
+        document.getElementById('productsTable').innerHTML = '<tr><td colspan="9" class="text-center py-5 text-danger">Không tải được danh sách sản phẩm.</td></tr>';
+        const mobile = document.getElementById('productsMobileList');
+        if (mobile) mobile.innerHTML = '';
+        showProductMsg(err.message || 'Không thể kết nối server.', true);
+    }
+}
+
+// Tối ưu hóa: Debounce cho search input
+document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(searchTimeout); 
+    const query = this.value.trim();
+    
+    searchTimeout = setTimeout(() => {
+        loadProducts(query);
+    }, 300); 
+});
+
+function searchProducts() {
+    const query = document.getElementById('searchInput').value.trim();
+    loadProducts(query);
+}
+
+function addUnit1() {
+    const unit = prompt("Tên đơn vị chuyển đổi (VD: thùng, lốc):");
+    if (unit && unit.trim()) {
+        document.getElementById('unit1').value = unit.trim();
+    }
+}
+
+function addFgUnit1() {
+    const unit = prompt("Tên đơn vị chuyển đổi (VD: thùng, lốc):");
+    if (unit && unit.trim()) {
+        document.getElementById('fgUnit1').value = unit.trim();
+    }
+}
+
+function editProduct(id) {
+    const p = products.find(x => x.id == id);
+    if (!p) return;
+    window.scrollTo(0, 0);
+
+    if (isServiceProduct(p)) {
+        resetForm();
+        resetFinishedForm();
+        serviceProductId = id;
+        switchToServiceTab();
+        document.getElementById('serviceFormTitle').textContent = 'Sửa Dịch Vụ';
+        document.getElementById('serviceProductId').value = id;
+        document.getElementById('serviceCode').value = p.product_code || '';
+        document.getElementById('serviceName').value = p.name || '';
+        document.getElementById('serviceUnit').value = p.unit || 'Lần';
+        document.getElementById('servicePrice').value = formatVND(p.base_price ?? p.price ?? 0);
+        populateSectorSelect(p.hkd_sector_code || 'G2');
+        return;
+    }
+
+    if (isFinishedGoodsProduct(p)) {
+        resetForm();
+        resetServiceForm();
+        fgProductId = id;
+        switchToFinishedTab();
+        document.getElementById('fgFormTitle').textContent = 'Sửa Thành Phẩm';
+        document.getElementById('fgProductId').value = id;
+        document.getElementById('fgProductCode').value = p.product_code || '';
+        document.getElementById('fgName').value = p.name || '';
+        document.getElementById('fgUnit').value = p.unit || 'Cái';
+        document.getElementById('fgQuantity').value = parseFloat(p.quantity || 0);
+        document.getElementById('fgBasePrice').value = formatVND(p.base_price);
+        document.getElementById('fgPrice').value = formatVND(p.price);
+        document.getElementById('fgUnit1').value = p.unit1 || '';
+        document.getElementById('fgUnitRatio').value = p.unit_ratio || 1;
+        document.getElementById('fgBarcode1').value = p.barcode1 || '';
+        document.getElementById('fgSellByWeight').checked = parseInt(p.sell_by_weight) === 1;
+        document.getElementById('fgWeightPlu').value = p.weight_plu || '';
+        toggleFgWeightFields();
+        return;
+    }
+
+    resetServiceForm();
+    resetFinishedForm();
+    switchToGoodsTab();
+    productId = id;
+    document.getElementById('formTitle').textContent = 'Sửa Sản Phẩm';
+    document.getElementById('productId').value = id;
+    document.getElementById('productCode').value = p.product_code || '';
+    document.getElementById('name').value = p.name;
+    document.getElementById('unit').value = p.unit || 'Cái';
+    document.getElementById('quantity').value = parseFloat(p.quantity || 0);
+    document.getElementById('basePrice').value = formatVND(p.base_price);
+    document.getElementById('price').value = formatVND(p.price);
+    document.getElementById('unit1').value = p.unit1 || '';
+    document.getElementById('unitRatio').value = p.unit_ratio || 1;
+    document.getElementById('barcode1').value = p.barcode1 || '';
+    document.getElementById('sellByWeight').checked = parseInt(p.sell_by_weight) === 1;
+    document.getElementById('weightPlu').value = p.weight_plu || '';
+    toggleWeightFields();
+}
+
+function resetForm() {
+    document.getElementById('productForm').reset();
+    document.getElementById('formTitle').textContent = 'Thêm Sản Phẩm Mới';
+    document.getElementById('productId').value = '';
+    productId = null;
+    document.getElementById('basePrice').value = '0';
+    document.getElementById('price').value = '0';
+    document.getElementById('unit').value = 'Cái';
+    document.getElementById('unitRatio').value = '1';
+    document.getElementById('quantity').value = '0';
+    document.getElementById('productCode').value = '';
+    document.getElementById('barcode1').value = '';
+    document.getElementById('sellByWeight').checked = false;
+    document.getElementById('weightPlu').value = '';
+    toggleWeightFields();
+}
+
+function resetServiceForm() {
+    document.getElementById('serviceForm').reset();
+    document.getElementById('serviceFormTitle').textContent = 'Thêm Dịch Vụ Mới';
+    document.getElementById('serviceProductId').value = '';
+    serviceProductId = null;
+    document.getElementById('serviceUnit').value = 'Lần';
+    document.getElementById('servicePrice').value = '0';
+    document.getElementById('serviceCode').value = '';
+    populateSectorSelect('G2');
+}
+
+function resetFinishedForm() {
+    document.getElementById('finishedGoodsForm').reset();
+    document.getElementById('fgFormTitle').textContent = 'Thêm Thành Phẩm Mới';
+    document.getElementById('fgProductId').value = '';
+    fgProductId = null;
+    document.getElementById('fgBasePrice').value = '0';
+    document.getElementById('fgPrice').value = '0';
+    document.getElementById('fgUnit').value = 'Cái';
+    document.getElementById('fgUnitRatio').value = '1';
+    document.getElementById('fgQuantity').value = '0';
+    document.getElementById('fgProductCode').value = '';
+    document.getElementById('fgBarcode1').value = '';
+    document.getElementById('fgSellByWeight').checked = false;
+    document.getElementById('fgWeightPlu').value = '';
+    toggleFgWeightFields();
+}
+
+document.getElementById('finishedGoodsForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const data = {
+        id: document.getElementById('fgProductId').value || undefined,
+        item_kind: 'finished_goods',
+        name: document.getElementById('fgName').value.trim(),
+        unit: document.getElementById('fgUnit').value.trim() || 'Cái',
+        base_price: parseNumberVN(document.getElementById('fgBasePrice').value),
+        price: parseNumberVN(document.getElementById('fgPrice').value),
+        unit1: document.getElementById('fgUnit1').value.trim() || '',
+        unit_ratio: parseFloat(document.getElementById('fgUnitRatio').value) || 1,
+        sell_by_weight: document.getElementById('fgSellByWeight').checked ? 1 : 0,
+        weight_plu: document.getElementById('fgWeightPlu').value.trim() || ''
+    };
+    if (!data.name) {
+        showProductMsg('Tên thành phẩm không được để trống.', true);
+        return;
+    }
+    try {
+        const res = await fetchJSON('/api/products/manage', {
+            method: data.id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.success) {
+            showProductMsg(data.id ? 'Cập nhật thành phẩm thành công!' : 'Thêm thành phẩm thành công!', false);
+            resetFinishedForm();
+            loadProducts(document.getElementById('searchInput').value.trim());
+            localStorage.setItem('product_price_updated', Date.now());
+        } else {
+            showProductMsg(res.error || 'Không lưu được thành phẩm.', true);
+        }
+    } catch (err) {
+        showProductMsg(err.message || 'Lỗi kết nối server.', true);
+    }
+});
+
+document.getElementById('productForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const data = {
+        id: document.getElementById('productId').value || undefined,
+        item_kind: 'goods',
+        name: document.getElementById('name').value.trim(),
+        unit: document.getElementById('unit').value.trim() || 'Cái',
+        base_price: parseNumberVN(document.getElementById('basePrice').value),
+        price: parseNumberVN(document.getElementById('price').value),
+        unit1: document.getElementById('unit1').value.trim() || '',
+        unit_ratio: parseFloat(document.getElementById('unitRatio').value) || 1,
+        sell_by_weight: document.getElementById('sellByWeight').checked ? 1 : 0,
+        weight_plu: document.getElementById('weightPlu').value.trim() || ''
+    };
+    if (!data.name) {
+        showProductMsg('Tên sản phẩm không được để trống.', true);
+        return;
+    }
+
+    try {
+        const res = await fetchJSON('/api/products/manage', {
+            method: data.id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.success) {
+            showProductMsg(data.id ? 'Cập nhật thành công!' : 'Thêm sản phẩm thành công!', false);
+            resetForm();
+            loadProducts(document.getElementById('searchInput').value.trim());
+            localStorage.setItem('product_price_updated', Date.now());
+        } else {
+            showProductMsg(res.error || 'Không lưu được sản phẩm.', true);
+        }
+    } catch (err) {
+        showProductMsg(err.message || 'Lỗi kết nối server.', true);
+    }
+});
+
+document.getElementById('serviceForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const sector = document.getElementById('serviceSector').value;
+    const data = {
+        id: document.getElementById('serviceProductId').value || undefined,
+        item_kind: 'service',
+        product_code: document.getElementById('serviceCode').value.trim().toUpperCase(),
+        name: document.getElementById('serviceName').value.trim(),
+        unit: document.getElementById('serviceUnit').value.trim() || 'Lần',
+        base_price: parseNumberVN(document.getElementById('servicePrice').value),
+        hkd_sector_code: sector
+    };
+    if (!data.name) {
+        showProductMsg('Tên dịch vụ không được để trống.', true);
+        return;
+    }
+    if (!sector) {
+        showProductMsg('Vui lòng chọn nhóm ngành (NN1–NN4).', true);
+        return;
+    }
+    if (data.id && !data.product_code) {
+        showProductMsg('Mã dịch vụ không được để trống khi sửa.', true);
+        return;
+    }
+
+    try {
+        const res = await fetchJSON('/api/products/manage', {
+            method: data.id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.success) {
+            showProductMsg(data.id ? 'Cập nhật dịch vụ thành công!' : 'Thêm dịch vụ thành công!', false);
+            resetServiceForm();
+            loadProducts(document.getElementById('searchInput').value.trim());
+            localStorage.setItem('product_price_updated', Date.now());
+        } else {
+            showProductMsg(res.error || 'Không lưu được dịch vụ.', true);
+        }
+    } catch (err) {
+        showProductMsg(err.message || 'Lỗi kết nối server.', true);
+    }
+});
+
+async function deleteProduct(id) {
+    if (!confirm('Xóa sản phẩm này? Dữ liệu sẽ mất vĩnh viễn!')) return;
+    try {
+        const res = await fetchJSON('/api/products/manage', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        if (res.success) {
+            loadProducts(document.getElementById('searchInput').value.trim());
+            localStorage.setItem('product_price_updated', Date.now());
+        } else {
+            showProductMsg(res.error || 'Không xóa được sản phẩm.', true);
+        }
+    } catch (err) {
+        showProductMsg(err.message || 'Lỗi kết nối server.', true);
+    }
+}
+
+window.addEventListener('storage', (e) => {
+    if (e.key === 'product_price_updated') {
+        loadProducts(document.getElementById('searchInput').value.trim());
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    initProductTable();
+    document.getElementById('btnClearProductColFilters')?.addEventListener('click', () => productTableCtrl?.clearColumnFilters());
+    renderPivotChips(document.getElementById('stockPivotChips'), STOCK_PIVOT_ITEMS, stockFilter, val => {
+        stockFilter = val;
+        renderProductsList(products);
+    });
+    loadHkdSectorOptions().then(() => loadProducts());
+
+    document.querySelectorAll('.format-input').forEach(input => {
+        input.addEventListener('blur', () => formatInputNumber(input));
+        input.addEventListener('focus', () => {
+            input.value = parseNumberVN(input.value) || '';
+        });
+    });
+
+    const basePriceEl = document.getElementById('basePrice');
+    const priceEl = document.getElementById('price');
+    const fgBasePriceEl = document.getElementById('fgBasePrice');
+    const fgPriceEl = document.getElementById('fgPrice');
+    const servicePriceEl = document.getElementById('servicePrice');
+    if (basePriceEl) basePriceEl.value = formatVND(parseNumberVN(basePriceEl.value));
+    if (priceEl) priceEl.value = formatVND(parseNumberVN(priceEl.value));
+    if (fgBasePriceEl) fgBasePriceEl.value = formatVND(parseNumberVN(fgBasePriceEl.value));
+    if (fgPriceEl) fgPriceEl.value = formatVND(parseNumberVN(fgPriceEl.value));
+    if (servicePriceEl) servicePriceEl.value = formatVND(parseNumberVN(servicePriceEl.value));
+});
+
+function openBarcodePrintProduct(productId) {
+    const win = window.open(`/print_barcode_product_select/${productId}`, '_blank');
+    if (!win) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi',
+                text: 'Vui lòng cho phép popup để in mã vạch!',
+            });
+        } else {
+            alert('Vui lòng cho phép popup để in mã vạch!');
+        }
+    }
+}
+</script>
+{% endblock %}

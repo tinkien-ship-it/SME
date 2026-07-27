@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+{% block head_extra %}
+{% include 'partials/data_list_table_assets.html' %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h3 class="fw-bold text-primary mb-1">Danh Sách Nhân Viên</h3>
+            <p class="text-muted mb-0 small">Quản lý hồ sơ nhân sự, lương và giảm trừ thuế</p>
+        </div>
+        <button class="btn btn-primary fw-bold" onclick="addEmployee()">
+            <i class="bi bi-person-plus me-1"></i> Thêm Nhân Viên
+        </button>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="row g-2 mb-3 align-items-end">
+                <div class="col-md-5">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo tên, CCCD, SĐT, chức vụ...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="1">Đang làm việc</option>
+                        <option value="0">Đã nghỉ việc</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button class="btn btn-outline-primary" onclick="loadEmployees()">Tìm</button>
+                    <button class="btn btn-outline-secondary" onclick="resetFilters()">Tải lại</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle" id="employeesTable">
+                    <thead><tr></tr></thead>
+                    <tbody>
+                        <tr><td colspan="14" class="text-center text-muted py-4">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="enhanced-table-toolbar">
+                    <span class="text-muted small">Hiển thị <strong id="employeeTableCount">0</strong> nhân viên</span>
+                    <span id="employeeColFilters" class="active-filters-badge d-none"></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearEmployeeColFilters">Xóa lọc cột</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="employeeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Thêm Nhân Viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs mb-3" id="empTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabGeneral" type="button">Thông tin</button>
+                    </li>
+                    <li class="nav-item" id="tabHistoryWrap" style="display:none;">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHistory" type="button" onclick="loadSalaryHistory()">Lịch sử lương</button>
+                    </li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tabGeneral">
+                        <form id="employeeForm" class="row g-3">
+                            <input type="hidden" id="empId">
+                            <div class="col-md-6">
+                                <label class="form-label">Họ tên <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="fullname" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">CCCD/CMND <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="idCard">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Chức vụ</label>
+                                <input type="text" class="form-control" id="position">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Điện thoại</label>
+                                <input type="text" class="form-control" id="phone">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Địa chỉ</label>
+                                <input type="text" class="form-control" id="address">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Mã máy chấm công (PIN)</label>
+                                <input type="text" class="form-control" id="attendanceCode" placeholder="Mã trên máy ZKTeco / Ronal Jack...">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ngày vào làm</label>
+                                <input type="text" class="form-control" id="joinDate" placeholder="dd/mm/yyyy">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Trạng thái</label>
+                                <select class="form-select" id="status">
+                                    <option value="1">Đang làm việc</option>
+                                    <option value="0">Đã nghỉ việc</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Lương cơ bản (tháng)</label>
+                                <input type="number" class="form-control" id="baseSalary" min="0" step="1000">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Hệ số lương</label>
+                                <input type="number" class="form-control" id="salaryRate" min="0" step="0.01">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Giảm trừ bản thân</label>
+                                <input type="number" class="form-control" id="selfDeduction" value="11000000">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Số người phụ thuộc</label>
+                                <input type="number" class="form-control" id="dependents" min="0" value="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Mức giảm trừ NPT</label>
+                                <input type="number" class="form-control" id="dependentDeduction" value="4400000">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Lý do thay đổi lương / nghỉ việc</label>
+                                <textarea class="form-control" id="reasonChange" rows="2"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="tabHistory">
+                        <div class="table-responsive" style="max-height:320px;">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Ngày</th>
+                                        <th class="text-end">Lương cũ</th>
+                                        <th class="text-end">Lương mới</th>
+                                        <th>Lý do</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" onclick="saveEmployee()">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+let employees = [];
+let employeeTableCtrl = null;
+let joinDatePicker = null;
+const empModal = new bootstrap.Modal(document.getElementById('employeeModal'));
+
+function escHtml(s) {
+    return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function fmtMoney(v) {
+    return (parseFloat(v) || 0).toLocaleString('vi-VN');
+}
+
+function fmtDate(v) {
+    if (!v) return '—';
+    const s = String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        const [y, m, d] = s.slice(0, 10).split('-');
+        return `${d}/${m}/${y}`;
+    }
+    return s;
+}
+
+function statusBadge(status) {
+    const active = String(status) === '1' || status === 1;
+    return active
+        ? '<span class="badge bg-success">Đang làm</span>'
+        : '<span class="badge bg-secondary">Nghỉ việc</span>';
+}
+
+function renderEmployeeRows(data, tbody) {
+    const el = tbody || document.querySelector('#employeesTable tbody');
+    if (!el) return;
+    if (!data.length) {
+        el.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">Không có nhân viên.</td></tr>';
+        return;
+    }
+    el.innerHTML = data.map(e => `
+        <tr data-id="${e.id}">
+            <td class="text-center small">${e.id}</td>
+            <td><strong>${escHtml(e.fullname)}</strong></td>
+            <td class="small">${escHtml(e.position || '—')}</td>
+            <td class="text-center small">${escHtml(e.id_card || '—')}</td>
+            <td class="text-center small">${escHtml(e.phone || '—')}</td>
+            <td class="small">${escHtml(e.address || '—')}</td>
+            <td class="text-center small">${fmtDate(e.join_date)}</td>
+            <td class="text-end">${fmtMoney(e.base_salary)}</td>
+            <td class="text-end">${e.salary_rate != null && e.salary_rate !== '' ? escHtml(e.salary_rate) : '—'}</td>
+            <td class="text-center">${e.dependents ?? 0}</td>
+            <td class="text-end small">${fmtMoney(e.self_deduction)}</td>
+            <td class="text-end small">${fmtMoney(e.dependent_deduction)}</td>
+            <td class="text-center">${statusBadge(e.status)}</td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-warning" onclick="editEmployee(${e.id})">Sửa</button>
+            </td>
+        </tr>`).join('');
+}
+
+function initEmployeeTable() {
+    employeeTableCtrl = DataListTable.create({
+        table: '#employeesTable',
+        countSelector: '#employeeTableCount',
+        activeFiltersSelector: '#employeeColFilters',
+        defaultSort: { key: 'id', dir: 'asc' },
+        columns: [
+            { key: 'id', label: 'Mã NV', sortable: true, filterType: 'number', width: '70px', align: 'center',
+              getValue: e => e.id, sortValue: e => Number(e.id) || 0 },
+            { key: 'fullname', label: 'Họ tên', sortable: true, filterType: 'text', width: '160px',
+              getValue: e => e.fullname || '' },
+            { key: 'position', label: 'Chức vụ', filterType: 'text', width: '120px',
+              getValue: e => e.position || '' },
+            { key: 'id_card', label: 'CCCD', filterType: 'text', width: '120px', align: 'center',
+              getValue: e => e.id_card || '' },
+            { key: 'phone', label: 'SĐT', filterType: 'text', width: '110px', align: 'center',
+              getValue: e => e.phone || '' },
+            { key: 'address', label: 'Địa chỉ', filterType: 'text', width: '160px',
+              getValue: e => e.address || '' },
+            { key: 'join_date', label: 'Ngày vào', sortable: true, filterType: 'date', width: '100px', align: 'center',
+              getValue: e => e.join_date || '', sortValue: e => e.join_date ? new Date(e.join_date) : new Date(0) },
+            { key: 'base_salary', label: 'Lương CB', sortable: true, filterType: 'number', width: '110px', align: 'end',
+              getValue: e => e.base_salary, sortValue: e => Number(e.base_salary) || 0 },
+            { key: 'salary_rate', label: 'Hệ số', sortable: true, filterType: 'number', width: '80px', align: 'end',
+              getValue: e => e.salary_rate, sortValue: e => Number(e.salary_rate) || 0 },
+            { key: 'dependents', label: 'NPT', sortable: true, filterType: 'number', width: '60px', align: 'center',
+              getValue: e => e.dependents, sortValue: e => Number(e.dependents) || 0 },
+            { key: 'self_deduction', label: 'GT bản thân', sortable: true, filterType: 'number', width: '110px', align: 'end',
+              getValue: e => e.self_deduction, sortValue: e => Number(e.self_deduction) || 0 },
+            { key: 'dependent_deduction', label: 'GT NPT', sortable: true, filterType: 'number', width: '100px', align: 'end',
+              getValue: e => e.dependent_deduction, sortValue: e => Number(e.dependent_deduction) || 0 },
+            { key: 'status', label: 'Trạng thái', filterType: 'select', width: '100px', align: 'center',
+              getValue: e => String(e.status),
+              filterOptions: [{ value: '1', label: 'Đang làm' }, { value: '0', label: 'Nghỉ việc' }] },
+            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '90px', align: 'center' },
+        ],
+        renderRows: renderEmployeeRows,
+    });
+}
+
+function toIsoDate(val) {
+    if (!val) return '';
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(val).trim());
+    if (!m) return val;
+    return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+}
+
+async function loadEmployees() {
+    const q = document.getElementById('searchInput').value.trim();
+    const status = document.getElementById('statusFilter').value;
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (status) params.set('status', status);
+    try {
+        const res = await fetch(`/api/employees/manage?${params}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Lỗi tải dữ liệu');
+        employees = data;
+        employeeTableCtrl?.setData(employees);
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('statusFilter').value = '';
+    loadEmployees();
+}
+
+function addEmployee() {
+    document.getElementById('modalTitle').textContent = 'Thêm Nhân Viên';
+    document.getElementById('employeeForm').reset();
+    document.getElementById('empId').value = '';
+    document.getElementById('selfDeduction').value = '11000000';
+    document.getElementById('dependentDeduction').value = '4400000';
+    document.getElementById('dependents').value = '0';
+    document.getElementById('status').value = '1';
+    document.getElementById('tabHistoryWrap').style.display = 'none';
+    joinDatePicker?.setDate(new Date());
+    empModal.show();
+}
+
+function editEmployee(id) {
+    const e = employees.find(x => x.id == id);
+    if (!e) return;
+    document.getElementById('modalTitle').textContent = 'Sửa Nhân Viên';
+    document.getElementById('empId').value = e.id;
+    document.getElementById('fullname').value = e.fullname || '';
+    document.getElementById('idCard').value = e.id_card || '';
+    document.getElementById('position').value = e.position || '';
+    document.getElementById('phone').value = e.phone || '';
+    document.getElementById('address').value = e.address || '';
+    document.getElementById('attendanceCode').value = e.attendance_code || '';
+    document.getElementById('baseSalary').value = e.base_salary || 0;
+    document.getElementById('salaryRate').value = e.salary_rate ?? '';
+    document.getElementById('dependents').value = e.dependents ?? 0;
+    document.getElementById('selfDeduction').value = e.self_deduction ?? 11000000;
+    document.getElementById('dependentDeduction').value = e.dependent_deduction ?? 4400000;
+    document.getElementById('status').value = String(e.status ?? 1);
+    document.getElementById('reasonChange').value = '';
+    if (e.join_date) joinDatePicker?.setDate(new Date(e.join_date.slice(0, 10)));
+    else joinDatePicker?.clear();
+    document.getElementById('tabHistoryWrap').style.display = '';
+    empModal.show();
+}
+
+async function loadSalaryHistory() {
+    const id = document.getElementById('empId').value;
+    const tbody = document.getElementById('historyBody');
+    if (!id) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Chưa có dữ liệu</td></tr>';
+        return;
+    }
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center">Đang tải...</td></tr>';
+    try {
+        const res = await fetch(`/api/get_salary_history/${id}`);
+        const rows = await res.json();
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Chưa có lịch sử</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(r => `
+            <tr>
+                <td>${fmtDate(r.change_date)}</td>
+                <td class="text-end">${fmtMoney(r.old_salary)}</td>
+                <td class="text-end">${fmtMoney(r.new_salary)}</td>
+                <td class="small">${escHtml(r.reason || '—')}</td>
+            </tr>`).join('');
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-danger text-center">Lỗi tải lịch sử</td></tr>';
+    }
+}
+
+async function saveEmployee() {
+    const fullname = document.getElementById('fullname').value.trim();
+    const idCard = document.getElementById('idCard').value.trim();
+    if (!fullname || !idCard) return alert('Họ tên và CCCD là bắt buộc.');
+
+    const payload = {
+        fullname,
+        id_card: idCard,
+        position: document.getElementById('position').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        attendance_code: document.getElementById('attendanceCode').value.trim(),
+        join_date: toIsoDate(document.getElementById('joinDate').value),
+        base_salary: parseFloat(document.getElementById('baseSalary').value || 0),
+        salary_rate: document.getElementById('salaryRate').value.trim()
+            ? parseFloat(document.getElementById('salaryRate').value) : null,
+        dependents: parseInt(document.getElementById('dependents').value || 0, 10),
+        self_deduction: parseFloat(document.getElementById('selfDeduction').value || 11000000),
+        dependent_deduction: parseFloat(document.getElementById('dependentDeduction').value || 4400000),
+        status: parseInt(document.getElementById('status').value, 10),
+        reason_change: document.getElementById('reasonChange').value.trim(),
+    };
+
+    const empId = document.getElementById('empId').value;
+    const url = empId ? '/api/update_employee' : '/api/add_employee';
+    if (empId) payload.id = parseInt(empId, 10);
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Lỗi lưu');
+        empModal.hide();
+        loadEmployees();
+        alert(data.message || 'Lưu thành công');
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    joinDatePicker = flatpickr('#joinDate', { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true });
+    initEmployeeTable();
+    document.getElementById('btnClearEmployeeColFilters')?.addEventListener('click', () => employeeTableCtrl?.clearColumnFilters());
+    document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadEmployees(); });
+    document.getElementById('statusFilter').addEventListener('change', loadEmployees);
+    loadEmployees();
+});
+</script>
+{% endblock %}

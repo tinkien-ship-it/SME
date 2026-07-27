@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Gia hạn tài khoản - KETO ALL IN ONE{% endblock %}
+{% block content %}
+<style>
+    nav.navbar, footer.footer { display: none !important; }
+    .renewal-page { min-height: 100vh; background: #f0f4f8; padding: 30px 15px; }
+    .plan-card { cursor: pointer; transition: all .2s; border: 2px solid #dee2e6; }
+    .plan-card.selected { border-color: #0d6efd; background: #eef4ff; box-shadow: 0 0 0 3px rgba(13,110,253,.15); }
+    .plan-price { font-size: 1.25rem; font-weight: 700; color: #0d6efd; }
+    #qrModal img { max-width: 280px; }
+</style>
+
+<div class="renewal-page">
+    <div class="container" style="max-width: 900px;">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold text-primary">Gia hạn tài khoản KETO</h2>
+            {% if tenant %}
+            <p class="text-muted mb-0">
+                Cửa hàng: <strong>{{ tenant.business_name or tenant_id }}</strong>
+                {% if tenant.expiry_date %} — Hết hạn: {{ tenant.expiry_date }}{% endif %}
+            </p>
+            {% elif tenant_id %}
+            <p class="text-muted">Mã cửa hàng: <code>{{ tenant_id }}</code></p>
+            {% else %}
+            <div class="alert alert-warning">Vui lòng đăng nhập Google hoặc bằng SĐT để xác định tài khoản cần gia hạn.</div>
+            {% endif %}
+        </div>
+
+        {% if tenant_id %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3">1. Chọn gói phần mềm</h5>
+                <div class="row g-3" id="planList">
+                    {% for p in plans %}
+                    <div class="col-md-6">
+                        <div class="card plan-card h-100 p-3" data-code="{{ p.code }}" data-price="{{ p.price }}">
+                            <div class="fw-semibold">{{ p.name }}</div>
+                            <div class="plan-price mt-2">{{ "{:,}".format(p.price).replace(",", ".") }} đ/năm</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="mt-3 row g-2 align-items-end">
+                    <div class="col-auto">
+                        <label class="form-label mb-0">Số năm gia hạn</label>
+                        <select id="renewYears" class="form-select" style="width:100px">
+                            {% for y in range(1, 6) %}
+                            <option value="{{ y }}" {% if y == 1 %}selected{% endif %}>{{ y }} năm</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <strong>Tổng thanh toán: </strong>
+                        <span id="totalDisplay" class="text-primary fs-5">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3">2. Thông tin xuất hóa đơn</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Tên hộ kinh doanh / Khách hàng <span class="text-danger">*</span></label>
+                        <input type="text" id="customerName" class="form-control" value="{{ business_info.business_name or '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tên công ty (nếu có)</label>
+                        <input type="text" id="companyName" class="form-control" value="">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Mã số thuế</label>
+                        <input type="text" id="taxCode" class="form-control" value="{{ business_info.tax_code or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Số điện thoại</label>
+                        <input type="tel" id="customerPhone" class="form-control" value="{{ business_info.phone or tenant_id }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Email nhận hóa đơn</label>
+                        <input type="email" id="customerEmail" class="form-control" value="{{ business_info.email or renewal_context.email or '' }}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Địa chỉ</label>
+                        <input type="text" id="customerAddress" class="form-control" value="{{ business_info.address or '' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mb-5">
+            <button type="button" id="btnPay" class="btn btn-primary btn-lg px-5" disabled>
+                <i class="fas fa-qrcode me-2"></i>Thanh toán QR — Gia hạn
+            </button>
+            <div class="mt-3">
+                <a href="{{ url_for('login') }}" class="text-muted small">← Quay lại đăng nhập</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal fade" id="qrModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Quét mã QR thanh toán</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mb-1">Nội dung CK: <code id="payCode">DH000000</code></p>
+                <p class="mb-3">Số tiền: <strong id="payAmount">0</strong> đ</p>
+                <img id="qrImage" src="" alt="VietQR" class="img-fluid border rounded">
+                <p class="text-muted small mt-3" id="payStatus">Đang chờ xác nhận chuyển khoản...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const TENANT_ID = {{ tenant_id|tojson if tenant_id else 'null' }};
+let selectedPlan = null;
+let pollTimer = null;
+let currentSaleId = null;
+
+function formatVn(n) {
+    return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function updateTotal() {
+    const el = document.getElementById('totalDisplay');
+    if (!selectedPlan) { el.textContent = '—'; return; }
+    const years = parseInt(document.getElementById('renewYears').value, 10) || 1;
+    el.textContent = formatVn(selectedPlan.price * years) + ' đ';
+}
+
+document.querySelectorAll('.plan-card').forEach(card => {
+    card.addEventListener('click', () => {
+        document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedPlan = { code: card.dataset.code, price: parseFloat(card.dataset.price) };
+        document.getElementById('btnPay').disabled = false;
+        updateTotal();
+    });
+});
+document.getElementById('renewYears')?.addEventListener('change', updateTotal);
+
+document.getElementById('btnPay')?.addEventListener('click', async () => {
+    if (!selectedPlan || !TENANT_ID) return;
+    const payload = {
+        tenant_id: TENANT_ID,
+        plan_code: selectedPlan.code,
+        years: parseInt(document.getElementById('renewYears').value, 10) || 1,
+        customer_name: document.getElementById('customerName').value.trim(),
+        company_name: document.getElementById('companyName').value.trim(),
+        tax_code: document.getElementById('taxCode').value.trim(),
+        phone: document.getElementById('customerPhone').value.trim(),
+        address: document.getElementById('customerAddress').value.trim(),
+        email: document.getElementById('customerEmail').value.trim(),
+    };
+    if (!payload.customer_name) {
+        alert('Vui lòng nhập tên hộ kinh doanh / khách hàng');
+        return;
+    }
+    const res = await fetch('/api/renewal/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!data.success) {
+        alert(data.error || 'Không tạo được đơn thanh toán');
+        return;
+    }
+    currentSaleId = data.sale_id;
+    document.getElementById('payCode').textContent = data.payment_code;
+    document.getElementById('payAmount').textContent = formatVn(data.total_amount);
+    document.getElementById('qrImage').src = data.qr_url + '?t=' + Date.now();
+    document.getElementById('payStatus').textContent = 'Đang chờ xác nhận chuyển khoản...';
+    new bootstrap.Modal(document.getElementById('qrModal')).show();
+    startPolling();
+});
+
+function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+        if (!currentSaleId) return;
+        const res = await fetch('/api/renewal/status/' + currentSaleId);
+        const data = await res.json();
+        if (data.paid) {
+            clearInterval(pollTimer);
+            document.getElementById('payStatus').innerHTML =
+                '<span class="text-success fw-bold">✓ Đã nhận tiền — tài khoản đã gia hạn!</span>';
+            setTimeout(() => { window.location.href = data.redirect || '/login'; }, 2500);
+        }
+    }, 2500);
+}
+</script>
+{% endblock %}

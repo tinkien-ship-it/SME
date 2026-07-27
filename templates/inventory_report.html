@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h3>Báo Cáo Tồn Kho</h3>
+
+    <!-- Bộ lọc ngày -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Lọc nhanh</strong></label>
+                    <select class="form-select" id="quickFilter" onchange="applyQuickFilter()">
+                        <option value="">-- Chọn khoảng thời gian --</option>
+                        <option value="today">Hôm nay</option>
+                        <option value="yesterday">Hôm qua</option>
+                        <option value="this_month">Tháng này</option>
+                        <option value="last_month">Tháng trước</option>
+                        <option value="month_1">Tháng 1</option>
+                        <option value="month_2">Tháng 2</option>
+                        <option value="month_3">Tháng 3</option>
+                        <option value="month_4">Tháng 4</option>
+                        <option value="month_5">Tháng 5</option>
+                        <option value="month_6">Tháng 6</option>
+                        <option value="month_7">Tháng 7</option>
+                        <option value="month_8">Tháng 8</option>
+                        <option value="month_9">Tháng 9</option>
+                        <option value="month_10">Tháng 10</option>
+                        <option value="month_11">Tháng 11</option>
+                        <option value="month_12">Tháng 12</option>
+                        <option value="this_year">Năm nay</option>
+                        <option value="last_year">Năm trước</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Từ ngày</label>
+                    <input type="date" class="form-control" id="startDate">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Đến ngày</label>
+                    <input type="date" class="form-control" id="endDate">
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100" onclick="loadReport()">Lọc</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tổng giá trị -->
+    <div class="card mb-3">
+        <div class="card-body text-end">
+            <h5>Tổng Giá Trị Tồn Kho: <strong id="totalValue" class="text-danger">0đ</strong></h5>
+        </div>
+    </div>
+
+    <!-- Bảng tồn kho -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle" id="inventoryTable">
+            <thead class="table-light text-center">
+                <tr>
+                    <th style="width: 12%">Mã vạch</th>
+                    <th style="width: 25%">Tên sản phẩm</th>
+                    <th style="width: 10%">Đơn vị</th>
+                    <th style="width: 10%">Tồn</th>
+                    <th style="width: 13%">Giá bán (cơ bản)</th>
+                    <th style="width: 13%">Giá bán</th>
+                    <th style="width: 17%">Đơn vị chuyển đổi</th>
+                </tr>
+            </thead>
+            <tbody id="inventoryBody" class="text-end"></tbody>
+        </table>
+    </div>
+
+    <!-- Nút xuất Excel -->
+    <div class="text-end mt-3">
+        <button class="btn btn-success" onclick="exportToExcel()">Xuất Excel</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // === LẤY CÀI ĐẶT TỪ base.html ===
+    const DATE_FORMAT = "{{ settings.date_format | default('dd/MM/yyyy') }}";
+
+    // === ĐỊNH DẠNG NGÀY VIỆT NAM (dd/MM/yyyy) ===
+    function formatDateVN(dateStr) {
+        if (!dateStr) return '';
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}/${y}`;
+    }
+
+    // === CẬP NHẬT LABEL NGÀY ===
+    function updateDateLabels() {
+        ['startDate', 'endDate'].forEach(id => {
+            const input = document.getElementById(id);
+            const label = input.parentElement.querySelector('label');
+            if (input.value) {
+                label.innerHTML = `<strong>${formatDateVN(input.value)}</strong>`;
+            } else {
+                label.innerHTML = id === 'startDate' ? 'Từ ngày' : 'Đến ngày';
+            }
+        });
+    }
+
+    // === ĐỊNH DẠNG TIỀN TỆ & SỐ ===
+    function formatVND(amount) {
+        if (amount === null || amount === undefined) return '0đ';
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    }
+
+    function formatNumberVN(num) {
+        return new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num);
+    }
+
+    // === CHUYỂN NGÀY AN TOÀN (KHÔNG LÙI NGÀY) ===
+    function formatDateLocal(date) {
+        return date.toLocaleDateString('sv').split('T')[0]; // YYYY-MM-DD
+    }
+
+    // === LỌC NHANH ===
+    function getDateRange(filter) {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        let start, end;
+
+        switch (filter) {
+            case 'today':
+                start = end = new Date(yyyy, now.getMonth(), now.getDate());
+                break;
+            case 'yesterday':
+                start = end = new Date(yyyy, now.getMonth(), now.getDate() - 1);
+                break;
+            case 'this_month':
+                start = new Date(yyyy, now.getMonth(), 1);
+                end = new Date(yyyy, now.getMonth() + 1, 0);
+                break;
+            case 'last_month':
+                start = new Date(yyyy, now.getMonth() - 1, 1);
+                end = new Date(yyyy, now.getMonth(), 0);
+                break;
+            case 'this_year':
+                start = new Date(yyyy, 0, 1);
+                end = new Date(yyyy, 11, 31);
+                break;
+            case 'last_year':
+                start = new Date(yyyy - 1, 0, 1);
+                end = new Date(yyyy - 1, 11, 31);
+                break;
+            default:
+                if (filter.startsWith('month_')) {
+                    const month = parseInt(filter.split('_')[1]) - 1;
+                    start = new Date(yyyy, month, 1);
+                    end = new Date(yyyy, month + 1, 0);
+                }
+                break;
+        }
+
+        if (start && end) {
+            const s = formatDateLocal(start);
+            const e = formatDateLocal(end);
+            document.getElementById('startDate').value = s;
+            document.getElementById('endDate').value = e;
+            updateDateLabels();
+        }
+    }
+
+    function applyQuickFilter() {
+        const filter = document.getElementById('quickFilter').value;
+        if (filter) {
+            getDateRange(filter);
+            loadReport();
+        }
+    }
+
+    // === TẢI BÁO CÁO ===
+    function loadReport() {
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+
+        if (!start || !end) {
+            alert('Vui lòng chọn đầy đủ ngày!');
+            return;
+        }
+
+        fetch(`/api/inventory/report?start=${start}&end=${end}`)
+            .then(r => r.json())
+            .then(data => {
+                const tbody = document.getElementById('inventoryBody');
+                tbody.innerHTML = '';
+                let total = 0;
+
+                data.products.forEach(p => {
+                    const value = p.quantity * (p.base_price || p.price || 0);
+                    total += value;
+
+                    const saleUnit = p.sale_unit 
+                        ? `${p.sale_unit} (${p.unit_ratio || 1} ${p.unit})`
+                        : '—';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="text-start">${p.barcode}</td>
+                            <td class="text-start"><strong>${p.name}</strong></td>
+                            <td class="text-center">${p.unit}</td>
+                            <td><strong>${formatNumberVN(p.quantity)}</strong></td>
+                            <td>${formatVND(p.base_price || 0)}</td>
+                            <td>${formatVND(p.price || 0)}</td>
+                            <td class="text-start">${saleUnit}</td>
+                        </tr>`;
+                });
+
+                document.getElementById('totalValue').textContent = formatVND(total);
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Lỗi tải dữ liệu!');
+            });
+    }
+
+    // === XUẤT EXCEL ===
+    function exportToExcel() {
+        const table = document.getElementById('inventoryTable');
+        let csv = [];
+        for (let row of table.rows) {
+            let cols = [];
+            for (let cell of row.cells) {
+                cols.push('"' + cell.innerText.replace(/"/g, '""') + '"');
+            }
+            csv.push(cols.join(','));
+        }
+        const csvContent = csv.join('\n');
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        const [sy, sm, sd] = start.split('-');
+        const [ey, em, ed] = end.split('-');
+
+        link.download = `TonKho_${sd}${sm}${sy}_den_${ed}${em}${ey}.csv`;
+        link.click();
+    }
+
+    // === KHỞI TẠO ===
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+
+        const startInput = document.getElementById('startDate');
+        const endInput = document.getElementById('endDate');
+
+        // Mặc định: Tháng hiện tại
+        startInput.value = formatDateLocal(new Date(yyyy, today.getMonth(), 1));
+        endInput.value = formatDateLocal(new Date(yyyy, today.getMonth() + 1, 0));
+
+        // Cập nhật label ngay khi load
+        updateDateLabels();
+
+        // Gắn sự kiện change
+        startInput.addEventListener('change', updateDateLabels);
+        endInput.addEventListener('change', updateDateLabels);
+
+        loadReport();
+    });
+</script>
+{% endblock %}

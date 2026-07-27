@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% block title %}Công Cụ Dụng Cụ - Năm {{ year }}{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+    .ts-control { border-radius: 0.5rem; padding: 0.65rem; border: 1px solid #d1d5db; }
+    .border-dashed { border-style: dashed !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0"><i class="fas fa-screwdriver-wrench"></i> DANH MỤC CÔNG CỤ DỤNG CỤ - NĂM {{ year }}</h5>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" onclick="openModalCCDC()" class="btn btn-light btn-sm fw-bold text-secondary">
+                    <i class="bi bi-tools me-1"></i> ĐƯA CCDC VÀO SỬ DỤNG
+                </button>
+                <span class="badge bg-light text-secondary">Dữ liệu hệ thống</span>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <ul class="nav nav-tabs mb-3" id="ccdcTab" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-quy">
+                        <b><i class="far fa-calendar-alt"></i> TAB 1: Theo dõi phân bổ Quý</b>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-chitiet">
+                        <b><i class="fas fa-list-ol"></i> TAB 2: Sổ chi tiết CCDC</b>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="tab-quy">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover text-center align-middle" style="font-size: 0.9rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th rowspan="2">STT</th>
+                                    <th colspan="2">Chứng từ</th>
+                                    <th rowspan="2">Tên CCDC</th>
+                                    <th rowspan="2">Nguyên giá</th>
+                                    <th rowspan="2">Lũy kế kỳ trước</th>
+                                    <th colspan="4">Phân bổ năm hiện tại ({{ year }})</th>
+                                    <th rowspan="2">Tổng lũy kế</th>
+                                    <th rowspan="2">Giá trị còn lại</th>
+                                </tr>
+                                <tr>
+                                    <th>Mã CCDC</th>
+                                    <th>Ngày Bắt đầu sử dụng</th>
+                                    <th>Quý 1</th>
+                                    <th>Quý 2</th>
+                                    <th>Quý 3</th>
+                                    <th>Quý 4</th>
+                                </tr>
+                            </thead>
+                            <tbody id="render-tab-1">
+                                <tr><td colspan="12" class="text-center py-4"><div class="spinner-border text-secondary"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-chitiet">
+                    <div class="table-responsive">
+                        <table class="table table-bordered text-center align-middle">
+                            <thead class="bg-dark text-white">
+                                <tr>
+                                    <th>Mã CCDC</th>
+                                    <th>Tên CCDC</th>
+                                    <th>Ngày bắt đầu sử dụng</th>
+                                    <th>Nguyên giá</th>
+                                    <th>Số tháng phân bổ</th>
+                                    <th>Phân bổ/Tháng</th>
+                                    <th>Tình trạng</th>
+                                </tr>
+                            </thead>
+                            <tbody id="render-tab-2">
+                                <tr><td colspan="7" class="text-center py-4"><div class="spinner-border text-secondary"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCCDC" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-tools me-2"></i>ĐƯA CCDC VÀO SỬ DỤNG</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formCCDC">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">CHỌN CCDC (Gõ tên/mã để tìm)</label>
+                        <select id="select_ccdc_id" name="product_id" required></select>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Ngày bắt đầu sử dụng</label>
+                            <input type="date" name="ngay_bat_dau_su_dung" class="form-control" id="ngay_sd_ccdc" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Số tháng phân bổ</label>
+                            <input type="number" name="months" class="form-control" value="12" min="1">
+                        </div>
+                    </div>
+                    <div id="ccdcPreview" class="mt-4 p-3 rounded border border-secondary border-dashed d-none" style="background-color: #f8f9fa;">
+                        <div class="row align-items-center">
+                            <div class="col-7 border-end">
+                                <div class="small mb-1">Giá mua: <span id="pre_buyprice" class="fw-bold float-end">0</span></div>
+                                <div class="small mb-1">Thuế: <span id="pre_tax" class="fw-bold float-end">0</span></div>
+                            </div>
+                            <div class="col-5 text-center">
+                                <div class="small text-muted">NGUYÊN GIÁ</div>
+                                <h4 class="fw-bold text-secondary mb-0" id="pre_final_cost">0 ₫</h4>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">HỦY</button>
+                <button type="button" onclick="submitCCDC()" id="btnSubmitCCDC" class="btn btn-secondary fw-bold px-4">XÁC NHẬN</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script>
+let ccdcSelect = null;
+
+function getCcdcModal() {
+    return bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCCDC'));
+}
+
+function formatDateVN(dateStr) {
+    if (!dateStr) return '';
+    const cleanDate = String(dateStr).split(' ')[0];
+    const parts = cleanDate.split('-');
+    if (parts.length !== 3) return dateStr;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+async function loadTableData() {
+    const tab1 = document.getElementById('render-tab-1');
+    const tab2 = document.getElementById('render-tab-2');
+
+    try {
+        const data = await fetchJSON('/api/ccdc/list?year={{ year }}');
+        let html1 = '', html2 = '';
+
+        data.forEach((item, i) => {
+            const nguyenGia = item.nguyen_gia || 0;
+            const soThang = item.so_thang_phan_bo || 12;
+            const pbThang = item.phan_bo_thang || (nguyenGia / soThang);
+            const luyKeKyTruoc = item.luy_ke_dau_nam || 0;
+            const q1 = item.q1 || 0, q2 = item.q2 || 0, q3 = item.q3 || 0, q4 = item.q4 || 0;
+            const tongLuyKe = item.total_acc != null ? item.total_acc : (luyKeKyTruoc + q1 + q2 + q3 + q4);
+            const giaTriConLai = item.con_lai != null ? item.con_lai : (nguyenGia - tongLuyKe);
+
+            html1 += `<tr>
+                <td>${i + 1}</td>
+                <td class="fw-bold">${escapeHtml(item.ma_ccdc)}</td>
+                <td>${formatDateVN(item.ngay_bat_dau_su_dung)}</td>
+                <td class="text-start">${escapeHtml(item.ten_ccdc)}</td>
+                <td class="text-end">${formatVND(nguyenGia)}</td>
+                <td class="text-end">${formatVND(luyKeKyTruoc)}</td>
+                <td class="text-secondary">${formatVND(q1)}</td>
+                <td class="text-secondary">${formatVND(q2)}</td>
+                <td class="text-secondary">${formatVND(q3)}</td>
+                <td class="text-secondary">${formatVND(q4)}</td>
+                <td class="fw-bold">${formatVND(tongLuyKe)}</td>
+                <td class="text-danger fw-bold">${formatVND(giaTriConLai)}</td>
+            </tr>`;
+
+            html2 += `<tr>
+                <td class="fw-bold">${escapeHtml(item.ma_ccdc)}</td>
+                <td class="text-start">${escapeHtml(item.ten_ccdc)}</td>
+                <td>${formatDateVN(item.ngay_bat_dau_su_dung)}</td>
+                <td class="text-end">${formatVND(nguyenGia)}</td>
+                <td>${soThang}</td>
+                <td class="text-end">${formatVND(pbThang)}</td>
+                <td><span class="badge bg-success">${escapeHtml(item.tinh_trang_label || 'Đang phân bổ')}</span></td>
+            </tr>`;
+        });
+
+        tab1.innerHTML = html1 || '<tr><td colspan="12" class="text-center text-muted py-4">Không có dữ liệu</td></tr>';
+        tab2.innerHTML = html2 || '<tr><td colspan="7" class="text-center text-muted py-4">Không có dữ liệu</td></tr>';
+    } catch (error) {
+        console.error('Error:', error);
+        tab1.innerHTML = '<tr><td colspan="12" class="text-danger text-center py-4">Lỗi tải dữ liệu.</td></tr>';
+        tab2.innerHTML = '<tr><td colspan="7" class="text-danger text-center py-4">Lỗi tải dữ liệu.</td></tr>';
+    }
+}
+
+async function initCcdcSelect() {
+    if (ccdcSelect) {
+        ccdcSelect.destroy();
+        ccdcSelect = null;
+    }
+    const products = await fetchJSON('/api/products/for-ccdc');
+    ccdcSelect = new TomSelect('#select_ccdc_id', {
+        valueField: 'id',
+        labelField: 'name',
+        searchField: ['name', 'product_code'],
+        options: products,
+        onChange: updateCCDCPreview,
+        render: {
+            option: (d, escape) => `<div class="p-2 border-bottom">
+                <b>[${escape(d.product_code)}]</b> ${escape(d.name)}<br>
+                <small class="text-muted">Chờ SD: ${d.stock_qty} | Nhập: ${formatMoney(d.buyprice)}</small>
+            </div>`,
+            item: (d, escape) => `<div><b class="text-secondary">[${escape(d.product_code)}]</b> ${escape(d.name)}</div>`
+        }
+    });
+}
+
+function openModalCCDC() {
+    document.getElementById('ngay_sd_ccdc').value = new Date().toISOString().split('T')[0];
+    $('#ccdcPreview').addClass('d-none');
+    initCcdcSelect()
+        .then(() => getCcdcModal().show())
+        .catch(err => alert(err.message || 'Không thể tải danh sách CCDC'));
+}
+
+function updateCCDCPreview() {
+    if (!ccdcSelect) return;
+    const id = ccdcSelect.getValue();
+    if (!id) return $('#ccdcPreview').addClass('d-none');
+
+    const item = ccdcSelect.options[id];
+    $('#ccdcPreview').removeClass('d-none');
+    $('#pre_buyprice').text(formatMoney(item.buyprice));
+    $('#pre_tax').text(formatMoney(item.tax));
+    $('#pre_final_cost').text(formatMoney(item.subtotal));
+}
+
+async function submitCCDC() {
+    if (!ccdcSelect || !ccdcSelect.getValue()) {
+        alert('Hãy chọn CCDC!');
+        return;
+    }
+    const btn = document.getElementById('btnSubmitCCDC');
+    btn.disabled = true;
+    btn.textContent = 'Đang lưu...';
+
+    const payload = {
+        product_id: ccdcSelect.getValue(),
+        ngay_bat_dau_su_dung: document.getElementById('ngay_sd_ccdc').value,
+        months: document.querySelector('#formCCDC input[name="months"]').value
+    };
+
+    try {
+        const result = await fetchJSON('/api/ccdc/activate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (result.success) {
+            alert('Đã đưa CCDC vào sử dụng thành công!');
+            getCcdcModal().hide();
+            ccdcSelect.clear();
+            $('#ccdcPreview').addClass('d-none');
+            loadTableData();
+        } else {
+            alert(result.error || 'Không thể kích hoạt CCDC');
+        }
+    } catch (e) {
+        alert(e.message || 'Lỗi kết nối');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'XÁC NHẬN';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadTableData);
+</script>
+{% endblock %}

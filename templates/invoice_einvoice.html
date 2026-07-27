@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Hóa đơn {{ order.invoice_number }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @page { margin: 1cm; }
+        body { font-family: DejaVu Sans, sans-serif; }
+        .header { border-bottom: 3px double black; padding-bottom: 10px; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 8px; }
+        .total-row { font-weight: bold; font-size: 1.2em; }
+    </style>
+</head>
+<body onload="window.print()">
+<div class="container">
+    <div class="header text-center my-4">
+        <h2>CỬA HÀNG ABC</h2>
+        <p>ĐC: 123 Đường Láng, Hà Nội | ĐT: 0123456789</p>
+        <h3 class="mt-3">HÓA ĐƠN GIÁ TRỊ GIA TĂNG</h3>
+        <h4>Số: {{ order.invoice_number }} - Ngày {{ order.date }}</h4>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-6">
+            <strong>Người mua:</strong> {{ order.customer_name }}<br>
+            <strong>Đơn vị:</strong> {{ order.company_name }}<br>
+            <strong>MST:</strong> {{ order.tax_code }}<br>
+            <strong>Địa chỉ:</strong> {{ order.address }}
+        </div>
+    </div>
+
+    <table class="mt-4">
+        <thead class="table-light">
+            <tr><th>STT</th><th>Tên hàng hóa, dịch vụ</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr>
+        </thead>
+        <tbody>
+            {% for item in order.items %}
+            <tr>
+                <td class="text-center">{{ item.stt }}</td>
+                <td>{{ item.name }}</td>
+                <td class="text-center">{{ item.unit }}</td>
+                <td class="text-center">{{ item.qty }}</td>
+                <td class="text-end">{{ item.price | format_currency }}</td>
+                <td class="text-end">{{ item.total | format_currency }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td colspan="5" class="text-end"><strong>Tổng cộng:</strong></td>
+                <td class="text-end"><strong>{{ order.total_amount | format_currency }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="mt-4">
+        <p><strong>Bằng chữ:</strong> {{ order.total_text }}</p>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-6 text-center">
+            <strong>Người mua hàng</strong><br><br><br>
+            (Ký, ghi rõ họ tên)
+        </div>
+        <div class="col-6 text-center">
+            <strong>Người bán hàng</strong><br><br><br>
+            (Ký, ghi rõ họ tên)
+        </div>
+    </div>
+</div>
+</body>
+</html>

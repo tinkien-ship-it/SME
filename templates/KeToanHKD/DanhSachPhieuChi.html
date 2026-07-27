@@ -1,0 +1,1141 @@
+{% extends "base.html" %}
+{% block title %}Quản Lý Phiếu Chi{% endblock %}
+{% block head_extra %}
+    {% include 'partials/data_list_table_assets.html' %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <style>
+        :root { --primary-color: #4f46e5; --success-color: #10b981; --danger-color: #ef4444; --warning-color: #f59e0b; }
+        body { background-color: #f3f4f6; }
+        .form-control, .btn, .form-select { border-radius: 8px !important; border: 1px solid #e5e7eb; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .badge-chi { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .type-import { background: #dbeafe; color: #1e40af; }
+        .type-other { background: #fef3c7; color: #92400e; }
+        .type-tax { background: #fee2e2; color: #991b1b; }
+        .amount-display { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #b91c1c; font-size: 0.9rem; }
+        .btn-text-action {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+        .flatpickr-calendar { z-index: 9999 !important; }
+        .balance-info {
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-color);
+        }
+        .balance-cash { color: var(--success-color); font-weight: 600; }
+        .balance-bank { color: var(--primary-color); font-weight: 600; }
+    </style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h3 class="fw-bold text-primary mb-1">Danh Sách Phiếu Chi</h3>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Trang chủ</a></li>
+                    <li class="breadcrumb-item active fw-semibold text-primary">Phiếu Chi</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button id="btnTaxExpense" class="btn btn-warning fw-bold px-3 shadow-sm">
+                <i class="bi bi-bank me-2"></i>Lập Phiếu Chi Nộp Thuế
+            </button>
+            <button id="btnInsuranceExpense" class="btn btn-outline-primary fw-semibold px-3">
+                <i class="bi bi-shield-check me-2"></i>Lập Phiếu Chi Nộp Bảo Hiểm
+            </button>
+            <button id="btnServiceExpense" class="btn btn-outline-warning fw-semibold px-3">
+                <i class="bi bi-calculator me-2"></i>Lập Phiếu Chi - Chi Phát Sinh
+            </button>
+            <button id="btnImportPayment" class="btn btn-danger fw-semibold px-3 shadow-sm">
+                <i class="bi bi-cart-check me-2"></i>Thanh Toán Hóa Đơn Mua Hàng
+            </button>
+            <button id="btnRenumberVouchers" class="btn btn-success fw-bold px-3 shadow-sm">
+                <i class="bi bi-arrow-repeat me-2"></i>Đánh Lại Số Phiếu
+            </button>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Khoảng thời gian</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control text-center" id="startDate" placeholder="Từ ngày">
+                        <span class="input-group-text bg-light border-x-0"><i class="bi bi-arrow-right"></i></span>
+                        <input type="text" class="form-control text-center" id="endDate" placeholder="Đến ngày">
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Loại chứng từ</label>
+                    <select class="form-select" id="expenseType">
+                        <option value="all">Tất cả</option>
+                        <option value="import">Chi nhập hàng</option>
+                        <option value="other">Chi phát sinh</option>
+                        <option value="tax">Chi nộp thuế</option>
+                    </select>
+                </div>
+                <div class="col-lg-5 col-md-8">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Tìm kiếm</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" id="searchKeyword" class="form-control" placeholder="Tìm theo tên người nhận, nội dung chi...">
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 d-flex align-items-end">
+                    <button class="btn btn-primary w-100 fw-bold" id="btnFilter">
+                        <i class="bi bi-funnel me-2"></i>LỌC
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="expenseTable">
+                <thead><tr></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="enhanced-table-toolbar">
+                <span class="text-muted small">Hiển thị <strong id="totalCount">0</strong> / <strong id="totalAllCount">0</strong> phiếu chi</span>
+                <span id="activeColFilters" class="active-filters-badge d-none"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearColFilters">Xóa lọc cột</button>
+            </div>
+            <div id="loadingStatus" class="d-none">
+                <span class="spinner-border spinner-border-sm text-primary me-2"></span> Đang tải...
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="insuranceExpenseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="fw-bold text-primary"><i class="bi bi-shield-check me-2"></i>Lập Phiếu Chi Nộp Bảo Hiểm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="small text-muted mb-3">
+                    Dùng cho các khoản nộp BHXH, BHYT, BHTN. Không ghi vào Chi tiết mua hàng hóa và dịch vụ.
+                </p>
+                <div class="balance-info">
+                    <i class="bi bi-wallet2"></i> Số dư hiện tại: 
+                    <span class="balance-cash">Tiền mặt: <strong id="otherCashBalance">0 ₫</strong></span> | 
+                    <span class="balance-bank">Ngân hàng: <strong id="otherBankBalance">0 ₫</strong></span>
+                </div>
+                <form id="insuranceExpenseForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Ngày chi <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="date" id="other_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Số Phiếu</label>
+                            <input type="text" class="form-control bg-light" placeholder="Tự động..." readonly>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Người nhận tiền <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="receiver" required placeholder="Họ tên người nhận">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Địa chỉ người nhận</label>
+                            <input type="text" class="form-control" name="address" placeholder="Địa chỉ hoặc bộ phận">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Hình thức <span class="text-danger">*</span></label>
+                            <select class="form-select" name="payment_method">
+                                <option value="cash">Tiền Mặt (111)</option>
+                                <option value="transfer">Chuyển Khoản (112)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Loại bảo hiểm <span class="text-danger">*</span></label>
+                            <select class="form-select" name="expense_type">
+                                <option value="CP_BHXH">Bảo Hiểm Xã Hội</option>
+                                <option value="CP_BHYT">Bảo Hiểm Y Tế</option>
+                                <option value="CP_BHTN">Bảo Hiểm Thất Nghiệp</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Số tiền (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="text" id="amountInput" class="form-control fw-bold text-danger fs-5" required placeholder="0">
+                            <input type="hidden" name="amount" id="amountActual">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Lý do chi</label>
+                            <textarea class="form-control" name="reason" rows="2" placeholder="Nội dung chi tiết..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                <button type="submit" form="insuranceExpenseForm" class="btn btn-primary px-4 fw-bold">LƯU & IN PHIẾU</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="taxExpenseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-warning border-0 p-4">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-bank me-2"></i>LẬP PHIẾU CHI NỘP THUẾ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="balance-info">
+                    <i class="bi bi-wallet2"></i> Số dư hiện tại: 
+                    <span class="balance-cash">Tiền mặt: <strong id="taxCashBalance">0 ₫</strong></span> | 
+                    <span class="balance-bank">Ngân hàng: <strong id="taxBankBalance">0 ₫</strong></span>
+                </div>
+                <form id="taxExpenseForm">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Ngày lập phiếu <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="tax_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Năm nộp thuế <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control fw-bold" id="tax_year" value="2026">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Kỳ nộp <span class="text-danger">*</span></label>
+                        <select class="form-select fw-bold" id="tax_expense_type">
+                            <option value="Quý 1">Quý 1</option>
+                            <option value="Quý 2">Quý 2</option>
+                            <option value="Quý 3">Quý 3</option>
+                            <option value="Quý 4">Quý 4</option>
+                            <option value="6 tháng đầu">6 Tháng Đầu Năm</option>
+                            <option value="6 tháng cuối">6 Tháng Cuối Năm</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Tên Kho bạc nhà nước nhận tiền <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="tax_treasury_name"
+                               placeholder="Ví dụ: Kho bạc nhà nước Khu Vực II" required>
+                        <small class="text-muted">Tên chính xác của kho bạc nhận tiền nộp thuế (thường ghi trên giấy nộp tiền)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Lý do nộp (Tự động cập nhật)</label>
+                        <select class="form-select bg-light" id="tax_reason_select"></select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Hình thức <span class="text-danger">*</span></label>
+                            <select class="form-select" id="tax_payment_method">
+                                <option value="transfer" selected>Chuyển Khoản (112)</option>
+                                <option value="cash">Tiền Mặt (111)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Số tiền <span class="text-danger">*</span></label>
+                            <input type="text" id="taxAmountInput" class="form-control fw-bold text-danger">
+                            <input type="hidden" id="taxAmountActual">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Số hóa đơn/GNT</label>
+                        <input type="text" class="form-control" id="tax_bill_no" placeholder="Nhập số hóa đơn nếu có">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="submit" form="taxExpenseForm" class="btn btn-warning w-100 fw-bold">XÁC NHẬN & IN PHIẾU</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="importPaymentModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header p-4 border-0 bg-danger text-white">
+                <h5 class="fw-bold mb-0">LẬP PHIẾU CHI THANH TOÁN NHẬP KHO</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="balance-info">
+                    <i class="bi bi-wallet2"></i> Số dư hiện tại: 
+                    <span class="balance-cash">Tiền mặt: <strong id="importCashBalance">0 ₫</strong></span> | 
+                    <span class="balance-bank">Ngân hàng: <strong id="importBankBalance">0 ₫</strong></span>
+                </div>
+                <form id="importPaymentForm">
+                    <input type="hidden" id="import_ref_id">
+                    <input type="hidden" id="import_total_value">
+                    <input type="hidden" id="import_paid_amount">
+                    <input type="hidden" id="import_remaining">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Ngày lập phiếu chi <span class="text-danger">*</span></label>
+                            <input type="text" id="import_payment_date" class="form-control text-center" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Số hóa đơn (nếu có)</label>
+                            <input type="text" id="import_bill_no" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Hình thức thanh toán <span class="text-danger">*</span></label>
+                            <select class="form-select fw-bold text-primary" id="import_payment_method">
+                                <option value="cash">Tiền Mặt (111)</option>
+                                <option value="transfer">Chuyển Khoản (112)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <h6 class="fw-bold text-primary mb-3">
+                        <i class="bi bi-list-check me-2"></i>Chọn Phiếu Nhập Kho Chưa Thanh Toán Hết
+                    </h6>
+                    <div class="table-responsive mb-4" style="max-height: 280px; overflow-y: auto;">
+                        <table class="table table-hover table-sm align-middle" style="table-layout: fixed; width: 100%; min-width: 900px;">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="text-center" style="width: 60px;">Chọn</th>
+                                    <th style="width: 120px;">Phiếu Nhập</th>
+                                    <th style="width: 110px;">Ngày Nhập</th>
+                                    <th style="width: auto; min-width: 250px;">Nhà Cung Cấp</th>
+                                    <th class="text-end" style="width: 120px;">Tổng Tiền</th>
+                                    <th class="text-end" style="width: 120px;">Đã Trả</th>
+                                    <th class="text-end text-danger fw-bold" style="width: 120px;">Còn Lại</th>
+                                </tr>
+                            </thead>
+                            <tbody id="unpaidImportsBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="card border-primary mb-4" id="selectedImportInfo" style="display: none;">
+                        <div class="card-body py-3">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Người nhận</label>
+                                    <input type="text" id="import_receiver" class="form-control bg-light" readonly>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label small fw-bold text-muted">Địa chỉ</label>
+                                    <input type="text" id="import_address" class="form-control bg-light" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Tổng giá trị phiếu</label>
+                                    <input type="text" id="total_value_display" class="form-control text-end fw-bold text-secondary bg-light" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Đã thanh toán</label>
+                                    <input type="text" id="paid_amount_display" class="form-control text-end fw-bold text-success bg-light" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-danger">Còn phải trả</label>
+                                    <input type="text" id="remaining_display" class="form-control text-end fw-bold text-danger bg-light" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-danger">
+                                        Số tiền thanh toán lần này <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="import_amount_input"
+                                           class="form-control text-end fw-bold fs-5 text-danger"
+                                           placeholder="0" autocomplete="off">
+                                    <input type="hidden" id="import_amount">
+                                    <small class="text-muted">Nhập số tiền muốn thanh toán (tối đa bằng số còn lại)</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Lý do chi</label>
+                                    <input type="text" id="import_reason" class="form-control bg-light" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer p-4 border-0 justify-content-between">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnSaveImportPayment"
+                        class="btn btn-danger rounded-pill px-5 fw-bold" disabled>
+                    LẬP PHIẾU CHI
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editExpenseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="fw-bold text-warning"><i class="bi bi-pencil-square me-2"></i>CHỈNH SỬA PHIẾU CHI</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editExpenseForm">
+                <input type="hidden" id="edit_id">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Ngày chi <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="edit_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Số Phiếu</label>
+                            <input type="text" class="form-control bg-light" id="edit_voucher_no" readonly>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Người nhận <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="edit_receiver" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Địa chỉ</label>
+                            <input type="text" class="form-control" id="edit_address">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Hình thức <span class="text-danger">*</span></label>
+                            <select class="form-select" id="edit_payment_method">
+                                <option value="cash">Tiền Mặt (111)</option>
+                                <option value="transfer">Chuyển Khoản (112)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Số tiền (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="text" id="edit_amount_input" class="form-control fw-bold text-danger fs-5" required placeholder="0">
+                            <input type="hidden" id="edit_amount_actual">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Nội dung / Lý do</label>
+                            <textarea class="form-control" id="edit_reason" rows="2"></textarea>
+                        </div>
+                        <div class="col-12 tax-only d-none">
+                            <label class="form-label small fw-bold">Tên Kho bạc nhà nước nhận tiền</label>
+                            <input type="text" class="form-control" id="edit_treasury_name" placeholder="Ví dụ: Kho bạc nhà nước Khu Vực II">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-warning px-4 fw-bold">LƯU THAY ĐỔI</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+// --- BIẾN TOÀN CỤC ---
+let unpaidImports = [];
+let selectedImport = null;
+let currentData = [];
+let expenseTableCtrl = null;
+let currentCashBalance = 0;
+let currentBankBalance = 0;
+
+const EXPENSE_TYPE_MAP = {
+    'CP_DIEN': 'Tiền Điện', 'CP_NUOC': 'Tiền Nước', 'CP_VT': 'Tiền Internet',
+    'CP_MB': 'CP Mặt Bằng', 'CP_VPP': 'CP Văn Phòng Phẩm', 'CP_KHAC': 'Chi Phí Khác',
+    'CP_BHXH': 'Bảo Hiểm XH', 'CP_BHYT': 'Bảo Hiểm YT', 'CP_BHTN': 'Bảo Hiểm TN',
+    'CP_LUONG': 'Chi Trả Lương', 'CP_TRALAIVAY': 'Trả Lãi Vay', 'TRANOGOC': 'Trả Nợ Gốc'
+};
+
+function getExpenseCategoryName(item) {
+    if (item.source_type === 'import') return 'Chi nhập hàng';
+    if (item.source_type === 'import_service') return 'Chi dịch vụ';
+    if (item.source_type === 'tax') return 'Chi nộp thuế';
+    if (item.source_type === 'return_sale') return 'Trả hàng hoàn tiền';
+    return EXPENSE_TYPE_MAP[item.expense_type] || item.expense_type || 'Chi khác';
+}
+
+function getExpenseCategoryClass(item) {
+    if (item.source_type === 'import' || item.source_type === 'import_service') return 'type-import';
+    if (item.source_type === 'tax' || item.source_type === 'return_sale') return 'type-tax';
+    return 'type-other';
+}
+
+// --- UTILITY FUNCTIONS ---
+function getDateFromInput(selector) {
+    const val = $(selector).val()?.trim();
+    if (!val) return null;
+    if (val.includes('/')) {
+        const parts = val.split('/');
+        if (parts.length !== 3) return null;
+        return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+    }
+    return val;
+}
+
+const initResizer = () => {};
+
+function renderExpenseRows(data, tbody) {
+    const $tbody = tbody ? $(tbody) : $('#expenseTable tbody');
+    $tbody.empty();
+    data.forEach(item => {
+        const typeClass = getExpenseCategoryClass(item);
+        const typeName = getExpenseCategoryName(item);
+        const receiver = item.receiver_name || '';
+        const company = item.company_name || '';
+        const companyNote = (company && company !== receiver)
+            ? `<div class="text-muted small" style="font-size: 0.75rem; font-weight: normal; margin-top: 2px;">${company}</div>`
+            : '';
+        $tbody.append(`
+            <tr data-id="${item.id}">
+                <td class="fw-bold text-primary">${item.voucher_no || ''}</td>
+                <td class="text-center text-secondary small">${item.date ? flatpickr.formatDate(new Date(item.date), "d/m/Y") : ''}</td>
+                <td><div class="fw-semibold">${receiver}</div>${companyNote}</td>
+                <td class="small text-muted text-truncate" title="${(item.reason || '').replace(/"/g,'&quot;')}">${item.reason || ''}</td>
+                <td class="text-center"><span class="badge-chi ${typeClass}">${typeName}</span></td>
+                <td class="text-end amount-display">${parseFloat(item.amount || 0).toLocaleString('vi-VN')} ₫</td>
+                <td class="text-center">
+                    <div class="d-flex justify-content-center gap-1">
+                        <button class="btn btn-text-action btn-outline-primary btn-print"><i class="bi bi-printer"></i> In</button>
+                        <button class="btn btn-text-action btn-outline-warning btn-edit"><i class="bi bi-pencil"></i> Sửa</button>
+                        <button class="btn btn-text-action btn-outline-danger btn-delete"><i class="bi bi-trash"></i> Xóa</button>
+                    </div>
+                </td>
+            </tr>
+        `);
+    });
+}
+
+function initExpenseTable() {
+    expenseTableCtrl = DataListTable.create({
+        table: '#expenseTable',
+        countSelector: '#totalCount',
+        activeFiltersSelector: '#activeColFilters',
+        defaultSort: { key: 'date', dir: 'desc' },
+        columns: [
+            { key: 'voucher_no', label: 'Số Phiếu', sortable: true, filterType: 'text', width: '100px', align: 'center',
+              getValue: r => r.voucher_no || '', sortValue: r => r.voucherSeq || 0 },
+            { key: 'date', label: 'Ngày Chi', sortable: true, filterType: 'date', width: '100px', align: 'center',
+              getValue: r => r.date || '', sortValue: r => r.dateObj || new Date(0) },
+            { key: 'receiver', label: 'Người Nhận', filterType: 'text', width: '280px',
+              getValue: r => `${r.receiver_name || ''} ${r.company_name || ''}`.trim() },
+            { key: 'reason', label: 'Nội Dung Chi', filterType: 'text', width: '200px', getValue: r => r.reason || '' },
+            { key: 'category', label: 'Phân Loại', filterType: 'text', width: '120px', align: 'center',
+              getValue: r => getExpenseCategoryName(r) },
+            { key: 'amount', label: 'Số Tiền', sortable: true, filterType: 'number', width: '130px', align: 'end',
+              getValue: r => r.amount, sortValue: r => parseFloat(r.amount || 0) },
+            { key: 'actions', label: 'Hành Động', filter: false, sortable: false, resizable: false, width: '180px', align: 'center' },
+        ],
+        renderRows: renderExpenseRows,
+        onFiltered: (rows, total) => { $('#totalAllCount').text(total); },
+    });
+}
+
+function formatMoneyInput(inputSelector, hiddenSelector = null, maxValue = Infinity, readonly = false) {
+    const $input = $(inputSelector);
+    if (readonly) {
+        $input.each(function() {
+            const num = $(this).data('amount') || parseFloat($(this).val()) || 0;
+            $(this).val(num.toLocaleString('vi-VN') + ' ₫');
+        });
+        return;
+    }
+    $input.on('input', function() {
+        let value = this.value.replace(/\D/g, '');
+        let numeric = value === '' ? 0 : parseInt(value, 10);
+        if (numeric > maxValue) numeric = maxValue;
+        if (hiddenSelector) $(hiddenSelector).val(numeric);
+        this.value = numeric ? numeric.toLocaleString('vi-VN') : '';
+        const pos = this.selectionStart;
+        let digits = 0;
+        for (let i = 0; i < pos; i++) if (/\d/.test(this.value[i]||'')) digits++;
+        let newPos = 0, cnt = 0;
+        for (let i = 0; i < this.value.length; i++) {
+            if (/\d/.test(this.value[i])) { cnt++; if (cnt > digits) break; }
+            newPos = i + 1;
+        }
+        setTimeout(() => this.setSelectionRange(newPos, newPos), 0);
+        if ($('#btnSaveImportPayment').length) $('#btnSaveImportPayment').prop('disabled', numeric <= 0);
+    })
+    .on('focus', function() { if (this.value === '0') this.select(); })
+    .on('blur', function() { if (!this.value.trim() || parseInt(this.value.replace(/\D/g,'')) === 0) this.value = ''; });
+}
+
+function printExpense(id) {
+    window.open(`/PhieuChi/in/${id}`, '_blank');
+}
+
+// --- TẢI SỐ DƯ QUỸ (đã nâng cấp để cập nhật hiển thị) ---
+async function loadQuySoDu() {
+    try {
+        const res = await fetch('/api/quy-so-du');
+        if (!res.ok) throw new Error('Không tải được số dư quỹ');
+        const data = await res.json();
+        if (data.success) {
+            currentCashBalance = parseFloat(data.so_du_tien_mat || 0);
+            currentBankBalance = parseFloat(data.so_du_ngan_hang || 0);
+
+            // Cập nhật hiển thị số dư trên các modal đang mở
+            const cashText = currentCashBalance.toLocaleString('vi-VN') + ' ₫';
+            const bankText = currentBankBalance.toLocaleString('vi-VN') + ' ₫';
+
+            $('#otherCashBalance, #taxCashBalance, #importCashBalance').text(cashText);
+            $('#otherBankBalance, #taxBankBalance, #importBankBalance').text(bankText);
+        }
+    } catch (err) {
+        console.error('Lỗi tải số dư quỹ:', err);
+        // Nếu lỗi, hiển thị thông báo cảnh báo
+        const errorText = 'Lỗi tải số dư';
+        $('#otherCashBalance, #taxCashBalance, #importCashBalance').text(errorText);
+        $('#otherBankBalance, #taxBankBalance, #importBankBalance').text(errorText);
+    }
+}
+
+function checkSoDu(amount, paymentMethod) {
+    if (!paymentMethod) return { ok: true };
+    const method = paymentMethod.toLowerCase().trim();
+    let available = Infinity;
+    let message = '';
+    if (method.includes('mat') || method.includes('cash') || method.includes('111')) {
+        available = currentCashBalance;
+        message = 'Hãy nộp thêm tiền mặt vào quỹ';
+    } else if (method.includes('ngan') || method.includes('bank') || method.includes('chuyen') || method.includes('112')) {
+        available = currentBankBalance;
+        message = 'Hãy nộp thêm tiền vào tài khoản ngân hàng';
+    } else {
+        return { ok: true };
+    }
+    if (amount > available) {
+        return {
+            ok: false,
+            message: `Số tiền chi (${amount.toLocaleString('vi-VN')} ₫) vượt quá số dư hiện tại (${available.toLocaleString('vi-VN')} ₫).<br><strong>${message}</strong>`
+        };
+    }
+    return { ok: true };
+}
+
+// --- LOAD & RENDER DATA ---
+async function loadExpense() {
+    $('#loadingStatus').removeClass('d-none');
+    const params = new URLSearchParams();
+    const startStr = $('#startDate').val()?.trim();
+    if (startStr) {
+        const [d, m, y] = startStr.split('/');
+        params.append('start', `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+    }
+    const endStr = $('#endDate').val()?.trim();
+    if (endStr) {
+        const [d, m, y] = endStr.split('/');
+        const nextDay = new Date(parseInt(y), parseInt(m) - 1, parseInt(d) + 1);
+        params.append('end', `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2,'0')}-${String(nextDay.getDate()).padStart(2,'0')}`);
+    }
+    const q = $('#searchKeyword').val()?.trim();
+    if (q) params.append('q', q);
+    const type = $('#expenseType').val();
+    if (type && type !== 'all') params.append('type', type);
+    try {
+        const res = await fetch(`/api/expense?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        currentData = data.map(item => ({
+            ...item,
+            dateObj: item.date ? new Date(item.date) : null,
+            voucherSeq: item.voucher_no ? parseInt(item.voucher_no.replace('PC', '') || '0', 10) : 0
+        }));
+        expenseTableCtrl.setData(currentData);
+        $('#totalAllCount').text(currentData.length);
+    } catch (err) {
+        console.error('Lỗi tải dữ liệu phiếu chi:', err);
+        Swal.fire('Lỗi', 'Không thể tải danh sách phiếu chi', 'error');
+    } finally {
+        $('#loadingStatus').addClass('d-none');
+    }
+}
+
+function renderTable(data) {
+    if (expenseTableCtrl) expenseTableCtrl.setData(data);
+    else renderExpenseRows(data);
+}
+
+// --- SORT: handled by DataListTable ---
+
+// --- EVENT: NÚT SỬA ---
+$('#expenseTable').on('click', '.btn-edit', async function() {
+    const id = $(this).closest('tr').data('id');
+    try {
+        const res = await fetch(`/api/expense/${id}`);
+        if (!res.ok) throw new Error('Không tải được thông tin phiếu chi');
+        const item = await res.json();
+        $('#edit_id').val(item.id);
+        $('#edit_voucher_no').val(item.voucher_no || '');
+        flatpickr("#edit_date", {
+            dateFormat: "d/m/Y",
+            locale: "vn",
+            allowInput: true,
+            defaultDate: item.date ? new Date(item.date) : "today"
+        });
+        $('#edit_receiver').val(item.receiver_name || '');
+        $('#edit_address').val(item.address || '');
+        $('#edit_payment_method').val(item.credit_account === '111' ? 'cash' : 'transfer');
+        const amount = parseFloat(item.amount || 0);
+        $('#edit_amount_input').val(amount.toLocaleString('vi-VN'));
+        $('#edit_amount_actual').val(amount);
+        formatMoneyInput('#edit_amount_input', '#edit_amount_actual');
+        $('#edit_reason').val(item.reason || '');
+        if (item.source_type === 'tax') {
+            $('.tax-only').removeClass('d-none');
+            $('#edit_treasury_name').val(item.receiver_name || '');
+        } else {
+            $('.tax-only').addClass('d-none');
+        }
+        $('#editExpenseModal').modal('show');
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Lỗi', 'Không thể tải thông tin phiếu chi để sửa', 'error');
+    }
+});
+
+// --- SUBMIT CHỈNH SỬA ---
+$('#editExpenseForm').on('submit', async function(e) {
+    e.preventDefault();
+
+    const id = $('#edit_id').val();
+    const newAmount = parseFloat($('#edit_amount_actual').val() || 0);
+    const dateStr = getDateFromInput('#edit_date'); // YYYY-MM-DD
+    const paymentMethod = $('#edit_payment_method').val();
+
+    if (newAmount <= 0) return Swal.fire('Lỗi', 'Số tiền phải lớn hơn 0', 'error');
+    if (!dateStr) return Swal.fire('Lỗi', 'Vui lòng chọn ngày hợp lệ', 'error');
+
+    try {
+        Swal.showLoading();
+
+        // 1. Lấy thông tin phiếu cũ để biết số tiền cũ và tài khoản cũ
+        const resOld = await fetch(`/api/expense/${id}`);
+        const oldData = await resOld.json();
+        if (!resOld.ok) throw new Error('Không thể lấy thông tin phiếu cũ');
+
+        const oldAmount = parseFloat(oldData.amount || 0);
+        const oldAccount = oldData.credit_account.startsWith('111') ? '111' : '112';
+        
+        // Xác định tài khoản mới dựa trên lựa chọn hiện tại
+        const newAccount = (paymentMethod.includes('mat') || paymentMethod.includes('111')) ? '111' : '112';
+
+        // 2. Gọi API mới của bạn để lấy số dư tại ngày lập phiếu
+        const resBalance = await fetch(`/api/quy-so-du-at-date?date=${dateStr}&account=${newAccount}`);
+        const balanceData = await resBalance.json();
+        if (!balanceData.success) throw new Error(balanceData.error);
+
+        let availableBalance = parseFloat(balanceData.so_du);
+
+        // 3. LOGIC QUAN TRỌNG: 
+        // Nếu không đổi tài khoản (vẫn là 111 hoặc vẫn là 112), 
+        // thì số dư thực tế để chi = Số dư DB + Số tiền cũ của chính nó.
+        if (newAccount === oldAccount) {
+            availableBalance += oldAmount;
+        }
+
+        // 4. Kiểm tra xem số tiền mới có vượt hạn mức không
+        if (newAmount > availableBalance) {
+            return Swal.fire({
+                icon: 'error',
+                title: 'Không đủ số dư',
+                html: `Số dư khả dụng tại ngày ${dateStr} là: <b>${availableBalance.toLocaleString('vi-VN')} ₫</b>.<br>` +
+                      `Số tiền bạn nhập (<b>${newAmount.toLocaleString('vi-VN')} ₫</b>) vượt quá giới hạn.`,
+                confirmButtonText: 'Đã hiểu'
+            });
+        }
+
+        // 5. Nếu mọi thứ OK -> Tiến hành PUT
+        const payload = {
+            date: dateStr,
+            receiver_name: $('#edit_receiver').val().trim(),
+            address: $('#edit_address').val().trim(),
+            amount: newAmount,
+            payment_method: paymentMethod,
+            reason: $('#edit_reason').val().trim()
+        };
+
+        const putRes = await fetch(`/api/expense/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await putRes.json();
+        if (result.success) {
+            $('#editExpenseModal').modal('hide');
+            Swal.fire('Thành công', 'Đã cập nhật phiếu chi', 'success');
+            loadExpense();
+            loadQuySoDu();
+        } else {
+            Swal.fire('Lỗi', result.error || 'Không thể cập nhật', 'error');
+        }
+
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Lỗi', err.message || 'Không thể kết nối server', 'error');
+    }
+});
+
+// --- KHỞI ĐỘNG ---
+$(document).ready(function() {
+    // --- ĐOẠN ĐƯỢC THÊM MỚI: VIỆT HÓA THÔNG BÁO VALIDATE HTML5 (REQUIRED) ---
+    // Tìm tất cả các trường có thuộc tính required để custom lại câu thông báo lỗi bằng tiếng Việt
+    document.querySelectorAll("[required]").forEach(function(element) {
+        element.oninvalid = function(e) {
+            e.target.setCustomValidity("");
+            if (!e.target.validity.valid) {
+                if (e.target.tagName === "SELECT") {
+                    e.target.setCustomValidity("Vui lòng chọn một tùy chọn trong danh sách.");
+                } else {
+                    e.target.setCustomValidity("Vui lòng điền thông tin vào trường này.");
+                }
+            }
+        };
+        element.oninput = function(e) {
+            e.target.setCustomValidity("");
+        };
+    });
+    // ------------------------------------------------------------------------
+
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const formatVNDate = d =>
+        `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    $('#startDate').val(formatVNDate(firstDayOfMonth));
+    $('#endDate').val(formatVNDate(today));
+
+    const fpConfig = {
+        dateFormat: "d/m/Y",
+        locale: "vn",
+        allowInput: true
+    };
+    flatpickr("#startDate", fpConfig).setDate(firstDayOfMonth);
+    flatpickr("#endDate", fpConfig).setDate(today);
+    flatpickr("#other_date", { ...fpConfig, defaultDate: "today" });
+    flatpickr("#tax_date", { ...fpConfig, defaultDate: "today" });
+    flatpickr("#import_payment_date", { ...fpConfig, defaultDate: "today" });
+
+    initExpenseTable();
+    $('#btnClearColFilters').on('click', () => expenseTableCtrl?.clearColumnFilters());
+
+    formatMoneyInput('#amountInput', '#amountActual');
+    formatMoneyInput('#taxAmountInput', '#taxAmountActual');
+    formatMoneyInput('#import_amount_input', '#import_amount');
+
+    loadExpense();
+
+    let searchTimer;
+    $('#searchKeyword').on('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadExpense, 400);
+    });
+
+    $('#startDate, #endDate, #expenseType').on('change', loadExpense);
+    $('#btnFilter').on('click', function(e) {
+        e.preventDefault();
+        loadExpense();
+    });
+
+    // Gọi loadQuySoDu khi mở bất kỳ modal nào
+    $('#btnInsuranceExpense, #btnTaxExpense, #btnImportPayment').on('click', loadQuySoDu);
+
+    $('#btnServiceExpense').on('click', () => {
+        window.location.href = '/import?mode=service&return_to=/DanhSachPhieuChi';
+    });
+
+    // Modal Nộp bảo hiểm
+    $('#btnInsuranceExpense').on('click', () => {
+        $('#insuranceExpenseForm')[0].reset();
+        $('#amountInput').val('');
+        $('#amountActual').val(0);
+        $('#insuranceExpenseModal').modal('show');
+        loadQuySoDu();
+    });
+
+    $('#insuranceExpenseForm').on('submit', async function(e) {
+        e.preventDefault();
+        const amount = parseInt($('#amountActual').val() || 0, 10);
+        if (amount <= 0) return Swal.fire('Lỗi', 'Số tiền phải lớn hơn 0', 'error');
+        const paymentMethod = this.payment_method.value;
+        const check = checkSoDu(amount, paymentMethod);
+        if (!check.ok) return Swal.fire({ icon: 'error', title: 'Không đủ số dư', html: check.message });
+        const dateStr = getDateFromInput('#other_date');
+        if (!dateStr) return Swal.fire('Lỗi', 'Vui lòng chọn ngày chi hợp lệ', 'error');
+        const payload = {
+            receiver: this.receiver.value.trim(),
+            address: this.address.value.trim(),
+            amount,
+            reason: this.reason.value.trim(),
+            payment_method: paymentMethod,
+            expense_type: this.expense_type.value,
+            date: dateStr
+        };
+        try {
+            const res = await fetch('/api/expense/create-other', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (result.success) {
+                $('#insuranceExpenseModal').modal('hide');
+                loadExpense();
+                printExpense(result.id);
+            } else {
+                Swal.fire('Lỗi', result.error || 'Không thể lưu phiếu chi', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Lỗi kết nối', 'Không thể kết nối đến server', 'error');
+        }
+    });
+
+    $('#expenseTable').on('click', '.btn-print', function() {
+        const row = $(this).closest('tr');
+        const id = row.data('id');
+        printExpense(id);
+    });
+
+    $('#expenseTable').on('click', '.btn-delete', async function() {
+        const row = $(this).closest('tr');
+        const id = row.data('id');
+        const result = await Swal.fire({
+            title: 'Xác nhận xóa?',
+            text: "Phiếu chi sẽ bị xóa vĩnh viễn và dữ liệu công nợ sẽ được hoàn trả!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy',
+        });
+        if (!result.isConfirmed) return;
+        Swal.fire({ title: 'Đang xóa...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        try {
+            const res = await fetch(`/api/expense/delete_and_reset/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Thành công!', text: data.message || 'Đã xóa phiếu chi', timer: 2000, showConfirmButton: false });
+                loadExpense();
+                loadQuySoDu();
+            } else {
+                Swal.fire('Lỗi', data.error || 'Không thể xóa phiếu chi', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Lỗi kết nối', 'Không thể kết nối đến server', 'error');
+        }
+    });
+
+    // Modal Nộp thuế (giữ nguyên)
+    function updateTaxReason() {
+        const year = $('#tax_year').val() || new Date().getFullYear();
+        const type = $('#tax_expense_type').val();
+        const reason = `Nộp thuế ${type} năm ${year}`;
+        $('#tax_reason_select').html(`<option value="${reason}">${reason}</option>`);
+    }
+
+    $('#btnTaxExpense').on('click', function() {
+        $('#tax_year').val(new Date().getFullYear());
+        updateTaxReason();
+        $('#tax_treasury_name').val('');
+        $('#taxExpenseModal').modal('show');
+        // Gọi lại để cập nhật số dư
+        loadQuySoDu();
+    });
+
+    $('#tax_expense_type, #tax_year').on('change input', updateTaxReason);
+
+    $('#taxExpenseForm').on('submit', async function(e) {
+        e.preventDefault();
+        const amount = parseFloat($('#taxAmountActual').val() || 0);
+        if (amount <= 0) return Swal.fire('Lỗi', 'Số tiền phải lớn hơn 0', 'error');
+        const treasuryName = $('#tax_treasury_name').val()?.trim();
+        if (!treasuryName) {
+            Swal.fire('Lỗi', 'Vui lòng nhập Tên Kho bạc nhà nước nhận tiền', 'error');
+            $('#tax_treasury_name').focus();
+            return;
+        }
+        const paymentMethod = $('#tax_payment_method').val();
+        const check = checkSoDu(amount, paymentMethod);
+        if (!check.ok) return Swal.fire({ icon: 'error', title: 'Không đủ số dư', html: check.message });
+        const dateStr = getDateFromInput('#tax_date');
+        if (!dateStr) return Swal.fire('Lỗi', 'Vui lòng chọn ngày lập phiếu hợp lệ', 'error');
+        const payload = {
+            amount,
+            payment_method: paymentMethod,
+            expense_type: $('#tax_expense_type').val(),
+            reason: $('#tax_reason_select').val(),
+            bill_no: $('#tax_bill_no').val() || '',
+            date: dateStr,
+            treasury_name: treasuryName
+        };
+        try {
+            const res = await fetch('/api/expense/create-tax', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (result.success) {
+                $('#taxExpenseModal').modal('hide');
+                loadExpense();
+                printExpense(result.id);
+            } else {
+                Swal.fire('Lỗi', result.error || 'Không thể lưu phiếu chi nộp thuế', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Lỗi kết nối', 'Không thể kết nối đến server', 'error');
+        }
+    });
+
+    // Modal Thanh toán nhập kho (giữ nguyên)
+    $('#btnImportPayment').on('click', async function() {
+        $('#unpaidImportsBody').html('<tr><td colspan="7" class="text-center py-4"><div class="spinner-border text-danger"></div></td></tr>');
+        $('#selectedImportInfo').hide();
+        $('#btnSaveImportPayment').prop('disabled', true);
+        selectedImport = null;
+        $('#importPaymentModal').modal('show');
+        // Gọi lại để cập nhật số dư
+        loadQuySoDu();
+        try {
+            const res = await fetch('/api/import/unpaid-list');
+            unpaidImports = await res.json();
+            if (unpaidImports.length === 0) {
+                $('#unpaidImportsBody').html('<tr><td colspan="7" class="text-center py-4 text-muted">Không có phiếu nhập kho nào cần thanh toán</td></tr>');
+                return;
+            }
+            const rows = unpaidImports.map(imp => `
+                <tr class="import-row" data-id="${imp.id}" style="cursor: pointer;">
+                    <td class="text-center"><input type="radio" name="import_select" class="form-check-input"></td>
+                    <td class="fw-bold text-primary">#${imp.import_no}</td>
+                    <td>${new Date(imp.date).toLocaleDateString('vi-VN')}</td>
+                    <td>${imp.supplier_name || 'Không xác định'}</td>
+                    <td class="text-end">${parseFloat(imp.total_value).toLocaleString('vi-VN')} ₫</td>
+                    <td class="text-end text-success">${parseFloat(imp.paid_amount || 0).toLocaleString('vi-VN')} ₫</td>
+                    <td class="text-end text-danger fw-bold">${parseFloat(imp.remaining_amount).toLocaleString('vi-VN')} ₫</td>
+                </tr>
+            `).join('');
+            $('#unpaidImportsBody').html(rows);
+        } catch (e) {
+            $('#unpaidImportsBody').html('<tr><td colspan="7" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>');
+        }
+    });
+
+    $(document).on('click', '.import-row', function() {
+        const id = parseInt($(this).data('id'));
+        selectedImport = unpaidImports.find(x => x.id === id);
+        if (!selectedImport) return;
+        $('.import-row').removeClass('table-primary');
+        $(this).addClass('table-primary').find('input[type="radio"]').prop('checked', true);
+        $('#import_receiver').val(selectedImport.supplier_name || '');
+        $('#import_address').val(selectedImport.supplier_address || '');
+        $('#import_reason').val(`Thanh toán nhập hàng phiếu #${selectedImport.import_no}`);
+        $('#import_ref_id').val(selectedImport.id);
+        $('#import_bill_no').val(selectedImport.bill_no || '');
+        const total = parseFloat(selectedImport.total_value || 0);
+        const paid = parseFloat(selectedImport.paid_amount || 0);
+        const remaining = parseFloat(selectedImport.remaining_amount || 0);
+        $('#total_value_display').data('amount', total).val(total.toLocaleString('vi-VN') + ' ₫');
+        $('#paid_amount_display').data('amount', paid).val(paid.toLocaleString('vi-VN') + ' ₫');
+        $('#remaining_display').data('amount', remaining).val(remaining.toLocaleString('vi-VN') + ' ₫');
+        $('#import_total_value').val(total);
+        $('#import_paid_amount').val(paid);
+        $('#import_remaining').val(remaining);
+        $('#import_amount_input').val('').off('input focus blur');
+        formatMoneyInput('#import_amount_input', '#import_amount', remaining);
+        formatMoneyInput('#total_value_display', null, null, true);
+        formatMoneyInput('#paid_amount_display', null, null, true);
+        formatMoneyInput('#remaining_display', null, null, true);
+        $('#selectedImportInfo').show();
+        if (remaining > 0) {
+            $('#import_amount_input').val(remaining.toLocaleString('vi-VN'));
+            $('#import_amount').val(remaining);
+            $('#btnSaveImportPayment').prop('disabled', false);
+        }
+    });
+
+    $('#btnSaveImportPayment').on('click', async function() {
+        if (!selectedImport) return Swal.fire('Lỗi', 'Vui lòng chọn một phiếu nhập kho', 'error');
+        const amount = parseFloat($('#import_amount').val() || 0);
+        if (amount <= 0) {
+            Swal.fire('Lỗi', 'Vui lòng nhập số tiền thanh toán lớn hơn 0', 'error');
+            return;
+        }
+        const remaining = parseFloat($('#import_remaining').val() || 0);
+        if (amount > remaining) {
+            Swal.fire('Lỗi', `Số tiền thanh toán không được vượt quá ${remaining.toLocaleString('vi-VN')} ₫`, 'error');
+            return;
+        }
+        const paymentMethod = $('#import_payment_method').val();
+        const check = checkSoDu(amount, paymentMethod);
+        if (!check.ok) return Swal.fire({ icon: 'error', title: 'Không đủ số dư', html: check.message });
+        const dateStr = getDateFromInput('#import_payment_date');
+        if (!dateStr) return Swal.fire('Lỗi', 'Vui lòng chọn ngày lập phiếu chi hợp lệ', 'error');
+        const data = {
+            type: 'import',
+            ref_id: selectedImport.id,
+            receiver: $('#import_receiver').val(),
+            address: $('#import_address').val(),
+            amount,
+            payment_method: paymentMethod,
+            date: dateStr,
+            bill_no: $('#import_bill_no').val() || ''
+        };
+        try {
+            const res = await fetch('/api/expense/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (result.success) {
+                $('#importPaymentModal').modal('hide');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Thành công!',
+                    text: `Đã lập phiếu chi thanh toán ${amount.toLocaleString('vi-VN')} ₫ cho phiếu nhập #${selectedImport.import_no}`,
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+                loadExpense();
+                printExpense(result.id);
+            } else {
+                Swal.fire('Lỗi', result.error || 'Không thể lưu phiếu chi', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Lỗi kết nối', 'Không thể kết nối đến server', 'error');
+        }
+    });
+
+    // Đánh lại số phiếu
+    $('#btnRenumberVouchers').on('click', async function() {
+        const result = await Swal.fire({
+            title: 'Đánh lại số phiếu chi?',
+            html: `Hệ thống sẽ sắp xếp theo <strong>ngày chi</strong> và đánh số liên tục từ <strong>PC000001</strong>.<br>
+                   <span class="text-danger fw-bold">Cảnh báo: Số phiếu cũ sẽ bị thay đổi vĩnh viễn!</span>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý đánh lại',
+            cancelButtonText: 'Hủy',
+        });
+        if (!result.isConfirmed) return;
+        Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        try {
+            const res = await fetch('/api/expense/renumber', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                Swal.fire('Thành công!', `Đã đánh lại số cho ${data.count || 'tất cả'} phiếu`, 'success');
+                loadExpense();
+            } else {
+                Swal.fire('Lỗi', data.message || 'Không thể thực hiện', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Lỗi kết nối', 'Không thể kết nối server', 'error');
+        }
+    });
+
+    console.log('Scripts Phiếu Chi đã load thành công!');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Danh Sách Phiếu Xuất Kho{% endblock %}
+{% block head_extra %}
+    {% include 'partials/data_list_table_assets.html' %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <style>
+        :root { --primary-color: #4f46e5; --success-color: #10b981; }
+        body { background-color: #f3f4f6; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .px-id { font-family: 'JetBrains Mono', monospace; font-weight: bold; color: #4f46e5; }
+        .amount-display { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #111827; }
+        .btn-action-text { font-size: 0.75rem; font-weight: 700; padding: 5px 12px; border-radius: 6px; text-transform: uppercase; }
+        .flatpickr-calendar { z-index: 9999 !important; }
+    </style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">Danh Sách Phiếu Xuất Kho Theo Hóa Đơn Bán Hàng</h3>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0 small">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Trang chủ</a></li>
+                    <li class="breadcrumb-item active fw-semibold text-primary">Phiếu Xuất Kho</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="location.href='/sale/create'" class="btn btn-success fw-bold px-3 shadow-sm">
+                <i class="bi bi-plus-lg me-2"></i>LẬP PHIẾU XUẤT KHO
+            </button>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Tìm kiếm</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Tên khách hàng, số phiếu..." onkeyup="if(event.key==='Enter') loadDelivery()">
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Khoảng thời gian</label>
+                    <div class="input-group">
+                        <input type="text" id="startDate" class="form-control text-center" placeholder="Từ ngày">
+                        <span class="input-group-text bg-light border-x-0"><i class="bi bi-arrow-right"></i></span>
+                        <input type="text" id="endDate" class="form-control text-center" placeholder="Đến ngày">
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-12 d-flex align-items-end">
+                    <button class="btn btn-dark w-100 fw-bold" onclick="loadDelivery()">
+                        <i class="bi bi-funnel me-2"></i>LỌC
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="deliveryTable">
+                <thead><tr></tr></thead>
+                <tbody id="deliveryTableBody"></tbody>
+            </table>
+        </div>
+        <div class="p-3 bg-light border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="enhanced-table-toolbar">
+                <span class="text-muted small">Hiển thị <strong id="totalCount">0</strong> / <strong id="totalRecords">0</strong> phiếu xuất</span>
+                <span id="activeColFilters" class="active-filters-badge d-none"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearColFilters">Xóa lọc cột</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Flatpickr JS + Tiếng Việt -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+const formatMoney = (v) => new Intl.NumberFormat('vi-VN').format(v || 0) + ' ₫';
+const formatDocNo = (docNo) => {
+    if (!docNo) return '—';
+    if (String(docNo).startsWith('PX')) return docNo;
+    const num = parseInt(docNo, 10);
+    return `PX${isNaN(num) ? '000000' : num.toString().padStart(6, '0')}`;
+};
+
+let deliveryData = [];
+let deliveryTableCtrl = null;
+
+function renderDeliveryRows(data, tbody) {
+    const $tbody = tbody ? $(tbody) : $('#deliveryTableBody');
+    $tbody.empty();
+    if (!data.length) {
+        $tbody.html('<tr><td colspan="6" class="text-center py-5 text-muted">Không tìm thấy phiếu xuất kho nào phù hợp</td></tr>');
+        return;
+    }
+    data.forEach(item => {
+        const isReturnImport = item.type === 'RETURN_IMPORT';
+        const receiver = item.partner_name || (isReturnImport ? 'NCC' : 'Bán cho người tiêu dùng');
+        const reason = item.reason || (isReturnImport ? 'Trả hàng nhập' : (item.note || `Xuất hàng bán theo phiếu ${formatDocNo(item.doc_no)}`));
+        const dateDisplay = item.date ? flatpickr.formatDate(new Date(item.date), 'd/m/Y') : '—';
+        $tbody.append(`
+            <tr>
+                <td class="text-center px-id">${formatDocNo(item.doc_no)}</td>
+                <td class="text-center text-muted small">${dateDisplay}</td>
+                <td class="fw-semibold">${receiver}</td>
+                <td class="text-muted small">${reason}</td>
+                <td class="text-end amount-display text-primary">${formatMoney(Math.abs(item.total_value || 0))}</td>
+                <td class="text-center">
+                    <button class="btn btn-action-text btn-outline-primary" onclick="window.open('/PhieuXuatKhoTheoDonBan/in/${item.id}', '_blank')">Xem & In</button>
+                </td>
+            </tr>`);
+    });
+}
+
+function initDeliveryTable() {
+    deliveryTableCtrl = DataListTable.create({
+        table: '#deliveryTable',
+        countSelector: '#totalCount',
+        activeFiltersSelector: '#activeColFilters',
+        defaultSort: { key: 'date', dir: 'desc' },
+        columns: [
+            { key: 'doc_no', label: 'Số Phiếu', sortable: true, filterType: 'text', width: '140px', align: 'center',
+              getValue: r => formatDocNo(r.doc_no), sortValue: r => parseInt(String(r.doc_no || '').replace(/\D/g, '') || '0', 10) },
+            { key: 'date', label: 'Ngày Xuất', sortable: true, filterType: 'date', width: '130px', align: 'center',
+              getValue: r => r.date || '', sortValue: r => r.date ? new Date(r.date) : new Date(0) },
+            { key: 'receiver', label: 'Người nhận hàng', filterType: 'text', width: '250px', getValue: r => r.partner_name || '' },
+            { key: 'reason', label: 'Lý do xuất kho', filterType: 'text', getValue: r => r.reason || r.note || '' },
+            { key: 'total_value', label: 'Thành tiền', sortable: true, filterType: 'number', width: '160px', align: 'end',
+              getValue: r => Math.abs(r.total_value || 0), sortValue: r => Math.abs(parseFloat(r.total_value || 0)) },
+            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '140px', align: 'center' },
+        ],
+        renderRows: renderDeliveryRows,
+        onFiltered: (rows, total) => { $('#totalRecords').text(total); },
+    });
+}
+
+const loadDelivery = async () => {
+    const q = $('#searchInput').val().trim();
+    const startStr = $('#startDate').val();
+    const endStr = $('#endDate').val();
+    const params = new URLSearchParams();
+    if (q) params.append('q', q);
+    if (startStr) {
+        const [d, m, y] = startStr.split('/');
+        params.append('start', `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+    }
+    if (endStr) {
+        const [d, m, y] = endStr.split('/');
+        params.append('end', `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+    }
+    $('#deliveryTableBody').html('<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary spinner-border-sm"></div> Đang tải...</td></tr>');
+    try {
+        const [resSale, resReturn] = await Promise.all([
+            fetch(`/api/stock-moves/list1?type=SALE&${params.toString()}`),
+            fetch(`/api/stock-moves/list1?type=RETURN_IMPORT&${params.toString()}`)
+        ]);
+        if (!resSale.ok || !resReturn.ok) throw new Error('Lỗi server');
+        deliveryData = [...(await resSale.json()), ...(await resReturn.json())];
+        deliveryTableCtrl.setData(deliveryData);
+    } catch (err) {
+        console.error(err);
+        $('#deliveryTableBody').html('<tr><td colspan="6" class="text-center text-danger py-5">Lỗi kết nối dữ liệu</td></tr>');
+    }
+};
+
+$(document).ready(function() {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const fpConfig = {
+        dateFormat: 'd/m/Y', locale: 'vn', allowInput: true, clickOpens: true,
+        onChange: function() { if ($('#startDate').val() && $('#endDate').val()) loadDelivery(); }
+    };
+    flatpickr('#startDate', fpConfig).setDate(firstDayOfMonth);
+    flatpickr('#endDate', fpConfig).setDate(today);
+    initDeliveryTable();
+    $('#btnClearColFilters').on('click', () => deliveryTableCtrl?.clearColumnFilters());
+    loadDelivery();
+});
+</script>
+{% endblock %}

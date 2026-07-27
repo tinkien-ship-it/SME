@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chỉnh Sửa Đơn Hàng</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+<style>
+body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%); min-height: 100vh; }
+.card { transition: all 0.3s ease; }
+.card:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important; }
+.required { color: #dc2626; }
+.table-input { width: 100%; text-align: right; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 8px; font-weight: 500; transition: all 0.2s; }
+.table-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2); background-color: #fff; outline: none; }
+.calculated-col { font-weight: 600; color: #1e3a8a; }
+.spinner { width: 80px; height: 80px; border: 8px solid #e5e7eb; border-top: 8px solid #4f46e5; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.customer-input-field input, .customer-input-field textarea { padding: 8px 12px; font-size: 1rem; border-radius: 12px; border: 1px solid #d1d5db; }
+#saveBtn { min-width: 200px; }
+</style>
+</head>
+<body class="p-6 lg:p-12">
+<div class="max-w-7xl mx-auto">
+    <!-- Loading -->
+    <div id="loadingScreen" class="bg-white rounded-3xl shadow-2xl p-20 text-center">
+        <div class="spinner"></div>
+        <p class="text-3xl font-bold text-gray-700">Đang tải thông tin đơn hàng...</p>
+    </div>
+
+    <!-- Form chỉnh sửa -->
+    <div id="orderForm" class="hidden space-y-8">
+        <!-- Thông tin khách hàng -->
+        <div class="bg-white rounded-3xl shadow-2xl p-8 card">
+            <h2 class="text-2xl font-extrabold text-indigo-600 mb-6 pb-3 border-b-2 border-indigo-100">
+                Thông tin Khách hàng
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <div class="customer-input-field">
+                        <label class="block text-sm font-bold text-red-600 mb-1">Họ tên khách hàng <span class="required">*</span></label>
+                        <input type="text" id="edit_customer_name" class="w-full">
+                    </div>
+                    <div class="customer-input-field">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Tên công ty</label>
+                        <input type="text" id="edit_company_name" class="w-full">
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="customer-input-field">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Mã số thuế</label>
+                        <input type="text" id="edit_tax_code" class="w-full">
+                    </div>
+                    <div class="customer-input-field">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Địa chỉ giao hàng</label>
+                        <textarea id="edit_address" rows="2" class="w-full resize-none"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danh sách sản phẩm -->
+        <div class="bg-white rounded-3xl shadow-2xl p-8 card">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-extrabold text-indigo-600 pb-3 border-b-2 border-indigo-100">
+                    Chi tiết Sản phẩm
+                </h2>
+                <button class="px-5 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg" onclick="addRow()">
+                    Thêm sản phẩm
+                </button>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl shadow-inner border border-gray-100">
+                <table class="w-full table-auto text-left whitespace-nowrap" id="itemsTable">
+                    <thead class="bg-gray-50 text-xs uppercase text-gray-700">
+                        <tr>
+                            <th class="text-center p-3 w-24">Mã SP</th>
+                            <th class="p-3">Tên hàng</th>
+                            <th class="text-center p-3 w-20">ĐV</th>
+                            <th class="text-right p-3 w-24">SL</th>
+                            <th class="text-right p-3 w-32">Giá bán</th>
+                            <th class="text-right p-3 w-32">Thành tiền</th>
+                            <th class="text-right p-3 w-20">% CK</th>
+                            <th class="text-right p-3 w-32">Tiền CK</th>
+                            <th class="text-right p-3 w-32 font-bold text-indigo-600">Tổng TT</th>
+                            <th class="text-center p-3 w-20">Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody">
+                        <tr><td colspan="10" class="text-center text-gray-400 py-12">Đang tải chi tiết đơn hàng...</td></tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-indigo-50 text-xl font-bold">
+                            <td colspan="8" class="text-right py-5 pr-6 text-gray-800">TỔNG CỘNG:</td>
+                            <td class="text-right py-5 pr-6 text-red-600" id="tableTotal">0 ₫</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Nút lưu -->
+        <div class="flex justify-end mt-10">
+            <button id="saveBtn" onclick="saveOrderAll()" class="px-12 py-5 rounded-xl bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold text-xl flex items-center gap-3 shadow-2xl transform hover:scale-105 transition-all">
+                <i class="bi bi-check2-circle"></i>
+                LƯU TOÀN BỘ THAY ĐỔI
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let productList = [], currentOrderData = null;
+const orderId = window.location.pathname.split('/').pop();
+
+function formatCurrency(v) {
+    return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(Math.round(v || 0));
+}
+function formatCurrencyVN(v) {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0 }).format(v || 0);
+}
+function parseCurrency(v) {
+    return parseFloat(String(v).replace(/\./g, '').replace(/₫/g, '').trim()) || 0;
+}
+
+async function loadProducts() {
+    try {
+        const res = await fetch('/api/products?q=&limit=1000');
+        const json = await res.json();
+        productList = Array.isArray(json) ? json : (json.data || []);
+    } catch (e) { console.error("Lỗi tải sản phẩm:", e); }
+}
+
+function addRow(item = { product_id: '', name: '', unit: '', quantity: 1, price: 0, discount_pct: 0, UseSaleUnit: 0 }) {
+    const rowId = 'row-' + Math.random().toString(36).substr(2, 9);
+    const tr = $(`
+        <tr id="${rowId}" class="hover:bg-indigo-50 transition-colors">
+            <td class="p-2"><input type="text" class="table-input product-id-input" value="${item.product_id || ''}"></td>
+            <td class="p-2"><input type="text" class="table-input name-input" value="${item.name || ''}"></td>
+            <td class="p-2 text-center"><input type="text" class="table-input unit-input text-center" value="${item.unit || ''}"></td>
+            <td class="p-2"><input type="number" class="table-input qty-input text-right" step="any" min="0.001" value="${item.quantity || 1}"></td>
+            <td class="p-2"><input type="text" class="table-input price-input text-right" value="${formatCurrency(item.price || 0)}"></td>
+            <td class="calculated-col goods-col p-2 text-right">0</td>
+            <td class="p-2"><input type="number" class="table-input disc-pct-input text-right" min="0" max="100" step="0.1" value="${item.discount_pct || 0}"></td>
+            <td class="calculated-col disc-amt-col p-2 text-right">0</td>
+            <td class="calculated-col net-col p-2 text-right font-bold">0</td>
+            <td class="text-center p-2"><button class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-full text-sm removeRowBtn">×</button></td>
+        </tr>
+    `);
+
+    $('#itemsTableBody').append(tr);
+
+    // Autocomplete tên hàng
+    tr.find('.name-input').autocomplete({
+        source: productList.map(p => ({ label: p.name, value: p.name, data: p })),
+        select: (e, ui) => fillProductRow(tr, ui.item.data)
+    });
+
+    // Autocomplete mã hàng
+    tr.find('.product-id-input').autocomplete({
+        source: productList.map(p => ({ label: p.product_id, value: p.product_id, data: p })),
+        select: (e, ui) => fillProductRow(tr, ui.item.data)
+    });
+
+    tr.find('.removeRowBtn').click(() => { tr.remove(); updateOverallTotals(); });
+    tr.find('.qty-input, .price-input, .disc-pct-input').on('input', () => calculateRow(tr));
+    calculateRow(tr);
+}
+
+function fillProductRow(row, prod) {
+    row.find('.product-id-input').val(prod.product_id || '');
+    row.find('.name-input').val(prod.name || '');
+    row.find('.unit-input').val(prod.unit || '');
+    row.find('.price-input').val(formatCurrency(prod.price || 0));
+    row.find('.disc-pct-input').val(prod.discount_pct || 0);
+    calculateRow(row);
+}
+
+function calculateRow(row) {
+    const qty = parseFloat(row.find('.qty-input').val()) || 0;
+    const price = parseCurrency(row.find('.price-input').val());
+    const disc = parseFloat(row.find('.disc-pct-input').val()) || 0;
+
+    const goods = qty * price;
+    const discAmt = goods * disc / 100;
+    const net = goods - discAmt;
+
+    row.find('.goods-col').text(formatCurrency(goods));
+    row.find('.disc-amt-col').text(formatCurrency(discAmt));
+    row.find('.net-col').text(formatCurrency(net));
+
+    updateOverallTotals();
+}
+
+function updateOverallTotals() {
+    let total = 0;
+    $('#itemsTableBody tr').each(function () {
+        total += parseCurrency($(this).find('.net-col').text());
+    });
+    $('#tableTotal').text(formatCurrencyVN(total));
+}
+
+async function loadOrderDetail() {
+    await loadProducts();
+    try {
+        const res = await fetch(`/api/sale/${orderId}`);
+        if (!res.ok) throw new Error("Không tìm thấy đơn hàng");
+        const json = await res.json();
+        const order = json.data || json;
+
+        $('#edit_customer_name').val(order.customer_name || '');
+        $('#edit_company_name').val(order.company_name || '');
+        $('#edit_tax_code').val(order.tax_code || '');
+        $('#edit_address').val(order.address || '');
+
+        $('#itemsTableBody').empty();
+        (order.items || []).forEach(item => addRow(item));
+
+        $('#loadingScreen').hide();
+        $('#orderForm').removeClass('hidden');
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không tải được dữ liệu đơn hàng: ' + e.message, 'error');
+    }
+}
+
+// === HÀM LƯU CHỈ GỌI 1 LẦN DUY NHẤT ===
+async function saveOrderAll() {
+    const customer_name = $('#edit_customer_name').val().trim();
+    if (!customer_name) {
+        return Swal.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Vui lòng nhập tên khách hàng!' });
+    }
+
+    const items = [];
+    let hasItem = false;
+
+    $('#itemsTableBody tr').each(function () {
+        const row = $(this);
+        const product_id = row.find('.product-id-input').val().trim();
+        const qty = parseFloat(row.find('.qty-input').val()) || 0;
+
+        if (product_id && qty > 0) {
+            items.push({
+                product_id: product_id,
+                name: row.find('.name-input').val().trim(),
+                unit: row.find('.unit-input').val().trim(),
+                quantity: qty,
+                price: parseCurrency(row.find('.price-input').val()),
+                discount_pct: parseFloat(row.find('.disc-pct-input').val()) || 0,
+                UseSaleUnit: row.find('.unit-input').val().includes('Cuộn') || row.find('.unit-input').val().includes('Lốc') ? 1 : 0
+            });
+            hasItem = true;
+        }
+    });
+
+    if (!hasItem) {
+        return Swal.fire({ icon: 'warning', title: 'Chưa có sản phẩm', text: 'Vui lòng thêm ít nhất 1 sản phẩm!' });
+    }
+
+    const payload = {
+        items: items,
+        customer: {
+            customer_name: customer_name,
+            company_name: $('#edit_company_name').val().trim() || null,
+            tax_code: $('#edit_tax_code').val().trim() || null,
+            address: $('#edit_address').val().trim() || null
+        }
+    };
+
+    $('#saveBtn').prop('disabled', true).html('Đang lưu...');
+
+    try {
+        const res = await fetch(`/api/sale/update_item/${orderId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+
+        if (!res.ok || !result.success) {
+            throw new Error(result.error || "Lỗi không xác định");
+        }
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Thành công!',
+            text: 'Đơn hàng đã được cập nhật thành công!',
+            timer: 2000
+        }).then(() => {
+            location.reload(); // Reload để thấy kết quả mới nhất
+        });
+
+    } catch (err) {
+        Swal.fire('Lỗi', err.message || 'Cập nhật thất bại!', 'error');
+    } finally {
+        $('#saveBtn').prop('disabled', false).html('LƯU TOÀN BỘ THAY ĐỔI');
+    }
+}
+
+$(document).ready(() => {
+    loadOrderDetail();
+});
+</script>
+</body>
+</html>

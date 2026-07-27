@@ -1,0 +1,613 @@
+{% extends "base.html" %}
+{% block title %}Xuất Hóa Đơn Thay Thế - KETO POS{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --pos-primary: #3b71ca;
+        --pos-success: #14a44d;
+        --pos-bg: #f4f7f6;
+        --pos-border: #e0e6ed;
+        --pos-warning: #e67e22;
+    }
+    body { 
+        background-color: var(--pos-bg); 
+        font-family: 'Inter', system-ui, sans-serif; 
+        color: #333; 
+    }
+    .pos-container { padding: 15px; max-width: 100%; }
+    .card { 
+        border: none; 
+        border-radius: 12px; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+        margin-bottom: 15px; 
+    }
+    .card-header { 
+        background: #fff; 
+        border-bottom: 1px solid var(--pos-border); 
+        padding: 12px 15px; 
+        font-weight: 700; 
+        border-radius: 12px 12px 0 0 !important; 
+    }
+    .search-input { 
+        border-radius: 10px 0 0 10px !important; 
+        padding: 12px 20px; 
+        border: 2px solid transparent; 
+        background: #fff; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08); 
+    }
+    .search-input:focus { 
+        border-color: var(--pos-primary); 
+        box-shadow: none; 
+        outline: none; 
+    }
+    .btn-camera {
+        border-radius: 0 10px 10px 0 !important;
+        background: #fff;
+        border: none;
+        box-shadow: 4px 4px 10px rgba(0,0,0,0.08);
+        padding: 0 20px;
+        color: var(--pos-primary);
+        font-size: 1.2rem;
+    }
+    .search-section { position: relative; }
+    #productResults { 
+        border-radius: 10px;
+        margin-top: 5px;
+        border: 1px solid var(--pos-border);
+        overflow-y: auto;
+        max-height: 400px;
+        display: none;
+        background: #fff;
+        z-index: 1050;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    
+    #cartItems { 
+        height: calc(100vh - 460px); 
+        overflow-y: auto; 
+        padding: 5px; 
+    }
+
+    .cart-item { 
+        background: #fff; 
+        border: 1px solid var(--pos-border); 
+        border-radius: 10px; 
+        padding: 10px 12px; 
+        margin-bottom: 8px;
+    }
+    .cart-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        border-bottom: 1px dashed #eee;
+        padding-bottom: 5px;
+    }
+    .item-controls-row {
+        display: flex;
+        justify-content: flex-end; 
+        align-items: flex-end;
+        gap: 8px;
+    }
+    .control-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .control-label {
+        font-size: 0.65rem;
+        color: #888;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    .input-pos-sm {
+        height: 32px;
+        padding: 2px 5px;
+        text-align: right;
+        font-weight: 600;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+    .line-total-box {
+        min-width: 110px;
+        text-align: right;
+    }
+    .line-total-val {
+        color: var(--pos-primary);
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+
+    .payment-card { background: #fff; position: sticky; top: 15px; }
+    .total-price { 
+        font-size: 1.85rem; 
+        font-weight: 800; 
+        color: var(--pos-success); 
+        border-top: 2px solid #f8f9fa; 
+        padding-top: 12px; 
+    }
+    .btn-pos { 
+        height: 60px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 1.1rem; 
+        font-weight: bold; 
+        border-radius: 10px; 
+    }
+    .auto-invoice-switch { 
+        position: relative; 
+        display: inline-block; 
+        width: 56px; 
+        height: 26px; 
+    }
+    .auto-invoice-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { 
+        position: absolute; 
+        cursor: pointer; 
+        top: 0; left: 0; right: 0; bottom: 0; 
+        background-color: #ccc; 
+        transition: .4s; 
+        border-radius: 22px; 
+    }
+    .slider:before { 
+        position: absolute; 
+        content: ""; 
+        height: 22px; 
+        width: 22px; 
+        left: 4px; 
+        bottom: 4px; 
+        background-color: white; 
+        transition: .4s; 
+        border-radius: 50%; 
+    }
+    input:checked + .slider { background-color: var(--pos-success); }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    #reader { width: 100%; }
+</style>
+
+<div class="pos-container">
+    <div class="alert alert-warning mb-3 shadow-sm border-0 d-flex align-items-center justify-content-between" id="originalInfo">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-exclamation-circle fa-lg me-2 text-warning"></i>
+            <div>
+                Đang thay thế HĐ số: <strong id="origInvoiceNo" class="badge bg-danger fs-6">---</strong>
+                <span class="ms-2 small text-muted">Ngày: <span id="origDate">--/--/----</span></span>
+            </div>
+        </div>
+        <span class="badge bg-light text-dark border">CHẾ ĐỘ THAY THẾ</span>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="search-section mb-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-0"><i class="fa fa-search text-muted"></i></span>
+                    <input type="text" id="searchInput" class="form-control search-input border-0"
+                           placeholder="Tìm sản phẩm bổ sung vào hóa đơn thay thế..." autocomplete="off">
+                    <button class="btn btn-camera" type="button" onclick="startScanner()">
+                        <i class="fa fa-camera"></i>
+                    </button>
+                </div>
+                <div id="productResults" class="list-group position-absolute w-100 shadow-lg" style="z-index: 1050;"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fa fa-shopping-basket me-2 text-primary"></i>GIỎ HÀNG THAY THẾ</span>
+                    <button class="btn btn-sm btn-outline-danger border-0 rounded-pill" onclick="clearCart()">
+                        <i class="fa fa-trash-alt me-1"></i> Xóa tất cả
+                    </button>
+                </div>
+                <div class="card-body p-2">
+                    <div id="cartItems"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header"><i class="fa fa-user-circle me-2"></i>THÔNG TIN NGƯỜI MUA</div>
+                <div class="card-body">
+                    <div class="row g-2 mb-2">
+                        <div class="col-7">
+                            <label class="small text-muted fw-bold mb-1">Họ tên khách hàng</label>
+                            <input type="text" id="customerName" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-5">
+                            <label class="small text-muted fw-bold mb-1">Số điện thoại</label>
+                            <input type="text" id="customerPhone" class="form-control form-control-sm">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <label class="small text-muted fw-bold mb-1">Tên đơn vị / Công ty</label>
+                            <input type="text" id="customerCompany" class="form-control form-control-sm">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <label class="small text-muted fw-bold mb-1">Email nhận hóa đơn</label>
+                            <input type="email" id="customerEmail" class="form-control form-control-sm">
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-7">
+                            <label class="small text-muted fw-bold mb-1">Địa chỉ</label>
+                            <input type="text" id="customerAddress" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-5">
+                            <label class="small text-muted fw-bold mb-1">Mã số thuế</label>
+                            <input type="text" id="customerTaxCode" class="form-control form-control-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card payment-card border-top border-warning border-4">
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="small text-muted fw-bold mb-1">CHIẾT KHẤU (%)</label>
+                            <input type="number" id="discountPct" class="form-control fw-bold text-danger" value="0" min="0" max="100" onchange="updateCart()">
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted fw-bold mb-1">THUẾ SUẤT (%)</label>
+                            <select id="taxPct" class="form-select" onchange="updateCart()">
+                                <option value="0">0</option>
+                                <option value="5">5</option>
+                                <option value="8">8</option>
+                                <option value="10">10</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="total-price d-flex justify-content-between align-items-baseline">
+                        <span class="fs-6 text-dark fw-normal">TỔNG TIỀN MỚI</span>
+                        <span id="total">0đ</span>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="small text-muted fw-bold mb-2 d-block">HÌNH THỨC THANH TOÁN</label>
+                        <div class="btn-group w-100 mb-4" role="group">
+                            <input type="radio" class="btn-check" name="payMethod" id="payCash" value="111" checked>
+                            <label class="btn btn-outline-primary" for="payCash">Tiền mặt</label>
+                            <input type="radio" class="btn-check" name="payMethod" id="payQR" value="112">
+                            <label class="btn btn-outline-primary" for="payQR">Chuyển khoản</label>
+                            <input type="radio" class="btn-check" name="payMethod" id="payDebt" value="131">
+                            <label class="btn btn-outline-warning" for="payDebt">Công Nợ</label>
+                        </div>
+
+                        <button class="btn btn-warning btn-pos w-100 text-dark fw-bold shadow" onclick="issueReplacementInvoice()" id="checkoutBtn">
+                            <span id="btnText"><i class="fas fa-exchange-alt me-2"></i> XÁC NHẬN THAY THẾ (F2)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="scannerModal">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quét mã vạch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="stopScanner()"></button>
+            </div>
+            <div class="modal-body"><div id="reader"></div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    let cart = [];
+    let originalInvoiceNo = '';
+    let editingOrderId = null;
+    let html5QrCode = null;
+
+    function formatVND(a) { return new Intl.NumberFormat('vi-VN').format(Math.round(a || 0)) + 'đ'; }
+
+    function calculateLineTotal(item) {
+        const lineSub = item.price * item.qty;
+        const lineDiscAmt = Math.round(lineSub * (item.discount_pct / 100));
+        const lineTaxable = lineSub - lineDiscAmt;
+        const lineTaxAmt = Math.round(lineTaxable * (item.tax_pct / 100));
+        return { lineSub, lineDiscAmt, lineTaxAmt, lineTotal: lineTaxable + lineTaxAmt };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadReplacementData();
+        initProductSearch();
+    });
+
+    async function loadReplacementData() {
+        const params = new URLSearchParams(window.location.search);
+        originalInvoiceNo = params.get('replace') || params.get('invoice_no');
+        editingOrderId = params.get('sale_id');
+
+        if (originalInvoiceNo) {
+            document.getElementById('origInvoiceNo').textContent = originalInvoiceNo;
+        }
+
+        try {
+            let url = editingOrderId 
+                ? `/api/sale/${editingOrderId}` 
+                : `/api/sale/by-invoice?invoice_no=${encodeURIComponent(originalInvoiceNo)}`;
+
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+
+            editingOrderId = data.id;
+            
+            // Fill Customer Info
+            document.getElementById('customerName').value = data.customer_name || '';
+            document.getElementById('customerCompany').value = data.company_name || '';
+            document.getElementById('customerPhone').value = data.customer_phone || data.phone || '';
+            document.getElementById('customerEmail').value = data.email || '';
+            document.getElementById('customerAddress').value = data.address || '';
+            document.getElementById('customerTaxCode').value = data.tax_code || '';
+            
+            // Set Tax from original
+            if (data.tax_pct) document.getElementById('taxPct').value = data.tax_pct;
+
+            if (data.date) {
+                const d = new Date(data.date);
+                document.getElementById('origDate').textContent = d.toLocaleDateString('vi-VN');
+            }
+
+            // Load Items
+            if (data.items) {
+                cart = data.items.map(item => ({
+                    id: item.product_id || item.id,
+                    name: item.name || item.product_name,
+                    price: parseFloat(item.sold_price || item.price || 0),
+                    qty: parseFloat(item.quantity || item.qty || 0),
+                    discount_pct: parseFloat(item.discount_pct || 0),
+                    tax_pct: parseFloat(item.tax_pct || data.tax_pct || 0),
+                    unit: item.unit || 'Cái',
+                    useUnit1: item.UseSaleUnit === 1,
+                    key: `${item.product_id || item.id}-${item.UseSaleUnit === 1}`
+                }));
+                updateCart();
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', 'Không thể tải dữ liệu: ' + e.message, 'error');
+        }
+    }
+
+    function updateCart() {
+        const container = document.getElementById('cartItems');
+        const discCommon = parseFloat(document.getElementById('discountPct').value) || 0;
+        const taxCommon = parseFloat(document.getElementById('taxPct').value) || 0;
+        let grandTotal = 0;
+        let html = '';
+
+        cart.forEach((item, i) => {
+            // Ưu tiên thuế/CK riêng của món, nếu = 0 thì lấy chung
+            const disc = (item.discount_pct !== 0) ? item.discount_pct : discCommon;
+            const tax = (item.tax_pct !== 0) ? item.tax_pct : taxCommon;
+            const calc = calculateLineTotal({ ...item, discount_pct: disc, tax_pct: tax });
+
+            html += `
+                <div class="cart-item">
+                    <div class="cart-item-header">
+                        <div class="text-truncate" style="max-width: 70%">
+                            <strong>${item.name}</strong> <small class="text-muted">(${item.unit})</small>
+                        </div>
+                        <button class="btn btn-sm text-danger p-0" onclick="remove(${i})"><i class="fa fa-times-circle"></i></button>
+                    </div>
+                    <div class="item-controls-row">
+                        <div class="control-group">
+                            <span class="control-label">Số Lượng</span>
+                            <input type="number" class="input-pos-sm border-primary" style="width: 80px" 
+                                   value="${item.qty}" step="any" onchange="changeQty(${i}, this.value)">
+                        </div>
+                        <div class="control-group">
+                            <span class="control-label">Chiếc Khấu(%)</span>
+                            <input type="number" class="input-pos-sm text-danger" style="width: 80px" 
+                                   value="${item.discount_pct}" onchange="updateItemDiscount(${i}, this.value)">
+                        </div>
+                        <div class="line-total-box">
+                            <span class="control-label">Thành tiền</span>
+                            <div class="line-total-val">${formatVND(calc.lineTotal)}</div>
+                        </div>
+                    </div>
+                </div>`;
+            grandTotal += calc.lineTotal;
+        });
+
+        container.innerHTML = html || '<div class="text-center py-5 text-muted">Giỏ hàng trống</div>';
+        document.getElementById('total').textContent = formatVND(grandTotal);
+    }
+
+    function changeQty(i, v) { cart[i].qty = parseFloat(v) || 0; updateCart(); }
+    function updateItemDiscount(i, v) { cart[i].discount_pct = parseFloat(v) || 0; updateCart(); }
+    function remove(i) { cart.splice(i, 1); updateCart(); }
+    function clearCart() { cart = []; updateCart(); }
+
+    // ==================== TÌM KIẾM & THÊM SP ====================
+    function initProductSearch() {
+        const searchInput = document.getElementById('searchInput');
+        const resultsDiv = document.getElementById('productResults');
+        
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', debounce(async () => {
+            const q = searchInput.value.trim();
+            if (q.length < 1) { resultsDiv.style.display = 'none'; return; }
+            
+            try {
+                const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
+                const products = await r.json();
+                resultsDiv.innerHTML = '';
+                
+                products.forEach(p => {
+                    // Hiển thị đơn vị mặc định (đơn vị lẻ)
+                    createProductRow(p, false);
+                    
+                    // Hiển thị đơn vị quy đổi (nếu có unit1 và tỉ lệ > 1)
+                    if (p.unit1 && p.unit_ratio > 1) {
+                        createProductRow(p, true);
+                    }
+                });
+                
+                if (products.length > 0) {
+                    resultsDiv.style.display = 'block';
+                } else {
+                    resultsDiv.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Lỗi tìm kiếm sản phẩm:", err);
+            }
+        }, 300));
+    }
+
+    function createProductRow(p, isUnit1) {
+        const resultsDiv = document.getElementById('productResults');
+        // Tính giá dựa trên đơn vị: Nếu là đơn vị 1 thì lấy sale_price hoặc giá lẻ * tỉ lệ
+        const price = isUnit1 ? (p.sale_price || (p.base_price * p.unit_ratio)) : p.base_price;
+        const unit = isUnit1 ? p.unit1 : p.unit;
+        const stock = isUnit1 ? (p.unit_ratio > 0 ? Math.floor(p.quantity / p.unit_ratio) : 0) : p.quantity;
+        
+        const div = document.createElement('div');
+        div.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center cursor-pointer';
+        div.innerHTML = `
+            <div>
+                <i class="fa fa-tag me-2 text-muted"></i>
+                <strong>${p.name}</strong> 
+                <span class="badge bg-secondary ms-1">${unit}</span>
+            </div>
+            <div class="text-end">
+                <div class="text-primary fw-bold">${formatVND(price)}</div>
+                <small class="text-muted">Kho: ${stock}</small>
+            </div>`;
+        
+        div.onclick = () => {
+            addToCart({ 
+                id: p.id, 
+                name: p.name, 
+                price: price, 
+                unit: unit, 
+                useUnit1: isUnit1 
+            });
+            const sInput = document.getElementById('searchInput');
+            sInput.value = ''; 
+            resultsDiv.style.display = 'none'; 
+            sInput.focus();
+        };
+        resultsDiv.appendChild(div);
+    }
+
+    function addToCart(item) {
+        const key = `${item.id}-${item.useUnit1}`;
+        const exist = cart.find(i => i.key === key);
+        
+        // Lấy thuế và chiết khấu mặc định từ UI để áp dụng cho món mới
+        const currentDisc = parseFloat(document.getElementById('discountPct').value) || 0;
+        const currentTax = parseFloat(document.getElementById('taxPct').value) || 0;
+
+        if (exist) {
+            exist.qty++;
+        } else {
+            cart.push({ 
+                ...item, 
+                key: key, 
+                qty: 1, 
+                discount_pct: currentDisc, 
+                tax_pct: currentTax 
+            });
+        }
+        updateCart();
+    }
+
+    async function issueReplacementInvoice() {
+        if (!cart.length) return Swal.fire('Giỏ hàng trống', '', 'warning');
+
+        const confirm = await Swal.fire({
+            title: 'Xác nhận thay thế',
+            text: `Hệ thống sẽ hủy hóa đơn ${originalInvoiceNo} và phát hành hóa đơn mới.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e67e22',
+            confirmButtonText: 'Đồng ý'
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        const btn = document.getElementById('checkoutBtn');
+        const btnText = document.getElementById('btnText');
+        btn.disabled = true;
+        const originalBtnHtml = btnText.innerHTML;
+        btnText.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Đang xử lý...`;
+
+        try {
+            const orderData = {
+                customer_name: document.getElementById('customerName').value,
+                company_name: document.getElementById('customerCompany').value,
+                tax_code: document.getElementById('customerTaxCode').value, // Đồng bộ field name
+                address: document.getElementById('customerAddress').value,
+                email: document.getElementById('customerEmail').value,
+                customer_phone: document.getElementById('customerPhone').value,
+                payment_method: document.querySelector('input[name="payMethod"]:checked').value,
+                discount_pct: parseFloat(document.getElementById('discountPct').value) || 0,
+                tax_pct: parseFloat(document.getElementById('taxPct').value) || 0,
+                items: cart.map(i => ({
+                    product_id: i.id,
+                    quantity: i.qty,
+                    price: i.price,
+                    discount_pct: i.discount_pct,
+                    tax_pct: i.tax_pct || parseFloat(document.getElementById('taxPct').value),
+                    unit: i.unit,
+                    UseSaleUnit: i.useUnit1 ? 1 : 0
+                })),
+                is_replacement: true,
+                replacement_for: originalInvoiceNo
+            };
+
+            // 1. Cập nhật Sale
+            const upRes = await fetch(`/api/sale/update_for_replacement/${editingOrderId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
+            const upResult = await upRes.json();
+            if (!upResult.success) throw new Error(upResult.error);
+
+            // 2. Phát hành HĐ mới
+            btnText.textContent = 'Đang ký hóa đơn điện tử...';
+            const invRes = await fetch(`/api/invoice/issue-replacement-final/${encodeURIComponent(originalInvoiceNo)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sale_id: editingOrderId, ...orderData })
+            });
+            const invResult = await invRes.json();
+
+            if (invResult.success) {
+                await Swal.fire('Thành công', `Hóa đơn mới: ${invResult.invoice_no}`, 'success');
+                window.location.href = '/outward-invoice';
+            } else {
+                throw new Error(invResult.error);
+            }
+        } catch (err) {
+            Swal.fire('Lỗi', err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btnText.innerHTML = originalBtnHtml;
+        }
+    }
+
+    function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+    window.addEventListener('keydown', e => {
+        if (e.key === 'F2') { e.preventDefault(); issueReplacementInvoice(); }
+    });
+</script>
+{% endblock %}

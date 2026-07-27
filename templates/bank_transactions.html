@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% block title %}Giao Dịch Ngân Hàng{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<style>
+    body { background: #f5f7fa; }
+    .card { border-radius: 14px; overflow: hidden; }
+    .section-title { font-weight: 700; color: #333; }
+    .preset-btn { border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
+    .preset-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .table thead th { font-size: 0.85rem; font-weight: 600; white-space: nowrap; vertical-align: middle; }
+    .table-responsive { max-height: 62vh; overflow-y: auto; }
+    .sticky-top { position: sticky; top: 0; z-index: 10; }
+    .summary-box { transition: 0.2s ease; }
+    .summary-box:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .flatpickr-calendar { z-index: 9999 !important; }
+    .badge-matched { background: #198754; }
+    .badge-unmatched { background: #6c757d; }
+    .badge-partial { background: #fd7e14; }
+    .txn-content { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .detail-json { max-height: 280px; overflow: auto; font-size: 0.8rem; background: #f8f9fa; border-radius: 8px; padding: 12px; }
+    #detailModal .modal-body dl dt { color: #6c757d; font-weight: 600; }
+    #detailModal .modal-body dl dd { margin-bottom: 0.65rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4 mb-5 px-3 px-md-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <h3 class="mb-0 text-primary section-title">
+            <i class="fas fa-university"></i> Giao Dịch Ngân Hàng Điện Tử
+        </h3>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" id="btnSync" onclick="syncTransactions()">
+                <i class="fas fa-sync-alt"></i> Đồng bộ từ ngân hàng
+            </button>
+        </div>
+    </div>
+
+    <div class="alert alert-info py-2 small mb-4" id="providerHint">
+        <i class="fas fa-info-circle"></i>
+        Hiển thị giao dịch chuyển khoản từ SePay/Casso. Nhấn <strong>Đồng bộ</strong> để lấy giao dịch mới nhất hoặc cấu hình webhook trong Cài đặt thanh toán.
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="mb-3">
+                <label class="form-label fw-bold mb-2">Khoảng thời gian</label>
+                <div class="d-flex flex-wrap gap-2" id="presetButtons">
+                    <button type="button" class="btn btn-outline-primary preset-btn" data-preset="today">Hôm nay</button>
+                    <button type="button" class="btn btn-outline-primary preset-btn" data-preset="this_week">Tuần này</button>
+                    <button type="button" class="btn btn-outline-primary preset-btn active" data-preset="this_month">Tháng này</button>
+                    <button type="button" class="btn btn-outline-primary preset-btn" data-preset="this_year">Năm nay</button>
+                    <button type="button" class="btn btn-outline-secondary preset-btn" data-preset="custom">Tùy chọn</button>
+                </div>
+            </div>
+
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Từ ngày</label>
+                    <input type="text" class="form-control text-center" id="startDate" placeholder="dd/mm/yyyy" readonly>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Đến ngày</label>
+                    <input type="text" class="form-control text-center" id="endDate" placeholder="dd/mm/yyyy" readonly>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Trạng thái khớp</label>
+                    <select class="form-select" id="matchStatus">
+                        <option value="">Tất cả</option>
+                        <option value="matched">Đã khớp đơn</option>
+                        <option value="unmatched">Chưa khớp</option>
+                        <option value="partial">Khớp một phần</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Tìm kiếm</label>
+                    <input type="text" class="form-control" id="searchQuery" placeholder="Nội dung CK, tên người gửi, mã đơn DH..., số GD...">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100 py-2" type="button" onclick="loadTransactions()">
+                        <i class="fas fa-search"></i> Xem
+                    </button>
+                </div>
+            </div>
+            <div class="text-muted small mt-2" id="periodLabel"></div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="p-3 border rounded summary-box bg-white text-center">
+                <small class="text-muted d-block">Tổng giao dịch (lọc)</small>
+                <h4 class="mt-1 mb-0 text-primary" id="sumCount">0</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="p-3 border rounded summary-box bg-white text-center">
+                <small class="text-muted d-block">Tổng tiền vào (lọc)</small>
+                <h4 class="mt-1 mb-0 text-success" id="sumAmount">0</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="p-3 border rounded summary-box bg-white text-center">
+                <small class="text-muted d-block">Đã khớp đơn</small>
+                <h4 class="mt-1 mb-0 text-success" id="sumMatched">0</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="p-3 border rounded summary-box bg-white text-center">
+                <small class="text-muted d-block">Chưa khớp</small>
+                <h4 class="mt-1 mb-0 text-secondary" id="sumUnmatched">0</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Nguồn</th>
+                            <th class="text-end">Số tiền</th>
+                            <th>Nội dung CK</th>
+                            <th>Người gửi</th>
+                            <th>Mã đơn</th>
+                            <th>Trạng thái</th>
+                            <th class="text-center">Chi tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody id="txnTableBody">
+                        <tr><td colspan="8" class="text-center text-muted py-4">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-receipt"></i> Chi tiết giao dịch ngân hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailBody">
+                <div class="text-center text-muted py-4">Đang tải...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+const REASON_LABELS = {
+    no_sale_code: 'Không có mã đơn DH trong nội dung',
+    sale_not_found: 'Không tìm thấy đơn hàng',
+    not_pending: 'Đơn không còn chờ thanh toán',
+    not_bank_transfer: 'Đơn không phải CK ngân hàng',
+    amount_mismatch: 'Số tiền không khớp',
+    completed: 'Đã hoàn tất thanh toán',
+};
+
+let startPicker, endPicker;
+let detailModal;
+
+function formatVND(n) {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(n || 0));
+}
+
+function toIso(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function fmtDateTime(s) {
+    if (!s) return '—';
+    const d = new Date(s.replace(' ', 'T'));
+    if (isNaN(d)) return s;
+    return d.toLocaleString('vi-VN');
+}
+
+function badgeStatus(st, label) {
+    const cls = st === 'matched' ? 'badge-matched' : (st === 'partial' ? 'badge-partial' : 'badge-unmatched');
+    return `<span class="badge ${cls}">${label || st || '—'}</span>`;
+}
+
+function applyPreset(preset) {
+    const now = new Date();
+    let start = new Date(now);
+    let end = new Date(now);
+    if (preset === 'today') {
+        /* start/end = today */
+    } else if (preset === 'this_week') {
+        const day = now.getDay() || 7;
+        start.setDate(now.getDate() - day + 1);
+    } else if (preset === 'this_month') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (preset === 'this_year') {
+        start = new Date(now.getFullYear(), 0, 1);
+    }
+    if (preset !== 'custom') {
+        startPicker.setDate(start, true, 'd/m/Y');
+        endPicker.setDate(end, true, 'd/m/Y');
+    }
+    document.querySelectorAll('#presetButtons .preset-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.preset === preset);
+    });
+}
+
+function getFilterParams() {
+    const sd = startPicker.selectedDates[0];
+    const ed = endPicker.selectedDates[0];
+    return {
+        start_date: sd ? toIso(sd) : '',
+        end_date: ed ? toIso(ed) : '',
+        match_status: document.getElementById('matchStatus').value,
+        q: document.getElementById('searchQuery').value.trim(),
+    };
+}
+
+function updatePeriodLabel() {
+    const p = getFilterParams();
+    document.getElementById('periodLabel').textContent =
+        p.start_date && p.end_date ? `Khoảng: ${p.start_date} → ${p.end_date}` : '';
+}
+
+async function loadTransactions() {
+    updatePeriodLabel();
+    const p = getFilterParams();
+    const qs = new URLSearchParams();
+    if (p.start_date) qs.set('start_date', p.start_date);
+    if (p.end_date) qs.set('end_date', p.end_date);
+    if (p.match_status) qs.set('match_status', p.match_status);
+    if (p.q) qs.set('q', p.q);
+
+    const tbody = document.getElementById('txnTableBody');
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Đang tải...</td></tr>';
+
+    try {
+        const resp = await fetch('/api/bank-transactions?' + qs.toString());
+        const json = await resp.json();
+        if (!json.success) throw new Error(json.error || 'Lỗi tải dữ liệu');
+
+        const rows = json.data || [];
+        document.getElementById('sumCount').textContent = json.total || rows.length;
+        const sumAmt = rows.reduce((a, r) => a + Number(r.amount || 0), 0);
+        document.getElementById('sumAmount').textContent = formatVND(sumAmt);
+        document.getElementById('sumMatched').textContent = json.summary?.matched_count ?? '—';
+        document.getElementById('sumUnmatched').textContent = json.summary?.unmatched_count ?? '—';
+
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không có giao dịch trong khoảng thời gian này.<br><small>Nhấn <strong>Đồng bộ từ ngân hàng</strong> để lấy dữ liệu mới.</small></td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = rows.map(r => {
+            const saleLink = r.sale_id
+                ? `<a href="/sale/view/${r.sale_id}" target="_blank">${r.sale_no || r.payment_code || ('#' + r.sale_id)}</a>`
+                : (r.payment_code ? `<span class="text-muted">${r.payment_code}</span>` : '—');
+            return `<tr>
+                <td>${fmtDateTime(r.transaction_date || r.created_at)}</td>
+                <td><span class="badge bg-secondary">${(r.provider || '').toUpperCase()}</span></td>
+                <td class="text-end fw-bold text-success">${formatVND(r.amount)}</td>
+                <td class="txn-content" title="${(r.content || '').replace(/"/g, '&quot;')}">${r.content || '—'}</td>
+                <td>${r.counterparty_name || '—'}</td>
+                <td>${saleLink}</td>
+                <td>${badgeStatus(r.match_status, r.match_status_label)}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary" onclick="showDetail(${r.id})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${e.message}</td></tr>`;
+    }
+}
+
+async function showDetail(id) {
+    const body = document.getElementById('detailBody');
+    body.innerHTML = '<div class="text-center text-muted py-4">Đang tải...</div>';
+    detailModal.show();
+    try {
+        const resp = await fetch('/api/bank-transactions/' + id);
+        const json = await resp.json();
+        if (!json.success) throw new Error(json.error || 'Không tải được chi tiết');
+        const d = json.data;
+        const reason = REASON_LABELS[d.match_reason] || d.match_reason || '—';
+        const saleBlock = d.sale_id ? `
+            <hr>
+            <h6 class="fw-bold text-primary">Đơn hàng liên kết</h6>
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Mã đơn</dt>
+                <dd class="col-sm-8"><a href="/sale/view/${d.sale_id}" target="_blank">${d.sale_no || ('#' + d.sale_id)}</a></dd>
+                <dt class="col-sm-4">Khách hàng</dt>
+                <dd class="col-sm-8">${d.customer_name || '—'}</dd>
+                <dt class="col-sm-4">Trạng thái đơn</dt>
+                <dd class="col-sm-8">${d.sale_status || '—'}</dd>
+                <dt class="col-sm-4">Tổng đơn</dt>
+                <dd class="col-sm-8">${formatVND(d.sale_amount)}</dd>
+            </dl>` : (d.extracted_sale_id ? `<p class="text-muted small">Phát hiện mã <strong>${d.payment_code}</strong> nhưng chưa khớp đơn (${reason}).</p>` : '');
+
+        body.innerHTML = `
+            <dl class="row">
+                <dt class="col-sm-4">Mã giao dịch (NCC)</dt>
+                <dd class="col-sm-8"><code>${d.external_id || '—'}</code></dd>
+                <dt class="col-sm-4">Nguồn / NCC</dt>
+                <dd class="col-sm-8">${(d.provider || '').toUpperCase()} — ${d.source || '—'}</dd>
+                <dt class="col-sm-4">Thời gian GD</dt>
+                <dd class="col-sm-8">${fmtDateTime(d.transaction_date || d.created_at)}</dd>
+                <dt class="col-sm-4">Số tiền</dt>
+                <dd class="col-sm-8 fw-bold text-success">${formatVND(d.amount)}</dd>
+                <dt class="col-sm-4">Nội dung chuyển khoản</dt>
+                <dd class="col-sm-8">${d.content || '—'}</dd>
+                <dt class="col-sm-4">STK nhận</dt>
+                <dd class="col-sm-8">${d.account_number || d.bank_account || '—'} ${d.bank_name ? '(' + d.bank_name + ')' : ''}</dd>
+                <dt class="col-sm-4">Người gửi</dt>
+                <dd class="col-sm-8">${d.counterparty_name || '—'}</dd>
+                <dt class="col-sm-4">STK người gửi</dt>
+                <dd class="col-sm-8">${d.counterparty_account || '—'}</dd>
+                <dt class="col-sm-4">Trạng thái khớp</dt>
+                <dd class="col-sm-8">${badgeStatus(d.match_status, d.match_status_label)} — ${reason}</dd>
+                <dt class="col-sm-4">Đồng bộ lúc</dt>
+                <dd class="col-sm-8">${fmtDateTime(d.synced_at)}</dd>
+            </dl>
+            ${saleBlock}
+            <hr>
+            <h6 class="fw-bold">Dữ liệu gốc từ ngân hàng / API</h6>
+            <pre class="detail-json mb-0">${JSON.stringify(d.raw || {}, null, 2)}</pre>`;
+    } catch (e) {
+        body.innerHTML = `<div class="text-danger">${e.message}</div>`;
+    }
+}
+
+async function syncTransactions() {
+    const btn = document.getElementById('btnSync');
+    btn.disabled = true;
+    const icon = btn.querySelector('i');
+    icon.classList.add('fa-spin');
+    try {
+        const resp = await fetch('/api/bank-transactions/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const json = await resp.json();
+        if (!json.success) throw new Error(json.error || 'Đồng bộ thất bại');
+        await loadTransactions();
+        alert(`Đồng bộ xong: ${json.total} giao dịch${json.new_matched ? ', ' + json.new_matched + ' đơn đã khớp' : ''}.`);
+    } catch (e) {
+        alert(e.message);
+    } finally {
+        btn.disabled = false;
+        icon.classList.remove('fa-spin');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+    const fpOpts = { locale: 'vn', dateFormat: 'd/m/Y', allowInput: false };
+    startPicker = flatpickr('#startDate', fpOpts);
+    endPicker = flatpickr('#endDate', fpOpts);
+
+    document.querySelectorAll('#presetButtons .preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+    });
+
+    applyPreset('this_month');
+    loadTransactions();
+
+    fetch('/api/payment/config').then(r => r.json()).then(cfg => {
+        const prov = (cfg.provider || 'none').toUpperCase();
+        const el = document.getElementById('providerHint');
+        if (cfg.provider && cfg.provider !== 'none') {
+            el.innerHTML = `<i class="fas fa-info-circle"></i> Đang dùng <strong>${prov}</strong>. Giao dịch được lưu tự động qua webhook hoặc khi bạn nhấn <strong>Đồng bộ</strong>.`;
+        }
+    }).catch(() => {});
+});
+</script>
+{% endblock %}

@@ -1,0 +1,492 @@
+{% extends "base.html" %}
+{% block title %}Quản Lý Đơn Hàng{% endblock %}
+{% block head_extra %}
+{% include 'partials/data_list_table_assets.html' %}
+{% endblock %}
+{% block extra_style %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    :root {
+        --primary: #5b21b6;
+        --primary-soft: #7c3aed;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --info: #3b82f6;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-600: #4b5563;
+        --glass: rgba(255, 255, 255, 0.94);
+        --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+        --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    }
+    body {
+        background: linear-gradient(135deg, #6b7280 0%, #1e293b 100%);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        min-height: 100vh;
+        color: #1f2937;
+    }
+    .glass-card {
+        background: var(--glass);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 1.25rem;
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: var(--shadow-md);
+    }
+    .hero-header {
+        padding: 3.5rem 1rem 2.5rem;
+        text-align: center;
+        color: white;
+    }
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        text-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .btn-primary-gradient {
+        background: linear-gradient(135deg, var(--primary), var(--primary-soft));
+        border: none; color: white; border-radius: 9999px;
+        padding: 0.8rem 2rem; font-weight: 700; transition: all 0.25s ease;
+    }
+    .btn-primary-gradient:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(91,33,182,0.35);
+    }
+    .stat-card {
+        background: rgba(30,41,59,0.45);
+        border-radius: 1rem; padding: 1.5rem 1rem;
+        border: 1px solid rgba(255,255,255,0.1);
+        color: white; text-align: center; transition: 0.2s;
+    }
+    .stat-number { font-size: 2.25rem; font-weight: 800; }
+    .table thead th {
+        background: rgba(30,41,59,0.7); color: white;
+        font-size: 0.8rem; padding: 1.1rem 1.25rem; border: none;
+    }
+    .status-badge {
+        padding: 0.4rem 1rem; border-radius: 9999px;
+        font-size: 0.82rem; font-weight: 700; min-width: 110px; display: inline-block;
+        text-align: center;
+    }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-completed { background: #d1fae5; color: #065f46; }
+    .status-draft { background: #dbeafe; color: #1e40af; }
+    .status-cancelled { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; }
+    
+    /* Thuế Status hiển thị văn bản trực tiếp */
+    .tax-text { font-size: 0.85rem; font-weight: 600; }
+    
+    .action-btn {
+        padding: 0.45rem 1rem; font-size: 0.88rem; border-radius: 0.6rem;
+        font-weight: 600; transition: all 0.2s ease;
+    }
+    .action-view { background: #dbeafe; color: #1d4ed8; }
+    .action-edit { background: #fef3c7; color: #92400e; }
+    .action-delete { background: #fee2e2; color: #991b1b; }
+    .btn-invoice { font-size: 0.85rem; padding: 0.4rem 0.9rem; border-radius: 0.6rem; }
+    .disabled-btn { opacity: 0.3; cursor: not-allowed !important; filter: grayscale(1); }
+    
+    tr.draft-row { background-color: rgba(253, 235, 208, 0.4) !important; }
+    tr.cancelled-row { background-color: rgba(243, 244, 246, 0.5) !important; opacity: 0.8; }
+
+    @media (max-width: 767.98px) {
+        .hero-header { padding: 1.75rem 0.5rem 1.25rem !important; }
+        .hero-title { font-size: 1.65rem !important; }
+        .stat-number { font-size: 1.45rem !important; }
+        .glass-card { border-radius: 1rem; padding: 1rem !important; }
+        .action-btn { padding: 0.4rem 0.75rem; font-size: 0.82rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-3 px-md-4 px-lg-5">
+    <div class="hero-header mb-5">
+        <h1 class="hero-title">QUẢN LÝ ĐƠN HÀNG</h1>
+        <div class="row g-4 mt-4 justify-content-center">
+            <div class="col-6 col-md-3 col-lg-4"><div class="stat-card"><h6 class="opacity-75">Doanh Thu Trong Kỳ</h6><div class="stat-number" id="totalRevenue">0 ₫</div></div></div>
+            <div class="col-6 col-md-3 col-lg-2"><div class="stat-card"><h6 class="opacity-75">Đơn Trong Kỳ</h6><div class="stat-number" id="todayOrders">0</div></div></div>
+            <div class="col-6 col-md-3 col-lg-2"><div class="stat-card"><h6 class="opacity-75">Chờ Xuất HĐ</h6><div class="stat-number text-warning" id="pendingInvoice">0</div></div></div>
+            <div class="col-6 col-md-3 col-lg-2"><div class="stat-card"><h6 class="opacity-75">Đã Xuất HĐ</h6><div class="stat-number text-success" id="issuedInvoice">0</div></div></div>
+        </div>
+        <div class="mt-5 d-flex justify-content-center flex-wrap gap-4 align-items-center">
+            <a href="/sale" class="btn btn-primary-gradient btn-lg shadow" target="_blank"><i class="bi bi-plus-lg me-2"></i> Tạo Đơn Hàng Mới</a>
+            <button id="runBatchNow" class="btn btn-outline-info rounded-pill px-4 py-2 text-white border-white">
+                <i class="bi bi-play-fill me-1"></i>Chạy batch xuất HĐ ngay
+            </button>
+        </div>
+    </div>
+
+    <div class="glass-card p-4 mb-4">
+        <div class="row g-3 align-items-center filter-toolbar">
+            <div class="col-md-2"><input type="text" class="form-control" id="startDate" placeholder="Từ ngày" readonly></div>
+            <div class="col-md-2"><input type="text" class="form-control" id="endDate" placeholder="Đến ngày" readonly></div>
+            <div class="col-md-4"><input type="text" class="form-control" id="searchInput" placeholder="Mã đơn, khách hàng..."></div>
+            <div class="col-md-2">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="draft">Đơn hàng tạm (Draft)</option>
+                    <option value="pending">Chờ xử lý</option>
+                    <option value="completed">Đã hoàn tất</option>
+                    <option value="cancelled">Đã hủy</option>
+                </select>
+            </div>
+            <div class="col-md-2"><button onclick="exportExcel()" class="btn btn-success w-100 rounded-pill fw-bold"><i class="bi bi-file-earmark-excel-fill me-2"></i>Excel</button></div>
+        </div>
+        <div class="pivot-panel mt-3 mb-0">
+            <div class="pivot-label"><i class="bi bi-diagram-3 me-1"></i> Lọc nhanh theo trạng thái</div>
+            <div class="pivot-chips" id="statusPivotChips"></div>
+            <div class="pivot-summary" id="orderPivotSummary"></div>
+        </div>
+    </div>
+
+    <div class="glass-card overflow-hidden">
+        <div class="table-responsive table-desktop-only">
+            <table class="table table-hover mb-0 align-middle" id="ordersTable">
+                <thead><tr></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="mobile-card-list p-3" id="ordersMobileList"></div>
+        <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="enhanced-table-toolbar">
+                <span class="text-muted small">Hiển thị <strong id="orderTableCount">0</strong> / <strong id="totalRecords">0</strong> đơn (trang này)</span>
+                <span id="orderColFilters" class="active-filters-badge d-none"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearOrderColFilters">Xóa lọc cột</button>
+            </div>
+            <nav id="paginationNav"></nav>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+let currentPage = 1;
+let lastOrders = [];
+let orderTableCtrl = null;
+
+const STATUS_PIVOT_ITEMS = [
+    { value: '', label: 'Tất cả' },
+    { value: 'draft', label: 'Đơn tạm' },
+    { value: 'pending', label: 'Chờ xử lý' },
+    { value: 'completed', label: 'Hoàn tất' },
+    { value: 'cancelled', label: 'Đã hủy' },
+];
+
+function renderOrderRows(data, tbody) {
+    const el = tbody || document.querySelector('#ordersTable tbody');
+    if (!el) return;
+    if (!data.length) {
+        el.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">Không có dữ liệu</td></tr>';
+        return;
+    }
+    el.innerHTML = data.map(o => {
+        const isDraft = o.status === 'draft';
+        const isCancelled = o.status === 'cancelled';
+        const hasInv = !!o.invoice_number;
+        const taxStatusText = o.tax_authority_status || '<span class="text-muted">—</span>';
+        const actionHtml = buildOrderActions(o);
+        const invCell = o.invoice_number
+            ? `<a href="javascript:void(0)" onclick="viewPdfOnly('${escapeHtml(o.invoice_number)}')" class="invoice-link fw-bold">${escapeHtml(o.invoice_number)}</a>`
+            : '—';
+        return `
+        <tr class="${isDraft ? 'draft-row' : ''} ${isCancelled ? 'cancelled-row' : ''}">
+            <td class="ps-4"><div class="fw-bold text-primary">ĐH${String(o.id).padStart(6,'0')}</div></td>
+            <td class="text-center small">${invCell}</td>
+            <td><div class="fw-bold">${escapeHtml(o.customer_name || 'Bán cho người tiêu dùng')}</div><div class="small text-muted">${escapeHtml(o.customer_phone || '')}</div></td>
+            <td class="text-center small">${moment(o.date).format('DD/MM/YYYY')}</td>
+            <td class="text-end fw-bold text-danger">${formatMoney(o.total_amount)}</td>
+            <td class="text-center">${getStatusBadge(o.status)}</td>
+            <td class="text-center tax-text">${taxStatusText}</td>
+            <td class="text-center"><div class="d-flex gap-2 justify-content-center">${actionHtml}</div></td>
+        </tr>`;
+    }).join('');
+}
+
+function initOrderTable() {
+    orderTableCtrl = DataListTable.create({
+        table: '#ordersTable',
+        countSelector: '#orderTableCount',
+        activeFiltersSelector: '#orderColFilters',
+        defaultSort: { key: 'date', dir: 'desc' },
+        columns: [
+            { key: 'order_no', label: 'Mã đơn', sortable: true, filterType: 'text', width: '110px',
+              getValue: o => `ĐH${String(o.id).padStart(6,'0')}`, sortValue: o => o.id },
+            { key: 'invoice_number', label: 'Số HĐ', filterType: 'text', width: '120px', align: 'center',
+              getValue: o => o.invoice_number || '' },
+            { key: 'customer', label: 'Khách hàng', filterType: 'text', width: '220px',
+              getValue: o => `${o.customer_name || ''} ${o.customer_phone || ''}`.trim() },
+            { key: 'date', label: 'Ngày', sortable: true, filterType: 'date', width: '110px', align: 'center',
+              getValue: o => o.date || '', sortValue: o => o.date ? new Date(o.date) : new Date(0) },
+            { key: 'total_amount', label: 'Tổng tiền', sortable: true, filterType: 'number', width: '130px', align: 'end',
+              getValue: o => o.total_amount, sortValue: o => parseFloat(o.total_amount || 0) },
+            { key: 'status', label: 'Trạng thái', filterType: 'select', width: '130px', align: 'center',
+              getValue: o => o.status || '',
+              filterOptions: [
+                  { value: 'draft', label: 'Đơn tạm' },
+                  { value: 'pending', label: 'Chờ xử lý' },
+                  { value: 'completed', label: 'Hoàn tất' },
+                  { value: 'cancelled', label: 'Đã hủy' },
+              ] },
+            { key: 'tax_authority_status', label: 'CQT', filterType: 'text', width: '120px', align: 'center',
+              getValue: o => o.tax_authority_status || '' },
+            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '180px', align: 'center' },
+        ],
+        renderRows: renderOrderRows,
+    });
+}
+
+function syncStatusPivot(activeValue) {
+    renderPivotChips(document.getElementById('statusPivotChips'), STATUS_PIVOT_ITEMS, activeValue, val => {
+        $('#statusFilter').val(val);
+        loadOrders(1);
+    });
+}
+
+function buildOrderActions(o) {
+    const isDraft = o.status === 'draft';
+    const isCompleted = o.status === 'completed';
+    const isCancelled = o.status === 'cancelled';
+    const hasInv = !!o.invoice_number;
+    let html = `
+        <a href="/sale/view/${o.id}" class="action-btn action-view"><i class="bi bi-eye"></i></a>
+        <button onclick="editOrder(${o.id})" class="action-btn action-edit ${isDraft ? '' : 'disabled-btn'}"><i class="bi bi-pencil"></i></button>`;
+    if (isCompleted && !hasInv) {
+        html += `<button onclick="issueInvoice(${o.id})" class="btn btn-sm btn-outline-primary btn-invoice">Xuất HĐ</button>`;
+    }
+    return html;
+}
+
+function renderOrdersMobile(orders) {
+    const container = document.getElementById('ordersMobileList');
+    if (!container) return;
+    if (!orders.length) {
+        container.innerHTML = '<div class="text-center text-muted py-4">Không có dữ liệu</div>';
+        return;
+    }
+    container.innerHTML = orders.map(o => {
+        const code = `ĐH${String(o.id).padStart(6, '0')}`;
+        const inv = o.invoice_number
+            ? `<a href="javascript:void(0)" onclick="viewPdfOnly('${escapeHtml(o.invoice_number)}')" class="text-primary fw-bold">${escapeHtml(o.invoice_number)}</a>`
+            : '—';
+        return `
+        <div class="mobile-card ${o.status === 'draft' ? 'border-warning' : ''} ${o.status === 'cancelled' ? 'opacity-75' : ''}">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <div class="card-title text-primary">${code}</div>
+                ${getStatusBadge(o.status)}
+            </div>
+            <div class="card-row"><span class="label">Khách hàng</span><span class="value fw-bold">${escapeHtml(o.customer_name || 'Bán cho người tiêu dùng')}</span></div>
+            <div class="card-row"><span class="label">Ngày</span><span class="value">${moment(o.date).format('DD/MM/YYYY')}</span></div>
+            <div class="card-row"><span class="label">Tổng tiền</span><span class="value fw-bold text-danger">${formatMoney(o.total_amount)}</span></div>
+            <div class="card-row"><span class="label">Số HĐ</span><span class="value">${inv}</span></div>
+            <div class="card-row"><span class="label">CQT</span><span class="value small">${o.tax_authority_status || '—'}</span></div>
+            <div class="card-actions">${buildOrderActions(o)}</div>
+        </div>`;
+    }).join('');
+}
+
+function updateOrderPivotSummary(orders, total) {
+    const el = document.getElementById('orderPivotSummary');
+    if (!el) return;
+    const groups = pivotGroup(orders, 'status', ['total_amount']);
+    const labels = { draft: 'Đơn tạm', pending: 'Chờ xử lý', completed: 'Hoàn tất', cancelled: 'Đã hủy' };
+    const parts = groups.map(g => `${labels[g.key] || g.key}: ${g.count} (${formatMoney(g.sums.total_amount || 0)})`);
+    el.textContent = `Trang này: ${orders.length} đơn · Tổng kỳ: ${total || 0} đơn${parts.length ? ' · ' + parts.join(' · ') : ''}`;
+}
+
+function getStatusBadge(status) {
+    if (status === 'draft') return `<span class="status-badge status-draft">ĐƠN TẠM</span>`;
+    if (status === 'completed') return `<span class="status-badge status-completed">HOÀN TẤT</span>`;
+    if (status === 'cancelled') return `<span class="status-badge status-cancelled">ĐÃ HỦY</span>`;
+    return `<span class="status-badge status-pending">CHỜ XỬ LÝ</span>`;
+}
+
+async function issueInvoice(saleId) {
+    const result = await Swal.fire({
+        title: 'Xuất hóa đơn?',
+        text: 'Hệ thống sẽ lập, ký số và xuất hóa đơn chính thức.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Xuất ngay',
+        cancelButtonText: 'Đóng'
+    });
+    if (!result.isConfirmed) return;
+    Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+        const res = await fetch(`/api/invoice/issue/${saleId}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            Swal.fire('Thành công', `Số hóa đơn: ${data.invoice_no || 'Đã ký'}`, 'success');
+            loadOrders(currentPage);
+        } else {
+            throw new Error(data.error || 'Lỗi hệ thống');
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+async function runBatchNow() {
+    Swal.fire({ title: 'Đang chạy batch...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+        const res = await fetch('/api/admin/run-batch-invoice', { method: 'POST' });
+        const data = await res.json();
+        Swal.fire(data.success ? 'Thành công' : 'Lỗi', data.success ? 'Batch đã kích hoạt' : data.error, data.success ? 'success' : 'error');
+        if (data.success) loadOrders(currentPage);
+    } catch (err) {
+        Swal.fire('Lỗi', 'Không kết nối được server', 'error');
+    }
+}
+
+const loadOrders = async (page = 1) => {
+    currentPage = page;
+    const q = $('#searchInput').val().trim();
+    const start = $('#startDate').val() ? moment($('#startDate').val(), 'DD/MM/YYYY').format('YYYY-MM-DD') : '';
+    const end = $('#endDate').val() ? moment($('#endDate').val(), 'DD/MM/YYYY').format('YYYY-MM-DD') : '';
+    let status = $('#statusFilter').val() || '';
+
+    try {
+        const limit = 20;
+        const res = await fetch(`/api/sale/list?page=${page}&limit=${limit}&q=${encodeURIComponent(q)}&start=${start}&end=${end}&status=${status}`);
+        const data = await res.json();
+        const orders = data.orders || [];
+        lastOrders = orders;
+
+        $('#totalRevenue').text(formatMoney(data.stats?.revenue || 0));
+        $('#pendingInvoice').text(orders.filter(o => o.status === 'completed' && !o.invoice_number).length);
+        $('#issuedInvoice').text(data.stats?.issued_invoice || 0);
+        $('#todayOrders').text(data.total || 0);
+        $('#totalRecords').text(data.total || 0);
+        syncStatusPivot($('#statusFilter').val() || '');
+        updateOrderPivotSummary(orders, data.total || 0);
+
+        if (orderTableCtrl) {
+            orderTableCtrl.setData(orders);
+        } else {
+            renderOrderRows(orders);
+        }
+        renderOrdersMobile(orders);
+        renderPagination(Math.ceil((data.total || 0) / limit), page);
+    } catch (err) {
+        const tbody = document.querySelector('#ordersTable tbody');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${err.message}</td></tr>`;
+    }
+};
+
+function renderPagination(totalPages, current) {
+    const nav = $('#paginationNav').empty();
+    if (totalPages <= 1) return;
+    let html = '<ul class="pagination pagination-sm mb-0">';
+    html += `<li class="page-item ${current === 1 ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadOrders(${current-1})">Trước</a></li>`;
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= current - 2 && i <= current + 2)) {
+            html += `<li class="page-item ${i === current ? 'active' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadOrders(${i})">${i}</a></li>`;
+        }
+    }
+    html += `<li class="page-item ${current === totalPages ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="loadOrders(${current+1})">Sau</a></li></ul>`;
+    nav.html(html);
+}
+
+async function editOrder(id) {
+    if (!id) return;
+    try {
+        Swal.fire({ title: 'Đang tải đơn hàng...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const res = await fetch(`/api/sale/${id}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Không thể lấy thông tin đơn hàng");
+        if (data.status !== 'draft') throw new Error("Đơn hàng đã chốt. Chỉ hỗ trợ sửa đơn tạm!");
+        const posData = {
+            order_id: data.id,
+            customer: { name: data.customer_name, phone: data.customer_phone, address: data.address, tax_code: data.tax_code },
+            cart: data.items.map(item => ({
+                id: item.product_id, name: item.name, price: item.sold_price, qty: item.quantity,
+                unit: item.unit, useUnit1: item.UseSaleUnit === 1
+            })),
+            is_edit: true, note: data.note || ''
+        };
+        localStorage.setItem('pos_cart_v1', JSON.stringify(posData));
+        window.location.href = '/sale';
+    } catch (err) {
+        Swal.fire({ icon: 'warning', title: 'Thông báo', text: err.message });
+    }
+}
+
+async function confirmDelete(id) {
+    const res = await Swal.fire({
+        title: 'Xác nhận xóa?',
+        text: "Không thể hoàn tác!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444'
+    });
+    if (res.isConfirmed) {
+        const del = await fetch(`/api/sale/delete/${id}`, { method: 'DELETE' });
+        if (del.ok) {
+            Swal.fire('Đã xóa!', '', 'success');
+            loadOrders(currentPage);
+        } else {
+            Swal.fire('Lỗi', 'Không thể xóa đơn hàng', 'error');
+        }
+    }
+}
+
+function exportExcel() {
+    const q = $('#searchInput').val().trim();
+    const start = $('#startDate').val() ? moment($('#startDate').val(), 'DD/MM/YYYY').format('YYYY-MM-DD') : '';
+    const end = $('#endDate').val() ? moment($('#endDate').val(), 'DD/MM/YYYY').format('YYYY-MM-DD') : '';
+    const status = $('#statusFilter').val();
+    window.location.href = `/api/sale/export?q=${encodeURIComponent(q)}&start=${start}&end=${end}&status=${status}`;
+}
+
+$(document).ready(function() {
+    initOrderTable();
+    $('#btnClearOrderColFilters').on('click', () => orderTableCtrl?.clearColumnFilters());
+    flatpickr("#startDate", { dateFormat: "d/m/Y", locale: "vn", defaultDate: "today", onChange: () => loadOrders(1) });
+    flatpickr("#endDate", { dateFormat: "d/m/Y", locale: "vn", defaultDate: "today", onChange: () => loadOrders(1) });
+    $('#searchInput').on('keypress', e => { if (e.which === 13) loadOrders(1); });
+    $('#statusFilter').on('change', function() {
+        syncStatusPivot(this.value || '');
+        loadOrders(1);
+    });
+    syncStatusPivot('');
+    $('#runBatchNow').on('click', runBatchNow);
+    loadOrders(1);
+});
+
+async function viewPdfOnly(invoiceNo) {
+    const url = await fetchUrl(invoiceNo, 'pdf');
+
+    if (!url) {
+        alert("Không tìm thấy link PDF.");
+        return;
+    }
+
+    window.open(`/api/view-pdf?url=${encodeURIComponent(url)}`, '_blank');
+}
+
+async function fetchUrl(invoiceNo, type) {
+    const endpoint = type === 'pdf' 
+        ? '/api/sale/invoice_pdf_url' 
+        : '/api/sale/invoice_xml_file';
+
+    try {
+        const res = await fetch(`${endpoint}?invoice_number=${encodeURIComponent(invoiceNo)}`);
+        const data = await res.json();
+        return data.success 
+            ? (type === 'pdf' ? data.pdf_url : data.xml_file) 
+            : null;
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
+}
+</script>
+{% endblock %}

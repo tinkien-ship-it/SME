@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% block title %}Báo Cáo Lợi Nhuận{% endblock %}
+
+{% block head_extra %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body { background: #f5f7fa; }
+        .card { border-radius: 14px; overflow: hidden; }
+        .card-header { font-weight: 600; padding: 16px 20px; }
+        .table thead th { font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+        .section-title { font-weight: 700; color: #333; }
+        .summary-box { transition: 0.2s ease; }
+        .summary-box:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .flatpickr-calendar { z-index: 9999 !important; }
+        .indent-sub { padding-left: 2rem !important; font-style: italic; color: #666; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4 section-title"><i class="fas fa-chart-line text-primary"></i> Báo Cáo Lợi Nhuận</h3>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Lọc nhanh</strong></label>
+                    <select class="form-select" id="quickFilter" onchange="applyQuickFilter()">
+                        <option value="">-- Chọn khoảng thời gian --</option>
+                        <option value="today">Hôm nay</option>
+                        <option value="yesterday">Hôm qua</option>
+                        <option value="this_week">Tuần này</option>
+                        <option value="last_week">Tuần trước</option>
+                        <option value="this_month">Tháng này</option>
+                        <option value="last_month">Tháng trước</option>
+                        {% for i in range(1, 13) %}
+                        <option value="month_{{ i }}">Tháng {{ i }}</option>
+                        {% endfor %}
+                        <option value="quarter_1">Quý 1</option>
+                        <option value="quarter_2">Quý 2</option>
+                        <option value="quarter_3">Quý 3</option>
+                        <option value="quarter_4">Quý 4</option>
+                        <option value="this_year" selected>Năm nay</option>
+                        <option value="last_year">Năm trước</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Từ ngày </strong></label>
+                    <input type="text" class="form-control text-center" id="startDate" placeholder="dd/mm/yyyy">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><strong>Đến ngày </strong></label>
+                    <input type="text" class="form-control text-center" id="endDate" placeholder="dd/mm/yyyy">
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100" onclick="loadProfit()">
+                        <i class="fas fa-search"></i> Xem Báo Cáo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center h-100 summary-box">
+                <div class="card-body p-4">
+                    <h5 class="text-success fw-bold">DOANH THU</h5>
+                    <h2 id="revenue" class="text-success">0đ</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center h-100 summary-box">
+                <div class="card-body p-4">
+                    <h5 class="text-danger fw-bold">TỔNG CHI PHÍ</h5>
+                    <h2 id="cost" class="text-danger">0đ</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center h-100 summary-box">
+                <div class="card-body p-4">
+                    <h5 class="text-primary fw-bold">LỢI NHUẬN THUẦN</h5>
+                    <h2 id="profit" class="text-primary">0đ</h2>
+                    <small id="profitRate" class="text-muted">0%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <strong>Chi Tiết Kết Quả Kinh Doanh</strong>
+            <button class="btn btn-sm btn-outline-success" onclick="exportExcel()">
+                <i class="fas fa-file-excel me-2"></i> Xuất Excel
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0" id="profitTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-start">Chỉ tiêu</th>
+                            <th class="text-end">Số tiền</th>
+                            <th class="text-end">Tỷ trọng / Doanh thu</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailBody">
+                        <tr><td colspan="3" class="text-center text-muted">Vui lòng chọn ngày để xem báo cáo...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+
+<script>
+// === HÀM HỖ TRỢ ===
+function formatVND(value) {
+    const num = parseFloat(value) || 0;
+    return num.toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + 'đ';
+}
+
+function formatPercent(value, total) {
+    const numValue = parseFloat(value) || 0;
+    const numTotal = parseFloat(total) || 0;
+    if (numTotal === 0) return '0.0%';
+    return ((numValue / numTotal) * 100).toFixed(1) + '%';
+}
+
+function VNStringToISOString(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.trim().split('/');
+    if (parts.length !== 3) return null;
+    const [d, m, y] = parts.map(p => p.padStart(2, '0'));
+    return `${y}-${m}-${d}`;
+}
+
+// === TẢI BÁO CÁO ===
+function loadProfit() {
+    const startVN = document.getElementById('startDate').value;
+    const endVN = document.getElementById('endDate').value;
+
+    if (!startVN || !endVN) return;
+
+    const startISO = VNStringToISOString(startVN);
+    const endISO = VNStringToISOString(endVN);
+    const tbody = document.getElementById('detailBody');
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải...</td></tr>';
+
+    fetch(`/api/reports/profit?from=${startISO}&to=${endISO}`)
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) throw new Error(data.error);
+        renderSummary(data);
+        renderDetails(data);
+    })
+    .catch(err => {
+        console.error("Fetch error:", err);
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger p-4">Lỗi tải dữ liệu! Vui lòng kiểm tra kết nối.</td></tr>';
+    });
+}
+
+function renderSummary(data) {
+    const revenue = data.revenue || 0;
+    // Kiểm tra an toàn cho operating_expenses
+    const opExp = data.operating_expenses || {};
+    const opTotal = opExp.total || 0;
+    
+    const totalExp = (data.cogs || 0) + opTotal;
+    const netProfit = data.net_profit || 0;
+    const rate = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+
+    document.getElementById('revenue').textContent = formatVND(revenue);
+    document.getElementById('cost').textContent = formatVND(totalExp);
+    document.getElementById('profit').textContent = formatVND(netProfit);
+
+    const rateEl = document.getElementById('profitRate');
+    rateEl.textContent = 'Tỷ suất: ' + rate.toFixed(1) + '%';
+    rateEl.className = netProfit >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
+}
+
+function renderDetails(data) {
+    const tbody = document.getElementById('detailBody');
+    tbody.innerHTML = '';
+
+    const rev = data.revenue || 0;
+    const exp = data.operating_expenses || {
+        labor: 0, depreciation: 0, tax: 0, loan_interest: 0, services_outsource: 0, total: 0
+    };
+
+    const items = [
+        { label: 'A. TỔNG DOANH THU', val: rev, type: 'header', cls: 'text-success fw-bold' },
+        { label: 'B. GIÁ VỐN HÀNG BÁN (COGS)', val: data.cogs || 0, type: 'normal', cls: 'text-danger' },
+        { label: 'C. LỢI NHUẬN GỘP (A - B)', val: data.gross_profit || 0, type: 'header', cls: 'text-primary fw-bold' },
+        { label: 'D. CHI PHÍ VẬN HÀNH', val: exp.total || 0, type: 'header', cls: 'text-warning fw-bold' },
+        { label: '1. Chi phí nhân công (Lương & Bảo Hiểm)', val: exp.labor || 0, type: 'sub', cls: '' },
+        { label: '2. Khấu hao tài sản cố định', val: exp.depreciation || 0, type: 'sub', cls: '' },
+        { label: '3. Thuế', val: exp.tax || 0, type: 'sub', cls: '' },
+        { label: '4. Lãi vay', val: exp.loan_interest || 0, type: 'sub', cls: '' },
+        {
+            label: '5. Chi phí mua dịch vụ và thuê ngoài khác (Điện, nước, viễn thông, thuê mặt bằng, VPP,...)',
+            val: exp.services_outsource || 0,
+            type: 'sub',
+            cls: ''
+        },
+        { label: 'E. LỢI NHUẬN THUẦN (C - D)', val: data.net_profit || 0, type: 'header', cls: 'bg-light fw-bold text-info' }
+    ];
+
+    items.forEach(item => {
+        let labelHtml = `<strong>${item.label}</strong>`;
+        let cellCls = item.cls;
+        
+        if (item.type === 'sub') {
+            labelHtml = `<span class="indent-sub">${item.label}</span>`;
+            cellCls = 'text-muted';
+        }
+
+        tbody.innerHTML += `
+            <tr class="${item.type === 'header' ? 'table-light' : ''}">
+                <td class="text-start">${labelHtml}</td>
+                <td class="text-end ${cellCls}">${formatVND(item.val)}</td>
+                <td class="text-end text-muted small">${formatPercent(item.val, rev)}</td>
+            </tr>
+        `;
+    });
+}
+
+function applyQuickFilter() {
+    const filter = document.getElementById('quickFilter').value;
+    const now = new Date();
+    let start, end;
+    const yyyy = now.getFullYear();
+
+    switch (filter) {
+        case 'today': start = end = now; break;
+        case 'yesterday': start = end = new Date(new Date().setDate(now.getDate() - 1)); break;
+        case 'this_month':
+            start = new Date(yyyy, now.getMonth(), 1);
+            end = new Date(yyyy, now.getMonth() + 1, 0);
+            break;
+        case 'last_month':
+            start = new Date(yyyy, now.getMonth() - 1, 1);
+            end = new Date(yyyy, now.getMonth(), 0);
+            break;
+        case 'this_year':
+            start = new Date(yyyy, 0, 1);
+            end = now;
+            break;
+        case 'quarter_1': start = new Date(yyyy, 0, 1); end = new Date(yyyy, 3, 0); break;
+        case 'quarter_2': start = new Date(yyyy, 3, 1); end = new Date(yyyy, 6, 0); break;
+        case 'quarter_3': start = new Date(yyyy, 6, 1); end = new Date(yyyy, 9, 0); break;
+        case 'quarter_4': start = new Date(yyyy, 9, 1); end = new Date(yyyy, 12, 0); break;
+        default:
+            if (filter.startsWith('month_')) {
+                const m = parseInt(filter.split('_')[1]) - 1;
+                start = new Date(yyyy, m, 1); end = new Date(yyyy, m + 1, 0);
+            }
+    }
+
+    if (start && end) {
+        window.fpStart.setDate(start);
+        window.fpEnd.setDate(end);
+        loadProfit();
+    }
+}
+
+function exportExcel() {
+    const table = document.getElementById("profitTable");
+    const wb = XLSX.utils.table_to_book(table, { sheet: "LoiNhuan" });
+    XLSX.writeFile(wb, `BaoCao_LoiNhuan_${new Date().getTime()}.xlsx`);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const cfg = { dateFormat: "d/m/Y", locale: "vn", allowInput: true };
+    window.fpStart = flatpickr("#startDate", cfg);
+    window.fpEnd = flatpickr("#endDate", cfg);
+
+    const now = new Date();
+    document.getElementById('quickFilter').value = 'this_year';
+    window.fpStart.setDate(new Date(now.getFullYear(), 0, 1));
+    window.fpEnd.setDate(now);
+
+    loadProfit();
+});
+</script>
+{% endblock %}

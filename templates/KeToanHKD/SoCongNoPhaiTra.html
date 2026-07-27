@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+{% block title %}Sổ Công Nợ Phải Trả{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<style>
+    body { background: #f4f7f6 !important; }
+    .card { border-radius: 15px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+    .money-lg { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 1.5rem; letter-spacing: -1px; }
+    .debt { color: #ef4444; }
+    .paid { color: #10b981; }
+    .table thead th { background-color: #f8fafc; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #e2e8f0; }
+    .table td { vertical-align: middle; padding: 1rem; }
+    .modal-content { border-radius: 20px; border: none; }
+    .modal-header { border-bottom: none; border-radius: 20px 20px 0 0; }
+    .form-label-bold { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #64748b; }
+    .flatpickr-calendar { z-index: 10060 !important; }
+    @media print { .no-print { display: none !important; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 no-print">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-primary mb-1">Công Nợ Phải Trả NCC</h3>
+            <p class="text-muted small">Theo dõi và thanh toán công nợ nhà cung cấp (SP2 — NCC)</p>
+        </div>
+        <button class="btn btn-outline-primary px-4 fw-bold" onclick="printLedger()">
+            <i class="bi bi-printer me-2"></i>IN SỔ CÔNG NỢ
+        </button>
+    </div>
+
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card p-4 bg-white text-center">
+                <div class="form-label-bold mb-2">Tổng nợ phát sinh</div>
+                <div id="totalReceivable" class="money-lg debt">0 ₫</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-4 bg-white text-center">
+                <div class="form-label-bold mb-2">Tổng đã thanh toán</div>
+                <div id="totalPaid" class="money-lg paid">0 ₫</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-4 bg-primary text-white text-center">
+                <div class="text-white-50 small fw-bold text-uppercase mb-2">Còn phải trả hiện tại</div>
+                <div id="remainingDebt" class="money-lg fw-bold">0 ₫</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label form-label-bold">Chọn nhà cung cấp</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-person-badge"></i></span>
+                    <select id="supplierFilter" class="form-select fw-bold">
+                        <option value="">-- Đang tải danh sách... --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <button id="btnRefresh" class="btn btn-primary w-100 fw-bold">
+                    <i class="bi bi-arrow-repeat me-2"></i>LÀM MỚI DỮ LIỆU
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="text-center">Số Đơn Nhập</th>
+                        <th class="text-center">Ngày Nhập</th>
+                        <th class="text-end">Tổng Nợ</th>
+                        <th class="text-end">Đã Trả</th>
+                        <th class="text-end">Còn Nợ</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="debtTableBody">
+                    <tr><td colspan="6" class="text-center p-5 text-muted">Vui lòng chọn một nhà cung cấp...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="importPaymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white p-4">
+                <h5 class="fw-bold mb-0"><i class="bi bi-cash-stack me-2"></i>LẬP PHIẾU CHI THANH TOÁN</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="importPaymentForm">
+                    <input type="hidden" id="import_ref_id">
+                    <input type="hidden" id="import_receiver_name">
+                    <input type="hidden" id="import_address">
+                    <input type="hidden" id="import_bill_no">
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label form-label-bold">Ngày chi tiền</label>
+                            <input type="text" id="import_payment_date" class="form-control fw-bold border-danger" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label form-label-bold">Phương thức</label>
+                            <select class="form-select fw-bold" id="import_payment_method">
+                                <option value="cash">Tiền mặt (111)</option>
+                                <option value="transfer">Chuyển khoản (112)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 mb-4 border">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="small text-muted d-block">Nhà cung cấp:</label>
+                                <span id="display_supplier" class="fw-bold text-dark"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small text-muted d-block">Địa Chỉ:</label>
+                                <span id="display_address" class="fw-bold text-dark"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted d-block">Số Hóa Đơn:</label>
+                                <span id="display_bill_no" class="fw-bold text-primary"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted d-block">Mã đơn nhập:</label>
+                                <span id="display_import_no" class="fw-bold text-primary"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted d-block">Tổng đơn:</label>
+                                <span id="display_total" class="fw-bold">0</span>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted d-block">Đã trả:</label>
+                                <span id="display_paid" class="fw-bold text-success">0</span>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted d-block">Nợ còn lại:</label>
+                                <span id="display_remaining" class="fw-bold text-danger">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label form-label-bold text-primary">Số tiền chi trả lần này</label>
+                            <div class="input-group input-group-lg">
+                                <input type="text" id="import_amount_input" class="form-control fw-bold text-danger border-primary" placeholder="0">
+                                <span class="input-group-text bg-primary text-white border-primary">₫</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label form-label-bold">Nội dung chi</label>
+                            <textarea id="import_reason" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer p-4 border-0">
+                <button type="button" class="btn btn-light px-4 fw-bold" data-bs-dismiss="modal">ĐÓNG</button>
+                <button type="button" id="btnSaveImportPayment" class="btn btn-danger px-5 fw-bold">
+                    <i class="bi bi-check-circle me-2"></i>XÁC NHẬN CHI TIỀN
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+
+<script>
+function formatDebtMoney(v) { return formatMoney(v); }
+const parseVND = (s) => parseInt(String(s).replace(/[^0-9]/g, ''), 10) || 0;
+
+let debtRecordsCache = {};
+let paymentDatePicker = null;
+
+function getPayModal() {
+    return bootstrap.Modal.getOrCreateInstance(document.getElementById('importPaymentModal'));
+}
+
+function printLedger() {
+    const supplier = $('#supplierFilter').val();
+    if (!supplier) {
+        Swal.fire('Cảnh báo', 'Vui lòng chọn nhà cung cấp trước khi in sổ', 'warning');
+        return;
+    }
+    window.open(`/KeToanHKD/SoCongNoPhaiTra_print.html?supplier=${encodeURIComponent(supplier)}`, '_blank');
+}
+
+async function loadSupplierDropdown() {
+    try {
+        const suppliers = await fetchJSON('/api/debt/suppliers');
+        const $select = $('#supplierFilter');
+        $select.html('<option value="">-- Chọn nhà cung cấp cần xem nợ --</option>');
+        suppliers.forEach(name => $select.append(new Option(name, name)));
+    } catch (err) { console.error("Lỗi tải NCC:", err); }
+}
+
+async function loadDebtData() {
+    const supplier = $('#supplierFilter').val();
+    if (!supplier) return;
+
+    const $tbody = $('#debtTableBody');
+    $tbody.html('<tr><td colspan="6" class="text-center p-5"><div class="spinner-border text-primary"></div></td></tr>');
+
+    try {
+        const data = await fetchJSON(`/api/debt/supplier-detail?supplier=${encodeURIComponent(supplier)}`);
+
+        $('#totalReceivable').text(formatDebtMoney(data.summary.total));
+        $('#totalPaid').text(formatDebtMoney(data.summary.paid));
+        $('#remainingDebt').text(formatDebtMoney(data.summary.remaining));
+
+        if (!data.records || data.records.length === 0) {
+            $tbody.html('<tr><td colspan="6" class="text-center p-5 text-success fw-bold">Không còn nợ đọng.</td></tr>');
+            return;
+        }
+
+        debtRecordsCache = {};
+        const rows = data.records.map(r => {
+            debtRecordsCache[r.id] = r;
+            const dateStr = r.date ? flatpickr.formatDate(new Date(r.date), "d/m/Y") : '—';
+            return `
+                <tr>
+                    <td class="text-center fw-bold text-primary">${escapeHtml(r.import_no)}</td>
+                    <td class="text-center small">${dateStr}</td>
+                    <td class="text-end fw-bold">${formatDebtMoney(r.total_value)}</td>
+                    <td class="text-end text-success">${formatDebtMoney(r.paid_amount)}</td>
+                    <td class="text-end text-danger fw-bold">${formatDebtMoney(r.remaining_amount)}</td>
+                    <td class="text-center">
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-danger px-3 btn-pay-trigger" data-id="${r.id}">
+                                <i class="bi bi-cash-coin"></i> TRẢ TIỀN
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+        });
+        $tbody.html(rows.join(''));
+    } catch (err) {
+        $tbody.html('<tr><td colspan="6" class="text-center text-danger p-5">Lỗi tải dữ liệu.</td></tr>');
+    }
+}
+
+// Mở Modal Trả Tiền
+$(document).on('click', '.btn-pay-trigger', function() {
+    const data = debtRecordsCache[$(this).data('id')];
+    if (!data) return;
+
+    $('#import_ref_id').val(data.id);
+    $('#import_receiver_name').val(data.supplier_name);
+    $('#import_address').val(data.supplier_address || '');
+    $('#import_bill_no').val(data.bill_no || '');
+    $('#display_address').text(data.supplier_address || '—');
+    $('#display_bill_no').text(data.bill_no || '—');
+    $('#display_import_no').text(data.import_no);
+    $('#display_supplier').text(data.supplier_name);
+    $('#display_total').text(formatDebtMoney(data.total_value));
+    $('#display_paid').text(formatDebtMoney(data.paid_amount));
+    $('#display_remaining').text(formatDebtMoney(data.remaining_amount));
+
+    $('#import_amount_input').val(Math.round(data.remaining_amount || 0).toLocaleString('vi-VN'));
+    $('#import_reason').val(`Thanh toán công nợ đơn hàng ${data.import_no}`);
+    if (paymentDatePicker) paymentDatePicker.setDate(new Date(), true);
+
+    getPayModal().show();
+});
+
+// Format tiền khi nhập
+$('#import_amount_input').on('input', function() {
+    let val = parseVND($(this).val());
+    let max = parseVND($('#display_remaining').text());
+    if (val > max) val = max;
+    $(this).val(val > 0 ? val.toLocaleString('vi-VN') : '');
+});
+
+// LƯU PHIẾU CHI - ĐÃ FIX LỖI THIẾU RECEIVER
+$('#btnSaveImportPayment').on('click', async function() {
+    const amount = parseVND($('#import_amount_input').val());
+    if (amount <= 0) return Swal.fire('Cảnh báo', 'Vui lòng nhập số tiền thanh toán', 'warning');
+
+    const btn = $(this);
+    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Đang lưu...');
+
+    // Lấy đầy đủ dữ liệu để gửi lên backend
+    const payload = {
+        type: 'import',
+        ref_id: $('#import_ref_id').val(),
+        receiver: $('#import_receiver_name').val(), // GIÁ TRỊ QUAN TRỌNG FIX LỖI
+        amount: amount,
+        bill_no: $('#import_bill_no').val(),
+        address: $('#import_address').val(), 
+        payment_method: $('#import_payment_method').val(),
+        date: paymentDatePicker && paymentDatePicker.selectedDates[0]
+            ? flatpickr.formatDate(paymentDatePicker.selectedDates[0], 'Y-m-d')
+            : new Date().toISOString().slice(0, 10),
+        reason: $('#import_reason').val()
+    };
+
+    try {
+        const res = await fetch('/api/expense/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            getPayModal().hide();
+            Swal.fire('Thành công', `Đã lập phiếu chi ${result.Voucher_no}`, 'success');
+            loadDebtData();
+        } else {
+            Swal.fire('Lỗi', result.error || 'Không thể lưu phiếu chi', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', 'Lỗi kết nối máy chủ', 'error');
+    } finally {
+        btn.prop('disabled', false).html('<i class="bi bi-check-circle me-2"></i>XÁC NHẬN CHI TIỀN');
+    }
+});
+
+$(document).ready(() => {
+    loadSupplierDropdown();
+    paymentDatePicker = flatpickr("#import_payment_date", {
+        dateFormat: "d/m/Y",
+        defaultDate: "today",
+        locale: "vn",
+        allowInput: false
+    });
+    $('#supplierFilter').change(loadDebtData);
+    $('#btnRefresh').click(loadDebtData);
+});
+</script>
+{% endblock %}

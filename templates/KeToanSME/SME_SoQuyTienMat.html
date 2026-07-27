@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    /* GIAO DIỆN HIỂN THỊ TRÊN WEB */
+    .s6-wrapper {
+        background: #fff; padding: 30px; border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        font-family: "Times New Roman", Times, serif; color: #000;
+        max-width: 1000px; margin: auto;
+    }
+    .table-s6 {
+        width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px;
+    }
+    .table-s6 th, .table-s6 td {
+        border: 1px solid #000 !important; padding: 10px 5px; text-align: center;
+    }
+    .table-s6 th { background-color: #f8f9fa !important; font-weight: bold; }
+    .val-cell { text-align: right !important; font-family: "Courier New", Courier, monospace; font-weight: 500; }
+    .text-left { text-align: left !important; padding-left: 10px !important; }
+
+    /* THIẾT LẬP KHI IN */
+    @media print {
+        /* 1. Ẩn tất cả các thành phần không liên quan */
+        nav, .navbar, footer, .no-print, .btn, form, .sidebar, header { 
+            display: none !important; 
+        }
+
+        /* 2. Cấu hình trang in */
+        @page {
+            size: A4 portrait;
+            margin: 15mm 10mm 15mm 15mm; /* Lề trái rộng hơn để đóng tập */
+        }
+
+        body { 
+            background: none !important; 
+            margin: 0 !important; 
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact; 
+        }
+
+        .container { 
+            max-width: 100% !important; 
+            width: 100% !important; 
+            margin: 0 !important; 
+            padding: 0 !important; 
+        }
+
+        .s6-wrapper {
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+        }
+
+        .table-s6 {
+            font-size: 12px; /* Chữ nhỏ lại một chút khi in để cân đối */
+        }
+
+        /* Đảm bảo bảng không bị cắt ngang trang một cách xấu xí */
+        tr { page-break-inside: avoid; }
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/">Quay Lại</a></li>
+                    <li class="breadcrumb-item active">Sổ Quỹ Tiền Mặt</li>
+                </ol>
+            </nav>
+            <h4 class="fw-bold mb-0 text-primary">Sổ Quỹ Tiền Mặt (S2e-HKD)</h4>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <form method="GET" class="d-flex gap-2">
+                <select name="year" class="form-select" onchange="this.form.submit()">
+                    {% for y in range(current_year_today + 1, 2019, -1) %}
+                        <option value="{{ y }}" {% if y == year %}selected{% endif %}>Năm {{ y }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <button onclick="window.print()" class="btn btn-primary px-4">
+                <i class="fas fa-print me-2"></i>In Sổ Kế Toán
+            </button>
+        </div>
+    </div>
+
+    <div class="s6-wrapper">
+        <div class="row">
+            <div class="col-7">
+                <p class="mb-1 fw-bold text-uppercase">Hộ kinh doanh: {{ info.business_name or '................' }}</p>
+                <p class="mb-1">MST: {{ info.tax_code or '................' }}</p>
+                <p class="mb-0">Địa chỉ: {{ info.address or '................' }}</p>
+            </div>
+            <div class="col-5 text-center">
+                <p class="mb-0 fw-bold">Mẫu số S2e – HKD</p>
+                <small class="fst-italic">(Ban hành kèm theo Thông tư 152/2025/TT-BTC)</small>
+            </div>
+        </div>
+
+        <div class="text-center my-5">
+            <h3 class="fw-bold mb-1">SỔ QUỸ TIỀN MẶT</h3>
+            <p class="mb-0">Năm: <strong>{{ year }}</strong></p>
+            <small class="fst-italic">(Dùng cho hộ kinh doanh, cá nhân kinh doanh)</small>
+        </div>
+
+        <table class="table-s6">
+            <thead>
+                <tr>
+                    <th rowspan="2" style="width: 12%;">Ngày ghi sổ</th>
+                    <th colspan="2">Chứng từ</th>
+                    <th rowspan="2" style="width: 25%;">Diễn giải</th>
+                    <th rowspan="2" style="width: 15%;">Thu</th>
+                    <th rowspan="2" style="width: 15%;">Chi</th>
+                    <th rowspan="2" style="width: 15%;">Tồn quỹ</th>
+                </tr>
+                <tr>
+                    <th style="width: 10%;">Số hiệu</th>
+                    <th style="width: 8%;">Ngày</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="fw-bold">
+                    <td>01/01/{{ year }}</td>
+                    <td></td>
+                    <td></td>
+                    <td class="text-left">Số dư đầu kỳ</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="val-cell">{{ "{:,.0f}".format(so_du_dau_ky)|replace(',', '.') }}</td>
+                </tr>
+
+                {% for item in ds_phat_sinh %}
+                <tr>
+                    <td>{{ item.date[8:10] }}/{{ item.date[5:7] }}/{{ item.date[:4] }}</td>
+                    <td>{{ item.so_hieu }}</td>
+                    <td>{{ item.date[8:10] }}/{{ item.date[5:7] }}</td>
+                    <td class="text-left">{{ item.dien_giai }}</td>
+                    <td class="val-cell">{{ "{:,.0f}".format(item.thu)|replace(',', '.') if item.thu > 0 else '-' }}</td>
+                    <td class="val-cell">{{ "{:,.0f}".format(item.chi)|replace(',', '.') if item.chi > 0 else '-' }}</td>
+                    <td class="val-cell">{{ "{:,.0f}".format(item.ton)|replace(',', '.') }}</td>
+                </tr>
+                {% endfor %}
+
+                <tr class="fw-bold" style="background-color: #fdfdfd !important;">
+                    <td colspan="4" class="text-uppercase text-center">Cộng phát sinh trong kỳ</td>
+                    <td class="val-cell">{{ "{:,.0f}".format(tong_thu_trong_ky)|replace(',', '.') }}</td>
+                    <td class="val-cell">{{ "{:,.0f}".format(tong_chi_trong_ky)|replace(',', '.') }}</td>
+                    <td></td>
+                </tr>
+                <tr class="fw-bold">
+                    <td colspan="4" class="text-uppercase text-center">Số dư cuối kỳ</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td class="val-cell text-danger">{{ "{:,.0f}".format(so_du_cuoi_ky)|replace(',', '.') }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="row mt-5">
+            <div class="col-4 text-center">
+                <p class="fw-bold mb-1"></p>
+                <p class="small fst-italic mb-4"></p>
+                <div style="height: 70px;"></div>
+                <p class="fw-bold">{{ session.get('user_name') or '' }}</p>
+            </div>
+            <div class="col-4 text-center">
+                <p class="fw-bold mb-1"></p>
+                <p class="small fst-italic mb-4"></p>
+                <div style="height: 70px;"></div>
+                <p class="fw-bold"></p>
+            </div>
+            <div class="col-4 text-center">
+                <p class="fst-italic mb-1">Ngày {{ ngay_in.split('/')[0] }} tháng {{ ngay_in.split('/')[1] }} năm {{ ngay_in.split('/')[2] }}</p>
+                <p class="fw-bold mb-1">Đại diện hộ kinh doanh</p>
+                <p class="small fst-italic mb-4">(Ký, họ tên, đóng dấu)</p>
+                <div style="height: 70px;"></div>
+                <p class="fw-bold text-uppercase">{{ info.representative_name or '................' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+{% endblock %}

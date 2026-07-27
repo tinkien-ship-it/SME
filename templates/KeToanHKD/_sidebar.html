@@ -1,0 +1,113 @@
+<aside class="accounting-hub-sidebar shadow-sm" id="hkdSidebar">
+
+    <div class="px-3 mb-2">
+
+        <span class="hub-brand text-uppercase fw-bold">{{ hub_title | default('POS và Kế Toán HKD') }}</span>
+
+        <div class="text-muted small">Bán hàng · Kho · Sổ sách HKD</div>
+
+    </div>
+
+
+
+    <div class="hub-search">
+
+        <input type="search" class="form-control form-control-sm" id="hkdMenuSearch"
+
+               placeholder="Tìm menu..." autocomplete="off">
+
+    </div>
+
+
+
+    <nav class="nav flex-column" id="hkdSidebarNav">
+
+        {% for group in hkd_menu_groups %}
+
+        {% if group.get('_type') == 'section_header' %}
+
+        <div class="hkd-section-header" data-section="{{ group['id'] }}">{{ group['label'] }}</div>
+
+        {% else %}
+
+        {% if group.get('_menu_style') == 'direct' %}
+        {% set direct_item = group['items'][0] %}
+        <div class="hkd-menu-group hkd-menu-direct" data-group="{{ group['id'] }}">
+            <a href="{{ url_for(direct_item['endpoint']) }}"
+               class="group-toggle group-toggle-direct text-decoration-none hkd-menu-item {% if request.endpoint == direct_item['endpoint'] %}text-primary active{% endif %}"
+               data-label="{{ group['label'] | lower }}">
+                <i class="{{ group['icon'] }} me-2"></i>{{ group['label'] }}
+            </a>
+        </div>
+        {% else %}
+
+        {% set group_has_active = group['items'] | selectattr('endpoint', 'equalto', request.endpoint) | list | length > 0 %}
+
+        {% set group_is_open = group_has_active or hub_current_group == group['id'] or (group['id'] == 'overview' and request.endpoint == 'HKD_dashboard') %}
+
+        <div class="hkd-menu-group" data-group="{{ group['id'] }}">
+
+            {% if group['id'] == 'overview' %}
+
+            <a href="{{ url_for('HKD_dashboard') }}"
+
+               class="group-toggle text-decoration-none {% if request.endpoint == 'HKD_dashboard' %}text-primary{% endif %}">
+
+                <i class="{{ group['icon'] }} me-2"></i>{{ group['label'] }}
+
+            </a>
+
+            {% else %}
+
+            <a href="{{ url_for('HKD_hub_group', group_id=group['id']) }}"
+
+               class="group-toggle text-decoration-none {% if hub_current_group == group['id'] %}text-primary{% endif %}">
+
+                <i class="{{ group['icon'] }} me-2"></i>{{ group['label'] }}
+
+                <i class="fas fa-chevron-down ms-auto" style="font-size:0.65rem;opacity:0.5"></i>
+
+            </a>
+
+            {% endif %}
+
+            <div class="collapse {% if group_is_open %}show{% endif %}" id="hkd-group-{{ group['id'] }}">
+
+                {% for item in group['items'] %}
+
+                {% if group['id'] != 'overview' or item['endpoint'] != 'HKD_dashboard' %}
+
+                <a class="nav-link-sub hkd-menu-item {% if request.endpoint == item['endpoint'] %}active{% endif %}"
+
+                   href="{{ url_for(item['endpoint']) }}"
+
+                   data-label="{{ item['label'] | lower }}">
+
+                    <i class="{{ item['icon'] }}"></i>
+
+                    <span>{{ item['label'] }}</span>
+
+                </a>
+
+                {% endif %}
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+        {% endif %}
+
+        {% else %}
+
+        <div class="px-3 text-muted small">Không có menu phù hợp quyền truy cập.</div>
+
+        {% endfor %}
+
+    </nav>
+
+</aside>
+

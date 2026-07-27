@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Thiết lập ban đầu - KETO{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width: 720px;">
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h4 class="fw-bold text-primary mb-2">Hoàn tất thiết lập cửa hàng</h4>
+            <p class="text-muted mb-4">
+                Cấu hình tài khoản VietQR để tạo mã QR cho khách chuyển khoản.
+                Nếu bạn <strong>chưa có số tài khoản</strong>, có thể bỏ qua bước này và cấu hình sau tại
+                <strong>Cài đặt → Thông tin cửa hàng</strong>.
+            </p>
+            <form id="onboardingForm">
+                <h6 class="fw-bold">Tài khoản VietQR (tuỳ chọn)</h6>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Chọn ngân hàng</label>
+                        <select id="bank_code" class="form-select">
+                            <option value="">-- Chọn ngân hàng --</option>
+                            <option value="970436">Vietcombank</option>
+                            <option value="970407">Techcombank</option>
+                            <option value="970418">BIDV</option>
+                            <option value="970415">VietinBank</option>
+                            <option value="970422">MB Bank</option>
+                            <option value="970416">ACB</option>
+                            <option value="970403">Sacombank</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Số tài khoản</label>
+                        <input type="text" id="bank_account" class="form-control" placeholder="Nhập khi đã có STK">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Chủ tài khoản</label>
+                        <input type="text" id="account_holder" class="form-control" placeholder="Tên chủ tài khoản ngân hàng">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
+                    Lưu VietQR và vào hệ thống
+                </button>
+            </form>
+            <button type="button" id="btnSkip" class="btn btn-outline-secondary btn-lg w-100">
+                Bỏ qua — vào hệ thống ngay
+            </button>
+            <p class="text-muted small text-center mt-3 mb-0">
+                Bạn vẫn bán hàng bình thường; chỉ tính năng QR chuyển khoản cần STK sau này.
+            </p>
+        </div>
+    </div>
+</div>
+<script>
+async function skipOnboarding() {
+    if (!confirm('Bỏ qua thiết lập VietQR? Bạn có thể cấu hình sau trong phần Cài đặt.')) {
+        return;
+    }
+    const res = await fetch('/api/onboarding/skip', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+        window.location.href = data.redirect || '/sale';
+    } else {
+        alert(data.error || 'Không thể bỏ qua');
+    }
+}
+
+document.getElementById('btnSkip').addEventListener('click', skipOnboarding);
+
+document.getElementById('onboardingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const bankSelect = document.getElementById('bank_code');
+    const bankCode = bankSelect.value;
+    const bankAccount = document.getElementById('bank_account').value.trim();
+    const accountHolder = document.getElementById('account_holder').value.trim();
+
+    if (!bankCode && !bankAccount && !accountHolder) {
+        skipOnboarding();
+        return;
+    }
+    if (!bankCode || !bankAccount || !accountHolder) {
+        alert('Vui lòng điền đủ ngân hàng, số tài khoản và chủ tài khoản — hoặc bấm "Bỏ qua".');
+        return;
+    }
+
+    const payload = {
+        bank_code: bankCode,
+        bank_name: bankSelect.options[bankSelect.selectedIndex].text,
+        bank_account: bankAccount,
+        account_holder: accountHolder,
+        payment_provider: 'none',
+    };
+    const res = await fetch('/api/onboarding/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.success) {
+        window.location.href = data.redirect || '/sale';
+    } else if (data.can_skip) {
+        if (confirm((data.error || 'Thiếu thông tin') + '\n\nBạn muốn bỏ qua và vào hệ thống?')) {
+            skipOnboarding();
+        }
+    } else {
+        alert(data.error || 'Lưu thất bại');
+    }
+});
+</script>
+{% endblock %}

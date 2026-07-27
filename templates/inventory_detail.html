@@ -1,0 +1,562 @@
+{% extends "base.html" %}
+{% block title %}Báo Cáo Tồn Kho Chi Tiết{% endblock %}
+
+{% block head_extra %}
+    {% include 'partials/data_list_table_assets.html' %}
+    <!-- Flatpickr CSS + Theme material_blue -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+
+    <!-- XLSX cho xuất Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+
+    <style>
+        body { background: #f5f7fa; }
+        .inventory-detail-page {
+            font-size: 1rem;
+            max-width: 100%;
+        }
+        .inventory-detail-page .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #333;
+        }
+        .inventory-detail-page .card { border-radius: 14px; overflow: hidden; }
+        .inventory-detail-page .card-header {
+            font-weight: 600;
+            padding: 1rem 1.25rem;
+            font-size: 1.1rem;
+        }
+        .inventory-detail-page .form-label { font-size: 1rem; }
+        .inventory-detail-page .form-control {
+            font-size: 1rem;
+            padding: 0.55rem 0.85rem;
+        }
+        .inventory-detail-page .btn { font-size: 1rem; }
+        .inventory-detail-page .summary-box small { font-size: 0.95rem; }
+        .inventory-detail-page .summary-box h4 { font-size: 1.4rem; }
+        .inventory-detail-page .summary-box {
+            transition: 0.2s ease;
+        }
+        .inventory-detail-page .summary-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .inventory-detail-page .pivot-panel .pivot-label { font-size: 0.92rem; }
+        .inventory-detail-page .pivot-chip {
+            font-size: 0.95rem;
+            padding: 0.45rem 1rem;
+        }
+        .inventory-detail-page .pivot-summary { font-size: 0.95rem; }
+        .inventory-detail-page #detailTable {
+            font-size: 1rem;
+            width: 100%;
+        }
+        .inventory-detail-page #detailTable thead th {
+            font-size: 0.98rem;
+            font-weight: 600;
+            white-space: nowrap;
+            padding: 0.7rem 0.55rem;
+            vertical-align: middle;
+        }
+        .inventory-detail-page #detailTable tbody td {
+            padding: 0.6rem 0.55rem;
+            vertical-align: middle;
+        }
+        .inventory-detail-page #detailTable td:nth-child(2) {
+            min-width: 220px;
+            max-width: 360px;
+        }
+        .inventory-detail-page .table-responsive {
+            max-height: 72vh;
+            overflow-y: auto;
+        }
+        .inventory-detail-page .sticky-top { position: sticky; top: 0; z-index: 10; }
+        .inventory-detail-page .flatpickr-calendar { z-index: 9999 !important; }
+        @media (min-width: 1400px) {
+            .inventory-detail-page #detailTable { font-size: 1.05rem; }
+            .inventory-detail-page #detailTable thead th { font-size: 1.02rem; }
+        }
+        @media (max-width: 767.98px) {
+            .inventory-detail-page .section-title { font-size: 1.45rem; }
+            .inventory-detail-page .summary-box h4 { font-size: 1.2rem; }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid inventory-detail-page mt-4 mb-5 px-3 px-md-4 px-xl-5">
+    <h3 class="mb-4 text-primary section-title"><i class="fas fa-clipboard-list"></i> Báo Cáo Tồn Kho Chi Tiết</h3>
+
+    <!-- Bộ lọc -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Từ ngày</label>
+                    <input type="text" class="form-control text-center" id="startDate" placeholder="dd/mm/yyyy">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Đến ngày</label>
+                    <input type="text" class="form-control text-center" id="endDate" placeholder="dd/mm/yyyy">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Tìm kiếm</label>
+                    <input type="text" class="form-control" id="searchQuery" placeholder="Mã hàng, tên sản phẩm...">
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100 py-2" onclick="loadReport()">
+                        <i class="fas fa-search"></i> Xem Báo Cáo
+                    </button>
+                </div>
+            </div>
+            <div class="pivot-panel mt-3 mb-0">
+                <div class="pivot-label"><i class="fas fa-table me-1"></i> Chế độ hiển thị</div>
+                <div class="pivot-chips" id="viewModeChips"></div>
+                <div class="pivot-summary" id="detailPivotSummary"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tổng quan -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0 fw-bold">Tổng Quan Tồn Kho <span id="reportPeriod" class="text-primary"></span></h5>
+        </div>
+        <div class="card-body p-4">
+            <div class="row text-center g-3">
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded summary-box bg-white">
+                        <small class="text-muted d-block">Tổng Giá trị Tồn Đầu</small>
+                        <h4 class="mt-1 text-secondary" id="totalBeginningValue">0 VND</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded summary-box bg-white">
+                        <small class="text-muted d-block">Tổng Giá Trị Nhập</small>
+                        <h4 class="mt-1 text-info" id="totalImportValue">0</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded summary-box bg-white">
+                        <small class="text-muted d-block">Tổng Giá Vốn Xuất</small>
+                        <h4 class="mt-1 text-danger" id="totalSaleValue">0</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 border rounded summary-box bg-white">
+                        <small class="text-muted d-block">Tổng Giá trị Tồn Cuối</small>
+                        <h4 class="mt-1 text-success" id="totalEndingValue">0</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bảng chi tiết -->
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+            <h5 class="mb-0 fw-bold">Chi Tiết Tồn Kho</h5>
+            <button class="btn btn-success px-3" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i> Xuất Excel
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive table-desktop-only">
+                <table class="table table-hover mb-0 align-middle" id="detailTable">
+                    <thead><tr></tr></thead>
+                    <tbody id="detailBody"></tbody>
+                </table>
+            </div>
+            <div class="mobile-card-list p-3" id="detailMobileList"></div>
+            <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="enhanced-table-toolbar">
+                    <span class="text-muted small">Hiển thị <strong id="detailTableCount">0</strong> sản phẩm</span>
+                    <span id="detailColFilters" class="active-filters-badge d-none"></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearDetailColFilters">Xóa lọc cột</button>
+                </div>
+            </div>
+            <div id="loadingIndicator" class="text-center p-3" style="display:none;">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Đang tải dữ liệu...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Flatpickr JS + Tiếng Việt -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+
+<script>
+let detailCache = [];
+let detailFilter = 'all';
+let detailTableCtrl = null;
+
+const DETAIL_PIVOT_ITEMS = [
+    { value: 'all', label: 'Tất cả SP' },
+    { value: 'movement', label: 'Có phát sinh NX' },
+    { value: 'ending', label: 'Còn tồn cuối' },
+];
+
+function filterDetailData(data) {
+    if (detailFilter === 'movement') {
+        return data.filter(i => (i.import_quantity || 0) > 0 || (i.export_quantity || 0) > 0);
+    }
+    if (detailFilter === 'ending') {
+        return data.filter(i => (i.ending_quantity || 0) > 0);
+    }
+    return data;
+}
+
+function renderDetailRows(data, tbody) {
+    const el = tbody || document.getElementById('detailBody');
+    if (!el) return;
+    if (!data.length) {
+        el.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-3">Không có dữ liệu phù hợp bộ lọc</td></tr>';
+        return;
+    }
+    let totalBeginningValue = 0, totalImportValue = 0, totalExportValue = 0, totalEndingValue = 0;
+    el.innerHTML = data.map(item => {
+        totalBeginningValue += (item.beginning_value || 0);
+        totalImportValue += (item.import_value || 0);
+        totalExportValue += (item.export_value || 0);
+        totalEndingValue += (item.ending_value || 0);
+        return `<tr>
+            <td>${escapeHtml(item.product_code || '')}</td>
+            <td>${escapeHtml(item.product_name || '')}</td>
+            <td>${escapeHtml(item.unit_name || '')}</td>
+            <td class="text-end">${item.beginning_quantity || 0}</td>
+            <td class="text-end">${formatCurrency(item.beginning_value || 0)}</td>
+            <td class="text-end">${item.import_quantity || 0}</td>
+            <td class="text-end">${formatCurrency(item.import_value || 0)}</td>
+            <td class="text-end">${item.export_quantity || 0}</td>
+            <td class="text-end">${formatCurrency(item.export_value || 0)}</td>
+            <td class="text-end fw-bold">${item.ending_quantity || 0}</td>
+            <td class="text-end fw-bold text-success">${formatCurrency(item.ending_value || 0)}</td>
+        </tr>`;
+    }).join('');
+    $("#totalBeginningValue").text(formatCurrency(totalBeginningValue));
+    $("#totalImportValue").text(formatCurrency(totalImportValue));
+    $("#totalSaleValue").text(formatCurrency(totalExportValue));
+    $("#totalEndingValue").text(formatCurrency(totalEndingValue));
+}
+
+function initDetailTable() {
+    detailTableCtrl = DataListTable.create({
+        table: '#detailTable',
+        countSelector: '#detailTableCount',
+        activeFiltersSelector: '#detailColFilters',
+        defaultSort: { key: 'product_code', dir: 'asc' },
+        columns: [
+            { key: 'product_code', label: 'Mã hàng', sortable: true, filterType: 'text', width: '100px',
+              getValue: i => i.product_code || '' },
+            { key: 'product_name', label: 'Tên SP', sortable: true, filterType: 'text', width: '220px',
+              getValue: i => i.product_name || '' },
+            { key: 'unit_name', label: 'ĐVT', filterType: 'text', width: '70px', align: 'center',
+              getValue: i => i.unit_name || '' },
+            { key: 'beginning_quantity', label: 'SL tồn đầu', sortable: true, filterType: 'number', width: '100px', align: 'end',
+              getValue: i => i.beginning_quantity, sortValue: i => Number(i.beginning_quantity) || 0 },
+            { key: 'beginning_value', label: 'GT tồn đầu', sortable: true, filterType: 'number', width: '110px', align: 'end',
+              getValue: i => i.beginning_value, sortValue: i => Number(i.beginning_value) || 0 },
+            { key: 'import_quantity', label: 'SL nhập', sortable: true, filterType: 'number', width: '90px', align: 'end',
+              getValue: i => i.import_quantity, sortValue: i => Number(i.import_quantity) || 0 },
+            { key: 'import_value', label: 'GT nhập', sortable: true, filterType: 'number', width: '110px', align: 'end',
+              getValue: i => i.import_value, sortValue: i => Number(i.import_value) || 0 },
+            { key: 'export_quantity', label: 'SL xuất', sortable: true, filterType: 'number', width: '90px', align: 'end',
+              getValue: i => i.export_quantity, sortValue: i => Number(i.export_quantity) || 0 },
+            { key: 'export_value', label: 'GT xuất', sortable: true, filterType: 'number', width: '110px', align: 'end',
+              getValue: i => i.export_value, sortValue: i => Number(i.export_value) || 0 },
+            { key: 'ending_quantity', label: 'SL tồn cuối', sortable: true, filterType: 'number', width: '100px', align: 'end',
+              getValue: i => i.ending_quantity, sortValue: i => Number(i.ending_quantity) || 0 },
+            { key: 'ending_value', label: 'GT tồn cuối', sortable: true, filterType: 'number', width: '110px', align: 'end',
+              getValue: i => i.ending_value, sortValue: i => Number(i.ending_value) || 0 },
+        ],
+        renderRows: (rows, tbody) => {
+            renderDetailRows(rows, tbody);
+            const startDate = $("#startDate").val();
+            const endDate = $("#endDate").val();
+            $("#reportPeriod").text(`(${startDate} - ${endDate})`);
+            const summaryEl = document.getElementById('detailPivotSummary');
+            if (summaryEl) summaryEl.textContent = `Hiển thị ${rows.length}/${detailCache.length} sản phẩm`;
+            renderDetailMobile(rows);
+        },
+    });
+}
+
+function renderDetailMobile(filtered) {
+    const mobile = document.getElementById('detailMobileList');
+    if (!mobile) return;
+    if (!filtered.length) {
+        mobile.innerHTML = '<div class="text-center text-muted py-3">Không có dữ liệu</div>';
+        return;
+    }
+    mobile.innerHTML = filtered.map(item => `
+        <div class="mobile-card">
+            <div class="card-title">${escapeHtml(item.product_name || '')}</div>
+            <div class="card-row"><span class="label">Mã hàng</span><span class="value">${escapeHtml(item.product_code || '')}</span></div>
+            <div class="card-row"><span class="label">Nhập</span><span class="value">${item.import_quantity || 0} · ${formatCurrency(item.import_value || 0)}</span></div>
+            <div class="card-row"><span class="label">Xuất</span><span class="value">${item.export_quantity || 0} · ${formatCurrency(item.export_value || 0)}</span></div>
+            <div class="card-row"><span class="label">Tồn cuối</span><span class="value fw-bold text-success">${item.ending_quantity || 0} · ${formatCurrency(item.ending_value || 0)}</span></div>
+        </div>`).join('');
+}
+
+function renderDetailData(data) {
+    const filtered = filterDetailData(data);
+    if (detailTableCtrl) {
+        detailTableCtrl.setData(filtered);
+    } else {
+        renderDetailRows(filtered);
+        renderDetailMobile(filtered);
+    }
+}
+
+function applyDetailFilter() {
+    const q = $("#searchQuery").val().trim().toLowerCase();
+    let data = detailCache;
+    if (q) {
+        data = data.filter(item =>
+            (item.product_code || '').toLowerCase().includes(q) ||
+            (item.product_name || '').toLowerCase().includes(q)
+        );
+    }
+    renderDetailData(data);
+}
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat("vi-VN", { 
+        style: "decimal", 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+    }).format(value || 0);
+}
+// Chuyển dd/mm/yyyy → yyyy-mm-dd
+function formatDateToISO(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split("/");
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
+
+// Tải báo cáo - giữ nguyên logic POST như file js của bạn
+function loadReport() {
+    const startDate = $("#startDate").val();
+    const endDate = $("#endDate").val();
+    const searchQuery = $("#searchQuery").val().trim().toLowerCase();
+
+    if (!startDate || !endDate) {
+        alert("Vui lòng chọn đủ từ ngày và đến ngày!");
+        return;
+    }
+
+    $("#loadingIndicator").show();
+    $("#detailBody").html("");
+
+    $.ajax({
+        url: "/api/inventory/detail",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+            start_date: formatDateToISO(startDate),
+            end_date: formatDateToISO(endDate)
+        }),
+        success: function (res) {
+            $("#loadingIndicator").hide();
+
+            if (!res.success) {
+                alert(res.error || "Lỗi khi tải dữ liệu");
+                return;
+            }
+
+            let data = res.data || [];
+            detailCache = data;
+
+            // Lọc client-side theo search
+            if (searchQuery) {
+                data = data.filter(item =>
+                    (item.product_code || "").toLowerCase().includes(searchQuery) ||
+                    (item.product_name || "").toLowerCase().includes(searchQuery)
+                );
+            }
+
+            renderDetailData(data);
+        },
+        error: function () {
+            $("#loadingIndicator").hide();
+            alert("Lỗi khi kết nối server");
+        }
+    });
+}
+
+// Xuất Excel - giữ nguyên như file js của bạn
+async function exportToExcel() {
+    const table = document.querySelector("table");
+    if (!table) return alert("Không tìm thấy bảng!");
+
+    // Lấy giá trị ngày từ giao diện để đưa vào file Excel
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Ton Kho');
+
+    // --- 1. THÊM TÊN BÁO CÁO VÀ KỲ BÁO CÁO (Dòng 1 & 2) ---
+    const tenBaoCao = "BÁO CÁO NHẬP XUẤT TỒN";
+    
+    // Cập nhật dòng này để lấy ngày động
+    const kyBaoCao = `KỲ BÁO CÁO: Từ ngày ${startDate} đến ngày ${endDate}`; 
+
+    worksheet.mergeCells('A1:K1');
+    const row1 = worksheet.getCell('A1');
+    row1.value = tenBaoCao;
+    row1.font = { bold: true, size: 14, name: 'Calibri' };
+    row1.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells('A2:K2');
+    const row2 = worksheet.getCell('A2');
+    row2.value = kyBaoCao;
+    row2.font = { bold: true, size: 11, name: 'Calibri' };
+    row2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    // --- 2. THIẾT LẬP HEADER BẢNG (Đẩy xuống dòng 3 & 4) ---
+    worksheet.getCell('A3').value = 'MÃ HÀNG';
+    worksheet.getCell('B3').value = 'TÊN SẢN PHẨM';
+    worksheet.getCell('C3').value = 'ĐVT';
+    worksheet.getCell('D3').value = 'TỒN ĐẦU KỲ';
+    worksheet.getCell('F3').value = 'NHẬP TRONG KỲ';
+    worksheet.getCell('H3').value = 'XUẤT TRONG KỲ';
+    worksheet.getCell('J3').value = 'TỒN CUỐI KỲ';
+
+    worksheet.getRow(4).values = ['', '', '', 'SỐ LƯỢNG', 'GIÁ TRỊ', 'SỐ LƯỢNG', 'GIÁ TRỊ', 'SỐ LƯỢNG', 'GIÁ TRỊ', 'SỐ LƯỢNG', 'GIÁ TRỊ'];
+
+    worksheet.mergeCells('A3:A4');
+    worksheet.mergeCells('B3:B4');
+    worksheet.mergeCells('C3:C4');
+    worksheet.mergeCells('D3:E3');
+    worksheet.mergeCells('F3:G3');
+    worksheet.mergeCells('H3:I3');
+    worksheet.mergeCells('J3:K3');
+
+    // --- 3. ĐỔ DỮ LIỆU TỪ TABLE (Bắt đầu từ dòng 5) ---
+    const rows = Array.from(table.rows);
+    let currentRow = 5;
+
+    for (let i = 2; i < rows.length; i++) {
+        const cells = Array.from(rows[i].cells);
+        // Kiểm tra dòng dữ liệu, tránh dòng trống hoặc dòng thông báo "Không có dữ liệu"
+        if (cells.length < 11 || cells[0].innerText.includes("TỔNG") || cells[0].innerText.includes("Không có dữ liệu")) continue;
+
+        const rowData = worksheet.getRow(currentRow);
+        cells.forEach((cell, colIdx) => {
+            let val = cell.innerText.trim();
+            // Xử lý chuyển đổi số chuẩn VN (1.234.567,00 -> 1234567.00)
+            const numericRaw = val.replace(/\./g, '').replace(',', '.');
+            if (!isNaN(numericRaw) && val !== "" && !val.includes(':')) {
+                rowData.getCell(colIdx + 1).value = parseFloat(numericRaw);
+            } else {
+                rowData.getCell(colIdx + 1).value = val;
+            }
+        });
+        currentRow++;
+    }
+
+    // --- 4. TẠO DÒNG TỔNG CỘNG ---
+    const totalRowIdx = currentRow;
+    worksheet.mergeCells(`A${totalRowIdx}:C${totalRowIdx}`);
+    worksheet.getCell(`A${totalRowIdx}`).value = 'TỔNG CỘNG';
+
+    for (let col = 4; col <= 11; col++) {
+        let sum = 0;
+        for (let r = 5; r < totalRowIdx; r++) {
+            const val = worksheet.getCell(r, col).value;
+            if (typeof val === 'number') sum += val;
+        }
+        worksheet.getCell(totalRowIdx, col).value = sum;
+    }
+
+    // --- 5. ĐỊNH DẠNG STYLE VÀ CANH LỀ ---
+    const thinBorder = {
+        top: { style: 'thin' }, left: { style: 'thin' },
+        bottom: { style: 'thin' }, right: { style: 'thin' }
+    };
+
+    worksheet.eachRow({ includeEmpty: true }, function(row, rowNum) {
+        // Không kẻ khung cho tên báo cáo và kỳ báo cáo (dòng 1, 2)
+        if (rowNum <= 2) return;
+
+        row.eachCell({ includeEmpty: true }, function(cell, colNum) {
+            cell.border = thinBorder;
+            cell.alignment = { vertical: 'middle', wrapText: true };
+
+            if (rowNum === 3 || rowNum === 4) { // Header
+                cell.font = { bold: true, name: 'Calibri' };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+                cell.alignment.horizontal = 'center';
+            } else if (rowNum === totalRowIdx) { // Total row
+                cell.font = { bold: true };
+                cell.alignment.horizontal = (colNum >= 4) ? 'right' : 'center';
+            } else { // Data rows
+                if (colNum === 1 || colNum === 3) cell.alignment.horizontal = 'center';
+                else if (colNum === 2) cell.alignment.horizontal = 'left';
+                else cell.alignment.horizontal = 'right';
+            }
+
+            // Định dạng hiển thị số có dấu phân cách
+            if (rowNum >= 5 && colNum >= 4) {
+                cell.numFmt = (colNum % 2 === 0) ? '#,##0' : '#,##0.00';
+            }
+        });
+    });
+
+    // --- 6. ĐỘ RỘNG CỘT ---
+    worksheet.columns = [
+        { width: 12 }, { width: 45 }, { width: 10 }, 
+        { width: 14 }, { width: 18 }, { width: 14 }, { width: 18 },
+        { width: 14 }, { width: 18 }, { width: 14 }, { width: 18 }
+    ];
+
+    // --- 7. XUẤT FILE ---
+    // Tạo tên file chứa ngày tháng để người dùng dễ quản lý
+    const fileNameDate = startDate.replace(/\//g, '-') + '_to_' + endDate.replace(/\//g, '-');
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `BaoCao_NXT_${fileNameDate}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+// Khởi tạo Flatpickr + tự động load lần đầu
+document.addEventListener('DOMContentLoaded', () => {
+    initDetailTable();
+    document.getElementById('btnClearDetailColFilters')?.addEventListener('click', () => detailTableCtrl?.clearColumnFilters());
+    renderPivotChips(document.getElementById('viewModeChips'), DETAIL_PIVOT_ITEMS, detailFilter, val => {
+        detailFilter = val;
+        applyDetailFilter();
+    });
+    const today = new Date();
+    const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+
+    const fpConfig = {
+        dateFormat: "d/m/Y",
+        locale: "vn",
+        allowInput: true,
+        clickOpens: true,
+        onChange: function() {
+            if (document.getElementById('startDate').value && document.getElementById('endDate').value) {
+                loadReport();
+            }
+        }
+    };
+
+    flatpickr("#startDate", fpConfig).setDate(firstDayOfYear);
+    flatpickr("#endDate", fpConfig).setDate(today);
+
+    loadReport(); // Tự động tải lần đầu
+});
+</script>
+{% endblock %}

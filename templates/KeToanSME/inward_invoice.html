@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+{% block title %}Hóa Đơn Mua Hàng{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    .status-badge { 
+        width: 130px; 
+        font-size: 0.75rem; 
+        text-transform: uppercase; 
+        letter-spacing: 0.5px; 
+        padding: 6px 10px;
+    }
+    .table-v-center td { vertical-align: middle; }
+    .invoice-id { 
+        font-family: 'Monaco', 'Consolas', monospace; 
+        color: #0d6efd; 
+        font-weight: bold; 
+        cursor: pointer; 
+    }
+    .invoice-id:hover { text-decoration: underline; }
+    .balance-info {
+        font-size: 0.95rem;
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border-left: 4px solid #4f46e5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="text-primary fw-bold mb-0">Hóa Đơn Mua Hàng</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="#">Mua Hàng</a></li>
+                    <li class="breadcrumb-item active">Hóa đơn mua hàng</li>
+                </ol>
+            </nav>
+        </div>
+        <button class="btn btn-primary shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#syncModal">
+            <i class="fas fa-sync-alt me-2"></i>Đồng bộ hóa đơn mới
+        </button>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-0" style="border-left: 5px solid #ffc107 !important; background-color: #fff9e6;">
+        <div class="card-body d-flex align-items-center">
+            <div class="me-3">
+                <span style="font-size: 1.5rem;">⚠️</span>
+            </div>
+            <div>
+                <h6 class="card-title fw-bold text-warning mb-1" style="text-transform: uppercase; letter-spacing: 1px;">
+                    Hướng dẫn xử lý hóa đơn
+                </h6>
+                <p class="card-text text-dark mb-0">
+                    Chỉ <span class="badge bg-primary text-white p-1 px-2">Lập phiếu nhập</span> cho hàng mua để bán, sản xuất và tài sản cố định.
+                    <br>
+                    Đối với dịch vụ hoặc hàng dùng ngay như Dịch vụ ăn uống, văn phòng phẩm,...: Hãy nhấn nút <strong class="text-danger border-bottom border-danger">Hạch Toán</strong>.
+                    <br>
+                    Nếu hạch toán sai, hãy vào Danh Sách Phiếu Chi để sửa và hạch toán lại. Nếu đã lỡ Hạch Toán, nhưng muốn Lập Phiếu Nhập Kho thì xóa phiếu chi liên quan để Lập Phiếu Nhập. 
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body">
+            <form id="filterForm" class="row g-2">
+                <div class="col-md-3">
+                    <input type="text" name="keyword" class="form-control" placeholder="Tên NCC hoặc Số hóa đơn...">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" name="from_date" id="from_date" class="form-control datepicker" placeholder="Từ ngày">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" name="to_date" id="to_date" class="form-control datepicker" placeholder="Đến ngày">
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select" onchange="loadInvoices()">
+                        <option value="">-- Tất cả trạng thái --</option>
+                        <option value="new">Mới (Chờ xử lý)</option>
+                        <option value="imported">Đã nhập kho</option>
+                        <option value="hach_toan">Đã hạch toán</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" onclick="loadInvoices()" class="btn btn-primary w-100 fw-bold">Lọc dữ liệu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover table-v-center mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4 py-3">Ngày HĐ</th>
+                        <th>Số hóa đơn / Ký hiệu</th>
+                        <th>Nhà cung cấp / MST</th>
+                        <th class="text-end">Tổng tiền thanh toán</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th class="text-center pe-4">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="invoiceTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="syncModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-cloud-download-alt me-2"></i>Đồng bộ dữ liệu GDT</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <label class="form-label fw-bold">Chọn tháng muốn lấy hóa đơn:</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fas fa-calendar-alt text-primary"></i></span>
+                    <input type="text" id="syncMonth" class="form-control form-control-lg bg-white" readonly placeholder="Chọn tháng/năm...">
+                </div>
+                <div class="alert alert-info mt-3 small">
+                    <i class="fas fa-info-circle me-1"></i> Hệ thống sẽ kết nối với Tổng cục thuế và bỏ qua các hóa đơn đã tồn tại.
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" onclick="startSync()" class="btn btn-primary px-4 fw-bold">Bắt đầu quét</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="hachToanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="fw-bold text-warning"><i class="fas fa-file-invoice-dollar me-2"></i>Hạch Toán - Lập Phiếu Chi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="balance-info mb-3">
+                    <i class="fas fa-wallet"></i> Số dư hiện tại: 
+                    <span class="balance-cash">Tiền mặt: <strong id="htCashBalance">0 ₫</strong></span> | 
+                    <span class="balance-bank">Ngân hàng: <strong id="htBankBalance">0 ₫</strong></span>
+                </div>
+
+                <form id="hachToanForm">
+                    <input type="hidden" id="ht_invoice_id">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Ngày chi <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="ht_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Số Phiếu</label>
+                            <input type="text" class="form-control bg-light" value="Tự động" readonly>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Số hóa đơn cần thanh toán</label>
+                            <input type="text" class="form-control bg-light" id="ht_invoice_no" readonly>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Người nhận <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="ht_receiver" readonly>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Địa chỉ người nhận</label>
+                            <input type="text" class="form-control" id="ht_address">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Hình thức <span class="text-danger">*</span></label>
+                            <select class="form-select" id="ht_payment_method">
+                                <option value="cash">Tiền Mặt (111)</option>
+                                <option value="transfer" selected>Chuyển Khoản (112)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Loại chi phí <span class="text-danger">*</span></label>
+                            <select class="form-select" id="ht_expense_type">
+                                <option value="CP_DIEN">Tiền điện</option>
+                                <option value="CP_NUOC">Tiền nước</option>
+                                <option value="CP_VT">Cước viễn thông</option>
+                                <option value="CP_MB">Tiền thuê mặt bằng</option>
+                                <option value="CP_VPP">Văn phòng phẩm</option>
+                                <option value="CP_BHXH">Bảo Hiểm Xã Hội</option>
+                                <option value="CP_BHYT">Bảo Hiểm Y Tế</option>
+                                <option value="CP_BHTN">Bảo Hiểm Thất Nghiệp</option>
+                                <option value="CP_KHAC" selected>Khác</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Số tiền (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="text" id="ht_amount_input" class="form-control fw-bold text-danger fs-5" required placeholder="0">
+                            <input type="hidden" id="ht_amount_actual">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Lý do chi</label>
+                            <textarea class="form-control" id="ht_reason" rows="2"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" id="btnSaveHachToan" class="btn btn-warning px-4 fw-bold">LƯU & IN PHIẾU CHI</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
+
+<script>
+// ====================== UTILITY ======================
+let currentCashBalance = 0;
+let currentBankBalance = 0;
+
+function formatMoneyInput(inputSelector, hiddenSelector) {
+    $(inputSelector).on('input', function() {
+        let value = this.value.replace(/\D/g, '');
+        let numeric = value ? parseInt(value, 10) : 0;
+        if (hiddenSelector) $(hiddenSelector).val(numeric);
+        this.value = numeric ? numeric.toLocaleString('vi-VN') : '';
+    }).on('focus', function() {
+        if (this.value === '0') this.select();
+    });
+}
+
+async function loadQuySoDu() {
+    try {
+        const res = await fetch('/api/quy-so-du');
+        const data = await res.json();
+        if (data.success) {
+            currentCashBalance = parseFloat(data.so_du_tien_mat || 0);
+            currentBankBalance = parseFloat(data.so_du_ngan_hang || 0);
+            $('#htCashBalance').text(currentCashBalance.toLocaleString('vi-VN') + ' ₫');
+            $('#htBankBalance').text(currentBankBalance.toLocaleString('vi-VN') + ' ₫');
+        }
+    } catch (e) { console.error(e); }
+}
+
+function checkSoDu(amount, paymentMethod) {
+    const isCash = paymentMethod === 'cash' || paymentMethod.includes('111');
+    const available = isCash ? currentCashBalance : currentBankBalance;
+    if (amount > available) {
+        return { 
+            ok: false, 
+            message: `Số tiền chi (${amount.toLocaleString('vi-VN')} ₫) vượt quá số dư ${isCash ? 'tiền mặt' : 'ngân hàng'} (${available.toLocaleString('vi-VN')} ₫).` 
+        };
+    }
+    return { ok: true };
+}
+
+// ====================== LOAD DANH SÁCH ======================
+document.addEventListener('DOMContentLoaded', function() {
+    flatpickr(".datepicker", { 
+        locale: "vn", 
+        dateFormat: "Y-m-d", 
+        altInput: true, 
+        altFormat: "d/m/Y" 
+    });
+
+    flatpickr("#syncMonth", {
+        locale: "vn",
+        plugins: [new monthSelectPlugin({ shorthand: true, dateFormat: "m/Y", altFormat: "Tháng m, Y" })],
+        defaultDate: new Date()
+    });
+
+    formatMoneyInput('#ht_amount_input', '#ht_amount_actual');
+    loadInvoices();
+});
+
+async function loadInvoices() {
+    const filterForm = document.getElementById('filterForm');
+    const formData = new FormData(filterForm);
+    const params = new URLSearchParams(formData).toString();
+
+    const tbody = document.getElementById('invoiceTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+
+    try {
+        const response = await fetch(`/api/invoices/inward?${params}`);
+        const result = await response.json();
+
+        if (!result.success) throw new Error(result.error || 'Lỗi từ server');
+
+        const data = result.data || [];
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Không tìm thấy dữ liệu hóa đơn</td></tr>';
+            return;
+        }
+
+        let html = '';
+        data.forEach(inv => {
+            // SỬA LỖI TẠI ĐÂY: Xử lý hiển thị ngày dạng Việt Nam (DD/MM/YYYY) bằng đối tượng Date
+            let dateVN = '—';
+            if (inv.date) {
+                const dateObj = new Date(inv.date);
+                if (!isNaN(dateObj.getTime())) {
+                    const day = String(dateObj.getDate()).padStart(2, '0');
+                    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const year = dateObj.getFullYear();
+                    dateVN = `${day}/${month}/${year}`;
+                }
+            }
+            
+            const pdfUrl = inv.pdf_url || '#';
+            const sellerAddress = inv.address || '';
+            
+            const isImported = inv.has_import === 1;
+            const isHachToan = inv.has_hach_toan === true || inv.has_accounted === 1 || inv.status === 'accounted';
+            const isProcessed = isImported || isHachToan;
+
+            // Xác định Badge trạng thái
+            let statusHtml = '';
+            if (isImported) {
+                statusHtml = '<span class="badge bg-success-subtle text-success border border-success status-badge">ĐÃ NHẬP KHO</span>';
+            } else if (isHachToan) {
+                statusHtml = '<span class="badge bg-info-subtle text-info border border-info status-badge">ĐÃ HẠCH TOÁN</span>';
+            } else {
+                statusHtml = '<span class="badge bg-warning-subtle text-warning border border-warning status-badge">CHỜ XỬ LÝ</span>';
+            }
+
+            // Action Buttons: Khóa nếu đã xử lý
+            let actionHtml = '';
+            if (isProcessed) {
+                actionHtml = `
+                    <button class="btn btn-sm btn-outline-secondary px-3 opacity-50" disabled style="cursor: not-allowed;">
+                        <i class="fas fa-lock me-1"></i> Đã xử lý
+                    </button>
+                `;
+            } else {
+                actionHtml = `
+                    <button class="btn btn-sm btn-primary shadow-sm px-3 fw-bold me-1" onclick="goToImport('${inv.id}')">
+                        <i class="fas fa-plus me-1"></i> Lập Phiếu Nhập
+                    </button>
+                    <button class="btn btn-sm btn-warning shadow-sm px-3 fw-bold" 
+                            onclick="goToServiceImport('${inv.id}')">
+                        <i class="fas fa-calculator me-1"></i> Hạch Toán
+                    </button>
+                `;
+            }
+
+            // Render dòng bảng
+            html += `
+                <tr class="align-middle ${isProcessed ? 'bg-light' : ''}">
+                    <td class="ps-4">
+                        <div class="${isProcessed ? 'text-muted' : 'text-dark'} small fw-bold">${dateVN}</div>
+                    </td>
+                    <td>
+                        <div class="invoice-id" 
+                             style="cursor: pointer; color: #0d6efd; text-decoration: underline; font-weight: bold;" 
+                             onclick="viewPdfById(${inv.id})">
+                             ${inv.invoice_no || '—'}
+                        </div>
+                        <div class="text-muted" style="font-size: 0.75rem;">KH: ${inv.serial || '—'}</div>
+                    </td>
+                    <td>
+                        <div class="fw-bold ${isProcessed ? 'text-muted' : ''}" style="font-size: 0.9rem;">${inv.seller_name || '—'}</div>
+                        <div class="text-muted small"><i class="fas fa-fingerprint me-1"></i>${inv.seller_tax_code || '—'}</div>
+                    </td>
+                    <td class="text-end fw-bold ${isProcessed ? 'text-muted' : 'text-dark'} pe-4">
+                        ${new Intl.NumberFormat('vi-VN', {style: 'currency', currency: 'VND'}).format(inv.total || 0)}
+                    </td>
+                    <td class="text-center">${statusHtml}</td>
+                    <td class="text-center pe-4">${actionHtml}</td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+
+    } catch (err) {
+        console.error("Lỗi loadInvoices:", err);
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-danger">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
+    }
+}
+
+// ====================== XEM PDF - KHÔNG TỰ ĐỘNG DOWNLOAD ======================
+function viewPdfById(invoiceId) {
+    if (!invoiceId) {
+        Swal.fire('Thông báo', 'Không tìm thấy hóa đơn này.', 'info');
+        return;
+    }
+    window.open(`/api/invoices/inward/${invoiceId}/pdf`, '_blank');
+}
+
+async function viewPdf(pdfUrl) {
+    if (!pdfUrl || pdfUrl === '#' || pdfUrl === '') {
+        Swal.fire('Thông báo', 'Không tìm thấy link PDF cho hóa đơn này.', 'info');
+        return;
+    }
+
+    if (pdfUrl.includes('/api/view-pdf')) {
+        window.open(pdfUrl, '_blank');
+        return;
+    }
+
+    try {
+        const proxyUrl = `/api/view-pdf?url=${encodeURIComponent(pdfUrl)}`;
+        window.open(proxyUrl, '_blank');
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Lỗi', 'Không thể mở PDF. Vui lòng thử lại sau.', 'error');
+    }
+}
+
+function goToImport(invoiceId) {
+    window.location.href = `/import?invoice_id=${invoiceId}`;
+}
+
+function goToServiceImport(invoiceId) {
+    window.location.href = `/import?invoice_id=${invoiceId}&mode=service`;
+}
+
+// ====================== MODAL HẠCH TOÁN ======================
+async function openHachToanModal(invoiceId, invoiceNo, sellerName, sellerAddress, totalAmount) {
+    $('#ht_invoice_id').val(invoiceId);
+    $('#ht_invoice_no').val(invoiceNo);
+    $('#ht_receiver').val(sellerName || 'Nhà cung cấp');
+    $('#ht_address').val(sellerAddress || '');
+    $('#ht_reason').val(`Thanh toán cho hóa đơn số: ${invoiceNo}`);
+
+    $('#ht_amount_input').val(totalAmount.toLocaleString('vi-VN'));
+    $('#ht_amount_actual').val(totalAmount);
+
+    await loadQuySoDu();
+
+    flatpickr("#ht_date", {
+        dateFormat: "d/m/Y",
+        locale: "vn",
+        allowInput: true,
+        defaultDate: "today"
+    });
+
+    $('#hachToanModal').modal('show');
+}
+
+// Lưu phiếu chi
+$('#btnSaveHachToan').on('click', async function() {
+    const amount = parseFloat($('#ht_amount_actual').val() || 0);
+    if (amount <= 0) return Swal.fire('Lỗi', 'Số tiền phải lớn hơn 0', 'error');
+
+    const paymentMethod = $('#ht_payment_method').val();
+    const check = checkSoDu(amount, paymentMethod);
+    if (!check.ok) return Swal.fire({ icon: 'error', title: 'Không đủ số dư', html: check.message });
+
+    const dateStr = $('#ht_date').val();
+    if (!dateStr) return Swal.fire('Lỗi', 'Vui lòng chọn ngày chi', 'error');
+
+    const payload = {
+        receiver: $('#ht_receiver').val().trim(),
+        address: $('#ht_address').val().trim(),
+        amount: amount,
+        payment_method: paymentMethod,
+        expense_type: $('#ht_expense_type').val(),
+        reason: $('#ht_reason').val().trim(),
+        bill_no: $('#ht_invoice_no').val(),
+        date: dateStr.split('/').reverse().join('-')
+    };
+
+    Swal.showLoading();
+
+    try {
+        const res = await fetch('/api/expense/create-other', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+            $('#hachToanModal').modal('hide');
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công!',
+                text: `Đã tạo phiếu chi ${result.voucher_no || ''}`,
+                timer: 2000
+            }).then(() => {
+                loadInvoices();
+                if (result.id) window.open(`/PhieuChi/in/${result.id}`, '_blank');
+            });
+        } else {
+            Swal.fire('Lỗi', result.error || 'Không thể tạo phiếu chi', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Lỗi kết nối', 'Không thể kết nối server', 'error');
+    }
+});
+
+// Đồng bộ
+function startSync() {
+    const fp = document.getElementById('syncMonth')._flatpickr;
+    const monthValue = fp.input.value;
+    Swal.fire({ 
+        title: 'Đang kết nối GDT...', 
+        html: `Đang quét hóa đơn tháng <b>${monthValue}</b>`, 
+        allowOutsideClick: false, 
+        didOpen: () => Swal.showLoading() 
+    });
+
+    fetch('/api/invoices/sync-gdt', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ month: monthValue })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            Swal.fire('Thành công!', `Đã thêm ${res.count || 0} hóa đơn mới.`, 'success')
+                .then(() => { 
+                    bootstrap.Modal.getInstance(document.getElementById('syncModal')).hide(); 
+                    loadInvoices(); 
+                });
+        } else {
+            Swal.fire('Thất bại', res.error || 'Lỗi', 'error');
+        }
+    })
+    .catch(() => Swal.fire('Lỗi kết nối', 'Không thể kết nối server', 'error'));
+}
+</script>
+{% endblock %}

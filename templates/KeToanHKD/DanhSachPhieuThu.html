@@ -1,0 +1,466 @@
+{% extends "base.html" %}
+{% block title %}Quản Lý Phiếu Thu{% endblock %}
+
+{% block head_extra %}
+    {% include 'partials/data_list_table_assets.html' %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root { --primary-color: #4f46e5; --success-color: #10b981; --danger-color: #ef4444; --warning-color: #f59e0b; }
+        body { background-color: #f3f4f6; }
+        .form-control, .btn, .form-select { border-radius: 8px !important; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .amount-display { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #15803d; font-size: 0.95rem; }
+        .btn-text-action { font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
+        .flatpickr-calendar { z-index: 1060 !important; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h3 class="fw-bold text-primary mb-1">Danh Sách Phiếu Thu</h3>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Trang chủ</a></li>
+                    <li class="breadcrumb-item active fw-semibold text-primary">Phiếu Thu</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button id="btnCreateReceipt" class="btn btn-success fw-bold px-4 shadow-sm">
+                <i class="bi bi-plus-lg me-2"></i>Lập Phiếu Thu
+            </button>
+            <button id="btnRenumberReceipts" class="btn btn-outline-warning fw-bold px-4 shadow-sm">
+                <i class="bi bi-arrow-repeat me-2"></i>Đánh Lại Số Phiếu
+            </button>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Khoảng thời gian</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control text-center" id="startDate" placeholder="Từ ngày" readonly>
+                        <span class="input-group-text bg-light border-x-0"><i class="bi bi-arrow-right"></i></span>
+                        <input type="text" class="form-control text-center" id="endDate" placeholder="Đến ngày" readonly>
+                    </div>
+                </div>
+                <div class="col-lg-5 col-md-8">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Tìm kiếm</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" id="searchKeyword" class="form-control" placeholder="Tìm theo người nộp, lý do, số phiếu...">
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 d-flex align-items-end">
+                    <button class="btn btn-primary w-100 fw-bold" id="btnFilter">
+                        <i class="bi bi-funnel me-2"></i>LỌC
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="receiptTable">
+                <thead><tr></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="enhanced-table-toolbar">
+                <span class="text-muted small">Hiển thị <strong id="totalCount">0</strong> / <strong id="totalAllCount">0</strong> phiếu thu</span>
+                <span id="activeColFilters" class="active-filters-badge d-none"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearColFilters">Xóa lọc cột</button>
+            </div>
+            <div id="loadingStatus" class="d-none">
+                <span class="spinner-border spinner-border-sm text-success me-2"></span> Đang tải...
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="fw-bold text-success" id="receiptModalTitle">
+                    <i class="bi bi-receipt-cutoff me-2"></i>Lập Phiếu Thu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="receiptForm" class="needs-validation" novalidate>
+                <input type="hidden" id="receipt_id">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Ngày thu <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="receipt_date" required>
+                            <div class="invalid-feedback">Vui lòng chọn ngày thu.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Số Phiếu</label>
+                            <input type="text" class="form-control bg-light" id="display_voucher_no" readonly placeholder="Tự động...">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Người nộp tiền <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="payer_name" required>
+                            <div class="invalid-feedback">Vui lòng nhập tên người nộp tiền.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Địa chỉ</label>
+                            <input type="text" class="form-control" id="address">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Tài khoản Nợ <span class="text-danger">*</span></label>
+                            <select class="form-select" id="debit_account" required>
+                                <option value="">Chọn tài khoản...</option>
+                                <option value="111">111 - Tiền mặt</option>
+                                <option value="112">112 - Tiền gửi ngân hàng</option>
+                            </select>
+                            <div class="invalid-feedback">Vui lòng chọn tài khoản Nợ.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Tài khoản Có <span class="text-danger">*</span></label>
+                            <select class="form-select" id="credit_account" required>
+                                <option value="">Chọn tài khoản...</option>
+                                <option value="411">411 - Chủ Nộp Quỹ</option>
+                                <option value="341">341 - Vốn Vay</option>
+                                <option value="511">511 - Doanh Thu</option>
+                                <option value="131">131 - Phải Thu Khách Hàng</option>
+                                <option value="156">156 - Hàng Hóa</option>
+                            </select>
+                            <div class="invalid-feedback">Vui lòng chọn tài khoản Có.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Số tiền (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="text" id="amount_display" class="form-control fw-bold text-success fs-5" required placeholder="0">
+                            <input type="hidden" id="amount_actual">
+                            <div class="invalid-feedback">Vui lòng nhập số tiền hợp lệ và lớn hơn 0.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Lý do thu <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="reason" rows="2" required></textarea>
+                            <div class="invalid-feedback">Vui lòng nhập lý do thu tiền.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Kèm theo (chứng từ gốc)</label>
+                            <input type="text" class="form-control" id="reference_document" placeholder="Số hóa đơn / phiếu xuất kho / ...">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success px-5 fw-bold" id="btnSaveReceipt">
+                        <span id="saveText">LƯU & IN PHIẾU</span>
+                        <span id="saveLoading" class="d-none spinner-border spinner-border-sm"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+<script>
+let currentReceipts = [];
+let receiptTableCtrl = null;
+let receiptDatePicker;
+
+function renderReceiptRows(data, tbody) {
+    const $tbody = tbody ? $(tbody) : $('#receiptTable tbody');
+    $tbody.empty();
+    data.forEach(item => {
+        const mainTitle = item.company_name || item.payer_name || 'Bán cho người tiêu dùng';
+        const subNote = (item.company_name && item.payer_name && item.payer_name !== item.company_name)
+            ? `<div class="text-muted small" style="font-size: 11px; margin-top: 2px;">Người mua: ${item.payer_name}</div>` : '';
+        $tbody.append(`
+        <tr>
+            <td class="fw-bold text-success">${item.voucher_no || ''}</td>
+            <td class="text-center small text-secondary">${item.date ? flatpickr.formatDate(new Date(item.date), "d/m/Y") : ''}</td>
+            <td><div class="fw-semibold text-dark">${mainTitle}</div>${subNote}</td>
+            <td class="small text-muted text-truncate" title="${(item.reason || '').replace(/"/g,'&quot;')}">${item.reason || ''}</td>
+            <td class="text-end amount-display">${parseFloat(item.amount || 0).toLocaleString('vi-VN')} ₫</td>
+            <td class="text-center"><span class="badge bg-info-subtle text-info">${item.debit_account}</span></td>
+            <td class="text-center"><span class="badge bg-success-subtle text-success">${item.credit_account}</span></td>
+            <td class="text-center">
+                <div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-text-action btn-outline-success" onclick="printReceipt(${item.id})">In</button>
+                    <button class="btn btn-text-action btn-outline-warning" onclick="editReceipt(${item.id})">Sửa</button>
+                </div>
+            </td>
+        </tr>`);
+    });
+}
+
+function initReceiptTable() {
+    receiptTableCtrl = DataListTable.create({
+        table: '#receiptTable',
+        countSelector: '#totalCount',
+        activeFiltersSelector: '#activeColFilters',
+        defaultSort: { key: 'date', dir: 'desc' },
+        columns: [
+            { key: 'voucher_no', label: 'Số Phiếu', sortable: true, filterType: 'text', width: '120px',
+              getValue: r => r.voucher_no || '', sortValue: r => parseInt(r.voucher_no?.replace('PT', '') || '0', 10) },
+            { key: 'date', label: 'Ngày Thu', sortable: true, filterType: 'date', width: '110px', align: 'center',
+              getValue: r => r.date || '', sortValue: r => r.date ? new Date(r.date) : new Date(0) },
+            { key: 'payer', label: 'Người Nộp / Đơn vị', filterType: 'text', width: '280px',
+              getValue: r => `${r.company_name || ''} ${r.payer_name || ''}`.trim() },
+            { key: 'reason', label: 'Lý Do Thu', filterType: 'text', width: '220px', getValue: r => r.reason || '' },
+            { key: 'amount', label: 'Số Tiền', sortable: true, filterType: 'number', width: '140px', align: 'end',
+              getValue: r => r.amount, sortValue: r => parseFloat(r.amount || 0) },
+            { key: 'debit_account', label: 'TK Nợ', filterType: 'text', width: '90px', align: 'center', getValue: r => r.debit_account || '' },
+            { key: 'credit_account', label: 'TK Có', filterType: 'text', width: '90px', align: 'center', getValue: r => r.credit_account || '' },
+            { key: 'actions', label: 'Hành Động', filter: false, sortable: false, resizable: false, width: '180px', align: 'center' },
+        ],
+        renderRows: renderReceiptRows,
+        onFiltered: (rows, total) => { $('#totalAllCount').text(total); },
+    });
+}
+
+function getReceiptModal() {
+    return bootstrap.Modal.getOrCreateInstance(document.getElementById('receiptModal'));
+}
+
+// --------------------- UTILITIES ---------------------
+function getDateFromInput(selector) {
+    const val = $(selector).val()?.trim();
+    if (!val) return null;
+    const parts = val.split('/');
+    if (parts.length !== 3) return null;
+    return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+}
+
+function formatMoneyInput(displaySelector, hiddenSelector) {
+    const $display = $(displaySelector);
+    $display.on('input', function() {
+        let val = this.value.replace(/\D/g, '');
+        let num = val ? parseInt(val, 10) : 0;
+        $(hiddenSelector).val(num);
+        this.value = num ? num.toLocaleString('vi-VN') : '';
+    });
+
+    $display.on('focus', function() {
+        if (this.value === '0') {
+            this.value = '';
+        }
+    });
+}
+
+function printReceipt(id) {
+    window.open(`/PhieuThu/in/${id}`, '_blank');
+}
+
+// --------------------- DATA HANDLING ---------------------
+async function loadReceipts() {
+    $('#loadingStatus').removeClass('d-none');
+    const params = new URLSearchParams();
+    const start = getDateFromInput('#startDate');
+    const end = getDateFromInput('#endDate');
+    if (start) params.append('start', start);
+    if (end) params.append('end', end);
+    
+    const q = $('#searchKeyword').val()?.trim();
+    if (q) params.append('q', q);
+
+    try {
+        const res = await fetch(`/api/receipt?${params.toString()}`);
+        currentReceipts = (await res.json()).map(item => ({
+            ...item,
+            voucherSeq: parseInt(item.voucher_no?.replace('PT', '') || '0', 10),
+            dateObj: item.date ? new Date(item.date) : null,
+        }));
+        receiptTableCtrl.setData(currentReceipts);
+        $('#totalAllCount').text(currentReceipts.length);
+    } catch (err) {
+        console.error(err);
+    } finally {
+        $('#loadingStatus').addClass('d-none');
+    }
+}
+
+// --------------------- ACTIONS ---------------------
+async function editReceipt(id) {
+    try {
+        const res = await fetch(`/api/receipt/${id}`);
+        const item = await res.json();
+
+        // Xóa class validation cũ nếu có trước khi mở modal sửa
+        $('#receiptForm').removeClass('was-validated');
+
+        $('#receiptModalTitle').html('<i class="bi bi-pencil-square me-2"></i>Sửa Phiếu Thu');
+        $('#receipt_id').val(item.id);
+        $('#display_voucher_no').val(item.voucher_no);
+        
+        if (item.date) {
+            const d = new Date(item.date);
+            receiptDatePicker.setDate(d);
+        }
+
+        $('#payer_name').val(item.payer_name);
+        $('#address').val(item.address || '');
+        $('#reason').val(item.reason);
+        $('#reference_document').val(item.reference_document || '');
+        $('#amount_display').val(parseFloat(item.amount).toLocaleString('vi-VN'));
+        $('#amount_actual').val(item.amount);
+        $('#debit_account').val(item.debit_account);
+        $('#credit_account').val(item.credit_account);
+
+        getReceiptModal().show();
+    } catch (err) {
+        Swal.fire('Lỗi', 'Không thể tải thông tin', 'error');
+    }
+}
+
+async function deleteReceipt(id) {
+    const result = await Swal.fire({
+        title: 'Xác nhận xóa?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
+    });
+    if (!result.isConfirmed) return;
+    try {
+        await fetch(`/api/receipt/delete/${id}`, { method: 'DELETE' });
+        loadReceipts();
+        Swal.fire('Đã xóa', '', 'success');
+    } catch (err) { console.error(err); }
+}
+
+// --------------------- INITIALIZATION ---------------------
+$(document).ready(function() {
+    const fpOptions = { dateFormat: "d/m/Y", locale: "vn", allowInput: false };
+    flatpickr("#startDate", fpOptions).setDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    flatpickr("#endDate", fpOptions).setDate(new Date());
+    receiptDatePicker = flatpickr("#receipt_date", { ...fpOptions, defaultDate: "today" });
+    
+    initReceiptTable();
+    $('#btnClearColFilters').on('click', () => receiptTableCtrl?.clearColumnFilters());
+
+    formatMoneyInput('#amount_display', '#amount_actual');
+
+    $('#btnCreateReceipt').on('click', () => {
+        // Xóa class validation cũ để form sạch sẽ khi tạo mới
+        $('#receiptForm').removeClass('was-validated');
+        
+        $('#receiptForm')[0].reset();
+        $('#receipt_id').val('');
+        $('#display_voucher_no').val('');
+        $('#amount_actual').val(0);
+        $('#amount_display').val('');
+        receiptDatePicker.setDate(new Date());
+        $('#receiptModalTitle').html('<i class="bi bi-receipt-cutoff me-2"></i>Lập Phiếu Thu');
+        getReceiptModal().show();
+    });
+
+    $('#receiptForm').on('submit', async function(e) {
+        e.preventDefault();
+        
+        const form = this;
+        const amountActual = parseInt($('#amount_actual').val() || 0, 10);
+
+        // Kiểm tra xem số tiền có hợp lệ không (phải lớn hơn 0)
+        if (isNaN(amountActual) || amountActual <= 0) {
+            $('#amount_display').val(''); // Reset text để kích hoạt trạng thái invalid của HTML5
+            $('#amount_actual').val(0);
+        }
+
+        // Nếu form không vượt qua được kiểm tra bắt buộc của các thẻ HTML5
+        if (!form.checkValidity()) {
+            e.stopPropagation();
+            $(form).addClass('was-validated'); // Kích hoạt hiển thị lỗi viền đỏ và text lỗi cho từng ô của Bootstrap 5
+            return;
+        }
+
+        // Bật trạng thái Loading cho nút bấm
+        $('#saveText').addClass('d-none');
+        $('#saveLoading').removeClass('d-none');
+        $('#btnSaveReceipt').prop('disabled', true);
+
+        const id = $('#receipt_id').val();
+        const payload = {
+            date: getDateFromInput('#receipt_date'),
+            payer_name: $('#payer_name').val().trim(),
+            address: $('#address').val().trim(),
+            reason: $('#reason').val().trim(),
+            amount: amountActual,
+            credit_account: $('#credit_account').val(),
+            debit_account: $('#debit_account').val(),
+            reference_document: $('#reference_document').val().trim()
+        };
+
+        const url = id ? `/api/receipt/${id}` : '/api/receipt/create';
+        const method = id ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            
+            if (result.success) {
+                getReceiptModal().hide();
+                loadReceipts();
+                printReceipt(result.id || id);
+            } else {
+                Swal.fire('Lỗi', result.error || 'Đã có lỗi xảy ra khi lưu dữ liệu.', 'error');
+            }
+        } catch (err) { 
+            console.error(err); 
+            Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ VPS.', 'error');
+        } finally {
+            // Tắt trạng thái Loading
+            $('#saveText').removeClass('d-none');
+            $('#saveLoading').addClass('d-none');
+            $('#btnSaveReceipt').prop('disabled', false);
+        }
+    });
+
+    $('#searchKeyword').on('input', _.debounce(loadReceipts, 400));
+    $('#btnFilter').on('click', loadReceipts);
+
+    $('#btnRenumberReceipts').on('click', async function() {
+        const result = await Swal.fire({
+            title: 'Đánh lại số phiếu thu?',
+            html: `Hệ thống sẽ sắp xếp theo <strong>ngày thu</strong> và đánh số liên tục từ <strong>PT000001</strong>.<br>
+                   <span class="text-danger fw-bold">Cảnh báo: Số phiếu cũ sẽ bị thay đổi vĩnh viễn!</span>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý đánh lại',
+            cancelButtonText: 'Hủy',
+        });
+        if (!result.isConfirmed) return;
+        Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        try {
+            const res = await fetch('/api/receipt/renumber', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                Swal.fire('Thành công!', data.message || `Đã đánh lại số cho ${data.count || ''} phiếu thu`, 'success');
+                loadReceipts();
+            } else {
+                Swal.fire('Lỗi', data.message || 'Không thể thực hiện', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Lỗi kết nối', 'Không thể kết nối server', 'error');
+        }
+    });
+
+    loadReceipts();
+});
+</script>
+{% endblock %}

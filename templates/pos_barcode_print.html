@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>In Mã Vạch Từ Máy Tính Tiền</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        @page { size: A4; margin: 8mm; }
+        .label-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+        .label { width: 48mm; height: 25mm; border: 1px dashed #ccc; padding: 2mm; text-align: center; background: white; }
+        .barcode { width: 100%; height: 40px; margin: 4px 0; }
+        .name { font-weight: bold; font-size: 10px; white-space: nowrap; overflow: hidden; }
+        .price { font-weight: bold; color: #d32f2f; font-size: 12px; }
+        @media print { body { margin: 0; } .no-print { display: none; } }
+    </style>
+</head>
+<body class="bg-gray-100">
+<div class="container mx-auto p-6 max-w-5xl">
+    <h1 class="text-3xl font-bold text-center mb-6 text-indigo-700">IN MÃ VẠCH TỪ MÁY TÍNH TIỀN</h1>
+
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input type="text" id="barcodeInput" placeholder="Nhập mã sản phẩm (hoặc mã vạch)" class="input input-bordered w-full">
+            <input type="number" id="quantityInput" value="1" min="1" class="input input-bordered w-full">
+            <button onclick="addToPrintList()" class="btn btn-success">Thêm vào danh sách</button>
+        </div>
+    </div>
+
+    <div id="printList" class="space-y-2 mb-6"></div>
+
+    <div class="text-center space-x-4">
+        <button onclick="printLabels()" class="btn btn-primary btn-lg">IN NGAY (Tommy 40 tem)</button>
+        <button onclick="clearList()" class="btn btn-warning">Xóa danh sách</button>
+    </div>
+
+    <div id="printArea" class="no-print"></div>
+</div>
+
+<script>
+let printItems = [];
+
+async function getProductInfo(code) {
+    try {
+        const res = await fetch(`/api/products?q=${code}&limit=1`);
+        const json = await res.json();
+        const p = Array.isArray(json) ? json[0] : (json.data?.[0] || null);
+        if (!p) throw new Error("Không tìm thấy");
+        return p;
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không tìm thấy sản phẩm: ' + code, 'error');
+        return null;
+    }
+}
+
+async function addToPrintList() {
+    const code = document.getElementById('barcodeInput').value.trim();
+    const qty = parseInt(document.getElementById('quantityInput').value) || 1;
+    if (!code) return;
+
+    const prod = await getProductInfo(code);
+    if (!prod) return;
+
+    const retail_price = parseFloat(prod.base_price || prod.price || 0);
+    const wholesale_price = parseFloat(prod.price || 0);
+    const ratio = parseFloat(prod.unit_ratio || 1);
+
+    // Hỏi in loại nào
+    const choice = await Swal.fire({
+        title: `In mã vạch cho: ${prod.name}`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: `In ${qty} tem ${prod.unit} (Lẻ - ${retail_price.toLocaleString()}đ)`,
+        cancelButtonText: prod.unit1 && ratio > 1 ? `In ${Math.floor(qty/ratio)} tem ${prod.unit1} (Sỉ - ${wholesale_price.toLocaleString()}đ)` : null,
+        allowOutsideClick: false
+    });
+
+    if (choice.isConfirmed || choice.isDismissed) {
+        // In lẻ
+        for (let i = 0; i < qty; i++) {
+            printItems.push({
+                code: prod.product_id,
+                name: prod.name,
+                unit: prod.unit,
+                price: retail_price
+            });
+        }
+    } else if (choice.isDenied && prod.unit1 && ratio > 1) {
+        // In sỉ
+        const large_qty = Math.floor(qty / ratio);
+        for (let i = 0; i < large_qty; i++) {
+            printItems.push({
+                code: prod.product_id + "1",
+                name: prod.name,
+                unit: prod.unit1,
+                price: wholesale_price
+            });
+        }
+    }
+
+    renderPrintList();
+    document.getElementById('barcodeInput').value = '';
+    document.getElementById('barcodeInput').focus();
+}
+
+function renderPrintList() {
+    const div = document.getElementById('printList');
+    div.innerHTML = printItems.length === 0 
+        ? '<p class="text-gray-500 text-center">Chưa có tem nào</p>'
+        : `<div class="alert alert-info">Đã thêm ${printItems.length} tem. Nhấn <strong>IN NGAY</strong> để in</div>`;
+}
+
+function clearList() {
+    printItems = [];
+    renderPrintList();
+}
+
+function printLabels() {
+    if (printItems.length === 0) return;
+
+    let html = `<h2 class="text-center my-4">IN ${printItems.length} TEM - ${new Date().toLocaleString('vi-VN')}</h2><table style="width:100%;border-collapse:collapse;">`;
+    printItems.forEach((item, idx) => {
+        if (idx % 4 === 0) html += idx === 0 ? '<tr>' : '</tr><tr>';
+        html += `
+        <td style="width:25%;height:25mm;padding:2mm;vertical-align:top;">
+            <div style="border:1px dashed #999;width:48mm;height:23mm;padding:2mm;background:white;text-align:center;font-size:11px;">
+                <svg class="barcode" id="printbc-${idx}"></svg>
+                <div style="font-weight:bold;white-space:nowrap;overflow:hidden;">${item.name}</div>
+                <div>${item.unit}</div>
+                <div style="color:#d32f2f;font-weight:bold;">${item.price.toLocaleString('vi-VN')}đ</div>
+                <div style="font-family:monospace;font-size:9px;">${item.code}</div>
+            </div>
+        </td>`;
+    });
+    html += '</tr></table>';
+
+    const area = document.getElementById('printArea');
+    area.innerHTML = html;
+    printItems.forEach((item, idx) => {
+        JsBarcode(`#printbc-${idx}`, item.code, { format: "CODE128", width: 1.8, height: 40, displayValue: false });
+    });
+
+    setTimeout(() => window.print(), 500);
+}
+</script>
+</body>
+</html>

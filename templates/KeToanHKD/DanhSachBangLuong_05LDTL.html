@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .card-stats { border-left: 4px solid #0d6efd; background-color: #fcfcfc; }
+    .table thead { background-color: #f8f9fa; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
+    .btn-action { width: 110px; }
+    .badge-insurance { font-size: 0.72rem; padding: 0.4em 0.7em; }
+    .section-title { font-size: 0.9rem; color: #495057; background: #f8f9fa; padding: 5px 10px; border-radius: 4px; }
+</style>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-primary"><i class="fas fa-file-invoice-dollar me-2"></i>QUẢN LÝ LƯƠNG & BẢO HIỂM</h3>
+            <p class="text-muted mb-0">Hệ thống tính toán tự động theo Thông tư 88 & Lương vùng 2026</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/SoCongNoBaoHiem" class="btn btn-outline-info shadow-sm">
+                <i class="fas fa-shield-heart me-1"></i> Nộp BH
+            </a>
+            <button class="btn btn-outline-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#configModal">
+                <i class="fas fa-cog me-1"></i> Cấu hình Tỷ lệ & Vùng
+            </button>
+            <a href="/SoCongNoPhaiTraNhanVien" class="btn btn-outline-success shadow-sm">
+                <i class="fas fa-money-check-alt me-1"></i> Trả lương
+            </a>
+            <a href="/salary/create" class="btn btn-primary shadow-sm">
+                <i class="fas fa-plus-circle me-1"></i> Lập Bảng Lương Mới
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card card-stats shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small">Vùng: <strong>{{ info.salary_region if info else 'Chưa chọn' }}</strong></span>
+                        <div class="mt-1">
+                            <span class="text-dark small me-2">NLĐ đóng:</span>
+                            <span class="badge bg-info badge-insurance">BHXH: {{ info.rate_bhxh|default(8) }}%</span>
+                            <span class="badge bg-info badge-insurance">BHYT: {{ info.rate_bhyt|default(1.5) }}%</span>
+                            <span class="badge bg-info badge-insurance">BHTN: {{ info.rate_bhtn|default(1) }}%</span>
+                        </div>
+                        <div class="mt-1">
+                            <span class="text-dark small me-2">Chủ nộp:</span>
+                            <span class="badge bg-danger badge-insurance">BHXH: {{ info.rate_bhxh_chu|default(17.5) }}%</span>
+                            <span class="badge bg-danger badge-insurance">BHYT: {{ info.rate_bhyt_chu|default(3) }}%</span>
+                            <span class="badge bg-danger badge-insurance">BHTN: {{ info.rate_bhtn_chu|default(1) }}%</span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <span class="text-muted small">Căn cứ đóng BH (Mức lương vùng):</span>
+                        <h5 class="fw-bold mb-0 text-primary">
+                            {{ "{:,.0f}".format(info.base_salary_insurance|default(0)).replace(',', '.') }} đ
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Tháng lương</th>
+                        <th class="text-end">Lương thời gian</th>
+                        <th class="text-end">Tổng Bảo hiểm (NLĐ)</th>
+                        <th class="text-end">Thực lãnh</th>
+                        <th class="text-center">TT lương</th>
+                        <th class="text-end">Còn trả</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in summary %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-secondary">
+                            <i class="far fa-calendar-check me-2 text-primary"></i>Tháng {{ row.month }}/{{ row.year }}
+                        </td>
+                        <td class="text-end">{{ "{:,.0f}".format(row.total_base).replace(',', '.') }} đ</td>
+                        <td class="text-end text-danger">{{ "{:,.0f}".format(row.total_deduct).replace(',', '.') }} đ</td>
+                        <td class="text-end fw-bold text-success">{{ "{:,.0f}".format(row.total_final).replace(',', '.') }} đ</td>
+                        <td class="text-center">
+                            {% if row.is_paid %}
+                            <span class="badge bg-success-subtle text-success">Đã trả đủ</span>
+                            {% elif row.da_nop > 0 %}
+                            <span class="badge bg-warning-subtle text-warning">Trả một phần</span>
+                            {% else %}
+                            <span class="badge bg-danger-subtle text-danger">Chưa trả</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end fw-bold {% if row.con_lai > 0 %}text-danger{% else %}text-muted{% endif %}">
+                            {{ "{:,.0f}".format(row.con_lai|default(0)).replace(',', '.') }} đ
+                        </td>
+                        <td class="text-center text-nowrap">
+                            {% if not row.is_paid %}
+                            <a href="/SoCongNoPhaiTraNhanVien?month={{ row.month }}&year={{ row.year }}"
+                               class="btn btn-success btn-sm rounded-pill shadow-sm me-1">
+                                <i class="fas fa-cash-register me-1"></i> Trả cả kỳ
+                            </a>
+                            {% endif %}
+                            <a href="/salary/create?month={{ row.month }}&year={{ row.year }}"
+                               class="btn btn-outline-primary btn-sm rounded-pill shadow-sm me-1" title="Sửa bảng lương">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="/print_salary?month={{ row.month }}&year={{ row.year }}"
+                               target="_blank"
+                               class="btn btn-outline-dark btn-sm rounded-pill shadow-sm">
+                                <i class="fas fa-print"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center py-5 text-muted">Chưa có dữ liệu bảng lương.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form class="modal-content" action="/salary/update_config" method="POST">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-tools me-2"></i>CẤU HÌNH LƯƠNG & TỶ LỆ BẢO HIỂM</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold section-title mb-3">1. Địa bàn & Mức lương vùng</h6>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Vùng kinh doanh</label>
+                            <select name="region" class="form-select" id="regionSelect">
+                                <option value="">-- Chọn vùng --</option>
+                                {% for v in vung_data %}
+                                <option value="{{ v.region_name }}" 
+                                        data-val="{{ v.min_salary }}" 
+                                        {% if info and info.salary_region == v.region_name %}selected{% endif %}>
+                                    {{ v.region_name }} - [{{ "{:,.0f}".format(v.min_salary).replace(',', '.') }} đ]
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Mức lương làm căn cứ đóng BH</label>
+                            <div class="input-group">
+                                <input type="number" name="base_salary" id="baseSalaryInput" 
+                                       class="form-control fw-bold text-danger" 
+                                       value="{{ info.base_salary_insurance|default(5210000) }}">
+                                <span class="input-group-text">đ</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 border-start">
+                        <h6 class="fw-bold section-title mb-3">2. Tỷ lệ đóng BH của NLĐ (%)</h6>
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <label class="small fw-bold">BHXH</label>
+                                <input type="number" step="0.1" name="rate_bhxh" class="form-control" value="{{ info.rate_bhxh|default(8.0) }}">
+                            </div>
+                            <div class="col-4">
+                                <label class="small fw-bold">BHYT</label>
+                                <input type="number" step="0.1" name="rate_bhyt" class="form-control" value="{{ info.rate_bhyt|default(1.5) }}">
+                            </div>
+                            <div class="col-4">
+                                <label class="small fw-bold">BHTN</label>
+                                <input type="number" step="0.1" name="rate_bhtn" class="form-control" value="{{ info.rate_bhtn|default(1.0) }}">
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold section-title mb-3">3. Tỷ lệ đóng BH của Chủ hộ (%)</h6>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <label class="small fw-bold text-danger">BHXH</label>
+                                <input type="number" step="0.1" name="rate_bhxh_chu" class="form-control border-danger-subtle" value="{{ info.rate_bhxh_chu|default(17.5) }}">
+                            </div>
+                            <div class="col-4">
+                                <label class="small fw-bold text-danger">BHYT</label>
+                                <input type="number" step="0.1" name="rate_bhyt_chu" class="form-control border-danger-subtle" value="{{ info.rate_bhyt_chu|default(3.0) }}">
+                            </div>
+                            <div class="col-4">
+                                <label class="small fw-bold text-danger">BHTN</label>
+                                <input type="number" step="0.1" name="rate_bhtn_chu" class="form-control border-danger-subtle" value="{{ info.rate_bhtn_chu|default(1.0) }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-warning small mb-0">
+                    <i class="fas fa-info-circle me-1"></i> Lưu ý: Tỷ lệ được nhập dưới dạng số thực (VD: 8 hoặc 17.5). Khi tính toán, hệ thống sẽ tự động chia cho 100.
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="submit" class="btn btn-primary px-5 shadow-sm">LƯU CẤU HÌNH TỔNG THỂ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('regionSelect').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const minSalary = selectedOption.getAttribute('data-val');
+        if(minSalary) {
+            document.getElementById('baseSalaryInput').value = minSalary;
+        }
+    });
+</script>
+{% endblock %}

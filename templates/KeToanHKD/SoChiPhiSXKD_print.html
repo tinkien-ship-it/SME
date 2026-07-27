@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Sổ Chi Phí S3 - HKD</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            line-height: 1.3;
+            margin: 0;
+            color: #000;
+            background-color: #f0f2f5;
+        }
+        .no-print-zone {
+            background: #ffffff;
+            padding: 12px 0;
+            border-bottom: 2px solid #dee2e6;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn-action {
+            padding: 8px 25px;
+            font-weight: 600;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-print { background-color: #0d6efd; color: white; }
+        .print-container { 
+            width: 297mm; 
+            margin: 20px auto; 
+            padding: 15mm; 
+            background: #fff; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .header-section p { margin-bottom: 2px; }
+        .title-main { font-size: 16pt; font-weight: bold; text-align: center; margin: 10px 0 5px 0; }
+        
+        /* Table S3 Styles */
+        .table-s3 { width: 100%; border-collapse: collapse; border: 1.5px solid #000; }
+        .table-s3 th, .table-s3 td {
+            border: 1px solid #000;
+            padding: 5px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .table-s3 thead th { font-weight: bold; font-size: 10pt; background: #f2f2f2 !important; }
+        .cost-val { text-align: right; font-family: "Consolas", monospace; white-space: nowrap; }
+        .total-row { font-weight: bold; background: #fafafa; }
+
+        .signature-table { width: 100%; margin-top: 30px; text-align: center; border: none; }
+        .signature-table td { border: none !important; width: 33%; }
+        .sign-space { height: 70px; }
+
+        @media print {
+            .no-print-zone { display: none !important; }
+            body { background-color: #fff; }
+            .print-container { width: 100%; margin: 0; padding: 0; box-shadow: none; }
+            .table-s3 thead th { background: transparent !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print-zone">
+        <button onclick="window.print()" class="btn-action btn-print">
+            <i class="bi bi-printer-fill"></i> IN SỔ CHI PHÍ (S3)
+        </button>
+        <button onclick="window.close()" style="background:#6c757d; color:white; padding:8px 20px; border:none; border-radius:6px; cursor:pointer;">
+            <i class="bi bi-x-circle-fill"></i> ĐÓNG
+        </button>
+    </div>
+
+    <div class="print-container">
+        <div class="d-flex justify-content-between header-section">
+            <div>
+                <p class="fw-bold text-uppercase">HỘ KINH DOANH: {{ info.business_name if info else '................................' }}</p>
+                <p>Địa chỉ: {{ info.address if info else '................................' }}</p>
+                <p>Mã số thuế: {{ info.tax_code if info else '................................' }}</p>
+            </div>
+            <div class="text-center">
+                <p class="fw-bold mb-0">Mẫu số S3 – HKD</p>
+                <small class="fst-italic">(Ban hành kèm theo Thông tư số 88/2021/TT-BTC)</small>
+            </div>
+        </div>
+
+        <div class="title-main">SỔ CHI PHÍ SẢN XUẤT, KINH DOANH</div>
+        <p class="text-center fst-italic mb-3">Tên địa điểm kinh doanh: {{ info.address if info else '................................' }}</p>
+        <p class="text-center fst-italic mb-3">Thời gian: {{ date_range_label }}</p>
+
+        <table class="table-s3">
+            <thead>
+                <tr>
+                    <th rowspan="2" width="7%">Ngày ghi sổ</th>
+                    <th colspan="2" width="15%">Chứng từ</th> <th rowspan="2" width="15%">Diễn giải</th>
+                    <th colspan="7">Tập hợp chi phí theo các yếu tố (VNĐ)</th>
+                    <th rowspan="2" width="10%">Tổng cộng<br>(1=2+...+8)</th>
+                </tr>
+                <tr>
+                    <th>Số hiệu</th> <th>Ngày</th>   <th width="8%">Nhân công<br>(2)</th>
+                    <th width="8%">Điện<br>(3)</th>
+                    <th width="8%">Nước<br>(4)</th>
+                    <th width="8%">Viễn thông<br>(5)</th>
+                    <th width="8%">Thuê mặt bằng<br>(6)</th>
+                    <th width="8%">Quản lý/VPP<br>(7)</th>
+                    <th width="8%">Khác<br>(8)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in items %}
+                <tr>
+                    <td>{{ row.ngay_phieu }}</td>
+                    <td>{{ row.so_phieu }}</td> <td>{{ row.ngay_phieu }}</td> <td class="text-start px-2">{{ row.noi_dung }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(row.cp_luong).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(row.cp_dien).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(row.cp_nuoc).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(row.cp_vt).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(row.cp_mb).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(row.cp_ql).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(row.cp_khac).replace(',', '.') }}</td>
+                    <td class="cost-val fw-bold">{{ "{:,.0f}".format(row.cp_luong + row.cp_dien + row.cp_nuoc + row.cp_vt + row.cp_mb + row.cp_ql + row.cp_khac).replace(',', '.') }}</td>
+                </tr>
+                {% endfor %}
+                
+                <tr class="total-row">
+                    <td colspan="4" class="text-center text-uppercase">Tổng cộng</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(totals.labor).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(totals.electric).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(totals.water).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(totals.telecom).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(totals.rent).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(totals.manage).replace(',', '.') }}</td>
+                    <td class="cost-val">{{ "{:,.0f}".format(totals.other).replace(',', '.') }}</td>
+                    <td class="cost-val text-primary">{{ "{:,.0f}".format(totals.grand).replace(',', '.') }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="signature-table">
+            <tr>
+                <td></td>
+                <td></td>
+                <td class="fst-italic">
+                    Ngày {{ day if day else '......' }}
+                    tháng {{ month if month else '......' }} 
+                    năm {{ year if year else '20......' }}
+                </td>
+            </tr>
+            <tr class="fw-bold">
+                <td>Người ghi sổ</td>
+                <td>Người lập biểu</td>
+                <td>Đại diện hộ kinh doanh</td>
+            </tr>
+            <tr class="fst-italic" style="font-size: 9pt;">
+                <td>(Ký, họ tên)</td>
+                <td>(Ký, họ tên)</td>
+                <td>(Ký, họ tên, đóng dấu)</td>
+            </tr>
+            <tr class="sign-space"><td></td><td></td><td></td></tr>
+            <tr class="fw-bold">
+                <td></td>
+                <td>{{ session.get('user_name') or '' }}</td>
+                <td>{{ info.representative_name if info else '' }}</td>
+            </tr>
+        </table>
+    </div>
+
+</body>
+</html>

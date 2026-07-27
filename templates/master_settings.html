@@ -1,0 +1,875 @@
+{% extends "base.html" %}
+{% block title %}Master Settings - Quản trị Hệ thống{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+
+<style>
+    .master-card { border: none; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); overflow: hidden; }
+    .master-header { background: linear-gradient(135deg, #1e3a8a, #312e81); color: white; border: none; }
+    .tenant-row:hover { background-color: #f8f9fa; }
+    .form-label { margin-bottom: 0.25rem; color: #4b5563; font-size: 0.85rem; font-weight: 600; }
+    
+    /* Tab Styling */
+    .nav-tabs { border-bottom: 2px solid #e2e8f0; }
+    .nav-tabs .nav-link { border: none; color: #64748b; font-weight: 600; padding: 1rem 1.5rem; transition: all 0.3s; }
+    .nav-tabs .nav-link.active { color: #1e3a8a; border-bottom: 3px solid #1e3a8a; background: none; }
+    
+    /* Badge & Status */
+    .badge-active { background-color: #198754; color: white; padding: 5px 10px; border-radius: 6px; }
+    .badge-warning-custom { background-color: #ffc107; color: #000; padding: 5px 10px; border-radius: 6px; }
+    .filter-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-danger"><i class="fas fa-tools me-2"></i>Master Settings</h2>
+            <p class="text-muted mb-0">Quản trị toàn bộ hệ thống • Nhật ký bảo mật</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <button onclick="createNewTenant()" class="btn btn-success px-4 shadow-sm">
+                <i class="fas fa-plus me-2"></i>Tạo Tenant Mới
+            </button>
+            <button onclick="toggleMain2FA()" class="btn btn-outline-primary px-4 shadow-sm" id="btnMain2FA">
+                <span id="main2faText"><i class="fas fa-shield-alt me-2"></i>2FA Main DB</span>
+            </button>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-4" id="masterTab" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="tenant-tab" data-bs-toggle="tab" data-bs-target="#tenant-content" type="button">
+                <i class="fas fa-users-cog me-2"></i>Quản lý Tenant
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="auth-tab" data-bs-toggle="tab" data-bs-target="#auth-content" type="button">
+                <i class="fas fa-sign-in-alt me-2"></i>Đăng nhập & OTP
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-content" type="button" onclick="loadLoginHistory()">
+                <i class="fas fa-history me-2"></i>Lịch sử đăng nhập
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit-content" type="button" onclick="loadMasterAuditLog()">
+                <i class="fas fa-clipboard-list me-2"></i>Nhật ký thao tác
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="masterTabContent">
+        <div class="tab-pane fade show active" id="tenant-content" role="tabpanel">
+            <div class="card master-card">
+                <div class="card-header master-header py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Danh sách Tenant</h5>
+                    <span class="badge bg-light text-dark" id="tenantCount">0 Tenants</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tenant ID</th>
+                                <th>Tên cửa hàng</th>
+                                <th>Liên hệ</th>
+                                <th>Hết hạn</th>
+                                <th>Trạng thái</th>
+                                <th class="text-center">2FA</th>
+                                <th class="text-end">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tenantTableBody">
+                            <tr><td colspan="7" class="text-center py-5 text-muted">Đang tải dữ liệu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="auth-content" role="tabpanel">
+            <div class="card master-card">
+                <div class="card-header master-header py-3">
+                    <h5 class="mb-0"><i class="fas fa-key me-2"></i>Cấu hình đăng nhập Google & OTP SMS</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Sau khi lưu, trang <strong>Đăng nhập</strong> sẽ hiện nút Google; trang <strong>Xác minh thiết bị (2FA)</strong> sẽ hiện thêm OTP SMS.
+                        Redirect URI Google Cloud Console (nếu dùng OAuth redirect cũ):
+                        <code>/login/google/callback</code>.
+                        Với đăng nhập Gmail trình duyệt: thêm <strong>Authorized JavaScript origins</strong>
+                        <code>http://127.0.0.1:5000</code>
+                    </div>
+                    <form id="authSettingsForm" onsubmit="saveAuthSettings(event)">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-primary mb-3"><i class="fab fa-google me-2"></i>Google OAuth</h6>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="authGoogleEnabled" checked>
+                                    <label class="form-check-label fw-semibold" for="authGoogleEnabled">Bật đăng nhập / xác thực Google</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Google Client ID</label>
+                                    <input type="text" class="form-control" id="googleClientId" placeholder="123456789-xxxx.apps.googleusercontent.com">
+                                    <div class="form-text">
+                                        Copy từ Google Cloud → Credentials → OAuth 2.0 Client IDs (Web).
+                                        <strong>Không</strong> dán Client Secret (GOCSPX-...) vào đây.
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Google Client Secret <span class="text-muted">(tùy chọn)</span></label>
+                                    <input type="password" class="form-control" id="googleClientSecret" placeholder="GOCSPX-... (chỉ dùng cho OAuth redirect cũ)">
+                                </div>
+                                <div id="googleConfigError" class="alert alert-warning py-2 small d-none mb-3"></div>
+                                <div id="googleSecretHint" class="form-text text-success d-none mb-2">
+                                    <i class="fas fa-check-circle me-1"></i>Client Secret đã lưu (để trống ô trên nếu không đổi).
+                                </div>
+                                <span id="googleStatusBadge" class="badge bg-secondary">Chưa kiểm tra</span>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-sms me-2"></i>OTP qua SMS</h6>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="authSmsEnabled" checked>
+                                    <label class="form-check-label fw-semibold" for="authSmsEnabled">Bật gửi OTP qua tin nhắn</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Nhà cung cấp SMS</label>
+                                    <select class="form-select" id="smsProvider">
+                                        <option value="generic">Generic API</option>
+                                        <option value="esms">ESMS</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">SMS API URL</label>
+                                    <input type="text" class="form-control" id="smsApiUrl" placeholder="https://...">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">SMS API Key</label>
+                                    <input type="password" class="form-control" id="smsApiKey" placeholder="Để trống nếu không đổi">
+                                </div>
+                                <div id="smsKeyHint" class="form-text text-success d-none mb-2">
+                                    <i class="fas fa-check-circle me-1"></i>SMS API Key đã lưu.
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">SMS API Secret (ESMS)</label>
+                                    <input type="password" class="form-control" id="smsApiSecret" placeholder="Để trống nếu không đổi">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Tên thương hiệu SMS</label>
+                                    <input type="text" class="form-control" id="smsBrandname" value="KETO POS">
+                                </div>
+                                <span id="smsStatusBadge" class="badge bg-secondary">Chưa kiểm tra</span>
+                            </div>
+                        </div>
+                        <div class="text-end mt-4">
+                            <button type="submit" class="btn btn-primary px-5">
+                                <i class="fas fa-save me-2"></i>Lưu cấu hình
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="history-content" role="tabpanel">
+            <div class="card master-card">
+                <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-user-shield me-2"></i>Nhật ký truy cập</h5>
+                    <a href="{{ url_for('audit_log_page') }}" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-external-link-alt me-1"></i>Trang nhật ký đầy đủ
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="filter-section row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label">Mã Tenant</label>
+                            <input type="text" id="filterTenant" class="form-control form-control-sm" placeholder="ID khách hàng...">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Từ ngày</label>
+                            <input type="text" id="filterStart" class="form-control form-control-sm bg-white" placeholder="Chọn ngày bắt đầu">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Đến ngày</label>
+                            <input type="text" id="filterEnd" class="form-control form-control-sm bg-white" placeholder="Chọn ngày kết thúc">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end gap-2">
+                            <button class="btn btn-primary btn-sm w-100" onclick="loadLoginHistory()">
+                                <i class="fas fa-search me-1"></i> Lọc
+                            </button>
+                            <button class="btn btn-secondary btn-sm w-100" onclick="resetHistoryFilter()">
+                                Làm mới
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mt-2">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Thời gian</th>
+                                    <th>Mã KH</th>
+                                    <th>Tài khoản</th>
+                                    <th>Địa chỉ IP</th>
+                                    <th>Vị trí</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr><td colspan="6" class="text-center py-5">Chưa có dữ liệu lịch sử.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="audit-content" role="tabpanel">
+            <div class="card master-card">
+                <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Nhật ký thao tác hệ thống</h5>
+                    <a href="{{ url_for('audit_log_page') }}" class="btn btn-sm btn-outline-light">Mở trang chi tiết</a>
+                </div>
+                <div class="card-body">
+                    <div class="filter-section row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label">Mã Tenant</label>
+                            <input type="text" id="auditFilterTenant" class="form-control form-control-sm" placeholder="Để trống = hệ thống master">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Từ ngày</label>
+                            <input type="date" id="auditFilterStart" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Đến ngày</label>
+                            <input type="date" id="auditFilterEnd" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button class="btn btn-primary btn-sm w-100" onclick="loadMasterAuditLog()">
+                                <i class="fas fa-search me-1"></i> Lọc
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Thời gian</th>
+                                    <th>Tenant</th>
+                                    <th>Người dùng</th>
+                                    <th>Loại</th>
+                                    <th>Phân hệ</th>
+                                    <th>Mô tả</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditTableBody">
+                                <tr><td colspan="6" class="text-center py-5 text-muted">Chọn tab hoặc bấm Lọc để tải dữ liệu.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="{{ url_for('static', filename='js/hkd-sector-form.js') }}"></script>
+
+<script>
+/** --- 1. TIỆN ÍCH --- **/
+function formatDateVN(dateStr) {
+    if (!dateStr) return '---';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('vi-VN');
+}
+
+/** --- 2. QUẢN LÝ TENANTS --- **/
+async function loadTenants() {
+    try {
+        const response = await fetch('/api/master/tenants');
+        const res = await response.json();
+        const tenants = res.data || []; 
+        const tbody = document.getElementById('tenantTableBody');
+        const countEl = document.getElementById('tenantCount');
+
+        if (countEl) countEl.innerText = `${tenants.length} Tenants`;
+
+        if (!res.success || tenants.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted">${res.error || 'Chưa có tenant nào.'}</td></tr>`;
+            return;
+        }
+
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        let html = '';
+        tenants.forEach(t => {
+            let statusBadge = '<span class="badge badge-active">Hoạt động</span>';
+            if (t.is_active === 0 || t.is_active === false) {
+                statusBadge = '<span class="badge bg-danger">Đã khóa</span>';
+            } else if (t.expiry_date) {
+                const expiryDateObj = new Date(t.expiry_date);
+                expiryDateObj.setHours(0,0,0,0);
+                const diffDays = Math.ceil((expiryDateObj - now) / 86400000);
+                if (diffDays < 0) statusBadge = '<span class="badge bg-secondary">Quá hạn</span>';
+                else if (diffDays <= 7) statusBadge = `<span class="badge badge-warning-custom">Còn ${diffDays} ngày</span>`;
+            }
+
+            const is2FAOn = Boolean(t.is_2fa_enabled);
+            const dtBadge = t.revenue_tier ? `<span class="badge bg-info text-dark me-1">${t.revenue_tier}</span>` : '';
+            const nnBadge = (t.enabled_nn_sectors || []).map(n => `<span class="badge bg-secondary me-1">${n}</span>`).join('');
+            html += `
+                <tr class="tenant-row">
+                    <td><code class="fw-bold text-primary">${t.tenant_id}</code></td>
+                    <td>
+                        <span class="fw-bold text-dark">${t.business_name || '---'}</span>
+                        <div class="mt-1">${dtBadge}${nnBadge}</div>
+                    </td>
+                    <td>
+                        <div class="small">
+                            ${t.phone ? '📞 ' + t.phone + '<br>' : ''}
+                            ${t.email ? '📧 ' + t.email : ''}
+                        </div>
+                    </td>
+                    <td>${formatDateVN(t.expiry_date)}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-center">
+                        <button onclick="toggle2FA('${t.tenant_id}', ${is2FAOn})" 
+                                class="btn btn-sm ${is2FAOn ? 'btn-success' : 'btn-outline-secondary'}" style="min-width: 65px;">
+                            ${is2FAOn ? 'BẬT' : 'TẮT'}
+                        </button>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-primary me-1" onclick="enterTenant('${t.tenant_id}')" title="Vào tenant test">
+                            <i class="fas fa-sign-in-alt"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="fetchAndEditTenant('${t.tenant_id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTenant('${t.tenant_id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+        });
+        tbody.innerHTML = html;
+    } catch (err) {
+        document.getElementById('tenantTableBody').innerHTML = `<tr><td colspan="7" class="text-center py-5 text-danger">Lỗi kết nối server.</td></tr>`;
+    }
+}
+
+// Modal chung cho Tạo và Sửa
+async function showTenantModal(mode, data = {}) {
+    const isEdit = mode === 'edit';
+    let sectorPayload;
+    try {
+        sectorPayload = await HkdSectorForm.loadProfileOptions();
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không tải được danh mục NN1–NN4', 'error');
+        return;
+    }
+    const sectors = sectorPayload.nn_sectors || sectorPayload.hkd_sectors || [];
+    const legalIntro = sectorPayload.nn_sector_legal_intro || sectorPayload.hkd_sector_legal_intro || '';
+    const initialNn = data.enabled_nn_sectors && data.enabled_nn_sectors.length
+        ? data.enabled_nn_sectors
+        : HkdSectorForm.suggestNnForBusinessLine(data.business_line || 'pos', sectors);
+    const nnField = HkdSectorForm.buildNnCheckboxGroup('swal-nn-box', 'swal-nn-help', sectors, initialNn, legalIntro);
+    const dtOptions = HkdSectorForm.buildDtTierOptions(data.revenue_tier || 'DT1');
+    const blOpts = `
+        <option value="pos" ${data.business_line === 'pos' ? 'selected' : ''}>Bán Hàng - Dịch Vụ - Sản Xuất</option>
+        <option value="fb_service" ${data.business_line === 'fb_service' ? 'selected' : ''}>Dịch Vụ Ăn Uống</option>
+        <option value="rental_service" ${data.business_line === 'rental_service' ? 'selected' : ''}>Dịch Vụ Lưu Trú</option>`;
+    Swal.fire({
+        title: isEdit ? `Chỉnh sửa: ${data.tenant_id}` : 'Khởi tạo Tenant Mới',
+        width: 760,
+        html: `
+            <div class="text-start">
+                <label class="form-label small fw-bold">Tenant ID ${isEdit ? '(Cố định)' : '*'}</label>
+                <input id="swal-tenant-id" class="form-control mb-2" value="${data.tenant_id || ''}" 
+                       ${isEdit ? 'readonly style="background:#e9ecef"' : ''} placeholder="Ví dụ: cua_hang_a">
+                <label class="form-label small fw-bold">Tên doanh nghiệp</label>
+                <input id="swal-business-name" class="form-control mb-2" value="${data.business_name || ''}">
+                <div class="row">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Số điện thoại</label>
+                        <input id="swal-phone" class="form-control mb-2" value="${data.phone || ''}">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Email</label>
+                        <input id="swal-email" class="form-control mb-2" value="${data.email || ''}">
+                    </div>
+                </div>
+                <label class="form-label small fw-bold">Địa chỉ</label>
+                <textarea id="swal-address" class="form-control mb-2" rows="2">${data.address || ''}</textarea>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Chế độ kế toán</label>
+                        <select id="swal-regime" class="form-select" disabled>
+                            <option value="HKD" selected>HKD (Hộ kinh doanh)</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Nhóm doanh thu DT1–DT4</label>
+                        <select id="swal-revenue-tier" class="form-select">${dtOptions}</select>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Ngành nghiệp vụ</label>
+                    <select id="swal-business-line" class="form-select">${blOpts}</select>
+                </div>
+                <div class="mb-2">${nnField}</div>
+                <label class="form-label small fw-bold">Ngày hết hạn hợp đồng</label>
+                <input type="date" id="swal-expiry-date" class="form-control" value="${data.expiry_date || ''}">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: isEdit ? 'Lưu thay đổi' : 'Tạo ngay',
+        cancelButtonText: 'Đóng',
+        didOpen: () => {
+            HkdSectorForm.bindNnSectorHelp('swal-nn-box', 'swal-nn-help', sectors, legalIntro);
+            HkdSectorForm.bindBusinessLineNnSuggest('swal-business-line', 'swal-nn-box', 'swal-nn-help', sectors, legalIntro);
+        },
+        preConfirm: () => {
+            const tid = document.getElementById('swal-tenant-id').value.trim();
+            if (!tid) return Swal.showValidationMessage('Vui lòng nhập Tenant ID');
+            const nnList = HkdSectorForm.getSelectedNnSectors('swal-nn-box');
+            return {
+                tenant_id: tid,
+                business_name: document.getElementById('swal-business-name').value.trim(),
+                phone: document.getElementById('swal-phone').value.trim(),
+                email: document.getElementById('swal-email').value.trim(),
+                address: document.getElementById('swal-address').value.trim(),
+                expiry_date: document.getElementById('swal-expiry-date').value,
+                accounting_regime: document.getElementById('swal-regime').value,
+                revenue_tier: document.getElementById('swal-revenue-tier').value,
+                business_line: document.getElementById('swal-business-line').value,
+                enabled_nn_sectors: nnList,
+                primary_nn_sector: nnList[0],
+            };
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Đang xử lý...', didOpen: () => Swal.showLoading() });
+            const url = isEdit ? `/api/master/edit_tenant/${data.tenant_id}` : '/api/master/create_tenant';
+            const method = isEdit ? 'PUT' : 'POST';
+            
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(result.value)
+                });
+                const res = await response.json();
+                if (res.success) {
+                    Swal.fire('Thành công', res.message, 'success');
+                    loadTenants();
+                } else {
+                    Swal.fire('Lỗi', res.error, 'error');
+                }
+            } catch (e) {
+                Swal.fire('Lỗi', 'Không thể kết nối API', 'error');
+            }
+        }
+    });
+}
+
+function createNewTenant() { showTenantModal('create'); }
+
+async function enterTenant(tenantId) {
+    try {
+        const res = await fetch(`/api/master/enter_tenant/${encodeURIComponent(tenantId)}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success && data.redirect) {
+            window.location.href = data.redirect;
+        } else {
+            Swal.fire('Lỗi', data.error || 'Không vào được tenant', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không kết nối server', 'error');
+    }
+}
+
+async function fetchAndEditTenant(tenantId) {
+    try {
+        const response = await fetch(`/api/master/tenant/${tenantId}`);
+        const res = await response.json();
+        if (res.success) showTenantModal('edit', res.tenant);
+        else Swal.fire('Lỗi', res.error, 'error');
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không lấy được dữ liệu tenant', 'error');
+    }
+}
+
+async function toggle2FA(tenantId, currentState) {
+    const newState = !currentState;
+    const confirm = await Swal.fire({
+        title: `Xác nhận ${newState ? 'BẬT' : 'TẮT'} 2FA?`,
+        text: `Thay đổi bảo mật cho tenant ${tenantId}`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Đồng ý'
+    });
+
+    if (confirm.isConfirmed) {
+        try {
+            const response = await fetch(`/api/master/toggle_2fa/${tenantId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_2fa_enabled: newState ? 1 : 0 })
+            });
+            const res = await response.json();
+            if (res.success) {
+                loadTenants();
+                Swal.fire('Đã cập nhật', res.message || '', 'success');
+            }
+        } catch (e) { Swal.fire('Lỗi', 'Thao tác thất bại', 'error'); }
+    }
+}
+
+function deleteTenant(tenantId) {
+    Swal.fire({
+        title: `Xóa vĩnh viễn ${tenantId}?`,
+        text: "Hành động này sẽ xóa toàn bộ dữ liệu và không thể hoàn tác!",
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Tôi đồng ý xóa'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const r = await fetch(`/api/master/delete_tenant/${encodeURIComponent(tenantId)}`, { method: 'DELETE' });
+                const res = await r.json();
+                if (res.success) { 
+                    loadTenants(); 
+                    Swal.fire('Đã xóa!', '', 'success'); 
+                } else {
+                    Swal.fire('Lỗi', res.error, 'error');
+                }
+            } catch (e) { Swal.fire('Lỗi', 'Kết nối server thất bại', 'error'); }
+        }
+    });
+}
+
+/** --- 3. QUẢN LÝ 2FA MASTER (MAIN DB) --- **/
+async function loadMain2FAStatus() {
+    try {
+        const res = await fetch('/api/master/main_2fa_status');
+        const data = await res.json();
+        const btn = document.getElementById('btnMain2FA');
+        const text = document.getElementById('main2faText');
+        
+        if (data.success && data.is_2fa_enabled) {
+            btn.className = 'btn btn-primary px-4 shadow-sm';
+            text.innerHTML = '<i class="fas fa-shield-alt me-2"></i>2FA Main: ĐANG BẬT';
+            btn.dataset.state = "1";
+        } else {
+            btn.className = 'btn btn-outline-primary px-4 shadow-sm';
+            text.innerHTML = '<i class="fas fa-unlock me-2"></i>2FA Main: ĐANG TẮT';
+            btn.dataset.state = "0";
+        }
+    } catch (e) { console.error("Lỗi lấy trạng thái 2FA Main"); }
+}
+
+async function toggleMain2FA() {
+    const btn = document.getElementById('btnMain2FA');
+    const isCurrentlyOn = btn.dataset.state === "1";
+    const newState = !isCurrentlyOn;
+
+    const confirm = await Swal.fire({
+        title: `Cấu hình 2FA Hệ thống`,
+        text: `Bạn muốn ${newState ? 'BẬT' : 'TẮT'} xác thực 2 bước cho TOÀN BỘ Master users?`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Xác nhận'
+    });
+
+    if (confirm.isConfirmed) {
+        try {
+            const response = await fetch('/api/master/toggle_main_2fa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_2fa_enabled: newState ? 1 : 0 })
+            });
+            const res = await response.json();
+            if (res.success) {
+                loadMain2FAStatus();
+                Swal.fire('Thành công', res.message, 'success');
+            }
+        } catch (e) { Swal.fire('Lỗi', 'Không thể thay đổi', 'error'); }
+    }
+}
+
+/** --- 4. LỊCH SỬ ĐĂNG NHẬP --- **/
+let startPicker, endPicker;
+
+function initPickers() {
+    const cfg = { locale: "vn", dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", allowInput: true };
+    startPicker = flatpickr("#filterStart", cfg);
+    endPicker = flatpickr("#filterEnd", cfg);
+}
+
+async function loadLoginHistory() {
+    const tbody = document.getElementById('historyTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải...</td></tr>';
+
+    try {
+        const tenant = document.getElementById('filterTenant').value.trim();
+        const start = document.getElementById('filterStart').value;
+        const end = document.getElementById('filterEnd').value;
+
+        const params = new URLSearchParams();
+        if(tenant) params.append('tenant_id', tenant);
+        if(start) params.append('start_date', start);
+        if(end) params.append('end_date', end);
+
+        const response = await fetch(`/api/master/login-history?${params}`);
+        const res = await response.json();
+
+        if (!res.success || !res.data || res.data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Không có dữ liệu lịch sử nào phù hợp.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        res.data.forEach(log => {
+            const isSuccess = log.status === 'Thành công' || log.status === 'Success';
+            html += `
+                <tr class="tenant-row">
+                    <td class="small text-nowrap">${log.login_at}</td>
+                    <td>${log.tenant_id ? `<span class="badge bg-info text-dark">${log.tenant_id}</span>` : '<span class="badge bg-secondary">Master</span>'}</td>
+                    <td><span class="fw-bold">${log.username}</span></td>
+                    <td><code>${log.ip_address}</code></td>
+                    <td class="small">${log.location || 'N/A'}</td>
+                    <td class="${isSuccess ? 'text-success' : 'text-danger'} fw-bold small">
+                        <i class="fas ${isSuccess ? 'fa-check-circle' : 'fa-times-circle'} me-1"></i>${log.status}
+                    </td>
+                </tr>`;
+        });
+        tbody.innerHTML = html;
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-danger">Lỗi kết nối API lịch sử.</td></tr>';
+    }
+}
+
+function resetHistoryFilter() {
+    document.getElementById('filterTenant').value = '';
+    if (startPicker) startPicker.clear();
+    if (endPicker) endPicker.clear();
+    loadLoginHistory();
+}
+
+async function loadMasterAuditLog() {
+    const tbody = document.getElementById('auditTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải...</td></tr>';
+
+    const params = new URLSearchParams({ type: 'actions', limit: 200 });
+    const tenant = document.getElementById('auditFilterTenant')?.value.trim();
+    const start = document.getElementById('auditFilterStart')?.value;
+    const end = document.getElementById('auditFilterEnd')?.value;
+    if (tenant) params.set('tenant_id', tenant);
+    if (start) params.set('start_date', start);
+    if (end) params.set('end_date', end);
+
+    try {
+        const res = await fetch(`/api/master/audit-log?${params}`);
+        const json = await res.json();
+        if (!json.success || !json.data?.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Không có bản ghi.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = json.data.map(r => `
+            <tr>
+                <td class="small text-nowrap">${r.created_at || '—'}</td>
+                <td><code>${r.tenant_id || '—'}</code></td>
+                <td>${r.username || '—'}</td>
+                <td><span class="badge bg-secondary">${r.action_label || r.action}</span></td>
+                <td>${r.module_label || r.module || '—'}</td>
+                <td class="small">${r.summary || r.entity_label || '—'}</td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-danger">Lỗi tải nhật ký.</td></tr>';
+    }
+}
+
+/** --- 5. CẤU HÌNH ĐĂNG NHẬP & OTP --- **/
+let authSettingsLoading = false;
+
+function authEl(id) {
+    return document.getElementById(id);
+}
+
+function applyAuthSettingsUI(s) {
+    const googleOn = authEl('authGoogleEnabled');
+    const smsOn = authEl('authSmsEnabled');
+    if (googleOn) googleOn.checked = s.auth_google_enabled === '1';
+    if (smsOn) smsOn.checked = s.auth_sms_enabled === '1';
+
+    const clientIdEl = authEl('googleClientId');
+    if (clientIdEl) clientIdEl.value = s.google_client_id || '';
+
+    const smsProviderEl = authEl('smsProvider');
+    if (smsProviderEl) smsProviderEl.value = s.sms_provider || 'generic';
+
+    const smsUrlEl = authEl('smsApiUrl');
+    if (smsUrlEl) smsUrlEl.value = s.sms_api_url || '';
+
+    const smsBrandEl = authEl('smsBrandname');
+    if (smsBrandEl) smsBrandEl.value = s.sms_brandname || 'KETO POS';
+
+    const googleBadge = authEl('googleStatusBadge');
+    if (googleBadge) {
+        googleBadge.className = 'badge ' + (s.google_ready ? 'bg-success' : 'bg-warning text-dark');
+        googleBadge.textContent = s.google_ready ? 'Google: Sẵn sàng' : 'Google: Thiếu hoặc sai Client ID';
+    }
+
+    const googleErr = authEl('googleConfigError');
+    if (googleErr) {
+        if (s.google_config_error) {
+            googleErr.textContent = s.google_config_error;
+            googleErr.classList.remove('d-none');
+        } else {
+            googleErr.classList.add('d-none');
+            googleErr.textContent = '';
+        }
+    }
+
+    const googleSecretHint = authEl('googleSecretHint');
+    if (googleSecretHint) {
+        googleSecretHint.classList.toggle('d-none', !s.has_google_secret);
+    }
+
+    const smsKeyHint = authEl('smsKeyHint');
+    if (smsKeyHint) {
+        smsKeyHint.classList.toggle('d-none', !s.has_sms_key);
+    }
+
+    const smsBadge = authEl('smsStatusBadge');
+    if (smsBadge) {
+        if (s.auth_sms_enabled !== '1') {
+            smsBadge.className = 'badge bg-secondary';
+            smsBadge.textContent = 'SMS: Đang tắt';
+        } else {
+            smsBadge.className = 'badge ' + (s.sms_ready ? 'bg-success' : 'bg-warning text-dark');
+            smsBadge.textContent = s.sms_ready ? 'SMS: Sẵn sàng' : 'SMS: Thiếu API URL/Key';
+        }
+    }
+}
+
+async function loadAuthSettings() {
+    if (authSettingsLoading) return;
+    authSettingsLoading = true;
+    try {
+        const res = await fetch('/api/master/auth_settings');
+        let data;
+        try {
+            data = await res.json();
+        } catch (parseErr) {
+            console.error('auth_settings JSON parse error:', parseErr);
+            Swal.fire('Lỗi', 'Phản hồi server không hợp lệ. Vui lòng tải lại trang.', 'error');
+            return;
+        }
+        if (!res.ok || !data.success) {
+            Swal.fire('Lỗi', data.error || 'Không có quyền hoặc không tải được cấu hình (cần tài khoản master).', 'error');
+            return;
+        }
+        applyAuthSettingsUI(data.settings || {});
+    } catch (e) {
+        console.error('loadAuthSettings error:', e);
+        Swal.fire('Lỗi', 'Không tải được cấu hình đăng nhập.', 'error');
+    } finally {
+        authSettingsLoading = false;
+    }
+}
+
+async function saveAuthSettings(e) {
+    e.preventDefault();
+    const clientId = document.getElementById('googleClientId').value.trim();
+    const googleOn = document.getElementById('authGoogleEnabled').checked;
+
+    if (googleOn) {
+        if (!clientId) {
+            Swal.fire('Lỗi', 'Vui lòng nhập Google Client ID.', 'warning');
+            return;
+        }
+        if (clientId.startsWith('GOCSPX-')) {
+            Swal.fire(
+                'Sai định dạng',
+                'Bạn đã dán Client Secret (GOCSPX-...) vào ô Client ID. Client ID phải có dạng 123456789-xxxx.apps.googleusercontent.com',
+                'warning'
+            );
+            return;
+        }
+        if (!clientId.includes('.apps.googleusercontent.com')) {
+            Swal.fire(
+                'Sai định dạng',
+                'Google Client ID phải kết thúc bằng .apps.googleusercontent.com',
+                'warning'
+            );
+            return;
+        }
+    }
+
+    const payload = {
+        auth_google_enabled: googleOn,
+        auth_sms_enabled: document.getElementById('authSmsEnabled').checked,
+        google_client_id: clientId,
+        google_client_secret: document.getElementById('googleClientSecret').value.trim(),
+        sms_provider: document.getElementById('smsProvider').value,
+        sms_api_url: document.getElementById('smsApiUrl').value.trim(),
+        sms_api_key: document.getElementById('smsApiKey').value.trim(),
+        sms_api_secret: document.getElementById('smsApiSecret').value.trim(),
+        sms_brandname: document.getElementById('smsBrandname').value.trim(),
+    };
+
+    try {
+        const res = await fetch('/api/master/auth_settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            Swal.fire('Thành công', data.message, 'success');
+            document.getElementById('googleClientSecret').value = '';
+            document.getElementById('smsApiKey').value = '';
+            document.getElementById('smsApiSecret').value = '';
+            if (data.settings) {
+                applyAuthSettingsUI(data.settings);
+            } else {
+                loadAuthSettings();
+            }
+        } else {
+            Swal.fire('Lỗi', data.error || 'Không lưu được.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', 'Không kết nối được server.', 'error');
+    }
+}
+
+/** --- KHỞI TẠO --- **/
+document.addEventListener('DOMContentLoaded', () => {
+    loadTenants();
+    loadMain2FAStatus();
+    initPickers();
+
+    const authTab = document.getElementById('auth-tab');
+    if (authTab) {
+        authTab.addEventListener('shown.bs.tab', () => loadAuthSettings());
+        if (authTab.classList.contains('active')) {
+            loadAuthSettings();
+        }
+    }
+});
+</script>
+{% endblock %}
