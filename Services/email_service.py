@@ -21,13 +21,21 @@ _DEFAULT_SMTP = {
 }
 
 
+def _env_or_default(key, default):
+    """Giá trị .env rỗng coi như chưa cấu hình — dùng default (tránh cp .env.txt ghi đè)."""
+    val = os.getenv(key)
+    if val is None or not str(val).strip():
+        return default
+    return str(val).strip()
+
+
 def get_smtp_config():
-    """Đọc cấu hình SMTP — .env ghi đè giá trị mặc định."""
+    """Đọc cấu hình SMTP — .env ghi đè giá trị mặc định (chỉ khi không rỗng)."""
     return {
-        "server": os.getenv("SMTP_SERVER", _DEFAULT_SMTP["server"]),
-        "port": int(os.getenv("SMTP_PORT", str(_DEFAULT_SMTP["port"]))),
-        "sender": os.getenv("SENDER_EMAIL", _DEFAULT_SMTP["sender"]),
-        "password": os.getenv("APP_PASSWORD", _DEFAULT_SMTP["password"]),
+        "server": _env_or_default("SMTP_SERVER", _DEFAULT_SMTP["server"]),
+        "port": int(_env_or_default("SMTP_PORT", str(_DEFAULT_SMTP["port"]))),
+        "sender": _env_or_default("SENDER_EMAIL", _DEFAULT_SMTP["sender"]),
+        "password": _env_or_default("APP_PASSWORD", _DEFAULT_SMTP["password"]),
     }
 
 
