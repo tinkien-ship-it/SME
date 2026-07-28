@@ -27,12 +27,15 @@ fi
 git fetch origin
 git pull origin "$BRANCH" || git pull origin master
 
-echo "=== [3/4] Cai dependency (bo pywin32 tren Linux) ==="
+echo "=== [3/5] Cai dependency (bo pywin32 tren Linux) ==="
 # shellcheck disable=SC1090
 source "$VENV"
 grep -v pywin32 requirements.txt | pip install -r /dev/stdin -q
 
-echo "=== [4/4] Restart pos.service ==="
+echo "=== [4/5] Migrate schema tat ca database (main + tenants) ==="
+python scripts/migrate_all_dbs.py
+
+echo "=== [5/5] Restart pos.service ==="
 systemctl restart pos
 sleep 2
 systemctl status pos --no-pager -l | head -20

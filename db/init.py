@@ -151,8 +151,11 @@ def ensure_products_schema(conn):
     conn.commit()
 
 
-def ensure_tenant_db_schema(conn):
-    """Migrate schema đầy đủ cho DB tenant (gọi lần đầu khi tenant truy cập)."""
+def apply_schema_migrations(conn):
+    """
+    Migrate schema đầy đủ cho MỘT file SQLite (main hoặc tenant).
+    Gọi khi deploy, khi tenant login, hoặc sau git pull — idempotent.
+    """
     c = conn.cursor()
     ensure_products_schema(conn)
     ensure_invoice_settings_schema(conn)
@@ -176,7 +179,124 @@ def ensure_tenant_db_schema(conn):
         ensure_fixed_assets_schema(conn)
     except Exception as e:
         print(f'[MIGRATE] warehouse/fixed_assets: {e}')
+    try:
+        from Services.payment_bank import ensure_bank_transactions_table
+        ensure_bank_transactions_table(conn)
+    except Exception as e:
+        print(f'[MIGRATE] bank_transactions: {e}')
+    try:
+        from Services.attendance_helpers import ensure_attendance_schema
+        ensure_attendance_schema(conn)
+    except Exception as e:
+        print(f'[MIGRATE] attendance: {e}')
+    try:
+        from Services.employee_payroll_helpers import ensure_payroll_schema
+        ensure_payroll_schema(conn, commit=True)
+    except Exception as e:
+        print(f'[MIGRATE] payroll: {e}')
     conn.commit()
+
+
+def ensure_tenant_db_schema(conn):
+    """Alias — migrate schema tenant DB (giữ tên cũ cho middleware)."""
+    apply_schema_migrations(conn)
+
+
+def _discover_database_paths():
+    """Liệt kê mọi file .db cần migrate: main + tenants/*.db + registry."""
+    import os
+    from db_utils import BASE_DIR, MAIN_DB_PATH, REGISTRY_PATH, _normalize_db_path
+
+    paths = set()
+    main = os.path.abspath(MAIN_DB_PATH)
+    if os.path.isfile(main):
+        paths.add(main)
+
+    tenants_dir = os.path.join(BASE_DIR, 'tenants')
+    if os.path.isdir(tenants_dir):
+        for fn in os.listdir(tenants_dir):
+            if fn.endswith('.db') and fn.lower() not in ('registry.db',):
+                paths.add(os.path.abspath(os.path.join(tenants_dir, fn)))
+
+    try:
+        if os.path.isfile(REGISTRY_PATH):
+            reg = sqlite3.connect(REGISTRY_PATH)
+            reg.row_factory = sqlite3.Row
+            rows = reg.execute(
+                "SELECT db_path FROM tenants WHERE db_path IS NOT NULL AND TRIM(db_path) != ''"
+            ).fetchall()
+            reg.close()
+            for row in rows:
+                p = _normalize_db_path(row['db_path'])
+                if p and os.path.isfile(p):
+                    paths.add(os.path.abspath(p))
+    except Exception as e:
+        print(f'[MIGRATE] discover registry: {e}')
+
+    return sorted(paths)
+
+
+def _migrate_main_system_tables():
+    """Bảng chỉ trên database hệ thống (registry / master)."""
+    try:
+        from Services.audit_log import ensure_audit_table
+        conn2 = get_main_db_connection()
+        ensure_audit_table(conn2)
+        conn2.execute("""
+            CREATE TABLE IF NOT EXISTS login_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                login_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                tenant_id TEXT,
+                user_id INTEGER,
+                username TEXT,
+                ip_address TEXT,
+                location TEXT,
+                device_info TEXT,
+                status TEXT
+            )
+        """)
+        conn2.commit()
+        conn2.close()
+    except Exception as e:
+        print(f'[MIGRATE] audit_log / login_history: {e}')
+    try:
+        from Services.attendance_helpers import ensure_attendance_schema
+        conn3 = get_main_db_connection()
+        ensure_attendance_schema(conn3)
+        conn3.commit()
+        conn3.close()
+    except Exception as e:
+        print(f'[MIGRATE] main attendance: {e}')
+    try:
+        from Services.subscription_service import ensure_subscription_products
+        ensure_subscription_products()
+    except Exception as e:
+        print(f'[MIGRATE] subscription products seed: {e}')
+
+
+def migrate_all_databases(verbose=True):
+    """
+    Migrate schema TẤT CẢ database (main + mọi tenant).
+    Chạy sau git pull trên VPS hoặc: python scripts/migrate_all_dbs.py
+    """
+    import os
+    paths = _discover_database_paths()
+    ok, fail = 0, 0
+    for path in paths:
+        try:
+            conn = sqlite3.connect(path)
+            apply_schema_migrations(conn)
+            conn.close()
+            ok += 1
+            if verbose:
+                print(f'[MIGRATE] OK {path}')
+        except Exception as e:
+            fail += 1
+            print(f'[MIGRATE] FAIL {path}: {e!r}')
+    _migrate_main_system_tables()
+    if verbose:
+        print(f'[MIGRATE] Done: {ok} database(s), {fail} failed')
+    return ok, fail
 
 
 def init_db_columns():
@@ -524,132 +644,6 @@ def init_db(bcrypt=None):
     migrate_database()
 
 def migrate_database():
-    conn = get_db_connection()
-    c = conn.cursor()
-    """
-    Thêm cột nếu cần. Tránh lỗi ALTER TABLE khi cột đã tồn tại.
-    """
-    # helper: check column exists
-    def has_column(table, column):
-        try:
-            c.execute(f"PRAGMA table_info({table})")
-            cols = [r[1] for r in c.fetchall()]
-            return column in cols
-        except Exception:
-            return False
-    # columns to ensure
-    extras = [
-        ('import', 'bill_no', "TEXT"),
-        ('suppliers', 'tax_code', "TEXT"),
-        ('sale', 'invoice_number', "TEXT"),
-        ('sale', 'invoice_provider', "TEXT"),
-        ('return_import', 'cost_price', "REAL"),
-        ('return_import', 'refund_amount', "REAL"),
-        ('users', 'permissions', "TEXT"),
-        ('products', 'product_type', "TEXT DEFAULT 'goods'"),
-        ('products', 'hkd_sector_code', "TEXT"),
-        ('products', 'is_subscription_plan', "INTEGER DEFAULT 0"),
-        ('products', 'has_einvoice', "INTEGER DEFAULT 0"),
-        ('sale_items', 'hkd_sector_code', "TEXT"),
-        ('sale', 'business_line', "TEXT"),
-        ('sale', 'email', "TEXT"),
-        ('sale', 'company_name', "TEXT"),
-        ('sale', 'sale_no', "TEXT"),
-        ('sale', 'customer_phone', "TEXT"),
-        ('sale', 'address', "TEXT"),
-        ('sale', 'tax_code', "TEXT"),
-        ('sale', 'budget_unit_code', "TEXT"),
-        ('sale', 'passport_no', "TEXT"),
-        ('customers', 'company_name', "TEXT"),
-        ('customers', 'phone', "TEXT"),
-        ('customers', 'address', "TEXT"),
-        ('customers', 'tax_code', "TEXT"),
-        ('customers', 'email', "TEXT"),
-        ('customers', 'budget_unit_code', "TEXT"),
-        ('customers', 'passport_no', "TEXT"),
-        ('business_info', 'email', "TEXT"),
-        ('business_info', 'accounting_regime', "TEXT DEFAULT 'HKD'"),
-        ('business_info', 'revenue_tier_declared', 'TEXT'),
-        ('business_info', 'revenue_tier_effective', 'TEXT'),
-        ('business_info', 'default_hkd_sector', "TEXT DEFAULT 'G1'"),
-        ('business_info', 'filing_period', "TEXT DEFAULT 'quarterly'"),
-        ('users', 'must_change_password', "INTEGER DEFAULT 0"),
-        ('users', 'is_support_account', "INTEGER DEFAULT 0"),
-        ('users', 'email', "TEXT"),
-        ('import', 'from_invoice_id', 'INTEGER'),
-        ('import', 'doc_type', "TEXT DEFAULT 'stock'"),
-        ('import_details', 'product_name', 'TEXT'),
-        ('import_details', 'product_code', 'TEXT'),
-        ('import_details', 'unit', 'TEXT'),
-        ('import_details', 'line_type', "TEXT DEFAULT 'goods'"),
-        ('employees', 'attendance_code', 'TEXT'),
-    ]
-    ensure_invoice_settings_schema(conn)
-
-    for table, col, col_type in extras:
-        if not has_column(table, col):
-            try:
-                c.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
-            except sqlite3.OperationalError as e:
-                print(f"[MIGRATE] Không thể thêm {col} vào {table}: {e}")
-    conn.commit()
-    try:
-        from Services.inward_invoice_helpers import (
-            ensure_import_service_schema,
-            migrate_import_details_for_service,
-            migrate_import_for_service,
-        )
-        ensure_import_service_schema(conn)
-        conn.commit()
-    except Exception as e:
-        print(f"[MIGRATE] import service columns: {e}")
-    try:
-        from Services.import_line_helpers import ensure_warehouse_schema
-        from Services.fixed_assets_helpers import ensure_fixed_assets_schema
-        ensure_warehouse_schema(conn)
-        ensure_fixed_assets_schema(conn)
-        conn.commit()
-    except Exception as e:
-        print(f"[MIGRATE] warehouse/fixed_assets schema: {e}")
-    try:
-        from Services.payment_bank import ensure_bank_transactions_table
-        ensure_bank_transactions_table(conn)
-        conn.commit()
-    except Exception as e:
-        print(f"[MIGRATE] bank_transactions table: {e}")
-    conn.close()
-    try:
-        from Services.audit_log import ensure_audit_table
-        conn2 = get_main_db_connection()
-        ensure_audit_table(conn2)
-        conn2.execute("""
-            CREATE TABLE IF NOT EXISTS login_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                login_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                tenant_id TEXT,
-                user_id INTEGER,
-                username TEXT,
-                ip_address TEXT,
-                location TEXT,
-                device_info TEXT,
-                status TEXT
-            )
-        """)
-        conn2.commit()
-        conn2.close()
-    except Exception as e:
-        print(f"[MIGRATE] audit_log table: {e}")
-    try:
-        from Services.attendance_helpers import ensure_attendance_schema
-        conn3 = get_main_db_connection()
-        ensure_attendance_schema(conn3)
-        conn3.commit()
-        conn3.close()
-    except Exception as e:
-        print(f"[MIGRATE] attendance schema: {e}")
-    try:
-        from Services.subscription_service import ensure_subscription_products
-        ensure_subscription_products()
-    except Exception as e:
-        print(f"[MIGRATE] Seed gói DV001-DV004: {e}")
+    """Migrate schema — gọi lúc khởi động app và sau deploy."""
+    migrate_all_databases(verbose=True)
 
