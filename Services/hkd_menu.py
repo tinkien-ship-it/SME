@@ -420,10 +420,11 @@ POS_HKD_MENU = [
         'description': 'Thiết lập và nhật ký hệ thống',
         'items': [
             {
-                'endpoint': 'settings_page',
+                'endpoint': 'store_setup_page',
                 'label': 'Thiết Lập',
                 'icon': 'fas fa-sliders-h text-dark',
                 'roles': ('admin', 'admin*', 'adminFB', 'master'),
+                'hide_metric': True,
             },
             {
                 'endpoint': 'audit_log_page',
@@ -431,6 +432,7 @@ POS_HKD_MENU = [
                 'icon': 'fas fa-clipboard-list text-secondary',
                 'perm': 'view_audit_log',
                 'roles': ('manager*', 'managerFB', 'manager', 'admin', 'admin*', 'adminFB', 'master'),
+                'hide_metric': True,
             },
         ],
     },
@@ -447,6 +449,7 @@ HUB_EXTRA_ENDPOINTS = frozenset({
     'huong_dan_su_dung',
     'cap_nhat_kien_thuc_page',
     'audit_log_page',
+    'store_setup_page',
     'settings_page',
     'SoCongNoPhaiTraNhanVien',
     'SoCongNoBaoHiem',

@@ -28,6 +28,34 @@
         margin-bottom: 1.5rem;
         text-align: justify;
     }
+    .huongdan-content ul.step-list {
+        list-style: none;
+        padding-left: 0;
+    }
+    .huongdan-content ul.step-list > li {
+        position: relative;
+        padding-left: 1.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .huongdan-content ul.step-list > li::before {
+        content: "\f054";
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        position: absolute;
+        left: 0;
+        color: #0d6efd;
+        font-size: 0.85rem;
+        top: 0.35rem;
+    }
+    .huongdan-luu-y {
+        color: #b02a37;
+        font-weight: 700;
+    }
+    .huongdan-luu-y h6,
+    .huongdan-luu-y li {
+        color: #b02a37;
+        font-weight: 700;
+    }
 </style>
 
 <div class="container-fluid">
@@ -47,267 +75,165 @@
                     <!-- TAB NAVIGATION -->
                     <ul class="nav nav-tabs nav-fill bg-light" id="huongdanTab" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active fw-bold py-3" id="banhang-tab" data-bs-toggle="tab" 
+                            <button class="nav-link active fw-bold py-3" id="banhang-tab" data-bs-toggle="tab"
                                     data-bs-target="#banhang" type="button" role="tab">
                                 <i class="fas fa-shopping-cart me-2"></i>
-                                Hướng Dẫn Hệ Thống Bán Hàng
+                                Phân Hệ Bán Hàng
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link fw-bold py-3" id="phongtro-tab" data-bs-toggle="tab" 
+                            <button class="nav-link fw-bold py-3" id="ketoan-tab" data-bs-toggle="tab"
+                                    data-bs-target="#ketoan" type="button" role="tab">
+                                <i class="fas fa-calculator me-2"></i>
+                                Phân Hệ Kế Toán
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold py-3" id="phongtro-tab" data-bs-toggle="tab"
                                     data-bs-target="#phongtro" type="button" role="tab">
                                 <i class="fas fa-bed me-2"></i>
-                                Hướng Dẫn Quản Lý Phòng Trọ
+                                Quản Lý Phòng Trọ
                             </button>
                         </li>
                     </ul>
 
                     <div class="tab-content huongdan-content" id="huongdanTabContent">
                         
-                        <!-- ==================== TAB 1: HỆ THỐNG BÁN HÀNG ==================== -->
+                        <!-- ==================== TAB: PHÂN HỆ BÁN HÀNG ==================== -->
                         <div class="tab-pane fade show active p-4 p-md-5" id="banhang" role="tabpanel">
-                            <div>
-                                <!-- Bước Đầu Tiên -->
-                                <h5 class="text-primary fw-bold mb-4 border-bottom pb-2">
-                                    <i class="fas fa-flag-checkered me-2"></i> Bước Đầu Tiên (***)
-                                </h5>
-                                <div class="mb-5">
-                                    <p>
-                                        Vào menu <strong>"Kế Toán"</strong>, chọn <strong>Phiếu Thu</strong>, sau đó chọn
-                                        <strong>"Lập Phiếu Thu"</strong> để nhập quỹ tiền mặt (<strong>111</strong>)
-                                        và Tiền gửi ngân hàng (<strong>112</strong>) theo số dư thực tế tại ngày tạo phiếu.
-                                    </p>
-                                    <div class="border-4 border-danger">
-                                        <p class="text-danger fw-bold mb-0">
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                            Nếu hệ thống báo “Không cho nhập” do thiếu quỹ tiền mặt hoặc tiền gửi ngân hàng,
-                                            hãy chọn phương thức thanh toán là <strong>"Chưa thanh toán"</strong> để hệ thống cho phép lập Phiếu Nhập Kho.
-                                        </p>
-                                    </div>
-                                </div>
-                                
-                                <!-- Bắt đầu từ Nhập Kho -->
-                                <h5 class="text-primary fw-bold mb-4 border-bottom pb-2">
-                                    <i class="fas fa-truck-loading me-2"></i> Bước Tiếp Theo: Bắt đầu từ "Nhập Kho"
-                                </h5>
-                                
-                                <!-- 1. Tạo phiếu nhập từ hóa đơn XML -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">1. Tạo phiếu nhập từ hóa đơn XML bên bán hàng</h6>
-                                    <div class="ps-4 border-start border-primary border-4">
-                                        <p>
-                                            Chọn menu <strong>Nhập Kho</strong> → <strong>"Tạo phiếu nhập"</strong><br>
-                                            Tải hóa đơn XML lên → Nhấn nút <strong>"Tự Động Lập Phiếu"</strong>.<br><br>
-                                            Sau khi hệ thống tự động điền thông tin, quý vị cần thiết lập:
-                                        </p>
-                                        <ul class="list-group list-group-flush mb-3">
-                                            <li class="list-group-item bg-transparent">• Đơn vị bán lẻ</li>
-                                            <li class="list-group-item bg-transparent">• Đơn vị bán sỉ</li>
-                                            <li class="list-group-item bg-transparent">• Tỷ lệ quy đổi (ví dụ: Đơn vị nhập kho trên hóa đơn là Thùng, 1 Thùng = 12 Chai → ghi tỷ lệ = 12. Nếu đơn vị nhập kho trên hóa đơn là Chai, 1 Thùng = 12 Chai -> thì vẫn ghi tỷ lệ = 12)</li>
-                                            <li class="list-group-item bg-transparent">• Giá bán lẻ và Giá bán sỉ</li>
-                                        </ul>
-                                        <p>Sau đó nhấn <strong>Lưu phiếu</strong> và bắt đầu bán hàng.</p>
-                                    </div>
-                                </div>
-                                
-                                <!-- 2. Lập phiếu nhập kho từ Hóa đơn đầu vào -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">2. Tạo phiếu nhập kho từ Hóa đơn đầu vào</h6>
-                                    <div class="ps-4 border-start border-primary border-4">
-                                        <p>
-                                            Vào menu <strong>Nhập Kho</strong> → <strong>"Hóa Đơn Đầu Vào"</strong><br>
-                                            Tìm hóa đơn cần lập → Nhấn <strong>"Lập phiếu nhập"</strong>.
-                                        </p>
-                                        <p class="fw-bold">Phân loại xử lý:</p>
-                                        <ul>
-                                            <li><strong>Lập phiếu nhập kho</strong>: Dùng cho hàng hóa mua về để bán, để sản xuất hoặc tài sản cố định.</li>
-                                            <li><strong>Hạch toán</strong>: Dùng cho hóa đơn dịch vụ hoặc hàng mua về sử dụng ngay cho cửa hàng (ăn uống, văn phòng phẩm, điện nước, chữ ký số…).</li>
-                                            <li><strong>Xử lý Lập phiếu nhập kho sai hoặc Hạch Toán Sai</strong>: Nếu lập sai phiếu nhập kho → Vào menu <strong>Nhập Kho</strong>, chọn <strong>Danh Sách Phiếu Nhập</strong> để sửa hoặc xóa phiếu. Nếu hạch toán sai → Vào menu <strong>Kế Toán</strong> → <strong>Phiếu Chi</strong> để sửa lại. <br>.</li>
+                            <h4 class="text-primary fw-bold mb-4 border-bottom pb-2">
+                                <i class="fas fa-shopping-cart me-2"></i> PHÂN HỆ BÁN HÀNG
+                            </h4>
 
-                                        </ul>
-                                    </div>
-                                </div>
-                                
-                                <!-- 3. Nhập tồn kho cũ -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">3. Nhập tồn kho cũ & Kiểm kê</h6>
-                                    <div class="ps-4 border-start border-primary border-4">
-                                        <p>
-                                            Nếu có hàng tồn kho trước khi sử dụng phần mềm:<br>
-                                            Chọn menu <strong>Nhập Kho</strong> → <strong>"Nhập tồn cũ và Kiểm Kê"</strong><br><br>
-                                          
-                                            Tại dòng thứ 2, nhấn <strong>"Tải mẫu Excel"</strong>.<br>
-                                            Copy danh sách tồn kho cũ vào file mẫu (theo đúng hướng dẫn trong file) → Lưu lại.<br>
-                                            Nhấn <strong>"Chọn file"</strong> → Tải file lên → Nhấn <strong>"Xác nhận nhập tồn kho ban đầu"</strong>.
-                                        </p>
-                                    </div>
-                                </div>
-                                <hr class="my-5">
-                                
-                                <!-- In mã vạch -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-barcode me-2"></i> In mã vạch sản phẩm
-                                    </h6>
-                                    <p class="ps-3">
-                                        Vào menu <strong>Nhập Kho</strong> → <strong>"Danh Sách Phiếu Nhập Kho"</strong><br>
-                                        Chọn phiếu cần in → Nhấn biểu tượng <strong>"Con Mắt"</strong> để xem chi tiết → Chọn <strong>"In Mã Vạch"</strong>.<br>
-                                        Thiết lập số lượng mã vạch cần in cho từng sản phẩm (theo đơn vị lẻ và sỉ).<br>
-                                        <strong>"Quét Mã Vạch"</strong> bằng ngay Camera điện thoại khi bán hàng hoặc đầu quét máy vạch như Siệu Thị hoặc các cửa hàng tiện lợi.
-                                    </p>
-                                </div>
-                                
-                                <!-- Bán hàng - Đơn tạm -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-shopping-cart me-2"></i> Bán Hàng - Đơn Tạm
-                                    </h6>
-                                    <p class="ps-3">
-                                        “Đơn Tạm” dùng để lưu đơn hàng đang tính dở (khách đang lựa thêm hàng).
-                                        Sau khi khách lựa xong, vào trang <strong>“Quản lý đơn hàng”</strong> → bấm <strong>Sửa</strong> của đơn tạm để tiếp tục tính tiền.<br><br>
-                                        <strong>Lưu ý:</strong> Không được để treo đơn tạm lâu. Nếu khách bỏ đi thì bật Đơn Tạm để bán cho khách khác bình thường.
-                                    </p>
-                                </div>
-                                
-                                <!-- Gửi email & Xuất hóa đơn điện tử -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-envelope me-2"></i> Gửi email & Xuất hóa đơn điện tử
-                                    </h6>
-                                    <div class="ps-3">
-                                        <p><strong>Gửi email hóa đơn:</strong> Hệ thống sẽ tự động gửi email chứa file PDF và XML nếu bạn nhập email khách hàng tại trang Bán Hàng.</p>
-                                        <p><strong>Xuất hóa đơn điện tử:</strong> Bật nút “Xuất hóa đơn điện tử” ở trang Bán Hàng (hoặc chạy Batch thủ công tại Quản lý đơn hàng).</p>
-                                    </div>
-                                </div>
-                                
-                                <!-- Khách trả hàng -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-undo me-2"></i> Khách trả hàng
-                                    </h6>
-                                    <div class="ps-4 border-start border-danger border-4">
-                                        <p>
-                                            Hệ thống chỉ cho phép trả hàng khi <strong>chưa xuất hóa đơn điện tử</strong>.<br><br>
-                                            Nếu đã xuất hóa đơn điện tử thì phải:
-                                        </p>
-                                        <ul>
-                                            <li>Trường hợp khách trả lại toàn bộ hàng đã mua thì Lập <strong>hóa đơn thay thế có giá trị bằng “0”</strong>, cụ thể vào menu <strong>Nhập Kho</strong>, chọn mục <strong>Hóa đơn đầu ra</strong>, rồi nhấn nút "Xuất Hóa Đơn Thay Thế", nó sẽ hiện trang bán hàng để chỉnh sửa thông tin đơn hàng đã bán, khi đó hãy xóa toàn bộ giỏ hàng và sửa thông tin khách hàng thành mặc định là Bán cho người tiêu dùng nếu khách trả hàng là Công Ty hoặc Hộ Kinh Doanh có mã số thuế khi mua, nếu là Bán cho người tiêu dùng trả hàng thì cứ để mặc định, sau đó kiểm tra kỹ thông tin trước nhấn nút "Xác Nhận Thay Thế" </li>
-                                        </ul>
-                                        <ul>
-                                            <li>Trường hợp bán sai hàng hoặc sai thông tin khách hàng thì cũng xuất <strong>Hóa đơn thay thế</strong>, cụ thể vào menu <strong>Nhập Kho</strong>, chọn mục <strong>Hóa đơn đầu ra</strong>, rồi nhấn nút "Xuất Hóa Đơn Thay Thế", nó sẽ hiện trang bán hàng để chỉnh sửa thông tin đơn hàng đã bán, khi đó hãy sửa tất cả những thông tin cần thiết và kiểm tra kỹ thông tin trước nhấn nút "Xác Nhận Thay Thế".</li>
-                                        </ul>
+                            <h5 class="text-primary fw-bold mb-3">Bước 1: Thiết Lập Thông Tin Cửa Hàng và Thông Tin Tài Khoản Ngân Hàng</h5>
+                            <ul class="step-list mb-4">
+                                <li>Vào menu <strong>Hệ Thống → Thiết Lập</strong> → điền <strong>Thông Tin Cửa Hàng</strong> và <strong>Thông Tin Tài Khoản Ngân Hàng</strong>.</li>
+                            </ul>
 
-                                        <p class="text-danger fw-bold">
-                                            Sau khi lập hóa đơn thay thế, hệ thống sẽ tự động ghi nhận đơn hàng là <strong>“Đã hủy”</strong> và cập nhật lại tồn kho + chứng từ liên quan.
-                                        </p>
-                                        <p class="text-warning fw-bold bg-light p-2">
-                                            <strong>Lưu ý quan trọng:</strong> Không được thay đổi giá trị hoặc chi tiết hàng hóa khác với đơn hàng gốc.
-                                            Nếu khách muốn mua lại hàng khác thì tạo đơn mới.
-                                        </p>
-                                    </div>
-                                </div>
-                                <hr class="my-5">
-                                
-                                <!-- Bảng lương -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-users me-2"></i> Cách sử dụng Bảng Thanh Toán Lương (05-LDTL)
-                                    </h6>
-                                    <div class="ps-3">
-                                        <ol>
-                                            <li class="mb-2"><strong>Cấu Hình Tỷ Lệ và Vùng:</strong> Chọn Vùng 1, Vùng 2, Vùng 3 hoặc Vùng 4 đã được thiết lập sẵn.</li>
-                                            <li><strong>Lập bảng lương mới:</strong>
-                                                <ul class="mt-2">
-                                                    <li class="mb-2">Nếu có nhân viên mới → Nhấn <strong>“Nhân Viên Mới”</strong>, điền thông tin và lưu hồ sơ.</li>
-                                                    <li class="mb-2">Nhấn <strong>“Tải Dữ Liệu”</strong> → Nhập ngày công → Kiểm tra lại → Nhấn <strong>“Lưu và Chốt Bảng Lương”</strong>.</li>
-                                                    <li class="mb-2">Sau khi tải danh sách nhân viên, nếu có nhân viên nào đã nghỉ việc thì vào mục "Sửa", rồi chọn "Tình trạng nhân viên" là "Đã nghỉ việc" và lưu lại, hệ thống sẽ không hiển thị nhân viên này trong danh sách bảng lương nữa</strong>.</li>
-                                                    <li>Hệ thống sẽ tự động tạo phiếu chi trả lương.</li>
-                                                </ul>
-                                            </li>
-                                        </ol>
-                                    </div>
-                                </div>
-                                <!-- Hạch toán chi phí không có hóa đơn đầu vào -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-users me-2"></i>Hạch toán chi phí không có hóa đơn đầu vào
-                                    </h6>
-                                    <div class="ps-3">
-                                        <ol>
-                                            <li class="mb-2">Vào menu Kế Toán, rồi chọn Phiếu Chi và chọn "Lập Phiếu Chi Bảo Hiểm và Chi Phát Sinh", rồi điền đầy đủ thông tin phiếu chi, hình thức thanh toán, chọn loại chi phí (ví dụ: Tiền điện, tiền nước,...), ghi lý do chi, rồi nhấn lưu và in phiếu. Theo đó, hệ thống sẽ tính lãi lỗ trong kỳ dựa trên chi phí thực tế phát sinh và chi phí lương đã trả cho nhân viên (nếu có).</li>
-                                        </ol>
-                                    </div>
-                                </div>
-                                
-                                <!-- Sổ theo dõi thuế khác -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-file-alt me-2"></i> Sổ Theo Dõi Thuế Khác
-                                    </h6>
-                                    <p class="ps-3">
-                                        Khi có khoản thuế khác cần theo dõi, bấm nút <strong>“Thêm Mới”</strong>, chọn loại thuế và nhập thông tin cần thiết.
-                                    </p>
-                                </div>
-                                
-                                <!-- Tài sản cố định -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-building me-2"></i> Sổ Tài Sản Cố Định và Khấu Hao
-                                    </h6>
-                                    <div class="ps-3">
-                                        <p>
-                                            Để xuất kho tài sản cố định đưa vào sử dụng:<br>
-                                            Vào menu <strong>Kế Toán</strong> → <strong>Phiếu Xuất Kho</strong> → Chọn xuất TSCĐ → Thiết lập thời gian khấu hao.<br><br>
-                                            <span class="badge bg-info text-dark p-2">Lưu ý:</span> Tài sản có giá trị từ <strong>30 triệu đồng</strong> trở lên là TSCĐ.
-                                            Tài sản nhỏ hơn xem là Công Cụ Dụng Cụ (CCDC) và có thể xuất để theo dõi, phân bổ chi phí.
-                                        </p>
-                                        <p>
-                                            Sau khi xuất, xem tình hình khấu hao tại mục <strong>Sổ Tài Sản Cố Định và Khấu Hao</strong>.
-                                        </p>
-                                    </div>
-                                </div>
-                                
-                                <!-- Sổ theo dõi khoản vay -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-hand-holding-usd me-2"></i> Sổ Theo Dõi Khoản Vay
-                                    </h6>
-                                    <div class="ps-3">
-                                        <p>
-                                            Khi có khoản vay phục vụ kinh doanh → Nhấn <strong>“Thêm Khoản Vay”</strong> và nhập thông tin.<br><br>
-                                            • <strong>Trả lãi vay:</strong> Nhấn nút thứ nhất<br>
-                                            • <strong>Trả nợ gốc:</strong> Nhấn nút thứ hai<br>
-                                            • <strong>Điều chỉnh thông tin khoản vay:</strong> Nhấn nút thứ ba
-                                        </p>
-                                    </div>
-                                </div>
-                                
-                                <!-- Xem sổ sách kế toán -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-book-open me-2"></i> Xem các sổ sách kế toán
-                                    </h6>
-                                    <p class="ps-3 mb-0">
-                                        Xem sổ chi tiết tiền mặt, tiền gửi ngân hàng, công nợ phải thu, công nợ phải trả và các sổ sách khác
-                                        tại các mục tương ứng trong menu <strong>KẾ TOÁN</strong>.
-                                    </p>
-                                </div>
-                                
-                                <!-- Lưu ý quan trọng -->
-                                 <div class="mb-5">
-                                    <h6 class="fw-bold mb-3">
-                                        <i class="fas fa-exclamation-triangle"></i> Lưu ý quan trọng
-                                    </h6>
-                                    <ul class="mb-0">
-                                        <li class="mb-2">Sau khi sửa phiếu nhập kho (số tiền, đơn vị tính, thông tin khác), hệ thống sẽ <strong>tự động cập nhật</strong> cho Phiếu Chi, Công nợ phải trả và tất cả chứng từ liên quan.</li>
-                                        <li style="color: red;"><strong>Để được hướng dẫn từ xa cách sử dụng trực tiếp trên phần mềm: Quý khách hãy vào Trình Duyệt Google Chrome, gõ tìm ứng dụng Ultraview và tải về cài vào máy tính, lưu trên Desktop (màn hình), rồi bật lên và chụp màn hình gửi cho chúng tôi để được hướng dẫn từ xa cách sử dụng trực tiếp trên phần mềm</strong>.</li>
-                                        <li style="color: red;"><strong>Cảnh Báo: Khách hàng sử dụng phần mềm có nghĩa vụ tuân thủ quy định pháp luật về thuế. Nhà cung cấp chỉ chịu trách nhiệm về tính chính xác và khả năng vận hành của phần mềm</strong>.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                            <h5 class="text-primary fw-bold mb-3">Bước 2: Nhập Quỹ Tiền Mặt và Số Dư Tài Khoản Ngân Hàng</h5>
+                            <p class="text-justify mb-3">
+                                Nhập quỹ tiền mặt và số dư tài khoản ngân hàng phục vụ kinh doanh tại ngày bắt đầu sử dụng phần mềm.
+                                Nếu không có quỹ tiền mặt hoặc số dư tài khoản ngân hàng thì hệ thống <strong>không cho chọn “Đã thanh toán”</strong>
+                                trên phiếu nhập kho hoặc khi hạch toán, mà chỉ có thể chọn <strong>“Chưa thanh toán”</strong>.
+                            </p>
+                            <ul class="step-list mb-4">
+                                <li><strong>Nhập quỹ tiền mặt:</strong> Vào menu <strong>TIỀN MẶT &amp; TIỀN GỬI NH → Sổ Quỹ Tiền Mặt</strong> → nhấn nút <strong>Nộp Quỹ Tiền Mặt</strong>, chọn ngày, nhập số tiền cần nộp và nhấn <strong>Lưu Phiếu Thu</strong>. Khi nộp thêm tiền vào quỹ sau này thì làm tương tự.</li>
+                                <li><strong>Nhập số dư tài khoản ngân hàng:</strong> Vào menu <strong>TIỀN MẶT &amp; TIỀN GỬI NH → Sổ Tiền Gửi NH</strong> → nhấn nút <strong>Nộp Tiền Vào Tài Khoản</strong>, chọn ngày, nhập số tiền và nhấn <strong>Lưu Phiếu Thu</strong>. Ví dụ: ngày bắt đầu sử dụng phần mềm, số dư ngân hàng còn 1.000.000 đ thì nhập 1 triệu; sau này nộp thêm tiền vào tài khoản thì làm tương tự.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3">Bước 3: Lập Phiếu Nhập Kho hoặc Hạch Toán</h5>
+
+                            <h6 class="fw-bold text-dark mb-2">1. Lập phiếu nhập kho cho hàng mua về bán</h6>
+                            <ul class="step-list mb-3">
+                                <li><strong>Nhập tự động từ Hóa Đơn Mua Hàng:</strong> Vào menu <strong>Mua Hàng → Hóa Đơn Mua Hàng</strong> → nhấn <strong>Lập Phiếu Nhập</strong>. Hệ thống tự điền chi tiết hóa đơn vào Phiếu Nhập, số phiếu tự sinh. Thiết lập đơn vị bán lẻ, đơn vị bán sỉ (ví dụ hóa đơn ghi <em>1 Thùng 12 chai</em> → đơn vị lẻ là <strong>Chai</strong>, đơn vị sỉ là <strong>Thùng</strong>; ngược lại nếu hóa đơn ghi <em>Chai</em> mà bán <em>Thùng</em> thì chỉ nhập đơn vị sỉ <strong>Thùng</strong>, tỷ lệ <strong>12</strong>). Nhập giá bán lẻ, giá bán sỉ. Nhiều kho → chọn cột <strong>KHO</strong>. Hàng hóa, dịch vụ, CCDC, TSCĐ, vật tư trên cùng hóa đơn → chọn cột <strong>LOẠI HÀNG</strong> cho từng dòng. Chọn phương thức thanh toán → <strong>Lưu Phiếu Nhập</strong>. Hệ thống tự tạo mã hàng, mã vạch, sản phẩm và danh mục nhà cung cấp.</li>
+                                <li><strong>Nhập từ hóa đơn XML</strong> do NCC gửi (nếu không dùng hóa đơn điện tử).</li>
+                                <li><strong>Nhập tồn kho cũ:</strong> Vào <strong>Mua Hàng → Nhập Tồn Cũ &amp; Kiểm Kê</strong> → <strong>Tải Mẫu Excel</strong> → điền hàng tồn trước khi dùng phần mềm → <strong>Chọn file</strong> → <strong>Xác Nhận Nhập Tồn Kho Ban Đầu</strong>.</li>
+                            </ul>
+
+                            <h6 class="fw-bold text-dark mb-2">2. Hạch toán khi có hóa đơn điện tử</h6>
+                            <p class="ps-3 mb-3 text-justify">
+                                Nếu hóa đơn đầu vào là dịch vụ hoặc hàng mua dùng ngay → nhấn <strong>Hạch Toán</strong> (hệ thống tự tạo số bút toán),
+                                chọn phương thức thanh toán → <strong>Lưu Hạch Toán</strong>.
+                            </p>
+
+                            <h6 class="fw-bold text-dark mb-2">3. Hạch toán không có hóa đơn điện tử</h6>
+                            <p class="ps-3 mb-3 text-justify">
+                                Tiền điện, tiền nước, tiền thuê nhà, chi phí khác (hàng/dịch vụ mua ngoài): vào <strong>Chứng Từ Kế Toán → Phiếu Chi</strong>
+                                → <strong>Lập Phiếu Chi – Chi Phát Sinh</strong> → nhập NCC, hàng hóa/dịch vụ → <strong>Lưu Hạch Toán</strong>.
+                            </p>
+
+                            <h6 class="fw-bold text-dark mb-2">4. Sửa phiếu nhập kho hoặc hạch toán sai</h6>
+                            <p class="ps-3 mb-4 text-justify">
+                                Vào <strong>Danh Sách Phiếu Nhập Kho</strong>, chọn phiếu cần sửa, lưu lại — hệ thống tự cập nhật mọi chứng từ và sổ sách liên quan.
+                            </p>
+
+                            <h5 class="text-primary fw-bold mb-3">Bước 4: In Mã Vạch</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Mua Hàng → Danh Sách Phiếu Nhập Kho</strong> → tìm phiếu → <strong>In Mã Vạch</strong> ở cột Hành Động → nhập số lượng mã lẻ/sỉ → <strong>Tạo &amp; In Ngay</strong>. Hoặc <strong>Danh Mục → Danh Mục Sản Phẩm</strong> → chọn hàng cần in.</li>
+                                <li>Quét mã vạch khi bán bằng camera điện thoại trên trang bán hàng hoặc máy quét chuyên dụng. Không in mã vạch vẫn có thể gõ tên sản phẩm để tìm khi bán.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3">Bước 5: Bán Hàng</h5>
+                            <ul class="step-list mb-3">
+                                <li>Bật <strong>Tự Động Xuất Hóa Đơn Điện Tử</strong> khi vào trang bán hàng để xuất HĐ ngay sau khi bán.</li>
+                                <li>Có thể tắt nút này; đơn sẽ được quét và xuất HĐĐT lúc 17h — <em>không khuyến khích tắt khi đang bán</em>.</li>
+                                <li><strong>Đơn tạm (F1):</strong> Lưu đơn đang tính dở, bán khách khác, sau đó mở lại tại <strong>Quản Lý Đơn Hàng</strong> để cập nhật và tính tiền.</li>
+                                <li>Sửa HĐ sai / đổi trả hàng đã xuất HĐ: <strong>Bán Hàng → Hóa Đơn Bán Hàng → Xuất Hóa Đơn Thay Thế</strong> → sửa → <strong>Xác Nhận Xuất Hóa Đơn Thay Thế</strong>.</li>
+                                <li><strong>Gửi email HĐĐT:</strong> Tự gửi PDF/XML nếu nhập email khách tại trang Bán Hàng.</li>
+                                <li><strong>Xuất hóa đơn điện tử:</strong> Bật nút “Xuất hóa đơn điện tử” ở trang Bán Hàng (hoặc chạy Batch thủ công tại Quản Lý Đơn Hàng).</li>
+                            </ul>
+
+                            <h6 class="fw-bold text-dark mb-2"><i class="fas fa-undo me-2"></i>Khách trả hàng</h6>
+                            <ul class="mb-0">
+                                <li class="mb-2"><strong>Chưa xuất HĐĐT:</strong> <strong>Khách Trả Hàng</strong> → chọn đơn → số lượng → xác nhận trả.</li>
+                                <li class="mb-2"><strong>Đã xuất HĐĐT — trả hết:</strong> <strong>Hóa Đơn Bán Hàng → Xuất Hóa Đơn Thay Thế</strong>, số lượng = 0 (không xóa tên hàng), khách hàng chọn <strong>Bán cho người tiêu dùng</strong> (các trường khác để trống nếu cần) → xác nhận thay thế.</li>
+                                <li class="mb-2"><strong>Trả một phần:</strong> Điều chỉnh số lượng hoặc xóa dòng hàng trả hết, giữ đủ thông tin khách hoặc “Bán cho người tiêu dùng” → xác nhận thay thế.</li>
+                                <li class="mb-2"><strong>Bán sai hàng / sai thông tin KH:</strong> Cũng dùng <strong>Xuất Hóa Đơn Thay Thế</strong>, sửa trên trang bán hàng, kiểm tra kỹ → <strong>Xác Nhận Thay Thế</strong>.</li>
+                            </ul>
+                            <p class="text-danger fw-bold mt-3 mb-0">
+                                Sau khi lập hóa đơn thay thế, hệ thống ghi nhận đơn <strong>“Đã hủy”</strong> (trả hết) hoặc <strong>“Hoàn thành”</strong> (trả một phần) và tự cập nhật tồn kho + chứng từ liên quan.
+                            </p>
                         </div>
 
-                        <!-- ==================== TAB 2: QUẢN LÝ PHÒNG TRỌ ==================== -->
+                        <!-- ==================== TAB: PHÂN HỆ KẾ TOÁN ==================== -->
+                        <div class="tab-pane fade p-4 p-md-5" id="ketoan" role="tabpanel">
+                            <h4 class="text-primary fw-bold mb-4 border-bottom pb-2">
+                                <i class="fas fa-calculator me-2"></i> PHÂN HỆ KẾ TOÁN
+                            </h4>
+                            <p class="text-justify mb-4">
+                                Chứng từ và sổ sách kế toán hầu hết đã được lập tự động; chỉ còn một số thao tác sau:
+                            </p>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-hand-holding-usd me-2"></i>Công nợ</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Thu nợ khách hàng:</strong> <strong>Công Nợ → Công Nợ Phải Thu</strong> → chọn khách → <strong>Thu Tiền</strong> cho đơn cần thu → ngày, hình thức, số tiền → <strong>LƯU PHIẾU THU</strong>.</li>
+                                <li><strong>Trả nợ NCC:</strong> <strong>Công Nợ → Công Nợ Phải Trả NCC</strong> → chọn NCC → <strong>Trả Tiền</strong> cho phiếu nhập → ngày ghi sổ, phương thức → <strong>XÁC NHẬN CHI TIỀN</strong>.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-building me-2"></i>Tài sản cố định &amp; CCDC</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>TSCĐ:</strong> Sau nhập kho, vào <strong>TSCĐ &amp; CCDC → TSCĐ &amp; Khấu Hao</strong> → <strong>ĐƯA TSCĐ VÀO SỬ DỤNG</strong> → chọn TSCĐ, ngày bắt đầu, số tháng khấu hao, có/không gồm thuế (PPKK trực tiếp / khấu trừ) → xác nhận. Hệ thống tự tính khấu hao định kỳ vào chi phí KD.</li>
+                                <li><strong>CCDC:</strong> <strong>TSCĐ &amp; CCDC → Công Cụ Dụng Cụ</strong> → <strong>ĐƯA CCDC VÀO SỬ DỤNG</strong>, thiết lập tương tự TSCĐ.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-users me-2"></i>Nhân sự và tiền lương</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Thêm nhân viên:</strong> <strong>NHÂN SỰ &amp; LƯƠNG → Danh Sách Nhân Viên → THÊM NHÂN VIÊN</strong> → điền đủ thông tin → <strong>LƯU</strong>.</li>
+                                <li><strong>Chấm công:</strong> Tự động (máy chấm công) hoặc <strong>Chấm Công Thủ Công</strong> (giờ vào/ra). Có chấm công → lương tính theo công thực tế; không chấm → trọn tháng hoặc nhập số ngày công trực tiếp.</li>
+                                <li><strong>Lập bảng lương:</strong> Cuối tháng → <strong>Lập Bảng Lương</strong> → <strong>Tải dữ liệu</strong> → kiểm tra, chọn cách chấm công → <strong>Chốt Bảng Lương</strong>.</li>
+                                <li><strong>Trả lương:</strong> <strong>Công Nợ Phải Trả Nhân Viên</strong> → trả cả kỳ (một phiếu) hoặc trả lẻ từng nhân viên.</li>
+                                <li><strong>Nộp BHXH/BHYT/BHTN:</strong> <strong>Công Nợ BHXH/BHYT/BHTN</strong> → nộp cả kỳ.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-file-invoice me-2"></i>Sổ theo dõi thuế khác</h5>
+                            <p class="mb-4 ps-3">Khi có khoản thuế khác cần theo dõi → <strong>Thêm Mới</strong> → chọn loại thuế và nhập thông tin.</p>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-chart-line me-2"></i>Sổ TSCĐ và khấu hao</h5>
+                            <p class="mb-2 ps-3 text-justify">
+                                <strong>Đưa TSCĐ vào sử dụng</strong> → thiết lập thời gian khấu hao → lưu. Hệ thống tự tính chi phí khấu hao định kỳ để xác định lãi/lỗ.
+                            </p>
+                            <p class="ps-3 mb-4">
+                                <span class="badge bg-info text-dark p-2">Lưu ý:</span>
+                                Tài sản từ <strong>30 triệu đồng</strong> trở lên là TSCĐ; dưới 30 triệu là <strong>CCDC</strong>.
+                            </p>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-tools me-2"></i>Sổ CCDC</h5>
+                            <p class="mb-4 ps-3 text-justify">
+                                <strong>Công Cụ Dụng Cụ → ĐƯA CCDC VÀO SỬ DỤNG</strong> → thiết lập thời gian phân bổ → lưu.
+                                Hệ thống tự tính chi phí phân bổ từng kỳ trên báo cáo Lợi Nhuận.
+                            </p>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-university me-2"></i>Sổ theo dõi khoản vay</h5>
+                            <p class="ps-3 mb-2">Có khoản vay phục vụ KD → <strong>Thêm Khoản Vay</strong> → nhập theo hợp đồng vay.</p>
+                            <ul class="mb-4 ps-3">
+                                <li><strong>Trả lãi vay:</strong> Nút thứ nhất</li>
+                                <li><strong>Trả nợ gốc:</strong> Nút thứ hai</li>
+                                <li><strong>Điều chỉnh thông tin khoản vay:</strong> Nút thứ ba</li>
+                            </ul>
+
+                        </div>
+
+                        <!-- ==================== TAB: QUẢN LÝ PHÒNG TRỌ ==================== -->
                         <div class="tab-pane fade p-4 p-md-5" id="phongtro" role="tabpanel">
                             <div>
                                 <h4 class="text-primary fw-bold mb-4 border-bottom pb-2">
@@ -323,49 +249,26 @@
                                 
                                 <p><strong><i class="fas fa-print text-primary"></i></strong> Nếu khách có yêu cầu Phiếu Thanh Toán thì có thể mua Máy In Nhiệt loại khổ giấy 80mm để in khi Thu Tiền, hoặc in bằng máy in Khổ A4, cụ thể vào mục Quản Lý Đơn Hàng, rồi chọn khách cần in, nhấn vào biểu tượng “Con Mắt” là nó ra trang cần in.</p>
 
+                                <p><strong><i class="fas fa-chart-line text-primary"></i></strong> Muốn xem các báo cáo doanh thu, lợi nhuận, chứng từ, sổ sách kế toán, số tiền mặt, sổ tiền gửi ngân hàng, sổ theo dõi khoản vay,... thì vào các mục tương ứng.</p>
 
-                                <!-- Bảng lương -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-users me-2"></i> Cách sử dụng Bảng Thanh Toán Lương (05-LDTL)
-                                    </h6>
-                                    <div class="ps-3">
-                                        <ol>
-                                            <li class="mb-2"><strong>Cấu Hình Tỷ Lệ và Vùng:</strong> Chọn Vùng 1, Vùng 2, Vùng 3 hoặc Vùng 4 đã được thiết lập sẵn.</li>
-                                            <li><strong>Lập bảng lương mới:</strong>
-                                                <ul class="mt-2">
-                                                    <li class="mb-2">Nếu có nhân viên mới → Nhấn <strong>“Nhân Viên Mới”</strong>, điền thông tin và lưu hồ sơ.</li>
-                                                    <li class="mb-2">Nhấn <strong>“Tải Dữ Liệu”</strong> → Nhập ngày công → Kiểm tra lại → Nhấn <strong>“Lưu và Chốt Bảng Lương”</strong>.</li>
-                                                    <li class="mb-2">Sau khi tải danh sách nhân viên, nếu có nhân viên nào đã nghỉ việc thì vào mục "Sửa", rồi chọn "Tình trạng nhân viên" là "Đã nghỉ việc" và lưu lại, hệ thống sẽ không hiển thị nhân viên này trong danh sách bảng lương nữa</strong>.</li>
-                                                    <li>Hệ thống sẽ tự động tạo phiếu chi trả lương.</li>
-                                                </ul>
-                                            </li>
-                                        </ol>
-                                    </div>
-                                </div>
-                                <!-- Hạch toán chi phí không có hóa đơn đầu vào -->
-                                <div class="mb-5">
-                                    <h6 class="fw-bold text-dark mb-3">
-                                        <i class="fas fa-users me-2"></i>Hạch toán chi phí không có hóa đơn đầu vào
-                                    </h6>
-                                    <div class="ps-3">
-                                        <ol>
-                                            <li class="mb-2">Vào menu Kế Toán, rồi chọn Phiếu Chi và chọn "Lập Phiếu Chi Bảo Hiểm và Chi Phát Sinh", rồi điền đầy đủ thông tin phiếu chi, hình thức thanh toán, chọn loại chi phí (ví dụ: Tiền điện, tiền nước,...), ghi lý do chi, rồi nhấn lưu và in phiếu. Theo đó, hệ thống sẽ tính lãi lỗ trong kỳ dựa trên chi phí thực tế phát sinh và chi phí lương đã trả cho nhân viên (nếu có).</li>
-                                        </ol>
-                                    </div>
-                                </div>
-                                
-                                <p><strong><i class="fas fa-chart-line text-primary"></i></strong> Muốn xem các báo cáo doanh thu, lợi nhuận, chứng từ, sổ sách kế toán, số tiền mặt, sổ tiền gửi ngân hàng, sổ theo dõi khoản vay,...thì vào các mục tương ứng.</p>
-                                
                                 <p><strong><i class="fas fa-file-invoice text-primary"></i></strong> Nếu có nhu cầu Xuất Hóa Đơn Điện Tử thì phải đăng ký thêm gói này.</p>
-                                
-                                <p style="color: red; font-weight: bold;"><strong><i class="fas fa-chevron-circle-right text-primary"></i> Trong quá trình sử dụng phần mềm, nếu quý khách có góp ý và cần cải tiến gì thì vui lòng cho ý kiến. Mỗi sự góp ý hợp lý để phần mềm có những tiện ích tốt hơn là niềm cảm kích của chúng tôi. Xin cảm ơn quý khách đã tin tưởng sử dụng phần mềm và hy vọng nó mang lại sự tiện lợi đích thực cho quý vị!</p>
-                                <p style="color: red; font-weight: bold;"><strong><i class="fas fa-chevron-circle-right text-primary"></i> Muốn được hỗ trợ từ xa hãy vào Trình Duyệt, gõ tìm ứng dụng Ultraview và tải về cài vào máy tính, lưu trên Desktop, rồi bật lên và chụp màn hình gửi cho chúng tôi để được hướng dẫn từ xa cách sử dụng trực tiếp trên phần mềm.</p>
-                                </div>
 
+                                <p class="text-danger fw-bold mb-4"><strong><i class="fas fa-chevron-circle-right text-primary"></i></strong> Trong quá trình sử dụng phần mềm, nếu quý khách có góp ý và cần cải tiến gì thì vui lòng cho ý kiến. Mỗi sự góp ý hợp lý để phần mềm có những tiện ích tốt hơn là niềm cảm kích của chúng tôi. Xin cảm ơn quý khách đã tin tưởng sử dụng phần mềm và hy vọng nó mang lại sự tiện lợi đích thực cho quý vị!</p>
                             </div>
                         </div>
 
+                    </div>
+
+                    <div class="huongdan-luu-y border-top px-4 px-md-5 py-4">
+                        <h6 class="mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Lưu ý quan trọng</h6>
+                        <ul class="mb-0">
+                            <li class="mb-3">
+                                Để được hướng dẫn từ xa cách sử dụng trực tiếp trên phần mềm: Quý khách hãy vào Trình Duyệt Google Chrome, gõ tìm ứng dụng Ultraview và tải về cài vào máy tính, lưu trên Desktop (màn hình), rồi bật lên và chụp màn hình gửi cho chúng tôi để được hướng dẫn từ xa cách sử dụng trực tiếp trên phần mềm.
+                            </li>
+                            <li class="mb-0">
+                                Cảnh Báo: Khách hàng sử dụng phần mềm có nghĩa vụ tuân thủ quy định pháp luật về thuế. Nhà cung cấp chỉ chịu trách nhiệm về tính chính xác và khả năng vận hành của phần mềm.
+                            </li>
+                        </ul>
                     </div>
                 </div>
 

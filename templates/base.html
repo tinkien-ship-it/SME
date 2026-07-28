@@ -216,6 +216,13 @@
         }
     </style>
 
+    <!-- Flatpickr — lịch chọn ngày thống nhất -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <style>
+        .flatpickr-calendar { z-index: 10060 !important; }
+        input.keto-date-input { text-align: center; }
+    </style>
     {% block head_extra %}{% endblock %}
     {% block extra_style %}{% endblock %}
 </head>
@@ -528,6 +535,9 @@
         }
     </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+    <script src="{{ url_for('static', filename='js/keto-date-picker.js') }}"></script>
     {% block scripts %}{% endblock %}
     {% block extra_script %}{% endblock %}
 </body>

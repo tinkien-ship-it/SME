@@ -1413,7 +1413,7 @@ async function refreshCart() {
         if (codeEl) codeEl.textContent = 'Nội dung CK: DH' + String(saleId).padStart(6, '0');
         img.src = `/qr_payment/${saleId}?t=${Date.now()}`;
         img.onerror = () => {
-            Swal.fire('Lỗi', 'Chưa cấu hình VietQR trong Cài đặt cửa hàng', 'error');
+            Swal.fire('Lỗi', 'Chưa cấu hình VietQR — vào Hệ Thống → Thiết lập', 'error');
             closeCustomerQrScreen();
         };
         screen.classList.add('active');

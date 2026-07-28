@@ -8,7 +8,7 @@
             <p class="text-muted mb-4">
                 Cấu hình tài khoản VietQR để tạo mã QR cho khách chuyển khoản.
                 Nếu bạn <strong>chưa có số tài khoản</strong>, có thể bỏ qua bước này và cấu hình sau tại
-                <strong>Cài đặt → Thông tin cửa hàng</strong>.
+                <strong>Hệ Thống → Thiết lập</strong>.
             </p>
             <form id="onboardingForm">
                 <h6 class="fw-bold">Tài khoản VietQR (tuỳ chọn)</h6>
@@ -50,7 +50,7 @@
 </div>
 <script>
 async function skipOnboarding() {
-    if (!confirm('Bỏ qua thiết lập VietQR? Bạn có thể cấu hình sau trong phần Cài đặt.')) {
+    if (!confirm('Bỏ qua thiết lập VietQR? Bạn có thể cấu hình sau tại Hệ Thống → Thiết lập.')) {
         return;
     }
     const res = await fetch('/api/onboarding/skip', { method: 'POST' });

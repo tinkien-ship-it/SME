@@ -292,7 +292,7 @@ def register_registration_routes(app):
         return jsonify({
             'success': True,
             'redirect': url_for('sale'),
-            'message': 'Bạn có thể cấu hình VietQR sau tại Cài đặt → Thông tin cửa hàng.',
+            'message': 'Bạn có thể cấu hình VietQR sau tại Hệ Thống → Thiết lập.',
         })
 
     @app.route('/api/onboarding/complete', methods=['POST'])

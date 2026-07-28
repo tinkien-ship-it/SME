@@ -100,6 +100,27 @@ def init_schedulers(app, backup_root):
         hour=20,
         minute=0,
     )
+    backup_scheduler.add_job(
+        func=_scheduled_knowledge_rss_sync,
+        trigger="cron",
+        day_of_week='mon',
+        hour=6,
+        minute=0,
+        id='knowledge_rss_sync',
+    )
     backup_scheduler.start()
 
     return expiry_scheduler, backup_scheduler
+
+
+def _scheduled_knowledge_rss_sync():
+    """Đồng bộ RSS pháp luật vào hàng chờ nháp — thứ Hai hàng tuần."""
+    try:
+        from Services.knowledge_service import run_scheduled_rss_sync
+        result = run_scheduled_rss_sync()
+        print(
+            f"[{datetime.now()}] Knowledge RSS sync: "
+            f"+{result.get('inserted', 0)} draft, skip {result.get('skipped', 0)}"
+        )
+    except Exception as e:
+        print(f"[{datetime.now()}] Knowledge RSS sync failed: {e}")

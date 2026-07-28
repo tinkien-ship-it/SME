@@ -109,7 +109,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Ngày bắt đầu sử dụng</label>
-                            <input type="date" name="ngay_bat_dau_su_dung" class="form-control" id="ngay_sd_ccdc" required>
+                            <input type="text" name="ngay_bat_dau_su_dung" class="form-control text-center keto-date-input" id="ngay_sd_ccdc" placeholder="dd/mm/yyyy" required autocomplete="off">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Số tháng phân bổ</label>
@@ -231,7 +231,7 @@ async function initCcdcSelect() {
 }
 
 function openModalCCDC() {
-    document.getElementById('ngay_sd_ccdc').value = new Date().toISOString().split('T')[0];
+    KetoDatePicker.init('ngay_sd_ccdc', new Date());
     $('#ccdcPreview').addClass('d-none');
     initCcdcSelect()
         .then(() => getCcdcModal().show())
@@ -261,7 +261,7 @@ async function submitCCDC() {
 
     const payload = {
         product_id: ccdcSelect.getValue(),
-        ngay_bat_dau_su_dung: document.getElementById('ngay_sd_ccdc').value,
+        ngay_bat_dau_su_dung: KetoDatePicker.getIsoValue('ngay_sd_ccdc'),
         months: document.querySelector('#formCCDC input[name="months"]').value
     };
 

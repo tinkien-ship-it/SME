@@ -3,8 +3,6 @@
 
 {% block head_extra %}
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
 {% include 'partials/data_list_table_assets.html' %}
 {% endblock %}
 
@@ -58,11 +56,11 @@
             <form id="filterForm" class="row g-3 align-items-end filter-toolbar">
                 <div class="col-12 col-sm-6 col-lg-3">
                     <label class="form-label fw-semibold">Từ ngày</label>
-                    <input type="text" class="form-control text-center" id="startDate" placeholder="dd/mm/yyyy" required />
+                    <input type="text" class="form-control text-center" id="startDate" placeholder="dd/mm/yyyy" required autocomplete="off" />
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
                     <label class="form-label fw-semibold">Đến ngày</label>
-                    <input type="text" class="form-control text-center" id="endDate" placeholder="dd/mm/yyyy" required />
+                    <input type="text" class="form-control text-center" id="endDate" placeholder="dd/mm/yyyy" required autocomplete="off" />
                 </div>
                 <div class="col-12 col-lg-4">
                     <label class="form-label fw-semibold">Tìm kiếm</label>
@@ -152,8 +150,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script>
 let searchTimer = null;
 let stockFilter = 'all';
@@ -202,13 +198,6 @@ function filterStock(list) {
     return (list || []).filter(item => stockLevel(item.quantity) === stockFilter);
 }
 
-function parseDateInputToISO(dateStr) {
-    if (!dateStr) return '';
-    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(dateStr).trim());
-    if (!m) return '';
-    return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
-}
-
 function formatHistoryDate(value) {
     if (!value) return '—';
     const raw = String(value).trim();
@@ -234,39 +223,8 @@ function scheduleLoadInventory(delayMs = 400) {
     searchTimer = setTimeout(loadInventory, delayMs);
 }
 
-function initializeDateInput(id, dateObj) {
-    const input = document.getElementById(id);
-    if (!input || !dateObj) return;
-    const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
-    if (Number.isNaN(d.getTime())) return;
-
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    input.value = formatDate(iso);
-    input.setAttribute('data-iso-value', iso);
-
-    flatpickr(input, {
-        dateFormat: 'd/m/Y',
-        locale: 'vn',
-        allowInput: true,
-        disableMobile: true,
-        onChange(selectedDates) {
-            if (selectedDates[0]) {
-                const picked = selectedDates[0];
-                const iso = `${picked.getFullYear()}-${String(picked.getMonth() + 1).padStart(2, '0')}-${String(picked.getDate()).padStart(2, '0')}`;
-                input.setAttribute('data-iso-value', iso);
-                scheduleLoadInventory(200);
-            }
-        }
-    });
-
-    input.addEventListener('blur', function onBlur() {
-        const isoValue = parseDateInputToISO(this.value);
-        if (isoValue && isoValue !== this.getAttribute('data-iso-value')) {
-            this.value = formatDate(isoValue);
-            this.setAttribute('data-iso-value', isoValue);
-            scheduleLoadInventory(200);
-        }
-    });
+function initializeDateInput(id, dateObj, onChange) {
+    KetoDatePicker.init(id, dateObj, { onChange: () => { if (onChange) onChange(); else scheduleLoadInventory(200); } });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -287,8 +245,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadInventory() {
-    const start = document.getElementById('startDate').getAttribute('data-iso-value');
-    const end = document.getElementById('endDate').getAttribute('data-iso-value');
+    const start = KetoDatePicker.getIsoValue('startDate');
+    const end = KetoDatePicker.getIsoValue('endDate');
     const q = document.getElementById('searchInput').value.trim();
     if (!start || !end) {
         showInventoryToast('Vui lòng chọn đủ Từ ngày và Đến ngày', true);

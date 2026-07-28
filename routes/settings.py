@@ -1966,6 +1966,14 @@ Trân trọng,
             return jsonify({"success": False, "error": f"Lỗi hệ thống: {str(e)}"}), 500
         finally:
             conn.close()
+    @app.route('/thiet-lap')
+    @admin_or_master_required
+    def store_setup_page():
+        db = get_db_connection()
+        info_row = db.execute("SELECT * FROM business_info LIMIT 1").fetchone()
+        info = dict(info_row) if info_row else {}
+        return render_template('store_setup.html', info=info)
+
     @app.route('/settings')
     @admin_or_master_required
     def settings_page():

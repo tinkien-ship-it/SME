@@ -101,7 +101,7 @@
                         <div class="alert alert-light border py-2 mb-3 small">
                             <i class="fas fa-cog me-1 text-primary"></i>
                             MST, tên HKD, chủ hộ, địa chỉ, điện thoại lấy từ
-                            <a href="{{ url_for('settings_page') }}">Cài đặt → Cửa hàng, VietQR &amp; Ngân hàng ĐT</a>.
+                            <a href="{{ url_for('store_setup_page') }}">Hệ Thống → Thiết lập</a>.
                         </div>
                         <h5 class="text-primary mb-3">[07] Thông Tin Người Nộp Thuế</h5>
                         <div class="row g-3 mb-3">
@@ -246,7 +246,7 @@
                     <div class="tab-pane fade" id="tab2">
                         <h5 class="text-primary mb-2">Phụ lục 01/BK-STK — Thông báo số tài khoản / ví điện tử</h5>
                         <p class="text-muted small mb-3">
-                            Dòng đầu tiên mặc định lấy <strong>số tài khoản VietQR</strong> dùng khi bán hàng (Cài đặt → Cửa hàng, VietQR &amp; Ngân hàng ĐT).
+                            Dòng đầu tiên mặc định lấy <strong>số tài khoản VietQR</strong> dùng khi bán hàng (Hệ Thống → Thiết lập).
                             Nếu HKD còn dùng thêm tài khoản/ví khác, nhấn <strong>Thêm tài khoản</strong> để kê khai bổ sung.
                         </p>
                         <div class="table-responsive">
@@ -814,7 +814,7 @@ async function fetchTaxDataForPeriod(ky, options = {}) {
         const qrNote = qrBankApplied ? ', STK VietQR đã điền' : '';
         showToast(`Đã tải dữ liệu: ${orderCount} chứng từ, DT ${formatNumber(result.doanhthu || 0, 0)}đ${qrNote}`, 'success');
         if (!qrBankApplied) {
-            showToast('Chưa cấu hình STK VietQR — vào Cài đặt → Cửa hàng, VietQR để thiết lập', 'warning');
+            showToast('Chưa cấu hình STK VietQR — vào Hệ Thống → Thiết lập', 'warning');
         }
     }
     return result;

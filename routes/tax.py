@@ -1149,7 +1149,7 @@ def register_tax_routes(app):
             if not info.get('mst') and not info.get('ct05'):
                 return jsonify({
                     "success": False,
-                    "message": "Chưa cấu hình thông tin hộ kinh doanh. Vào Cài đặt → Cửa hàng, VietQR & Ngân hàng ĐT.",
+                    "message": "Chưa cấu hình thông tin hộ kinh doanh. Vào Hệ Thống → Thiết lập.",
                 })
             return jsonify({
                 "success": True,

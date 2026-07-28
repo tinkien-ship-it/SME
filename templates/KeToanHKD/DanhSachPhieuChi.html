@@ -50,9 +50,6 @@
             <button id="btnTaxExpense" class="btn btn-warning fw-bold px-3 shadow-sm">
                 <i class="bi bi-bank me-2"></i>Lập Phiếu Chi Nộp Thuế
             </button>
-            <button id="btnInsuranceExpense" class="btn btn-outline-primary fw-semibold px-3">
-                <i class="bi bi-shield-check me-2"></i>Lập Phiếu Chi Nộp Bảo Hiểm
-            </button>
             <button id="btnServiceExpense" class="btn btn-outline-warning fw-semibold px-3">
                 <i class="bi bi-calculator me-2"></i>Lập Phiếu Chi - Chi Phát Sinh
             </button>
@@ -114,75 +111,6 @@
             </div>
             <div id="loadingStatus" class="d-none">
                 <span class="spinner-border spinner-border-sm text-primary me-2"></span> Đang tải...
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="insuranceExpenseModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <h5 class="fw-bold text-primary"><i class="bi bi-shield-check me-2"></i>Lập Phiếu Chi Nộp Bảo Hiểm</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="small text-muted mb-3">
-                    Dùng cho các khoản nộp BHXH, BHYT, BHTN. Không ghi vào Chi tiết mua hàng hóa và dịch vụ.
-                </p>
-                <div class="balance-info">
-                    <i class="bi bi-wallet2"></i> Số dư hiện tại: 
-                    <span class="balance-cash">Tiền mặt: <strong id="otherCashBalance">0 ₫</strong></span> | 
-                    <span class="balance-bank">Ngân hàng: <strong id="otherBankBalance">0 ₫</strong></span>
-                </div>
-                <form id="insuranceExpenseForm">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Ngày chi <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="date" id="other_date" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted">Số Phiếu</label>
-                            <input type="text" class="form-control bg-light" placeholder="Tự động..." readonly>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Người nhận tiền <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="receiver" required placeholder="Họ tên người nhận">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Địa chỉ người nhận</label>
-                            <input type="text" class="form-control" name="address" placeholder="Địa chỉ hoặc bộ phận">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Hình thức <span class="text-danger">*</span></label>
-                            <select class="form-select" name="payment_method">
-                                <option value="cash">Tiền Mặt (111)</option>
-                                <option value="transfer">Chuyển Khoản (112)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Loại bảo hiểm <span class="text-danger">*</span></label>
-                            <select class="form-select" name="expense_type">
-                                <option value="CP_BHXH">Bảo Hiểm Xã Hội</option>
-                                <option value="CP_BHYT">Bảo Hiểm Y Tế</option>
-                                <option value="CP_BHTN">Bảo Hiểm Thất Nghiệp</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Số tiền (VNĐ) <span class="text-danger">*</span></label>
-                            <input type="text" id="amountInput" class="form-control fw-bold text-danger fs-5" required placeholder="0">
-                            <input type="hidden" name="amount" id="amountActual">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">Lý do chi</label>
-                            <textarea class="form-control" name="reason" rows="2" placeholder="Nội dung chi tiết..."></textarea>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
-                <button type="submit" form="insuranceExpenseForm" class="btn btn-primary px-4 fw-bold">LƯU & IN PHIẾU</button>
             </div>
         </div>
     </div>
@@ -579,15 +507,15 @@ async function loadQuySoDu() {
             const cashText = currentCashBalance.toLocaleString('vi-VN') + ' ₫';
             const bankText = currentBankBalance.toLocaleString('vi-VN') + ' ₫';
 
-            $('#otherCashBalance, #taxCashBalance, #importCashBalance').text(cashText);
-            $('#otherBankBalance, #taxBankBalance, #importBankBalance').text(bankText);
+            $('#taxCashBalance, #importCashBalance').text(cashText);
+            $('#taxBankBalance, #importBankBalance').text(bankText);
         }
     } catch (err) {
         console.error('Lỗi tải số dư quỹ:', err);
         // Nếu lỗi, hiển thị thông báo cảnh báo
         const errorText = 'Lỗi tải số dư';
-        $('#otherCashBalance, #taxCashBalance, #importCashBalance').text(errorText);
-        $('#otherBankBalance, #taxBankBalance, #importBankBalance').text(errorText);
+        $('#taxCashBalance, #importCashBalance').text(errorText);
+        $('#taxBankBalance, #importBankBalance').text(errorText);
     }
 }
 
@@ -813,14 +741,12 @@ $(document).ready(function() {
     };
     flatpickr("#startDate", fpConfig).setDate(firstDayOfMonth);
     flatpickr("#endDate", fpConfig).setDate(today);
-    flatpickr("#other_date", { ...fpConfig, defaultDate: "today" });
     flatpickr("#tax_date", { ...fpConfig, defaultDate: "today" });
     flatpickr("#import_payment_date", { ...fpConfig, defaultDate: "today" });
 
     initExpenseTable();
     $('#btnClearColFilters').on('click', () => expenseTableCtrl?.clearColumnFilters());
 
-    formatMoneyInput('#amountInput', '#amountActual');
     formatMoneyInput('#taxAmountInput', '#taxAmountActual');
     formatMoneyInput('#import_amount_input', '#import_amount');
 
@@ -839,56 +765,10 @@ $(document).ready(function() {
     });
 
     // Gọi loadQuySoDu khi mở bất kỳ modal nào
-    $('#btnInsuranceExpense, #btnTaxExpense, #btnImportPayment').on('click', loadQuySoDu);
+    $('#btnTaxExpense, #btnImportPayment').on('click', loadQuySoDu);
 
     $('#btnServiceExpense').on('click', () => {
         window.location.href = '/import?mode=service&return_to=/DanhSachPhieuChi';
-    });
-
-    // Modal Nộp bảo hiểm
-    $('#btnInsuranceExpense').on('click', () => {
-        $('#insuranceExpenseForm')[0].reset();
-        $('#amountInput').val('');
-        $('#amountActual').val(0);
-        $('#insuranceExpenseModal').modal('show');
-        loadQuySoDu();
-    });
-
-    $('#insuranceExpenseForm').on('submit', async function(e) {
-        e.preventDefault();
-        const amount = parseInt($('#amountActual').val() || 0, 10);
-        if (amount <= 0) return Swal.fire('Lỗi', 'Số tiền phải lớn hơn 0', 'error');
-        const paymentMethod = this.payment_method.value;
-        const check = checkSoDu(amount, paymentMethod);
-        if (!check.ok) return Swal.fire({ icon: 'error', title: 'Không đủ số dư', html: check.message });
-        const dateStr = getDateFromInput('#other_date');
-        if (!dateStr) return Swal.fire('Lỗi', 'Vui lòng chọn ngày chi hợp lệ', 'error');
-        const payload = {
-            receiver: this.receiver.value.trim(),
-            address: this.address.value.trim(),
-            amount,
-            reason: this.reason.value.trim(),
-            payment_method: paymentMethod,
-            expense_type: this.expense_type.value,
-            date: dateStr
-        };
-        try {
-            const res = await fetch('/api/expense/create-other', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await res.json();
-            if (result.success) {
-                $('#insuranceExpenseModal').modal('hide');
-                loadExpense();
-                printExpense(result.id);
-            } else {
-                Swal.fire('Lỗi', result.error || 'Không thể lưu phiếu chi', 'error');
-            }
-        } catch (err) {
-            Swal.fire('Lỗi kết nối', 'Không thể kết nối đến server', 'error');
-        }
     });
 
     $('#expenseTable').on('click', '.btn-print', function() {

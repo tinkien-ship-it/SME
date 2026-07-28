@@ -243,11 +243,11 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Từ ngày</label>
-                            <input type="date" id="auditFilterStart" class="form-control form-control-sm">
+                            <input type="text" id="auditFilterStart" class="form-control form-control-sm keto-date-input text-center" placeholder="dd/mm/yyyy" autocomplete="off">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Đến ngày</label>
-                            <input type="date" id="auditFilterEnd" class="form-control form-control-sm">
+                            <input type="text" id="auditFilterEnd" class="form-control form-control-sm keto-date-input text-center" placeholder="dd/mm/yyyy" autocomplete="off">
                         </div>
                         <div class="col-md-3 d-flex align-items-end">
                             <button class="btn btn-primary btn-sm w-100" onclick="loadMasterAuditLog()">
@@ -428,7 +428,7 @@ async function showTenantModal(mode, data = {}) {
                 </div>
                 <div class="mb-2">${nnField}</div>
                 <label class="form-label small fw-bold">Ngày hết hạn hợp đồng</label>
-                <input type="date" id="swal-expiry-date" class="form-control" value="${data.expiry_date || ''}">
+                <input type="text" id="swal-expiry-date" class="form-control keto-date-input text-center" placeholder="dd/mm/yyyy" autocomplete="off">
             </div>
         `,
         showCancelButton: true,
@@ -437,6 +437,10 @@ async function showTenantModal(mode, data = {}) {
         didOpen: () => {
             HkdSectorForm.bindNnSectorHelp('swal-nn-box', 'swal-nn-help', sectors, legalIntro);
             HkdSectorForm.bindBusinessLineNnSuggest('swal-business-line', 'swal-nn-box', 'swal-nn-help', sectors, legalIntro);
+            const expiryEl = document.getElementById('swal-expiry-date');
+            if (expiryEl) {
+                KetoDatePicker.init(expiryEl, data.expiry_date || null);
+            }
         },
         preConfirm: () => {
             const tid = document.getElementById('swal-tenant-id').value.trim();
@@ -448,7 +452,7 @@ async function showTenantModal(mode, data = {}) {
                 phone: document.getElementById('swal-phone').value.trim(),
                 email: document.getElementById('swal-email').value.trim(),
                 address: document.getElementById('swal-address').value.trim(),
-                expiry_date: document.getElementById('swal-expiry-date').value,
+                expiry_date: KetoDatePicker.getIsoValue('swal-expiry-date'),
                 accounting_regime: document.getElementById('swal-regime').value,
                 revenue_tier: document.getElementById('swal-revenue-tier').value,
                 business_line: document.getElementById('swal-business-line').value,
@@ -674,8 +678,8 @@ async function loadMasterAuditLog() {
 
     const params = new URLSearchParams({ type: 'actions', limit: 200 });
     const tenant = document.getElementById('auditFilterTenant')?.value.trim();
-    const start = document.getElementById('auditFilterStart')?.value;
-    const end = document.getElementById('auditFilterEnd')?.value;
+    const start = KetoDatePicker.getIsoValue('auditFilterStart');
+    const end = KetoDatePicker.getIsoValue('auditFilterEnd');
     if (tenant) params.set('tenant_id', tenant);
     if (start) params.set('start_date', start);
     if (end) params.set('end_date', end);
@@ -862,6 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTenants();
     loadMain2FAStatus();
     initPickers();
+    KetoDatePicker.initMonthToToday('auditFilterStart', 'auditFilterEnd');
 
     const authTab = document.getElementById('auth-tab');
     if (authTab) {

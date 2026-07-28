@@ -272,6 +272,14 @@ def _migrate_main_system_tables():
         ensure_subscription_products()
     except Exception as e:
         print(f'[MIGRATE] subscription products seed: {e}')
+    try:
+        from Services.knowledge_service import ensure_knowledge_schema, seed_default_articles
+        conn_k = get_main_db_connection()
+        ensure_knowledge_schema(conn_k)
+        seed_default_articles(conn_k)
+        conn_k.close()
+    except Exception as e:
+        print(f'[MIGRATE] knowledge_articles: {e}')
 
 
 def migrate_all_databases(verbose=True):

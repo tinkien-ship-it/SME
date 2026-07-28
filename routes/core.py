@@ -15,8 +15,3 @@ def register_core_routes(app):
     @login_required  # hoặc bỏ nếu muốn ai cũng xem được
     def huong_dan_su_dung():
         return render_template('huongdansudung.html')
-
-    @app.route('/cap-nhat-kien-thuc')
-    @login_required
-    def cap_nhat_kien_thuc_page():
-        return render_template('cap_nhat_kien_thuc.html')

@@ -33,11 +33,11 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Từ ngày</label>
-                    <input type="date" class="form-control" id="startDate">
+                    <input type="text" class="form-control text-center keto-date-input" id="startDate" placeholder="dd/mm/yyyy" autocomplete="off">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Đến ngày</label>
-                    <input type="date" class="form-control" id="endDate">
+                    <input type="text" class="form-control text-center keto-date-input" id="endDate" placeholder="dd/mm/yyyy" autocomplete="off">
                 </div>
                 <div class="col-md-3">
                     <button class="btn btn-primary w-100" onclick="loadReport()">Lọc</button>
@@ -95,8 +95,9 @@
         ['startDate', 'endDate'].forEach(id => {
             const input = document.getElementById(id);
             const label = input.parentElement.querySelector('label');
-            if (input.value) {
-                label.innerHTML = `<strong>${formatDateVN(input.value)}</strong>`;
+            const iso = KetoDatePicker.getIsoValue(id);
+            if (iso) {
+                label.innerHTML = `<strong>${formatDate(iso)}</strong>`;
             } else {
                 label.innerHTML = id === 'startDate' ? 'Từ ngày' : 'Đến ngày';
             }
@@ -157,10 +158,8 @@
         }
 
         if (start && end) {
-            const s = formatDateLocal(start);
-            const e = formatDateLocal(end);
-            document.getElementById('startDate').value = s;
-            document.getElementById('endDate').value = e;
+            KetoDatePicker.setDate('startDate', start, false);
+            KetoDatePicker.setDate('endDate', end, false);
             updateDateLabels();
         }
     }
@@ -175,8 +174,8 @@
 
     // === TẢI BÁO CÁO ===
     function loadReport() {
-        const start = document.getElementById('startDate').value;
-        const end = document.getElementById('endDate').value;
+        const start = KetoDatePicker.getIsoValue('startDate');
+        const end = KetoDatePicker.getIsoValue('endDate');
 
         if (!start || !end) {
             alert('Vui lòng chọn đầy đủ ngày!');
@@ -234,8 +233,8 @@
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
 
-        const start = document.getElementById('startDate').value;
-        const end = document.getElementById('endDate').value;
+        const start = KetoDatePicker.getIsoValue('startDate');
+        const end = KetoDatePicker.getIsoValue('endDate');
         const [sy, sm, sd] = start.split('-');
         const [ey, em, ed] = end.split('-');
 
@@ -246,24 +245,12 @@
     // === KHỞI TẠO ===
     document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-
-        const startInput = document.getElementById('startDate');
-        const endInput = document.getElementById('endDate');
-
-        // Mặc định: Tháng hiện tại
-        startInput.value = formatDateLocal(new Date(yyyy, today.getMonth(), 1));
-        endInput.value = formatDateLocal(new Date(yyyy, today.getMonth() + 1, 0));
-
-        // Cập nhật label ngay khi load
+        KetoDatePicker.initRange('startDate', 'endDate', {
+            startDate: new Date(today.getFullYear(), today.getMonth(), 1),
+            endDate: today,
+            onChange: updateDateLabels,
+        });
         updateDateLabels();
-
-        // Gắn sự kiện change
-        startInput.addEventListener('change', updateDateLabels);
-        endInput.addEventListener('change', updateDateLabels);
-
         loadReport();
     });
 </script>

@@ -37,11 +37,11 @@
         {% endif %}
         <div class="col-md-2">
             <label class="form-label small mb-0">Từ ngày</label>
-            <input type="date" id="fStart" class="form-control form-control-sm">
+            <input type="text" id="fStart" class="form-control form-control-sm text-center" placeholder="dd/mm/yyyy" autocomplete="off">
         </div>
         <div class="col-md-2">
             <label class="form-label small mb-0">Đến ngày</label>
-            <input type="date" id="fEnd" class="form-control form-control-sm">
+            <input type="text" id="fEnd" class="form-control form-control-sm text-center" placeholder="dd/mm/yyyy" autocomplete="off">
         </div>
         <div class="col-md-2" id="wrapAction">
             <label class="form-label small mb-0">Loại thao tác</label>
@@ -144,8 +144,8 @@ async function loadAuditLogs() {
     if (IS_MASTER && document.getElementById('fTenant')?.value.trim()) {
         params.set('tenant_id', document.getElementById('fTenant').value.trim());
     }
-    if (document.getElementById('fStart').value) params.set('start_date', document.getElementById('fStart').value);
-    if (document.getElementById('fEnd').value) params.set('end_date', document.getElementById('fEnd').value);
+    if (document.getElementById('fStart').value) params.set('start_date', KetoDatePicker.getIsoValue('fStart'));
+    if (document.getElementById('fEnd').value) params.set('end_date', KetoDatePicker.getIsoValue('fEnd'));
     if (currentLogType === 'actions') {
         if (document.getElementById('fAction').value) params.set('action', document.getElementById('fAction').value);
         if (document.getElementById('fModule').value) params.set('module', document.getElementById('fModule').value);
@@ -217,6 +217,9 @@ function escapeHtml(t) {
     return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-document.addEventListener('DOMContentLoaded', loadAuditLogs);
+document.addEventListener('DOMContentLoaded', () => {
+    KetoDatePicker.initMonthToToday('fStart', 'fEnd', loadAuditLogs);
+    loadAuditLogs();
+});
 </script>
 {% endblock %}

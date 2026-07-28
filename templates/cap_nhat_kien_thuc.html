@@ -3,59 +3,94 @@
 
 {% block hkd_content %}
 <style>
-    .knowledge-card {
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-        transition: transform 0.2s;
-    }
-    .knowledge-card:hover {
-        transform: translateY(-2px);
-    }
-    .knowledge-tag {
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.03em;
-    }
-    .knowledge-body {
-        font-size: 1.05rem;
-        line-height: 1.75;
-        color: #334155;
-    }
+    .knowledge-card { border: none; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); transition: transform 0.2s; }
+    .knowledge-card:hover { transform: translateY(-2px); }
+    .knowledge-tag { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em; }
+    .knowledge-body { font-size: 1.05rem; line-height: 1.75; color: #334155; }
+    .article-item { border-left: 4px solid #0d6efd; padding-left: 1rem; }
+    .article-item.pinned { border-left-color: #dc3545; }
+    .article-item.draft { border-left-color: #ffc107; background: #fffdf5; padding: 0.75rem 0.75rem 0.75rem 1rem; border-radius: 8px; }
+    .article-title-link { color: #0d6efd; text-decoration: none; font-weight: 600; }
+    .article-title-link:hover { text-decoration: underline; }
+    .cat-filter .btn { font-size: 0.85rem; }
 </style>
 
-<div class="mb-4">
-    <h4 class="fw-bold text-dark mb-1">
-        <i class="fas fa-newspaper text-primary me-2"></i>Cập Nhật Kiến Thức
-    </h4>
-    <p class="text-muted mb-0">Tổng hợp chính sách pháp luật, thuế và hướng dẫn nghiệp vụ mới cho hộ kinh doanh và doanh nghiệp.</p>
+<div class="mb-4 d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-1">
+            <i class="fas fa-newspaper text-primary me-2"></i>Cập Nhật Kiến Thức
+        </h4>
+        <p class="text-muted mb-0" id="pageSubtitle">
+            {% if is_hkd %}
+            Tổng hợp chính sách pháp luật, thuế và hướng dẫn nghiệp vụ dành cho <strong>hộ kinh doanh</strong>.
+            {% else %}
+            Tổng hợp chính sách pháp luật, thuế và hướng dẫn nghiệp vụ dành cho <strong>doanh nghiệp</strong>.
+            {% endif %}
+        </p>
+    </div>
+    {% if can_manage %}
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        {% if draft_count > 0 %}
+        <span class="badge bg-warning text-dark" id="draftBadge">{{ draft_count }} nháp chờ duyệt</span>
+        {% else %}
+        <span class="badge bg-warning text-dark d-none" id="draftBadge"></span>
+        {% endif %}
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSyncRss" title="Lấy thông tư, nghị định mới — vào hàng chờ duyệt">
+            <i class="fas fa-sync-alt me-1"></i>Đồng bộ pháp luật
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnAddArticle">
+            <i class="fas fa-plus me-1"></i>Đăng tin
+        </button>
+    </div>
+    {% endif %}
 </div>
 
 <div class="row g-3 mb-4">
+    {% if is_hkd %}
     <div class="col-md-4">
         <div class="card knowledge-card h-100 border-start border-4 border-primary">
             <div class="card-body">
                 <span class="badge bg-primary bg-opacity-10 text-primary knowledge-tag mb-2">Thuế HKD</span>
                 <h6 class="fw-bold">Kê khai thuế theo từng kỳ</h6>
-                <p class="text-muted small mb-0">Theo dõi hạn nộp tờ khai thuế GTGT, TNCN và các loại thuế khác theo quy định hiện hành.</p>
+                <p class="text-muted small mb-0">Theo dõi hạn nộp tờ khai thuế GTGT, TNCN và các loại thuế khác theo quy định hiện hành cho hộ kinh doanh.</p>
             </div>
         </div>
     </div>
+    <div class="col-md-4">
+        <div class="card knowledge-card h-100 border-start border-4 border-info">
+            <div class="card-body">
+                <span class="badge bg-info bg-opacity-10 text-info knowledge-tag mb-2">Sổ kế toán</span>
+                <h6 class="fw-bold">Thông tư 88/2021/TT-BTC</h6>
+                <p class="text-muted small mb-0">Mẫu sổ S1a, S2a–S2e, S3, S3a, S4, S5 và sổ phụ SP1–SP4 cho hộ kinh doanh.</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-md-4">
+        <div class="card knowledge-card h-100 border-start border-4 border-primary">
+            <div class="card-body">
+                <span class="badge bg-primary bg-opacity-10 text-primary knowledge-tag mb-2">Thuế DN</span>
+                <h6 class="fw-bold">Nghĩa vụ thuế doanh nghiệp</h6>
+                <p class="text-muted small mb-0">Tờ khai GTGT, TNDN, báo cáo tài chính và các nghĩa vụ thuế theo chế độ kế toán doanh nghiệp.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card knowledge-card h-100 border-start border-4 border-info">
+            <div class="card-body">
+                <span class="badge bg-info bg-opacity-10 text-info knowledge-tag mb-2">Chế độ KT</span>
+                <h6 class="fw-bold">TT99 &amp; TT58 / VAS</h6>
+                <p class="text-muted small mb-0">Hướng dẫn kế toán doanh nghiệp siêu nhỏ và doanh nghiệp theo chuẩn mực kế toán Việt Nam.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     <div class="col-md-4">
         <div class="card knowledge-card h-100 border-start border-4 border-success">
             <div class="card-body">
                 <span class="badge bg-success bg-opacity-10 text-success knowledge-tag mb-2">Hóa đơn</span>
                 <h6 class="fw-bold">Hóa đơn điện tử &amp; chứng từ</h6>
-                <p class="text-muted small mb-0">Cập nhật quy trình lập, ký và lưu trữ hóa đơn điện tử; đối chiếu hóa đơn mua — bán trong phần mềm.</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card knowledge-card h-100 border-start border-4 border-warning">
-            <div class="card-body">
-                <span class="badge bg-warning bg-opacity-10 text-warning knowledge-tag mb-2">Lương &amp; BHXH</span>
-                <h6 class="fw-bold">Lương tối thiểu vùng</h6>
-                <p class="text-muted small mb-0">Tham chiếu mức lương, bảo hiểm và các khoản khấu trừ khi lập bảng lương và sổ theo dõi tiền lương (S5).</p>
+                <p class="text-muted small mb-0">Quy trình lập, ký và lưu trữ hóa đơn điện tử; đối chiếu hóa đơn mua — bán trong phần mềm.</p>
             </div>
         </div>
     </div>
@@ -63,36 +98,32 @@
 
 <div class="card knowledge-card">
     <div class="card-header bg-white py-3">
-        <h5 class="mb-0 fw-bold"><i class="fas fa-bullhorn text-primary me-2"></i>Bản tin cập nhật</h5>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-bullhorn text-primary me-2"></i>Bản tin cập nhật</h5>
+            <div class="input-group input-group-sm" style="max-width: 280px;">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" id="searchKeyword" class="form-control" placeholder="Tìm tiêu đề, nội dung...">
+            </div>
+        </div>
+        {% if can_manage %}
+        <ul class="nav nav-pills gap-1 mt-3" id="statusTabs">
+            <li class="nav-item"><button type="button" class="nav-link active py-1 px-3 status-btn" data-status="all">Tất cả</button></li>
+            <li class="nav-item"><button type="button" class="nav-link py-1 px-3 status-btn" data-status="published">Đã đăng</button></li>
+            <li class="nav-item"><button type="button" class="nav-link py-1 px-3 status-btn" data-status="draft">Nháp chờ duyệt</button></li>
+        </ul>
+        {% endif %}
+        <div class="cat-filter d-flex flex-wrap gap-1 mt-3">
+            <button type="button" class="btn btn-sm btn-primary cat-btn active" data-cat="">Tất cả</button>
+            {% for key, label in categories.items() %}
+            {% if can_manage or (is_hkd and key != 'thue_dn') or (not is_hkd and key != 'thue_hkd') %}
+            <button type="button" class="btn btn-sm btn-outline-primary cat-btn" data-cat="{{ key }}">{{ label }}</button>
+            {% endif %}
+            {% endfor %}
+        </div>
     </div>
     <div class="card-body knowledge-body">
-        <div class="alert alert-info border-0 mb-4">
-            <i class="fas fa-info-circle me-2"></i>
-            Mục này sẽ được bổ sung các bài viết, thông tư và hướng dẫn mới nhất. Quý khách có thể liên hệ bộ phận hỗ trợ để đề xuất chủ đề cần cập nhật.
-        </div>
-
-        <div class="list-group list-group-flush">
-            <div class="list-group-item px-0 py-3">
-                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-1">
-                    <strong>Sổ sách kế toán HKD — Thông tư 88/2021/TT-BTC</strong>
-                    <span class="text-muted small">Tham chiếu</span>
-                </div>
-                <p class="mb-0 text-muted">Hệ thống sổ S1a, S2a–S2e, S3, S3a, S4, S5 và sổ phụ SP1–SP4 được thiết kế theo mẫu sổ kế toán cho hộ kinh doanh. Xem trực tiếp tại menu <strong>Sổ Sách Kế Toán</strong>.</p>
-            </div>
-            <div class="list-group-item px-0 py-3">
-                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-1">
-                    <strong>Chấm công &amp; tính lương</strong>
-                    <span class="text-muted small">Tính năng mới</span>
-                </div>
-                <p class="mb-0 text-muted">Đồng bộ dữ liệu máy chấm công ZKTeco hoặc nhập Excel để tính ngày công thực tế khi lập bảng lương.</p>
-            </div>
-            <div class="list-group-item px-0 py-3 border-bottom-0">
-                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-1">
-                    <strong>Công nợ nhân viên</strong>
-                    <span class="text-muted small">Nghiệp vụ</span>
-                </div>
-                <p class="mb-0 text-muted">Theo dõi khoản lương đã hạch toán nhưng chưa chi trả qua sổ công nợ phải trả nhân viên.</p>
-            </div>
+        <div id="articleList">
+            <div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Đang tải...</div>
         </div>
     </div>
     <div class="card-footer bg-light text-center py-3">
@@ -104,4 +135,374 @@
         </a>
     </div>
 </div>
+
+<div class="modal fade" id="articleDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="detailTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2" id="detailMeta"></div>
+                <div id="detailSummary" class="text-muted mb-3"></div>
+                <div id="detailContent" style="white-space: pre-wrap;"></div>
+                <div id="detailLinkWrap" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if can_manage %}
+<div class="modal fade" id="articleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="articleModalTitle">Đăng bản tin</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="articleId">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tiêu đề <span class="text-danger">*</span></label>
+                    <input type="text" id="articleTitle" class="form-control" maxlength="500">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Link tham khảo</label>
+                    <input type="url" id="articleUrl" class="form-control" placeholder="https://...">
+                    <div class="form-text">Người dùng nhấn tiêu đề để mở link văn bản gốc.</div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Đối tượng</label>
+                        <select id="articleAudience" class="form-select">
+                            {% for key, label in audiences.items() %}
+                            <option value="{{ key }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Chuyên mục</label>
+                        <select id="articleCategory" class="form-select">
+                            {% for key, label in categories.items() %}
+                            <option value="{{ key }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Trạng thái</label>
+                        <select id="articleStatus" class="form-select">
+                            <option value="published">Đăng ngay</option>
+                            <option value="draft">Lưu nháp</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tóm tắt</label>
+                    <textarea id="articleSummary" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Nội dung chi tiết</label>
+                    <textarea id="articleContent" class="form-control" rows="6"></textarea>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="articlePinned">
+                    <label class="form-check-label" for="articlePinned">Ghim lên đầu danh sách</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="btnSaveArticle">
+                    <i class="fas fa-save me-1"></i>Lưu bản tin
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+    const CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
+    const CATEGORIES = {{ categories | tojson }};
+    const AUDIENCES = {{ audiences | tojson }};
+    let currentCategory = '';
+    let currentStatus = 'all';
+    let searchTimer = null;
+
+    const articleList = document.getElementById('articleList');
+    const searchInput = document.getElementById('searchKeyword');
+
+    function escHtml(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatDate(raw) {
+        if (!raw) return '';
+        const d = new Date(raw);
+        if (isNaN(d)) return String(raw).split(' ')[0] || raw;
+        return d.toLocaleDateString('vi-VN');
+    }
+
+    function catBadge(cat) {
+        const label = CATEGORIES[cat] || cat;
+        const colors = {
+            thue_hkd: 'primary', thue_dn: 'primary', hoa_don: 'success', luong_bhxh: 'warning',
+            thong_tu: 'info', nghi_dinh: 'dark', phap_luat: 'danger',
+            huong_dan: 'secondary', tin_tuc: 'primary',
+        };
+        const c = colors[cat] || 'secondary';
+        return `<span class="badge bg-${c} bg-opacity-10 text-${c} knowledge-tag">${escHtml(label)}</span>`;
+    }
+
+    function audBadge(aud) {
+        const label = AUDIENCES[aud] || aud;
+        const cls = aud === 'hkd' ? 'primary' : (aud === 'dn' ? 'info' : 'secondary');
+        return `<span class="badge bg-${cls} bg-opacity-10 text-${cls} knowledge-tag ms-1">${escHtml(label)}</span>`;
+    }
+
+    function updateDraftBadge(count) {
+        const el = document.getElementById('draftBadge');
+        if (!el) return;
+        if (count > 0) {
+            el.textContent = count + ' nháp chờ duyệt';
+            el.classList.remove('d-none');
+        } else {
+            el.classList.add('d-none');
+        }
+    }
+
+    function renderArticles(items) {
+        if (!items.length) {
+            articleList.innerHTML = '<div class="alert alert-light border mb-0"><i class="fas fa-inbox me-2"></i>Chưa có bản tin phù hợp.</div>';
+            return;
+        }
+        articleList.innerHTML = items.map(a => {
+            const isDraft = a.status === 'draft';
+            const cls = 'article-item' + (a.is_pinned ? ' pinned' : '') + (isDraft ? ' draft' : '');
+            const titleHtml = a.external_url
+                ? `<a href="${escHtml(a.external_url)}" target="_blank" rel="noopener" class="article-title-link">${escHtml(a.title)} <i class="fas fa-external-link-alt small"></i></a>`
+                : `<a href="#" class="article-title-link view-detail" data-id="${a.id}">${escHtml(a.title)}</a>`;
+            const manageBtns = CAN_MANAGE ? `
+                ${isDraft ? `<button type="button" class="btn btn-success btn-sm py-0 px-2 btn-publish" data-id="${a.id}" title="Duyệt đăng"><i class="fas fa-check"></i></button>` : ''}
+                <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 btn-edit" data-id="${a.id}" title="Sửa"><i class="fas fa-edit"></i></button>
+                <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 btn-delete" data-id="${a.id}" title="Xóa"><i class="fas fa-trash"></i></button>` : '';
+            const srcBadge = a.source_type === 'rss' ? '<span class="badge bg-light text-muted border ms-1">RSS</span>' : '';
+            const draftBadge = isDraft ? '<span class="badge bg-warning text-dark ms-1">Nháp</span>' : '';
+            return `
+            <div class="${cls} mb-4 pb-3 border-bottom">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                    <div class="flex-grow-1">
+                        ${catBadge(a.category)}${audBadge(a.audience || 'all')}
+                        ${a.is_pinned ? '<span class="badge bg-danger ms-1">Ghim</span>' : ''}${draftBadge}${srcBadge}
+                        <div class="mt-1">${titleHtml}</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small">${formatDate(a.published_at || a.created_at)}</span>
+                        ${manageBtns}
+                    </div>
+                </div>
+                ${a.summary ? `<p class="mb-1 text-muted">${escHtml(a.summary)}</p>` : ''}
+                ${!a.external_url && a.content ? `<button type="button" class="btn btn-link btn-sm p-0 view-detail" data-id="${a.id}">Xem chi tiết</button>` : ''}
+            </div>`;
+        }).join('');
+        bindArticleEvents();
+    }
+
+    async function loadArticles() {
+        articleList.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin me-2"></i>Đang tải...</div>';
+        const params = new URLSearchParams();
+        if (currentCategory) params.set('category', currentCategory);
+        if (searchInput && searchInput.value.trim()) params.set('keyword', searchInput.value.trim());
+        if (CAN_MANAGE) {
+            params.set('all_status', '1');
+            if (currentStatus && currentStatus !== 'all') params.set('status', currentStatus);
+        }
+        try {
+            const res = await fetch('/api/knowledge/articles?' + params.toString());
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Lỗi tải dữ liệu');
+            renderArticles(json.data || []);
+            if (CAN_MANAGE) refreshDraftCount();
+        } catch (e) {
+            articleList.innerHTML = `<div class="alert alert-danger mb-0">${escHtml(e.message)}</div>`;
+        }
+    }
+
+    async function refreshDraftCount() {
+        try {
+            const res = await fetch('/api/knowledge/draft-count');
+            const json = await res.json();
+            if (json.success) updateDraftBadge(json.count || 0);
+        } catch (_) {}
+    }
+
+    function bindArticleEvents() {
+        document.querySelectorAll('.view-detail').forEach(el => {
+            el.addEventListener('click', async (ev) => {
+                ev.preventDefault();
+                const res = await fetch('/api/knowledge/articles/' + el.dataset.id);
+                const json = await res.json();
+                if (!json.success) return alert(json.error || 'Không tải được');
+                showDetail(json.data);
+            });
+        });
+        if (!CAN_MANAGE) return;
+        document.querySelectorAll('.btn-edit').forEach(el => {
+            el.addEventListener('click', () => openEdit(parseInt(el.dataset.id, 10)));
+        });
+        document.querySelectorAll('.btn-delete').forEach(el => {
+            el.addEventListener('click', () => deleteArticle(parseInt(el.dataset.id, 10)));
+        });
+        document.querySelectorAll('.btn-publish').forEach(el => {
+            el.addEventListener('click', () => publishArticle(parseInt(el.dataset.id, 10)));
+        });
+    }
+
+    function showDetail(a) {
+        document.getElementById('detailTitle').textContent = a.title || '';
+        document.getElementById('detailMeta').innerHTML =
+            catBadge(a.category) + audBadge(a.audience || 'all') +
+            ' <span class="text-muted small ms-2">' + formatDate(a.published_at || a.created_at) + '</span>';
+        document.getElementById('detailSummary').textContent = a.summary || '';
+        document.getElementById('detailContent').textContent = a.content || '';
+        document.getElementById('detailLinkWrap').innerHTML = a.external_url
+            ? `<a href="${escHtml(a.external_url)}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm"><i class="fas fa-external-link-alt me-1"></i>Xem văn bản gốc</a>` : '';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('articleDetailModal')).show();
+    }
+
+    function resetForm() {
+        ['articleId','articleTitle','articleUrl','articleSummary','articleContent'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        document.getElementById('articleCategory').value = 'tin_tuc';
+        document.getElementById('articleAudience').value = 'all';
+        document.getElementById('articleStatus').value = 'published';
+        document.getElementById('articlePinned').checked = false;
+    }
+
+    async function openEdit(id) {
+        const res = await fetch('/api/knowledge/articles/' + id);
+        const json = await res.json();
+        if (!json.success) return alert(json.error || 'Không tải được');
+        const a = json.data;
+        document.getElementById('articleModalTitle').textContent = 'Sửa bản tin';
+        document.getElementById('articleId').value = a.id;
+        document.getElementById('articleTitle').value = a.title || '';
+        document.getElementById('articleUrl').value = a.external_url || '';
+        document.getElementById('articleCategory').value = a.category || 'tin_tuc';
+        document.getElementById('articleAudience').value = a.audience || 'all';
+        document.getElementById('articleStatus').value = a.status || 'published';
+        document.getElementById('articleSummary').value = a.summary || '';
+        document.getElementById('articleContent').value = a.content || '';
+        document.getElementById('articlePinned').checked = !!a.is_pinned;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('articleModal')).show();
+    }
+
+    async function saveArticle() {
+        const id = document.getElementById('articleId').value;
+        const payload = {
+            title: document.getElementById('articleTitle').value.trim(),
+            external_url: document.getElementById('articleUrl').value.trim(),
+            category: document.getElementById('articleCategory').value,
+            audience: document.getElementById('articleAudience').value,
+            status: document.getElementById('articleStatus').value,
+            summary: document.getElementById('articleSummary').value.trim(),
+            content: document.getElementById('articleContent').value.trim(),
+            is_pinned: document.getElementById('articlePinned').checked,
+        };
+        if (!payload.title) return alert('Vui lòng nhập tiêu đề');
+        const url = id ? '/api/knowledge/articles/' + id : '/api/knowledge/articles';
+        const res = await fetch(url, {
+            method: id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!json.success) return alert(json.error || 'Lưu thất bại');
+        bootstrap.Modal.getInstance(document.getElementById('articleModal')).hide();
+        loadArticles();
+    }
+
+    async function publishArticle(id) {
+        if (!confirm('Duyệt và đăng bản tin này?')) return;
+        const res = await fetch('/api/knowledge/articles/' + id + '/publish', { method: 'POST' });
+        const json = await res.json();
+        if (!json.success) return alert(json.error || 'Duyệt thất bại');
+        loadArticles();
+    }
+
+    async function deleteArticle(id) {
+        if (!confirm('Xóa bản tin này?')) return;
+        const res = await fetch('/api/knowledge/articles/' + id, { method: 'DELETE' });
+        const json = await res.json();
+        if (!json.success) return alert(json.error || 'Xóa thất bại');
+        loadArticles();
+    }
+
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('active', 'btn-primary');
+                b.classList.add('btn-outline-primary');
+            });
+            btn.classList.add('active', 'btn-primary');
+            btn.classList.remove('btn-outline-primary');
+            currentCategory = btn.dataset.cat || '';
+            loadArticles();
+        });
+    });
+
+    document.querySelectorAll('.status-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentStatus = btn.dataset.status || 'all';
+            loadArticles();
+        });
+    });
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(loadArticles, 350);
+        });
+    }
+
+    if (CAN_MANAGE) {
+        document.getElementById('btnAddArticle').addEventListener('click', () => {
+            resetForm();
+            document.getElementById('articleModalTitle').textContent = 'Đăng bản tin';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('articleModal')).show();
+        });
+        document.getElementById('btnSaveArticle').addEventListener('click', saveArticle);
+        document.getElementById('btnSyncRss').addEventListener('click', async () => {
+            const btn = document.getElementById('btnSyncRss');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Đang đồng bộ...';
+            try {
+                const res = await fetch('/api/knowledge/sync-rss', { method: 'POST' });
+                const json = await res.json();
+                if (!json.success) throw new Error(json.error || 'Đồng bộ thất bại');
+                alert(json.message || 'Đồng bộ xong — kiểm tra tab Nháp chờ duyệt');
+                currentStatus = 'draft';
+                document.querySelectorAll('.status-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.status === 'draft');
+                });
+                loadArticles();
+            } catch (e) {
+                alert(e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Đồng bộ pháp luật';
+            }
+        });
+    }
+
+    loadArticles();
+})();
+</script>
 {% endblock %}

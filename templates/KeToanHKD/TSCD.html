@@ -109,7 +109,7 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Ngày bắt đầu sử dụng</label>
-                            <input type="date" name="ngay_xuat" class="form-control" id="ngay_xuat_ts" required>
+                            <input type="text" name="ngay_xuat" class="form-control text-center keto-date-input" id="ngay_xuat_ts" placeholder="dd/mm/yyyy" required autocomplete="off">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Số tháng khấu hao</label>
@@ -245,7 +245,7 @@ async function initTscdSelect() {
 }
 
 function openModalTSCD() {
-    document.getElementById('ngay_xuat_ts').value = new Date().toISOString().split('T')[0];
+    KetoDatePicker.init('ngay_xuat_ts', new Date());
     $('#tscdPreview').addClass('d-none');
     initTscdSelect()
         .then(() => getTscdModal().show())
@@ -279,7 +279,7 @@ async function submitTSCD() {
 
     const payload = {
         product_id: tscdSelect.getValue(),
-        ngay_xuat: document.getElementById('ngay_xuat_ts').value,
+        ngay_xuat: KetoDatePicker.getIsoValue('ngay_xuat_ts'),
         months: document.querySelector('#formTSCD input[name="months"]').value,
         co_khau_tru: document.getElementById('tscd_tax_mode').value
     };

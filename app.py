@@ -351,6 +351,9 @@ register_attendance_routes(app)
 from routes.core import register_core_routes
 register_core_routes(app)
 
+from routes.knowledge import register_knowledge_routes
+register_knowledge_routes(app)
+
 # === REPORTS routes → routes/reports.py ===
 from routes.reports import register_reports_routes
 register_reports_routes(app)
