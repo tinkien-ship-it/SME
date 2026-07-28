@@ -3,12 +3,6 @@
 
 {% block content %}
 <style>
-    /* Ẩn navbar và footer chỉ trên trang login */
-    nav.navbar,
-    footer.footer {
-        display: none !important;
-    }
-
     .login-page {
         min-height: 100vh;
         background: #f8f9fa;
@@ -98,25 +92,28 @@
     }
 
     /* Password toggle */
-    .password-wrapper {
+    .password-input-wrap {
         position: relative;
     }
     .password-toggle {
         position: absolute;
-        right: 18px;
-        top: 68%;
+        right: 16px;
+        top: 50%;
         transform: translateY(-50%);
         cursor: pointer;
         color: #6c757d;
-        font-size: 1.35rem;
-        padding: 5px;
+        font-size: 1.2rem;
+        padding: 4px;
         z-index: 10;
+        line-height: 1;
     }
 
     .form-control-lg {
         padding: 14px 20px;
         font-size: 1.05rem;
-        padding-right: 55px !important;
+    }
+    .password-input-wrap .form-control-lg {
+        padding-right: 52px !important;
     }
 
     .forgot-link {
@@ -146,8 +143,21 @@
         color: #14532d;
     }
 
-    #googleRegisterWrap {
-        min-height: 44px;
+    .google-register-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    #googleRegisterHidden iframe {
+        width: 1px !important;
+        height: 1px !important;
     }
 
     .pricing-section {
@@ -176,6 +186,18 @@
 
     .pricing-item:last-child {
         border-bottom: none;
+    }
+
+    @media (max-width: 991.98px) {
+        .intro-column {
+            padding: 32px 24px;
+        }
+        .brand-title {
+            font-size: 2.2rem;
+        }
+        .brand-subtitle {
+            font-size: 1.35rem;
+        }
     }
 
     @media (max-width: 576px) {
@@ -223,6 +245,17 @@
             <!-- Cột bên phải -->
             <div class="col-lg-5 form-column">
 
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'danger' else 'warning' if category == 'warning' else 'info' }} alert-dismissible fade show mb-3" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
                 <!-- Nút chuyển -->
                 <div class="switch-container">
                     <button id="btnLogin" class="switch-btn active">ĐĂNG NHẬP</button>
@@ -240,12 +273,14 @@
                             <label class="form-label fw-medium">Tên đăng nhập</label>
                             <input type="text" name="username" class="form-control form-control-lg" required autofocus>
                         </div>
-                        <div class="mb-4 password-wrapper">
+                        <div class="mb-4">
                             <label class="form-label fw-medium">Mật khẩu</label>
-                            <input type="password" id="password" name="password" class="form-control form-control-lg" required>
-                            <span class="password-toggle" id="togglePassword">
-                                <i class="fas fa-eye" id="eyeIcon"></i>
-                            </span>
+                            <div class="password-input-wrap">
+                                <input type="password" id="password" name="password" class="form-control form-control-lg" required>
+                                <span class="password-toggle" id="togglePassword" role="button" tabindex="0" aria-label="Hiện hoặc ẩn mật khẩu">
+                                    <i class="fas fa-eye" id="eyeIcon"></i>
+                                </span>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold py-3 mb-3">
                             ĐĂNG NHẬP
@@ -266,12 +301,9 @@
                     <div class="trial-register-box mb-3">
                         Nếu <strong>chưa có tài khoản</strong>, hãy đăng ký dùng thử
                         <strong>6 tháng miễn phí</strong> bằng tài khoản Google —
-                        <a href="#" id="linkTrialRegister" class="trial-register-link">chỉ cần nhấn vào link này</a>.
+                        <a href="#" id="linkTrialRegister" class="trial-register-link">chỉ cần nhấn vào link này và làm theo hướng dẫn</a>.
                     </div>
-                    <div id="googleRegisterWrap" class="d-flex justify-content-center mb-2 d-none"></div>
-                    <p id="registerHint" class="text-success small text-center d-none mb-0">
-                        Chọn tài khoản Google bên dưới để mở form đăng ký.
-                    </p>
+                    <div id="googleRegisterHidden" class="google-register-hidden" aria-hidden="true"></div>
                     {% elif google_config_error %}
                     <div class="alert alert-warning border small text-center mb-0 py-2">
                         <i class="fab fa-google text-danger me-1"></i>
@@ -362,8 +394,8 @@
         const togglePassword = document.getElementById('togglePassword');
         const eyeIcon = document.getElementById('eyeIcon');
 
-        if (togglePassword && eyeIcon) {
-            togglePassword.addEventListener('click', function() {
+        if (togglePassword && eyeIcon && passwordInput) {
+            const toggleFn = function() {
                 if (passwordInput.type === 'password') {
                     passwordInput.type = 'text';
                     eyeIcon.classList.remove('fa-eye');
@@ -373,6 +405,13 @@
                     eyeIcon.classList.remove('fa-eye-slash');
                     eyeIcon.classList.add('fa-eye');
                 }
+            };
+            togglePassword.addEventListener('click', toggleFn);
+            togglePassword.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleFn();
+                }
             });
         }
     });
@@ -381,7 +420,7 @@
 {% if google_visible and google_client_id %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="/static/js/hkd-sector-form.js"></script>
+<script src="{{ url_for('static', filename='js/hkd-sector-form.js') }}"></script>
 <script>
 const GOOGLE_CLIENT_ID = '{{ google_client_id }}';
 let pendingGoogleMode = 'login';
@@ -561,28 +600,35 @@ function renderGoogleLoginButton() {
     });
 }
 
-function showGoogleRegisterButton() {
+function ensureRegisterButtonRendered() {
+    const wrap = document.getElementById('googleRegisterHidden');
+    if (!wrap || wrap.dataset.rendered === '1') return;
     if (!ensureGoogleInitialized()) return;
-    const wrap = document.getElementById('googleRegisterWrap');
-    const hint = document.getElementById('registerHint');
-    if (!wrap) return;
-
-    pendingGoogleMode = 'register';
-    wrap.classList.remove('d-none');
-    if (hint) hint.classList.remove('d-none');
-
-    wrap.innerHTML = '';
-    wrap.addEventListener('mousedown', () => { pendingGoogleMode = 'register'; }, true);
     google.accounts.id.renderButton(wrap, {
-        theme: 'filled_green',
+        theme: 'outline',
         size: 'large',
-        width: 320,
+        width: 280,
         text: 'signup_with',
         locale: 'vi',
         shape: 'rectangular',
         logo_alignment: 'left',
     });
-    wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    wrap.dataset.rendered = '1';
+}
+
+function triggerGoogleRegister() {
+    pendingGoogleMode = 'register';
+    if (!ensureGoogleInitialized()) {
+        showGoogleLoginError('Google chưa sẵn sàng. Vui lòng tải lại trang và thử lại.');
+        return;
+    }
+    ensureRegisterButtonRendered();
+    const btn = document.getElementById('googleRegisterHidden')?.querySelector('[role="button"]');
+    if (btn) {
+        btn.click();
+        return;
+    }
+    showGoogleLoginError('Không mở được cửa sổ chọn tài khoản Google. Vui lòng thử lại.');
 }
 
 function initGoogleSignIn() {
@@ -594,7 +640,7 @@ function initGoogleSignIn() {
 
     document.getElementById('linkTrialRegister')?.addEventListener('click', (e) => {
         e.preventDefault();
-        showGoogleRegisterButton();
+        triggerGoogleRegister();
     });
 }
 

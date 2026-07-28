@@ -1,7 +1,6 @@
 #!/bin/bash
-# Chạy trên VPS Ubuntu sau khi git push từ local:
+# Chay tren VPS Ubuntu sau khi git push tu local:
 #   /root/deploy_pos.sh
-# hoặc: bash /root/pos/scripts/deploy_pos.sh
 
 set -e
 
@@ -11,7 +10,7 @@ VENV="$APP_DIR/venv/bin/activate"
 
 cd "$APP_DIR"
 
-echo "=== [1/4] Backup nhanh (không gồm venv) ==="
+echo "=== [1/4] Backup nhanh (khong gom venv) ==="
 tar -czf "/root/pos_backup_$(date +%Y%m%d_%H%M).tar.gz" \
   --exclude='pos/venv' \
   --exclude='pos/pos_env' \
@@ -21,14 +20,14 @@ tar -czf "/root/pos_backup_$(date +%Y%m%d_%H%M).tar.gz" \
 
 echo "=== [2/4] Git pull ($BRANCH) ==="
 if [ ! -d .git ]; then
-  echo "Lỗi: /root/pos chưa có Git. Chạy scripts/setup_git_vps.sh trước."
+  echo "Loi: /root/pos chua co Git. Chay scripts/setup_git_vps.sh truoc."
   exit 1
 fi
 
 git fetch origin
 git pull origin "$BRANCH" || git pull origin master
 
-echo "=== [3/4] Cài dependency (bỏ pywin32 trên Linux) ==="
+echo "=== [3/4] Cai dependency (bo pywin32 tren Linux) ==="
 # shellcheck disable=SC1090
 source "$VENV"
 grep -v pywin32 requirements.txt | pip install -r /dev/stdin -q

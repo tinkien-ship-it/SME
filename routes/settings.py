@@ -185,6 +185,18 @@ def register_settings_routes(app):
 
     from flask import render_template, request, flash, redirect, url_for, session, current_app
 
+    def _login_page_context():
+        return dict(
+            google_visible=google_login_visible(),
+            google_ready=google_login_enabled(),
+            google_client_id=get_google_client_id(),
+            google_config_error=google_client_id_error(),
+            subscription_plans=get_subscription_plans(),
+        )
+
+    def _render_login_page():
+        return render_template('login.html', **_login_page_context())
+
     @app.route('/login', methods=['GET', 'POST'])
     def login():
         if request.method == 'POST':
@@ -193,7 +205,7 @@ def register_settings_routes(app):
 
             if not username or not password:
                 flash("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.", "danger")
-                return render_template('login.html')
+                return _render_login_page()
 
             # ==================== 1. Xác định Tenant và Database ====================
             tenant_record = get_tenant_by_username(username, active_only=True)
@@ -228,7 +240,7 @@ def register_settings_routes(app):
             if not db_to_open or not os.path.exists(db_to_open):
                 flash("Cơ sở dữ liệu của chi nhánh không tồn tại hoặc đường dẫn sai cấu hình!", "danger")
                 current_app.logger.error(f"Đăng nhập thất bại: Không tìm thấy file DB tại {db_to_open}")
-                return render_template('login.html')
+                return _render_login_page()
 
             # ==================== 2. Lấy thông tin User từ DB tương ứng ====================
             try:
@@ -242,11 +254,11 @@ def register_settings_routes(app):
             except Exception as e:
                 current_app.logger.error(f"Lỗi kết nối cơ sở dữ liệu tenant ({db_to_open}): {e}")
                 flash(f"Lỗi hệ thống khi truy cập cơ sở dữ liệu.", "danger")
-                return render_template('login.html')
+                return _render_login_page()
 
             if not user_row:
                 flash("Tài khoản không tồn tại trên hệ thống!", "danger")
-                return render_template('login.html')
+                return _render_login_page()
 
             user = dict(user_row)
             stored_password = user.get('password')
@@ -257,7 +269,7 @@ def register_settings_routes(app):
             if not bcrypt.check_password_hash(stored_password, password):
                 log_login_attempt(user.get('id'), username, current_tenant_id, status='Thất bại (Sai MK)')
                 flash("Mật khẩu không chính xác!", "danger")
-                return render_template('login.html')
+                return _render_login_page()
 
             # ==================== 4. Quyết định có yêu cầu 2FA hay không ====================
             if current_tenant_id is not None:
@@ -403,14 +415,7 @@ def register_settings_routes(app):
                 return redirect('/sale')
 
         # Xử lý phương thức GET: Hiển thị giao diện form đăng nhập thông thường
-        return render_template(
-            'login.html',
-            google_visible=google_login_visible(),
-            google_ready=google_login_enabled(),
-            google_client_id=get_google_client_id(),
-            google_config_error=google_client_id_error(),
-            subscription_plans=get_subscription_plans(),
-        )
+        return _render_login_page()
 
     #=== LOGIN HISTORY ============#
     @app.route('/api/master/login-history')

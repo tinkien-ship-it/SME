@@ -26,6 +26,10 @@
             display: flex;
             flex-direction: column;
         }
+        body.page-login {
+            display: block;
+            background: #f8f9fa;
+        }
         .navbar-brand {
             font-weight: 700;
             font-size: 1.25rem;
@@ -215,8 +219,8 @@
     {% block head_extra %}{% endblock %}
     {% block extra_style %}{% endblock %}
 </head>
-<body>
-    {% if master_viewing_tenant %}
+<body{% if request.endpoint == 'login' %} class="page-login"{% endif %}>
+    {% if master_viewing_tenant and request.endpoint != 'login' %}
     <div class="alert alert-warning mb-0 py-2 rounded-0 border-0 d-flex flex-wrap justify-content-center align-items-center gap-2 text-center">
         <span class="small">
             <i class="fas fa-user-shield"></i>
@@ -239,6 +243,8 @@
     }
     </script>
     {% endif %}
+
+    {% if request.endpoint != 'login' %}
     <!-- Navbar chính -->
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background: linear-gradient(135deg, #1e3a8a, #1e40af);">
         <div class="container-fluid">
@@ -347,8 +353,11 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+    {% endif %}
 
         {% block content %}{% endblock %}
+
+    {% if request.endpoint != 'login' %}
     </div>
 
     <!-- Footer -->
@@ -357,6 +366,7 @@
             © POS System V1.0 | © 2026 | Phát triển bởi <strong>Trung Tín</strong>
         </div>
     </footer>
+    {% endif %}
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
