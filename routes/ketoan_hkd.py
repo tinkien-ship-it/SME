@@ -107,9 +107,11 @@ def register_ketoan_hkd_routes(app):
             conn.row_factory = sqlite3.Row
             c = conn.cursor()
             from Services.hkd_dashboard_metrics import fetch_hkd_dashboard_metrics
+            from Services.hkd_hub_group_metrics import fetch_main_dashboard_charts
             metrics = fetch_hkd_dashboard_metrics(c, year)
+            charts = fetch_main_dashboard_charts(c, year)
             conn.close()
-            return jsonify({'success': True, **metrics})
+            return jsonify({'success': True, **metrics, 'charts': charts})
         except Exception as e:
             logger.error('api_hkd_dashboard_metrics: %s', e, exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500

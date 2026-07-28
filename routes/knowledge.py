@@ -13,6 +13,7 @@ from Services.knowledge_service import (
     get_article,
     is_hkd_regime,
     list_articles,
+    maybe_auto_sync_rss,
     publish_article,
     seed_default_articles,
     sync_rss_feeds,
@@ -147,11 +148,20 @@ def register_knowledge_routes(app):
     def api_knowledge_sync_rss():
         user = session.get('user') or {}
         created_by = user.get('username') or session.get('username') or 'master'
-        result = sync_rss_feeds(created_by=created_by, as_draft=True)
-        msg = f"Đã thêm {result['inserted']} bản tin vào hàng chờ duyệt (nháp)"
+        result = sync_rss_feeds(created_by=created_by, as_draft=None)
+        msg = f"Đã thêm {result['inserted']} bản tin mới"
+        if result.get('published'):
+            msg += f" ({result['published']} tin TCT/BTC đã tự đăng)"
         if result['errors']:
             msg += f" ({len(result['errors'])} nguồn lỗi)"
         return jsonify({'success': True, 'message': msg, **result})
+
+    @app.route('/api/knowledge/auto-sync', methods=['POST'])
+    @login_required
+    def api_knowledge_auto_sync():
+        """Tự đồng bộ tin TCT/BTC — tối đa mỗi 12 giờ/lần."""
+        result = maybe_auto_sync_rss(min_hours=12)
+        return jsonify({'success': True, **result})
 
     @app.route('/api/knowledge/draft-count', methods=['GET'])
     @login_required

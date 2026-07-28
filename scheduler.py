@@ -103,10 +103,9 @@ def init_schedulers(app, backup_root):
     backup_scheduler.add_job(
         func=_scheduled_knowledge_rss_sync,
         trigger="cron",
-        day_of_week='mon',
         hour=6,
-        minute=0,
-        id='knowledge_rss_sync',
+        minute=30,
+        id='knowledge_rss_sync_daily',
     )
     backup_scheduler.start()
 
@@ -120,7 +119,8 @@ def _scheduled_knowledge_rss_sync():
         result = run_scheduled_rss_sync()
         print(
             f"[{datetime.now()}] Knowledge RSS sync: "
-            f"+{result.get('inserted', 0)} draft, skip {result.get('skipped', 0)}"
+            f"+{result.get('inserted', 0)} new ({result.get('published', 0)} published), "
+            f"skip {result.get('skipped', 0)}"
         )
     except Exception as e:
         print(f"[{datetime.now()}] Knowledge RSS sync failed: {e}")

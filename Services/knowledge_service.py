@@ -46,13 +46,80 @@ DN_RSS_KEYWORDS = [
 
 DEFAULT_RSS_FEEDS = [
     {
+        'name': 'Tổng cục Thuế',
+        'url': (
+            'https://news.google.com/rss/search?q=site:gdt.gov.vn+'
+            '(ho+kinh+doanh+OR+thuế+OR+thong+tu+OR+nghi+dinh+OR+hóa+đơn)&hl=vi&gl=VN&ceid=VN:vi'
+        ),
+        'keywords': HKD_RSS_KEYWORDS,
+        'audience_default': 'hkd',
+        'auto_publish': True,
+        'filter_keywords': False,
+    },
+    {
+        'name': 'Bộ Tài Chính',
+        'url': (
+            'https://news.google.com/rss/search?q=site:mof.gov.vn+'
+            '(ho+kinh+doanh+OR+thuế+OR+thong+tu+OR+nghi+dinh+OR+kế+toán)&hl=vi&gl=VN&ceid=VN:vi'
+        ),
+        'keywords': HKD_RSS_KEYWORDS,
+        'audience_default': 'hkd',
+        'auto_publish': True,
+        'filter_keywords': False,
+    },
+    {
         'name': 'Thư viện Pháp luật',
         'url': 'https://thuvienphapluat.vn/page/rss.aspx',
         'keywords': list(dict.fromkeys(HKD_RSS_KEYWORDS + DN_RSS_KEYWORDS)),
+        'audience_default': None,
+        'auto_publish': False,
+        'filter_keywords': True,
     },
 ]
 
 _TAG_RE = re.compile(r'<[^>]+>')
+_RSS_UA = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+    '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+)
+
+
+def _ensure_sync_meta_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS knowledge_sync_meta (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    """)
+
+
+def _get_sync_meta(conn, key: str) -> str:
+    _ensure_sync_meta_table(conn)
+    row = conn.execute(
+        'SELECT value FROM knowledge_sync_meta WHERE key = ?', (key,)
+    ).fetchone()
+    return (row['value'] if row else '') or ''
+
+
+def _set_sync_meta(conn, key: str, value: str):
+    _ensure_sync_meta_table(conn)
+    conn.execute(
+        'INSERT OR REPLACE INTO knowledge_sync_meta (key, value) VALUES (?, ?)',
+        (key, value),
+    )
+
+
+def _clean_news_title(title: str) -> str:
+    """Bỏ hậu tố nguồn tin Google News (- Tổng cục Thuế...)."""
+    if not title:
+        return ''
+    parts = re.split(r'\s+-\s+', title.strip())
+    if len(parts) >= 2 and any(
+        k in parts[-1].lower()
+        for k in ('thuế', 'tài chính', 'gdt', 'mof', 'google')
+    ):
+        return ' - '.join(parts[:-1]).strip()
+    return title.strip()
 _HKD_HINTS = (
     'hộ kinh doanh', 'ho kinh doanh', 'hkd', 'thông tư 88', 'tt 88', 'tt88',
     'sổ kế toán hộ', 'cá nhân kinh doanh', 'hộ kinh doanh cá thể',
@@ -470,10 +537,10 @@ def _matches_keywords(text: str, keywords: list[str]) -> bool:
     return any(kw.lower() in lower for kw in keywords)
 
 
-def sync_rss_feeds(*, created_by: str = 'rss_sync', max_per_feed: int = 25, as_draft: bool = True) -> dict:
+def sync_rss_feeds(*, created_by: str = 'rss_sync', max_per_feed: int = 25, as_draft: bool | None = None) -> dict:
     """
-    Đồng bộ văn bản pháp luật từ RSS.
-    Mặc định tạo bản tin ở trạng thái draft để master duyệt trước khi đăng.
+    Đồng bộ tin pháp luật từ RSS.
+    Nguồn TCT/BTC: tự đăng (published). TVPL: nháp nếu lấy được.
     """
     conn = get_main_db_connection()
     ensure_knowledge_schema(conn)
@@ -481,14 +548,21 @@ def sync_rss_feeds(*, created_by: str = 'rss_sync', max_per_feed: int = 25, as_d
     inserted = 0
     skipped = 0
     errors: list[str] = []
-    status = 'draft' if as_draft else 'published'
+    published_count = 0
 
     for feed in DEFAULT_RSS_FEEDS:
+        feed_auto = feed.get('auto_publish', False)
+        status = 'published' if (as_draft is False or (as_draft is None and feed_auto)) else (
+            'draft' if as_draft else ('published' if feed_auto else 'draft')
+        )
+        if as_draft is True:
+            status = 'draft'
+
         try:
             resp = requests.get(
                 feed['url'],
-                timeout=20,
-                headers={'User-Agent': 'KETO-POS-KnowledgeSync/1.0'},
+                timeout=25,
+                headers={'User-Agent': _RSS_UA, 'Accept': 'application/rss+xml, application/xml, */*'},
             )
             resp.raise_for_status()
             rss_items = _parse_rss_items(resp.content)
@@ -500,11 +574,12 @@ def sync_rss_feeds(*, created_by: str = 'rss_sync', max_per_feed: int = 25, as_d
         for item in rss_items:
             if count >= max_per_feed:
                 break
-            title = item['title']
+            title = _clean_news_title(item['title'])
             summary = item['summary'][:500] if item['summary'] else title[:200]
-            if not _matches_keywords(f'{title} {summary}', feed['keywords']):
-                skipped += 1
-                continue
+            if feed.get('filter_keywords', True):
+                if not _matches_keywords(f'{title} {summary}', feed['keywords']):
+                    skipped += 1
+                    continue
             source_id = hashlib.sha256(item['link'].encode('utf-8')).hexdigest()[:40]
             exists = conn.execute(
                 'SELECT id FROM knowledge_articles WHERE source_type = ? AND source_id = ?',
@@ -513,8 +588,9 @@ def sync_rss_feeds(*, created_by: str = 'rss_sync', max_per_feed: int = 25, as_d
             if exists:
                 skipped += 1
                 continue
-            audience = _guess_audience(title, summary)
+            audience = feed.get('audience_default') or _guess_audience(title, summary)
             category = _guess_category(title, summary, audience)
+            item_status = status
             conn.execute("""
                 INSERT INTO knowledge_articles
                 (title, summary, content, external_url, category, audience, source_type, source_name,
@@ -529,20 +605,47 @@ def sync_rss_feeds(*, created_by: str = 'rss_sync', max_per_feed: int = 25, as_d
                 audience,
                 feed['name'],
                 source_id,
-                status,
-                item.get('pub_date') or now if status == 'published' else None,
+                item_status,
+                item.get('pub_date') or now if item_status == 'published' else None,
                 created_by,
                 now,
                 now,
             ))
             inserted += 1
+            if item_status == 'published':
+                published_count += 1
             count += 1
 
+    _set_sync_meta(conn, 'last_rss_sync', now)
+    _set_sync_meta(conn, 'last_rss_inserted', str(inserted))
     conn.commit()
     conn.close()
-    return {'inserted': inserted, 'skipped': skipped, 'errors': errors, 'as_draft': as_draft}
+    return {
+        'inserted': inserted,
+        'published': published_count,
+        'skipped': skipped,
+        'errors': errors,
+    }
+
+
+def maybe_auto_sync_rss(*, min_hours: float = 12) -> dict:
+    """Tự đồng bộ nếu đã quá min_hours kể từ lần trước."""
+    conn = get_main_db_connection()
+    ensure_knowledge_schema(conn)
+    last = _get_sync_meta(conn, 'last_rss_sync')
+    conn.close()
+    if last:
+        try:
+            last_dt = datetime.strptime(last[:19], '%Y-%m-%d %H:%M:%S')
+            elapsed_h = (datetime.now() - last_dt).total_seconds() / 3600
+            if elapsed_h < min_hours:
+                return {'synced': False, 'reason': 'recent', 'last_sync': last}
+        except ValueError:
+            pass
+    result = sync_rss_feeds(created_by='auto_sync', as_draft=None)
+    return {'synced': True, **result}
 
 
 def run_scheduled_rss_sync():
-    """Gọi từ APScheduler — đồng bộ RSS vào hàng chờ nháp."""
-    return sync_rss_feeds(created_by='scheduler', as_draft=True)
+    """Gọi từ APScheduler — đồng bộ TCT/BTC, tự đăng tin mới."""
+    return sync_rss_feeds(created_by='scheduler', as_draft=None)

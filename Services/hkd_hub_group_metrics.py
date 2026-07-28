@@ -551,7 +551,7 @@ def _metric_return_import(cursor, year):
     return _metric(amount, 'currency', detail=detail)
 
 
-def _build_currency_chart(title, items):
+def _build_currency_chart(title, items, min_slices=2):
     """Tạo biểu đồ doughnut từ danh sách {label, value[, display]}."""
     slices = []
     for item in items:
@@ -564,7 +564,7 @@ def _build_currency_chart(title, items):
                 'value': pie_val,
                 'display': display,
             })
-    if len(slices) < 2:
+    if len(slices) < min_slices:
         return None
     total = sum(s['value'] for s in slices)
     return {
@@ -576,6 +576,35 @@ def _build_currency_chart(title, items):
         'total': total,
         'total_display': _fmt_currency(total),
     }
+
+
+def fetch_main_dashboard_charts(cursor, year=None):
+    """Ba biểu đồ tóm tắt trang chủ — chỉ trả chart có ít nhất 1 tiêu chí phát sinh."""
+    if year is None:
+        year = date.today().year
+    year = int(year)
+    profit = _profit_metrics(cursor, year)
+    tm, nh = _cash_balances(cursor)
+
+    candidates = [
+        _build_currency_chart('Cơ cấu Doanh Thu, Chi Phí, Lợi Nhuận', [
+            {'label': 'Doanh thu', 'value': profit['revenue']},
+            {'label': 'Chi phí', 'value': profit['total_chi_phi']},
+            {'label': 'Lợi nhuận', 'value': profit['net_profit']},
+        ], min_slices=1),
+        _build_currency_chart('Cơ cấu Tài Sản', [
+            {'label': 'Giá trị hàng tồn kho', 'value': _inventory_value(cursor)},
+            {'label': 'Tiền mặt', 'value': tm},
+            {'label': 'Tiền gửi ngân hàng', 'value': nh},
+            {'label': 'TSCĐ', 'value': _tscd_value(cursor)},
+            {'label': 'CCDC', 'value': _ccdc_value(cursor)},
+        ], min_slices=1),
+        _build_currency_chart('Công Nợ Phải Trả NCC & Phải Thu KH', [
+            {'label': 'Phải trả NCC', 'value': _payable_total(cursor)},
+            {'label': 'Phải thu khách hàng', 'value': _receivable_total(cursor)},
+        ], min_slices=1),
+    ]
+    return [c for c in candidates if c]
 
 
 def _fetch_bao_cao_charts(cursor, year):

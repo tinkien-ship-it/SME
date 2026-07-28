@@ -12,7 +12,51 @@
     .article-item.draft { border-left-color: #ffc107; background: #fffdf5; padding: 0.75rem 0.75rem 0.75rem 1rem; border-radius: 8px; }
     .article-title-link { color: #0d6efd; text-decoration: none; font-weight: 600; }
     .article-title-link:hover { text-decoration: underline; }
-    .cat-filter .btn { font-size: 0.85rem; }
+    /* Nút lọc trên nền header xanh — chữ trắng, dễ đọc */
+    .knowledge-card .card-header .cat-filter .cat-btn {
+        font-size: 0.85rem;
+        color: #ffffff !important;
+        background-color: rgba(255, 255, 255, 0.12) !important;
+        border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    }
+    .knowledge-card .card-header .cat-filter .cat-btn:hover {
+        color: #0d6efd !important;
+        background-color: #ffffff !important;
+        border-color: #ffffff !important;
+    }
+    .knowledge-card .card-header .cat-filter .cat-btn.active {
+        color: #0d6efd !important;
+        background-color: #ffffff !important;
+        border-color: #ffffff !important;
+        font-weight: 600;
+    }
+    .knowledge-card .card-header #statusTabs .status-btn {
+        color: #ffffff !important;
+        background-color: rgba(255, 255, 255, 0.12) !important;
+        border: 1px solid rgba(255, 255, 255, 0.45) !important;
+        font-size: 0.85rem;
+    }
+    .knowledge-card .card-header #statusTabs .status-btn:hover {
+        color: #0d6efd !important;
+        background-color: #ffffff !important;
+        border-color: #ffffff !important;
+    }
+    .knowledge-card .card-header #statusTabs .status-btn.active {
+        color: #0d6efd !important;
+        background-color: #ffffff !important;
+        border-color: #ffffff !important;
+        font-weight: 600;
+    }
+    .knowledge-card .card-header .rss-note {
+        color: rgba(255, 255, 255, 0.92) !important;
+    }
+    .knowledge-card .card-header .input-group-text,
+    .knowledge-card .card-header .form-control {
+        background: rgba(255, 255, 255, 0.95);
+        border-color: rgba(255, 255, 255, 0.6);
+    }
+    .source-badge-tct { background: #198754 !important; color: #fff !important; }
+    .source-badge-btc { background: #0dcaf0 !important; color: #003544 !important; }
 </style>
 
 <div class="mb-4 d-flex flex-wrap justify-content-between align-items-start gap-3">
@@ -35,8 +79,8 @@
         {% else %}
         <span class="badge bg-warning text-dark d-none" id="draftBadge"></span>
         {% endif %}
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSyncRss" title="Lấy thông tư, nghị định mới — vào hàng chờ duyệt">
-            <i class="fas fa-sync-alt me-1"></i>Đồng bộ pháp luật
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSyncRss" title="Lấy tin mới từ Tổng cục Thuế và Bộ Tài Chính">
+            <i class="fas fa-sync-alt me-1"></i>Đồng bộ TCT &amp; BTC
         </button>
         <button type="button" class="btn btn-primary btn-sm" id="btnAddArticle">
             <i class="fas fa-plus me-1"></i>Đăng tin
@@ -97,9 +141,9 @@
 </div>
 
 <div class="card knowledge-card">
-    <div class="card-header bg-white py-3">
+    <div class="card-header py-3">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h5 class="mb-0 fw-bold"><i class="fas fa-bullhorn text-primary me-2"></i>Bản tin cập nhật</h5>
+            <h5 class="mb-0 fw-bold text-white"><i class="fas fa-bullhorn me-2"></i>Bản tin cập nhật</h5>
             <div class="input-group input-group-sm" style="max-width: 280px;">
                 <span class="input-group-text"><i class="fas fa-search"></i></span>
                 <input type="text" id="searchKeyword" class="form-control" placeholder="Tìm tiêu đề, nội dung...">
@@ -112,6 +156,11 @@
             <li class="nav-item"><button type="button" class="nav-link py-1 px-3 status-btn" data-status="draft">Nháp chờ duyệt</button></li>
         </ul>
         {% endif %}
+        <p class="small mb-0 mt-2 rss-note">
+            <i class="fas fa-rss me-1"></i>
+            Tin từ <strong>Tổng cục Thuế</strong> (gdt.gov.vn) và <strong>Bộ Tài Chính</strong> (mof.gov.vn) được tự cập nhật mỗi ngày.
+            Nhấn tiêu đề có biểu tượng <i class="fas fa-external-link-alt"></i> để mở văn bản gốc.
+        </p>
         <div class="cat-filter d-flex flex-wrap gap-1 mt-3">
             <button type="button" class="btn btn-sm btn-primary cat-btn active" data-cat="">Tất cả</button>
             {% for key, label in categories.items() %}
@@ -264,6 +313,14 @@
         return `<span class="badge bg-${cls} bg-opacity-10 text-${cls} knowledge-tag ms-1">${escHtml(label)}</span>`;
     }
 
+    function sourceBadge(sourceName) {
+        const n = sourceName || '';
+        if (n.includes('Tổng cục Thuế')) return '<span class="badge source-badge-tct ms-1">TCT</span>';
+        if (n.includes('Bộ Tài Chính')) return '<span class="badge source-badge-btc ms-1">BTC</span>';
+        if (n) return `<span class="badge bg-light text-dark border ms-1">${escHtml(n)}</span>`;
+        return '';
+    }
+
     function updateDraftBadge(count) {
         const el = document.getElementById('draftBadge');
         if (!el) return;
@@ -290,7 +347,7 @@
                 ${isDraft ? `<button type="button" class="btn btn-success btn-sm py-0 px-2 btn-publish" data-id="${a.id}" title="Duyệt đăng"><i class="fas fa-check"></i></button>` : ''}
                 <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 btn-edit" data-id="${a.id}" title="Sửa"><i class="fas fa-edit"></i></button>
                 <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 btn-delete" data-id="${a.id}" title="Xóa"><i class="fas fa-trash"></i></button>` : '';
-            const srcBadge = a.source_type === 'rss' ? '<span class="badge bg-light text-muted border ms-1">RSS</span>' : '';
+            const srcBadge = a.source_type === 'rss' ? sourceBadge(a.source_name) : '';
             const draftBadge = isDraft ? '<span class="badge bg-warning text-dark ms-1">Nháp</span>' : '';
             return `
             <div class="${cls} mb-4 pb-3 border-bottom">
@@ -487,22 +544,24 @@
                 const res = await fetch('/api/knowledge/sync-rss', { method: 'POST' });
                 const json = await res.json();
                 if (!json.success) throw new Error(json.error || 'Đồng bộ thất bại');
-                alert(json.message || 'Đồng bộ xong — kiểm tra tab Nháp chờ duyệt');
-                currentStatus = 'draft';
-                document.querySelectorAll('.status-btn').forEach(b => {
-                    b.classList.toggle('active', b.dataset.status === 'draft');
-                });
+                alert(json.message || 'Đồng bộ xong');
                 loadArticles();
             } catch (e) {
                 alert(e.message);
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Đồng bộ pháp luật';
+                btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Đồng bộ TCT &amp; BTC';
             }
         });
     }
 
-    loadArticles();
+    async function autoSyncOnLoad() {
+        try {
+            await fetch('/api/knowledge/auto-sync', { method: 'POST' });
+        } catch (_) { /* bỏ qua lỗi mạng */ }
+    }
+
+    autoSyncOnLoad().then(loadArticles);
 })();
 </script>
 {% endblock %}
