@@ -159,7 +159,10 @@ def register_settings_routes(app):
         fetch_google_user_info,
         verify_google_credential,
         get_google_client_id,
+        get_public_base_url,
         google_client_id_error,
+        google_oauth_redirect_ready,
+        google_oauth_setup_hints,
         find_user_by_email,
         get_auth_settings,
         get_auth_settings_db,
@@ -186,11 +189,19 @@ def register_settings_routes(app):
     from flask import render_template, request, flash, redirect, url_for, session, current_app
 
     def _login_page_context():
+        base = get_public_base_url(request.url_root)
+        hints = google_oauth_setup_hints(base)
+        trial_google = None
+        if request.args.get('trial_google') == '1':
+            trial_google = session.pop('trial_google', None)
         return dict(
             google_visible=google_login_visible(),
             google_ready=google_login_enabled(),
             google_client_id=get_google_client_id(),
             google_config_error=google_client_id_error(),
+            google_oauth_hints=hints,
+            google_redirect_ready=google_oauth_redirect_ready(),
+            trial_google_pending=trial_google,
             subscription_plans=get_subscription_plans(),
         )
 
@@ -886,6 +897,74 @@ def register_settings_routes(app):
             return redirect(url_for('login'))
         finally:
             session.pop('oauth_mode', None)
+
+    @app.route('/trial/google')
+    def trial_google_start():
+        """Đăng ký dùng thử — OAuth redirect (tránh lỗi origin_mismatch của nút JS ẩn)."""
+        if not google_login_visible():
+            flash("Đăng ký Google đang tắt.", "warning")
+            return redirect(url_for('login'))
+        if not configure_google_oauth(google):
+            flash(
+                "Chưa cấu hình đủ Google OAuth (cần Client ID + Client Secret trong Master Settings). "
+                "Hoặc thêm JavaScript origin vào Google Cloud Console — xem hướng dẫn trên trang đăng nhập.",
+                "warning",
+            )
+            return redirect(url_for('login', google_setup=1))
+        session['oauth_mode'] = 'trial_register'
+        session.modified = True
+        redirect_uri = url_for('trial_google_callback', _external=True)
+        return google.authorize_redirect(redirect_uri)
+
+    @app.route('/trial/google/callback')
+    def trial_google_callback():
+        from Services.subscription_service import find_account_by_email, tenant_is_expired
+
+        if session.get('oauth_mode') != 'trial_register':
+            return redirect(url_for('login'))
+        try:
+            if not configure_google_oauth(google):
+                flash("Chưa cấu hình Google OAuth.", "warning")
+                return redirect(url_for('login'))
+            user_info = fetch_google_user_info(google)
+            email = (user_info.get('email') or '').strip().lower()
+            if not email:
+                flash("Google không trả về email.", "danger")
+                return redirect(url_for('login'))
+
+            account = find_account_by_email(email, active_only=False)
+            if account:
+                if not account.get('tenant_active') or tenant_is_expired({
+                    'is_active': account.get('tenant_active'),
+                    'expiry_date': account.get('expiry_date'),
+                }):
+                    session['renewal_context'] = {
+                        'tenant_id': account['tenant_id'],
+                        'email': email,
+                        'business_name': account.get('business_name') or '',
+                    }
+                    flash("Tài khoản đã hết hạn — vui lòng gia hạn.", "info")
+                    return redirect(url_for('renewal_page'))
+                flash("Email này đã có tài khoản. Hãy dùng «Đăng nhập bằng Google».", "info")
+                return redirect(url_for('login'))
+
+            session['trial_google'] = {
+                'email': email,
+                'name': user_info.get('name') or '',
+            }
+            session.modified = True
+            return redirect(url_for('login', trial_google=1))
+        except Exception as exc:
+            current_app.logger.error("Trial Google OAuth lỗi: %s", exc)
+            flash("Xác thực Google thất bại hoặc bị hủy.", "danger")
+            return redirect(url_for('login', google_setup=1))
+        finally:
+            session.pop('oauth_mode', None)
+
+    @app.route('/api/auth/google-setup-hint', methods=['GET'])
+    def api_google_setup_hint():
+        base = get_public_base_url(request.url_root)
+        return jsonify({'success': True, **google_oauth_setup_hints(base)})
 
     @app.route('/login/google/2fa')
     def login_google_2fa_start():

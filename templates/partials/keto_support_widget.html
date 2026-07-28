@@ -1,0 +1,71 @@
+{# Widget Zalo + Trợ lý AI — hiển thị mọi trang đã đăng nhập #}
+{% if assistant_enabled %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/keto-assistant.css') }}">
+
+<div class="keto-support-launcher" id="ketoSupportLauncher">
+    <a href="{{ support_zalo_url }}" target="_blank" rel="noopener"
+       class="keto-zalo-fab" title="Chat Zalo {{ support_zalo_display }}"
+       aria-label="Chat Zalo hỗ trợ">
+        <i class="fas fa-comment-dots"></i>
+    </a>
+    <button type="button" class="keto-ai-fab" id="ketoAiFab"
+            title="Trợ lý AI KETO POS" aria-label="Mở trợ lý AI">
+        <i class="fas fa-robot"></i>
+    </button>
+</div>
+
+<div class="keto-assist-panel" id="ketoAssistPanel" role="dialog" aria-label="Trợ lý AI KETO">
+    <div class="keto-assist-header">
+        <div>
+            <h6><i class="fas fa-headset me-1"></i> Hỗ trợ KETO POS</h6>
+            <small>Trợ lý AI &amp; Zalo {{ support_zalo_display }}</small>
+        </div>
+        <button type="button" class="btn btn-sm btn-light py-0 px-2" id="ketoAssistClose" aria-label="Đóng">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="keto-assist-tabs">
+        <button type="button" class="active" id="ketoTabAi"><i class="fas fa-robot me-1"></i>Trợ lý AI</button>
+        <button type="button" id="ketoTabZalo"><i class="fas fa-comment-dots me-1"></i>Zalo</button>
+    </div>
+    <div id="ketoPaneAi" class="d-flex flex-column flex-grow-1" style="min-height:0;">
+        <div class="keto-assist-body flex-grow-1">
+            <div class="keto-assist-messages" id="ketoAssistMessages"></div>
+            <div class="keto-assist-chips" id="ketoAssistChips"></div>
+        </div>
+        <div class="keto-assist-input-row">
+            <input type="text" id="ketoAssistInput" placeholder="Hỏi cách sử dụng phần mềm..." maxlength="500" autocomplete="off">
+            <button type="button" id="ketoAssistSend" aria-label="Gửi"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+    <div id="ketoPaneZalo" class="keto-assist-body" style="display:none;">
+        <div class="keto-zalo-tab">
+            <div class="zalo-icon-lg"><i class="fas fa-comment-dots"></i></div>
+            <p class="text-muted small mb-1">Hỗ trợ trực tiếp qua Zalo</p>
+            <div class="phone">{{ support_zalo_display }}</div>
+            <p class="text-muted small mt-2 mb-0">
+                Tư vấn cài đặt, hướng dẫn từ xa (UltraViewer), hóa đơn điện tử và kế toán HKD.
+            </p>
+            <a href="{{ support_zalo_url }}" target="_blank" rel="noopener" class="btn btn-zalo">
+                <i class="fas fa-external-link-alt me-1"></i>Mở chat Zalo
+            </a>
+            <p class="text-muted small mt-3 mb-0">
+                <i class="fas fa-book me-1"></i>
+                <a href="{{ url_for('huong_dan_su_dung') }}">Hướng Dẫn Sử Dụng</a> đầy đủ
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+window.KETO_SUPPORT = {
+    enabled: true,
+    zaloPhone: {{ support_zalo_phone | tojson }},
+    zaloUrl: {{ support_zalo_url | tojson }},
+    page: {{ (request.endpoint or '') | tojson }},
+    regime: {{ (tenant_regime or 'HKD') | tojson }},
+    role: {{ (current_user.role if current_user.is_authenticated else '') | tojson }}
+};
+</script>
+<script src="{{ url_for('static', filename='js/keto-assistant.js') }}"></script>
+{% endif %}

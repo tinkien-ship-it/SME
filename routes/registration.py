@@ -133,11 +133,22 @@ def register_registration_routes(app):
     @app.route('/api/trial/register', methods=['POST'])
     def api_trial_register():
         payload = request.get_json(silent=True) or {}
-        user_info, err = verify_google_credential(payload.get('credential'))
-        if err:
-            return jsonify({'success': False, 'error': err}), 400
+        google_email = ''
+        oauth_from_session = False
 
-        google_email = (user_info.get('email') or '').strip().lower()
+        trial_sess = session.get('trial_google') or {}
+        if payload.get('oauth_register') and trial_sess.get('email'):
+            google_email = (trial_sess.get('email') or '').strip().lower()
+            oauth_from_session = True
+        else:
+            user_info, err = verify_google_credential(payload.get('credential'))
+            if err:
+                return jsonify({'success': False, 'error': err}), 400
+            google_email = (user_info.get('email') or '').strip().lower()
+
+        if not google_email:
+            return jsonify({'success': False, 'error': 'Thiếu xác thực Google'}), 400
+
         existing = find_account_by_email(google_email, active_only=False)
         if existing:
             return jsonify({'success': False, 'error': 'Email Google đã được đăng ký'}), 400
@@ -174,6 +185,8 @@ def register_registration_routes(app):
             'tenant_id': tenant_id,
             'message': 'Đăng ký thành công! Mật khẩu đã gửi qua email.',
         }
+        if oauth_from_session:
+            session.pop('trial_google', None)
         return jsonify({
             'success': True,
             'tenant_id': tenant_id,

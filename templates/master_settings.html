@@ -61,6 +61,11 @@
                 <i class="fas fa-clipboard-list me-2"></i>Nhật ký thao tác
             </button>
         </li>
+        <li class="nav-item">
+            <button class="nav-link" id="assistant-tab" data-bs-toggle="tab" data-bs-target="#assistant-content" type="button" onclick="loadAssistantMaster()">
+                <i class="fas fa-robot me-2"></i>Trợ lý AI
+            </button>
+        </li>
     </ul>
 
     <div class="tab-content" id="masterTabContent">
@@ -99,11 +104,11 @@
                 <div class="card-body p-4">
                     <div class="alert alert-info small">
                         <i class="fas fa-info-circle me-1"></i>
-                        Sau khi lưu, trang <strong>Đăng nhập</strong> sẽ hiện nút Google; trang <strong>Xác minh thiết bị (2FA)</strong> sẽ hiện thêm OTP SMS.
-                        Redirect URI Google Cloud Console (nếu dùng OAuth redirect cũ):
-                        <code>/login/google/callback</code>.
-                        Với đăng nhập Gmail trình duyệt: thêm <strong>Authorized JavaScript origins</strong>
-                        <code>http://127.0.0.1:5000</code>
+                        Sau khi lưu, trang <strong>Đăng nhập</strong> sẽ hiện nút Google.
+                        <strong>Bắt buộc</strong> trong Google Cloud → Credentials → OAuth Client (Web):
+                        thêm <strong>Authorized JavaScript origins</strong> (sửa lỗi <code>origin_mismatch</code>)
+                        và <strong>Authorized redirect URIs</strong> nếu dùng đăng ký redirect.
+                        <div id="googleOriginsHint" class="mt-2 small text-dark"></div>
                     </div>
                     <form id="authSettingsForm" onsubmit="saveAuthSettings(event)">
                         <div class="row g-4">
@@ -275,6 +280,8 @@
                 </div>
             </div>
         </div>
+
+        {% include 'partials/master_assistant_tab.html' %}
     </div>
 </div>
 
@@ -706,6 +713,21 @@ async function loadMasterAuditLog() {
     }
 }
 
+async function loadGoogleOriginsHint() {
+    const el = document.getElementById('googleOriginsHint');
+    if (!el) return;
+    try {
+        const res = await fetch('/api/auth/google-setup-hint');
+        const json = await res.json();
+        if (!json.success) return;
+        const origins = (json.javascript_origins || []).map(o => `<code class="me-1">${o}</code>`).join('<br>');
+        const redirects = (json.redirect_uris || []).map(u => `<code class="me-1">${u}</code>`).join('<br>');
+        el.innerHTML = `
+            <div><strong>JavaScript origins:</strong><br>${origins || '—'}</div>
+            <div class="mt-1"><strong>Redirect URIs:</strong><br>${redirects || '—'}</div>`;
+    } catch (_) { /* ignore */ }
+}
+
 /** --- 5. CẤU HÌNH ĐĂNG NHẬP & OTP --- **/
 let authSettingsLoading = false;
 
@@ -747,6 +769,8 @@ function applyAuthSettingsUI(s) {
             googleErr.textContent = '';
         }
     }
+
+    loadGoogleOriginsHint();
 
     const googleSecretHint = authEl('googleSecretHint');
     if (googleSecretHint) {
@@ -858,6 +882,180 @@ async function saveAuthSettings(e) {
         }
     } catch (err) {
         Swal.fire('Lỗi', 'Không kết nối được server.', 'error');
+    }
+}
+
+/** --- 6. TRỢ LÝ AI & ZALO OA --- **/
+function escAssist(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function loadAssistantMaster() {
+    loadAssistantSettings();
+    loadAssistantPending();
+    loadAssistantFaqList();
+}
+
+async function loadAssistantSettings() {
+    try {
+        const res = await fetch('/api/master/assistant/settings');
+        const json = await res.json();
+        if (!json.success) return;
+        const s = json.settings || {};
+        document.getElementById('zaloOaAppId').value = s.zalo_oa_app_id || '';
+        document.getElementById('zaloOaId').value = s.zalo_oa_id || '';
+        document.getElementById('zaloWebhookToken').value = s.zalo_webhook_verify_token || '';
+        document.getElementById('zaloWebhookUrl').value = json.webhook_url || '';
+        document.getElementById('assistantEscalation').checked = s.assistant_escalation_enabled !== '0';
+        document.getElementById('zaloSecretHint').innerHTML = s.has_zalo_oa_secret
+            ? '<span class="text-success"><i class="fas fa-check"></i> Secret đã lưu</span>' : '';
+        document.getElementById('zaloRefreshHint').innerHTML = s.has_zalo_oa_refresh_token
+            ? '<span class="text-success"><i class="fas fa-check"></i> Refresh token đã lưu</span>' : '';
+        const st = json.stats || {};
+        document.getElementById('assistantStatsBadges').innerHTML = `
+            <span class="badge bg-primary">${st.total_chats || 0} hội thoại</span>
+            <span class="badge bg-warning text-dark">${st.pending_review || 0} chờ duyệt</span>
+            <span class="badge bg-success">${st.dynamic_faq || 0} FAQ động</span>
+            <span class="badge bg-info text-dark">${st.zalo_users || 0} user Zalo</span>
+            <span class="badge ${json.openai_configured ? 'bg-success' : 'bg-secondary'}">${json.openai_configured ? 'OpenAI OK' : 'Chưa có OpenAI'}</span>`;
+    } catch (e) { /* ignore */ }
+}
+
+async function saveAssistantSettings(e) {
+    e.preventDefault();
+    const payload = {
+        zalo_oa_app_id: document.getElementById('zaloOaAppId').value.trim(),
+        zalo_oa_secret: document.getElementById('zaloOaSecret').value.trim(),
+        zalo_oa_id: document.getElementById('zaloOaId').value.trim(),
+        zalo_oa_refresh_token: document.getElementById('zaloOaRefresh').value.trim(),
+        zalo_webhook_verify_token: document.getElementById('zaloWebhookToken').value.trim(),
+        assistant_escalation_enabled: document.getElementById('assistantEscalation').checked ? '1' : '0',
+    };
+    try {
+        const res = await fetch('/api/master/assistant/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (json.success) {
+            Swal.fire('Đã lưu', json.message || 'OK', 'success');
+            document.getElementById('zaloOaSecret').value = '';
+            document.getElementById('zaloOaRefresh').value = '';
+            loadAssistantSettings();
+        } else {
+            Swal.fire('Lỗi', json.error || 'Không lưu được', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', 'Không kết nối server', 'error');
+    }
+}
+
+function copyWebhookUrl() {
+    const el = document.getElementById('zaloWebhookUrl');
+    if (!el) return;
+    el.select();
+    navigator.clipboard.writeText(el.value).then(() => Swal.fire({ toast: true, position: 'top', icon: 'success', title: 'Đã copy webhook URL', showConfirmButton: false, timer: 1500 }));
+}
+
+async function loadAssistantPending() {
+    const tbody = document.getElementById('assistantPendingBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">Đang tải...</td></tr>';
+    try {
+        const res = await fetch('/api/master/assistant/pending');
+        const json = await res.json();
+        if (!json.success || !json.data.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Không có câu hỏi chờ duyệt.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = json.data.map(r => `
+            <tr>
+                <td class="small text-nowrap">${escAssist((r.created_at || '').slice(0, 16))}</td>
+                <td><span class="badge bg-${r.channel === 'zalo' ? 'primary' : 'secondary'}">${escAssist(r.channel)}</span></td>
+                <td class="small" style="max-width:180px">${escAssist(r.user_message)}</td>
+                <td class="small text-muted" style="max-width:220px">${escAssist((r.bot_reply || '').slice(0, 120))}...</td>
+                <td class="text-nowrap">
+                    <button class="btn btn-success btn-sm py-0 btn-approve-assist" data-log-id="${r.id}">Duyệt</button>
+                    <button class="btn btn-outline-secondary btn-sm py-0" onclick="dismissAssistantFaq(${r.id})">Bỏ</button>
+                </td>
+            </tr>`).join('');
+        tbody.querySelectorAll('.btn-approve-assist').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const row = btn.closest('tr');
+                approveAssistantFaq(
+                    parseInt(btn.dataset.logId, 10),
+                    row?.cells[2]?.textContent || '',
+                    row?.cells[3]?.textContent?.replace(/\.\.\.$/, '') || ''
+                );
+            });
+        });
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>';
+    }
+}
+
+async function approveAssistantFaq(logId, question, answer) {
+    const { value: form } = await Swal.fire({
+        title: 'Duyệt FAQ',
+        html: `
+            <label class="form-label small">Câu hỏi</label>
+            <textarea id="swal-q" class="form-control mb-2" rows="2">${escAssist(question)}</textarea>
+            <label class="form-label small">Câu trả lời (Markdown **đậm**)</label>
+            <textarea id="swal-a" class="form-control" rows="4">${escAssist(answer)}</textarea>`,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Duyệt & thêm FAQ',
+        preConfirm: () => ({
+            question: document.getElementById('swal-q').value.trim(),
+            answer: document.getElementById('swal-a').value.trim(),
+        }),
+    });
+    if (!form || !form.question || !form.answer) return;
+    const res = await fetch('/api/master/assistant/faq/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ log_id: logId, question: form.question, answer: form.answer }),
+    });
+    const json = await res.json();
+    if (json.success) {
+        Swal.fire('OK', json.message, 'success');
+        loadAssistantPending();
+        loadAssistantFaqList();
+        loadAssistantSettings();
+    } else {
+        Swal.fire('Lỗi', json.error || 'Thất bại', 'error');
+    }
+}
+
+async function dismissAssistantFaq(logId) {
+    if (!confirm('Bỏ qua câu hỏi này?')) return;
+    await fetch('/api/master/assistant/faq/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ log_id: logId }),
+    });
+    loadAssistantPending();
+}
+
+async function loadAssistantFaqList() {
+    const ul = document.getElementById('assistantFaqList');
+    if (!ul) return;
+    try {
+        const res = await fetch('/api/master/assistant/faq/list');
+        const json = await res.json();
+        if (!json.success || !json.data.length) {
+            ul.innerHTML = '<li class="list-group-item text-muted">Chưa có FAQ động.</li>';
+            return;
+        }
+        ul.innerHTML = json.data.slice(0, 20).map(f => `
+            <li class="list-group-item">
+                <strong>${escAssist(f.question)}</strong>
+                <span class="badge bg-light text-dark ms-1">${f.hit_count || 0} lượt</span>
+                <div class="text-muted mt-1">${escAssist((f.answer || '').slice(0, 100))}...</div>
+            </li>`).join('');
+    } catch (e) {
+        ul.innerHTML = '<li class="list-group-item text-danger">Lỗi tải FAQ</li>';
     }
 }
 

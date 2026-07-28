@@ -1,0 +1,95 @@
+        <div class="tab-pane fade" id="assistant-content" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <div class="card master-card">
+                        <div class="card-header master-header py-3">
+                            <h5 class="mb-0"><i class="fas fa-robot me-2"></i>Trợ lý AI &amp; Zalo OA</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="alert alert-info small">
+                                <strong>5 giai đoạn đã bật:</strong> FAQ + RAG hướng dẫn + ngữ cảnh màn hình +
+                                webhook Zalo OA + học FAQ từ câu hỏi khách.
+                                <br>OpenAI: cấu hình biến <code>OPENAI_API_KEY</code> trong <code>.env</code>.
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mb-3" id="assistantStatsBadges"></div>
+                            <form id="assistantSettingsForm" onsubmit="saveAssistantSettings(event)">
+                                <div class="mb-3">
+                                    <label class="form-label">Zalo OA App ID</label>
+                                    <input type="text" class="form-control" id="zaloOaAppId">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Zalo OA Secret</label>
+                                    <input type="password" class="form-control" id="zaloOaSecret" placeholder="Để trống nếu không đổi">
+                                    <div class="form-text" id="zaloSecretHint"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Zalo OA ID</label>
+                                    <input type="text" class="form-control" id="zaloOaId">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Refresh Token OA</label>
+                                    <input type="password" class="form-control" id="zaloOaRefresh" placeholder="Để trống nếu không đổi">
+                                    <div class="form-text" id="zaloRefreshHint"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Webhook verify token</label>
+                                    <input type="text" class="form-control" id="zaloWebhookToken" placeholder="Chuỗi xác minh khi đăng ký webhook">
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="assistantEscalation" checked>
+                                    <label class="form-check-label" for="assistantEscalation">Tự gợi ý chuyển Zalo khi câu hỏi khó / lỗi</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Webhook URL (dán vào Zalo Developer)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control font-monospace" id="zaloWebhookUrl" readonly>
+                                        <button type="button" class="btn btn-outline-secondary" onclick="copyWebhookUrl()">Copy</button>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-save me-1"></i>Lưu cấu hình
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card master-card">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-inbox me-2 text-warning"></i>Câu hỏi chờ duyệt → FAQ</h5>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadAssistantPending()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height:520px;overflow-y:auto;">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Thời gian</th>
+                                            <th>Kênh</th>
+                                            <th>Câu hỏi</th>
+                                            <th>Gợi ý trả lời</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="assistantPendingBody">
+                                        <tr><td colspan="5" class="text-center py-4 text-muted">Đang tải...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card master-card mt-3">
+                        <div class="card-header bg-white py-2">
+                            <h6 class="mb-0"><i class="fas fa-check-circle text-success me-1"></i>FAQ đã duyệt (động)</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush small" id="assistantFaqList">
+                                <li class="list-group-item text-muted">Đang tải...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>

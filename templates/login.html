@@ -143,6 +143,19 @@
         color: #14532d;
     }
 
+    .google-setup-hint {
+        background: #fff8e6;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-size: 0.82rem;
+        text-align: left;
+    }
+    .google-setup-hint code {
+        font-size: 0.78rem;
+        word-break: break-all;
+    }
+
     .google-register-hidden {
         position: absolute;
         width: 1px;
@@ -301,8 +314,35 @@
                     <div class="trial-register-box mb-3">
                         Nếu <strong>chưa có tài khoản</strong>, hãy đăng ký dùng thử
                         <strong>6 tháng miễn phí</strong> bằng tài khoản Google —
+                        {% if google_redirect_ready %}
+                        <a href="{{ url_for('trial_google_start') }}" class="trial-register-link">chỉ cần nhấn vào link này và làm theo hướng dẫn</a>.
+                        {% else %}
                         <a href="#" id="linkTrialRegister" class="trial-register-link">chỉ cần nhấn vào link này và làm theo hướng dẫn</a>.
+                        {% endif %}
                     </div>
+                    {% if google_oauth_hints and google_oauth_hints.javascript_origins %}
+                    <div class="google-setup-hint mb-3 {% if not request.args.get('google_setup') %}d-none{% endif %}" id="googleSetupHint">
+                        <strong><i class="fas fa-exclamation-triangle text-warning me-1"></i>Lỗi Google «origin_mismatch»?</strong>
+                        <p class="mb-1 mt-2">Vào <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console → Credentials</a>,
+                        chọn OAuth Client ID loại <strong>Web application</strong>, thêm các mục sau (không có dấu / cuối):</p>
+                        <p class="mb-1 fw-semibold">Authorized JavaScript origins:</p>
+                        <ul class="mb-2 ps-3">
+                            {% for origin in google_oauth_hints.javascript_origins %}
+                            <li><code>{{ origin }}</code></li>
+                            {% endfor %}
+                        </ul>
+                        {% if google_redirect_ready and google_oauth_hints.redirect_uris %}
+                        <p class="mb-1 fw-semibold">Authorized redirect URIs (đăng ký redirect):</p>
+                        <ul class="mb-0 ps-3">
+                            {% for uri in google_oauth_hints.redirect_uris %}
+                            <li><code>{{ uri }}</code></li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="mb-0 text-muted">Để dùng link đăng ký redirect (ổn định hơn), thêm <strong>Client Secret</strong> trong Master Settings → Đăng nhập &amp; OTP.</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     <div id="googleRegisterHidden" class="google-register-hidden" aria-hidden="true"></div>
                     {% elif google_config_error %}
                     <div class="alert alert-warning border small text-center mb-0 py-2">
@@ -364,7 +404,10 @@
                     <small class="text-muted">
                         KETO <strong>"ALL IN ONE"</strong> @ V.1<br>
                         Bản quyền thuộc về: <strong>KIÊN TRUNG TÍN</strong><br>
-                        Hỗ trợ Zalo: <strong>0908870287</strong>
+                        Hỗ trợ Zalo:
+                        <a href="{{ support_zalo_url }}" target="_blank" rel="noopener" class="text-white fw-bold text-decoration-none">
+                            {{ support_zalo_display }}
+                        </a>
                     </small>
                 </div>
             </div>
@@ -427,11 +470,22 @@ let pendingGoogleMode = 'login';
 let googleInitialized = false;
 
 function showGoogleLoginError(msg) {
+    const hint = document.getElementById('googleSetupHint');
+    if (hint) hint.classList.remove('d-none');
     if (typeof Swal !== 'undefined') {
-        Swal.fire({ icon: 'error', title: 'Không đăng nhập được', text: msg, confirmButtonText: 'Đóng' });
+        Swal.fire({
+            icon: 'error',
+            title: 'Không đăng nhập được',
+            html: escHtml(msg) + (hint ? '<p class="small text-muted mt-2 mb-0">Xem hộp vàng «Lỗi Google origin_mismatch» bên dưới để cấu hình Google Cloud Console.</p>' : ''),
+            confirmButtonText: 'Đóng',
+        });
     } else {
         alert(msg);
     }
+}
+
+function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function handleGoogleCredential(response, mode) {
@@ -545,7 +599,11 @@ function openTrialRegisterModal(credential, info) {
             fetch('/api/trial/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ credential, ...f })
+                body: JSON.stringify(
+                    credential
+                        ? { credential, ...f }
+                        : { oauth_register: true, ...f }
+                )
             })
             .then(r => r.json())
             .then(data => {
@@ -642,6 +700,13 @@ function initGoogleSignIn() {
         e.preventDefault();
         triggerGoogleRegister();
     });
+
+    {% if trial_google_pending %}
+    openTrialRegisterModal(null, {
+        email: {{ trial_google_pending.email | tojson }},
+        name: {{ trial_google_pending.name | tojson }},
+    });
+    {% endif %}
 }
 
 document.addEventListener('DOMContentLoaded', initGoogleSignIn);

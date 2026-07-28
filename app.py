@@ -187,6 +187,20 @@ def inject_business_info():
 def inject_now():
     return {'now': datetime.now()}
 
+@app.context_processor
+def inject_support_info():
+    from Services.support_config import support_context
+    ctx = support_context()
+    regime = 'HKD'
+    try:
+        profile = getattr(g, 'tenant_profile', None) or {}
+        if profile.get('accounting_regime'):
+            regime = str(profile['accounting_regime']).upper()
+    except Exception:
+        pass
+    ctx['tenant_regime'] = regime
+    return ctx
+
 bcrypt = Bcrypt(app)
 from auth import (
     User,
@@ -353,6 +367,9 @@ register_core_routes(app)
 
 from routes.knowledge import register_knowledge_routes
 register_knowledge_routes(app)
+
+from routes.assistant import register_assistant_routes
+register_assistant_routes(app)
 
 # === REPORTS routes → routes/reports.py ===
 from routes.reports import register_reports_routes

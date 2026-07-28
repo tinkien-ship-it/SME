@@ -371,8 +371,16 @@
     <footer class="footer text-center">
         <div class="container">
             © POS System V1.0 | © 2026 | Phát triển bởi <strong>Trung Tín</strong>
+            · Hỗ trợ Zalo:
+            <a href="{{ support_zalo_url }}" target="_blank" rel="noopener" class="footer-zalo-link">
+                <i class="fas fa-comment-dots"></i> {{ support_zalo_display }}
+            </a>
         </div>
     </footer>
+
+    {% if current_user.is_authenticated %}
+    {% include 'partials/keto_support_widget.html' %}
+    {% endif %}
     {% endif %}
 
     <!-- Scripts -->

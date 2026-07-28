@@ -186,6 +186,69 @@ def get_google_client_id():
     return cid
 
 
+def google_oauth_redirect_ready():
+    """OAuth redirect (đăng ký dùng thử) cần cả Client ID và Secret."""
+    if not google_login_enabled():
+        return False
+    secret = (get_auth_settings().get("google_client_secret") or "").strip()
+    return bool(secret)
+
+
+def get_public_base_url(fallback_root: str | None = None) -> str:
+    """URL gốc công khai — ưu tiên PUBLIC_BASE_URL (.env) khi đứng sau proxy."""
+    base = (os.getenv("PUBLIC_BASE_URL") or os.getenv("APP_BASE_URL") or "").strip().rstrip("/")
+    if base:
+        return base
+    return (fallback_root or "").rstrip("/")
+
+
+def google_oauth_setup_hints(base_url: str | None = None) -> dict:
+    """
+    Gợi ý cấu hình Google Cloud Console — sửa lỗi origin_mismatch / redirect_uri_mismatch.
+    """
+    root = get_public_base_url(base_url)
+    origins: list[str] = []
+    redirects: list[str] = []
+
+    def _add_origin(url: str) -> None:
+        u = (url or "").strip().rstrip("/")
+        if u and u not in origins:
+            origins.append(u)
+
+    if root:
+        from urllib.parse import urlparse
+        parsed = urlparse(root)
+        if parsed.scheme and parsed.netloc:
+            _add_origin(f"{parsed.scheme}://{parsed.netloc}")
+            host = parsed.hostname or ""
+            port = parsed.port
+            if host in ("127.0.0.1", "localhost"):
+                _add_origin(f"http://127.0.0.1:{port or 5000}")
+                _add_origin(f"http://localhost:{port or 5000}")
+            if parsed.scheme == "http" and host not in ("127.0.0.1", "localhost"):
+                _add_origin(f"https://{parsed.netloc}")
+
+    for extra in (os.getenv("GOOGLE_EXTRA_ORIGINS") or "").split(","):
+        _add_origin(extra.strip())
+
+    _add_origin("http://127.0.0.1:5000")
+    _add_origin("http://localhost:5000")
+
+    if root:
+        redirects.extend([
+            f"{root}/login/google/callback",
+            f"{root}/trial/google/callback",
+            f"{root}/authorize-google-2fa",
+        ])
+
+    return {
+        "javascript_origins": origins,
+        "redirect_uris": redirects,
+        "public_base_url": root,
+        "redirect_ready": google_oauth_redirect_ready(),
+    }
+
+
 def google_client_id_error(client_id=None):
     """Thông báo nếu cấu hình Google Client ID sai định dạng."""
     if client_id is None:
