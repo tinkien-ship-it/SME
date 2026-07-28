@@ -163,6 +163,7 @@ def register_settings_routes(app):
         google_client_id_error,
         google_oauth_redirect_ready,
         google_oauth_setup_hints,
+        oauth_redirect_uri,
         find_user_by_email,
         get_auth_settings,
         get_auth_settings_db,
@@ -817,8 +818,7 @@ def register_settings_routes(app):
             return redirect(url_for('login'))
         session['oauth_mode'] = 'login'
         session.modified = True
-        redirect_uri = url_for('login_google_callback', _external=True)
-        return google.authorize_redirect(redirect_uri)
+        return google.authorize_redirect(oauth_redirect_uri('login_google_callback'))
 
     @app.route('/login/google/callback')
     def login_google_callback():
@@ -913,8 +913,7 @@ def register_settings_routes(app):
             return redirect(url_for('login', google_setup=1))
         session['oauth_mode'] = 'trial_register'
         session.modified = True
-        redirect_uri = url_for('trial_google_callback', _external=True)
-        return google.authorize_redirect(redirect_uri)
+        return google.authorize_redirect(oauth_redirect_uri('trial_google_callback'))
 
     @app.route('/trial/google/callback')
     def trial_google_callback():
@@ -978,7 +977,7 @@ def register_settings_routes(app):
             return redirect(url_for('login_2fa'))
         session['oauth_mode'] = '2fa'
         session.modified = True
-        return google.authorize_redirect(url_for('authorize_google_2fa', _external=True))
+        return google.authorize_redirect(oauth_redirect_uri('authorize_google_2fa'))
 
     def _finalize_login_from_dict(user, db_to_open, current_tenant_id, fingerprint):
         """Hoàn tất đăng nhập sau OTP/Google — dùng chung logic redirect."""

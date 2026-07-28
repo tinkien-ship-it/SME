@@ -427,6 +427,8 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             'login_google_credential',
             'login_google_2fa_credential',
             'login_google_2fa_start',
+            'trial_google_start',
+            'trial_google_callback',
             'authorize_google_2fa',
             'logout',
             'forgot_password',

@@ -202,21 +202,93 @@ def get_public_base_url(fallback_root: str | None = None) -> str:
     return (fallback_root or "").rstrip("/")
 
 
+_OAUTH_CALLBACK_ENDPOINTS = (
+    "login_google_callback",
+    "trial_google_callback",
+    "authorize_google_2fa",
+)
+
+
+def oauth_redirect_uri(endpoint: str) -> str:
+    """
+    Redirect URI OAuth — luôn khớp host/port trình duyệt đang mở.
+    Tránh redirect_uri_mismatch khi PUBLIC_BASE_URL trỏ production nhưng test localhost.
+    """
+    from flask import has_request_context, request, url_for
+
+    if has_request_context() and getattr(request, "url_root", None):
+        root = request.url_root.rstrip("/")
+        path = url_for(endpoint, _external=False)
+        if path.startswith("http://") or path.startswith("https://"):
+            return path
+        return f"{root}{path}"
+    return url_for(endpoint, _external=True)
+
+
+def _localhost_mirror_root(url_root: str) -> str | None:
+    from urllib.parse import urlparse
+
+    parsed = urlparse((url_root or "").rstrip("/"))
+    host = parsed.hostname or ""
+    if host not in ("127.0.0.1", "localhost"):
+        return None
+    port = parsed.port or 5000
+    alt = "localhost" if host == "127.0.0.1" else "127.0.0.1"
+    return f"http://{alt}:{port}"
+
+
 def google_oauth_setup_hints(base_url: str | None = None) -> dict:
     """
     Gợi ý cấu hình Google Cloud Console — sửa lỗi origin_mismatch / redirect_uri_mismatch.
     """
+    from flask import has_request_context, request, url_for
+    from urllib.parse import urlparse
+
     root = get_public_base_url(base_url)
     origins: list[str] = []
     redirects: list[str] = []
+    current_redirects: list[str] = []
 
     def _add_origin(url: str) -> None:
         u = (url or "").strip().rstrip("/")
         if u and u not in origins:
             origins.append(u)
 
+    def _add_redirect(url: str) -> None:
+        u = (url or "").strip()
+        if u and u not in redirects:
+            redirects.append(u)
+
+    def _add_redirects_for_base(base: str) -> None:
+        b = (base or "").strip().rstrip("/")
+        if not b:
+            return
+        for ep in _OAUTH_CALLBACK_ENDPOINTS:
+            try:
+                path = url_for(ep, _external=False)
+            except Exception:
+                continue
+            if path.startswith("http://") or path.startswith("https://"):
+                _add_redirect(path)
+            else:
+                _add_redirect(f"{b}{path}")
+
+    # URI đang dùng thực tế (host/port trình duyệt) — quan trọng khi test localhost
+    if has_request_context() and getattr(request, "url_root", None):
+        req_root = request.url_root.rstrip("/")
+        _add_origin(req_root)
+        mirror = _localhost_mirror_root(req_root)
+        if mirror:
+            _add_origin(mirror)
+        for ep in _OAUTH_CALLBACK_ENDPOINTS:
+            uri = oauth_redirect_uri(ep)
+            current_redirects.append(uri)
+            _add_redirect(uri)
+            if mirror:
+                parsed = urlparse(uri)
+                _add_redirect(f"{mirror}{parsed.path}")
+
     if root:
-        from urllib.parse import urlparse
         parsed = urlparse(root)
         if parsed.scheme and parsed.netloc:
             _add_origin(f"{parsed.scheme}://{parsed.netloc}")
@@ -227,25 +299,25 @@ def google_oauth_setup_hints(base_url: str | None = None) -> dict:
                 _add_origin(f"http://localhost:{port or 5000}")
             if parsed.scheme == "http" and host not in ("127.0.0.1", "localhost"):
                 _add_origin(f"https://{parsed.netloc}")
+        _add_redirects_for_base(root)
 
     for extra in (os.getenv("GOOGLE_EXTRA_ORIGINS") or "").split(","):
         _add_origin(extra.strip())
 
     _add_origin("http://127.0.0.1:5000")
     _add_origin("http://localhost:5000")
-
-    if root:
-        redirects.extend([
-            f"{root}/login/google/callback",
-            f"{root}/trial/google/callback",
-            f"{root}/authorize-google-2fa",
-        ])
+    for local_base in ("http://127.0.0.1:5000", "http://localhost:5000"):
+        _add_redirects_for_base(local_base)
 
     return {
         "javascript_origins": origins,
         "redirect_uris": redirects,
+        "current_redirect_uris": current_redirects,
         "public_base_url": root,
+        "request_base_url": request.url_root.rstrip("/") if has_request_context() else "",
         "redirect_ready": google_oauth_redirect_ready(),
+        "is_localhost": has_request_context()
+        and (request.host or "").split(":")[0] in ("127.0.0.1", "localhost"),
     }
 
 

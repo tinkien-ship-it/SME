@@ -143,6 +143,19 @@
         color: #14532d;
     }
 
+    button.trial-register-link {
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        display: inline;
+        text-align: inherit;
+    }
+
+    #googleTrialRegisterWrap {
+        margin-top: 10px;
+    }
+
     .google-setup-hint {
         background: #fff8e6;
         border: 1px solid #ffc107;
@@ -156,22 +169,6 @@
         word-break: break-all;
     }
 
-    .google-register-hidden {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        margin: -1px;
-        padding: 0;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border: 0;
-    }
-
-    #googleRegisterHidden iframe {
-        width: 1px !important;
-        height: 1px !important;
-    }
 
     .pricing-section {
         background: #f8f9fa;
@@ -284,7 +281,7 @@
                     <form method="POST">
                         <div class="mb-4">
                             <label class="form-label fw-medium">Tên đăng nhập</label>
-                            <input type="text" name="username" class="form-control form-control-lg" required autofocus>
+                            <input type="text" name="username" id="loginUsername" class="form-control form-control-lg" required{% if not google_visible and not request.args.get('trial_google') %} autofocus{% endif %}>
                         </div>
                         <div class="mb-4">
                             <label class="form-label fw-medium">Mật khẩu</label>
@@ -317,14 +314,26 @@
                         {% if google_redirect_ready %}
                         <a href="{{ url_for('trial_google_start') }}" class="trial-register-link">chỉ cần nhấn vào link này và làm theo hướng dẫn</a>.
                         {% else %}
-                        <a href="#" id="linkTrialRegister" class="trial-register-link">chỉ cần nhấn vào link này và làm theo hướng dẫn</a>.
+                        <button type="button" id="linkTrialRegister" class="trial-register-link">chỉ cần nhấn vào link này hoặc nút bên dưới</button>.
+                        <div id="googleTrialRegisterWrap" class="d-flex justify-content-center"></div>
                         {% endif %}
                     </div>
                     {% if google_oauth_hints and google_oauth_hints.javascript_origins %}
                     <div class="google-setup-hint mb-3 {% if not request.args.get('google_setup') %}d-none{% endif %}" id="googleSetupHint">
-                        <strong><i class="fas fa-exclamation-triangle text-warning me-1"></i>Lỗi Google «origin_mismatch»?</strong>
+                        <strong><i class="fas fa-exclamation-triangle text-warning me-1"></i>Lỗi Google «origin_mismatch» hoặc «redirect_uri_mismatch»?</strong>
                         <p class="mb-1 mt-2">Vào <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console → Credentials</a>,
                         chọn OAuth Client ID loại <strong>Web application</strong>, thêm các mục sau (không có dấu / cuối):</p>
+                        {% if google_redirect_ready and google_oauth_hints.current_redirect_uris %}
+                        <p class="mb-1 fw-semibold text-danger">Redirect URI bắt buộc (đang dùng trên trình duyệt này):</p>
+                        <ul class="mb-2 ps-3">
+                            {% for uri in google_oauth_hints.current_redirect_uris %}
+                            <li><code>{{ uri }}</code></li>
+                            {% endfor %}
+                        </ul>
+                        {% if google_oauth_hints.is_localhost %}
+                        <p class="mb-2 small text-muted">Test localhost: thêm <strong>cả</strong> <code>http://127.0.0.1:PORT/...</code> và <code>http://localhost:PORT/...</code> nếu bạn hay đổi URL. PORT = cổng bạn đang mở (vd. 5000).</p>
+                        {% endif %}
+                        {% endif %}
                         <p class="mb-1 fw-semibold">Authorized JavaScript origins:</p>
                         <ul class="mb-2 ps-3">
                             {% for origin in google_oauth_hints.javascript_origins %}
@@ -332,7 +341,7 @@
                             {% endfor %}
                         </ul>
                         {% if google_redirect_ready and google_oauth_hints.redirect_uris %}
-                        <p class="mb-1 fw-semibold">Authorized redirect URIs (đăng ký redirect):</p>
+                        <p class="mb-1 fw-semibold">Authorized redirect URIs (đăng ký redirect — thêm tất cả nếu test cả local + production):</p>
                         <ul class="mb-0 ps-3">
                             {% for uri in google_oauth_hints.redirect_uris %}
                             <li><code>{{ uri }}</code></li>
@@ -343,7 +352,6 @@
                         {% endif %}
                     </div>
                     {% endif %}
-                    <div id="googleRegisterHidden" class="google-register-hidden" aria-hidden="true"></div>
                     {% elif google_config_error %}
                     <div class="alert alert-warning border small text-center mb-0 py-2">
                         <i class="fab fa-google text-danger me-1"></i>
@@ -658,12 +666,19 @@ function renderGoogleLoginButton() {
     });
 }
 
+function getGoogleRegisterButton() {
+    const wrap = document.getElementById('googleTrialRegisterWrap');
+    if (!wrap) return null;
+    return wrap.querySelector('div[role="button"], [role="button"]');
+}
+
 function ensureRegisterButtonRendered() {
-    const wrap = document.getElementById('googleRegisterHidden');
-    if (!wrap || wrap.dataset.rendered === '1') return;
-    if (!ensureGoogleInitialized()) return;
+    const wrap = document.getElementById('googleTrialRegisterWrap');
+    if (!wrap || wrap.dataset.rendered === '1') return false;
+    if (!ensureGoogleInitialized()) return false;
+    wrap.addEventListener('mousedown', () => { pendingGoogleMode = 'register'; }, true);
     google.accounts.id.renderButton(wrap, {
-        theme: 'outline',
+        theme: 'filled_blue',
         size: 'large',
         width: 280,
         text: 'signup_with',
@@ -672,6 +687,7 @@ function ensureRegisterButtonRendered() {
         logo_alignment: 'left',
     });
     wrap.dataset.rendered = '1';
+    return true;
 }
 
 function triggerGoogleRegister() {
@@ -681,12 +697,12 @@ function triggerGoogleRegister() {
         return;
     }
     ensureRegisterButtonRendered();
-    const btn = document.getElementById('googleRegisterHidden')?.querySelector('[role="button"]');
+    const btn = getGoogleRegisterButton();
     if (btn) {
         btn.click();
         return;
     }
-    showGoogleLoginError('Không mở được cửa sổ chọn tài khoản Google. Vui lòng thử lại.');
+    showGoogleLoginError('Chưa tải xong nút Google. Vui lòng nhấn trực tiếp nút «Đăng ký bằng Google» bên dưới.');
 }
 
 function initGoogleSignIn() {
@@ -696,10 +712,12 @@ function initGoogleSignIn() {
     }
     renderGoogleLoginButton();
 
-    document.getElementById('linkTrialRegister')?.addEventListener('click', (e) => {
-        e.preventDefault();
+    {% if not google_redirect_ready %}
+    ensureRegisterButtonRendered();
+    document.getElementById('linkTrialRegister')?.addEventListener('click', () => {
         triggerGoogleRegister();
     });
+    {% endif %}
 
     {% if trial_google_pending %}
     openTrialRegisterModal(null, {
