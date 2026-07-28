@@ -6,7 +6,7 @@ from flask import jsonify, render_template, request
 from flask_login import login_required
 
 from db_utils import get_db_connection
-from Services.hkd_sector import HKD_SECTORS, resolve_hkd_sector
+from Services.hkd_sector import HKD_SECTORS, normalize_nn_code, resolve_hkd_sector
 
 
 def _assign_goods_codes(c, product_id, unit1=None):
@@ -247,7 +247,10 @@ def register_products_routes(app):
                 if item_kind == 'service':
                     unit = (data.get('unit') or 'Lần').strip()
                     base_price = float(data.get('base_price') or 0)
-                    hkd_sector = (data.get('hkd_sector_code') or '').strip()
+                    hkd_sector = normalize_nn_code(
+                        (data.get('hkd_sector_code') or '').strip() or 'NN2',
+                        default='NN2',
+                    )
                     if hkd_sector not in HKD_SECTORS:
                         return jsonify({"success": False, "error": "Vui lòng chọn nhóm ngành (NN1–NN4)"}), 400
 
@@ -312,7 +315,10 @@ def register_products_routes(app):
                 is_finished = item_kind == 'finished_goods' or current_type == 'finished_goods'
 
                 if is_service:
-                    hkd_sector = (data.get('hkd_sector_code') or '').strip()
+                    hkd_sector = normalize_nn_code(
+                        (data.get('hkd_sector_code') or '').strip() or 'NN2',
+                        default='NN2',
+                    )
                     if hkd_sector not in HKD_SECTORS:
                         return jsonify({"success": False, "error": "Vui lòng chọn nhóm ngành (NN1–NN4)"}), 400
 
@@ -731,13 +737,21 @@ def register_products_routes(app):
     def api_hkd_sector_options():
         from flask import g
         from Services.hkd_sector import get_sector_ui_options, normalize_enabled_nn_sectors
+        from Services.tenant_profile import infer_enabled_nn_sectors
 
         profile = getattr(g, 'tenant_profile', None) or {}
-        enabled = normalize_enabled_nn_sectors(profile.get('enabled_nn_sectors'))
+        purpose = (request.args.get('purpose') or '').strip().lower()
         options = get_sector_ui_options()
-        if enabled:
-            enabled_set = set(enabled)
+
+        if purpose == 'service':
+            # Dịch vụ mặc định NN2 — luôn có trong dropdown dù tenant chỉ bật NN1
+            enabled_set = set(infer_enabled_nn_sectors(profile, profile.get('business_line')))
+            enabled_set.add('NN2')
             options = [opt for opt in options if opt['code'] in enabled_set]
+        elif profile.get('enabled_nn_sectors'):
+            enabled_set = set(normalize_enabled_nn_sectors(profile.get('enabled_nn_sectors')))
+            options = [opt for opt in options if opt['code'] in enabled_set]
+
         return jsonify([
             {
                 **opt,

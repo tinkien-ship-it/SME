@@ -308,18 +308,15 @@
                                 <label class="form-label mb-0"><small>Đơn giá <span class="text-danger">*</span></small></label>
                                 <input type="text" class="form-control form-control-sm format-input" id="servicePrice" value="0" required>
                             </div>
-                        </div>
-                        <div class="row g-2 align-items-end">
-                            <div class="col-md-8">
-                                <label class="form-label mb-0"><small>Nhóm ngành (NN1–NN4) <span class="text-danger">*</span></small></label>
-                                <select class="form-select form-select-sm" id="serviceSector" required>
-                                    <option value="">— Chọn nhóm ngành —</option>
-                                </select>
-                                <small class="text-muted">Mã dịch vụ có thể sửa trực tiếp (VD: <strong>DV001</strong>, mã vạch <strong>DV00101</strong>). Gói subscription hiển thị trên trang đăng nhập / gia hạn theo dữ liệu bảng này.</small>
-                            </div>
-                            <div class="col-md-4 d-flex justify-content-end">
+                            <div class="col-md-2 d-flex justify-content-end">
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="resetServiceForm()">Hủy</button>
                                 <button type="submit" class="btn btn-sm btn-success ms-2">Lưu dịch vụ</button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="serviceSector" value="NN2">
+                        <div class="row mt-1">
+                            <div class="col-md-12">
+                                <small class="form-text text-muted">Nhóm ngành: <strong>NN2</strong> — Dịch vụ, xây dựng không bao thầu NVL (GTGT 5%, TNCN 2%). Mã dịch vụ có thể sửa trực tiếp (VD: <strong>DV001</strong>, mã vạch <strong>DV00101</strong>).</small>
                             </div>
                         </div>
                     </form>
@@ -368,25 +365,14 @@ let fgProductId = null;
 let serviceProductId = null;
 let searchTimeout;
 let stockFilter = 'all';
-let hkdSectorOptions = [];
 let productTableCtrl = null;
 
-const HKD_SECTOR_FALLBACK = [
-    { code: 'NN1', storage_code: 'G1', label: 'NN1 — Phân phối, cung cấp hàng hóa (GTGT 1%, TNCN 0,5%)' },
-    { code: 'NN2', storage_code: 'G2', label: 'NN2 — Dịch vụ, xây dựng không bao thầu NVL (GTGT 5%, TNCN 2%)' },
-    { code: 'NN3', storage_code: 'G3', label: 'NN3 — Sản xuất, vận tải, thầu XD có vật tư (GTGT 3%, TNCN 1,5%)' },
-    { code: 'NN4', storage_code: 'G4', label: 'NN4 — Hoạt động kinh doanh khác (GTGT 2%, TNCN 1%)' },
-];
-
 const LEGACY_G_TO_NN = { G1: 'NN1', G2: 'NN2', G3: 'NN3', G4: 'NN4' };
+const DEFAULT_SERVICE_SECTOR = 'NN2';
 
 function nnDisplayCode(code) {
     if (!code) return '—';
     return LEGACY_G_TO_NN[code] || code;
-}
-
-function sectorStorageCode(opt) {
-    return opt.storage_code || opt.legacy_code || opt.code;
 }
 
 function isServiceProduct(p) {
@@ -402,7 +388,7 @@ function isFinishedGoodsProduct(p) {
 }
 
 function defaultSector(p) {
-    if (isServiceProduct(p)) return p.hkd_sector_code || '';
+    if (isServiceProduct(p)) return p.hkd_sector_code || DEFAULT_SERVICE_SECTOR;
     if (isFinishedGoodsProduct(p)) return p.hkd_sector_code || 'G3';
     return p.hkd_sector_code || 'G1';
 }
@@ -418,29 +404,6 @@ function kindBadge(p) {
     if (isServiceProduct(p)) return '<span class="badge bg-info">Dịch vụ</span>';
     if (isFinishedGoodsProduct(p)) return '<span class="badge bg-warning text-dark">Thành phẩm</span>';
     return '<span class="badge bg-primary">Hàng hóa</span>';
-}
-
-function populateSectorSelect(selectedCode = '') {
-    const sel = document.getElementById('serviceSector');
-    if (!sel) return;
-    const opts = hkdSectorOptions.length ? hkdSectorOptions : HKD_SECTOR_FALLBACK;
-    const normalized = selectedCode || '';
-    sel.innerHTML = '<option value="">— Chọn nhóm ngành —</option>' +
-        opts.map(o => {
-            const val = sectorStorageCode(o);
-            const selAttr = (val === normalized || o.code === normalized) ? ' selected' : '';
-            return `<option value="${val}"${selAttr}>${escapeHtml(o.label)}</option>`;
-        }).join('');
-}
-
-async function loadHkdSectorOptions() {
-    try {
-        const data = await fetchJSON('/api/hkd/sector-options');
-        hkdSectorOptions = Array.isArray(data) ? data : [];
-    } catch (e) {
-        hkdSectorOptions = HKD_SECTOR_FALLBACK.slice();
-    }
-    populateSectorSelect();
 }
 
 function switchToGoodsTab() {
@@ -821,7 +784,7 @@ function editProduct(id) {
         document.getElementById('serviceName').value = p.name || '';
         document.getElementById('serviceUnit').value = p.unit || 'Lần';
         document.getElementById('servicePrice').value = formatVND(p.base_price ?? p.price ?? 0);
-        populateSectorSelect(p.hkd_sector_code || 'G2');
+        document.getElementById('serviceSector').value = DEFAULT_SERVICE_SECTOR;
         return;
     }
 
@@ -892,7 +855,7 @@ function resetServiceForm() {
     document.getElementById('serviceUnit').value = 'Lần';
     document.getElementById('servicePrice').value = '0';
     document.getElementById('serviceCode').value = '';
-    populateSectorSelect('G2');
+    document.getElementById('serviceSector').value = DEFAULT_SERVICE_SECTOR;
 }
 
 function resetFinishedForm() {
@@ -989,7 +952,6 @@ document.getElementById('productForm').addEventListener('submit', async function
 
 document.getElementById('serviceForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const sector = document.getElementById('serviceSector').value;
     const data = {
         id: document.getElementById('serviceProductId').value || undefined,
         item_kind: 'service',
@@ -997,14 +959,10 @@ document.getElementById('serviceForm').addEventListener('submit', async function
         name: document.getElementById('serviceName').value.trim(),
         unit: document.getElementById('serviceUnit').value.trim() || 'Lần',
         base_price: parseNumberVN(document.getElementById('servicePrice').value),
-        hkd_sector_code: sector
+        hkd_sector_code: DEFAULT_SERVICE_SECTOR
     };
     if (!data.name) {
         showProductMsg('Tên dịch vụ không được để trống.', true);
-        return;
-    }
-    if (!sector) {
-        showProductMsg('Vui lòng chọn nhóm ngành (NN1–NN4).', true);
         return;
     }
     if (data.id && !data.product_code) {
@@ -1063,7 +1021,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stockFilter = val;
         renderProductsList(products);
     });
-    loadHkdSectorOptions().then(() => loadProducts());
+    loadProducts();
 
     document.querySelectorAll('.format-input').forEach(input => {
         input.addEventListener('blur', () => formatInputNumber(input));
