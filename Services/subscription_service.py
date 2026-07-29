@@ -22,25 +22,25 @@ SUPPORT_NOTIFY_EMAIL = os.getenv('SUPPORT_NOTIFY_EMAIL', 'tinkien@gmail.com')
 DEFAULT_SUBSCRIPTION_PLANS = {
     'DV001': {
         'code': 'DV001',
-        'name': 'Gói 1: HKD doanh thu dưới 1 tỷ — không xuất HĐĐT',
+        'name': 'Phần mềm Bán Hàng kiêm Kế Toán KETO POS - HKD có doanh thu dưới 1 tỷ — không xuất HĐĐT',
         'price': 1_200_000,
         'has_einvoice': False,
     },
     'DV002': {
         'code': 'DV002',
-        'name': 'Gói 2: HKD doanh thu dưới 1 tỷ — có xuất HĐĐT',
+        'name': 'Phần mềm Bán Hàng kiêm Kế Toán KETO POS - HKD có doanh thu dưới 1 tỷ — có xuất HĐĐT',
         'price': 1_800_000,
         'has_einvoice': True,
     },
     'DV003': {
         'code': 'DV003',
-        'name': 'Gói 3: HKD doanh thu trên 1 tỷ đến 3 tỷ',
+        'name': 'Phần mềm Bán Hàng kiêm Kế Toán KETO POS - HKD có doanh thu trên 1 tỷ đến 3 tỷ',
         'price': 2_100_000,
         'has_einvoice': True,
     },
     'DV004': {
         'code': 'DV004',
-        'name': 'Gói 4: HKD doanh thu trên 3 tỷ',
+        'name': 'Phần mềm Bán Hàng kiêm Kế Toán KETO POS - HKD có doanh thu trên 3 tỷ',
         'price': 3_200_000,
         'has_einvoice': True,
     },
