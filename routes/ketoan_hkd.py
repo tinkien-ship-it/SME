@@ -2809,115 +2809,20 @@ def register_ketoan_hkd_routes(app):
 
         conn = None
         try:
+            from Services.profit_report_helpers import compute_s2c_report
             conn = get_db_connection()
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-
-            # Chuẩn hóa ngày cho truy vấn
-            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
-            end_date_sql = end_dt.replace(hour=23, minute=59, second=59).strftime('%Y-%m-%d %H:%M:%S')
-
-            # 1. Doanh thu
-            cursor.execute("""
-                SELECT COALESCE(SUM(total_amount), 0) as revenue
-                FROM sale
-                WHERE status = 'completed'
-                  AND invoice_status = 'none'
-                  AND date >= ? AND date <= ?
-            """, (start_date, end_date_sql))
-            revenue = cursor.fetchone()['revenue'] or 0
-
-            # 2. Chi phí a (Giá vốn hàng bán)
-            cost_a = compute_cogs(cursor, start_date, end_date_sql)
-
-            # 3. Hàm tính chi phí từ phiếu chi
-            def get_pc_sum(types):
-                if not types: return 0
-                placeholders = ','.join('?' * len(types))
-                sql = f"""
-                    SELECT COALESCE(SUM(amount), 0)
-                    FROM phieu_chi
-                    WHERE expense_type IN ({placeholders})
-                      AND date >= ? AND date <= ?
-                """
-                cursor.execute(sql, (*types, start_date, end_date_sql))
-                res = cursor.fetchone()
-                return res[0] if res else 0
-
-            cost_b = get_pc_sum(['CP_LUONG'])
-            cost_d = get_pc_sum(['CP_DIEN', 'CP_NUOC', 'CP_VT', 'CP_MB', 'CP_VPP'])
-            cost_dh = get_pc_sum(['CP_TRALAIVAY'])
-            cost_e = get_pc_sum(['CP_KHAC', 'CP_TAX'])
-
-            # --- 4. FIX KHẤU HAO TSCĐ (COST_C) ---
-            cursor.execute("SELECT * FROM fixed_assets WHERE tinh_trang = 'Active'")
-            assets = cursor.fetchall()
-            cost_c = 0
-
-            # Tạo danh sách các tháng trong kỳ báo cáo
-            months_to_calc = []
-            curr = datetime(start_dt.year, start_dt.month, 1)
-            last = datetime(end_dt.year, end_dt.month, 1)
-            while curr <= last:
-                months_to_calc.append((curr.year, curr.month))
-                if curr.month == 12:
-                    curr = datetime(curr.year + 1, 1, 1)
-                else:
-                    curr = datetime(curr.year, curr.month + 1, 1)
-
-            for asset in assets:
-                nguyen_gia = float(asset['nguyen_gia_tinh_khau_hao'] or 0)
-                so_thang_kh = int(asset['so_thang_khau_hao'] or 1)
-                kh_thang = nguyen_gia / so_thang_kh
-            
-                # FIX LỖI SPLIT: Kiểm tra kiểu dữ liệu của ngày bắt đầu
-                val_ngay = asset['ngay_bat_dau_su_dung']
-                if isinstance(val_ngay, str):
-                    ngay_bd_str = val_ngay.split(' ')[0]
-                    ngay_bd = datetime.strptime(ngay_bd_str, '%Y-%m-%d')
-                elif isinstance(val_ngay, (date, datetime)):
-                    ngay_bd = datetime(val_ngay.year, val_ngay.month, val_ngay.day)
-                else:
-                    continue # Bỏ qua nếu dữ liệu trống hoặc lỗi
-
-                ngay_bd_thang = datetime(ngay_bd.year, ngay_bd.month, 1)
-            
-                for y, m in months_to_calc:
-                    current_month_dt = datetime(y, m, 1)
-                    # Nếu tháng báo cáo nằm trong khoảng thời gian khấu hao
-                    if current_month_dt >= ngay_bd_thang:
-                        diff = (y - ngay_bd.year) * 12 + (m - ngay_bd.month)
-                        if 0 <= diff < so_thang_kh:
-                            cost_c += kh_thang
-
-            cost_c = round(cost_c)
-
-            # 5. Tổng hợp
-            total_expenses = cost_a + cost_b + cost_c + cost_d + cost_dh + cost_e
-            profit = revenue - total_expenses
-            tax_tncn = round(max(0, profit * 0.17)) # Thuế giả định 17% theo logic của bạn
-
-            return jsonify({
-                "revenue": float(revenue),
-                "total_expenses": float(total_expenses),
-                "tax_tncn": int(tax_tncn),
-                "costs": {
-                    "a": float(cost_a), "b": float(cost_b), "c": float(cost_c),
-                    "d": float(cost_d), "dh": float(cost_dh), "e": float(cost_e)
-                }
-            })
-
+            profile = getattr(g, 'tenant_profile', None) or {}
+            data = compute_s2c_report(cursor, start_date, end_date, tenant_profile=profile)
+            return jsonify(data)
         except Exception as e:
             import traceback
             traceback.print_exc()
             return jsonify({"error": str(e)}), 500
         finally:
-            if conn: conn.close()
-
-    from flask import render_template, request, jsonify
-    import sqlite3
-    from datetime import datetime
+            if conn:
+                conn.close()
 
     @app.route('/reports/print-s2c')
     def print_s2c_view():
@@ -2927,89 +2832,38 @@ def register_ketoan_hkd_routes(app):
         if not start_date or not end_date:
             return "Thiếu khoảng thời gian start/end", 400
 
-        # Tính toán dữ liệu báo cáo (tương tự API)
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
         try:
+            from Services.profit_report_helpers import compute_s2c_report
+            profile = getattr(g, 'tenant_profile', None) or {}
+            data = compute_s2c_report(cursor, start_date, end_date, tenant_profile=profile)
             start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-            end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1) - timedelta(seconds=1)
-            end_date_sql = end_dt.strftime('%Y-%m-%d %H:%M:%S')
-
-            # Doanh thu
-            cursor.execute("""
-                SELECT COALESCE(SUM(total_amount), 0) as revenue
-                FROM sale
-                WHERE status = 'completed' AND invoice_status = 'issued'
-                AND date >= ? AND date <= ?
-            """, (start_date, end_date_sql))
-            revenue = cursor.fetchone()['revenue']
-
-            # Chi phí a
-            cost_a = compute_cogs(cursor, start_date, end_date_sql)
-
-            # Các chi phí khác (copy from API)
-            def get_pc_sum(types):
-                if not types:
-                    return 0
-                placeholders = ','.join('?' * len(types))
-                sql = f"""
-                    SELECT COALESCE(SUM(amount), 0)
-                    FROM phieu_chi
-                    WHERE expense_type IN ({placeholders})
-                      AND date >= ? AND date <= ?
-                """
-                cursor.execute(sql, (*types, start_date, end_date_sql))
-                return cursor.fetchone()[0]
-
-            cost_b = get_pc_sum(['CP_LUONG'])
-            cost_d = get_pc_sum(['CP_DIEN', 'CP_NUOC', 'CP_VT', 'CP_MB', 'CP_VPP'])
-            cost_dh = get_pc_sum(['CP_TRALAIVAY'])
-            cost_e = get_pc_sum(['CP_KHAC'])
-
-            # Khấu hao
-            cursor.execute("""
-                SELECT COALESCE(SUM(nguyen_gia_tinh_khau_hao / so_thang_khau_hao), 0) as monthly_depr
-                FROM fixed_assets
-                WHERE tinh_trang = 'dang_khau_hao' AND so_thang_khau_hao > 0
-            """)
-            monthly_depr = cursor.fetchone()['monthly_depr'] or 0
-
-            days_in_period = (datetime.strptime(end_date, '%Y-%m-%d') - start_dt).days + 1
-            months_in_period = days_in_period / 30.437
-            cost_c = round(monthly_depr * months_in_period)
-
-            # Tổng hợp
-            total_expenses = cost_a + cost_b + cost_c + cost_d + cost_dh + cost_e
-            diff = revenue - total_expenses
-            tax_tncn = max(0, round(diff * 0.17)) if diff > 0 else 0
-
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
             report = {
-                'revenue': revenue,
-                'total_expenses': total_expenses,
-                'tax_tncn': tax_tncn,
-                'diff': diff,
-                'costs': {'a': cost_a, 'b': cost_b, 'c': cost_c, 'd': cost_d, 'dh': cost_dh, 'e': cost_e}
+                'revenue': data['revenue'],
+                'total_expenses': data['total_expenses'],
+                'tax_tncn': data['tax_tncn'],
+                'tax_gtgt': data.get('tax_gtgt', 0),
+                'diff': data['diff'],
+                'costs': data['costs'],
+                'taxes': data.get('taxes'),
+                'unissued_invoice_warning': data.get('unissued_invoice_warning'),
             }
-
-            start_display = start_dt.strftime('%d/%m/%Y')
-            end_display = datetime.strptime(end_date, '%Y-%m-%d').strftime('%d/%m/%Y')
-
             return render_template(
                 'KeToanHKD/SoChiTietDoanhThu_ChiPhi_S2c_print.html',
                 report=report,
                 start=start_date,
                 end=end_date,
-                start_display=start_display,
-                end_display=end_display
+                start_display=start_dt.strftime('%d/%m/%Y'),
+                end_display=end_dt.strftime('%d/%m/%Y'),
             )
-
         except Exception as e:
             import traceback
             print("LỖI in S2c:", traceback.format_exc())
             return "Lỗi hệ thống khi in S2c-HKD", 500
-
         finally:
             conn.close()
 

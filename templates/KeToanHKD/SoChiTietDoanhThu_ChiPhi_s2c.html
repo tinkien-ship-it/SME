@@ -67,6 +67,8 @@
         </div>
     </div>
 
+    <div id="s2cUnissuedWarn" class="alert alert-warning border-0 shadow-sm d-none mb-3" role="alert"></div>
+
     <div class="row g-3 mb-4">
         <div class="col-md-4">
             <div class="card stat-card border-0 shadow-sm text-center h-100">
@@ -161,8 +163,25 @@ async function loadReport() {
 
         const revenue = data.revenue || 0;
         const totalExpense = data.total_expenses || 0;
-        const profit = revenue - totalExpense;
+        const profit = data.diff != null ? data.diff : (revenue - totalExpense);
         const taxTncn = data.tax_tncn || 0;
+        const taxGtgt = data.tax_gtgt || 0;
+        const taxNote = (data.taxes && data.taxes.note_tncn) ? data.taxes.note_tncn : 'TNCN trên lãi';
+
+        const warnEl = document.getElementById('s2cUnissuedWarn');
+        const uw = data.unissued_invoice_warning;
+        if (warnEl) {
+            if (uw && uw.count > 0) {
+                warnEl.classList.remove('d-none');
+                warnEl.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>${uw.count} đơn đã hoàn thành</strong> nhưng chưa xuất HĐĐT
+                    (tổng <strong>${formatVND(uw.amount)}</strong>) — nhóm ${data.revenue_tier || 'DT2–DT4'}.
+                    Doanh thu vẫn được ghi nhận; hãy xuất hóa đơn để tuân thủ kê khai.`;
+            } else {
+                warnEl.classList.add('d-none');
+                warnEl.innerHTML = '';
+            }
+        }
 
         const costs = data.costs || {};
 
@@ -175,13 +194,17 @@ async function loadReport() {
             { label: '1. Doanh thu bán hàng hóa, dịch vụ', amount: revenue, bold: true, class: 'positive section-title' },
             { label: '2. Chi phí hợp lý', amount: totalExpense, bold: true, class: 'negative section-title' },
             { label: 'a) Chi phí nguyên liệu, vật liệu, nhiên liệu, năng lượng, hàng hóa sử dụng vào sản xuất, kinh doanh.', amount: costs.a || 0, indent: true, class: 'negative' },
-            { label: 'b) Chi phí tiền lương, tiền công, các khoản phụ cấp, bảo hiểm bắt buộc và các khoản chỉ trả cho người lao động có đóng bảo hiểm bắt buộc theo quy định; chi phí tiền lương, tiền công, các khoản phụ cấp và các khoản chi trả cho người lao động dưới 01 tháng.', amount: costs.b || 0, indent: true, class: 'negative' },
+            { label: 'b) Chi phí tiền lương, bảo hiểm bắt buộc và TNCN nhân viên', amount: costs.b || 0, indent: true, class: 'negative' },
+            { label: '— Lương thực lãnh (đã trừ BH/TNCN NLĐ)', amount: costs.b_net_pay || 0, indent: true, class: 'text-muted' },
+            { label: '— BHXH/BHYT/BHTN (NLĐ trích từ lương + NSDLĐ phải trả)', amount: costs.b_insurance_total || 0, indent: true, class: 'text-muted' },
+            { label: '— TNCN nhân viên (NSDLĐ khấu trừ/chi trả)', amount: costs.b_employee_tncn || 0, indent: true, class: 'text-muted' },
             { label: 'c) Chi phí khấu hao tài sản cố định phục vụ cho hoạt động sản xuất, kinh doanh theo chế độ quản lý, sử dụng và trích khấu hao tài sản cố định (nếu có).', amount: costs.c || 0, indent: true, class: 'negative' },
             { label: 'd) Chi phí dịch vụ mua ngoài như điện, nước, điện thoại, internet, vận chuyển, thuê tài sản, sửa chữa, bảo dưỡng.', amount: costs.d || 0, indent: true, class: 'negative' },
             { label: 'đ) Chi phí trả lãi tiền vay vốn sản xuất, kinh doanh của tổ chức tín dụng theo lãi suất thực tế. Chi phí trả lãi tiền vay vốn sản xuất, kinh doanh của đối tượng không phải là tổ chức tín dụng không vượt quá mức quy định tại Bộ luật Dân sự.', amount: costs.dh || 0, indent: true, class: 'negative' },
             { label: 'e)  Các khoản chi khác phục vụ trực tiếp hoạt động sản xuất, kinh doanh...', amount: costs.e || 0, indent: true, class: 'negative' },
             { label: '3. Chênh lệch [Lãi/ Lỗ] {(3) = (1) - (2)}', amount: profit, bold: true, class: profit >= 0 ? 'positive' : 'negative' },
-            { label: '4. Tổng số thuế TNCN phải nộp (17% Lợi Nhuận)', amount: taxTncn, bold: true, class: 'negative' }
+            { label: `4. Thuế GTGT phải nộp (${(data.taxes && data.taxes.note_gtgt) || 'theo cấu hình'})`, amount: taxGtgt, bold: true, class: 'negative' },
+            { label: `5. Thuế TNCN phải nộp (${taxNote})`, amount: taxTncn, bold: true, class: 'negative' }
         ];
 
         tbody.innerHTML = tableRows.map(r => `

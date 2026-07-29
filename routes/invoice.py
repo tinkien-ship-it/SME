@@ -1647,19 +1647,22 @@ def register_invoice_routes(app):
                     "unit1": p['unit1'],
                 })
 
-            # 5. Cập nhật thông tin đơn hàng chính
+            # 5. Cập nhật thông tin đơn hàng chính — giữ nguyên ngày bán gốc (không nhảy kỳ P&L)
+            original_date = sale_old.get('date') or now_str
+            new_status = 'cancelled' if total_amount <= 0 else 'completed'
             cursor.execute("""
                 UPDATE sale SET
-                    date = ?, total_amount = ?, payment_method = ?,
+                    total_amount = ?, payment_method = ?,
                     customer_name = ?, company_name = ?, tax_code = ?, 
                     customer_phone = ?, email = ?, address = ?, 
-                    note = ?, status = 'completed', discount_pct = ?, tax_pct = ?
+                    note = ?, status = ?, discount_pct = ?, tax_pct = ?
                 WHERE id = ?
-            """, (now_str, total_amount, payment_method,
+            """, (total_amount, payment_method,
                   customer_name, company_name, tax_code, customer_phone, 
-                  email, address, note, discount_pct, tax_pct_total, sale_id))
+                  email, address, note, new_status, discount_pct, tax_pct_total, sale_id))
 
-            # 6. Lưu Chi tiết mới + Trừ kho + Stock move
+            # 6. Lưu Chi tiết mới + Trừ kho + Stock move (dùng ngày gốc cho sổ)
+            move_date = original_date
             px_items = []
             for pid, info in merged.items():
                 if not requires_stock_check(info.get("product_type")):
@@ -1672,11 +1675,27 @@ def register_invoice_routes(app):
                               1 if d["use_unit1"] else 0, d["ratio"], d["discount_pct"], d["tax_pct"]))
                     continue
                 total_deduct = round(info["deduct"], 6)
+                # Giữ dòng SL=0 trên HĐ thay thế (không bỏ tên hàng)
                 if total_deduct <= 0:
+                    for d in info["details"]:
+                        cursor.execute("""
+                            INSERT INTO sale_items 
+                            (sale_id, product_id, quantity, price, cost_price, UseSaleUnit, unit_ratio, discount_pct, tax_pct)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (sale_id, pid, d["qty_input"], d["price"], d["avg_cost"],
+                              1 if d["use_unit1"] else 0, d["ratio"], d["discount_pct"], d["tax_pct"]))
+                        px_items.append({
+                            "product_id": pid,
+                            "product_name": d['name'],
+                            "unit": d['unit1'] if d['use_unit1'] else d['unit'],
+                            "quantity": d['qty_input'],
+                            "price": d['price'],
+                            "amount": round(d['qty_input'] * d['price'])
+                        })
                     continue
                 cost_used = deduct_inventory_for_sale(
                     cursor, pid, total_deduct, info["details"][0]["avg_cost"],
-                    sale_id, now_str, ref_doc,
+                    sale_id, move_date, ref_doc,
                 )
 
                 for d in info["details"]:
@@ -1704,10 +1723,10 @@ def register_invoice_routes(app):
             cursor.execute("""
                 INSERT INTO phieu_xuat_kho (voucher_no, date, customer_name, items_json, total_amount, sale_id)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (px_vno, now_str, customer_name, json.dumps(px_items, ensure_ascii=False), total_amount, sale_id))
+            """, (px_vno, move_date, customer_name, json.dumps(px_items, ensure_ascii=False), total_amount, sale_id))
 
             # 8. Tạo chứng từ tài chính (Sử dụng payment_method đã chuẩn hóa)
-            if payment_method in ["111", "112"]:
+            if total_amount > 0 and payment_method in ["111", "112"]:
                 last_pt = cursor.execute("SELECT voucher_no FROM phieu_thu WHERE voucher_no LIKE 'PT%' ORDER BY id DESC LIMIT 1").fetchone()
                 pt_num = (int(last_pt['voucher_no'][2:]) + 1) if last_pt else 1
                 pt_vno = f"PT{pt_num:06d}"
@@ -1717,15 +1736,15 @@ def register_invoice_routes(app):
                                            reason, reference_document, sale_id, date)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (pt_vno, customer_name, address, tax_code, total_amount, payment_method, '511',
-                      f"Thu tiền bán hàng thay thế - {ref_doc}", ref_doc, sale_id, now_str))
+                      f"Thu tiền bán hàng thay thế - {ref_doc}", ref_doc, sale_id, move_date))
 
-            elif payment_method == "131":
+            elif total_amount > 0 and payment_method == "131":
                 cursor.execute("""
                     INSERT INTO cong_no (customer_name, company_name, address, tax_code, debit_account, 
                                        credit_account, date_of_debt, unpaid_amount, sale_id, sale_no)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (customer_name, company_name, address, tax_code, '131', '511', 
-                      now_str, total_amount, sale_id, ref_doc))
+                      move_date, total_amount, sale_id, ref_doc))
 
             conn.commit()
             return jsonify({"success": True, "message": "Cập nhật đơn hàng thay thế thành công."}), 200

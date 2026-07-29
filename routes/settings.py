@@ -1680,6 +1680,31 @@ Trân trọng,
             "settings": _master_auth_settings_payload(saved),
         })
 
+    @app.route('/api/master/tax-rates', methods=['GET'])
+    @login_required
+    @master_required
+    def api_master_tax_rates_list():
+        from Services.tax_rate_helpers import ensure_tax_rate_schema, list_tax_rate_schedules
+        ensure_tax_rate_schema()
+        return jsonify({'success': True, 'data': list_tax_rate_schedules()})
+
+    @app.route('/api/master/tax-rates', methods=['POST'])
+    @login_required
+    @master_required
+    def api_master_tax_rates_add():
+        from Services.tax_rate_helpers import add_tax_rate_schedule
+        data = request.get_json(silent=True) or {}
+        try:
+            row = add_tax_rate_schedule(
+                data,
+                created_by=session.get('username') or 'master',
+            )
+            return jsonify({'success': True, 'data': row, 'message': 'Đã thêm mức thuế mới'})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     @app.route('/api/master/toggle_2fa/<tenant_id>', methods=['POST'])
     def toggle_tenant_2fa(tenant_id):
         # 1. Kiểm tra quyền Master

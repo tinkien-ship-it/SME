@@ -40,7 +40,9 @@ def register_reports_routes(app):
 
         try:
             from Services.profit_report_helpers import compute_profit_report
-            result = compute_profit_report(c, from_date_iso, to_date_iso)
+            from flask import g
+            profile = getattr(g, 'tenant_profile', None) or {}
+            result = compute_profit_report(c, from_date_iso, to_date_iso, tenant_profile=profile)
             return jsonify({"status": "success", **result})
         except Exception as e:
             print(f"Profit Report Error: {str(e)}")

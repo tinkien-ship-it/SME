@@ -66,6 +66,11 @@
                 <i class="fas fa-robot me-2"></i>Trợ lý AI
             </button>
         </li>
+        <li class="nav-item">
+            <button class="nav-link" id="taxrate-tab" data-bs-toggle="tab" data-bs-target="#taxrate-content" type="button" onclick="loadTaxRates()">
+                <i class="fas fa-percent me-2"></i>Thuế suất HKD
+            </button>
+        </li>
     </ul>
 
     <div class="tab-content" id="masterTabContent">
@@ -282,6 +287,90 @@
         </div>
 
         {% include 'partials/master_assistant_tab.html' %}
+
+        <div class="tab-pane fade" id="taxrate-content" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <div class="card master-card">
+                        <div class="card-header master-header py-3">
+                            <h5 class="mb-0"><i class="fas fa-percent me-2"></i>Thêm mức thuế mới</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <p class="small text-muted">Khi luật đổi %, thêm dòng mới với <strong>ngày hiệu lực</strong>. Mức cũ tự đóng trước ngày đó — báo cáo kỳ cũ vẫn dùng % cũ.</p>
+                            <form id="taxRateForm" onsubmit="saveTaxRate(event)">
+                                <div class="mb-2">
+                                    <label class="form-label">Loại thuế</label>
+                                    <select class="form-select" id="taxScope" required>
+                                        <option value="hkd_gtgt_on_revenue">GTGT trên doanh thu (DT3/DT4)</option>
+                                        <option value="hkd_tncn_on_profit">TNCN trên lãi (DT3/DT4)</option>
+                                        <option value="hkd_nn_gtgt">GTGT theo ngành (DT2)</option>
+                                        <option value="hkd_nn_tncn">TNCN theo ngành (DT2)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Nhóm DT</label>
+                                    <select class="form-select" id="taxTier">
+                                        <option value="DT2">DT2</option>
+                                        <option value="DT3" selected>DT3</option>
+                                        <option value="DT4">DT4</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Ngành NN (chỉ DT2)</label>
+                                    <select class="form-select" id="taxNn">
+                                        <option value="">—</option>
+                                        <option value="NN1">NN1</option>
+                                        <option value="NN2">NN2</option>
+                                        <option value="NN3">NN3</option>
+                                        <option value="NN4">NN4</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Tỷ lệ %</label>
+                                    <input type="number" step="0.01" min="0" class="form-control" id="taxPct" required placeholder="17">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Hiệu lực từ (yyyy-mm-dd)</label>
+                                    <input type="date" class="form-control" id="taxFrom" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Ghi chú</label>
+                                    <input type="text" class="form-control" id="taxNote" placeholder="VD: Theo nghị định ...">
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">Lưu mức thuế</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card master-card">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between">
+                            <h5 class="mb-0">Lịch thuế suất</h5>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadTaxRates()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height:520px;overflow:auto;">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Scope</th>
+                                            <th>DT</th>
+                                            <th>NN</th>
+                                            <th class="text-end">%</th>
+                                            <th>Từ</th>
+                                            <th>Đến</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="taxRateBody">
+                                        <tr><td colspan="6" class="text-center text-muted py-4">Đang tải...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1081,6 +1170,59 @@ async function loadAssistantFaqList() {
             </li>`).join('');
     } catch (e) {
         ul.innerHTML = '<li class="list-group-item text-danger">Lỗi tải FAQ</li>';
+    }
+}
+
+async function loadTaxRates() {
+    const tbody = document.getElementById('taxRateBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Đang tải...</td></tr>';
+    try {
+        const res = await fetch('/api/master/tax-rates');
+        const json = await res.json();
+        if (!json.success || !json.data.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Chưa có dữ liệu</td></tr>';
+            return;
+        }
+        tbody.innerHTML = json.data.map(r => `
+            <tr>
+                <td class="small"><code>${escAssist(r.scope)}</code></td>
+                <td>${escAssist(r.revenue_tier || '')}</td>
+                <td>${escAssist(r.nn_code || '')}</td>
+                <td class="text-end fw-bold">${Number(r.rate_pct).toLocaleString('vi-VN')}</td>
+                <td class="small">${escAssist(r.effective_from || '')}</td>
+                <td class="small">${escAssist(r.effective_to || '…')}</td>
+            </tr>`).join('');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Lỗi tải</td></tr>';
+    }
+}
+
+async function saveTaxRate(e) {
+    e.preventDefault();
+    const payload = {
+        scope: document.getElementById('taxScope').value,
+        revenue_tier: document.getElementById('taxTier').value,
+        nn_code: document.getElementById('taxNn').value || null,
+        rate_pct: parseFloat(document.getElementById('taxPct').value),
+        effective_from: document.getElementById('taxFrom').value,
+        note: document.getElementById('taxNote').value.trim(),
+    };
+    try {
+        const res = await fetch('/api/master/tax-rates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (json.success) {
+            Swal.fire('Đã lưu', json.message || 'OK', 'success');
+            loadTaxRates();
+        } else {
+            Swal.fire('Lỗi', json.error || 'Không lưu được', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', 'Không kết nối server', 'error');
     }
 }
 

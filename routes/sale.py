@@ -1816,9 +1816,13 @@ def register_sale_routes(app):
 
             # === 4. Cập nhật SALE & SALE_ITEMS ===
             if is_full_return:
-                # TRẢ TOÀN BỘ: Giữ nguyên sale_items để tham chiếu, chỉ hủy đơn
+                # TRẢ TOÀN BỘ: hủy đơn + doanh thu = 0 (tránh phình P&L nếu quên lọc status)
                 new_status = 'cancelled'
-                new_total_amount = float(sale_master['total_amount'])
+                new_total_amount = 0
+                c.execute("""
+                    UPDATE sale_items SET quantity = 0
+                    WHERE sale_id = ?
+                """, (sale_id,))
             else:
                 # TRẢ MỘT PHẦN: Cập nhật giảm số lượng trong sale_items
                 new_status = sale_master['status']

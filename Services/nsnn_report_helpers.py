@@ -1,4 +1,6 @@
 """Báo cáo S4 — Sổ theo dõi nghĩa vụ thuế với NSNN."""
+from datetime import datetime
+
 from Services.profit_report_helpers import compute_profit_report
 from Services.tenant_profile import (
     legacy_group_to_revenue_tier,
@@ -67,6 +69,28 @@ def compute_nsnn_tax_amounts(
             'note_tncn': 'TNCN theo NN1–NN4 (S2a)',
             'sector_breakdown': taxes,
         }
+
+    tncn_rate_pct = None
+    try:
+        from Services.tax_rate_helpers import get_tax_rate_pct
+        as_of = datetime.now().strftime('%Y-%m-%d')
+        if tier in ('DT3', 'DT4'):
+            gtgt_pct = get_tax_rate_pct(
+                'hkd_gtgt_on_revenue', revenue_tier=tier, as_of=as_of, default=1.0,
+            )
+            tncn_pct = get_tax_rate_pct(
+                'hkd_tncn_on_profit', revenue_tier=tier, as_of=as_of,
+                default=17.0 if tier == 'DT3' else 20.0,
+            )
+            return {
+                'revenue_tier': tier,
+                'gtgt': round(dt * float(gtgt_pct or 0) / 100.0),
+                'tncn': round(max(0.0, lai) * float(tncn_pct or 0) / 100.0),
+                'note_gtgt': f'{gtgt_pct:g}% Doanh thu',
+                'note_tncn': f'{tncn_pct:g}% Lãi (S2c)',
+            }
+    except Exception:
+        pass
 
     tncn_rate = 0.20 if tier == 'DT4' else 0.17
     tncn_pct = int(tncn_rate * 100)
