@@ -41,7 +41,7 @@ def build_template_user():
     """Dict current_user cho template — luôn có permissions dạng list."""
     user = session.get('user') or {}
     role = session.get('role') or user.get('role') or 'guest'
-    logged_in = _session_user_id() is not None and bool(user)
+    logged_in = bool(user.get('username')) or session.get('user_id') is not None or _session_user_id() is not None
     return {
         'id': user.get('id'),
         'username': user.get('username'),

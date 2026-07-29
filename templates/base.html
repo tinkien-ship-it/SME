@@ -378,9 +378,6 @@
         </div>
     </footer>
 
-    {% if current_user.is_authenticated %}
-    {% include 'partials/keto_support_widget.html' %}
-    {% endif %}
     {% endif %}
 
     <!-- Scripts -->
@@ -548,5 +545,9 @@
     <script src="{{ url_for('static', filename='js/keto-date-picker.js') }}"></script>
     {% block scripts %}{% endblock %}
     {% block extra_script %}{% endblock %}
+
+    {% if request.endpoint != 'login' and (session.get('user') or session.get('user_id')) %}
+    {% include 'partials/keto_support_widget.html' %}
+    {% endif %}
 </body>
 </html>

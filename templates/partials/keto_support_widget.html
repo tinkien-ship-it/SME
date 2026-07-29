@@ -1,58 +1,100 @@
-{# Widget Zalo + Trợ lý AI — luôn hiển thị khi đã đăng nhập #}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/keto-assistant.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/keto-assistant.css') }}?v=20260729c">
 
-<div class="keto-support-launcher" id="ketoSupportLauncher">
-    <a href="{{ support_zalo_url }}" target="_blank" rel="noopener"
-       class="keto-zalo-fab" title="Chat Zalo {{ support_zalo_display }}"
-       aria-label="Chat Zalo hỗ trợ">
-        <i class="fas fa-comment-dots"></i>
-    </a>
-    <button type="button" class="keto-ai-fab" id="ketoAiFab"
-            title="Trợ lý AI KETO POS" aria-label="Mở trợ lý AI">
-        <i class="fas fa-robot"></i>
-        <span class="keto-ai-badge" id="ketoAiBadge">{{ 'Pro' if assistant_premium_active else 'AI' }}</span>
-    </button>
-</div>
+<style>
+{% raw %}
+#keto-support-root{all:initial;font-family:'Segoe UI',Tahoma,sans-serif}
+#keto-support-root *,#keto-support-root *::before,#keto-support-root *::after{box-sizing:border-box}
+#keto-support-root .keto-support-launcher{position:fixed;right:18px;bottom:18px;z-index:99999;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+#keto-support-root .keto-zalo-fab,#keto-support-root .keto-ai-fab{width:52px;height:52px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;color:#fff!important;text-decoration:none!important;cursor:pointer;box-shadow:0 8px 24px rgba(15,23,42,.22);font-size:1.3rem;line-height:1;padding:0}
+#keto-support-root .keto-zalo-fab{background:#0068ff}
+#keto-support-root .keto-ai-fab{width:56px;height:56px;background:linear-gradient(135deg,#0d6efd,#6366f1);position:relative}
+#keto-support-root .keto-ai-badge{position:absolute;top:-4px;right:-4px;background:#22c55e;color:#fff;font-size:10px;font-weight:800;padding:3px 5px;border-radius:999px;border:2px solid #fff;line-height:1}
+#keto-support-root .keto-ai-fab.premium .keto-ai-badge{background:linear-gradient(135deg,#f59e0b,#ef4444)}
+#keto-support-root .keto-assist-panel{position:fixed;right:18px;bottom:90px;width:min(380px,calc(100vw - 36px));max-height:min(560px,calc(100vh - 120px));background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(15,23,42,.2);z-index:100000;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.08)}
+#keto-support-root .keto-assist-panel.open{display:flex}
+#keto-support-root .keto-assist-panel[hidden]{display:none!important}
+#keto-support-root .keto-assist-header{background:linear-gradient(135deg,#0d6efd,#6366f1);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0}
+#keto-support-root .keto-assist-header h6{margin:0;font-size:15px;font-weight:700;color:#fff}
+#keto-support-root .keto-assist-header small{font-size:12px;opacity:.92;color:#fff}
+#keto-support-root .keto-assist-close{width:28px;height:28px;border:none;border-radius:6px;background:rgba(255,255,255,.95);color:#333;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;font-size:14px}
+#keto-support-root .keto-assist-tabs{display:flex;border-bottom:1px solid #e9ecef;background:#f8fafc;flex-shrink:0}
+#keto-support-root .keto-assist-tabs button{flex:1;border:none;background:transparent;padding:10px 8px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer}
+#keto-support-root .keto-assist-tabs button.active{color:#0d6efd;border-bottom:2px solid #0d6efd;background:#fff}
+#keto-support-root .keto-pane-ai{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+#keto-support-root .keto-assist-body{flex:1;overflow-y:auto;padding:12px;min-height:140px}
+#keto-support-root .keto-assist-messages{display:flex;flex-direction:column;gap:10px}
+#keto-support-root .keto-assist-msg{max-width:92%;padding:10px 12px;border-radius:12px;font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+#keto-support-root .keto-assist-msg.bot{align-self:flex-start;background:#f1f5f9;color:#1e293b}
+#keto-support-root .keto-assist-msg.user{align-self:flex-end;background:#0d6efd;color:#fff}
+#keto-support-root .keto-assist-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+#keto-support-root .keto-assist-chip{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer}
+#keto-support-root .keto-assist-input-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #e9ecef;background:#fff;flex-shrink:0}
+#keto-support-root .keto-assist-input-row input{flex:1;border:1px solid #dee2e6;border-radius:999px;padding:8px 14px;font-size:14px;outline:none}
+#keto-support-root .keto-assist-input-row button{width:40px;height:40px;border-radius:50%;border:none;background:#0d6efd;color:#fff;cursor:pointer;flex-shrink:0;padding:0}
+#keto-support-root .keto-zalo-tab{text-align:center;padding:20px 16px}
+#keto-support-root .keto-zalo-tab .zalo-icon-lg{width:64px;height:64px;border-radius:50%;background:#0068ff;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:12px}
+#keto-support-root .keto-zalo-tab .phone{font-size:1.35rem;font-weight:700;color:#0f172a}
+#keto-support-root .keto-zalo-tab .btn-zalo{display:inline-block;background:#0068ff;color:#fff!important;border:none;border-radius:999px;padding:10px 24px;font-weight:600;margin-top:12px;text-decoration:none!important}
+#keto-support-root .keto-assist-typing{font-size:13px;color:#64748b;padding:4px 0}
+@media (max-width:576px){
+  #keto-support-root .keto-assist-panel{right:8px;bottom:80px;width:calc(100vw - 16px)}
+  #keto-support-root .keto-support-launcher{right:12px;bottom:12px}
+}
+{% endraw %}
+</style>
 
-<div class="keto-assist-panel" id="ketoAssistPanel" role="dialog" aria-label="Trợ lý AI KETO">
-    <div class="keto-assist-header">
-        <div>
-            <h6><i class="fas fa-headset me-1"></i> Trợ lý KETO POS</h6>
-            <small id="ketoAssistModeLabel">{{ assistant_mode_label | default('Miễn phí (FAQ + hướng dẫn)') }}</small>
-        </div>
-        <button type="button" class="btn btn-sm btn-light py-0 px-2" id="ketoAssistClose" aria-label="Đóng">
-            <i class="fas fa-times"></i>
+<div id="keto-support-root">
+    <div class="keto-support-launcher" id="ketoSupportLauncher">
+        <a href="{{ support_zalo_url }}" target="_blank" rel="noopener"
+           class="keto-zalo-fab" title="Chat Zalo {{ support_zalo_display }}"
+           aria-label="Chat Zalo hỗ trợ">
+            <i class="fas fa-comment-dots"></i>
+        </a>
+        <button type="button" class="keto-ai-fab{% if assistant_premium_active %} premium{% endif %}" id="ketoAiFab"
+                title="Trợ lý AI KETO POS" aria-label="Mở trợ lý AI">
+            <i class="fas fa-robot"></i>
+            <span class="keto-ai-badge" id="ketoAiBadge">{{ 'Pro' if assistant_premium_active else 'AI' }}</span>
         </button>
     </div>
-    <div class="keto-assist-tabs">
-        <button type="button" class="active" id="ketoTabAi"><i class="fas fa-robot me-1"></i>Trợ lý AI</button>
-        <button type="button" id="ketoTabZalo"><i class="fas fa-comment-dots me-1"></i>Zalo</button>
-    </div>
-    <div id="ketoPaneAi" class="d-flex flex-column flex-grow-1" style="min-height:0;">
-        <div class="keto-assist-body flex-grow-1">
-            <div class="keto-assist-messages" id="ketoAssistMessages"></div>
-            <div class="keto-assist-chips" id="ketoAssistChips"></div>
+
+    <div class="keto-assist-panel" id="ketoAssistPanel" role="dialog" aria-label="Trợ lý AI KETO" hidden>
+        <div class="keto-assist-header">
+            <div>
+                <h6><i class="fas fa-headset me-1"></i> Trợ lý KETO POS</h6>
+                <small id="ketoAssistModeLabel">{{ assistant_mode_label | default('Miễn phí (FAQ + hướng dẫn)') }}</small>
+            </div>
+            <button type="button" class="keto-assist-close" id="ketoAssistClose" aria-label="Đóng">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-        <div class="keto-assist-input-row">
-            <input type="text" id="ketoAssistInput" placeholder="Hỏi cách sử dụng phần mềm..." maxlength="500" autocomplete="off">
-            <button type="button" id="ketoAssistSend" aria-label="Gửi"><i class="fas fa-paper-plane"></i></button>
+        <div class="keto-assist-tabs">
+            <button type="button" class="active" id="ketoTabAi"><i class="fas fa-robot me-1"></i>Trợ lý AI</button>
+            <button type="button" id="ketoTabZalo"><i class="fas fa-comment-dots me-1"></i>Zalo</button>
         </div>
-    </div>
-    <div id="ketoPaneZalo" class="keto-assist-body" style="display:none;">
-        <div class="keto-zalo-tab">
-            <div class="zalo-icon-lg"><i class="fas fa-comment-dots"></i></div>
-            <p class="text-muted small mb-1">Hỗ trợ trực tiếp qua Zalo cá nhân</p>
-            <div class="phone">{{ support_zalo_display }}</div>
-            <p class="text-muted small mt-2 mb-0">
-                Tư vấn cài đặt, hướng dẫn từ xa (UltraViewer), hóa đơn điện tử và kế toán HKD.
-            </p>
-            <a href="{{ support_zalo_url }}" target="_blank" rel="noopener" class="btn btn-zalo">
-                <i class="fas fa-external-link-alt me-1"></i>Mở chat Zalo
-            </a>
-            <p class="text-muted small mt-3 mb-0">
-                <i class="fas fa-book me-1"></i>
-                <a href="{{ url_for('huong_dan_su_dung') }}">Hướng Dẫn Sử Dụng</a> đầy đủ
-            </p>
+        <div id="ketoPaneAi" class="keto-pane-ai">
+            <div class="keto-assist-body">
+                <div class="keto-assist-messages" id="ketoAssistMessages"></div>
+                <div class="keto-assist-chips" id="ketoAssistChips"></div>
+            </div>
+            <div class="keto-assist-input-row">
+                <input type="text" id="ketoAssistInput" placeholder="Hỏi cách sử dụng phần mềm..." maxlength="500" autocomplete="off">
+                <button type="button" id="ketoAssistSend" aria-label="Gửi"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+        <div id="ketoPaneZalo" class="keto-assist-body" style="display:none;">
+            <div class="keto-zalo-tab">
+                <div class="zalo-icon-lg"><i class="fas fa-comment-dots"></i></div>
+                <p style="color:#6c757d;font-size:.875rem;margin-bottom:.25rem;">Hỗ trợ trực tiếp qua Zalo cá nhân</p>
+                <div class="phone">{{ support_zalo_display }}</div>
+                <p style="color:#6c757d;font-size:.875rem;margin:.5rem 0 0;">Tư vấn cài đặt, hướng dẫn từ xa (UltraViewer), hóa đơn điện tử và kế toán HKD.</p>
+                <a href="{{ support_zalo_url }}" target="_blank" rel="noopener" class="btn-zalo">
+                    <i class="fas fa-external-link-alt me-1"></i>Mở chat Zalo
+                </a>
+                <p style="color:#6c757d;font-size:.875rem;margin-top:.75rem;margin-bottom:0;">
+                    <i class="fas fa-book me-1"></i>
+                    <a href="{{ url_for('huong_dan_su_dung') }}">Hướng Dẫn Sử Dụng</a> đầy đủ
+                </p>
+            </div>
         </div>
     </div>
 </div>
@@ -64,11 +106,11 @@ window.KETO_SUPPORT = {
     zaloUrl: {{ support_zalo_url | tojson }},
     page: {{ (request.endpoint or '') | tojson }},
     regime: {{ (tenant_regime or 'HKD') | tojson }},
-    role: {{ (current_user.role if current_user.is_authenticated else '') | tojson }},
+    role: {{ (current_user.role or '') | tojson }},
     aiMode: {{ (assistant_ai_mode or 'free') | tojson }},
     premiumActive: {{ assistant_premium_active | default(false) | tojson }},
     openaiAvailable: {{ openai_available | default(false) | tojson }},
     modeLabel: {{ (assistant_mode_label or 'Miễn phí (FAQ + hướng dẫn)') | tojson }}
 };
 </script>
-<script src="{{ url_for('static', filename='js/keto-assistant.js') }}"></script>
+<script src="{{ url_for('static', filename='js/keto-assistant.js') }}?v=20260729c"></script>

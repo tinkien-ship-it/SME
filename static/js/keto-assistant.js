@@ -130,6 +130,7 @@
     }
 
     function openPanel(tab) {
+        panel.hidden = false;
         panel.classList.add('open');
         switchTab(tab || 'ai');
         if (messagesEl.children.length === 0) {
@@ -151,6 +152,7 @@
 
     function closePanel() {
         panel.classList.remove('open');
+        panel.hidden = true;
     }
 
     function switchTab(name) {
