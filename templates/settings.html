@@ -747,6 +747,27 @@
                                         <label class="form-check-label fw-bold text-danger" for="auto_issue">Tự động xuất & ký HĐĐT khi hoàn tất thanh toán</label>
                                     </div>
                                 </div>
+                                <!-- Xuất hóa đơn theo giờ -->
+                                <div class="col-12 mt-3">
+                                    <div class="p-3 bg-primary-subtle rounded border border-primary-subtle">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" name="auto_issue_schedule" id="auto_issue_schedule">
+                                                <label class="form-check-label fw-bold text-primary" for="auto_issue_schedule">
+                                                    <i class="fas fa-clock me-1"></i>Xuất hóa đơn tự động theo giờ
+                                                </label>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-primary" id="btnToggleInvoiceSchedule" onclick="toggleInvoiceSchedule()">
+                                                <i class="fas fa-power-off me-1"></i>Áp dụng ngay
+                                            </button>
+                                        </div>
+                                        <div class="small text-muted mt-2" id="invoiceScheduleHint">
+                                            Hệ thống sẽ tự quét các đơn đã hoàn tất nhưng chưa có số hóa đơn và xuất
+                                            <strong>17:00 hằng ngày (giờ Việt Nam)</strong>. Cần bật sẵn công tắc tự động xuất ở trên.
+                                        </div>
+                                        <div class="small mt-1" id="invoiceScheduleLastRun"></div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="alert alert-info mt-4 small">
                                 <i class="fas fa-info-circle me-2"></i>
@@ -1321,6 +1342,9 @@ async function loadInvoiceSettings() {
 
         const autoCheckbox = document.getElementById('auto_issue');
         if (autoCheckbox) autoCheckbox.checked = data.auto_issue_invoice == 1;
+        const scheduleCheckbox = document.getElementById('auto_issue_schedule');
+        if (scheduleCheckbox) scheduleCheckbox.checked = data.auto_issue_schedule == 1;
+        loadInvoiceScheduleStatus();
 
         ['password', 'app_secret', 'esign_pin', 'etax_password'].forEach(fieldName => {
             const input = form.querySelector(`input[name="${fieldName}"]`);
@@ -1342,6 +1366,75 @@ function ensureEsignLoaded() {
     if (esignLoaded) return;
     esignLoaded = true;
     loadInvoiceSettings();
+}
+
+// =============================================
+// XUẤT HÓA ĐƠN THEO GIỜ (17:00 hằng ngày)
+// =============================================
+function renderInvoiceScheduleStatus(payload) {
+    const checkbox = document.getElementById('auto_issue_schedule');
+    const hint = document.getElementById('invoiceScheduleHint');
+    const lastRunEl = document.getElementById('invoiceScheduleLastRun');
+    if (!checkbox || !hint) return;
+
+    checkbox.checked = !!payload.schedule_enabled;
+    const label = payload.schedule?.label || '17:00 hằng ngày (giờ Việt Nam)';
+    const nextRun = payload.schedule?.next_run_at ? ` Lượt kế tiếp: <strong>${payload.schedule.next_run_at}</strong>.` : '';
+
+    if (!payload.has_active_provider) {
+        hint.innerHTML = '<span class="text-danger">Chưa có nhà cung cấp HĐĐT nào đang hoạt động — hãy lưu cấu hình trước khi bật lịch.</span>';
+    } else if (!payload.auto_issue_invoice) {
+        hint.innerHTML = '<span class="text-warning-emphasis">Cần bật công tắc <strong>Tự động xuất & ký HĐĐT</strong> ở trên, sau đó lưu cấu hình, rồi mới bật được lịch.</span>';
+    } else if (payload.schedule_enabled) {
+        hint.innerHTML = `Đang <strong class="text-success">BẬT</strong> — quét và xuất hóa đơn tồn vào <strong>${label}</strong>.${nextRun}`;
+    } else {
+        hint.innerHTML = `Đang <strong class="text-secondary">TẮT</strong> — bật để hệ thống tự xuất hóa đơn tồn vào <strong>${label}</strong>.`;
+    }
+
+    if (lastRunEl) {
+        const last = payload.last_run;
+        lastRunEl.innerHTML = last
+            ? `<i class="fas fa-history me-1"></i>Lượt gần nhất ${last.run_key}: ${escapeHtml(last.summary || 'đang chạy...')}`
+            : '';
+    }
+}
+
+async function loadInvoiceScheduleStatus() {
+    try {
+        const res = await fetchJSON('/api/invoice/schedule/status');
+        if (res.success) renderInvoiceScheduleStatus(res);
+    } catch (err) {
+        /* không chặn phần còn lại của trang */
+    }
+}
+
+async function toggleInvoiceSchedule() {
+    const checkbox = document.getElementById('auto_issue_schedule');
+    const btn = document.getElementById('btnToggleInvoiceSchedule');
+    if (!checkbox) return;
+
+    if (btn) btn.disabled = true;
+    try {
+        const res = await postSettingsJSON('/api/invoice/schedule/toggle', { enabled: checkbox.checked ? 1 : 0 });
+        if (!res.success) {
+            checkbox.checked = !checkbox.checked;
+            Swal.fire('Không thể áp dụng', res.error || 'Lỗi không xác định', 'error');
+            return;
+        }
+        Swal.fire({
+            icon: 'success',
+            title: checkbox.checked ? 'Đã bật' : 'Đã tắt',
+            text: res.message || '',
+            timer: 2000,
+            showConfirmButton: false,
+        });
+        loadInvoiceScheduleStatus();
+    } catch (err) {
+        checkbox.checked = !checkbox.checked;
+        showSettingsError(err.message);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
 }
 
 async function resetFullDatabase() {

@@ -100,7 +100,42 @@ PAGE_CONTEXT: dict[str, dict[str, Any]] = {
     },
     'products': {
         'label': 'Danh Mục Sản Phẩm',
-        'hint': 'Sửa giá, in mã vạch, quản lý tồn theo sản phẩm.',
+        'hint': (
+            'Sửa giá, in mã vạch, quản lý tồn. Tab Thành phẩm: mã TP001…, mã vạch TP00101/TP00102. '
+            'Vật tư sản xuất thường mã VT… (từ phiếu nhập loại Vật Tư).'
+        ),
+    },
+    'production_page': {
+        'label': 'Tính Giá Thành (Thành Phẩm)',
+        'hint': (
+            'Định mức BOM (thành phẩm + vật tư VT) → phiếu sản xuất → xuất vật tư (giá vốn bình quân) '
+            '+ nhập thành phẩm. Giá thành/ĐV = (vật tư + nhân công + chi phí khác) ÷ số lượng hoàn thành. '
+            'Nút +: thêm thành phẩm (mã TP001…).'
+        ),
+        'steps': [
+            'Định mức BOM',
+            'Chọn thành phẩm + số lượng (+ nhân công/chi phí khác)',
+            'Tính vật tư & giá thành',
+            'Hoàn thành phiếu SX',
+            'In phiếu / Hủy phiếu nếu cần',
+        ],
+    },
+    'production_print': {
+        'label': 'In phiếu sản xuất',
+        'hint': 'Phiếu in gồm vật tư xuất, nhân công, chi phí khác và giá thành đơn vị thành phẩm.',
+    },
+    'F_and_B_service': {
+        'label': 'F&B — Nhà hàng / quán ăn / cà phê',
+        'hint': (
+            'Phục vụ nhà hàng, quán ăn, quán cà phê, trà sữa: thực đơn, định mức NVL, order bàn, thanh toán. '
+            'Món có định mức trừ kho lúc thanh toán; món chưa định mức → Kiểm kê NVL cuối ngày → Chốt cuối ngày.'
+        ),
+        'steps': [
+            'Nhập nguyên liệu',
+            'Thực đơn & định mức NVL',
+            'Gọi món / thanh toán',
+            'Kiểm kê & chốt cuối ngày (nếu cần)',
+        ],
     },
 }
 

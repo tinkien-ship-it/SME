@@ -4,8 +4,10 @@
 ## V1.0 — 2026
 - POS bán hàng: đơn tạm F1, VietQR, quét mã vạch, xuất HĐĐT tự động.
 - Mua hàng: nhập kho từ HĐ mua, nhập tồn Excel, hạch toán dịch vụ.
+- F&B cho nhà hàng, quán ăn, quán cà phê, trà sữa: thực đơn, định mức nguyên liệu, order bàn, kiểm kê NVL cuối ngày.
 - Kế toán HKD TT88: sổ tự động, phiếu thu/chi, công nợ, lương, BHXH, TSCĐ/CCDC.
-- Thiết lập riêng tenant tại Hệ Thống → Thiết Lập (/thiet-lap).
+- Tính giá thành thành phẩm: định mức BOM (thành phẩm + vật tư) → phiếu sản xuất → xuất vật tư (giá vốn bình quân) + nhập thành phẩm; mã TP001 / mã vạch TP00101; có thể cộng nhân công & chi phí khác; hủy phiếu; in phiếu.
+- Thiết lập riêng tenant tại Hệ Thống → Thiết Lập.
 - Cập Nhật Kiến Thức: tin TCT & Bộ Tài Chính tự đồng bộ.
 - Trợ lý AI + Zalo 0908870287 hỗ trợ trong phần mềm.
 - Quản lý phòng trọ: sơ đồ phòng, thu tiền, chỉ số điện.
@@ -14,5 +16,6 @@
 ## Mẹo nhanh
 - Chưa nộp quỹ tiền mặt / số dư NH → không chọn Đã thanh toán khi nhập kho.
 - TSCĐ từ 30 triệu; dưới 30 triệu là CCDC.
+- Thành phẩm: mã TP001…, mã vạch TP00101 (sỉ TP00102); vật tư sản xuất dùng mã VT….
 - Sửa HĐĐT đã xuất: Hóa Đơn Thay Thế, không xóa đơn trực tiếp.
 - Hỗ trợ từ xa: UltraViewer + Zalo 0908870287.

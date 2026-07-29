@@ -4,13 +4,13 @@ import sqlite3
 
 def _max_seq_with_prefix(c, prefix, digit_width=4):
     px = prefix.upper()
-    c.execute(
+    rows = c.execute(
         "SELECT product_code FROM products WHERE UPPER(product_code) LIKE ? ORDER BY product_code DESC",
         (f"{px}%",),
-    )
+    ).fetchall()
     max_num = 0
     plen = len(px)
-    for row in c.fetchall():
+    for row in rows:
         code = (row[0] or '').strip().upper()
         if code.startswith(px):
             suffix = code[plen:]
@@ -23,6 +23,8 @@ def peek_next_product_code(c, product_type):
     pt = (product_type or 'goods').strip().lower()
     if pt == 'materials':
         return _max_seq_with_prefix(c, 'VT', 4)
+    if pt == 'finished_goods':
+        return _max_seq_with_prefix(c, 'TP', 3)
     if pt == 'fixed_asset':
         return _max_seq_with_prefix(c, 'TSCD', 4)
     if pt == 'tools':
@@ -37,6 +39,11 @@ def assign_product_codes(c, product_id, product_type, unit1=None):
     pt = (product_type or 'goods').strip().lower()
     if pt == 'materials':
         code = _max_seq_with_prefix(c, 'VT', 4)
+        barcode = f"{code}01"
+        barcode1 = f"{code}02" if unit1 else None
+    elif pt == 'finished_goods':
+        # Giống products.html: TP001, barcode TP00101 / TP00102
+        code = _max_seq_with_prefix(c, 'TP', 3)
         barcode = f"{code}01"
         barcode1 = f"{code}02" if unit1 else None
     elif pt == 'fixed_asset':

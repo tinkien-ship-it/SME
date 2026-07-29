@@ -22,18 +22,9 @@ def _assign_goods_codes(c, product_id, unit1=None):
 
 def _next_seq_product_code(c, prefix):
     """Sinh mã DV001, TP001… theo max hiện có với prefix cho trước."""
-    px = prefix.upper()
-    c.execute(
-        "SELECT product_code FROM products WHERE product_code LIKE ? ORDER BY product_code DESC",
-        (f"{px}%",),
-    )
-    max_num = 0
-    plen = len(px)
-    for row in c.fetchall():
-        code = (row[0] or '').strip().upper()
-        if code.startswith(px) and code[plen:].isdigit():
-            max_num = max(max_num, int(code[plen:]))
-    return f"{px}{max_num + 1:03d}"
+    from Services.import_line_helpers import _max_seq_with_prefix
+    width = 3 if prefix.upper() in ('TP', 'DV') else 4
+    return _max_seq_with_prefix(c, prefix, width)
 
 
 def _next_tp_product_code(c):
@@ -41,12 +32,10 @@ def _next_tp_product_code(c):
 
 
 def _assign_finished_goods_codes(c, product_id, unit1=None):
-    code = _next_tp_product_code(c)
-    barcode = f"{code}01"
-    barcode1 = f"{code}02" if unit1 else None
-    c.execute(
-        "UPDATE products SET product_code=?, barcode=?, barcode1=? WHERE id=?",
-        (code, barcode, barcode1, product_id),
+    """Mã thành phẩm giống products.html: TP001, barcode TP00101 / TP00102."""
+    from Services.import_line_helpers import assign_product_codes
+    code, barcode, _barcode1 = assign_product_codes(
+        c, product_id, 'finished_goods', unit1,
     )
     return code, barcode
 
@@ -368,6 +357,17 @@ def register_products_routes(app):
                                1 if str(data.get('sell_by_weight', 0)) in ('1', 'true', True) else 0,
                                (data.get('weight_plu') or '').strip() or None,
                                product_id))
+                    # Gán mã TP001 / barcode TP00101 nếu chưa có
+                    c.execute(
+                        "SELECT product_code, unit1 FROM products WHERE id = ?",
+                        (product_id,),
+                    )
+                    prow = c.fetchone()
+                    existing_code = (prow[0] if prow else '') or ''
+                    if not str(existing_code).strip():
+                        _assign_finished_goods_codes(
+                            c, product_id, (prow[1] if prow else None) or data.get('unit1'),
+                        )
                 else:
                     c.execute("""UPDATE products SET 
                                  name=?, unit=?, base_price=?, price=?, unit1=?, unit_ratio=?,

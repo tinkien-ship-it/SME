@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Phiếu sản xuất {{ order.voucher_no }}</title>
+    <style>
+        @page { size: A4; margin: 12mm; }
+        body { font-family: "Times New Roman", Times, serif; font-size: 13pt; color: #000; background: #f0f2f5; margin: 0; }
+        .toolbar { text-align: center; padding: 12px; background: #fff; border-bottom: 1px solid #dee2e6; position: sticky; top: 0; }
+        .btn { padding: 8px 18px; border: none; border-radius: 4px; cursor: pointer; font-weight: 700; margin: 0 4px; }
+        .btn-print { background: #0d6efd; color: #fff; }
+        .btn-close { background: #6c757d; color: #fff; }
+        .sheet { width: 210mm; margin: 16px auto; padding: 14mm 16mm; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,.08); }
+        .header { width: 100%; border: none; margin-bottom: 8px; }
+        .header td { vertical-align: top; }
+        .biz { width: 62%; }
+        .meta { width: 38%; text-align: center; font-size: 10.5pt; line-height: 1.25; }
+        .title { text-align: center; font-size: 18pt; font-weight: 700; text-transform: uppercase; margin: 12px 0 4px; }
+        .sub { text-align: center; font-style: italic; margin-bottom: 4px; }
+        .num { text-align: center; margin-bottom: 14px; }
+        .row { margin-bottom: 6px; }
+        .label { display: inline-block; min-width: 140px; }
+        table.grid { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table.grid th, table.grid td { border: 1px solid #000; padding: 6px 5px; }
+        table.grid th { background: #fafafa; font-size: 11pt; text-align: center; }
+        .r { text-align: right; }
+        .c { text-align: center; }
+        .b { font-weight: 700; }
+        .signs { width: 100%; margin-top: 28px; border: none; }
+        .signs td { text-align: center; vertical-align: top; width: 33%; }
+        .space { height: 80px; }
+        .muted { color: #555; font-size: 11pt; }
+        .cancelled { color: #b91c1c; font-weight: 700; text-align: center; margin: 8px 0; }
+        @media print {
+            body { background: #fff; }
+            .toolbar { display: none; }
+            .sheet { width: 100%; margin: 0; padding: 0; box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="toolbar">
+    <button class="btn btn-print" onclick="window.print()">In phiếu</button>
+    <button class="btn btn-close" onclick="window.close()">Đóng</button>
+</div>
+
+<div class="sheet">
+    <table class="header">
+        <tr>
+            <td class="biz">
+                <div class="b">HỘ KINH DOANH: {{ info.business_name or '' }}</div>
+                <div>Địa chỉ: {{ info.address or '' }}</div>
+                <div>Điện thoại: {{ info.phone or '' }}</div>
+            </td>
+            <td class="meta">
+                <div class="b">PHIẾU NỘI BỘ</div>
+                <div>Tính giá thành thành phẩm</div>
+                <div>KETO POS · Kế toán HKD</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="title">Phiếu sản xuất</div>
+    {% set d = (order.production_date or '')[:10].split('-') %}
+    <div class="sub">
+        {% if d|length == 3 %}Ngày {{ d[2] }} tháng {{ d[1] }} năm {{ d[0] }}{% else %}{{ order.production_date }}{% endif %}
+    </div>
+    <div class="num">Số: <strong>{{ order.voucher_no }}</strong></div>
+
+    {% if order.status == 'cancelled' %}
+    <div class="cancelled">ĐÃ HỦY{% if order.cancelled_at %} — {{ order.cancelled_at }}{% endif %}
+        {% if order.cancel_note %} ({{ order.cancel_note }}){% endif %}
+    </div>
+    {% endif %}
+
+    <div class="row"><span class="label">- Thành phẩm:</span> <strong>{{ order.finished_name }}</strong>
+        {% if order.product_code %} ({{ order.product_code }}){% endif %}
+    </div>
+    <div class="row"><span class="label">- Số lượng hoàn thành:</span>
+        <strong>{{ '%.3f'|format(order.qty_completed|float) }} {{ order.finished_unit or '' }}</strong>
+    </div>
+    <div class="row"><span class="label">- Ghi chú:</span> {{ order.note or '—' }}</div>
+
+    <table class="grid">
+        <thead>
+            <tr>
+                <th style="width:36px">STT</th>
+                <th>Vật tư</th>
+                <th style="width:70px">ĐVT</th>
+                <th style="width:90px">Định mức</th>
+                <th style="width:90px">Thực tế</th>
+                <th style="width:110px">Đơn giá</th>
+                <th style="width:120px">Thành tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in order.materials %}
+            <tr>
+                <td class="c">{{ loop.index }}</td>
+                <td>{{ m.material_name }}{% if m.material_code %} <span class="muted">({{ m.material_code }})</span>{% endif %}</td>
+                <td class="c">{{ m.material_unit or '' }}</td>
+                <td class="r">{{ '%.3f'|format(m.qty_standard|float) }}</td>
+                <td class="r">{{ '%.3f'|format(m.qty_actual|float) }}</td>
+                <td class="r">{{ '{:,.0f}'.format(m.unit_cost|float) }}</td>
+                <td class="r">{{ '{:,.0f}'.format(m.total_cost|float) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="c">Không có dòng vật tư</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% set mat = order.total_material_cost|float %}
+    {% set labor = (order.labor_cost or 0)|float %}
+    {% set other = (order.other_cost or 0)|float %}
+    {% set total = (order.total_cost if order.total_cost is not none else (mat + labor + other))|float %}
+
+    <table class="grid" style="margin-top:12px; width:55%; margin-left:auto;">
+        <tr>
+            <td>Tổng giá trị vật tư</td>
+            <td class="r b">{{ '{:,.0f}'.format(mat) }}</td>
+        </tr>
+        <tr>
+            <td>Chi phí nhân công</td>
+            <td class="r">{{ '{:,.0f}'.format(labor) }}</td>
+        </tr>
+        <tr>
+            <td>Chi phí khác</td>
+            <td class="r">{{ '{:,.0f}'.format(other) }}</td>
+        </tr>
+        <tr>
+            <td class="b">Tổng giá thành</td>
+            <td class="r b">{{ '{:,.0f}'.format(total) }}</td>
+        </tr>
+        <tr>
+            <td class="b">Giá thành / đơn vị</td>
+            <td class="r b">{{ '{:,.0f}'.format(order.unit_cost|float) }}</td>
+        </tr>
+    </table>
+
+    <table class="signs">
+        <tr>
+            <td>
+                <div class="b">Người lập</div>
+                <div class="muted">(Ký, họ tên)</div>
+                <div class="space"></div>
+                <div>{{ order.created_by or '' }}</div>
+            </td>
+            <td>
+                <div class="b">Thủ kho</div>
+                <div class="muted">(Ký, họ tên)</div>
+                <div class="space"></div>
+            </td>
+            <td>
+                <div class="b">Chủ hộ KD</div>
+                <div class="muted">(Ký, họ tên)</div>
+                <div class="space"></div>
+            </td>
+        </tr>
+    </table>
+</div>
+</body>
+</html>

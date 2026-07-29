@@ -25,6 +25,7 @@ _INVOICE_SETTINGS_DDL = """
         minvoice_cctbao_id TEXT,
         minvoice_has_code INTEGER DEFAULT 1,
         auto_issue_invoice INTEGER DEFAULT 0,
+        auto_issue_schedule INTEGER DEFAULT 0,
         is_active INTEGER DEFAULT 0,
         updated_at TEXT
     )
@@ -39,6 +40,7 @@ _INVOICE_SETTINGS_COLS = [
     ('api_key', 'TEXT'),
     ('esign_pin', 'TEXT'),
     ('auto_issue_invoice', 'INTEGER DEFAULT 0'),
+    ('auto_issue_schedule', 'INTEGER DEFAULT 0'),
     ('is_active', 'INTEGER DEFAULT 0'),
     ('updated_at', 'TEXT'),
 ]
@@ -194,6 +196,11 @@ def apply_schema_migrations(conn):
         ensure_payroll_schema(conn, commit=True)
     except Exception as e:
         print(f'[MIGRATE] payroll: {e}')
+    try:
+        from Services.production_costing import ensure_production_schema
+        ensure_production_schema(conn)
+    except Exception as e:
+        print(f'[MIGRATE] production: {e}')
     conn.commit()
 
 

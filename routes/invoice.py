@@ -22,6 +22,7 @@ from flask import (
     abort,
     current_app,
     flash,
+    g,
     jsonify,
     make_response,
     redirect,
@@ -1936,27 +1937,20 @@ def register_invoice_routes(app):
 
     #===HÀM VÀ CÁC ROUTE XUẤT HÓA ĐƠN ĐIỆN TỬ THEO GIỜ===#
 
-    def get_active_invoice_config():
-        conn = get_db_connection()
-        conn.row_factory = sqlite3.Row
-        config_row = conn.execute("SELECT * FROM invoice_settings WHERE is_active = 1 AND auto_issue_invoice = 1").fetchone()
-        conn.close()
-        if config_row:
-            config = dict(config_row)
-            # Đồng bộ cấu hình như trong API đơn lẻ
-            # Ưu tiên lấy từ config DB, nếu rỗng thì dùng default
-            if not config.get('invoice_series'): config['invoice_series'] = 'C26MES'
-            if not config.get('invoice_type'): config['invoice_type'] = '2'
-            return config
-        return None
-
-    def batch_issue_pending_invoices():
+    def batch_issue_pending_invoices(config=None):
         stats = {"success": 0, "failed": 0, "remaining": 0}
-    
-        config = get_active_invoice_config()
+
+        if config is None:
+            config = get_active_invoice_config()
         if not config:
             logging.warning("Không tìm thấy cấu hình hóa đơn hoạt động")
             return stats
+
+        config = dict(config)
+        if not config.get('invoice_series'):
+            config['invoice_series'] = 'C26MES'
+        if not config.get('invoice_type'):
+            config['invoice_type'] = '2'
 
         conn = None
         try:
@@ -3945,18 +3939,143 @@ def register_invoice_routes(app):
         finally:
             conn.close()
 
+    def run_scheduled_batch_invoice():
+        """
+        Job 17:00 hằng ngày: quét từng tenant đã bật lịch và xuất hóa đơn tồn.
+
+        Chạy trong thread nền nên phải tự đẩy app context và tự trỏ g.db_path
+        sang DB của từng tenant — không có request để middleware làm việc đó.
+        """
+        from Services.invoice_schedule import (
+            BATCH_INVOICE_JOB_ID,
+            claim_job_run,
+            current_run_key,
+            finish_job_run,
+            iter_auto_invoice_targets,
+        )
+
+        run_key = current_run_key()
+        if not claim_job_run(BATCH_INVOICE_JOB_ID, run_key):
+            logger.info("Batch HĐĐT %s: worker khác đã nhận lượt này — bỏ qua.", run_key)
+            return
+
+        try:
+            targets = iter_auto_invoice_targets()
+        except Exception as exc:
+            logger.exception("Batch HĐĐT %s: không liệt kê được tenant: %s", run_key, exc)
+            finish_job_run(f"Lỗi liệt kê tenant: {exc}", BATCH_INVOICE_JOB_ID, run_key)
+            return
+
+        if not targets:
+            logger.info("Batch HĐĐT %s: không tenant nào bật xuất theo lịch.", run_key)
+            finish_job_run("Không có tenant nào bật lịch", BATCH_INVOICE_JOB_ID, run_key)
+            return
+
+        lines = []
+        for target in targets:
+            tenant_id = target['tenant_id']
+            try:
+                with app.app_context():
+                    g.db_path = target['db_path']
+                    g.tenant_id = tenant_id
+                    stats = batch_issue_pending_invoices(config=target['config'])
+                lines.append(
+                    f"{tenant_id}: OK {stats['success']}, lỗi {stats['failed']}, còn {stats['remaining']}"
+                )
+                logger.info(
+                    "Batch HĐĐT %s | %s: thành công %s, thất bại %s, còn lại %s",
+                    run_key, tenant_id, stats['success'], stats['failed'], stats['remaining'],
+                )
+            except Exception as exc:
+                lines.append(f"{tenant_id}: LỖI {exc}")
+                logger.exception("Batch HĐĐT %s | %s lỗi: %s", run_key, tenant_id, exc)
+
+        finish_job_run(" | ".join(lines), BATCH_INVOICE_JOB_ID, run_key)
+
+    @app.route('/api/invoice/schedule/status', methods=['GET'])
+    @login_required
+    def api_invoice_schedule_status():
+        """Trạng thái lịch xuất hóa đơn của cửa hàng hiện tại."""
+        from Services.invoice_schedule import describe_schedule, get_schedule_state, last_run_info
+
+        conn = get_db_connection()
+        try:
+            from db.init import ensure_invoice_settings_schema
+            ensure_invoice_settings_schema(conn)
+            state = get_schedule_state(conn)
+        finally:
+            conn.close()
+
+        return jsonify({
+            'success': True,
+            **state,
+            'schedule': describe_schedule(),
+            'last_run': last_run_info(),
+        })
+
+    @app.route('/api/invoice/schedule/toggle', methods=['POST'])
+    @login_required
+    def api_invoice_schedule_toggle():
+        """Bật/tắt chế độ xuất hóa đơn theo giờ cho cửa hàng hiện tại."""
+        from Services.invoice_schedule import set_schedule_enabled
+
+        data = request.get_json(silent=True) or {}
+        enabled = data.get('enabled')
+        if enabled is None:
+            return jsonify({'success': False, 'error': 'Thiếu tham số enabled'}), 400
+        enabled = str(enabled).strip().lower() in ('1', 'true', 'yes', 'on')
+
+        conn = get_db_connection()
+        try:
+            from db.init import ensure_invoice_settings_schema
+            ensure_invoice_settings_schema(conn)
+            result = set_schedule_enabled(conn, enabled)
+        except Exception as exc:
+            logger.exception('api_invoice_schedule_toggle: %s', exc)
+            return jsonify({'success': False, 'error': str(exc)}), 500
+        finally:
+            conn.close()
+
+        if not result.get('success'):
+            return jsonify(result), 400
+
+        result['message'] = (
+            f"Đã BẬT xuất hóa đơn tự động lúc {result['schedule']['label']}"
+            if enabled else
+            'Đã TẮT xuất hóa đơn theo giờ'
+        )
+        return jsonify(result)
+
     if not _invoice_scheduler_started:
-        inv_scheduler = BackgroundScheduler(daemon=True)
+        from Services.invoice_schedule import (
+            SCHEDULE_HOUR,
+            SCHEDULE_MINUTE,
+            SCHEDULE_TZ,
+            SCHEDULE_TZ_NAME,
+        )
+
+        inv_scheduler = BackgroundScheduler(daemon=True, timezone=SCHEDULE_TZ)
         inv_scheduler.add_job(
-            batch_issue_pending_invoices,
-            CronTrigger(hour="12,18", minute=0, second=0),
+            run_scheduled_batch_invoice,
+            CronTrigger(
+                hour=SCHEDULE_HOUR,
+                minute=SCHEDULE_MINUTE,
+                second=0,
+                timezone=SCHEDULE_TZ,
+            ),
             id="batch_invoice_job",
-            name="Batch xuất hóa đơn theo giờ",
+            name="Xuất hóa đơn tự động 17:00",
             replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=3600,
         )
         inv_scheduler.start()
         _invoice_scheduler_started = True
-        logger.info("APScheduler batch invoice job started (12:00, 18:00 daily)")
+        logger.info(
+            "APScheduler batch invoice job started (%02d:%02d %s)",
+            SCHEDULE_HOUR, SCHEDULE_MINUTE, SCHEDULE_TZ_NAME,
+        )
 
         def _shutdown_invoice_scheduler():
             if inv_scheduler.running:

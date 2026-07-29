@@ -2663,7 +2663,8 @@ Trân trọng,
                        tax_code, invoice_series, invoice_type, 
                        etax_password, etax_cvalue, etax_ckey,
                        api_url, sign_service_url, misa_has_code,
-                       minvoice_cctbao_id, minvoice_has_code
+                       minvoice_cctbao_id, minvoice_has_code,
+                       auto_issue_schedule
                 FROM invoice_settings 
                 WHERE provider_name = ?
             """, (provider_name,))
@@ -2675,7 +2676,16 @@ Trân trọng,
                 'etax_password', 'etax_cvalue', 'etax_ckey', 'api_url',
                 'sign_service_url', 'misa_has_code',
                 'minvoice_cctbao_id', 'minvoice_has_code',
+                'auto_issue_schedule',
             ], row)) if row else {}
+
+            # Form khác (vd. POS) có thể lưu cấu hình mà không gửi cờ lịch → giữ nguyên
+            if 'auto_issue_schedule' in data:
+                auto_issue_schedule = 1 if data.get('auto_issue_schedule') in (True, 'true', '1', 1) else 0
+            else:
+                auto_issue_schedule = 1 if str(old.get('auto_issue_schedule') or '0') in ('1', 'True', 'true') else 0
+            if not auto_issue_invoice:
+                auto_issue_schedule = 0
 
             # Xây dựng giá trị cuối cùng: nếu field gửi lên rỗng → giữ nguyên cũ (đặc biệt password)
             values = {
@@ -2694,6 +2704,7 @@ Trân trọng,
                 'etax_cvalue': data.get('etax_cvalue', old.get('etax_cvalue', '')),
                 'etax_ckey': data.get('etax_ckey', old.get('etax_ckey', '')),
                 'auto_issue_invoice': auto_issue_invoice,
+                'auto_issue_schedule': auto_issue_schedule,
                 'is_active': 1,
                 'updated_at': 'datetime("now")'
             }
@@ -2715,19 +2726,22 @@ Trân trọng,
                     sign_service_url, misa_has_code,
                     minvoice_cctbao_id, minvoice_has_code,
                     etax_password, etax_cvalue, etax_ckey,
-                    auto_issue_invoice, is_active, updated_at
+                    auto_issue_invoice, auto_issue_schedule, is_active, updated_at
                 ) VALUES (
                     :provider_name, :api_url, :username, :password, :api_key, :app_secret,
                     :serial_number, :tax_code, :invoice_series, :invoice_type,
                     :sign_service_url, :misa_has_code,
                     :minvoice_cctbao_id, :minvoice_has_code,
                     :etax_password, :etax_cvalue, :etax_ckey,
-                    :auto_issue_invoice, :is_active, datetime('now')
+                    :auto_issue_invoice, :auto_issue_schedule, :is_active, datetime('now')
                 )
             """
 
             # Tắt tất cả các cấu hình khác (chỉ giữ active 1 provider)
-            cursor.execute("UPDATE invoice_settings SET is_active = 0 WHERE provider_name != ?", (provider_name,))
+            cursor.execute(
+                "UPDATE invoice_settings SET is_active = 0, auto_issue_schedule = 0 WHERE provider_name != ?",
+                (provider_name,),
+            )
 
             # Insert hoặc Replace
             cursor.execute(sql, values)
@@ -2772,6 +2786,7 @@ Trân trọng,
                        sign_service_url, misa_has_code,
                        minvoice_cctbao_id, minvoice_has_code,
                        password, app_secret, esign_pin, auto_issue_invoice,
+                       auto_issue_schedule,
                        etax_password, etax_cvalue, etax_ckey, api_key
                 FROM invoice_settings
                 ORDER BY is_active DESC, updated_at DESC
@@ -2792,6 +2807,7 @@ Trân trọng,
 
             # FIX: chuẩn hóa auto_issue_invoice
             res_data['auto_issue_invoice'] = int(res_data.get('auto_issue_invoice', 0))
+            res_data['auto_issue_schedule'] = int(res_data.get('auto_issue_schedule') or 0)
             res_data['misa_has_code'] = int(res_data.get('misa_has_code') or 0)
             res_data['minvoice_has_code'] = int(res_data.get('minvoice_has_code') if res_data.get('minvoice_has_code') is not None else 1)
 

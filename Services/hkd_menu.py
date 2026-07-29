@@ -231,6 +231,13 @@ POS_HKD_MENU = [
             {'endpoint': 'DanhSachPhieuNhapKho', 'label': 'Phiếu Nhập Kho (03-VT)', 'icon': 'fas fa-truck-loading text-primary', 'perm': 'view_phieu_nhap_kho'},
             {'endpoint': 'DanhSachPhieuXuatKho', 'label': 'Phiếu Xuất Kho (04-VT)', 'icon': 'fas fa-box-open text-warning', 'perm': 'view_phieu_xuat_kho'},
             {
+                'endpoint': 'production_page',
+                'label': 'Tính Giá Thành (Thành Phẩm)',
+                'icon': 'fas fa-industry text-success',
+                'perm': 'view_inventory',
+                'roles': ('accountant', 'manager', 'admin', 'master'),
+            },
+            {
                 'endpoint': 'DanhSachBangLuong_05LDTL',
                 'label': 'Bảng Thanh Toán Lương (05-LĐTL)',
                 'icon': 'fas fa-file-invoice-dollar text-info',

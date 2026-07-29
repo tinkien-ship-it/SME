@@ -318,6 +318,10 @@ register_inward_routes(app)
 from routes.ketoan_hkd import register_ketoan_hkd_routes
 register_ketoan_hkd_routes(app)
 
+# === Tính Giá Thành (Thành Phẩm) → routes/production.py ===
+from routes.production import register_production_routes
+register_production_routes(app)
+
 # === RENTAL routes → routes/rental.py ===
 from routes.rental import register_rental_routes
 register_rental_routes(app)
