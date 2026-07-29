@@ -737,6 +737,7 @@ def provision_tenant(
     extra_settings=None,
     send_emails=False,
     email_context=None,
+    empty_business_data=False,
 ):
     """Luồng provisioning thống nhất — Master và Google trial."""
     from tenant_middleware import init_tenant_database
@@ -795,6 +796,7 @@ def provision_tenant(
             settings_json=settings,
             subscription_plan=subscription_plan,
             enabled_nn_sectors=sectors,
+            empty_business_data=empty_business_data,
         )
     except Exception as exc:
         logger.exception('provision_tenant: %s', exc)
@@ -859,6 +861,7 @@ def provision_trial_tenant(
         subscription_plan='trial',
         send_emails=True,
         email_context={'business_line': business_line},
+        empty_business_data=True,
     )
     if not result.get('success'):
         return result

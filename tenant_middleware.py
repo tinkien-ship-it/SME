@@ -66,6 +66,7 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
     revenue_tier = kwargs.get('revenue_tier') or 'DT1'
     accounting_regime = kwargs.get('accounting_regime') or 'HKD'
     settings_json = kwargs.get('settings_json') or {}
+    empty_business_data = bool(kwargs.get('empty_business_data', False))
 
     from Services.subscription_service import role_for_business_line, support_role_for_business_line
     from Services.tenant_profile import (
@@ -113,6 +114,10 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
         tables_to_drop = ['user_tenant_mapping', 'user_trusted_devices', 'tenants']
         for table in tables_to_drop:
             cursor_tenant.execute(f"DROP TABLE IF EXISTS {table}")
+
+        if empty_business_data:
+            from Services.tenant_db_bootstrap import clear_trial_business_data
+            clear_trial_business_data(conn_tenant)
 
         cursor_tenant.execute("DELETE FROM users")
         try:
