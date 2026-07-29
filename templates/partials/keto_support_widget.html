@@ -1,5 +1,4 @@
-{# Widget Zalo + Trợ lý AI — hiển thị mọi trang đã đăng nhập #}
-{% if assistant_enabled %}
+{# Widget Zalo + Trợ lý AI — luôn hiển thị khi đã đăng nhập #}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/keto-assistant.css') }}">
 
 <div class="keto-support-launcher" id="ketoSupportLauncher">
@@ -11,14 +10,15 @@
     <button type="button" class="keto-ai-fab" id="ketoAiFab"
             title="Trợ lý AI KETO POS" aria-label="Mở trợ lý AI">
         <i class="fas fa-robot"></i>
+        <span class="keto-ai-badge" id="ketoAiBadge">{{ 'Pro' if assistant_premium_active else 'AI' }}</span>
     </button>
 </div>
 
 <div class="keto-assist-panel" id="ketoAssistPanel" role="dialog" aria-label="Trợ lý AI KETO">
     <div class="keto-assist-header">
         <div>
-            <h6><i class="fas fa-headset me-1"></i> Hỗ trợ KETO POS</h6>
-            <small>Trợ lý AI &amp; Zalo {{ support_zalo_display }}</small>
+            <h6><i class="fas fa-headset me-1"></i> Trợ lý KETO POS</h6>
+            <small id="ketoAssistModeLabel">{{ assistant_mode_label | default('Miễn phí (FAQ + hướng dẫn)') }}</small>
         </div>
         <button type="button" class="btn btn-sm btn-light py-0 px-2" id="ketoAssistClose" aria-label="Đóng">
             <i class="fas fa-times"></i>
@@ -41,7 +41,7 @@
     <div id="ketoPaneZalo" class="keto-assist-body" style="display:none;">
         <div class="keto-zalo-tab">
             <div class="zalo-icon-lg"><i class="fas fa-comment-dots"></i></div>
-            <p class="text-muted small mb-1">Hỗ trợ trực tiếp qua Zalo</p>
+            <p class="text-muted small mb-1">Hỗ trợ trực tiếp qua Zalo cá nhân</p>
             <div class="phone">{{ support_zalo_display }}</div>
             <p class="text-muted small mt-2 mb-0">
                 Tư vấn cài đặt, hướng dẫn từ xa (UltraViewer), hóa đơn điện tử và kế toán HKD.
@@ -64,8 +64,11 @@ window.KETO_SUPPORT = {
     zaloUrl: {{ support_zalo_url | tojson }},
     page: {{ (request.endpoint or '') | tojson }},
     regime: {{ (tenant_regime or 'HKD') | tojson }},
-    role: {{ (current_user.role if current_user.is_authenticated else '') | tojson }}
+    role: {{ (current_user.role if current_user.is_authenticated else '') | tojson }},
+    aiMode: {{ (assistant_ai_mode or 'free') | tojson }},
+    premiumActive: {{ assistant_premium_active | default(false) | tojson }},
+    openaiAvailable: {{ openai_available | default(false) | tojson }},
+    modeLabel: {{ (assistant_mode_label or 'Miễn phí (FAQ + hướng dẫn)') | tojson }}
 };
 </script>
 <script src="{{ url_for('static', filename='js/keto-assistant.js') }}"></script>
-{% endif %}

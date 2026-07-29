@@ -10,7 +10,11 @@ from Services.assistant_context import PAGE_CONTEXT, build_context_prompt, rag_s
 from Services.assistant_faq import get_suggestions, search_faq, should_escalate
 from Services.assistant_rag import rag_context_for_prompt, search_rag
 from Services.assistant_store import get_assistant_settings, log_chat
-from Services.support_config import OPENAI_API_KEY, OPENAI_MODEL, SUPPORT_ZALO_PHONE
+from Services.support_config import (
+    SUPPORT_ZALO_PHONE,
+    get_assistant_runtime_config,
+    resolve_openai_model,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +50,13 @@ def _call_openai(
     rag_text: str,
     faq_hint: str | None,
 ) -> str | None:
-    if not OPENAI_API_KEY:
+    from Services.support_config import OPENAI_API_KEY
+
+    rt = get_assistant_runtime_config()
+    if not rt.get('premium_active') or not OPENAI_API_KEY:
+        return None
+    model = resolve_openai_model()
+    if not model:
         return None
     parts = [SYSTEM_PROMPT]
     if context_prompt:
@@ -64,7 +74,7 @@ def _call_openai(
                 'Content-Type': 'application/json',
             },
             json={
-                'model': OPENAI_MODEL,
+                'model': model,
                 'messages': [
                     {'role': 'system', 'content': SYSTEM_PROMPT},
                     {'role': 'user', 'content': '\n'.join(parts[1:])},
@@ -137,8 +147,8 @@ def ask_assistant(
     if cfg.get('assistant_escalation_enabled') == '1' and escalate:
         pass  # force lower confidence path
 
-    # Ưu tiên FAQ khớp cao
-    if faq_match and faq_score >= 3.5 and not OPENAI_API_KEY:
+    # FAQ khớp cao — luôn ưu tiên (miễn phí, nhanh)
+    if faq_match and faq_score >= 3.5:
         text = faq_match.entry['answer']
         if faq_match.entry.get('id') != 'support_zalo':
             text += '\n\nCần hỗ trợ thêm, nhắn Zalo **0908870287** hoặc xem **Hướng Dẫn Sử Dụng**.'
@@ -151,12 +161,13 @@ def ask_assistant(
             'faq_id': faq_match.entry.get('id'),
             'needs_escalation': escalate and confidence < 0.5,
             'help_url': help_url,
+            'tier': get_assistant_runtime_config().get('ai_mode_label', 'Miễn phí'),
         }
         if log_interaction:
             _log_result(msg, result, channel, tenant_id, username, zalo_user_id, page_key, ctx)
         return result
 
-    # OpenAI + RAG + context
+    # OpenAI + RAG + context (chỉ khi Master bật premium + có API key)
     ai_text = _call_openai(
         msg,
         context_prompt=context_prompt,

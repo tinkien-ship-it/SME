@@ -16,7 +16,7 @@ from Services.assistant_store import (
     list_pending_reviews,
     save_assistant_settings,
 )
-from Services.support_config import ASSISTANT_ENABLED, OPENAI_API_KEY, support_context
+from Services.support_config import get_assistant_runtime_config, support_context
 from Services.zalo_oa_service import (
     handle_zalo_message,
     is_zalo_oa_configured,
@@ -53,8 +53,9 @@ def register_assistant_routes(app):
     @app.route('/api/assistant/chat', methods=['POST'])
     @login_required
     def api_assistant_chat():
-        if not ASSISTANT_ENABLED:
-            return jsonify({'success': False, 'error': 'Trợ lý AI đang tắt'}), 503
+        rt = get_assistant_runtime_config()
+        if not rt.get('widget_enabled'):
+            return jsonify({'success': False, 'error': 'Trợ lý AI đang bảo trì'}), 503
 
         payload = request.get_json(silent=True) or {}
         message = (payload.get('message') or '').strip()
@@ -79,6 +80,7 @@ def register_assistant_routes(app):
             'success': True,
             'reply': reply,
             'support': support_context(),
+            'assistant': get_assistant_runtime_config(),
         })
 
     @app.route('/api/assistant/suggestions', methods=['GET'])
@@ -91,8 +93,8 @@ def register_assistant_routes(app):
             'success': True,
             'suggestions': suggestions,
             'support': support_context(),
-            'context': ctx,
-            'openai_configured': bool(OPENAI_API_KEY),
+            'assistant': get_assistant_runtime_config(),
+            'openai_configured': get_assistant_runtime_config().get('openai_configured'),
             'zalo_oa_configured': is_zalo_oa_configured(),
         })
 
@@ -149,7 +151,8 @@ def register_assistant_routes(app):
             'success': True,
             'settings': safe,
             'stats': assistant_stats(),
-            'openai_configured': bool(OPENAI_API_KEY),
+            'assistant': get_assistant_runtime_config(),
+            'openai_configured': get_assistant_runtime_config().get('openai_configured'),
             'webhook_url': request.url_root.rstrip('/') + '/api/zalo/webhook',
         })
 
@@ -159,7 +162,7 @@ def register_assistant_routes(app):
     def api_master_assistant_settings_save():
         data = request.get_json(silent=True) or {}
         saved = save_assistant_settings(data)
-        return jsonify({'success': True, 'settings': saved, 'message': 'Đã lưu cấu hình trợ lý & Zalo OA'})
+        return jsonify({'success': True, 'settings': saved, 'message': 'Đã lưu cấu hình trợ lý AI'})
 
     @app.route('/api/master/assistant/pending', methods=['GET'])
     @login_required

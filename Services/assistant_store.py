@@ -9,6 +9,8 @@ from typing import Any
 from db_utils import BASE_DIR, get_main_db_connection
 
 ASSISTANT_SETTING_KEYS = (
+    'assistant_ai_mode',
+    'assistant_openai_model',
     'zalo_oa_app_id',
     'zalo_oa_secret',
     'zalo_oa_refresh_token',
@@ -93,6 +95,8 @@ def get_assistant_settings() -> dict[str, str]:
     conn = get_main_db_connection()
     data = {k: _get_setting(conn, k, '') for k in ASSISTANT_SETTING_KEYS}
     data['assistant_escalation_enabled'] = data.get('assistant_escalation_enabled') or '1'
+    data['assistant_ai_mode'] = data.get('assistant_ai_mode') or 'free'
+    data['assistant_openai_model'] = data.get('assistant_openai_model') or 'gpt-4o-mini'
     conn.close()
     return data
 

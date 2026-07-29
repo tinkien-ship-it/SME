@@ -3,53 +3,74 @@
                 <div class="col-lg-5">
                     <div class="card master-card">
                         <div class="card-header master-header py-3">
-                            <h5 class="mb-0"><i class="fas fa-robot me-2"></i>Trợ lý AI &amp; Zalo OA</h5>
+                            <h5 class="mb-0"><i class="fas fa-robot me-2"></i>Trợ lý AI</h5>
                         </div>
                         <div class="card-body p-4">
-                            <div class="alert alert-info small">
-                                <strong>5 giai đoạn đã bật:</strong> FAQ + RAG hướng dẫn + ngữ cảnh màn hình +
-                                webhook Zalo OA + học FAQ từ câu hỏi khách.
-                                <br>OpenAI: cấu hình biến <code>OPENAI_API_KEY</code> trong <code>.env</code>.
+                            <div class="alert alert-success small mb-3">
+                                <strong>Miễn phí (mặc định):</strong> FAQ + tài liệu hướng dẫn + gợi ý theo màn hình — không cần OpenAI.
+                                <br><strong>AI Pro (tùy chọn):</strong> thêm OpenAI — cần <code>OPENAI_API_KEY</code> trong <code>.env</code>.
                             </div>
                             <div class="d-flex flex-wrap gap-2 mb-3" id="assistantStatsBadges"></div>
                             <form id="assistantSettingsForm" onsubmit="saveAssistantSettings(event)">
                                 <div class="mb-3">
-                                    <label class="form-label">Zalo OA App ID</label>
-                                    <input type="text" class="form-control" id="zaloOaAppId">
+                                    <label class="form-label fw-semibold">Chế độ trợ lý</label>
+                                    <select class="form-select" id="assistantAiMode">
+                                        <option value="free">Miễn phí — FAQ + RAG + ngữ cảnh màn hình</option>
+                                        <option value="premium">AI Pro — OpenAI (trả phí theo usage)</option>
+                                    </select>
+                                    <div class="form-text" id="assistantModeHint"></div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Zalo OA Secret</label>
-                                    <input type="password" class="form-control" id="zaloOaSecret" placeholder="Để trống nếu không đổi">
-                                    <div class="form-text" id="zaloSecretHint"></div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Zalo OA ID</label>
-                                    <input type="text" class="form-control" id="zaloOaId">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Refresh Token OA</label>
-                                    <input type="password" class="form-control" id="zaloOaRefresh" placeholder="Để trống nếu không đổi">
-                                    <div class="form-text" id="zaloRefreshHint"></div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Webhook verify token</label>
-                                    <input type="text" class="form-control" id="zaloWebhookToken" placeholder="Chuỗi xác minh khi đăng ký webhook">
+                                <div class="mb-3" id="assistantModelWrap">
+                                    <label class="form-label">Mô hình OpenAI (khi bật AI Pro)</label>
+                                    <select class="form-select" id="assistantOpenaiModel">
+                                        <option value="gpt-4o-mini">GPT-4o mini — rẻ, nhanh (khuyến nghị)</option>
+                                        <option value="gpt-4o">GPT-4o — thông minh hơn</option>
+                                        <option value="gpt-4.1-mini">GPT-4.1 mini</option>
+                                        <option value="gpt-4.1">GPT-4.1 — cao cấp</option>
+                                    </select>
                                 </div>
                                 <div class="form-check form-switch mb-3">
                                     <input class="form-check-input" type="checkbox" id="assistantEscalation" checked>
-                                    <label class="form-check-label" for="assistantEscalation">Tự gợi ý chuyển Zalo khi câu hỏi khó / lỗi</label>
+                                    <label class="form-check-label" for="assistantEscalation">Gợi ý chuyển Zalo khi câu hỏi khó / lỗi</label>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Webhook URL (dán vào Zalo Developer)</label>
+                                <button type="submit" class="btn btn-primary w-100 mb-3">
+                                    <i class="fas fa-save me-1"></i>Lưu cấu hình trợ lý
+                                </button>
+                            </form>
+
+                            <details class="small border rounded p-3 bg-light">
+                                <summary class="fw-semibold cursor-pointer">Zalo OA (tùy chọn — không bắt buộc)</summary>
+                                <p class="text-muted mt-2 mb-2">Khuyến nghị dùng Zalo cá nhân <strong>0908870287</strong> qua nút chat. Phần OA chỉ khi cần bot trên Official Account.</p>
+                                <div class="mb-2">
+                                    <label class="form-label">Zalo OA App ID</label>
+                                    <input type="text" class="form-control form-control-sm" id="zaloOaAppId">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Zalo OA Secret</label>
+                                    <input type="password" class="form-control form-control-sm" id="zaloOaSecret" placeholder="Để trống nếu không đổi">
+                                    <div class="form-text" id="zaloSecretHint"></div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Zalo OA ID</label>
+                                    <input type="text" class="form-control form-control-sm" id="zaloOaId">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Refresh Token OA</label>
+                                    <input type="password" class="form-control form-control-sm" id="zaloOaRefresh" placeholder="Để trống nếu không đổi">
+                                    <div class="form-text" id="zaloRefreshHint"></div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Webhook verify token</label>
+                                    <input type="text" class="form-control form-control-sm" id="zaloWebhookToken">
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label">Webhook URL</label>
                                     <div class="input-group input-group-sm">
                                         <input type="text" class="form-control font-monospace" id="zaloWebhookUrl" readonly>
                                         <button type="button" class="btn btn-outline-secondary" onclick="copyWebhookUrl()">Copy</button>
                                     </div>
                                 </div>
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-save me-1"></i>Lưu cấu hình
-                                </button>
-                            </form>
+                            </details>
                         </div>
                     </div>
                 </div>

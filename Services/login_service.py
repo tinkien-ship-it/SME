@@ -216,13 +216,16 @@ def oauth_redirect_uri(endpoint: str) -> str:
     """
     from flask import has_request_context, request, url_for
 
-    if has_request_context() and getattr(request, "url_root", None):
-        root = request.url_root.rstrip("/")
-        path = url_for(endpoint, _external=False)
-        if path.startswith("http://") or path.startswith("https://"):
-            return path
-        return f"{root}{path}"
-    return url_for(endpoint, _external=True)
+    try:
+        if has_request_context() and getattr(request, "url_root", None):
+            root = request.url_root.rstrip("/")
+            path = url_for(endpoint, _external=False)
+            if path.startswith("http://") or path.startswith("https://"):
+                return path
+            return f"{root}{path}"
+        return url_for(endpoint, _external=True)
+    except Exception:
+        return ""
 
 
 def _localhost_mirror_root(url_root: str) -> str | None:
@@ -281,7 +284,12 @@ def google_oauth_setup_hints(base_url: str | None = None) -> dict:
         if mirror:
             _add_origin(mirror)
         for ep in _OAUTH_CALLBACK_ENDPOINTS:
-            uri = oauth_redirect_uri(ep)
+            try:
+                uri = oauth_redirect_uri(ep)
+            except Exception:
+                continue
+            if not uri:
+                continue
             current_redirects.append(uri)
             _add_redirect(uri)
             if mirror:

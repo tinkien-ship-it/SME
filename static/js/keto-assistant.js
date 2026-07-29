@@ -21,6 +21,10 @@
     const page = cfg.page || '';
     let busy = false;
 
+    if (cfg.premiumActive && launcher) {
+        launcher.classList.add('premium');
+    }
+
     function escHtml(s) {
         return String(s || '')
             .replace(/&/g, '&amp;')
@@ -129,9 +133,17 @@
         panel.classList.add('open');
         switchTab(tab || 'ai');
         if (messagesEl.children.length === 0) {
-            let greet = 'Xin chào! Tôi là trợ lý KETO POS — hướng dẫn bán hàng, kho, kế toán HKD và hóa đơn điện tử.';
+            let greet = 'Xin chào! Tôi là **Trợ lý KETO POS** — hướng dẫn bán hàng, kho, kế toán HKD và hóa đơn điện tử.';
             if (cfg.regime) greet += '\n\nLoại hình: **' + cfg.regime + '**.';
-            greet += '\n\nHãy chọn câu hỏi gợi ý hoặc gõ câu hỏi của bạn.';
+            if (cfg.premiumActive) {
+                greet += '\n\nChế độ **AI Pro** (OpenAI) — trả lời linh hoạt hơn.';
+            } else {
+                greet += '\n\nChế độ **miễn phí**: FAQ + tài liệu hướng dẫn + gợi ý theo màn hình.';
+                if (cfg.openaiAvailable) {
+                    greet += '\n\nQuản trị viên có thể bật **AI Pro** trong Master Settings → Trợ lý AI.';
+                }
+            }
+            greet += '\n\nChọn câu hỏi gợi ý hoặc gõ câu hỏi của bạn.';
             appendMsg('bot', greet);
             loadSuggestions();
         }

@@ -120,7 +120,8 @@ def log_login_attempt(user_id, username, tenant_id, status='Thành công'):
     loc = get_location(ip)
     ua = request.headers.get('User-Agent')
     try:
-        with sqlite3.connect('database.db') as conn:
+        from db_utils import MAIN_DB_PATH
+        with sqlite3.connect(MAIN_DB_PATH) as conn:
             conn.execute("""
                 INSERT INTO login_history (tenant_id, user_id, username, ip_address, location, device_info, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -191,7 +192,22 @@ def register_settings_routes(app):
 
     def _login_page_context():
         base = get_public_base_url(request.url_root)
-        hints = google_oauth_setup_hints(base)
+        try:
+            hints = google_oauth_setup_hints(base)
+        except Exception as exc:
+            current_app.logger.exception("google_oauth_setup_hints: %s", exc)
+            hints = {
+                "javascript_origins": [],
+                "redirect_uris": [],
+                "current_redirect_uris": [],
+                "redirect_ready": google_oauth_redirect_ready(),
+                "is_localhost": False,
+            }
+        try:
+            subscription_plans = get_subscription_plans()
+        except Exception as exc:
+            current_app.logger.exception("get_subscription_plans: %s", exc)
+            subscription_plans = []
         trial_google = None
         if request.args.get('trial_google') == '1':
             trial_google = session.pop('trial_google', None)
@@ -203,7 +219,7 @@ def register_settings_routes(app):
             google_oauth_hints=hints,
             google_redirect_ready=google_oauth_redirect_ready(),
             trial_google_pending=trial_google,
-            subscription_plans=get_subscription_plans(),
+            subscription_plans=subscription_plans,
         )
 
     def _render_login_page():
@@ -278,7 +294,16 @@ def register_settings_routes(app):
                 stored_password = stored_password.decode('utf-8')
 
             # ==================== 3. Kiểm tra mật khẩu ====================
-            if not bcrypt.check_password_hash(stored_password, password):
+            if not stored_password:
+                flash("Tài khoản chưa có mật khẩu. Liên hệ quản trị viên.", "danger")
+                return _render_login_page()
+            try:
+                password_ok = bcrypt.check_password_hash(stored_password, password)
+            except (TypeError, ValueError) as exc:
+                current_app.logger.error("Lỗi bcrypt user %s: %s", username, exc)
+                flash("Mật khẩu tài khoản trên hệ thống không hợp lệ. Liên hệ quản trị viên.", "danger")
+                return _render_login_page()
+            if not password_ok:
                 log_login_attempt(user.get('id'), username, current_tenant_id, status='Thất bại (Sai MK)')
                 flash("Mật khẩu không chính xác!", "danger")
                 return _render_login_page()

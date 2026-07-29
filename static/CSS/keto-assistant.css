@@ -39,6 +39,7 @@
 }
 
 .keto-support-launcher .keto-ai-fab {
+    position: relative;
     width: 56px;
     height: 56px;
     border-radius: 50%;
@@ -56,6 +57,25 @@
 .keto-support-launcher .keto-ai-fab:hover {
     transform: scale(1.05);
     color: #fff;
+}
+
+.keto-ai-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #22c55e;
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 999px;
+    border: 2px solid #fff;
+    pointer-events: none;
+}
+
+.keto-ai-fab.premium .keto-ai-badge {
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
 }
 
 .keto-assist-panel {

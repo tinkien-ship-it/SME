@@ -902,6 +902,9 @@ async function loadAssistantSettings() {
         const json = await res.json();
         if (!json.success) return;
         const s = json.settings || {};
+        const rt = json.assistant || {};
+        document.getElementById('assistantAiMode').value = s.assistant_ai_mode || 'free';
+        document.getElementById('assistantOpenaiModel').value = s.assistant_openai_model || 'gpt-4o-mini';
         document.getElementById('zaloOaAppId').value = s.zalo_oa_app_id || '';
         document.getElementById('zaloOaId').value = s.zalo_oa_id || '';
         document.getElementById('zaloWebhookToken').value = s.zalo_webhook_verify_token || '';
@@ -911,19 +914,41 @@ async function loadAssistantSettings() {
             ? '<span class="text-success"><i class="fas fa-check"></i> Secret đã lưu</span>' : '';
         document.getElementById('zaloRefreshHint').innerHTML = s.has_zalo_oa_refresh_token
             ? '<span class="text-success"><i class="fas fa-check"></i> Refresh token đã lưu</span>' : '';
+        const modelWrap = document.getElementById('assistantModelWrap');
+        const modeHint = document.getElementById('assistantModeHint');
+        const isPremium = (s.assistant_ai_mode || 'free') === 'premium';
+        if (modelWrap) modelWrap.style.display = isPremium ? '' : 'none';
+        if (modeHint) {
+            if (isPremium && !json.openai_configured) {
+                modeHint.innerHTML = '<span class="text-danger">Chưa có OPENAI_API_KEY — thêm vào .env rồi restart server.</span>';
+            } else if (isPremium) {
+                modeHint.innerHTML = '<span class="text-success">AI Pro đang bật — model: ' + escAssist(s.assistant_openai_model || 'gpt-4o-mini') + '</span>';
+            } else {
+                modeHint.innerHTML = '<span class="text-muted">Đang dùng FAQ + hướng dẫn — không tốn phí OpenAI.</span>';
+            }
+        }
+        document.getElementById('assistantAiMode')?.addEventListener('change', function () {
+            const prem = this.value === 'premium';
+            if (modelWrap) modelWrap.style.display = prem ? '' : 'none';
+        });
         const st = json.stats || {};
+        const modeBadge = rt.premium_active
+            ? '<span class="badge bg-warning text-dark">AI Pro</span>'
+            : '<span class="badge bg-success">Miễn phí</span>';
         document.getElementById('assistantStatsBadges').innerHTML = `
+            ${modeBadge}
             <span class="badge bg-primary">${st.total_chats || 0} hội thoại</span>
             <span class="badge bg-warning text-dark">${st.pending_review || 0} chờ duyệt</span>
             <span class="badge bg-success">${st.dynamic_faq || 0} FAQ động</span>
-            <span class="badge bg-info text-dark">${st.zalo_users || 0} user Zalo</span>
-            <span class="badge ${json.openai_configured ? 'bg-success' : 'bg-secondary'}">${json.openai_configured ? 'OpenAI OK' : 'Chưa có OpenAI'}</span>`;
+            <span class="badge ${json.openai_configured ? 'bg-info text-dark' : 'bg-secondary'}">${json.openai_configured ? 'OpenAI sẵn sàng' : 'Chưa có OpenAI key'}</span>`;
     } catch (e) { /* ignore */ }
 }
 
 async function saveAssistantSettings(e) {
     e.preventDefault();
     const payload = {
+        assistant_ai_mode: document.getElementById('assistantAiMode').value,
+        assistant_openai_model: document.getElementById('assistantOpenaiModel').value,
         zalo_oa_app_id: document.getElementById('zaloOaAppId').value.trim(),
         zalo_oa_secret: document.getElementById('zaloOaSecret').value.trim(),
         zalo_oa_id: document.getElementById('zaloOaId').value.trim(),
