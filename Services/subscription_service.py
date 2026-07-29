@@ -15,8 +15,145 @@ from db_utils import BASE_DIR, MAIN_DB_PATH, get_main_db_connection
 
 logger = logging.getLogger(__name__)
 
-TRIAL_MONTHS = 6
+TRIAL_MONTHS = 6  # mặc định khi chưa cấu hình trong Master Settings
+TRIAL_MONTHS_SETTING_KEY = 'trial_months'
+TRIAL_MONTHS_MIN = 1
+TRIAL_MONTHS_MAX = 36
 SUPPORT_NOTIFY_EMAIL = os.getenv('SUPPORT_NOTIFY_EMAIL', 'tinkien@gmail.com')
+
+
+def get_trial_months(conn=None):
+    """Số tháng dùng thử mặc định (Master Settings), fallback TRIAL_MONTHS."""
+    own = conn is None
+    if own:
+        conn = get_main_db_connection()
+    try:
+        row = conn.execute(
+            "SELECT value FROM settings WHERE key = ?",
+            (TRIAL_MONTHS_SETTING_KEY,),
+        ).fetchone()
+        if not row:
+            return TRIAL_MONTHS
+        val = row['value'] if isinstance(row, sqlite3.Row) else row[0]
+        months = int(str(val).strip() or TRIAL_MONTHS)
+        return max(TRIAL_MONTHS_MIN, min(TRIAL_MONTHS_MAX, months))
+    except (TypeError, ValueError, sqlite3.Error):
+        return TRIAL_MONTHS
+    finally:
+        if own:
+            conn.close()
+
+
+def set_trial_months(months, conn=None):
+    """Lưu số tháng dùng thử mặc định vào main DB settings."""
+    try:
+        months = int(months)
+    except (TypeError, ValueError):
+        return {'success': False, 'error': 'Số tháng không hợp lệ'}
+    if months < TRIAL_MONTHS_MIN or months > TRIAL_MONTHS_MAX:
+        return {
+            'success': False,
+            'error': f'Số tháng phải từ {TRIAL_MONTHS_MIN} đến {TRIAL_MONTHS_MAX}',
+        }
+
+    own = conn is None
+    if own:
+        conn = get_main_db_connection()
+    try:
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            (TRIAL_MONTHS_SETTING_KEY, str(months)),
+        )
+        if own:
+            conn.commit()
+        return {'success': True, 'trial_months': months}
+    except sqlite3.Error as exc:
+        return {'success': False, 'error': str(exc)}
+    finally:
+        if own:
+            conn.close()
+
+
+def adjust_tenant_expiry_months(tenant_id, delta_months):
+    """
+    Tăng/giảm ngày hết hạn tenant theo số tháng (delta dương = thêm, âm = bớt).
+    Nếu đã quá hạn và delta > 0: tính từ hôm nay.
+    """
+    try:
+        delta = int(delta_months)
+    except (TypeError, ValueError):
+        return {'success': False, 'error': 'Số tháng điều chỉnh không hợp lệ'}
+    if delta == 0:
+        return {'success': False, 'error': 'Số tháng điều chỉnh phải khác 0'}
+    if abs(delta) > TRIAL_MONTHS_MAX:
+        return {'success': False, 'error': f'Chỉ điều chỉnh tối đa ±{TRIAL_MONTHS_MAX} tháng mỗi lần'}
+
+    tenant_id = (tenant_id or '').strip()
+    if not tenant_id:
+        return {'success': False, 'error': 'Thiếu tenant_id'}
+
+    conn = get_main_db_connection()
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            "SELECT tenant_id, business_name, expiry_date, settings, is_active FROM tenants WHERE tenant_id = ?",
+            (tenant_id,),
+        ).fetchone()
+        if not row:
+            return {'success': False, 'error': 'Không tìm thấy tenant'}
+
+        today = datetime.now().date()
+        old_expiry = None
+        if row['expiry_date']:
+            try:
+                old_expiry = datetime.strptime(str(row['expiry_date'])[:10], '%Y-%m-%d').date()
+            except ValueError:
+                old_expiry = None
+
+        if delta > 0:
+            base = old_expiry if (old_expiry and old_expiry >= today) else today
+        else:
+            base = old_expiry or today
+
+        new_expiry = base + relativedelta(months=delta)
+        new_expiry_str = new_expiry.strftime('%Y-%m-%d')
+
+        settings = parse_tenant_settings(row['settings'])
+        settings['trial_months'] = get_trial_months(conn)
+        settings['last_trial_adjust_months'] = delta
+        settings['last_trial_adjust_at'] = datetime.now().isoformat(timespec='seconds')
+
+        conn.execute(
+            """
+            UPDATE tenants
+            SET expiry_date = ?, settings = ?, is_active = CASE WHEN ? >= date('now') THEN 1 ELSE is_active END
+            WHERE tenant_id = ?
+            """,
+            (
+                new_expiry_str,
+                json.dumps(settings, ensure_ascii=False),
+                new_expiry_str,
+                tenant_id,
+            ),
+        )
+        conn.commit()
+        return {
+            'success': True,
+            'tenant_id': tenant_id,
+            'business_name': row['business_name'],
+            'old_expiry_date': old_expiry.strftime('%Y-%m-%d') if old_expiry else None,
+            'expiry_date': new_expiry_str,
+            'delta_months': delta,
+            'message': (
+                f"Đã {'tăng' if delta > 0 else 'giảm'} {abs(delta)} tháng — "
+                f"hết hạn mới: {new_expiry.strftime('%d/%m/%Y')}"
+            ),
+        }
+    except Exception as exc:
+        logger.exception('adjust_tenant_expiry_months: %s', exc)
+        return {'success': False, 'error': str(exc)}
+    finally:
+        conn.close()
 
 # Giá trị mặc định lúc seed lần đầu — sau đó đọc/ghi qua bảng products (main DB).
 DEFAULT_SUBSCRIPTION_PLANS = {
@@ -674,14 +811,16 @@ def try_issue_renewal_invoice(sale_id):
 def send_trial_account_emails(
     tenant_id, phone, business_name, customer_email, customer_password,
     support_username, support_password, business_line,
+    trial_months=None,
 ):
     from Services.email_service import send_email
 
     login_url = f"/{tenant_id}/login"
     bl_label = BUSINESS_LINE_OPTIONS.get(business_line, {}).get('label', business_line)
+    months = trial_months if trial_months is not None else get_trial_months()
 
     if customer_email:
-        subject = f"[KETO] Tài khoản dùng thử {TRIAL_MONTHS} tháng đã sẵn sàng"
+        subject = f"[KETO] Tài khoản dùng thử {months} tháng đã sẵn sàng"
         body = f"""Kính gửi {business_name},
 
 Tài khoản dùng thử KETO ALL IN ONE của bạn đã được kích hoạt.
@@ -690,7 +829,7 @@ Tài khoản dùng thử KETO ALL IN ONE của bạn đã được kích hoạt.
 Tên đăng nhập: {phone}
 Mật khẩu: {customer_password}
 Ngành: {bl_label}
-Thời hạn dùng thử: {TRIAL_MONTHS} tháng
+Thời hạn dùng thử: {months} tháng
 
 Vui lòng đăng nhập và đổi mật khẩu ngay sau lần đăng nhập đầu tiên.
 
@@ -758,8 +897,9 @@ def provision_tenant(
     support_username = support_username or f"{tenant_id}admin"
     support_password = support_password or generate_password()
 
+    trial_months = get_trial_months()
     if not expiry_date:
-        expiry_date = (datetime.now() + relativedelta(months=TRIAL_MONTHS)).strftime('%Y-%m-%d')
+        expiry_date = (datetime.now() + relativedelta(months=trial_months)).strftime('%Y-%m-%d')
 
     settings = build_tenant_settings(
         business_line=business_line,
@@ -770,7 +910,7 @@ def provision_tenant(
         subscription_plan=subscription_plan or 'trial',
         onboarding_completed=False,
         extra={
-            'trial_months': TRIAL_MONTHS,
+            'trial_months': trial_months,
             **(extra_settings or {}),
         },
     )
@@ -813,6 +953,7 @@ def provision_tenant(
             support_username,
             support_password,
             ctx.get('business_line', business_line),
+            trial_months=trial_months,
         )
 
     return {

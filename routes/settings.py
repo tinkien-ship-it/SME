@@ -1941,6 +1941,73 @@ Trân trọng,
             if conn: conn.close()
             return jsonify({"success": False, "error": str(e)}), 500
 
+    @app.route('/api/master/trial_settings', methods=['GET'])
+    @login_required
+    @master_required
+    def api_get_trial_settings():
+        from Services.subscription_service import (
+            TRIAL_MONTHS_MAX,
+            TRIAL_MONTHS_MIN,
+            get_trial_months,
+        )
+        return jsonify({
+            'success': True,
+            'trial_months': get_trial_months(),
+            'min': TRIAL_MONTHS_MIN,
+            'max': TRIAL_MONTHS_MAX,
+        })
+
+    @app.route('/api/master/trial_settings', methods=['POST'])
+    @login_required
+    @master_required
+    def api_save_trial_settings():
+        from Services.subscription_service import set_trial_months
+        from Services.audit_log import write_audit
+
+        data = request.get_json() or {}
+        result = set_trial_months(data.get('trial_months'))
+        if not result.get('success'):
+            return jsonify(result), 400
+        write_audit(
+            'update', 'trial_settings',
+            f"Đặt thời hạn dùng thử mặc định: {result['trial_months']} tháng",
+            entity_type='settings', entity_id='trial_months',
+            new_data={'trial_months': result['trial_months']},
+            use_main=True,
+        )
+        return jsonify({
+            'success': True,
+            'trial_months': result['trial_months'],
+            'message': f"Đã lưu thời hạn dùng thử mặc định: {result['trial_months']} tháng",
+        })
+
+    @app.route('/api/master/tenant/<tenant_id>/adjust_trial', methods=['POST'])
+    @login_required
+    @master_required
+    def api_adjust_tenant_trial(tenant_id):
+        from Services.subscription_service import adjust_tenant_expiry_months
+        from Services.audit_log import write_audit
+
+        data = request.get_json() or {}
+        delta = data.get('months', data.get('delta_months'))
+        result = adjust_tenant_expiry_months(tenant_id, delta)
+        if not result.get('success'):
+            return jsonify(result), 400
+        write_audit(
+            'update', 'tenant',
+            result.get('message') or f"Điều chỉnh dùng thử {tenant_id}",
+            entity_type='tenant', entity_id=tenant_id,
+            entity_label=result.get('business_name'),
+            old_data={'expiry_date': result.get('old_expiry_date')},
+            new_data={
+                'expiry_date': result.get('expiry_date'),
+                'delta_months': result.get('delta_months'),
+            },
+            tenant_id=tenant_id,
+            use_main=True,
+        )
+        return jsonify(result)
+
     @app.route('/api/master/enter_tenant/<tenant_id>', methods=['POST'])
     @login_required
     @master_required

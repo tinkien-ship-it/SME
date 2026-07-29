@@ -75,6 +75,37 @@
 
     <div class="tab-content" id="masterTabContent">
         <div class="tab-pane fade show active" id="tenant-content" role="tabpanel">
+            <div class="card master-card mb-3">
+                <div class="card-body py-3">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div>
+                            <div class="fw-semibold text-dark">
+                                <i class="fas fa-hourglass-half me-2 text-primary"></i>Thời hạn dùng thử mặc định
+                            </div>
+                            <div class="small text-muted mb-0">
+                                Áp dụng khi khách tự đăng ký trial hoặc khi tạo tenant không chọn ngày hết hạn.
+                                Trên từng dòng tenant có nút <strong>+1 / −1 tháng</strong> để gia hạn hoặc rút ngắn.
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-secondary" onclick="changeTrialMonths(-1)" title="Giảm 1 tháng">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <div class="input-group" style="width: 140px;">
+                                <input type="number" class="form-control text-center fw-bold" id="trialMonthsInput"
+                                       min="1" max="36" value="6" onchange="clampTrialMonthsInput()">
+                                <span class="input-group-text">tháng</span>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary" onclick="changeTrialMonths(1)" title="Tăng 1 tháng">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="saveTrialSettings()">
+                                <i class="fas fa-save me-1"></i>Lưu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="card master-card">
                 <div class="card-header master-header py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-list me-2"></i>Danh sách Tenant</h5>
@@ -389,6 +420,103 @@ function formatDateVN(dateStr) {
 }
 
 /** --- 2. QUẢN LÝ TENANTS --- **/
+let trialMonthsMin = 1;
+let trialMonthsMax = 36;
+
+function clampTrialMonthsInput() {
+    const el = document.getElementById('trialMonthsInput');
+    if (!el) return;
+    let v = parseInt(el.value, 10);
+    if (Number.isNaN(v)) v = 6;
+    v = Math.max(trialMonthsMin, Math.min(trialMonthsMax, v));
+    el.value = v;
+}
+
+function changeTrialMonths(delta) {
+    const el = document.getElementById('trialMonthsInput');
+    if (!el) return;
+    let v = parseInt(el.value, 10);
+    if (Number.isNaN(v)) v = 6;
+    el.value = Math.max(trialMonthsMin, Math.min(trialMonthsMax, v + delta));
+}
+
+async function loadTrialSettings() {
+    try {
+        const res = await fetch('/api/master/trial_settings');
+        const json = await res.json();
+        if (!json.success) return;
+        trialMonthsMin = json.min || 1;
+        trialMonthsMax = json.max || 36;
+        const el = document.getElementById('trialMonthsInput');
+        if (el) {
+            el.min = trialMonthsMin;
+            el.max = trialMonthsMax;
+            el.value = json.trial_months || 6;
+        }
+    } catch (e) { /* ignore */ }
+}
+
+async function saveTrialSettings() {
+    clampTrialMonthsInput();
+    const months = parseInt(document.getElementById('trialMonthsInput').value, 10);
+    try {
+        const res = await fetch('/api/master/trial_settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trial_months: months }),
+        });
+        const json = await res.json();
+        if (json.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã lưu',
+                text: json.message || `Dùng thử mặc định: ${json.trial_months} tháng`,
+                timer: 1800,
+                showConfirmButton: false,
+            });
+        } else {
+            Swal.fire('Lỗi', json.error || 'Không lưu được', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không kết nối server', 'error');
+    }
+}
+
+async function adjustTenantTrial(tenantId, months) {
+    const label = months > 0 ? `tăng ${months} tháng` : `giảm ${Math.abs(months)} tháng`;
+    const confirm = await Swal.fire({
+        title: 'Điều chỉnh dùng thử?',
+        text: `${label} cho tenant ${tenantId}`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Đồng ý',
+        cancelButtonText: 'Hủy',
+    });
+    if (!confirm.isConfirmed) return;
+    try {
+        const res = await fetch(`/api/master/tenant/${encodeURIComponent(tenantId)}/adjust_trial`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ months }),
+        });
+        const json = await res.json();
+        if (json.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã cập nhật',
+                text: json.message || '',
+                timer: 1800,
+                showConfirmButton: false,
+            });
+            loadTenants();
+        } else {
+            Swal.fire('Lỗi', json.error || 'Không cập nhật được', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không kết nối server', 'error');
+    }
+}
+
 async function loadTenants() {
     try {
         const response = await fetch('/api/master/tenants');
@@ -436,7 +564,15 @@ async function loadTenants() {
                             ${t.email ? '📧 ' + t.email : ''}
                         </div>
                     </td>
-                    <td>${formatDateVN(t.expiry_date)}</td>
+                    <td>
+                        <div class="fw-semibold">${formatDateVN(t.expiry_date)}</div>
+                        <div class="btn-group btn-group-sm mt-1" role="group">
+                            <button type="button" class="btn btn-outline-danger py-0 px-2"
+                                    onclick="adjustTenantTrial('${t.tenant_id}', -1)" title="Giảm 1 tháng dùng thử">−1</button>
+                            <button type="button" class="btn btn-outline-success py-0 px-2"
+                                    onclick="adjustTenantTrial('${t.tenant_id}', 1)" title="Tăng 1 tháng dùng thử">+1</button>
+                        </div>
+                    </td>
                     <td>${statusBadge}</td>
                     <td class="text-center">
                         <button onclick="toggle2FA('${t.tenant_id}', ${is2FAOn})" 
@@ -1229,6 +1365,7 @@ async function saveTaxRate(e) {
 /** --- KHỞI TẠO --- **/
 document.addEventListener('DOMContentLoaded', () => {
     loadTenants();
+    loadTrialSettings();
     loadMain2FAStatus();
     initPickers();
     KetoDatePicker.initMonthToToday('auditFilterStart', 'auditFilterEnd');
