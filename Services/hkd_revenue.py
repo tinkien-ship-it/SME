@@ -30,6 +30,9 @@ def _aggregate_revenue_rows(cursor, start_date, end_date):
     menu_join = 'LEFT JOIN menu m ON m.id = si.menu_id' if _table_has_column(cursor, 'sale_items', 'menu_id') else ''
     menu_type_col = 'COALESCE(m.product_type, \'\')' if _table_has_column(cursor, 'sale_items', 'menu_id') else "''"
     business_line_col = 'COALESCE(s.business_line, \'\')' if _table_has_column(cursor, 'sale', 'business_line') else "''"
+    line_total_col = 'si.line_total' if _table_has_column(cursor, 'sale_items', 'line_total') else 'NULL'
+    discount_col = 'COALESCE(si.discount_pct, 0)' if _table_has_column(cursor, 'sale_items', 'discount_pct') else '0'
+    tax_col = 'COALESCE(si.tax_pct, 0)' if _table_has_column(cursor, 'sale_items', 'tax_pct') else '0'
 
     sql = f"""
         SELECT
@@ -40,9 +43,9 @@ def _aggregate_revenue_rows(cursor, start_date, end_date):
             COALESCE(s.invoice_number, '') AS invoice_number,
             si.quantity,
             si.price,
-            COALESCE(si.discount_pct, 0) AS discount_pct,
-            COALESCE(si.tax_pct, 0) AS tax_pct,
-            si.line_total,
+            {discount_col} AS discount_pct,
+            {tax_col} AS tax_pct,
+            {line_total_col} AS line_total,
             {item_sector_col} AS item_sector,
             p.hkd_sector_code AS product_sector,
             p.product_type AS product_type,

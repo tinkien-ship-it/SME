@@ -89,6 +89,13 @@
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold py-3" id="fb-tab" data-bs-toggle="tab"
+                                    data-bs-target="#fb" type="button" role="tab">
+                                <i class="fas fa-utensils me-2"></i>
+                                Dịch Vụ Ẩm Thực (F&amp;B)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold py-3" id="phongtro-tab" data-bs-toggle="tab"
                                     data-bs-target="#phongtro" type="button" role="tab">
                                 <i class="fas fa-bed me-2"></i>
@@ -174,14 +181,11 @@
                                 Sau khi lập hóa đơn thay thế, hệ thống ghi nhận đơn <strong>“Đã hủy”</strong> (trả hết) hoặc <strong>“Hoàn thành”</strong> (trả một phần) và tự cập nhật tồn kho + chứng từ liên quan.
                             </p>
 
-                            <h5 class="text-primary fw-bold mb-3 mt-4"><i class="fas fa-utensils me-2"></i>F&amp;B — Nhà hàng, quán ăn, cà phê, trà sữa</h5>
-                            <ul class="step-list mb-0">
-                                <li>Vào menu <strong>F&amp;B</strong> (dành cho nhà hàng, quán ăn, quán cà phê, trà sữa / dịch vụ ăn uống).</li>
-                                <li>Nhập <strong>nguyên liệu</strong> vào kho trước khi bán.</li>
-                                <li>Tab <strong>Thực đơn &amp; Định mức NVL</strong>: thêm món (<strong>Món chế biến</strong> hoặc <strong>Hàng bán sẵn</strong>) → thiết lập <strong>Định mức NVL</strong> cho từng món.</li>
-                                <li>Phục vụ theo bàn: gọi món → <strong>Thanh toán</strong>. Món đã có định mức sẽ trừ kho nguyên liệu ngay khi thanh toán.</li>
-                                <li>Món chế biến chưa có định mức: tab <strong>Kiểm kê NVL cuối ngày</strong> → nhập tồn thực → <strong>Chốt cuối ngày</strong> (một phiếu xuất kho gom nguyên liệu đã dùng).</li>
-                            </ul>
+                            <p class="mt-4 mb-0">
+                                <i class="fas fa-utensils text-primary me-1"></i>
+                                Nhà hàng, quán ăn, cà phê, trà sữa: xem tab
+                                <strong>Dịch Vụ Ẩm Thực (F&amp;B)</strong> ở trên.
+                            </p>
                         </div>
 
                         <!-- ==================== TAB: PHÂN HỆ KẾ TOÁN ==================== -->
@@ -249,6 +253,99 @@
                                 <li><strong>Điều chỉnh thông tin khoản vay:</strong> Nút thứ ba</li>
                             </ul>
 
+                        </div>
+
+                        <!-- ==================== TAB: DỊCH VỤ ẨM THỰC (F&B) ==================== -->
+                        <div class="tab-pane fade p-4 p-md-5" id="fb" role="tabpanel">
+                            <h4 class="text-primary fw-bold mb-2 border-bottom pb-2">
+                                <i class="fas fa-utensils me-2"></i> DỊCH VỤ ẨM THỰC, ĂN UỐNG (F&amp;B)
+                            </h4>
+                            <p class="text-muted mb-4">
+                                Dùng cho <strong>Nhà Hàng, Quán Ăn, Quán Cà Phê, Trà Sữa</strong> và các hình thức dịch vụ ăn uống tương tự.
+                            </p>
+
+                            <h5 class="text-primary fw-bold mb-3">1. Tạo danh sách bàn</h5>
+                            <ul class="step-list mb-4">
+                                <li>Nhấn nút <strong>Nhập Khu Vực &amp; Số Bàn</strong> → <strong>Tải Mẫu</strong>.</li>
+                                <li>Mở file Excel vừa tải, điền <strong>khu vực</strong> và <strong>số bàn</strong> tương ứng ở mỗi khu vực → lưu lại.</li>
+                                <li>Nhấn <strong>Nhập file Excel</strong> → <strong>Xác nhận thêm bàn</strong>. Hệ thống tạo sơ đồ khu vực và danh sách bàn.</li>
+                                <li>Hoặc tạo thủ công trên giao diện <strong>Cấu Hình Sơ Đồ Quán</strong> (các ô có sẵn trên màn hình).</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3">2. Tạo menu (thực đơn)</h5>
+                            <ul class="step-list mb-3">
+                                <li><strong>Nhập Menu Excel:</strong> nhấn <strong>Nhập menu Excel</strong> → <strong>Tải Menu</strong> → điền món ăn / thức uống theo hướng dẫn → lưu file.</li>
+                                <li>Trên giao diện <strong>Nhập Menu Bằng File Excel</strong>, nhấn <strong>Nhập Menu</strong> → chọn file Excel vừa tạo.</li>
+                                <li>Vào <strong>Quản Lý Menu &amp; Định Mức</strong> → chọn tên món → nhấn <strong>Sửa</strong> để thêm hình cho từng món.</li>
+                                <li><strong>Tạo thủ công:</strong> nhấn <strong>Thêm Món Thủ Công</strong> → nhập thông tin gợi ý trong bảng, chọn hình ảnh món → <strong>Lưu Thực Đơn</strong>.</li>
+                            </ul>
+                            <p class="ps-3 mb-4">
+                                <span class="badge bg-info text-dark p-2">Lưu ý:</span>
+                                <strong>Mã món do hệ thống tự tạo</strong> — không cần nhập mã món.
+                            </p>
+
+                            <h5 class="text-primary fw-bold mb-3">3. Khi khách chọn được bàn</h5>
+                            <ul class="step-list mb-4">
+                                <li>Nhấn vào <strong>số bàn</strong> → chọn món khách gọi → xong, chờ tính tiền.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3">4. Theo dõi phục vụ</h5>
+                            <ul class="step-list mb-4">
+                                <li>Sau khi chọn món, hệ thống hiển thị danh sách món đã gọi để Quản lý kiểm soát.</li>
+                                <li>Nhân viên Bếp và nhân viên phục vụ biết món nào cần làm trước để phục vụ nhanh hơn.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3">5. Thiết lập định mức món ăn</h5>
+                            <ul class="step-list mb-3">
+                                <li>Vào <strong>Quản Lý Menu &amp; Định Mức</strong> → chọn món → nhấn <strong>Định Mức</strong>.</li>
+                                <li>Chọn nguyên liệu và số lượng dùng cho 1 phần món (ví dụ: 1 đĩa bò nướng tảng gồm thịt bò, xà lách, cà chua, muối, đường, bột ngọt…).</li>
+                                <li><strong>Không bắt buộc:</strong> nếu chưa muốn tạo định mức vẫn bán bình thường.</li>
+                                <li>Phương án nhanh: cuối ngày vào <strong>Kiểm Kê NVL</strong> → nhập số nguyên vật liệu còn lại → hệ thống tự trừ tồn kho phần đã dùng trong ngày → nhấn <strong>Chốt doanh thu</strong>.</li>
+                            </ul>
+                            <p class="ps-3 mb-4">
+                                <span class="badge bg-warning text-dark p-2">Lưu ý:</span>
+                                Nguyên vật liệu <strong>không nhập giá bán</strong> — hệ thống tính chi phí theo giá vốn khi có định mức hoặc khi kiểm kê trừ tồn cuối ngày.
+                            </p>
+
+                            <h5 class="text-primary fw-bold mb-3">6. Lập phiếu nhập kho (NVL &amp; hàng dùng ngay)</h5>
+                            <ul class="step-list mb-3">
+                                <li>Vào <strong>Hóa Đơn Mua Hàng</strong> → nhấn <strong>Lập Phiếu Nhập</strong>. Hệ thống tự điền chi tiết hóa đơn; số phiếu tự sinh.</li>
+                                <li>Cột <strong>Loại Hàng</strong>:
+                                    <ul class="mt-2 mb-2">
+                                        <li><strong>Hàng Dùng Ngay</strong> — bia, nước ngọt, nước suối, đậu phộng đóng gói… (sau nhập kho tự hiện trên menu, có mã món + giá bán; chỉ cần <strong>Sửa</strong> để thêm ảnh).</li>
+                                        <li><strong>Nguyên Vật Liệu</strong> — thịt, cá, rau, củ, gia vị… (chỉ nhập kho, <strong>không</strong> hiện trên menu).</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Đơn vị:</strong> nếu hóa đơn là đơn vị sỉ (vd. 1 Thùng 12 chai) → <strong>Đơn vị cơ bản (bán lẻ)</strong> = Chai, <strong>Đơn vị sỉ</strong> = Thùng, <strong>Tỷ lệ</strong> = 12. Nếu hóa đơn đã là Chai mà muốn bán Thùng → chỉ nhập Đơn vị sỉ = Thùng (đơn vị lẻ mặc định theo hóa đơn) và tỷ lệ.</li>
+                                <li>Nhập <strong>Giá bán lẻ</strong>, <strong>Giá bán sỉ</strong>. Nhiều kho → chọn cột <strong>KHO</strong>.</li>
+                                <li>Hàng dùng ngay: khi thanh toán khách → <strong>tự trừ tồn kho</strong>. Nguyên vật liệu: trừ kho khi có <strong>định mức</strong>, hoặc qua <strong>kiểm kê cuối ngày</strong>.</li>
+                                <li>Chỉ theo dõi doanh thu (không nhập kho / không trừ NVL) vẫn được nhưng <strong>không khuyến khích</strong>.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3">7. Nhập kho từ file XML (không lấy được HĐ mua về phần mềm)</h5>
+                            <ul class="step-list mb-4">
+                                <li>Tải file XML hóa đơn điện tử NCC gửi về máy tính.</li>
+                                <li>Vào <strong>Mua Hàng → Tạo Phiếu Nhập F&amp;B</strong> → mục <strong>NHẬP TỪ XML (HĐĐT)</strong>.</li>
+                                <li>Nhấn <strong>Chọn file</strong> → chọn hóa đơn → <strong>TỰ ĐỘNG LẬP</strong>.</li>
+                                <li>Kiểm tra kỹ <strong>Loại Hàng</strong>, <strong>Kho</strong> và thông tin khác → <strong>Lưu Phiếu Nhập</strong>.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3">8. Sửa phiếu nhập kho bị sai</h5>
+                            <ul class="step-list mb-4">
+                                <li>Vào <strong>Danh Sách Phiếu Nhập</strong> → chọn phiếu → nhấn <strong>Sửa</strong> → chỉnh đúng → <strong>Lưu</strong>.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3">9. Thanh toán &amp; hóa đơn</h5>
+                            <ul class="step-list mb-4">
+                                <li>Nhấn vào bàn cần thanh toán → <strong>Thanh Toán</strong>.</li>
+                                <li>Bảng <strong>Thanh Toán &amp; Hóa Đơn</strong> hiện ra: nhập thông tin khách và email (nếu cần gửi HĐ); không lấy HĐ thì để mặc định.</li>
+                                <li>Chọn <strong>Phương Thức Thanh Toán</strong>, bật <strong>Xuất hóa đơn điện tử</strong> (nếu cần) → <strong>HOÀN TẤT THANH TOÁN</strong>.</li>
+                            </ul>
+
+                            <p class="mb-0 ps-1">
+                                <i class="fas fa-book text-primary me-1"></i>
+                                Để xem sổ sách, chứng từ kế toán: xem mục <strong>Phân Hệ Kế Toán</strong> trong Hướng Dẫn Sử Dụng.
+                            </p>
                         </div>
 
                         <!-- ==================== TAB: QUẢN LÝ PHÒNG TRỌ ==================== -->

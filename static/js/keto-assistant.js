@@ -119,6 +119,11 @@
             if (reply.help_url && reply.source === 'fallback') {
                 appendMsg('bot', 'Xem thêm: Hướng Dẫn Sử Dụng trong menu Kế Toán HKD.');
             }
+            if (Array.isArray(reply.suggestions) && reply.suggestions.length) {
+                renderChips(reply.suggestions);
+            } else {
+                loadSuggestions();
+            }
         } catch (e) {
             setTyping(false);
             appendMsg('bot', 'Không kết nối được trợ lý. Nhắn Zalo ' + (cfg.zaloPhone || '0908870287') + ' để được hỗ trợ.');

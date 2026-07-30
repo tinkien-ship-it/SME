@@ -4,7 +4,7 @@
 ## V1.0 — 2026
 - POS bán hàng: đơn tạm F1, VietQR, quét mã vạch, xuất HĐĐT tự động.
 - Mua hàng: nhập kho từ HĐ mua, nhập tồn Excel, hạch toán dịch vụ.
-- F&B cho nhà hàng, quán ăn, quán cà phê, trà sữa: thực đơn, định mức nguyên liệu, order bàn, kiểm kê NVL cuối ngày.
+- F&B / dịch vụ ẩm thực (nhà hàng, quán ăn, quán cà phê, trà sữa): tạo khu vực & bàn, tạo thực đơn (Excel hoặc thủ công), gọi món theo bàn, theo dõi phục vụ, định mức NVL hoặc kiểm kê NVL cuối ngày → Chốt doanh thu, nhập kho Hàng Dùng Ngay / Nguyên Vật Liệu từ HĐ mua hoặc XML, thanh toán & xuất HĐĐT.
 - Kế toán HKD TT88: sổ tự động, phiếu thu/chi, công nợ, lương, BHXH, TSCĐ/CCDC.
 - Tính giá thành thành phẩm: định mức BOM (thành phẩm + vật tư) → phiếu sản xuất → xuất vật tư (giá vốn bình quân) + nhập thành phẩm; mã TP001 / mã vạch TP00101; có thể cộng nhân công & chi phí khác; hủy phiếu; in phiếu.
 - Thiết lập riêng tenant tại Hệ Thống → Thiết Lập.

@@ -7,7 +7,7 @@ from typing import Any
 import requests
 
 from Services.assistant_context import PAGE_CONTEXT, build_context_prompt, rag_section_for_regime
-from Services.assistant_faq import get_suggestions, search_faq, should_escalate
+from Services.assistant_faq import get_follow_ups, get_suggestions, search_faq, should_escalate
 from Services.assistant_rag import rag_context_for_prompt, search_rag
 from Services.assistant_store import get_assistant_settings, log_chat
 from Services.support_config import (
@@ -28,7 +28,11 @@ Quy tắc:
   Chỉ nói ngôn ngữ màn hình: Thành phẩm, Vật tư, Nguyên liệu, Hoàn thành, Đã hủy, giá vốn bình quân…
 - Chỉ trả lời đúng chủ đề câu hỏi; không chen nội dung module khác không được hỏi.
 - Không tư vấn trốn thuế; nhắc tuân thủ pháp luật khi hỏi về thuế.
-Chủ đề F&B (nhà hàng, quán ăn, cà phê, trà sữa): menu F&B — thực đơn, định mức NVL, order bàn, trừ kho khi thanh toán hoặc Kiểm kê NVL cuối ngày. Món chỉ nằm trên thực đơn, không nói sang tính giá thành thành phẩm.
+Chủ đề F&B / ẩm thực (nhà hàng, quán ăn, cà phê, trà sữa):
+menu F&B — tạo bàn/khu vực, tạo thực đơn, gọi món theo bàn, theo dõi phục vụ,
+định mức NVL hoặc Kiểm kê NVL cuối ngày → Chốt doanh thu,
+nhập kho Hàng Dùng Ngay / Nguyên Vật Liệu (từ HĐ mua hoặc XML), thanh toán & xuất HĐĐT.
+Chỉ dùng tên nút/menu trên giao diện. Không nói sang tính giá thành thành phẩm trừ khi được hỏi.
 Chủ đề tính giá thành thành phẩm: Chứng Từ Kế Toán → Tính Giá Thành — Định mức BOM → Phiếu sản xuất → xuất vật tư + nhập thành phẩm; mã TP001… / mã vạch TP00101…; giá thành/ĐV = (vật tư + nhân công + chi phí khác) ÷ số lượng hoàn thành. Không nói sang F&B trừ khi người dùng hỏi rõ."""
 
 
@@ -152,6 +156,17 @@ def ask_assistant(
     if cfg.get('assistant_escalation_enabled') == '1' and escalate:
         pass  # force lower confidence path
 
+    def _finish(result: dict[str, Any]) -> dict[str, Any]:
+        faq_id = result.get('faq_id') or (faq_match.entry.get('id') if faq_match else None)
+        result['suggestions'] = get_follow_ups(
+            faq_id,
+            page=page_key or None,
+            exclude_question=msg,
+        )
+        if log_interaction:
+            _log_result(msg, result, channel, tenant_id, username, zalo_user_id, page_key, ctx)
+        return result
+
     # FAQ khớp cao — luôn ưu tiên (miễn phí, nhanh)
     if faq_match and faq_score >= 3.5:
         text = faq_match.entry['answer']
@@ -159,7 +174,7 @@ def ask_assistant(
             text += '\n\nCần hỗ trợ thêm, nhắn Zalo **0908870287** hoặc xem **Hướng Dẫn Sử Dụng**.'
         source = 'faq'
         confidence = _confidence_from_sources(faq_score, rag_score, source)
-        result = {
+        return _finish({
             'text': text,
             'source': source,
             'confidence': confidence,
@@ -167,10 +182,7 @@ def ask_assistant(
             'needs_escalation': escalate and confidence < 0.5,
             'help_url': help_url,
             'tier': get_assistant_runtime_config().get('ai_mode_label', 'Miễn phí'),
-        }
-        if log_interaction:
-            _log_result(msg, result, channel, tenant_id, username, zalo_user_id, page_key, ctx)
-        return result
+        })
 
     # OpenAI + RAG + context (chỉ khi Master bật premium + có API key)
     ai_text = _call_openai(
@@ -182,17 +194,14 @@ def ask_assistant(
     if ai_text:
         source = 'openai'
         confidence = _confidence_from_sources(faq_score, rag_score, source)
-        result = {
+        return _finish({
             'text': ai_text,
             'source': source,
             'confidence': confidence,
             'faq_id': faq_match.entry.get('id') if faq_match else None,
             'needs_escalation': escalate or confidence < 0.45,
             'help_url': help_url,
-        }
-        if log_interaction:
-            _log_result(msg, result, channel, tenant_id, username, zalo_user_id, page_key, ctx)
-        return result
+        })
 
     # FAQ vừa khớp
     if faq_match:
@@ -201,17 +210,14 @@ def ask_assistant(
             text += '\n\nCần hỗ trợ thêm, nhắn Zalo **0908870287** hoặc xem **Hướng Dẫn Sử Dụng**.'
         source = 'faq'
         confidence = _confidence_from_sources(faq_score, rag_score, source)
-        result = {
+        return _finish({
             'text': text,
             'source': source,
             'confidence': confidence,
             'faq_id': faq_match.entry.get('id'),
             'needs_escalation': escalate,
             'help_url': help_url,
-        }
-        if log_interaction:
-            _log_result(msg, result, channel, tenant_id, username, zalo_user_id, page_key, ctx)
-        return result
+        })
 
     # RAG fallback
     if rag_hits and rag_score >= 2.5:
@@ -219,16 +225,13 @@ def ask_assistant(
         text += '\n\nChi tiết: **Hướng Dẫn Sử Dụng** hoặc Zalo **0908870287**.'
         source = 'rag'
         confidence = _confidence_from_sources(faq_score, rag_score, source)
-        result = {
+        return _finish({
             'text': text,
             'source': source,
             'confidence': confidence,
             'needs_escalation': escalate,
             'help_url': help_url,
-        }
-        if log_interaction:
-            _log_result(msg, result, channel, tenant_id, username, zalo_user_id, page_key, ctx)
-        return result
+        })
 
     # Page hint khi đang ở màn hình cụ thể
     if page_key and page_key in PAGE_CONTEXT and not faq_match:
@@ -237,7 +240,7 @@ def ask_assistant(
         if hint:
             source = 'context'
             confidence = 0.4
-            result = {
+            return _finish({
                 'text': (
                     f'Bạn đang ở **{pc.get("label", page_key)}**.\n\n{hint}\n\n'
                     'Hỏi cụ thể hơn hoặc xem **Hướng Dẫn Sử Dụng** / Zalo **0908870287**.'
@@ -246,12 +249,9 @@ def ask_assistant(
                 'confidence': confidence,
                 'needs_escalation': True,
                 'help_url': help_url,
-            }
-            if log_interaction:
-                _log_result(msg, result, channel, tenant_id, username, zalo_user_id, page_key, ctx)
-            return result
+            })
 
-    result = {
+    return _finish({
         'text': (
             'Tôi chưa tìm thấy hướng dẫn khớp trong cơ sở kiến thức KETO POS.\n\n'
             'Bạn có thể:\n'
@@ -263,10 +263,7 @@ def ask_assistant(
         'confidence': 0.2,
         'needs_escalation': True,
         'help_url': help_url,
-    }
-    if log_interaction:
-        _log_result(msg, result, channel, tenant_id, username, zalo_user_id, page_key, ctx)
-    return result
+    })
 
 
 def _log_result(

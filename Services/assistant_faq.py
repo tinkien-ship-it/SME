@@ -176,22 +176,233 @@ STATIC_FAQ: list[dict[str, Any]] = [
         'id': 'fb_service',
         'keywords': [
             'f&b', 'fb', 'nhà hàng', 'quán ăn', 'quán cafe', 'quán cà phê', 'cà phê', 'cafe',
-            'trà sữa', 'trà sửa', 'quán trà sữa', 'dịch vụ ăn uống', 'ăn uống', 'bếp', 'pha chế',
-            'thực đơn', 'định mức nvl', 'nguyên liệu', 'món chế biến', 'hàng bán sẵn',
-            'kiểm kê nvl', 'chốt cuối ngày', 'order bàn', 'quản lý bàn',
+            'trà sữa', 'trà sửa', 'quán trà sữa', 'dịch vụ ăn uống', 'ăn uống', 'ẩm thực',
             'quản lý quán ăn', 'quản lý nhà hàng', 'quản lý cà phê', 'quản lý trà sữa',
+            'dịch vụ ẩm thực',
         ],
-        'pages': ['F_and_B_service'],
+        'pages': ['F_and_B_service', 'import'],
         'title': 'F&B nhà hàng / quán ăn / cà phê / trà sữa',
         'answer': (
-            'Menu **F&B** (dành cho **nhà hàng, quán ăn, quán cà phê, trà sữa**):\n'
-            '1) Nhập **nguyên liệu** vào kho (phiếu nhập F&B / loại nguyên liệu).\n'
-            '2) Tab **Thực đơn & Định mức NVL**: thêm món (**Món chế biến** hoặc **Hàng bán sẵn**) → '
-            'mở **Định mức NVL** gắn nguyên liệu cho từng món.\n'
-            '3) Phục vụ theo bàn: gọi món → **Thanh toán**. Món đã có định mức sẽ **trừ kho nguyên liệu** lúc thanh toán.\n'
-            '4) Món chế biến **chưa** có định mức: cuối ngày vào **Kiểm kê NVL cuối ngày** → nhập tồn thực → '
-            '**Chốt cuối ngày** (một phiếu xuất kho gom NVL đã dùng).'
+            'Menu **F&B** dành cho **nhà hàng, quán ăn, quán cà phê, trà sữa**:\n'
+            '1) Tạo **khu vực & bàn** (Excel hoặc cấu hình sơ đồ quán).\n'
+            '2) Tạo **thực đơn** (Excel hoặc Thêm Món Thủ Công) — mã món hệ thống tự cấp.\n'
+            '3) Nhập kho **Hàng Dùng Ngay** / **Nguyên Vật Liệu** từ Hóa Đơn Mua Hàng hoặc XML.\n'
+            '4) Khách chọn bàn → gọi món → theo dõi phục vụ → **Thanh Toán**.\n'
+            '5) Có thể lập **Định mức** từng món hoặc **Kiểm Kê NVL** cuối ngày rồi **Chốt doanh thu**.\n'
+            'Chi tiết: tab **Dịch Vụ Ẩm Thực (F&B)** trong **Hướng Dẫn Sử Dụng**.'
         ),
+        'follow_ups': [
+            'Tạo danh sách bàn thế nào?',
+            'Tạo menu món ăn thế nào?',
+            'Lập phiếu nhập kho F&B?',
+            'Thanh toán order bàn thế nào?',
+        ],
+    },
+    {
+        'id': 'fb_tables',
+        'keywords': [
+            'tạo bàn', 'danh sách bàn', 'khu vực bàn', 'sơ đồ quán', 'nhập khu vực',
+            'số bàn', 'cấu hình sơ đồ', 'thêm bàn', 'bàn ăn',
+        ],
+        'pages': ['F_and_B_service'],
+        'title': 'Tạo khu vực & danh sách bàn F&B',
+        'answer': (
+            'Trên màn hình F&B:\n'
+            '1) Nhấn **Nhập Khu Vực & Số Bàn** → **Tải Mẫu**.\n'
+            '2) Mở Excel, điền **khu vực** và **số bàn** → lưu.\n'
+            '3) **Nhập file Excel** → **Xác nhận thêm bàn**.\n'
+            'Hoặc tạo thủ công trên **Cấu Hình Sơ Đồ Quán** (các ô sẵn trên giao diện).'
+        ),
+        'follow_ups': [
+            'Tạo menu món ăn thế nào?',
+            'Khi khách chọn bàn làm sao?',
+            'Theo dõi món bếp thế nào?',
+        ],
+    },
+    {
+        'id': 'fb_menu',
+        'keywords': [
+            'tạo menu', 'nhập menu', 'thực đơn', 'thêm món', 'món thủ công', 'nhập menu excel',
+            'tải menu', 'mã món', 'hình món', 'quản lý menu', 'lưu thực đơn',
+        ],
+        'pages': ['F_and_B_service'],
+        'title': 'Tạo thực đơn F&B',
+        'answer': (
+            '**Cách 1 — Excel:** **Nhập menu Excel** → **Tải Menu** → điền món theo hướng dẫn → lưu → '
+            '**Nhập Menu** chọn file. Vào **Quản Lý Menu & Định Mức** → **Sửa** để thêm hình.\n'
+            '**Cách 2 — Thủ công:** **Thêm Món Thủ Công** → nhập thông tin + chọn ảnh → **Lưu Thực Đơn**.\n'
+            '**Lưu ý:** mã món do hệ thống tự tạo, không cần nhập.'
+        ),
+        'follow_ups': [
+            'Định mức nguyên liệu món ăn?',
+            'Hàng dùng ngay hiện lên menu thế nào?',
+            'Khi khách chọn bàn làm sao?',
+        ],
+    },
+    {
+        'id': 'fb_order',
+        'keywords': [
+            'gọi món', 'chọn bàn', 'order bàn', 'theo dõi phục vụ', 'món đã gọi',
+            'nhân viên bếp', 'phục vụ bàn', 'order', 'đặt món', 'theo dõi món bếp',
+            'khi khách chọn bàn', 'chọn được bàn',
+        ],
+        'pages': ['F_and_B_service'],
+        'title': 'Gọi món & theo dõi phục vụ',
+        'answer': (
+            'Khi khách có bàn: nhấn **số bàn** → chọn món khách gọi → chờ tính tiền.\n'
+            'Sau khi chọn món, hệ thống hiện danh sách món đã gọi để Quản lý kiểm soát; '
+            'nhân viên Bếp / phục vụ biết món nào cần làm trước.'
+        ),
+        'follow_ups': [
+            'Thanh toán order bàn thế nào?',
+            'Định mức nguyên liệu món ăn?',
+            'Kiểm kê NVL cuối ngày?',
+        ],
+    },
+    {
+        'id': 'fb_recipe',
+        'keywords': [
+            'định mức', 'định mức nvl', 'định mức món', 'nguyên liệu món', 'công thức món',
+            'nguyên vật liệu', 'nvl món ăn', 'định mức nguyên liệu',
+        ],
+        'pages': ['F_and_B_service'],
+        'title': 'Định mức nguyên liệu món ăn',
+        'answer': (
+            'Vào **Quản Lý Menu & Định Mức** → chọn món → **Định Mức** → chọn nguyên liệu '
+            'và số lượng cho 1 phần món.\n'
+            'Không bắt buộc: chưa có định mức vẫn bán được. Phương án nhanh — cuối ngày vào '
+            '**Kiểm Kê NVL** nhập tồn còn lại → **Chốt doanh thu** để hệ thống trừ NVL đã dùng.\n'
+            'NVL **không nhập giá bán**; chi phí tính theo giá vốn khi có định mức hoặc kiểm kê.'
+        ),
+        'follow_ups': [
+            'Kiểm kê NVL cuối ngày?',
+            'Lập phiếu nhập kho F&B?',
+            'Hàng dùng ngay và nguyên vật liệu khác nhau?',
+        ],
+    },
+    {
+        'id': 'fb_inventory_check',
+        'keywords': [
+            'kiểm kê nvl', 'kiểm kê nguyên liệu', 'chốt doanh thu', 'chốt cuối ngày',
+            'trừ tồn nvl', 'cuối ngày f&b',
+        ],
+        'pages': ['F_and_B_service'],
+        'title': 'Kiểm kê NVL cuối ngày',
+        'answer': (
+            'Dùng khi món **chưa** lập định mức (hoặc muốn chốt nhanh):\n'
+            '1) Vào **Kiểm Kê NVL** cuối ngày.\n'
+            '2) Nhập số nguyên vật liệu **còn lại** thực tế.\n'
+            '3) Nhấn **Chốt doanh thu** — hệ thống tự trừ tồn kho phần đã dùng trong ngày.'
+        ),
+        'follow_ups': [
+            'Định mức nguyên liệu món ăn?',
+            'Thanh toán order bàn thế nào?',
+            'Lập phiếu nhập kho F&B?',
+        ],
+    },
+    {
+        'id': 'fb_import',
+        'keywords': [
+            'phiếu nhập f&b', 'nhập kho f&b', 'hàng dùng ngay', 'nguyên vật liệu nhập kho',
+            'lập phiếu nhập', 'tạo phiếu nhập f&b', 'nhập nvl', 'bia nước ngọt',
+            'đơn vị sỉ', 'đơn vị lẻ', 'tỷ lệ thùng', 'cột kho f&b',
+        ],
+        'pages': ['F_and_B_service', 'import', 'inward_invoice'],
+        'title': 'Lập phiếu nhập kho F&B',
+        'answer': (
+            '**Hóa Đơn Mua Hàng → Lập Phiếu Nhập** (số phiếu tự sinh, chi tiết HĐ tự điền).\n'
+            '- **Hàng Dùng Ngay** (bia, nước suối…): tự hiện trên menu sau nhập; trừ kho khi thanh toán; '
+            '**Sửa** món để thêm ảnh.\n'
+            '- **Nguyên Vật Liệu** (thịt, rau, gia vị…): chỉ nhập kho, không hiện menu; trừ kho qua '
+            '**định mức** hoặc **kiểm kê cuối ngày**.\n'
+            'Thiết lập ĐV lẻ / ĐV sỉ / **Tỷ lệ**, nhập giá bán lẻ–sỉ; nhiều kho → chọn cột **KHO**. '
+            'NVL không nhập giá bán.'
+        ),
+        'follow_ups': [
+            'Nhập kho từ file XML thế nào?',
+            'Hàng dùng ngay và nguyên vật liệu khác nhau?',
+            'Sửa phiếu nhập kho sai?',
+        ],
+    },
+    {
+        'id': 'fb_import_xml',
+        'keywords': [
+            'nhập xml f&b', 'xml hóa đơn', 'tự động lập', 'không có hóa đơn mua',
+            'nhập từ xml', 'hđđt xml', 'tạo phiếu nhập từ xml',
+        ],
+        'pages': ['F_and_B_service', 'import'],
+        'title': 'Nhập kho F&B từ file XML',
+        'answer': (
+            'Khi HKD không lấy được danh sách HĐ mua về phần mềm:\n'
+            '1) Tải file **XML** NCC gửi về máy.\n'
+            '2) **Mua Hàng → Tạo Phiếu Nhập F&B** → mục **NHẬP TỪ XML (HĐĐT)**.\n'
+            '3) **Chọn file** → **TỰ ĐỘNG LẬP**.\n'
+            '4) Kiểm tra **Loại Hàng**, **Kho** và thông tin khác → **Lưu Phiếu Nhập**.'
+        ),
+        'follow_ups': [
+            'Lập phiếu nhập kho F&B?',
+            'Hàng dùng ngay và nguyên vật liệu khác nhau?',
+            'Sửa phiếu nhập kho sai?',
+        ],
+    },
+    {
+        'id': 'fb_line_types',
+        'keywords': [
+            'hàng dùng ngay và nguyên vật liệu', 'loại hàng f&b', 'ready made',
+            'khác nhau hàng dùng ngay', 'không hiện trên menu',
+            'hàng dùng ngay hiện lên menu', 'hiện lên menu',
+        ],
+        'pages': ['F_and_B_service', 'import'],
+        'title': 'Hàng dùng ngay vs nguyên vật liệu',
+        'answer': (
+            '**Hàng Dùng Ngay** (bia, nước ngọt, đóng gói…): sau nhập kho **tự hiện trên menu** '
+            '(có mã món, giá bán); trừ tồn khi thanh toán khách; thêm ảnh bằng nút **Sửa**.\n'
+            '**Nguyên Vật Liệu** (thịt, cá, rau, gia vị…): **chỉ nhập kho**, không hiện menu; '
+            'trừ tồn khi có **định mức** hoặc qua **Kiểm Kê NVL** cuối ngày. Không nhập giá bán NVL.'
+        ),
+        'follow_ups': [
+            'Định mức nguyên liệu món ăn?',
+            'Kiểm kê NVL cuối ngày?',
+            'Lập phiếu nhập kho F&B?',
+        ],
+    },
+    {
+        'id': 'fb_edit_import',
+        'keywords': [
+            'sửa phiếu nhập', 'sửa phiếu nhập kho', 'phiếu nhập sai', 'danh sách phiếu nhập',
+        ],
+        'pages': ['DanhSachPhieuNhapKho', 'import', 'F_and_B_service'],
+        'title': 'Sửa phiếu nhập kho',
+        'answer': (
+            'Vào **Danh Sách Phiếu Nhập** → chọn phiếu cần sửa → nhấn **Sửa** → chỉnh đúng → **Lưu**. '
+            'Hệ thống cập nhật chứng từ / tồn kho liên quan.'
+        ),
+        'follow_ups': [
+            'Lập phiếu nhập kho F&B?',
+            'Nhập kho từ file XML thế nào?',
+            'Thanh toán order bàn thế nào?',
+        ],
+    },
+    {
+        'id': 'fb_payment',
+        'keywords': [
+            'thanh toán bàn', 'thanh toán f&b', 'hoàn tất thanh toán', 'xuất hóa đơn bàn',
+            'tính tiền bàn', 'thanh toán order', 'hóa đơn bàn ăn',
+        ],
+        'pages': ['F_and_B_service'],
+        'title': 'Thanh toán order bàn F&B',
+        'answer': (
+            'Nhấn bàn cần thanh toán → **Thanh Toán**.\n'
+            'Bảng **Thanh Toán & Hóa Đơn**: nhập thông tin khách + email (nếu gửi HĐ); '
+            'không lấy HĐ thì để mặc định.\n'
+            'Chọn **Phương Thức Thanh Toán**, bật **Xuất hóa đơn điện tử** nếu cần → '
+            '**HOÀN TẤT THANH TOÁN**.'
+        ),
+        'follow_ups': [
+            'Theo dõi món bếp thế nào?',
+            'Kiểm kê NVL cuối ngày?',
+            'Quản lý quán ăn, Cà Phê, Trà sửa, Nhà hàng?',
+        ],
     },
     {
         'id': 'production_costing',
@@ -296,13 +507,21 @@ PAGE_SUGGESTIONS: dict[str, list[str]] = {
     'store_setup': ['Thiết lập cửa hàng ở đâu?', 'Nhập quỹ tiền mặt ban đầu?', 'Cấu hình VietQR?'],
     'thiet_lap': ['Thiết lập cửa hàng ở đâu?', 'Nhập quỹ tiền mặt ban đầu?'],
     'settings_page': ['Cấu hình hóa đơn điện tử?', 'Kết nối ngân hàng Sepay/Casso?'],
-    'inward_invoice': ['Lập phiếu nhập từ hóa đơn mua?', 'Hạch toán dịch vụ mua ngay?'],
-    'DanhSachPhieuNhapKho': ['In mã vạch sản phẩm?', 'Sửa phiếu nhập kho sai?'],
+    'inward_invoice': [
+        'Lập phiếu nhập từ hóa đơn mua?',
+        'Lập phiếu nhập kho F&B?',
+        'Hạch toán dịch vụ mua ngay?',
+    ],
+    'DanhSachPhieuNhapKho': [
+        'In mã vạch sản phẩm?',
+        'Sửa phiếu nhập kho sai?',
+        'Lập phiếu nhập kho F&B?',
+    ],
     'HKD_dashboard': [
         'Kế toán tính giá thành?',
         'Quản lý quán ăn, Cà Phê, Trà sửa, Nhà hàng?',
         'Quản lý khách sạn, phòng cho thuê?',
-        'Sổ kế toán tự động thế nào?',
+        'Tạo menu món ăn thế nào?',
     ],
     'SoCongNoPhaiThu': ['Thu nợ khách hàng?', 'Xem công nợ phải thu?'],
     'SoCongNoPhaiTra': ['Trả nợ nhà cung cấp?'],
@@ -321,15 +540,22 @@ PAGE_SUGGESTIONS: dict[str, list[str]] = {
     'production_print': ['In phiếu sản xuất?', 'Giá thành gồm những gì?'],
     'F_and_B_service': [
         'Quản lý quán ăn, Cà Phê, Trà sửa, Nhà hàng?',
-        'Định mức nguyên liệu món ăn?',
-        'Kiểm kê NVL cuối ngày?',
-        'Thanh toán order bàn thế nào?',
+        'Tạo danh sách bàn thế nào?',
+        'Tạo menu món ăn thế nào?',
+        'Lập phiếu nhập kho F&B?',
+    ],
+    'import': [
+        'Lập phiếu nhập kho F&B?',
+        'Nhập kho từ file XML thế nào?',
+        'Hàng dùng ngay và nguyên vật liệu khác nhau?',
+        'Sửa phiếu nhập kho sai?',
     ],
     'cap_nhat_kien_thuc_page': ['Tin pháp luật HKD mới?', 'Tra cứu thông tư thuế?'],
     '_default': [
         'Kế toán tính giá thành?',
         'Quản lý quán ăn, Cà Phê, Trà sửa, Nhà hàng?',
         'Quản lý khách sạn, phòng cho thuê?',
+        'Tạo menu món ăn thế nào?',
     ],
 }
 
@@ -441,6 +667,33 @@ def get_suggestions(page: str | None = None) -> list[str]:
     if page and page in PAGE_SUGGESTIONS:
         return PAGE_SUGGESTIONS[page][:4]
     return PAGE_SUGGESTIONS['_default']
+
+
+def get_follow_ups(
+    faq_id: str | None = None,
+    *,
+    page: str | None = None,
+    exclude_question: str | None = None,
+) -> list[str]:
+    """Gợi ý câu hỏi tiếp theo sau khi đã trả lời một FAQ."""
+    follow: list[str] = []
+    if faq_id:
+        for entry in STATIC_FAQ:
+            if entry.get('id') == faq_id:
+                follow = list(entry.get('follow_ups') or [])
+                break
+    if not follow:
+        follow = get_suggestions(page)
+    excl = (exclude_question or '').strip().lower()
+    out: list[str] = []
+    for q in follow:
+        if excl and q.strip().lower() == excl:
+            continue
+        if q not in out:
+            out.append(q)
+        if len(out) >= 4:
+            break
+    return out
 
 
 def should_escalate(message: str) -> bool:

@@ -141,6 +141,13 @@ POS_HKD_MENU = [
                 'perm': 'view_inventory',
                 'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master'),
             },
+            {
+                'endpoint': 'production_page',
+                'label': 'Sản Xuất & Tính Giá Thành',
+                'icon': 'fas fa-industry text-success',
+                'perm': 'view_inventory',
+                'roles': ('accountant', 'manager', 'admin', 'master'),
+            },
         ],
     },
     {
@@ -232,7 +239,7 @@ POS_HKD_MENU = [
             {'endpoint': 'DanhSachPhieuXuatKho', 'label': 'Phiếu Xuất Kho (04-VT)', 'icon': 'fas fa-box-open text-warning', 'perm': 'view_phieu_xuat_kho'},
             {
                 'endpoint': 'production_page',
-                'label': 'Tính Giá Thành (Thành Phẩm)',
+                'label': 'Sản Xuất & Tính Giá Thành',
                 'icon': 'fas fa-industry text-success',
                 'perm': 'view_inventory',
                 'roles': ('accountant', 'manager', 'admin', 'master'),

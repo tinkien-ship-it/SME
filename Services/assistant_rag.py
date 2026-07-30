@@ -16,7 +16,7 @@ _H5_RE = re.compile(r'<h5[^>]*>(.*?)</h5>', re.I | re.S)
 _H6_RE = re.compile(r'<h6[^>]*>(.*?)</h6>', re.I | re.S)
 _LI_RE = re.compile(r'<li[^>]*>(.*?)</li>', re.I | re.S)
 _P_RE = re.compile(r'<p[^>]*>(.*?)</p>', re.I | re.S)
-_TAB_RE = re.compile(r'id="(banhang|ketoan|phongtro)"', re.I)
+_TAB_RE = re.compile(r'id="(banhang|ketoan|fb|phongtro)"', re.I)
 
 _CACHE: dict[str, Any] = {'mtime': 0.0, 'chunks': []}
 
@@ -56,7 +56,12 @@ def _read_file(path: str) -> str:
 
 def _parse_huongdan_chunks(html: str) -> list[dict[str, str]]:
     chunks: list[dict[str, str]] = []
-    section_names = {'banhang': 'Phân hệ Bán hàng', 'ketoan': 'Phân hệ Kế toán', 'phongtro': 'Quản lý Phòng trọ'}
+    section_names = {
+        'banhang': 'Phân hệ Bán hàng',
+        'ketoan': 'Phân hệ Kế toán',
+        'fb': 'Dịch vụ ẩm thực (F&B)',
+        'phongtro': 'Quản lý Phòng trọ',
+    }
 
     for tab_id, section in section_names.items():
         tab_match = re.search(

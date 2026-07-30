@@ -125,16 +125,20 @@ PAGE_CONTEXT: dict[str, dict[str, Any]] = {
         'hint': 'Phiếu in gồm vật tư xuất, nhân công, chi phí khác và giá thành đơn vị thành phẩm.',
     },
     'F_and_B_service': {
-        'label': 'F&B — Nhà hàng / quán ăn / cà phê',
+        'label': 'F&B — Nhà hàng / quán ăn / cà phê / trà sữa',
         'hint': (
-            'Phục vụ nhà hàng, quán ăn, quán cà phê, trà sữa: thực đơn, định mức NVL, order bàn, thanh toán. '
-            'Món có định mức trừ kho lúc thanh toán; món chưa định mức → Kiểm kê NVL cuối ngày → Chốt cuối ngày.'
+            'Dịch vụ ẩm thực: tạo khu vực & bàn → tạo thực đơn → nhập kho '
+            '(Hàng Dùng Ngay / Nguyên Vật Liệu) → gọi món theo bàn → thanh toán. '
+            'Có thể lập Định mức NVL từng món, hoặc Kiểm Kê NVL cuối ngày rồi Chốt doanh thu. '
+            'Xem tab Dịch Vụ Ẩm Thực (F&B) trong Hướng Dẫn Sử Dụng.'
         ),
         'steps': [
-            'Nhập nguyên liệu',
-            'Thực đơn & định mức NVL',
-            'Gọi món / thanh toán',
-            'Kiểm kê & chốt cuối ngày (nếu cần)',
+            'Tạo khu vực & bàn',
+            'Tạo thực đơn (+ hình món)',
+            'Nhập kho NVL / hàng dùng ngay',
+            'Gọi món theo bàn → theo dõi phục vụ',
+            'Thanh toán / xuất HĐĐT',
+            'Định mức hoặc Kiểm kê NVL cuối ngày',
         ],
     },
 }
