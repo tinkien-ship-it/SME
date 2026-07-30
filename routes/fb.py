@@ -1768,7 +1768,24 @@ def register_fb_routes(app):
     @app.route('/importFB')
     @login_required
     def importFB_stock():
-        return render_template('importFB.html')
+        """Phiếu nhập kho cho ngành ăn uống — dùng chung template với /import."""
+        from routes.inventory import peek_next_import_no
+        from Services.import_line_helpers import list_active_warehouses
+
+        conn = get_db_connection()
+        try:
+            warehouses = list_active_warehouses(conn)
+            conn.commit()
+        finally:
+            conn.close()
+
+        return render_template(
+            'import.html',
+            today=datetime.now().strftime('%Y-%m-%d'),
+            import_mode='fb',
+            next_import_no=peek_next_import_no('stock'),
+            warehouses=warehouses,
+        )
 
 
     @app.route('/api/fb_import', methods=['POST'])
@@ -1779,6 +1796,13 @@ def register_fb_routes(app):
         c = conn.cursor()
     
         try:
+            from Services.import_line_helpers import (
+                ensure_warehouse_schema,
+                insert_import_detail_row,
+            )
+            ensure_warehouse_schema(conn)
+            conn.commit()
+
             data = request.get_json()
             if not data:
                 return jsonify({"error": "Dữ liệu không hợp lệ"}), 400
@@ -1791,6 +1815,7 @@ def register_fb_routes(app):
             import_no = data.get('import_no')
             bill_no = data.get('bill_no')
             note = data.get('note')
+            default_warehouse = (data.get('warehouse_code') or 'KHO_001').strip()
         
             extra_cost = Decimal(str(data.get('extra_cost', 0) or 0))
             payment_status_input = data.get('payment_status', 'Chưa thanh toán')
@@ -1815,12 +1840,29 @@ def register_fb_routes(app):
             total_base_safe = total_base_for_allocation if total_base_for_allocation > 0 else Decimal('0.0001')
 
             # --- 3. TẠO PHIẾU NHẬP HEADER ---
-            c.execute("""
-                INSERT INTO import (date, supplier_id, import_no, bill_no, bill_date, note, 
-                                   payment_status, extra_cost, total_value, paid_amount)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
-            """, (import_date, supplier_id, import_no, bill_no, bill_date, note, payment_status_input, float(extra_cost)))
+            c.execute('PRAGMA table_info(import)')
+            import_cols = {col[1] for col in c.fetchall()}
+            import_fields = [
+                'date', 'supplier_id', 'import_no', 'bill_no', 'bill_date',
+                'note', 'payment_status', 'extra_cost', 'total_value', 'paid_amount',
+            ]
+            import_values = [
+                import_date, supplier_id, import_no, bill_no, bill_date,
+                note, payment_status_input, float(extra_cost), 0, 0,
+            ]
+            if 'warehouse_code' in import_cols:
+                import_fields.append('warehouse_code')
+                import_values.append(default_warehouse)
+
+            c.execute(
+                f'INSERT INTO import ({", ".join(import_fields)}) '
+                f'VALUES ({", ".join(["?"] * len(import_fields))})',
+                import_values,
+            )
             import_id = c.lastrowid
+
+            c.execute('PRAGMA table_info(stock_moves)')
+            sm_has_wh = 'warehouse_code' in {col[1] for col in c.fetchall()}
 
             # --- 4. XỬ LÝ TỪNG SẢN PHẨM HỖN HỢP (READY_MADE & RAW_MATERIALS) ---
             total_invoice_value = Decimal('0')
@@ -1832,6 +1874,7 @@ def register_fb_routes(app):
                 if not pid:
                     continue
 
+                warehouse_code = (item.get('warehouse_code') or default_warehouse or 'KHO_001').strip()
                 item_name = (item.get('name') or item.get('invoice_name') or '').strip()
                 fe_wholesale_unit = str(item.get('wholesale_unit') or '').strip()
                 fe_ratio = Decimal(str(item.get('ratio') if item.get('ratio') is not None else 1))
@@ -1881,10 +1924,23 @@ def register_fb_routes(app):
                 cost_price_base = cost_price_invoice / fe_ratio if is_wholesale else cost_price_invoice
 
                 # Lưu thông tin chi tiết hóa đơn nhập (theo đơn vị hạch toán gốc)
-                c.execute("""
-                    INSERT INTO import_details (import_id, product_id, qty, buyprice, subtotal, discount, tax, cost_price, unit_type, tax_pct, discount_pct)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                """, (import_id, pid, float(qty_in), float(price_in), float(line_subtotal), float(line_disc), float(line_tax), float(cost_price_invoice), 1 if is_wholesale else 0, float(tax_p), float(disc_p)))
+                insert_import_detail_row(c, import_id, {
+                    'import_id': import_id,
+                    'product_id': pid,
+                    'qty': float(qty_in),
+                    'buyprice': float(price_in),
+                    'subtotal': float(line_subtotal),
+                    'discount': float(line_disc),
+                    'tax': float(line_tax),
+                    'cost_price': float(cost_price_invoice),
+                    'unit_type': 1 if is_wholesale else 0,
+                    'tax_pct': float(tax_p),
+                    'discount_pct': float(disc_p),
+                    'product_name': item_name or p_info['name'],
+                    'unit': (item.get('unit') or item.get('base_unit') or '').strip(),
+                    'line_type': (item.get('type') or p_info['product_type'] or 'ready_made'),
+                    'warehouse_code': warehouse_code,
+                })
 
                 # Cập nhật tồn kho và tính giá vốn bình quân gia quyền theo giá trị lẻ chuẩn
                 c.execute("SELECT quantity, avg_cost FROM inventory WHERE product_id = ?", (pid,))
@@ -1903,10 +1959,21 @@ def register_fb_routes(app):
                 # Ghi nhận stock_moves theo giá lẻ quy đổi
                 retail_unit = str(p_info['unit'] or "Cái").strip()
                 wholesale_unit_str = str(p_info['unit1'] or "").strip()
-                c.execute("""
-                    INSERT INTO stock_moves (product_id, date, type, ref_id, quantity, cost_price, note, ref_document, ref_type, type1, unit, unit1, unit_ratio)
-                    VALUES (?, ?, 'import', ?, ?, ?, ?, ?, 'import', 'Nhập', ?, ?, ?)
-                """, (pid, import_date, import_id, float(qty_retail), float(cost_price_base), f"Nhập hàng từ {supplier_name}", import_no, retail_unit, wholesale_unit_str, float(fe_ratio)))
+                sm_cols = "product_id, date, type, ref_id, quantity, cost_price, note, ref_document, ref_type, type1, unit, unit1, unit_ratio"
+                sm_vals = [
+                    pid, import_date, import_id, float(qty_retail), float(cost_price_base),
+                    f"Nhập hàng từ {supplier_name}", import_no, retail_unit,
+                    wholesale_unit_str, float(fe_ratio),
+                ]
+                sm_placeholders = "?, ?, 'import', ?, ?, ?, ?, ?, 'import', 'Nhập', ?, ?, ?"
+                if sm_has_wh:
+                    sm_cols += ", warehouse_code"
+                    sm_placeholders += ", ?"
+                    sm_vals.append(warehouse_code)
+                c.execute(
+                    f"INSERT INTO stock_moves ({sm_cols}) VALUES ({sm_placeholders})",
+                    sm_vals,
+                )
 
                 # Ghi nhận inventory_transactions theo giá lẻ quy đổi
                 c.execute("""
@@ -1915,7 +1982,8 @@ def register_fb_routes(app):
                 """, (pid, float(qty_retail), float(cost_price_base), import_id, f"Nhập kho - PN#{import_no}", now_str))
 
                 items_for_json.append({
-                    "product_id": pid, "product_name": p_info['name'], "qty": float(qty_in), "unit": unit_in, "buyprice": float(price_in), "line_total": float(line_total)
+                    "product_id": pid, "product_name": p_info['name'], "qty": float(qty_in), "unit": unit_in,
+                    "buyprice": float(price_in), "line_total": float(line_total), "warehouse_code": warehouse_code
                 })
 
             # --- 5. CẬP NHẬT TỔNG KẾT HEADER VÀ PHIẾU CHI CHI TIẾT ---

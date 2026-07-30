@@ -426,8 +426,17 @@ async function viewPdf(pdfUrl) {
     }
 }
 
+const FB_ROLES = ['adminFB', 'managerFB', 'accountantFB', 'staffFB', 'staff**'];
+const CURRENT_ROLE = {{ (current_user.role or '') | tojson }};
+const IS_FB_BUSINESS = {{ ((tenant_profile.business_line or '') == 'fb_service') | tojson }};
+
+function importPageUrl() {
+    const isFB = IS_FB_BUSINESS || FB_ROLES.includes(CURRENT_ROLE);
+    return isFB ? '/importFB' : '/import';
+}
+
 function goToImport(invoiceId) {
-    window.location.href = `/import?invoice_id=${invoiceId}`;
+    window.location.href = `${importPageUrl()}?invoice_id=${invoiceId}`;
 }
 
 function goToServiceImport(invoiceId) {

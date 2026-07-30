@@ -83,6 +83,8 @@
         <h5 class="text-primary fw-bold m-0" id="pageTitle">
             {% if import_mode == 'service' %}
             <i class="bi bi-calculator"></i> HẠCH TOÁN CHI PHÍ DỊCH VỤ
+            {% elif import_mode == 'fb' %}
+            <i class="bi bi-cup-hot"></i> LẬP PHIẾU NHẬP KHO (ĂN UỐNG)
             {% else %}
             <i class="bi bi-box-arrow-in-right"></i> LẬP PHIẾU NHẬP KHO
             {% endif %}
@@ -100,6 +102,15 @@
         Chi phí phát sinh <strong>không có hóa đơn điện tử</strong>: nhập NCC, chi tiết dịch vụ và thanh toán.
         Dữ liệu sẽ ghi vào <strong>Chi tiết mua hàng hóa và dịch vụ</strong> (hạch toán dịch vụ).
     </div>
+
+    {% if import_mode == 'fb' %}
+    <div class="alert alert-info py-2 small mb-2">
+        <i class="bi bi-info-circle me-1"></i>
+        Chọn <strong>Hàng Dùng Ngay</strong> cho món bán trực tiếp (tự thêm vào <strong>Thực đơn</strong>, mã <strong>M…</strong>),
+        chọn <strong>Nguyên Vật Liệu</strong> cho hàng dùng để chế biến (mã <strong>NVL…</strong>).
+        Nhớ chọn đúng <strong>Kho</strong> nhận hàng và nhập <strong>Giá lẻ mới / Giá sỉ mới</strong> để bán.
+    </div>
+    {% endif %}
 
     <div class="card xml-upload-zone mb-2" id="xmlUploadZone">
         <div class="card-body py-1">
@@ -178,7 +189,7 @@
         <div class="card shadow-sm border-0 mb-5">
             <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
                 <span class="small fw-bold text-primary uppercase"><i class="bi bi-list-ul"></i>
-                    {% if import_mode == 'service' %}Chi tiết dịch vụ / chi phí{% else %}Chi tiết mặt hàng{% endif %}
+                    {% if import_mode == 'service' %}Chi tiết dịch vụ / chi phí{% elif import_mode == 'fb' %}Chi tiết hàng dùng ngay / nguyên vật liệu{% else %}Chi tiết mặt hàng{% endif %}
                 </span>
                 <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="addRow()">
                     <i class="bi bi-plus-lg"></i> THÊM DÒNG
@@ -281,15 +292,25 @@
 
 <script>
 // ====================== 1. BIẾN TOÀN CỤC ======================
-const IS_SERVICE_MODE = {{ 'true' if import_mode|default('stock') == 'service' else 'false' }};
+const IMPORT_MODE = {{ (import_mode|default('stock'))|tojson }};
+const IS_SERVICE_MODE = IMPORT_MODE === 'service';
+const IS_FB_MODE = IMPORT_MODE === 'fb';
 const WAREHOUSES = {{ warehouses|default([])|tojson }};
-const LINE_TYPE_OPTIONS = [
-    { value: 'goods', label: 'Hàng Hóa' },
-    { value: 'materials', label: 'Vật Tư' },
-    { value: 'service', label: 'Dịch Vụ' },
-    { value: 'fixed_asset', label: 'TSCĐ' },
-    { value: 'tools', label: 'CCDC' },
-];
+const LINE_TYPE_OPTIONS = IS_FB_MODE
+    ? [
+        { value: 'ready_made', label: 'Hàng Dùng Ngay' },
+        { value: 'raw_materials', label: 'Nguyên Vật Liệu' },
+    ]
+    : [
+        { value: 'goods', label: 'Hàng Hóa' },
+        { value: 'materials', label: 'Vật Tư' },
+        { value: 'service', label: 'Dịch Vụ' },
+        { value: 'fixed_asset', label: 'TSCĐ' },
+        { value: 'tools', label: 'CCDC' },
+    ];
+const DEFAULT_LINE_TYPE = IS_FB_MODE ? 'ready_made' : (IS_SERVICE_MODE ? 'service' : 'goods');
+const NEXT_CODE_API = IS_FB_MODE ? '/api/fb/get-next-code' : '/api/products/next-code';
+const SAVE_API = IS_FB_MODE ? '/api/fb_import' : (IS_SERVICE_MODE ? '/api/import/service' : '/api/import');
 let currentCashBalance = 0;
 let currentBankBalance = 0;
 let suppliersCache = [];
@@ -463,7 +484,8 @@ function buildWarehouseOptions(selected) {
 }
 
 function buildLineTypeOptions(selected) {
-    const sel = selected || (IS_SERVICE_MODE ? 'service' : 'goods');
+    const known = LINE_TYPE_OPTIONS.some(o => o.value === selected);
+    const sel = known ? selected : DEFAULT_LINE_TYPE;
     return LINE_TYPE_OPTIONS.map(o =>
         `<option value="${o.value}" ${o.value === sel ? 'selected' : ''}>${o.label}</option>`
     ).join('');
@@ -474,7 +496,7 @@ function isServiceLineType(type) {
 }
 
 function updateCodePreview(row) {
-    const type = row.querySelector('.line-type-select')?.value || 'goods';
+    const type = row.querySelector('.line-type-select')?.value || DEFAULT_LINE_TYPE;
     const pid = row.querySelector('.p-id')?.value;
     const codeEl = row.querySelector('.product-code-preview');
     if (!codeEl || pid) return;
@@ -482,7 +504,7 @@ function updateCodePreview(row) {
         codeEl.value = '';
         return;
     }
-    fetch(`/api/products/next-code?type=${encodeURIComponent(type)}`)
+    fetch(`${NEXT_CODE_API}?type=${encodeURIComponent(type)}`)
         .then(r => r.json())
         .then(d => { if (d.success) codeEl.value = d.next_code || ''; })
         .catch(() => {});
@@ -537,8 +559,9 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         row.querySelector('.base-sale-price').value = formatVNDCustom(product.base_price);
         row.querySelector('.sale-price').value = formatVNDCustom(product.price);
         if (codeEl) codeEl.value = product.product_code || '';
-        if (product.product_type && row.querySelector('.line-type-select')) {
-            row.querySelector('.line-type-select').value = product.product_type;
+        const typeSelect = row.querySelector('.line-type-select');
+        if (product.product_type && typeSelect && LINE_TYPE_OPTIONS.some(o => o.value === product.product_type)) {
+            typeSelect.value = product.product_type;
             applyLineTypeUI(row);
         }
         if (matchType === 'exact') row.classList.add('row-exact-match');
@@ -558,7 +581,7 @@ function addRow(data = {}) {
     const tr = document.createElement('tr');
     tr.className = 'import-row';
     const svcHide = IS_SERVICE_MODE ? 'service-mode-hide' : '';
-    const lineType = data.line_type || (IS_SERVICE_MODE ? 'service' : 'goods');
+    const lineType = data.line_type || data.type || DEFAULT_LINE_TYPE;
     const whCode = data.warehouse_code || '';
     tr.innerHTML = `
         <td class="${svcHide}"><input type="text" class="p-id form-control form-control-sm bg-light text-center border-0" readonly value="${data.product_id || ''}"></td>
@@ -743,7 +766,9 @@ function bindImportFormSubmit() {
         try {
             const finalItems = getConsolidatedItems();
             if (finalItems.length === 0) throw new Error(IS_SERVICE_MODE ? "Vui lòng nhập ít nhất một dòng dịch vụ!" : "Vui lòng nhập ít nhất một mặt hàng!");
-            if (!IS_SERVICE_MODE) {
+            // Chế độ F&B: sản phẩm được tạo/cập nhật ngay trong API nhập kho F&B
+            // (kèm mã món M.../NVL... và đồng bộ thực đơn), nên không gọi upsert riêng.
+            if (!IS_SERVICE_MODE && !IS_FB_MODE) {
                 for (let item of finalItems) {
                     if (isServiceLineType(item.line_type)) continue;
                     item.product_id = await upsertProduct(item);
@@ -765,8 +790,7 @@ function bindImportFormSubmit() {
                 from_invoice_id: parseInt(document.getElementById('fromInvoiceId')?.value) || null,
                 warehouse_code: defaultWh,
             };
-            const apiUrl = IS_SERVICE_MODE ? '/api/import/service' : '/api/import';
-            const resImport = await fetch(apiUrl, {
+            const resImport = await fetch(SAVE_API, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -810,7 +834,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (xmlFileInput) {
         xmlFileInput.addEventListener('change', function() {
             const display = document.getElementById('fileNameDisplay');
-            if (this.files?.[0]) display.textContent = this.files[0].name;
+            const file = this.files?.[0];
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.xml')) {
+                this.value = '';
+                display.textContent = 'Chưa có file được chọn';
+                return toast('Chỉ hỗ trợ file XML của hóa đơn điện tử!', 'error');
+            }
+            display.textContent = file.name;
         });
     }
 
@@ -953,7 +984,7 @@ function getConsolidatedItems() {
         const name = tr.querySelector('.product-name').value.trim();
         const invName = tr.querySelector('.invoice-name-hidden').value.trim() || name;
         const unit = (tr.querySelector('.invoice-unit')?.value || tr.querySelector('.base-unit')?.value || '').trim();
-        const line_type = tr.querySelector('.line-type-select')?.value || (IS_SERVICE_MODE ? 'service' : 'goods');
+        const line_type = tr.querySelector('.line-type-select')?.value || DEFAULT_LINE_TYPE;
         const warehouse_code = tr.querySelector('.warehouse-select')?.value || 'KHO_001';
         if (!name) return;
         const qty = parseNumber(tr.querySelector('.qty').value);
@@ -978,6 +1009,7 @@ function getConsolidatedItems() {
                 tax_pct: tax_pct,
                 discountPct: disc_pct,
                 line_type: line_type,
+                type: line_type,
                 warehouse_code: warehouse_code,
                 base_unit: (tr.querySelector('.base-unit')?.value || '').trim() || unit,
                 wholesale_unit: (tr.querySelector('.wholesale-unit')?.value || '').trim(),
