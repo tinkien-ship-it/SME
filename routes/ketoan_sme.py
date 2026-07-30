@@ -188,7 +188,31 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_BCTC():
+        return render_template('KeToanSME/dashboard_BCTC.html')
+
+    @app.route('/SME_BCTC/reports')
+    @login_required
+    @require_sme_regime
+    def SME_BCTC_reports():
         return render_template('KeToanSME/bctc_reports.html')
+
+    @app.route('/SME_vat_declaration')
+    @login_required
+    @require_sme_regime
+    def SME_vat_declaration():
+        return render_template('KeToanSME/vat_declaration.html')
+
+    @app.route('/SME_form_01_bh')
+    @login_required
+    @require_sme_regime
+    def SME_form_01_bh():
+        return render_template('KeToanSME/form_01_bh.html')
+
+    @app.route('/SME_form_02_bh')
+    @login_required
+    @require_sme_regime
+    def SME_form_02_bh():
+        return render_template('KeToanSME/form_02_bh.html')
 
     @app.route('/SME_SoQuyTienMat')
     def SME_SoQuyTienMat():
@@ -401,6 +425,12 @@ def register_ketoan_sme_routes(app):
             else:
                 payment_method = 'CASH' if payment_method_raw == 'CASH' else 'BANK_TRANSFER'
 
+            po_id = data.get('po_id')
+            try:
+                po_id = int(po_id) if po_id not in (None, '', 0, '0') else None
+            except (TypeError, ValueError):
+                po_id = None
+
             # Truy vấn thông tin Nhà cung cấp
             c.execute("SELECT name, address FROM suppliers WHERE id = ?", (supplier_id,))
             sup_row = c.fetchone()
@@ -608,6 +638,24 @@ def register_ketoan_sme_routes(app):
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (import_no, import_date, bill_no, bill_date, supplier_name, supplier_id, items_json_str, total_final_float, import_id, note))
 
+            po_result = None
+            if po_id:
+                from Services.sme.purchase_order import apply_po_receipt
+                receipt_lines = []
+                for i in items:
+                    receipt_lines.append({
+                        'product_id': i.get('product_id'),
+                        'product_name': i.get('name') or i.get('invoice_name'),
+                        'qty': i.get('qty'),
+                    })
+                po_note = (note or '')
+                if f'ĐĐH' not in po_note and data.get('po_no'):
+                    # giữ note phiếu; apply_po_receipt gắn PNK#
+                    pass
+                po_result = apply_po_receipt(
+                    conn, po_id, receipt_lines, import_id=import_id,
+                )
+
             conn.commit()
             return jsonify({
                 "success": True,
@@ -616,6 +664,7 @@ def register_ketoan_sme_routes(app):
                 "total_payment_vnd": total_final_float,
                 "journal_entry_ids": accounting_tx_ids,
                 "accounting_tx_ids": accounting_tx_ids,
+                "purchase_order": po_result,
             })
 
         except Exception as e:
@@ -1418,6 +1467,348 @@ def register_ketoan_sme_routes(app):
             return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
             conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/purchase-orders/<int:po_id>/import-draft', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_po_import_draft(po_id):
+        conn = get_db_connection()
+        try:
+            from Services.sme.purchase_order import build_import_draft_from_po
+            data = build_import_draft_from_po(conn, po_id)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/purchasing-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_purchasing_metrics():
+        conn = get_db_connection()
+        try:
+            from Services.sme.purchase_order import purchasing_hub_metrics
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = purchasing_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/debt-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_debt_metrics():
+        conn = get_db_connection()
+        try:
+            from Services.sme.dashboard_metrics import debt_hub_metrics
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = debt_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/warehouse-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_warehouse_metrics():
+        conn = get_db_connection()
+        try:
+            from Services.sme.dashboard_metrics import warehouse_hub_metrics
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = warehouse_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/fixed-asset-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_fixed_asset_metrics():
+        conn = get_db_connection()
+        try:
+            from Services.sme.dashboard_metrics import fixed_asset_hub_metrics
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = fixed_asset_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/tools-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_tools_metrics():
+        conn = get_db_connection()
+        try:
+            from Services.sme.dashboard_metrics import tools_hub_metrics
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = tools_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/hr-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_hr_metrics():
+        conn = get_db_connection()
+        try:
+            from Services.sme.dashboard_metrics import hr_hub_metrics
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = hr_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/sales-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_sales_metrics():
+        conn = get_db_connection()
+        try:
+            from Services.sme.dashboard_metrics import sales_hub_metrics
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = sales_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/books-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_books_metrics():
+        conn = get_db_connection()
+        try:
+            from Services.sme.dashboard_metrics import books_hub_metrics
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = books_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/bctc-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_bctc_metrics():
+        conn = get_db_connection()
+        try:
+            from Services.sme.dashboard_metrics import bctc_hub_metrics
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = bctc_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/vat-declaration', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_vat_declaration():
+        conn = get_db_connection()
+        try:
+            from Services.sme.vat_declaration import vat_declaration_worksheet
+            from Services.tenant_profile import get_current_tenant_profile, normalize_vat_filing_period
+            profile = get_current_tenant_profile()
+            features = profile.get('features') or {}
+            default_mode = normalize_vat_filing_period(
+                request.args.get('filing_mode')
+                or profile.get('vat_filing_period')
+                or features.get('vat_filing_period')
+                or features.get('filing_period'),
+                default='monthly' if features.get('monthly_vat_filing') else 'quarterly',
+            )
+            year = request.args.get('year', type=int) or datetime.now().year
+            now = datetime.now()
+            period = request.args.get('period', type=int)
+            quarter = request.args.get('quarter', type=int)
+            if default_mode == 'quarterly' and quarter is None and period is None:
+                quarter = (now.month - 1) // 3 + 1
+            elif default_mode == 'monthly' and period is None:
+                period = now.month
+            data = vat_declaration_worksheet(
+                conn,
+                fiscal_year=year,
+                period=period,
+                quarter=quarter,
+                filing_mode=default_mode,
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/vat-declaration/xml', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_vat_declaration_xml():
+        conn = get_db_connection()
+        try:
+            from Services.sme.vat_xml import generate_sme_vat_xml
+            from Services.tenant_profile import get_current_tenant_profile, normalize_vat_filing_period
+            profile = get_current_tenant_profile()
+            features = profile.get('features') or {}
+            default_mode = normalize_vat_filing_period(
+                request.args.get('filing_mode')
+                or profile.get('vat_filing_period')
+                or features.get('vat_filing_period')
+                or features.get('filing_period'),
+                default='monthly' if features.get('monthly_vat_filing') else 'quarterly',
+            )
+            year = request.args.get('year', type=int) or datetime.now().year
+            now = datetime.now()
+            period = request.args.get('period', type=int)
+            quarter = request.args.get('quarter', type=int)
+            if default_mode == 'quarterly' and quarter is None and period is None:
+                quarter = (now.month - 1) // 3 + 1
+            elif default_mode == 'monthly' and period is None:
+                period = now.month
+            result = generate_sme_vat_xml(
+                conn,
+                fiscal_year=year,
+                period=period,
+                quarter=quarter,
+                filing_mode=default_mode,
+                loai_tkhai=request.args.get('loai_tkhai') or 'C',
+                so_lan=request.args.get('so_lan') or '1',
+            )
+            return Response(
+                result['xml'],
+                mimetype='application/xml; charset=utf-8',
+                headers={
+                    'Content-Disposition': f'attachment; filename="{result["filename"]}"',
+                },
+            )
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/sale-forms/customers', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_sale_form_customers():
+        conn = get_db_connection()
+        try:
+            from Services.sme.sale_forms import list_sale_customers
+            return jsonify({'success': True, 'data': list_sale_customers(conn)})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/sale-forms/products', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_sale_form_products():
+        conn = get_db_connection()
+        try:
+            from Services.sme.sale_forms import list_products_brief
+            return jsonify({'success': True, 'data': list_products_brief(conn)})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/sale-forms/01-bh', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_form_01_bh():
+        conn = get_db_connection()
+        try:
+            from Services.sme.sale_forms import form_01_bh
+            data = form_01_bh(
+                conn,
+                agent_name=request.args.get('agent_name') or '',
+                date_from=request.args.get('date_from') or '',
+                date_to=request.args.get('date_to') or '',
+                contract_no=request.args.get('contract_no') or '',
+                contract_date=request.args.get('contract_date') or '',
+                opening_debt=float(request.args.get('opening_debt') or 0),
+                commission=float(request.args.get('commission') or 0),
+                tax_paid_for=float(request.args.get('tax_paid_for') or 0),
+                other_cost=float(request.args.get('other_cost') or 0),
+                paid_cash=float(request.args.get('paid_cash') or 0),
+                paid_cheque=float(request.args.get('paid_cheque') or 0),
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/sale-forms/02-bh', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_form_02_bh():
+        conn = get_db_connection()
+        try:
+            from Services.sme.sale_forms import form_02_bh
+            data = form_02_bh(
+                conn,
+                product_id=request.args.get('product_id', type=int) or 0,
+                date_from=request.args.get('date_from') or '',
+                date_to=request.args.get('date_to') or '',
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()

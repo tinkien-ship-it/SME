@@ -1,115 +1,113 @@
-{% extends "base.html" %}
-{% block title %}Dashboard Công Nợ - SME Accounting{% endblock %}
+# -*- coding: utf-8 -*-
+from pathlib import Path
 
-{% block extra_style %}
-<style>
-    .sme-dashboard-container {
-        display: flex;
-        min-height: calc(100vh - 160px);
-        margin: -1.5rem;
+PURCH_SCRIPTS = """{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function () {
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('vi-VN').format(Number(amount || 0)) + ' đ';
+    }
+    function periodToFromFilter(val) {
+        const m = new Date().getMonth() + 1;
+        if (val === 'this_quarter') return Math.ceil(m / 3) * 3;
+        if (val === 'this_year') return 12;
+        return m;
+    }
+    let trendChart, pieChart;
+
+    async function loadDash() {
+        const year = new Date().getFullYear();
+        const periodTo = periodToFromFilter(document.getElementById('dateFilter').value);
+        const res = await fetch('/api/sme/purchasing-metrics?year=' + year + '&period_to=' + periodTo);
+        const payload = await res.json();
+        if (!payload.success) throw new Error(payload.error || 'Loi tai');
+        const d = payload.data || {};
+
+        document.getElementById('total-purchase').textContent = formatCurrency(d.total_purchase);
+        document.getElementById('total-paid').textContent = formatCurrency(d.total_paid);
+        document.getElementById('total-payable').textContent = formatCurrency(d.total_payable);
+        document.getElementById('pending-orders').textContent = d.pending_orders || 0;
+        document.getElementById('purchase-growth').textContent =
+            d.growth_pct == null ? '—' : ((d.growth_pct >= 0 ? '+' : '') + d.growth_pct.toFixed(1) + '%');
+        document.getElementById('paid-rate').textContent =
+            d.paid_rate_pct == null ? '—' : (Math.round(d.paid_rate_pct) + '%');
+        document.getElementById('urgent-payable-text').textContent =
+            'ĐĐH chờ nhập ~ ' + formatCurrency(d.pending_order_value);
+
+        const tableBody = document.getElementById('due-debts-table-body');
+        const opens = d.open_orders || [];
+        if (!opens.length) {
+            tableBody.innerHTML = '<tr class="text-center text-muted"><td colspan="5" class="py-4">Không có đơn chờ nhập</td></tr>';
+        } else {
+            const stLabel = {draft:'Nháp',confirmed:'Xác nhận',partial:'Một phần'};
+            tableBody.innerHTML = opens.map(o =>
+                '<tr>' +
+                '<td class="ps-3 fw-medium">' + (o.supplier_name || '') + '</td>' +
+                '<td><code><a href="/SME_purchase_order_create?id=' + o.id + '">' + (o.po_no || '') + '</a></code></td>' +
+                '<td>' + ((o.expected_date || o.po_date || '').slice(0,10)) + '</td>' +
+                '<td class="text-end fw-bold">' + formatCurrency(o.total_amount) + '</td>' +
+                '<td class="text-center"><span class="badge bg-warning bg-opacity-10 text-warning">' + (stLabel[o.status]||o.status) + '</span>' +
+                ' <a class="btn btn-sm btn-outline-success py-0 ms-1" href="/SME_import?po_id=' + o.id + '">Nhập</a></td>' +
+                '</tr>'
+            ).join('');
+        }
+
+        const months = d.monthly || [];
+        if (trendChart) trendChart.destroy();
+        trendChart = new Chart(document.getElementById('purchaseTrendChart').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: months.map(x => x.label),
+                datasets: [{
+                    label: 'Giá trị mua (152/153/156)',
+                    data: months.map(x => x.purchase),
+                    borderColor: '#0d6efd', borderWidth: 3, tension: 0.35, fill: true,
+                    backgroundColor: 'rgba(13,110,253,0.12)', pointBackgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + formatCurrency(c.parsed.y) } } },
+                scales: { y: { ticks: { callback: v => v >= 1e6 ? (v / 1e6) + ' Tr' : v } }, x: { grid: { display: false } } }
+            }
+        });
+
+        const suppliers = d.suppliers || [];
+        if (pieChart) pieChart.destroy();
+        pieChart = new Chart(document.getElementById('supplierPieChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: suppliers.length ? suppliers.map(s => s.name) : ['Chưa có ĐĐH'],
+                datasets: [{
+                    data: suppliers.length ? suppliers.map(s => s.amount) : [1],
+                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#6c757d', '#dc3545', '#0dcaf0'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '70%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: { callbacks: { label: c => ' ' + c.label + ': ' + formatCurrency(c.parsed) } }
+                }
+            }
+        });
     }
 
-    .sme-sidebar {
-        width: 280px;
-        background: #ffffff;
-        border-right: 1px solid #e9ecef;
-        padding: 1.5rem 0;
-        flex-shrink: 0;
-        overflow-y: auto;
-        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.03);
-    }
-
-    .nav-link-sub {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem 1.5rem;
-        color: #495057;
-        text-decoration: none;
-        font-weight: 500;
-        border-left: 4px solid transparent;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .nav-link-sub:hover {
-        background: #f8f9fa;
-        color: #0d6efd;
-    }
-
-    .nav-link-sub.active {
-        background: #e7f1ff;
-        color: #0d6efd;
-        border-left-color: #0d6efd;
-        font-weight: 600;
-    }
-
-    .submenu {
-        padding-left: 2.8rem;
-        font-size: 0.95rem;
-    }
-
-    .sme-content {
-        flex-grow: 1;
-        padding: 2rem;
-        background: linear-gradient(135deg, #f8f9fc 0%, #f0f2f5 100%);
-        overflow-y: auto;
-    }
-
-    .metric-card {
-        border: none;
-        border-radius: 16px;
-        background: white;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-    }
-
-    .metric-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
-    }
-
-    .metric-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.6rem;
-    }
-
-    .quick-action-btn {
-        height: 42px;
-        font-weight: 600;
-        border-radius: 10px;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-    }
-</style>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('dateFilter').addEventListener('change', () => loadDash().catch(e => alert(e.message)));
+        loadDash().catch(e => {
+            document.getElementById('due-debts-table-body').innerHTML =
+                '<tr><td colspan="5" class="text-danger text-center py-4">' + e.message + '</td></tr>';
+        });
+    });
+})();
+</script>
 {% endblock %}
+"""
 
-{% block content %}
-<div class="sme-dashboard-container">
-    <!-- Sidebar -->
-    <div class="sme-sidebar shadow-sm">
-        <div class="px-3 mb-4">
-            <span class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.08em;">CÔNG NỢ</span>
-        </div>
-        <nav class="nav flex-column">
-            <a class="nav-link-sub active" href="#"><i class="fas fa-bag-shopping text-warning me-2"></i> Quản Lý Công Nợ</a>
-            
-            <div class="submenu">
-                <a class="nav-link-sub" href="{{ url_for('SoCongNoPhaiThu') }}"><i class="fas fa-list me-2"></i> Công Nợ Phải Thu Khách Hàng</a>
-                <a class="nav-link-sub" href="{{ url_for('SME_SoCongNoPhaiTra') }}"><i class="fas fa-list me-2"></i> Công Nợ Phải Trả NCC</a>
-                <a class="nav-link-sub" href="{{ url_for('SME_PhaiThuCongNhanVien') }}"><i class="fas fa-file-invoice me-2"></i> Phải Thu Nhân Viên (141)</a>
-                <a class="nav-link-sub" href="{{ url_for('SoCongNoPhaiTraNhanVien') }}"><i class="fas fa-boxes me-2"></i> Phải Trả Công Nhân Viên</a>
-                <a class="nav-link-sub text-danger" href="{{ url_for('SME_dashboard') }}"><i class="fas fa-home me-2 text-danger"></i> Quay lại trang chủ</a>
-            </div>
-        </nav>
-    </div>
-
-    <!-- Main Content -->
-    <div class="sme-content">
+DEBT_TAIL = """
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h3 class="fw-bold text-primary mb-1">Tổng Quan Công Nợ</h3>
@@ -239,3 +237,31 @@
 })();
 </script>
 {% endblock %}
+"""
+
+p = Path(r'C:\SME\templates\KeToanSME\dashboard_purchasing.html')
+text = p.read_text(encoding='utf-8')
+idx = text.find('{% block scripts %}')
+assert idx >= 0
+text = text[:idx] + PURCH_SCRIPTS
+text = text.replace('Năm 2026', 'Năm nay', 1)
+text = text.replace('Công Nợ Đến Hạn & Quá Hạn', 'Đơn đặt hàng chờ nhập kho', 1)
+text = text.replace('<th>Số Hóa Đơn</th>', '<th>Số ĐĐH</th>', 1)
+text = text.replace('<th>Ngày Đến Hạn</th>', '<th>Ngày DK</th>', 1)
+p.write_text(text, encoding='utf-8')
+print('purchasing ok')
+
+p2 = Path(r'C:\SME\templates\KeToanSME\dashboard_debt.html')
+text2 = p2.read_text(encoding='utf-8')
+# keep head through sidebar end of sme-content start header
+marker = '<div class="sme-content">'
+i = text2.find(marker)
+assert i >= 0
+# find after opening sme-content, keep sidebar before
+head = text2[: i + len(marker)]
+# drop old main content/scripts, append new
+out = head + DEBT_TAIL
+# fix title
+out = out.replace('Dashboard Mua Hàng - SME Accounting', 'Dashboard Công Nợ - SME Accounting', 1)
+p2.write_text(out, encoding='utf-8')
+print('debt ok')

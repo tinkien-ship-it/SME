@@ -70,6 +70,8 @@
       <td class="money">${money(r.total_amount)}</td>
       <td><span class="badge badge-${r.status}">${label[r.status]||r.status}</span></td>
       <td class="text-end">
+        ${['draft','confirmed','partial'].includes(r.status)
+          ? `<a class="btn btn-outline-success btn-sm py-0 me-1" href="/SME_import?po_id=${r.id}">Nhập kho</a>` : ''}
         <a class="btn btn-outline-secondary btn-sm py-0" href="/SME_purchase_order_create?id=${r.id}">Sửa</a>
       </td>
     </tr>`).join('');

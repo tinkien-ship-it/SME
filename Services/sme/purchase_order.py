@@ -334,3 +334,269 @@ def delete_purchase_order(conn: sqlite3.Connection, po_id: int) -> bool:
     conn.execute("DELETE FROM sme_purchase_order_lines WHERE po_id = ?", (po_id,))
     conn.execute("DELETE FROM sme_purchase_orders WHERE id = ?", (po_id,))
     return True
+
+
+def remaining_qty(line: dict) -> Decimal:
+    ordered = _money(line.get('qty'))
+    received = _money(line.get('received_qty'))
+    rem = ordered - received
+    return rem if rem > 0 else Decimal('0.00')
+
+
+def build_import_draft_from_po(conn: sqlite3.Connection, po_id: int) -> dict[str, Any]:
+    """Payload điền sẵn phiếu nhập kho từ ĐĐH (chỉ phần chưa nhận)."""
+    po = get_purchase_order(conn, po_id)
+    if not po:
+        raise ValueError('Không tìm thấy đơn đặt hàng')
+    if po.get('status') == 'cancelled':
+        raise ValueError('Đơn đã hủy')
+    if po.get('status') == 'received':
+        raise ValueError('Đơn đã nhận đủ')
+
+    items = []
+    for ln in po.get('lines') or []:
+        rem = remaining_qty(ln)
+        if rem <= 0:
+            continue
+        items.append({
+            'line_id': ln.get('id'),
+            'product_id': ln.get('product_id'),
+            'product_code': ln.get('product_code') or '',
+            'invoice_name': ln.get('product_name'),
+            'name': ln.get('product_name'),
+            'unit': ln.get('unit') or '',
+            'qty': float(rem),
+            'ordered_qty': float(_money(ln.get('qty'))),
+            'received_qty': float(_money(ln.get('received_qty'))),
+            'price': float(_money(ln.get('unit_price'))),
+            'type': 'goods',
+        })
+    if not items:
+        raise ValueError('Không còn số lượng chờ nhập trên đơn này')
+
+    supplier_id = po.get('supplier_id')
+    if not supplier_id and po.get('supplier_name'):
+        try:
+            row = conn.execute(
+                "SELECT id FROM suppliers WHERE name = ? COLLATE NOCASE LIMIT 1",
+                (po['supplier_name'],),
+            ).fetchone()
+            if row:
+                supplier_id = row[0] if not isinstance(row, sqlite3.Row) else row['id']
+        except sqlite3.Error:
+            supplier_id = None
+
+    return {
+        'po_id': po['id'],
+        'po_no': po.get('po_no'),
+        'po_date': po.get('po_date'),
+        'status': po.get('status'),
+        'note': po.get('note') or f"Theo ĐĐH {po.get('po_no')}",
+        'supplier_id': supplier_id,
+        'supplier_name': po.get('supplier_name'),
+        'supplier_code': po.get('supplier_code'),
+        'supplier_tax_code': po.get('supplier_tax_code'),
+        'items': items,
+    }
+
+
+def apply_po_receipt(
+    conn: sqlite3.Connection,
+    po_id: int,
+    received_lines: list[dict],
+    *,
+    import_id: int | None = None,
+) -> dict[str, Any]:
+    """Cộng số lượng đã nhận sau khi lập phiếu nhập; cập nhật trạng thái ĐĐH."""
+    po = get_purchase_order(conn, po_id)
+    if not po:
+        raise ValueError('Không tìm thấy đơn đặt hàng')
+    if po.get('status') == 'cancelled':
+        raise ValueError('Đơn đã hủy')
+
+    lines = list(po.get('lines') or [])
+    by_id = {int(x['id']): x for x in lines if x.get('id') is not None}
+    by_pid = {}
+    by_name = {}
+    for x in lines:
+        if x.get('product_id'):
+            by_pid.setdefault(int(x['product_id']), []).append(x)
+        key = str(x.get('product_name') or '').strip().lower()
+        if key:
+            by_name.setdefault(key, []).append(x)
+
+    def _pick(candidates: list[dict]) -> dict | None:
+        for c in candidates:
+            if remaining_qty(c) > 0:
+                return c
+        return candidates[0] if candidates else None
+
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    for raw in received_lines or []:
+        qty = _money(raw.get('qty') or raw.get('received_qty'))
+        if qty <= 0:
+            continue
+        target = None
+        if raw.get('line_id') and int(raw['line_id']) in by_id:
+            target = by_id[int(raw['line_id'])]
+        elif raw.get('product_id') and int(raw['product_id']) in by_pid:
+            target = _pick(by_pid[int(raw['product_id'])])
+        else:
+            key = str(raw.get('product_name') or raw.get('name') or raw.get('invoice_name') or '').strip().lower()
+            if key in by_name:
+                target = _pick(by_name[key])
+        if not target:
+            continue
+        new_recv = _money(target.get('received_qty')) + qty
+        ordered = _money(target.get('qty'))
+        if new_recv > ordered:
+            new_recv = ordered
+        conn.execute(
+            "UPDATE sme_purchase_order_lines SET received_qty = ? WHERE id = ?",
+            (float(new_recv), target['id']),
+        )
+        target['received_qty'] = float(new_recv)
+
+    refreshed = get_purchase_order(conn, po_id) or po
+    all_done = True
+    any_recv = False
+    for ln in refreshed.get('lines') or []:
+        recv = _money(ln.get('received_qty'))
+        ordered = _money(ln.get('qty'))
+        if recv > 0:
+            any_recv = True
+        if recv + Decimal('0.0001') < ordered:
+            all_done = False
+    if all_done and any_recv:
+        new_status = 'received'
+    elif any_recv:
+        new_status = 'partial'
+    else:
+        new_status = refreshed.get('status') or 'confirmed'
+    if refreshed.get('status') == 'draft' and any_recv:
+        # Nhập từ đơn nháp → coi như đã xác nhận
+        if new_status == 'partial' or new_status == 'received':
+            pass
+        else:
+            new_status = 'confirmed'
+
+    note_extra = refreshed.get('note') or ''
+    if import_id:
+        tag = f'[PNK#{import_id}]'
+        if tag not in note_extra:
+            note_extra = (note_extra + ' ' + tag).strip()
+
+    conn.execute(
+        """
+        UPDATE sme_purchase_orders
+        SET status = ?, note = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (new_status, note_extra, now, po_id),
+    )
+    return get_purchase_order(conn, po_id) or refreshed
+
+
+def purchasing_hub_metrics(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    period_to: int | None = None,
+) -> dict[str, Any]:
+    """Chỉ số hub Mua hàng: PS nhập kho, công nợ 331, ĐĐH chờ nhập."""
+    from datetime import datetime as _dt
+    from Services.sme.bctc_report import _closing_balances, _period_activity
+    from Services.sme.dashboard_metrics import _f, _money, _sum_activity, _sum_balance
+    from Services.sme.journal_engine import ensure_sme_journal_ready
+
+    ensure_sme_journal_ready(conn, commit=False)
+    ensure_purchase_order_schema(conn, commit=False)
+    period_to = period_to or _dt.now().month
+    if period_to < 1 or period_to > 12:
+        raise ValueError('Kỳ phải từ 1 đến 12')
+
+    activity = _period_activity(conn, fiscal_year, 1, period_to)
+    bals = _closing_balances(conn, fiscal_year, period_to)
+
+    # Giá trị mua hàng ≈ phát sinh Nợ TK hàng tồn (152/153/156)
+    purchase = _sum_activity(activity, ('152', '153', '156'), side='debit')
+    # Thanh toán NCC ≈ phát sinh Nợ 331 (giảm công nợ)
+    paid = _sum_activity(activity, ('331',), side='debit')
+    if paid < 0:
+        paid = Decimal('0.00')
+    payable = _sum_balance(bals, ('331',), normal='credit')
+    if payable < 0:
+        payable = Decimal('0.00')
+
+    prev_to = max(1, period_to - 1)
+    prev_act = _period_activity(conn, fiscal_year, 1, prev_to) if period_to > 1 else {}
+    prev_purchase = _sum_activity(prev_act, ('152', '153', '156'), side='debit') if period_to > 1 else Decimal('0.00')
+    growth = None
+    if prev_purchase > 0:
+        growth = float((purchase - prev_purchase) / prev_purchase * 100)
+
+    open_pos = conn.execute(
+        """
+        SELECT COUNT(*) FROM sme_purchase_orders
+        WHERE status IN ('draft', 'confirmed', 'partial')
+        """
+    ).fetchone()[0]
+    open_value = conn.execute(
+        """
+        SELECT COALESCE(SUM(
+            CASE WHEN l.qty > IFNULL(l.received_qty,0)
+                 THEN (l.qty - IFNULL(l.received_qty,0)) * l.unit_price ELSE 0 END
+        ), 0)
+        FROM sme_purchase_order_lines l
+        JOIN sme_purchase_orders p ON p.id = l.po_id
+        WHERE p.status IN ('draft', 'confirmed', 'partial')
+        """
+    ).fetchone()[0]
+
+    monthly = []
+    for m in range(1, period_to + 1):
+        act = _period_activity(conn, fiscal_year, m, m)
+        monthly.append({
+            'period': m,
+            'label': f'Tháng {m}',
+            'purchase': _f(_sum_activity(act, ('152', '153', '156'), side='debit')),
+        })
+
+    top_rows = conn.execute(
+        """
+        SELECT supplier_name, SUM(total_amount) AS amt, COUNT(*) AS cnt
+        FROM sme_purchase_orders
+        WHERE status != 'cancelled'
+          AND strftime('%Y', po_date) = ?
+        GROUP BY supplier_name
+        ORDER BY amt DESC
+        LIMIT 6
+        """,
+        (str(fiscal_year),),
+    ).fetchall()
+    suppliers = [
+        {
+            'name': r[0] if not isinstance(r, sqlite3.Row) else r['supplier_name'],
+            'amount': float(r[1] if not isinstance(r, sqlite3.Row) else r['amt'] or 0),
+            'count': int(r[2] if not isinstance(r, sqlite3.Row) else r['cnt'] or 0),
+        }
+        for r in top_rows
+    ]
+
+    recent_open = list_purchase_orders(conn, limit=8)
+    recent_open = [x for x in recent_open if x.get('status') in ('draft', 'confirmed', 'partial')][:8]
+
+    return {
+        'fiscal_year': fiscal_year,
+        'period_to': period_to,
+        'total_purchase': _f(purchase),
+        'total_paid': _f(paid),
+        'total_payable': _f(payable),
+        'pending_orders': int(open_pos or 0),
+        'pending_order_value': float(open_value or 0),
+        'growth_pct': growth,
+        'paid_rate_pct': float(paid / purchase * 100) if purchase > 0 else None,
+        'monthly': monthly,
+        'suppliers': suppliers,
+        'open_orders': recent_open,
+    }

@@ -67,6 +67,8 @@
         <input type="hidden" id="import_no">
         <input type="hidden" id="supplierId">
         <input type="hidden" id="fromInvoiceId">
+        <input type="hidden" id="fromPoId">
+        <input type="hidden" id="fromPoNo">
 
         <div class="info-header shadow-sm">
             <div class="row g-2">
@@ -504,12 +506,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const urlParams = new URLSearchParams(window.location.search);
     const invoiceId = urlParams.get('invoice_id');
+    const poId = urlParams.get('po_id');
     if (invoiceId) loadInvoiceFromServer(invoiceId);
+    else if (poId) loadPurchaseOrder(poId);
     else addRow();
 
     togglePaymentMethod();
 });
 
+async function loadPurchaseOrder(poId) {
+    try {
+        const res = await fetch('/api/sme/purchase-orders/' + encodeURIComponent(poId) + '/import-draft');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Không tải được ĐĐH');
+        const d = data.data || {};
+        document.getElementById('fromPoId').value = d.po_id || poId;
+        document.getElementById('fromPoNo').value = d.po_no || '';
+        document.getElementById('supplierId').value = d.supplier_id || '';
+        document.getElementById('supplierSearch').value = d.supplier_name || '';
+        document.getElementById('taxCode').value = d.supplier_tax_code || '';
+        const noteEl = document.getElementById('note');
+        if (noteEl) noteEl.value = d.note || ('Theo ĐĐH ' + (d.po_no || ''));
+        const tbody = document.querySelector('#itemsTable tbody');
+        tbody.innerHTML = '';
+        for (const item of (d.items || [])) {
+            addRow({
+                product_id: item.product_id || '',
+                invoice_name: item.invoice_name || item.name,
+                unit: item.unit || '',
+                qty: item.qty,
+                price: item.price,
+                type: item.type || 'goods',
+            });
+            const row = tbody.lastElementChild;
+            if (row && item.line_id) row.dataset.poLineId = item.line_id;
+            if (row && item.product_id) {
+                row.querySelector('.p-id').value = item.product_id;
+            }
+            if (row && (item.invoice_name || item.name)) {
+                await performInitialMatch(row, item.invoice_name || item.name, item.unit || '');
+                calcRow(row);
+            }
+        }
+        if (!(d.items || []).length) addRow();
+        calcTotal();
+        const badge = document.getElementById('import_no_val');
+        if (badge && d.po_no) {
+            const hint = document.createElement('div');
+            hint.className = 'small text-success mt-1';
+            hint.id = 'poHint';
+            hint.textContent = 'Điền từ ĐĐH ' + d.po_no + ' — chỉ phần chưa nhận';
+            const host = document.querySelector('.d-flex.justify-content-between.align-items-center.mb-2');
+            if (host && !document.getElementById('poHint')) host.appendChild(hint);
+        }
+        toast('Đã nạp đơn đặt hàng ' + (d.po_no || ''), 'success');
+    } catch (err) {
+        toast(err.message || 'Lỗi tải ĐĐH', 'error');
+        addRow();
+    }
+}
 // ====================== XML & LOAD INVOICE (GIỮ NGUYÊN) ======================
 async function handleXMLUpload() {
     const fileInput = document.getElementById('xmlFile');
@@ -691,6 +746,8 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
             note: document.getElementById('note').value || '',
             extra_cost: parseNumber(document.getElementById('extraCost').value),
             from_invoice_id: parseInt(document.getElementById('fromInvoiceId')?.value) || null,
+            po_id: parseInt(document.getElementById('fromPoId')?.value) || null,
+            po_no: document.getElementById('fromPoNo')?.value || null,
             
             payment_status: paymentStatus,
             payment_method: (paymentStatus === 'Đã thanh toán') 
@@ -709,8 +766,17 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
         const result = await res.json();
 
         if (result.success) {
-            toast('Lưu phiếu nhập kho thành công!', 'success');
-            setTimeout(() => location.reload(), 1500);
+            const poMsg = result.purchase_order
+                ? ` · ĐĐH ${result.purchase_order.po_no || ''} → ${result.purchase_order.status}`
+                : '';
+            toast('Lưu phiếu nhập kho thành công!' + poMsg, 'success');
+            setTimeout(() => {
+                if (result.purchase_order && result.purchase_order.id) {
+                    location.href = '/SME_purchase_order_list';
+                } else {
+                    location.reload();
+                }
+            }, 1500);
         } else {
             throw new Error(result.error || result.message || 'Lưu thất bại');
         }

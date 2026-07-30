@@ -1,97 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Dashboard Mua Hàng - SME Accounting{% endblock %}
+{% block title %}Dashboard Nhân sự & Lương - SME{% endblock %}
 
 {% block extra_style %}
 <style>
-    .sme-dashboard-container {
-        display: flex;
-        min-height: calc(100vh - 160px);
-        margin: -1.5rem;
-    }
-
-    .sme-sidebar {
-        width: 280px;
-        background: #ffffff;
-        border-right: 1px solid #e9ecef;
-        padding: 1.5rem 0;
-        flex-shrink: 0;
-        overflow-y: auto;
-        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.03);
-    }
-
-    .nav-link-sub {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem 1.5rem;
-        color: #495057;
-        text-decoration: none;
-        font-weight: 500;
-        border-left: 4px solid transparent;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .nav-link-sub:hover {
-        background: #f8f9fa;
-        color: #0d6efd;
-    }
-
-    .nav-link-sub.active {
-        background: #e7f1ff;
-        color: #0d6efd;
-        border-left-color: #0d6efd;
-        font-weight: 600;
-    }
-
-    .submenu {
-        padding-left: 2.8rem;
-        font-size: 0.95rem;
-    }
-
-    .sme-content {
-        flex-grow: 1;
-        padding: 2rem;
-        background: linear-gradient(135deg, #f8f9fc 0%, #f0f2f5 100%);
-        overflow-y: auto;
-    }
-
-    .metric-card {
-        border: none;
-        border-radius: 16px;
-        background: white;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-    }
-
-    .metric-card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
-    }
-
-    .metric-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.6rem;
-    }
-
-    .quick-action-btn {
-        height: 42px;
-        font-weight: 600;
-        border-radius: 10px;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-    }
+.sme-dashboard-container{display:flex;min-height:calc(100vh - 160px);margin:-1.5rem}
+.sme-sidebar{width:280px;background:#fff;border-right:1px solid #e9ecef;padding:1.5rem 0;flex-shrink:0;overflow-y:auto;box-shadow:2px 0 10px rgba(0,0,0,.03)}
+.nav-link-sub{display:flex;align-items:center;padding:.75rem 1.5rem;color:#495057;text-decoration:none;font-weight:500;border-left:4px solid transparent}
+.nav-link-sub:hover{background:#f8f9fa;color:#0d6efd}
+.nav-link-sub.active{background:#e7f1ff;color:#0d6efd;border-left-color:#0d6efd;font-weight:600}
+.submenu{padding-left:2.8rem;font-size:.95rem}
+.sme-content{flex-grow:1;padding:2rem;background:linear-gradient(135deg,#f8f9fc 0%,#f0f2f5 100%);overflow-y:auto}
+.metric-card{border:none;border-radius:16px;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+.metric-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.6rem}
+.quick-action-btn{height:42px;font-weight:600;border-radius:10px;display:inline-flex;align-items:center}
 </style>
 {% endblock %}
-
 {% block content %}
 <div class="sme-dashboard-container">
-    <!-- Sidebar -->
-    <div class="sme-sidebar shadow-sm">
+<div class="sme-sidebar shadow-sm">
         <div class="px-3 mb-4">
             <span class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem; letter-spacing: 0.08em;">Nhân Sự và Tiền Lương</span>
         </div>
@@ -109,316 +35,114 @@
             </div>
         </nav>
     </div>
-
-    <!-- Main Content -->
-    <div class="sme-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h3 class="fw-bold text-primary mb-1">Tổng Quan</h3>
-                <p class="text-muted mb-0">Theo dõi toàn diện hoạt động bán hàng • Cập nhật thời gian thực</p>
-            </div>
-            <div class="d-flex gap-2 align-items-center">
-                <select class="form-select shadow-sm" id="dateFilter" style="width: 160px; height: 42px;">
-                    <option value="this_month" selected>Tháng này</option>
-                    <option value="this_quarter">Quý này</option>
-                    <option value="this_year">Năm 2026</option>
-                </select>
-                <a href="{{ url_for('sale') }}" class="btn btn-primary quick-action-btn px-4">
-                    <i class="fas fa-plus me-2"></i> Điểm bán hàng
-                </a>
-            </div>
-        </div>
-
-        <!-- Metric Cards -->
-        <div class="row g-4 mb-4">
-            <div class="col-xl-3 col-md-6">
-                <div class="card metric-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="text-muted small fw-semibold text-uppercase">Tổng giá trị mua</span>
-                                <h3 class="fw-bold text-primary mt-2 mb-0" id="total-purchase">0 đ</h3>
-                            </div>
-                            <div class="metric-icon bg-primary bg-opacity-10 text-primary">
-                                <i class="fas fa-shopping-cart"></i>
-                            </div>
-                        </div>
-                        <div class="mt-3 text-success small">
-                            <i class="fas fa-arrow-trend-up"></i> <span id="purchase-growth">+12.4%</span> so với tháng trước
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-3 col-md-6">
-                <div class="card metric-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="text-muted small fw-semibold text-uppercase">Đã thanh toán</span>
-                                <h3 class="fw-bold text-success mt-2 mb-0" id="total-paid">0 đ</h3>
-                            </div>
-                            <div class="metric-icon bg-success bg-opacity-10 text-success">
-                                <i class="fas fa-credit-card"></i>
-                            </div>
-                        </div>
-                        <div class="mt-3 text-success small">
-                            <i class="fas fa-circle-check"></i> <span id="paid-rate">68%</span> thanh toán đúng hạn
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-3 col-md-6">
-                <div class="card metric-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="text-muted small fw-semibold text-uppercase">Công nợ phải trả</span>
-                                <h3 class="fw-bold text-danger mt-2 mb-0" id="total-payable">0 đ</h3>
-                            </div>
-                            <div class="metric-icon bg-danger bg-opacity-10 text-danger">
-                                <i class="fas fa-hand-holding-dollar"></i>
-                            </div>
-                        </div>
-                        <div class="mt-3 text-warning small">
-                            <i class="fas fa-clock"></i> <span id="urgent-payable-text">145 triệu đến hạn trong 15 ngày</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-3 col-md-6">
-                <div class="card metric-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <span class="text-muted small fw-semibold text-uppercase">Đơn hàng chưa nhập</span>
-                                <h3 class="fw-bold text-warning mt-2 mb-0" id="pending-orders">0</h3>
-                            </div>
-                            <div class="metric-icon bg-warning bg-opacity-10 text-warning">
-                                <i class="fas fa-boxes-packing"></i>
-                            </div>
-                        </div>
-                        <div class="mt-3 text-muted small">
-                            <i class="fas fa-info-circle"></i> Đang chờ xử lý nhập kho
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions & Charts -->
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-white border-0 pt-3">
-                        <h6 class="fw-bold mb-0">Xu Hướng Mua Hàng 6 Tháng Gần Nhất</h6>
-                    </div>
-                    <div class="card-body">
-                        <div style="position: relative; height: 320px;">
-                            <canvas id="purchaseTrendChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-4">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-white border-0 pt-3">
-                        <h6 class="fw-bold mb-0">Top Nhà Cung Cấp</h6>
-                    </div>
-                    <div class="card-body d-flex align-items-center justify-content-center">
-                        <div style="position: relative; height: 280px; width: 100%;">
-                            <canvas id="supplierPieChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bảng công nợ đến hạn -->
-        <div class="card shadow-sm border-0 mt-4">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-                <h6 class="fw-bold mb-0"><i class="fas fa-bell text-warning me-2"></i>Công Nợ Đến Hạn & Quá Hạn</h6>
-                <a href="{{ url_for('SME_SoCongNoPhaiTra') }}" class="text-primary small text-decoration-none">Xem tất cả →</a>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-3">Nhà Cung Cấp</th>
-                            <th>Số Hóa Đơn</th>
-                            <th>Ngày Đến Hạn</th>
-                            <th class="text-end">Giá Trị</th>
-                            <th class="text-center">Trạng Thái</th>
-                        </tr>
-                    </thead>
-                    <tbody id="due-debts-table-body">
-                        <!-- Render dynamic từ JS hoặc Jinja loop -->
-                        <tr class="text-center text-muted" id="empty-row-placeholder">
-                            <td colspan="5" class="py-4">Đang tải dữ liệu hoặc không có công nợ đến hạn...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+  <div class="sme-content">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h3 class="fw-bold text-primary mb-1">Tổng quan nhân sự & lương</h3>
+        <p class="text-muted mb-0">Phải trả lương 334 · BHXH 338 · tạm ứng 141 từ sổ kép</p>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <select class="form-select shadow-sm" id="dateFilter" style="width:160px;height:42px">
+          <option value="this_month" selected>Tháng này</option>
+          <option value="this_quarter">Quý này</option>
+          <option value="this_year">Năm nay</option>
+        </select>
+        <a href="{{ url_for('SME_PhaiThuCongNhanVien') }}" class="btn btn-primary quick-action-btn px-4"><i class="fas fa-user-tie me-2"></i>Tạm ứng NV</a>
+      </div>
     </div>
+    <div class="row g-4 mb-4">
+<div class="col-xl-3 col-md-6"><div class="card metric-card h-100"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-start">
+    <div><span class="text-muted small fw-semibold text-uppercase">Phải trả lương (334)</span>
+    <h3 class="fw-bold text-danger mt-2 mb-0" id="m1">0</h3></div>
+    <div class="metric-icon bg-danger bg-opacity-10 text-danger"><i class="fas fa-money-check-dollar"></i></div>
+  </div>
+  <div class="mt-3 text-muted small"></div>
+</div></div></div>
+<div class="col-xl-3 col-md-6"><div class="card metric-card h-100"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-start">
+    <div><span class="text-muted small fw-semibold text-uppercase">Đã trả YTD</span>
+    <h3 class="fw-bold text-success mt-2 mb-0" id="m2">0</h3></div>
+    <div class="metric-icon bg-success bg-opacity-10 text-success"><i class="fas fa-hand-holding-dollar"></i></div>
+  </div>
+  <div class="mt-3 text-muted small"></div>
+</div></div></div>
+<div class="col-xl-3 col-md-6"><div class="card metric-card h-100"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-start">
+    <div><span class="text-muted small fw-semibold text-uppercase">Tạm ứng (141)</span>
+    <h3 class="fw-bold text-warning mt-2 mb-0" id="m3">0</h3></div>
+    <div class="metric-icon bg-warning bg-opacity-10 text-warning"><i class="fas fa-wallet"></i></div>
+  </div>
+  <div class="mt-3 text-muted small"></div>
+</div></div></div>
+<div class="col-xl-3 col-md-6"><div class="card metric-card h-100"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-start">
+    <div><span class="text-muted small fw-semibold text-uppercase">Số nhân viên</span>
+    <h3 class="fw-bold text-primary mt-2 mb-0" id="m4">0</h3></div>
+    <div class="metric-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-users"></i></div>
+  </div>
+  <div class="mt-3 text-muted small"><span id="m4sub"></span></div>
+</div></div></div></div>
+    <div class="row g-4">
+      <div class="col-lg-8"><div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white border-0 pt-3"><h6 class="fw-bold mb-0">Ghi nhận & chi trả lương theo tháng</h6></div>
+        <div class="card-body"><div style="position:relative;height:320px"><canvas id="hrTrend"></canvas></div></div>
+      </div></div>
+      <div class="col-lg-4"><div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white border-0 pt-3"><h6 class="fw-bold mb-0">Cơ cấu nghĩa vụ</h6></div>
+        <div class="card-body d-flex align-items-center justify-content-center">
+          <div style="position:relative;height:280px;width:100%"><canvas id="hrPie"></canvas></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="card shadow-sm border-0 mt-4">
+      <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">Lối tắt</h6></div>
+      <div class="card-body d-flex flex-wrap gap-2">
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_PhaiThuCongNhanVien') }}">Phải thu NV</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_dashboard_HRSalary') }}">Hub NS-TL</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_general_ledger') }}">Sổ cái</a>
+</div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Định dạng tiền tệ VND an toàn
-    function formatCurrency(amount) {
-        return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
-    }
+(function(){
 
-    document.addEventListener("DOMContentLoaded", function() {
-        // --- 1. ĐỔI DỮ LIỆU TỪ BACKEND QUA ĐÂY ---
-        const dashboardData = {
-            summary: {
-                totalPurchase: 2450000000,
-                totalPaid: 1680000000,
-                totalPayable: 770000000,
-                pendingOrders: 12,
-                growthRate: "+12.4%",
-                paidRate: "68%",
-                urgentText: "145 triệu đến hạn trong 15 ngày"
-            },
-            trendChart: {
-                labels: ['Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7'],
-                data: [420000000, 380000000, 650000000, 520000000, 780000000, 920000000] // Triệu đồng -> đầy đủ chữ số
-            },
-            suppliers: {
-                labels: ['Công Ty TNHH Mỹ Dung', 'Nhà cung cấp An Phát', 'Công Ty Cổ Phần Sài Gòn', 'Các đơn vị khác'],
-                data: [35, 28, 22, 15]
-            },
-            debtsTable: [
-                { supplier: 'Công Ty TNHH Mỹ Dung', invoiceNo: 'HD-2026-0089', dueDate: '25/07/2026', amount: 45000000, status: 'Quá hạn 5 ngày', statusClass: 'badge bg-danger bg-opacity-10 text-danger' },
-                { supplier: 'Nhà cung cấp An Phát', invoiceNo: 'HD-2026-0102', dueDate: '30/07/2026', amount: 100000000, status: 'Đến hạn trong 10 ngày', statusClass: 'badge bg-warning bg-opacity-10 text-warning' }
-            ]
-        };
+function money(v){return new Intl.NumberFormat('vi-VN').format(Number(v||0))+' đ';}
+function periodToFromFilter(val){const m=new Date().getMonth()+1;if(val==='this_quarter')return Math.ceil(m/3)*3;if(val==='this_year')return 12;return m;}
 
-        // --- 2. RENDER CÁC SỐ LIỆU TỔNG HỢP ---
-        document.getElementById('total-purchase').textContent = formatCurrency(dashboardData.summary.totalPurchase);
-        document.getElementById('total-paid').textContent = formatCurrency(dashboardData.summary.totalPaid);
-        document.getElementById('total-payable').textContent = formatCurrency(dashboardData.summary.totalPayable);
-        document.getElementById('pending-orders').textContent = dashboardData.summary.pendingOrders;
-        document.getElementById('purchase-growth').textContent = dashboardData.summary.growthRate;
-        document.getElementById('paid-rate').textContent = dashboardData.summary.paidRate;
-        document.getElementById('urgent-payable-text').textContent = dashboardData.summary.urgentText;
+let trendChart, pieChart;
+async function loadDash(){
+  const year=new Date().getFullYear();
+  const periodTo=periodToFromFilter(document.getElementById('dateFilter').value);
+  const res=await fetch('/api/sme/hr-metrics?year='+year+'&period_to='+periodTo);
+  const payload=await res.json();
+  if(!payload.success) throw new Error(payload.error||'Lỗi');
+  const d=payload.data||{};
 
-        // --- 3. RENDER BẢNG CÔNG NỢ ---
-        const tableBody = document.getElementById('due-debts-table-body');
-        if (dashboardData.debtsTable && dashboardData.debtsTable.length > 0) {
-            tableBody.innerHTML = ''; // Xóa placeholder
-            dashboardData.debtsTable.forEach(item => {
-                const row = `
-                    <tr>
-                        <td class="ps-3 fw-medium">${item.supplier}</td>
-                        <td><code>${item.invoiceNo}</code></td>
-                        <td>${item.dueDate}</td>
-                        <td class="text-end fw-bold text-dark">${formatCurrency(item.amount)}</td>
-                        <td class="text-center"><span class="${item.statusClass}">${item.status}</span></td>
-                    </tr>
-                `;
-                tableBody.insertAdjacentHTML('beforeend', row);
-            });
-        }
+  document.getElementById('m1').textContent=money(d.salary_payable);
+  document.getElementById('m2').textContent=money(d.salary_paid_ytd);
+  document.getElementById('m3').textContent=money(d.employee_advance);
+  document.getElementById('m4').textContent=String(d.employee_count||0);
+  document.getElementById('m4sub').textContent='Ghi nhận lương YTD '+money(d.salary_accrued_ytd)+' · BHXH '+money(d.social_insurance);
+  const months=d.monthly||[];
+  if(trendChart) trendChart.destroy();
+  trendChart=new Chart(document.getElementById('hrTrend').getContext('2d'),{type:'bar',data:{labels:months.map(x=>x.label),datasets:[
+    {label:'Ghi nhận',data:months.map(x=>x.accrued),backgroundColor:'#0d6efd'},
+    {label:'Chi trả',data:months.map(x=>x.paid),backgroundColor:'#198754'}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+money(c.parsed.y)}}}}});
+  if(pieChart) pieChart.destroy();
+  pieChart=new Chart(document.getElementById('hrPie').getContext('2d'),{type:'doughnut',data:{labels:['Phải trả 334','BHXH 338','Tạm ứng 141'],datasets:[{data:[d.salary_payable||0,d.social_insurance||0,d.employee_advance||0],backgroundColor:['#dc3545','#6f42c1','#ffc107']}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>' '+c.label+': '+money(c.parsed)}}}}});
 
-        // --- 4. CẤU HÌNH BIỂU ĐỒ XU HƯỚNG MUA HÀNG (LINE CHART) ---
-        const ctxTrend = document.getElementById('purchaseTrendChart').getContext('2d');
-        new Chart(ctxTrend, {
-            type: 'line',
-            data: {
-                labels: dashboardData.trendChart.labels,
-                datasets: [{
-                    label: 'Giá trị mua hàng',
-                    data: dashboardData.trendChart.data,
-                    borderColor: '#0d6efd',
-                    borderWidth: 3,
-                    tension: 0.38,
-                    fill: true,
-                    backgroundColor: function(context) {
-                        const chart = context.chart;
-                        const {ctx, chartArea} = chart;
-                        if (!chartArea) return null;
-                        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                        gradient.addColorStop(0, 'rgba(13, 110, 253, 0.24)');
-                        gradient.addColorStop(1, 'rgba(13, 110, 253, 0.01)');
-                        return gradient;
-                    },
-                    pointBackgroundColor: '#0d6efd',
-                    pointHoverRadius: 7
-                }]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return ' ' + context.dataset.label + ': ' + formatCurrency(context.parsed.y);
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        grid: { borderDash: [5, 5] },
-                        ticks: {
-                            callback: function(value) {
-                                return value >= 1000000 ? (value / 1000000) + ' Tr' : value;
-                            }
-                        }
-                    },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-
-        // --- 5. CẤU HÌNH BIỂU ĐỒ TOP NCC (DOUGHNUT CHART) ---
-        const ctxPie = document.getElementById('supplierPieChart').getContext('2d');
-        new Chart(ctxPie, {
-            type: 'doughnut',
-            data: {
-                labels: dashboardData.suppliers.labels,
-                datasets: [{
-                    data: dashboardData.suppliers.data,
-                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#6c757d'],
-                    borderWidth: 2,
-                    borderRadius: 4
-                }]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { 
-                        position: 'bottom',
-                        labels: { boxWidth: 12, padding: 15, font: { size: 11 } }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return ' ' + context.label + ': ' + context.parsed + '%';
-                            }
-                        }
-                    }
-                },
-                cutout: '70%'
-            }
-        });
-
-        // --- 6. XỬ LÝ SỰ KIỆN LỌC THỜI GIAN (TÙY CHỌN PHÁT TRIỂN) ---
-        document.getElementById('dateFilter').addEventListener('change', function(e) {
-            console.log("Đã chọn bộ lọc thời gian: " + e.target.value);
-            // Tại đây bạn có thể viết hàm fetch() gọi API backend để cập nhật lại data của Chart và Thẻ số liệu.
-        });
-    });
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('dateFilter').addEventListener('change',()=>loadDash().catch(e=>alert(e.message)));
+  loadDash().catch(e=>alert(e.message));
+});
+})();
 </script>
 {% endblock %}

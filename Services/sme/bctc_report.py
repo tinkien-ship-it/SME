@@ -97,9 +97,10 @@ def _period_activity(
     fiscal_year: int,
     period_from: int,
     period_to: int,
+    *,
+    exclude_document_types: tuple[str, ...] = (),
 ) -> dict[str, dict[str, Decimal]]:
-    rows = conn.execute(
-        """
+    sql = """
         SELECT jl.account_code,
                SUM(jl.debit) AS debit,
                SUM(jl.credit) AS credit
@@ -108,10 +109,14 @@ def _period_activity(
         WHERE je.status IN ('posted', 'reversed')
           AND je.fiscal_year = ?
           AND je.period >= ? AND je.period <= ?
-        GROUP BY jl.account_code
-        """,
-        (fiscal_year, period_from, period_to),
-    ).fetchall()
+    """
+    params: list[Any] = [fiscal_year, period_from, period_to]
+    if exclude_document_types:
+        placeholders = ','.join('?' for _ in exclude_document_types)
+        sql += f' AND je.document_type NOT IN ({placeholders})'
+        params.extend(exclude_document_types)
+    sql += ' GROUP BY jl.account_code'
+    rows = conn.execute(sql, params).fetchall()
     return {
         r[0]: {'debit': _money(r[1]), 'credit': _money(r[2])}
         for r in rows
@@ -251,11 +256,27 @@ def balance_sheet(
 
     current_profit = Decimal('0.00')
     if include_current_profit:
-        is_rep = income_statement(
-            conn, fiscal_year=fiscal_year, period_from=1, period_to=period_to,
-        )
-        current_profit = _money(is_rep['totals']['profit_after_tax'])
-        leaf_vals['421'] = _money(leaf_vals.get('421', 0)) + current_profit
+        # Chỉ cộng LN các kỳ chưa kết chuyển KCKQ (tránh cộng trùng vào 421)
+        closed_rows = conn.execute(
+            """
+            SELECT DISTINCT period FROM sme_journal_entries
+            WHERE fiscal_year = ? AND period <= ?
+              AND document_type = 'KCKQ' AND status = 'posted'
+              AND reverses_id IS NULL
+            """,
+            (fiscal_year, period_to),
+        ).fetchall()
+        closed = {int(r[0]) for r in closed_rows}
+        open_periods = [p for p in range(1, period_to + 1) if p not in closed]
+        if open_periods:
+            is_rep = income_statement(
+                conn,
+                fiscal_year=fiscal_year,
+                period_from=min(open_periods),
+                period_to=max(open_periods),
+            )
+            current_profit = _money(is_rep['totals']['profit_after_tax'])
+            leaf_vals['421'] = _money(leaf_vals.get('421', 0)) + current_profit
 
     rows = _build_rows(B01_BALANCE_SHEET, leaf_vals)
     by_code = {r['code']: r['amount'] for r in rows if r['amount'] is not None}
@@ -295,7 +316,11 @@ def income_statement(
         raise ValueError('period_from không được lớn hơn period_to')
 
     accounts = _coa_line_map(conn)
-    bal_map = _period_activity(conn, fiscal_year, period_from, period_to)
+    # Loại KCKQ: kết chuyển làm phát sinh DT/CP về 0 — B02 cần số trước kết chuyển
+    bal_map = _period_activity(
+        conn, fiscal_year, period_from, period_to,
+        exclude_document_types=('KCKQ',),
+    )
     leaf_vals = _aggregate_leaf_amounts(accounts, bal_map, line_defs=B02_INCOME_STATEMENT)
     rows = _build_rows(B02_INCOME_STATEMENT, leaf_vals)
     date_from, _ = period_bounds(fiscal_year, period_from)

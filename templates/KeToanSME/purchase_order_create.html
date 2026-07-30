@@ -9,6 +9,7 @@
     </div>
     <div class="d-flex gap-2">
       <button type="button" class="btn btn-outline-secondary btn-sm" id="btnConfirm" style="display:none">Xác nhận</button>
+      <a class="btn btn-outline-success btn-sm" id="btnImport" style="display:none" href="#"><i class="fas fa-boxes me-1"></i> Nhập kho</a>
       <button type="button" class="btn btn-outline-danger btn-sm" id="btnCancel" style="display:none">Hủy đơn</button>
       <button type="button" class="btn btn-primary btn-sm" id="btnSave">Lưu</button>
     </div>
@@ -32,13 +33,18 @@
       <strong>Chi tiết hàng</strong>
       <button type="button" class="btn btn-outline-primary btn-sm" id="btnAdd">+ Dòng</button>
     </div>
+    <p class="small text-muted mb-2">Gõ tên hàng để chọn từ danh mục — hệ thống gắn <code>product_id</code> khi khớp.</p>
     <div class="table-responsive">
       <table class="table table-sm align-middle" id="lineTable">
-        <thead class="table-light"><tr><th>Tên hàng *</th><th style="width:90px">ĐVT</th><th style="width:100px">SL</th><th style="width:120px">Đơn giá</th><th style="width:120px">Thành tiền</th><th></th></tr></thead>
+        <thead class="table-light"><tr>
+          <th style="width:90px">Mã SP</th><th>Tên hàng *</th><th style="width:90px">ĐVT</th>
+          <th style="width:100px">SL</th><th style="width:120px">Đơn giá</th><th style="width:120px">Thành tiền</th><th></th>
+        </tr></thead>
         <tbody></tbody>
-        <tfoot><tr><td colspan="4" class="text-end fw-semibold">Tổng</td><td class="text-end fw-bold" id="sumAmt">0</td><td></td></tr></tfoot>
+        <tfoot><tr><td colspan="5" class="text-end fw-semibold">Tổng</td><td class="text-end fw-bold" id="sumAmt">0</td><td></td></tr></tfoot>
       </table>
     </div>
+    <datalist id="prodList"></datalist>
   </div></div>
 </div>
 {% endblock %}
@@ -51,12 +57,24 @@
   const tbody=document.querySelector('#lineTable tbody');
   const today=new Date().toISOString().slice(0,10);
   document.getElementById('poDate').value=today;
+  let products=[];
+
+  function findProductByName(name){
+    const n=String(name||'').trim().toLowerCase();
+    if(!n) return null;
+    return products.find(p=>String(p.name||'').trim().toLowerCase()===n)
+      || products.find(p=>String(p.name||'').toLowerCase().includes(n));
+  }
 
   function addRow(ln){
     ln=ln||{};
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td><input class="form-control form-control-sm name" value="${ln.product_name||''}"></td>
+      <td><input class="form-control form-control-sm code" readonly value="${ln.product_code||''}" placeholder="—"></td>
+      <td>
+        <input type="hidden" class="pid" value="${ln.product_id||''}">
+        <input class="form-control form-control-sm name" list="prodList" value="${ln.product_name||''}" placeholder="Gõ tên SP...">
+      </td>
       <td><input class="form-control form-control-sm unit" value="${ln.unit||''}"></td>
       <td><input type="number" step="any" class="form-control form-control-sm qty" value="${ln.qty||1}"></td>
       <td><input type="number" step="any" class="form-control form-control-sm price" value="${ln.unit_price||0}"></td>
@@ -69,7 +87,23 @@
       tr.querySelector('.amt').textContent=money(q*p);
       sumAll();
     };
+    const bindProduct=()=>{
+      const hit=findProductByName(tr.querySelector('.name').value);
+      if(hit){
+        tr.querySelector('.pid').value=hit.id||'';
+        tr.querySelector('.code').value=hit.product_code||hit.barcode||'';
+        if(!tr.querySelector('.unit').value) tr.querySelector('.unit').value=hit.unit||'';
+        const buy=Number(hit.buyprice||hit.avg_cost||hit.base_price||0);
+        if(buy>0 && !(Number(tr.querySelector('.price').value)>0)) tr.querySelector('.price').value=buy;
+      } else {
+        tr.querySelector('.pid').value='';
+        if(!ln.product_code) tr.querySelector('.code').value='';
+      }
+      recalc();
+    };
     tr.querySelectorAll('.qty,.price').forEach(el=>el.addEventListener('input', recalc));
+    tr.querySelector('.name').addEventListener('change', bindProduct);
+    tr.querySelector('.name').addEventListener('blur', bindProduct);
     tr.querySelector('.btnDel').addEventListener('click', ()=>{ tr.remove(); sumAll(); });
     recalc();
   }
@@ -83,12 +117,18 @@
     document.getElementById('sumAmt').textContent=money(s);
   }
   function collectLines(){
-    return Array.from(tbody.querySelectorAll('tr')).map(tr=>({
-      product_name: tr.querySelector('.name').value.trim(),
-      unit: tr.querySelector('.unit').value.trim(),
-      qty: Number(tr.querySelector('.qty').value||0),
-      unit_price: Number(tr.querySelector('.price').value||0),
-    })).filter(x=>x.product_name && x.qty>0);
+    return Array.from(tbody.querySelectorAll('tr')).map(tr=>{
+      const name=tr.querySelector('.name').value.trim();
+      const pid=tr.querySelector('.pid').value;
+      return {
+        product_id: pid ? Number(pid) : null,
+        product_code: tr.querySelector('.code').value.trim()||null,
+        product_name: name,
+        unit: tr.querySelector('.unit').value.trim(),
+        qty: Number(tr.querySelector('.qty').value||0),
+        unit_price: Number(tr.querySelector('.price').value||0),
+      };
+    }).filter(x=>x.product_name && x.qty>0);
   }
   document.getElementById('btnAdd').addEventListener('click', ()=>addRow());
 
@@ -104,6 +144,18 @@
         if(hit){ document.getElementById('supTax').value=hit.tax_code||''; document.getElementById('supCode').value=hit.code||''; }
       });
     }catch(e){}
+  }
+
+  async function loadProducts(){
+    try{
+      const res=await fetch('/api/products/manage?q=');
+      const rows=await res.json();
+      products=Array.isArray(rows)?rows:(rows.data||[]);
+      document.getElementById('prodList').innerHTML=products.slice(0,500).map(p=>{
+        const label=(p.product_code?p.product_code+' — ':'')+(p.name||'');
+        return `<option value="${(p.name||'').replace(/"/g,'&quot;')}" label="${label.replace(/"/g,'&quot;')}">`;
+      }).join('');
+    }catch(e){ products=[]; }
   }
 
   async function loadOne(id){
@@ -126,6 +178,10 @@
     if(!d.lines||!d.lines.length) addRow();
     document.getElementById('btnConfirm').style.display = d.status==='draft' ? '' : 'none';
     document.getElementById('btnCancel').style.display = (d.status==='draft'||d.status==='confirmed') ? '' : 'none';
+    const canImport = ['draft','confirmed','partial'].includes(d.status);
+    const btnImp = document.getElementById('btnImport');
+    btnImp.style.display = canImport ? '' : 'none';
+    btnImp.href = canImport ? ('/SME_import?po_id=' + d.id) : '#';
   }
 
   document.getElementById('btnSave').addEventListener('click', async ()=>{
@@ -165,8 +221,9 @@
   document.getElementById('btnConfirm').addEventListener('click', ()=>setStatus('confirmed'));
   document.getElementById('btnCancel').addEventListener('click', ()=>{ if(confirm('Hủy đơn này?')) setStatus('cancelled'); });
 
-  loadSuppliers();
-  if(editId) loadOne(editId); else addRow();
+  Promise.all([loadSuppliers(), loadProducts()]).then(()=>{
+    if(editId) loadOne(editId); else addRow();
+  });
 })();
 </script>
 {% endblock %}

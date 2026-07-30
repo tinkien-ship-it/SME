@@ -122,7 +122,7 @@
                 <select class="form-select shadow-sm" id="dateFilter" style="width: 160px; height: 42px;">
                     <option value="this_month" selected>Tháng này</option>
                     <option value="this_quarter">Quý này</option>
-                    <option value="this_year">Năm 2026</option>
+                    <option value="this_year">Năm nay</option>
                 </select>
                 <a href="{{ url_for('SME_purchase_order_create') }}" class="btn btn-primary quick-action-btn px-4">
                     <i class="fas fa-plus me-2"></i> Tạo Đơn Đặt Hàng
@@ -241,7 +241,7 @@
         <!-- Bảng công nợ đến hạn -->
         <div class="card shadow-sm border-0 mt-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-                <h6 class="fw-bold mb-0"><i class="fas fa-bell text-warning me-2"></i>Công Nợ Đến Hạn & Quá Hạn</h6>
+                <h6 class="fw-bold mb-0"><i class="fas fa-bell text-warning me-2"></i>Đơn đặt hàng chờ nhập kho</h6>
                 <a href="{{ url_for('SME_SoCongNoPhaiTra') }}" class="text-primary small text-decoration-none">Xem tất cả →</a>
             </div>
             <div class="table-responsive">
@@ -249,8 +249,8 @@
                     <thead class="table-light">
                         <tr>
                             <th class="ps-3">Nhà Cung Cấp</th>
-                            <th>Số Hóa Đơn</th>
-                            <th>Ngày Đến Hạn</th>
+                            <th>Số ĐĐH</th>
+                            <th>Ngày DK</th>
                             <th class="text-end">Giá Trị</th>
                             <th class="text-center">Trạng Thái</th>
                         </tr>
@@ -271,155 +271,104 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Định dạng tiền tệ VND an toàn
+(function () {
     function formatCurrency(amount) {
-        return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
+        return new Intl.NumberFormat('vi-VN').format(Number(amount || 0)) + ' đ';
     }
+    function periodToFromFilter(val) {
+        const m = new Date().getMonth() + 1;
+        if (val === 'this_quarter') return Math.ceil(m / 3) * 3;
+        if (val === 'this_year') return 12;
+        return m;
+    }
+    let trendChart, pieChart;
 
-    document.addEventListener("DOMContentLoaded", function() {
-        // --- 1. ĐỔI DỮ LIỆU TỪ BACKEND QUA ĐÂY ---
-        const dashboardData = {
-            summary: {
-                totalPurchase: 2450000000,
-                totalPaid: 1680000000,
-                totalPayable: 770000000,
-                pendingOrders: 12,
-                growthRate: "+12.4%",
-                paidRate: "68%",
-                urgentText: "145 triệu đến hạn trong 15 ngày"
-            },
-            trendChart: {
-                labels: ['Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7'],
-                data: [420000000, 380000000, 650000000, 520000000, 780000000, 920000000] // Triệu đồng -> đầy đủ chữ số
-            },
-            suppliers: {
-                labels: ['Công Ty TNHH Mỹ Dung', 'Nhà cung cấp An Phát', 'Công Ty Cổ Phần Sài Gòn', 'Các đơn vị khác'],
-                data: [35, 28, 22, 15]
-            },
-            debtsTable: [
-                { supplier: 'Công Ty TNHH Mỹ Dung', invoiceNo: 'HD-2026-0089', dueDate: '25/07/2026', amount: 45000000, status: 'Quá hạn 5 ngày', statusClass: 'badge bg-danger bg-opacity-10 text-danger' },
-                { supplier: 'Nhà cung cấp An Phát', invoiceNo: 'HD-2026-0102', dueDate: '30/07/2026', amount: 100000000, status: 'Đến hạn trong 10 ngày', statusClass: 'badge bg-warning bg-opacity-10 text-warning' }
-            ]
-        };
+    async function loadDash() {
+        const year = new Date().getFullYear();
+        const periodTo = periodToFromFilter(document.getElementById('dateFilter').value);
+        const res = await fetch('/api/sme/purchasing-metrics?year=' + year + '&period_to=' + periodTo);
+        const payload = await res.json();
+        if (!payload.success) throw new Error(payload.error || 'Loi tai');
+        const d = payload.data || {};
 
-        // --- 2. RENDER CÁC SỐ LIỆU TỔNG HỢP ---
-        document.getElementById('total-purchase').textContent = formatCurrency(dashboardData.summary.totalPurchase);
-        document.getElementById('total-paid').textContent = formatCurrency(dashboardData.summary.totalPaid);
-        document.getElementById('total-payable').textContent = formatCurrency(dashboardData.summary.totalPayable);
-        document.getElementById('pending-orders').textContent = dashboardData.summary.pendingOrders;
-        document.getElementById('purchase-growth').textContent = dashboardData.summary.growthRate;
-        document.getElementById('paid-rate').textContent = dashboardData.summary.paidRate;
-        document.getElementById('urgent-payable-text').textContent = dashboardData.summary.urgentText;
+        document.getElementById('total-purchase').textContent = formatCurrency(d.total_purchase);
+        document.getElementById('total-paid').textContent = formatCurrency(d.total_paid);
+        document.getElementById('total-payable').textContent = formatCurrency(d.total_payable);
+        document.getElementById('pending-orders').textContent = d.pending_orders || 0;
+        document.getElementById('purchase-growth').textContent =
+            d.growth_pct == null ? '—' : ((d.growth_pct >= 0 ? '+' : '') + d.growth_pct.toFixed(1) + '%');
+        document.getElementById('paid-rate').textContent =
+            d.paid_rate_pct == null ? '—' : (Math.round(d.paid_rate_pct) + '%');
+        document.getElementById('urgent-payable-text').textContent =
+            'ĐĐH chờ nhập ~ ' + formatCurrency(d.pending_order_value);
 
-        // --- 3. RENDER BẢNG CÔNG NỢ ---
         const tableBody = document.getElementById('due-debts-table-body');
-        if (dashboardData.debtsTable && dashboardData.debtsTable.length > 0) {
-            tableBody.innerHTML = ''; // Xóa placeholder
-            dashboardData.debtsTable.forEach(item => {
-                const row = `
-                    <tr>
-                        <td class="ps-3 fw-medium">${item.supplier}</td>
-                        <td><code>${item.invoiceNo}</code></td>
-                        <td>${item.dueDate}</td>
-                        <td class="text-end fw-bold text-dark">${formatCurrency(item.amount)}</td>
-                        <td class="text-center"><span class="${item.statusClass}">${item.status}</span></td>
-                    </tr>
-                `;
-                tableBody.insertAdjacentHTML('beforeend', row);
-            });
+        const opens = d.open_orders || [];
+        if (!opens.length) {
+            tableBody.innerHTML = '<tr class="text-center text-muted"><td colspan="5" class="py-4">Không có đơn chờ nhập</td></tr>';
+        } else {
+            const stLabel = {draft:'Nháp',confirmed:'Xác nhận',partial:'Một phần'};
+            tableBody.innerHTML = opens.map(o =>
+                '<tr>' +
+                '<td class="ps-3 fw-medium">' + (o.supplier_name || '') + '</td>' +
+                '<td><code><a href="/SME_purchase_order_create?id=' + o.id + '">' + (o.po_no || '') + '</a></code></td>' +
+                '<td>' + ((o.expected_date || o.po_date || '').slice(0,10)) + '</td>' +
+                '<td class="text-end fw-bold">' + formatCurrency(o.total_amount) + '</td>' +
+                '<td class="text-center"><span class="badge bg-warning bg-opacity-10 text-warning">' + (stLabel[o.status]||o.status) + '</span>' +
+                ' <a class="btn btn-sm btn-outline-success py-0 ms-1" href="/SME_import?po_id=' + o.id + '">Nhập</a></td>' +
+                '</tr>'
+            ).join('');
         }
 
-        // --- 4. CẤU HÌNH BIỂU ĐỒ XU HƯỚNG MUA HÀNG (LINE CHART) ---
-        const ctxTrend = document.getElementById('purchaseTrendChart').getContext('2d');
-        new Chart(ctxTrend, {
+        const months = d.monthly || [];
+        if (trendChart) trendChart.destroy();
+        trendChart = new Chart(document.getElementById('purchaseTrendChart').getContext('2d'), {
             type: 'line',
             data: {
-                labels: dashboardData.trendChart.labels,
+                labels: months.map(x => x.label),
                 datasets: [{
-                    label: 'Giá trị mua hàng',
-                    data: dashboardData.trendChart.data,
-                    borderColor: '#0d6efd',
-                    borderWidth: 3,
-                    tension: 0.38,
-                    fill: true,
-                    backgroundColor: function(context) {
-                        const chart = context.chart;
-                        const {ctx, chartArea} = chart;
-                        if (!chartArea) return null;
-                        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                        gradient.addColorStop(0, 'rgba(13, 110, 253, 0.24)');
-                        gradient.addColorStop(1, 'rgba(13, 110, 253, 0.01)');
-                        return gradient;
-                    },
-                    pointBackgroundColor: '#0d6efd',
-                    pointHoverRadius: 7
+                    label: 'Giá trị mua (152/153/156)',
+                    data: months.map(x => x.purchase),
+                    borderColor: '#0d6efd', borderWidth: 3, tension: 0.35, fill: true,
+                    backgroundColor: 'rgba(13,110,253,0.12)', pointBackgroundColor: '#0d6efd'
                 }]
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + formatCurrency(c.parsed.y) } } },
+                scales: { y: { ticks: { callback: v => v >= 1e6 ? (v / 1e6) + ' Tr' : v } }, x: { grid: { display: false } } }
+            }
+        });
+
+        const suppliers = d.suppliers || [];
+        if (pieChart) pieChart.destroy();
+        pieChart = new Chart(document.getElementById('supplierPieChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: suppliers.length ? suppliers.map(s => s.name) : ['Chưa có ĐĐH'],
+                datasets: [{
+                    data: suppliers.length ? suppliers.map(s => s.amount) : [1],
+                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#6c757d', '#dc3545', '#0dcaf0'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '70%',
                 plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return ' ' + context.dataset.label + ': ' + formatCurrency(context.parsed.y);
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        grid: { borderDash: [5, 5] },
-                        ticks: {
-                            callback: function(value) {
-                                return value >= 1000000 ? (value / 1000000) + ' Tr' : value;
-                            }
-                        }
-                    },
-                    x: { grid: { display: false } }
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: { callbacks: { label: c => ' ' + c.label + ': ' + formatCurrency(c.parsed) } }
                 }
             }
         });
+    }
 
-        // --- 5. CẤU HÌNH BIỂU ĐỒ TOP NCC (DOUGHNUT CHART) ---
-        const ctxPie = document.getElementById('supplierPieChart').getContext('2d');
-        new Chart(ctxPie, {
-            type: 'doughnut',
-            data: {
-                labels: dashboardData.suppliers.labels,
-                datasets: [{
-                    data: dashboardData.suppliers.data,
-                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#6c757d'],
-                    borderWidth: 2,
-                    borderRadius: 4
-                }]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { 
-                        position: 'bottom',
-                        labels: { boxWidth: 12, padding: 15, font: { size: 11 } }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return ' ' + context.label + ': ' + context.parsed + '%';
-                            }
-                        }
-                    }
-                },
-                cutout: '70%'
-            }
-        });
-
-        // --- 6. XỬ LÝ SỰ KIỆN LỌC THỜI GIAN (TÙY CHỌN PHÁT TRIỂN) ---
-        document.getElementById('dateFilter').addEventListener('change', function(e) {
-            console.log("Đã chọn bộ lọc thời gian: " + e.target.value);
-            // Tại đây bạn có thể viết hàm fetch() gọi API backend để cập nhật lại data của Chart và Thẻ số liệu.
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('dateFilter').addEventListener('change', () => loadDash().catch(e => alert(e.message)));
+        loadDash().catch(e => {
+            document.getElementById('due-debts-table-body').innerHTML =
+                '<tr><td colspan="5" class="text-danger text-center py-4">' + e.message + '</td></tr>';
         });
     });
+})();
 </script>
 {% endblock %}

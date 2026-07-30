@@ -10,6 +10,8 @@
     <a class="nav-link-sub {% if sme_active == 'SME_dashboard' %}active{% endif %}" href="{{ url_for('SME_dashboard') }}"><i class="fas fa-chart-pie text-primary"></i> Tổng Quan (Dashboard)</a>
     <a class="nav-link-sub" href="{{ url_for('sale') }}"><i class="fas fa-cart-shopping text-success"></i> Điểm Bán Hàng</a>
     <a class="nav-link-sub {% if sme_active == 'SME_dashboard_sale' %}active{% endif %}" href="{{ url_for('SME_dashboard_sale') }}"><i class="fas fa-cart-shopping text-success"></i> Quản Lý Bán Hàng</a>
+    <a class="nav-link-sub {% if sme_active == 'SME_form_01_bh' %}active{% endif %}" href="{{ url_for('SME_form_01_bh') }}"><i class="fas fa-file-signature text-success"></i> 01-BH Đại lý</a>
+    <a class="nav-link-sub {% if sme_active == 'SME_form_02_bh' %}active{% endif %}" href="{{ url_for('SME_form_02_bh') }}"><i class="fas fa-id-card text-success"></i> 02-BH Thẻ quầy</a>
     <a class="nav-link-sub {% if sme_active == 'SME_purchasing' %}active{% endif %}" href="{{ url_for('SME_purchasing') }}"><i class="fas fa-bag-shopping text-warning"></i> Quản Lý Mua Hàng</a>
     <a class="nav-link-sub {% if sme_active == 'SME_dashboard_warehouse' %}active{% endif %}" href="{{ url_for('SME_dashboard_warehouse') }}"><i class="fas fa-warehouse text-warning"></i> Kho</a>
     <a class="nav-link-sub {% if sme_active == 'SME_SoSachKeToan' %}active{% endif %}" href="{{ url_for('SME_SoSachKeToan') }}"><i class="fas fa-book text-indigo"></i> Sổ Kế Toán</a>
@@ -23,6 +25,7 @@
     <a class="nav-link-sub {% if sme_active == 'SME_BCTC' %}active{% endif %}" href="{{ url_for('SME_BCTC') }}"><i class="fas fa-chart-line text-indigo"></i> Báo Cáo Tài Chính</a>
     <a class="nav-link-sub {% if sme_active == 'SME_mgmt_report' %}active{% endif %}" href="{{ url_for('SME_mgmt_report') }}"><i class="fas fa-chart-bar text-indigo"></i> Báo Cáo Quản Trị</a>
     <a class="nav-link-sub {% if sme_active == 'SME_tax_nsnn' %}active{% endif %}" href="{{ url_for('SME_tax_nsnn') }}"><i class="fas fa-landmark text-violet"></i> Thuế & NSNN</a>
+    <a class="nav-link-sub {% if sme_active == 'SME_vat_declaration' %}active{% endif %}" href="{{ url_for('SME_vat_declaration') }}"><i class="fas fa-file-invoice text-violet"></i> Tờ Khai GTGT</a>
     <a class="nav-link-sub {% if sme_active == 'SME_SoQuyTienMat' %}active{% endif %}" href="{{ url_for('SME_SoQuyTienMat') }}"><i class="fas fa-wallet text-violet"></i> Tiền Mặt</a>
     <a class="nav-link-sub {% if sme_active == 'SME_SoTienGuiNganHang' %}active{% endif %}" href="{{ url_for('SME_SoTienGuiNganHang') }}"><i class="fas fa-building-columns text-violet"></i> Tiền Gửi Ngân Hàng</a>
     <a class="nav-link-sub {% if sme_active == 'SME_dashboard_debt' %}active{% endif %}" href="{{ url_for('SME_dashboard_debt') }}"><i class="fas fa-book text-indigo"></i> Công Nợ</a>
