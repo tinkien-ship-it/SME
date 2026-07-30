@@ -99,13 +99,9 @@
             <a class="nav-link-sub active" href="#"><i class="fas fa-bag-shopping text-warning me-2"></i> Sổ Sách Kế Toán</a>
             
             <div class="submenu">
-                <a class="nav-link-sub" href="{{ url_for('order') }}"><i class="fas fa-list me-2"></i> Sổ Nhật ký chung (S01-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('SME_sale_details') }}"><i class="fas fa-list me-2"></i> Sổ Nhật ký thu tiền (S01a-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('outward_invoice') }}"><i class="fas fa-file-invoice me-2"></i> Sổ Nhật ký chi tiền (S01b-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('return_sale_page') }}"><i class="fas fa-boxes me-2"></i> Sổ Nhật ký mua hàng (S01c-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('SoCongNoPhaiThu') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Sổ Nhật ký bán hàng (S01d-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('SoCongNoPhaiThu') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Sổ Cái (S02-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('SoCongNoPhaiThu') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Bảng Cân Đối Tài Khoản (F01-DN)</a>
+                <a class="nav-link-sub" href="{{ url_for('SME_journal') }}"><i class="fas fa-list me-2"></i> Sổ Nhật ký chung (S01-DN)</a>
+                <a class="nav-link-sub" href="{{ url_for('SME_general_ledger') }}"><i class="fas fa-book me-2"></i> Sổ Cái (S02-DN)</a>
+                <a class="nav-link-sub" href="{{ url_for('SME_general_ledger') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Bảng Cân Đối Tài Khoản (F01-DN)</a>
                 <a class="nav-link-sub text-danger" href="{{ url_for('SME_dashboard') }}"><i class="fas fa-home me-2 text-danger"></i> Quay lại trang chủ</a>
             </div>
         </nav>

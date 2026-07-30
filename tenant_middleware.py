@@ -61,9 +61,9 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
     tax_code = (kwargs.get('tax_code') or '').strip()
     business_line = (kwargs.get('business_line') or 'pos').strip()
     enabled_nn_sectors = kwargs.get('enabled_nn_sectors')
-    hkd_sector = (kwargs.get('hkd_sector') or 'NN1').strip()
+    hkd_sector = (kwargs.get('hkd_sector') or '').strip()
     representative_name = (kwargs.get('representative_name') or '').strip()
-    revenue_tier = kwargs.get('revenue_tier') or 'DT1'
+    revenue_tier = kwargs.get('revenue_tier')
     accounting_regime = kwargs.get('accounting_regime') or 'HKD'
     settings_json = kwargs.get('settings_json') or {}
     empty_business_data = bool(kwargs.get('empty_business_data', False))
@@ -74,28 +74,54 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
         ensure_business_info_profile_columns,
         sync_business_info_profile,
         build_profile_from_registry,
+        is_sme_regime,
     )
     from Services.hkd_sector import nn_to_storage_code, normalize_nn_code
 
-    if not settings_json.get('revenue_tier'):
+    sme = is_sme_regime(accounting_regime)
+    if sme:
+        hkd_sector = ''
+        revenue_tier = None
+        if enabled_nn_sectors is None:
+            enabled_nn_sectors = []
+    else:
+        hkd_sector = hkd_sector or 'NN1'
+        revenue_tier = revenue_tier or 'DT1'
+
+    if not settings_json.get('accounting_regime'):
         settings_json = build_tenant_settings(
             business_line=business_line,
-            hkd_sector=hkd_sector,
+            hkd_sector=hkd_sector or 'NN1',
             enabled_nn_sectors=enabled_nn_sectors,
-            revenue_tier=revenue_tier,
+            revenue_tier=revenue_tier or 'DT1',
             accounting_regime=accounting_regime,
             subscription_plan=settings_json.get('plan', kwargs.get('subscription_plan', '')),
             onboarding_completed=settings_json.get('onboarding_completed', False),
             extra=settings_json,
         )
-    primary_nn = normalize_nn_code(settings_json.get('primary_nn_sector') or hkd_sector)
-    storage_sector = nn_to_storage_code(primary_nn)
+    elif sme:
+        # Đảm bảo settings SME không còn DT/NN HKD
+        settings_json = build_tenant_settings(
+            business_line=business_line or settings_json.get('business_line') or 'pos',
+            accounting_regime=accounting_regime,
+            subscription_plan=settings_json.get('plan', kwargs.get('subscription_plan', '')),
+            onboarding_completed=settings_json.get('onboarding_completed', False),
+            extra=settings_json,
+        )
+
+    primary_raw = settings_json.get('primary_nn_sector') or hkd_sector
+    if sme and not primary_raw:
+        primary_nn = None
+        storage_sector = None
+    else:
+        primary_nn = normalize_nn_code(primary_raw or 'NN1')
+        storage_sector = nn_to_storage_code(primary_nn)
 
     customer_password = kwargs.get('customer_password') or 'admin'
     support_username = kwargs.get('support_username') or f"{phone}admin"
     support_password = kwargs.get('support_password') or customer_password
-    owner_role = role_for_business_line(business_line)
-    support_role = support_role_for_business_line(business_line)
+    owner_role = role_for_business_line(business_line, accounting_regime)
+    support_role = support_role_for_business_line(business_line, accounting_regime)
 
     # 1. Copy Database mẫu
     if os.path.exists(os.path.join(BASE_DIR, 'database.db')):

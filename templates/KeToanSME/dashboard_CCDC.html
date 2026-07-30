@@ -99,9 +99,10 @@
             <a class="nav-link-sub active" href="#"><i class="fas fa-bag-shopping text-warning me-2"></i> CÔNG CỤ DỤNG CỤ</a>
             
             <div class="submenu">
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuNhapKho') }}"><i class="fas fa-clipboard-list me-2"></i> DANH SÁCH CÔNG CỤ DỤNG CỤ</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Sổ chi tiết vật liệu, dụng cụ, hàng hóa: Mẫu số S10-DN</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Bảng phân bổ nguyên liệu, vật liệu, công cụ, dụng cụ (Mẫu số 05-VT)</a>
+                <a class="nav-link-sub" href="{{ url_for('CongCuDungCu') }}"><i class="fas fa-clipboard-list me-2"></i> Danh sách CCDC</a>
+                <a class="nav-link-sub" href="{{ url_for('CongCuDungCu') }}"><i class="fas fa-file-invoice me-2"></i> Phân bổ CCDC</a>
+                <a class="nav-link-sub" href="{{ url_for('SME_auto_posting') }}"><i class="fas fa-robot me-2"></i> Phân bổ CCDC tự động theo kỳ</a>
+                <a class="nav-link-sub" href="{{ url_for('SME_general_ledger') }}"><i class="fas fa-scale-balanced me-2"></i> Sổ cái TK 153</a>
                 <a class="nav-link-sub text-danger" href="{{ url_for('SME_dashboard') }}"><i class="fas fa-home me-2 text-danger"></i> Quay lại trang chủ</a>
             </div>
         </nav>

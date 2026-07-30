@@ -1,0 +1,2901 @@
+VĂN BẢN QUY PHẠM PHÁP LUẬT
+
+BỘ TÀI CHÍNH
+
+Thông tư số 99/2025/TT-BTC ngày 27 tháng 10 năm 2025
+hướng dẫn Chế độ kế toán doanh nghiệp
+
+(Tiếp theo Công báo số 1563 + 1564)
+
+PHẦN B - GIẢI THÍCH NỘI DUNG VÀ PHƯƠNG PHÁP GHI CHÉP
+CHỨNG TỪ KẾ TOÁN
+
+I. CHỈ TIÊU LAO ĐỘNG TIỀN LƯƠNG
+
+1. Mục đích: Các chứng từ thuộc chỉ tiêu lao động tiền lương được lập nhằm mục đích theo dõi tình hình sử dụng thời gian lao động; theo dõi các khoản phải thanh toán cho người lao động trong đơn vị như: tiền lương, tiền công các khoản phụ cấp, tiền thưởng, tiền công tác phí, tiền làm thêm ngoài giờ; theo dõi các khoản thanh toán cho bên ngoài, cho các tổ chức khác như: thanh toán tiền thuê ngoài, thanh toán các khoản phải trích nộp theo lương,... và một số nội dung khác có liên quan đến lao động, tiền lương.
+2. Nội dung: Thuộc chỉ tiêu lao động tiền lương gồm có các biểu mẫu sau:
+Bảng thanh toán tiền lương
+Mẫu số 01- LĐTL
+
+Bảng thanh toán tiền thưởng
+Mẫu số 02- LĐTL
+
+Bảng thanh toán tiền làm thêm giờ
+Mẫu số 03- LĐTL
+
+Bảng thanh toán tiền thuê ngoài 
+Mẫu số 04- LĐTL
+
+Hợp đồng giao khoán
+Mẫu số 05- LĐTL
+
+Biên bản thanh lý (nghiệm thu) hợp đồng giao khoán
+Mẫu số 06- LĐTL
+
+Bảng kê trích nộp các khoản theo lương
+Mẫu số 07- LĐTL
+
+Bảng phân bổ tiền lương và các khoản trích theo lương
+Mẫu số 08- LĐTL
+
+BẢNG THANH TOÁN TIỀN LƯƠNG
+(Mẫu số 01 - LĐTL)
+
+1. Mục đích: Bảng thanh toán tiền lương là chứng từ làm căn cứ để thanh toán tiền lương, phụ cấp, các khoản thu nhập tăng thêm ngoài tiền lương cho người lao động, kiểm tra việc thanh toán tiền lương cho người lao động làm việc trong doanh nghiệp đồng thời là căn cứ để thống kê về lao động tiền lương.
+2. Phương pháp và trách nhiệm ghi
+Bảng thanh toán tiền lương được lập hàng tháng. Cơ sở để lập Bảng thanh toán tiền lương là các tài liệu khác có liên quan như: Bảng chấm công, phiếu xác nhận sản phẩm hoặc công việc hoàn thành...
+Cột A, B: Ghi số thứ tự, họ tên của người lao động được hưởng lương.
+Cột 1,2: Ghi ngạch bậc lương hoặc cấp bậc chức vụ, hệ số lương của người lao động. 
+Cột 3,4: Ghi số sản phẩm và số tiền tính theo lương sản phẩm.
+Cột 5,6: Ghi số công và số tiền tính theo lương thời gian.
+Cột 7,8: Ghi số công và số tiền tính theo lương thời gian hoặc ngừng, nghỉ việc hưởng các loại % lương.
+Cột 9: Ghi các khoản phụ cấp thuộc quỹ lương.
+Cột 10: Ghi số phụ cấp khác được tính vào thu nhập của người lao động nhưng không nằm trong quỹ lương, quỹ thưởng.
+Cột 11: Ghi tổng số tiền lương và các khoản phụ cấp mà người lao động được hưởng.
+Cột 12: Ghi số tiền tạm ứng kỳ I của mỗi người. 
+Cột 13,14,15,16: Ghi các khoản phải khấu trừ khỏi lương của người lao động và tính ra tổng số tiền phải khấu trừ trong tháng.	
+Cột 17: Ghi số tiền còn được nhận kỳ II.
+Cột C: Người lao động ký nhận khi nhận lương kỳ II (nếu chi bằng tiền mặt).
+Cuối mỗi tháng căn cứ vào chứng từ liên quan, người phụ trách tính lương lập Bảng thanh toán tiền lương chuyển cho kế toán trưởng soát xét xong trình cho giám đốc hoặc người được ủy quyền ký duyệt, chuyển cho kế toán làm căn cứ để thanh toán lương. Bảng thanh toán tiền lương được lưu tại phòng (ban) kế toán của đơn vị. 
+Mỗi lần lĩnh lương, người lao động phải trực tiếp ký vào cột “Ký nhận” hoặc người nhận hộ phải ký thay.
+BẢNG THANH TOÁN TIỀN THƯỞNG
+(Mẫu số 02 - LĐTL)
+
+1. Mục đích: Là chứng từ xác nhận số tiền thưởng cho từng người lao động, làm cơ sở để tính thu nhập của mỗi người lao động và ghi sổ kế toán.
+2. Phương pháp và trách nhiệm ghi
+Góc trên bên trái của Bảng thanh toán tiền thưởng phải ghi rõ tên đơn vị, bộ phận được thưởng.
+Cột A,B,C: Ghi số thứ tự, họ tên, ngạch bậc lương hoặc cấp bậc chức vụ của người được thưởng. 
+Cột 1,2: Ghi rõ loại thưởng được bình xét, số tiền được thưởng theo mỗi loại.
+Cột D: Người được thưởng ký nhận tiền thưởng (nếu nhận bằng tiền mặt).
+Bảng thanh toán tiền thưởng phải có chữ ký (họ tên) của người lập, kế toán trưởng và giám đốc.
+
+BẢNG THANH TOÁN TIỀN LÀM THÊM GIỜ
+(Mẫu số 03 - LĐTL)
+
+1. Mục đích: Bảng thanh toán tiền làm thêm giờ nhằm xác định khoản tiền lương, tiền công làm thêm giờ mà người lao động được hưởng sau khi làm việc ngoài giờ theo yêu cầu công việc.
+2. Phương pháp lập và trách nhiệm ghi  
+Góc trên bên trái của Bảng thanh toán tiền làm thêm giờ phải ghi rõ tên đơn vị, bộ phận làm việc. 
+Dòng tháng năm: Ghi rõ tháng và năm mà người lao động tiến hành làm thêm giờ.
+Cột A, B, C: Ghi số thứ tự, họ và tên, Ngạch bậc lương hoặc cấp bậc chức vụ của người làm việc thêm giờ .
+Cột 1: Ghi hệ số lương người lao động đang hưởng.
+Cột 2: Ghi hệ số phụ cấp chức vụ người lao động đang hưởng.
+Cột 3: Ghi tổng số hệ số lương của người lao động (Cột 3 = Cột 1 + Cột 2).
+Cột 4: Ghi tiền lương tháng được hưởng tính bằng: Lương tối thiểu (Theo quy định của nhà nước) nhân với (x) Hệ số lương cộng với (+) Phụ cấp chức vụ.  
+Cột 5: Ghi mức lương ngày được tính bằng Lương tối thiểu (theo quy định của Nhà nước)  x  (hệ số lương +  hệ số phụ cấp chức vụ)/Số ngày làm việc bình thường trong tháng theo quy định của pháp luật mà doanh nghiệp lựa chọn.
+Cột 6: Ghi mức lương giờ được tính bằng Cột 5 chia cho Số giờ làm việc bình thường trong ngày theo quy định của Bộ luật Lao động.
+Cột số giờ làm thêm ngày làm việc bình thường, số giờ làm thêm ngày thứ 7, chủ nhật, số giờ làm thêm ngày lễ, số giờ làm thêm buổi đêm (Cột 7, 9, 11, 13) căn cứ vào dữ liệu doanh nghiệp theo dõi về số giờ làm thêm thực tế của tháng đó để ghi.
+Cột thành tiền của làm thêm ngày thường (cột 8) = số giờ (cột 7)  x  mức lương giờ (cột 6) x Hệ số làm thêm theo quy định hiện hành.  
+Cột thành tiền của làm thêm ngày thứ 7, CN (cột 10) = số giờ (cột 9) x mức lương giờ (cột 6) x Hệ số làm thêm theo quy định hiện hành.  
+Cột thành tiền của làm thêm ngày lễ, tết (cột 12) = số giờ (cột 11) x  mức lương giờ (cột 6) x Hệ số làm thêm theo quy định hiện hành.  
+Cột thành tiền làm thêm buổi đêm (Cột 14) = số giờ (Cột 13) nhân (x) mức lương giờ (Cột 6) x Hệ số làm thêm theo quy định hiện hành.  
+Cột 15: Ghi tổng cộng số tiền Cột 15 = Cột 8 +  Cột 10 + Cột 12 + Cột 14.
+Cột 16, 17: Ghi số giờ công nghỉ bù của những ngày làm thêm và số tiền tương ứng của những ngày nghỉ bù phải trừ không được thanh toán tiền.
+Cột 17 = Cột 16 x Cột 6 x Hệ số làm thêm theo quy định hiện hành.  
+Cột 18: Ghi số tiền làm thêm thực thanh toán cho người làm thêm. 
+Cột 18 = Cột 15 - Cột 17.
+Cột D - Ký nhận: Người làm thêm sau khi nhận tiền phải ký vào cột này (nếu chi bằng tiền mặt).
+Bảng thanh toán tiền làm thêm giờ được lập thành 1 bản để làm căn cứ thanh toán.
+BẢNG THANH TOÁN TIỀN THUÊ NGOÀI 
+(Mẫu số 04 - LĐTL)
+
+1. Mục đích: Bảng thanh toán tiền thuê ngoài là chứng từ kế toán nhằm xác nhận số tiền đã thanh toán cho người được thuê để thực hiện những công việc không lập được hợp đồng, như:  Thuê lao động bốc vác, thuê vận chuyển thiết bị, thuê làm khoán 1 công việc nào đó.... Chứng từ được dùng để thanh toán cho người lao động thuê ngoài.
+2. Phương pháp và trách nhiệm ghi  
+Chứng từ này do người thuê lao động lập.
+Ghi họ và tên người thuê thuộc bộ phận (Phòng, ban,...). 
+Ghi rõ nội dung, địa điểm và thời gian thuê.
+Cột A, B, C: Ghi số thứ tự, họ tên, địa chỉ hoặc số CCCD/Căn cước/MST TNCN của người được thuê. 
+Cột D: Ghi rõ nội dung hoặc tên công việc thuê.
+Cột 1: Ghi số công lao động hoặc khối lượng công việc đã làm.
+Cột 2: Ghi đơn giá phải thanh toán cho 1 công lao động hoặc 1 đơn vị khối lượng công việc. Trường hợp thuê khoán gọn công việc thì cột này để trống. 
+Cột 3: Ghi số tiền phải thanh toán. 
+Cột 4: Tiền thuế khấu trừ phải nộp nếu người được thuê có mức thu nhập ở diện phải nộp thuế thu nhập cá nhân theo qui định của pháp luật thuế (nếu có).
+Cột 5: Số tiền còn lại được nhận của người được thuê sau khi đã khấu trừ thuế. (Cột 5 = Cột 3 - Cột 4)
+Cột E: Người được thuê ký nhận khi nhận tiền (nếu nhận bằng tiền mặt).
+
+HỢP ĐỒNG GIAO KHOÁN 
+(Mẫu số 05 - LĐTL)
+1. Mục đích: Hợp đồng giao khoán là bản ký kết giữa người giao khoán và người nhận khoán nhằm xác nhận về khối lượng công việc khoán hoặc nội dung công việc khoán, thời gian làm việc, trách nhiệm, quyền lợi của mỗi bên khi thực hiện công việc đó. Đồng thời là cơ sở thanh toán chi phí cho người nhận khoán.
+2. Phương pháp và trách nhiệm ghi 
+Góc trên bên trái ghi rõ tên đơn vị, địa chỉ và số của hợp đồng giao khoán (nếu có). Ghi rõ họ tên, chức vụ đại diện cho phòng, ban, bộ phận của bên giao khoán và bên nhận khoán.
+Phần I. Điều khoản chung:
+- Phương thức giao khoán: Ghi rõ phương thức giao khoán cho người nhận khoán.
+- Điều kiện thực hiện hợp đồng: Ghi rõ các điều kiện cam kết của 2 bên khi ký hợp đồng giao khoán. 
+- Thời gian thực hiện hợp đồng: Ghi rõ thời gian thực hiện công việc nhận khoán từ ngày bắt đầu đến ngày kết thúc hợp đồng.
+- Các điều kiện khác: Ghi rõ các điều kiện khác khi ký kết hợp đồng.
+Phần II. Điều khoản cụ thể:
+Ghi rõ nội dung các công việc khoán, trách nhiệm, quyền lợi và nghĩa vụ của người nhận khoán và người giao khoán (như điều kiện làm việc, yêu cầu sản phẩm (công việc) khoán, thời gian hoàn thành và số tiền phải thanh toán).
+Hợp đồng giao khoán do bên giao khoán lập thành 3 bản: 
+- 1 bản giao cho người nhận khoán;
+- 1 bản lưu ở bộ phận lập hợp đồng;
+- 1 bản chuyển về phòng kế toán cho người có trách nhiệm theo dõi quá trình thực hiện hợp đồng giao khoán và làm căn cứ để thanh toán hợp đồng.
+Hợp đồng giao khoán phải có đầy đủ chữ ký, họ tên của đại diện bên giao khoán và đại diện bên nhận khoán.  
+
+BIÊN BẢN THANH LÝ (NGHIỆM THU) HỢP ĐỒNG GIAO KHOÁN
+(Mẫu số 06 - LĐTL)
+
+1. Mục đích: Biên bản thanh lý hợp đồng giao khoán là chứng từ nhằm xác nhận số lượng, chất lượng công việc và giá trị của hợp đồng đã thực hiện, làm căn cứ để hai bên thanh toán và chấm dứt hợp đồng.
+2. Phương pháp và trách nhiệm ghi
+Góc trên bên trái ghi rõ tên đơn vị, bộ phận có bản thanh lý hợp đồng giao khoán.
+Ghi rõ ngày, tháng, năm thanh lý hợp đồng, số hiệu bản thanh lý.
+Ghi rõ họ tên, chức vụ của những người được đại diện cho bên giao khoán và bên nhận khoán.
+Ghi rõ số, ngày tháng của hợp đồng được thanh lý.
+Ghi rõ nội dung công việc đã thực hiện và giá trị của hợp đồng đã thực hiện đến thời điểm thanh lý hợp đồng.
+Ghi rõ số tiền bằng số và bằng chữ mà bên giao khoán đã thanh toán cho bên nhận khoán từ khi ký hợp đồng đến ngày thanh lý hợp đồng.
+Ghi rõ nội dung của từng bên vi phạm hợp đồng (nếu có) và số tiền bị phạt do vi phạm hợp đồng.
+Ghi rõ số tiền bằng số và bằng chữ bên giao khoán còn phải thanh toán cho bên nhận khoán (Theo tính toán trong hợp đồng, nghiệm thu công việc và số tiền đã thanh toán trước cho nhau) đến khi thanh lý hợp đồng hoặc ngược lại bên giao khoán đã thanh toán quá cho bên nhận khoán.
+Sau khi kiểm tra thực tế việc thực hiện hợp đồng, kết quả thực hiện hợp đồng hai bên nhất trí đưa ra kết luận về từng nội dung cụ thể về khối lượng thực hiện, đánh giá chất lượng và kiến nghị, các việc cần làm (nếu có).
+Biên bản thanh lý hợp đồng giao khoán được lập thành 4 bản, mỗi bên giữ 2 bản. Biên bản thanh lý hợp đồng giao khoán phải có đầy đủ chữ ký của đại diện bên giao khoán và đại diện bên nhận khoán thực hiện hợp đồng.
+
+BẢNG KÊ TRÍCH NỘP CÁC KHOẢN THEO LƯƠNG
+(Mẫu số 07 - LĐTL)
+
+1. Mục đích: Bảng kê trích nộp các khoản theo lương dùng để xác định số tiền bảo hiểm xã hội, bảo hiểm y tế, bảo hiểm thất nghiệp, kinh phí công đoàn mà đơn vị và người lao động phải nộp trong tháng (hoặc quý) cho cơ quan bảo hiểm xã hội và công đoàn. Chứng từ này là cơ sở để ghi sổ kế toán về các khoản trích nộp theo lương.
+2.  Phương pháp và trách nhiệm ghi
+Góc trên bên trái ghi rõ tên đơn vị, bộ phận trích nộp các khoản theo lương.
+- Cột A: Ghi số thứ tự. 
+- Cột B: Ghi số tháng trích nộp BHXH, BHYT, BHTN, KPCĐ.
+- Cột 1: Ghi tổng quỹ lương dùng làm cơ sở để trích lập BHXH, BHYT, BHTN, KPCĐ.
+- Cột 2, 3, 4: Ghi tổng số tiền BHXH, BHYT, BHTN phải nộp và trong đó chia theo nguồn trích tính vào chi phí và tính trừ vào lương của người lao động.
+- Cột 5: Ghi tổng số tiền kinh phí công đoàn phải nộp.
+- Cột 6: Ghi số kinh phí công đoàn đơn vị phải nộp cấp trên.
+- Cột 7: Ghi số kinh phí công đoàn đơn vị được để lại chi tại đơn vị.
+Bảng kê được lập thành 2 bản. Bảng kê trích nộp theo lương sau khi lập xong phải có đầy đủ chữ ký và ghi rõ họ tên của người lập, kế toán trưởng, giám đốc.
+
+BẢNG PHÂN BỔ TIỀN LƯƠNG VÀ CÁC KHOẢN TRÍCH THEO LƯƠNG
+(Mẫu số 08-LĐTL)
+
+1. Mục đích: Dùng để tập hợp và phân bổ tiền lương tiền công thực tế phải trả (gồm tiền lương, tiền công và các khoản phụ cấp), bảo hiểm xã hội, bảo hiểm y tế và kinh phí công đoàn phải trích nộp trong tháng cho các đối tượng sử dụng lao động (ghi Có TK 334, TK 335, TK 338 (3382, 3383, 3384, 3386).
+2. Phương pháp lập và trách nhiệm ghi  
+- Kết cấu và nội dung chủ yếu của bảng phân bổ này gồm có các cột dọc ghi Có TK 334, TK 335, TK 338 (3382, 3383, 3384, 3386), các dòng ngang phản ánh tiền lương, bảo hiểm xã hội, bảo hiểm y tế, bảo hiểm thất nghiệp, kinh phí công đoàn tính cho các đối tượng sử dụng lao động.
+- Cơ sở lập:
++ Căn cứ vào các bảng thanh toán lương, thanh toán làm đêm, làm thêm giờ... kế toán tập hợp, phân loại chứng từ theo từng đối tượng sử dụng tính toán số tiền để ghi vào bảng phân bổ này theo các dòng phù hợp cột ghi Có TK 334 hoặc Có TK 335.
++ Căn cứ vào tỷ lệ trích bảo hiểm xã hội, bảo hiểm y tế, bảo hiểm thất nghiệp, kinh phí công đoàn và tổng số tiền lương phải trả (theo quy định hiện hành) theo từng đối tượng sử dụng tính ra số tiền phải trích BHXH, BHYT, BHTN, KPCĐ để ghi vào các dòng phù hợp cột ghi Có TK 338 (3382, 3383, 3384, 3386).
+Số liệu của bảng phân bổ này được sử dụng để ghi vào các bảng kê, Nhật ký - Chứng từ và các sổ kế toán có liên quan tùy theo hình thức kế toán áp dụng ở đơn vị (như Sổ Cái hoặc Nhật ký - Sổ cái TK 334, 338...), đồng thời được sử dụng để tính giá thành thực tế sản phẩm, dịch vụ hoàn thành.
+II. CHỈ TIÊU HÀNG TỒN KHO
+1. Mục đích: Theo dõi tình hình nhập, xuất, tồn kho vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa, làm căn cứ kiểm tra tình hình sử dụng, dự trữ vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa và cung cấp thông tin cần thiết cho việc quản lý hàng tồn kho.
+2. Nội dung: Thuộc chỉ tiêu hàng tồn kho gồm các biểu mẫu sau:
+Phiếu nhập kho 		- Mẫu số 01-VT
+Phiếu xuất kho		- Mẫu số 02-VT
+Biên bản kiểm nghiệm vật tư, công cụ,
+sản phẩm, hàng hóa	                                            	- Mẫu số 03-VT
+Bảng kê chi tiết vật tư còn lại cuối kỳ                 	- Mẫu số 04-VT 
+Biên bản tổng hợp kiểm kê vật tư, công cụ, 
+sản phẩm, hàng hóa    			- Mẫu số 05-VT 
+Bảng kê mua hàng		- Mẫu số 06-VT
+Bảng phân bổ nguyên liệu, vật liệu, công cụ, dụng cụ    	- Mẫu số 07-VT
+
+PHIẾU NHẬP KHO 
+(Mẫu số 01- VT)
+
+1. Mục đích: Nhằm xác nhận số lượng vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa nhập kho làm căn cứ ghi Thẻ kho, thanh toán tiền hàng, xác định trách nhiệm với người có liên quan và ghi sổ kế toán.
+2. Phương pháp và trách nhiệm ghi 
+Góc trên bên trái của Phiếu nhập kho phải ghi rõ tên của đơn vị (hoặc đóng dấu đơn vị), bộ phận nhập kho. Phiếu nhập kho áp dụng trong các trường hợp nhập kho vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa mua ngoài, tự sản xuất, thuê ngoài gia công chế biến, nhận góp vốn hoặc thừa phát hiện trong kiểm kê.
+Khi lập phiếu nhập kho phải ghi rõ số phiếu nhập và ngày, tháng, năm lập phiếu, họ tên người giao vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa; số hóa đơn hoặc lệnh nhập kho; tên kho; địa điểm kho nhập.
+Cột A, B, C, D: Ghi số thứ tự, tên, nhãn hiệu, qui cách, phẩm chất, mã số và đơn vị tính của vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa.
+Cột 1: Ghi số lượng theo chứng từ (hóa đơn hoặc lệnh nhập).
+Cột 2: Thủ kho ghi số lượng thực nhập vào kho.
+Cột 3, 4: Kế toán ghi đơn giá (giá hạch toán hoặc giá hóa đơn,... tùy theo quy định của từng đơn vị) và tính ra số tiền của từng thứ vật tư, dụng cụ, sản phẩm, hàng hóa thực nhập. 
+Dòng cộng: Ghi tổng số tiền của các loại vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa nhập cùng một phiếu nhập kho.
+Dòng số tiền viết bằng chữ: Ghi tổng số tiền trên Phiếu nhập kho bằng chữ.
+Phiếu nhập kho do bộ phận mua hàng hoặc bộ phận sản xuất lập thành 2 liên (đối với vật tư, hàng hóa mua ngoài) hoặc 3 liên (đối với vật tư tự sản xuất) (đặt giấy than viết 1 lần), và người lập phiếu ký (ghi rõ họ tên), người giao hàng mang phiếu đến kho để nhập vật tư, dụng cụ, sản phẩm, hàng hóa.
+Nhập kho xong thủ kho ghi ngày, tháng, năm nhập kho và cùng người giao hàng ký vào phiếu, thủ kho giữ liên 2 để ghi vào thẻ kho và sau đó chuyển cho phòng kế toán để ghi sổ kế toán và liên 1 lưu ở nơi lập phiếu, liên 3 (nếu có) người giao hàng giữ (Đối với trường hợp phiếu nhập kho lập bằng bản cứng).
+
+PHIẾU XUẤT KHO 
+(Mẫu số 02 - VT) 
+
+1. Mục đích: Theo dõi chặt chẽ số lượng vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa xuất kho cho các bộ phận sử dụng trong doanh nghiệp, làm căn cứ để hạch toán chi phí sản xuất, tính giá thành sản phẩm, dịch vụ và kiểm tra việc sử dụng, thực hiện định mức tiêu hao vật tư.
+2.  Phương pháp và trách nhiệm ghi
+Góc bên trái của Phiếu xuất kho phải ghi rõ tên của đơn vị (hoặc đóng dấu đơn vị), bộ phận xuất kho. Phiếu xuất kho lập cho một hoặc nhiều thứ vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa cùng một kho dùng cho một đối tượng hạch toán chi phí hoặc cùng một mục đích sử dụng. 
+Khi lập phiếu xuất kho phải ghi rõ: Họ tên người nhận hàng, tên, đơn vị (bộ phận): số và ngày, tháng, năm lập phiếu; lý do xuất kho và kho xuất vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa.
+- Cột A, B, C, D: Ghi số thứ tự, tên, nhãn hiệu, qui cách, phẩm chất, mã số và đơn vị tính của vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa.
+- Cột 1: Ghi số lượng vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa theo yêu cầu xuất kho của người (bộ phận) sử dụng.
+- Cột 2: Thủ kho ghi số lượng thực tế xuất kho (số lượng thực tế xuất kho chỉ có thể bằng hoặc ít hơn số lượng yêu cầu).
+- Cột 3, 4: Kế toán ghi đơn giá (tùy theo qui định hạch toán của doanh nghiệp) và tính thành tiền của từng loại vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa xuất kho (cột 4 = cột 2 x cột 3).
+Dòng Cộng: Ghi tổng số tiền của số vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa thực tế đã xuất kho.
+Dòng "Tổng số tiền viết bằng chữ": Ghi tổng số tiền viết bằng chữ trên Phiếu xuất kho.
+Phiếu xuất kho do các bộ phận xin lĩnh hoặc do bộ phận quản lý, bộ phận kho lập (tùy theo tổ chức quản lý và quy định của từng doanh nghiệp) thành 3 liên (đặt giấy than viết 1 lần). Sau khi lập phiếu xong, người lập phiếu và kế toán trưởng ký xong chuyển cho giám đốc hoặc người được ủy quyền duyệt (ghi rõ họ tên) giao cho người nhận cầm phiếu xuống kho để nhận hàng. Sau khi xuất kho, thủ kho ghi vào cột 2 số lượng thực xuất của từng thứ, ghi ngày, tháng, năm xuất kho và cùng người nhận hàng ký tên vào phiếu xuất (ghi rõ họ tên).
+Liên 1: Lưu ở bộ phận lập phiếu.
+Liên 2: Thủ kho giữ để ghi vào thẻ kho và sau đó chuyển cho kế toán để kế toán ghi vào cột 3, 4 và ghi vào sổ kế toán.                
+Liên 3: Người nhận vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa giữ để theo dõi ở bộ phận sử dụng.
+
+BIÊN BẢN KIỂM NGHIỆM   
+(Vật tư, công cụ, sản phẩm, hàng hóa)
+(Mẫu số 03 - VT)
+
+1. Mục đích: Xác định số lượng, quy cách, chất lượng vật tư, công cụ, sản phẩm, hàng hóa trước khi nhập kho, làm căn cứ để qui trách nhiệm trong thanh toán và bảo quản.
+2. Phương pháp và trách nhiệm ghi
+Góc bên trái của Biên bản kiểm nghiệm ghi rõ tên đơn vị (hoặc đóng dấu đơn vị), bộ phận sử dụng.
+Biên bản này áp dụng cho các loại vật tư, dụng cụ, sản phẩm, hàng hóa cần phải kiểm nghiệm trước khi nhập kho trong các trường hợp:
+- Nhập kho với số lượng lớn;
+- Các loại vật tư, công cụ, sản phẩm, hàng hóa có tính chất lý, hóa phức tạp;
+- Các loại vật tư, công cụ, sản phẩm, hàng hóa quý hiếm;
+Những vật tư, công cụ, sản phẩm, hàng hóa không cần kiểm nghiệm trước khi nhập kho, nhưng trong quá trình nhập kho nếu phát hiện có sự khác biệt lớn về số lượng và chất lượng giữa hóa đơn và thực nhập thì vẫn phải lập biên bản kiểm nghiệm.
+	- Cột A, B, C: Ghi số thứ tự, tên nhãn hiệu, quy cách và mã số của vật tư, công cụ, dụng cụ, sản phẩm, hàng hóa kiểm nghiệm.
+- Cột D: “Phương thức kiểm nghiệm” ghi phương pháp kiểm nghiệm toàn diện hay xác suất. 
+- Cột E: Ghi rõ đơn vị tính của từng loại
+- Cột 1: Ghi số lượng theo hóa đơn hoặc phiếu giao hàng.
+- Cột 2 và 3: Ghi kết quả thực tế kiểm nghiệm.
+Ý kiến của Ban kiểm nghiệm: ghi rõ ý kiến về số lượng, chất lượng, nguyên nhân đối với vật tư, công cụ, sản phẩm, hàng hóa không đúng số lượng, quy cách, phẩm chất và cách xử lý.
+Biên bản kiểm nghiệm lập 2 bản:
+- 1 bản giao cho phòng, ban cung tiêu/hoặc người giao hàng.
+- 1 bản giao cho phòng, ban kế toán.
+Trường hợp vật tư, công cụ, sản phẩm, hàng hóa không đúng số lượng, quy cách, phẩm chất so với chứng từ hóa đơn thì kèm theo chứng từ liên quan gửi cho đơn vị bán vật tư, dụng cụ, công cụ, sản phẩm, hàng hóa để giải quyết.
+
+BẢNG KÊ CHI TIẾT VẬT TƯ CÒN LẠI CUỐI KỲ
+(Mẫu số 04 - VT)
+
+1. Mục đích: Theo dõi số lượng vật tư còn lại cuối kỳ hạch toán ở đơn vị sử dụng, làm căn cứ tính giá thành sản phẩm và kiểm tra tình hình thực hiện định mức sử dụng vật tư.
+2. Phương pháp và trách nhiệm ghi
+Góc bên trái của Phiếu báo vật tư còn lại cuối kỳ ghi rõ tên đơn vị (hoặc đóng dấu đơn vị), bộ phận sử dụng.
+Số lượng vật tư còn lại cuối kỳ ở đơn vị sử dụng được phân thành hai loại:
+- Nếu vật tư không cần sử dụng nữa thì lập Phiếu nhập kho (Mẫu số 02 - VT) và nộp lại kho.
+- Nếu vật tư còn sử dụng tiếp thì bộ phận sử dụng lập Bảng kê chi tiết vật tư còn lại cuối kỳ thành 2 bản.
+Phụ trách bộ phận sử dụng ký tên:
+- 1 bản giao cho phòng vật tư (nếu có);
+- 1 bản giao cho phòng kế toán.
+
+BIÊN BẢN TỔNG HỢP KIỂM KÊ VẬT TƯ, CÔNG CỤ,
+ SẢN PHẨM, HÀNG HÓA 
+(Mẫu số 05 - VT) 
+
+1. Mục đích: Biên bản tổng hợp kiểm kê vật tư, công cụ, sản phẩm, hàng hóa nhằm xác định số lượng, chất lượng và giá trị vật tư, công cụ, sản phẩm, hàng hóa có ở kho tại thời điểm kiểm kê làm căn cứ xác định trách nhiệm trong việc bảo quản, xử lý vật tư, công cụ, sản phẩm, hàng hóa thừa, thiếu và ghi sổ kế toán.
+2.  Phương pháp và trách nhiệm ghi 
+Góc trên bên trái của Biên bản tổng hợp kiểm kê vật tư, công cụ, sản phẩm, hàng hóa ghi rõ tên đơn vị (hoặc đóng dấu đơn vị), bộ phận sử dụng. Biên bản tổng hợp kiểm kê vật tư, công cụ, sản phẩm, hàng hóa phải ghi rõ giờ, ngày, tháng, năm thực hiện kiểm kê. Ban kiểm kê gồm Trưởng ban và các ủy viên. 
+Mỗi kho được kiểm kê lập 1 biên bản riêng.
+Cột A, B, C, D: Ghi số thứ tự, tên, nhãn hiệu, quy cách, đơn vị tính của từng loại vật tư, công cụ, sản phẩm, hàng hóa được kiểm kê tại kho.
+Cột 1: Ghi đơn giá của từng thứ vật tư, công cụ, sản phẩm, hàng hóa (tùy theo quy định của đơn vị để ghi đơn giá cho phù hợp). 
+Cột 2, 3: Ghi số lượng, thành tiền của từng thứ vật tư, công cụ, sản phẩm, hàng hóa theo sổ kế toán. 
+Cột 4, 5: Ghi số lượng, thành tiền của từng thứ vật tư, công cụ, sản phẩm, hàng hóa theo kết quả kiểm kê.
+Nếu thừa so với sổ kế toán (cột 2, 3) ghi vào cột 6, 7, nếu thiếu ghi vào cột 8, 9. 
+Số lượng vật tư, công cụ, sản phẩm, hàng hóa thực tế kiểm kê sẽ được phân loại theo phẩm chất: 
+- Tốt 100% ghi vào cột 10.
+- Kém phẩm chất (Vật tư, công cụ, sản phẩm, hàng hóa bị giảm chất lượng nhưng vẫn còn sử dụng được) ghi vào cột 11.
+- Mất phẩm chất (Vật tư, công cụ, sản phẩm, hàng hóa bị không còn sử dụng được) ghi vào cột 12. 
+Nếu có chênh lệch phải trình giám đốc doanh nghiệp ghi rõ ý kiến giải quyết số chênh lệch này. 
+Biên bản được lập thành 2 bản: 
+- 1 bản phòng kế toán lưu. 
+- 1 bản thủ kho lưu. 
+Sau khi lập xong biên bản, giám đốc, trưởng ban/chủ tịch hội đồng kiểm kê và thủ kho, kế toán trưởng cùng ký vào biên bản (ghi rõ họ tên).
+
+BẢNG KÊ MUA HÀNG
+(Mẫu số 06 -VT)
+
+1. Mục đích: Là chứng từ kê khai mua vật tư, công cụ, dụng cụ, hàng hóa, dịch vụ trong trường hợp người bán thuộc diện không phải lập hóa đơn khi bán hàng hóa, cung cấp dịch vụ theo quy định làm căn cứ lập phiếu nhập kho, thanh toán và hạch toán chi phí vật tư, hàng hóa,... lập trong Bảng kê khai này không được khấu trừ thuế GTGT. 
+2. Phương pháp và trách nhiệm ghi
+Góc bên trái của Bảng kê mua hàng ghi rõ tên đơn vị (hoặc đóng dấu đơn vị), bộ phận sử dụng Bảng kê mua hàng. 
+Ghi rõ họ tên, địa chỉ hoặc nơi làm việc của người trực tiếp mua hàng.
+Cột A, B, C, D: Ghi số thứ tự, tên, quy cách, phẩm chất, địa chỉ mua hàng và đơn vị tính của từng thứ vật tư, công cụ, dụng cụ, hàng hóa.
+Cột 1: Ghi số lượng của mỗi loại vật tư, công cụ, dụng cụ, hàng hóa đã mua.
+Cột 2: Ghi đơn giá mua của từng thứ vật tư, công cụ, dụng cụ, hàng hóa đã mua.
+Cột 3: Ghi số tiền của từng thứ vật tư, công cụ, dụng cụ, hàng hóa đã mua (Cột 3 = Cột 1 x Cột 2).
+Dòng cộng ghi tổng số tiền đã mua các loại vật tư, công cụ, hàng hóa ghi trong Bảng.
+Các cột B, C, 1, 2, 3 nếu còn thừa thì được gạch 1 đường chéo từ trên xuống.
+Bảng kê mua hàng do người mua lập 2 liên (đặt giấy than viết 1 lần). 
+Sau khi lập xong, người mua ký và chuyển cho kế toán trưởng soát xét, ký vào Bảng kê mua hàng. Người đi mua phải chuyển “Bảng kê mua hàng” cho giám đốc hoặc người được ủy quyền duyệt và làm thủ tục nhập kho (nếu có) hoặc giao hàng cho người quản lý sử dụng.
+Liên 1 lưu, liên 2 chuyển cho kế toán làm thủ tục thanh toán và ghi sổ (Trường hợp bảng kê mua hàng được lập bằng bản cứng).
+
+BẢNG PHÂN BỔ NGUYÊN LIỆU, VẬT LIỆU, 
+CÔNG CỤ, DỤNG CỤ
+(Mẫu số 07 - VT)
+
+1. Mục đích: Dùng để phản ánh tổng giá trị nguyên liệu, vật liệu, công cụ, dụng cụ xuất kho trong tháng theo giá thực tế và giá hạch toán và phân bổ giá trị nguyên liệu, vật liệu, công cụ, dụng cụ xuất dùng cho các đối tượng sử dụng hàng tháng (ghi Có TK 152, TK 153, Nợ các tài khoản liên quan), Bảng này còn dùng để phân bổ giá trị công cụ, dụng cụ xuất dùng một lần có giá trị lớn, thời gian sử dụng dưới một năm hoặc trên một năm đang được phản ánh trên  TK 242.
+2. Phương pháp và trách nhiệm ghi
+- Bảng gồm các cột dọc phản ánh các loại nguyên liệu, vật liệu và công cụ, dụng cụ xuất dùng trong tháng tính theo giá hạch toán và giá thực tế, các dòng ngang phản ánh các đối tượng sử dụng nguyên liệu, vật liệu, công cụ, dụng cụ.
+- Căn cứ vào các chứng từ xuất kho vật liệu và hệ số chênh lệch giữa giá hạch toán và giá thực tế của từng loại vật liệu để tính giá thực tế nguyên liệu, vật liệu, công cụ xuất kho.
+Giá trị nguyên liệu, vật liệu, công cụ, dụng cụ xuất kho trong tháng theo giá thực tế phản ánh trong Bảng phân bổ nguyên liệu, vật liệu, công cụ, dụng cụ theo từng đối tượng sử dụng được dùng làm căn cứ để ghi vào bên Có các Tài khoản 152, 153, 242 của các Bảng kê, Nhật ký - Chứng từ và sổ kế toán liên quan tùy theo hình thức kế toán đơn vị áp dụng (Sổ Cái hoặc Nhật ký - Sổ Cái TK 152, 153,...). Số liệu của Bảng phân bổ này đồng thời được sử dụng để tập hợp chi phí tính giá thành sản phẩm, dịch vụ. 
+III. CHỈ TIÊU BÁN HÀNG
+1. Mục đích: Theo dõi tình hình nhập, xuất, tồn tại quầy, thanh toán hàng nhằm cung cấp thông tin cần thiết cho kế toán và người quản lý của đơn trong việc quản lý hàng hóa.
+	2. Nội dung: Thuộc chỉ tiêu bán hàng gồm các biểu mẫu sau:
+	Bảng thanh toán hàng đại lý, ký gửi 		       - Mẫu số 01-BH
+	Thẻ quầy hàng						       - Mẫu số 02-BH
+
+BẢNG THANH TOÁN HÀNG ĐẠI LÝ, KÝ GỬI
+(Mẫu số 01 - BH)
+
+1. Mục đích: Phản ánh tình hình thanh toán hàng đại lý, ký gửi giữa đơn vị có hàng và đơn vị nhận bán hàng, là chứng từ để đơn vị có hàng và đơn vị nhận bán hàng đại lý, ký gửi thanh toán tiền và ghi sổ kế toán.
+2.  Phương pháp và trách nhiệm ghi
+- Ghi rõ tên, địa chỉ hoặc đóng dấu đơn vị nhận bán hàng đại lý, ký gửi ở góc trên bên trái.
+- Ghi rõ số, ngày, tháng, năm lập bảng thanh toán hàng đại lý, ký gửi.
+- Ghi rõ số hiệu, ngày, tháng, năm của hợp đồng bán hàng đại lý, ký gửi.
+	Mục I Thanh toán số hàng đại lý, ký gửi:
++ Cột A, B, C: Ghi số thứ tự và tên, quy cách, phẩm chất, đơn vị tính của sản phẩm, hàng hóa nhận đại lý, ký gửi.
++ Cột 1: Ghi số lượng hàng còn tồn cuối kỳ trước.
++ Cột 2: Ghi số lượng hàng nhận đại lý, ký gửi kỳ này.
++ Cột 3: Ghi tổng số lượng hàng nhận đại lý, ký gửi tính đến cuối kỳ này gồm số lượng hàng tồn kỳ trước chưa bán và số lượng hàng nhận kỳ này (Cột 3 = cột 1+ cột 2).
++ Cột 4, 5, 6: Ghi số lượng, đơn giá và số tiền của hàng hóa đã bán phải thanh toán của kỳ này. Đơn giá thanh toán là đơn giá ghi trong hợp đồng bán hàng đại lý, ký gửi giữa bên có hàng và bên nhận hàng.
++ Cột 7: Ghi số hàng hóa nhận đại lý, ký gửi còn tồn (tại quầy, tại kho) chưa bán được đến ngày lập bảng thanh toán (Cột 7 = Cột 3 - Cột 4).
+Dòng cộng: Ghi tổng số tiền phải thanh toán phát sinh kỳ này.
+Mục II: Ghi số tiền bên bán hàng đại lý, ký gửi còn nợ chưa thanh toán với bên có hàng đến thời điểm thanh toán kỳ này.
+Mục III: Ghi số tiền bên bán hàng đại lý phải thanh toán với bên có hàng đại lý mới phát sinh đến kỳ này (Mục III = Mục II + cột 6 của Mục I).
+Mục IV: Ghi số tiền bên có hàng đại lý phải thanh toán với bên bán hàng đại lý về số thuế nộp hộ, tiền hoa hồng, chi phí khác,... (nếu có).
+Mục V: Ghi số tiền bên bán hàng đại lý thanh toán cho bên có hàng đại lý kỳ này (ghi rõ số tiền mặt và tiền séc).
+Mục VI: Ghi số tiền bên bán hàng đại lý còn nợ bên có hàng đại lý đến thời điểm thanh toán (Mục VI = Mục III - Mục IV - Mục V).
+Bảng thanh toán hàng đại lý, ký gửi do bên nhận bán hàng đại lý, ký gửi lập thành 3 bản. Sau khi lập xong, người lập ký, chuyển cho kế toán trưởng hai bên soát xét và trình giám đốc hai bên ký duyệt đóng dấu, một bản lưu ở nơi lập (phòng kế hoạch hoặc phòng cung tiêu), 1 bản lưu ở phòng kế toán để làm chứng từ thanh toán và ghi sổ kế toán, 1 bản gửi cho bên có hàng đại lý, ký gửi.
+
+THẺ QUẦY HÀNG
+(Mẫu số 02 - BH)
+	
+1. Mục đích: Theo dõi số lượng và giá trị hàng hóa trong quá trình nhận và bán tại quầy hàng, giúp cho người bán hàng thường xuyên nắm được tình hình nhập, xuất, tồn tại quầy, làm căn cứ để kiểm tra, quản lý hàng hóa và lập bảng kê bán hàng từng ngày (kỳ).
+2. Phương pháp và trách nhiệm ghi
+- Ghi rõ họ tên, địa chỉ hoặc đóng dấu cơ quan vào góc trên bên trái.
+- Ghi số thẻ. 
+- Ghi rõ tên hàng, quy cách, đơn vị tính và đơn giá của hàng hóa.
+Mỗi thẻ quầy hàng theo dõi một mặt hàng, không ghi những mặt hàng khác nhau về quy cách, phẩm chất vào cùng một thẻ.
+- Cột A, B: Ghi ngày, tháng và tên người bán hàng trong ngày (ca).
+- Cột 1: Ghi số lượng hàng hóa tồn đầu ngày (ca).
+- Cột 2: Ghi số lượng hàng hóa từ kho nhập vào quầy trong ngày (ca).
+- Cột 3: Ghi số lượng hàng hóa nhập trong ngày (ca) từ những nguồn khác không qua kho của đơn vị.
+- Cột 4: Ghi tổng số lượng hàng hóa có trong ngày (ca).
+- Cột 5: Ghi số lượng hàng hóa xuất bán trong ngày (ca).
+- Cột 6: Ghi số tiền thu được của số hàng hóa bán trong ngày (ca).
+- Cột 7, 8: Ghi số lượng và giá trị hàng hóa xuất ra vì các mục đích khác không phải bán trong ngày (ca).	
+- Cột 9: Ghi số lượng hàng tồn lại quầy hàng vào cuối ngày (ca).
+Cuối tháng cộng thẻ quầy hàng để lập báo cáo bán hàng.
+Thẻ này do người bán hàng giữ và ghi hàng ngày (ca), trước khi sử dụng phải đăng ký với kế toán.
+IV- CHỈ TIÊU TIỀN TỆ
+1. Mục đích: Theo dõi tình hình thu, chi, tồn quỹ các loại tiền mặt, ngoại tệ, vàng  tiền tệ và các khoản tạm ứng, thanh toán tạm ứng của đơn vị, nhằm cung cấp những thông tin cần thiết cho kế toán và người quản lý của đơn vị trong lĩnh vực tiền tệ.
+2. Nội dung: Thuộc chỉ tiêu tiền tệ gồm các biểu mẫu sau:
+- Phiếu thu: 
+Mẫu số 01 - TT
+
+- Phiếu chi:
+Mẫu số 02 - TT
+
+- Giấy đề nghị tạm ứng
+Mẫu số 03 - TT
+
+- Giấy thanh toán tiền tạm ứng
+Mẫu số 04 - TT 
+
+- Giấy đề nghị thanh toán
+Mẫu số 05 - TT
+
+- Biên lai thu tiền: 
+Mẫu số 06 - TT 
+
+- Bảng kê vàng tiền tệ:
+Mẫu số 07 - TT 
+
+- Bảng kiểm kê quỹ (dùng cho VND):
+Mẫu số 08a - TT 
+
+- Bảng kiểm kê quỹ (dùng cho ngoại tệ, vàng tiền tệ):
+Mẫu số 08b - TT
+
+- Bảng kê chi tiền:
+Mẫu số 09 - TT
+
+PHIẾU THU 
+(Mẫu số 01 - TT) 
+
+1. Mục đích: Nhằm xác định số tiền mặt, ngoại tệ,... thực tế nhập quỹ và làm căn cứ để thủ quỹ thu tiền, ghi sổ quỹ, kế toán ghi sổ các khoản thu có liên quan. Mọi khoản tiền Việt Nam, ngoại tệ nhập quỹ đều phải có Phiếu thu.
+Đối với ngoại tệ trước khi nhập quỹ phải được kiểm tra và lập “Bảng kê ngoại tệ" đính kèm với Phiếu thu.
+2. Phương pháp và trách nhiệm ghi 
+- Góc trên bên trái của Phiếu thu phải ghi rõ tên đơn vị và địa chỉ đơn vị. 
+- Phiếu thu phải đóng thành quyển và ghi số từng quyển dùng trong 1 năm. Trong mỗi Phiếu thu phải ghi số quyển và số của từng Phiếu thu. Số phiếu thu phải đánh liên tục trong 1 kỳ kế toán. Từng Phiếu thu phải ghi rõ ngày, tháng, năm lập phiếu, ngày, tháng, năm thu tiền.
+- Ghi rõ họ, tên, địa chỉ người nộp tiền.           
+- Dòng “Lý do nộp" ghi rõ nội dung nộp tiền như: Thu tiền bán hàng hóa, sản phẩm, thu tiền tạm ứng còn thừa,...
+- Dòng “Số tiền": Ghi bằng số và bằng chữ số tiền nộp quỹ, ghi rõ đơn vị tính là đồng VN, hay USD ...
+- Dòng tiếp theo ghi số lượng chứng từ gốc kèm theo Phiếu thu.
+	Phiếu thu do kế toán lập thành 3 liên, ghi đầy đủ các nội dung trên phiếu và ký vào Phiếu thu, sau đó chuyển cho kế toán trưởng soát xét và giám đốc ký duyệt, chuyển cho thủ quỹ làm thủ tục nhập quỹ. Sau khi đã nhận đủ số tiền, thủ quỹ ghi số tiền thực tế nhập quỹ (bằng chữ) vào Phiếu thu trước khi ký và ghi rõ họ tên.
+Thủ quỹ giữ lại 1 liên để ghi sổ quỹ, 1 liên giao cho người nộp tiền, 1 liên lưu nơi lập phiếu. Cuối ngày toàn bộ Phiếu thu kèm theo chứng từ gốc chuyển cho kế toán để ghi sổ kế toán (nếu phiếu thu lập bằng bản cứng).
+Chú ý: 
++ Nếu là thu ngoại tệ phải ghi rõ tỷ giá tại thời điểm nhập quỹ để tính ra tổng số tiền theo đơn vị đồng để ghi sổ.
++ Liên phiếu thu gửi ra ngoài doanh nghiệp phải đóng dấu.   
+PHIẾU CHI 
+(Mẫu số 02 - TT) 
+
+1. Mục đích: Nhằm xác định các khoản tiền mặt, ngoại tệ thực tế xuất quỹ và làm căn cứ để thủ quỹ xuất quỹ, ghi sổ quỹ và kế toán ghi sổ kế toán.
+2. Phương pháp và trách nhiệm ghi 
+Góc trên bên trái của chứng từ ghi rõ tên đơn vị và địa chỉ đơn vị.
+- Phiếu chi phải đóng thành quyển, trong mỗi Phiếu chi phải ghi số quyển và số của từng Phiếu chi. Số phiếu chi phải đánh liên tục trong 1 kỳ kế toán. Từng Phiếu chi phải ghi rõ ngày, tháng, năm lập phiếu, ngày, tháng, năm chi tiền.
+- Ghi rõ họ, tên, địa chỉ người nhận tiền.           
+- Dòng “Lý do chi" ghi rõ nội dung chi tiền. 
+- Dòng “Số tiền": Ghi bằng số hoặc bằng chữ số tiền xuất quỹ, ghi rõ đơn vị tính là đồng VN, hay USD ...
+- Dòng tiếp theo ghi số lượng chứng từ gốc kèm theo Phiếu chi.
+Phiếu chi được lập thành 3 liên và chỉ sau khi có đủ chữ ký (Ký theo từng liên) của người lập phiếu, kế toán trưởng, giám đốc, thủ quỹ mới được xuất quỹ. Sau khi nhận đủ số tiền người nhận tiền phải ghi số tiền đã nhận bằng chữ, ký tên và ghi rõ họ, tên vào Phiếu chi.
+Liên 1 lưu ở  nơi lập phiếu.
+Liên 2 thủ quỹ dùng để ghi sổ quỹ và chuyển cho kế toán cùng với chứng từ gốc để vào sổ kế toán. 
+Liên 3 giao cho người nhận tiền (Trường hợp phiếu chi lập bằng bản cứng).
+Chú ý: 
++ Nếu là chi ngoại tệ phải ghi rõ tỷ giá, đơn giá tại thời điểm xuất quỹ để tính ra tổng số tiền theo đơn vị đồng tiền ghi sổ.    
++ Liên phiếu chi gửi ra ngoài doanh nghiệp phải đóng dấu.
+
+GIẤY ĐỀ NGHỊ TẠM ỨNG
+(Mẫu số 03 - TT) 
+
+1. Mục đích: Giấy đề nghị tạm ứng là căn cứ để xét duyệt tạm ứng, làm thủ tục lập phiếu chi và xuất quỹ cho tạm ứng.
+2. Phương pháp và trách nhiệm ghi 
+Góc trên bên trái của Giấy đề nghị tạm ứng ghi rõ tên đơn vị, tên bộ phận. Giấy đề nghị tạm ứng do người xin tạm ứng viết 1 liên và ghi rõ gửi giám đốc doanh nghiệp (người xét duyệt tạm ứng).     
+- Người xin tạm ứng phải ghi rõ họ tên, đơn vị, bộ phận và số tiền xin tạm ứng (viết bằng số và bằng chữ).
+- Lý do tạm ứng ghi rõ mục đích sử dụng tiền tạm ứng như: Tiền công tác phí, mua văn phòng phẩm, tiếp khách...
+- Thời hạn thanh toán: Ghi rõ ngày, tháng hoàn lại số tiền đã tạm ứng.
+Giấy đề nghị tạm ứng được chuyển cho kế toán trưởng xem xét và ghi ý kiến đề nghị giám đốc duyệt chi. Căn cứ quyết định của giám đốc, kế toán lập phiếu chi kèm theo giấy đề nghị tạm ứng và chuyển cho thủ quỹ làm thủ tục xuất quỹ.
+
+GIẤY THANH TOÁN TIỀN TẠM ỨNG
+(Mẫu số 04 - TT) 
+
+1. Mục đích: Giấy thanh toán tiền tạm ứng là bảng liệt kê các khoản tiền đã nhận tạm ứng và các khoản đã chi của người nhận tạm ứng, làm căn cứ thanh toán số tiền tạm ứng và ghi sổ kế toán.
+2.  Phương pháp và trách nhiệm ghi
+Góc trên bên trái của Giấy đề nghị tạm ứng ghi rõ tên đơn vị, tên bộ phận. Phần đầu ghi rõ ngày, tháng, năm, số hiệu của giấy thanh toán tiền tạm ứng; Họ tên, đơn vị người thanh toán.
+Căn cứ vào chỉ tiêu của cột A, kế toán ghi vào cột 1 như sau:
+Mục I- Số tiền tạm ứng: Gồm số tiền tạm ứng các kỳ trước chưa chi hết và số tạm ứng kỳ này, gồm:
+Mục 1: Số tạm ứng các kỳ trước chưa chi hết: Căn cứ vào dòng số dư tạm ứng tính đến ngày lập phiếu thanh toán trên sổ kế toán để ghi.
+Mục 2: Số tạm ứng kỳ này: Căn cứ vào các phiếu chi tạm ứng để ghi, mỗi phiếu chi ghi 1 dòng.
+Mục II- Số tiền đã chi: Căn cứ vào các chứng từ chi tiêu của người nhận tạm ứng để ghi vào mục này. Mỗi chứng từ chi tiêu ghi 1 dòng.
+Mục III- Chênh lệch: Là số chênh lệch giữa Mục I và Mục II. 
+- Nếu số tạm ứng chi không hết ghi vào dòng 1 của Mục III.
+- Nếu chi quá số tạm ứng ghi vào dòng 2 của Mục III.
+Sau khi lập xong giấy thanh toán tiền tạm ứng, kế toán thanh toán chuyển cho kế toán trưởng soát xét và giám đốc doanh nghiệp duyệt. Giấy thanh toán tiền tạm ứng kèm theo chứng từ gốc được dùng làm căn cứ ghi sổ kế toán.
+Phần chênh lệch tiền tạm ứng chi không hết phải làm thủ tục thu hồi nộp quỹ hoặc trừ vào lương. Phần chi quá số tạm ứng phải làm thủ tục xuất quỹ trả lại cho người tạm ứng. Chứng từ gốc, giấy thanh toán tạm ứng phải đính kèm phiếu thu hoặc phiếu chi có liên quan.
+
+GIẤY ĐỀ NGHỊ THANH TOÁN
+(Mẫu số 05 - TT) 
+
+1. Mục đích: Giấy đề nghị thanh toán dùng trong trường hợp đã chi nhưng chưa được thanh toán hoặc chưa nhận tạm ứng để tổng hợp các khoản đã chi kèm theo chứng từ (nếu có) để làm thủ tục thanh toán, làm căn cứ thanh toán và ghi sổ kế toán.
+2.  Phương pháp và trách nhiệm ghi 
+Góc trên bên trái của Giấy đề nghị thanh toán ghi rõ tên đơn vị, bộ phận. Giấy đề nghị thanh toán do người đề nghị thanh toán viết 1 liên và ghi rõ gửi giám đốc doanh nghiệp (hoặc người xét duyệt chi).     
+- Người đề nghị thanh toán phải ghi rõ họ tên, địa chỉ (đơn vị, bộ phận) và số tiền đề nghị thanh toán (viết bằng số và bằng chữ).
+- Nội dung thanh toán: Ghi rõ nội dung đề nghị thanh toán. 
+- Giấy đề nghị thanh toán phải ghi rõ số lượng chứng từ gốc đính kèm. 
+Sau khi mua hàng hoặc sau khi chi tiêu cho những nhiệm vụ được giao, người mua hàng hoặc chi tiêu lập giấy đề nghị thanh toán. Giấy đề nghị thanh toán được chuyển cho kế toán trưởng soát xét và ghi ý kiến đề nghị giám đốc doanh nghiệp (hoặc người được ủy quyền) duyệt chi. Căn cứ quyết định của giám đốc, kế toán lập phiếu chi kèm theo giấy đề nghị thanh toán và chuyển cho thủ quỹ làm thủ tục xuất quỹ.
+BIÊN LAI THU TIỀN
+(Mẫu  số 06 - TT)
+
+1. Mục đích: Biên lai thu tiền là giấy biên nhận của doanh nghiệp hoặc cá nhân đã thu tiền hoặc thu séc của người nộp làm căn cứ để lập phiếu thu, nộp tiền vào quỹ, đồng thời để người nộp thanh toán với cơ quan hoặc lưu quỹ.
+	2. Phương pháp và trách nhiệm ghi 
+	Biên lai thu tiền phải đóng thành quyển, phải ghi rõ tên đơn vị, địa chỉ của đơn vị thu tiền và đóng dấu đơn vị, phải đánh số từng quyển. Trong mỗi quyển phải ghi rõ số hiệu của từng tờ biên lai thu tiền liên tục trong 1 quyển.
+Ghi rõ họ tên, địa chỉ của người nộp tiền.
+- Dòng “Nội dung thu” ghi rõ nội dung thu tiền. 
+- Dòng “Số tiền thu” ghi bằng số và bằng chữ số tiền nộp, ghi rõ đơn vị tính là “đồng” hoặc USD...
+Nếu thu bằng séc phải ghi rõ số, ngày, tháng, năm của tờ séc bắt đầu lưu hành và họ tên người sử dụng séc.
+Biên lai thu tiền được lập thành hai liên (đặt giấy than viết một lần).
+Sau khi thu tiền, người thu tiền và người nộp tiền cùng ký và ghi rõ họ tên để xác nhận số tiền đã thu, đã nộp. Ký xong người thu tiền lưu 1 liên, còn liên 2 giao cho người nộp tiền giữ.
+Cuối ngày, người được đơn vị giao nhiệm vụ thu tiền phải căn cứ vào bản biên lai lưu để lập Bảng kê biên lai thu tiền trong ngày (nếu thu séc phải lập Bảng kê thu séc riêng) và nộp cho kế toán để kế toán lập phiếu thu làm thủ tục nhập quỹ hoặc làm thủ tục nộp ngân hàng. Tiền mặt thu được ngày nào, người thu tiền phải nộp quỹ ngày đó.
+
+BẢNG KÊ VÀNG TIỀN TỆ
+(Mẫu số 07 - TT) 
+
+1. Mục đích: Bảng kê vàng tiền tệ dùng để liệt kê số vàng tiền tệ của đơn vị, nhằm quản lý chặt chẽ, chính xác các loại vàng tiền tệ có tại đơn vị và làm căn cứ cùng với chứng từ gốc để lập phiếu thu, chi quỹ.
+2. Phương pháp và trách nhiệm ghi 
+Cột A, B: Ghi số thứ tự và tên, loại, qui cách, phẩm chất của vàng tiền tệ...
+Cột C: Ghi đơn vị tính: gam, chỉ, Kg.
+Cột 1: Ghi số lượng của từng loại. 
+Cột 2: Ghi đơn giá của từng loại.  
+Cột 3: Bằng cột 1 nhân ( x ) cột 2.
+Ghi chú: Khi cần thiết, tại cột B có thể ghi rõ ký hiệu của loại vàng tiền tệ...
+Bảng kê do người đứng ra kiểm nghiệm lập thành 2 liên, 1 liên đính kèm với. phiếu thu (chi) chuyển cho thủ quỹ để làm thủ tục nhập hoặc xuất quỹ và 1 liên giao cho người nộp (hoặc nhận).
+Bảng kê phải có đầy đủ chữ ký và ghi rõ họ tên như quy định.
+
+BẢNG KIỂM KÊ QUỸ
+(Dùng cho VNĐ)
+(Mẫu số 08a - TT) 
+
+1. Mục đích: Bảng kiểm kê quỹ nhằm xác nhận tiền bằng VNĐ tồn quỹ thực tế và số thừa, thiếu so với sổ quỹ trên cơ sở đó tăng cường quản lý quỹ và làm cơ sở qui trách nhiệm vật chất, ghi sổ kế toán số chênh lệch.
+2. Phương pháp và trách nhiệm ghi
+Góc trên bên trái của Biên bản kiểm kê quỹ tiền mặt phải ghi rõ tên đơn vị (hoặc đóng dấu), bộ phận. 
+Việc kiểm kê quỹ được tiến hành định kỳ vào cuối tháng, cuối quý, cuối năm hoặc khi cần thiết có thể kiểm kê đột xuất hoặc khi bàn giao quỹ. Khi tiến hành kiểm kê phải lập Ban kiểm kê, trong đó, thủ quỹ và kế toán tiền mặt hoặc kế toán thanh toán là các thành viên. Biên bản kiểm kê quỹ phải ghi rõ số hiệu chứng từ và thời điểm kiểm kê (.... giờ..... ngày..... tháng..... năm.....). Trước khi kiểm kê quỹ, thủ quỹ phải ghi sổ quỹ tất cả các phiếu thu, phiếu chi và tính số dư tồn quỹ đến thời điểm kiểm kê.
+- Khi tiến hành kiểm kê phải tiến hành kiểm kê riêng từng loại tiền có trong quỹ. 
+- Dòng “Số dư theo sổ quỹ": Căn cứ vào số tồn quỹ trên sổ quỹ tại ngày, giờ cộng sổ kiểm kê quỹ để ghi vào cột 2.
+- Dòng “Số kiểm kê thực tế": Căn cứ vào số kiểm kê thực tế để ghi theo từng loại tiền vào cột 1 và tính ra tổng số tiền để ghi vào cột 2.
+- Dòng chênh lệch: Ghi số chênh lệch thừa hoặc thiếu giữa số dư theo sổ quỹ với số kiểm kê thực tế.
+Trên Bảng kiểm kê quỹ cần phải xác định và ghi rõ nguyên nhân gây ra thừa hoặc thiếu quỹ, có ý kiến nhận xét và kiến nghị của Ban kiểm kê. Bảng kiểm kê quỹ phải có chữ ký của thủ quỹ, Trưởng ban kiểm kê và kế toán trưởng. Mọi khoản chênh lệch quỹ đều phải báo cáo giám đốc doanh nghiệp xem xét giải quyết.
+Bảng kiểm kê quỹ do ban kiểm kê quỹ lập thành 2 bản:
+- 1 bản lưu ở thủ quỹ.
+- 1 bản lưu ở kế toán quỹ tiền mặt hoặc kế toán thanh toán.
+
+BẢNG KIỂM KÊ QUỸ
+(Dùng cho ngoại tệ, vàng tiền tệ)
+(Mẫu số 08b - TT) 
+
+1. Mục đích: Biên bản nhằm xác nhận tiền ngoại tệ, vàng tiền tệ,... tồn quỹ thực tế và số thừa, thiếu so với sổ quỹ trên cơ sở đó tăng cường quản lý quỹ và làm cơ sở qui trách nhiệm vật chất, ghi sổ kế toán số chênh lệch.
+2. Phương pháp và trách nhiệm ghi
+Góc trên bên trái ghi tên đơn vị, bộ phận. Việc kiểm kê quỹ được tiến hành định kỳ vào cuối tháng, cuối quý, cuối năm hoặc khi cần thiết có thể kiểm kê đột xuất hoặc khi bàn giao quỹ. Khi tiến hành kiểm kê phải lập ban kiểm kê, trong đó, thủ quỹ và kế toán quỹ là các thành viên.
+Biên bản kiểm kê quỹ phải ghi rõ số hiệu chứng từ và thời điểm kiểm kê (... giờ..... ngày..... tháng..... năm.....). Trước khi kiểm kê quỹ, thủ quỹ phải ghi sổ quỹ tất cả các phiếu thu, phiếu chi và tính số dư tồn quỹ đến thời điểm kiểm kê.
+- Khi tiến hành kiểm kê phải tiến hành kiểm kê riêng từng loại tiền có trong quỹ như: Ngoại tệ, vàng tiền tệ ...
+- Dòng “Số dư theo sổ quỹ": Căn cứ vào sổ quỹ tại ngày, giờ kiểm kê quỹ để  ghi vào cột 2, 4.
+- Dòng “Kiểm kê thực tế": Căn cứ vào số kiểm kê thực tế để ghi theo từng loại ngoại tệ, vàng tiền tệ ...
+- Dòng chênh lệch: Ghi số chênh lệch thừa hoặc thiếu giữa số dư theo sổ quỹ với số kiểm kê thực tế.
+Trên Bảng kiểm kê quỹ cần phải xác định và ghi rõ nguyên nhân gây ra thừa hoặc thiếu quỹ, có ý kiến nhận xét và kiến nghị của Ban kiểm kê. Bảng kiểm kê quỹ phải có chữ ký (ghi rõ họ tên) của thủ quỹ, trưởng ban kiểm kê và kế toán trưởng. Mọi khoản chênh lệch quỹ đều phải báo cáo giám đốc doanh nghiệp xem xét giải quyết.
+Bảng kiểm kê quỹ do ban kiểm kê quỹ lập thành 2 bản:
+- 1 bản lưu ở thủ quỹ
+- 1 bản lưu ở kế toán quỹ.
+Ghi chú: (*) Trường hợp kiểm kê vàng tiền tệ thì cột "Diễn giải" phải ghi theo từng loại, từng thứ.
+
+BẢNG KÊ CHI TIỀN 
+(Mẫu số 09 - TT) 
+
+1. Mục đích: Bảng kê chi tiền là bảng liệt kê các khoản tiền đã chi, làm căn cứ quyết toán các khoản tiền đã chi và ghi sổ kế toán. 
+2. Phương pháp và trách nhiệm ghi
+Góc trên bên trái ghi rõ tên đơn vị. Phần đầu ghi rõ họ tên, bộ phận, địa chỉ của người chi tiền và ghi rõ nội dung chi cho công việc gì.
+- Cột A,B,C,D ghi rõ số thứ tự, số hiệu, ngày, tháng chứng từ và diễn giải nội dung chi của từng chứng từ.
+- Cột 1: Ghi số tiền.
+Bảng kê chi tiền phải ghi rõ tổng số tiền bằng chữ và số chứng từ gốc đính kèm.
+Bảng kê chi tiền được lập thành 2 bản:
+- 1 bản lưu ở thủ quỹ.
+- 1 bản lưu ở kế toán quỹ.
+V. CHỈ TIÊU TÀI SẢN CỐ ĐỊNH
+1. Mục đích: Theo dõi tình hình biến động về số lượng, chất lượng và giá trị của TSCĐ. Giám đốc chặt chẽ tình hình sử dụng, thanh lý và sửa chữa lớn tài sản cố định.
+2. Nội dung: Thuộc chỉ tiêu vật tư gồm các biểu mẫu sau:
+- Biên bản giao nhận TSCĐ				- Mẫu số 01 - TSCĐ
+- Biên bản thanh lý TSCĐ					- Mẫu số 02 - TSCĐ
+- Biên bản bàn giao TSCĐ sửa chữa, bảo 
+  dưỡng hoặc nâng cấp, cải tạo hoàn thành	- Mẫu số 03 - TSCĐ
+- Biên bản đánh giá lại TSCĐ				- Mẫu số 04 - TSCĐ
+- Biên bản tổng hợp kiểm kê TSCĐ			- Mẫu số 05 - TSCĐ
+- Bảng tính và phân bổ khấu hao TSCĐ			- Mẫu số 06 - TSCĐ
+
+BIÊN BẢN GIAO NHẬN TÀI SẢN CỐ ĐỊNH
+(Mẫu số 01 - TSCĐ) 
+
+1. Mục đích: Nhằm xác nhận việc giao nhận TSCĐ sau khi hoàn thành xây dựng, mua sắm, được cấp trên cấp, được tặng, biếu, viện trợ, nhận góp vốn, TSCĐ thuê ngoài... đưa vào sử dụng tại đơn vị hoặc tài sản của đơn vị bàn giao cho đơn vị khác theo lệnh của cấp trên, theo hợp đồng góp vốn,... (không sử dụng biên bản giao nhận TSCĐ trong trường hợp nhượng bán, thanh lý hoặc tài sản cố định phát hiện thừa, thiếu khi kiểm kê). Biên bản giao nhận TSCĐ là căn cứ để giao nhận TSCĐ và kế toán ghi sổ (thẻ) TSCĐ, sổ kế toán có liên quan.   
+2. Phương pháp và trách nhiệm ghi
+Góc trên bên trái của Biên bản giao nhận TSCĐ ghi rõ tên đơn vị (hoặc đóng dấu đơn vị), bộ phận sử dụng. Khi có tài sản mới đưa vào sử dụng hoặc điều tài sản cho đơn vị khác, đơn vị phải lập hội đồng bàn giao gồm: Đại diện bên giao, đại diện bên nhận và 1 số ủy viên.
+Biên bản giao nhận TSCĐ lập cho từng TSCĐ. Đối với trường hợp giao nhận cùng một lúc nhiều tài sản cùng loại, cùng giá trị và do cùng 1 đơn vị giao có thể lập chung 1 biên bản giao nhận TSCĐ.
+Cột A, B: Ghi số thứ tự, tên, ký mã hiệu, qui cách (cấp hạng) của TSCĐ.
+Cột C: Ghi số hiệu TSCĐ hoặc mã TSCĐ.
+Cột D: Ghi nước sản xuất (xây dựng). 
+Cột 1: Ghi năm sản xuất.
+Cột 2: Ghi năm bắt đầu đưa vào sử dụng. 
+Cột 3: Ghi công suất (diện tích, thiết kế) như xe TOYOTA 12 chỗ ngồi, hoặc máy phát điện 75 KVA, ...
+Cột 4, 5, 6, 7: Ghi các yếu tố cấu thành nên nguyên giá TSCĐ gồm: Giá mua (hoặc giá thành sản xuất) (cột 4); chi phí vận chuyển, lắp đặt (cột 5); chi phí chạy thử (cột 6).
+Cột 8: Ghi nguyên giá TSCĐ (cột 7 = cột 4 + cột 5 + cột 6 +...).
+Cột E: Ghi những tài liệu kỹ thuật kèm theo TSCĐ khi bàn giao.
+Bảng kê phụ tùng kèm theo: Liệt kê số phụ tùng, dụng cụ đồ nghề kèm theo TSCĐ khi bàn giao. Sau khi bàn giao xong các thành viên bàn giao, nhận TSCĐ cùng ký vào biên bản.
+Biên bản giao nhận TSCĐ được lập thành 2 bản, mỗi bên (giao, nhận) giữ 1 bản chuyển cho phòng kế toán để ghi sổ kế toán và lưu.
+
+BIÊN BẢN THANH LÝ TÀI SẢN CỐ ĐỊNH   
+(Mẫu số 02 - TSCĐ) 
+	
+1. Mục đích: Xác nhận việc thanh lý TSCĐ và làm căn cứ để ghi giảm TSCĐ trên sổ kế toán.
+2.  Phương pháp và trách nhiệm ghi
+Góc trên bên trái của Biên bản thanh lý TSCĐ ghi rõ tên đơn vị (hoặc đóng dấu đơn vị), bộ phận sử dụng. Khi có quyết định về việc thanh lý TSCĐ doanh nghiệp phải thành lập Ban thanh lý TSCĐ. Thành viên Ban thanh lý TSCĐ được ghi chép ở Mục I.
+Ở Mục II  ghi các chỉ tiêu chung về TSCĐ có quyết định thanh lý như: 
+- Tên, ký hiệu TSCĐ, số hiệu hoặc Mã TSCĐ, số thẻ TSCĐ, nước sản xuất, năm đưa vào sử dụng.
+- Nguyên giá TSCĐ, giá trị hao mòn đã trích cộng dồn đến thời điểm thanh lý, giá trị còn lại của TSCĐ đó.
+Mục III ghi kết luận của Ban thanh lý, ghi ý kiến nhận xét của Ban về việc thanh lý TSCĐ.
+Mục IV, kết qủa thanh lý: Sau khi thanh lý xong căn cứ vào chứng từ tính toán tổng số chi phí thanh lý thực tế và giá trị thu hồi ghi vào dòng chi phí thanh lý và giá trị thu hồi (giá trị phụ tùng, phế liệu thu hồi tính theo giá thực tế đã bán hoặc giá bán ước tính).
+Biên bản thanh lý phải do Ban thanh lý TSCĐ lập và có đầy đủ chữ ký, ghi rõ họ tên của trưởng Ban thanh lý, kế toán trưởng và giám đốc doanh nghiệp.
+
+BIÊN BẢN BÀN GIAO TSCĐ 
+SỬA CHỮA, BẢO DƯỠNG HOẶC NÂNG CẤP, CẢI TẠO HOÀN THÀNH
+(Mẫu số 03 - TSCĐ)
+
+1. Mục đích: Xác nhận việc bàn giao TSCĐ sau khi hoàn thành việc sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo giữa bên có TSCĐ sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo và bên thực hiện việc sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo. Là căn cứ ghi sổ kế toán và thanh toán chi phí sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạoTSCĐ.
+2. Phương pháp và trách nhiệm ghi
+Góc trên bên trái của Biên bản bàn giao TSCĐ sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo hoàn thành ghi rõ tên đơn vị (hoặc đóng dấu đơn vị), bộ phận sử dụng. Khi có TSCĐ sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo hoàn thành phải tiến hành lập Ban giao nhận gồm đại diện bên thực hiện việc sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo và đại diện bên có TSCĐ sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo.
+Biên bản bàn giao TSCĐ sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo hoàn thành gồm 2 phần chính:
+1 - Ghi tên, ký hiệu, số hiệu TSCĐ sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo.
+Nơi quản lý sử dụng TSCĐ và ghi rõ thời gian bắt đầu sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo và hoàn thành việc sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo TSCĐ.
+2 - Các bộ phận sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo.
+Cột A: Ghi rõ tên của bộ phận cần phải sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo của TSCĐ.
+Cột B: Ghi nội dung (mức độ) của công việc sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo như: Thay thế mới hoặc sửa chữa, tân trang lại v.v...
+Cột 1: Ghi giá dự toán (giá kế hoạch) (đối với trường hợp đơn vị tự làm) hoặc giá hợp đồng hai bên đã thỏa thuận (đối với trường hợp thuê ngoài) của từng bộ phận cần sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo .
+Cột 2: Ghi số chi phí thực tế đã chi cho từng bộ phận sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo (Đối với trường hợp đơn vị tự sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo).
+Đối với trường hợp thuê ngoài sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo thì chỉ ghi vào cột này khi có sự thay đổi về giá cả (so với giá ghi theo hợp đồng) phát sinh trong quá trình sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo được bên có TSCĐ sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo chấp nhận thanh toán.
+Cột 3: Ghi rõ kết quả kiểm tra của từng bộ phận sau khi đã sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo xong.
+- Kết luận: Ghi ý kiến nhận xét tổng thể về việc sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo TSCĐ của Hội đồng giao nhận.
+Biên bản giao nhận TSCĐ sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo hoàn thành lập thành 2 bản, đại diện đơn vị hai bên giao, nhận cùng ký và mỗi bên giữ một bản, lưu tại phòng kế toán.
+
+BIÊN BẢN ĐÁNH GIÁ LẠI TÀI SẢN CỐ ĐỊNH
+(Mẫu số 04 - TSCĐ) 
+	
+1. Mục đích: Xác nhận việc đánh giá lại TSCĐ và làm căn cứ để ghi sổ kế toán và các tài liệu liên quan đến số chênh lệch (tăng, giảm) do đánh giá lại TSCĐ.
+2. Phương pháp và trách nhiệm ghi
+Góc trên bên trái của Biên bản đánh giá lại TSCĐ ghi rõ tên đơn vị (hoặc đóng dấu đơn vị), bộ phận sử dụng. Khi có quyết định đánh giá lại TSCĐ, đơn vị phải thành lập Hội đồng đánh giá TSCĐ. 
+Cột A, B, C, D: Ghi số thứ tự, tên, ký mã hiệu, qui cách (cấp hạng) số hiệu và số thẻ của TSCĐ.
+Cột 1, 2, 3: Ghi nguyên giá, giá trị hao mòn và giá trị còn lại của TSCĐ trên sổ kế toán tại thời điểm đánh giá.
+Cột 4, 5, 6: Ghi giá trị còn lại của TSCĐ sau khi đánh giá lại.
+ Trường hợp không đánh giá lại giá trị hao mòn, chỉ ghi Cột 4. Trường hợp đánh giá lại cả giá trị hao mòn thì ghi Cột 4, 5, 6.
+Cột 7, 8, 9: Ghi số chênh lệch giữa giá đánh giá so với giá trị đang ghi trên sổ kế toán.  
+Sau khi đánh giá xong, Hội đồng có trách nhiệm lập biên bản ghi đầy đủ các nội dung và các thành viên trong Hội đồng ký, ghi rõ họ tên vào Biên bản đánh giá lại TSCĐ.
+Biên bản đánh giá lại TSCĐ được lập thành 2 bản, 1 bản lưu tại phòng kế toán để ghi sổ kế toán và 1 bản lưu cùng với hồ sơ kỹ thuật của TSCĐ.
+
+BIÊN BẢN TỔNG HỢP KIỂM KÊ TÀI SẢN CỐ ĐỊNH
+(Mẫu số 05 - TSCĐ)
+	
+1. Mục đích: Biên bản tổng hợp kiểm kê tài sản cố định nhằm xác nhận số lượng, giá trị tài sản cố định hiện có, thừa thiếu so với sổ kế toán trên cơ sở đó tăng cường quản lý tài sản cố định và làm cơ sở quy trách nhiệm vật chất, ghi sổ kế toán số chênh lệch.
+2. Phương pháp và trách nhiệm ghi
+Góc trên bên trái của Biên bản tổng hợp kiểm kê TSCĐ ghi rõ tên đơn vị (hoặc đóng dấu đơn vị), bộ phận sử dụng. Việc kiểm kê tài sản cố định được thực hiện theo quy định của pháp luật và theo yêu cầu của đơn vị. Khi tiến hành kiểm kê phải lập Ban kiểm kê, trong đó kế toán theo dõi tài sản cố định là thành viên.
+Biên bản tổng hợp kiểm kê TSCĐ phải ghi rõ thời điểm kiểm kê: (... giờ... ngày... tháng... năm...).
+Khi tiến hành kiểm kê phải tiến hành kiểm kê theo từng đối tượng ghi tài sản cố định.
+Dòng “Theo sổ kế toán” căn cứ vào sổ kế toán TSCĐ phải ghi cả 3 chỉ tiêu: Số lượng, nguyên giá, giá trị còn lại vào cột 1,2,3.
+Dòng “Theo kiểm kê” căn cứ vào kết quả kiểm kê thực tế để ghi theo từng đối tượng TSCĐ, phải ghi cả 3 chỉ tiêu: số lượng, nguyên giá, giá trị còn lại vào cột 4,5,6.
+Dòng “Chênh lệch” ghi số chênh lệch thừa hoặc thiếu theo 3 chỉ tiêu: Số lượng, nguyên giá, giá trị còn lại vào cột 7,8,9.
+Trên Biên bản tổng hợp kiểm kê TSCĐ cần phải xác định và ghi rõ nguyên nhân gây ra thừa hoặc thiếu TSCĐ, có ý kiến nhận xét và kiến nghị của Ban kiểm kê. Biên bản tổng hợp kiểm kê TSCĐ phải có chữ ký (ghi rõ họ tên) của Trưởng ban kiểm kê, chữ ký soát xét của kế toán trưởng và giám đốc doanh nghiệp duyệt. Mọi khoản chênh lệch về TSCĐ của đơn vị đều phải báo cáo giám đốc doanh nghiệp xem xét.
+
+BẢNG TÍNH VÀ PHÂN BỔ KHẤU HAO TSCĐ
+(Mẫu số 06 - TSCĐ)
+
+1. Mục đích: Dùng để phản ánh số khấu hao TSCĐ phải trích và phân bổ số khấu hao đó cho các đối tượng sử dụng TSCĐ hàng tháng.
+2. Kết cấu và nội dung chủ yếu
+Bảng tính và phân bổ khấu hao TSCĐ có các cột dọc phản ánh số khấu hao phải tính cho từng đối tượng sử dụng TSCĐ (như cho bộ phận sản xuất - TK 623, 627, cho bộ phận bán hàng - TK 641, cho bộ phận quản lý - TK 642...) và các hàng ngang phản ánh số khấu hao tính trong tháng trước, số khấu hao tăng, giảm và số khấu hao phải tính trong tháng này.
+Cơ sở lập:
++ Dòng khấu hao đã tính tháng trước lấy từ bảng tính và phân bổ khấu hao TSCĐ tháng trước.
++ Các dòng số khấu hao TSCĐ tăng, giảm tháng này được phản ánh chi tiết cho từng TSCĐ có liên quan đến số tăng, giảm khấu hao TSCĐ theo chế độ quy định hiện hành về khấu hao TSCĐ.
+Dòng số khấu hao phải tính tháng này được tính bằng (=) Số khấu hao tính tháng trước cộng (+) Số khấu hao tăng, trừ (-) Số khấu hao giảm trong tháng.
+Số khấu hao phải trích tháng này trên Bảng phân bổ khấu hao TSCĐ được sử dụng để ghi vào các Bảng kê, Nhật ký - Chứng từ và sổ kế toán có liên quan (cột ghi Có TK 214), đồng thời được sử dụng để tính giá thành thực tế sản phẩm, dịch vụ hoàn thành.  
+
+
+Phụ lục II
+HỆ THỐNG TÀI KHOẢN KẾ TOÁN DOANH NGHIỆP
+(Kèm theo Thông tư số 99/2025/TT-BTC ngày 27 tháng 10 năm 2025
+của Bộ trưởng Bộ Tài chính)
+
+A - DANH MỤC TÀI KHOẢN KẾ TOÁN
+
+Số
+TT
+SỐ HIỆU TK
+TÊN TÀI KHOẢN
+
+
+Cấp 1
+Cấp 2
+
+
+1
+2
+3
+4
+
+
+
+
+LOẠI TÀI KHOẢN TÀI SẢN
+
+
+
+
+
+
+01
+111
+
+Tiền mặt
+
+
+
+
+
+
+02
+112
+
+Tiền gửi không kỳ hạn
+
+
+
+
+
+
+03
+113
+
+Tiền đang chuyển
+
+
+
+
+
+
+04
+121
+
+Chứng khoán kinh doanh
+
+
+
+
+
+
+05
+128
+
+Đầu tư nắm giữ đến ngày đáo hạn
+
+
+
+1281
+Tiền gửi có kỳ hạn
+
+
+
+1282
+Trái phiếu
+
+
+
+1283
+Cho vay
+
+
+
+1288
+Các khoản đầu tư khác nắm giữ đến ngày đáo hạn
+
+
+
+
+
+
+06
+131
+
+Phải thu của khách hàng
+
+
+
+
+
+
+07
+133
+
+Thuế GTGT được khấu trừ
+
+
+
+1331
+Thuế GTGT được khấu trừ của hàng hóa, dịch vụ
+
+
+
+1332
+Thuế GTGT được khấu trừ của TSCĐ
+
+
+
+
+
+
+08
+136
+
+Phải thu nội bộ
+
+
+
+1361
+Vốn kinh doanh ở đơn vị trực thuộc
+
+
+
+1362
+Phải thu nội bộ về chênh lệch tỷ giá
+
+
+
+1363
+Phải thu nội bộ về chi phí đi vay đủ điều kiện được vốn hóa
+
+
+
+1368
+Phải thu nội bộ khác
+
+
+
+
+
+
+09
+138
+
+Phải thu khác
+
+
+
+1381
+Tài sản thiếu chờ xử lý
+
+
+
+1383
+Thuế TTĐB của hàng nhập khẩu
+
+
+
+1388
+Phải thu khác
+
+
+
+
+
+
+10
+141
+
+Tạm ứng
+
+
+
+
+
+
+11
+151
+
+Hàng mua đang đi đường
+
+
+
+
+
+
+12
+152
+
+Nguyên liệu, vật liệu
+
+
+
+
+
+
+13
+153
+
+Công cụ, dụng cụ
+
+
+
+
+
+
+14
+154
+
+Chi phí sản xuất, kinh doanh dở dang
+
+
+
+
+
+
+15
+155
+
+Sản phẩm
+
+16
+156
+
+Hàng hóa
+
+
+
+
+
+
+17
+157
+
+Hàng gửi đi bán
+
+
+
+
+
+
+18
+158
+
+Nguyên liệu, vật tư tại kho bảo thuế
+
+
+
+
+
+
+19
+171
+
+Giao dịch mua, bán lại trái phiếu chính phủ
+
+
+
+
+
+
+20
+211
+
+Tài sản cố định hữu hình
+
+
+
+
+
+
+21
+212
+
+Tài sản cố định thuê tài chính
+
+
+
+
+
+
+22
+213
+
+Tài sản cố định vô hình
+
+
+
+
+
+
+23
+214
+
+Hao mòn tài sản cố định
+
+
+
+2141
+Hao mòn TSCĐ hữu hình
+
+
+
+2142
+Hao mòn TSCĐ thuê tài chính
+
+
+
+2143
+Hao mòn TSCĐ vô hình
+
+
+
+2147
+Hao mòn BĐSĐT
+
+
+
+
+
+
+24
+215
+
+Tài sản sinh học
+
+
+
+2151
+Súc vật nuôi cho sản phẩm định kỳ
+
+
+
+21511
+Súc vật nuôi cho sản phẩm định kỳ chưa đạt đến giai đoạn trưởng thành
+
+
+
+21512
+Súc vật nuôi cho sản phẩm định kỳ đạt đến giai đoạn trưởng thành
+
+
+
+215121
+Nguyên giá
+
+
+
+215122
+Giá trị khấu hao lũy kế
+
+
+
+2152
+Súc vật nuôi lấy sản phẩm một lần
+
+
+
+2153
+Cây trồng theo mùa vụ hoặc lấy sản phẩm một lần
+
+
+
+
+
+
+25
+217
+
+Bất động sản đầu tư
+
+26
+221
+
+Đầu tư vào công ty con
+
+
+
+
+
+
+27
+222
+
+Đầu tư vào công ty liên doanh, liên kết
+
+
+
+
+
+
+28
+228
+
+Đầu tư khác
+
+
+
+2281
+Đầu tư góp vốn vào đơn vị khác
+
+
+
+2288
+Đầu tư khác
+
+
+
+
+
+
+29
+229
+
+Dự phòng tổn thất tài sản
+
+
+
+2291
+Dự phòng giảm giá chứng khoán kinh doanh
+
+
+
+2292
+Dự phòng tổn thất đầu tư vào đơn vị khác
+
+
+
+2293
+Dự phòng phải thu khó đòi
+
+
+
+2294
+Dự phòng giảm giá hàng tồn kho
+
+
+
+2295
+Dự phòng tổn thất tài sản sinh học
+
+
+
+
+
+
+30
+241
+
+Xây dựng cơ bản dở dang
+
+
+
+2411
+Mua sắm TSCĐ
+
+
+
+2412
+Xây dựng cơ bản
+
+
+
+2413
+Sửa chữa, bảo dưỡng định kỳ TSCĐ
+
+
+
+2414
+Nâng cấp, cải tạo TSCĐ
+
+31
+242
+
+Chi phí chờ phân bổ
+
+
+
+
+
+
+32
+243
+
+Tài sản thuế thu nhập hoãn lại
+
+
+
+
+
+
+33
+244
+
+Ký quỹ, ký cược
+
+
+
+
+
+
+
+
+
+LOẠI TÀI KHOẢN NỢ PHẢI TRẢ
+
+
+
+
+
+
+34
+331
+
+Phải trả cho người bán
+
+
+
+
+
+
+35
+332
+
+Phải trả cổ tức, lợi nhuận
+
+
+
+
+
+
+36
+333
+
+Thuế và các khoản phải nộp Nhà nước
+
+
+
+3331
+Thuế giá trị gia tăng phải nộp
+
+
+
+33311
+Thuế GTGT đầu ra
+
+
+
+33312
+Thuế GTGT hàng nhập khẩu
+
+
+
+3332
+Thuế tiêu thụ đặc biệt
+
+
+
+3333
+Thuế xuất, nhập khẩu
+
+
+
+3334
+Thuế thu nhập doanh nghiệp
+
+
+
+3335
+Thuế thu nhập cá nhân
+
+
+
+3336
+Thuế tài nguyên
+
+
+
+3337
+Thuế nhà đất, tiền thuê đất
+
+
+
+3338
+Thuế bảo vệ môi trường và các loại thuế khác
+
+
+
+33381
+Thuế bảo vệ môi trường
+
+
+
+33382
+Các loại thuế khác
+
+
+
+3339
+Phí, lệ phí và các khoản phải nộp khác
+
+37
+334
+
+Phải trả người lao động
+
+
+
+
+
+
+38
+335
+
+Chi phí phải trả
+
+
+
+
+
+
+39
+336
+
+Phải trả nội bộ
+
+
+
+3361
+Phải trả nội bộ về vốn kinh doanh
+
+
+
+3362
+Phải trả nội bộ về chênh lệch tỷ giá
+
+
+
+3363
+Phải trả nội bộ về chi phí đi vay đủ điều kiện được vốn hóa
+
+
+
+3368
+Phải trả nội bộ khác
+
+
+
+
+
+
+40
+337
+
+Thanh toán theo tiến độ hợp đồng xây dựng
+
+
+
+
+
+
+41
+338
+
+Phải trả, phải nộp khác
+
+
+
+3381
+Tài sản thừa chờ giải quyết
+
+
+
+3382
+Kinh phí công đoàn
+
+
+
+3383
+Bảo hiểm xã hội
+
+
+
+3384
+Bảo hiểm y tế
+
+
+
+3386
+Bảo hiểm thất nghiệp
+
+
+
+3387
+Doanh thu chờ phân bổ
+
+
+
+3388
+Phải trả, phải nộp khác
+
+
+
+
+
+
+42
+341
+
+Vay và nợ thuê tài chính
+
+
+
+3411
+Các khoản đi vay
+
+
+
+3412
+Nợ thuê tài chính
+
+43
+343
+
+Trái phiếu phát hành
+
+
+
+3431
+Trái phiếu thường
+
+
+
+3432
+Trái phiếu chuyển đổi
+
+
+
+
+
+
+44
+344
+
+Nhận ký quỹ, ký cược
+
+
+
+
+
+
+45
+347
+
+Thuế thu nhập hoãn lại phải trả
+
+
+
+
+
+
+46
+352
+
+Dự phòng phải trả
+
+
+
+3521
+Dự phòng bảo hành sản phẩm, hàng hóa
+
+
+
+3522
+Dự phòng bảo hành công trình xây dựng
+
+
+
+3523
+Dự phòng tái cơ cấu doanh nghiệp
+
+
+
+3525
+Dự phòng phải trả khác
+
+
+
+
+
+
+47
+353
+
+Quỹ khen thưởng, phúc lợi
+
+
+
+3531
+Quỹ khen thưởng
+
+
+
+3532
+Quỹ phúc lợi
+
+
+
+3533
+Quỹ phúc lợi đã hình thành TSCĐ
+
+
+
+3534
+Quỹ thưởng ban quản lý điều hành công ty
+
+
+
+
+
+
+48
+356
+
+Quỹ phát triển khoa học và công nghệ
+
+
+
+3561
+Quỹ phát triển khoa học và công nghệ
+
+
+
+3562
+Quỹ phát triển khoa học và công nghệ đã hình thành tài sản
+
+
+
+
+
+
+49
+357
+
+Quỹ bình ổn giá
+
+
+
+
+LOẠI TÀI KHOẢN VỐN CHỦ SỞ HỮU
+
+
+
+
+
+
+50
+411
+
+Vốn đầu tư của chủ sở hữu
+
+
+
+4111
+Vốn góp của chủ sở hữu
+
+
+
+41111
+Cổ phiếu phổ thông có quyền biểu quyết
+
+
+
+41112
+Cổ phiếu ưu đãi
+
+
+
+4112
+Thặng dư vốn
+
+
+
+4113
+Quyền chọn chuyển đổi trái phiếu
+
+
+
+4118
+Vốn khác
+
+
+
+
+
+
+51
+412
+
+Chênh lệch đánh giá lại tài sản
+
+
+
+
+
+
+52
+413
+
+Chênh lệch tỷ giá hối đoái
+
+
+
+
+
+
+53
+414
+
+Quỹ đầu tư phát triển
+
+
+
+
+
+
+54
+418
+
+Các quỹ khác thuộc vốn chủ sở hữu
+
+
+
+
+
+
+55
+419
+
+Cổ phiếu mua lại của chính mình
+
+
+
+
+
+
+56
+421
+
+Lợi nhuận sau thuế chưa phân phối
+
+
+
+4211
+Lợi nhuận sau thuế chưa phân phối lũy kế đến cuối năm trước
+
+
+
+4212
+Lợi nhuận sau thuế chưa phân phối năm nay
+
+
+
+
+
+
+
+
+
+LOẠI TÀI KHOẢN DOANH THU
+
+
+
+
+
+
+57
+511
+
+Doanh thu bán hàng và cung cấp dịch vụ
+
+58
+515
+
+Doanh thu hoạt động tài chính
+
+
+
+
+
+
+59
+521
+
+Các khoản giảm trừ doanh thu
+
+
+
+
+
+
+
+
+
+LOẠI TÀI KHOẢN CHI PHÍ SẢN XUẤT, KINH DOANH
+
+
+
+
+
+
+60
+621
+
+Chi phí nguyên liệu, vật liệu trực tiếp
+
+
+
+
+
+
+61
+622
+
+Chi phí nhân công trực tiếp
+
+
+
+
+
+
+62
+623
+
+Chi phí sử dụng máy thi công
+
+
+
+6231
+Chi phí nhân công
+
+
+
+6232
+Chi phí vật liệu
+
+
+
+6233
+Chi phí dụng cụ sản xuất
+
+
+
+6234
+Chi phí khấu hao máy thi công
+
+
+
+6237
+Chi phí dịch vụ mua ngoài
+
+
+
+6238
+Chi phí bằng tiền khác
+
+
+
+
+
+
+63
+627
+
+Chi phí sản xuất chung
+
+
+
+6271
+Chi phí nhân viên phân xưởng
+
+
+
+6272
+Chi phí vật liệu
+
+
+
+6273
+Chi phí dụng cụ sản xuất
+
+
+
+6274
+Chi phí khấu hao TSCĐ
+
+
+
+6275
+Thuế, phí, lệ phí
+
+
+
+6277
+Chi phí dịch vụ mua ngoài
+
+
+
+6278
+Chi phí bằng tiền khác
+
+
+
+
+
+
+64
+632
+
+Giá vốn hàng bán
+
+
+
+
+
+
+65
+635
+
+Chi phí tài chính
+
+
+
+
+
+
+66
+641
+
+Chi phí bán hàng
+
+
+
+6411
+Chi phí nhân viên
+
+
+
+6412
+Chi phí vật liệu, bao bì
+
+
+
+6413
+Chi phí dụng cụ, đồ dùng
+
+
+
+6414
+Chi phí khấu hao TSCĐ
+
+
+
+6415
+Thuế, phí, lệ phí
+
+
+
+6417
+Chi phí dịch vụ mua ngoài
+
+
+
+6418
+Chi phí bằng tiền khác
+
+
+
+
+
+
+67
+642
+
+Chi phí quản lý doanh nghiệp
+
+
+
+6421
+Chi phí nhân viên quản lý
+
+
+
+6422
+Chi phí vật liệu quản lý
+
+
+
+6423
+Chi phí đồ dùng văn phòng
+
+
+
+6424
+Chi phí khấu hao TSCĐ
+
+
+
+6425
+Thuế, phí và lệ phí
+
+
+
+6426
+Chi phí dự phòng
+
+
+
+6427
+Chi phí dịch vụ mua ngoài
+
+
+
+6428
+Chi phí bằng tiền khác
+
+
+
+
+
+
+
+
+
+LOẠI TÀI KHOẢN THU NHẬP KHÁC
+
+
+
+
+
+
+68
+711
+
+Thu nhập khác
+
+
+
+
+
+
+
+
+
+LOẠI TÀI KHOẢN CHI PHÍ KHÁC
+
+
+
+
+
+
+69
+811
+
+Chi phí khác
+
+
+
+
+
+
+70
+821
+
+Chi phí thuế thu nhập doanh nghiệp
+
+
+
+8211
+Chi phí thuế TNDN hiện hành
+
+
+
+82111
+Chi phí thuế thu nhập doanh nghiệp hiện hành theo quy định của Luật thuế thu nhập doanh nghiệp
+
+
+
+82112
+Chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu
+
+
+
+8212
+Chi phí thuế TNDN hoãn lại
+
+
+
+
+
+
+
+
+
+TÀI KHOẢN XÁC ĐỊNH KẾT QUẢ KINH DOANH
+
+
+
+
+
+
+71
+911
+
+Xác định kết quả kinh doanh
+
+
+B - NỘI DUNG VÀ PHƯƠNG PHÁP KẾ TOÁN
+NGUYÊN TẮC KẾ TOÁN TIỀN
+
+1. Tiền của doanh nghiệp bao gồm tiền mặt; tiền gửi không kỳ hạn tại các ngân hàng, tổ chức khác mà doanh nghiệp được gửi tiền không kỳ hạn, thanh toán theo quy định của pháp luật; tiền đang chuyển. Các khoản tiền này có thể bao gồm tiền Việt Nam, ngoại tệ, vàng tiền tệ,... Trong đó, vàng tiền tệ được phản ánh trong tài khoản tiền là vàng được sử dụng với các chức năng cất trữ giá trị, không bao gồm các loại vàng được phân loại là hàng tồn kho sử dụng với mục đích là nguyên vật liệu để sản xuất sản phẩm hoặc hàng hóa để bán. Việc quản lý và sử dụng vàng tiền tệ phải thực hiện theo quy định của pháp luật hiện hành.
+2. Doanh nghiệp phải mở sổ kế toán chi tiết để ghi chép liên tục hàng ngày theo trình tự thời gian phát sinh các khoản thu, chi, nhập, xuất tiền để tính ra số tồn tại quỹ và từng tài khoản ở ngân hàng, tổ chức khác mà doanh nghiệp được gửi tiền không kỳ hạn, thanh toán theo quy định của pháp luật tại mọi thời điểm để tiện cho việc kiểm tra, đối chiếu theo yêu cầu quản lý.
+3. Các khoản tiền do doanh nghiệp khác và các cá nhân ký quỹ, ký cược tại doanh nghiệp được quản lý và hạch toán như tiền của doanh nghiệp. 
+4. Nguyên tắc kế toán tiền bằng ngoại tệ:
+a) Doanh nghiệp phải theo dõi chi tiết tiền theo nguyên tệ. Khi phát sinh các giao dịch bằng ngoại tệ, doanh nghiệp phải quy đổi ra đơn vị tiền tệ trong kế toán theo nguyên tắc:
+- Bên Nợ các tài khoản tiền áp dụng tỷ giá giao dịch thực tế; 
+- Bên Có các tài khoản tiền áp dụng tỷ giá giao dịch thực tế hoặc tỷ giá ghi sổ. 
+b) Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp phải đánh giá lại số dư các khoản mục tiền tệ có gốc ngoại tệ theo tỷ giá mua bán chuyển khoản trung bình của ngân hàng thương mại nơi doanh nghiệp thường xuyên có giao dịch. Riêng số dư các khoản tiền gửi không kỳ hạn bằng ngoại tệ, doanh nghiệp phải đánh giá lại theo tỷ giá mua bán chuyển khoản trung bình của ngân hàng thương mại nơi doanh nghiệp mở tài khoản tiền gửi không kỳ hạn.
+c) Doanh nghiệp phải thuyết minh rõ việc lựa chọn áp dụng tỷ giá hối đoái trên thuyết minh Báo cáo tài chính và việc lựa chọn áp dụng tỷ giá hối đoái phải đảm bảo nguyên tắc nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+d) Việc xác định và áp dụng tỷ giá giao dịch thực tế, tỷ giá ghi sổ các giao dịch phát sinh và tỷ giá đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ được hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái.
+5. Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp phải đánh giá lại vàng tiền tệ theo giá mua trên thị trường trong nước. Giá mua trên thị trường trong nước là giá mua được công bố bởi Ngân hàng Nhà nước. Trường hợp Ngân hàng Nhà nước không công bố giá mua vàng thì tính theo giá mua công bố bởi các đơn vị được phép kinh doanh vàng theo luật định và doanh nghiệp thuyết minh rõ trên Thuyết minh Báo cáo tài chính về việc doanh nghiệp tham chiếu theo giá mua vàng công bố của đơn vị nào. 
+TÀI KHOẢN 111 - TIỀN MẶT
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh tình hình thu, chi, tồn tiền tại quỹ của doanh nghiệp bao gồm: Tiền Việt Nam, ngoại tệ và vàng tiền tệ... 
+b) Khi tiến hành nhập, xuất quỹ tiền mặt phải có phiếu thu, phiếu chi và có đủ chữ ký hoặc xác nhận của người nhận, người giao, người có thẩm quyền cho phép nhập, xuất quỹ theo quy định của chế độ chứng từ kế toán, quy chế kiểm soát và quản trị nội bộ doanh nghiệp. Một số trường hợp đặc biệt phải có lệnh nhập quỹ, xuất quỹ đính kèm.
+c) Kế toán quỹ tiền mặt phải có trách nhiệm mở sổ kế toán quỹ tiền mặt, ghi chép liên tục hàng ngày theo trình tự phát sinh các khoản thu, chi, xuất, nhập quỹ tiền mặt, ngoại tệ và tính ra số tồn quỹ tại mọi thời điểm. 
+d) Thủ quỹ chịu trách nhiệm quản lý và nhập, xuất quỹ tiền mặt đồng thời thường xuyên kiểm kê số tồn quỹ tiền mặt thực tế và đối chiếu giữa số liệu trên sổ quỹ tiền mặt với sổ kế toán tiền mặt theo yêu cầu quản trị, quy trình kiểm soát nội bộ của doanh nghiệp. Nếu có chênh lệch, kế toán và thủ quỹ phải kiểm tra lại để xác định nguyên nhân và kiến nghị biện pháp xử lý chênh lệch kịp thời.
+đ) Việc thực hiện các giao dịch kinh tế phát sinh bằng tiền mặt, doanh nghiệp phải tuân thủ quy định của pháp luật liên quan (ví dụ các giao dịch góp vốn và mua bán, chuyển nhượng phần vốn góp vào doanh nghiệp khác,...).
+2. Kết cấu và nội dung phản ánh của Tài khoản 111 - Tiền mặt
+Bên Nợ:
+- Các khoản tiền mặt nhập quỹ;
+- Số tiền mặt thừa ở quỹ phát hiện khi kiểm kê;
+- Chênh lệch tỷ giá hối đoái do đánh giá lại số dư tiền mặt bằng ngoại tệ tại thời điểm kết thúc kỳ kế toán (trường hợp tỷ giá ngoại tệ tăng so với đơn vị tiền tệ trong kế toán); 
+- Chênh lệch đánh giá lại vàng tiền tệ ở quỹ tăng tại thời điểm kết thúc kỳ kế toán.
+Bên Có:
+- Các khoản tiền mặt xuất quỹ;
+- Số tiền mặt thiếu hụt quỹ phát hiện khi kiểm kê;
+- Chênh lệch tỷ giá hối đoái do đánh giá lại số dư tiền mặt bằng ngoại tệ tại thời điểm kết thúc kỳ kế toán (trường hợp tỷ giá ngoại tệ giảm so với đơn vị tiền tệ trong kế toán);
+- Chênh lệch đánh giá lại vàng tiền tệ ở quỹ giảm tại thời điểm kết thúc kỳ kế toán. 
+Số dư bên Nợ:
+Các khoản tiền Việt Nam, ngoại tệ, vàng tiền tệ còn tồn quỹ tiền mặt tại thời điểm kết thúc kỳ kế toán.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết của Tài khoản 111 - Tiền mặt để theo dõi các loại tiền mặt (ví dụ như tiền Việt Nam, ngoại tệ, vàng tiền tệ...) cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình. 
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi bán sản phẩm, hàng hóa, cung cấp dịch vụ thu ngay bằng tiền mặt, doanh nghiệp ghi nhận doanh thu, ghi:
+a) Trường hợp sản phẩm, hàng hóa, dịch vụ,... mà doanh nghiệp bán thuộc đối tượng chịu thuế GTGT, thuế TTĐB, thuế xuất khẩu,..., (thuế gián thu), doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ theo giá bán chưa có thuế, các khoản thuế gián thu phải nộp được tách riêng theo từng loại ngay khi ghi nhận doanh thu, ghi:
+Nợ TK 111 - Tiền mặt (tổng giá thanh toán)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá chưa có thuế) 
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+b) Trường hợp các khoản thuế phải nộp không tách riêng ngay từng loại thuế tại thời điểm phát sinh giao dịch, doanh nghiệp ghi nhận doanh thu bao gồm cả thuế phải nộp. Định kỳ, doanh nghiệp xác định nghĩa vụ thuế phải nộp và ghi giảm doanh thu, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+3.2. Khi nhận được tiền của Nhà nước thanh toán về khoản trợ cấp, trợ giá bằng tiền mặt, ghi:
+Nợ TK 111 - Tiền mặt
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3339).
+3.3. Khi phát sinh các khoản doanh thu hoạt động tài chính, các khoản thu nhập khác bằng tiền mặt, ghi: 
+Nợ TK 111 - Tiền mặt (tổng giá thanh toán)
+Có TK 515 - Doanh thu hoạt động tài chính (giá chưa có thuế GTGT)
+Có TK 711 - Thu nhập khác (giá chưa có thuế GTGT)
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+3.4. Rút tiền gửi không kỳ hạn từ ngân hàng,... về nhập quỹ tiền mặt, ghi:
+Nợ TK 111 - Tiền mặt
+Có TK 112 - Tiền gửi không kỳ hạn.
+3.5. Thu hồi các khoản nợ phải thu, cho vay, tạm ứng, ký quỹ, ký cược bằng tiền mặt; Nhận ký quỹ, ký cược của các doanh nghiệp khác bằng tiền mặt, ghi:
+Nợ TK 111 - Tiền mặt
+Có các TK 128, 131, 136, 138, 141, 244, 344,...
+3.6. Khi bán các khoản đầu tư ngắn hạn, dài hạn thu bằng tiền mặt, doanh nghiệp ghi nhận chênh lệch giữa số tiền thu được và giá gốc khoản đầu tư vào doanh thu hoạt động tài chính hoặc chi phí tài chính, ghi:
+Nợ TK 111 - Tiền mặt
+Nợ TK 229 - Dự phòng tổn thất tài sản (nếu có)
+Nợ TK 635 - Chi phí tài chính (nếu lỗ)
+Có các TK 121, 221, 222, 228 (giá vốn)
+Có TK 515 - Doanh thu hoạt động tài chính (nếu lãi).
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản đầu tư có thể được ghi nhận ngay cho từng giao dịch tại thời điểm bán khoản đầu tư hoặc khi xác định số trích lập dự phòng các khoản đầu tư vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+3.7. Khi thực nhận vốn góp của các chủ sở hữu bằng tiền mặt, ghi:
+Nợ TK 111 - Tiền mặt
+Nợ TK 4112 - Thặng dư vốn (chênh lệch giữa giá trị vốn góp thực nhận nhỏ hơn mệnh giá cổ phần đối với công ty cổ phần hoặc giá trị phần vốn góp theo điều lệ đối với loại hình doanh nghiệp khác) (nếu có)
+Có TK 4111 - Vốn góp của chủ sở hữu
+Có TK 4112 - Thặng dư vốn (chênh lệch giữa giá trị vốn góp thực nhận lớn hơn mệnh giá cổ phần đối với công ty cổ phần hoặc giá trị phần vốn góp theo điều lệ đối với loại hình doanh nghiệp khác) (nếu có).
+3.8. Xuất quỹ tiền mặt gửi vào tài khoản không kỳ hạn tại ngân hàng hoặc đem ký quỹ, ký cược, ghi:
+Nợ TK 112 - Tiền gửi không kỳ hạn
+Nợ TK 244 - Ký quỹ, ký cược
+Có TK 111 - Tiền mặt.
+3.9. Xuất quỹ tiền mặt mua chứng khoán kinh doanh, gửi tiền có kỳ hạn, mua trái phiếu, cho vay hoặc đầu tư vào công ty con, đầu tư vào công ty liên doanh, liên kết..., ghi:
+Nợ các TK 121, 128, 221, 222, 228,...
+ 	Có TK 111 - Tiền mặt.
+3.10. Xuất quỹ tiền mặt mua hàng tồn kho, mua TSCĐ, chi cho hoạt động đầu tư XDCB,..., ghi:
+Nợ các TK 151, 152, 153, 156, 211, 213, 241,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có TK 111 - Tiền mặt.
+3.11. Khi mua nguyên vật liệu thanh toán bằng tiền mặt sử dụng ngay vào sản xuất, kinh doanh, ghi:
+Nợ các TK 621, 623, 627, 641, 642,... 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có TK 111 - Tiền mặt.
+3.12. Xuất quỹ tiền mặt thanh toán các khoản nợ phải trả, vay và nợ thuê tài chính,..., ghi: 
+Nợ các TK 331, 333, 334, 335, 336, 338, 341,...
+Có TK 111 - Tiền mặt.
+3.13. Xuất quỹ tiền mặt sử dụng chi cho hoạt động tài chính, hoạt động khác, ghi:
+Nợ các TK 635, 811,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có TK 111 - Tiền mặt.
+3.14. Số quỹ tiền mặt bị thiếu phát hiện khi kiểm kê nhưng chưa xác định rõ nguyên nhân, ghi:
+Nợ TK 138 - Phải thu khác (1381)
+Có TK 111 - Tiền mặt. 
+3.15. Số quỹ tiền mặt phát hiện thừa khi kiểm kê nhưng chưa xác định rõ nguyên nhân, ghi:
+Nợ TK 111 - Tiền mặt
+Có TK 338 - Phải trả, phải nộp khác (3381).
+3.16. Kế toán đánh giá lại vàng tiền tệ 
+- Trường hợp lãi, ghi:
+Nợ TK 111 - Tiền mặt (theo giá mua trong nước)
+	Có TK 515 - Doanh thu hoạt động tài chính.
+- Trường hợp lỗ, ghi:
+Nợ TK 635 - Chi phí tài chính
+Có TK 111 - Tiền mặt (theo giá mua trong nước).
+TÀI KHOẢN 112 - TIỀN GỬI KHÔNG KỲ HẠN
+1. Nguyên tắc kế toán
+Tài khoản này dùng để phản ánh số hiện có và tình hình biến động tăng, giảm các khoản tiền gửi không kỳ hạn tại ngân hàng, tổ chức khác mà doanh nghiệp được gửi tiền không kỳ hạn theo quy định của pháp luật, bao gồm tiền Việt Nam, ngoại tệ,... 
+a) Căn cứ để hạch toán trên Tài khoản 112 - Tiền gửi không kỳ hạn là các giấy báo Có, báo Nợ hoặc bản sao kê của ngân hàng, tổ chức khác mà doanh nghiệp được gửi tiền không kỳ hạn theo quy định của pháp luật kèm theo các chứng từ gốc (ủy nhiệm chi, ủy nhiệm thu, séc chuyển khoản, séc bảo chi,...).
+b) Khi nhận được chứng từ của ngân hàng, tổ chức khác nơi doanh nghiệp gửi tiền không kỳ hạn, doanh nghiệp phải kiểm tra, đối chiếu với chứng từ gốc kèm theo. Nếu có sự chênh lệch giữa số liệu trên sổ kế toán của doanh nghiệp, số liệu ở chứng từ gốc với số liệu trên chứng từ của ngân hàng,... thì doanh nghiệp phải thông báo cho các đơn vị đó để cùng đối chiếu, xác minh và xử lý kịp thời. Cuối tháng, nếu chưa xác định được nguyên nhân chênh lệch thì doanh nghiệp ghi sổ theo số liệu trên giấy báo Nợ, báo Có hoặc bản sao kê của ngân hàng,... còn số chênh lệch được ghi vào bên Nợ Tài khoản 138 - Phải thu khác (nếu số liệu của kế toán lớn hơn số liệu của ngân hàng,...) hoặc ghi vào bên Có Tài khoản 338 - Phải trả, phải nộp khác (nếu số liệu của kế toán nhỏ hơn số liệu của ngân hàng,...). Sang tháng sau, tiếp tục kiểm tra, đối chiếu, xác định nguyên nhân để điều chỉnh số liệu ghi sổ.	
+c) Phải tổ chức hạch toán chi tiết số tiền gửi không kỳ hạn theo từng tài khoản ở từng ngân hàng, tổ chức khác mà doanh nghiệp được gửi tiền không kỳ hạn theo quy định của pháp luật để tiện cho việc kiểm tra, đối chiếu.
+d) Khoản thấu chi ngân hàng không được ghi âm trên tài khoản tiền gửi không kỳ hạn mà được phản ánh tương tự như khoản vay ngân hàng,...
+đ) Việc gửi vàng tiền tệ vào ngân hàng được thực hiện theo quy định của pháp luật liên quan và việc kế toán vàng tiền tệ gửi tại ngân hàng (nếu có) được thực hiện tương tự Tài khoản 111 - Tiền mặt.
+2. Kết cấu và nội dung phản ánh của Tài khoản 112 - Tiền gửi không kỳ hạn 
+Bên Nợ:
+- Các khoản tiền Việt Nam, ngoại tệ,... gửi vào ngân hàng, tổ chức khác mà doanh nghiệp được gửi tiền không kỳ hạn theo quy định của pháp luật;
+- Chênh lệch tỷ giá hối đoái do đánh giá lại số dư tiền gửi không kỳ hạn bằng ngoại tệ tại thời điểm kết thúc kỳ kế toán (trường hợp tỷ giá ngoại tệ tăng so với đơn vị tiền tệ trong kế toán). 
+Bên Có:
+- Các khoản tiền Việt Nam, ngoại tệ,... rút ra từ ngân hàng, tổ chức khác mà doanh nghiệp được gửi tiền không kỳ hạn theo quy định của pháp luật;
+- Chênh lệch tỷ giá hối đoái do đánh giá lại số dư tiền gửi không kỳ hạn bằng ngoại tệ tại thời điểm kết thúc kỳ kế toán (trường hợp tỷ giá ngoại tệ giảm so với đơn vị tiền tệ trong kế toán). 
+Số dư bên Nợ:
+Số tiền Việt Nam, ngoại tệ,... hiện còn gửi tại ngân hàng, tổ chức khác mà doanh nghiệp được gửi tiền không kỳ hạn, thanh toán theo quy định của pháp luật tại thời điểm kết thúc kỳ kế toán.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết của TK 112 để theo dõi các loại tiền gửi không kỳ hạn (ví dụ như tiền Việt Nam, ngoại tệ,...) cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi bán sản phẩm, hàng hóa, cung cấp dịch vụ thu ngay bằng tiền gửi không kỳ hạn, ghi:
+a) Đối với sản phẩm, hàng hóa, dịch vụ, BĐSĐT thuộc đối tượng chịu thuế (thuế GTGT, thuế TTĐB, thuế xuất khẩu,...), doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ theo giá bán chưa có thuế, các khoản thuế gián thu phải nộp được tách riêng theo từng loại thuế ngay khi ghi nhận doanh thu, ghi:
+Nợ TK 112 - Tiền gửi không kỳ hạn (tổng giá thanh toán)
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá chưa có thuế)
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+b) Trường hợp các khoản thuế phải nộp không tách riêng ngay từng loại thuế tại thời điểm phát sinh giao dịch, doanh nghiệp ghi nhận doanh thu bao gồm cả thuế phải nộp. Định kỳ, doanh nghiệp xác định nghĩa vụ thuế phải nộp và ghi giảm doanh thu, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ		
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+3.2. Khi nhận được tiền của Nhà nước thanh toán về khoản trợ cấp, trợ giá bằng tiền gửi không kỳ hạn, ghi:
+Nợ TK 112 - Tiền gửi không kỳ hạn
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3339).
+3.3. Khi phát sinh các khoản doanh thu hoạt động tài chính, các khoản thu nhập khác bằng tiền gửi không kỳ hạn, ghi: 
+Nợ TK 112 - Tiền gửi không kỳ hạn (tổng giá thanh toán)
+Có TK 515 - Doanh thu hoạt động tài chính (giá chưa có thuế GTGT)
+Có TK 711 - Thu nhập khác (giá chưa có thuế GTGT)
+Có TK 3331 - Thuế GTGT phải nộp (33311).
+3.4. Xuất quỹ tiền mặt gửi vào tài khoản không kỳ hạn tại ngân hàng ghi:
+Nợ TK 112 - Tiền gửi không kỳ hạn
+		Có TK 111 - Tiền mặt.
+3.5. Nhận được tiền khách hàng trả nợ bằng chuyển khoản, căn cứ giấy báo Có của ngân hàng,..., ghi:
+Nợ TK 112 - Tiền gửi không kỳ hạn
+		Có TK 131 - Phải thu của khách hàng
+Có TK 113 - Tiền đang chuyển.
+3.6. Thu hồi các khoản nợ phải thu, cho vay, tạm ứng, ký quỹ, ký cược bằng tiền gửi không kỳ hạn; Nhận ký quỹ, ký cược của các doanh nghiệp khác bằng tiền gửi không kỳ hạn, ghi:
+Nợ TK 112 - Tiền gửi không kỳ hạn
+		Có các TK 128, 131, 136, 141, 244, 344,...
+3.7. Khi bán các khoản đầu tư ngắn hạn, dài hạn thu bằng tiền gửi không kỳ hạn, doanh nghiệp ghi nhận chênh lệch giữa số tiền thu được và giá gốc khoản đầu tư vào doanh thu hoạt động tài chính hoặc chi phí tài chính, ghi:
+Nợ TK 112 - Tiền gửi không kỳ hạn
+Nợ TK 635 - Chi phí tài chính (nếu lỗ)
+Nợ TK 229 - Dự phòng tổn thất tài sản (nếu có)
+		Có các TK 121, 221, 222, 228 (giá vốn)
+		Có TK 515 - Doanh thu hoạt động tài chính (nếu lãi).
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản đầu tư có thể được ghi nhận ngay cho từng giao dịch tại thời điểm bán khoản đầu tư hoặc khi xác định số trích lập dự phòng các khoản đầu tư vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+3.8. Khi nhận được vốn góp của chủ sở hữu bằng tiền gửi không kỳ hạn, ghi:
+Nợ TK 112 - Tiền gửi không kỳ hạn
+Nợ TK 4112 - Thặng dư vốn (chênh lệch giữa giá trị vốn góp thực nhận nhỏ hơn mệnh giá cổ phần đối với công ty cổ 					phần hoặc giá trị phần vốn góp theo điều lệ đối 					với loại hình doanh nghiệp khác) (nếu có)
+		Có TK 4111 - Vốn góp của chủ sở hữu 
+		Có TK 4112 - Thặng dư vốn (chênh lệch giữa giá trị vốn góp thực 					nhận lớn hơn
+mệnh giá cổ phần đối với công ty 					cổ phần hoặc giá trị phần vốn góp theo điều lệ 				đối với loại hình doanh nghiệp khác) (nếu có).
+3.9. Rút tiền gửi về nhập quỹ tiền mặt, chuyển tiền gửi không kỳ hạn đem đi ký quỹ, ký cược, ghi:
+Nợ TK 111 - Tiền mặt
+Nợ TK 244 - Ký quỹ, ký cược.
+		Có TK 112 - Tiền gửi không kỳ hạn.	
+3.10. Mua chứng khoán kinh doanh, gửi tiền có kỳ hạn, mua trái phiếu, cho vay hoặc đầu tư vào công ty con, công ty liên doanh, liên kết... bằng tiền gửi không kỳ hạn, ghi:
+Nợ các TK 121, 128, 221, 222, 228,...
+ 	Có TK 112 - Tiền gửi không kỳ hạn.
+3.11. Mua hàng tồn kho, mua TSCĐ, chi cho hoạt động đầu tư XDCB,... bằng tiền gửi không kỳ hạn, ghi:
+Nợ các TK 151, 152, 153, 156, 211, 213, 241,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có TK 112 - Tiền gửi không kỳ hạn.
+3.12. Mua nguyên vật liệu thanh toán bằng tiền gửi không kỳ hạn sử dụng ngay vào sản xuất, kinh doanh, ghi:
+Nợ các TK 621, 623, 627, 641, 642,... 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có TK 112 - Tiền gửi không kỳ hạn.
+3.13. Thanh toán các khoản nợ phải trả, vay và nợ thuê tài chính,... bằng tiền gửi không kỳ hạn, ghi: 
+Nợ các TK 331, 333, 334, 335, 336, 338, 341,...
+Có TK 112 - Tiền gửi không kỳ hạn.
+3.14. Chi phí tài chính, chi phí khác phát sinh bằng tiền gửi không kỳ hạn, ghi:
+Nợ các TK 635, 811,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có TK 112 - Tiền gửi không kỳ hạn.
+3.15. Trả vốn góp hoặc trả cổ tức, lợi nhuận cho cổ đông hoặc các bên góp vốn, chi các quỹ khen thưởng, phúc lợi bằng tiền gửi không kỳ hạn, ghi:
+Nợ TK 411 - Vốn đầu tư của chủ sở hữu (trả vốn góp)
+Nợ TK 332 - Phải trả cổ tức, lợi nhuận (trả cổ tức, lợi nhuận)
+Nợ TK 353 - Quỹ khen thưởng, phúc lợi (chi quỹ khen thưởng, phúc lợi)
+		Có TK 112 - Tiền gửi không kỳ hạn.
+TÀI KHOẢN 113 - TIỀN ĐANG CHUYỂN
+1. Nguyên tắc kế toán
+Tài khoản này dùng để phản ánh các khoản tiền của doanh nghiệp đã nộp vào ngân hàng, đã gửi bưu điện,... để chuyển cho ngân hàng,... nhưng chưa nhận được giấy báo Có hoặc đã chuyển trả cho doanh nghiệp khác nhưng doanh nghiệp đó chưa nhận được khoản thanh toán.
+2. Kết cấu và nội dung phản ánh của Tài khoản 113 - Tiền đang chuyển
+Bên Nợ:
+- Các khoản tiền đã nộp vào ngân hàng hoặc đã gửi bưu điện,... để chuyển vào ngân hàng,... nhưng chưa nhận được giấy báo Có hoặc đã chuyển trả cho doanh nghiệp khác nhưng doanh nghiệp đó chưa nhận được khoản thanh toán;
+- Chênh lệch tỷ giá hối đoái do đánh giá lại số dư tiền đang chuyển bằng ngoại tệ tại thời điểm báo cáo. 
+Bên Có:
+- Số tiền kết chuyển vào Tài khoản 112 - Tiền gửi không kỳ hạn hoặc tài khoản có liên quan;
+- Chênh lệch tỷ giá hối đoái do đánh giá lại số dư tiền đang chuyển bằng ngoại tệ tại thời điểm kết thúc kỳ kế toán. 
+Số dư bên Nợ: 
+Các khoản tiền còn đang chuyển tại thời điểm kết thúc kỳ kế toán.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết của Tài khoản 113 - Tiền đang chuyển để theo dõi các loại tiền đang chuyển (ví dụ như tiền Việt Nam, ngoại tệ,...) cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Thu tiền bán hàng, tiền nợ của khách hàng hoặc các khoản thu nhập khác bằng tiền mặt hoặc séc nộp thẳng vào ngân hàng,... (không qua quỹ) nhưng chưa nhận được giấy báo Có, ghi:
+Nợ TK 113 - Tiền đang chuyển
+Có các TK 131, 511, 515, 711,... 
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+3.2. Xuất quỹ tiền mặt gửi vào ngân hàng,... nhưng chưa nhận được giấy báo Có, ghi:
+Nợ TK 113 - Tiền đang chuyển
+Có TK 111 - Tiền mặt.
+3.3. Làm thủ tục chuyển tiền từ tài khoản ở ngân hàng,... để trả cho chủ nợ nhưng chủ nợ chưa nhận được khoản thanh toán, ghi:
+Nợ TK 113 - Tiền đang chuyển
+Có TK 112 - Tiền gửi không kỳ hạn.
+3.4. Khách hàng trả trước tiền mua hàng bằng séc, doanh nghiệp đã nộp séc vào ngân hàng,... nhưng chưa nhận được giấy báo Có, ghi:
+Nợ TK 113 - Tiền đang chuyển
+Có TK 131 - Phải thu của khách hàng.
+3.5. Ngân hàng báo Có các khoản tiền đang chuyển đã vào tài khoản tiền gửi của doanh nghiệp, ghi:
+Nợ TK 112 - Tiền gửi không kỳ hạn
+Có TK 113 - Tiền đang chuyển.
+3.6. Khi người bán, người cung cấp dịch vụ,... nhận được tiền đang chuyển, ghi:
+Nợ các TK 331, 341,...
+Có TK 113 - Tiền đang chuyển.
+TÀI KHOẢN 121 - CHỨNG KHOÁN KINH DOANH
+1. Nguyên tắc kế toán
+1.1. Tài khoản này dùng để phản ánh giá trị hiện có và tình hình mua, bán các loại chứng khoán nắm giữ vì mục đích kinh doanh theo quy định của pháp luật (kể cả chứng khoán có thời gian đáo hạn trên 12 tháng nhưng được doanh nghiệp mua vào, bán ra để kiếm lời). Chứng khoán kinh doanh bao gồm: Cổ phiếu, trái phiếu, các loại chứng khoán và công cụ tài chính khác (chứng chỉ quỹ, quyền mua cổ phần, chứng quyền, quyền chọn mua, quyền chọn bán, hợp đồng tương lai, thương phiếu, hối phiếu, các khoản nợ/cho vay,...) được doanh nghiệp mua bán lại để kiếm lời.
+Tài khoản này không phản ánh các khoản đầu tư nắm giữ đến ngày đáo hạn, như: Các khoản cho vay theo khế ước giữa 2 bên, tiền gửi có kỳ hạn, trái phiếu, thương phiếu, tín phiếu, kỳ phiếu,... nắm giữ đến ngày đáo hạn.
+1.2. Chứng khoán kinh doanh được ghi nhận ban đầu theo giá trị hợp lý của các khoản thanh toán tại thời điểm giao dịch phát sinh. Các chi phí mua chứng khoán kinh doanh (nếu có) như chi phí môi giới, giao dịch, cung cấp thông tin, thuế, phí ngân hàng,... được hạch toán vào chi phí tài chính trong kỳ. Thời điểm ghi nhận các khoản chứng khoán kinh doanh là thời điểm nhà đầu tư có quyền sở hữu, cụ thể như sau:
+- Chứng khoán niêm yết được ghi nhận tại thời điểm khớp lệnh (T+0);
+- Chứng khoán chưa niêm yết được ghi nhận tại thời điểm chính thức có quyền sở hữu theo quy định của pháp luật.
+1.3. Doanh nghiệp phải hạch toán đầy đủ, kịp thời các khoản thu nhập từ hoạt động đầu tư chứng khoán kinh doanh. 
+a) Doanh nghiệp chỉ được ghi nhận cổ tức được chia bằng tiền từ chứng khoán kinh doanh vào doanh thu hoạt động tài chính cho giai đoạn sau ngày đầu tư. Khoản cổ tức được chia bằng tiền hoặc các khoản lãi thu bằng tiền cho giai đoạn trước ngày đầu tư được ghi giảm giá trị khoản đầu tư.
+b) Trường hợp nhà đầu tư nhận được thêm cổ phiếu do đơn vị nhận đầu tư là công ty cổ phần sử dụng thặng dư vốn, các quỹ thuộc vốn chủ sở hữu và lợi nhuận sau thuế chưa phân phối để phát hành thêm cổ phiếu (chia cổ tức bằng cổ phiếu), nhà đầu tư chỉ theo dõi số lượng cổ phiếu tăng thêm trên thuyết minh Báo cáo tài chính, không ghi nhận giá trị cổ phiếu được nhận, không ghi nhận doanh thu hoạt động tài chính và không ghi nhận tăng chứng khoán kinh doanh. 
+1.4. Doanh nghiệp phải mở sổ để theo dõi chi tiết các loại chứng khoán kinh doanh mà doanh nghiệp đang nắm giữ (theo từng loại chứng khoán; theo từng đối tượng, mệnh giá, giá mua thực tế, từng loại nguyên tệ sử dụng để đầu tư...).
+1.5. Khi thanh lý, nhượng bán hoặc hoán đổi chứng khoán kinh doanh (tính theo từng loại chứng khoán), giá vốn được xác định theo phương pháp bình quân gia quyền hoặc nhập trước xuất trước. Doanh nghiệp phải áp dụng nhất quán phương pháp đã chọn để tính giá vốn của chứng khoán kinh doanh qua các kỳ kế toán. Trường hợp thay đổi phương pháp tính giá vốn của chứng khoán kinh doanh, doanh nghiệp phải trình bày và thuyết minh như thay đổi chính sách kế toán theo quy định của chuẩn mực kế toán Việt Nam.
+1.6. Tại thời điểm kết thúc kỳ kế toán, nếu giá trị thị trường của chứng khoán kinh doanh bị giảm xuống thấp hơn giá gốc, doanh nghiệp phải trích lập dự phòng tổn thất chứng khoán kinh doanh đó theo hướng dẫn tại Tài khoản 229 - Dự phòng tổn thất tài sản.
+1.7. Trong quá trình nắm giữ, doanh nghiệp không được tái phân loại chứng khoán kinh doanh thành khoản đầu tư nắm giữ đến ngày đáo hạn và ngược lại. 
+1.8. Việc xác định tỷ giá giao dịch thực tế, tỷ giá ghi sổ, các giao dịch phát sinh và đánh giá lại chứng khoán kinh doanh là khoản mục tiền tệ có gốc ngoại tệ (nếu có) được hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái.
+2. Kết cấu và nội dung phản ánh của Tài khoản 121 - Chứng khoán kinh doanh
+Bên Nợ: 
+Giá trị chứng khoán kinh doanh tăng.
+Bên Có: 
+Giá trị chứng khoán kinh doanh giảm.
+Số dư bên Nợ: 
+Giá trị chứng khoán kinh doanh tại thời điểm kết thúc kỳ kế toán.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết của Tài khoản 121 - Chứng khoán kinh doanh để theo dõi từng loại chứng khoán kinh doanh (ví dụ như cổ phiếu, trái phiếu,...) cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu	
+3.1. Khi mua chứng khoán kinh doanh, căn cứ vào giá thực tế mua, ghi:
+Nợ TK 121 - Chứng khoán kinh doanh
+Có các TK 111, 112, 141, 244, 331,...
+3.2. Các chi phí mua chứng khoán kinh doanh như chi phí môi giới, giao dịch, chi phí thông tin, phí ngân hàng... được hạch toán vào chi phí tài chính, ghi:
+Nợ TK 635 - Chi phí tài chính 
+Có các TK 111, 112, 331,...
+3.3. Định kỳ thu lãi chứng khoán kinh doanh là trái phiếu và các chứng khoán khác:	
+- Trường hợp nhận tiền lãi trái phiếu và sử dụng tiền lãi để tiếp tục mua bổ sung trái phiếu, tín phiếu (không mang tiền về doanh nghiệp mà sử dụng tiền lãi mua ngay trái phiếu), ghi:
+Nợ TK 121 - Chứng khoán kinh doanh
+Có TK 515 - Doanh thu hoạt động tài chính.	
+- Trường hợp các khoản cổ tức, lợi nhuận hoặc lãi trái phiếu được chia bằng tiền:
+Nợ các TK 111, 112, 138,... (tổng tiền lãi thu được)
+Có TK 121 - Chứng khoán kinh doanh (phần tiền lãi đầu tư dồn tích trước khi doanh nghiệp mua lại khoản đầu tư)
+Có TK 515 - Doanh thu hoạt động tài chính (phần tiền lãi của các kỳ sau khi doanh nghiệp mua lại khoản đầu tư).
+3.4. Khi bán, chuyển nhượng chứng khoán kinh doanh: 
+- Trường hợp có lãi, ghi:
+Nợ các TK 111, 112, 131,... (Tổng số tiền thu được)
+Nợ TK 229 - Dự phòng tổn thất tài sản (số dự phòng đã trích lập tương ứng 					với chứng khoán kinh doanh đã bán) (nếu có)
+Có TK 121 - Chứng khoán kinh doanh (giá trị ghi sổ)
+Có TK 515 - Doanh thu hoạt động tài chính (số chênh lệch).
+- Trường hợp bị lỗ, ghi:
+Nợ các TK 111, 112,... (Tổng số tiền thu được)
+Nợ TK 229 - Dự phòng tổn thất tài sản (2291) (số dự phòng đã trích lập tương ứng với chứng khoán kinh doanh đã bán) (nếu có)
+Nợ TK 635 - Chi phí tài chính (Chênh lệch giữa tổn thất thực tế với số dự phòng đã trích lập)
+Có TK 121 - Chứng khoán kinh doanh (giá trị ghi sổ).
+Việc hoàn nhập các khoản dự phòng giảm giá chứng khoán kinh doanh có thể được ghi nhận ngay cho từng giao dịch tại thời điểm bán, chuyển nhượng chứng khoán kinh doanh hoặc khi xác định số trích lập dự phòng giảm giá chứng khoán kinh doanh vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+3.5. Các chi phí về bán chứng khoán kinh doanh (nếu có), ghi:
+Nợ TK 635 - Chi phí tài chính 
+Có các TK 111, 112, 331,...
+3.6. Trường hợp doanh nghiệp mua, bán chứng khoán kinh doanh dưới hình thức hoán đổi cổ phiếu, doanh nghiệp phải xác định giá trị hợp lý của cổ phiếu nhận về tại thời điểm hoán đổi. Phần chênh lệch (nếu có) giữa giá trị hợp lý của cổ phiếu nhận về và giá trị ghi sổ của cổ phiếu mang đi hoán đổi được ghi nhận là doanh thu hoạt động tài chính (nếu lãi) hoặc chi phí tài chính (nếu lỗ).
+Nợ TK 121 - Chứng khoán kinh doanh (giá trị hợp lý của cổ phiếu nhận về) 
+Nợ TK 635 - Chi phí tài chính (nếu lỗ)
+Có TK 121- Chứng khoán kinh doanh (giá trị ghi sổ của cổ phiếu 				mang đi
+hoán đổi) 
+Có TK 515 - Doanh thu hoạt động tài chính (nếu lãi).
+TÀI KHOẢN 128 - ĐẦU TƯ NẮM GIỮ ĐẾN NGÀY ĐÁO HẠN
+1. Nguyên tắc kế toán
+1.1. Tài khoản này dùng để phản ánh số hiện có và tình hình biến động tăng, giảm các khoản đầu tư nắm giữ đến ngày đáo hạn như: Các khoản tiền gửi có kỳ hạn tại ngân hàng,... giấy tờ có giá (bao gồm cả các loại tín phiếu, kỳ phiếu, chứng chỉ tiền gửi), trái phiếu, cổ phiếu ưu đãi được phân loại là nợ phải trả, các khoản cho vay nắm giữ đến ngày đáo hạn với mục đích thu lãi hàng kỳ, các khoản đầu tư nắm giữ đến ngày đáo hạn khác hoặc có bản chất tương tự và không bao gồm các công cụ phái sinh. 
+Tài khoản này không phản ánh các loại trái phiếu và công cụ nợ khác nắm giữ vì mục đích mua bán để kiếm lời (được phản ánh trong Tài khoản 121 - Chứng khoán kinh doanh).
+1.2. Doanh nghiệp phải mở sổ chi tiết theo dõi từng khoản đầu tư nắm giữ đến ngày đáo hạn theo từng kỳ hạn, từng đối tượng, từng loại nguyên tệ, từng số lượng,... Khi lập Báo cáo tài chính, doanh nghiệp căn cứ vào kỳ hạn còn lại của khoản đầu tư nắm giữ đến ngày đáo hạn (từ 12 tháng trở xuống hay trên 12 tháng kể từ thời điểm kết thúc kỳ kế toán) để trình bày là tài sản ngắn hạn hoặc dài hạn. 
+1.3. Doanh nghiệp phải hạch toán đầy đủ, kịp thời doanh thu hoạt động tài chính phát sinh từ các khoản đầu tư, ví dụ như lãi tiền gửi có kỳ hạn, lãi cho vay, lãi trái phiếu,... khi thanh lý, nhượng bán các khoản đầu tư nắm giữ đến ngày đáo hạn,...
+1.4. Tại thời điểm kết thúc kỳ kế toán, nếu có bất kỳ dấu hiệu hoặc bằng chứng nào cho thấy khoản đầu tư nắm giữ đến ngày đáo hạn của doanh nghiệp có thể bị tổn thất thì doanh nghiệp phải lập dự phòng tổn thất đầu tư nắm giữ đến ngày đáo hạn theo hướng dẫn tại Tài khoản 229 - Dự phòng tổn thất tài sản. 
+1.5. Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn của doanh nghiệp có phát sinh chiết khấu (giá phát hành trái phiếu nhỏ hơn mệnh giá của trái phiếu) hoặc phụ trội (giá phát hành trái phiếu lớn hơn mệnh giá của trái phiếu) thì khoản chiết khấu, phụ trội đó được phân bổ dần vào doanh thu hoạt động tài chính theo phương pháp đường thẳng hoặc phương pháp lãi suất thực phù hợp với kỳ hạn của khoản đầu tư. Tuy nhiên, nếu phần phụ trội của khoản đầu tư nắm giữ đến ngày đáo hạn phân bổ hàng kỳ lớn hơn phần lãi theo lãi suất danh nghĩa hàng kỳ của khoản đầu tư nắm giữ đến ngày đáo hạn (nếu có) thì phần chênh lệch này được hạch toán vào chi phí tài chính. 
+Trường hợp doanh nghiệp mua khoản đầu tư nắm giữ đến ngày đáo hạn có lãi suất thả nổi được xác định lại hàng kỳ theo thị trường mà việc cập nhật lãi suất thả nổi sẽ triệt tiêu được chiết khấu, phụ trội liên quan đến lợi thế/bất lợi của công cụ thì chiết khấu, phụ trội được phân bổ cho giai đoạn từ ngày mua tới ngày chốt lãi suất tiếp theo (ngày mà lãi suất danh nghĩa của trái phiếu được xác định theo biến động lãi suất trên thị trường). 
+Trường hợp doanh nghiệp mua khoản đầu tư nắm giữ đến ngày đáo hạn có lãi suất thả nổi được xác định lại hàng kỳ theo thị trường đồng thời chiết khấu, phụ trội liên quan đến lợi thế/bất lợi của công cụ mà việc cập nhật lãi suất thả nổi không triệt tiêu được thì chiết khấu, phụ trội được phân bổ trong suốt thời gian của công cụ.
+Doanh nghiệp được lựa chọn phân bổ các khoản chiết khấu hoặc phụ trội của các khoản đầu tư nắm giữ đến ngày đáo hạn trong suốt thời gian của công cụ theo phương pháp đường thẳng hoặc phương pháp lãi suất thực nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+1.6. Việc xác định tỷ giá giao dịch thực tế, tỷ giá ghi sổ, các giao dịch phát sinh và đánh giá lại các khoản đầu tư nắm giữ đến ngày đáo hạn là khoản mục tiền tệ có gốc ngoại tệ được hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái.
+2. Kết cấu và nội dung phản ánh của Tài khoản 128 - Đầu tư nắm giữ đến ngày đáo hạn
+Bên Nợ:
+Giá trị các khoản đầu tư nắm giữ đến ngày đáo hạn tăng.
+Bên Có:
+Giá trị các khoản đầu tư nắm giữ đến ngày đáo hạn giảm.
+Số dư bên Nợ:
+Giá trị các khoản đầu tư nắm giữ đến ngày đáo hạn hiện có tại thời điểm kết thúc kỳ kế toán.
+Tài khoản 128 - Đầu tư nắm giữ đến ngày đáo hạn có 4 tài khoản cấp 2:
+- Tài khoản 1281 - Tiền gửi có kỳ hạn: Phản ánh số hiện có và tình hình tăng, giảm của tiền gửi có kỳ hạn và các công cụ tài chính khác có tính chất tương tự tiền gửi có kỳ hạn.
+- Tài khoản 1282 - Trái phiếu: Phản ánh số hiện có và tình hình tăng, giảm của các loại trái phiếu mà doanh nghiệp có khả năng và có ý định nắm giữ đến ngày đáo hạn và các công cụ tài chính khác có tính chất tương tự như trái phiếu. 
+- Tài khoản 1283 - Cho vay: Phản ánh số hiện có và tình hình tăng, giảm của các khoản cho vay theo khế ước giữa các bên phù hợp với quy định của pháp luật. Tùy theo từng hợp đồng, các khoản cho vay theo khế ước có thể được thu hồi một lần tại thời điểm đáo hạn hoặc thu hồi dần từng kỳ.
+- Tài khoản 1288 - Các khoản đầu tư khác nắm giữ đến ngày đáo hạn: Phản ánh số hiện có và tình hình tăng, giảm của các khoản đầu tư khác nắm giữ đến ngày đáo hạn (ngoài các khoản tiền gửi có kỳ hạn, trái phiếu và cho vay), như cổ phiếu ưu đãi được phân loại là nợ phải trả, thương phiếu,...
+3. Phương pháp kế toán một số nghiệp vụ kinh tế chủ yếu
+3.1. Kế toán mua khoản đầu tư nắm giữ đến ngày đáo hạn và phân bổ chiết khấu hoặc phụ trội (nếu có) theo phương pháp đường thẳng
+3.1.1. Kế toán khoản đầu tư nắm giữ đến ngày đáo hạn theo mệnh giá
+a) Khi chi tiền để mua khoản đầu tư nắm giữ đến ngày đáo hạn (gửi tiền có kỳ hạn, mua trái phiếu, cho vay...), ghi:
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn 
+Có các TK 111, 112,... (số tiền thực chi mua khoản đầu tư).
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi trước thì số tiền thực chi mua khoản đầu tư = mệnh giá - số tiền lãi nhận trước cho nhiều kỳ.
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi định kỳ hoặc nhận lãi sau thì số tiền thực chi mua khoản đầu tư theo mệnh giá.
+b) Định kỳ, doanh nghiệp ghi nhận tiền lãi khoản đầu tư nắm giữ đến ngày đáo hạn vào doanh thu tài chính của từng kỳ, ghi:
+- Đối với nhận lãi trước hoặc nhận lãi sau (kể cả kỳ đáo hạn), ghi:
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn (trường hợp nhận lãi trước hoặc nhận lãi sau)
+Có TK 515 - Doanh thu hoạt động tài chính.
+- Đối với trường hợp nhận lãi định kỳ (trừ kỳ đáo hạn), ghi:
+Nợ các TK 111, 112,... (trường hợp nhận lãi định kỳ) 
+Có TK 515 - Doanh thu hoạt động tài chính
+c) Cuối thời hạn của khoản đầu tư nắm giữ đến ngày đáo hạn:
+- Đối với trường hợp nhận lãi trước hoặc nhận lãi sau, ghi:
+Nợ các TK 111, 112,... (số tiền thực thu)
+Có TK 128 - Đầu tư nắm giữ đến ngày đáo hạn.
+- Đối với trường hợp nhận lãi định kỳ, ghi:
+Nợ các TK 111, 112,... (số tiền thực thu)
+Có TK 128 - Đầu tư nắm giữ đến ngày đáo hạn
+Có TK 515 - Doanh thu hoạt động tài chính.
+3.1.2. Kế toán khoản đầu tư nắm giữ đến ngày đáo hạn có chiết khấu 
+a) Khi chi tiền để mua khoản đầu tư nắm giữ đến ngày đáo hạn (gửi tiền có kỳ hạn, mua trái phiếu, cho vay...), ghi:
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn 
+Có các TK 111, 112,... (số tiền thực chi mua khoản đầu tư).
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi trước thì số tiền thực chi mua khoản đầu tư = mệnh giá - số tiền lãi nhận trước cho nhiều kỳ - số chiết khấu.
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi định kỳ hoặc nhận lãi sau thì số tiền thực chi mua khoản đầu tư = mệnh giá - số chiết khấu.
+b) Định kỳ, doanh nghiệp ghi nhận số tiền lãi của từng kỳ và số chiết khấu của khoản đầu tư phân bổ cho từng kỳ vào doanh thu hoạt động tài chính của từng kỳ, ghi:
+- Đối với trường hợp nhận lãi trước hoặc nhận lãi sau (kể cả kỳ đáo hạn), ghi:
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn (số tiền lãi và số chiết khấu 					 của khoản đầu tư phân bổ cho từng kỳ)
+Có TK 515 - Doanh thu hoạt động tài chính.
+- Đối với trường hợp nhận lãi định kỳ:
++ Phân bổ số chiết khấu của khoản đầu tư (kể cả kỳ đáo hạn), ghi:
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn (số chiết khấu của khoản 						đầu  tư phân bổ cho từng kỳ)
+Có TK 515 - Doanh thu hoạt động tài chính.
++ Phản ánh số tiền lãi nhận được của từng kỳ (trừ kỳ đáo hạn)
+Nợ các TK 111, 112,... (số tiền lãi nhận được của từng kỳ)
+Có TK 515 - Doanh thu hoạt động tài chính.
+c) Cuối thời hạn của khoản đầu tư nắm giữ đến ngày đáo hạn:
+- Đối với trường hợp nhận lãi trước hoặc nhận lãi sau, ghi:
+Nợ các TK 111, 112,... (số tiền thực thu)
+Có TK 128 - Đầu tư nắm giữ đến ngày đáo hạn.
+- Đối với trường hợp nhận lãi định kỳ, ghi:
+Nợ các TK 111, 112,... (số tiền thực thu)
+Có TK 128 - Đầu tư nắm giữ đến ngày đáo hạn.
+		Có TK 515- Doanh thu hoạt động tài chính (lãi kỳ đáo hạn)
+3.1.3. Kế toán khoản đầu tư nắm giữ đến ngày đáo hạn có phụ trội
+a) Khi chi tiền để mua khoản đầu tư nắm giữ đến ngày đáo hạn (gửi tiền có kỳ hạn, mua trái phiếu, cho vay...), ghi:
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn 
+Có các TK 111, 112,... (số tiền thực chi mua khoản đầu tư).
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi trước thì số tiền thực chi mua khoản đầu tư = mệnh giá - số tiền lãi nhận trước cho nhiều kỳ + số phụ trội.
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi định kỳ hoặc nhận lãi sau thì số tiền thực chi mua khoản đầu tư = mệnh giá + số phụ trội.
+b) Định kỳ, doanh nghiệp ghi nhận khoản chênh lệch giữa số tiền lãi từng kỳ với số phụ trội của khoản đầu tư phân bổ cho từng kỳ vào doanh thu hoạt động tài chính của từng kỳ, ghi:
+- Đối với trường hợp nhận lãi trước hoặc nhận lãi sau (kể cả kỳ đáo hạn), ghi:
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn (số tiền lãi từng kỳ trừ (-) 				số phụ trội của khoản đầu tư phân bổ cho từng kỳ)
+Có TK 515 - Doanh thu hoạt động tài chính.
+- Đối với trường hợp nhận lãi định kỳ:
++ Phân bổ số phụ trội của khoản đầu tư (kể cả kỳ đáo hạn), ghi:
+Nợ TK 515 - Doanh thu hoạt động tài chính
+Có TK 128 - Đầu tư nắm giữ đến ngày đáo hạn (số phụ trội của 					khoản đầu tư 
+phân bổ cho từng kỳ).
++ Số tiền lãi được nhận của từng kỳ (trừ kỳ đáo hạn), ghi:
+Nợ các TK 111, 112,... (số tiền lãi nhận được của từng kỳ)
+Có TK 515 - Doanh thu hoạt động tài chính.
+c) Cuối thời hạn của khoản đầu tư nắm giữ đến ngày đáo hạn:
+- Đối với trường hợp nhận lãi trước hoặc nhận lãi sau, ghi:
+Nợ các TK 111, 112,... (số tiền thực thu)
+Có TK 128 - Đầu tư nắm giữ đến ngày đáo hạn.
+- Đối với trường hợp nhận lãi định kỳ, ghi:
+Nợ các TK 111, 112,... (số tiền thực thu)
+Có TK 128 - Đầu tư nắm giữ đến ngày đáo hạn.
+Có TK 515 - Doanh thu hoạt động tài chính (lãi kỳ đáo hạn)
+3.2. Kế toán mua khoản đầu tư nắm giữ đến ngày đáo hạn và phân bổ chiết khấu hoặc phụ trội trái phiếu (nếu có) theo phương pháp lãi suất thực
+a) Khi mua khoản đầu tư nắm giữ đến ngày đáo hạn (gửi tiền có kỳ hạn, mua trái phiếu, cho vay...), ghi:
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn
+Có các TK 111, 112,... (số tiền thực chi)
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi trước thì số tiền thực chi mua khoản đầu tư = mệnh giá trừ (-) số tiền lãi nhận trước cho nhiều kỳ cộng (+) số phụ trội hoặc trừ (-) số chiết khấu.
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi định kỳ hoặc nhận lãi sau thì số tiền thực chi mua khoản đầu tư = mệnh giá cộng (+) số phụ trội hoặc trừ (-) số chiết khấu.
+b) Sau ghi nhận ban đầu, doanh nghiệp căn cứ vào lãi suất danh nghĩa, số chiết khấu hoặc phụ trội, chi phí mua khoản đầu tư để xác định lãi suất thực của khoản đầu tư làm cơ sở cho việc tính và phân bổ số tiền lãi từng kỳ (kể cả kỳ đáo hạn) theo quy định.
+- Trường hợp nhận lãi trước hoặc nhận lãi sau, ghi:
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn 
+Có TK 515 - Doanh thu hoạt động tài chính (số tiền lãi từng kỳ theo lãi suất thực).
+- Trường hợp nhận lãi định kỳ, ghi:
+Nợ các TK 111, 112 (số lãi từng kỳ được nhận theo lãi suất danh nghĩa)
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn (Chênh lệch giữa lãi suất danh nghĩa nhỏ hơn lãi suất thực của khoản đầu tư nắm giữ đến ngày đáo hạn) (nếu có)
+Có TK 515 - Doanh thu hoạt động tài chính (số tiền lãi từng kỳ theo 	lãi suất thực)
+Có TK 128 - Đầu tư nắm giữ đến ngày đáo hạn (Chênh lệch giữa				 lãi suất danh nghĩa lớn hơn lãi suất thực của khoản				 đầu tư nắm giữ đến ngày đáo hạn) (nếu có).
+c) Cuối thời hạn của khoản đầu tư nắm giữ đến ngày đáo hạn:
+Nợ các TK 111, 112,... (số tiền thực thu)
+Có TK 128 - Đầu tư nắm giữ đến ngày đáo hạn.
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi trước thì số tiền thực thu = mệnh giá.
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi định kỳ thì số tiền thực thu = mệnh giá + số tiền lãi của kỳ đáo hạn theo lãi suất danh nghĩa.
+- Trường hợp khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi sau thì số tiền thực thu = mệnh giá + tổng số tiền lãi của khoản đầu tư theo lãi suất danh nghĩa.
+3.3. Trường hợp thanh lý trước hạn các khoản đầu tư nắm giữ đến ngày đáo hạn, ghi:
+Nợ các TK 111, 112,...
+Nợ TK 229 - Dự phòng tổn thất tài sản (2291) (số dự phòng đã trích lập 						tương ứng với khoản đầu tư nắm giữ đến 						ngày đáo hạn đã thanh lý) (nếu có)
+Nợ TK 635 - Chi phí tài chính (nếu lỗ)
+Có TK 128 - Đầu tư nắm giữ đến ngày đáo hạn (giá trị ghi sổ)
+Có TK 515 - Doanh thu hoạt động tài chính (nếu lãi).
+NGUYÊN TẮC KẾ TOÁN CÁC KHOẢN NỢ PHẢI THU
+1. Doanh nghiệp phải theo dõi chi tiết các khoản nợ phải thu theo từng kỳ hạn phải thu, đối tượng phải thu, nguyên tệ phải thu và các yếu tố khác cho phù hợp với đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý của doanh nghiệp. 
+2. Việc phân loại các khoản nợ phải thu là phải thu của khách hàng, phải thu nội bộ, phải thu khác được thực hiện theo nguyên tắc:
+a) Phải thu của khách hàng gồm các khoản phải thu mang tính chất thương mại phát sinh từ giao dịch có tính chất mua - bán, như: Phải thu về bán hàng, cung cấp dịch vụ; phải thu về thanh lý, nhượng bán tài sản (TSCĐ, BĐSĐT, các khoản đầu tư tài chính) giữa doanh nghiệp và người mua (là đơn vị độc lập với người bán mà không phải đơn vị trực thuộc của doanh nghiệp). Khoản phải thu này bao gồm cả các khoản phải thu về tiền bán hàng xuất khẩu của bên giao ủy thác thông qua bên nhận ủy thác;
+b) Phải thu nội bộ gồm các khoản phải thu giữa doanh nghiệp và đơn vị trực thuộc hoặc giữa các đơn vị trực thuộc với nhau;
+c) Phải thu khác gồm các khoản phải thu không có tính chất thương mại, không liên quan đến giao dịch mua - bán, như: khoản phải thu về cổ tức và lợi nhuận được chia bằng tiền, các khoản đã chi hộ bên thứ ba, các khoản bên nhận ủy thác xuất nhập khẩu chi hộ cho bên giao ủy thác, các khoản cho mượn tài sản phi tiền tệ, tiền phạt, bồi thường, tài sản thiếu chờ xử lý,...	
+3. Nguyên tắc kế toán các khoản phải thu bằng ngoại tệ:
+3.1. Doanh nghiệp phải theo dõi chi tiết các khoản nợ phải thu theo nguyên tệ. Khi phát sinh các giao dịch liên quan đến các khoản nợ phải thu bằng ngoại tệ, doanh nghiệp phải quy đổi ra đơn vị tiền tệ trong kế toán theo nguyên tắc:
+a) Bên Nợ các tài khoản phải thu áp dụng tỷ giá giao dịch thực tế. 
+b) Bên Có các tài khoản phải thu áp dụng tỷ giá giao dịch thực tế hoặc tỷ giá ghi sổ. 
+c) Trường hợp doanh nghiệp có phát sinh giao dịch trả trước tiền cho người bán để mua hàng hóa, dịch vụ thì khi nhận được hàng hóa, dịch vụ,..., giá trị hàng hóa, dịch vụ nhận về tương ứng với các khoản ngoại tệ đã trả trước được áp dụng tỷ giá giao dịch thực tế tại thời điểm trả tiền trước.
+3.2. Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp phải đánh giá lại số dư các khoản nợ phải thu là khoản mục tiền tệ có gốc ngoại tệ theo tỷ giá mua bán chuyển khoản trung bình của ngân hàng thương mại nơi doanh nghiệp thường xuyên có giao dịch. 
+3.3. Việc xác định tỷ giá giao dịch thực tế, tỷ giá ghi sổ, các giao dịch phát sinh và đánh giá lại các khoản nợ phải thu bằng ngoại tệ được hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái.
+4. Khi lập Báo cáo tài chính, doanh nghiệp căn cứ kỳ hạn còn lại của các khoản nợ phải thu (từ 12 tháng trở xuống hay trên 12 tháng kể từ thời điểm kết thúc kỳ kế toán) để trình bày là tài sản ngắn hạn hoặc dài hạn. Các chỉ tiêu phải thu của Báo cáo tình hình tài chính có thể bao gồm cả các khoản được phản ánh ở các tài khoản khác ngoài các tài khoản phải thu, như: Khoản ký quỹ, ký cược phản ánh ở Tài khoản 244 - Ký quỹ, ký cược, khoản tạm ứng ở Tài khoản 141 - Tạm ứng,... Khi có bất kỳ dấu hiệu hoặc bằng chứng nào cho thấy doanh nghiệp không có khả năng thu hồi hoặc khó có khả năng thu hồi đối với các khoản nợ phải thu của doanh nghiệp thì phải trích lập dự phòng nợ phải thu khó đòi theo hướng dẫn tại Tài khoản 229 - Dự phòng tổn thất tài sản. 
+TÀI KHOẢN 131 - PHẢI THU CỦA KHÁCH HÀNG
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh các khoản nợ phải thu của khách hàng (là khoản nợ phải thu mà quyền thu tiền chỉ phụ thuộc vào yếu tố thời gian) và tình hình thanh toán các khoản nợ phải thu của doanh nghiệp với khách hàng về tiền bán sản phẩm, hàng hóa, BĐSĐT, TSCĐ, các khoản đầu tư tài chính, cung cấp dịch vụ. Tài khoản này còn dùng để phản ánh các khoản phải thu của người nhận thầu XDCB với người giao thầu về khối lượng công tác XDCB đã hoàn thành. 
+b) Khoản phải thu của khách hàng cần được hạch toán chi tiết cho từng đối tượng, từng nội dung phải thu, theo dõi chi tiết kỳ hạn thu hồi (từ 12 tháng trở xuống hay trên 12 tháng kể từ thời điểm kết thúc kỳ kế toán) và ghi chép theo từng lần thanh toán. Đối tượng phải thu là các khách hàng có quan hệ kinh tế với doanh nghiệp về mua sản phẩm, hàng hóa, nhận cung cấp dịch vụ, kể cả TSCĐ, BĐSĐT, các khoản đầu tư tài chính.
+c) Bên giao ủy thác xuất khẩu ghi nhận trong tài khoản này đối với các khoản phải thu từ bên nhận ủy thác xuất khẩu về tiền bán hàng xuất khẩu như các giao dịch bán hàng, cung cấp dịch vụ thông thường. 
+d) Khi lập Báo cáo tài chính, doanh nghiệp phải tiến hành phân loại các khoản nợ phải thu, các khoản nợ phải thu có thể được trả đúng hạn, bị quá hạn hoặc chưa quá hạn nhưng không có khả năng thu hồi hoặc khó có khả năng thu hồi... để có biện pháp xử lý đối với khoản nợ phải thu khó đòi và trích lập dự phòng nợ phải thu khó đòi theo quy định. 
+2. Kết cấu và nội dung phản ánh của Tài khoản 131 - Phải thu của khách hàng
+Bên Nợ:
+- Số tiền phải thu của khách hàng phát sinh trong kỳ khi bán sản phẩm, hàng hóa, BĐS đầu tư, TSCĐ, dịch vụ, các khoản đầu tư tài chính;
+- Số tiền thừa trả lại cho khách hàng;
+- Đánh giá lại các khoản phải thu của khách hàng là khoản mục tiền tệ có gốc ngoại tệ (trường hợp tỷ giá ngoại tệ tăng so với đơn vị tiền tệ trong kế toán).
+Bên Có:
+- Số tiền khách hàng đã trả nợ;
+- Số tiền đã nhận ứng trước, trả trước của khách hàng;
+- Doanh thu của số hàng đã bán bị người mua trả lại (có thuế GTGT hoặc không có thuế GTGT);
+- Số chiết khấu thanh toán, chiết khấu thương mại, giảm giá hàng bán cho người mua;
+- Đánh giá lại các khoản phải thu của khách hàng là khoản mục tiền tệ có gốc ngoại tệ (trường hợp tỷ giá ngoại tệ giảm so với đơn vị tiền tệ trong kế toán).
+Số dư bên Nợ:
+Số tiền còn phải thu của khách hàng tại thời điểm kết thúc kỳ kế toán.
+Tài khoản này có thể có số dư bên Có. Số dư bên Có phản ánh số tiền nhận trước hoặc số đã thu nhiều hơn số phải thu của khách hàng chi tiết theo từng đối tượng cụ thể. Khi lập Báo cáo tình hình tài chính, doanh nghiệp lấy số dư chi tiết theo từng đối tượng phải thu của tài khoản này để ghi vào cả hai chỉ tiêu bên "Tài sản" và bên "Nguồn vốn".
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi bán sản phẩm, hàng hóa, cung cấp dịch vụ chưa thu được ngay bằng tiền (kể cả các khoản phải thu về tiền bán hàng xuất khẩu của bên giao ủy thác), doanh nghiệp ghi nhận doanh thu, ghi:
+a) Đối với sản phẩm, hàng hóa, dịch vụ, BĐSĐT thuộc đối tượng chịu thuế gián thu (thuế GTGT, thuế tiêu thụ đặc biệt, thuế xuất khẩu, thuế bảo vệ môi trường), doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ theo giá bán chưa có thuế, các khoản thuế gián thu phải nộp được tách riêng theo từng loại thuế ngay khi ghi nhận doanh thu, ghi:
+Nợ TK 131 - Phải thu của khách hàng (tổng giá thanh toán)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá chưa có thuế) 
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+b) Trường hợp các khoản thuế gián thu phải nộp không tách riêng ngay theo từng loại, doanh nghiệp ghi nhận doanh thu bao gồm cả thuế phải nộp. Định kỳ, doanh nghiệp xác định nghĩa vụ thuế phải nộp và ghi giảm doanh thu, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+3.2. Kế toán hàng bán bị khách hàng trả lại: 
+Nợ TK 521 - Các khoản giảm trừ doanh thu 
+Nợ TK 333 - Thuế và các khoản phải nộp Nhà nước (số thuế GTGT của 	hàng bán bị trả lại, chi tiết cho từng loại thuế) (nếu có)
+		Có TK 131 - Phải thu của khách hàng.
+3.3. Kế toán chiết khấu thương mại và giảm giá hàng bán
+a) Trường hợp số tiền chiết khấu thương mại, giảm giá hàng bán đã ghi ngay trên hóa đơn bán hàng, kế toán phản ánh doanh thu theo giá đã trừ chiết khấu, giảm giá (ghi nhận theo doanh thu thuần) và không phản ánh riêng số chiết khấu, giảm giá;
+	b) Trường hợp trên hóa đơn bán hàng chưa thể hiện số tiền chiết khấu thương mại, giảm giá hàng bán do khách hàng chưa đủ điều kiện để được hưởng hoặc chưa xác định được số phải chiết khấu, giảm giá thì doanh thu ghi nhận theo giá chưa trừ chiết khấu (doanh thu gộp). Sau thời điểm ghi nhận doanh thu, nếu khách hàng đủ điều kiện được hưởng chiết khấu, giảm giá thì doanh nghiệp phải ghi nhận riêng khoản chiết khấu giảm giá để định kỳ điều chỉnh giảm doanh thu, ghi:
+	Nợ TK 521 - Các khoản giảm trừ doanh thu 
+	Nợ TK 333 - Thuế và các khoản phải nộp Nhà nước (số thuế của hàng 						giảm giá, chiết khấu thương mại) (nếu có)
+		Có TK 131 - Phải thu của khách hàng (tổng số tiền giảm giá).
+3.4. Số chiết khấu thanh toán phải trả cho người mua do người mua thanh toán tiền mua hàng trước thời hạn quy định, trừ vào khoản nợ phải thu của khách hàng, ghi:
+	Nợ các TK 111, 112,...
+	Nợ TK 635 - Chi phí tài chính (Số tiền chiết khấu thanh toán)
+	Có TK 131 - Phải thu của khách hàng.
+3.5. Nhận được tiền do khách hàng trả (kể cả tiền lãi của số nợ - nếu có), nhận tiền ứng trước của khách hàng theo hợp đồng bán hàng hoặc cung cấp dịch vụ, ghi:
+Nợ các TK 111, 112,....
+Có TK 131 - Phải thu của khách hàng
+Có TK 515 - Doanh thu hoạt động tài chính (phần tiền lãi).
+3.6. Phương pháp kế toán các khoản phải thu của nhà thầu đối với khách hàng liên quan đến hợp đồng xây dựng:	
+a) Trường hợp hợp đồng xây dựng quy định nhà thầu được thanh toán theo tiến độ kế hoạch:
+- Khi kết quả thực hiện hợp đồng xây dựng được ước tính một cách đáng tin cậy, nhà thầu căn cứ vào chứng từ phản ánh doanh thu tương ứng với phần công việc đã hoàn thành (không phải hóa đơn) do nhà thầu tự xác định, ghi:	
+Nợ TK 337 - Thanh toán theo tiến độ kế hoạch hợp đồng xây dựng
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ.	
+- Căn cứ vào hóa đơn được lập theo tiến độ kế hoạch để phản ánh số tiền khách hàng phải trả theo tiến độ kế hoạch đã ghi trong hợp đồng, ghi:
+Nợ TK 131 - Phải thu của khách hàng
+	Có TK 337 - Thanh toán theo tiến độ kế hoạch hợp đồng xây dựng
+	Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+b) Trường hợp hợp đồng xây dựng quy định nhà thầu được thanh toán theo giá trị khối lượng thực hiện, khi kết quả thực hiện hợp đồng xây dựng được xác định một cách đáng tin cậy và được khách hàng xác nhận, doanh nghiệp phải ghi nhận doanh thu trên cơ sở phần công việc đã hoàn thành được khách hàng xác nhận, ghi:
+Nợ TK 131 - Phải thu của khách hàng
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+c) Khoản tiền thưởng thu được từ khách hàng trả phụ thêm cho nhà thầu khi thực hiện hợp đồng đạt hoặc vượt một số chỉ tiêu cụ thể đã được ghi trong hợp đồng, ghi:
+Nợ TK 131 - Phải thu của khách hàng
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+d) Khoản bồi thường thu được từ khách hàng hay các bên khác để bù đắp cho các chi phí không bao gồm trong giá trị hợp đồng (như sự chậm trễ, sai sót của khách hàng và các tranh chấp về các thay đổi trong việc thực hiện hợp đồng), ghi:
+Nợ TK 131 - Phải thu của khách hàng
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+đ) Khi nhận được tiền thanh toán khối lượng công trình hoàn thành từ khách hàng, ghi:
+Nợ các TK 111, 112,...
+Có TK 131 - Phải thu của khách hàng.	
+3.7. Trường hợp khách hàng không thanh toán bằng tiền mà thanh toán bằng hàng (theo phương thức hàng đổi hàng), căn cứ vào giá trị vật tư, hàng hóa nhận trao đổi (tính theo giá trị hợp lý ghi trong Hóa đơn GTGT hoặc Hóa đơn bán hàng của khách hàng) trừ vào số nợ phải thu của khách hàng, ghi:
+Nợ các TK 152, 153, 156,... 
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có TK 131 - Phải thu của khách hàng.
+3.8. Trường hợp phát sinh khoản nợ phải thu không có khả năng thu hồi thì phải xử lý tài chính theo quy định. Căn cứ vào quyết định của cấp có thẩm quyền về việc xử lý xóa sổ khoản nợ phải thu, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (2293) (số đã lập dự phòng)
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (số chưa lập dự phòng)
+		Có TK 131 - Phải thu của khách hàng.
+Đồng thời mở sổ theo dõi khoản nợ khó đòi đã xử lý nhằm tiếp tục theo dõi trong thời hạn quy định để có thể truy thu người nợ số tiền đó.
+3.9. Bên nhận ủy thác xuất nhập khẩu phản ánh khoản phải thu về phí ủy thác xuất nhập khẩu được nhận từ bên giao ủy thác, căn cứ vào hóa đơn, ghi: 
+Nợ TK 131 - Phải thu của khách hàng
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+		Có TK 3331 - Thuế GTGT phải nộp (33311).
+	TÀI KHOẢN 133 - THUẾ GIÁ TRỊ GIA TĂNG ĐƯỢC KHẤU TRỪ
+1. Nguyên tắc kế toán 
+a) Tài khoản này dùng để phản ánh số thuế GTGT đầu vào được khấu trừ, đã khấu trừ và còn được khấu trừ của doanh nghiệp. 
+b) Doanh nghiệp phải hạch toán riêng thuế GTGT đầu vào được khấu trừ và thuế GTGT đầu vào không được khấu trừ. Trường hợp không thể hạch toán riêng được thì số thuế GTGT đầu vào được hạch toán vào Tài khoản 133. Cuối kỳ, doanh nghiệp phải xác định số thuế GTGT được khấu trừ và không được khấu trừ theo quy định của pháp luật về thuế GTGT. 
+c) Số thuế GTGT đầu vào không được khấu trừ được tính vào giá trị tài sản được mua, giá vốn của hàng bán ra hoặc chi phí sản xuất, kinh doanh tùy theo từng trường hợp cụ thể.	
+d) Việc xác định số thuế GTGT đầu vào được khấu trừ, kê khai, quyết toán, nộp thuế phải tuân thủ theo đúng quy định của pháp luật về thuế GTGT.
+2. Kết cấu và nội dung phản ánh của Tài khoản 133 - Thuế GTGT được khấu trừ
+Bên Nợ: 
+Số thuế GTGT đầu vào được khấu trừ.
+Bên Có:
+- Số thuế GTGT đầu vào đã khấu trừ;
+- Kết chuyển số thuế GTGT đầu vào không được khấu trừ; 
+- Thuế GTGT đầu vào của vật tư, hàng hóa, dịch vụ mua vào nhưng đã trả lại, được giảm giá;
+- Số thuế GTGT đầu vào đã được hoàn lại.
+Số dư bên Nợ: 
+Số thuế GTGT đầu vào còn được khấu trừ, số thuế GTGT đầu vào được hoàn lại nhưng NSNN chưa hoàn trả tại thời điểm kết thúc kỳ kế toán.
+Tài khoản 133 - Thuế GTGT được khấu trừ, có 2 tài khoản cấp 2:	
+- Tài khoản 1331 - Thuế GTGT được khấu trừ của hàng hóa, dịch vụ: Phản ánh thuế GTGT đầu vào được khấu trừ của vật tư, hàng hóa, dịch vụ mua ngoài dùng vào sản xuất, kinh doanh hàng hóa, dịch vụ thuộc đối tượng chịu thuế GTGT tính theo phương pháp khấu trừ thuế.	
+- Tài khoản 1332 - Thuế GTGT được khấu trừ của TSCĐ: Phản ánh thuế GTGT đầu vào của hoạt động đầu tư, mua sắm TSCĐ, BĐSĐT dùng vào hoạt động sản xuất, kinh doanh hàng hóa, dịch vụ thuộc đối tượng chịu thuế GTGT tính theo phương pháp khấu trừ thuế.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu	
+3.1. Khi mua hàng tồn kho, TSCĐ, BĐSĐT, ghi:
+Nợ các TK 152, 153, 156, 211, 213, 217,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331, 1332) (nếu có)
+		Có các TK 111, 112, 331,... (tổng giá thanh toán).
+3.2. Khi mua vật tư, hàng hóa, dịch vụ dùng ngay vào sản xuất, kinh doanh, ghi:
+Nợ các TK 241, 242, 621, 623, 627, 641, 642,... 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+		Có các TK 111, 112, 331,... (tổng giá thanh toán).
+3.3. Khi mua hàng hóa giao bán ngay cho khách hàng (không qua nhập kho), ghi:
+Nợ TK 632 - Giá vốn hàng bán 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+		Có các TK 111, 112, 331,... (tổng giá thanh toán).
+3.4. Khi nhập khẩu vật tư, hàng hóa, TSCĐ:
+- Doanh nghiệp phản ánh giá trị vật tư, hàng hóa, TSCĐ nhập khẩu bao gồm tổng số tiền phải thanh toán cho người bán (theo tỷ giá giao dịch thực tế), thuế nhập khẩu, thuế tiêu thụ đặc biệt, thuế bảo vệ môi trường phải nộp, chi phí vận chuyển (nếu có), ghi:
+Nợ các TK 152, 153, 156, 211,...
+Có TK 3331 - Thuế GTGT phải nộp (33312) (nếu thuế GTGT đầu
+			 vào của hàng nhập khẩu không được khấu trừ)
+Có TK 3332 - Thuế tiêu thụ đặc biệt (nếu có)
+Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu)
+Có TK 33381 - Thuế Bảo vệ môi trường (nếu có)
+Có các TK 111, 112, 331,...
+ - Nếu thuế GTGT đầu vào của hàng nhập khẩu được khấu trừ, ghi:
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331, 1332)
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước (33312).
+3.5. Trường hợp hàng đã mua và đã trả lại người bán hoặc hàng đã mua được giảm giá do kém, mất phẩm chất: Căn cứ vào chứng từ xuất hàng trả lại cho bên bán và các chứng từ liên quan, doanh nghiệp phản ánh giá trị hàng đã mua và đã trả lại người bán hoặc hàng đã mua được giảm giá, thuế GTGT đầu vào không được khấu trừ, ghi:
+Nợ các TK 111, 112, 331 (tổng giá thanh toán)
+Có TK 133 - Thuế GTGT được khấu trừ (thuế GTGT đầu vào của hàng mua trả lại hoặc được giảm giá)
+Có các TK 152, 153, 156, 211,... (giá mua chưa có thuế GTGT).
+3.6. Trường hợp không hạch toán riêng được thuế GTGT đầu vào được khấu trừ, không được khấu trừ:	
+a) Khi mua vật tư, hàng hóa, TSCĐ, ghi:
+Nợ các TK 152, 153, 156, 211, 213 (giá mua chưa có thuế GTGT) 
+Nợ TK 133 - Thuế GTGT được khấu trừ (thuế GTGT đầu vào) 
+		Có các TK 111, 112, 331,...	
+b) Cuối kỳ, doanh nghiệp tính và xác định thuế GTGT đầu vào được khấu trừ, không được khấu trừ theo quy định của pháp luật về thuế GTGT. Đối với số thuế GTGT đầu vào không được khấu trừ thì được tính vào giá trị tài sản được mua, giá vốn của hàng bán ra hoặc chi phí sản xuất, kinh doanh tùy theo từng trường hợp cụ thể, ghi:
+Nợ các TK 152, 156, 211, 627, 632, 641, 642,...
+		Có TK 133 - Thuế GTGT được khấu trừ (1331).	
+3.7. Vật tư, hàng hóa, TSCĐ mua vào bị tổn thất do thiên tai, hỏa hoạn, bị mất, việc khấu trừ thuế GTGT đầu vào được thực hiện theo quy định của pháp luật về thuế. Nếu thuế GTGT đầu vào của số tài sản này không được khấu trừ:
++ Nếu chưa xác định được nguyên nhân chờ xử lý, ghi:
+Nợ TK 138 - Phải thu khác (1381)
+Có TK 133 - Thuế GTGT được khấu trừ (1331, 1332).
++ Khi có quyết định xử lý của cấp có thẩm quyền về số thu bồi thường của các tổ chức, cá nhân, ghi:
+Nợ các TK 111, 112, 334,... (số thu bồi thường)
+Nợ TK 632 - Giá vốn hàng bán (nếu được tính vào chi phí)
+		Có TK 138 - Phải thu khác (1381)
+		Có TK 133 - Thuế GTGT được khấu trừ (nếu xác định được 
+				 nguyên nhân và có quyết định xử lý ngay).
+3.8. Cuối kỳ, doanh nghiệp xác định số thuế GTGT đầu vào được khấu trừ vào số thuế GTGT đầu ra khi xác định số thuế GTGT phải nộp trong kỳ, ghi:
+Nợ TK 3331 - Thuế GTGT phải nộp (33311)
+		Có TK 133 - Thuế GTGT được khấu trừ.
+3.9. Khi được hoàn thuế GTGT đầu vào của hàng hóa, dịch vụ, ghi:
+Nợ các TK 111, 112,...
+		Có TK 133 - Thuế GTGT được khấu trừ (1331).
+TÀI KHOẢN 136 - PHẢI THU NỘI BỘ
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh các khoản nợ phải thu và tình hình thanh toán các khoản nợ phải thu của doanh nghiệp với đơn vị trực thuộc hoặc giữa các đơn vị trực thuộc doanh nghiệp. 
+b) Nội dung các khoản phải thu nội bộ phản ánh vào Tài khoản 136 - Phải thu nội bộ bao gồm:
+- Ở doanh nghiệp: 
++ Vốn, quỹ đã giao, đã cấp cho đơn vị trực thuộc; 
++ Các khoản đơn vị trực thuộc phải nộp lên doanh nghiệp theo quy định; 
++ Các khoản nhờ đơn vị trực thuộc thu hộ;
++ Các khoản đã chi, đã trả hộ đơn vị trực thuộc;
++ Các khoản đã giao cho đơn vị trực thuộc để thực hiện khối lượng giao khoán nội bộ và nhận lại giá trị giao khoán nội bộ;
++ Các khoản phải thu vãng lai khác.	
+- Ở đơn vị trực thuộc:
++ Các khoản vốn, quỹ doanh nghiệp đã giao, đã cấp nhưng chưa nhận được;
++ Doanh thu bán hàng hóa, cung cấp dịch vụ giữa trụ sở chính với các đơn vị trực thuộc hoặc giữa các đơn vị trực thuộc với nhau;
++ Các khoản nhờ doanh nghiệp hoặc đơn vị trực thuộc khác thu hộ; 
++ Các khoản đã chi, đã trả hộ doanh nghiệp và đơn vị trực thuộc khác; 
++ Các khoản phải thu nội bộ vãng lai khác.
+c) Tài khoản 136 - Phải thu nội bộ phải hạch toán chi tiết theo từng đơn vị trực thuộc có quan hệ thanh toán và theo dõi riêng từng khoản phải thu nội bộ. Doanh nghiệp cần có biện pháp đôn đốc giải quyết dứt điểm các khoản nợ phải thu nội bộ trong kỳ kế toán.	
+d) Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp phải kiểm tra, đối chiếu và xác nhận số phát sinh, số dư Tài khoản 136 - Phải thu nội bộ, Tài khoản 336 - Phải trả nội bộ với các đơn vị trực thuộc có quan hệ theo từng nội dung thanh toán. Tiến hành thanh toán bù trừ theo từng khoản với từng đơn vị trực thuộc, đồng thời hạch toán bù trừ trên 2 Tài khoản 136 - Phải thu nội bộ và Tài khoản 336 - Phải trả nội bộ (theo chi tiết từng đối tượng). Khi đối chiếu, nếu có chênh lệch, phải tìm nguyên nhân và điều chỉnh kịp thời.
+2. Kết cấu và nội dung phản ánh của Tài khoản 136 - Phải thu nội bộ
+Bên Nợ:
+- Số vốn doanh nghiệp đã giao, đã cấp cho đơn vị trực thuộc;
+- Kinh phí chủ đầu tư giao cho BQLDA; Các khoản khác được ghi tăng số phải thu của chủ đầu tư đối với BQLDA;
+- Các khoản đơn vị trực thuộc đã chi hộ, trả hộ doanh nghiệp hoặc các đơn vị trực thuộc khác;
+- Số tiền doanh nghiệp phải thu về, các khoản đơn vị trực thuộc phải nộp cho doanh nghiệp;
+- Số tiền đơn vị trực thuộc phải thu về, các khoản doanh nghiệp phải cấp xuống;
+- Số tiền phải thu về sản phẩm, hàng hóa, dịch vụ giữa các đơn vị trực thuộc với nhau.
+- Các khoản phải thu nội bộ khác.
+Bên Có:
+- Thu hồi vốn, quỹ ở đơn vị trực thuộc;
+- Giá trị TSCĐ hoàn thành chuyển lên từ BQLDA; Các khoản khác được ghi giảm số phải thu của chủ đầu tư đối với BQLDA;
+- Số tiền đã thu về các khoản phải thu trong nội bộ;
+- Bù trừ phải thu với phải trả trong nội bộ của cùng một đối tượng.
+Số dư bên Nợ: 
+Số nợ còn phải thu ở các đơn vị trực thuộc tại thời điểm kết thúc kỳ kế toán.	
+Tài khoản 136 - Phải thu nội bộ, có 4 tài khoản cấp 2:	
+- Tài khoản 1361 - Vốn kinh doanh ở đơn vị trực thuộc: Tài khoản này chỉ mở ở doanh nghiệp để phản ánh số vốn kinh doanh hiện có do doanh nghiệp cấp cho các đơn vị trực thuộc. 
+Tài khoản này không phản ánh số vốn công ty mẹ đầu tư vào các công ty con vì được phản ánh trên Tài khoản 221 - Đầu tư vào công ty con.
+- Tài khoản 1362 - Phải thu nội bộ về chênh lệch tỷ giá: Tài khoản này chỉ mở ở các doanh nghiệp là Chủ đầu tư có thành lập BQLDA, dùng để phản ánh khoản chênh lệch tỷ giá phát sinh ở các BQLDA chuyển lên.
+- Tài khoản 1363 - Phải thu nội bộ về chi phí đi vay đủ điều kiện được vốn hóa: Tài khoản này chỉ mở ở các doanh nghiệp là Chủ đầu tư có thành lập BQLDA, dùng để phản ánh khoản chi phí đi vay được vốn hóa phát sinh tại BQLDA.
+- Tài khoản 1368 - Phải thu nội bộ khác: Phản ánh tất cả các khoản phải thu khác giữa trụ sở chính với các đơn vị trực thuộc hoặc giữa các đơn vị trực thuộc với nhau.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu	
+3.1. Tại đơn vị trực thuộc 
+a) Khi chi hộ, trả hộ doanh nghiệp và các đơn vị trực thuộc khác, ghi: 
+Nợ TK 136 - Phải thu nội bộ (1368)
+		Có các TK 111, 112.
+b) Căn cứ vào thông báo của doanh nghiệp về số quỹ khen thưởng, phúc lợi được doanh nghiệp cấp xuống, ghi:
+Nợ TK 136 - Phải thu nội bộ (1368)
+		Có TK 353 - Quỹ khen thưởng, phúc lợi.
+c) Khi bán sản phẩm, hàng hóa, cung cấp dịch vụ cho các đơn vị khác trong nội bộ doanh nghiệp, tùy thuộc vào đặc điểm hoạt động và phân cấp của từng đơn vị:
+- Trường hợp đơn vị trực thuộc được phân cấp ghi nhận doanh thu, ghi:	
+Nợ TK 136 - Phải thu nội bộ (1368)
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (chi tiết giao  				dịch bán hàng nội bộ)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3331).
+Đồng thời ghi nhận giá vốn, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có các TK 154, 155, 156,...
+- Trường hợp đơn vị trực thuộc không được phân cấp ghi nhận doanh thu, giá trị sản phẩm, hàng hóa, dịch vụ cung cấp nội bộ được phản ánh là khoản phải thu nội bộ, ghi:
+Nợ TK 136 - Phải thu nội bộ (1368)
+		Có các TK 154, 155, 156,...
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+d) Khi nhận được tiền hoặc vật tư, tài sản của doanh nghiệp hoặc đơn vị trực thuộc khác thanh toán về các khoản phải thu, ghi:
+Nợ các TK 111, 112, 152, 153,...
+		Có TK 136 - Phải thu nội bộ (1368).
+đ) Bù trừ các khoản phải thu nội bộ với các khoản phải trả nội bộ của cùng một đối tượng, ghi:
+Nợ TK 336 - Phải trả nội bộ (3368)
+		Có TK 136 - Phải thu nội bộ (1368).
+3.2. Hạch toán ở doanh nghiệp	
+a) Khi doanh nghiệp giao, cấp vốn cho đơn vị trực thuộc:
+- Trường hợp giao vốn bằng tiền, hàng tồn kho, ghi:
+Nợ TK 1361 - Vốn kinh doanh ở đơn vị trực thuộc
+		Có các TK 111, 112, 156,...
+- Trường hợp giao vốn bằng TSCĐ, ghi:
+Nợ TK 136 - Phải thu nội bộ (giá trị còn lại của TSCĐ) (1361) 
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn của TSCĐ) 
+		Có TK 211 - TSCĐ hữu hình (nguyên giá).
+b) Trường hợp đơn vị trực thuộc phải hoàn lại vốn cho doanh nghiệp, khi nhận được tiền do đơn vị trực thuộc nộp lên, ghi: 
+Nợ các TK 111, 112,...
+		Có TK 136 - Phải thu nội bộ (1361).	
+c) Căn cứ vào báo cáo của đơn vị trực thuộc về số vốn kinh doanh đơn vị trực thuộc đã nộp Ngân sách Nhà nước theo sự ủy quyền của cấp trên, ghi: 
+Nợ TK 411 - Vốn đầu tư của chủ sở hữu
+		Có TK 136 - Phải thu nội bộ (1361).	
+d) Khi bán sản phẩm, hàng hóa, cung cấp dịch vụ cho các đơn vị trong nội bộ doanh nghiệp, tùy thuộc vào đặc điểm hoạt động và phân cấp của từng đơn vị, doanh nghiệp có thể ghi nhận doanh thu tại thời điểm chuyển giao hàng hóa dịch vụ cho các đơn vị trực thuộc hoặc tại thời điểm khi đơn vị trực thuộc bán hàng hóa, cung cấp dịch vụ ra bên ngoài:
+- Trường hợp doanh nghiệp ghi nhận doanh thu tại thời điểm chuyển giao hàng hóa, dịch vụ cho đơn vị trực thuộc, ghi:	
+Nợ TK 136 - Phải thu nội bộ (1368)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (chi tiết giao dịch bán hàng nội bộ)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+- Trường hợp doanh nghiệp không ghi nhận doanh thu tại thời điểm chuyển giao hàng hóa, dịch vụ cho đơn vị trực thuộc:
++ Khi chuyển giao hàng hóa, dịch vụ, ghi: 
+Nợ TK 136 - Phải thu nội bộ (1368)
+		Có các TK 154, 155, 156,...
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
++ Khi đơn vị trực thuộc thông báo đã tiêu thụ được sản phẩm, hàng hóa, dịch vụ cho bên thứ ba ngoài doanh nghiệp, doanh nghiệp ghi doanh thu, ghi:
+Nợ TK 136 - Phải thu nội bộ (1368)
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ.
+Đồng thời ghi nhận giá vốn, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có TK 136 - Phải thu nội bộ (1368).		
+đ) Khoản phải thu về lãi của hoạt động sản xuất, kinh doanh, hoạt động khác ở các đơn vị trực thuộc, ghi:
+Nợ TK 136 - Phải thu nội bộ (1368)
+		Có TK 421 - Lợi nhuận sau thuế chưa phân phối.	
+e) Khi chi hộ, trả hộ các đơn vị trực thuộc, ghi:
+Nợ TK 136 - Phải thu nội bộ (1368)
+		Có các TK 111, 112,...
+g) Khi nhận được tiền do đơn vị trực thuộc nộp lên về tiền lãi kinh doanh, thanh toán các khoản đã chi hộ, trả hộ đơn vị trực thuộc, ghi:
+Nợ các TK 111, 112,...
+		Có TK 136 - Phải thu nội bộ (1368).	
+h) Bù trừ các khoản phải thu nội bộ với các khoản phải trả nội bộ của cùng một đối tượng, ghi:
+Nợ TK 336 - Phải trả nội bộ (3368)
+		Có TK 136 - Phải thu nội bộ (1368).	
+3.3. Kế toán tại Chủ đầu tư có thành lập BQLDAĐT
+a) Khi chủ đầu tư có quyết định giao vốn đầu tư bằng tiền, vật tư, TSCĐ cho BQLDAĐT, ghi:
+Nợ TK 136 - Phải thu nội bộ (1361)
+Nợ TK 214 - Hao mòn TSCĐ
+		Có các TK 111, 112, 152,...
+		Có TK 211 - TSCĐ hữu hình.
+b) Lãi tiền gửi ngân hàng do tạm thời chưa sử dụng vốn đầu tư do các BQLDA đầu tư chuyển lên cho Chủ đầu tư, chủ đầu tư, ghi:
+Nợ TK 136 - Phải thu nội bộ (1368)
+		Có TK 515 - Doanh thu hoạt động tài chính.
+c) Chủ đầu tư kết chuyển chi phí đi vay đủ điều kiện được vốn hóa vào giá trị công trình cho BQLDAĐT tính vào chi phí đầu tư xây dựng, ghi:
+Nợ TK 136 - Phải thu nội bộ (1363)
+		Có các TK 111, 112, 335,...
+d) Khi nhận doanh thu, doanh thu hoạt động tài chính, thu nhập khác do các BQLDAĐT nộp lên, ghi:
+Nợ TK 136 - Phải thu nội bộ (1362, 1368)
+		Có các TK 511, 515, 711,...
+đ) Khi các BQLDAĐT chuyển số thuế GTGT đầu vào khi mua NVL, CCDC, TSCĐ, dịch vụ để thực hiện dự án đầu tư cho Chủ đầu tư để khấu trừ, ghi:
+Nợ TK 133 - Thuế GTGT được khấu trừ
+		Có TK 136 - Phải thu nội bộ (1368). 
+e) Khi nhận giá vốn cung cấp dịch vụ, chi phí tài chính, chi phí khác do các BQLDAĐT chuyển lên, ghi:
+Nợ các TK 632, 635, 811,...
+		Có TK 136 - Phải thu nội bộ (1362, 1368).
+g) Khi dự án hoàn thành, nhận bàn giao công trình, đơn vị chủ đầu tư ghi:
+- Trường hợp nhận bàn giao công trình đã được quyết toán, chủ đầu tư ghi nhận giá trị công trình là giá đã được quyết toán, ghi:
+Nợ các TK 111, 112, 152, 153, 155, 211, 213, 217,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+			Có TK 136 - Phải thu nội bộ (1361)
+			Có các TK 331, 333,... (nhận nợ phải trả nếu có).
+- Trường hợp nhận bàn giao công trình chưa được quyết toán, chủ đầu tư ghi nhận giá trị công trình là giá tạm tính. Khi quyết toán phải điều chỉnh giá trị công trình theo giá được quyết toán, ghi:
++ Nếu giá được quyết toán lớn hơn giá tạm tính, ghi:
+Nợ các TK 155, 211, 213, 217,...
+		Có các TK liên quan.
++ Nếu giá được quyết toán nhỏ hơn giá tạm tính, ghi:
+Nợ các TK liên quan
+	Có các TK 155, 211, 213, 217,...
+
+TÀI KHOẢN 138 - PHẢI THU KHÁC
+1. Nguyên tắc kế toán
+Tài khoản này dùng để phản ánh các khoản phải thu ngoài phạm vi đã phản ánh ở các Tài khoản 131, 133, 136 và tình hình thanh toán các khoản phải thu này, gồm những nội dung chủ yếu sau:
+- Giá trị tài sản thiếu nhưng chưa xác định được nguyên nhân, chờ xử lý;
+- Các khoản phải thu về bồi thường vật chất do cá nhân, tập thể (trong và ngoài doanh nghiệp) gây ra như mất mát, hư hỏng vật tư, hàng hóa, tiền vốn,... đã được xử lý bắt bồi thường;	
+- Các khoản cho bên khác mượn bằng tài sản phi tiền tệ (nếu cho mượn bằng tiền thì phải kế toán là cho vay trên Tài khoản 1283);
+- Các khoản đã chi đầu tư XDCB, chi phí sản xuất, kinh doanh... nhưng không được cấp có thẩm quyền phê duyệt phải thu hồi;	
+- Các khoản chi hộ phải thu hồi, như các khoản bên nhận ủy thác xuất nhập khẩu chi hộ cho bên giao ủy thác xuất khẩu về phí ngân hàng, phí giám định hải quan, phí vận chuyển, bốc vác, các khoản thuế,...	
+- Khoản phải thu về cổ tức, lợi nhuận được chia bằng tiền hoặc tài sản phi tiền tệ từ các hoạt động đầu tư tài chính;
+- Thuế tiêu thụ đặc biệt của hàng nhập khẩu (ví dụ mặt hàng xăng nhập khẩu theo quy định của pháp luật thuế) đã nộp, được khấu trừ hoặc hoàn theo quy định của pháp luật thuế; 
+- Giá trị tài sản mang đi đầu tư vào hợp đồng hợp tác kinh doanh;
+- Các khoản phải thu khác ngoài các khoản trên.
+2. Kết cấu và nội dung phản ánh của Tài khoản 138 - Phải thu khác
+Bên Nợ:
+- Giá trị tài sản thiếu chờ xử lý;
+- Phải thu của cá nhân, tập thể (trong và ngoài doanh nghiệp) đối với tài sản thiếu đã xác định rõ nguyên nhân;
+- Số thuế tiêu thụ đặc biệt của hàng nhập khẩu đã nộp được khấu trừ hoặc được hoàn theo quy định của pháp luật thuế;
+- Giá trị tài sản doanh nghiệp đem đầu tư vào hợp đồng hợp tác kinh doanh;
+- Phải thu về cổ tức, lợi nhuận được chia bằng tiền từ các hoạt động đầu tư tài chính;
+- Các khoản chi hộ bên thứ ba phải thu hồi, các khoản phải thu khác;
+- Đánh giá lại các khoản phải thu khác là khoản mục tiền tệ có gốc ngoại tệ (trường hợp tỷ giá ngoại tệ tăng so với đơn vị tiền tệ trong kế toán).
+Bên Có:
+- Kết chuyển giá trị tài sản thiếu vào các tài khoản liên quan theo quyết định ghi trong biên bản xử lý;
+- Số thuế tiêu thụ đặc biệt của hàng nhập khẩu đã khấu trừ hoặc đã hoàn theo quy định của pháp luật thuế;
+- Giá trị tài sản hoặc lợi ích doanh nghiệp được chia từ hợp đồng hợp tác kinh doanh sang tài khoản liên quan;
+- Số tiền đã thu được về các khoản phải thu khác;
+- Đánh giá lại các khoản phải thu khác là khoản mục tiền tệ có gốc ngoại tệ (trường hợp tỷ giá ngoại tệ giảm so với đơn vị tiền tệ trong kế toán).
+Số dư bên Nợ:
+Các khoản nợ phải thu khác chưa thu được hiện còn tại thời điểm kết thúc kỳ kế toán.
+Tài khoản 138 - Phải thu khác, có 3 tài khoản cấp 2:
+- Tài khoản 1381 - Tài sản thiếu chờ xử lý: Phản ánh giá trị tài sản thiếu chưa xác định rõ nguyên nhân, còn chờ quyết định xử lý.
+Về nguyên tắc trong mọi trường hợp phát hiện thiếu tài sản, doanh nghiệp phải truy tìm nguyên nhân và người phạm lỗi để có biện pháp xử lý cụ thể. Chỉ hạch toán vào Tài khoản 1381 - Tài sản thiếu chờ xử lý đối với các tài sản chưa xác định được nguyên nhân về thiếu, mất mát, hư hỏng phải chờ xử lý. Trường hợp tài sản thiếu đã xác định được nguyên nhân và đã có biên bản xử lý ngay trong kỳ thì ghi vào các tài khoản liên quan, không hạch toán qua Tài khoản 1381 - Tài sản thiếu chờ xử lý.
+Trường hợp khi lập báo cáo tài chính, nếu không có bằng chứng chắc chắn cho thấy tài sản thiếu chờ xử lý có khả năng thu hồi thì doanh nghiệp phải ghi nhận giá trị tài sản thiếu đó vào chi phí để xác định kết quả kinh doanh trong kỳ. Đồng thời, doanh nghiệp phải thuyết minh trên Báo cáo tài chính của doanh nghiệp về giá trị tài sản thiếu chờ xử lý đã được ghi nhận vào kết quả kinh doanh trong kỳ, thời hạn doanh nghiệp dự kiến sẽ xác định rõ được nguyên nhân của từng loại tài sản thiếu chờ xử lý trên Báo cáo tài chính kỳ này, kết quả xử lý tài sản thiếu chờ xử lý đã phản ánh trên Báo cáo tài chính kỳ trước,...
+- Tài khoản 1383 - Thuế TTĐB của hàng nhập khẩu: Phản ánh số thuế tiêu thụ đặc biệt của hàng nhập khẩu (ví dụ xăng nhập khẩu,...), (trừ trường hợp thuế TTĐB của hàng tạm nhập - tái xuất đã nộp) được khấu trừ hoặc hoàn theo quy định của pháp luật thuế.
+- Tài khoản 1388 - Phải thu khác: Phản ánh các khoản phải thu của doanh nghiệp ngoài phạm vi các khoản phải thu phản ánh ở các Tài khoản 1381, 1383, như: Phải thu hoạt động đầu tư của doanh nghiệp vào hợp đồng hợp tác kinh doanh; Phải thu các khoản cổ tức, lợi nhuận được chia bằng tiền hoặc tài sản phi tiền tệ; Phải thu về tiền lãi; Phải thu các khoản bồi thường, thuế TTĐB của hàng tạm nhập - tái xuất mà không thuộc quyền sở hữu của doanh nghiệp,...	
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. TSCĐ hữu hình dùng cho hoạt động sản xuất, kinh doanh phát hiện thiếu, chưa xác định rõ nguyên nhân, chờ xử lý, ghi:
+Nợ TK 138 - Phải thu khác (1381) (giá trị còn lại của TSCĐ)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn)
+		Có TK 211 - TSCĐ hữu hình (nguyên giá).
+3.2. TSCĐ hữu hình dùng cho hoạt động phúc lợi phát hiện thiếu, chưa xác định rõ nguyên nhân, chờ xử lý, ghi giảm TSCĐ, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn)
+Nợ TK 3533 - Quỹ phúc lợi đã hình thành TSCĐ (giá trị còn lại) (TSCĐ dùng cho hoạt động phúc lợi)
+		Có TK 211 - TSCĐ hữu hình (nguyên giá).
+Đồng thời phản ánh phần giá trị còn lại của tài sản thiếu chờ xử lý, ghi:
+Nợ TK 138 - Phải thu khác (1381)
+		Có TK 353 - Quỹ khen thưởng, phúc lợi (3532). 
+3.3. Đối với tiền mặt tồn quỹ, vật tư, hàng hóa,... phát hiện thiếu khi kiểm kê: 
+Mọi trường hợp tiền mặt, vật tư, hàng hóa,... trong quỹ, trong kho hoặc tại nơi quản lý, nơi bảo quản bị phát hiện thiếu khi kiểm kê đều phải lập biên bản và truy tìm nguyên nhân, xác định người phạm lỗi. Căn cứ vào biên bản kiểm kê và quyết định xử lý của cấp có thẩm quyền để ghi sổ kế toán:
+Trường hợp tài sản phát hiện thiếu đã xác định được ngay nguyên nhân:
+- Nếu do nhầm lẫn hoặc chưa ghi sổ phải tiến hành ghi bổ sung hoặc điều chỉnh lại số liệu trên sổ kế toán;
+- Nếu giá trị vật tư, hàng hóa hao hụt trong phạm vi định mức, ghi:
+Nợ TK 632 - Giá vốn hàng bán 
+Có các TK 152, 153, 155, 156.
+- Nếu xác định có người phải chịu trách nhiệm thì căn cứ nguyên nhân hoặc người chịu trách nhiệm bồi thường, ghi:
+Nợ TK 138 - Phải thu khác (1388) (số phải bồi thường)
+Nợ TK 334 - Phải trả người lao động (số bồi thường trừ vào lương)
+Nợ TK 632 - Giá vốn hàng bán (giá trị hao hụt, mất mát của hàng tồn kho sau khi trừ số thu bồi thường theo quyết định xử lý)
+		Có các TK 111, 112, 152, 153, 155, 156,...
+b) Nếu số hao hụt, mất mát chưa xác định rõ nguyên nhân phải chờ xử lý, căn cứ vào giá trị hao hụt, ghi:
+Nợ TK 138 - Phải thu khác (1381)
+Có các TK 111, 152, 153, 155, 156,...
+- Khi có quyết định xử lý, căn cứ vào quyết định, ghi:
+Nợ các TK 111, 112 (nếu người phạm lỗi nộp tiền bồi thường)
+Nợ TK 138 - Phải thu khác (1388) (nếu phải thu tiền bồi thường của người phạm lỗi)
+Nợ TK 334 - Phải trả người lao động (nếu trừ vào tiền lương của người phạm lỗi)
+Nợ TK 632 - Giá vốn hàng bán (giá trị hao hụt mất mát của hàng tồn kho sau khi trừ số thu bồi thường theo quyết định xử lý)
+Nợ TK 811 - Chi phí khác (Tiền, phần giá trị còn lại của TSCĐ thiếu qua kiểm kê phải tính vào chi phí khác của doanh nghiệp)
+Có TK 138 - Phải thu khác (1381).
+3.4. Các khoản cho mượn tài sản phi tiền tệ, ghi:
+	Nợ TK 138 - Phải thu khác (1388)
+		Có các TK 152, 153, 155, 156,...
+3.5. Các khoản chi hộ bên thứ ba phải thu hồi, các khoản phải thu khác, ghi:
+Nợ TK 138 - Phải thu khác (1388)
+		Có các TK liên quan.
+3.6. Kế toán giao dịch ủy thác xuất - nhập khẩu tại bên nhận ủy thác:
+a) Khi bên nhận ủy thác chi hộ cho bên giao ủy thác, ghi:
+Nợ TK 138 - Phải thu khác (1388) (nếu bên giao ủy thác chưa ứng tiền)
+Nợ TK 3388 - Phải trả, phải nộp khác (trừ vào tiền đã nhận của bên giao ủy thác)
+		Có các TK 111, 112,... 
+b) Khi được doanh nghiệp ủy thác xuất khẩu thanh toán bù trừ với các khoản đã chi hộ, doanh nghiệp nhận ủy thác xuất khẩu, ghi:
+Nợ TK 338 - Phải trả, phải nộp khác (3388)
+		Có TK 138 - Phải thu khác (1388). 
+c) Kế toán chi tiết các giao dịch thanh toán xuất - nhập khẩu ủy thác được thực hiện theo hướng dẫn của Tài khoản 338 - Phải trả, phải nộp khác; Kế toán các khoản thuế GTGT hàng nhập khẩu, thuế TTĐB, thuế nhập khẩu tại bên giao và nhận ủy thác thực hiện theo hướng dẫn của Tài khoản 333 - Thuế và các khoản phải nộp Nhà nước.
+3.7. Phản ánh cổ tức, lợi nhuận được chia bằng tiền hoặc tài sản phi tiền tệ từ hoạt động đầu tư tài chính, ghi:
+Nợ TK 138 - Phải thu khác (1388) 
+		Có TK 515 - Doanh thu hoạt động tài chính. 
+3.8. Khi thu được tiền của các khoản phải thu khác, ghi:
+Nợ các TK 111, 112 
+		Có TK 138 - Phải thu khác (1388).
+3.9. Căn cứ quyết định xử lý khoản phải thu khác, ghi:
+Nợ các TK 111, 112 (nếu số bồi thường được thu bằng tiền)
+Nợ TK 334 - Phải trả người lao động (nếu số bồi thường trừ vào lương)
+Nợ TK 229 - Dự phòng tổn thất tài sản (2293) (nếu được bù đắp bằng khoản dự phòng nợ phải thu khó đòi)
+ Nợ TK 642 - Chi phí quản lý doanh nghiệp (nếu tính vào chi phí)
+		Có TK 138 - Phải thu khác (1388).
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản nợ phải thu khó đòi có thể được ghi nhận ngay cho từng giao dịch tại thời điểm xử lý khoản phải thu khác hoặc khi xác định số trích lập dự phòng nợ phải thu khó đòi vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+3.10. Khi các doanh nghiệp hoàn thành thủ tục bán các khoản phải thu khác (đang được phản ánh trên Báo cáo tình hình tài chính) cho công ty mua bán nợ, ghi:
+Nợ các TK 111, 112,... (số tiền thu được từ việc bán khoản phải thu)
+Nợ TK 229 - Dự phòng tổn thất tài sản (2293) (số chênh lệch được bù đắp bằng khoản dự phòng nợ phải thu khó đòi)
+Nợ các TK liên quan (số chênh lệch giữa giá gốc khoản nợ phải thu với số tiền thu được từ bán khoản nợ và số đã được bù đắp bằng khoản dự phòng nợ phải thu khó đòi)
+Có TK 138 - Phải thu khác (1388) (giá trị ghi sổ khoản phải thu khác).
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản nợ phải thu khó đòi có thể được ghi nhận ngay cho từng giao dịch tại thời điểm bán khoản phải thu khác hoặc khi xác định số trích lập dự phòng nợ phải thu khó đòi vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+ 3.11. Các khoản chi đầu tư XDCB, chi phí SXKD nhưng không được cấp có thẩm quyền phê duyệt phải thu hồi, ghi:
+Nợ TK 138 - Phải thu khác (1388)
+		Có các TK 241, 641, 642,...
+3.12. Kế toán thuế tiêu thụ đặc biệt của hàng nhập khẩu
+ - Đối với số thuế tiêu thụ đặc biệt phải nộp ở khâu nhập khẩu của các mặt hàng sẽ được khấu trừ hoặc được hoàn theo quy định của pháp luật thuế, doanh nghiệp căn cứ vào hóa đơn mua hàng nhập khẩu và thông báo nộp thuế của cơ quan có thẩm quyền, xác định số thuế tiêu thụ đặc biệt phải nộp của hàng nhập khẩu, ghi:
+Nợ TK 1383 - Thuế TTĐB của hàng nhập khẩu 
+Có TK 3332 - Thuế tiêu thụ đặc biệt.
+- Khi nộp thuế TTĐB của hàng nhập khẩu, căn cứ vào chứng từ liên quan, ghi:
+Nợ TK 3332 - Thuế tiêu thụ đặc biệt
+		Có các TK 111, 112,...
+- Trong kỳ, phản ánh số thuế TTĐB của hàng nhập khẩu (ví dụ như xăng sinh học) đã nộp ở khâu nhập khẩu được khấu trừ với số thuế TTĐB phải nộp ở khâu bán ra, ghi: 
+Nợ TK 3332 - Thuế tiêu thụ đặc biệt (phần được khấu trừ)
+Nợ TK 632 - Giá vốn hàng bán {phần chênh lệch giữa số thuế TTĐB được khấu trừ đã nộp ở khâu nhập khẩu lớn hơn số thuế TTĐB của hàng nhập khẩu phải nộp ở khâu bán ra (trừ mặt hàng được hoàn thuế TTĐB ở khâu nhập khẩu, ví dụ như xăng sinh học)}
+Có TK 1383 - Thuế TTĐB của hàng nhập khẩu (số thuế TTĐB được khấu trừ trong kỳ của hàng nhập khẩu).
+- Trường hợp trong kỳ số thuế TTĐB của hàng nhập khẩu đã nộp ở khâu nhập khẩu nhỏ hơn số thuế TTĐB phải nộp ở khâu bán ra thì doanh nghiệp phải nộp phần chênh lệch vào NSNN, ghi:
+Nợ TK 3332 - Thuế tiêu thụ đặc biệt
+		Có các TK 111, 112
+- Trường hợp doanh nghiệp được hoàn số thuế TTĐB của mặt hàng (ví dụ xăng sinh học) đã nộp ở khâu nhập khẩu, ghi:
+Nợ các TK 111, 112,...
+		Có TK 1383 - Thuế TTĐB của hàng nhập khẩu.
+
+TÀI KHOẢN 141 - TẠM ỨNG
+1. Nguyên tắc kế toán 
+a) Tài khoản này dùng để phản ánh các khoản tạm ứng của doanh nghiệp cho người lao động của doanh nghiệp và tình hình thanh toán các khoản tạm ứng đó. 
+b) Doanh nghiệp có trách nhiệm xây dựng quy chế và tổ chức kiểm soát nội bộ liên quan đến các khoản tạm ứng phù hợp với pháp luật có liên quan và yêu cầu quản trị nội bộ, như: đối tượng được tạm ứng; giá trị, mục đích, hình thức, thời hạn tạm ứng; thẩm quyền phê duyệt tạm ứng,... 
+c) Khi hoàn thành, kết thúc công việc được giao, người nhận tạm ứng căn cứ vào số tiền đã tạm ứng, số đã chi được người có thẩm quyền phê duyệt để lập bảng thanh toán tạm ứng (kèm chứng từ gốc). Trường hợp khoản tạm ứng sử dụng không hết so với số được duyệt thì người nhận tạm ứng phải có trách nhiệm và nghĩa vụ hoàn trả lại cho doanh nghiệp theo quy chế của doanh nghiệp. Trường hợp giá trị thanh toán tạm ứng được duyệt lớn hơn số tiền đã nhận tạm ứng thì doanh nghiệp có trách nhiệm chi bổ sung phần còn thiếu cho người tạm ứng.
+d) Doanh nghiệp phải mở sổ kế toán chi tiết theo dõi cho từng người nhận tạm ứng và ghi chép đầy đủ tình hình nhận, thanh toán tạm ứng theo từng lần tạm ứng.
+2. Kết cấu và nội dung phản ánh của Tài khoản 141 - Tạm ứng	
+Bên Nợ: 
+Các khoản tiền, vật tư đã tạm ứng cho người lao động của doanh nghiệp.
+Bên Có:
+- Các khoản tạm ứng đã được thanh toán;
+- Số tiền đã tạm ứng nhưng dùng không hết được nhập lại quỹ hoặc tính trừ vào lương;
+- Các khoản vật tư đã tạm ứng nhưng sử dụng không hết nhập lại kho. 
+Số dư bên Nợ:
+Số tạm ứng hiện còn tại thời điểm kết thúc kỳ kế toán chưa thanh toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu	
+3.1. Khi tạm ứng tiền hoặc vật tư cho người lao động trong doanh nghiệp, căn cứ vào các chứng từ liên quan, ghi:
+Nợ TK 141 - Tạm ứng
+ 		Có các TK 111, 112, 152,...
+3.2. Khi thực hiện xong công việc được giao, người nhận tạm ứng lập Bảng thanh toán tạm ứng kèm theo các chứng từ gốc đã được ký duyệt để quyết toán khoản tạm ứng, ghi:
+Nợ các TK 152, 153, 156, 241, 331, 621, 623, 627, 642,...
+Có TK 141 - Tạm ứng. 
+3.3. Căn cứ vào quyết định xử lý của doanh nghiệp đối với các khoản đã tạm ứng nhưng không sử dụng hết, ghi:
+Nợ các TK 111, 112, 152, 334,... 
+ 	Có TK 141 - Tạm ứng.
+3.4. Trường hợp số thực chi đã được duyệt lớn hơn số đã nhận tạm ứng, doanh nghiệp thanh toán thêm cho người nhận tạm ứng, ghi:
+Nợ các TK 152, 153, 156, 241, 621, 622, 627,...
+Có các TK 111, 112.
+NGUYÊN TẮC KẾ TOÁN HÀNG TỒN KHO
+1. Nhóm tài khoản hàng tồn kho được dùng để phản ánh trị giá hiện có và tình hình biến động hàng tồn kho của doanh nghiệp (kể cả trường hợp giá trị hàng xuất kho được tính theo từng lần phát sinh hoặc được tính trên cơ sở giá trị hàng tồn kho cuối kỳ). 
+2. Hàng tồn kho của doanh nghiệp là những tài sản được mua vào để sản xuất hoặc để bán trong kỳ sản xuất, kinh doanh thông thường, gồm: 
+- Hàng mua đang đi đường;
+- Nguyên liệu, vật liệu; 
+- Công cụ, dụng cụ;
+- Sản phẩm dở dang;
+- Sản phẩm (thành phẩm và bán thành phẩm); 
+- Hàng hóa; 
+- Hàng gửi đi bán;
+- Nguyên liệu, vật tư tại kho bảo thuế của doanh nghiệp.
+Đối với vật tư, thiết bị, phụ tùng thay thế có thời gian dự trữ trên 12 tháng hoặc hơn một chu kỳ sản xuất, kinh doanh thông thường; sản phẩm dở dang có thời gian sản xuất, luân chuyển vượt quá một chu kỳ sản xuất, kinh doanh thông thường thì không được trình bày là hàng tồn kho trên Báo cáo tình hình tài chính mà trình bày là tài sản dài hạn.
+3. Các loại sản phẩm, hàng hóa, vật tư, tài sản nhận giữ hộ, nhận ký gửi, nhận ủy thác xuất nhập khẩu, nhận gia công... không thuộc quyền sở hữu và kiểm soát của doanh nghiệp thì không được phản ánh là hàng tồn kho của doanh nghiệp mà mở sổ chi tiết theo dõi sản phẩm, hàng hóa, vật tư, tài sản nhận giữ hộ, nhận ký gửi, nhận ủy thác xuất nhập khẩu, nhận gia công,... và thuyết minh trên Báo cáo tài chính.
+4. Kế toán hàng tồn kho (xác định giá gốc hàng tồn kho, xác định giá trị thuần có thể thực hiện được, lập dự phòng giảm giá hàng tồn kho và ghi nhận chi phí liên quan đến hàng tồn kho,...) phải được thực hiện theo quy định của Chuẩn mực kế toán Việt Nam số 02 - Hàng tồn kho.
+5. Nguyên tắc xác định giá trị hàng tồn kho được quy định cụ thể cho từng mặt hàng tồn kho, theo nguồn hình thành và thời điểm tính giá hàng tồn kho. 
+6. Các khoản thuế, phí (như: Thuế GTGT đầu vào của hàng tồn kho không được khấu trừ, thuế tiêu thụ đặc biệt, thuế nhập khẩu, thuế bảo vệ môi trường, thuế tài nguyên,...) phải nộp khi mua, khai thác, sản xuất hàng tồn kho mà không được hoàn lại theo quy định của pháp luật thuế thì được tính vào giá trị hàng tồn kho. 
+7. Khi mua hàng tồn kho nếu được nhận kèm thêm sản phẩm, hàng hóa thì doanh nghiệp phải xác định và ghi nhận riêng sản phẩm, hàng hóa theo giá trị hợp lý (giá trị thị trường của tài sản được nhận kèm, giá trị của tài sản tương tự,...), trừ trường hợp doanh nghiệp không tách riêng sản phẩm, hàng hóa nhận thêm này để sử dụng, cho, biếu, tặng hoặc bán.
+8. Trường hợp xuất hàng tồn kho để khuyến mại, quảng cáo, căn cứ vào bản chất của giao dịch để hạch toán theo nguyên tắc sau:
+a) Trường hợp xuất hàng tồn kho để khuyến mại, quảng cáo không thu tiền, không kèm theo các điều kiện khác như phải mua sản phẩm, hàng hóa... hoặc bản chất mô hình kinh doanh, đặc điểm sản phẩm, hàng hóa, dịch vụ của doanh nghiệp là giá bán sản phẩm chính không thay đổi cho dù khách hàng có nhận hay không nhận sản phẩm tặng kèm thì doanh nghiệp ghi nhận giá trị hàng tồn kho dùng cho khuyến mại, quảng cáo vào chi phí bán hàng (chi tiết hàng khuyến mại, quảng cáo);
+b) Trường hợp xuất hàng tồn kho để khuyến mại, quảng cáo nhưng khách hàng chỉ được nhận hàng khuyến mại, quảng cáo kèm theo các điều kiện khác như phải mua sản phẩm, hàng hóa (ví dụ như mua 2 sản phẩm được tặng 1 sản phẩm...) thì doanh nghiệp phải phân bổ số tiền hoặc lợi ích thu được để tính doanh thu cho cả hàng bán và hàng khuyến mại. Theo đó, giá trị hàng khuyến mại được tính vào giá vốn hàng bán (trường hợp này bản chất giao dịch là giảm giá hàng bán). 
+9. Khi xác định giá trị hàng xuất kho và tồn kho, doanh nghiệp áp dụng theo một trong các phương pháp sau: 
+a) Phương pháp tính theo giá đích danh: Phương pháp này được áp dụng dựa trên giá trị thực tế của từng thứ vật tư, hàng hóa mua vào, từng thứ sản phẩm sản xuất ra nên chỉ áp dụng cho các doanh nghiệp có ít mặt hàng hoặc mặt hàng ổn định và nhận diện được.
+b) Phương pháp bình quân gia quyền: Theo phương pháp này, giá trị của từng mặt hàng tồn kho được tính theo giá trị trung bình của từng mặt hàng tồn kho đầu kỳ và giá trị từng mặt hàng tồn kho được mua hoặc sản xuất trong kỳ. Giá trị trung bình có thể được tính theo từng kỳ hoặc sau từng lô hàng nhập về, phụ thuộc vào điều kiện cụ thể của mỗi doanh nghiệp.
+c) Phương pháp nhập trước, xuất trước (FIFO): Phương pháp này được áp dụng dựa trên giả định là giá trị hàng tồn kho được mua hoặc được sản xuất trước thì được xuất trước nên giá trị hàng tồn kho còn lại cuối kỳ là giá trị hàng tồn kho được mua hoặc sản xuất gần thời điểm cuối kỳ. Theo phương pháp này thì giá trị hàng xuất kho được tính theo giá của lô hàng nhập kho ở thời điểm đầu kỳ hoặc gần đầu kỳ, giá trị của hàng tồn kho cuối kỳ được tính theo giá của hàng nhập kho ở thời điểm cuối kỳ hoặc gần cuối kỳ.
+d) Phương pháp giá bán lẻ được dùng trong ngành bán lẻ (ví dụ như các đơn vị kinh doanh siêu thị hoặc tương tự), với đặc thù là hàng tồn kho có số lượng lớn, các mặt hàng thay đổi nhanh chóng và nhiều mặt hàng có lợi nhuận biên tương tự hoặc không thể sử dụng các phương pháp tính giá khác. Giá xuất hàng tồn kho được xác định bằng cách lấy giá bán của hàng tồn kho trừ (-) lợi nhuận biên theo tỷ lệ phần trăm hợp lý. Tỷ lệ phần trăm hợp lý được sử dụng có tính đến các mặt hàng đó bị hạ giá xuống thấp hơn giá bán ban đầu của nó. Thông thường mỗi bộ phận bán lẻ sẽ sử dụng một tỷ lệ phần trăm bình quân riêng. 
+đ) Phương pháp chi phí chuẩn (có thể áp dụng cho các doanh nghiệp sản xuất) được tính theo mức sử dụng bình thường của nguyên vật liệu và công cụ dụng cụ, nhân công, hiệu quả và hiệu suất sử dụng chi phí. Các yếu tố này thường xuyên được xem xét lại và nếu cần thiết, sẽ được điều chỉnh theo các điều kiện hiện tại. 
+Doanh nghiệp căn cứ vào đặc điểm, tính chất, số lượng, chủng loại của từng mặt hàng tồn kho cũng như yêu cầu quản lý của doanh nghiệp để lựa chọn phương pháp xác định giá trị xuất kho và tồn kho cuối kỳ của từng mặt hàng tồn kho cho phù hợp và phải được áp dụng nhất quán giữa các kỳ kế toán, trừ khi có sự thay đổi chính sách kế toán.
+10. Đối với hàng tồn kho mua vào bằng ngoại tệ, phần giá mua phải căn cứ vào tỷ giá giao dịch thực tế tại thời điểm mua hàng để ghi giá trị hàng tồn kho đã nhập kho (trừ trường hợp có ứng trước tiền cho người bán thì giá trị hàng tồn kho tương ứng với số ngoại tệ đã ứng trước được ghi nhận theo tỷ giá giao dịch thực tế tại thời điểm ứng trước). Các khoản thuế liên quan đến hàng tồn kho mua vào bằng ngoại tệ được xác định theo tỷ giá tính thuế của pháp luật thuế, hải quan. Kế toán mua hàng tồn kho bằng ngoại tệ được thực hiện theo hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái.
+11. Tại thời điểm kết thúc kỳ kế toán, nếu xét thấy giá trị hàng tồn kho không thu hồi đủ do bị hư hỏng, lỗi thời, giá bán bị giảm hoặc chi phí hoàn thiện, chi phí bán hàng tăng lên dẫn đến giá trị thuần có thể thực hiện được thấp hơn so với giá gốc hàng tồn kho thì doanh nghiệp phải lập dự phòng giảm giá hàng tồn kho để điều chỉnh giảm giá hàng tồn kho cho bằng giá trị thuần có thể thực hiện được. Việc lập dự phòng giảm giá hàng tồn kho được thực hiện theo hướng dẫn tại Tài khoản 229 - Dự phòng tổn thất tài sản.
+12. Kế toán hàng tồn kho phải đồng thời theo dõi chi tiết cả về giá trị và hiện vật theo từng thứ, từng loại, quy cách vật tư, hàng hóa theo từng địa điểm quản lý và sử dụng, luôn phải đảm bảo sự khớp đúng cả về giá trị và hiện vật giữa số liệu thực tế với sổ kế toán tổng hợp và sổ kế toán chi tiết.
+13. Doanh nghiệp căn cứ vào đặc điểm, tính chất, số lượng, chủng loại của từng mặt hàng tồn kho cũng như yêu cầu quản lý và điều kiện vật chất để xác định số lượng và giá trị hàng xuất kho theo từng lần phát sinh hoặc tính trên cơ sở số lượng và giá trị hàng tồn kho cuối kỳ cho phù hợp và phải được áp dụng nhất quán giữa các kỳ kế toán, trừ khi có sự thay đổi chính sách kế toán. Trong đó: 
+a) Trường hợp doanh nghiệp xác định số lượng và tính giá trị hàng xuất kho theo từng lần phát sinh: Doanh nghiệp theo dõi và phản ánh thường xuyên, liên tục, có hệ thống tình hình nhập, xuất, tồn hàng tồn kho trên sổ kế toán nên số lượng và giá trị hàng tồn kho trên sổ kế toán có thể được xác định ở bất kỳ thời điểm nào trong kỳ kế toán.
+Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp căn cứ vào số liệu kiểm kê thực tế hàng tồn kho để so sánh, đối chiếu với số liệu hàng tồn kho trên sổ kế toán. Về nguyên tắc, số lượng tồn kho thực tế phải luôn bằng số lượng tồn kho trên sổ kế toán. Nếu có chênh lệch phải truy tìm nguyên nhân và có giải pháp xử lý kịp thời. Phương pháp này thường áp dụng cho các doanh nghiệp sản xuất (công nghiệp, xây lắp...) và các doanh nghiệp thương mại kinh doanh các mặt hàng có giá trị lớn như máy móc, thiết bị, hàng có kỹ thuật, chất lượng cao...
+b) Trường hợp doanh nghiệp xác định số lượng và giá trị hàng xuất kho trên cơ sở số lượng và giá trị hàng tồn kho cuối kỳ: Căn cứ vào kết quả kiểm kê thực tế để phản ánh số lượng và giá trị hàng tồn kho cuối kỳ trên sổ kế toán và từ đó tính số lượng và giá trị của hàng tồn kho đã xuất trong kỳ theo công thức:
+Số lượng/Trị giá hàng xuất kho trong kỳ
+=
+Số lượng/Trị giá hàng tồn kho         đầu kỳ
++
+Tổng số lượng/ trị giá hàng nhập kho trong kỳ
+-
+Số lượng/Trị giá hàng tồn kho cuối kỳ
+
+- Tùy theo đặc điểm hàng tồn kho và yêu cầu quản lý của doanh nghiệp, công tác kiểm kê hàng tồn kho được tiến hành định kỳ hoặc cuối mỗi kỳ kế toán để xác định số lượng/trị giá hàng tồn kho thực tế từ đó xác định số lượng/trị giá hàng tồn kho xuất kho trong kỳ (dùng cho sản xuất, xuất bán,...).
+- Phương pháp này thường áp dụng ở các doanh nghiệp có nhiều chủng loại hàng tồn kho với quy cách, mẫu mã rất khác nhau, giá trị thấp, hàng tồn kho xuất dùng hoặc xuất bán thường xuyên (cửa hàng bán lẻ...). Phương pháp này có ưu điểm là đơn giản, giảm nhẹ khối lượng công việc hạch toán. Nhưng độ chính xác về số lượng và giá trị hàng tồn kho xuất dùng, xuất bán bị ảnh hưởng bởi chất lượng công tác quản lý tại kho, quầy, bến bãi.
+
+
+
+
+
+(Xem tiếp Công báo số 1567 + 1568)

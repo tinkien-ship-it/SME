@@ -41,6 +41,9 @@ from Services.inventory_stock_helpers import (
     sync_inventory_quantities,
 )
 from Services.return_import_checkout import process_return_import_checkout
+from Services.sme.import_journal import reverse_import_journals, sync_import_journals
+from Services.sme.return_import_journal import sync_return_import_journals
+from Services.tenant_profile import get_current_tenant_profile
 
 logger = logging.getLogger(__name__)
 
@@ -969,8 +972,29 @@ def register_inventory_routes(app):
                     WHERE invoice_no = ? AND seller_tax_code = ? AND status != 'imported'
                 """, (bill_no_clean, tax_code))
 
+            profile = get_current_tenant_profile()
+            journal_sync = sync_import_journals(
+                conn,
+                import_id,
+                accounting_regime=profile.get('accounting_regime'),
+                features=profile.get('features'),
+                created_by=session.get('user_name') or session.get('username'),
+                payment_method=payment_method,
+            )
+            if (profile.get('features') or {}).get('auto_depreciation'):
+                from Services.sme.auto_posting import auto_activate_idle_assets
+                auto_activate_idle_assets(conn)
+
             conn.commit()
-            return jsonify({"success": True, "import_id": import_id, "voucher_no": import_no, "phieu_chi_voucher": res_pc_vouch, "paid_amount": final_paid})
+            return jsonify({
+                "success": True,
+                "import_id": import_id,
+                "voucher_no": import_no,
+                "phieu_chi_voucher": res_pc_vouch,
+                "paid_amount": final_paid,
+                "journal_entry_ids": journal_sync.get('entry_ids') or [],
+                "journal_sync": journal_sync,
+            })
 
         except Exception as e:
             conn.rollback()
@@ -1165,6 +1189,16 @@ def register_inventory_routes(app):
                         (int(from_invoice_id),),
                     )
 
+            profile = get_current_tenant_profile()
+            journal_sync = sync_import_journals(
+                conn,
+                import_id,
+                accounting_regime=profile.get('accounting_regime'),
+                features=profile.get('features'),
+                created_by=session.get('user_name') or session.get('username'),
+                payment_method=payment_method,
+            )
+
             conn.commit()
             return jsonify({
                 'success': True,
@@ -1172,6 +1206,8 @@ def register_inventory_routes(app):
                 'voucher_no': import_no,
                 'phieu_chi_voucher': res_pc_vouch,
                 'paid_amount': final_paid,
+                'journal_entry_ids': journal_sync.get('entry_ids') or [],
+                'journal_sync': journal_sync,
             })
 
         except Exception as e:
@@ -1540,6 +1576,7 @@ def register_inventory_routes(app):
                 INSERT INTO return_import (import_id, product_id, quantity, cost_price, date, reason)
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (import_id, product_id, return_qty_input, cost_price_base, return_date, reason))
+            return_row_id = c.lastrowid
 
             # 9. Phiếu thu — theo giá trị mua/thuế (tiền NCC hoàn)
             voucher_thu = None
@@ -1554,6 +1591,21 @@ def register_inventory_routes(app):
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (voucher_thu, supplier_name, supplier_address, tax_code, refund_amount, '111', '156', f"Thu tiền trả hàng PN{str(import_id).zfill(6)}", f"PN{str(import_id).zfill(6)}", return_date))
 
+            profile = get_current_tenant_profile()
+            journal_sync = sync_return_import_journals(
+                conn,
+                document_id=return_row_id,
+                import_id=import_id,
+                lines=[{'product_id': product_id, 'quantity': return_qty_input}],
+                payment_method='111',
+                posting_date=return_date,
+                document_no=f"THN{return_row_id:06d}",
+                accounting_regime=profile.get('accounting_regime'),
+                features=profile.get('features'),
+                created_by=session.get('user_name') or session.get('username'),
+                reason=reason,
+            )
+
             conn.commit()
             return jsonify({
                 "success": True, 
@@ -1562,6 +1614,9 @@ def register_inventory_routes(app):
                 "refund": round(refund_amount, 2),
                 "cost_out": round(cost_out, 2),
                 "import_cost_base": round(cost_price_base, 4),
+                "return_id": return_row_id,
+                "journal_entry_ids": journal_sync.get('entry_ids') or [],
+                "journal_sync": journal_sync,
             }), 200
 
         except Exception as e:
@@ -1586,6 +1641,27 @@ def register_inventory_routes(app):
         try:
             c.execute('BEGIN IMMEDIATE')
             result = process_return_import_checkout(c, data)
+            profile = get_current_tenant_profile()
+            posting_date = (data.get('date') or datetime.now().strftime('%Y-%m-%d %H:%M:%S'))[:10]
+            journal_sync = sync_return_import_journals(
+                conn,
+                document_id=int(result['sale_id']),
+                import_id=int(data['import_id']),
+                lines=[
+                    {
+                        'product_id': int(x['product_id']),
+                        'quantity': float(x.get('quantity') or 0),
+                    }
+                    for x in (data.get('items') or [])
+                ],
+                payment_method=str(data.get('payment_method') or '111'),
+                posting_date=posting_date,
+                document_no=result.get('sale_no'),
+                accounting_regime=profile.get('accounting_regime'),
+                features=profile.get('features'),
+                created_by=session.get('user_name') or session.get('username'),
+                reason=data.get('reason') or 'Trả hàng NCC',
+            )
             conn.commit()
 
             invoice_result = None
@@ -1604,6 +1680,8 @@ def register_inventory_routes(app):
             return jsonify({
                 'success': True,
                 **result,
+                'journal_entry_ids': journal_sync.get('entry_ids') or [],
+                'journal_sync': journal_sync,
                 'invoice': invoice_result,
             })
         except ValueError as e:
@@ -2344,8 +2422,24 @@ def register_inventory_routes(app):
                 query_update = f"UPDATE import SET {', '.join(update_fields)} WHERE id=?"
                 c.execute(query_update, tuple(update_values))
 
+            profile = get_current_tenant_profile()
+            journal_sync = sync_import_journals(
+                conn,
+                import_id,
+                accounting_regime=profile.get('accounting_regime'),
+                features=profile.get('features'),
+                created_by=session.get('user_name') or session.get('username'),
+                replace_existing=True,
+                payment_method=payment_method,
+            )
+
             conn.commit()
-            return jsonify({"success": True, "message": "Cập nhật phiếu nhập và cân đối dòng tiền thành công!"})
+            return jsonify({
+                "success": True,
+                "message": "Cập nhật phiếu nhập và cân đối dòng tiền thành công!",
+                "journal_entry_ids": journal_sync.get('entry_ids') or [],
+                "journal_sync": journal_sync,
+            })
 
         except Exception as e:
             conn.rollback()
@@ -2405,6 +2499,16 @@ def register_inventory_routes(app):
                     "success": False,
                     "error": "Không thể xóa: TSCĐ/CCDC từ phiếu nhập đã đưa vào sử dụng.",
                 }), 403
+
+            profile = get_current_tenant_profile()
+            if (profile.get('features') or {}).get('journal_posting'):
+                reverse_import_journals(
+                    conn,
+                    import_id,
+                    posting_date=str(import_date or '')[:10] or None,
+                    created_by=session.get('user_name') or session.get('username'),
+                    reason=f'Hủy phiếu nhập {import_no}',
+                )
 
             # 3. Lấy chi tiết hàng hóa
             c.execute("""

@@ -173,7 +173,7 @@ def process_return_import_checkout(cursor, data):
             INSERT INTO sale
             (date, total_amount, payment_method, customer_name, company_name, tax_code,
              customer_phone, address, note, status, email, business_line, sale_no)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, 'pos', ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, 'return_import', ?)
             """,
             (
                 return_date, total_amount, payment_method, customer_name, company_name,

@@ -41,6 +41,8 @@ from Services.fb_product_codes import (
 from Services.hkd_sector import resolve_item_hkd_sector
 from Services.sale_helpers import insert_sale_item_with_sector
 from Services.inventory_stock_helpers import sync_inventory_quantity_from_moves
+from Services.sme.sale_journal import sync_sale_journals
+from Services.tenant_profile import get_current_tenant_profile
 from db_utils import get_db_connection
 
 
@@ -337,6 +339,13 @@ def _fb_finalize_checkout(cursor, sale_id, table_id, customer_name, payment_meth
     cursor.execute(
         "UPDATE tables SET current_sale_id = NULL, status = 'Available' WHERE id = ?", (table_id,))
 
+    sync_sale_journals(
+        cursor.connection,
+        sale_id,
+        accounting_regime=get_current_tenant_profile().get('accounting_regime'),
+        features=get_current_tenant_profile().get('features'),
+        created_by=session.get('user_name'),
+    )
     return final_total, sale_no
 
 

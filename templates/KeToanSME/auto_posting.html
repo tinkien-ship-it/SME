@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}Tự động hóa kế toán SME{% endblock %}
+
+{% block extra_style %}
+<style>
+    .auto-wrap { max-width: 860px; margin: 0 auto; }
+    .auto-mono { font-family: ui-monospace, Consolas, monospace; }
+    .auto-ok { color: #0f5132; }
+    .auto-muted { color: #64748b; font-size: .85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auto-wrap">
+    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1"><i class="fas fa-robot text-primary me-2"></i>Tự động hóa kỳ kế toán</h4>
+            <p class="text-muted small mb-0">
+                Một lần chạy kỳ: KH TSCĐ → PB CCDC → kết chuyển DT/CP → 911 → 4212 → quyết toán GTGT (133↔33311) → khóa sổ.
+                Tài sản <code>InStock</code> được kích hoạt tự động. Lịch hệ thống: ngày 1 hàng tháng.
+                {% set feat = tenant_profile.features or {} %}
+                {% set filing = tenant_profile.vat_filing_period or feat.vat_filing_period or feat.filing_period or ('monthly' if feat.monthly_vat_filing else 'quarterly') %}
+                <br><span class="text-primary">Kê khai GTGT đang cấu hình theo <strong>{{ 'tháng' if filing == 'monthly' else 'quý' }}</strong>
+                — đổi tại <a href="{{ url_for('SME_tax_nsnn') }}">Thuế &amp; NSNN</a>. Quyết toán sổ kép vẫn theo tháng.</span>
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('SME_journal') }}" class="btn btn-outline-primary btn-sm">Nhật ký</a>
+            <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">Năm</label>
+                    <input type="number" id="autoYear" class="form-control form-control-sm" min="2000" max="2100">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">Tháng</label>
+                    <select id="autoPeriod" class="form-select form-select-sm"></select>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="autoReplace">
+                        <label class="form-check-label small" for="autoReplace">Ghi đè (mở khóa nếu cần)</label>
+                    </div>
+                </div>
+                <div class="col-md-3 text-md-end">
+                    <button type="button" class="btn btn-primary btn-sm" id="btnRun">
+                        <i class="fas fa-play me-1"></i> Chạy kỳ này
+                    </button>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnVatOnly">Chỉ QT GTGT</button>
+                <button type="button" class="btn btn-outline-warning btn-sm" id="btnUnlock">Mở khóa kỳ</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="btnLock">Khóa sổ thủ công</button>
+            </div>
+            <div class="auto-muted mt-2">Lịch hệ thống cũng chạy tự động ngày 1 hàng tháng (kỳ tháng trước) cho mọi tenant SME.</div>
+            <div id="lockStatus" class="small mt-2 text-muted">Đang kiểm tra khóa sổ…</div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body" id="autoResult">
+            <div class="text-muted">Chưa chạy.</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const now = new Date();
+    const yEl = document.getElementById('autoYear');
+    const pEl = document.getElementById('autoPeriod');
+    yEl.value = now.getFullYear();
+    for (let m = 1; m <= 12; m++) pEl.add(new Option('Tháng ' + m, m));
+    pEl.value = String(now.getMonth() + 1);
+
+    function money(v) {
+        return Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+    }
+
+    function periodPayload(extra) {
+        return Object.assign({
+            year: Number(yEl.value),
+            period: Number(pEl.value),
+            replace_existing: document.getElementById('autoReplace').checked,
+        }, extra || {});
+    }
+
+    async function refreshLockStatus() {
+        const box = document.getElementById('lockStatus');
+        try {
+            const res = await fetch('/api/sme/period-lock?year=' + encodeURIComponent(yEl.value));
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Lỗi');
+            const period = Number(pEl.value);
+            const hit = (data.data || []).find(x => Number(x.period) === period);
+            if (hit) {
+                box.innerHTML = `<span class="text-danger">Kỳ ${period}/${yEl.value} đã khóa</span>`
+                    + ` · ${hit.locked_at || ''}`
+                    + (hit.reason ? ` · ${hit.reason}` : '');
+            } else {
+                box.innerHTML = `<span class="auto-ok">Kỳ ${period}/${yEl.value} đang mở</span>`;
+            }
+        } catch (e) {
+            box.textContent = e.message;
+        }
+    }
+
+    function renderResult(d) {
+        const dep = d.depreciation || {};
+        const tools = d.tools || {};
+        const close = d.period_close || {};
+        const vat = d.vat_settlement || {};
+        const act = d.activated || {};
+        const lock = d.period_lock || null;
+        let html = `<div class="mb-2"><strong>Kỳ ${d.period}/${d.fiscal_year}</strong> · ngày ghi ${d.posting_date || '—'}</div>`;
+        if (d.reason === 'period_locked') {
+            html += `<div class="text-warning mb-2">Kỳ đã khóa — bật “Ghi đè” để mở khóa và chạy lại.</div>`;
+        }
+        if (act.fixed_assets_activated != null) {
+            html += `<div class="auto-muted mb-3">Kích hoạt: TSCĐ ${act.fixed_assets_activated || 0} · CCDC ${act.tools_activated || 0}</div>`;
+        }
+        if (d.depreciation) {
+            html += `<div class="mb-2">Khấu hao: <span class="auto-ok">${money(dep.amount)} đ</span> · ${dep.assets || 0} tài sản`;
+            if (dep.entry_id) html += ` · BT#${dep.entry_id}`;
+            if (dep.reason) html += ` · <span class="text-warning">${dep.reason}</span>`;
+            html += `</div>`;
+        }
+        if (d.tools) {
+            html += `<div class="mb-2">Phân bổ CCDC: <span class="auto-ok">${money(tools.amount)} đ</span> · ${tools.assets || 0} món`;
+            if (tools.entry_id) html += ` · BT#${tools.entry_id}`;
+            if (tools.reason) html += ` · <span class="text-warning">${tools.reason}</span>`;
+            html += `</div>`;
+        }
+        if (d.period_close) {
+            html += `<div class="mb-2">Kết chuyển KQKD: DT ${money(close.revenue_total)} − CP ${money(close.expense_total)} → `;
+            const profit = Number(close.profit || 0);
+            html += profit >= 0
+                ? `<span class="auto-ok">Lãi ${money(profit)}</span>`
+                : `<span class="text-danger">Lỗ ${money(-profit)}</span>`;
+            if (close.entry_id) html += ` · BT#${close.entry_id}`;
+            if (close.reason) html += ` · <span class="text-warning">${close.reason}</span>`;
+            html += `</div>`;
+        }
+        if (d.vat_settlement || vat.reason || vat.offset_amount != null) {
+            html += `<div class="mb-2">QT GTGT: đầu vào ${money(vat.input_total)} · đầu ra ${money(vat.output_total)} · bù trừ ${money(vat.offset_amount)}`;
+            html += ` · phải nộp <strong>${money(vat.vat_payable)}</strong> · còn khấu trừ ${money(vat.vat_credit_carry)}`;
+            if (vat.entry_id) html += ` · BT#${vat.entry_id}`;
+            if (vat.reason) html += ` · <span class="text-warning">${vat.reason}</span>`;
+            html += `</div>`;
+        }
+        if (lock) {
+            html += `<div class="mb-2 text-danger">Đã khóa sổ · ${lock.locked_at || ''} · ${lock.reason || ''}</div>`;
+        }
+        if (d.reason && d.reason !== 'period_locked') html += `<div class="text-muted">${d.reason}</div>`;
+        if ((dep.details || []).length) {
+            html += `<div class="mt-3 small fw-semibold">Chi tiết TSCĐ</div><ul class="small">`;
+            dep.details.forEach(x => {
+                html += `<li class="auto-mono">${x.code || x.id}: ${money(x.amount)}</li>`;
+            });
+            html += `</ul>`;
+        }
+        if ((tools.details || []).length) {
+            html += `<div class="mt-2 small fw-semibold">Chi tiết CCDC</div><ul class="small">`;
+            tools.details.forEach(x => {
+                html += `<li class="auto-mono">${x.code || x.id}: ${money(x.amount)}</li>`;
+            });
+            html += `</ul>`;
+        }
+        return html;
+    }
+
+    document.getElementById('btnRun').addEventListener('click', async () => {
+        const box = document.getElementById('autoResult');
+        box.innerHTML = '<div class="text-muted">Đang chạy…</div>';
+        try {
+            const res = await fetch('/api/sme/auto/run-period', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Object.assign(periodPayload(), { auto_activate: true })),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Lỗi');
+            box.innerHTML = renderResult(data.data || {});
+            refreshLockStatus();
+        } catch (e) {
+            box.innerHTML = `<div class="text-danger">${e.message}</div>`;
+        }
+    });
+
+    document.getElementById('btnVatOnly').addEventListener('click', async () => {
+        const box = document.getElementById('autoResult');
+        box.innerHTML = '<div class="text-muted">Đang quyết toán GTGT…</div>';
+        try {
+            const res = await fetch('/api/sme/auto/vat-settle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(periodPayload()),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Lỗi');
+            const vat = data.data || {};
+            box.innerHTML = renderResult({
+                fiscal_year: Number(yEl.value),
+                period: Number(pEl.value),
+                posting_date: vat.posting_date,
+                vat_settlement: vat,
+            });
+            refreshLockStatus();
+        } catch (e) {
+            box.innerHTML = `<div class="text-danger">${e.message}</div>`;
+        }
+    });
+
+    async function setLock(action) {
+        const box = document.getElementById('autoResult');
+        try {
+            const res = await fetch('/api/sme/period-lock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    year: Number(yEl.value),
+                    period: Number(pEl.value),
+                    action,
+                    reason: action === 'lock' ? 'Khóa sổ thủ công' : undefined,
+                }),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Lỗi');
+            box.innerHTML = action === 'unlock'
+                ? `<div class="auto-ok">Đã mở khóa kỳ ${pEl.value}/${yEl.value}</div>`
+                : `<div class="text-danger">Đã khóa kỳ ${pEl.value}/${yEl.value}</div>`;
+            refreshLockStatus();
+        } catch (e) {
+            box.innerHTML = `<div class="text-danger">${e.message}</div>`;
+        }
+    }
+
+    document.getElementById('btnUnlock').addEventListener('click', () => setLock('unlock'));
+    document.getElementById('btnLock').addEventListener('click', () => setLock('lock'));
+    yEl.addEventListener('change', refreshLockStatus);
+    pEl.addEventListener('change', refreshLockStatus);
+    refreshLockStatus();
+})();
+</script>
+{% endblock %}

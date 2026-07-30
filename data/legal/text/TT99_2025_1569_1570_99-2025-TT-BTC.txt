@@ -1,0 +1,1622 @@
+VĂN BẢN QUY PHẠM PHÁP LUẬT
+
+BỘ TÀI CHÍNH
+
+Thông tư số 99/2025/TT-BTC ngày 27 tháng 10 năm 2025
+hướng dẫn Chế độ kế toán doanh nghiệp
+
+(Tiếp theo Công báo số 1567 + 1568)
+
+NGUYÊN TẮC KẾ TOÁN
+CÁC KHOẢN ĐẦU TƯ VÀO ĐƠN VỊ KHÁC
+
+1. Các khoản đầu tư vào đơn vị khác gồm các khoản đầu tư vào công ty con, công ty liên doanh, công ty liên kết và các khoản đầu tư góp vốn khác với mục đích nắm giữ lâu dài. Việc đầu tư có thể thực hiện dưới các hình thức:
+a) Đầu tư dưới hình thức góp vốn vào đơn vị khác (do bên được đầu tư huy động vốn): Theo hình thức này, tài sản của bên góp vốn được ghi nhận vào Báo cáo tình hình tài chính của bên nhận vốn góp;
+b) Đầu tư dưới hình thức mua lại phần vốn góp tại đơn vị khác (mua lại phần vốn của chủ sở hữu khác): Theo hình thức này, tài sản của bên mua (bên đầu tư, bên nhận chuyển nhượng vốn góp) được chuyển cho bên bán (bên chuyển nhượng vốn góp) mà không được ghi nhận vào Báo cáo tình hình tài chính của bên được đầu tư. 
+2. Khi thực hiện đầu tư bằng tài sản phi tiền tệ, nhà đầu tư phải căn cứ vào hình thức đầu tư để áp dụng phương pháp kế toán một cách phù hợp, cụ thể:
+a) Nếu đầu tư dưới hình thức góp vốn bằng tài sản phi tiền tệ, giá trị tài sản phi tiền tệ mang đi góp vốn phải được xác định một cách đáng tin cậy và phù hợp với thị trường, việc xác định giá trị vốn góp bằng tài sản phi tiền tệ được thực hiện theo quy định của pháp luật về doanh nghiệp và pháp luật có liên quan. Phần chênh lệch (nếu có) giữa giá trị đánh giá lại với giá trị ghi sổ hoặc giá trị còn lại của tài sản phi tiền tệ mang đi góp vốn được hạch toán vào thu nhập khác hoặc chi phí khác của bên đem tài sản đi góp vốn;
+b) Nếu đầu tư dưới hình thức mua lại phần vốn góp của đơn vị khác và thanh toán cho bên chuyển nhượng vốn bằng tài sản phi tiền tệ:
+- Nếu tài sản phi tiền tệ dùng để thanh toán là hàng tồn kho, nhà đầu tư phải kế toán như giao dịch bán hàng tồn kho dưới hình thức hàng đổi hàng (ghi nhận doanh thu, giá vốn của hàng tồn kho mang đi trao đổi lấy phần vốn được mua);
+- Nếu tài sản phi tiền tệ dùng để thanh toán là TSCĐ, BĐSĐT, nhà đầu tư phải kế toán như giao dịch thanh lý, nhượng bán TSCĐ, BĐSĐT (ghi nhận doanh thu, thu nhập khác, chi phí khác...);
+	- Nếu tài sản dùng để thanh toán là các công cụ vốn (cổ phiếu) hoặc công cụ nợ (trái phiếu, các khoản phải thu...), nhà đầu tư phải kế toán như giao dịch thanh lý nhượng bán các khoản đầu tư tài chính (ghi nhận lãi, lỗ vào doanh thu hoạt động tài chính hoặc chi phí tài chính).
+Giá phí các khoản đầu tư được phản ánh theo giá gốc, bao gồm giá mua cộng (+) các chi phí liên quan trực tiếp đến việc đầu tư (nếu có), như: Chi phí giao dịch, môi giới, tư vấn, kiểm toán, lệ phí, thuế và phí ngân hàng... Riêng trường hợp doanh nghiệp vay vốn để đầu tư vào đơn vị khác thì chi phí lãi vay được ghi nhận vào chi phí tài chính mà không được vốn hóa. Trường hợp đầu tư bằng tài sản phi tiền tệ, giá phí khoản đầu tư được ghi nhận theo giá trị hợp lý của tài sản phi tiền tệ tại thời điểm phát sinh.
+4. Doanh nghiệp phải mở sổ chi tiết theo dõi khoản đầu tư vào từng công ty con, công ty liên doanh, liên kết và từng khoản đầu tư vào đơn vị khác. Thời điểm ghi nhận các khoản đầu tư vào đơn vị khác là thời điểm doanh nghiệp chính thức có quyền sở hữu, cụ thể như sau:
+- Chứng khoán niêm yết được ghi nhận tại thời điểm khớp lệnh (T+0);
+- Chứng khoán chưa niêm yết, các khoản đầu tư dưới hình thức khác được ghi nhận tại thời điểm chính thức có quyền sở hữu theo quy định của pháp luật.
+5. Doanh nghiệp phải hạch toán đầy đủ, kịp thời các khoản cổ tức, lợi nhuận được chia vào Báo cáo tài chính riêng của nhà đầu tư tại thời điểm được quyền nhận cổ tức, lợi nhuận. Đối với đơn vị đã đăng ký, lưu ký tập trung tại Tổng công ty lưu ký và bù trừ chứng khoán Việt Nam thì thời điểm nhà đầu tư được quyền nhận cổ tức là ngày đăng ký cuối cùng. Đối với các đơn vị còn lại thì thời điểm nhà đầu tư được quyền nhận cổ tức, lợi nhuận được xác định theo quy định của Luật doanh nghiệp, Điều lệ của doanh nghiệp và pháp luật có liên quan. Cổ tức, lợi nhuận được chia trong một số trường hợp được hạch toán như sau:
+5.1. Đối với bên nhận đầu tư:
+a) Bên nhận đầu tư phải ghi nhận khoản phải trả về cổ tức, lợi nhuận tại thời điểm không có quyền từ chối chi trả cổ tức, lợi nhuận. Trong đó:
+- Đối với doanh nghiệp thuộc đối tượng điều chỉnh của pháp luật về chứng khoán thì thời điểm bên nhận đầu tư không có quyền từ chối chi trả cổ tức được căn cứ theo quy định của pháp luật về chứng khoán.
+- Đối với các doanh nghiệp còn lại thì thời điểm bên nhận đầu tư không có quyền từ chối chi trả cổ tức được căn cứ theo quy định của Luật doanh nghiệp, Điều lệ của doanh nghiệp.
+b) Về nguyên tắc hạch toán các khoản cổ tức, lợi nhuận phải trả:
+- Trường hợp cổ tức, lợi nhuận được chia bằng tiền hoặc bằng tài sản phi tiền tệ thì bên nhận đầu tư ghi giảm lợi nhuận sau thuế chưa phân phối và ghi tăng khoản phải trả về cổ tức, lợi nhuận.
+- Trường hợp đơn vị nhận đầu tư phát hành cổ phiếu để trả cổ tức hoặc phân phối lợi nhuận cho các chủ sở hữu hoặc các trường hợp sử dụng vốn khác của chủ sở hữu, các quỹ thuộc vốn chủ sở hữu và các nguồn khác thuộc vốn chủ sở hữu để để tăng thêm hoặc bổ sung vốn điều lệ thì doanh nghiệp ghi giảm lợi nhuận sau thuế chưa phân phối, các nguồn thuộc vốn chủ sở hữu và ghi tăng vốn khác khi phát hành cổ phiếu, phân phối lợi nhuận. Khi được cấp Giấy chứng nhận đăng ký doanh nghiệp, doanh nghiệp ghi giảm vốn khác và ghi tăng vốn góp của chủ sở hữu.
+Doanh nghiệp phải trình bày trên thuyết minh Báo cáo tài chính đối với trường hợp tại thời điểm kết thúc kỳ kế toán doanh nghiệp đang thực hiện hoặc đã kết thúc các giao dịch tăng thêm hoặc bổ sung vốn điều lệ nhưng chưa nhận được Giấy chứng nhận đăng ký doanh nghiệp để ghi tăng vốn góp của chủ sở hữu trong báo cáo tài chính.
+5.2. Đối với bên đi đầu tư:
+a) Trường hợp cổ tức, lợi nhuận được chia bằng tiền: 
+- Thời điểm bên đi đầu tư ghi nhận khoản phải thu về cổ tức được chia bằng tiền là ngày đăng ký cuối cùng (đối với đơn vị nhận đầu tư là đơn vị đã đăng ký, lưu ký tập trung tại Tổng công ty lưu ký và bù trừ chứng khoán Việt Nam) hoặc ghi nhận khoản phải thu về cổ tức, lợi nhuận tại ngày được quyền nhận cổ tức, lợi nhuận (đối với đơn vị nhận đầu tư là các đơn vị còn lại). Trong đó:
++ Cổ tức, lợi nhuận được chia bằng tiền cho giai đoạn sau ngày đầu tư được hạch toán vào doanh thu hoạt động tài chính;
++ Cổ tức, lợi nhuận được chia bằng tiền cho giai đoạn trước ngày đầu tư không được hạch toán vào doanh thu hoạt động tài chính mà hạch toán giảm giá trị khoản đầu tư.
+b) Trường hợp đơn vị nhận đầu tư trả cổ tức bằng cổ phiếu hoặc phân phối lợi nhuận cho các chủ sở hữu dưới hình thức sử dụng vốn khác của chủ sở hữu, các quỹ thuộc vốn chủ sở hữu, lợi nhuận sau thuế chưa phân phối để tăng thêm hoặc bổ sung vốn điều lệ thì nhà đầu tư chỉ theo dõi số lượng cổ phiếu tăng thêm hoặc giá trị vốn điều lệ tăng thêm của doanh nghiệp tại đơn vị nhận đầu tư trên thuyết minh Báo cáo tài chính, không ghi nhận tăng giá trị khoản đầu tư vào doanh thu hoạt động tài chính.
+c) Đối với nhà đầu tư là doanh nghiệp nhà nước, việc kế toán các khoản cổ tức, lợi nhuận được chia khi đơn vị nhận đầu tư trả cổ tức bằng cổ phiếu hoặc phân phối lợi nhuận cho các chủ sở hữu dưới hình thức sử dụng vốn khác của chủ sở hữu, các quỹ thuộc vốn chủ sở hữu, lợi nhuận sau thuế chưa phân phối để tăng thêm hoặc bổ sung vốn điều lệ của doanh nghiệp tại đơn vị nhận đầu tư nếu có quy định khác với nguyên tắc quy định tại điểm b khoản 5.2 tài khoản này thì được thực hiện theo quy định của pháp luật đối với doanh nghiệp nhà nước.
+6. Giá vốn các khoản đầu tư tài chính khi thanh lý, nhượng bán được xác định theo phương pháp bình quân gia quyền. Khi thanh lý, nhượng bán, thu hồi vốn góp vào công ty con, công ty liên doanh, liên kết, căn cứ vào giá trị tài sản thu hồi được, doanh nghiệp ghi giảm giá trị ghi sổ của khoản đầu tư. Phần chênh lệch giữa giá trị hợp lý của tài sản thu hồi được so với giá trị ghi sổ của khoản đầu tư được ghi nhận là doanh thu hoạt động tài chính (nếu lãi) hoặc chi phí tài chính (nếu lỗ).
+7. Doanh nghiệp không được phân loại lại khoản đầu tư vào công ty con, công ty liên doanh, liên kết thành chứng khoán kinh doanh trừ khi đã thực sự thanh lý, nhượng bán khoản đầu tư, dẫn đến mất quyền kiểm soát đối với công ty con, mất quyền đồng kiểm soát đối với công ty liên doanh và không còn ảnh hưởng đáng kể đối với công ty liên kết.
+8. Trường hợp quyền kiểm soát, đồng kiểm soát, ảnh hưởng đáng kể là tạm thời thì phải được xác định tại thời điểm ghi nhận ban đầu khoản đầu tư. Trong trường hợp này, doanh nghiệp ghi nhận khoản đầu tư là đầu tư góp vốn vào đơn vị khác hoặc chứng khoán kinh doanh, không ghi nhận khoản đầu tư vào công ty con, công ty liên doanh, liên kết. 
+9. Khi lập Báo cáo tài chính, doanh nghiệp phải xác định giá trị tổn thất của khoản đầu tư vào đơn vị khác theo hướng dẫn tại Tài khoản 229 - Dự phòng tổn thất tài sản để trích lập dự phòng tổn thất đầu tư. 
+TÀI KHOẢN 221 - ĐẦU TƯ VÀO CÔNG TY CON
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm khoản đầu tư vốn trực tiếp vào công ty con. Công ty con là đơn vị có tư cách pháp nhân, hạch toán độc lập, chịu sự kiểm soát của một đơn vị khác (gọi là công ty mẹ). 
+b) Cho mục đích ghi sổ kế toán và lập Báo cáo tài chính, chỉ hạch toán vào Tài khoản 221 - Đầu tư vào công ty con khi nhà đầu tư nắm giữ trên 50% quyền biểu quyết (ngoại trừ trường hợp tại điểm c dưới đây) và có quyền chi phối các chính sách tài chính và hoạt động của đơn vị khác nhằm thu được lợi ích kinh tế từ các hoạt động của doanh nghiệp đó. Khi công ty mẹ không còn quyền kiểm soát công ty con thì ghi giảm khoản đầu tư vào công ty con. Trường hợp nhà đầu tư tạm thời nắm giữ trên 50% quyền biểu quyết tại đơn vị nhưng không dự định thực thi quyền biểu quyết do mục đích đầu tư là mua - bán công cụ vốn để kiếm lời (nắm giữ khoản đầu tư vì mục đích thương mại và quyền kiểm soát chỉ là tạm thời) thì không hạch toán khoản đầu tư vào tài khoản này mà hạch toán là chứng khoán kinh doanh.
+c) Cho mục đích ghi sổ kế toán và lập Báo cáo tài chính, khi nhà đầu tư nắm giữ ít hơn 50% quyền biểu quyết tại đơn vị nhận đầu tư, nhưng có thỏa thuận khác sau đây thì khoản đầu tư vẫn được hạch toán vào Tài khoản 221 - Đầu tư vào công ty con:
+- Các nhà đầu tư khác thỏa thuận dành cho nhà đầu tư hơn 50% quyền biểu quyết;
+- Nhà đầu tư có quyền chi phối các chính sách tài chính và hoạt động theo quy chế thỏa thuận;
+- Nhà đầu tư có quyền bổ nhiệm hoặc bãi miễn đa số các thành viên Hội đồng quản trị hoặc cấp quản lý tương đương;
+- Nhà đầu tư có quyền bỏ đa số phiếu tại các cuộc họp của Hội đồng quản trị hoặc cấp quản lý tương đương.
+d) Trường hợp mua khoản đầu tư vào công ty con trong giao dịch hợp nhất kinh doanh, bên mua phải xác định ngày mua, giá phí khoản đầu tư và thực hiện các thủ tục ghi sổ kế toán theo đúng quy định của Chuẩn mực kế toán Việt Nam số 11 - Hợp nhất kinh doanh.
+đ) Việc kế toán khoản đầu tư vào công ty con phải tuân thủ các nguyên tắc kế toán các khoản đầu tư vào đơn vị khác quy định tại Thông tư này. 
+e) Khi thanh lý, nhượng bán, thu hồi khoản đầu tư vào công ty con, căn cứ vào tỷ lệ khoản đầu tư vào công ty con được thanh lý, nhượng bán hoặc thu hồi để doanh nghiệp ghi giảm khoản đầu tư vào công ty con. Phần chênh lệch giữa giá trị hợp lý của tài sản thu được so với phần giá trị ghi sổ khoản đầu tư vào công ty con thanh lý, nhượng bán, thu hồi thì được ghi nhận là doanh thu hoạt động tài chính (nếu lãi) hoặc chi phí tài chính (nếu lỗ).
+g) Việc doanh nghiệp có ý định thanh lý công ty con trong tương lai không được coi là công ty mẹ có quyền kiểm soát tạm thời đối với công ty con. 
+h) Nhà đầu tư có thể không có quyền chi phối hoặc kiểm soát đối với bên được đầu tư, ngay cả khi nhà đầu tư nắm giữ phần lớn quyền biểu quyết đối với bên được đầu tư đó nếu các quyền biểu quyết đó không có ý nghĩa thực chất. Ví dụ, một nhà đầu tư nắm giữ hơn một nửa quyền biểu quyết tại một bên được đầu tư có thể không còn quyền chi phối hoặc kiểm soát đối với bên được đầu tư đó nếu các hoạt động liên quan của bên được đầu tư đó chịu sự điều hành, giám sát của Chính phủ, tòa án, cơ quan quản lý, quản tài viên hoặc các bên khác (ví dụ sau khi cơ quan có thẩm quyền có quyết định mở thủ tục phá sản đối với bên được đầu tư đó,...). Trong các trường hợp này, doanh nghiệp phải căn cứ vào tình hình thực tế để xem xét, đánh giá về việc nhà đầu tư thực chất có còn quyền chi phối hoặc kiểm soát đối với bên được đầu tư nữa hay không. 
+2. Kết cấu và nội dung phản ánh của Tài khoản 221 - Đầu tư vào công ty con
+Bên Nợ: 
+Giá trị thực tế các khoản đầu tư vào công ty con tăng.
+Bên Có: 
+Giá trị thực tế các khoản đầu tư vào công ty con giảm.
+Số dư bên Nợ: 
+Giá trị thực tế các khoản đầu tư vào công ty con hiện còn nắm giữ tại thời điểm kết thúc kỳ kế toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Trường hợp công ty mẹ đầu tư vào công ty con dưới hình thức góp vốn
+a) Khi công ty mẹ đầu tư vào công ty con bằng tiền, căn cứ số tiền đầu tư và các chi phí liên quan trực tiếp đến việc đầu tư vào công ty con, ghi:
+Nợ TK 221 - Đầu tư vào công ty con
+Có TK 112 - Tiền gửi không kỳ hạn.
+Đồng thời mở sổ chi tiết để theo dõi từng loại cổ phiếu theo mệnh giá (nếu đầu tư vào công ty con dưới hình thức mua cổ phiếu) hoặc theo dõi giá trị vốn điều lệ tại công ty con (nếu công ty con không phải là công ty cổ phần).
+b) Trường hợp công ty mẹ góp vốn vào công ty con bằng tài sản phi tiền tệ:
+- Trường hợp giá trị ghi sổ hoặc giá trị còn lại của tài sản đem đi góp vốn nhỏ hơn giá trị do các bên đánh giá lại, doanh nghiệp phản ánh phần chênh lệch tăng do đánh giá lại tài sản vào thu nhập khác, ghi:
+Nợ TK 221 - Đầu tư vào công ty con (giá trị vốn góp được đánh giá)
+Nợ TK 214 - Hao mòn TSCĐ
+Có các TK 211, 213, 217 (nếu góp vốn bằng TSCĐ hoặc BĐSĐT) (nguyên giá TSCĐ, BĐSĐT)
+Có các TK 152, 153, 155, 156 (nếu góp vốn bằng hàng tồn kho) (giá trị ghi sổ hàng tồn kho)
+		Có TK 711 - Thu nhập khác (phần chênh lệch đánh giá tăng).
+- Trường hợp giá trị ghi sổ hoặc giá trị còn lại của tài sản đem đi góp vốn lớn hơn giá trị do các bên đánh giá lại, doanh nghiệp phản ánh phần chênh lệch giảm do đánh giá lại tài sản vào chi phí khác, ghi:
+Nợ TK 221 - Đầu tư vào công ty con (giá trị vốn góp được đánh giá)
+Nợ TK 214 - Hao mòn TSCĐ
+Nợ TK 811 - Chi phí khác (phần chênh lệch đánh giá giảm)
+Có các TK 211, 213, 217 (nếu góp vốn bằng TSCĐ hoặc BĐSĐT) (nguyên giá TSCĐ, BĐSĐT)
+Có các TK 152, 153, 155, 156 (nếu góp vốn bằng hàng tồn kho) (giá trị ghi sổ hàng tồn kho).
+3.2. Trường hợp công ty mẹ đầu tư vào công ty con dưới hình thức mua lại phần vốn góp: 
+Tại ngày mua, nhà đầu tư xác định và phản ánh giá phí khoản đầu tư vào công ty con bao gồm: Giá trị hợp lý tại ngày diễn ra trao đổi của các tài sản đem trao đổi, các khoản nợ phải trả đã phát sinh hoặc đã thừa nhận và các công cụ vốn do bên mua phát hành để đổi lấy quyền kiểm soát tại công ty con cộng (+) Các chi phí liên quan trực tiếp đến việc mua lại phần vốn góp tại công ty con. 
+a) Nếu việc mua lại khoản đầu tư vào công ty con được bên mua thanh toán bằng tiền hoặc các khoản tương đương tiền, ghi:
+	Nợ TK 221 - Đầu tư vào công ty con
+		Có các TK 111, 112, 1281...
+b) Nếu việc mua lại khoản đầu tư vào công ty con được thực hiện bằng việc bên mua phát hành cổ phiếu:
+- Nếu giá phát hành (theo giá trị hợp lý) của cổ phiếu tại ngày diễn ra hoán đổi lớn hơn mệnh giá cổ phiếu, ghi:
+	Nợ TK 221 - Đầu tư vào công ty con (theo giá trị hợp lý)
+		Có TK 4111 - Vốn góp của chủ sở hữu (theo mệnh giá)
+		Có TK 4112 - Thặng dư vốn (số chênh lệch giữa giá trị hợp lý lớn hơn mệnh giá cổ phiếu).
+- Nếu giá phát hành (theo giá trị hợp lý) của cổ phiếu tại ngày diễn ra hoán đổi nhỏ hơn mệnh giá cổ phiếu, ghi:
+Nợ TK 221 - Đầu tư vào công ty con (theo giá trị hợp lý)
+Nợ TK 4112 - Thặng dư vốn (số chênh lệch giữa giá trị hợp lý nhỏ hơn mệnh giá cổ phiếu)
+		Có TK 4111 - Vốn góp của chủ sở hữu (theo mệnh giá).
+c) Nếu việc mua lại khoản đầu tư vào công ty con được thanh toán bằng việc bên mua trao đổi các tài sản phi tiền tệ của đơn vị mình với bên bán:
+- Trường hợp trao đổi bằng TSCĐ:
++ Khi đưa TSCĐ đem trao đổi, phản ánh giảm TSCĐ:
+Nợ TK 811 - Chi phí khác (giá trị còn lại của TSCĐ đưa đi trao đổi)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+	 	Có TK 211 - TSCĐ hữu hình (nguyên giá).
++ Đồng thời ghi tăng thu nhập khác và tăng khoản đầu tư vào công ty con do trao đổi TSCĐ:
+Nợ TK 221 - Đầu tư vào công ty con (tổng giá thanh toán)
+		Có TK 711 - Thu nhập khác (giá trị hợp lý của TSCĐ đưa đi trao 				đổi)
+	 	Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+- Trường hợp trao đổi bằng sản phẩm, hàng hóa:
++ Khi xuất kho sản phẩm, hàng hóa đưa đi trao đổi, phản ánh giá vốn hàng bán, ghi:
+ Nợ TK 632 - Giá vốn hàng bán
+		 Có các TK 155, 156,...
++ Đồng thời phản ánh doanh thu bán hàng và ghi tăng khoản đầu tư vào công ty con:
+Nợ TK 221 - Đầu tư vào công ty con
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá trị hợp 				lý của hàng tồn
+kho đem đi trao đổi)
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước (33311) (nếu 				có).
+d) Nếu việc mua lại khoản đầu tư vào công ty con được bên mua thanh toán bằng việc phát hành trái phiếu:
+Nợ TK 221 - Đầu tư vào công ty con (theo giá trị hợp lý)
+		Có TK 343 - Trái phiếu phát hành (3431, 3432).
+3.3. Các chi phí phát sinh liên quan trực tiếp đến việc mua lại khoản đầu tư vào công ty con như chi phí tư vấn pháp lý, thẩm định giá..., doanh nghiệp mua ghi:
+Nợ TK 221 - Đầu tư vào công ty con
+		Có các TK 111, 112, 331,...
+3.4. Các khoản chi phí khác phát sinh liên quan đến hoạt động góp vốn vào công ty con như lãi tiền vay để góp vốn, các chi phí khác, ghi: 
+Nợ TK 635 - Chi phí tài chính
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 152,...
+3.5. Công ty mẹ ghi nhận cổ tức, lợi nhuận được chia bằng tiền:
+- Phản ánh khoản phải thu về cổ tức, lợi nhuận được chia, ghi:
+Nợ TK 138 - Phải thu khác (1388)
+Có TK 515 - Doanh thu hoạt động tài chính (trường hợp cổ tức, lợi nhuận được chia phân bổ cho giai đoạn sau ngày đầu tư)
+Có TK 221 - Đầu tư vào công ty con (trường hợp cổ tức, lợi nhuận được chia phân bổ cho giai đoạn trước ngày đầu tư)
+- Khi nhận được cổ tức, lợi nhuận được chia bằng tiền, ghi:
+Nợ các TK 111, 112
+Có TK 138 - Phải thu khác (1388).
+3.6. Trường hợp doanh nghiệp đầu tư thêm để các khoản đầu tư vào công ty liên doanh, liên kết, đầu tư khác trở thành khoản đầu tư vào công ty con, ghi:
+Nợ TK 221 - Đầu tư vào công ty con
+Có các TK 222, 228
+Có các TK 111, 112,... (giá trị hợp lý của khoản đầu tư bổ sung).
+3.7. Khi thanh lý một phần hoặc toàn bộ khoản đầu tư vào công ty con:
+Nợ các TK liên quan (giá trị hợp lý của số thu được từ việc thanh lý)
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết (công ty con trở thành công ty liên doanh, liên kết)
+Nợ TK 228 - Đầu tư khác (công ty con trở thành khoản đầu tư khác)
+Nợ TK 229 - Dự phòng tổn thất tài sản (khoản dự phòng đã trích lập để bù đắp số tổn thất) (nếu có)
+Nợ TK 635 - Chi phí tài chính (Nếu lỗ)
+Có TK 221 - Đầu tư vào công ty con (giá trị ghi sổ)
+Có TK 515 - Doanh thu hoạt động tài chính (nếu lãi).
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản đầu tư vào công ty con có thể được ghi nhận ngay cho từng giao dịch tại thời điểm thanh lý hoặc khi xác định số trích lập dự phòng vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+TÀI KHOẢN 222 - ĐẦU TƯ VÀO                                                                      CÔNG TY LIÊN DOANH, LIÊN KẾT
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm toàn bộ khoản đầu tư vào công ty liên doanh và công ty liên kết; tình hình thu hồi vốn đầu tư vào công ty liên doanh, liên kết; các khoản lãi, lỗ phát sinh từ hoạt động đầu tư vào công ty liên doanh, liên kết. 
+- Công ty liên doanh được thành lập bởi các bên góp vốn liên doanh có quyền đồng kiểm soát các chính sách tài chính và hoạt động, là đơn vị có tư cách pháp nhân hạch toán độc lập. Công ty liên doanh phải tổ chức thực hiện công tác kế toán riêng theo quy định của pháp luật hiện hành về kế toán, chịu trách nhiệm kiểm soát tài sản, các khoản nợ phải trả, doanh thu, thu nhập khác và chi phí phát sinh tại đơn vị mình. Mỗi bên góp vốn liên doanh được hưởng một phần kết quả hoạt động của công ty liên doanh theo thỏa thuận của hợp đồng liên doanh.
+- Khoản đầu tư được phân loại là đầu tư vào công ty liên kết khi nhà đầu tư nắm giữ trực tiếp hoặc gián tiếp thông qua công ty con từ 20% đến dưới 50% quyền biểu quyết của bên nhận đầu tư mà không có thỏa thuận khác. 
+b) Kế toán khoản đầu tư vào công ty liên doanh phải tuân thủ nguyên tắc kế toán các khoản đầu tư vào đơn vị khác quy định tại Thông tư này.
+c) Khi nhà đầu tư không còn quyền đồng kiểm soát đơn vị nhận đầu tư thì phải ghi giảm khoản đầu tư vào công ty liên doanh; khi nhà đầu tư không còn ảnh hưởng đáng kể đến đơn vị nhận đầu tư thì phải ghi giảm khoản đầu tư vào công ty liên kết. 
+d) Các khoản chi phí liên quan trực tiếp đến việc đầu tư vào công ty liên doanh, liên kết được ghi nhận vào giá phí khoản đầu tư vào công ty liên doanh, liên kết đó. 
+đ) Khi thanh lý, nhượng bán, thu hồi vốn góp liên doanh, liên kết, căn cứ vào tỷ lệ khoản đầu tư vào công ty liên doanh, liên kết được thanh lý, nhượng bán hoặc thu hồi để doanh nghiệp ghi giảm giá trị ghi sổ của khoản đầu tư vào công ty liên doanh, liên kết. Phần chênh lệch giữa giá trị hợp lý của tài sản thu được so với phần giá trị ghi sổ khoản đầu tư vào công ty liên doanh, liên kết thanh lý, nhượng bán, thu hồi thì được ghi nhận là doanh thu hoạt động tài chính (nếu lãi) hoặc chi phí tài chính (nếu lỗ). 
+e) Doanh nghiệp phải mở sổ kế toán chi tiết theo dõi các khoản vốn đầu tư vào từng công ty liên doanh, liên kết, từng lần đầu tư, từng lần thanh lý, nhượng bán.
+2. Kết cấu và nội dung phản ánh của Tài khoản 222 - Đầu tư vào công ty liên doanh, liên kết
+Bên Nợ: 
+Giá trị khoản đầu tư vào công ty liên doanh, liên kết tăng.
+Bên Có: 
+Giá trị khoản đầu tư vào công ty liên doanh, liên kết giảm.
+Số dư bên Nợ: 
+Giá trị khoản đầu tư vào công ty liên doanh, liên kết hiện còn tại thời điểm kết thúc kỳ kế toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi góp vốn bằng tiền vào công ty liên doanh, liên kết, căn cứ số tiền đầu tư và các phi phí liên quan trực tiếp đến việc đầu tư vào công ty liên doanh, liên kết, ghi:
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết 
+		Có TK 112 - Tiền gửi không kỳ hạn
+Đồng thời mở sổ chi tiết để theo dõi từng loại cổ phiếu theo mệnh giá (nếu đầu tư vào công ty liên doanh, liên kết dưới hình thức mua cổ phiếu) hoặc theo dõi giá trị vốn điều lệ tại công ty liên doanh, liên kết (nếu công ty liên doanh, liên kết không phải là công ty cổ phần).
+3.2. Trường hợp nhà đầu tư góp vốn vào công ty liên doanh, liên kết bằng tài sản phi tiền tệ:
+a) Trường hợp giá trị ghi sổ hoặc giá trị còn lại của tài sản đem đi góp vốn nhỏ hơn giá trị do các bên đánh giá lại, doanh nghiệp phản ánh phần chênh lệch tăng do đánh giá lại tài sản vào thu nhập khác, ghi:
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn luỹ kế của TCSĐ, BĐSĐT)
+ Có các TK 211, 213, 217 (nếu góp vốn bằng TSCĐ hoặc BĐSĐT) (nguyên giá TSCĐ, BĐSĐT)
+		Có các TK 152, 153, 155, 156 (nếu góp vốn bằng hàng tồn kho) 				(Giá trị ghi sổ của hàng tồn kho)
+		Có TK 711 - Thu nhập khác (phần chênh lệch đánh giá tăng).
+b) Trường hợp giá trị ghi sổ hoặc giá trị còn lại của tài sản đem đi góp vốn lớn hơn giá trị do các bên đánh giá lại, doanh nghiệp phản ánh phần chênh lệch giảm do đánh giá lại tài sản vào chi phí khác, ghi:
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn luỹ kế của TCSĐ, BĐSĐT)
+Nợ TK 811 - Chi phí khác (phần chênh lệch đánh giá giảm)
+Có các TK 211, 213, 217 (góp vốn bằng TSCĐ hoặc BĐSĐT) (nguyên giá TSCĐ, BĐSĐT)
+Có các TK 152, 153, 155, 156 (nếu góp vốn bằng hàng tồn kho) (Giá trị ghi sổ của hàng tồn kho).
+3.3. Trường hợp doanh nghiệp đầu tư vào công ty liên doanh, liên kết dưới hình thức mua lại phần vốn góp:
+Tại ngày mua, nhà đầu tư xác định và phản ánh giá phí khoản đầu tư vào công ty liên doanh, liên kết bao gồm: Giá trị hợp lý tại ngày diễn ra trao đổi của các tài sản đem trao đổi, các khoản nợ phải trả đã phát sinh hoặc đã thừa nhận và các công cụ vốn do bên mua phát hành để đổi lấy quyền đồng kiểm soát hoặc ảnh hưởng đáng kể tại công ty liên doanh, liên kết cộng (+) Các chi phí liên quan trực tiếp đến việc mua lại phần vốn góp tại công ty liên doanh, liên kết. 
+a) Nếu việc mua lại khoản đầu tư vào công ty liên doanh, liên kết được bên mua thanh toán bằng tiền hoặc các khoản tương đương tiền, ghi:
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết
+		Có các TK 111, 112, 1281...
+b) Nếu việc mua lại khoản đầu tư vào công ty liên doanh, liên kết được thực hiện bằng việc bên mua phát hành cổ phiếu:
+- Nếu giá phát hành (theo giá trị hợp lý) của cổ phiếu tại ngày diễn ra hoán đổi lớn hơn mệnh giá cổ phiếu, ghi:
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết (theo giá trị hợp lý)
+		Có TK 4111 - Vốn góp của chủ sở hữu (theo mệnh giá)
+Có TK 4112 - Thặng dư vốn (số chênh lệch giữa giá trị hợp lý lớn hơn mệnh giá cổ phiếu).
+- Nếu giá phát hành (theo giá trị hợp lý) của cổ phiếu tại ngày diễn ra hoán đổi nhỏ hơn mệnh giá cổ phiếu, ghi:
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết (theo giá trị hợp lý)
+Nợ TK 4112 - Thặng dư vốn (số chênh lệch giữa giá trị hợp lý nhỏ hơn mệnh giá cổ phiếu)
+		Có TK 4111 - Vốn góp của chủ sở hữu (theo mệnh giá).
+c) Nếu việc mua lại khoản đầu tư vào công ty liên doanh, liên kết được thanh toán bằng việc bên mua trao đổi các tài sản phi tiền tệ của đơn vị mình với bên bán:
+- Trường hợp trao đổi bằng TSCĐ:
++ Khi đưa TSCĐ đem trao đổi, phản ánh giảm TSCĐ:
+Nợ TK 811 - Chi phí khác (giá trị còn lại của TSCĐ đưa đi trao đổi)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+	 	Có TK 211 - TSCĐ hữu hình (nguyên giá).
++ Đồng thời ghi tăng thu nhập khác và tăng khoản đầu tư vào công ty liên doanh do trao đổi TSCĐ:
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết (tổng giá thanh toán)
+Có TK 711 - Thu nhập khác (giá trị hợp lý của TSCĐ đưa đi trao đổi)
+	 	Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+- Trường hợp trao đổi bằng sản phẩm, hàng hóa:
++ Khi xuất kho sản phẩm, hàng hóa đưa đi trao đổi, phản ánh giá vốn hàng bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		 Có các TK 155, 156,...
++ Đồng thời phản ánh doanh thu bán hàng và ghi tăng khoản đầu tư vào công ty liên doanh, liên kết:
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá trị hợp lý của hàng tồn kho đem đi trao đổi)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (33311) (nếu có).
+d) Nếu việc mua lại khoản đầu tư vào công ty liên doanh được bên mua thanh toán bằng việc phát hành trái phiếu:
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết (theo giá trị hợp lý)
+		Có TK 343 - Trái phiếu phát hành.
+3.4. Các chi phí phát sinh liên quan trực tiếp tới việc đầu tư vào công ty liên doanh, liên kết (chi phí thông tin, môi giới, giao dịch trong quá trình thực hiện đầu tư), ghi:
+Nợ TK 222 - Đầu tư vào công ty liên doanh, liên kết
+		Có các TK 111, 112, 331,...
+3.5. Các khoản chi phí khác phát sinh liên quan đến hoạt động góp vốn liên doanh, liên kết như lãi tiền vay để góp vốn, các chi phí khác, ghi: 
+Nợ TK 635 - Chi phí tài chính
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112,...
+3.6. Kế toán cổ tức, lợi nhuận được chia bằng tiền:
+- Phản ánh khoản phải thu về cổ tức, lợi nhuận được chia, ghi:
+Nợ TK 138 - Phải thu khác (1388)
+Có TK 515 - Doanh thu hoạt động tài chính (trường hợp cổ tức, lợi nhuận được chia phân bổ cho giai đoạn sau ngày đầu tư)
+ Có TK 222 - Đầu tư vào công ty liên doanh, liên kết (trường hợp cổ tức, lợi nhuận được chia phân bổ cho giai đoạn trước ngày đầu tư)
+- Khi nhận được cổ tức, lợi nhuận được chia bằng tiền, ghi:
+Nợ các TK 111, 112 
+		Có TK 138 - Phải thu khác (1388).
+3.7. Kế toán thanh lý, nhượng bán khoản đầu tư vào công ty liên doanh, liên kết:
+Nợ các TK 112, 131,... (giá trị hợp lý của số thu được từ việc thanh lý)
+Nợ TK 228 - Đầu tư khác (nếu không còn ảnh hưởng đáng kể)
+Nợ TK 229 - Dự phòng tổn thất tài sản (khoản dự phòng đã trích lập để bù đắp số tổn thất khi đầu tư vào công ty liên doanh, liên kết) (nếu có)
+Nợ TK 635 - Chi phí tài chính (nếu lỗ)		
+	Có TK 222 - Đầu tư vào công ty liên doanh, liên kết (giá trị ghi sổ)
+		Có TK 515 - Doanh thu hoạt động tài chính (nếu lãi).
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản đầu tư vào công ty liên doanh, liên kết có thể được ghi nhận ngay cho từng giao dịch tại thời điểm chuyển nhượng hoặc khi xác định số trích lập dự phòng tổn thất đầu tư vào đơn vị khác vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.	
+3.8. Chi phí thanh lý, nhượng bán khoản đầu tư vào công ty liên doanh, liên kết, ghi:
+Nợ TK 635 - Chi phí tài chính 	
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+	Có các TK 111, 112, 331...
+3.9. Trường hợp đầu tư thêm để công ty liên doanh, liên kết trở thành công ty con và nắm giữ quyền kiểm soát, ghi:
+Nợ TK 221 - Đầu tư vào công ty con
+		Có các TK 111, 112 (giá trị khoản đầu tư bổ sung)
+		Có TK 222 - Đầu tư vào công ty liên doanh, liên kết.
+3.10. Kế toán giao dịch mua, bán giữa bên tham gia liên doanh và công ty liên doanh: Kế toán phản ánh như giao dịch đối với các giao dịch mua, bán với khách hàng thông thường (trừ khi áp dụng phương pháp vốn chủ sở hữu).
+TÀI KHOẢN 228 - ĐẦU TƯ KHÁC
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm các khoản đầu tư khác (ngoài các khoản đầu tư vào công ty con, đầu tư vào công ty liên doanh, liên kết), như: 
+- Các khoản đầu tư vào công cụ vốn của đơn vị khác nhưng không có quyền kiểm soát hoặc đồng kiểm soát, không có ảnh hưởng đáng kể đối với bên được đầu tư; Khoản đầu tư vào hợp đồng BCC mà doanh nghiệp không có quyền đồng kiểm soát nhưng được hưởng lợi ích phụ thuộc vào lợi nhuận sau thuế của hợp đồng BCC.
+- Các khoản kim loại quý, đá quý không sử dụng như nguyên vật liệu để sản xuất sản phẩm hoặc mua vào - bán ra như hàng hóa; Tranh, ảnh, tài liệu, vật phẩm có giá trị không tham gia vào hoạt động sản xuất kinh doanh thông thường. Trường hợp có bằng chứng chắc chắn cho thấy các khoản đầu tư này bị giảm giá so với giá trị thị trường và khoản giảm giá được xác định một cách đáng tin cậy thì doanh nghiệp được ghi giảm giá trị khoản đầu tư và ghi nhận tổn thất vào chi phí tài chính. 
+- Các khoản đầu tư khác.
+b) Doanh nghiệp phải theo dõi chi tiết từng khoản đầu tư khác theo số lượng cổ phiếu, phần vốn góp tại bên được đầu tư.
+c) Kế toán tuân thủ các nguyên tắc kế toán khoản đầu tư vào đơn vị khác theo quy định tại Thông tư này.
+2. Kết cấu và nội dung phản ánh của Tài khoản 228 - Đầu tư khác
+Bên Nợ: 
+Giá trị các khoản đầu tư khác tăng.
+Bên Có: 
+Giá trị các khoản đầu tư khác giảm.
+Số dư bên Nợ: 
+Giá trị khoản đầu tư khác hiện có tại thời điểm kết thúc kỳ kế toán.
+Tài khoản 228 - Đầu tư khác có 2 tài khoản cấp 2:
+- Tài khoản 2281 - Đầu tư góp vốn vào đơn vị khác: Phản ánh các khoản đầu tư công cụ vốn nhưng doanh nghiệp không có quyền kiểm soát, đồng kiểm soát hoặc có ảnh hưởng đáng kể đối với bên được đầu tư. Ngoài ra, tài khoản này còn phản ánh các khoản đầu tư vào hợp đồng BCC mà doanh nghiệp không có quyền đồng kiểm soát nhưng được hưởng lợi ích phụ thuộc vào lợi nhuận sau thuế của hợp đồng BCC.
+- Tài khoản 2288 - Đầu tư khác: Phản ánh các khoản đầu tư vào tài sản phi tài chính ngoài BĐSĐT và các khoản đã được phản ánh trong các tài khoản khác liên quan đến hoạt động đầu tư. Các khoản đầu tư khác có thể gồm kim loại quý, đá quý (không sử dụng như hàng tồn kho), tranh, ảnh, tài liệu, vật phẩm khác có giá trị (ngoài những khoản được phân loại là TSCĐ)... không tham gia vào hoạt động sản xuất kinh doanh thông thường nhưng được mua với mục đích nắm giữ chờ tăng giá.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi doanh nghiệp đầu tư mua cổ phiếu hoặc góp vốn dài hạn nhưng không có quyền kiểm soát, đồng kiểm soát hoặc ảnh hưởng đáng kể đối với bên được đầu tư:
+a) Trường hợp đầu tư bằng tiền
+Nợ TK 228 - Đầu tư khác (2281) (theo giá gốc khoản đầu tư + Chi phí trực tiếp liên quan đến hoạt động đầu tư, như chi phí môi giới,...)
+		Có TK 112 - Tiền gửi không kỳ hạn.
+Đồng thời mở sổ chi tiết để theo dõi từng loại cổ phiếu theo mệnh giá (nếu đầu tư dưới hình thức mua cổ phiếu) hoặc theo dõi giá trị vốn điều lệ tại công ty được đầu tư (nếu doanh nghiệp nhận đầu tư không phải là công ty cổ phần).
+b) Trường hợp đầu tư bằng tài sản phi tiền tệ:
+- Trường hợp góp vốn bằng tài sản phi tiền tệ, căn cứ vào giá đánh giá lại vật tư, hàng hóa, TSCĐ, ghi:
+Nợ TK 228 - Đầu tư khác (2281)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+Nợ TK 811 - Chi phí khác (số chênh lệch giữa giá đánh giá lại nhỏ hơn giá trị ghi sổ của hàng tồn kho hoặc giá trị còn lại của TSCĐ)
+Có các TK 152, 153, 156, 211, 213,... (giá trị ghi sổ của hàng tồn kho hoặc nguyên giá TSCĐ)
+Có TK 711 - Thu nhập khác (số chênh lệch giữa giá đánh giá lại 	lớn hơn giá trị ghi sổ của hàng tồn kho hoặc giá trị còn lại của TSCĐ).
+- Trường hợp mua lại phần vốn góp bằng tài sản phi tiền tệ:
++ Trường hợp trao đổi bằng TSCĐ:
+Nợ TK 811 - Chi phí khác (giá trị còn lại của TSCĐ đưa đi trao đổi)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn)
+		Có các TK 211, 213 (nguyên giá).
+Đồng thời ghi nhận thu nhập khác và tăng khoản đầu tư dài hạn khác do trao đổi TSCĐ:
+Nợ TK 228 - Đầu tư khác (2281) (tổng giá thanh toán)
+		Có TK 711 - Thu nhập khác 
+	 	Có TK 3331 - Thuế GTGT phải nộp (TK 33311) (nếu có).
+	+ Trường hợp trao đổi bằng sản phẩm, hàng hóa, khi xuất kho sản phẩm, hàng hóa đưa đi trao đổi, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có các TK 155, 156,...
+Đồng thời phản ánh doanh thu bán hàng và ghi tăng khoản đầu tư khác:
+Nợ TK 228 - Đầu tư khác (2281) (tổng giá thanh toán)
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 		
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước (33311) (nếu 				có).
+3.2. Kế toán cổ tức, lợi nhuận được chia bằng tiền:
+- Phản ánh khoản phải thu về cổ tức, lợi nhuận được chia, ghi:
+Nợ TK 138 - Phải thu khác (1388)
+		Có TK 515 - Doanh thu hoạt động tài chính (trường hợp cổ tức, lợi nhuận được chia phân bổ cho giai đoạn sau ngày đầu tư)
+Có TK 228 - Đầu tư khác (2281) (trường hợp cổ tức, lợi nhuận được chia phân bổ cho giai đoạn trước ngày đầu tư).
+- Khi nhận được cổ tức, lợi nhuận được chia bằng tiền, ghi:
+Nợ các TK 111, 112
+		Có TK 138 - Phải thu khác (1388).
+3.3. Khi nhà đầu tư bán một phần khoản đầu tư vào công ty con, công ty liên doanh, công ty liên kết dẫn đến không còn quyền kiểm soát hoặc không còn quyền đồng kiểm soát hoặc không còn ảnh hưởng đáng kể, ghi:
+Nợ các TK 112, 131...
+Nợ TK 228 - Đầu tư khác (2281)
+Nợ TK 635 - Chi phí tài chính (nếu lỗ)
+	Có các TK 221, 222 
+	Có TK 515 - Doanh thu hoạt động tài chính (nếu lãi).
+3.4. Thanh lý, nhượng bán các khoản đầu tư khác:
+- Trường hợp bán, thanh lý có lãi, ghi:
+Nợ các TK 112, 131,... (giá bán)
+	Có TK 228 - Đầu tư khác (giá trị ghi sổ)
+	Có TK 515 - Doanh thu hoạt động tài chính (giá bán lớn hơn giá trị ghi sổ).
+- Trường hợp bán, thanh lý bị lỗ, ghi:
+Nợ các TK 112, 131... (giá bán)
+Nợ TK 635 - Chi phí tài chính (giá bán nhỏ hơn giá trị ghi sổ)
+	Có TK 228 - Đầu tư khác (giá trị ghi sổ).
+3.5. Khi nhà đầu tư đầu tư góp thêm vốn và làm khoản đầu tư khác chuyển thành khoản đầu tư vào công ty con, công ty liên kết, ghi:
+Nợ các TK 221, 222 
+	Có các TK 111, 112 (số tiền đầu tư thêm)
+	Có TK 228 - Đầu tư khác.
+KẾ TOÁN GIAO DỊCH HỢP ĐỒNG HỢP TÁC KINH DOANH
+1. Nguyên tắc kế toán
+1.1. Hợp đồng hợp tác kinh doanh (BCC) là thỏa thuận bằng hợp đồng của hai hoặc nhiều bên để cùng thực hiện hoạt động kinh tế nhưng không hình thành pháp nhân độc lập. Hoạt động này có thể được đồng kiểm soát hoặc không được đồng kiểm soát bởi các bên góp vốn hoặc được kiểm soát bởi một trong số các bên tham gia hợp đồng.
+1.2. Hợp đồng BCC có thể được thực hiện dưới hình thức cùng nhau xây dựng tài sản hoặc hợp tác trong một số hoạt động kinh doanh. Các bên tham gia trong BCC có thể thỏa thuận chia doanh thu, chia sản phẩm hoặc chia lợi nhuận sau thuế theo kết quả của hoạt động BCC hoặc chia lợi ích cố định không phụ thuộc vào kết quả hoạt động của BCC.
+1.3. Trong mọi trường hợp, khi nhận tiền, tài sản của các bên khác đóng góp cho BCC, bên nhận phải kế toán là nợ phải trả, không được ghi nhận vào vốn chủ sở hữu.
+1.4. Doanh nghiệp cần căn cứ vào điều khoản, bản chất của hợp đồng BCC để xác định doanh nghiệp có quyền đồng kiểm soát hay không đồng kiểm soát đối với hợp đồng BCC để thực hiện hạch toán kế toán cho phù hợp.
+1.5. Đối với trường hợp doanh nghiệp là bên có quyền đồng kiểm soát BCC
+1.5.1. Đối với BCC theo hình thức tài sản đồng kiểm soát
+a) Tài sản đồng kiểm soát bởi các bên tham gia BCC là tài sản được các bên tham gia BCC mua, xây dựng, sử dụng cho mục đích của BCC và mang lại lợi ích cho các bên tham gia BCC theo quy định của hợp đồng. Các bên tham gia BCC được ghi nhận phần giá trị tài sản đồng kiểm soát mà mình được hưởng là tài sản trên Báo cáo tài chính của đơn vị mình.
+b) Mỗi bên tham gia BCC được nhận sản phẩm hoặc doanh thu từ việc sử dụng và khai thác tài sản đồng kiểm soát và chịu một phần chi phí phát sinh theo thỏa thuận trong hợp đồng.
+c) Các bên tham gia BCC phải mở sổ kế toán chi tiết trên cùng hệ thống sổ kế toán của mình để ghi chép và phản ánh trong Báo cáo tài chính của mình những nội dung sau đây:
+- Phần vốn góp vào tài sản đồng kiểm soát, được phân loại theo tính chất của tài sản;
+- Các khoản nợ phải trả phát sinh riêng của mỗi bên tham gia góp vốn vào BCC;
+- Phần nợ phải trả phát sinh chung mà các bên tham gia BCC phải gánh chịu từ hoạt động của BCC;
+- Các khoản thu nhập từ việc bán hoặc sử dụng phần sản phẩm được chia cùng với phần chi phí phát sinh được phân chia từ BCC;
+- Các khoản chi phí phát sinh liên quan đến việc góp vốn vào BCC.
+Đối với TSCĐ, BĐSĐT khi mang đi góp vốn vào BCC và không chuyển quyền sở hữu từ bên góp vốn thành sở hữu chung của các bên thì bên nhận tài sản theo dõi như tài sản nhận giữ hộ, không hạch toán tăng tài sản và vốn góp của chủ sở hữu; Bên góp tài sản không ghi giảm tài sản trên sổ kế toán mà chỉ theo dõi chi tiết địa điểm, vị trí, nơi đặt tài sản, bên quản lý, sử dụng tài sản.
+Đối với TSCĐ, BĐSĐT mang đi góp vốn có chuyển quyền sở hữu từ bên góp vốn thành quyền sở hữu chung, trong quá trình đang xây dựng tài sản đồng kiểm soát, bên mang tài sản đi góp phải ghi giảm tài sản trên sổ kế toán. Sau khi tài sản đồng kiểm soát hoàn thành, bàn giao, đưa vào sử dụng, căn cứ vào giá trị tài sản được chia, các bên ghi nhận tăng tài sản của mình phù hợp với mục đích sử dụng.
+1.5.2. Đối với BCC dưới hình thức hoạt động kinh doanh đồng kiểm soát
+a) Hợp đồng hợp tác kinh doanh dưới hình thức hoạt động kinh doanh đồng kiểm soát là hoạt động hợp tác kinh doanh không thành lập một cơ sở kinh doanh mới. Các bên tham gia BCC có nghĩa vụ và được hưởng quyền lợi theo thỏa thuận trong hợp đồng. Hoạt động của BCC được các bên góp vốn thực hiện cùng với các hoạt động kinh doanh thông thường khác của từng bên.
+b) Hợp đồng hợp tác kinh doanh quy định các khoản chi phí phát sinh riêng cho hoạt động kinh doanh đồng kiểm soát do mỗi bên tham gia BCC bỏ ra thì bên đó phải gánh chịu. Đối với các khoản chi phí chung (nếu có) thì căn cứ vào các thỏa thuận trong hợp đồng để phân chia cho các bên góp vốn.
+c) Các bên tham gia BCC phải mở sổ kế toán để ghi chép và phản ánh trong Báo cáo tài chính của mình các nội dung sau đây:
+- Tài sản góp vốn vào hợp đồng BCC và chịu sự kiểm soát của bên góp vốn vào BCC;
+- Các khoản nợ phải trả phải gánh chịu;
+- Doanh thu được chia từ việc bán hàng hoặc cung cấp dịch vụ của BCC;
+- Chi phí phải gánh chịu.
+d) Khi bên tham gia BCC có phát sinh chi phí chung phải mở sổ kế toán để ghi chép, tập hợp toàn bộ các chi phí chung đó. Định kỳ căn cứ vào các thỏa thuận trong BCC về việc phân bổ các chi phí chung, bên kế toán cho BCC lập Bảng phân bổ chi phí chung, được các bên tham gia BCC xác nhận, giao cho mỗi bên giữ một bản (bản chính). Bảng phân bổ chi phí chung kèm theo các chứng từ gốc hợp pháp là căn cứ để mỗi bên tham gia BCC kế toán chi phí chung được phân bổ từ hợp đồng.
+đ) Trường hợp hợp đồng BCC quy định chia sản phẩm, định kỳ theo thỏa thuận trong hợp đồng, bên kế toán cho BCC phải lập Bảng phân chia sản phẩm cho các bên góp vốn và được các bên xác nhận số lượng, quy cách sản phẩm được chia từ hợp đồng, giao cho các bên. Khi thực giao sản phẩm, bên kế toán cho BCC phải lập Phiếu giao nhận sản phẩm để làm căn cứ cho các bên tham gia BCC ghi sổ kế toán, theo dõi và là căn cứ thanh lý hợp đồng.
+e) Trường hợp BCC phát sinh các chi phí, doanh thu chung mà các bên tham gia hợp đồng BCC phải gánh chịu hoặc được hưởng thì các bên tham gia BCC căn cứ vào Bảng phân bổ doanh thu, chi phí chung do bên kế toán cho hợp đồng BCC thông báo để ghi nhận vào doanh thu, chi phí của đơn vị.
+1.5.3. Đối với BCC dưới hình thức chia lợi nhuận sau thuế
+a) Hợp đồng BCC trong trường hợp này quy định các bên tham gia chỉ được phân chia lợi nhuận nếu kết quả hoạt động của BCC có lãi, đồng thời phải gánh chịu lỗ nếu kết quả hoạt động của BCC bị lỗ. Các bên phải cử ra một bên để kế toán toàn bộ các giao dịch của BCC, ghi nhận doanh thu, chi phí, theo dõi riêng kết quả kinh doanh của BCC và phát hành hóa đơn, khai thuế theo quy định của hợp đồng và pháp luật thuế. 
+b) Bên kế toán và quyết toán thuế cho BCC ghi nhận toàn bộ doanh thu, chi phí phát sinh của BCC vào sổ kế toán các tài khoản liên quan để làm căn cứ đối chiếu, xác định doanh thu, chi phí tính thuế của BCC. Tuy nhiên, chỉ những khoản doanh thu, chi phí tương ứng với phần doanh nghiệp được hưởng hoặc gánh chịu mới được ghi nhận và trình bày vào các chỉ tiêu doanh thu, chi phí liên quan trên Báo cáo kết quả kinh doanh của doanh nghiệp.
+c) Các bên tham gia hợp đồng BCC thực hiện quy định về kế toán tương tự như trường hợp hoạt động kinh doanh đồng kiểm soát.
+1.6. Đối với trường hợp doanh nghiệp là bên không có quyền đồng kiểm soát BCC
+a) Doanh nghiệp cần căn cứ vào nội dung các điều khoản, bản chất của hợp đồng BCC để xác định doanh nghiệp không có quyền đồng kiểm soát BCC thì được hưởng lợi ích phụ thuộc vào kết quả kinh doanh của BCC hay được hưởng lợi ích cố định mà không phụ thuộc vào kết quả kinh doanh của BCC để từ đó thực hiện hạch toán kế toán cho phù hợp. 
+b) Trường hợp hợp đồng BCC quy định các bên tham gia BCC được hưởng lợi ích phụ thuộc vào kết quả kinh doanh của BCC thì các khoản vốn góp vào hợp đồng BCC và các khoản lợi ích mà nhà đầu tư nhận được từ hợp đồng BCC được thực hiện theo hướng dẫn tại Tài khoản 2281 - Đầu tư vào đơn vị khác. 
+c) Trường hợp hợp đồng BCC quy định các bên tham gia được hưởng lợi ích cố định mà không phụ thuộc vào kết quả kinh doanh của BCC thì tùy theo bản chất của hợp đồng để kế toán như sau:
+- Đối với bên kế toán cho BCC:
++ Ghi nhận toàn bộ doanh thu, chi phí và lợi nhuận sau thuế của BCC trên Báo cáo kết quả hoạt động kinh doanh của mình; Lãi trên cổ phiếu và các chỉ tiêu phân tích tài chính được tính đối với toàn bộ doanh thu, chi phí và lợi nhuận của BCC;
++ Ghi nhận toàn bộ Lợi nhuận sau thuế của BCC vào chỉ tiêu “Lợi nhuận sau thuế chưa phân phối” trên Báo cáo tình hình tài chính, các chỉ tiêu tài chính liên quan đến tỷ suất lợi nhuận sau thuế được xác định bao gồm toàn bộ kết quả của BCC.
+- Đối với các bên tham gia BCC ghi nhận doanh thu cho thuê tài sản hoặc lãi cho vay vốn đối với khoản được chia từ BCC. Trong đó:
++ Nếu bản chất là thuê tài sản (doanh nghiệp góp vào BCC bằng tài sản phi tiền tệ) thì doanh nghiệp kế toán như giao dịch cho thuê tài sản
++ Nếu bản chất là giao dịch cho vay (doanh nghiệp góp vào BCC bằng tiền) thì doanh nghiệp kế toán như giao dịch cho vay.
+1.7. Thuyết minh về hợp đồng BCC trên Báo cáo tài chính của doanh nghiệp
+Đối với các hợp đồng BCC có giá trị chiếm từ 10% trở lên trên tổng giá trị các hợp đồng BCC thì doanh nghiệp phải thuyết minh chi tiết các thông tin về hợp đồng BCC trên Báo cáo tài chính của đơn vị theo quy định tại Thông tư này.
+2. Phương pháp kế toán đối với trường hợp doanh nghiệp là bên có quyền đồng kiểm soát BCC
+2.1. Trường hợp BCC theo hình thức tài sản đồng kiểm soát
+a) Trường hợp các bên tham gia BCC góp tiền mua tài sản đồng kiểm soát, mỗi bên căn cứ vào số tiền thực góp để mua tài sản, ghi:
+Nợ các TK 211, 213, 217,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331, 341,...
+b) Trường hợp các bên tham gia BCC tự thực hiện hoặc phối hợp với đối tác khác tiến hành đầu tư xây dựng để có được tài sản đồng kiểm soát, căn cứ vào chi phí thực tế bỏ ra của bên tham gia BCC, ghi:
+Nợ TK 241 - Xây dựng cơ bản dở dang (chi tiết tài sản đồng kiểm soát)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 152, 153, 155, 156, 331, 341,...
+c) Khi công trình đầu tư XDCB hoàn thành, đưa vào sử dụng, các bên phải quyết toán và phân chia giá trị tài sản đồng kiểm soát. Căn cứ biên bản chia tài sản đồng kiểm soát để kế toán phù hợp với quy định của pháp luật, ghi:
+Nợ các TK 211, 213, 217 (chi tiết phần tài sản đồng kiểm soát theo giá trị hợp lý của từng phần tài sản được chia)
+Nợ TK 138 - Phải thu khác (chi phí không được duyệt, phải thu hồi - nếu có)
+Nợ TK 811 - Chi phí khác (nếu giá trị hợp lý của tài sản được chia nhỏ hơn chi phí đầu tư xây dựng) 
+Có TK 241 - XDCB dở dang
+Có TK 711 - Thu nhập khác (nếu giá trị hợp lý của tài sản được chia lớn hơn chi phí đầu tư xây dựng).
+d) Phương pháp ghi chép các nghiệp vụ kinh tế liên quan đến kế toán chi phí, doanh thu mà các bên tham gia BCC theo hình thức tài sản đồng kiểm soát phải gánh chịu hoặc được hưởng khi tài sản đi vào hoạt động và BCC chuyển sang hình thức hoạt động đồng kiểm soát thực hiện như quy định đối với trường hợp hoạt động kinh doanh đồng kiểm soát.
+2.2. Trường hợp BCC theo hình thức hoạt động kinh doanh đồng kiểm soát
+a) Kế toán góp vốn và nhận vốn góp hoạt động kinh doanh đồng kiểm soát
+- Tại bên nhận vốn góp
++ Căn cứ biên bản góp vốn của các bên tham gia hợp đồng BCC đồng kiểm soát, bên nhận vốn góp ghi:
+Nợ các TK 111, 112, 152, 155, 156...
+Có TK 338 - Phải trả, phải nộp khác.
+Trường hợp nhận vốn góp bằng TSCĐ mà không có sự chuyển giao quyền sở hữu, bên nhận vốn góp chỉ theo dõi chi tiết trên hệ thống quản trị và thuyết minh như tài sản nhận giữ hộ.
++ Khi trả lại vốn góp cho các bên, bên nhận vốn góp ghi đảo bút toán trên. Nếu có chênh lệch giữa giá trị ghi sổ của tài sản trả lại và giá trị khoản nhận góp của các bên, doanh nghiệp phản ánh thu nhập khác hoặc chi phí khác.
+- Tại bên góp vốn
++ Căn cứ biên bản góp vốn của các bên tham gia hợp đồng BCC đồng kiểm soát, bên góp vốn ghi:
+Nợ TK 138 - Phải thu khác
+Có các TK 111, 112, 152, 155, 156,...
+Trường hợp góp vốn bằng TSCĐ mà không có sự chuyển giao quyền sở hữu, bên góp vốn không ghi giảm TSCĐ mà chỉ theo dõi chi tiết trên hệ thống quản trị và thuyết minh về địa điểm đặt tài sản, bên quản lý, sử dụng tài sản.
++ Khi nhận lại vốn góp, bên góp vốn ghi đảo bút toán trên. Nếu có chênh lệch giữa giá trị hợp lý của tài sản nhận về và giá trị khoản vốn góp, doanh nghiệp phản ánh thu nhập khác hoặc chi phí khác.
+b) Kế toán chi phí phát sinh riêng tại mỗi bên tham gia BCC
+- Căn cứ vào các hóa đơn, chứng từ liên quan, tập hợp chi phí phát sinh riêng mà bên tham gia BCC phải gánh chịu khi tham gia hoạt động kinh doanh đồng kiểm soát, ghi:
+Nợ các TK 621, 622, 627, 641, 642 (chi tiết cho hợp đồng BCC)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331,...
+- Cuối kỳ, kết chuyển chi phí phát sinh riêng để tổng hợp chi phí SXKD của hợp đồng BCC, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang (chi tiết cho hợp đồng 										BCC)
+Có các TK 621, 622, 627 (chi tiết cho hợp đồng BCC).
+c) Kế toán chi phí phát sinh chung do mỗi bên tham gia BCC gánh chịu:
+- Kế toán tại bên tham gia BCC có phát sinh chi phí chung:
++ Khi phát sinh chi phí chung do mỗi bên tham gia BCC phải gánh chịu, căn cứ vào các hóa đơn, chứng từ liên quan, ghi:
+Nợ các TK 621, 622, 627, 641, 642,... (chi tiết cho hợp đồng BCC)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331,...
++ Trường hợp hợp đồng BCC quy định phải phân chia chi phí chung, cuối kỳ căn cứ vào quy định của hợp đồng, bên phát sinh chi phí chung lập Bảng phân bổ chi phí chung cho các bên góp vốn và sau khi được các bên tham gia BCC chấp nhận, căn cứ vào chí phí được phân bổ cho các bên góp vốn khác, ghi:
+Nợ TK 138 - Phải thu khác (chi tiết cho từng đối tác)
+Có TK 133 - Thuế GTGT được khấu trừ (nếu chia thuế đầu vào) (nếu có)
+Có TK 3331 - Thuế GTGT phải nộp (nếu thuế đầu vào của chi phí chung đã khấu trừ hết, phải ghi tăng số thuế đầu ra phải nộp) (nếu có)
+Có các TK 621, 622, 627, 641, 642,...
+- Kế toán tại bên tham gia BCC không hạch toán chi phí chung cho hợp đồng BCC: Căn cứ vào Bảng phân bổ chi phí chung của hợp đồng BCC đã được các bên góp vốn chấp nhận (do bên tham gia BCC có phát sinh chi phí chung thông báo), ghi:
+Nợ các TK 621, 622, 623, 641, 642 (chi tiết cho hợp đồng BCC)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có TK 338 - Phải trả khác (chi tiết cho bên tham gia BCC có phát sinh chi phí chung).
+d) Kế toán trong trường hợp hợp đồng chia sản phẩm:
+- Khi nhận sản phẩm được chia từ hợp đồng BCC nhập kho, căn cứ vào phiếu giao nhận sản phẩm từ hợp đồng, phiếu nhập kho và các chứng từ liên quan, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu (nếu sản phẩm được chia chưa phải là thành phẩm cuối cùng)
+Nợ TK 155 - Sản phẩm (nếu sản phẩm được chia là thành phẩm, bán thành phẩm)
+Nợ TK 157 - Hàng gửi đi bán (nếu gửi sản phẩm được chia đem đi bán ngay không qua kho)
+Có TK 154 - Chi phí sản xuất kinh doanh, dở dang (gồm chi phí phát sinh riêng và chi phí chung mà mỗi bên tham gia BCC phải gánh chịu) (chi tiết cho hợp đồng BCC).
+- Khi nhận sản phẩm được chia từ hợp đồng và đưa vào sử dụng ngay cho sản xuất sản phẩm khác, căn cứ vào phiếu giao nhận sản phẩm từ hợp đồng và các chứng từ liên quan, ghi:
+Nợ TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang (gồm chi phí phát sinh riêng và chi phí chung mà mỗi bên tham gia BCC phải gánh chịu) (chi tiết cho hợp đồng BCC).
+- Trường hợp hợp đồng BCC quy định không chia sản phẩm mà giao cho một bên bán ra ngoài, sau khi phát hành hóa đơn cho bên bán sản phẩm, kết chuyển chi phí phát sinh riêng và chi phí chung mà mỗi bên tham gia BCC phải gánh chịu vào giá vốn hàng bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang (gồm chi phí phát sinh riêng và chi phí chung mà mỗi bên tham gia BCC phải gánh chịu) (chi tiết cho hợp đồng BCC).
+đ) Kế toán doanh thu bán sản phẩm trong trường hợp một bên tham gia hợp đồng BCC bán hộ hàng hóa và chia doanh thu cho các đối tác khác:
+- Kế toán ở bên bán sản phẩm:
++ Khi bán sản phẩm theo quy định của hợp đồng, bên bán phải phát hành hóa đơn cho toàn bộ sản phẩm bán ra, đồng thời phản ánh tổng số tiền bán sản phẩm của hoạt động BCC, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 338 - Phải trả, phải nộp khác (chi tiết hợp đồng BCC)
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
++ Căn cứ vào quy định của hợp đồng BCC và Bảng phân bổ doanh thu, phản ánh doanh thu tương ứng với lợi ích của bên tham gia BCC được hưởng:
+(+) Đối với phần doanh thu bên bán sản phẩm được hưởng, ghi:
+Nợ TK 338 - Phải trả, phải nộp khác (chi tiết cho hợp đồng BCC)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (lợi ích mà bên bán được hưởng theo thỏa thuận trong hợp đồng).
++ Đối với phần doanh thu phân chia cho bên đối tác BCC, trên cơ sở Bảng phân chia doanh thu và hóa đơn do bên đối tác lập, ghi:
+Nợ TK 338 - Phải trả, phải nộp khác (chi tiết cho hợp đồng BCC)
+Nợ TK 133 - Thuế GTGT đầu vào (nếu có)
+Có TK 338 - Phải trả, phải nộp khác (Chi tiết cho đối tác BCC).
++ Sau khi đối chiếu chi phí phát sinh chung mỗi bên phải gánh chịu và doanh thu chia cho các bên theo hợp đồng, doanh nghiệp bù trừ khoản phải thu khác và phải trả khác (chi tiết cho từng bên tham gia hợp đồng BCC), ghi:
+Nợ TK 338 - Phải trả, phải nộp khác (Chi tiết cho đối tác BCC)
+Có TK 138 - Phải thu khác (Chi tiết cho đối tác BCC).
++ Khi thanh toán tiền bán sản phẩm do bên đối tác tham gia BCC không phải là bên bán sản phẩm được hưởng, ghi:
+Nợ TK 338 - Phải trả, phải nộp khác (từng đối tác tham gia BCC)
+Có các TK 111, 112,...
+- Kế toán ở bên không bán sản phẩm:
++ Đối với bên tham gia BCC không bán sản phẩm, căn cứ vào bảng phân bổ doanh thu đã được các bên tham gia BCC xác nhận và chứng từ có liên quan do bên bán sản phẩm cung cấp, lập hóa đơn cho bên bán sản phẩm theo số doanh thu mà mình được hưởng, ghi:
+Nợ TK 138 - Phải thu khác (bao gồm cả thuế GTGT nếu chia cả thuế GTGT đầu ra, chi tiết cho đối tác tham gia hợp đồng BCC bán sản phẩm)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (chi tiết cho hợp đồng BCC và theo số tiền được chia)
+Có TK 3331 - Thuế GTGT phải nộp (nếu chia thuế GTGT đầu ra).
++ Sau khi đối chiếu chi phí phát sinh chung mỗi bên phải gánh chịu và doanh thu được chia cho các bên theo hợp đồng, doanh nghiệp bù trừ khoản phải thu khác và phải trả khác (chi tiết cho từng bên tham gia hợp đồng BCC), ghi:
+ Nợ TK 338 - Phải trả, phải nộp khác 
+Có TK 138 - Phải thu khác.
++ Khi bên đối tác tham gia hợp đồng BCC thanh toán tiền bán sản phẩm, căn cứ vào số tiền thực nhận, ghi:
+Nợ các TK 111, 112,... (số tiền do đối tác trong hợp đồng chuyển trả)
+Có TK 138 - Phải thu khác (chi tiết từng bên bán sản phẩm).
+2.3. Trường hợp BCC chia lợi nhuận sau thuế phụ thuộc vào kết quả kinh doanh của hợp đồng BCC
+a) Tại bên kế toán cho hợp đồng BCC
+- Khi nhận tiền, vật tư, hàng hóa, TSCĐ của các bên góp vốn, ghi:
+Nợ các TK 112, 152, 156,...
+Có TK 338 - Phải trả, phải nộp khác.	
+- Khi ghi nhận doanh thu của hợp đồng BCC, kế toán ghi nhận toàn bộ doanh thu phát sinh trên sổ kế toán TK 511 để làm căn cứ đối chiếu, giải trình và xác định doanh thu tính thuế cho BCC:
++ Ghi nhận doanh thu của hợp đồng BCC, ghi:
+Nợ các TK 112, 131
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp.
+Trên Báo cáo kết quả hoạt động kinh doanh, chỉ khoản doanh thu tương ứng với phần doanh nghiệp được hưởng mới được trình bày trong chỉ tiêu “Doanh thu bán hàng và cung cấp dịch vụ”.
++ Định kỳ, doanh nghiệp ghi giảm doanh thu của hợp đồng BCC tương ứng với phần các bên được hưởng, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Nợ TK 3331 - Thuế GTGT phải nộp (nếu chia cả thuế GTGT)
+Có TK 338 - Phải trả, phải nộp khác.
+- Khi ghi nhận chi phí của hợp đồng BCC, doanh nghiệp ghi nhận toàn bộ chi phí trên sổ kế toán các tài khoản chi phí liên quan để làm căn cứ đối chiếu, xác định chi phí của hợp đồng BCC:
++ Khi phát sinh chi phí của hợp đồng BCC, ghi:
+Nợ các TK 632, 641, 642...
+Có các TK 112, 331, 154, 155...
+Trên Báo cáo kết quả hoạt động kinh doanh, chỉ các khoản chi phí tương ứng với phần phải gánh chịu mới được trình bày trong các chỉ tiêu về chi phí.
++ Định kỳ, kế toán ghi giảm chi phí của hợp đồng BCC tương ứng với phần các bên khác phải gánh chịu, ghi:
+Nợ TK 138 - Phải thu khác
+Có các TK 632, 641, 642.
++ Khi xác định số thuế TNDN phải nộp cho hợp đồng BCC, bên quyết toán thuế thông báo cho các bên khác về nghĩa vụ đối với số thuế phải nộp của từng bên, ghi:
+Nợ TK 8211 - Chi phí thuế TNDN (số phải nộp của bên quyết toán thuế)
+Nợ TK 138 - Phải thu khác (số nộp hộ các bên khác trong hợp đồng BCC)
+Có TK 3334 - Thuế TNDN (tổng số thuế TNDN phải nộp).
++ Sau khi đối chiếu chi phí phát sinh chung mỗi bên phải gánh chịu và doanh thu chia cho các bên theo hợp đồng, doanh nghiệp bù trừ khoản phải thu khác và phải trả khác (chi tiết cho từng bên tham gia hợp đồng BCC), ghi:
+Nợ TK 338 - Phải trả, phải nộp khác
+Có TK 138 - Phải thu khác.
+- Khi trả lại cho các bên số tiền, vật tư đã nhận góp vốn, ghi:
+Nợ TK 338 - Phải trả, phải nộp khác
+Có các TK 112, 152, 156,...
+Nếu có chênh lệch giữa giá trị ghi sổ của tài sản trả lại và giá trị khoản vốn nhận góp của các bên, doanh nghiệp phản ánh thu nhập khác hoặc chi phí khác.
+b) Tại bên không kế toán cho hợp đồng BCC
+- Khi góp vốn vào hợp đồng BCC, ghi:
+Nợ TK 138 - Phải thu khác
+Có các TK 112, 152, 156...
+- Căn cứ vào Bảng phân bổ chi phí của hợp đồng BCC đã được các bên tham gia chấp nhận, ghi:
+Nợ các TK 621, 622, 623, 641, 642 (chi tiết cho hợp đồng BCC)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có TK 338 - Phải trả, phải nộp khác.
+- Căn cứ số thuế TNDN phải nộp được thông báo, ghi:
+Nợ TK 821 - Chi phí thuế TNDN hiện hành
+Có TK 338 - Phải trả, phải nộp khác.
+- Căn cứ vào bảng phân bổ doanh thu đã được các bên tham gia BCC xác nhận và chứng từ có liên quan do bên bán sản phẩm cung cấp, lập hóa đơn cho bên bán sản phẩm theo số doanh thu mà mình được hưởng, ghi:
+Nợ TK 138 - Phải thu khác (bao gồm cả thuế GTGT nếu chia cả thuế GTGT đầu ra, chi tiết cho đối tác tham gia hợp đồng BCC bán sản phẩm)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (chi tiết cho hợp đồng BCC và theo số tiền được chia)
+Có TK 3331 - Thuế GTGT phải nộp (nếu chia thuế GTGT đầu ra).
+- Sau khi đối chiếu chi phí phát sinh chung mỗi bên phải gánh chịu và doanh thu chia cho các bên theo hợp đồng, kế toán bù trừ khoản phải thu khác và phải trả khác (chi tiết cho từng bên tham gia hợp đồng BCC), ghi:
+Nợ TK 338 - Phải trả, phải nộp khác
+Có TK 138 - Phải thu khác.
+- Khi bên kế toán cho BCC phân chia kết quả của BCC cho các bên đối tác tham gia hợp đồng BCC, căn cứ vào số tiền thực nhận, ghi:
+Nợ các TK 111, 112,... (số tiền do đối tác trong hợp đồng chuyển trả)
+Có TK 138 - Phải thu khác (chi tiết từng bên bán sản phẩm).
+- Khi nhận lại vốn góp, ghi:
+Nợ các TK 112, 152, 156...
+Có TK 138 - Phải thu khác
+Nếu có chênh lệch giữa giá trị hợp lý của tài sản nhận về và giá trị khoản vốn góp, kế toán phản ánh thu nhập khác hoặc chi phí khác.
+3. Phương pháp kế toán đối với trường hợp doanh nghiệp là bên không có quyền đồng kiểm soát BCC
+3.1. Trường hợp hợp đồng BCC quy định các bên tham gia BCC được hưởng lợi ích phụ thuộc vào kết quả kinh doanh của BCC thì các khoản vốn góp vào hợp đồng BCC và các khoản lợi ích mà nhà đầu tư nhận được từ hợp đồng BCC được thực hiện theo hướng dẫn tại Tài khoản 2281 - Đầu tư vào đơn vị khác. 
+3.2. Trường hợp hợp đồng BCC quy định các bên tham gia được hưởng lợi ích cố định mà không phụ thuộc vào kết quả kinh doanh của BCC thì tùy theo bản chất của hợp đồng là thuê tài sản hay cho vay vốn để kế toán cho phù hợp.
+a) Đối với trường hợp bản chất hợp đồng BCC là thuê tài sản:
+- Bên thực hiện kế toán và quyết toán thuế cho BCC thực hiện hạch toán như giao dịch đi thuê tài sản
+- Bên không thực hiện kế toán và quyết toán thuế cho BCC thực hiện hạch toán như giao dịch cho thuê tài sản
+b) Đối với trường hợp bản chất hợp đồng BCC là vay vốn:
+- Bên thực hiện kế toán và quyết toán thuế cho BCC thực hiện hạch toán như giao dịch đi đi vay vốn
+- Bên không thực hiện kế toán và quyết toán thuế cho BCC thực hiện hạch toán như giao dịch cho vay vốn.
+TÀI KHOẢN 229 - DỰ PHÒNG TỔN THẤT TÀI SẢN
+1. Nguyên tắc kế toán
+1.1. Tài khoản này dùng để phản ánh số hiện có và tình hình biến động tăng, giảm các khoản dự phòng tổn thất tài sản, gồm: 
+a) Dự phòng giảm giá chứng khoán kinh doanh: Là dự phòng phần giá trị bị tổn thất có thể xảy ra do giảm giá các loại chứng khoán doanh nghiệp đang nắm giữ vì mục đích kinh doanh;
+b) Dự phòng tổn thất đầu tư vào đơn vị khác (ngoại trừ chứng khoán kinh doanh): Là khoản dự phòng khi doanh nghiệp nhận vốn góp đầu tư bị lỗ hoặc khoản đầu tư vào đơn vị khác bị suy giảm giá trị dẫn đến nhà đầu tư có khả năng bị mất vốn hoặc khi có bằng chứng cho thấy một phần hoặc toàn bộ khoản đầu tư nắm giữ đến ngày đáo hạn của doanh nghiệp có khả năng không thu hồi được.
+c) Dự phòng nợ phải thu khó đòi: Là khoản dự phòng phần giá trị các khoản nợ phải thu khi có bằng chứng cho thấy doanh nghiệp khó có khả năng thu hồi hoặc không có khả năng thu hồi được một phần hoặc toàn bộ khoản phải thu của doanh nghiệp.
+d) Dự phòng giảm giá hàng tồn kho: Là khoản dự phòng được trích lập khi có bằng chứng cho thấy giá trị thuần có thể thực hiện được thấp hơn so với giá gốc của hàng tồn kho.
+đ) Dự phòng tổn thất tài sản sinh học: Là khoản dự phòng được trích lập khi có bằng chứng cho thấy giá trị thuần có thể thực hiện được thấp hơn giá gốc của tài sản sinh học. 
+1.2. Nguyên tắc kế toán dự phòng giảm giá chứng khoán kinh doanh
+a) Doanh nghiệp được trích lập dự phòng đối với phần giá trị bị tổn thất có thể xảy ra khi có bằng chứng chắc chắn cho thấy giá trị thị trường của các loại chứng khoán doanh nghiệp đang nắm giữ vì mục đích kinh doanh bị giảm so với giá trị ghi sổ. 
+b) Việc trích lập dự phòng tổn thất chứng khoán kinh doanh được thực hiện như sau:
+- Đối với chứng khoán kinh doanh là các chứng khoán niêm yết hoặc giá trị hợp lý chứng khoán được xác định tin cậy, việc lập dự phòng được thực hiện căn cứ vào giá trị thị trường của chứng khoán tại thời điểm cuối kỳ kế toán;
+- Đối với chứng khoán kinh doanh không xác định được giá trị hợp lý tại thời điểm cuối kỳ kế toán, việc lập dự phòng được thực hiện căn cứ vào khoản lỗ của bên được đầu tư.
+c) Việc trích lập hoặc hoàn nhập khoản dự phòng giảm giá chứng khoán kinh doanh được thực hiện ở thời điểm lập Báo cáo tài chính:
+- Nếu số dự phòng phải lập năm nay cao hơn số dư dự phòng đang ghi trên sổ kế toán thì doanh nghiệp trích lập bổ sung số chênh lệch đó và ghi nhận vào chi phí tài chính trong kỳ. 
+- Nếu số dự phòng phải lập năm nay thấp hơn số dư dự phòng đã lập năm trước chưa sử dụng hết thì doanh nghiệp hoàn nhập số chênh lệch đó và ghi giảm chi phí tài chính trong kỳ.
+1.3. Nguyên tắc kế toán dự phòng tổn thất đầu tư vào đơn vị khác
+a) Đối với các đơn vị được đầu tư là công ty mẹ, căn cứ để nhà đầu tư trích lập dự phòng tổn thất đầu tư vào đơn vị khác là Báo cáo tài chính hợp nhất của công ty mẹ đó. Đối với các đơn vị được đầu tư là doanh nghiệp độc lập không có công ty con, căn cứ để nhà đầu tư trích lập dự phòng tổn thất đầu tư vào đơn vị khác là Báo cáo tài chính của bên được đầu tư đó.
+- Đối với khoản đầu tư vào công ty liên doanh, liên kết, nhà đầu tư chỉ trích lập khoản dự phòng do công ty liên doanh, liên kết bị lỗ nếu Báo cáo tài chính không áp dụng phương pháp vốn chủ sở hữu đối với khoản đầu tư vào công ty liên doanh, liên kết.
+- Đối với khoản đầu tư mà nhà đầu tư nắm giữ lâu dài (không phải là các khoản đầu tư vào chứng khoán kinh doanh, đầu tư vào công ty con, liên doanh, liên kết), việc lập dự phòng được thực hiện như sau:
++ Đối với khoản đầu tư vào cổ phiếu niêm yết hoặc giá trị hợp lý khoản đầu tư được xác định tin cậy, việc lập dự phòng dựa trên giá trị thị trường của cổ phiếu;
++ Đối với khoản đầu tư không xác định được giá trị hợp lý tại thời điểm báo cáo, việc lập dự phòng được thực hiện căn cứ vào khoản lỗ của bên được đầu tư.
+- Đối với khoản đầu tư nắm giữ đến ngày đáo hạn: Việc trích lập dự phòng được thực hiện khi có bằng chứng cho thấy một phần hoặc toàn bộ khoản đầu tư nắm giữ đến ngày đáo hạn của doanh nghiệp có khả năng không thu hồi được. 
+c) Việc trích lập và hoàn nhập khoản dự phòng tổn thất đầu tư vào đơn vị khác được thực hiện ở thời điểm lập Báo cáo tài chính cho từng khoản đầu tư theo nguyên tắc:
+- Nếu số dự phòng phải lập năm nay cao hơn số dư dự phòng đang ghi trên sổ kế toán thì doanh nghiệp trích lập bổ sung số chênh lệch đó và ghi nhận vào chi phí tài chính trong kỳ. 
+- Nếu số dự phòng phải lập năm nay thấp hơn số dư dự phòng đã lập năm trước chưa sử dụng hết thì doanh nghiệp hoàn nhập số chênh lệch đó và ghi giảm chi phí tài chính trong kỳ.
+1.4. Nguyên tắc kế toán dự phòng nợ phải thu khó đòi
+a) Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp xác định các khoản nợ phải thu khó đòi bị quá hạn hoặc có khả năng không thu hồi được để trích lập hoặc hoàn nhập khoản dự phòng phải thu khó đòi.
+b) Doanh nghiệp trích lập dự phòng phải thu khó đòi khi có khoản nợ phải thu đã quá hạn thanh toán hoặc chưa đến hạn thanh toán nhưng có bằng chứng cho thấy một phần hoặc toàn bộ khoản nợ phải thu đó của doanh nghiệp ước tính có thể bị tổn thất do đối tượng nợ hoặc khách nợ mất tích, trốn nợ hoặc khó có khả năng hoặc không có khả năng thanh toán khoản nợ. 
+- Doanh nghiệp có khoản nợ phải thu đã quá hạn thanh toán ghi trong hợp đồng kinh tế, các khế ước vay nợ, bản cam kết hợp đồng hoặc cam kết nợ, nhưng vẫn chưa thu được. Việc xác định thời gian quá hạn của khoản nợ phải thu được xác định là khó đòi phải trích lập dự phòng được căn cứ vào thời gian trả nợ gốc theo hợp đồng mua, bán ban đầu, không tính đến việc gia hạn nợ giữa các bên;
+- Doanh nghiệp khó có khả năng hoặc không có khả năng thu hồi một phần hoặc toàn bộ khoản nợ phải thu từ hợp đồng BCC do dự án bị tạm dừng hoặc kéo dài mà không phải do yêu cầu về kỹ thuật, dự án không có khả năng tiếp tục triển khai,...;
+- Doanh nghiệp có khoản nợ phải thu chưa đến thời hạn thanh toán nhưng khách nợ đã lâm vào tình trạng phá sản hoặc đang làm thủ tục giải thể, mất tích, bỏ trốn;
+c) Mức trích lập dự phòng các khoản nợ phải thu khó đòi
+- Đối với nợ phải thu quá hạn thanh toán, mức trích lập dự phòng như sau:
++ 30% giá trị đối với khoản nợ phải thu quá hạn từ 6 tháng đến dưới 1 năm.
++ 50% giá trị đối với khoản nợ phải thu quá hạn từ 1 năm đến dưới 2 năm.
++ 70% giá trị đối với khoản nợ phải thu quá hạn từ 2 năm đến dưới 3 năm.
++ 100% giá trị đối với khoản nợ phải thu từ 3 năm trở lên.
+- Đối với doanh nghiệp kinh doanh dịch vụ viễn thông và doanh nghiệp kinh doanh bán lẻ hàng hóa, khoản nợ phải thu cước dịch vụ viễn thông, công nghệ thông tin, truyền hình trả sau và khoản nợ phải thu do bán lẻ hàng hóa theo hình thức trả chậm/trả góp của các đối tượng nợ là cá nhân đã quá hạn thanh toán mức trích lập dự phòng như sau:
++ 30% giá trị đối với khoản nợ phải thu quá hạn từ 3 tháng đến dưới 6 tháng.
++ 50% giá trị đối với khoản nợ phải thu quá hạn từ 6 tháng đến dưới 9 tháng.
++ 70% giá trị đối với khoản nợ phải thu quá hạn từ 9 tháng đến dưới 12 tháng.
++ 100% giá trị đối với khoản nợ phải thu từ 12 tháng trở lên.
+- Đối với các khoản nợ phải thu chưa đến hạn thanh toán nhưng doanh nghiệp có bằng chứng cho thấy tổ chức kinh tế đã phá sản, đã mở thủ tục phá sản, đã bỏ trốn khỏi địa điểm kinh doanh; đối tượng nợ đang bị các cơ quan pháp luật truy tố, giam giữ, xét xử hoặc đang thi hành án hoặc đang mắc bệnh hiểm nghèo hoặc đã chết hoặc khoản nợ đã được doanh nghiệp yêu cầu thi hành án nhưng không thể thực hiện được do đối tượng nợ bỏ trốn khỏi nơi cư trú; khoản nợ đã được doanh nghiệp khởi kiện đòi nợ nhưng bị đình chỉ giải quyết vụ án hoặc các lý do khác thì doanh nghiệp tự dự kiến mức tổn thất không thu hồi được (tối đa bằng giá trị khoản nợ đang theo dõi trên sổ kế toán) để trích lập dự phòng nợ phải thu khó đòi.
+Trường hợp doanh nghiệp có bằng chứng tin cậy hơn hoặc phương pháp khác phù hợp hơn khi xác định giá trị có thể thu hồi của khoản nợ phải thu thì có thể áp dụng phương pháp đó để xác định khoản dự phòng nợ phải thu khó đòi. 
+d) Việc trích lập hoặc hoàn nhập khoản dự phòng phải thu khó đòi được thực hiện ở thời điểm lập Báo cáo tài chính. 
+- Trường hợp khoản dự phòng phải thu khó đòi phải lập ở cuối kỳ kế toán này lớn hơn số dư khoản dự phòng phải thu khó đòi đang ghi trên sổ kế toán thì số chênh lệch lớn hơn được ghi tăng dự phòng và ghi tăng chi phí quản lý doanh nghiệp trong kỳ.
+- Trường hợp khoản dự phòng phải thu khó đòi phải lập ở cuối kỳ kế toán này nhỏ hơn số dư khoản dự phòng phải thu khó đòi đang ghi trên sổ kế toán thì số chênh lệch nhỏ hơn được hoàn nhập ghi giảm dự phòng và ghi giảm chi phí quản lý doanh nghiệp trong kỳ.
+đ) Đối với những khoản phải thu khó đòi kéo dài trong nhiều năm, doanh nghiệp đã cố gắng dùng mọi biện pháp để thu nợ nhưng vẫn không thu được nợ và xác định khách nợ thực sự không có khả năng thanh toán thì doanh nghiệp có thể phải làm các thủ tục bán nợ cho Công ty mua, bán nợ hoặc xóa những khoản nợ phải thu khó đòi trên sổ kế toán. Việc xóa các khoản nợ phải thu khó đòi phải thực hiện theo quy định của pháp luật và điều lệ doanh nghiệp. Số nợ này được theo dõi trong hệ thống quản trị của doanh nghiệp và trình bày trong thuyết minh Báo cáo tài chính. Nếu sau khi đã xóa nợ, doanh nghiệp lại đòi được nợ đã xử lý thì số tiền thu được sẽ hạch toán vào Tài khoản 711 - Thu nhập khác.
+1.5. Nguyên tắc kế toán dự phòng giảm giá hàng tồn kho
+a) Dự phòng giảm giá hàng tồn kho là khoản dự tính trước để đưa vào chi phí sản xuất, kinh doanh phần giá trị bị giảm xuống thấp hơn giá trị đã ghi sổ kế toán của hàng tồn kho và nhằm bù đắp các khoản thiệt hại thực tế xảy ra do vật tư, sản phẩm, hàng hóa tồn kho bị giảm giá. Doanh nghiệp thực hiện trích lập dự phòng giảm giá hàng tồn kho khi có bằng chứng cho thấy giá trị thuần có thể thực hiện được thấp hơn so với giá gốc của hàng tồn kho.
+b) Việc trích lập hoặc hoàn nhập dự phòng giảm giá hàng tồn kho được thực hiện ở thời điểm lập Báo cáo tài chính. Việc lập dự phòng giảm giá hàng tồn kho phải được thực hiện theo đúng các quy định của Chuẩn mực kế toán Việt Nam số 02 - Hàng tồn kho. 
+c) Việc lập dự phòng giảm giá hàng tồn kho phải tính theo từng loại vật tư, hàng hóa, sản phẩm tồn kho. Đối với dịch vụ cung cấp dở dang, việc lập dự phòng giảm giá hàng tồn kho phải được tính theo từng loại dịch vụ có mức giá riêng biệt.
+d) Giá trị thuần có thể thực hiện được của hàng tồn kho là giá bán ước tính của hàng tồn kho trong kỳ sản xuất, kinh doanh bình thường trừ (-) chi phí ước tính để hoàn thành sản phẩm và chi phí ước tính cần thiết cho việc bán chúng.
+đ) Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp căn cứ vào số lượng, giá gốc, giá trị thuần có thể thực hiện được của từng loại vật tư, hàng hóa, từng loại dịch vụ cung cấp dở dang để xác định khoản dự phòng giảm giá hàng tồn kho cần phải trích lập hoặc hoàn nhập tại thời điểm kết thúc kỳ kế toán như sau:
+- Trường hợp khoản dự phòng giảm giá hàng tồn kho phải lập ở cuối kỳ kế toán này lớn hơn khoản dự phòng giảm giá hàng tồn kho đang ghi trên sổ kế toán thì số chênh lệch lớn hơn được ghi tăng dự phòng và ghi tăng giá vốn hàng bán trong kỳ.
+- Trường hợp khoản dự phòng giảm giá hàng tồn kho phải lập ở cuối kỳ kế toán này nhỏ hơn khoản dự phòng giảm giá hàng tồn kho đang ghi trên sổ kế toán thì số chênh lệch nhỏ hơn được hoàn nhập ghi giảm dự phòng và ghi giảm giá vốn hàng bán trong kỳ.
+1.6. Nguyên tắc kế toán dự phòng tổn thất tài sản sinh học
+a) Doanh nghiệp thực hiện trích lập dự phòng tổn thất tài sản sinh học khi có bằng chứng cho thấy giá trị thuần có thể thực hiện được nhỏ hơn so với giá gốc của tài sản sinh học. Việc kế toán trích lập và hoàn nhập khoản dự phòng tổn thất tài sản sinh học được thực hiện tương tự như hàng tồn kho của doanh nghiệp. 
+b) Khi lập Báo cáo tài chính, doanh nghiệp cần căn cứ vào số lượng, giá gốc, giá trị thuần có thể thực hiện được của từng loại tài sản sinh học để xác định khoản dự phòng tổn thất tài sản sinh học phải trích lập hoặc hoàn nhập tại thời điểm kết thúc kỳ kế toán như sau:
+- Trường hợp khoản dự phòng tổn thất tài sản sinh học phải lập ở thời điểm kết thúc kỳ kế toán này lớn hơn khoản dự phòng tổn thất tài sản sinh học đang ghi trên sổ kế toán thì số chênh lệch lớn hơn được ghi tăng khoản dự phòng và ghi tăng giá vốn hàng bán trong kỳ.
+- Trường hợp khoản dự phòng tổn thất tài sản sinh học phải lập ở thời điểm kết thúc kỳ kế toán này nhỏ hơn khoản dự phòng tổn thất tài sản sinh học đang ghi trên sổ kế toán thì số chênh lệch nhỏ hơn được hoàn nhập ghi giảm khoản dự phòng và ghi giảm giá vốn hàng bán trong kỳ.
+2. Kết cấu và nội dung phản ánh của tài khoản 229 - Dự phòng tổn thất tài sản
+Bên Nợ:
+- Hoàn nhập chênh lệch giữa số dự phòng phải lập kỳ này nhỏ hơn số dự phòng đã trích lập kỳ trước chưa sử dụng hết;
+- Bù đắp giá trị khoản đầu tư vào đơn vị khác khi có quyết định dùng số dự phòng đã trích lập để bù đắp số tổn thất xảy ra.
+- Bù đắp phần giá trị đã được lập dự phòng của khoản nợ phải thu không thể thu hồi được phải xóa sổ.
+Bên Có:
+Trích lập các khoản dự phòng tổn thất tài sản tại thời điểm kết thúc kỳ kế toán.
+Số dư bên Có: Số dự phòng tổn thất tài sản hiện có tại thời điểm kết thúc kỳ kế toán.
+Tài khoản 229 - Dự phòng tổn thất tài sản có 5 tài khoản cấp 2
+Tài khoản 2291 - Dự phòng giảm giá chứng khoán kinh doanh: Tài khoản này phản ánh tình hình trích lập hoặc hoàn nhập khoản dự phòng giảm giá chứng khoán kinh doanh.
+Tài khoản 2292 - Dự phòng tổn thất đầu tư vào đơn vị khác: Tài khoản này phản ánh tình hình trích lập hoặc hoàn nhập khoản dự phòng tổn thất đầu tư vào đơn vị khác. 
+Tài khoản 2293 - Dự phòng phải thu khó đòi: Tài khoản này phản ánh tình hình trích lập hoặc hoàn nhập khoản dự phòng các khoản phải thu khó đòi.
+Tài khoản 2294 - Dự phòng giảm giá hàng tồn kho: Tài khoản này phản ánh tình hình trích lập hoặc hoàn nhập dự phòng giảm giá hàng tồn kho. 
+Tài khoản 2295 - Dự phòng tổn thất tài sản sinh học: Tài khoản này phản ánh tình hình trích lập hoặc hoàn nhập dự phòng tổn thất tài sản sinh học (trừ các tài sản sinh học được kế toán là tài sản cố định). 
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Phương pháp kế toán dự phòng giảm giá chứng khoán kinh doanh
+a) Tại thời điểm kết thúc kỳ kế toán, nếu có bất kỳ dấu hiệu hoặc bằng chứng nào cho thấy các loại chứng khoán mà doanh nghiệp đang nắm giữ vì mục đích kinh doanh có thể tổn thất do bị giảm giá, doanh nghiệp phải thực hiện trích lập dự phòng giảm giá chứng khoán kinh doanh trong kỳ, ghi:
+Nợ TK 635 - Chi phí tài chính
+Có TK 229 - Dự phòng tổn thất tài sản (2291).
+b) Tại thời điểm kết thúc các kỳ kế toán sau:
+- Nếu số dự phòng giảm giá chứng khoán kinh doanh phải trích lập kỳ này lớn hơn số dự phòng đã trích lập từ kỳ trước, doanh nghiệp trích lập bổ sung phần chênh lệch, ghi:
+Nợ TK 635 - Chi phí tài chính
+Có TK 229 - Dự phòng tổn thất tài sản (2291).
+- Nếu số dự phòng giảm giá chứng khoán kinh doanh phải trích lập kỳ này nhỏ hơn số dự phòng đã trích lập từ kỳ trước, doanh nghiệp hoàn nhập phần chênh lệch, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (2291)
+Có TK 635 - Chi phí tài chính.
+c) Khi chuyển nhượng chứng khoán kinh doanh chưa được giao dịch trên thị trường chứng khoán, doanh nghiệp xử lý số dự phòng đã trích lập (nếu có) theo các trường hợp sau: 
+- Trường hợp có lãi, ghi:
+Nợ các TK 111, 112, 131... (Tổng số tiền thu được)
+Nợ TK 229 - Dự phòng tổn thất tài sản (số dự phòng đã trích lập tương ứng với chứng khoán kinh doanh đã bán)
+Có TK 121 - Chứng khoán kinh doanh (giá vốn)
+Có TK 515 - Doanh thu hoạt động tài chính (số chênh lệch).
+- Trường hợp bị lỗ, ghi:
+Nợ các TK 111, 112,... (Tổng số tiền thu được)
+Nợ TK 229 - Dự phòng tổn thất tài sản (2291) (số dự phòng đã trích lập tương ứng với chứng khoán kinh doanh đã bán)
+Nợ TK 635 - Chi phí tài chính (Chênh lệch giữa tổn thất thực tế với số dự phòng đã trích lập)
+Có TK 121 - Chứng khoán kinh doanh (giá gốc chứng khoán kinh doanh).
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với chứng khoán kinh doanh có thể được ghi nhận ngay cho từng giao dịch tại thời điểm chuyển nhượng chứng khoán kinh doanh hoặc khi xác định số trích lập dự phòng giảm giá chứng khoán kinh doanh vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+3.2. Phương pháp kế toán dự phòng tổn thất đầu tư vào đơn vị khác
+a) Tại thời điểm kết thúc kỳ kế toán, nếu có bất kỳ dấu hiệu hoặc bằng chứng nào cho thấy khoản đầu tư vào đơn vị khác của doanh nghiệp có thể bị tổn thất hoặc bị suy giảm giá trị, doanh nghiệp phải thực hiện trích lập dự phòng tổn thất đầu tư vào đơn vị khác trong kỳ, ghi:
+Nợ TK 635 - Chi phí tài chính
+		Có TK 229 - Dự phòng tổn thất tài sản (2292).
+b) Tại thời điểm kết thúc các kỳ kế toán sau:
+- Nếu số dự phòng tổn thất đầu tư vào đơn vị khác phải trích lập kỳ này lớn hơn số dự phòng đã trích lập từ kỳ trước, doanh nghiệp trích lập bổ sung phần chênh lệch, ghi:
+Nợ TK 635 - Chi phí tài chính
+		Có TK 229 - Dự phòng tổn thất tài sản (2292).
+- Nếu số dự phòng tổn thất đầu tư vào đơn vị khác phải trích lập kỳ này nhỏ hơn số dự phòng đã trích lập từ kỳ trước, doanh nghiệp hoàn nhập phần chênh lệch, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (2292)
+		Có TK 635 - Chi phí tài chính.
+c) Khi thanh lý, nhượng bán các khoản đầu tư vào đơn vị khác mà giá trị thu hồi thấp hơn giá gốc ban đầu, doanh nghiệp quyết định dùng khoản dự phòng tổn thất đầu tư vào đơn vị khác đã trích lập để bù đắp tổn thất, ghi:
+Nợ các TK 111, 112,... (giá trị thu hồi)
+Nợ TK 229 - Dự phòng tổn thất tài sản (2292) (số đã lập dự phòng)
+Nợ TK 635 - Chi phí tài chính (số chưa lập dự phòng)
+		Có các TK 221, 222, 228,... (giá gốc khoản đầu tư bị tổn thất).
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản đầu tư vào đơn vị khác có thể được ghi nhận ngay cho từng giao dịch tại thời điểm thu hồi hoặc khi xác định số trích lập dự phòng tổn thất đầu tư vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+3.3. Phương pháp kế toán dự phòng phải thu khó đòi
+a) Tại thời điểm kết thúc kỳ kế toán, nếu có bất kỳ dấu hiệu hoặc bằng chứng nào cho thấy doanh nghiệp khó có khả năng thu hồi hoặc không có khả năng thu hồi đối với một phần hoặc toàn bộ các khoản nợ phải thu của doanh nghiệp, doanh nghiệp phải thực hiện trích lập dự phòng nợ phải thu khó đòi trong kỳ, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp 
+		Có TK 229 - Dự phòng tổn thất tài sản (2293).
+b) Tại thời điểm kết thúc các kỳ kế toán sau:
+- Nếu số dự phòng nợ phải thu khó đòi phải trích lập kỳ này lớn hơn số dự phòng đã trích lập từ kỳ trước, doanh nghiệp trích lập bổ sung phần chênh lệch, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp 
+		Có TK 229 - Dự phòng tổn thất tài sản (2293).
+- Nếu số dự phòng nợ phải thu khó đòi phải trích lập kỳ này nhỏ hơn số dự phòng đã trích lập từ kỳ trước, doanh nghiệp hoàn nhập phần chênh lệch, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (2293)
+Có TK 642 - Chi phí quản lý doanh nghiệp.
+c) Đối với các khoản nợ phải thu được xác định là khó có khả năng thu hồi hoặc không có khả năng thu hồi mà doanh nghiệp thực hiện xóa khoản nợ phải thu. Căn cứ vào quyết định xóa nợ, ghi: 
+Nợ các TK 111, 112, 331, 334... (phần tổ chức cá nhân phải bồi thường)
+Nợ TK 229 - Dự phòng tổn thất tài sản (2293) (phần đã lập dự phòng)
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (phần được tính vào chi phí)
+		Có các TK 131, 138,...
+Đồng thời doanh nghiệp mở sổ chi tiết theo dõi nợ khó đòi đã xử lý theo quy định.
+d) Đối với những khoản nợ phải thu khó đòi đã được xử lý xóa nợ, nếu sau đó doanh nghiệp thu hồi lại được, doanh nghiệp căn cứ vào giá trị thực tế của khoản nợ đã thu hồi được, ghi:
+Nợ các TK 111, 112,...
+		Có TK 711 - Thu nhập khác.
+đ) Đối với các khoản nợ phải thu được bán theo giá thỏa thuận, tùy từng trường hợp thực tế, doanh nghiệp ghi nhận như sau:
+- Trường hợp khoản nợ phải thu chưa lập dự phòng nợ phải thu khó đòi, ghi:
+Nợ các TK 111, 112 (theo giá bán thỏa thuận)
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (số tổn thất từ việc bán nợ) (nếu có)
+		Có các TK 131, 138,...
+- Trường hợp doanh nghiệp bán khoản phải thu đã được trích lập dự phòng nợ phải thu khó đòi nhưng số đã lập dự phòng không đủ bù đắp tổn thất khi bán khoản nợ phải thu thì số tổn thất còn lại (nếu có) được hạch toán vào chi phí quản lý doanh nghiệp, ghi:
+Nợ các TK 111, 112 (theo giá bán thỏa thuận)
+Nợ TK 229 - Dự phòng tổn thất tài sản (2293) (số đã lập dự phòng)
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (số tổn thất còn lại từ việc bán khoản nợ phải thu)
+		Có các TK 131, 138,...
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản nợ phải thu khó đòi có thể được ghi nhận ngay cho từng giao dịch tại thời điểm bán khoản phải thu hoặc khi xác định số trích lập dự phòng nợ phải thu khó đòi vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+3.4. Phương pháp kế toán dự phòng giảm giá hàng tồn kho
+a) Tại thời điểm kết thúc kỳ kế toán, nếu giá trị thuần có thể thực hiện được thấp hơn so với giá gốc của hàng tồn kho, doanh nghiệp phải thực hiện trích lập dự phòng giảm giá hàng tồn kho trong kỳ, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 229 - Dự phòng tổn thất tài sản (2294).
+b) Tại thời điểm kết thúc các kỳ kế toán sau:
+- Nếu số dự phòng giảm giá hàng tồn kho phải trích lập kỳ này lớn hơn số dự phòng đã trích lập từ kỳ trước, doanh nghiệp trích lập bổ sung phần chênh lệch, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 229 - Dự phòng tổn thất tài sản (2294).
+- Nếu số dự phòng giảm giá hàng tồn kho phải trích lập kỳ này nhỏ hơn số dự phòng đã trích lập từ các kỳ trước, doanh nghiệp hoàn nhập phần chênh lệch, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (2294)
+Có TK 632 - Giá vốn hàng bán.
+c) Kế toán xử lý khoản dự phòng giảm giá hàng tồn kho đối với vật tư, hàng hóa bị hủy bỏ do hết hạn sử dụng, mất phẩm chất, hư hỏng, không còn giá trị sử dụng, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (số được bù đắp bằng dự phòng)
+Nợ TK 632 - Giá vốn hàng bán (nếu số tổn thất cao hơn số đã lập dự phòng)
+		Có các TK 152, 153, 155, 156,...
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với hàng tồn kho có thể được ghi nhận ngay cho từng giao dịch tại thời điểm hàng tồn kho bị hủy bỏ hoặc khi xác định số trích lập dự phòng giảm giá hàng tồn kho vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của chuẩn mực kế toán Việt Nam.
+3.5. Phương pháp kế toán dự phòng tổn thất tài sản sinh học
+a) Tại thời điểm kết thúc kỳ kế toán, nếu giá trị thuần có thể thực hiện được thấp hơn so với giá gốc của tài sản sinh học, doanh nghiệp phải thực hiện trích lập dự phòng tổn thất tài sản sinh học trong kỳ, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 229 - Dự phòng tổn thất tài sản (2295).
+b) Tại thời điểm kết thúc các kỳ kế toán sau:
+- Nếu số dự phòng tài sản sinh học phải trích lập kỳ này lớn hơn số dự phòng đã trích lập từ kỳ trước, doanh nghiệp trích lập bổ sung phần chênh lệch, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 229 - Dự phòng tổn thất tài sản (2295).
+- Nếu số dự phòng tài sản sinh học phải trích lập kỳ này nhỏ hơn số dự phòng đã trích lập từ các kỳ trước, doanh nghiệp hoàn nhập phần chênh lệch, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (2295)
+Có TK 632 - Giá vốn hàng bán.
+c) Trường hợp doanh nghiệp bị tổn thất tài sản sinh học do thiên tai, lũ lụt,..., căn cứ vào giá trị tài sản sinh học bị tổn thất, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (số được bù đắp bằng dự phòng)
+Nợ TK 632 - Giá vốn hàng bán (nếu số tổn thất cao hơn số đã lập dự phòng)
+		Có TK 215 - Tài sản sinh học
+TÀI KHOẢN 241 - XÂY DỰNG CƠ BẢN DỞ DANG
+1. Nguyên tắc kế toán
+a) Tài khoản này chỉ dùng ở đơn vị không thành lập ban quản lý dự án để phản ánh chi phí thực hiện các dự án đầu tư XDCB (bao gồm mua sắm mới TSCĐ; xây dựng cơ bản TSCĐ mới; sửa chữa, bảo dưỡng định kỳ; nâng cấp, cải tạo TSCĐ để làm tăng năng lực hoặc kéo dài thời gian sử dụng, tăng lợi ích kinh tế của TSCĐ) và tình hình quyết toán chi phí đầu tư XDCB ở các doanh nghiệp.
+Công tác đầu tư XDCB và sửa chữa, bảo dưỡng định kỳ hoặc nâng cấp, cải tạo TSCĐ của doanh nghiệp có thể được thực hiện theo phương thức giao thầu hoặc tự làm. Ở các doanh nghiệp tiến hành đầu tư XDCB theo phương thức tự làm thì tài khoản này phản ánh cả chi phí phát sinh trong quá trình xây lắp, sửa chữa.
+b) Chi phí thực hiện các dự án đầu tư XDCB là toàn bộ chi phí cần thiết để xây dựng mới hoặc sửa chữa, nâng cấp, cải tạo, mở rộng hay trang bị lại kỹ thuật công trình. Việc xác định nội dung chi phí đầu tư XDCB được thực hiện theo quy định của pháp luật về quản lý chi phí đầu tư xây dựng hiện hành. Chỉ những chi phí liên quan trực tiếp đến hoạt động đầu tư XDCB TSCĐ, BĐSĐT (là những chi phí cần thiết và không thể tránh được khi thực hiện hoạt động đầu tư XDCB) và quá trình đầu tư xây dựng tài sản dở dang không bị gián đoạn một cách bất thường do chậm triển khai hoặc chậm tiến độ so với thời gian xây dựng dự kiến,... mới được vốn hóa vào giá trị của TSCĐ, BĐSĐT. 
+Đối với chi phí đi vay liên quan trực tiếp đến khoản vay (ngoài lãi vay phải trả), như chi phí thẩm định, kiểm toán, lập hồ sơ vay vốn, chi phí thu xếp khoản vay,... được hạch toán vào chi phí tài chính, trừ trường hợp các chi phí đi vay này phát sinh từ khoản vay riêng cho mục đích đầu tư, xây dựng hoặc sản xuất tài sản dở dang nếu thỏa mãn điều kiện quy định tại Chuẩn mực kế toán Việt Nam số 16 - Chi phí đi vay thì được vốn hóa. Trường hợp đi vay để đầu tư vào công ty con, công ty liên doanh, liên kết,... thì chi phí đi vay không được vốn hóa. 
+Tài khoản 241 được mở chi tiết theo từng công trình, hạng mục công trình. Mỗi hạng mục công trình phải được hạch toán chi tiết từng nội dung chi phí đầu tư XDCB và được theo dõi lũy kế kể từ khi khởi công đến khi công trình, hạng mục công trình hoàn thành ở trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp và được nghiệm thu.
+Trường hợp công trình, hạng mục công trình mà doanh nghiệp đang đầu tư xây dựng hoặc hợp tác kinh doanh để đầu tư xây dựng nhưng không thể tiếp tục triển khai được dự án thì doanh nghiệp phải căn cứ vào tình hình thực tiễn để đánh giá khả năng thu hồi của các khoản chi phí đầu tư XDCB đã bỏ ra, phần chênh lệch nếu có sẽ được hạch toán vào kết quả SXKD của doanh nghiệp trong kỳ.
+c) Khi đầu tư XDCB, các chi phí xây lắp, chi phí thiết bị thường tính trực tiếp cho từng công trình, hạng mục công trình; Các chi phí quản lý dự án và chi phí khác thường được chi chung. Doanh nghiệp phải tiến hành tính toán, phân bổ chi phí quản lý dự án và chi phí khác cho từng công trình, hạng mục công trình theo nguyên tắc: 
+- Nếu xác định được riêng các chi phí quản lý dự án và chi phí khác liên quan trực tiếp đến từng công trình, hạng mục công trình thì tính trực tiếp cho công trình, hạng mục công trình đó;
+- Các chi phí quản lý dự án và chi phí khác chi chung có liên quan đến nhiều công trình, hạng mục công trình mà không tính trực tiếp được cho từng công trình, hạng mục công trình thì đơn vị được phân bổ theo những tiêu thức phù hợp nhất với từng công trình, hạng mục công trình. 
+d) Trường hợp dự án đã hoàn thành đưa vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp nhưng quyết toán dự án chưa được duyệt thì doanh nghiệp ghi tăng nguyên giá TSCĐ theo giá tạm tính (giá tạm tính phải căn cứ vào chi phí thực tế đã phát sinh, chi phí ước tính chắc chắn sẽ phải bỏ ra để có được TSCĐ) để trích khấu hao TSCĐ, nhưng sau đó phải điều chỉnh theo giá quyết toán được phê duyệt. 
+đ) Chi phí sửa chữa, bảo dưỡng thường xuyên cho TSCĐ hoạt động bình thường được hạch toán trực tiếp vào chi phí sản xuất, kinh doanh trong kỳ của bộ phận sử dụng TSCĐ. Đối với các TSCĐ theo yêu cầu kỹ thuật phải sửa chữa, bảo dưỡng định kỳ, doanh nghiệp được trích trước chi phí sửa chữa, bảo dưỡng (nếu có nghĩa vụ) hoặc tính chi phí sửa chữa, bảo dưỡng phát sinh vào chi phí chờ phân bổ và định kỳ phân bổ vào chi phí sản xuất, kinh doanh của bộ phận sử dụng TSCĐ. Đối với các chi phí phát sinh sau ghi nhận ban đầu liên quan đến nâng cấp, cải tạo làm tăng năng lực hoặc kéo dài thời gian sử dụng của TSCĐ thì được hạch toán tăng nguyên giá TSCĐ.
+e) Doanh nghiệp xây dựng bất động sản sử dụng tài khoản này để tập hợp chi phí xây dựng TSCĐ hoặc BĐSĐT. Trường hợp bất động sản xây dựng sử dụng cho nhiều mục đích (làm văn phòng, cho thuê hoặc để bán, ví dụ như tòa nhà hỗn hợp) thì doanh nghiệp vẫn tập hợp chi phí phát sinh liên quan trực tiếp tới việc đầu tư xây dựng trên Tài khoản 241 - Xây dựng cơ bản dở dang. Khi công trình, dự án hoàn thành bàn giao đưa vào sử dụng, doanh nghiệp căn cứ cách thức sử dụng tài sản trong thực tế để kết chuyển chi phí đầu tư xây dựng phù hợp với bản chất của từng loại tài sản.
+g) Trong giai đoạn đầu tư xây dựng để hình thành TSCĐ hoặc BĐSĐT, doanh nghiệp không được vốn hóa các khoản chênh lệch tỷ giá hối đoái vào giá trị tài sản dở dang.
+h) Trường hợp dự án đầu tư bị hủy bỏ hoặc tổn thất, doanh nghiệp phải tiến hành thanh lý và thu hồi các chi phí đã phát sinh của dự án. Phần chênh lệch giữa chi phí đầu tư thực tế phát sinh và số thu từ việc thanh lý được ghi nhận vào chi phí khác hoặc xác định trách nhiệm bồi thường của tổ chức, cá nhân để thu hồi.
+i) Đối với cây lâu năm cho sản phẩm định kỳ thỏa mãn là TSCĐ (chè, cà phê, cao su, hồ tiêu, cây ăn quả,...) thì các chi phí khai hoang, làm đất, gieo trồng, chăm sóc cây,... trong thời kỳ XDCB (trước giai đoạn trưởng thành, bắt đầu cho sản phẩm bói) được phản ánh vào Tài khoản 241 - Xây dựng cơ bản dở dang. Khi cây lâu năm cho sản phẩm định kỳ trưởng thành và bắt đầu cho sản phẩm thì doanh nghiệp kết chuyển từ Tài khoản 241 - Xây dựng cơ bản dở dang sang Tài khoản 211 - TSCĐ hữu hình.
+Tài khoản 241 - Xây dựng cơ bản dở dang, có 4 tài khoản cấp 2:
+- Tài khoản 2411 - Mua sắm TSCĐ: Phản ánh chi phí mua sắm TSCĐ và tình hình quyết toán chi phí mua sắm TSCĐ trong trường hợp phải qua lắp đặt, chạy thử trước khi đưa vào sử dụng (kể cả mua TSCĐ mới hoặc đã qua sử dụng). Nếu mua sắm TSCĐ về phải đầu tư, trang bị thêm mới sử dụng được thì mọi chi phí mua sắm, trang bị thêm cũng được phản ánh vào tài khoản này. 
+- Tài khoản 2412 - Xây dựng cơ bản: Phản ánh chi phí đầu tư XDCB và tình hình quyết toán vốn đầu tư XDCB. Tài khoản này được mở chi tiết cho từng công trình, hạng mục công trình (theo từng đối tượng tài sản hình thành qua đầu tư) và đối với mỗi đối tượng tài sản phải theo dõi chi tiết từng nội dung chi phí đầu tư XDCB. 
+- Tài khoản 2413 - Sửa chữa, bảo dưỡng định kỳ TSCĐ: Phản ánh chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ và tình hình quyết toán chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ. Trường hợp sửa chữa thường xuyên TSCĐ thì không hạch toán vào tài khoản này mà hạch toán ngay vào chi phí sản xuất, kinh doanh trong kỳ.
+- Tài khoản 2414 - Nâng cấp, cải tạo TSCĐ: Phản ánh chi phí nâng cấp, cải tạo TSCĐ và tình hình quyết toán chi phí nâng cấp, cải tạo TSCĐ. 
+2. Kết cấu và nội dung phản ánh của Tài khoản 241 - Xây dựng cơ bản dở dang
+Bên Nợ:
+- Chi phí mua sắm TSCĐ và BĐSĐT (trường hợp cần có giai đoạn đầu tư xây dựng hoặc lắp đặt, chạy thử);
+- Chi phí đầu tư XDCB TSCĐ hoặc BĐSĐT;
+- Chi phí nâng cấp, cải tạo TSCĐ;
+- Chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ.
+Bên Có:
+- Giá trị TSCĐ hoặc BĐSĐT hình thành qua mua sắm, đầu tư XDCB đã hoàn thành đưa vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp;
+- Giá trị công trình nâng cấp, cải tạo TSCĐ hoặc BĐSĐT hoàn thành, kết chuyển khi quyết toán được duyệt;
+- Quyết toán chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ khi TSCĐ hoàn thành, bàn giao đưa vào sử dụng;
+- Giá trị công trình bị loại bỏ và các khoản chi phí duyệt bỏ khác kết chuyển khi quyết toán được duyệt;
+Số dư Nợ:
+- Chi phí mua sắm, đầu tư xây dựng, sửa chữa, bảo dưỡng định kỳ và nâng cấp cải tạo TSCĐ dở dang tại thời điểm kết thúc kỳ kế toán;
+- Giá trị đầu tư xây dựng BĐSĐT còn dở dang tại thời điểm kết thúc kỳ kế toán;
+- Giá trị công trình xây dựng và sửa chữa, bảo dưỡng định kỳ và nâng cấp, cải tạo TSCĐ đã hoàn thành nhưng chưa bàn giao đưa vào sử dụng hoặc quyết toán chưa được duyệt tại thời điểm kết thúc kỳ kế toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Kế toán mua sắm TSCĐ phải qua lắp đặt, chạy thử
+a) Trường hợp phát sinh chi phí chạy thử không thu được sản phẩm, căn cứ vào chứng từ kế toán có liên quan đến mua TSCĐ, ghi:
+Nợ TK 241 - Xây dựng cơ bản dở dang
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112,...
+- Khi phát sinh chi phí sản xuất thử, doanh nghiệp tập hợp vào TK 241 để tính nguyên giá TSCĐ, căn cứ vào chứng từ kế toán có liên quan, ghi:
+Nợ TK 241 - Xây dựng cơ bản dở dang
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112,...
+b) Trường hợp chi phí chạy thử có thu được sản phẩm, phế liệu chạy thử:
+- Khi phát sinh chi phí chạy thử có tạo ra sản phẩm chạy thử, doanh nghiệp tập hợp toàn bộ chi phí chạy thử vào chi phí sản xuất, kinh doanh dở dang để tính giá thành của sản phẩm chạy thử, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang 
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+	Có các TK 111, 112, 152, 331,...
+- Khi nhập kho sản phẩm chạy thử, ghi:
+Nợ TK 155 - Sản phẩm
+ 	Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+- Khi bán sản phẩm chạy thử:
++ Phản ánh doanh thu bán sản phẩm chạy thử:
+Nợ các TK 111, 112,...
+		Có các TK 154, 155
+		Có TK 3331 - Thuế GTGT phải nộp (nếu có)
+- Kết chuyển phần chênh lệch giữa chi phí sản xuất thử và số thu từ việc bán sản phẩm sản xuất thử:
++ Trường hợp chi phí sản xuất thử cao hơn số thu từ việc bán sản phẩm sản xuất thử, doanh nghiệp kết chuyển phần chênh lệch để ghi tăng chi phí đầu tư XDCB dở dang, ghi:
+Nợ TK 241 - Xây dựng cơ bản dở dang
+		Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
++ Trường hợp chi phí sản xuất thử nhỏ hơn số thu từ việc bán sản phẩm sản xuất thử, doanh nghiệp kết chuyển phần chênh lệch để ghi giảm chi phí đầu tư XDCB dở dang, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Có TK 241 - Xây dựng cơ bản dở dang.
+c) Khi hoạt động chạy thử hoàn thành, bàn giao đưa TSCĐ vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp, ghi:
+Nợ TK 211 - TSCĐ hữu hình
+		Có TK 241 - Xây dựng cơ bản dở dang.
+3.2. Kế toán chi phí đầu tư XDCB
+3.2.1. Trường hợp ứng trước tiền cho nhà thầu XDCB, sửa chữa, bảo dưỡng định kỳ hoặc nâng cấp, cải tạo TSCĐ, căn cứ vào các chứng từ liên quan:
+-	 Ghi nhận số tiền ứng trước cho nhà thầu theo hợp đồng, ghi
+Nợ TK 331 - Phải trả cho người bán
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112,...
+- Khi nhận khối lượng XDCB, sửa chữa, bảo dưỡng định kỳ hoặc nâng cấp, cải tạo TSCĐ hoàn thành từ bên nhận thầu, căn cứ vào các chứng từ liên quan, ghi:
+Nợ TK 241 - XDCB dở dang (2412, 2413, 2414)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có TK 331 - Phải trả cho người bán.
+3.2.2. Nhận khối lượng XDCB, khối lượng sửa chữa, bảo dưỡng định kỳ hoặc nâng cấp, cải tạo TSCĐ hoàn thành do bên nhận thầu bàn giao hoặc khi phát sinh chi phí đầu tư xây dựng theo phương thức tự làm, căn cứ vào chứng từ liên quan, ghi:
+Nợ TK 241 - XDCB dở dang (2412, 2413, 2414)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+ Có các TK 111, 112, 331, 335,...
+3.2.3. Khi mua thiết bị đầu tư XDCB, căn cứ hóa đơn, phiếu nhập kho, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có TK 331 - Phải trả cho người bán (tổng giá thanh toán).
+Trường hợp chuyển thẳng thiết bị không cần lắp đến địa điểm thi công giao cho bên nhận thầu, ghi:
+Nợ TK 241 - XDCB dở dang
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có TK 331 - Phải trả cho người bán
+Có TK 151 - Hàng mua đang đi đường.
+3.2.4. Trả tiền cho người nhận thầu, người cung cấp vật tư, hàng hóa, dịch vụ có liên quan đến đầu tư XDCB, ghi:
+Nợ TK 331 - Phải trả cho người bán 
+Có các TK 111, 112,...
+3.2.5. Xuất thiết bị đầu tư XDCB giao cho bên nhận thầu:
+a) Đối với thiết bị không cần lắp đặt, ghi:
+Nợ TK 241 - XDCB dở dang
+Có TK 152 - Nguyên liệu, vật liệu.
+b) Đối với thiết bị cần lắp đặt:
+- Khi xuất thiết bị giao cho bên nhận thầu, doanh nghiệp chỉ theo dõi chi tiết thiết bị đưa đi lắp đặt.
+- Khi có khối lượng lắp đặt hoàn thành của bên nhận thầu bàn giao, được nghiệm thu, chấp nhận thanh toán thì giá trị thiết bị đưa đi lắp mới được tính vào chi phí đầu tư XDCB, ghi:
+Nợ TK 241 - XDCB dở dang (2412)
+Có TK 152 - Nguyên liệu, vật liệu.
+3.2.6. Khi phát sinh các chi phí đi vay (bao gồm lãi tiền vay và các chi phí để có được khoản vay) nếu được vốn hóa theo quy định, chi phí đấu thầu, (sau khi bù trừ với số tiền thu từ việc bán hồ sơ thầu), chi phí tháo dỡ hoàn trả mặt bằng (sau khi bù trừ với số phế liệu có thể thu hồi)... ghi:
+Nợ TK 241 - XDCB dở dang (2412)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có các TK 111, 112, 331, 335, 3411, 343...
+	Số tiền bán hồ sơ thầu sau khi bù trừ với chi phí đấu thầu, nếu còn thừa được kế toán giảm chi phí đầu tư xây dựng (ghi vào bên Có TK 241).
+3.2.7. Khoản tiền phạt nhà thầu thu được nếu bản chất làm giảm số phải thanh toán cho nhà thầu, ghi:
+	Nợ các TK 112, 331
+		Có TK 241 - XDCB dở dang.
+3.2.8. Khi công trình, hạng mục công trình hoàn thành, việc nghiệm thu công trình hoặc hạng mục công trình đã được thực hiện xong, tài sản được bàn giao và đưa TSCĐ vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp:
++ Nếu quyết toán được duyệt ngay thì căn cứ vào giá trị tài sản hình thành qua đầu tư được duyệt để ghi sổ.
++ Nếu quyết toán chưa được phê duyệt thì ghi tăng giá trị của tài sản hình thành qua đầu tư theo giá tạm tính (giá tạm tính là chi phí thực tế đã bỏ ra để có được tài sản, căn cứ vào TK 241 để xác định giá tạm tính).
+Cả 2 trường hợp đều ghi như sau:
+Nợ các TK 211, 213, 217
+ Có TK 241 - XDCB dở dang (giá được duyệt hoặc giá tạm tính).
+- Trường hợp các khoản chi XDCB nhưng không được cấp có thẩm quyền phê duyệt phải thu hồi, ghi:
+Nợ TK 138 - Phải thu khác
+Có TK 241 - XDCB dở dang
+- Trường hợp công trình đã hoàn thành, nhưng chưa nghiệm thu và làm thủ tục bàn giao tài sản để đưa vào sử dụng, đang chờ lập hoặc duyệt quyết toán thì doanh nghiệp phải mở sổ chi tiết Tài khoản 241 - XDCB dở dang theo dõi riêng công trình hoàn thành chờ bàn giao và duyệt quyết toán.
+3.2.9. Khi quyết toán vốn đầu tư XDCB hoàn thành được duyệt thì doanh nghiệp điều chỉnh lại giá tạm tính theo giá trị tài sản được duyệt, ghi:
+- Nếu giá trị tài sản hình thành qua đầu tư XDCB được duyệt có giá trị thấp hơn giá tạm tính:
+Nợ TK 138 - Phải thu khác (nếu cấp có thẩm quyền quyết định chi phí không được duyệt bỏ phải thu hồi)
+		Có các TK 211, 213, 217,...
+- Trường hợp giá trị tài sản hình thành qua đầu tư XDCB được duyệt có giá trị cao hơn giá tạm tính hoặc cao hơn chi phí đầu tư xây dựng cơ bản (nếu có theo quy định của pháp luật), căn cứ vào quyết định của cấp có thẩm quyền về việc xử lý phần giá trị cao hơn, ghi:
+Nợ các TK 211, 213, 217, 155,...
+Có các TK liên quan. 
+- Nếu TSCĐ hình thành bằng quỹ phúc lợi và dùng vào mục đích phúc lợi, khi chủ đầu tư duyệt quyết toán vốn đầu tư, doanh nghiệp ghi tăng quỹ phúc lợi đã hình thành TSCĐ:
+Nợ TK 3532 - Quỹ phúc lợi
+Có TK 3533 - Quỹ phúc lợi đã hình thành TSCĐ.
+3.2.10. Trường hợp dự án đầu tư bị hủy bỏ hoặc thu hồi, doanh nghiệp thanh lý dự án và thu hồi chi phí đầu tư. Phần chênh lệch giữa chi phí đầu tư và số thu từ việc thanh lý được phản ánh vào chi phí khác hoặc xác định trách nhiệm bồi thường của tổ chức, cá nhân theo quyết định xử lý của cấp có thẩm quyền, ghi:
+Nợ các TK 111, 112 (Số thu từ việc thanh lý dự án)
+Nợ TK 138 - Phải thu khác (Số tổ chức, cá nhân phải bồi thường)
+Nợ TK 811 - Chi phí khác (Số được tính vào chi phí khác)
+		Có TK 241 - XDCB dở dang.
+3.2.11. Trường hợp doanh nghiệp là chủ đầu tư có thành lập đơn vị phụ thuộc là các Ban quản lý dự án để thực hiện công tác kế toán hoạt động đầu tư XDCB:
+a) Kế toán tại chủ đầu tư:
+- Trường hợp nhận bàn giao công trình đã được quyết toán, chủ đầu tư ghi nhận giá trị công trình là giá đã được quyết toán, ghi:
+Nợ các TK 211, 213, 217,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Nợ các TK 111, 112, 152, 153
+			Có TK 136 - Phải thu nội bộ
+			Có các TK 331, 333,... (nhận nợ phải trả nếu có).
+- Trường hợp nhận bàn giao công trình chưa được quyết toán, chủ đầu tư ghi nhận giá trị công trình là giá tạm tính. Khi quyết toán phải điều chỉnh giá trị công trình theo giá được quyết toán, ghi:
++ Nếu giá được quyết toán lớn hơn giá tạm tính, ghi:
+Nợ các TK 211, 213, 217,...
+Có các TK liên quan.
++ Nếu giá được quyết toán nhỏ hơn giá tạm tính, ghi:
+Nợ các TK liên quan
+Có các TK 211, 213, 217,...
+b) Kế toán tại Ban quản lý dự án: Tùy theo đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý của doanh nghiệp để doanh nghiệp hướng dẫn công tác kế toán cho các Ban quản lý dự án trực thuộc doanh nghiệp cho phù hợp với nguyên tắc hướng dẫn tại Điều 7 Thông tư này, quy định của pháp luật đầu tư xây dựng và pháp luật khác có liên quan.
+ 3.3. Kế toán sửa chữa, bảo dưỡng định kỳ TSCĐ
+Công tác sửa chữa TSCĐ của doanh nghiệp cũng có thể tiến hành theo phương thức tự làm hoặc giao thầu.
+a) Khi chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ phát sinh được tập hợp vào bên Nợ Tài khoản 241 - XDCB dở dang (2413) và được chi tiết cho từng công trình, công việc sửa chữa TSCĐ. Căn cứ chứng từ phát sinh liên quan đến các khoản chi phí để hạch toán:
+- Nếu thuế GTGT đầu vào được khấu trừ, ghi: 
+Nợ TK 241 - XDCB dở dang (2413) (giá mua chưa có thuế GTGT)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332)
+		Có các TK 111, 112, 152, 214,... (tổng giá thanh toán).
+- Nếu thuế GTGT đầu vào không được khấu trừ thì chi phí sửa chữa TSCĐ bao gồm cả thuế GTGT, ghi:
+Nợ TK 241 - XDCB dở dang (2413) (tổng giá thanh toán) 
+		Có các 111, 112, 152, 214, 334,... (tổng giá thanh toán).
+b) Khi công trình, hạng mục công trình sửa chữa, bảo dưỡng định kỳ hoàn thành, bàn giao và đưa vào sử dụng:
+- Kết chuyển chi phí sửa chữa, bảo dưỡng định kỳ vào chi phi chờ phân bổ, ghi:
+Nợ TK 242 - Chi phí chờ phân bổ (chi phí sửa chữa, bảo dưỡng định kỳ 	được phân bổ dần)
+Có TK 241 - XDCB dở dang (2413).
+- Phân bổ dần vào chi phí sản xuất kinh doanh của bộ phận sử dụng:
+Nợ các TK 623, 627, 641, 642,...
+		Có TK 242 - Chi phí chờ phân bổ
+3.4. Kế toán nâng cấp, cải tạo TSCĐ 
+- Tập hợp chi phí nâng cấp, cải tạo TSCĐ, ghi:
+Nợ TK 241 - XDCB dở dang (2414)
+		Có các TK 112, 331,...
+- Kết chuyển tăng nguyên giá TSCĐ khi hoạt động cải tạo, nâng cấp TSCĐ hoàn thành, bàn giao đưa vào sử dụng:
++ Trường hợp khi nhận bàn giao, công trình đã được quyết toán ngay, ghi:
+Nợ TK 211 - TSCĐ hữu hình
+Có TK 241 - XDCB dở dang (2414).
++ Trường hợp nhận bàn giao công trình chưa được quyết toán, chủ đầu tư ghi nhận giá trị công trình là giá tạm tính, việc hạch toán kế toán tương tự như xây dựng cơ bản mới TSCĐ.
+TÀI KHOẢN 242 - CHI PHÍ CHỜ PHÂN BỔ
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh các chi phí thực tế đã phát sinh (bao gồm các chi phí đã trả tiền trước và các chi phí chưa trả tiền trước) nhưng có liên quan đến kết quả hoạt động SXKD của nhiều kỳ kế toán và việc phân bổ các khoản chi phí này vào chi phí SXKD của các kỳ kế toán sau.
+b) Các nội dung được phản ánh là chi phí chờ phân bổ, bao gồm:
+- Chi phí về thuê cơ sở hạ tầng, thuê hoạt động TSCĐ đã phát sinh (quyền sử dụng đất, nhà xưởng, kho bãi, văn phòng làm việc, cửa hàng và TSCĐ khác) phục vụ cho sản xuất, kinh doanh nhiều kỳ kế toán. 
+- Chi phí mua bảo hiểm (bảo hiểm cháy, nổ, bảo hiểm trách nhiệm dân sự chủ phương tiện vận tải, bảo hiểm thân xe, bảo hiểm tài sản,...) và các khoản chi mà doanh nghiệp đã trả một lần cho nhiều kỳ kế toán;
+- Công cụ, dụng cụ, bao bì luân chuyển, đồ dùng cho thuê liên quan đến hoạt động kinh doanh trong nhiều kỳ kế toán;
+- Chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ liên quan đến hoạt động kinh doanh trong nhiều kỳ kế toán; 
+- Số chênh lệch giá bán nhỏ hơn giá trị còn lại của TSCĐ bán và thuê lại là thuê tài chính;
+- Số chênh lệch giá bán nhỏ hơn giá trị hợp lý của TSCĐ bán và thuê lại là thuê hoạt động;
+- Lợi thế thương mại phát sinh từ việc hợp nhất kinh doanh không hình thành công ty mẹ - công ty con (mua tài sản thuần), trừ trường hợp hợp nhất kinh doanh dưới sự kiểm soát chung; 
+- Các khoản chi phí chờ phân bổ khác không thỏa mãn điều kiện là TSCĐ, ví dụ như các chi phí khác phát sinh liên quan đến nhiều kỳ, tiền đọc tài liệu khai thác tài nguyên, khoáng sản,... 
+c) Việc tính và phân bổ chi phí chờ phân bổ vào chi phí SXKD từng kỳ doanh nghiệp phải căn cứ vào tính chất, mức độ từng loại chi phí để lựa chọn phương pháp và tiêu thức phân bổ cho phù hợp. Ví dụ, đối với chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ liên quan đến nhiều kỳ kế toán thì thời gian phân bổ dự kiến có thể tính từ khi TSCĐ được sửa chữa bảo dưỡng hoàn thành, đưa vào sử dụng cho đến lần cần sửa chữa, bảo dưỡng định kỳ sau hoặc đối với công cụ, dụng cụ, bao bì luân chuyển, đồ dùng cho thuê liên quan đến hoạt động kinh doanh trong nhiều kỳ kế toán thì thời gian phân bổ có thể là thời gian dự kiến sử dụng hữu ích của công cụ dụng cụ, bao bì luân chuyển hoặc đồ dùng cho thuê,...
+d) Doanh nghiệp phải theo dõi chi tiết từng khoản chi phí chờ phân bổ theo từng kỳ hạn, số đã phát sinh, số đã phân bổ vào các đối tượng chịu chi phí của từng kỳ kế toán và số còn lại chưa phân bổ vào chi phí.
+2. Kết cấu và nội dung phản ánh của Tài khoản 242 - Chi phí chờ phân bổ
+Bên Nợ: 
+Các khoản chi phí chờ phân bổ phát sinh trong kỳ. 
+Bên Có: 
+Các khoản chi phí chờ phân bổ đã tính vào chi phí sản xuất, kinh doanh trong kỳ.
+Số dư bên Nợ: 
+Các khoản chi phí chờ phân bổ chưa tính vào chi phí sản xuất, kinh doanh trong kỳ tại thời điểm kết thúc kỳ kế toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Khi phát sinh các khoản chi phí phải phân bổ dần vào chi phí SXKD của nhiều kỳ, căn cứ vào chứng từ kế toán có liên quan, ghi:
+Nợ TK 242 - Chi phí chờ phân bổ
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)	
+Có các TK 111, 112, 153, 331, 334, 338,...
+Định kỳ tiến hành phân bổ chi phí chờ phân bổ vào chi phí SXKD của từng kỳ, ghi:
+Nợ các TK 623, 627, 635, 641, 642,...
+Có TK 242 - Chi phí chờ phân bổ.
+b) Khi trả trước tiền thuê TSCĐ, thuê cơ sở hạ tầng theo phương thức thuê hoạt động và phục vụ hoạt động kinh doanh cho nhiều kỳ, ghi:
+ Nợ TK 242 - Chi phí chờ phân bổ
+ Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112,...
+c) Xuất dùng công cụ, dụng cụ, bao bì luân chuyển, đồ dùng cho thuê liên quan đến hoạt động sản xuất, kinh doanh trong nhiều kỳ, ghi:
+- Khi xuất dùng hoặc cho thuê, ghi:
+Nợ TK 242 - Chi phí chờ phân bổ
+Có TK 153 - Công cụ, dụng cụ.
+- Định kỳ, tiến hành phân bổ giá trị công cụ, dụng cụ, bao bì luân chuyển, đồ dùng cho thuê đã xuất kho theo tiêu thức hợp lý tùy theo đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý của doanh nghiệp, ví dụ thời gian sử dụng hoặc mức độ, khối lượng sản phẩm, dịch vụ mà công cụ, dụng cụ, bao bì luân chuyển, đồ dùng cho thuê tham gia vào hoạt động sản xuất, kinh doanh trong từng kỳ kế toán,... Khi phân bổ, ghi:
+Nợ các TK 623, 627, 641, 642,...
+Có TK 242 - Chi phí chờ phân bổ.
+d) Trường hợp chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ liên quan nhiều kỳ kế toán, khi công việc sửa chữa, bảo dưỡng định kỳ hoàn thành:
+- Kết chuyển chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ vào tài khoản chi phí chờ phân bổ, ghi:
+Nợ TK 242 - Chi phí chờ phân bổ.
+Có TK 241 - XDCB dở dang (2413).
+- Định kỳ, tính và phân bổ chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ vào chi phí sản xuất, kinh doanh trong từng kỳ, ghi:
+Nợ các TK 623, 627, 641, 642,...
+Có TK 242 - Chi phí chờ phân bổ.
+đ) Lợi thế thương mại phát sinh tại ngày mua đối với trường hợp hợp nhất kinh doanh không dẫn đến quan hệ công ty mẹ - công ty con (mua một hoạt động kinh doanh), trừ trường hợp hợp nhất kinh doanh dưới sự kiểm soát chung theo quy định:
+- Nếu việc mua, bán khi hợp nhất kinh doanh được bên mua thanh toán bằng tiền, hoặc các khoản tương đương tiền, ghi:
+Nợ các TK 131, 138, 152, 153, 155, 156, 211, 213, 217.... (theo giá trị hợp lý của các tài sản đã mua)
+Nợ TK 242 - Chi phí chờ phân bổ (chi tiết lợi thế thương mại)
+		Có các TK 331, 3411,... (theo giá trị hợp lý của các khoản nợ phải trả và nợ tiềm tàng phải gánh chịu)
+		Có các TK 111, 112, 121 (số tiền hoặc các khoản tương đương tiền 					bên mua đã thanh toán).
+- Nếu việc mua, bán khi hợp nhất kinh doanh được thực hiện bằng việc bên mua phát hành cổ phiếu, ghi:
+Nợ các TK 131, 138, 152, 153, 155, 156, 211, 213, 217,... (theo giá trị hợp lý của các tài sản đã mua)
+Nợ TK 242 - Chi phí chờ phân bổ (chi tiết lợi thế thương mại)
+Nợ TK 4112 - Thặng dư vốn (giá phát hành nhỏ hơn mệnh giá) (nếu có)
+Có TK 4111 - Vốn góp của chủ sở hữu (theo mệnh giá)
+Có các TK 331, 3411... (theo giá trị hợp lý của các khoản nợ phải trả và nợ tiềm tàng phải gánh chịu)
+Có TK 4112 - Thặng dư vốn (giá phát hành lớn hơn mệnh giá) (nếu có).
+TÀI KHOẢN 243 - TÀI SẢN THUẾ THU NHẬP HOÃN LẠI
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm của tài sản thuế thu nhập hoãn lại.
+
+Tài sản thuế thu nhập hoãn lại
+=
+Chênh lệch tạm thời được khấu trừ
++
+Giá trị được khấu trừ chuyển sang năm sau của các khoản lỗ tính thuế và ưu đãi thuế chưa sử dụng
+ x 
+Thuế suất thuế thu nhập doanh nghiệp hiện hành (%)
+
+	Trường hợp tại thời điểm ghi nhận tài sản thuế thu nhập hoãn lại đã biết trước có sự thay đổi về thuế suất thuế TNDN trong tương lai, nếu việc hoàn nhập tài sản thuế thu nhập hoãn lại nằm trong thời gian thuế suất mới đã có hiệu lực thì thuế suất áp dụng để ghi nhận tài sản thuế được tính theo thuế suất mới.
+b) Cơ sở tính thuế của tài sản hoặc nợ phải trả và Chênh lệch tạm thời:
+- Cơ sở tính thuế của tài sản là giá trị sẽ được trừ khỏi thu nhập chịu thuế khi thu hồi giá trị ghi sổ của tài sản. Nếu thu nhập không phải chịu thuế thì cơ sở tính thuế của tài sản bằng giá trị ghi sổ của tài sản đó. Cơ sở tính thuế thu nhập của nợ phải trả là giá trị ghi sổ của nó trừ (-) giá trị sẽ được khấu trừ vào thu nhập chịu thuế khi thanh toán nợ phải trả trong các kỳ tương lai. Đối với doanh thu nhận trước, cơ sở tính thuế là giá trị ghi sổ của nó, trừ (-) phần giá trị của doanh thu không phải chịu thuế trong tương lai.
+	- Chênh lệch tạm thời là khoản chênh lệch giữa giá trị ghi sổ của tài sản hoặc nợ phải trả trong Báo cáo tình hình tài chính và cơ sở tính thuế của tài sản hoặc nợ phải trả đó. Chênh lệch tạm thời gồm 2 loại: Chênh lệch tạm thời được khấu trừ và chênh lệch tạm thời chịu thuế. Chênh lệch tạm thời được khấu trừ là các khoản chênh lệch tạm thời làm phát sinh các khoản được khấu trừ khi xác định thu nhập chịu thuế trong tương lai khi giá trị ghi sổ của các khoản mục tài sản được thu hồi hoặc nợ phải trả được thanh toán.
++ Chênh lệch tạm thời về thời gian chỉ là một trong các trường hợp chênh lệch tạm thời, ví dụ chênh lệch tạm thời về thời gian của chi phí thuế thu nhập doanh nghiệp nộp bổ sung vào ngân sách nhà nước theo quy định về thuế tối thiểu toàn cầu (nếu có) giữa kỳ phát sinh với kỳ kê khai hoặc các trường hợp khác mà lợi nhuận kế toán được ghi nhận trong kỳ này nhưng thu nhập chịu thuế được tính trong kỳ khác.
++ Các khoản chênh lệch tạm thời giữa giá trị ghi sổ của tài sản hoặc nợ phải trả so với cơ sở tính thuế của tài sản hoặc nợ phải trả đó có thể không phải là chênh lệch tạm thời về mặt thời gian, ví dụ: Khi đánh giá lại một tài sản thì giá trị ghi sổ của tài sản thay đổi nhưng nếu cơ sở tính thuế không thay đổi thì phát sinh chênh lệch tạm thời. Tuy nhiên thời gian thu hồi giá trị ghi sổ và cơ sở tính thuế không thay đổi nên chênh lệch tạm thời này không phải là chênh lệch tạm thời về thời gian.
++ Kế toán không tiếp tục sử dụng khái niệm “Chênh lệch vĩnh viễn” để phân biệt với chênh lệch tạm thời khi xác định thuế thu nhập hoãn lại do thời gian thu hồi tài sản hoặc thanh toán nợ phải trả cũng như thời gian để khấu trừ tài sản và nợ phải trả đó vào thu nhập chịu thuế là hữu hạn. 
+c) Nếu doanh nghiệp dự tính chắc chắn có được lợi nhuận tính thuế thu nhập trong tương lai để sử dụng các khoản chênh lệch tạm thời được khấu trừ, các khoản lỗ tính thuế và ưu đãi thuế chưa sử dụng, doanh nghiệp được ghi nhận tài sản thuế thu nhập hoãn lại đối với:
+- Tất cả các khoản chênh lệch tạm thời được khấu trừ (ngoại trừ chênh lệch tạm thời phát sinh từ việc ghi nhận ban đầu của tài sản hoặc nợ phải trả từ một giao dịch mà không phải là giao dịch hợp nhất kinh doanh; và không có ảnh hưởng đến cả lợi nhuận kế toán và thu nhập chịu thuế (hoặc lỗ tính thuế) tại thời điểm giao dịch).
+- Giá trị còn được khấu trừ của khoản lỗ tính thuế và ưu đãi về thuế chưa sử dụng chuyển sang năm sau. 
+	d) Cuối năm, doanh nghiệp phải lập “Bảng xác định chênh lệch tạm thời được khấu trừ”, “Bảng theo dõi chênh lệch tạm thời được khấu trừ chưa sử dụng”, giá trị được khấu trừ chuyển sang năm sau của các khoản lỗ tính thuế và ưu đãi thuế chưa sử dụng làm căn cứ lập “Bảng xác định tài sản thuế thu nhập hoãn lại” để xác định giá trị tài sản thuế thu nhập hoãn lại được ghi nhận hoặc hoàn nhập trong năm.
+đ) Việc ghi nhận tài sản thuế thu nhập hoãn lại trong năm được thực hiện theo nguyên tắc bù trừ giữa tài sản thuế thu nhập hoãn lại phát sinh trong năm nay với tài sản thuế thu nhập doanh nghiệp đã ghi nhận từ các năm trước nhưng năm nay được hoàn nhập lại, theo nguyên tắc:
+- Nếu tài sản thuế thu nhập hoãn lại phát sinh trong năm lớn hơn tài sản thuế thu nhập hoãn lại được hoàn nhập trong năm thì số chênh lệch được ghi nhận là tài sản thuế thu nhập hoãn lại và ghi giảm chi phí thuế thu nhập hoãn lại. 
+- Nếu tài sản thuế thu nhập hoãn lại phát sinh trong năm nhỏ hơn tài sản thuế thu nhập hoãn lại được hoàn nhập trong năm thì số chênh lệch được ghi giảm tài sản thuế thu nhập hoãn lại và ghi tăng chi phí thuế thu nhập hoãn lại.
+e) Doanh nghiệp phải hoàn nhập tài sản thuế thu nhập hoãn lại khi các khoản chênh lệch tạm thời được khấu trừ không còn ảnh hưởng tới lợi nhuận tính thuế (khi tài sản được thu hồi hoặc nợ phải trả được thanh toán một phần hoặc toàn bộ), khi lỗ tính thuế hoặc ưu đãi thuế đã được sử dụng.
+g) Khi lập Báo cáo tài chính, nếu dự tính chắc chắn có được lợi nhuận tính thuế thu nhập trong tương lai, tài sản thuế thu nhập hoãn lại chưa được ghi nhận từ các năm trước được ghi nhận bổ sung làm giảm chi phí thuế thu nhập hoãn lại. 
+h) Việc bù trừ tài sản thuế thu nhập hoãn lại và thuế thu nhập hoãn lại phải trả chỉ thực hiện khi lập Báo cáo tình hình tài chính, không thực hiện khi ghi nhận tài sản thuế thu nhập hoãn lại trên sổ kế toán. 
+2. Kết cấu và nội dung phản ánh của Tài khoản 243 - Tài sản thuế thu nhập hoãn lại
+Bên Nợ: 
+Giá trị tài sản thuế thu nhập hoãn lại tăng. 
+Bên Có: 
+Giá trị tài sản thuế thu nhập hoãn lại giảm . 
+Số dư bên Nợ: 
+Giá trị tài sản thuế thu nhập hoãn lại còn lại tại thời điểm kết thúc kỳ kế toán.
+ 3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Nếu tài sản thuế thu nhập hoãn lại phát sinh trong năm lớn hơn tài sản thuế thu nhập hoãn lại được hoàn nhập trong năm, doanh nghiệp ghi tăng tài sản thuế thu nhập hoãn lại là số chênh lệch giữa số tài sản thuế thu nhập hoãn lại phát sinh lớn hơn số được hoàn nhập trong năm, ghi:
+Nợ TK 243 - Tài sản thuế thu nhập hoãn lại
+		Có TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại.	
+b) Nếu tài sản thuế thu nhập hoãn lại phát sinh trong năm nhỏ hơn tài sản thuế thu nhập hoãn lại được hoàn nhập trong năm, doanh nghiệp ghi giảm tài sản thuế thu nhập hoãn lại là số chênh lệch giữa số tài sản thuế thu nhập hoãn lại phát sinh nhỏ hơn số được hoàn nhập trong năm, ghi:
+Nợ TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại
+		Có TK 243 - Tài sản thuế thu nhập hoãn lại.
+TÀI KHOẢN 244 - KÝ QUỸ, KÝ CƯỢC
+	1. Nguyên tắc kế toán
+	a) Tài khoản này dùng để phản ánh số tiền mà doanh nghiệp đem đi ký quỹ, ký cược tại các doanh nghiệp, tổ chức khác trong các quan hệ kinh tế theo quy định của pháp luật. Doanh nghiệp không dùng tài khoản này để phản ánh các tài sản mà doanh nghiệp sử dụng để cầm cố, thế chấp.
+	b) Các khoản tiền đem ký quỹ, ký cược phải được theo dõi chặt chẽ và kịp thời để thu hồi khi hết thời hạn ký quỹ, ký cược. Trường hợp các khoản ký quỹ, ký cược của doanh nghiệp đã quá hạn nhưng chưa thu hồi được hoặc khó có khả năng thu hồi thì doanh nghiệp được trích lập dự phòng tổn thất tài sản tương tự dự phòng các khoản nợ phải thu khó đòi.
+	c) Doanh nghiệp phải theo dõi chi tiết các khoản ký quỹ, ký cược theo từng loại, từng đối tượng, kỳ hạn, nguyên tệ. Khi lập Báo cáo tài chính, những khoản ký quỹ, ký cược có kỳ hạn còn lại từ 12 tháng trở xuống được phân loại là tài sản ngắn hạn; Những khoản có kỳ hạn còn lại trên 12 tháng được phân loại là tài sản dài hạn.
+d) Trường hợp doanh nghiệp có các khoản ký quỹ, ký cược là khoản mục tiền tệ có gốc ngoại tệ thì khi lập Báo cáo tài chính phải đánh giá lại theo tỷ giá mua bán chuyển khoản trung bình của ngân hàng thương mại nơi doanh nghiệp thường xuyên giao dịch tại thời điểm kết thúc kỳ kế toán. 
+đ) Khi doanh nghiệp cầm cố, thế chấp bằng giấy chứng nhận quyền sở hữu hoặc sử dụng tài sản (như giấy chứng nhận quyền sở hữu hoặc sử dụng bất động sản, sổ tiết kiệm,...) thì doanh nghiệp không ghi giảm tài sản mà phải mở sổ theo dõi chi tiết và trình bày trên thuyết minh trên Báo cáo tài chính về việc sử dụng giấy chứng nhận quyền sở hữu hoặc sử dụng tài sản đem cầm cố, thế chấp.
+2. Kết cấu và nội dung phản ánh của Tài khoản 244 - Ký quỹ, ký cược 
+Bên Nợ: 
+- Số tiền đã ký quỹ, ký cược;
+- Chênh lệch tỷ giá hối đoái do đánh giá lại số dư các khoản ký quỹ, ký cược là khoản mục tiền tệ có gốc ngoại tệ tại thời điểm kết thúc kỳ kế toán (trường hợp tỷ giá ngoại tệ tăng so với đơn vị tiền tệ trong kế toán). 
+Bên Có: 
+- Số tiền ký quỹ, ký cược đã nhận lại hoặc đã thanh toán; 
+- Khoản khấu trừ (ví dụ khoản bị phạt) vào tiền ký quỹ, ký cược (nếu có);
+- Chênh lệch tỷ giá hối đoái do đánh giá lại số dư các khoản ký quỹ, ký cược là khoản mục tiền tệ có gốc ngoại tệ tại thời điểm kết thúc kỳ kế toán (trường hợp tỷ giá ngoại tệ giảm so với đơn vị tiền tệ trong kế toán). 
+Số dư bên Nợ: 
+Số tiền còn đang ký quỹ, ký cược tại thời điểm kết thúc kỳ kế toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Dùng tiền mặt hoặc tiền gửi không kỳ hạn để ký quỹ, ký cược, ghi:
+Nợ TK 244 - Ký quỹ, ký cược
+Có các TK 111, 112.
+b) Khi nhận lại tiền ký quỹ, ký cược, ghi:
+Nợ các TK 111, 112
+Có TK 244 - Ký quỹ, ký cược. 
+	c) Trường hợp doanh nghiệp không thực hiện đúng những cam kết, bị phạt vi phạm hợp đồng trừ vào tiền ký quỹ, ký cược, ghi:
+Nợ TK 811 - Chi phí khác (số tiền bị trừ)
+Có TK 244 - Ký quỹ, ký cược.
+d) Trường hợp sử dụng khoản ký quỹ, ký cược thanh toán cho người bán, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có TK 244 - Ký quỹ, ký cược.
+NGUYÊN TẮC KẾ TOÁN CÁC KHOẢN NỢ PHẢI TRẢ
+	1. Nội dung các khoản nợ phải trả bao gồm: Phải trả cho người bán; Phải trả cổ tức, lợi nhuận; Thuế và các khoản phải nộp Nhà nước; Phải trả người lao động; Chi phí phải trả; Phải trả nội bộ; Phải trả, phải nộp khác; Vay và nợ thuê tài chính; Trái phiếu phát hành; Nhận ký quỹ, ký cược; Thuế thu nhập hoãn lại phải trả; Dự phòng phải trả; Quỹ khen thưởng, phúc lợi; Quỹ phát triển khoa học và công nghệ; Quỹ bình ổn giá.
+	Các khoản nợ phải trả phải được theo dõi chi tiết theo từng đối tượng, kỳ hạn phải trả, loại nguyên tệ phải trả và các yếu tố khác theo nhu cầu quản lý của doanh nghiệp.
+	2. Việc phân loại các khoản nợ phải trả được thực hiện theo nguyên tắc:
+	a) Phải trả cho người bán là các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản của nhà cung cấp hoặc người bán (là đơn vị độc lập với người mua). Khoản phải trả người bán bao gồm cả các khoản phải trả giữa công ty mẹ và công ty con, công ty liên doanh, liên kết, khoản phải trả khi nhập khẩu thông qua người nhận ủy thác (trong giao dịch nhập khẩu ủy thác).
+b) Phải trả cổ tức, lợi nhuận bao gồm các khoản cổ tức, lợi nhuận doanh nghiệp trả cho chủ sở hữu của doanh nghiệp (cổ đông, thành viên công ty TNHH,...).
+c) Phải trả nội bộ bao gồm các khoản phải trả giữa trụ sở chính và các đơn vị trực thuộc hoặc giữa các đơn vị trực thuộc với nhau.
+d) Phải trả khác bao gồm các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán hàng hóa, cung cấp dịch vụ:
+- Các khoản phải trả liên quan đến chi phí tài chính, như: khoản phải trả về lãi vay, về chi phí hoạt động đầu tư tài chính,...;
+- Các khoản phải trả do bên thứ ba chi hộ; Các khoản tiền bên nhận ủy thác nhận của các bên giao ủy thác để thanh toán theo chỉ định trong giao dịch ủy thác xuất nhập khẩu;
+- Các khoản phải trả do mượn tài sản phi tiền tệ, phải trả về tiền phạt, bồi thường, tài sản thừa chờ giải quyết, phải trả về các khoản BHXH, BHYT, BHTN, KPCĐ,...
+3. Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp căn cứ kỳ hạn còn lại của các khoản phải trả để phân loại là dài hạn hoặc ngắn hạn theo nguyên tắc phân loại nợ phải trả quy định tại Thông tư này. 
+4. Khi có các bằng chứng cho thấy một khoản tổn thất có khả năng chắc chắn xảy ra, doanh nghiệp phải ghi nhận ngay một khoản phải trả theo nguyên tắc thận trọng.
+5. Nguyên tắc kế toán các khoản nợ phải trả bằng ngoại tệ:
+5.1. Doanh nghiệp phải theo dõi chi tiết các khoản nợ phải trả theo nguyên tệ. Khi phát sinh các giao dịch liên quan đến các khoản nợ phải trả bằng ngoại tệ, doanh nghiệp phải quy đổi ra đơn vị tiền tệ trong kế toán theo nguyên tắc:
+a) Bên Có các tài khoản nợ phải trả áp dụng tỷ giá giao dịch thực tế. 
+b) Bên Nợ các tài khoản nợ phải trả áp dụng tỷ giá giao dịch thực tế hoặc tỷ giá ghi sổ. 
+c) Trường hợp các khoản nợ phải trả có phát sinh giao dịch trả trước tiền thì bên Nợ tài khoản nợ phải trả áp dụng tỷ giá giao dịch thực tế tại thời điểm trả trước tiền và khi nhận được hàng hóa, dịch vụ,... thì bên Có các tài khoản nợ phải trả tương ứng với các khoản ngoại tệ đã trả trước được áp dụng tỷ giá giao dịch thực tế tại thời điểm trả tiền trước.
+5.2. Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp phải đánh giá lại số dư các khoản nợ phải trả là khoản mục tiền tệ có gốc ngoại tệ theo tỷ giá mua bán chuyển khoản trung bình của ngân hàng thương mại nơi doanh nghiệp thường xuyên có giao dịch. 
+5.3. Việc xác định tỷ giá giao dịch thực tế, tỷ giá ghi sổ và các giao dịch phát sinh, việc đánh giá lại các khoản nợ phải trả bằng ngoại tệ được hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái.
+TÀI KHOẢN 331 - PHẢI TRẢ CHO NGƯỜI BÁN
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình thanh toán các khoản nợ phải trả của doanh nghiệp cho người bán vật tư, hàng hóa, người cung cấp dịch vụ, người bán TSCĐ, BĐSĐT, các khoản đầu tư tài chính theo hợp đồng kinh tế đã ký kết. Tài khoản này cũng được dùng để phản ánh tình hình thanh toán về các khoản nợ phải trả cho người nhận thầu xây lắp chính, phụ. 
+b) Nợ phải trả cho người bán, người cung cấp, người nhận thầu xây lắp cần được hạch toán chi tiết cho từng đối tượng phải trả. Trong chi tiết từng đối tượng phải trả, tài khoản này phản ánh cả số tiền đã ứng trước cho người bán, người cung cấp, người nhận thầu xây lắp nhưng chưa nhận được sản phẩm, hàng hóa, dịch vụ, khối lượng xây lắp hoàn thành bàn giao.
+c) Bên giao nhập khẩu ủy thác ghi nhận trên tài khoản này số tiền phải trả người bán về hàng nhập khẩu thông qua bên nhận nhập khẩu ủy thác như khoản phải trả người bán thông thường. 
+d) Khi hạch toán chi tiết các khoản phải trả người bán, doanh nghiệp phải hạch toán rõ ràng, rành mạch các khoản chiết khấu thanh toán, chiết khấu thương mại, giảm giá hàng bán của người bán, người cung cấp nếu chưa được phản ánh trong hóa đơn mua hàng.
+	2. Kết cấu và nội dung phản ánh của Tài khoản 331 - Phải trả cho người bán
+Bên Nợ:
+- Số tiền đã trả nợ cho người bán vật tư, hàng hóa, người cung cấp dịch vụ, người nhận thầu xây lắp; 
+- Số tiền ứng trước cho người bán, người cung cấp, người nhận thầu xây lắp nhưng chưa nhận được vật tư, hàng hóa, dịch vụ, khối lượng sản phẩm xây lắp hoàn thành bàn giao;
+- Số tiền người bán chấp thuận giảm giá hàng hóa hoặc dịch vụ đã giao theo hợp đồng;
+- Chiết khấu thanh toán và chiết khấu thương mại được người bán chấp thuận cho doanh nghiệp giảm trừ vào khoản nợ phải trả cho người bán;
+- Giá trị vật tư, hàng hóa thiếu hụt, kém phẩm chất khi kiểm nhận và trả lại người bán;
+- Đánh giá lại các khoản phải trả cho người bán bằng ngoại tệ (trường hợp tỷ giá ngoại tệ giảm so với đơn vị tiền tệ trong kế toán).
+Bên Có:
+- Số tiền phải trả cho người bán vật tư, hàng hóa, người cung cấp dịch vụ và người nhận thầu xây lắp;
+- Điều chỉnh số chênh lệch giữa giá tạm tính nhỏ hơn giá thực tế của số vật tư, hàng hóa, dịch vụ đã nhận;
+- Đánh giá lại các khoản phải trả cho người bán bằng ngoại tệ (trường hợp tỷ giá ngoại tệ tăng so với đơn vị tiền tệ trong kế toán).
+Số dư bên Có: 
+Số tiền còn phải trả cho người bán, người cung cấp, người nhận thầu xây lắp tại thời điểm kết thúc kỳ kế toán.
+Tài khoản này có thể có số dư bên Nợ. Số dư bên Nợ (nếu có) phản ánh số tiền đã ứng trước cho người bán hoặc số tiền đã trả nhiều hơn số phải trả cho người bán theo chi tiết của từng đối tượng cụ thể. Khi lập Báo cáo tình hình tài chính, phải lấy số dư chi tiết của từng đối tượng phản ánh ở tài khoản này để ghi vào 2 chỉ tiêu bên “Tài sản” và bên “Nguồn vốn”.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Mua vật tư, hàng hóa về nhập kho hoặc mua TSCĐ về dùng ngay,... chưa trả tiền cho người bán:
+a) Trường hợp mua trong nội địa, ghi:
+- Nếu thuế GTGT đầu vào được khấu trừ, ghi:
+Nợ các TK 152, 153, 156, 157, 211, 213,... (giá chưa có thuế GTGT)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331)
+Có TK 331 - Phải trả cho người bán (tổng giá thanh toán).
+- Trường hợp thuế GTGT đầu vào không được khấu trừ thì giá trị vật tư, hàng hóa, TSCĐ bao gồm cả thuế GTGT (tổng giá thanh toán).
+b) Trường hợp nhập khẩu, ghi:
+- Phản ánh giá trị hàng nhập khẩu bao gồm cả thuế TTĐB, thuế BVMT (nếu có), ghi:
+Nợ các TK 152, 153, 156, 157, 211, 213,...
+Có TK 331 - Phải trả cho người bán 
+Có TK 3332 - Thuế TTĐB (nếu có)
+Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu, nếu có)
+Có TK 33381 - Thuế bảo vệ môi trường (nếu có).
+- Trường hợp thuế GTGT hàng nhập khẩu phải nộp được khấu trừ, ghi:
+Nợ TK 133 - Thuế GTGT được khấu trừ
+Có TK 3331 - Thuế GTGT phải nộp (33312).
+- Trường hợp thuế GTGT hàng nhập khẩu phải nộp không được khấu trừ phải tính vào giá trị vật tư, hàng hóa, TSCĐ nhập khẩu, ghi:
+Nợ các TK 152, 153, 156, 211,...	
+Có TK 3331 - Thuế GTGT phải nộp (33312).
+3.2. Trường hợp doanh nghiệp thực hiện đầu tư XDCB theo phương thức giao thầu, khi nhận khối lượng xây lắp hoàn thành bàn giao của bên nhận thầu xây lắp, căn cứ hợp đồng giao thầu và biên bản bàn giao khối lượng xây lắp, hóa đơn khối lượng xây lắp hoàn thành:
+- Nếu thuế GTGT đầu vào được khấu trừ, ghi: 
+Nợ TK 241 - XDCB dở dang (giá chưa có thuế GTGT) 
+Nợ TK 133 - Thuế GTGT được khấu trừ
+Có TK 331 - Phải trả cho người bán (tổng giá thanh toán).
+- Trường hợp thuế GTGT đầu vào không được khấu trừ thì giá trị đầu tư XDCB bao gồm cả thuế GTGT (tổng giá thanh toán).
+3.3. Khi ứng trước tiền hoặc thanh toán số tiền phải trả cho người bán vật tư, hàng hóa, người cung cấp dịch vụ, người nhận thầu xây lắp, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có các TK 111, 112, 341,...
+3.4. Khi nhận lại tiền do người bán hoàn lại số tiền đã ứng trước vì không cung cấp được hàng hóa, dịch vụ, ghi:
+Nợ các TK 111, 112,...
+Có TK 331 - Phải trả cho người bán.
+3.5. Nhận dịch vụ được cung cấp (vận chuyển hàng hóa, điện, nước, điện thoại, kiểm toán, tư vấn, quảng cáo, dịch vụ khác) của người bán:
+Nợ các TK 241, 242, 627, 641, 642,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có TK 331 - Phải trả cho người bán (tổng giá thanh toán).
+3.6. Chiết khấu thanh toán doanh nghiệp được hưởng khi mua vật tư, hàng hóa do thanh toán trước thời hạn được trừ vào khoản nợ phải trả người bán, người cung cấp, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có TK 515 - Doanh thu hoạt động tài chính.
+3.7. Trường hợp vật tư, hàng hóa mua vào phải trả lại hoặc được người bán chấp thuận giảm giá do không đúng quy cách, phẩm chất được tính trừ vào khoản nợ phải trả cho người bán, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có các TK 152, 153, 156,...
+3.8. Trường hợp các khoản nợ phải trả cho người bán không xác định được chủ nợ hoặc đã xác định được là không phải trả nợ và được xử lý ghi tăng thu nhập khác của doanh nghiệp, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có TK 711 - Thu nhập khác.
+3.9. Đối với nhà thầu chính, khi xác định giá trị khối lượng xây lắp phải trả cho nhà thầu phụ theo hợp đồng kinh tế đã ký kết, căn cứ vào hóa đơn, phiếu giá công trình, biên bản nghiệm thu khối lượng xây lắp hoàn thành và hợp đồng giao thầu phụ, ghi:
+Nợ TK 632 - Giá vốn hàng bán (giá chưa có thuế GTGT)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331)
+Có TK 331 - Phải trả cho người bán. 
+3.10. Trường hợp doanh nghiệp nhận bán hàng đại lý để hưởng hoa hồng.
+- Khi nhận hàng bán đại lý, doanh nghiệp theo dõi và ghi chép thông tin về hàng nhận bán đại lý để trình bày trong thuyết minh Báo cáo tài chính.
+- Khi bán hàng nhận đại lý, ghi:
+Nợ các TK 111, 112, 131,... (tổng giá thanh toán)
+Có TK 331 - Phải trả cho người bán.
+Đồng thời doanh nghiệp theo dõi và ghi chép thông tin về hàng nhận bán đại lý đã xuất bán để trình bày trong thuyết minh Báo cáo tài chính.
+- Khi xác định hoa hồng đại lý được hưởng, tính vào doanh thu hoa hồng về bán hàng đại lý, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+- Khi thanh toán tiền cho bên giao hàng đại lý, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có các TK 111, 112,...
+3.11. Kế toán khoản phải trả cho người bán tại đơn vị giao ủy thác nhập khẩu:
+- Khi trả trước một khoản tiền ủy thác mua hàng theo hợp đồng ủy thác nhập khẩu cho đơn vị nhận ủy thác nhập khẩu mở LC,... căn cứ các chứng từ liên quan, ghi:
+Nợ TK 331 - Phải trả cho người bán (chi tiết cho từng đơn vị nhận ủy thác)
+Có các TK 111, 112, 341,...
+- Khi nhận hàng ủy thác nhập khẩu do bên nhận ủy thác giao trả, doanh nghiệp thực hiện như đối với hàng nhập khẩu thông thường.
+- Khi trả tiền cho đơn vị nhận ủy thác nhập khẩu về số tiền hàng nhập khẩu và các chi phí liên quan trực tiếp đến hàng nhập khẩu, căn cứ các chứng từ liên quan, ghi:
+Nợ TK 331 - Phải trả cho người bán (chi tiết cho từng đơn vị nhận ủy thác)
+Có các TK 111, 112,...
+- Phí ủy thác nhập khẩu phải trả đơn vị nhận ủy thác được tính vào giá trị hàng nhập khẩu, căn cứ các chứng từ liên quan, ghi:
+Nợ các TK 151, 152, 156, 211,...
+Nợ TK 133 - Thuế GTGT được khấu trừ
+		Có TK 331- Phải trả cho người bán (chi tiết từng đơn vị nhận ủy 		thác).
+- Việc thanh toán nghĩa vụ thuế đối với hàng nhập khẩu thực hiện theo quy định của Tài khoản 333 - Thuế và các khoản phải nộp Nhà nước.
+- Đơn vị nhận ủy thác không sử dụng tài khoản này để phản ánh các nghiệp vụ thanh toán ủy thác mà phản ánh qua các Tài khoản 138 - Phải thu khác và Tài khoản 338 - Phải trả, phải nộp khác.
+TÀI KHOẢN 332 - PHẢI TRẢ CỔ TỨC, LỢI NHUẬN
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh số cổ tức, lợi nhuận phải trả (bằng tiền, các tài sản phi tiền tệ) và tình hình thanh toán khoản cổ tức, lợi nhuận phải trả bằng tiền cho các cổ đông, thành viên góp vốn của công ty. 
+b) Thời điểm doanh nghiệp ghi nhận khoản phải trả về cổ tức, lợi nhuận là thời điểm doanh nghiệp không có quyền từ chối nghĩa vụ chi trả cổ tức, lợi nhuận cho các cổ đông, thành viên góp vốn của công ty theo quy định của pháp luật liên quan. Tùy theo từng loại hình doanh nghiệp, việc xác định thời điểm và việc chi trả cổ tức, lợi nhuận thực hiện như sau:
+- Đối với doanh nghiệp thuộc đối tượng điều chỉnh của pháp luật về chứng khoán thì thời điểm bên nhận đầu tư không có quyền từ chối chi trả cổ tức được căn cứ theo quy định của pháp luật về chứng khoán.
+- Đối với các doanh nghiệp còn lại thì thời điểm bên nhận đầu tư không có quyền từ chối chi trả cổ tức được căn cứ theo quy định của Luật doanh nghiệp, Điều lệ của doanh nghiệp.
+2. Kết cấu và nội dung phản ánh của Tài khoản 332 - Phải trả cổ tức, lợi nhuận
+Bên Nợ:
+Khoản cổ tức, lợi nhuận đã trả bằng tiền hoặc các tài sản phi tiền tệ cho các cổ đông, thành viên góp vốn của công ty.
+Bên Có:
+Khoản cổ tức, lợi nhuận phải trả bằng tiền hoặc tài sản phi tiền tệ cho các cổ đông, thành viên góp vốn của công ty.
+Số dư bên Có: 
+Số cổ tức, lợi nhuận được chia còn phải trả cho các cổ đông, thành viên góp vốn của công ty tại thời điểm kết thúc kỳ kế toán. 
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Tại ngày doanh nghiệp không có quyền từ chối nghĩa vụ chi trả cổ tức, lợi nhuận cho các cổ đông, thành viên góp vốn của công ty, ghi:
+Nợ TK 421 - Lợi nhuận sau thuế chưa phân phối
+		Có TK 332 - Phải trả cổ tức, lợi nhuận. 
+b) Trường hợp doanh nghiệp chi trả cổ tức, lợi nhuận bằng tiền hoặc tài sản phi tiền tệ, ghi:
+Nợ TK 332 - Phải trả cổ tức, lợi nhuận
+		Có các TK 111, 112,... 
+		TÀI KHOẢN 333 - THUẾ VÀ CÁC KHOẢN PHẢI NỘP NHÀ NƯỚC
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh số phải trả và tình hình thanh toán các khoản thuế, phí, lệ phí và các khoản khác doanh nghiệp phải nộp, đã nộp, còn phải nộp vào Ngân sách Nhà nước trong kỳ kế toán. 
+b) Doanh nghiệp chủ động tính, xác định và kê khai số thuế, phí, lệ phí và các khoản phải nộp cho Nhà nước theo luật định; Kịp thời phản ánh vào sổ kế toán số thuế phải nộp, đã nộp, được khấu trừ, được hoàn,...
+c) Các khoản thuế gián thu như thuế GTGT (kể cả theo phương pháp khấu trừ hay phương pháp trực tiếp), thuế tiêu thụ đặc biệt, thuế xuất khẩu, thuế bảo vệ môi trường và các loại thuế gián thu khác về bản chất là khoản thu hộ bên thứ ba. Vì vậy, các khoản thuế gián thu phát sinh ở khâu bán sản phẩm, hàng hóa, dịch vụ được loại trừ ra khỏi số liệu về doanh thu gộp trên Báo cáo tài chính hoặc các báo cáo khác. Doanh nghiệp được lựa chọn việc ghi nhận doanh thu và số thuế gián thu phải nộp trên sổ kế toán bằng một trong hai phương pháp:
+- Tách và ghi nhận riêng số thuế gián thu phải nộp ngay tại thời điểm ghi nhận doanh thu. Theo phương pháp này doanh thu ghi trên sổ kế toán không bao gồm số thuế gián thu phải nộp, phù hợp với số liệu về doanh thu gộp trên Báo cáo tài chính và phản ánh đúng bản chất giao dịch;
+- Ghi nhận số thuế gián thu phải nộp bằng cách ghi giảm số doanh thu đã ghi chép trên sổ kế toán. Theo phương pháp này, định kỳ doanh nghiệp ghi giảm doanh thu đối với số thuế gián thu phải nộp, số liệu về doanh thu trên sổ kế toán có sự khác biệt so với doanh thu gộp trên Báo cáo tài chính. 
+Trong mọi trường hợp, chỉ tiêu “Doanh thu bán hàng và cung cấp dịch vụ” và chỉ tiêu “Các khoản giảm trừ doanh thu” của Báo cáo kết quả hoạt động kinh doanh đều không bao gồm các khoản thuế gián thu phải nộp.
+d) Đối với các khoản thuế được hoàn, được giảm, doanh nghiệp phải phân biệt rõ số thuế được hoàn, được giảm là thuế đã nộp ở khâu mua hay phải nộp ở khâu bán và thực hiện theo nguyên tắc:
+- Đối với số thuế đã nộp ở khâu mua được hoàn lại (ví dụ trong giao dịch tạm nhập - tái xuất, các khoản thuế TTĐB, thuế nhập khẩu, thuế BVMT đã nộp được hoàn lại khi tái xuất,...), doanh nghiệp ghi giảm giá trị hàng mua hoặc giảm giá vốn hàng bán, giảm chi phí khác tùy theo từng trường hợp cụ thể. Riêng thuế GTGT đầu vào được hoàn ghi giảm số thuế GTGT được khấu trừ;
+- Đối với số thuế đã nộp ở khâu nhập khẩu nhưng hàng nhập khẩu không thuộc quyền sở hữu của đơn vị, khi tái xuất được hoàn thì doanh nghiệp ghi giảm khoản phải thu khác (ví dụ thuế nhập khẩu đã nộp của hàng nhận gia công được hoàn lại khi tái xuất,...);
+- Đối với số thuế phải nộp khi bán hàng hóa, cung cấp dịch vụ nhưng sau đó được giảm, được hoàn, doanh nghiệp ghi nhận vào thu nhập khác (ví dụ hoàn thuế xuất khẩu, giảm số thuế TTĐB, GTGT, BVMT phải nộp khi bán hàng hóa, cung cấp dịch vụ).
+đ) Nghĩa vụ đối với NSNN trong giao dịch ủy thác xuất - nhập khẩu:
+- Trong giao dịch ủy thác xuất - nhập khẩu (hoặc các giao dịch tương tự), nghĩa vụ đối với NSNN được xác định là của bên giao ủy thác.
+- Bên nhận ủy thác được xác định là bên cung cấp dịch vụ cho bên giao ủy thác trong việc chuẩn bị hồ sơ, kê khai, thanh quyết toán với NSNN (người nộp thuế hộ cho bên giao ủy thác). 
+- Tài khoản 333 - Thuế và các khoản phải nộp Nhà nước chỉ sử dụng tại bên giao ủy thác, không sử dụng tại bên nhận ủy thác. Bên nhận ủy thác với vai trò trung gian chỉ phản ánh số thuế phải nộp vào NSNN là khoản chi hộ, trả hộ trên Tài khoản 3388 - Phải trả, phải nộp khác và phản ánh quyền được nhận lại số tiền đã chi hộ, trả hộ cho bên giao ủy thác trên Tài khoản 138 - Phải thu khác. Căn cứ để phản ánh tình hình thực hiện nghĩa vụ với NSNN của bên giao ủy thác như sau:
++ Khi nhận được thông báo về số thuế phải nộp, bên nhận ủy thác bàn giao lại cho bên giao ủy thác toàn bộ hồ sơ, tài liệu, thông báo của cơ quan có thẩm quyền về số thuế phải nộp làm căn cứ ghi nhận số thuế phải nộp trên Tài khoản 333 - Thuế và các khoản phải nộp Nhà nước.
++ Căn cứ chứng từ nộp tiền vào NSNN của bên nhận ủy thác, bên giao ủy thác phản ánh giảm số phải nộp NSNN.
+e) Đối với số thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu, doanh nghiệp phải thuyết minh rõ trong Thuyết minh Báo cáo tài chính về kỳ phát sinh nghĩa vụ thuế, kỳ kê khai thuế, tiêu thức phân bổ nghĩa vụ thuế của đơn vị hợp thành chịu trách nhiệm kê khai cho các đơn vị hợp thành không chịu trách nhiệm kê khai, số ước tính thuế thu nhập doanh nghiệp bổ sung phải nộp theo quy định về thuế tối thiểu toàn cầu của doanh nghiệp, số chênh lệch giữa số ước tính thuế thu nhập doanh nghiệp bổ sung với số thuế thu nhập doanh nghiệp bổ sung phải nộp thực tế khi kê khai,... Riêng đối với đơn vị hợp thành chịu trách nhiệm kê khai còn thuyết minh rõ nghĩa vụ thuế của đơn vị mình và đơn vị hợp thành khác không chịu trách nhiệm kê khai. 
+g) Kế toán phải mở sổ chi tiết theo dõi từng khoản thuế, phí, lệ phí và các khoản phải nộp, đã nộp và còn phải nộp.
+2. Kết cấu và nội dung phản ánh của Tài khoản 333 - Thuế và các khoản phải nộp nhà nước
+Bên Nợ:
+- Số thuế GTGT đã được khấu trừ trong kỳ;
+- Số thuế, phí, lệ phí và các khoản phải nộp, đã nộp vào Ngân sách Nhà nước;
+- Số thuế được giảm trừ vào số thuế phải nộp;
+- Số thuế GTGT của hàng bán bị trả lại, bị giảm giá, chiết khấu thương mại.
+Bên Có:
+- Số thuế GTGT đầu ra và số thuế GTGT hàng nhập khẩu phải nộp;
+- Số thuế, phí, lệ phí và các khoản khác phải nộp vào Ngân sách Nhà nước.
+Số dư bên Có: 
+Số thuế, phí, lệ phí và các khoản khác còn phải nộp vào Ngân sách Nhà nước tại thời điểm kết thúc kỳ kế toán.
+Trong trường hợp cá biệt, Tài khoản 333 - Thuế và các khoản phải nộp Nhà nước có thể có số dư bên Nợ. Số dư bên Nợ (nếu có) của Tài khoản 333 - Thuế và các khoản phải nộp Nhà nước phản ánh số thuế và các khoản đã nộp lớn hơn số thuế và các khoản phải nộp cho Nhà nước hoặc có thể phản ánh số thuế đã nộp được xét miễn, giảm hoặc hoàn thuế nhưng chưa thực hiện.
+Tài khoản 333 - Thuế và các khoản phải nộp Nhà nước, có 9 tài khoản cấp 2:
+- Tài khoản 3331 - Thuế giá trị gia tăng phải nộp: Phản ánh số thuế GTGT đầu ra, số thuế GTGT của hàng nhập khẩu phải nộp, số thuế GTGT đã được khấu trừ, số thuế GTGT đã nộp và còn phải nộp vào Ngân sách Nhà nước.
+Tài khoản 3331 có 2 tài khoản cấp 3:
++ Tài khoản 33311 - Thuế GTGT đầu ra: Dùng để phản ánh số thuế GTGT đầu ra, số thuế GTGT đầu vào đã khấu trừ, số thuế GTGT của hàng bán bị trả lại, bị giảm giá, số thuế GTGT phải nộp, đã nộp, còn phải nộp của sản phẩm, hàng hóa, dịch vụ tiêu thụ trong kỳ.
++ Tài khoản 33312 - Thuế GTGT hàng nhập khẩu: Dùng để phản ánh số thuế GTGT của hàng nhập khẩu phải nộp, đã nộp, còn phải nộp vào Ngân sách Nhà nước.
+- Tài khoản 3332 - Thuế tiêu thụ đặc biệt: Phản ánh số thuế tiêu thụ đặc biệt phải nộp, đã nộp và còn phải nộp vào Ngân sách Nhà nước.
+- Tài khoản 3333 - Thuế xuất, nhập khẩu: Phản ánh số thuế xuất khẩu, thuế nhập khẩu phải nộp, đã nộp và còn phải nộp vào Ngân sách Nhà nước.
+- Tài khoản 3334 - Thuế thu nhập doanh nghiệp: Phản ánh số thuế thu nhập doanh nghiệp phải nộp, đã nộp và còn phải nộp, bao gồm cả chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu phải nộp, đã nộp và còn phải nộp vào NSNN.
+- Tài khoản 3335 - Thuế thu nhập cá nhân: Phản ánh số thuế thu nhập cá nhân phải nộp, đã nộp và còn phải nộp vào Ngân sách Nhà nước.
+- Tài khoản 3336 - Thuế tài nguyên: Phản ánh số thuế tài nguyên phải nộp, đã nộp và còn phải nộp vào Ngân sách Nhà nước.
+- Tài khoản 3337 - Thuế nhà đất, tiền thuê đất: Phản ánh số thuế nhà đất, tiền thuê đất phải nộp, đã nộp và còn phải nộp vào Ngân sách Nhà nước.
+- Tài khoản 3338 - Thuế bảo vệ môi trường và các loại thuế khác: Phản ánh số phải nộp, đã nộp và còn phải nộp về thuế bảo vệ môi trường và các loại thuế khác, như: Thuế nộp thay cho các tổ chức, cá nhân nước ngoài có hoạt động kinh doanh tại Việt Nam,... 
+Tài khoản 3338 có 2 tài khoản cấp 3:
++ TK 33381: Thuế bảo vệ môi trường: Phản ánh số thuế bảo vệ môi trường phải nộp, đã nộp và còn phải nộp vào Ngân sách Nhà nước.
++ TK 33382: Các loại thuế khác: Phản ánh số phải nộp, đã nộp, còn phải nộp các loại thuế khác. Doanh nghiệp được chủ động mở các TK cấp 4 chi tiết cho từng loại thuế phù hợp với yêu cầu quản lý.
+- Tài khoản 3339 - Phí, lệ phí và các khoản phải nộp khác: Phản ánh số phải nộp, đã nộp và còn phải nộp về các khoản phí, lệ phí, các khoản phải nộp khác cho Nhà nước ngoài các khoản đã ghi vào các tài khoản từ 3331 đến 3338. Tài khoản này còn phản ánh các khoản Nhà nước trợ cấp cho doanh nghiệp (nếu có) như các khoản trợ cấp, trợ giá.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Thuế GTGT phải nộp (TK 3331)
+3.1.1. Kế toán thuế GTGT đầu ra (TK 33311)
+a) Kế toán thuế GTGT đầu ra phải nộp theo phương pháp khấu trừ:
+Khi xuất hóa đơn GTGT bán sản phẩm, hàng hóa, dịch vụ,... doanh nghiệp phản ánh doanh thu, thu nhập theo giá bán chưa có thuế GTGT và tách riêng thuế GTGT phải nộp được tại thời điểm xuất hóa đơn, ghi:
+Nợ các TK 111, 112, 131 (tổng giá thanh toán)
+ 	Có các TK 511, 515, 711 (giá chưa có thuế GTGT)
+	Có TK 3331 - Thuế GTGT phải nộp (33311).
+b) Kế toán thuế GTGT đầu ra phải nộp theo phương pháp trực tiếp
+Tùy theo quy định của pháp luật thuế để doanh nghiệp lựa chọn một trong hai phương pháp ghi sổ như sau:
+- Phương pháp 1: Nếu tách riêng ngay số thuế GTGT phải nộp khi xuất hóa đơn, thực hiện như điểm a nêu trên.
+- Phương pháp 2: Ghi nhận doanh thu bao gồm cả thuế GTGT phải nộp theo phương pháp trực tiếp, định kỳ khi xác định số thuế GTGT phải nộp, doanh nghiệp ghi giảm doanh thu, thu nhập tương ứng:
+Nợ các TK 511, 515, 711
+Có TK 3331 - Thuế GTGT phải nộp (33311).
+c) Khi nộp thuế GTGT vào Ngân sách Nhà nước, ghi: 
+Nợ TK 3331 - Thuế GTGT phải nộp
+Có các TK 111, 112.
+3.1.2. Kế toán thuế GTGT của hàng nhập khẩu (TK 33312)
+a) Khi nhập khẩu vật tư, hàng hóa, TSCĐ, doanh nghiệp phản ánh số thuế nhập khẩu phải nộp, tổng số tiền phải thanh toán và giá trị vật tư, hàng hóa, TSCĐ nhập khẩu (chưa bao gồm thuế GTGT hàng nhập khẩu), ghi:
+Nợ các TK 152, 153, 156, 211,...
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3333) 
+Có các TK 111, 112, 331,...
+b) Phản ánh số thuế GTGT phải nộp của hàng nhập khẩu: 
+- Trường hợp thuế GTGT hàng nhập khẩu phải nộp được khấu trừ, ghi:
+Nợ TK 133 - Thuế GTGT được khấu trừ
+Có TK 3331 - Thuế GTGT phải nộp (33312).
+- Trường hợp thuế GTGT hàng nhập khẩu phải nộp không được khấu trừ phải tính vào giá trị vật tư, hàng hóa, TSCĐ nhập khẩu, ghi:
+Nợ các TK 152, 153, 156, 211,...
+Có TK 3331 - Thuế GTGT phải nộp (33312).
+c) Khi nộp thuế GTGT của hàng nhập khẩu vào Ngân sách Nhà nước, ghi:
+Nợ TK 3331 - Thuế GTGT phải nộp (33312)
+Có các TK 111, 112,...
+d) Trường hợp nhập khẩu ủy thác (áp dụng tại bên giao ủy thác)
+- Khi nhận được thông báo về nghĩa vụ nộp thuế GTGT hàng nhập khẩu từ bên nhận ủy thác, bên giao ủy thác ghi nhận số thuế GTGT hàng nhập khẩu phải nộp được khấu trừ, ghi:	
+Nợ TK 133 - Thuế GTGT được khấu trừ
+Có TK 3331 - Thuế GTGT phải nộp (33312).
+- Khi nhận được chứng từ nộp thuế vào NSNN của bên nhận ủy thác, bên giao ủy thác phản ánh giảm nghĩa vụ với NSNN về thuế GTGT hàng nhập khẩu, ghi:
+Nợ TK 3331 - Thuế GTGT phải nộp (33312)
+Có các TK 111, 112 (nếu trả tiền ngay cho bên nhận ủy thác)
+Có TK 338 - Phải trả, phải nộp khác (nếu chưa thanh toán ngay tiền thuế GTGT hàng nhập khẩu cho bên nhận ủy thác)
+Có TK 138 - Phải thu khác (ghi giảm số tiền đã ứng cho bên nhận ủy thác để nộp thuế GTGT hàng nhập khẩu).
+- Bên nhận ủy thác không phản ánh số thuế GTGT hàng nhập khẩu phải nộp như bên giao ủy thác mà chỉ ghi nhận số tiền đã nộp thuế hộ bên giao ủy thác, ghi:
+Nợ TK 138 - Phải thu khác (phải thu lại số tiền thuế đã nộp hộ)
+Nợ TK 338 - Phải trả, phải nộp khác (trừ vào số tiền đã nhận của bên giao 			ủy thác để nộp hộ)
+		Có các TK 111, 112.
+3.1.3. Kế toán thuế GTGT được khấu trừ
+- Định kỳ, doanh nghiệp tính, xác định số thuế GTGT được khấu trừ với số thuế GTGT đầu ra phải nộp trong kỳ, ghi:
+Nợ TK 3331 - Thuế GTGT phải nộp (33311)
+Có TK 133 - Thuế GTGT được khấu trừ.
+- Trường hợp tại thời điểm giao dịch phát sinh chưa xác định được thuế GTGT đầu vào của hàng hóa, dịch vụ có được khấu trừ hay không, doanh nghiệp ghi nhận toàn bộ số thuế GTGT đầu vào trên Tài khoản 133 - Thuế GTGT được khấu trừ. Định kỳ, khi xác định số thuế GTGT không được khấu trừ với thuế GTGT đầu ra, doanh nghiệp phản ánh vào chi phí có liên quan, ghi:
+Nợ các TK 152, 156, 211, 627, 632, 641, 642,... (thuế GTGT đầu vào không được khấu trừ)
+Có TK 133 - Thuế GTGT được khấu trừ.
+3.1.4. Kế toán thuế GTGT phải nộp được giảm
+Trường hợp doanh nghiệp được giảm số thuế GTGT phải nộp, doanh nghiệp ghi nhận số thuế GTGT được giảm vào thu nhập khác, ghi:
+Nợ TK 33311 - Thuế GTGT phải nộp (Nếu được trừ vào số thuế phải nộp)
+Nợ các TK 111, 112 (Nếu số giảm thuế được nhận lại bằng tiền)
+Có TK 711 - Thu nhập khác.
+3.1.5. Kế toán thuế GTGT đầu vào được hoàn 
+Trường hợp doanh nghiệp được hoàn thuế GTGT theo quy định của pháp luật do thuế đầu vào lớn hơn thuế đầu ra, khi nhận lại được tiền hoàn thuế, ghi: 
+Nợ các TK 111, 112
+		Có TK 133 - Thuế GTGT được khấu trừ.
+3.2. Thuế tiêu thụ đặc biệt (Thuế TTĐB) (TK 3332)
+3.2.1. Nguyên tắc kế toán
+- Tài khoản này sử dụng cho người có nghĩa vụ nộp thuế TTĐB theo quy định của pháp luật. Trong giao dịch xuất nhập khẩu ủy thác, tài khoản này chỉ sử dụng cho bên giao ủy thác, không áp dụng cho bên nhận ủy thác.
+- Khi doanh nghiệp bán sản phẩm, hàng hóa, dịch vụ chịu thuế TTĐB, doanh nghiệp ghi nhận doanh thu bán hàng và cung cấp dịch vụ không bao gồm thuế TTĐB phải nộp. Trường hợp không tách ngay được số thuế TTĐB phải nộp tại thời điểm ghi nhận doanh thu, doanh nghiệp được ghi nhận doanh thu bao gồm cả thuế TTĐB và định kỳ ghi giảm doanh thu đối với số thuế TTĐB phải nộp. Trong mọi trường hợp, khi lập Báo cáo kết quả hoạt động kinh doanh, chỉ tiêu “Doanh thu bán hàng và cung cấp dịch vụ” và chỉ tiêu “Các khoản giảm trừ doanh thu” đều không bao gồm số thuế TTĐB phải nộp.
+Việc kế toán thuế TTĐB của hàng nhập khẩu (ví dụ mặt hàng xăng theo quy định của pháp luật thuế) được hướng dẫn tại Tài khoản 1383 - Thuế TTĐB của hàng nhập khẩu. 
+- Các doanh nghiệp nhập khẩu hoặc mua hàng hóa nội địa, TSCĐ thuộc diện chịu thuế TTĐB thì được ghi nhận số thuế phải nộp vào giá gốc hàng tồn kho. Trường hợp doanh nghiệp nhập khẩu hàng hộ nhưng không có quyền sở hữu hàng hóa, ví dụ giao dịch tạm nhập - tái xuất hộ bên thứ ba thì số thuế nhập khẩu phải nộp không được ghi nhận vào giá trị hàng tồn kho mà được ghi nhận là khoản phải thu khác.
+- Kế toán số thuế TTĐB được hoàn, được giảm thực hiện theo nguyên tắc:
++ Thuế TTĐB đã nộp khi nhập khẩu hàng hóa, dịch vụ, nếu được hoàn ghi giảm giá vốn hàng bán (nếu xuất hàng để bán) hoặc giảm giá trị hàng hóa (nếu xuất trả lại do vay, mượn,...);
++ Thuế TTĐB đã nộp khi nhập khẩu TSCĐ, nếu được hoàn ghi giảm chi phí khác (nếu bán TSCĐ) hoặc giảm nguyên giá TSCĐ (nếu xuất trả lại);
++ Thuế TTĐB đã nộp khi nhập khẩu hàng hóa, TSCĐ nhưng đơn vị không có quyền sở hữu, khi được hoàn ghi giảm khoản phải thu khác;
++ Thuế TTĐB phải nộp khi bán hàng hóa, cung cấp dịch vụ nhưng sau đó được hoàn, được giảm thì ghi nhận vào thu nhập khác.
+3.2.2. Phương pháp kế toán thuế TTĐB
+a) Kế toán thuế TTĐB phải nộp khi bán hàng hóa, cung cấp dịch vụ:
+- Trường hợp tách ngay được thuế TTĐB phải nộp tại thời điểm giao dịch phát sinh, doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ không bao gồm thuế TTĐB, ghi:
+Nợ các TK 111, 112, 131 
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+		Có TK 3332 - Thuế tiêu thụ đặc biệt.
+- Trường hợp không tách ngay thuế TTĐB phải nộp tại thời điểm giao dịch phát sinh, doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ bao gồm cả thuế TTĐB. Định kỳ, khi xác định số thuế TTĐB phải nộp, doanh nghiệp ghi giảm doanh thu, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 3332 - Thuế tiêu thụ đặc biệt.
+b) Khi nhập khẩu hàng hóa thuộc đối tượng chịu thuế TTĐB (trừ mặt hàng xăng theo quy định của pháp luật thuế), doanh nghiệp căn cứ vào số thuế TTĐB phải nộp của hàng nhập khẩu, ghi:
+Nợ các TK 152, 156, 211,...
+Có TK 3332 - Thuế tiêu thụ đặc biệt.
+Đối với hàng tạm nhập - tái xuất không thuộc quyền sở hữu của đơn vị, ví dụ như hàng quá cảnh được tái xuất ngay tại kho ngoại quan, khi nộp thuế TTĐB của hàng nhập khẩu, ghi:
+Nợ TK 138 - Phải thu khác (1388)	
+Có TK 3332 - Thuế tiêu thụ đặc biệt.
+c) Khi nộp tiền thuế TTĐB vào Ngân sách Nhà nước, ghi:
+Nợ TK 3332 - Thuế tiêu thụ đặc biệt
+Có các TK 111, 112.
+d) Kế toán hoàn thuế TTĐB đã nộp ở khâu nhập khẩu (trừ trường hợp quy định tại khoản 3.12 Tài khoản 138 - Phải thu khác):
+- Thuế TTĐB đã nộp ở khâu nhập khẩu, được hoàn khi tái xuất hàng hóa, ghi: 
+Nợ TK 3332 - Thuế tiêu thụ đặc biệt
+		Có TK 632 - Giá vốn hàng bán (nếu xuất hàng để bán)
+		Có các TK 152, 153, 156 (nếu xuất hàng trả lại).
+- Thuế TTĐB đã nộp ở khâu nhập khẩu, được hoàn khi tái xuất TSCĐ, ghi:
+Nợ TK 3332 - Thuế TTĐB
+		Có TK 211 - TSCĐ hữu hình (nếu xuất trả lại TSCĐ)
+		Có TK 811 - Chi phí khác (nếu bán TSCĐ). 
+- Thuế TTĐB đã nộp ở khâu nhập khẩu nhưng hàng hóa không thuộc quyền sở hữu của đơn vị, được hoàn khi tái xuất, ghi:
+Nợ TK 3332 - Thuế tiêu thụ đặc biệt
+ 		Có TK 138 - Phải thu khác (1388). 	
+đ) Kế toán thuế TTĐB phải nộp khi bán hàng hóa, TSCĐ, cung cấp dịch vụ nhưng sau đó được giảm, được hoàn: Khi nhận được thông báo của cơ quan có thẩm quyền về số thuế ở khâu bán được giảm, được hoàn, ghi:
+Nợ TK 3332 - Thuế tiêu thụ đặc biệt
+		Có TK 711 - Thu nhập khác.
+e) Trường hợp xuất sản phẩm, hàng hóa, dịch vụ chịu thuế TTĐB để tiêu dùng nội bộ, cho, biếu, tặng, khuyến mại, quảng cáo không thu tiền, ghi:
+	Nợ các TK 641, 642,... 
+		Có các TK 154, 155,...	
+		Có TK 3332 - Thuế tiêu thụ đặc biệt (nếu có).	
+g) Trường hợp nhập khẩu ủy thác (áp dụng tại bên giao ủy thác)
+- Khi nhận được thông báo về nghĩa vụ nộp thuế TTĐB từ bên nhận ủy thác, bên giao ủy thác ghi nhận số thuế TTĐB phải nộp, ghi:	
+Nợ các TK 152, 156, 211,...
+Có TK 3332 - Thuế tiêu thụ đặc biệt.
+- Khi nhận được chứng từ nộp thuế vào NSNN của bên nhận ủy thác, bên giao ủy thác phản ánh giảm nghĩa vụ với NSNN về thuế TTĐB, ghi:
+Nợ TK 3332 - Thuế tiêu thụ đặc biệt
+Có các TK 111, 112 (nếu trả tiền ngay cho bên nhận ủy thác)
+Có TK 338 - Phải trả, phải nộp khác (nếu chưa thanh toán ngay tiền thuế TTĐB cho bên nhận ủy thác)
+Có TK 138 - Phải thu khác (ghi giảm số tiền đã ứng cho bên nhận ủy thác để nộp thuế TTĐB).
+- Bên nhận ủy thác không phản ánh số thuế TTĐB phải nộp như bên giao ủy thác mà chỉ ghi nhận số tiền đã nộp thuế hộ bên giao ủy thác, ghi:
+Nợ TK 138 - Phải thu khác (phải thu lại số tiền đã nộp hộ)
+Nợ TK 338 - Phải trả, phải nộp khác (trừ vào số tiền đã nhận của bên giao 			ủy thác)
+		Có các TK 111, 112.
+3.3. Thuế xuất khẩu (TK 3333)
+3.3.1. Nguyên tắc kế toán
+- Tài khoản này sử dụng cho người có nghĩa vụ nộp thuế xuất khẩu theo quy định của pháp luật. Trong giao dịch xuất khẩu ủy thác, tài khoản này chỉ sử dụng cho bên giao ủy thác, không áp dụng cho bên nhận ủy thác. 
+- Thuế xuất khẩu là thuế gián thu, không nằm trong cơ cấu doanh thu của doanh nghiệp. Khi xuất khẩu hàng hóa, doanh nghiệp phải tách riêng số thuế xuất khẩu phải nộp ra khỏi doanh thu bán hàng và cung cấp dịch vụ. Trường hợp không tách ngay được số thuế xuất khẩu phải nộp tại thời điểm ghi nhận doanh thu thì được ghi nhận doanh thu bao gồm cả thuế nhưng định kỳ phải ghi giảm doanh thu đối với số thuế xuất khẩu phải nộp. Trong mọi trường hợp, chỉ tiêu “Doanh thu bán hàng và cung cấp dịch vụ” và chỉ tiêu “Các khoản giảm trừ doanh thu” của Báo cáo kết quả hoạt động kinh doanh đều không bao gồm số thuế xuất khẩu phải nộp khi xuất khẩu hàng hóa, dịch vụ.
+- Thuế xuất khẩu phải nộp khi xuất khẩu nhưng sau đó được hoàn, được giảm thì ghi nhận vào thu nhập khác.
+3.3.2. Phương pháp kế toán thuế xuất khẩu
+a) Kế toán thuế xuất khẩu phải nộp khi bán hàng hóa, cung cấp dịch vụ:
+- Trường hợp tách ngay được thuế xuất khẩu phải nộp tại thời điểm giao dịch phát sinh, doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ không bao gồm thuế xuất khẩu, ghi:
+Nợ các TK 111, 112, 131 (tổng giá thanh toán)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế XK).
+- Trường hợp không tách ngay được thuế xuất khẩu phải nộp tại thời điểm giao dịch phát sinh, doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ bao gồm cả thuế xuất khẩu. Định kỳ khi xác định số thuế xuất khẩu phải nộp để ghi giảm doanh thu, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế XK).
+b) Khi nộp tiền thuế xuất khẩu vào NSNN, ghi:
+Nợ TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế xuất khẩu)
+Có các TK 111, 112,...
+	c) Thuế xuất khẩu được hoàn hoặc được giảm (nếu có), ghi:
+Nợ các TK 111, 112, 3333
+	Có TK 711 - Thu nhập khác.
+	d) Trường hợp xuất khẩu ủy thác (áp dụng tại bên giao ủy thác)
+- Khi bán hàng hóa, dịch vụ chịu thuế xuất khẩu, doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ và số thuế xuất khẩu phải nộp như trường hợp xuất khẩu thông thường quy định tại điểm a mục này.
+- Khi nhận được chứng từ nộp thuế vào NSNN của bên nhận ủy thác, bên giao ủy thác phản ánh giảm nghĩa vụ với NSNN về thuế xuất khẩu, ghi:
+Nợ TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế xuất khẩu)
+Có các TK 111, 112 (nếu trả tiền ngay cho bên nhận ủy thác)
+Có TK 338 - Phải trả, phải nộp khác (nếu chưa thanh toán ngay tiền thuế xuất khẩu cho bên nhận ủy thác)
+Có TK 138 - Phải thu khác (ghi giảm số tiền đã ứng cho bên nhận ủy thác để nộp thuế xuất khẩu).
+- Bên nhận ủy thác không phản ánh số thuế xuất khẩu phải nộp như bên giao ủy thác mà chỉ ghi nhận số tiền đã nộp thuế hộ bên giao ủy thác là khoản phải thu khác hay phải trả khác, ghi:
+Nợ TK 138 - Phải thu khác (phải thu lại số tiền đã nộp hộ)
+Nợ TK 338 - Phải trả, phải nộp khác (trừ vào số tiền đã nhận của bên giao 			ủy thác)
+		Có các TK 111, 112.
+3.4. Thuế nhập khẩu (TK 3333)
+3.4.1. Nguyên tắc kế toán
+- Tài khoản này sử dụng cho doanh nghiệp có nghĩa vụ nộp thuế nhập khẩu theo quy định của pháp luật. Trong giao dịch nhập khẩu ủy thác, tài khoản này chỉ sử dụng cho bên giao ủy thác, không áp dụng cho bên nhận ủy thác. 
+- Các doanh nghiệp nhập khẩu hàng hóa, TSCĐ được ghi nhận số thuế nhập khẩu phải nộp vào giá gốc hàng mua. Trường hợp doanh nghiệp nhập khẩu hàng hộ nhưng không có quyền sở hữu hàng hóa, ví dụ giao dịch tạm nhập - tái xuất hộ bên thứ ba thì số thuế nhập khẩu phải nộp không được ghi nhận vào giá trị hàng hóa mà được ghi nhận là khoản phải thu khác.
+- Kế toán số thuế nhập khẩu được hoàn, được giảm thực hiện theo nguyên tắc: 
++ Thuế nhập khẩu đã nộp khi nhập khẩu hàng hóa, dịch vụ, nếu được hoàn ghi giảm giá vốn hàng bán (nếu xuất hàng để bán) hoặc giảm giá trị hàng hóa (nếu xuất trả lại do vay, mượn,...);
++ Thuế nhập khẩu đã nộp khi nhập khẩu TSCĐ, nếu được hoàn ghi giảm chi phí khác (nếu bán TSCĐ) hoặc giảm nguyên giá TSCĐ (nếu xuất trả lại);
++ Thuế nhập khẩu đã nộp khi nhập khẩu hàng hóa, TSCĐ nhưng đơn vị không có quyền sở hữu (ví dụ hàng tạm nhập - tái xuất để gia công, chế biến,...) thì khi được hoàn ghi giảm khoản phải thu khác.
+3.4.2. Phương pháp kế toán thuế nhập khẩu
+a) Khi nhập khẩu vật tư, hàng hóa, TSCĐ, doanh nghiệp phản ánh số thuế nhập khẩu phải nộp vào giá trị vật tư, hàng hóa, TSCĐ nhập khẩu (giá có thuế nhập khẩu), ghi:
+Nợ các TK 152, 156, 211,... (giá có thuế nhập khẩu)
+Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu)
+Có các TK 111, 112, 331,...
+Đối với hàng tạm nhập - tái xuất không thuộc quyền sở hữu của đơn vị, ví dụ như hàng quá cảnh được tái xuất ngay tại kho ngoại quan, khi nộp thuế nhập khẩu, ghi:
+Nợ TK 138 - Phải thu khác	
+Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu).
+b) Khi nộp thuế nhập khẩu vào Ngân sách Nhà nước, ghi: 
+Nợ TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu)
+Có các TK 111, 112,...
+c) Kế toán hoàn thuế nhập khẩu đã nộp ở khâu nhập khẩu
+- Thuế nhập khẩu đã nộp ở khâu nhập khẩu, được hoàn khi tái xuất hàng hóa, ghi: 
+Nợ TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu)
+		Có TK 632 - Giá vốn hàng bán (nếu xuất hàng để bán)
+		Có các TK 152, 153, 156 (nếu xuất hàng trả lại).
+- Thuế nhập khẩu đã nộp ở khâu nhập khẩu, được hoàn khi tái xuất TSCĐ, ghi:
+Nợ TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu)
+		Có TK 211 - TSCĐ hữu hình (nếu xuất trả lại TSCĐ)
+		Có TK 811 - Chi phí khác (nếu bán TSCĐ). 
+- Thuế nhập khẩu đã nộp ở khâu nhập khẩu nhưng hàng hóa không thuộc quyền sở hữu của đơn vị, được hoàn khi tái xuất (ví dụ thuế nhập khẩu đã nộp khi nhập khẩu hàng phục vụ gia công, chế biến), ghi:
+Nợ TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu)
+ 		Có TK 138 - Phải thu khác. 	
+- Khi nhận được tiền từ NSNN, ghi:
+Nợ TK 112 - Tiền gửi không kỳ hạn
+		Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu).
+d) Trường hợp nhập khẩu ủy thác (áp dụng tại bên giao ủy thác)
+- Khi nhận được thông báo về nghĩa vụ nộp thuế nhập khẩu từ bên nhận ủy thác, bên giao ủy thác ghi nhận số thuế nhập khẩu phải nộp, ghi:	
+Nợ các TK 152, 156, 211,... (giá có thuế nhập khẩu)
+Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu).
+- Khi nhận được chứng từ nộp thuế vào NSNN của bên nhận ủy thác, bên giao ủy thác phản ánh giảm nghĩa vụ với NSNN về thuế nhập khẩu, ghi:
+Nợ TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu)
+Có các TK 111, 112 (nếu trả tiền ngay cho bên nhận ủy thác)
+Có TK 338 - Phải trả, phải nộp khác (nếu chưa thanh toán ngay tiền thuế nhập khẩu cho bên nhận ủy thác)
+Có TK 138 - Phải thu khác (ghi giảm số tiền đã ứng cho bên nhận ủy thác để nộp thuế nhập khẩu).
+- Bên nhận ủy thác không phản ánh số thuế nhập khẩu phải nộp như bên giao ủy thác mà chỉ ghi nhận số tiền đã nộp thuế hộ bên giao ủy thác, ghi:
+Nợ TK 138 - Phải thu khác (phải thu lại số tiền đã nộp hộ)
+Nợ TK 338 - Phải trả, phải nộp khác (trừ vào số tiền đã nhận của bên giao 			ủy thác)
+		Có các TK 111, 112.
+3.5. Thuế thu nhập doanh nghiệp (TK 3334)
+3.5.1. Phương pháp kế toán chi phí thuế thu nhập doanh nghiệp hiện hành
+- Hàng quý, doanh nghiệp phản ánh số thuế thu nhập doanh nghiệp hiện hành tạm phải nộp vào Ngân sách Nhà nước (không bao gồm thuế thu nhập doanh nghiệp phải nộp bổ sung theo quy định của pháp luật thuế tối thiểu toàn cầu), ghi:
+Nợ TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành
+Có TK 3334 - Thuế thu nhập doanh nghiệp.
+Khi nộp thuế thu nhập doanh nghiệp vào Ngân sách Nhà nước, ghi:
+Nợ TK 3334 - Thuế thu nhập doanh nghiệp
+Có TK 111, 112,...
+- Cuối năm tài chính, căn cứ vào số thuế thu nhập doanh nghiệp thực tế phải nộp theo tờ khai quyết toán thuế hoặc số thuế do cơ quan thuế thông báo phải nộp (không bao gồm thuế thu nhập doanh nghiệp phải nộp bổ sung theo quy định của pháp luật thuế tối thiểu toàn cầu):
++ Nếu số thuế thu nhập doanh nghiệp thực tế phải nộp trong năm lớn hơn số thuế thu nhập doanh nghiệp tạm phải nộp, doanh nghiệp phản ánh bổ sung số thuế thu nhập doanh nghiệp hiện hành còn phải nộp, ghi:
+Nợ TK 8211- Chi phí thuế thu nhập doanh nghiệp hiện hành
+Có TK 3334 - Thuế thu nhập doanh nghiệp.
++ Nếu số thuế thu nhập doanh nghiệp thực tế phải nộp trong năm nhỏ hơn số thuế thu nhập doanh nghiệp tạm phải nộp, doanh nghiệp ghi giảm chi phí thuế thu nhập doanh nghiệp hiện hành, ghi:
+Nợ TK 3334 - Thuế thu nhập doanh nghiệp
+Có TK 8211- Chi phí thuế thu nhập doanh nghiệp hiện hành.
+- Trường hợp phát hiện sai sót không trọng yếu của các năm trước liên quan đến thuế thu nhập doanh nghiệp phải nộp của các năm trước, doanh nghiệp được hạch toán tăng (hoặc giảm) số thuế thu nhập doanh nghiệp phải nộp của các năm trước vào chi phí thuế thu nhập hiện hành của năm phát hiện sai sót. 
++ Trường hợp được ghi tăng chi phí thuế thu nhập doanh nghiệp hiện hành của năm hiện tại, ghi:
+Nợ TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành
+Có TK 3334 - Thuế thu nhập doanh nghiệp.
++ Trường hợp được ghi giảm chi phí thuế thu nhập doanh nghiệp hiện hành trong năm hiện tại, ghi:
+Nợ TK 3334 - Thuế thu nhập doanh nghiệp
+Có TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành.
+3.5.2. Phương pháp kế toán chi phí thuế thu nhập doanh nghiệp nộp bổ sung theo quy định về thuế tối thiểu toàn cầu thực hiện theo hướng dẫn tại khoản 3.2 Tài khoản 821 - Chi phí thuế thu nhập doanh nghiệp.
+3.6. Thuế thu nhập cá nhân (TK 3335)
+a) Khi xác định số thuế thu nhập cá nhân phải nộp khấu trừ tại nguồn tính trên thu nhập chịu thuế của người lao động, ghi:
+Nợ các TK 622, 627, 641, 642,... (thu nhập phải trả người lao động không bao gồm thuế TNCN)
+Nợ TK 334 - Phải trả người lao động (thu nhập phải trả người lao động đã bao gồm thuế TNCN)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3335).
+b) Khi chi trả thu nhập cho các cá nhân bên ngoài, doanh nghiệp phải xác định số thuế thu nhập cá nhân phải nộp tính trên thu nhập không thường xuyên chịu thuế theo từng lần phát sinh thu nhập, ghi:
++ Trường hợp chi trả tiền thù lao, dịch vụ thuê ngoài,... ngay cho các cá nhân bên ngoài, ghi:
+Nợ các TK 623, 627, 641, 642,... (tổng số phải thanh toán); hoặc
+Nợ TK 353 - Quỹ khen thưởng, phúc lợi (tổng tiền phải thanh toán) (3531)
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3335) (số thuế thu nhập cá nhân khấu trừ tại nguồn)
+	Có các TK 111, 112 (số tiền thực trả).
++ Khi chi trả các khoản nợ phải trả cho các cá nhân bên ngoài có thu nhập, ghi:
+Nợ TK 331 - Phải trả cho người bán (tổng số tiền phải trả)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (số thuế thu nhập cá nhân phải khấu trừ)
+Có các TK 111, 112 (số tiền thực trả).
+c) Khi nộp thuế thu nhập cá nhân vào Ngân sách Nhà nước thay cho người có thu nhập, ghi:
+Nợ TK 333 - Thuế và các khoản phải nộp Nhà nước (3335)
+	Có các TK 111, 112,...
+3.7. Thuế tài nguyên (TK 3336)
+a) Xác định số thuế tài nguyên phải nộp tính vào chi phí sản xuất chung, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6275)
+Có TK 3336 - Thuế tài nguyên.
+b) Khi nộp thuế tài nguyên vào Ngân sách Nhà nước, ghi:
+Nợ TK 3336 - Thuế tài nguyên
+Có các TK 111, 112,...
+3.8. Thuế nhà đất, tiền thuê đất (TK 3337)
+- Đối với số thuế nhà đất, tiền thuê đất phải nộp: Doanh nghiệp căn cứ vào mục đích sử dụng đất để phân bổ và ghi nhận thuế nhà đất, tiền thuê đất vào bộ phận sử dụng đất cho phù hợp, ghi:
+Nợ các TK 627, 641, 642,...
+Có TK 3337 - Thuế nhà đất, tiền thuê đất.
+- Khi nộp tiền thuế nhà đất, tiền thuê đất vào Ngân sách Nhà nước, ghi:
+Nợ TK 3337 - Thuế nhà đất, tiền thuê đất
+Có các TK 111, 112,...
+3.9. Thuế bảo vệ môi trường (TK 33381)
+3.9.1. Nguyên tắc kế toán:
+- Tài khoản này sử dụng cho người nộp thuế bảo vệ môi trường theo quy định của pháp luật. Trong giao dịch nhập khẩu ủy thác, tài khoản này chỉ sử dụng cho bên giao ủy thác, không áp dụng cho bên nhận ủy thác.
+- Các doanh nghiệp bán sản phẩm, hàng hóa chịu thuế bảo vệ môi trường ghi nhận doanh thu không bao gồm số thuế bảo vệ môi trường phải nộp. Trường hợp không tách ngay được số thuế phải nộp tại thời điểm phát sinh thì được ghi nhận doanh thu bao gồm cả thuế bảo vệ môi trường nhưng định kỳ phải ghi giảm doanh thu đối với số thuế bảo vệ môi trường phải nộp. 
+- Các doanh nghiệp nhập khẩu hoặc mua hàng tồn kho trong nội địa thuộc diện chịu thuế bảo vệ môi trường được ghi nhận số thuế bảo vệ môi trường phải nộp vào giá gốc hàng tồn kho. Đối với các doanh nghiệp sản xuất, chế biến sản phẩm, dịch vụ thì phí bảo vệ môi trường phát sinh ở khâu sản xuất, chế biến được hạch toán vào chi phí sản xuất chung (TK 6275).
+- Thời điểm tính thuế bảo vệ môi trường được thực hiện theo quy định của pháp luật về thuế. 
+- Kế toán số thuế BVMT được hoàn, được giảm thực hiện theo nguyên tắc:
++ Thuế BVMT đã nộp khi nhập khẩu hàng hóa, dịch vụ, nếu được hoàn ghi giảm giá vốn hàng bán (nếu xuất hàng để bán) hoặc giảm giá trị hàng hóa (nếu xuất trả lại do vay, mượn...);
++ Thuế BVMT đã nộp khi nhập khẩu TSCĐ, nếu được hoàn ghi giảm chi phí khác (nếu bán TSCĐ) hoặc giảm nguyên giá TSCĐ (nếu xuất trả lại);
++ Thuế BVMT đã nộp khi nhập khẩu hàng hóa, TSCĐ nhưng đơn vị không có quyền sở hữu, khi được hoàn ghi giảm khoản phải thu khác;
++ Thuế BVMT phải nộp khi bán hàng hóa, cung cấp dịch vụ nhưng sau đó được hoàn, được giảm thì ghi nhận vào thu nhập khác.
+3.9.2. Phương pháp kế toán thuế bảo vệ môi trường
+a) Khi bán hàng hóa, cung cấp dịch vụ thuộc đối tượng chịu thuế bảo vệ môi trường và chịu thuế GTGT, doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ không bao gồm thuế bảo vệ môi trường và không có thuế GTGT, ghi:
+Nợ các TK 111, 112, 131 (tổng giá thanh toán)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá bán không có thuế bảo vệ môi trường và thuế GTGT)
+Có TK 3331 - Thuế GTGT phải nộp (33311)
+Có TK 33381 - Thuế bảo vệ môi trường (nếu có). 
+Trường hợp không xác định được ngay số thuế phải nộp tại thời điểm giao dịch phát sinh, doanh thu được ghi nhận bao gồm cả thuế nhưng định kỳ khi xác định số thuế phải nộp thì phải ghi giảm doanh thu, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 333 - Thuế và các khoản phải nộp (chi tiết từng loại thuế).
+b) Khi nhập khẩu hàng hóa thuộc đối tượng chịu thuế bảo vệ môi trường, doanh nghiệp căn cứ vào số thuế bảo vệ môi trường phải nộp, ghi:
+Nợ các TK 152, 156, 211, 627,...
+Có TK 33381 - Thuế bảo vệ môi trường (nếu có). 
+c) Trường hợp xuất sản phẩm, hàng hóa, dịch vụ chịu thuế bảo vệ môi trường để trao đổi, tiêu dùng nội bộ, tặng cho, ghi: 
+Nợ các TK 641, 642,...
+Có các TK 152, 154, 155
+Có TK 33381 - Thuế bảo vệ môi trường (nếu có). 
+d) Trường hợp nhập khẩu ủy thác:
+- Đối với bên giao ủy thác: 
++ Khi nhận được thông báo về nghĩa vụ nộp thuế bảo vệ môi trường từ bên nhận ủy thác, bên giao ủy thác ghi nhận số thuế bảo vệ môi trường phải nộp, ghi:
+Nợ các TK 152, 156, 211,... 
+Có TK 33381 - Thuế bảo vệ môi trường.
++ Khi nhận được chứng từ nộp thuế vào Ngân sách Nhà nước của bên nhận ủy thác, bên giao ủy thác phản ánh giảm nghĩa vụ với Ngân sách Nhà nước về thuế bảo vệ môi trường, ghi:
+Nợ TK 33381 - Thuế bảo vệ môi trường
+Có các TK 111, 112 (nếu trả tiền ngay cho bên nhận ủy thác)
+Có TK 338 - Phải trả, phải nộp khác (nếu chưa thanh toán ngay tiền thuế bảo vệ môi trường cho bên nhận ủy thác)
+Có TK 138 - Phải thu khác (ghi giảm số tiền đã ứng cho bên nhận ủy thác để nộp thuế bảo vệ môi trường).
+- Đối với bên nhận ủy thác: không phản ánh số thuế bảo vệ môi trường phải nộp như bên giao ủy thác mà chỉ ghi nhận số tiền đã nộp thuế hộ bên giao ủy thác là khoản phải thu, phải trả khác, ghi:
+Nợ TK 138 - Phải thu khác (phải thu lại số tiền đã nộp hộ)
+Nợ TK 338 - Phải trả, phải nộp khác (trừ vào số tiền đã nhận của bên giao ủy thác)
+		Có các TK 111, 112.	
+đ) Kế toán hoàn thuế bảo vệ môi trường đã nộp ở khâu nhập khẩu:
+- Thuế BVMT đã nộp ở khâu nhập khẩu, được hoàn khi tái xuất hàng hóa, ghi: 
+Nợ TK 33381 - Thuế bảo vệ môi trường
+		Có TK 632 - Giá vốn hàng bán (nếu xuất hàng để bán)
+		Có các TK 152, 153, 156 (nếu xuất hàng trả lại).
+- Thuế BVMT đã nộp ở khâu nhập khẩu, được hoàn khi tái xuất TSCĐ, ghi:
+Nợ TK 33381 - Thuế bảo vệ môi trường
+ 		Có TK 211 - TSCĐ hữu hình (nếu xuất trả lại TSCĐ)
+		Có TK 811 - Chi phí khác (nếu bán TSCĐ). 
+- Thuế BVMT đã nộp ở khâu nhập khẩu nhưng hàng hóa không thuộc quyền sở hữu của đơn vị, được hoàn khi tái xuất, ghi:
+Nợ TK 33381 - Thuế bảo vệ môi trường
+ 		Có TK 138 - Phải thu khác. 	
+e) Kế toán thuế BVMT phải nộp khi bán hàng hóa (trừ sản phẩm xăng dầu), TSCĐ, cung cấp dịch vụ nhưng sau đó được giảm, được hoàn: Khi nhận được thông báo của cơ quan có thẩm quyền về số thuế ở khâu bán được giảm, được hoàn, ghi:
+Nợ TK 33381 - Thuế bảo vệ môi trường
+		Có TK 711 - Thu nhập khác. 
+3.10. Các loại thuế khác (TK 33382)
+a) Khi xác định số thuế phải nộp, ghi:
+Nợ TK liên quan
+		Có TK 33382 - Các loại thuế khác
+b) Khi nộp các loại thuế khác, ghi: 
+Nợ TK 33382 - Các loại thuế khác
+Có các TK 111, 112.
+3.11. Phí, lệ phí và các khoản phải nộp khác (TK 3339)
+3.11.1. Thuế nhà thầu trong trường hợp doanh nghiệp phải nộp thuế thay cho nhà thầu nước ngoài, nhà thầu phụ nước ngoài theo quy định của pháp luật về thuế
+a) Trường hợp giá trên hợp đồng đã bao gồm thuế nhà thầu (thuế TNDN và thuế GTGT), ghi:
+- Khi nhận hàng hóa, dịch vụ, phản ánh vào giá trị tài sản hoặc chi phí SXKD liên quan theo giá trị hợp đồng, ghi:
+Nợ các TK 627, 642,... (giá trị hợp đồng không bao gồm thuế GTGT nhà thầu nước ngoài nếu thuộc trường hợp được khấu trừ thuế GTGT nhà thầu)
+Nợ TK 1388 - Phải thu khác (Thuế GTGT nhà thầu nước ngoài nếu thuộc trường hợp được khấu trừ thuế GTGT nhà thầu) 
+Có TK 331 - Phải trả cho người bán (giá trị hợp đồng đã bao gồm thuế TNDN và thuế GTGT phải nộp của nhà thầu).
+- Khi ứng tiền trước hoặc trả tiền cho nhà thầu, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3339) (số thuế GTGT và TNDN phải nộp thay cho nhà thầu)
+Có các TK 111, 112 (giá trị hợp đồng sau khi trừ số thuế GTGT và TNDN phải nộp thay cho nhà thầu).
+- Khi doanh nghiệp nộp thuế nhà thầu, ghi:
+Nợ TK 333 - Thuế và các khoản phải nộp Nhà nước (3339)
+		Có các TK 111, 112
+Đồng thời, ghi:
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu thuế GTGT nhà thầu nước ngoài đã nộp vào NSNN được khấu trừ)
+		Có TK 1388 - Phải thu khác (Thuế GTGT nhà thầu nước ngoài).
+- Trường hợp có sự khác biệt về thời điểm ghi nhận giữa chi phí kế toán và chi phí được trừ khi tính thuế TNDN đối với khoản thuế nhà thầu thì được thực hiện theo hướng dẫn tại Chuẩn mực kế toán Việt Nam số 17 - Thuế thu nhập doanh nghiệp.
+b) Trường hợp giá phải trả người bán trên hợp đồng không bao gồm thuế nhà thầu (cả thuế TNDN và thuế GTGT):
+- Khi nhận hàng hóa, dịch vụ, phản ánh vào giá trị tài sản hoặc chi phí SXKD liên quan theo giá trị hợp đồng, ghi:
+Nợ các TK 627, 642,... (giá trị hợp đồng không bao gồm thuế GTGT nhà 		 thầu nước ngoài nếu thuộc trường hợp được khấu trừ 		 thuế GTGT nhà thầu và bao gồm thuế TNDN nhà thầu)
+Có TK 331 - Phải trả cho người bán (giá trị hợp đồng không bao gồm thuế nhà thầu)
+Có TK 338 - Phải trả, phải nộp khác (3388) (số thuế TNDN phải nộp thay cho nhà thầu).
+ - Phản ánh thuế GTGT của hàng nhập khẩu theo quy định của pháp luật thuế, ghi:
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu được khấu trừ)
+Nợ các TK 627, 642,... (nếu không được khấu trừ)
+	Có TK 33312 - Thuế GTGT hàng nhập khẩu.
+- Khi ứng tiền trước hoặc trả tiền cho nhà thầu, ghi:
+ Nợ TK 331 - Phải trả cho người bán
+		Có các TK 111, 112 (giá trị hợp đồng không bao gồm thuế nhà 						thầu).
+Đồng thời, ghi:
+Nợ TK 3388 - Phải trả, phải nộp khác (Thuế TNDN phải nộp thay cho nhà thầu)
+Nợ TK 1388 - Phải thu khác (Thuế GTGT nhà thầu nước ngoài)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3339) (số thuế GTGT và TNDN phải nộp thay cho nhà thầu).
+- Khi doanh nghiệp nộp thuế nhà thầu, ghi:
+Nợ TK 333 - Thuế và các khoản phải nộp Nhà nước (3339)
+		Có các TK 111, 112.
+Đồng thời, ghi:
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu thuế GTGT nhà thầu nước ngoài đã nộp vào NSNN được khấu trừ)
+Nợ các TK 627, 642,... (nếu không được khấu trừ)
+	Có TK 1388 - Phải thu khác (Thuế GTGT nhà thầu nước ngoài).
+c) Trường hợp giá phải trả người bán trên hợp đồng (bao gồm thuế GTGT của nhà thầu, không bao gồm Thuế TNDN của nhà thầu), doanh nghiệp chỉ phải chịu trách nhiệm nộp thuế TNDN thay nhà thầu
+- Khi nhận hàng hóa, dịch vụ, phản ánh vào giá trị tài sản hoặc chi phí SXKD liên quan theo giá trị hợp đồng, ghi:
+Nợ các TK 627, 642,.. (giá trị hợp đồng không bao gồm thuế GTGT của nhà thầu và bao gồm thuế TNDN nhà thầu)
+Có TK 331 - Phải trả cho người bán (bao gồm thuế GTGT của nhà thầu, không bao gồm thuế TNDN nộp thay nhà thầu)
+Có TK 3388 - Phải trả, phải nộp khác (số thuế TNDN phải nộp thay cho nhà thầu).
+- Khi ứng tiền trước hoặc trả tiền cho nhà thầu, ghi:
+ Nợ TK 331 - Phải trả cho người bán (giá trị hợp đồng bao gồm thuế GTGT của nhà thầu, không bao gồm thuế TNDN nộp thay nhà thầu)
+ Có các TK 111, 112 (giá trị hợp đồng bao gồm thuế GTGT của nhà thầu, không bao gồm thuế TNDN nộp thay nhà thầu)
+Đồng thời, ghi:
+Nợ TK 3388 - Phải trả, phải nộp khác (Thuế TNDN phải nộp thay cho nhà 								thầu)
+Nợ TK 1388 - Phải thu khác (Thuế GTGT nhà thầu nước ngoài)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3339) (số thuế GTGT và TNDN phải nộp thay cho nhà thầu)
+- Khi nhà thầu phát sinh nghĩa vụ thuế, ghi:
+Nợ TK 333 - Thuế và các khoản phải nộp Nhà nước (3339)
+		Có các TK 111, 112.
+Đồng thời, ghi:
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu thuế GTGT nhà thầu nước ngoài đã nộp vào NSNN được khấu trừ)
+Nợ các TK 627, 642,... (nếu không được khấu trừ)
+		Có TK 1388 - Phải thu khác (Thuế GTGT nhà thầu nước ngoài).
+3.11.2. Phí, lệ phí và các khoản phải nộp khác
+a) Khi xác định số lệ phí trước bạ tính trên giá trị tài sản mua về (khi đăng ký quyền sở hữu hoặc quyền sử dụng), ghi:
+Nợ TK 211 - TSCĐ hữu hình
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3339).
+b) Xác định số phí bảo vệ môi trường phải nộp ở khâu sản xuất, chế biến sản phẩm, dịch vụ theo quy định của pháp luật, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6275)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3339).
+c) Khi nộp phí, lệ phí và các khoản phải nộp khác, ghi:
+Nợ TK 333 - Thuế và các khoản phải nộp Nhà nước (3339)
+Có các TK 111, 112. 
+3.12. Kế toán các khoản trợ cấp, trợ giá của Nhà nước cho doanh nghiệp:
+- Khi nhận được quyết định về khoản trợ cấp, trợ giá của Nhà nước trong trường hợp doanh nghiệp thực hiện các nhiệm vụ cung cấp hàng hóa, dịch vụ theo yêu cầu của Nhà nước, doanh nghiệp phản ánh doanh thu trợ cấp, trợ giá được Nhà nước cấp, ghi:
+Nợ TK 333 - Thuế và các khoản phải nộp Nhà nước (3339) 
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ.
+- Khi nhận được tiền trợ cấp, trợ giá của Nhà nước, ghi:
+Nợ các TK 111, 112
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3339).
+
+
+
+
+
+
+
+
+
+
+
+
+(Xem tiếp Công báo số 1571 + 1572)

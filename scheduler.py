@@ -107,9 +107,31 @@ def init_schedulers(app, backup_root):
         minute=30,
         id='knowledge_rss_sync_daily',
     )
+    backup_scheduler.add_job(
+        func=_scheduled_sme_auto_posting,
+        trigger="cron",
+        day=1,
+        hour=1,
+        minute=15,
+        id='sme_auto_posting_monthly',
+    )
     backup_scheduler.start()
 
     return expiry_scheduler, backup_scheduler
+
+
+def _scheduled_sme_auto_posting():
+    """Ngày 1 hàng tháng: khấu hao/phân bổ kỳ tháng trước cho tenant SME."""
+    try:
+        from Services.sme.auto_posting import run_sme_automation_for_all_tenants
+        result = run_sme_automation_for_all_tenants()
+        posted = sum(1 for r in result.get('results') or [] if r.get('posted'))
+        print(
+            f"[{datetime.now()}] SME auto posting {result.get('period')}/{result.get('fiscal_year')}: "
+            f"{posted}/{result.get('tenants', 0)} tenants posted"
+        )
+    except Exception as e:
+        print(f"[{datetime.now()}] SME auto posting failed: {e}")
 
 
 def _scheduled_knowledge_rss_sync():

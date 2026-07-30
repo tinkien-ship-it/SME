@@ -99,14 +99,10 @@
             <a class="nav-link-sub active" href="#"><i class="fas fa-bag-shopping text-warning me-2"></i> TÀI SẢN CỐ ĐỊNH</a>
             
             <div class="submenu">
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuNhapKho') }}"><i class="fas fa-clipboard-list me-2"></i> Sổ tài sản cố định (S31-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Thẻ tài sản cố định (S32-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Biên bản giao nhận TSCĐ (Mẫu số 01-TSCĐ)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Biên bản thanh lý TSCĐ (Mẫu số 02-TSCĐ)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Biên bản giao nhận TSCĐ sửa chữa lớn hoàn thành (Mẫu số 03-TSCĐ)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Biên bản đánh giá lại TSCĐ (Mẫu số 04-TSCĐ)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Biên bản kiểm kê TSCĐ (Mẫu số 05-TSCĐ)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Bảng tính và phân bổ khấu hao TSCĐ (Mẫu số 06-TSCĐ)</a>
+                <a class="nav-link-sub" href="{{ url_for('TaiSanCoDinh') }}"><i class="fas fa-clipboard-list me-2"></i> Sổ tài sản cố định / Thẻ TSCĐ</a>
+                <a class="nav-link-sub" href="{{ url_for('TaiSanCoDinh') }}"><i class="fas fa-file-invoice me-2"></i> Quản lý TSCĐ &amp; khấu hao</a>
+                <a class="nav-link-sub" href="{{ url_for('SME_auto_posting') }}"><i class="fas fa-robot me-2"></i> Trích KH tự động theo kỳ</a>
+                <a class="nav-link-sub" href="{{ url_for('SME_general_ledger') }}"><i class="fas fa-scale-balanced me-2"></i> Sổ cái TK 211 / 214</a>
                 <a class="nav-link-sub text-danger" href="{{ url_for('SME_dashboard') }}"><i class="fas fa-home me-2 text-danger"></i> Quay lại trang chủ</a>
             </div>
         </nav>

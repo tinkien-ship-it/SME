@@ -1,0 +1,1790 @@
+VĂN BẢN QUY PHẠM PHÁP LUẬT
+
+BỘ TÀI CHÍNH
+
+Thông tư số 99/2025/TT-BTC ngày 27 tháng 10 năm 2025
+hướng dẫn Chế độ kế toán doanh nghiệp
+
+(Tiếp theo Công báo số 1565 + 1566)
+
+TÀI KHOẢN 151 - HÀNG MUA ĐANG ĐI ĐƯỜNG
+
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động các loại hàng hóa, vật tư (nguyên liệu, vật liệu; công cụ, dụng cụ) mua ngoài đã thuộc quyền sở hữu của doanh nghiệp nhưng còn đang đi đường.
+b) Hàng hóa, vật tư được coi là đang đi trên đường, bao gồm:
+- Hàng hóa, vật tư mua ngoài đã thanh toán tiền hoặc đã chấp nhận thanh toán nhưng còn để ở kho người bán, ở bến cảng, bến bãi, kho ngoại quan hoặc đang trên đường vận chuyển;
+- Hàng hóa, vật tư mua ngoài đã về đến doanh nghiệp nhưng đang chờ kiểm nghiệm, kiểm nhận nhập kho.
+c) Kế toán hàng mua đang đi đường được ghi nhận trên Tài khoản 151 theo nguyên tắc giá gốc quy định trong Chuẩn mực kế toán Việt Nam số 02 - Hàng tồn kho.
+d) Hàng ngày, khi nhận được hóa đơn mua hàng, nhưng hàng chưa về nhập kho, doanh nghiệp chưa ghi sổ mà tiến hành đối chiếu với hợp đồng kinh tế và lưu hóa đơn vào tập hồ sơ riêng là “Hàng mua đang đi đường”.
+Trong kỳ, nếu hàng về nhập kho, kế toán căn cứ vào phiếu nhập kho và hóa đơn mua hàng ghi sổ trực tiếp vào các Tài khoản 152, Tài khoản 153,... 
+đ) Nếu đến thời điểm kết thúc kỳ kế toán mà hàng vẫn chưa về thì doanh nghiệp căn cứ hóa đơn mua hàng để ghi nhận vào Tài khoản 151 - Hàng mua đang đi đường. Tùy theo yêu cầu quản lý, doanh nghiệp có thể theo dõi chi tiết hàng mua đang đi đường theo từng mặt hàng, vật tư, từng lô hàng, từng hợp đồng kinh tế,...
+2. Kết cấu và nội dung phản ánh của Tài khoản 151 - Hàng mua đang đi đường
+Bên Nợ:
+- Trị giá hàng hóa, vật tư đã mua đang đi đường;
+Bên Có:
+- Trị giá hàng hóa, vật tư đang đi đường đã về nhập kho hoặc đã chuyển giao thẳng cho khách hàng;
+Số dư bên Nợ: 
+Trị giá hàng hóa, vật tư đã mua nhưng còn đang đi đường (chưa về nhập kho doanh nghiệp) tại thời điểm kết thúc kỳ kế toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Tại thời điểm kết thúc kỳ kế toán, căn cứ vào hóa đơn mua hàng của các loại hàng mua chưa về nhập kho, nếu thuế GTGT đầu vào được khấu trừ, ghi:
+Nợ TK 151 - Hàng mua đang đi đường 
+Nợ TK 133 - Thuế GTGT được khấu trừ 
+Có các TK 111, 112, 141, 331,...
+Trường hợp thuế GTGT đầu vào không được khấu trừ thì giá trị hàng mua bao gồm cả thuế GTGT.
+b) Sang kỳ kế toán sau, khi hàng về nhập kho hoặc về dùng ngay cho sản xuất kinh doanh, căn cứ hóa đơn và các chứng từ liên quan, ghi:
+Nợ các TK 152, 153, 156, 621,...
+Có TK 151 - Hàng mua đang đi đường.
+c) Trường hợp sang kỳ kế toán sau, hàng hóa, vật tư đã mua đang đi đường không nhập kho mà giao thẳng cho khách hàng theo hợp đồng kinh tế từ kho người bán, bến cảng, bến bãi, hoặc gửi thẳng cho đại lý, ký gửi, ghi:
+Nợ các TK 157, 632
+Có TK 151 - Hàng mua đang đi đường.
+d) Trường hợp hàng mua đang đi đường bị hao hụt, mất mát phát hiện ngay khi hàng về nhập kho hoặc xuất chuyển thẳng để bán hoặc gửi bán, căn cứ vào chứng từ liên quan, doanh nghiệp phản ánh giá trị hàng tồn kho bị mất mát, hao hụt, ghi:
+Nợ TK 138 - Phải thu khác (1381, 1388)
+	Có TK 151 - Hàng mua đang đi đường.	
+TÀI KHOẢN 152 - NGUYÊN LIỆU, VẬT LIỆU
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh trị giá hiện có và tình hình biến động tăng, giảm của các loại nguyên liệu, vật liệu trong kho hoặc các địa điểm bảo quản hàng tồn kho của doanh nghiệp (ngoại trừ nguyên liệu, vật liệu đã được phản ánh vào Tài khoản 151 - Hàng mua đang đi đường và Tài khoản 158 - Nguyên liệu, vật tư tại kho bảo thuế). Nguyên liệu, vật liệu của doanh nghiệp có thể do mua ngoài hoặc tự chế biến dùng cho mục đích sản xuất, kinh doanh của doanh nghiệp. Tùy theo đặc điểm sản xuất kinh doanh và yêu cầu quản lý của doanh nghiệp, nguyên liệu, vật liệu có thể được phân loại như sau:
+- Nguyên liệu, vật liệu chính: Là những loại nguyên liệu và vật liệu khi tham gia vào quá trình sản xuất thì cấu thành thực thể chính của sản phẩm. Vì vậy khái niệm nguyên liệu, vật liệu chính gắn liền với từng doanh nghiệp sản xuất cụ thể. Nguyên liệu, vật liệu chính cũng bao gồm cả bán thành phẩm mua ngoài với mục đích tiếp tục quá trình sản xuất, chế tạo ra thành phẩm.
+- Vật liệu phụ: Là những loại vật liệu khi tham gia vào quá trình sản xuất, không cấu thành thực thể chính của sản phẩm nhưng có thể kết hợp với vật liệu chính làm thay đổi màu sắc, mùi vị, hình dáng bề ngoài, tăng thêm chất lượng của sản phẩm hoặc tạo điều kiện cho quá trình chế tạo sản phẩm được thực hiện bình thường hoặc phục vụ cho nhu cầu công nghệ, kỹ thuật, bảo quản đóng gói; phục vụ cho quá trình lao động.
+- Nhiên liệu: Là những thứ có tác dụng cung cấp nhiệt lượng trong quá trình sản xuất, kinh doanh tạo điều kiện cho quá trình chế tạo sản phẩm diễn ra bình thường. Nhiên liệu có thể tồn tại ở thể lỏng, thể rắn và thể khí.
+- Vật tư thay thế: Là những vật tư dùng để thay thế, sửa chữa máy móc thiết bị, phương tiện vận tải, công cụ, dụng cụ sản xuất...
+- Vật liệu và thiết bị xây dựng cơ bản: Là những loại vật liệu và thiết bị được sử dụng cho hoạt động xây dựng cơ bản. Đối với thiết bị xây dựng cơ bản bao gồm cả thiết bị cần lắp, không cần lắp, công cụ, khí cụ và vật kết cấu dùng để lắp đặt vào công trình xây dựng cơ bản.
+b) Kế toán nhập, xuất, tồn kho nguyên liệu, vật liệu trên Tài khoản 152 phải được thực hiện theo nguyên tắc giá gốc quy định trong Chuẩn mực kế toán Việt Nam số 02 - Hàng tồn kho. Nội dung giá gốc của nguyên liệu, vật liệu được xác định tùy theo từng nguồn nhập.
+- Giá gốc của nguyên liệu, vật liệu mua ngoài, bao gồm: Giá mua ghi trên hóa đơn và các loại thuế không được hoàn lại theo quy định của pháp luật thuế, chi phí vận chuyển, bốc xếp, bảo quản, phân loại, bảo hiểm,... nguyên liệu, vật liệu từ nơi mua về đến kho của doanh nghiệp, các chi phí khác có liên quan trực tiếp đến việc mua nguyên vật liệu và số hao hụt tự nhiên trong định mức (nếu có):
++ Trường hợp thuế GTGT hàng nhập khẩu được khấu trừ thì giá trị của nguyên liệu, vật liệu mua vào được phản ánh theo giá mua chưa có thuế GTGT. Nếu thuế GTGT hàng nhập khẩu không được khấu trừ thì giá trị của nguyên liệu, vật liệu mua vào bao gồm cả thuế GTGT. 
++ Đối với nguyên liệu, vật liệu mua bằng ngoại tệ được thực hiện theo hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái. 
+- Giá gốc của nguyên liệu, vật liệu tự chế biến, bao gồm: Giá thực tế của nguyên liệu, vật liệu xuất chế biến và chi phí chế biến.
+- Giá gốc của nguyên liệu, vật liệu thuê ngoài gia công chế biến, bao gồm: Giá thực tế của nguyên liệu, vật liệu xuất thuê ngoài gia công chế biến, chi phí vận chuyển vật liệu đến nơi chế biến và từ nơi chế biến về doanh nghiệp, tiền thuê ngoài gia công chế biến.
+- Giá gốc của nguyên liệu nhận góp vốn là giá trị được các bên tham gia góp vốn liên doanh thống nhất đánh giá và chấp thuận phù hợp với quy định của pháp luật.
+c) Kế toán chi tiết nguyên liệu, vật liệu phải thực hiện theo từng kho, từng loại, từng nhóm, từng thứ nguyên liệu, vật liệu. Trường hợp doanh nghiệp sử dụng giá tạm tính để kế toán chi tiết nhập, xuất nguyên liệu, vật liệu, thì cuối kỳ doanh nghiệp phải tính hệ số chênh lệch giữa giá thực tế và giá tạm tính của nguyên liệu, vật liệu làm cơ sở tính giá thực tế của nguyên liệu, vật liệu xuất dùng trong kỳ theo công thức:
+Hệ số chênh lệch giữa giá thực tế và giá tạm tính của NVL
+
+Giá thực tế của NVL tồn kho đầu kỳ
++
+Giá thực tế của NVL nhập kho trong kỳ
+
+
+=
+
+
+
+
+Giá tạm tính của NVL tồn kho đầu kỳ
++
+Giá tạm tính của NVL nhập kho trong kỳ
+
+
+Giá thực tế của NVL xuất dùng trong kỳ
+=
+Giá tạm tính của NVL xuất dùng trong kỳ
+x
+Hệ số chênh lệch giữa giá thực tế và giá tạm tính của NVL
+
+d) Đối với nguyên vật liệu không thuộc quyền sở hữu của doanh nghiệp như nguyên vật liệu nhận giữ hộ, nguyên vật liệu nhận để gia công,... thì không được phản ánh vào tài khoản này mà mở sổ chi tiết theo dõi sản phẩm, hàng hóa, vật tư, tài sản nhận giữ hộ, nhận ký gửi, nhận ủy thác xuất nhập khẩu, nhận gia công,... và thuyết minh trên Thuyết minh Báo cáo tài chính.
+2. Kết cấu và nội dung phản ánh của Tài khoản 152 - Nguyên liệu, vật liệu	
+Bên Nợ:
+- Trị giá thực tế của nguyên liệu, vật liệu nhập kho do mua ngoài, tự chế, thuê ngoài gia công, chế biến, nhận góp vốn hoặc từ các nguồn khác;
+- Trị giá nguyên liệu, vật liệu thừa phát hiện khi kiểm kê;
+Bên Có:
+- Trị giá thực tế của nguyên liệu, vật liệu xuất kho dùng vào sản xuất, kinh doanh, để bán, thuê ngoài gia công chế biến, hoặc đưa đi góp vốn,...; 
+- Trị giá nguyên liệu, vật liệu trả lại người bán hoặc được giảm giá hàng mua;
+- Chiết khấu thương mại được hưởng sau khi mua nguyên liệu, vật liệu;
+- Trị giá nguyên liệu, vật liệu hao hụt, mất mát phát hiện khi kiểm kê;
+Số dư bên Nợ:
+Trị giá thực tế của nguyên liệu, vật liệu tồn kho tại thời điểm kết thúc kỳ kế toán. 
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi mua nguyên liệu, vật liệu về nhập kho, căn cứ hóa đơn, phiếu nhập kho và các chứng từ có liên quan phản ánh giá trị nguyên liệu, vật liệu nhập kho:
+Nợ TK 152 - Nguyên liệu, vật liệu 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có các TK 111, 112, 141, 331,... (tổng giá thanh toán).
+3.2. Kế toán nguyên vật liệu trả lại cho người bán, khoản chiết khấu thương mại hoặc giảm giá nhận được khi mua nguyên vật liệu:
+- Trường hợp trả lại nguyên vật liệu cho người bán, ghi:
+Nợ các TK 111, 112, 331,... 
+		Có TK 152 - Nguyên liệu, vật liệu
+		Có TK 133 - Thuế GTGT được khấu trừ (nếu có).
+- Trường hợp khoản chiết khấu thương mại hoặc giảm giá nhận được sau khi mua nguyên liệu, vật liệu thì doanh nghiệp phải căn cứ vào tình hình biến động của nguyên vật liệu để phân bổ số chiết khấu thương mại, giảm giá được hưởng dựa trên số nguyên vật liệu còn tồn kho, số đã xuất dùng cho sản xuất sản phẩm hoặc cho hoạt động đầu tư xây dựng hoặc đã xác định là tiêu thụ trong kỳ, ghi:
+Nợ các TK 111, 112, 331,...
+ 	Có TK 152 - Nguyên liệu, vật liệu (nếu NVL còn tồn kho)
+Có các TK 154, 621, 623, 627 (nếu NVL đã xuất dùng cho sản 	xuất)
+Có TK 241 - Xây dựng cơ bản dở dang (nếu NVL đã xuất dùng cho hoạt động đầu tư xây dựng)
+Có TK 632 - Giá vốn hàng bán (nếu sản phẩm do NVL đó cấu thành đã được xác định là tiêu thụ trong kỳ)
+Có các TK 641, 642 (NVL dùng cho hoạt động bán hàng, quản lý doanh nghiệp) 
+Có TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có). 
+3.3. Trường hợp doanh nghiệp đã nhận được hóa đơn mua hàng nhưng nguyên liệu, vật liệu chưa về nhập kho thì doanh nghiệp lưu hóa đơn để theo dõi hàng mua đang đi đường.
+- Nếu trong kỳ nguyên liệu, vật liệu về nhập kho thì căn cứ vào hóa đơn, phiếu nhập kho để ghi vào Tài khoản 152 - Nguyên liệu, vật liệu.
+- Nếu đến cuối kỳ nguyên liệu, vật liệu vẫn chưa về thì căn cứ vào hóa đơn, ghi:
+Nợ TK 151 - Hàng mua đang đi đường 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có) 
+Có các TK 111, 112, 141, 331...
+- Sang kỳ sau, khi nguyên liệu, vật liệu về nhập kho, căn cứ vào hóa đơn và phiếu nhập kho, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu 
+Có TK 151 - Hàng mua đang đi đường.
+3.4. Khi trả tiền cho người bán, nếu được hưởng chiết khấu thanh toán thì khoản chiết khấu thanh toán được hưởng ghi nhận vào doanh thu hoạt động tài chính, ghi:
+Nợ TK 331 - Phải trả cho người bán 
+Có TK 515 - Doanh thu hoạt động tài chính.
+3.5. Đối với nguyên liệu, vật liệu nhập khẩu:
+- Khi nhập khẩu nguyên liệu, vật liệu, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu 
+Có TK 331 - Phải trả cho người bán
+Có TK 3331 - Thuế GTGT phải nộp (33312) (nếu thuế GTGT đầu vào của hàng nhập khẩu không được khấu trừ)
+Có TK 3332- Thuế tiêu thụ đặc biệt (nếu có)
+Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu).
+Có TK 33381 - Thuế bảo vệ môi trường (nếu có).
+- Nếu thuế GTGT đầu vào của hàng nhập khẩu được khấu trừ, ghi: 
+Nợ TK 133 - Thuế GTGT được khấu trừ
+Có TK 3331 - Thuế GTGT phải nộp (33312). 
+- Trường hợp mua nguyên vật liệu có trả trước cho người bán một phần bằng ngoại tệ thì phần giá trị nguyên vật liệu tương ứng với số ngoại tệ trả trước được ghi nhận theo tỷ giá giao dịch thực tế tại thời điểm ứng trước. Phần giá trị nguyên vật liệu bằng ngoại tệ chưa trả được ghi nhận theo tỷ giá giao dịch thực tế tại thời điểm nhận nguyên vật liệu.
+3.6. Các chi phí về thu mua, bốc xếp, vận chuyển nguyên liệu, vật liệu từ nơi mua về kho doanh nghiệp, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có các TK 111, 112, 141, 331,...
+3.7. Đối với nguyên liệu, vật liệu nhập kho do thuê ngoài gia công, chế biến:
+- Khi xuất nguyên liệu, vật liệu đưa đi gia công, chế biến, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang 
+Có TK 152 - Nguyên liệu, vật liệu.
+- Khi phát sinh chi phí thuê ngoài gia công, chế biến, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có các TK 111, 112, 131, 141,...
+- Khi nhập lại kho số nguyên liệu, vật liệu thuê ngoài gia công, chế biến xong, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu 
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+3.8. Đối với nguyên liệu, vật liệu nhập kho do tự chế:
+- Khi xuất kho nguyên liệu, vật liệu để tự chế biến, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang 
+Có TK 152 - Nguyên liệu, vật liệu.
+- Khi nhập kho nguyên liệu, vật liệu tự chế, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+3.9. Khi xuất kho nguyên liệu, vật liệu sử dụng vào sản xuất, kinh doanh, ghi:
+Nợ các TK 621, 623, 627, 641, 642,...
+Có TK 152 - Nguyên liệu, vật liệu.
+3.10. Xuất nguyên liệu, vật liệu sử dụng cho hoạt động đầu tư xây dựng cơ bản hoặc sửa chữa, bảo dưỡng hoặc nâng cấp, cải tạo TSCĐ, ghi:
+Nợ TK 241 - Xây dựng cơ bản dở dang
+Có TK 152 - Nguyên liệu, vật liệu.
+3.11. Đối với nguyên liệu, vật liệu xuất đưa đi góp vốn vào công ty con, công ty liên doanh, liên kết, ghi:
+Nợ các TK 221, 222 (theo giá đánh giá lại)
+Nợ TK 811 - Chi phí khác (giá đánh giá lại nhỏ hơn giá trị ghi sổ) 
+Có TK 152 - Nguyên liệu, vật liệu (theo giá trị ghi sổ)
+Có TK 711 - Thu nhập khác (giá đánh giá lại lớn hơn giá trị ghi sổ). 
+3.12. Khi xuất nguyên liệu, vật liệu dùng để mua lại phần vốn góp tại công ty con, công ty liên doanh, liên kết, ghi:
+- Ghi nhận doanh thu bán nguyên vật liệu và khoản đầu tư vào công ty con, công ty liên doanh, liên kết, ghi:
+Nợ các TK 221, 222 (theo giá trị hợp lý)
+	Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+		Có TK 3331 - Thuế GTGT đầu ra phải nộp.
+- Ghi nhận giá vốn nguyên vật liệu dùng để mua lại phần vốn góp tại công ty con, công ty liên doanh, liên kết, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+ 	Có TK 152 - Nguyên liệu, vật liệu.
+3.13. Đối với nguyên liệu, vật liệu thừa, thiếu phát hiện khi kiểm kê: 
+Mọi trường hợp thừa, thiếu nguyên liệu, vật liệu trong kho hoặc tại nơi quản lý, bảo quản phát hiện khi kiểm kê phải lập biên bản và truy tìm nguyên nhân, xác định người phạm lỗi. Căn cứ vào biên bản kiểm kê và quyết định xử lý của cấp có thẩm quyền để ghi sổ kế toán:
+a) Trường hợp tài sản phát hiện thừa, thiếu đã xác định được ngay nguyên nhân:
+- Nếu do nhầm lẫn hoặc chưa ghi sổ, doanh nghiệp phải tiến hành ghi bổ sung hoặc điều chỉnh lại số liệu trên sổ kế toán;
+- Nếu thiếu do giá trị nguyên liệu, vật liệu hao hụt trong phạm vi định mức, ghi:
+Nợ TK 632 - Giá vốn hàng bán 
+Có TK 152 - Nguyên liệu, vật liệu.
+- Nếu xác định có người phải chịu trách nhiệm thì căn cứ nguyên nhân hoặc người chịu trách nhiệm bồi thường, ghi:
+Nợ TK 138 - Phải thu khác (1388) (số phải bồi thường)
+Nợ TK 334 - Phải trả người lao động (số bồi thường trừ vào lương)
+Nợ TK 632 - Giá vốn hàng bán (giá trị hao hụt, mất mát của hàng tồn kho sau khi trừ số thu bồi thường được tính vào giá vốn hàng bán theo quyết định xử lý)
+		Có TK 152 - Nguyên liệu, vật liệu
+b) Nếu nguyên liệu, vật liệu thừa, thiếu chưa xác định rõ nguyên nhân phải chờ xử lý:
+- Nếu nguyên liệu, vật liệu thiếu, ghi:
+Nợ TK 138 - Phải thu khác (1381)
+Có TK 152 - Nguyên liệu, vật liệu.
++ Khi có quyết định xử lý, căn cứ vào quyết định, ghi:
+Nợ các TK 111, 112,... (nếu người phạm lỗi nộp tiền bồi thường)
+Nợ TK 138 - Phải thu khác (1388) (nếu phải thu tiền bồi thường của người phạm lỗi)
+Nợ TK 334 - Phải trả người lao động (nếu trừ vào tiền lương của người phạm lỗi)
+Nợ TK 632 - Giá vốn hàng bán (nếu phần giá trị hao hụt, mất mát nguyên liệu, vật liệu còn lại được tính vào giá vốn hàng bán)
+Có TK 138 - Phải thu khác (1381).
++ Trường hợp tài sản thiếu chờ xử lý được chủ sở hữu hoặc cơ quan đại diện chủ sở hữu xem xét, quyết định ghi nhận vào kết quả kinh doanh theo quy định, căn cứ vào giá trị nguyên liệu, vật liệu bị tổn thất, ghi:
+Nợ TK 632 - Giá vốn hàng bán 
+		Có TK 138 - Phải thu khác (1381)
+- Nếu nguyên liệu, vật liệu thừa chờ giải quyết, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu
+		Có TK 338 - Phải trả, phải nộp khác (3381).
++ Khi có quyết định xử lý, căn cứ vào quyết định, ghi:
+Nợ TK 338 - Phải trả, phải nộp khác (3381)
+		Có các tài khoản liên quan.
+c) Khi thanh lý, nhượng bán nguyên vật liệu, phế liệu:
+- Phản ánh giá vốn, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 152 - Nguyên liệu, vật liệu.
+- Phản ánh doanh thu bán nguyên vật liệu, phế liệu, ghi:
+Nợ các TK 111, 112, 131
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+
+TÀI KHOẢN 153 - CÔNG CỤ, DỤNG CỤ
+
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm các loại công cụ, dụng cụ của doanh nghiệp. Công cụ, dụng cụ là những tư liệu lao động không có đủ tiêu chuẩn quy định về giá trị và thời gian sử dụng đối với TSCĐ. Vì vậy công cụ, dụng cụ được quản lý và hạch toán như nguyên liệu, vật liệu. Theo quy định hiện hành, những tư liệu lao động sau đây nếu không đủ tiêu chuẩn ghi nhận TSCĐ thì được ghi nhận là công cụ, dụng cụ:
+- Các đà giáo, ván khuôn, công cụ, dụng cụ gá lắp chuyên dùng cho sản xuất xây lắp;
+- Các loại thiết bị, phụ tùng thay thế; các loại bao bì bán kèm theo hàng hóa có tính tiền riêng, nhưng trong quá trình bảo quản hàng hóa vận chuyển trên đường và dự trữ trong kho có tính khấu hao để trừ dần vào giá trị của bao bì;
+- Những dụng cụ, đồ nghề bằng thủy tinh, sành, sứ;
+- Phương tiện quản lý, đồ dùng văn phòng;
+- Quần áo, giày dép chuyên dùng để làm việc;... 
+b) Kế toán nhập, xuất, tồn kho công cụ, dụng cụ trên Tài khoản 153 được phản ánh theo giá gốc. Nguyên tắc xác định giá gốc công cụ, dụng cụ nhập kho tương tự như hướng dẫn tại Tài khoản 152 - Nguyên liệu, vật liệu.
+c) Kế toán chi tiết công cụ, dụng cụ phải thực hiện theo từng kho, từng loại, từng nhóm, từng thứ công cụ, dụng cụ. Công cụ, dụng cụ xuất dùng cho sản xuất, kinh doanh, cho thuê phải được theo dõi cả về hiện vật và giá trị trên sổ kế toán chi tiết theo nơi sử dụng, theo đối tượng thuê và người chịu trách nhiệm vật chất. Đối với công cụ, dụng cụ có giá trị lớn, quý hiếm cần có cách thức bảo quản đặc biệt.
+d) Đối với các công cụ, dụng cụ có giá trị nhỏ khi xuất dùng cho sản xuất, kinh doanh có thể ghi nhận toàn bộ một lần vào chi phí sản xuất, kinh doanh.
+đ) Trường hợp công cụ, dụng cụ, bao bì luân chuyển, đồ dùng cho thuê xuất dùng hoặc cho thuê liên quan đến hoạt động sản xuất, kinh doanh trong nhiều kỳ thì được ghi nhận vào Tài khoản 242 - Chi phí chờ phân bổ và phân bổ dần vào chi phí sản xuất, kinh doanh. 
+e) Công cụ, dụng cụ liên quan đến các giao dịch bằng ngoại tệ được thực hiện theo hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái.
+2. Kết cấu và nội dung phản ánh của Tài khoản 153 - Công cụ, dụng cụ
+Bên Nợ:
+- Trị giá thực tế của công cụ, dụng cụ nhập kho do mua ngoài, tự chế, thuê ngoài gia công chế biến, nhận góp vốn,...;
+- Trị giá công cụ, dụng cụ cho thuê nhập lại kho;
+- Trị giá thực tế của công cụ, dụng cụ thừa phát hiện khi kiểm kê;
+Bên Có:
+- Trị giá thực tế của công cụ, dụng cụ xuất kho để sử dụng cho sản xuất, kinh doanh, cho thuê hoặc góp vốn,...;
+- Chiết khấu thương mại sau khi mua công cụ, dụng cụ được hưởng;
+- Trị giá công cụ, dụng cụ trả lại cho người bán hoặc được người bán giảm giá;
+- Trị giá công cụ, dụng cụ thiếu phát hiện khi kiểm kê;
+Số dư bên Nợ: 
+Trị giá thực tế của công cụ, dụng cụ tồn kho tại thời điểm kết thúc kỳ kế toán.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết công cụ, dụng cụ (như: thiết bị, phụ tùng thay thế, bao bì luân chuyển, đồ dùng cho thuê,...) cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình. 
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Mua công cụ, dụng cụ nhập kho, căn cứ vào hóa đơn, phiếu nhập kho và các chứng từ có liên quan, ghi:
+Nợ TK 153 - Công cụ, dụng cụ 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có các TK 111, 112, 141, 331,...
+b) Trường hợp khoản chiết khấu thương mại hoặc giảm giá nhận được sau khi mua công cụ, dụng cụ thì doanh nghiệp phải căn cứ vào tình hình biến động của công cụ, dụng cụ để phân bổ số chiết khấu thương mại, giảm giá hàng bán được hưởng cho số công cụ, dụng cụ còn tồn kho hoặc số đã xuất dùng cho hoạt động sản xuất kinh doanh, ghi:
+Nợ các TK 111, 112, 331,...
+Có TK 153 - Công cụ, dụng cụ (nếu công cụ, dụng cụ còn tồn kho)
+Có TK 154 - Chi phí SXKD dở dang (nếu công cụ, dụng cụ đã xuất dùng cho sản xuất kinh doanh) 
+Có các TK 641, 642 (nếu công cụ, dụng cụ đã xuất dùng cho hoạt động bán hàng, quản lý doanh nghiệp)
+Có TK 242 - Chi phí chờ phân bổ (nếu được phân bổ dần)
+Có TK 632 - Giá vốn hàng bán (nếu sản phẩm do công cụ, dụng cụ 			đó cấu thành đã được xác định là tiêu thụ trong kỳ)
+ 	Có TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có). 
+c) Trả lại công cụ, dụng cụ đã mua cho người bán, ghi:
+Nợ TK 331 - Phải trả cho người bán 
+	Có TK 153 - Công cụ, dụng cụ (giá trị công cụ, dụng cụ trả lại)
+Có TK 133 - Thuế GTGT được khấu trừ (nếu có) (thuế GTGT đầu vào của công cụ, dụng cụ trả lại cho người bán).
+d) Phản ánh chiết khấu thanh toán được hưởng (nếu có) trừ vào nợ phải trả người bán, ghi:
+Nợ TK 331 - Phải trả cho người bán 
+ 		Có TK 515 - Doanh thu hoạt động tài chính.
+đ) Xuất công cụ, dụng cụ sử dụng cho sản xuất, kinh doanh:
+- Nếu giá trị công cụ, dụng cụ, bao bì luân chuyển, đồ dùng cho thuê liên quan đến một kỳ kế toán hoặc các công cụ, dụng cụ có giá trị nhỏ khi xuất dùng cho sản xuất, kinh doanh có thể ghi nhận toàn bộ một lần vào chi phí sản xuất, kinh doanh, ghi:
+Nợ các TK 623, 627, 641, 642 
+Có TK 153 - Công cụ, dụng cụ.
+- Nếu giá trị công cụ, dụng cụ, bao bì luân chuyển, đồ dùng cho thuê liên quan đến nhiều kỳ kế toán được phân bổ dần vào chi phí sản xuất, kinh doanh hàng kỳ, ghi:
++ Khi xuất công cụ, dụng cụ, bao bì luân chuyển, đồ dùng cho thuê, ghi:
+Nợ TK 242 - Chi phí chờ phân bổ
+Có TK 153 - Công cụ, dụng cụ.
++ Khi phân bổ vào chi phí sản xuất, kinh doanh cho từng kỳ kế toán, ghi:
+Nợ các TK 623, 627, 641, 642,...
+Có TK 242 - Chi phí chờ phân bổ. 
+- Ghi nhận doanh thu về cho thuê công cụ, dụng cụ, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 3331 - Thuế GTGT phải nộp (33311).
+- Nhận lại công cụ, dụng cụ cho thuê, ghi:
+Nợ TK 153 - Công cụ, dụng cụ 
+Có TK 242 - Chi phí chờ phân bổ (giá trị còn lại của CCDC chưa phân bổ vào chi phí).
+e) Đối với công cụ, dụng cụ nhập khẩu:
+- Khi nhập khẩu công cụ, dụng cụ, ghi:
+Nợ TK 153 - Công cụ, dụng cụ 
+Có TK 331 - Phải trả cho người bán
+Có TK 3331 - Thuế GTGT phải nộp (33312) (nếu thuế GTGT đầu vào của hàng nhập khẩu không được khấu trừ)
+Có TK 3332 - Thuế tiêu thụ đặc biệt (nếu có)
+Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu)
+Có TK 33381 - Thuế bảo vệ môi trường (nếu có).
+- Nếu thuế GTGT đầu vào của hàng nhập khẩu được khấu trừ, ghi: 
+Nợ TK 133 - Thuế GTGT được khấu trừ
+Có TK 3331 - Thuế GTGT phải nộp (33312).
+- Trường hợp mua công cụ, dụng cụ có trả trước cho người bán một phần bằng ngoại tệ thì phần giá trị công cụ, dụng cụ tương ứng với số ngoại tệ trả trước được ghi nhận theo tỷ giá giao dịch thực tế tại thời điểm ứng trước. Phần giá trị công cụ, dụng cụ bằng ngoại tệ chưa trả được ghi nhận theo tỷ giá giao dịch thực tế tại thời điểm nhận công cụ, dụng cụ.
+g) Khi kiểm kê phát hiện công cụ, dụng cụ thừa, thiếu, mất, hư hỏng, kế toán xử lý tương tự như đối với nguyên liệu, vật liệu (xem Tài khoản 152 - Nguyên liệu, vật liệu).
+h) Khi thanh lý, nhượng bán công cụ, dụng cụ:
+- Phản ánh giá vốn, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 153 - Công cụ, dụng cụ.
+- Phản ánh doanh thu bán công cụ, dụng cụ, ghi:
+	Nợ các TK 111, 112, 131
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+TÀI KHOẢN 154 - CHI PHÍ SẢN XUẤT, KINH DOANH DỞ DANG
+
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh tổng hợp chi phí sản xuất, kinh doanh phục vụ cho việc tính giá thành sản phẩm, dịch vụ ở doanh nghiệp. 
+b) Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang phản ánh chi phí sản xuất, kinh doanh dở dang đầu kỳ, phát sinh trong kỳ và dở dang cuối kỳ; chi phí sản xuất, kinh doanh của khối lượng sản phẩm, dịch vụ hoàn thành trong kỳ của các hoạt động sản xuất, kinh doanh chính, phụ và thuê ngoài gia công chế biến ở các doanh nghiệp sản xuất hoặc doanh nghiệp kinh doanh dịch vụ. 
+c) Tùy theo đặc điểm hoạt động sản xuất kinh doanh, yêu cầu quản lý của doanh nghiệp, chi phí sản xuất, kinh doanh hạch toán trên Tài khoản 154 có thể được chi tiết theo địa điểm phát sinh chi phí (phân xưởng, bộ phận sản xuất, đội sản xuất, công trường,...); theo loại, nhóm sản phẩm hoặc chi tiết, bộ phận sản phẩm; theo từng loại dịch vụ hoặc theo từng công đoạn dịch vụ,...
+d) Chi phí sản xuất, kinh doanh phản ánh trên Tài khoản 154 gồm những chi phí sau:
+- Chi phí nguyên liệu, vật liệu trực tiếp cho việc sản xuất, chế tạo sản phẩm, gia công, chế biến, cung cấp dịch vụ;
+- Chi phí nhân công trực tiếp cho việc sản xuất, chế tạo sản phẩm, gia công, chế biến, cung cấp dịch vụ;
+- Chi phí sử dụng máy thi công (đối với hoạt động xây lắp); 
+- Chi phí sản xuất chung phục vụ trực tiếp cho việc sản xuất, chế tạo sản phẩm, gia công, chế biến, cung cấp dịch vụ;
+đ) Cuối kỳ, phân bổ và kết chuyển chi phí sản xuất chung cố định vào chi phí chế biến cho mỗi đơn vị sản phẩm theo mức công suất bình thường. Trường hợp mức sản phẩm thực tế sản xuất ra thấp hơn mức công suất bình thường thì doanh nghiệp phải tính và xác định chi phí sản xuất chung cố định phân bổ vào chi phí chế biến cho mỗi đơn vị sản phẩm theo mức công suất bình thường. Khoản chi phí sản xuất chung cố định không phân bổ (không tính vào giá thành sản phẩm) được ghi nhận vào giá vốn hàng bán trong kỳ. Chi phí sản xuất chung biến đổi được phân bổ hết vào chi phí chế biến cho mỗi đơn vị sản phẩm theo chi phí thực tế phát sinh.
+e) Không hạch toán vào Tài khoản 154 những chi phí sau: 
+- Chi phí bán hàng;
+- Chi phí quản lý doanh nghiệp;
+- Chi phí tài chính;
+- Chi phí khác;
+- Chi phí thuế thu nhập doanh nghiệp;
+- Chi đầu tư xây dựng cơ bản;
+- Các khoản chi được trang trải bằng nguồn khác.
+2. Phương pháp kế toán Tài khoản 154 trong ngành công nghiệp
+a) Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang áp dụng trong ngành công nghiệp dùng để tập hợp chi phí sản xuất và tính giá thành sản phẩm theo các phân xưởng hoặc bộ phận sản xuất, chế tạo sản phẩm. Đối với các doanh nghiệp sản xuất có thuê ngoài gia công, chế biến, cung cấp lao vụ, dịch vụ cho bên ngoài hoặc phục vụ cho việc sản xuất sản phẩm thì chi phí của những hoạt động này cũng được tập hợp vào Tài khoản 154.
+b) Tùy theo yêu cầu quản lý của doanh nghiệp, Tài khoản 154 ở các doanh nghiệp sản xuất công nghiệp có thể được hạch toán chi tiết theo địa điểm phát sinh chi phí (phân xưởng, bộ phận sản xuất) hoặc theo loại, nhóm sản phẩm, sản phẩm, hoặc chi tiết bộ phận sản phẩm,...
+3. Phương pháp kế toán Tài khoản 154 trong ngành dịch vụ
+a) Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang áp dụng trong các doanh nghiệp kinh doanh dịch vụ (giao thông vận tải, bưu điện, du lịch, dịch vụ,...) để tập hợp chi phí sản xuất và tính giá thành của dịch vụ đã thực hiện. Tùy theo yêu cầu quản lý của doanh nghiệp, tài khoản này có thể được hạch toán chi tiết theo ngành kinh doanh dịch vụ như vận tải, du lịch,...hoặc theo địa điểm phát sinh chi phí hoặc chi tiết theo từng dịch vụ,...
+b) Đối với lĩnh vực giao thông vận tải:
+- Tài khoản này được dùng để tập hợp chi phí và tính giá thành dịch vụ vận tải, có thể chi tiết theo từng ngành như vận tải đường bộ, vận tải đường sắt, đường thủy, đường hàng không, vận tải đường ống,... hoặc từng hoạt động (vận tải hành khách, vận tải hàng hóa,...) hoặc theo từng bộ phận kinh doanh dịch vụ,...
+- Trong quá trình cung cấp dịch vụ vận tải, săm lốp thay thế thường được sử dụng cho nhiều kỳ nên không tính toàn bộ giá trị săm lốp vào giá thành dịch vụ vận tải ngay một lần khi xuất dùng mà có thể phân bổ dần cho nhiều kỳ. 
+c) Đối với hoạt động kinh doanh du lịch
+ Tài khoản này được dùng để tập hợp chi phí và tính giá thành dịch vụ du lịch, tùy theo yêu cầu quản lý của doanh nghiệp, có thể được mở chi tiết theo từng loại hoạt động như: Hướng dẫn du lịch, kinh doanh vận tải du lịch,...
+d) Đối với hoạt động kinh doanh khách sạn
+Tài khoản này được dùng để tập hợp chi phí và tính giá thành dịch vụ khách sạn, tùy theo yêu cầu quản lý của doanh nghiệp, có thể mở chi tiết theo từng loại dịch vụ như: Hoạt động ăn, uống, dịch vụ buồng nghỉ, dịch vụ vui chơi giải trí, phục vụ khác (giặt, là, cắt tóc, điện tín, thể thao,...).
+4. Phương pháp kế toán Tài khoản 154 trong ngành xây dựng
+a) Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang áp dụng trong các doanh nghiệp kinh doanh xây lắp để tập hợp chi phí sản xuất và tính giá thành của sản phẩm xây lắp đã thực hiện. Tùy theo yêu cầu quản lý của doanh nghiệp, tài khoản này có thể được hạch toán chi tiết theo từng hoạt động xây lắp như xây lắp công nghiệp, xây lắp dân dụng..., hoặc chi tiết theo từng sản phẩm xây lắp,...
+b) Việc tập hợp chi phí sản xuất, tính giá thành sản phẩm xây lắp phải chi tiết theo từng công trình, hạng mục công trình, khoản mục chi phí (nguyên liệu, vật liệu trực tiếp, nhân công trực tiếp, sử dụng máy thi công, chi phí sản xuất chung...), theo quy định của pháp luật về quản lý đầu tư và xây dựng hiện hành. 
+c) Chủ đầu tư xây dựng bất động sản sử dụng tài khoản này để tập hợp chi phí xây dựng thành phẩm bất động sản. Trường hợp bất động sản xây dựng sử dụng cho nhiều mục đích (làm văn phòng, cho thuê hoặc để bán, ví dụ như tòa nhà chung cư hỗn hợp) thì thực hiện theo nguyên tắc:
+- Nếu đủ căn cứ để hạch toán riêng hoặc xác định được tỷ trọng của phần chi phí xây dựng bất động sản để bán (thành phẩm bất động sản) và phần chi phí xây dựng bất động sản để cho thuê hoặc làm văn phòng (TSCĐ hoặc BĐSĐT) thì chỉ hạch toán vào Tài khoản 154 phần chi phí xây dựng thành phẩm bất động sản còn phần chi phí xây dựng TSCĐ hoặc BĐSĐT được hạch toán vào Tài khoản 241 - Xây dựng cơ bản dở dang.
+- Trường hợp không hạch toán riêng hoặc xác định được tỷ trọng chi phí xây dựng cho các cấu phần thành phẩm bất động sản, TSCĐ hoặc BĐSĐT thì doanh nghiệp tập hợp toàn bộ chi phí phát sinh liên quan trực tiếp tới việc đầu tư xây dựng tài sản vào Tài khoản 241 - Xây dựng cơ bản dở dang. Khi công trình, dự án hoàn thành bàn giao đưa vào sử dụng, doanh nghiệp căn cứ cách thức sử dụng tài sản trong thực tế để kết chuyển chi phí đầu tư xây dựng phù hợp với bản chất của từng loại tài sản.
+5. Kết cấu và nội dung phản ánh của Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang
+Bên Nợ:
+- Kết chuyển các chi phí nguyên liệu, vật liệu trực tiếp, chi phí nhân công trực tiếp, chi phí sử dụng máy thi công, chi phí sản xuất chung phát sinh trong kỳ liên quan đến sản xuất sản phẩm và thực hiện dịch vụ;
+- Giá trị nguyên liệu, vật liệu xuất thuê ngoài gia công chế biến, chi phí vận chuyển vật liệu đến nơi chế biến, tiền thuê ngoài gia công chế biến;
+- Các chi phí nguyên liệu, vật liệu trực tiếp, chi phí nhân công trực tiếp, chi phí sử dụng máy thi công, chi phí sản xuất chung phát sinh trong kỳ liên quan đến sản phẩm xây lắp;
+Bên Có:
+- Giá thành sản xuất thực tế của sản phẩm đã sản xuất, chế tạo xong nhập kho hoặc chuyển thẳng đi bán, tiêu dùng nội bộ, sử dụng ngay cho hoạt động XDCB,...
+- Trị giá nguyên liệu, vật liệu, hàng hóa gia công xong nhập lại kho hoặc sử dụng ngay cho các hoạt động;
+- Giá thành thực tế của khối lượng dịch vụ đã hoàn thành cung cấp cho khách hàng;
+- Giá thành sản xuất của sản phẩm xây lắp hoàn thành bàn giao từng phần hoặc toàn bộ được tiêu thụ trong kỳ hoặc chờ tiêu thụ; hoặc bàn giao cho doanh nghiệp nhận thầu chính xây lắp...;
+- Trị giá phế liệu thu hồi, giá trị sản phẩm hỏng không sửa chữa được.
+Số dư bên Nợ: 
+Chi phí sản xuất, kinh doanh còn dở dang tại thời điểm kết thúc kỳ kế toán.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết chi phí sản xuất kinh doanh dở dang cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình. 
+6. Phương pháp kế toán một số giao dịch kinh tế chủ yếu trong ngành công nghiệp
+a) Cuối kỳ, kết chuyển chi phí nguyên liệu, vật liệu trực tiếp theo từng đối tượng tập hợp chi phí, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Nợ TK 632 - Giá vốn hàng bán (phần chi phí NVL trên mức bình thường)
+Có TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp.
+b) Cuối kỳ, kết chuyển chi phí nhân công trực tiếp theo từng đối tượng tập hợp chi phí, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Nợ TK 632 - Giá vốn hàng bán (chi phí nhân công trực tiếp trên mức bình thường)
+Có TK 622 - Chi phí nhân công trực tiếp.
+c) Trường hợp mức sản phẩm thực tế sản xuất ra cao hơn hoặc bằng công suất bình thường thì cuối kỳ, doanh nghiệp phải tính toán, phân bổ và kết chuyển toàn bộ chi phí sản xuất chung (chi phí sản xuất chung biến đổi và chi phí sản xuất chung cố định) cho từng đối tượng tập hợp chi phí, ghi: 
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Có TK 627 - Chi phí sản xuất chung.
+d) Trường hợp mức sản phẩm thực tế sản xuất ra thấp hơn công suất bình thường thì doanh nghiệp phải tính và xác định chi phí sản xuất chung cố định phân bổ vào chi phí chế biến cho mỗi đơn vị sản phẩm theo mức công suất bình thường để tính vào giá thành sản phẩm. Khoản chi phí sản xuất chung cố định không được tính vào giá thành sản phẩm theo quy định được ghi nhận vào giá vốn hàng bán trong kỳ, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Nợ TK 632 - Giá vốn hàng bán (phần chi phí sản xuất chung cố định không phân bổ vào giá thành sản phẩm)
+Có TK 627 - Chi phí sản xuất chung.
+đ) Trường hợp sau khi đã xuất kho nguyên vật liệu đưa vào sản xuất, nếu doanh nghiệp nhận được khoản chiết khấu thương mại hoặc giảm giá liên quan đến nguyên vật liệu đó, doanh nghiệp ghi giảm chi phí sản xuất kinh doanh dở dang đối với phần chiết khấu thương mại, giảm giá được hưởng tương ứng với số nguyên vật liệu đã xuất dùng để sản xuất sản phẩm dở dang, ghi:
+Nợ các TK 111, 112, 331,...
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang (phần chiết khấu thương mại, giảm giá được hưởng tương ứng với số nguyên vật liệu đã xuất dùng để sản xuất sản phẩm dở dang)
+Có TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có). 
+e) Trị giá nguyên liệu, vật liệu xuất thuê ngoài gia công nhập lại kho, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+g) Trị giá sản phẩm hỏng không sửa chữa được, người gây ra thiệt hại sản phẩm hỏng phải bồi thường, ghi:
+Nợ TK 138 - Phải thu khác (1388)
+Nợ TK 334 - Phải trả người lao động
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+h) Giá thành sản phẩm thực tế nhập kho trong kỳ, ghi:
+Nợ TK 155 - Sản phẩm
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+i) Trường hợp sản phẩm sản xuất xong, không tiến hành nhập kho mà chuyển giao thẳng cho người mua hàng (sản phẩm điện, nước...), ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+k) Trường hợp sản phẩm sản xuất ra được sử dụng tiêu dùng nội bộ ngay hoặc tiếp tục xuất dùng cho hoạt động XDCB không qua nhập kho, ghi:
+Nợ các TK 241, 641, 642,...
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+7. Phương pháp kế toán một số giao dịch kinh tế chủ yếu trong ngành kinh doanh dịch vụ
+Phương pháp kế toán một số nghiệp vụ kinh tế chủ yếu trên Tài khoản 154 ở các doanh nghiệp thuộc ngành kinh doanh dịch vụ tương tự như đối với ngành Công nghiệp. Ngoài ra cần chú ý:
+a) Nghiệp vụ kết chuyển giá thành thực tế của khối lượng dịch vụ đã hoàn thành, đã chuyển giao cho người mua và được xác định là đã bán trong kỳ, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+b) Khi sử dụng dịch vụ tiêu dùng nội bộ, ghi:
+Nợ các TK 641, 642
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+8. Phương pháp kế toán một số giao dịch kinh tế chủ yếu trong ngành xây dựng
+8.1. Phương pháp hạch toán tập hợp chi phí xây lắp:
+a) Đối với chi phí nguyên liệu, vật liệu trực tiếp: 
+- Chi phí nguyên liệu, vật liệu trực tiếp bao gồm: Giá trị thực tế của vật liệu chính, vật liệu phụ, các cấu kiện hoặc các bộ phận rời, vật liệu luân chuyển tham gia cấu thành thực thể sản phẩm xây, lắp hoặc giúp cho việc thực hiện và hoàn thành khối lượng xây, lắp (không kể vật liệu phụ cho máy móc, phương tiện thi công và những vật liệu tính trong chi phí chung).
+- Về nguyên tắc hạch toán, nguyên liệu, vật liệu sử dụng cho xây dựng công trình/hạng mục công trình nào phải tính trực tiếp cho công trình/hạng mục công trình đó trên cơ sở chứng từ gốc theo số lượng thực tế đã sử dụng và theo giá thực tế xuất kho nguyên liệu, vật liệu. 
+- Tại thời điểm kết thúc kỳ kế toán hoặc khi công trình/hạng mục công trình hoàn thành, tiến hành kiểm kê số nguyên liệu, vật liệu còn lại tại nơi sản xuất (nếu có) để ghi giảm trừ chi phí nguyên liệu, vật liệu trực tiếp xuất sử dụng cho công trình/hạng mục công trình đó.
+- Trường hợp doanh nghiệp không xác định được chi phí nguyên liệu, vật liệu trực tiếp cho từng công trình, hạng mục công trình thì có thể áp dụng phương pháp phân bổ nguyên liệu, vật liệu cho đối tượng sử dụng theo tiêu thức phù hợp. Doanh nghiệp phải thuyết minh chi tiết về tiêu thức phân bổ nguyên liệu, vật liệu trên Báo cáo tài chính. Căn cứ vào Bảng phân bổ vật liệu cho từng công trình, hạng mục công trình, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang (chi phí vật liệu) 
+Nợ TK 632 - Giá vốn hàng bán (chi phí nguyên vật liệu trực tiếp trên mức bình thường)
+Có TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp.
+b) Đối với chi phí nhân công trực tiếp, doanh nghiệp hạch toán tương tự như ngành công nghiệp
+c) Đối với chi phí sử dụng máy thi công:
+- Chi phí sử dụng máy thi công bao gồm: Chi phí cho các máy thi công nhằm thực hiện khối lượng công tác xây lắp bằng máy. Máy móc thi công là loại máy trực tiếp phục vụ xây lắp công trình. Đó là những máy móc chuyển động bằng động cơ hơi nước, diezen, xăng, điện,... (kể cả loại máy phục vụ xây, lắp). Chi phí sử dụng máy thi công có thể phân loại thành chi phí thường xuyên và chi phí tạm thời. Trong đó:
++ Chi phí thường xuyên cho hoạt động của máy thi công, gồm: Chi phí nhân công điều khiển máy, phục vụ máy,...; Chi phí vật liệu; Chi phí công cụ, dụng cụ; Chi phí khấu hao TSCĐ; Chi phí dịch vụ mua ngoài (chi phí sửa chữa nhỏ, điện, nước, bảo hiểm xe, máy,...); Chi phí khác bằng tiền.
++ Chi phí tạm thời cho hoạt động của máy thi công, gồm: Chi phí sửa chữa, bồi dưỡng máy thi công (đại tu, trung tu,...) không đủ điều kiện ghi tăng nguyên giá máy thi công; Chi phí công trình tạm thời cho máy thi công (lều, lán, bệ, đường ray chạy máy,...). Trường hợp chi phí tạm thời của máy thi công phát sinh trước liên quan đến nhiều kỳ thì khi phát sinh được hạch toán vào bên Nợ Tài khoản 242 - Chi phí chờ phân bổ, sau đó sẽ phân bổ dần vào Nợ Tài khoản 623 - Chi phí sử dụng máy thi công.
+- Việc tập hợp chi phí và tính giá thành về chi phí sử dụng máy thi công phải được hạch toán riêng biệt theo từng máy thi công (xem hướng dẫn ở phần Tài khoản 623 - Chi phí sử dụng máy thi công).
+- Căn cứ vào Bảng phân bổ chi phí sử dụng máy thi công (chi phí thực tế ca máy) tính cho từng công trình, hạng mục công trình, ghi: 
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Nợ TK 632 - Giá vốn hàng bán (số chi phí sử dụng máy thi công trên mức bình thường)
+Có TK 623 - Chi phí sử dụng máy thi công.
+d) Đối với chi phí sản xuất chung:
+- Chi phí sản xuất chung phản ánh chi phí sản xuất của đội, công trường xây dựng gồm: Lương nhân viên quản lý phân xưởng, tổ, đội xây dựng; Khoản trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn được tính theo tỷ lệ quy định trên tiền lương phải trả công nhân trực tiếp xây lắp, nhân viên sử dụng máy thi công và nhân viên quản lý phân xưởng, tổ, đội; Khấu hao TSCĐ dùng chung cho hoạt động của đội và những chi phí khác liên quan đến hoạt động của đội,... Khi các chi phí này phát sinh trong kỳ, ghi:
+Nợ TK 627 - Chi phí sản xuất chung
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 152, 153, 214, 242, 334, 338,...
+- Tại thời điểm kết thúc kỳ kế toán, căn cứ vào Bảng phân bổ chi phí sản xuất chung để phân bổ và kết chuyển chi phí sản xuất chung cho các công trình, hạng mục công trình có liên quan theo tiêu thức phân bổ phù hợp, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang 
+Nợ TK 632 - Giá vốn hàng bán (phần chi phí sản xuất chung cố định không phân bổ không tính vào giá thành công trình xây lắp)
+Có TK 627 - Chi phí sản xuất chung.
+8.2. Phương pháp hạch toán và kết chuyển chi phí xây lắp:
+a) Các chi phí của hợp đồng đã chi ra nhưng không thể thu hồi (ví dụ: không đủ tính thực thi về mặt pháp lý như có sự nghi ngờ về hiệu lực của nó hoặc hợp đồng mà khách hàng không thể thực thi nghĩa vụ của mình...) phải được ghi nhận ngay là chi phí trong kỳ, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+b) Chi phí liên quan trực tiếp đến từng hợp đồng có thể được giảm nếu có các khoản thu khác không bao gồm trong doanh thu của hợp đồng. Ví dụ: Các khoản thu từ việc bán nguyên liệu, vật liệu thừa và thanh lý máy móc, thiết bị thi công khi kết thúc hợp đồng xây dựng:
+- Nhập kho nguyên liệu, vật liệu thừa khi kết thúc hợp đồng xây dựng, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu (theo giá gốc)
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+- Phế liệu thu hồi nhập kho, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu (theo giá có thể thu hồi)
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+- Trường hợp vật liệu thừa và phế liệu thu hồi không qua nhập kho mà bán ngay, doanh nghiệp phản ánh các khoản thu, bán vật liệu thừa, ghi giảm chi phí:
+Nợ các TK 111, 112, 131,...
+ Có TK 3331 - Thuế GTGT phải nộp (33311)
+ Có TK 154 - Chi phí sản xuất, kinh doanh dở dang. 
+- Kế toán thanh lý máy móc, thiết bị thi công chuyên dùng cho một hợp đồng xây dựng và TSCĐ này đã trích khấu hao đủ theo nguyên giá khi kết thúc hợp đồng xây dựng:
++ Phản ánh số thu về thanh lý máy móc, thiết bị thi công, ghi:
+Nợ các TK 111, 112, 131,...
+ Có TK 3331 - Thuế GTGT phải nộp (33311)
+ Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
++ Phản ánh chi phí thanh lý máy móc, thiết bị (nếu có), ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331)
+Có các TK 111, 112,...
++ Ghi giảm TSCĐ đã khấu hao hết là máy móc, thiết bị thi công chuyên dùng đã thanh lý, ghi:
+Nợ TK 214 - Hao mòn TSCĐ
+Có TK 211 - TSCĐ hữu hình.
+c) Tại thời điểm kết thúc kỳ kế toán, căn cứ vào giá thành sản xuất sản phẩm xây lắp thực tế hoàn thành được xác định là đã bán (bàn giao từng phần hoặc toàn bộ); hoặc bàn giao cho doanh nghiệp nhận thầu chính: 
+- Trường hợp sản phẩm xây lắp được bán hoặc bàn giao cho nhà thầu chính, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 154 - Chí phí sản xuất, kinh doanh dở dang.
+- Trường hợp sản phẩm xây lắp hoàn thành chờ bán (xây dựng nhà để bán,...) hoặc sản phẩm xây lắp hoàn thành nhưng chưa bàn giao cho khách hàng, căn cứ vào giá thành sản phẩm xây lắp hoàn thành, ghi:
+Nợ TK 155 - Sản phẩm
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+- Khi doanh nghiệp ước tính hoặc xác định số dự phòng phải trả về chi phí bảo hành công trình xây dựng theo mức quy định của pháp luật về xây dựng trên cơ sở doanh thu dịch vụ xây dựng đã thực hiện trong kỳ, ghi:
+Nợ TK 641 - Chi phí bán hàng
+Có TK 352 - Dự phòng phải trả (3522).
+
+TÀI KHOẢN 155 - SẢN PHẨM
+
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động của các loại sản phẩm của doanh nghiệp. Sản phẩm bao gồm thành phẩm và bán thành phẩm trong đó thành phẩm là những sản phẩm đã kết thúc quá trình chế biến do các bộ phận sản xuất của doanh nghiệp thực hiện hoặc thuê ngoài gia công xong đã được kiểm nghiệm phù hợp với tiêu chuẩn kỹ thuật và nhập kho; Bán thành phẩm là những sản phẩm chỉ mới hoàn thành được một hoặc một số công đoạn (trừ công đoạn cuối cùng) của quá trình sản xuất. 
+Trong giao dịch ủy thác xuất khẩu sản phẩm, tài khoản này chỉ sử dụng tại bên giao ủy thác, không sử dụng tại bên nhận ủy thác (bên nhận giữ hộ). 	
+b) Sản phẩm do các bộ phận sản xuất chính và sản xuất phụ của doanh nghiệp sản xuất ra phải được xác định giá trị theo giá thành sản xuất (giá gốc), bao gồm: Chi phí nguyên liệu, vật liệu trực tiếp, chi phí nhân công trực tiếp, chi phí sản xuất chung và những chi phí có liên quan trực tiếp khác đến việc sản xuất sản phẩm. Trong đó:
+- Đối với chi phí sản xuất chung biến đổi được phân bổ hết vào chi phí chế biến cho mỗi đơn vị sản phẩm theo chi phí thực tế phát sinh trong kỳ.
+- Đối với chi phí sản xuất chung cố định được phân bổ vào chi phí chế biến cho mỗi đơn vị sản phẩm dựa trên công suất bình thường của máy móc thiết bị sản xuất. Công suất bình thường là số lượng sản phẩm đạt được ở mức trung bình trong các điều kiện sản xuất bình thường.
++ Trường hợp mức sản phẩm thực tế sản xuất ra cao hơn công suất bình thường thì chi phí sản xuất chung cố định được phân bổ cho mỗi đơn vị sản phẩm theo chi phí thực tế phát sinh.
++ Trường hợp mức sản phẩm thực tế sản xuất ra thấp hơn mức công suất bình thường thì chi phí sản xuất chung cố định chỉ được phân bổ vào chi phí chế biến cho mỗi đơn vị sản phẩm theo mức công suất bình thường. Khoản chi phí sản xuất chung không phân bổ được ghi nhận vào giá vốn hàng bán để xác định kết quả hoạt động kinh doanh trong kỳ.
+c) Không được tính vào giá gốc sản phẩm các chi phí sau:
+- Chi phí nguyên liệu, vật liệu, chi phí nhân công và các chi phí sản xuất, kinh doanh khác phát sinh trên mức bình thường;
+- Chi phí bảo quản hàng tồn kho trừ các khoản chi phí bảo quản hàng tồn kho cần thiết cho quá trình sản xuất tiếp theo và chi phí bảo quản quy định của Chuẩn mực kế toán Việt Nam số 02 - Hàng tồn kho;
+- Chi phí bán hàng;
+- Chi phí quản lý doanh nghiệp.
+d) Đối với thành phẩm bất động sản (là các công trình do doanh nghiệp làm chủ đầu tư): 
+d1) Thành phẩm bất động sản bao gồm: quyền sử dụng đất; nhà hoặc nhà và quyền sử dụng đất; cơ sở hạ tầng do doanh nghiệp đầu tư xây dựng để bán trong kỳ hoạt động kinh doanh thông thường.
+d2) Giá gốc thành phẩm bất động sản bao gồm toàn bộ các chi phí liên quan trực tiếp tới việc đầu tư, xây dựng bất động sản (kể cả các chi phí đầu tư, xây dựng cơ sở hạ tầng gắn liền với bất động sản) để đưa bất động sản vào trạng thái sẵn sàng để bán.
+d3) Chi phí liên quan trực tiếp tới việc đầu tư, xây dựng thành phẩm bất động sản phải là các chi phí thực tế đã phát sinh, các chi phí đã có biên bản nghiệm thu khối lượng.
+đ) Sản phẩm thuê ngoài gia công chế biến được đánh giá theo giá thành thực tế gia công chế biến, bao gồm: Chi phí nguyên liệu, vật liệu trực tiếp; chi phí thuê gia công và các chi phí khác có liên quan trực tiếp đến quá trình gia công, chế biến.
+e) Trường hợp doanh nghiệp ghi sổ chi tiết nhập, xuất kho sản phẩm hàng ngày theo giá tạm tính (có thể là giá thành kế hoạch, giá thành định mức, giá nhập kho thống nhất...). Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp phải tính giá thành thực tế của sản phẩm nhập kho và xác định hệ số chênh lệch giữa giá thành thực tế và giá tạm tính của sản phẩm (tính cả số chênh lệch của sản phẩm tồn đầu kỳ) làm cơ sở xác định giá thành thực tế của sản phẩm nhập, xuất kho trong kỳ (sử dụng công thức tính như hướng dẫn tại Tài khoản 152 - Nguyên liệu, vật liệu).
+g) Kế toán chi tiết thành phẩm phải thực hiện theo từng kho, từng loại, nhóm, thứ sản phẩm và phải theo dõi chi tiết số lượng và giá trị,...
+2. Kết cấu và nội dung phản ánh của Tài khoản 155 - Sản phẩm
+Bên Nợ:
+- Trị giá của sản phẩm nhập kho;
+- Trị giá của sản phẩm thừa khi kiểm kê.
+Bên Có:
+- Trị giá thực tế của sản phẩm xuất kho;
+- Trị giá của sản phẩm thiếu hụt khi kiểm kê.
+Số dư bên Nợ: 
+Trị giá thực tế của sản phẩm tồn kho tại thời điểm kết thúc kỳ kế toán.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết sản phẩm (như: thành phẩm, bán thành phẩm, thành phẩm bất động sản,...) phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Nhập kho sản phẩm do doanh nghiệp sản xuất ra hoặc thuê ngoài gia công chế biến, ghi:
+Nợ TK 155 - Sản phẩm
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+3.2. Xuất kho sản phẩm để bán cho khách hàng (kể cả sản phẩm là thành phẩm bất động sản đã hoàn thành bàn giao cho khách hàng), doanh nghiệp phản ánh giá vốn của sản phẩm xuất bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 155 - Sản phẩm.
+3.3. Xuất kho sản phẩm gửi đi bán, ghi:
+Nợ TK 157 - Hàng gửi đi bán 
+Có TK 155 - Sản phẩm.
+3.4. Kế toán sản phẩm đã bán bị trả lại:
+Nợ TK 521 - Các khoản giảm trừ doanh thu
+Nợ TK 3331 - Thuế GTGT phải nộp (33311)
+Có các TK 111, 112, 131,... (tổng giá trị của hàng bán bị trả lại).
+Đồng thời phản ánh giá vốn của thành phẩm đã bán nhập lại kho, ghi:
+Nợ TK 155 - Sản phẩm
+Có TK 632 - Giá vốn hàng bán.
+3.5. Khi doanh nghiệp xuất kho sản phẩm để tiêu dùng nội bộ:
+Nợ các TK 641, 642, 241, 211,...
+Có TK 155 - Sản phẩm
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+3.6. Xuất kho thành phẩm chuyển cho các đơn vị trực thuộc:
+- Trường hợp đơn vị trực thuộc được phân cấp ghi nhận doanh thu, giá vốn, doanh nghiệp ghi nhận giá vốn sản phẩm xuất bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 155 - Sản phẩm.
+- Trường hợp đơn vị trực thuộc không được phân cấp ghi nhận doanh thu, giá vốn, doanh nghiệp ghi nhận giá trị sản phẩm luân chuyển giữa các khâu trong nội bộ doanh nghiệp là khoản phải thu nội bộ, ghi:
+Nợ TK 136 - Phải thu nội bộ
+Có TK 155 - Sản phẩm
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (chi tiết từng loại thuế) (nếu có).
+3.7. Xuất kho sản phẩm đưa đi góp vốn vào công ty con, công ty liên doanh, liên kết, đầu tư khác, ghi:
+Nợ các TK 221, 222, 228 (theo giá đánh giá lại)
+Nợ TK 811 - Chi phí khác (chênh lệch giữa giá đánh giá lại nhỏ hơn giá trị ghi sổ của sản phẩm) 
+Có TK 155 - Sản phẩm
+Có TK 711 - Thu nhập khác (chênh lệch giữa giá đánh giá lại lớn hơn giá trị ghi sổ của sản phẩm).
+3.8. Khi xuất kho sản phẩm dùng để mua lại phần vốn góp tại công ty con, công ty liên doanh, liên kết, đầu tư khác ghi:
+- Ghi nhận doanh thu bán sản phẩm tương ứng với tăng giá trị khoản đầu tư vào công ty con, công ty liên doanh, liên kết, đầu tư khác, ghi:
+Nợ các TK 221, 222, 228 (theo giá trị hợp lý)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT đầu ra phải nộp (nếu có).
+- Ghi nhận giá vốn sản phẩm dùng để mua lại phần vốn góp tại công ty con, công ty liên doanh, liên kết, đầu tư khác, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 155 - Sản phẩm.
+3.9. Mọi trường hợp phát hiện thừa, thiếu sản phẩm khi kiểm kê đều phải lập biên bản và truy tìm nguyên nhân xác định người phạm lỗi. Doanh nghiệp căn cứ vào việc sản phẩm thừa, thiếu đã rõ hay chưa rõ nguyên nhân để xử lý và hạch toán tương tự như hướng dẫn tại Tài khoản 152 - Nguyên liệu, vật liệu.
+3.10. Trường hợp doanh nghiệp sử dụng sản phẩm sản xuất ra để cho, biếu, tặng, khuyến mại, quảng cáo: 
+a) Trường hợp xuất sản phẩm để khuyến mại, quảng cáo không thu tiền, không kèm theo các điều kiện khác như phải mua sản phẩm, hàng hóa... hoặc theo mô hình kinh doanh, đặc điểm sản phẩm của doanh nghiệp là giá bán sản phẩm chính không thay đổi cho dù khách hàng có nhận hay không nhận sản phẩm tặng kèm thì doanh nghiệp ghi nhận giá trị sản phẩm dùng cho khuyến mại, quảng cáo vào chi phí bán hàng, ghi:
+Nợ TK 641 - Chi phí bán hàng
+Có TK 155 - Sản phẩm.
+b) Trường hợp xuất sản phẩm để khuyến mại, quảng cáo nhưng khách hàng chỉ được nhận hàng khuyến mại, quảng cáo kèm theo các điều kiện khác như phải mua sản phẩm (ví dụ như mua 2 sản phẩm được tặng 1 sản phẩm...) thì doanh nghiệp phải phân bổ số tiền thu được để tính doanh thu cho cả hàng khuyến mại, quảng cáo. Bản chất giao dịch trường hợp này là giảm giá hàng bán nên giá trị hàng khuyến mại, quảng cáo được tính vào giá vốn hàng bán.
+- Khi xuất sản phẩm để khuyến mại, quảng cáo doanh nghiệp ghi nhận giá trị hàng khuyến mại vào giá vốn hàng bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 155 - Sản phẩm.
+- Ghi nhận doanh thu của hàng khuyến mại, quảng cáo trên cơ sở phân bổ số tiền thu được cho cả sản phẩm được bán và sản phẩm khuyến mại, quảng cáo, ghi:
+Nợ các TK 111, 112, 131...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+c) Nếu xuất sản phẩm để biếu, tặng cho người lao động được trang trải bằng quỹ khen thưởng, phúc lợi, doanh nghiệp phải ghi nhận doanh thu, giá vốn như giao dịch bán hàng thông thường:
+- Ghi nhận giá vốn hàng bán đối với giá trị sản phẩm dùng để biếu, tặng cho người lao động, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 155 - Sản phẩm. 
+- Ghi nhận doanh thu của sản phẩm được trang trải bằng quỹ khen thưởng, phúc lợi, ghi:
+Nợ TK 353 - Quỹ khen thưởng, phúc lợi (tổng giá thanh toán)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+d) Nếu xuất kho sản phẩm để cho, biếu, tặng, ghi:
+Nợ các TK 641, 642,...
+Có TK 155 - Sản phẩm
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).	
+3.11. Kế toán trả lương cho người lao động bằng sản phẩm
+- Doanh thu của sản phẩm dùng để trả lương cho người lao động, ghi:
+Nợ TK 334 - Phải trả người lao động (tổng giá thanh toán)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (33311)
+Có TK 3335 - Thuế thu nhập cá nhân (nếu có).
+- Ghi nhận giá vốn hàng bán đối với sản phẩm dùng để trả lương cho người lao động, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 155 - Sản phẩm. 
+3.12. Phản ánh giá vốn sản phẩm thanh lý, nhượng bán do ứ đọng, mất phẩm chất, không cần dùng, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 155 - Sản phẩm.
+
+TÀI KHOẢN 156 - HÀNG HÓA
+
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm các loại hàng hóa của doanh nghiệp bao gồm hàng hóa tại các kho hàng, quầy hàng, hàng hoá bất động sản và các tài sản khác được nắm giữ hoặc mua để bán lại (trừ chứng khoán kinh doanh), ví dụ như: thẻ điện thoại, quyền sử dụng dịch vụ, quyền nhận hàng hóa, phiếu quà tặng, phiếu giảm giá,... Hàng hóa tại các kho hàng, quầy hàng là các loại vật tư, sản phẩm do doanh nghiệp mua về với mục đích để bán (bán buôn và bán lẻ). Hàng hóa bất động sản gồm: Quyền sử dụng đất; nhà; hoặc nhà và quyền sử dụng đất; cơ sở hạ tầng mua để bán trong kỳ hoạt động kinh doanh thông thường; BĐSĐT chuyển thành hàng tồn kho khi chủ sở hữu bắt đầu triển khai cho mục đích bán. 
+Trường hợp hàng hóa mua về vừa dùng để bán, vừa dùng để làm nguyên vật liệu cho sản xuất, kinh doanh mà không phân biệt được rõ ràng mục đích để bán hay để sử dụng thì phản ánh vào Tài khoản 152 - Nguyên liệu, vật liệu.
+Trong giao dịch xuất nhập - khẩu ủy thác hàng hóa, tài khoản này chỉ sử dụng tại bên giao ủy thác, không sử dụng tại bên nhận ủy thác (bên nhận giữ hộ). Việc kế toán mua, bán hàng hóa liên quan đến các giao dịch bằng ngoại tệ được thực hiện theo hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái.
+b) Những trường hợp sau đây không phản ánh vào Tài khoản 156 - Hàng hóa:
+- Hàng hóa nhận bán hộ, nhận giữ hộ cho các doanh nghiệp khác;
+- Hàng mua về dùng làm nguyên vật liệu, công cụ dụng cụ phục vụ cho hoạt động sản xuất, kinh doanh (ghi vào các Tài khoản 152 - Nguyên liệu, vật liệu hoặc Tài khoản 153 - Công cụ, dụng cụ,...).
+c) Kế toán nhập, xuất, tồn kho hàng hóa trên Tài khoản 156 được phản ánh theo nguyên tắc giá gốc quy định trong Chuẩn mực kế toán Việt Nam số 02 - Hàng tồn kho. Giá gốc hàng hóa mua vào, bao gồm: Giá mua, chi phí thu mua, thuế nhập khẩu, thuế tiêu thụ đặc biệt, thuế bảo vệ môi trường (nếu có), thuế GTGT hàng nhập khẩu (nếu không được khấu trừ). Trường hợp doanh nghiệp mua hàng hóa về để bán lại nhưng vì lý do nào đó cần phải gia công, sơ chế, tân trang, phân loại chọn lọc để làm tăng thêm giá trị hoặc khả năng bán của hàng hóa thì trị giá hàng mua gồm cả chi phí gia công, sơ chế. 
+- Giá gốc của hàng hóa mua vào được tính theo từng nguồn nhập và tùy theo đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý của doanh nghiệp, giá gốc của hàng hóa có thể được theo dõi chi tiết theo giá mua và chi phí thu mua hàng hóa. 
+Chi phí thu mua hàng hóa bao gồm các chi phí liên quan trực tiếp đến quá trình thu mua hàng hóa như: Chi phí bảo hiểm hàng hóa, tiền thuê kho, thuê bến bãi, chi phí vận chuyển, bốc xếp, bảo quản đưa hàng hóa từ nơi mua về đến kho doanh nghiệp, các khoản hao hụt tự nhiên trong định mức phát sinh trong quá trình thu mua hàng hóa,... 
+Đối với chi phí thu mua liên quan đến nhiều hàng hóa thì có thể phân bổ cho từng loại, mặt hàng theo tiêu thức phân bổ cho phù hợp và phải đảm bảo nguyên tắc nhất quán theo quy định của Chuẩn mực kế toán Việt Nam. Trường hợp chi phí thu mua hàng hóa có giá trị nhỏ liên quan đến nhiều mặt hàng thì doanh nghiệp có thể ghi nhận ngay vào giá vốn hàng bán.
+d) Kế toán chi tiết hàng hóa phải thực hiện theo từng kho, từng loại, từng hàng hóa và phải theo dõi chi tiết số lượng và giá trị.
+2. Kết cấu và nội dung phản ánh của Tài khoản 156 - Hàng hóa	
+Bên Nợ:
+- Giá gốc của hàng hóa mua về nhập kho theo từng nguồn nhập;
+- Trị giá của hàng hóa thuê ngoài gia công (gồm giá mua vào và chi phí gia công);
+- Trị giá hàng hóa đã bán bị người mua trả lại; 
+- Trị giá hàng hóa phát hiện thừa khi kiểm kê;
+- Trị giá hàng hóa bất động sản mua vào hoặc chuyển từ BĐSĐT sang.
+Bên Có:
+- Trị giá của hàng hóa xuất kho để bán, giao đại lý, thuê ngoài gia công, hoặc sử dụng cho sản xuất, kinh doanh,...
+- Chiết khấu thương mại, giảm giá được hưởng của hàng hóa mua về;
+- Trị giá hàng hóa trả lại cho người bán;
+- Trị giá hàng hóa phát hiện thiếu khi kiểm kê; 
+- Trị giá hàng hóa bất động sản đã bán hoặc chuyển thành BĐSĐT, bất động sản chủ sở hữu sử dụng hoặc TSCĐ.
+Số dư bên Nợ:
+Trị giá thực tế của hàng hóa tồn kho tại thời điểm kết thúc kỳ kế toán.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết hàng hóa (như: các loại hàng hóa do doanh nghiệp mua về, hàng hóa bất động sản,...) phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Hàng hóa mua ngoài nhập kho doanh nghiệp, căn cứ hóa đơn, phiếu nhập kho và các chứng từ có liên quan:
+a) Khi mua hàng hóa về nhập kho, ghi:
+Nợ TK 156 - Hàng hóa (chi tiết hàng hóa mua vào)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có các TK 111, 112, 141, 331,... (tổng giá thanh toán).
+b) Khi nhập khẩu hàng hóa:
+- Khi nhập khẩu hàng hóa, ghi:
+Nợ TK 156 - Hàng hóa
+Có TK 331 - Phải trả cho người bán
+Có TK 3331 - Thuế GTGT phải nộp (33312) (nếu thuế GTGT đầu vào của hàng nhập khẩu không được khấu trừ)
+Có TK 3332 - Thuế tiêu thụ đặc biệt (nếu có)
+Có TK 3333 - Thuế xuất, nhập khẩu (chi tiết thuế nhập khẩu)
+Có TK 33381 - Thuế bảo vệ môi trường (nếu có).
+- Nếu thuế GTGT đầu vào của hàng nhập khẩu được khấu trừ, ghi: 
+Nợ TK 133 - Thuế GTGT được khấu trừ
+Có TK 3331 - Thuế GTGT phải nộp (33312).
+- Trường hợp mua hàng hóa có ứng trước cho người bán một phần bằng ngoại tệ thì phần giá trị hàng mua tương ứng với số tiền ứng trước được ghi nhận theo tỷ giá giao dịch thực tế tại thời điểm ứng trước. Phần giá trị hàng mua bằng ngoại tệ chưa trả được ghi nhận theo tỷ giá giao dịch thực tế tại thời điểm nhận hàng hóa.
+- Mua hàng hóa dưới hình thức ủy thác nhập khẩu thực hiện theo quy định ở Tài khoản 331 - Phải trả cho người bán.	
+3.2. Trường hợp doanh nghiệp đã nhận được hóa đơn của người bán nhưng đến thời điểm kết thúc kỳ kế toán, hàng hóa chưa về nhập kho thì căn cứ vào hóa đơn, ghi:
+Nợ TK 151 - Hàng mua đang đi đường
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có) 
+Có các TK 111, 112, 331,...
+- Sang kỳ kế toán sau, khi hàng mua đang đi đường về nhập kho, ghi:
+Nợ TK 156 - Hàng hóa 
+Có TK 151 - Hàng mua đang đi đường.
+3.3. Trường hợp doanh nghiệp được nhận khoản chiết khấu thương mại hoặc giảm giá sau khi mua hàng thì doanh nghiệp phải căn cứ vào tình hình biến động của hàng hóa để phân bổ số chiết khấu thương mại, giảm giá hàng bán được hưởng dựa trên số hàng còn tồn kho, số đã xuất bán trong kỳ:
+Nợ các TK 111, 112, 331,...
+Có TK 156 - Hàng hóa (nếu hàng còn tồn kho)
+Có TK 632 - Giá vốn hàng bán (nếu đã tiêu thụ trong kỳ)
+Có TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có). 
+3.4. Giá trị của hàng hóa mua ngoài không đúng quy cách, phẩm chất theo hợp đồng kinh tế phải trả lại cho người bán, ghi:
+Nợ các TK 111, 112, 331,...
+Có TK 156 - Hàng hóa 
+Có TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có).
+3.5. Phản ánh chi phí thu mua hàng hóa, ghi:
+Nợ TK 156 - Hàng hóa (nếu tính vào giá trị hàng hóa mua về)
+Nợ TK 632 - Giá vốn hàng bán (nếu tính vào giá vốn hàng bán)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 141, 331,...
+3.6. Khi mua hàng hóa theo phương thức trả chậm, trả góp, ghi:
+Nợ TK 156 - Hàng hóa (theo giá mua trả tiền ngay)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112 (số đã trả ngay)
+Có TK 331 - Phải trả cho người bán.
+- Định kỳ, phản ánh khoản lãi trả chậm, trả góp phải trả cho người bán, ghi:
+Nợ TK 635 - Chi phí tài chính
+Có TK 331 - Phải trả cho người bán.
+- Định kỳ, khi trả tiền cho người bán bao gồm cả nợ gốc và tiền lãi trả chậm, trả góp, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có các TK 111, 112 
+3.7. Khi mua hàng hóa bất động sản về để bán, doanh nghiệp phản ánh giá mua và các chi phí liên quan trực tiếp đến việc mua hàng hóa BĐS, ghi:
+Nợ TK 156 - Hàng hóa 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có các TK 111, 112, 331,...
+3.8. Trường hợp BĐSĐT chuyển thành hàng tồn kho khi chủ sở hữu có quyết định sửa chữa, cải tạo, nâng cấp để bán: 
+- Khi có quyết định sửa chữa, cải tạo, nâng cấp BĐSĐT để bán, ghi:
+Nợ TK 156 - Hàng hóa (giá trị còn lại của BĐSĐT)
+Nợ TK 214 - Hao mòn TSCĐ (2147) (Số hao mòn lũy kế)
+Có TK 217 - Bất động sản đầu tư (nguyên giá).	
+- Khi phát sinh các chi phí sửa chữa, cải tạo, nâng cấp triển khai cho mục đích bán, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Nợ TK 133 - Thuế GTGT được khấu trừ
+Có các TK 111, 112, 152, 334, 331,...
+- Khi kết thúc giai đoạn sửa chữa, cải tạo, nâng cấp triển khai cho mục đích bán, kết chuyển toàn bộ chi phí ghi tăng giá trị hàng hóa bất động sản, ghi:
+Nợ TK 156 - Hàng hóa 
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+3.9. Trị giá hàng hóa xuất bán được xác định là tiêu thụ, ghi:
+Nợ TK 632 - Giá vốn hàng bán 
+Có TK 156 - Hàng hóa.
+Đồng thời doanh nghiệp phản ánh doanh thu bán hàng:
+- Đối với hàng hóa thuộc đối tượng chịu thuế gián thu (thuế GTGT, thuế tiêu thụ đặc biệt, thuế xuất khẩu, thuế bảo vệ môi trường), doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ theo giá bán chưa có thuế, các khoản thuế gián thu phải nộp được tách riêng theo từng loại thuế ngay khi ghi nhận doanh thu, ghi:
+Nợ các TK 111, 112, 131,... 
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá chưa có thuế) 
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+- Trường hợp các khoản thuế phải nộp không tách riêng ngay theo từng loại, doanh nghiệp ghi nhận doanh thu bao gồm cả thuế phải nộp. Định kỳ, doanh nghiệp xác định nghĩa vụ thuế phải nộp và ghi giảm doanh thu, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+3.10. Trường hợp thuê ngoài gia công, chế biến hàng hóa:
+- Khi xuất kho hàng hóa đưa đi gia công, chế biến, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang 
+Có TK 156 - Hàng hóa.
+- Chi phí gia công, chế biến hàng hóa, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang 
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có) 
+Có các TK 111, 112, 331,...
+- Khi gia công xong nhập lại kho hàng hóa, ghi:
+Nợ TK 156 - Hàng hóa 
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+3.11. Khi xuất kho hàng hóa gửi cho khách hàng hoặc xuất kho cho các đại lý, doanh nghiệp nhận hàng ký gửi,..., ghi:
+Nợ TK 157 - Hàng gửi đi bán
+Có TK 156 - Hàng hóa.
+3.12. Khi xuất kho hàng hóa cho các đơn vị trực thuộc để bán:
+- Trường hợp đơn vị trực thuộc được phân cấp ghi nhận doanh thu, giá vốn, đơn vị ghi nhận giá vốn hàng hóa xuất bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 156 - Hàng hóa
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+	- Trường hợp đơn vị trực thuộc không được phân cấp ghi nhận doanh thu, giá vốn, đơn vị ghi nhận giá trị hàng hóa luân chuyển giữa các khâu trong nội bộ doanh nghiệp là khoản phải thu nội bộ, ghi:
+Nợ TK 136 - Phải thu nội bộ (1368)
+Có TK 156 - Hàng hóa
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+3.13. Khi xuất hàng hóa tiêu dùng nội bộ, ghi: 
+Nợ các TK 641, 642, 241, 211,...
+Có TK 156 - Hàng hóa
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).	
+3.14. Trường hợp doanh nghiệp sử dụng hàng hóa để khuyến mại, quảng cáo, cho biếu, tặng: 
+a) Trường hợp xuất hàng hóa để khuyến mại, quảng cáo không thu tiền, không kèm theo các điều kiện khác như phải mua sản phẩm, hàng hóa... hoặc theo mô hình kinh doanh, đặc điểm hàng hóa của doanh nghiệp là giá bán hàng hóa chính không thay đổi cho dù khách hàng có nhận hay không nhận sản phẩm, hàng hóa tặng kèm thì doanh nghiệp ghi nhận giá trị hàng hóa dùng cho khuyến mại, quảng cáo vào chi phí bán hàng, ghi:
+Nợ TK 641 - Chi phí bán hàng
+Có TK 156 - Hàng hóa.
+b) Trường hợp xuất hàng hóa để khuyến mại, quảng cáo nhưng khách hàng chỉ được nhận hàng khuyến mại, quảng cáo kèm theo các điều kiện khác như phải mua hàng hóa (ví dụ như mua 2 sản phẩm được tặng 1 sản phẩm...) thì doanh nghiệp phải phân bổ số tiền thu được để tính doanh thu cho cả hàng khuyến mại. Bản chất giao dịch này là giảm giá hàng bán nên giá trị hàng khuyến mại được tính vào giá vốn hàng bán. 
+- Khi xuất hàng khuyến mại, doanh nghiệp ghi nhận giá trị hàng khuyến mại vào giá vốn hàng bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+	Có TK 156 - Hàng hóa.
+- Ghi nhận doanh thu của hàng khuyến mại trên cơ sở phân bổ số tiền thu được cho cả hàng hóa chính được bán và hàng hóa khuyến mại, quảng cáo, ghi:
+Nợ các TK 111, 112, 131...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+c) Nếu xuất hàng hóa biếu, tặng cho người lao động được trang trải bằng quỹ khen thưởng, phúc lợi, doanh nghiệp phải ghi nhận doanh thu, giá vốn như giao dịch bán hàng thông thường, ghi:
+- Ghi nhận giá vốn hàng bán đối với hàng hóa dùng để biếu, tặng cho người lao động, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 156 - Hàng hóa. 
+- Ghi nhận doanh thu của hàng hóa được trang trải bằng quỹ khen thưởng, phúc lợi, ghi:
+Nợ TK 353 - Quỹ khen thưởng, phúc lợi (tổng giá thanh toán)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+d) Nếu xuất kho hàng hóa để cho, biếu, tặng, ghi:
+Nợ các TK 641, 642,...
+Có TK 156 - Hàng hóa
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+3.15. Kế toán trả lương cho người lao động bằng hàng hóa: 
+- Doanh nghiệp ghi nhận doanh thu, ghi:
+Nợ TK 334 - Phải trả người lao động (tổng giá thanh toán)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có)
+Có TK 3335 - Thuế thu nhập cá nhân (nếu có).
+- Ghi nhận giá vốn hàng bán đối với giá trị hàng hóa dùng để trả lương cho người lao động, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 156 - Hàng hóa.
+3.16. Hàng hóa đưa đi góp vốn vào công ty con, công ty liên doanh, liên kết, đầu tư khác, ghi:
+Nợ các TK 221, 222, 228 (theo giá đánh giá lại)
+Nợ TK 811 - Chi phí khác (chênh lệch giữa giá đánh giá lại nhỏ hơn giá trị 			ghi sổ của hàng hóa)
+Có TK 156 - Hàng hóa
+Có TK 711 - Thu nhập khác (chênh lệch giữa giá đánh giá lại lớn hơn giá trị ghi sổ của hàng hóa).
+3.17. Cuối kỳ, khi phân bổ chi phí thu mua cho hàng hóa được xác định là bán trong kỳ, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 156 - Hàng hóa.
+3.18. Mọi trường hợp phát hiện thừa, thiếu hàng hóa bất kỳ ở khâu nào trong kinh doanh phải lập biên bản và truy tìm nguyên nhân. Doanh nghiệp căn cứ vào việc hàng hóa thừa, thiếu đã rõ hay chưa rõ nguyên nhân để xử lý và hạch toán tương tự như hướng dẫn tại Tài khoản 152 - Nguyên liệu, vật liệu.
+3.19. Trị giá hàng hóa bất động sản được xác định là bán trong kỳ, căn cứ hóa đơn GTGT hoặc hóa đơn bán hàng, biên bản bàn giao hàng hóa BĐS:
+- Phản ánh giá vốn, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 156 - Hàng hóa.
+Đồng thời doanh nghiệp phản ánh doanh thu bán hàng hóa BĐS:
+Nợ các TK 111, 112, 131,...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+3.20. Phản ánh giá vốn hàng hóa thanh lý, khi nhượng bán do ứ đọng, mất phẩm chất, không cần dùng,..., ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 156 - Hàng hóa.
+
+TÀI KHOẢN 157 - HÀNG GỬI ĐI BÁN
+
+1. Nguyên tắc kế toán
+a) Tài khoản này để phản ánh trị giá của hàng hóa, sản phẩm đã gửi đi cho khách hàng, gửi bán đại lý, ký gửi, dịch vụ đã hoàn thành bàn giao cho khách hàng theo hợp đồng kinh tế hoặc đơn đặt hàng nhưng chưa được xác định là đã bán (chưa được khách hàng chấp nhận thanh toán nên chưa được tính là doanh thu bán hàng trong kỳ); hàng hóa, sản phẩm gửi kho ngoại quan.
+b) Hàng hóa, sản phẩm phản ánh trên tài khoản này vẫn thuộc quyền sở hữu của doanh nghiệp, doanh nghiệp phải mở sổ chi tiết theo dõi từng loại hàng hóa, sản phẩm, từng lần gửi hàng từ khi gửi đi cho đến khi được xác định là đã bán.
+c) Không phản ánh vào tài khoản này chi phí vận chuyển, bốc xếp,... chi hộ khách hàng. Tài khoản 157 có thể mở chi tiết để theo dõi từng loại hàng hóa, sản phẩm,... gửi đi bán cho từng khách hàng, cho từng cơ sở nhận đại lý.
+2. Kết cấu và nội dung phản ánh của Tài khoản 157 - Hàng gửi đi bán
+Bên Nợ:
+- Trị giá hàng hóa, sản phẩm đã gửi đi bán cho khách hàng, đại lý, gửi vào kho ngoại quan,...; 
+- Trị giá dịch vụ đã cung cấp cho khách hàng nhưng chưa được xác định là đã bán.
+Bên Có:
+- Trị giá hàng hóa, sản phẩm gửi đi bán, dịch vụ đã cung cấp được xác định là đã bán.
+Số dư bên Nợ:
+Trị giá hàng hóa, sản phẩm đã gửi đi, dịch vụ đã cung cấp chưa được xác định là đã bán trong kỳ. 
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết hàng gửi đi bán (như: hàng gửi đi bán cho khách hàng, gửi bán đại lý, ký gửi; hàng hóa, sản phẩm đưa vào kho ngoại quan;...) phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi xuất kho hàng hóa, sản phẩm gửi cho khách hàng, đại lý theo hợp đồng kinh tế, căn cứ phiếu xuất kho, ghi:
+Nợ TK 157 - Hàng gửi đi bán
+Có các TK 155, 156.
+3.2. Dịch vụ đã hoàn thành bàn giao cho khách hàng nhưng chưa xác định là đã bán trong kỳ, ghi:
+Nợ TK 157 - Hàng gửi đi bán
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+3.3. Khi hàng gửi đi bán và dịch vụ đã hoàn thành bàn giao cho khách hàng được xác định là đã bán trong kỳ:
+- Đối với sản phẩm, hàng hóa, dịch vụ gửi đi bán thuộc đối tượng chịu thuế gián thu (thuế GTGT, thuế tiêu thụ đặc biệt, thuế xuất khẩu, thuế bảo vệ môi trường), doanh nghiệp phản ánh doanh thu bán hàng và cung cấp dịch vụ theo giá bán chưa có thuế, các khoản thuế gián thu phải nộp được tách riêng theo từng loại thuế ngay khi ghi nhận doanh thu, ghi:
+Nợ các TK 111, 112, 131,... 
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+- Trường hợp các khoản thuế phải nộp không tách riêng ngay theo từng loại, doanh nghiệp ghi nhận doanh thu bao gồm cả thuế phải nộp. Định kỳ, doanh nghiệp xác định nghĩa vụ thuế phải nộp và ghi giảm doanh thu, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước
+- Đồng thời phản ánh trị giá vốn của số hàng hóa, sản phẩm, dịch vụ đã bán trong kỳ, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 157 - Hàng gửi đi bán.
+3.4. Khi xuất hàng hóa, sản phẩm gửi vào Kho ngoại quan để xuất khẩu (nếu có), ghi:
+Nợ TK 157 - Hàng gửi đi bán 
+Có các TK 154, 155, 156,...
+3.5. Khi hàng hóa, sản phẩm ở kho ngoại quan được xuất khẩu (nếu có):
+- Phản ánh giá vốn của hàng xuất khẩu, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 157 - Hàng gửi đi bán 
+- Phản ánh doanh thu của hàng xuất khẩu, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 333 - Thuế và các khoản phải nộp nhà nước (nếu có).
+
+TÀI KHOẢN 158 - NGUYÊN LIỆU, VẬT TƯ TẠI KHO BẢO THUẾ
+
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh sự biến động tăng, giảm và số hiện có của nguyên liệu, vật tư tại kho bảo thuế. Kho bảo thuế chỉ áp dụng cho doanh nghiệp phục vụ cho sản xuất hàng xuất khẩu, được áp dụng chế độ quản lý hải quan đặc biệt. Việc chưa phải tính và nộp thuế nhập khẩu và các loại thuế liên quan khác đối với nguyên liệu, vật tư nhập khẩu để cho sản xuất hàng xuất khẩu của doanh nghiệp khi đưa vào lưu giữ tại kho bảo thuế được thực hiện theo quy định của pháp luật hải quan. 
+b) Nguyên liệu, vật tư nhập khẩu lưu giữ tại kho bảo thuế chỉ bao gồm nguyên liệu, vật tư của doanh nghiệp để phục vụ sản xuất hàng xuất khẩu đã được thông quan nhưng chưa nộp thuế. 
+c) Doanh nghiệp phải mở sổ chi tiết để phản ánh số lượng và giá trị của từng thứ nguyên liệu, vật tư theo từng lần nhập, xuất kho bảo thuế.
+2. Kết cấu và nội dung phản ánh của Tài khoản 158 - Nguyên liệu, vật tư tại kho bảo thuế
+Bên Nợ: 
+Trị giá nguyên liệu, vật tư tại kho bảo thuế tăng trong kỳ.
+Bên Có: 
+Trị giá nguyên liệu, vật tư tại kho bảo thuế giảm trong kỳ.
+Số dư bên Nợ: 
+Trị giá nguyên liệu, vật tư tại kho bảo thuế còn lại tại thời điểm kết thúc kỳ kế toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi nhập khẩu nguyên liệu, vật tư để sản xuất sản phẩm xuất khẩu, hoặc gia công hàng xuất khẩu được đưa vào Kho bảo thuế để doanh nghiệp chưa phải nộp thuế nhập khẩu và thuế GTGT hàng nhập khẩu theo quy định, ghi:
+Nợ TK 158 - Nguyên liệu, vật tư tại kho bảo thuế
+Có TK 331 - Phải trả cho người bán.
+3.2. Khi xuất nguyên liệu, vật tư nhập khẩu ở Kho bảo thuế để đưa ra sản xuất sản phẩm hoặc gia công hàng xuất khẩu, ghi:
+Nợ TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp
+Có TK 158 - Nguyên liệu, vật tư tại kho bảo thuế.
+3.3. Trường hợp nguyên liệu, vật tư nhập khẩu ở Kho bảo thuế, nếu bị hư hỏng, giảm phẩm chất, không đáp ứng yêu cầu sản xuất hàng xuất khẩu thì được làm thủ tục hải quan để tái xuất hoặc tiêu hủy:
+- Trường hợp tái xuất khẩu (trả lại cho người bán), ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có TK 158 - Nguyên liệu, vật tư tại kho bảo thuế.
+- Trường hợp doanh nghiệp bị tổn thất do phải tiêu hủy nguyên liệu, vật tư lưu giữ tại Kho bảo thuế, ghi:
+Nợ TK 632 - Giá vốn hàng bán 
+Có TK 158 - Nguyên liệu, vật tư tại kho bảo thuế. 
+3.4. Trường hợp doanh nghiệp bán nguyên liệu, vật tư tại kho bảo thuế vào nội địa Việt Nam, doanh nghiệp phải thực hiện các thủ tục và nộp thuế theo quy định của pháp luật.
+
+TÀI KHOẢN 171 - GIAO DỊCH MUA, BÁN LẠI
+TRÁI PHIẾU CHÍNH PHỦ
+
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh các giao dịch mua, bán lại trái phiếu Chính phủ phát sinh trong kỳ. Tài khoản này chỉ ghi nhận giá trị của hợp đồng mua bán lại trái phiếu Chính phủ, không ghi nhận khoản coupon mà bên mua nhận hộ bên bán tại (các) thời điểm nằm trong thời hạn hợp đồng.
+b) Doanh nghiệp phải chấp hành đúng các qui định về hình thức giao dịch, thời hạn giao dịch và thu nhập từ trái phiếu Chính phủ trong giao dịch mua, bán lại được quy định tại các cơ chế tài chính hiện hành về giao dịch mua, bán lại trái phiếu Chính phủ.
+c) Bên mua trái phiếu theo hợp đồng mua bán lại không được ghi nhận là khoản doanh thu khi nhận khoản coupon trái phiếu của bên bán tại các thời điểm nằm trong thời hạn của giao dịch mua bán lại mà ghi nhận là khoản phải trả, phải nộp khác.
+2. Kết cấu và nội dung phản ánh của Tài khoản 171 - Giao dịch mua, bán lại trái phiếu Chính phủ
+Bên Nợ:
+- Giá trị trái phiếu Chính phủ mua lại của bên bán khi hết hạn hợp đồng;
+- Giá trị trái phiếu khi mua của bên mua khi hợp đồng mua bán lại trái phiếu Chính phủ có hiệu lực;
+- Phân bổ số chênh lệch giữa giá bán lại và giá mua trái phiếu Chính phủ theo hợp đồng mua bán lại trái phiếu Chính phủ đối với bên mua.
+Bên Có:
+- Giá trị trái phiếu Chính phủ khi bán theo hợp đồng mua bán lại trái phiếu Chính phủ của bên mua khi hết hạn hợp đồng;
+- Giá trị trái phiếu khi bán của bên bán khi hợp đồng mua bán lại trái phiếu Chính phủ có hiệu lực;
+- Phân bổ số chênh lệch giữa giá bán lại và giá mua lại trái phiếu Chính phủ theo hợp đồng mua bán lại trái phiếu Chính phủ đối với bên bán.
+Số dư bên Nợ: 
+Giá trị trái phiếu Chính phủ của bên mua khi chưa hết thời hạn hợp đồng mua bán lại tại thời điểm kết thúc kỳ kế toán.
+Số dư bên Có: 
+Giá trị trái phiếu Chính phủ của bên bán khi chưa hết thời hạn hợp đồng mua bán lại tại thời điểm kết thúc kỳ kế toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Kế toán đối với bên bán trái phiếu Chính phủ theo hợp đồng mua, bán lại (Repo)
+a) Khi hợp đồng mua, bán lại trái phiếu Chính phủ có hiệu lực, ghi:
+Nợ các TK 111, 112 (số tiền theo giá bán) 
+Có TK 171 - Giao dịch mua, bán lại trái phiếu Chính phủ.
+b) Định kỳ, bên bán phân bổ số chênh lệch giữa giá bán và giá mua lại trái phiếu Chính phủ của hợp đồng mua, bán lại trái phiếu Chính phủ vào chi phí, ghi:
+Nợ TK 635 - Chi phí tài chính (đơn vị khác công ty chứng khoán)
+Có TK 171 - Giao dịch mua, bán lại trái phiếu Chính phủ (thời gian phân bổ phù hợp với thời gian của hợp đồng).
+c) Khi kết thúc thời hạn hợp đồng mua, bán lại trái phiếu Chính phủ, công ty nhận lại chứng khoán và thanh toán tiền ghi trong hợp đồng mua, bán lại trái phiếu Chính phủ, ghi:
+Nợ TK 171 - Giao dịch mua, bán lại trái phiếu Chính phủ 
+Có các TK 111, 112 (theo giá mua lại ghi trong hợp đồng).
+d) Khi bên mua thanh toán cho bên bán số coupon mà bên mua nhận hộ bên bán tại (các) thời điểm nằm trong thời hạn hợp đồng, bên bán ghi:
+	Nợ các TK 111, 112, 138
+Có TK 515 - Doanh thu hoạt động tài chính (đơn vị khác công ty chứng khoán) (số coupon của trái phiếu).
+3.2. Kế toán đối với bên mua trái phiếu Chính phủ theo hợp đồng mua bán lại (Repo)
+a) Khi hợp đồng có hiệu lực, căn cứ vào chứng từ xuất tiền và các chứng từ khác, ghi:
+Nợ TK 171 - Giao dịch mua, bán lại trái phiếu Chính phủ 
+Có các TK 111, 112 (số tiền phải trả theo giá mua).
+b) Định kỳ, bên mua phân bổ số chênh lệch giữa giá bán lại và giá mua trái phiếu Chính phủ của hợp đồng mua bán lại trái phiếu Chính phủ vào doanh thu, ghi:
+Nợ TK 171 - Giao dịch mua, bán lại trái phiếu Chính phủ 
+Có TK 515 - Doanh thu hoạt động tài chính (đơn vị khác công ty chứng khoán) (phân bổ theo thời gian của hợp đồng).
+c) Khi nhận được coupon của trái phiếu của bên bán tại (các) thời điểm nằm trong thời hạn hợp đồng, ghi:
+Nợ các TK 111, 112,...
+Có TK 338 - Phải trả, phải nộp khác (3388). 
+Đồng thời thực hiện các thủ tục thanh toán lại số coupon của trái phiếu của bên bán tại (các) thời điểm nằm trong thời hạn hợp đồng mà bên mua nhận hộ, ghi:
+Nợ TK 338 - Phải trả, phải nộp khác 
+Có các TK 111, 112...
+d) Khi kết thúc thời hạn của hợp đồng, ghi:
+	Nợ các TK 111, 112, 138
+Có TK 171 - Giao dịch mua, bán lại trái phiếu Chính phủ.
+
+NGUYÊN TẮC KẾ TOÁN
+TÀI SẢN CỐ ĐỊNH, BẤT ĐỘNG SẢN ĐẦU TƯ
+VÀ CHI PHÍ ĐẦU TƯ XÂY DỰNG CƠ BẢN DỞ DANG
+
+1. Tài sản cố định, bất động sản đầu tư và chi phí đầu tư xây dựng cơ bản dở dang phải được theo dõi, quyết toán, quản lý và sử dụng theo đúng quy định của pháp luật liên quan hiện hành. 
+2. Doanh nghiệp phải theo dõi chi tiết nguồn hình thành TSCĐ để phân bổ giá trị khấu hao/hao mòn TSCĐ cho phù hợp theo nguyên tắc:
+- Đối với TSCĐ liên quan đến hoạt động sản xuất, kinh doanh thì hao mòn được tính vào chi phí sản xuất, kinh doanh;
+- Đối với TSCĐ hình thành từ các Quỹ phúc lợi, Quỹ phát triển khoa học và công nghệ thì hao mòn được ghi giảm các quỹ hình thành TSCĐ đó.
+3. Kế toán phân loại TSCĐ và BĐSĐT theo mục đích sử dụng. Trường hợp một tài sản được sử dụng cho nhiều mục đích, ví dụ một tòa nhà hỗn hợp vừa dùng để làm văn phòng làm việc, vừa để cho thuê và một phần để bán thì doanh nghiệp phải ước tính giá trị hợp lý của từng bộ phận hoặc phân bổ theo tiêu thức khác hợp lý hơn để ghi nhận cho phù hợp với mục đích sử dụng thực tế của doanh nghiệp. Trường hợp một công trình có một số hạng mục sử dụng chung (như thang máy, hệ thống điều hòa, hầm để xe,...) mà một phần để sử dụng, một phần để cho thuê thì doanh nghiệp được phân loại các tài sản dùng chung này là TSCĐ hoặc BĐSĐT theo những tiêu thức phù hợp nhất với từng công trình của doanh nghiệp.
+- Trường hợp một bộ phận trọng yếu hoặc phần lớn các bộ phận của tài sản được sử dụng cho một mục đích cụ thể nào đó khác với mục đích sử dụng của các bộ phận còn lại thì doanh nghiệp căn cứ vào mức độ trọng yếu có thể phân loại toàn bộ tài sản theo bộ phận trọng yếu đó;
+- Trường hợp có sự thay đổi về chức năng sử dụng của các bộ phận của tài sản thì doanh nghiệp được tái phân loại tài sản theo mục đích sử dụng theo quy định của các chuẩn mực kế toán Việt Nam có liên quan.
+4. Khi doanh nghiệp mua TSCĐ được nhận kèm thêm sản phẩm, thiết bị, phụ tùng thay thế,... thì phải phân bổ giá phí cho cả TSCĐ chính mua về và các tài sản được nhận kèm theo giá trị hợp lý tương ứng của từng tài sản tại ngày mua hoặc doanh nghiệp phải xác định và ghi nhận riêng các tài sản được tặng kèm theo giá trị hợp lý (giá trị thị trường của tài sản, giá trị của tài sản tương tự,...) và trừ khỏi giá mua để xác định nguyên giá TSCĐ chính mua về tùy theo phương pháp nào phù hợp hơn với doanh nghiệp. Trường hợp doanh nghiệp mua TSCĐ được nhận kèm thêm thiết bị, phụ tùng thay thế chuyên dùng mà các tài sản này chỉ có thể sử dụng đi kèm với TSCĐ chính để dự phòng TSCĐ chính bị hỏng đột ngột (có nghĩa là loại thiết bị, phụ tùng thay thế này sẽ không còn giá trị sử dụng khi TSCĐ chính được thanh lý, nhượng bán hoặc khấu hao hết) thì doanh nghiệp không phải xác định và ghi nhận riêng giá trị thiết bị, phụ tùng thay thế này nhưng phải mở sổ theo dõi chi tiết về số lượng, tính chất của các tài sản được tặng kèm này và trình bày trên Thuyết minh Báo cáo tài chính.
+5. Trường hợp doanh nghiệp mua TSCĐ, BĐSĐT được thanh toán theo phương thức trả chậm, trả góp: 
+- Nguyên giá TSCĐ, BĐSĐT được xác định theo giá mua TSCĐ, BĐSĐT trả tiền ngay cộng (+) các chi phí liên quan trực tiếp được tính vào nguyên giá TSCĐ tính đến thời điểm đưa tài sản vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp (không bao gồm các khoản thuế được hoàn lại). Khoản lãi trả chậm, trả góp được hạch toán vào chi phí tài chính của từng kỳ hoặc vốn hóa theo quy định của Chuẩn mực kế toán Việt Nam số 16 - Chi phí đi vay. 
++ Trường hợp các khoản lãi trả chậm, trả góp được quy định cụ thể trên hợp đồng thì doanh nghiệp phải căn cứ vào hợp đồng để xác định và tách riêng phần lãi trả chậm, trả góp của từng kỳ. 
++ Trường hợp các khoản lãi trả chậm, trả góp không được quy định cụ thể trên hợp đồng và thời hạn trả chậm, trả góp trên 12 tháng thì doanh nghiệp bắt buộc phải tách riêng phần lãi trả chậm, trả góp. Theo đó, doanh nghiệp phải căn cứ vào khoản chênh lệch giữa giá mua trả chậm, trả góp với giá mua TSCĐ, BĐSĐT trả tiền ngay để xác định lãi suất ngầm định, phần lãi trả chậm, trả góp để ghi nhận và hạch toán. 
+- Định kỳ, căn cứ vào lãi trả chậm, trả góp để doanh nghiệp ghi nhận vào nợ phải trả người bán tương ứng với chi phí tài chính của từng kỳ. Thông tin về tiền lãi trả chậm, trả góp khi mua TSCĐ, BĐSĐT phải được theo dõi chi tiết trên sổ kế toán và thuyết minh trên Báo cáo tài chính của doanh nghiệp.
+6. Khi đem TSCĐ đi góp vốn thì việc xác định giá trị vốn góp phải tuân thủ theo quy định của pháp luật doanh nghiệp và các bên phải chịu trách nhiệm trước pháp luật về việc cố ý định giá hoặc xác định không đúng giá trị các TSCĐ mang đi góp vốn.
+7. Trường hợp doanh nghiệp được giao quản lý tài sản kết cấu hạ tầng, các tài sản công khác không tính thành phần vốn nhà nước tại doanh nghiệp (bao gồm cả tài sản kết cấu hạ tầng, các tài sản công khác doanh nghiệp được giao quản lý có trực tiếp khai thác, sử dụng và không trực tiếp khai thác, sử dụng) thì áp dụng các tài khoản kế toán, ghi sổ kế toán và lập báo cáo đối với các tài sản này theo quy định tại pháp luật hiện hành liên quan.
+8. Kế toán TSCĐ, BĐSĐT và chi phí đầu tư XDCB liên quan đến ngoại tệ được thực hiện theo hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái. 
+TÀI KHOẢN 211 - TÀI SẢN CỐ ĐỊNH HỮU HÌNH
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm toàn bộ TSCĐ hữu hình của doanh nghiệp theo nguyên giá.
+b) Tài sản cố định hữu hình là những tài sản có hình thái vật chất do doanh nghiệp nắm giữ để sử dụng cho hoạt động sản xuất, kinh doanh phù hợp với tiêu chuẩn ghi nhận TSCĐ hữu hình.
+c) Trường hợp TSCĐ hữu hình có kết cấu độc lập hoặc nhiều bộ phận tài sản riêng lẻ liên kết với nhau thành một hệ thống để cùng thực hiện được một hay một số chức năng nhất định (trong đó thời gian sử dụng của mỗi bộ phận cấu thành có thể khác nhau) thì tùy theo yêu cầu quản lý, sử dụng TSCĐ của đơn vị, doanh nghiệp có thể coi cả hệ thống hoặc mỗi bộ phận tài sản là một TSCĐ hữu hình độc lập nếu cả hệ thống hoặc mỗi bộ phận tài sản thỏa mãn đồng thời bốn tiêu chuẩn sau đây:
+- Chắc chắn thu được lợi ích kinh tế trong tương lai từ việc sử dụng tài sản đó;
+- Nguyên giá tài sản phải được xác định một cách tin cậy;
+- Có thời gian sử dụng ước tính trên 1 năm;
+- Có đủ tiêu chuẩn giá trị theo quy định hiện hành.
+d) Các tài sản sinh học là cây lâu năm cho sản phẩm định kỳ và súc vật làm việc được kế toán là TSCĐ hữu hình. Việc xác định, phân loại các loại tài sản sinh học của doanh nghiệp được hướng dẫn theo quy định tại Tài khoản 215 - Tài sản sinh học. 
+đ) Giá trị TSCĐ hữu hình được phản ánh trên Tài khoản 211 - Tài sản cố định hữu hình theo nguyên giá. Doanh nghiệp phải theo dõi chi tiết nguyên giá của từng TSCĐ. Tùy thuộc vào nguồn hình thành, nguyên giá TSCĐ hữu hình được xác định như sau:
+đ1) Nguyên giá TSCĐ hữu hình do mua sắm bao gồm: Giá mua (trừ các khoản được chiết khấu thương mại, giảm giá), các khoản thuế phát sinh khi mua TSCĐ (không bao gồm các khoản thuế được hoàn lại) và các chi phí liên quan trực tiếp đến việc đưa tài sản đến vị trí và trạng thái cần thiết để nó có khả năng hoạt động theo cách thức dự định của doanh nghiệp như chi phí chuẩn bị mặt bằng, chi phí vận chuyển và bốc xếp ban đầu, chi phí lắp đặt, chạy thử (trừ (-) các khoản thu hồi về sản phẩm, phế liệu do chạy thử), chi phí chuyên gia và các chi phí liên quan trực tiếp khác theo quy định của pháp luật. Chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang được vốn hóa theo quy định của Chuẩn mực kế toán Việt Nam số 16 - Chi phí đi vay. 
+Đối với TSCĐ là bất động sản: Khi mua sắm bất động sản, doanh nghiệp phải tách riêng giá trị quyền sử dụng đất và tài sản trên đất theo quy định của pháp luật. Phần giá trị tài sản trên đất được ghi nhận là nguyên giá TSCĐ hữu hình; Giá trị quyền sử dụng đất được ghi nhận là nguyên giá TSCĐ vô hình hoặc chi phí chờ phân bổ tùy từng trường hợp theo quy định của pháp luật.
+đ2) Nguyên giá TSCĐ hữu hình hình thành do đầu tư xây dựng cơ bản hoàn thành
+- Nguyên giá TSCĐ theo phương thức giao thầu: Là giá quyết toán công trình xây dựng theo quy định của pháp luật về quản lý chi phí đầu tư xây dựng, các chi phí khác có liên quan trực tiếp và lệ phí trước bạ (nếu có). Chi phí đi vay liên quan trực tiếp đến quá trình đầu tư xây dựng TSCĐ được tính vào nguyên giá TSCĐ (được vốn hóa) khi thỏa mãn các điều kiện quy định tại Chuẩn mực kế toán Việt Nam số 16 - Chi phí đi vay.
+- Nguyên giá cây lâu năm cho sản phẩm định kỳ và súc vật làm việc là toàn bộ các chi phí thực tế doanh nghiệp đã chi ra để mua, chăm sóc, nuôi trồng vườn cây, súc vật làm việc đó từ lúc bắt đầu hình thành tài sản cho đến giai đoạn trưởng thành (sẵn sàng cho sản phẩm hoặc ở trạng thái cần thiết theo yêu cầu kỹ thuật để có khả năng hoạt động theo cách thức dự định của doanh nghiệp) và các chi phí khác trực tiếp có liên quan. 
+- TSCĐ hữu hình tự xây dựng hoặc tự sản xuất: 
++ Nguyên giá TSCĐ hữu hình tự xây dựng là giá trị quyết toán công trình theo quy định của pháp luật về quản lý chi phí đầu tư xây dựng cộng (+) các chi phí khác có liên quan trực tiếp cộng (+) lệ phí trước bạ (nếu có) khi đưa công trình vào sử dụng. Trường hợp TSCĐ đã đưa vào sử dụng nhưng chưa thực hiện quyết toán thì doanh nghiệp hạch toán tăng nguyên giá theo giá tạm tính và điều chỉnh sau khi quyết toán công trình hoàn thành.
++ Nguyên giá TSCĐ hữu hình tự sản xuất là giá thành thực tế của TSCĐ hữu hình cộng (+) các chi phí liên quan trực tiếp đến việc đưa TSCĐ vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp hoặc theo quy định của pháp luật về quản lý chi phí đầu tư xây dựng. Chi phí đi vay liên quan trực tiếp đến quá trình đầu tư xây dựng TSCĐ được tính vào nguyên giá TSCĐ (được vốn hóa) khi thỏa mãn các điều kiện được quy định tại Chuẩn mực kế toán Việt Nam số 16 - Chi phí đi vay.
+- Doanh nghiệp không được tính vào nguyên giá TSCĐ hữu hình các khoản lãi nội bộ và các khoản chi phí không hợp lý như nguyên liệu, vật liệu lãng phí, lao động hoặc các khoản chi phí khác sử dụng vượt quá mức bình thường trong quá trình tự xây dựng hoặc tự sản xuất.
+đ3) Nguyên giá TSCĐ hữu hình mua dưới hình thức trao đổi với một TSCĐ hữu hình không tương tự hoặc tài sản khác, được xác định theo giá trị hợp lý của TSCĐ hữu hình nhận về hoặc giá trị hợp lý của tài sản đem trao đổi, sau khi điều chỉnh các khoản tiền hoặc tương đương tiền trả thêm hoặc thu về cộng (+) các chi phí liên quan trực tiếp đến việc đưa tài sản vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp (không bao gồm các khoản thuế được hoàn lại). 
+Nguyên giá TSCĐ hữu hình mua dưới hình thức trao đổi với một TSCĐ hữu hình tương tự hoặc có thể hình thành do được bán để đổi lấy quyền sở hữu một tài sản tương tự (tài sản tương tự là tài sản có công dụng tương tự, trong cùng lĩnh vực kinh doanh và có giá trị tương đương). Trong trường hợp này không có bất kỳ khoản lãi hay lỗ nào được ghi nhận trong quá trình trao đổi. Nguyên giá TSCĐ nhận về được tính bằng giá trị còn lại của TSCĐ đem trao đổi. 
+đ4) Nguyên giá TSCĐ hữu hình được cấp, được điều chuyển đến bao gồm: Giá trị còn lại trên sổ kế toán của TSCĐ ở doanh nghiệp cấp, doanh nghiệp điều chuyển hoặc giá trị theo đánh giá thực tế của Hội đồng giao nhận hoặc tổ chức định giá chuyên nghiệp theo quy định của pháp luật và các chi phí liên quan trực tiếp như chi phí vận chuyển, bốc dỡ, nâng cấp, lắp đặt, chạy thử, lệ phí trước bạ (nếu có)... mà bên nhận tài sản phải chi ra tính đến thời điểm đưa TSCĐ vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp. 
+Riêng nguyên giá TSCĐ hữu hình điều chuyển giữa các đơn vị trực thuộc trong cùng doanh nghiệp là nguyên giá phản ánh ở đơn vị bị điều chuyển phù hợp với bộ hồ sơ của TSCĐ đó. Đơn vị nhận TSCĐ căn cứ vào nguyên giá, số khấu hao lũy kế, giá trị còn lại trên sổ kế toán và bộ hồ sơ của TSCĐ đó để phản ánh vào sổ kế toán. Các chi phí có liên quan tới việc điều chuyển TSCĐ giữa các đơn vị trực thuộc không được hạch toán tăng nguyên giá TSCĐ mà hạch toán vào chi phí sản xuất, kinh doanh trong kỳ.
+đ5) Nguyên giá TSCĐ hữu hình nhận góp vốn, nhận lại vốn góp là giá trị do các thành viên, cổ đông hoặc tổ chức thẩm định giá định giá theo quy định của pháp luật.
+đ6) Nguyên giá TSCĐ phát hiện thừa, được tài trợ, biếu, tặng: Là giá trị theo đánh giá thực tế của Hội đồng giao nhận hoặc tổ chức định giá chuyên nghiệp và các chi phí mà bên nhận phải chi ra tính đến thời điểm đưa TSCĐ vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp như chi phí vận chuyển, bốc dỡ, lắp đặt, chạy thử, lệ phí trước bạ,... (nếu có).
+đ7) Nguyên giá TSCĐ mua bằng ngoại tệ được thực hiện theo hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái.
+e) Doanh nghiệp chỉ được thay đổi nguyên giá TSCĐ hữu hình trong các trường hợp sau đây:
+- Xây lắp, trang bị thêm hoặc nâng cấp làm tăng năng lực hoặc kéo dài thời gian sử dụng cho TSCĐ;
+- Thay đổi một hoặc một số bộ phận của TSCĐ hữu hình làm tăng thời gian sử dụng hữu ích hoặc làm tăng công suất sử dụng của chúng;
+- Cải tiến bộ phận của TSCĐ hữu hình làm tăng đáng kể chất lượng sản phẩm sản xuất ra;
+- Áp dụng quy trình công nghệ sản xuất mới làm giảm chi phí hoạt động của TSCĐ so với trước;
+- Tháo dỡ một hoặc một số bộ phận của TSCĐ;
+- Đánh giá lại TSCĐ theo quyết định của Nhà nước (nếu có);
+- Các trường hợp khác theo quy định của pháp luật.
+Mọi trường hợp tăng, giảm TSCĐ hữu hình đều phải lập hồ sơ TSCĐ (ví dụ như biên bản giao nhận, biên bản thanh lý TSCĐ,...) và phải thực hiện các thủ tục theo quy định để phục vụ cho công tác kế toán TSCĐ.
+g) Các chi phí sửa chữa, bảo dưỡng TSCĐ phát sinh thường xuyên hằng kỳ để TSCĐ hoạt động bình thường được ghi nhận vào chi phí sản xuất kinh doanh trong kỳ. Các TSCĐ theo yêu cầu kỹ thuật phải được sửa chữa, bảo dưỡng định kỳ (như tua bin nhà máy điện, động cơ máy bay...) thì doanh nghiệp được hạch toán chi phí phát sinh vào chi phí chờ phân bổ và định kỳ phân bổ dần vào chi phí sản xuất, kinh doanh cho đến kỳ bảo dưỡng tiếp theo. Đối với các chi phí phát sinh sau ghi nhận ban đầu để nâng cấp, cải tạo làm tăng năng lực hoặc kéo dài thời gian sử dụng của TSCĐ (tăng lợi ích kinh tế của TSCĐ) thì được hạch toán tăng nguyên giá TSCĐ.
+h) TSCĐ hữu hình cho thuê hoạt động vẫn phải trích khấu hao theo quy định của chuẩn mực kế toán Việt Nam và cơ chế tài chính hiện hành.
+i) TSCĐ hữu hình phải được theo dõi chi tiết cho từng đối tượng ghi TSCĐ, theo từng loại TSCĐ và địa điểm bảo quản, sử dụng, quản lý TSCĐ.
+2. Kết cấu và nội dung phản ánh của Tài khoản 211 - TSCĐ hữu hình
+Bên Nợ:
+- Nguyên giá của TSCĐ hữu hình tăng do XDCB hoàn thành bàn giao đưa vào sử dụng, do mua sắm, do nhận vốn góp, do được cấp, do được tặng biếu, tài trợ,...;
+- Điều chỉnh tăng nguyên giá của TSCĐ do xây lắp, trang bị thêm hoặc do cải tạo nâng cấp;
+- Điều chỉnh tăng nguyên giá TSCĐ do đánh giá lại.
+Bên Có:
+- Nguyên giá của TSCĐ hữu hình giảm do điều chuyển cho đơn vị khác; do nhượng bán, thanh lý hoặc đem đi góp vốn vào đơn vị khác,...;
+- Nguyên giá của TSCĐ giảm do tháo bớt một hoặc một số bộ phận;
+- Điều chỉnh giảm nguyên giá TSCĐ do đánh giá lại.
+Số dư bên Nợ: 
+Nguyên giá TSCĐ hữu hình hiện có ở doanh nghiệp tại thời điểm kết thúc kỳ kế toán.
+Doanh nghiệp có thể mở các tài khoản chi tiết để theo dõi các loại TSCĐ hữu hình (như nhà cửa, vật kiến trúc, máy móc thiết bị; phương tiện vận tải, truyền dẫn; thiết bị, dụng cụ quản lý; cây lâu năm cho sản phẩm định kỳ;...) cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Kế toán tăng TSCĐ hữu hình
+a) Trường hợp nhận vốn góp của chủ sở hữu hoặc nhận vốn được cấp bằng TSCĐ hữu hình, ghi: 
+Nợ TK 211 - TSCĐ hữu hình
+Có TK 411 - Vốn đầu tư của chủ sở hữu. 
+b) Trường hợp TSCĐ hữu hình được mua sắm về dùng ngay (kể cả TSCĐ mua về chưa sử dụng nhưng đã ở trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp):
+- Khi mua sắm TSCĐ hữu hình, căn cứ các chứng từ có liên quan, doanh nghiệp xác định nguyên giá của TSCĐ, lập hồ sơ kế toán, lập Biên bản giao nhận TSCĐ, ghi:
+Nợ TK 211 - TSCĐ hữu hình (giá mua chưa có thuế GTGT) 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có các TK 111, 112, 331, 341, 352,...
+- Trường hợp mua sắm, đầu tư xây dựng TSCĐ hữu hình được nhận kèm thiết bị, phụ tùng thay thế,... ghi:
+Nợ TK 211 - TSCĐ hữu hình 
+Nợ các TK 152, 153,... (thiết bị, phụ tùng thay thế) (nếu có)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có các TK 111, 112, 331, 341, 352,...
+c) Trường hợp mua TSCĐ hữu hình theo phương thức trả chậm, trả góp:
+- Khi mua TSCĐ hữu hình theo phương thức trả chậm, trả góp và đưa về sử dụng ngay cho SXKD, ghi:
+Nợ TK 211 - TSCĐ hữu hình (ghi theo giá mua trả tiền ngay)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có các TK 111, 112, 331,... 
+- Định kỳ, phản ánh khoản lãi trả chậm, trả góp phải trả cho người bán từng kỳ, ghi:
+Nợ TK 635 - Chi phí tài chính
+		Có TK 331 - Phải trả cho người bán.
+- Định kỳ, khi trả tiền cho người bán bao gồm cả nợ gốc và tiền lãi trả chậm, trả góp, ghi:
+	Nợ TK 331 - Phải trả cho người bán
+		Có các TK 111, 112
+d) Trường hợp doanh nghiệp được hỗ trợ, tài trợ, biếu, tặng TSCĐ hữu hình đưa vào sử dụng ngay cho SXKD, ghi:
+Nợ TK 211 - TSCĐ hữu hình 
+Có TK 711 - Thu nhập khác (nếu TSCĐ được hỗ trợ, tài trợ, biếu, tặng không kèm theo điều kiện và không thuộc trường hợp ghi tăng vốn đầu tư của chủ sở hữu theo quyết định của cấp có thẩm quyền)
+Có TK 3387 - Doanh thu chờ phân bổ (nếu TSCĐ được hỗ trợ, tài trợ, biếu, tặng có kèm theo điều kiện)
+Có TK 4118 - Vốn khác (nếu được phép ghi tăng vốn đầu tư của chủ sở hữu theo quyết định của cấp có thẩm quyền).
+Các chi phí khác liên quan trực tiếp đến TSCĐ hữu hình được tài trợ, biếu, tặng tính vào nguyên giá, ghi:
+Nợ TK 211 - TSCĐ hữu hình 
+Có các TK 111, 112, 331,...
+đ) Trường hợp TSCĐ hữu hình tự sản xuất:
+Khi sử dụng sản phẩm do doanh nghiệp tự sản xuất để chuyển thành TSCĐ hữu hình, ghi:
+Nợ TK 211 - TSCĐ hữu hình
+Có TK 155 - Sản phẩm (nếu xuất kho ra sử dụng)
+Có TK 154 - Chi phí SXKD dở dang (đưa vào sử dụng ngay)
+Có TK 3331 - Thuế GTGT phải nộp (nếu có)
+e) Trường hợp TSCĐ hữu hình mua dưới hình thức trao đổi:
+- TSCĐ hữu hình mua dưới hình thức trao đổi với TSCĐ hữu hình tương tự và đưa vào sử dụng ngay cho SXKD, ghi:
+Nợ TK 211 - TSCĐ hữu hình (nguyên giá TSCĐ hữu hình nhận về ghi theo giá trị còn lại của TSCĐ đưa đi trao đổi)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị khấu hao lũy kế của TSCĐ đưa đi trao đổi)
+	Có TK 211 - TSCĐ hữu hình (nguyên giá TSCĐ đưa đi trao đổi).
+- TSCĐ hữu hình mua dưới hình thức trao đổi với TSCĐ hữu hình không tương tự:
++ Khi giao TSCĐ hữu hình đưa đi trao đổi, ghi:
+Nợ TK 811 - Chi phí khác (giá trị còn lại của TSCĐ đưa đi trao đổi)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị đã khấu hao)
+Có TK 211 - TSCĐ hữu hình (nguyên giá).
+Đồng thời ghi tăng thu nhập do trao đổi TSCĐ:
+Nợ TK 131 - Phải thu của khách hàng (tổng giá thanh toán)
+Có TK 711 - Thu nhập khác (giá trị hợp lý của TSCĐ đưa đi  trao đổi)
+Có TK 3331 - Thuế GTGT phải nộp (TK 33311) (nếu có).
++ Khi nhận được TSCĐ hữu hình do trao đổi, ghi:
+Nợ TK 211 - TSCĐ hữu hình (giá trị hợp lý của TSCĐ nhận về)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có TK 131 - Phải thu của khách hàng (tổng giá thanh toán).
++ Trường hợp phải thu thêm tiền do giá trị của TSCĐ đưa đi trao đổi lớn hơn giá trị của TSCĐ nhận được do trao đổi, khi nhận được tiền của bên có TSCĐ trao đổi, ghi:
+Nợ các TK 111, 112 (số tiền đã thu thêm)
+Có TK 131 - Phải thu của khách hàng.
++ Trường hợp phải trả thêm tiền do giá trị hợp lý của TSCĐ đưa đi trao đổi nhỏ hơn giá trị hợp lý của TSCĐ nhận được do trao đổi, khi trả tiền cho bên có TSCĐ trao đổi, ghi:
+Nợ TK 131 - Phải thu của khách hàng
+Có các TK 111, 112 (số tiền phải trả thêm)
+g) Trường hợp mua TSCĐ hữu hình là nhà cửa, vật kiến trúc gắn liền với quyền sử dụng đất, đưa vào sử dụng ngay cho hoạt động SXKD, ghi:
+Nợ TK 211 - TSCĐ hữu hình (nguyên giá nhà cửa, vật kiến trúc)
+Nợ các TK 242, 213,... (nguyên giá quyền sử dụng đất)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331,...
+h) Trường hợp TSCĐ hữu hình tăng do đầu tư XDCB hoàn thành: Trường hợp công trình hoặc hạng mục công trình XDCB hoàn thành đã bàn giao đưa vào sử dụng, nhưng chưa được duyệt quyết toán vốn đầu tư, thì doanh nghiệp căn cứ vào nguyên giá TSCĐ theo giá tạm tính để hạch toán tăng TSCĐ (làm cơ sở tính và trích khấu hao TSCĐ đưa vào sử dụng). Sau khi công trình hoặc hạng mục công trình được phê duyệt quyết toán, nếu có chênh lệch so với giá trị TSCĐ đã tạm tính thì doanh nghiệp thực hiện điều chỉnh tăng, giảm số chênh lệch vào nguyên giá TSCĐ.
+- Trường hợp quá trình đầu tư XDCB được hạch toán trên cùng hệ thống sổ kế toán của doanh nghiệp, khi công tác XDCB hoàn thành nghiệm thu, bàn giao đưa tài sản vào sử dụng cho sản xuất, kinh doanh, ghi:
+Nợ TK 211 - TSCĐ hữu hình (nguyên giá TSCĐ hình thành qua XDCB)
+Nợ các TK 152, 153, 242,... (vật liệu, công cụ, dụng cụ nhập kho hoặc đưa vào sử dụng ngay)
+Có TK 241 - Xây dựng cơ bản dở dang.
+- Trường hợp quá trình đầu tư XDCB không hạch toán trên cùng hệ thống sổ kế toán của doanh nghiệp (doanh nghiệp chủ đầu tư có BQLDA tổ chức kế toán riêng để theo dõi quá trình đầu tư XDCB), khi nhận bàn giao công trình từ BQLDA theo giá tạm tính, ghi:
+Nợ TK 211 - TSCĐ hữu hình (nguyên giá TSCĐ hình thành qua XDCB)
+Nợ các TK 152, 153, 242,... (vật liệu, công cụ, dụng cụ nhập kho hoặc đưa vào sử dụng ngay)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có TK 136 - Phải thu nội bộ
+Có các TK 331, 341,... (nhận nợ phải trả nếu có).
+- Trường hợp sau khi quyết toán được duyệt, nếu có chênh lệch giữa giá quyết toán và giá tạm tính, doanh nghiệp điều chỉnh tăng, giảm nguyên giá TSCĐ hữu hình, ghi:
++ Trường hợp điều chỉnh giảm nguyên giá TSCĐ, ghi:
+	Nợ TK 138 - Phải thu khác (số phải thu hồi không được quyết toán)
+Có TK 211 - TSCĐ hữu hình.
++ Trường hợp điều chỉnh tăng nguyên giá TSCĐ, ghi:	
+	Nợ TK 211 - TSCĐ hữu hình
+Có các TK liên quan. 
+i) TSCĐ hữu hình nhận được do điều động trong nội bộ doanh nghiệp:
+- Đơn vị điều động TSCĐ hữu hình, ghi:
+Nợ các TK 1361, 411 (giá trị còn lại)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+Có TK 211 - TSCĐ hữu hình (nguyên giá)
+- Đơn vị được nhận TSCĐ hữu hình, ghi:
+Nợ TK 211 - TSCĐ hữu hình (nguyên giá)
+Có TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+Có các TK 336, 411 (giá trị còn lại).
+k) Trường hợp đầu tư, mua sắm TSCĐ bằng quỹ phúc lợi, khi hoàn thành đưa vào sử dụng cho hoạt động phúc lợi, ghi:
+Nợ TK 211 - TSCĐ hữu hình (tổng giá thanh toán)
+Có các TK 111, 112, 331,...
+- Đồng thời, ghi:
+Nợ TK 3532 - Quỹ phúc lợi
+Có TK 3533 - Quỹ phúc lợi đã hình thành TSCĐ.
+l) Chi phí phát sinh sau ghi nhận ban đầu liên quan đến nâng cấp, cải tạo TSCĐ hữu hình:
+- Đối với sửa chữa bảo dưỡng thường xuyên, căn cứ vào chứng từ có liên quan, ghi:
+Nợ các TK 623, 627, 641, 642,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112,...
+- Đối với sửa chữa, bảo dưỡng định kỳ TSCĐ:
++ Khi phát sinh chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ, căn cứ vào chứng từ có liên quan, ghi:
+Nợ TK 241 - Xây dựng cơ bản dở dang (2413)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có các TK 112, 152, 331, 334,...
++ Khi công việc sửa chữa, bảo dưỡng định kỳ TSCĐ hoàn thành đưa vào sử dụng, ghi:
+Nợ TK 242 - Chi phí chờ phân bổ 
+Có TK 241 - Xây dựng cơ bản dở dang (2413).
++ Định kỳ, phân bổ chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ vào chi phí sản xuất, kinh doanh trong kỳ, ghi:
+Nợ các TK 623, 627, 641, 642,...
+Có TK 242 - Chi phí chờ phân bổ 
+- Đối với nâng cấp, cải tạo TSCĐ:
++ Khi phát sinh chi phí cải tạo, nâng cấp TSCĐ hữu hình, căn cứ vào chứng từ có liên quan, ghi:
+Nợ TK 241 - Xây dựng cơ bản dở dang (2414)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có các TK 112, 152, 331, 334,...
++ Khi công việc cải tạo, nâng cấp TSCĐ hoàn thành đưa vào sử dụng:
+Nợ TK 211 - TSCĐ hữu hình
+Có TK 241 - Xây dựng cơ bản dở dang (2414).
+3.2. Kế toán giảm TSCĐ hữu hình
+TSCĐ hữu hình của doanh nghiệp giảm do nhượng bán, thanh lý, mất mát, phát hiện thiếu khi kiểm kê, đem đi góp vốn, tháo dỡ một hoặc một số bộ phận... Trong mọi trường hợp giảm TSCĐ hữu hình, doanh nghiệp phải thực hiện đầy đủ các thủ tục, xác định đúng những khoản thiệt hại và thu nhập (nếu có). Căn cứ vào các chứng từ liên quan, doanh nghiệp ghi sổ theo từng trường hợp cụ thể như sau:
+3.2.1. Trường hợp nhượng bán TSCĐ dùng vào sản xuất, kinh doanh: TSCĐ nhượng bán thường là những TSCĐ không cần dùng hoặc không còn có nhu cầu sử dụng hoặc xét thấy sử dụng không có hiệu quả,... Khi nhượng bán TSCĐ hữu hình, doanh nghiệp phải thực hiện đầy đủ các thủ tục cần thiết theo quy định của pháp luật. Căn cứ vào biên bản giao nhận TSCĐ và các chứng từ liên quan đến nhượng bán TSCĐ:
+a) Trường hợp nhượng bán TSCĐ dùng cho hoạt động sản xuất, kinh doanh, ghi:
+- Phản ánh thu nhập về nhượng bán TSCĐ, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 711 - Thu nhập khác (giá bán chưa có thuế GTGT)
+Có TK 3331 - Thuế giá trị gia tăng phải nộp (33311) (nếu có).
+	- Ghi giảm TSCĐ đã nhượng bán, căn cứ Biên bản giao nhận TSCĐ:
+Nợ TK 214 - Hao mòn TSCĐ (2141) (giá trị hao mòn lũy kế) 
+Nợ TK 811 - Chi phí khác (giá trị còn lại)
+Có TK 211 - TSCĐ hữu hình (nguyên giá).
+- Khi phát sinh các chi phí liên quan đến nhượng bán TSCĐ, ghi:
+Nợ TK 811 - Chi phí khác
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331,...
+b) Trường hợp nhượng bán TSCĐ hữu hình dùng cho hoạt động phúc lợi:
+- Căn cứ Biên bản giao nhận TSCĐ để ghi giảm TSCĐ nhượng bán, ghi:
+Nợ TK 353 - Quỹ khen thưởng, phúc lợi (3533) (giá trị còn lại)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+Có TK 211 - TSCĐ hữu hình (nguyên giá).
+- Đồng thời phản ánh số thu về nhượng bán TSCĐ, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 353 - Quỹ khen thưởng, phúc lợi (3532)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3331) (nếu có)
+- Phản ánh số chi về nhượng bán TSCĐ, ghi:
+Nợ TK 353 - Quỹ khen thưởng, phúc lợi (3532)
+Có các TK 111, 112,...
+3.2.2. Trường hợp thanh lý TSCĐ: 
+TSCĐ thanh lý là những TSCĐ hư hỏng không thể tiếp tục sử dụng được, những TSCĐ lạc hậu về kỹ thuật hoặc không phù hợp với yêu cầu sản xuất, kinh doanh. Khi thanh lý TSCĐ, doanh nghiệp phải ra quyết định thanh lý, thành lập Hội đồng thanh lý TSCĐ. Hội đồng thanh lý TSCĐ có nhiệm vụ tổ chức thực hiện việc thanh lý TSCĐ theo đúng trình tự, thủ tục quy định của pháp luật, chế độ quản lý TSCĐ của doanh nghiệp và lập “Biên bản thanh lý TSCĐ" theo quy định. Căn cứ vào Biên bản thanh lý TSCĐ và các chứng từ có liên quan đến các khoản thu, chi thanh lý TSCĐ,... doanh nghiệp ghi sổ như trường hợp nhượng bán TSCĐ.
+3.2.3. Khi đem TSCĐ hữu hình góp vốn vào công ty con, công ty liên doanh, liên kết hoặc đầu tư vào đơn vị khác, ghi:
+Nợ các TK 221, 222, 228 (theo giá trị đánh giá lại)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+Nợ TK 811 - Chi phí khác (số chênh lệch giữa giá trị đánh giá lại nhỏ hơn giá trị còn lại của TSCĐ)
+Có TK 211 - TSCĐ hữu hình (nguyên giá)
+Có TK 711 - Thu nhập khác (số chênh lệch giữa giá trị đánh giá lại lớn hơn giá trị còn lại của TSCĐ).
+3.2.4. Kế toán TSCĐ hữu hình phát hiện thừa, thiếu: Mọi trường hợp phát hiện thừa hoặc thiếu TSCĐ đều phải truy tìm nguyên nhân. Căn cứ vào "Biên bản tổng hợp kiểm kê TSCĐ" và kết luận của Hội đồng kiểm kê để hạch toán chính xác, kịp thời, theo từng nguyên nhân cụ thể:
+a) TSCĐ phát hiện thừa:
+Mọi trường hợp phát hiện thừa TSCĐ bất kỳ ở khâu nào trong kinh doanh phải lập biên bản và truy tìm nguyên nhân. Doanh nghiệp căn cứ vào nguyên nhân đã được xác định để xử lý và hạch toán:
+- Nếu TSCĐ thừa phát hiện khi kiểm kê đã xác định được nguyên nhân thì căn cứ nguyên nhân thừa (do nhầm lẫn khi cân, đo, đếm, quên ghi sổ,...) để ghi sổ kế toán. Nếu TSCĐ thừa khi kiểm kê xác định được ngay là của các doanh nghiệp khác thì phải báo ngay cho doanh nghiệp chủ tài sản đó biết. Doanh nghiệp không ghi tăng TSCĐ và không ghi vào bên Có Tài khoản 338 - Phải trả, phải nộp khác mà mở sổ chi tiết theo dõi TSCĐ thừa và trình bày trong phần thuyết minh Báo cáo tài chính. 
+- Nếu TSCĐ thừa chưa xác định được nguyên nhân phải chờ xử lý, phản ánh giá trị TSCĐ thừa chưa xác định được nguyên nhân, ghi:
+Nợ TK 211 - TSCĐ hữu hình
+Có TK 338 - Phải trả, phải nộp khác (3381).
++ Khi có quyết định của cấp có thẩm quyền về xử lý TSCĐ hữu hình thừa chưa rõ nguyên nhân, ghi:
+Nợ TK 338 - Phải trả, phải nộp khác (3381)
+Có các tài khoản liên quan.
+b) TSCĐ phát hiện thiếu:
+Mọi trường hợp phát hiện thiếu hụt, mất mát TSCĐ ở bất kỳ khâu nào trong quá trình hoạt động kinh doanh đều phải lập biên bản và truy tìm nguyên nhân. Doanh nghiệp căn cứ vào quyết định xử lý của cấp có thẩm quyền theo từng nguyên nhân gây ra để xử lý và ghi sổ kế toán:
+- Nếu TSCĐ phát hiện thiếu đã xác định được ngay nguyên nhân thì căn cứ nguyên nhân thiếu (do nhầm lẫn, quên ghi sổ,...) để ghi sổ kế toán.
+- Trường hợp TSCĐ phát hiện thiếu có quyết định xử lý ngay: Căn cứ "Biên bản xử lý TSCĐ thiếu" đã được duyệt và hồ sơ TSCĐ, doanh nghiệp phải xác định chính xác nguyên giá, giá trị hao mòn lũy kế của TSCĐ đó làm căn cứ ghi giảm TSCĐ và xử lý vật chất phần giá trị còn lại của TSCĐ. Tùy thuộc vào quyết định xử lý, ghi:
++ Đối với TSCĐ thiếu dùng vào sản xuất, kinh doanh, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+Nợ các TK 111, 112, 334, 138 (1388) (nếu người có lỗi phải bồi thường) 
+Nợ TK 411 - Vốn đầu tư của chủ sở hữu (nếu được phép ghi giảm vốn) 
+Nợ TK 811 - Chi phí khác (nếu doanh nghiệp chịu tổn thất) 
+Có TK 211 - TSCĐ hữu hình.
++ Đối với TSCĐ thiếu dùng vào hoạt động phúc lợi:
+(+) Phản ánh giảm TSCĐ, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn luỹ kế)
+Nợ TK 3533 - Quỹ phúc lợi đã hình thành TSCĐ (giá trị còn lại)
+Có TK 211 - TSCĐ hữu hình (nguyên giá).
+(+) Đối với phần giá trị còn lại của TSCĐ thiếu phải thu hồi theo quyết định xử lý, ghi:
+Nợ các TK 111, 112, 1388 (nếu người có lỗi phải bồi thường)
+Nợ TK 334 - Phải trả người lao động (nếu trừ vào lương của người lao động)
+Có TK 3532 - Quỹ phúc lợi.
+- Trường hợp TSCĐ phát hiện thiếu nhưng chưa xác định được nguyên nhân, chờ xử lý, ghi:
++ Đối với TSCĐ thiếu dùng vào hoạt động sản xuất, kinh doanh:
+(+) Phản ánh giảm TSCĐ đối với phần giá trị còn lại của TSCĐ thiếu, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (2141) (giá trị hao mòn luỹ kế) 
+Nợ TK 138 - Phải thu khác (1381) (giá trị còn lại) 
+Có TK 211 - TSCĐ hữu hình (nguyên giá).
+(+) Khi có quyết định xử lý giá trị còn lại của TSCĐ thiếu, ghi:
+Nợ các TK 111, 112 (thu được tiền bồi thường)
+Nợ TK 138 - Phải thu khác (1388) (nếu người có lỗi phải bồi thường) 
+Nợ TK 334 - Phải trả người lao động (nếu trừ vào lương của người lao động)
+Nợ TK 411 - Vốn đầu tư của chủ sở hữu (nếu được phép ghi giảm vốn) 
+Nợ TK 811 - Chi phí khác (nếu doanh nghiệp chịu tổn thất) 
+Có TK 138 - Phải thu khác (1381).
++ Đối với TSCĐ thiếu dùng vào hoạt động phúc lợi:
+(+) Phản ánh giảm TSCĐ, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn)
+Nợ TK 3533 - Quỹ phúc lợi đã hình thành TSCĐ (giá trị còn lại)
+Có TK 211 - TSCĐ hữu hình (nguyên giá).
+(+) Đồng thời phản ánh phần giá trị còn lại của TSCĐ thiếu vào Tài khoản 1381 - Tài sản thiếu chờ xử lý, ghi:
+Nợ TK 1381 - Tài sản thiếu chờ xử lý
+Có TK 3532 - Quỹ phúc lợi.
+(+) Khi có quyết định xử lý thu bồi thường phần giá trị còn lại của TSCĐ thiếu, căn cứ vào quyết định xử lý ghi:
+Nợ các TK 111, 334,...
+Có TK 1381 - Tài sản thiếu chờ xử lý.
+3.2.5. Đối với TSCĐ hữu hình dùng cho sản xuất, kinh doanh nhưng không đủ tiêu chuẩn ghi nhận theo quy định phải chuyển thành công cụ, dụng cụ, ghi:
+Nợ các TK 623, 627, 641, 642,... (nếu giá trị còn lại nhỏ)
+Nợ TK 242 - Chi phí chờ phân bổ (nếu giá trị còn lại lớn phải phân bổ dần) 
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn luỹ kế)
+Có TK 211 - TSCĐ hữu hình (nguyên giá TSCĐ).
+3.2.6 Kế toán giao dịch bán và thuê lại TSCĐ hữu hình là thuê hoạt động (xem hướng dẫn ở Tài khoản 811 - Chi phí khác hoặc Tài khoản 711 - Doanh thu khác).
+
+TÀI KHOẢN 212 - TÀI SẢN CỐ ĐỊNH THUÊ TÀI CHÍNH
+
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm của toàn bộ TSCĐ thuê tài chính của doanh nghiệp. Tài khoản này dùng cho doanh nghiệp là bên đi thuê để hạch toán nguyên giá của TSCĐ thuê tài chính (là những TSCĐ chưa thuộc quyền sở hữu của doanh nghiệp nhưng doanh nghiệp có nghĩa vụ và trách nhiệm pháp lý quản lý và sử dụng như tài sản của doanh nghiệp).
+b) Thuê tài chính: Là thuê tài sản mà bên cho thuê có sự chuyển giao phần lớn rủi ro và lợi ích gắn liền với quyền sở hữu tài sản cho bên thuê. Quyền sở hữu tài sản có thể chuyển giao vào cuối thời hạn thuê.
+c) Việc phân loại thuê tài sản là thuê tài chính hay thuê hoạt động phải căn cứ vào bản chất các điều khoản ghi trong hợp đồng. Ví dụ về tình huống đơn lẻ hoặc kết hợp thường dẫn đến giao dịch thuê tài sản được phân loại là thuê tài chính như sau:
+- Bên cho thuê chuyển giao quyền sở hữu tài sản cho bên thuê khi hết thời hạn thuê;
+- Tại thời điểm khởi đầu thuê tài sản, bên thuê có quyền lựa chọn mua lại tài sản thuê với mức giá ước tính thấp hơn giá trị hợp lý vào cuối thời hạn thuê;
+- Thời hạn thuê tài sản chiếm phần lớn thời gian sử dụng kinh tế của tài sản cho dù không có sự chuyển giao quyền sở hữu;
+- Tại thời điểm khởi đầu thuê tài sản, giá trị hiện tại của khoản thanh toán tiền thuê tối thiểu chiếm phần lớn (tương đương) giá trị hợp lý của tài sản thuê;
+- Tài sản thuê thuộc loại chuyên dùng mà chỉ có bên thuê có khả năng sử dụng không cần có sự thay đổi, sửa chữa lớn nào.
+d) Hợp đồng thuê tài sản được coi là hợp đồng thuê tài chính nếu thỏa mãn ít nhất một trong ba (3) điều kiện sau:
+- Nếu bên thuê hủy hợp đồng và đền bù tổn thất phát sinh liên quan đến việc hủy hợp đồng cho bên cho thuê;
+- Thu nhập hoặc tổn thất do sự thay đổi giá trị hợp lý của giá trị còn lại của tài sản thuê gắn với bên thuê;
+- Bên thuê có khả năng tiếp tục thuê lại tài sản sau khi hết hạn hợp đồng thuê với tiền thuê thấp hơn giá thuê thị trường. Riêng trường hợp thuê tài sản là quyền sử dụng đất thì thường được phân loại là thuê hoạt động.
+đ) Nguyên giá của TSCĐ thuê tài chính được ghi nhận bằng giá trị hợp lý của tài sản thuê hoặc là giá trị hiện tại của khoản thanh toán tiền thuê tối thiểu (trường hợp giá trị hợp lý cao hơn giá trị hiện tại của khoản thanh toán tiền thuê tối thiểu) cộng (+) với các chi phí trực tiếp phát sinh ban đầu liên quan đến hoạt động thuê tài chính. Nếu thuế GTGT đầu vào được khấu trừ, giá trị hiện tại của khoản thanh toán tiền thuê tối thiểu không bao gồm số thuế GTGT phải trả cho bên cho thuê.
+Khi tính giá trị hiện tại của khoản thanh toán tiền thuê tối thiểu cho việc thuê tài sản, doanh nghiệp có thể sử dụng tỷ lệ lãi suất ngầm định, tỷ lệ lãi suất được ghi trong hợp đồng thuê hoặc tỷ lệ lãi suất biên đi vay của bên thuê.
+e) Số thuế GTGT đầu vào của tài sản thuê tài chính mà bên đi thuê phải trả cho bên cho thuê nhưng không được khấu trừ thì được hạch toán như sau:
+- Nếu thuế GTGT đầu vào không được khấu trừ nhưng được thanh toán một lần ngay tại thời điểm ghi nhận tài sản thuê thì nguyên giá tài sản thuê bao gồm cả thuế GTGT;
+- Nếu thuế GTGT đầu vào không được khấu trừ nhưng được thanh toán từng kỳ thì được ghi vào chi phí SXKD trong kỳ phù hợp với khoản mục phản ánh chi phí khấu hao của tài sản thuê tài chính.
+g) Không phản ánh vào tài khoản này giá trị của TSCĐ thuê hoạt động.
+h) Nếu doanh nghiệp có các giao dịch thuê tài sản mà các điều khoản trong hợp đồng có bản chất như hợp đồng thuê tài chính và việc ký kết, nội dung, điều khoản thực hiện các hợp đồng thuê tài sản đó tuân thủ quy định của pháp luật thì kế toán giao dịch về thuê tài sản đó được thực hiện như hướng dẫn tại khoản 3 Điều này.
+i) Bên thuê có trách nhiệm tính, trích khấu hao TSCĐ vào chi phí sản xuất, kinh doanh theo định kỳ trên cơ sở áp dụng chính sách khấu hao nhất quán với chính sách khấu hao của tài sản cùng loại thuộc sở hữu của doanh nghiệp. Nếu không chắc chắn là bên thuê sẽ có quyền sở hữu tài sản thuê khi hết hạn hợp đồng thuê thì tài sản thuê sẽ được khấu hao theo thời hạn thuê nếu thời hạn thuê ngắn hơn thời gian sử dụng hữu ích của tài sản thuê.
+k) Tài khoản 212 được mở chi tiết để theo dõi từng loại, từng TSCĐ đi thuê.
+2. Kết cấu và nội dung phản ánh của Tài khoản 212 - TSCĐ thuê tài chính
+Bên Nợ: 
+Nguyên giá của TSCĐ thuê tài chính tăng.
+Bên Có: 
+Nguyên giá của TSCĐ thuê tài chính giảm do chuyển trả lại cho bên cho thuê khi hết hạn hợp đồng hoặc mua lại thành TSCĐ của doanh nghiệp.
+Số dư bên Nợ: 
+Nguyên giá của TSCĐ thuê tài chính hiện có tại thời điểm kết thúc kỳ kế toán.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết của Tài khoản 212 - TSCĐ thuê tài chính (như: Nhà cửa, vật kiến trúc; Máy móc, thiết bị,...) cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi phát sinh chi phí trực tiếp ban đầu liên quan đến tài sản thuê tài chính trước khi nhận tài sản thuê như chi phí đàm phán, ký kết hợp đồng..., ghi:
+Nợ TK 242 - Chi phí chờ phân bổ
+Có các TK 111, 112,...
+3.2. Khi chi tiền ứng trước khoản tiền thuê tài chính hoặc ký quỹ đảm bảo việc thuê tài sản, ghi:
+Nợ TK 341 - Vay và nợ thuê tài chính (3412) (số tiền thuê trả trước)
+Nợ TK 244 - Ký quỹ, ký cược
+Có các TK 111, 112,...
+3.3. Khi nhận TSCĐ thuê tài chính, doanh nghiệp căn cứ vào hợp đồng thuê tài sản và các chứng từ có liên quan phản ánh giá trị TSCĐ thuê tài chính theo giá chưa có thuế GTGT đầu vào, ghi:
+Nợ TK 212 - TSCĐ thuê tài chính (giá chưa có thuế GTGT) 
+Có TK 341 - Vay và nợ thuê tài chính (3412) (giá trị hiện tại của khoản thanh toán tiền thuê tối thiểu hoặc giá trị hợp lý của tài sản thuê không bao gồm các khoản thuế được hoàn lại). 
+- Chi phí trực tiếp ban đầu liên quan đến hoạt động thuê tài chính được ghi nhận vào nguyên giá TSCĐ thuê tài chính, ghi:
+	Nợ TK 212 - TSCĐ thuê tài chính 
+Có TK 242 - Chi phí chờ phân bổ, hoặc 
+Có các TK 111, 112,... (số chi phí trực tiếp liên quan đến hoạt động thuê phát sinh khi nhận TSCĐ thuê tài chính).
+3.4. Định kỳ, khi trả nợ gốc, trả tiền lãi thuê cho bên cho thuê, ghi:
+Nợ TK 635 - Chi phí tài chính (tiền lãi thuê trả kỳ này)
+Nợ TK 341 - Vay và nợ thuê tài chính (3412) (nợ gốc trả kỳ này)
+	Có các TK 111, 112,...
+3.5. Khi nhận được hóa đơn của bên cho thuê yêu cầu thanh toán khoản thuế GTGT đầu vào:
+a) Nếu thuế GTGT được khấu trừ, ghi:		
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332)
+Có các TK 111, 112,... (nếu trả tiền ngay)
+Có TK 338 - Phải trả, phải nộp khác (thuế GTGT đầu vào phải trả bên cho thuê).
+b) Nếu thuế GTGT đầu vào không được khấu trừ, ghi:
+Nợ TK 212 - TSCĐ thuê tài chính (nếu thuế GTGT đầu vào không được khấu trừ và việc thanh toán thuế GTGT được thực hiện một lần ngay tại thời điểm ghi nhận TSCĐ thuê tài chính)
+Nợ các TK 627, 641, 642,... (nếu thuế GTGT đầu vào không được khấu trừ thanh toán theo định kỳ nhận hóa đơn)
+Có các TK 111, 112,... (nếu trả tiền ngay)
+Có TK 338 - Phải trả, phải nộp khác (thuế GTGT đầu vào phải trả bên cho thuê).
+3.6. Khi thanh toán phí cam kết sử dụng vốn cho bên cho thuê tài sản, ghi:
+Nợ TK 635 - Chi phí tài chính
+Có các TK 111, 112,...
+3.7. Khi trả lại TSCĐ thuê tài chính cho bên cho thuê theo quy định của hợp đồng thuê, doanh nghiệp ghi giảm giá trị TSCĐ thuê tài chính, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (2142)
+Có TK 212 - TSCĐ thuê tài chính.
+3.8. Trường hợp trong hợp đồng thuê tài sản quy định khi hết thời hạn thuê, bên đi thuê mua lại tài sản thuê thì khi nhận chuyển giao quyền sở hữu tài sản, doanh nghiệp ghi giảm TSCĐ thuê tài chính và ghi tăng TSCĐ hữu hình thuộc sở hữu của doanh nghiệp. Khi chuyển từ tài sản thuê tài chính sang tài sản thuộc sở hữu của doanh nghiệp, ghi:
+Nợ TK 211 - TSCĐ hữu hình
+Có TK 212 - TSCĐ thuê tài chính (Nguyên giá TSCĐ thuê tài chính)
+Có các TK 111, 112,... (số tiền phải trả thêm).
+Đồng thời chuyển giá trị hao mòn lũy kế của TSCĐ, ghi:
+Nợ TK 2142 - Hao mòn TSCĐ thuê tài chính
+Có TK 2141 - Hao mòn TSCĐ hữu hình.
+3.9. Kế toán giao dịch bán và thuê lại tài sản là thuê tài chính:
+a) Kế toán giao dịch bán (xem Tài khoản 711 - Thu nhập khác)
+b) Ghi nhận tài sản thuê và nợ phải trả về thuê tài chính, trả tiền thuê từng kỳ thực hiện theo quy định từ khoản 3.1 đến 3.6 Tài khoản này.
+c) Định kỳ, doanh nghiệp tính, trích khấu hao TSCĐ thuê tài chính vào chi phí sản xuất, kinh doanh, ghi:
+	Nợ các TK 623, 627, 641, 642,...
+Có TK 2142 - Hao mòn TSCĐ thuê tài chính.
+d) Định kỳ, kết chuyển phần chênh lệch giữa giá bán với giá trị còn lại của TSCĐ bán và thuê lại:
+- Trường hợp giá bán lớn hơn giá trị còn lại của TSCĐ bán và thuê lại thì phần chênh lệch được ghi giảm chi phí sản xuất, kinh doanh trong kỳ phù hợp với thời gian thuê tài sản, ghi:
+Nợ TK 3387 - Doanh thu chờ phân bổ
+Có các TK 623, 627, 641, 642,...
+- Trường hợp giá bán nhỏ hơn giá trị còn lại của TSCĐ bán và thuê lại thì phần chênh lệch được ghi tăng chi phí sản xuất, kinh doanh trong kỳ, ghi:
+Nợ các TK 623, 627, 641, 642,...
+Có TK 242 - Chi phí chờ phân bổ.
+
+TÀI KHOẢN 213 - TÀI SẢN CỐ ĐỊNH VÔ HÌNH
+
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm TSCĐ vô hình của doanh nghiệp. TSCĐ vô hình là tài sản không có hình thái vật chất do doanh nghiệp nắm giữ để sử dụng trong SXKD, cung cấp dịch vụ hoặc cho các đối tượng khác thuê, phù hợp với tiêu chuẩn ghi nhận TSCĐ vô hình.
+b) Nguyên giá của TSCĐ vô hình là toàn bộ các chi phí mà doanh nghiệp phải bỏ ra để có được TSCĐ vô hình tính đến thời điểm đưa tài sản đó vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp.
+- Nguyên giá TSCĐ vô hình mua riêng biệt, bao gồm giá mua trừ (-) các khoản được chiết khấu thương mại hoặc giảm giá, các khoản thuế (không bao gồm các khoản thuế được hoàn lại) và các chi phí liên quan trực tiếp đến việc đưa tài sản vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp;
+- Nguyên giá TSCĐ vô hình mua dưới hình thức trao đổi với một TSCĐ vô hình không tương tự hoặc tài sản khác được xác định theo giá trị hợp lý của tài sản nhận về hoặc bằng giá trị hợp lý của tài sản đem đi trao đổi sau khi điều chỉnh các khoản tiền hoặc tương đương tiền trả thêm hoặc thu về; 
+- Nguyên giá TSCĐ vô hình là quyền sử dụng đất thì nguyên giá TSCĐ là số tiền doanh nghiệp đã trả để có được quyền sử dụng đất hợp pháp (gồm chi phí đã trả cho tổ chức, cá nhân chuyển nhượng; chi phí đền bù, giải phóng mặt bằng, san lấp mặt bằng, lệ phí trước bạ...) hoặc theo thỏa thuận của các bên khi góp vốn. Việc xác định TSCĐ vô hình là quyền sử dụng đất phải tuân thủ các quy định của pháp luật có liên quan hướng dẫn chế độ quản lý, sử dụng và trích khấu hao TSCĐ;
+- Nguyên giá TSCĐ vô hình được Nhà nước cấp hoặc được tặng, biếu được xác định theo giá trị hợp lý ban đầu cộng (+) các chi phí liên quan trực tiếp đến việc đưa tài sản vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp;
+- Nguyên giá TSCĐ vô hình điều chuyển giữa các đơn vị trực thuộc trong nội bộ doanh nghiệp là nguyên giá ghi trên sổ sách kế toán của đơn vị có tài sản điều chuyển.
+c) Đối với chi phí phát sinh trong giai đoạn nghiên cứu và giai đoạn triển khai:
+- Toàn bộ chi phí phát sinh trong giai đoạn nghiên cứu không được ghi nhận là TSCĐ vô hình mà được ghi nhận là chi phí sản xuất, kinh doanh trong kỳ.
+- Toàn bộ các chi phí phát sinh trong giai đoạn triển khai không đủ điều kiện ghi nhận là TSCĐ vô hình được hạch toán vào chi phí SXKD trong kỳ. Trường hợp xét thấy kết quả triển khai thỏa mãn được định nghĩa và tiêu chuẩn ghi nhận TSCĐ vô hình quy định tại Chuẩn mực kế toán Việt Nam số 04 - Tài sản cố định vô hình thì các chi phí giai đoạn triển khai được tập hợp vào Tài khoản 2412 - Xây dựng cơ bản. Khi kết thúc giai đoạn triển khai, các chi phí trong giai đoạn triển khai hình thành nguyên giá TSCĐ vô hình được kết chuyển vào bên Nợ Tài khoản 213 - TSCĐ vô hình. 
+Chi phí liên quan đến tài sản vô hình đã được doanh nghiệp ghi nhận là chi phí để xác định kết quả hoạt động kinh doanh trong kỳ trước đó thì không được tái ghi nhận vào nguyên giá TSCĐ vô hình.
+- Nếu doanh nghiệp không thể phân biệt giai đoạn nghiên cứu với giai đoạn triển khai để tạo ra TSCĐ vô hình, doanh nghiệp phải hạch toán toàn bộ chi phí phát sinh liên quan đến dự án đó vào chi phí sản xuất kinh doanh để xác định kết quả kinh doanh trong kỳ. 
+d) Trong quá trình sử dụng, doanh nghiệp phải tiến hành trích khấu hao TSCĐ vô hình vào chi phí sản xuất kinh doanh theo quy định của Chuẩn mực kế toán Việt Nam số 04 - Tài sản cố định vô hình. Riêng đối với TSCĐ là quyền sử dụng đất thì chỉ tính khấu hao đối với những TSCĐ vô hình là quyền sử dụng có thời hạn.
+đ) Chi phí liên quan đến TSCĐ vô hình phát sinh sau khi ghi nhận ban đầu phải được ghi nhận là chi phí sản xuất, kinh doanh trong kỳ, trừ khi thỏa mãn đồng thời 2 điều kiện sau thì được ghi tăng nguyên giá TSCĐ vô hình: 
+- Chi phí phát sinh có khả năng làm cho TSCĐ vô hình tạo ra lợi ích kinh tế trong tương lai nhiều hơn mức hoạt động được đánh giá ban đầu;
+- Chi phí được xác định một cách chắc chắn và gắn liền với TSCĐ vô hình cụ thể.
+e) Chi phí thành lập doanh nghiệp, chi phí đào tạo nhân viên, chi phí quảng cáo,... phát sinh trong giai đoạn trước hoạt động của doanh nghiệp mới thành lập, chi phí chuyển dịch địa điểm được ghi nhận vào chi phí sản xuất kinh doanh trong kỳ.
+g) Việc góp vốn của doanh nghiệp bằng các tài sản vô hình như quyền sở hữu trí tuệ,... được thực hiện theo quy định của pháp luật.
+h) TSCĐ vô hình được theo dõi chi tiết theo từng đối tượng ghi TSCĐ trong “Sổ tài sản cố định”.
+2. Kết cấu và nội dung phản ánh của Tài khoản 213 - TSCĐ vô hình
+Bên Nợ: 
+Nguyên giá TSCĐ vô hình tăng.
+Bên Có: 
+Nguyên giá TSCĐ vô hình giảm.
+Số dư bên Nợ: 
+Nguyên giá TSCĐ vô hình hiện có ở doanh nghiệp tại thời điểm kết thúc kỳ kế toán. 
+Doanh nghiệp có thể mở các tài khoản chi tiết TSCĐ vô hình (như TSCĐ là quyền sử dụng đất, quyền tác giả, quyền liên quan đến quyền tác giả, quyền sở hữu công nghiệp, phần mềm, giấy phép, giấy phép nhượng quyền,...) cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình. 
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Mua TSCĐ vô hình:
+- Trường hợp mua TSCĐ vô hình dùng vào SXKD hàng hóa, dịch vụ thuộc đối tượng chịu thuế GTGT tính theo phương pháp khấu trừ, ghi:
+Nợ TK 213 - TSCĐ vô hình (giá mua chưa có thuế GTGT)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) 
+Có các TK 112, 331, 341,... 
+- Trường hợp mua TSCĐ vô hình dùng vào SXKD hàng hóa, dịch vụ không thuộc đối tượng chịu thuế GTGT, ghi:
+Nợ TK 213 - TSCĐ vô hình (tổng giá thanh toán)
+Có các TK 112, 331,... (tổng giá thanh toán).
+3.2. Trường hợp mua TSCĐ vô hình theo phương thức trả chậm, trả góp:
+- Khi mua TSCĐ vô hình theo phương thức trả chậm, trả góp, ghi:
+Nợ TK 213 - TSCĐ vô hình (giá mua trả tiền ngay)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có các TK 111, 112, 331,... 
+- Định kỳ, phản ánh khoản lãi trả chậm, trả góp phải trả cho người bán từng kỳ, ghi:
+Nợ TK 635 - Chi phí tài chính
+Có TK 331 - Phải trả cho người bán.
+- Định kỳ, khi trả tiền cho người bán bao gồm cả nợ gốc và tiền lãi trả chậm, trả góp, ghi:
+Nợ TK 331 - Phải trả cho người bán
+		Có các TK 111, 112
+3.3. TSCĐ vô hình mua dưới hình thức trao đổi.
+a) Trường hợp trao đổi hai TSCĐ vô hình tương tự:
+Khi nhận TSCĐ vô hình do trao đổi với một TSCĐ vô hình tương tự và đưa vào sử dụng ngay cho SXKD, ghi:
+Nợ TK 213 - TSCĐ vô hình (nguyên giá TSCĐ vô hình nhận về ghi theo giá trị còn lại của TSCĐ đưa đi trao đổi)
+Nợ TK 214 - Hao mòn TSCĐ (2143) (giá trị khấu hao luỹ kế của TSCĐ đưa đi trao đổi)
+Có TK 213 - TSCĐ vô hình (nguyên giá của TSCĐ đưa đi 	trao đổi).
+b) Trường hợp trao đổi hai TSCĐ vô hình không tương tự:
+- Ghi giảm TSCĐ vô hình đưa đi trao đổi, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (giá trị khấu hao luỹ kế)
+Nợ TK 811 - Chi phí khác (giá trị còn lại)
+		Có TK 213 - TSCĐ vô hình (nguyên giá).
+- Đồng thời phản ánh số thu nhập do trao đổi TSCĐ, ghi:	
+Nợ TK 131- Phải thu của khách hàng (tổng giá thanh toán)
+		Có TK 711 - Thu nhập khác (giá trị hợp lý TSCĐ đưa đi trao đổi)
+	Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+- Ghi tăng TSCĐ vô hình nhận về do trao đổi, ghi:
+Nợ TK 213 - TSCĐ vô hình (giá trị hợp lý của TSCĐ nhận về)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+		Có TK 131 - Phải thu của khách hàng (tổng giá thanh toán).
+3.4. Chi phí thành lập doanh nghiệp, chi phí đào tạo nhân viên, chi phí quảng cáo,... phát sinh trong giai đoạn trước hoạt động của doanh nghiệp mới thành lập; chi phí trong giai đoạn nghiên cứu; chi phí trong giai đoạn triển khai xét thấy kết quả triển khai không thỏa mãn định nghĩa và tiêu chuẩn ghi nhận TSCĐ vô hình hạch toán vào chi phí sản xuất kinh doanh trong kỳ, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp
+		Có các TK 111, 112, 152, 153, 331,...	 
+	3.5. Giá trị TSCĐ vô hình được hình thành từ nội bộ doanh nghiệp trong giai đoạn triển khai khi xét thấy kết quả triển khai thỏa mãn định nghĩa và tiêu chuẩn ghi nhận TSCĐ vô hình:
+- Tập hợp chi phí thực tế phát sinh ở giai đoạn triển khai để hình thành nguyên giá TSCĐ vô hình, ghi:
+Nợ TK 241 - Xây dựng cơ bản dở dang
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+ 		Có các TK 111, 112, 152, 153, 331,...
+- Khi kết thúc giai đoạn triển khai, doanh nghiệp phải xác định tổng chi phí thực tế phát sinh hình thành nguyên giá TSCĐ vô hình, trường hợp khi nhận bàn giao TSCĐ vô hình đưa vào sử dụng nhưng chưa được quyết toán (nếu có) theo quy định thì ghi nhận tăng TSCĐ vô hình theo giá tạm tính, ghi:
+Nợ TK 213 - TSCĐ vô hình
+	 	Có TK 241 - Xây dựng cơ bản dở dang.
+- Khi được duyệt quyết toán, doanh nghiệp phải điều chỉnh giá trị TSCĐ vô hình theo giá được quyết toán.
++ Nếu giá được quyết toán lớn hơn giá tạm tính, doanh nghiệp điều chỉnh tăng nguyên giá TSCĐ vô hình, ghi:
+Nợ TK 213 - TSCĐ vô hình
+	Có các TK liên quan.
++ Nếu giá được quyết toán nhỏ hơn giá tạm tính, doanh nghiệp điều chỉnh giảm nguyên giá TSCĐ vô hình, ghi:
+Nợ các TK liên quan
+	Có TK 213 - TSCĐ vô hình.
+3.6. Khi mua TSCĐ vô hình là quyền sử dụng đất cùng với mua nhà cửa, vật kiến trúc trên đất thì phải xác định riêng biệt giá trị TSCĐ vô hình là quyền sử dụng đất, TSCĐ hữu hình là nhà cửa, vật kiến trúc, ghi:
+Nợ TK 211 - TSCĐ hữu hình (nguyên giá nhà cửa, vật kiến trúc) 
+Nợ TK 213 - TSCĐ vô hình (nguyên giá quyền sử dụng đất)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332 - nếu có) 
+ 	Có các TK 111, 112, 331,...
+3.7. Khi doanh nghiệp được hỗ trợ, tài trợ, biếu, tặng TSCĐ vô hình đưa vào sử dụng ngay cho hoạt động SXKD:
+- Khi nhận TSCĐ vô hình được hỗ trợ, tài trợ, biếu, tặng, ghi:
+Nợ TK 213 - TSCĐ vô hình 
+Có TK 711 - Thu nhập khác (nếu được hỗ trợ, tài trợ, biếu, tặng TSCĐ không kèm theo điều kiện và không thuộc trường hợp ghi tăng vốn đầu tư của chủ sở hữu theo quyết định của cấp có thẩm quyền)
+Có TK 3387 - Doanh thu chờ phân bổ (nếu được hỗ trợ, tài trợ, biếu, tặng TSCĐ có kèm theo điều kiện)
+ Có TK 4118 - Vốn khác (nếu được phép ghi tăng vốn đầu tư của chủ sở hữu theo quyết định của cấp có thẩm quyền).
+- Chi phí phát sinh liên quan đến TSCĐ vô hình nhận hỗ trợ, tài trợ, biếu, tặng (nếu có), ghi:
+Nợ TK 213 - TSCĐ vô hình
+Có các TK 111, 112, 331,...	
+3.8. Khi doanh nghiệp nhận vốn góp bằng quyền sử dụng đất, căn cứ vào hồ sơ chuyển giao quyền sử dụng đất, ghi:
+Nợ TK 213 - TSCĐ vô hình
+Có TK 411 - Vốn đầu tư của chủ sở hữu.
+3.9. Khi có quyết định chuyển mục đích sử dụng của BĐSĐT là quyền sử dụng đất sang TSCĐ vô hình, ghi:
+Nợ TK 213 - TSCĐ vô hình 
+Có TK 217 - Bất động sản đầu tư.
+	Đồng thời kết chuyển số hao mòn lũy kế của BĐSĐT sang số hao mòn luỹ kế của TSCĐ vô hình, ghi: 
+Nợ TK 2147 - Hao mòn BĐSĐT
+	Có TK 2143 - Hao mòn TSCĐ vô hình.
+3.10. Khi đầu tư vào công ty con, công ty liên doanh, liên kết hoặc đầu tư góp vốn vào đơn vị khác dưới hình thức góp vốn bằng TSCĐ vô hình, căn cứ vào giá đánh giá lại của TSCĐ vô hình được xác định theo quy định của pháp luật doanh nghiệp:
+a) Trường hợp giá trị đánh giá lại nhỏ hơn giá trị còn lại của TSCĐ vô hình đem đi góp vốn, ghi:
+Nợ các TK 221, 222, 228 (theo giá trị đánh giá lại)
+Nợ TK 214 - Hao mòn TSCĐ (2143) (giá trị khấu hao lũy kế)
+Nợ TK 811 - Chi phí khác (số chênh lệch giữa giá đánh giá lại nhỏ hơn giá 
+ trị còn lại của TSCĐ vô hình)
+			Có TK 213 - TSCĐ vô hình (nguyên giá).
+b) Trường hợp giá đánh giá lại lớn hơn giá trị còn lại của TSCĐ vô hình đem đi góp vốn, ghi: 
+Nợ các TK 221, 222, 228 (theo giá trị đánh giá lại)
+Nợ TK 214 - Hao mòn TSCĐ (2143) (giá trị khấu hao lũy kế)
+	 	Có TK 213 - TSCĐ vô hình (nguyên giá)
+Có TK 711 - Thu nhập khác (số chênh lệch giữa giá đánh giá lại lớn hơn giá trị còn lại của TSCĐ vô hình).
+3.11. Hạch toán việc nhượng bán, thanh lý TSCĐ vô hình được thực hiện tương tự như hạch toán nhượng bán, thanh lý TSCĐ hữu hình (xem hướng dẫn ở Tài khoản 211 - TSCĐ hữu hình).
+
+TÀI KHOẢN 214 - HAO MÒN TÀI SẢN CỐ ĐỊNH
+
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh tình hình tăng, giảm giá trị hao mòn và giá trị hao mòn luỹ kế của các loại TSCĐ và bất động sản đầu tư (BĐSĐT) trong quá trình sử dụng do trích khấu hao TSCĐ, BĐSĐT và những khoản tăng, giảm hao mòn khác của TSCĐ, BĐSĐT.
+b) Về nguyên tắc, mọi TSCĐ, BĐSĐT của doanh nghiệp liên quan đến hoạt động sản xuất, kinh doanh (bao gồm cả tài sản chưa dùng, không cần dùng, không dùng được chờ thanh lý, nhượng bán,...) hoặc cho thuê (trừ khi đã khấu hao hết) đều phải trích khấu hao theo quy định hiện hành. Khấu hao TSCĐ, BĐSĐT dùng trong sản xuất, kinh doanh hạch toán vào chi phí sản xuất, kinh doanh trong kỳ; khấu hao TSCĐ dùng cho hoạt động đầu tư XDCB hạch toán vào chi phí đầu tư XDCB. Các trường hợp đặc biệt không phải trích khấu hao (như TSCĐ dự trữ, TSCĐ dùng chung cho xã hội,...), doanh nghiệp phải thực hiện theo quy định của pháp luật hiện hành. Đối với TSCĐ dùng cho mục đích phúc lợi thì không phải trích khấu hao tính vào chi phí sản xuất, kinh doanh mà chỉ tính hao mòn TSCĐ và hạch toán giảm Quỹ phúc lợi đã hình thành TSCĐ đó.
+c) Căn cứ vào quy định của pháp luật và yêu cầu quản lý của doanh nghiệp để lựa chọn một trong các phương pháp tính, trích khấu hao theo quy định của pháp luật cho phù hợp với từng TSCĐ nhằm kích thích sự phát triển sản xuất, kinh doanh, đảm bảo việc thu hồi vốn nhanh, đầy đủ và phù hợp với cách thức thu hồi lợi ích kinh tế trong tương lai đối với TSCĐ đó của doanh nghiệp.
+Phương pháp khấu hao được áp dụng cho từng TSCĐ, BĐSĐT phải được thực hiện nhất quán và có thể được thay đổi khi có sự thay đổi đáng kể cách thức thu hồi lợi ích kinh tế của TSCĐ và BĐSĐT.
+d) Hàng năm, khi doanh nghiệp có sự thay đổi lớn về thời gian dự kiến sử dụng của TSCĐ hoặc cách thức thu hồi lợi ích từ TSCĐ thì doanh nghiệp cần xem xét lại thời gian khấu hao và phương pháp khấu hao TSCĐ. Nếu thời gian sử dụng hữu ích ước tính của tài sản khác biệt lớn so với các dự kiến trước đó thì thời gian khấu hao phải được thay đổi tương ứng. Phương pháp khấu hao TSCĐ được thay đổi khi có sự thay đổi đáng kể cách thức ước tính thu hồi lợi ích kinh tế của TSCĐ. Trường hợp này, doanh nghiệp phải điều chỉnh chi phí khấu hao cho năm hiện hành và các năm tiếp theo và phải được thuyết minh trong Báo cáo tài chính.
+đ) Đối với các TSCĐ đã khấu hao hết (đã thu hồi đủ vốn), nhưng doanh nghiệp vẫn còn sử dụng vào hoạt động sản xuất, kinh doanh thì không được tiếp tục trích khấu hao. Các TSCĐ chưa tính đủ khấu hao (chưa thu hồi đủ vốn) mà đã hư hỏng, không sử dụng được cần thanh lý,... thì phải xác định nguyên nhân, trách nhiệm của tập thể, cá nhân để xử lý bồi thường. Phần giá trị còn lại của TSCĐ chưa thu hồi, không được bồi thường phải được bù đắp bằng số thu do thanh lý của chính TSCĐ đó, số tiền bồi thường do lãnh đạo doanh nghiệp quyết định. Nếu số thu thanh lý và số thu bồi thường không đủ bù đắp phần giá trị còn lại của TSCĐ chưa thu hồi bị mất thì chênh lệch còn lại được coi là lỗ về thanh lý TSCĐ và hạch toán vào chi phí khác. Riêng doanh nghiệp Nhà nước được xử lý theo chính sách tài chính hiện hành đối với doanh nghiệp Nhà nước. 
+e) Đối với TSCĐ vô hình, phải tùy thời gian phát huy hiệu quả để trích khấu hao tính từ khi TSCĐ được đưa vào sử dụng (theo hợp đồng, cam kết hoặc theo quyết định của cấp có thẩm quyền). Riêng đối với TSCĐ vô hình là quyền sử dụng đất thì chỉ trích khấu hao đối với quyền sử dụng đất xác định được thời hạn sử dụng. Nếu quyền sử dụng đất không xác định được thời gian sử dụng thì không trích khấu hao.
+g) Đối với TSCĐ thuê tài chính, trong quá trình sử dụng bên đi thuê phải trích khấu hao TSCĐ trong thời gian thuê theo hợp đồng tính vào chi phí sản xuất, kinh doanh, đảm bảo thu hồi đủ vốn.
+h) Đối với BĐSĐT cho thuê hoạt động phải trích khấu hao và ghi nhận vào chi phí sản xuất, kinh doanh trong kỳ. Doanh nghiệp có thể dựa vào các BĐS chủ sở hữu sử dụng (TSCĐ) cùng loại để ước tính thời gian trích khấu hao và xác định phương pháp khấu hao BĐSĐT. Trường hợp BĐSĐT nắm giữ chờ tăng giá, doanh nghiệp không trích khấu hao mà xác định tổn thất do giảm giá trị.
+2. Kết cấu và nội dung phản ánh của Tài khoản 214 - Hao mòn TSCĐ
+Bên Nợ: 
+Giá trị hao mòn TSCĐ, BĐSĐT giảm do TSCĐ, BĐSĐT thanh lý, nhượng bán, góp vốn đầu tư vào đơn vị khác,...
+Bên Có: 
+Giá trị hao mòn TSCĐ, BĐSĐT tăng do trích khấu hao TSCĐ, BĐSĐT, do nhận điều chuyển TSCĐ đã sử dụng từ các đơn vị trong nội bộ doanh nghiệp,...
+Số dư bên Có:
+Giá trị hao mòn luỹ kế của TSCĐ, BĐSĐT hiện có ở doanh nghiệp tại thời điểm kết thúc kỳ kế toán.
+Tài khoản 214 - Hao mòn TSCĐ, có 4 tài khoản cấp 2:
+- Tài khoản 2141 - Hao mòn TSCĐ hữu hình: Phản ánh giá trị hao mòn của TSCĐ hữu hình trong quá trình sử dụng do trích khấu hao TSCĐ và những khoản tăng, giảm hao mòn khác của TSCĐ hữu hình.
+- Tài khoản 2142 - Hao mòn TSCĐ thuê tài chính: Phản ánh giá trị hao mòn của TSCĐ thuê tài chính trong quá trình sử dụng do trích khấu hao TSCĐ thuê tài chính và những khoản tăng, giảm hao mòn khác của TSCĐ thuê tài chính.
+- Tài khoản 2143 - Hao mòn TSCĐ vô hình: Phản ánh giá trị hao mòn của TSCĐ vô hình trong quá trình sử dụng do trích khấu hao TSCĐ vô hình và những khoản làm tăng, giảm hao mòn khác của TSCĐ vô hình.
+- Tài khoản 2147 - Hao mòn BĐSĐT: Tài khoản này phản ánh giá trị hao mòn BĐSĐT dùng để cho thuê hoạt động của doanh nghiệp.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Định kỳ tính, trích khấu hao TSCĐ vào chi phí sản xuất, kinh doanh, chi phí khác, ghi:
+Nợ các TK 623, 627, 641, 642, 811
+Có TK 214 - Hao mòn TSCĐ (TK cấp 2 phù hợp).
+b) TSCĐ đã sử dụng, nhận được do điều chuyển giữa các đơn vị trực thuộc trong nội bộ doanh nghiệp, ghi:
+	Nợ TK 211 - TSCĐ hữu hình (nguyên giá)
+		Có các TK 336, 411 (giá trị còn lại)
+		Có TK 214 - Hao mòn TSCĐ (2141) (giá trị hao mòn luỹ kế).
+c) Định kỳ tính, trích khấu hao BĐSĐT đang cho thuê hoạt động, ghi:
+Nợ TK 632 - Giá vốn hàng bán (chi tiết chi phí kinh doanh BĐSĐT)
+		Có TK 214 - Hao mòn TSCĐ (2147).
+d) Trường hợp giảm TSCĐ, BĐSĐT thì đồng thời với việc ghi giảm nguyên giá phải ghi giảm giá trị đã hao mòn của TSCĐ, BĐSĐT (xem hướng dẫn hạch toán các Tài khoản 211 - TSCĐ hữu hình, Tài khoản 213 - TSCĐ vô hình, Tài khoản 217 - BĐSĐT).
+đ) Đối với TSCĐ dùng cho hoạt động phúc lợi, khi tính hao mòn vào thời điểm cuối năm tài chính, ghi:
+Nợ TK 3533 - Quỹ phúc lợi đã hình thành TSCĐ
+		Có TK 214 - Hao mòn TSCĐ.
+e) Trường hợp vào cuối năm tài chính doanh nghiệp xem xét lại thời gian trích khấu hao và phương pháp khấu hao TSCĐ, nếu có sự thay đổi mức khấu hao cần phải điều chỉnh số khấu hao ghi trên sổ kế toán như sau: 
+- Nếu do thay đổi phương pháp khấu hao và thời gian trích khấu hao TSCĐ, mà mức khấu hao TSCĐ tăng lên so với số đã trích trong năm, số chênh lệch khấu hao tăng, ghi:
+Nợ các TK 623, 627, 641, 642,... (số chênh lệch khấu hao tăng)
+ Có TK 214 - Hao mòn TSCĐ (TK cấp 2 phù hợp).
+- Nếu do thay đổi phương pháp khấu hao và thời gian trích khấu hao TSCĐ mà mức khấu hao TSCĐ giảm so với số đã trích trong năm, số chênh lệch khấu hao giảm, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (TK cấp 2 phù hợp)
+Có các TK 623, 627, 641, 642,... (số chênh lệch khấu hao giảm).
+
+TÀI KHOẢN 215 - TÀI SẢN SINH HỌC
+
+1. Nguyên tắc kế toán 
+1.1. Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm của (i) các tài sản sinh học liên quan đến hoạt động nông nghiệp (bao gồm cả các tài sản sinh học được tạo ra/sinh ra từ cây lâu năm cho sản phẩm định kỳ của doanh nghiệp); (ii) sản phẩm nông nghiệp tại thời điểm thu hoạch. 
+Tài khoản này không sử dụng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm của các cây lâu năm cho sản phẩm định kỳ và súc vật làm việc (ví dụ các con vật được nuôi trong rạp xiếc để biểu diễn xiếc, nuôi trong vườn thú để cho khách tham quan như hổ, báo, sư tử, khỉ, cá voi, chó nghiệp vụ được nuôi để thực hiện các nhiệm vụ theo yêu cầu,...). Cây lâu năm cho sản phẩm định kỳ và súc vật làm việc được phản ánh vào Tài khoản 211 - TSCĐ hữu hình. 
+Trong đó:
+- Tài sản sinh học là các cây trồng hoặc vật nuôi sống gắn với sự quản lý của doanh nghiệp đối với quá trình biến đổi sinh học mà sau đó có thể được chuyển thành các sản phẩm nông nghiệp hoặc tạo ra các tài sản sinh học khác. 
+- Biến đổi sinh học bao gồm các quá trình tăng trưởng, thoái hóa, sản xuất và sinh sản dẫn đến những thay đổi về số lượng hoặc chất lượng của một tài sản sinh học.
+- Hoạt động nông nghiệp là hoạt động quản lý sự biến đổi sinh học nhằm thu hoạch được tài sản sinh học để bán hoặc để chế biến thành sản phẩm nông nghiệp hoặc sinh ra tài sản sinh học khác. Hoạt động nông nghiệp bao gồm các hoạt động đa dạng, ví dụ: trồng trọt (trồng cây hàng năm, cây lâu năm, vườn cây, vườn hoa, đồn điền,...) chăn nuôi (nuôi trồng thủy hải sản, gia súc, gia cầm,...). Súc vật nuôi để làm việc hoặc đánh bắt cá ở đại dương,... không thỏa mãn là hoạt động nông nghiệp.
+- Sản phẩm nông nghiệp là sản phẩm được thu hoạch từ tài sản sinh học của doanh nghiệp (lá chè được thu hoạch từ bụi chè, sữa bò được thu hoạch từ bò mẹ, trứng được thu hoạch từ gà đẻ trứng,...). Sau thời điểm thu hoạch, các sản phẩm này không còn là tài sản sinh học mà chuyển sang là hàng tồn kho của doanh nghiệp. Theo đó, quá trình chế biến các sản phẩm nông nghiệp sau thu hoạch của doanh nghiệp (ví dụ, quá trình ủ, xử lý nho để trở thành rượu,...) là quá trình chế biến hàng tồn kho và được kế toán theo Chuẩn mực kế toán Việt Nam số 02 - Hàng tồn kho và các văn bản hướng dẫn.
+1.2. Tài sản sinh học của doanh nghiệp bao gồm các loại như sau: 
+- Cây lâu năm cho sản phẩm định kỳ: Là các cây trồng sống lâu năm, được sử dụng trong sản xuất hoặc cung cấp sản phẩm nông nghiệp; dự kiến cho sản phẩm nhiều hơn một kỳ kế toán và ít có khả năng được bán dưới dạng sản phẩm nông nghiệp, trừ trường hợp thanh lí đột ngột. (Ví dụ, bụi chè/vườn chè, cây/vườn nho, cây/vườn cọ dừa, cây/vườn cây cao su, ... ) thường đáp ứng được định nghĩa của TSCĐ nên được kế toán là TSCĐ hữu hình của doanh nghiệp. Tuy nhiên, sản phẩm được tạo ra từ các cây lâu năm cho sản phẩm định kỳ như lá trà, quả nho, cọ dừa, mủ cao su,... khi chưa thu hoạch lại là các tài sản sinh học.
+- Cây trồng để lấy sản phẩm một lần (ví dụ các loại cây lấy gỗ như cây keo, bạch đàn, xoan đào, xà cừ,...); cây trồng theo mùa vụ hàng năm (ví dụ ngô, lúa, mì, khoai, rau,...).
+- Súc vật nuôi lấy thịt, sản phẩm một lần (cá, lợn, bò, gà,... nuôi lấy thịt) và súc vật nuôi cho sản phẩm định kỳ (ví dụ bò sữa, gà lấy trứng, cừu lấy lông cừu, tôm giống, gà giống, cá giống, lợn giống,...).
+Bảng ví dụ sau minh họa việc phân loại giữa tài sản sinh học, sản phẩm nông nghiệp và sản phẩm nông nghiệp được chế biến sau thu hoạch. Tuy nhiên, trong thực tiễn áp dụng, việc phân loại một tài sản sinh học là cây lâu năm cho sản phẩm định kỳ không chỉ phụ thuộc vào tên gọi mà cần căn cứ vào đặc điểm, tính chất, cách thức thu hồi lợi ích từ tài sản sinh học đó của doanh nghiệp.
+Tài sản cố định
+Tài sản             sinh học
+Sản phẩm           nông nghiệp
+Các sản phẩm được           chế biến sau thu hoạch
+
+Cây bông
+Quả bông chưa thu hoạch được
+Bông được thu hoạch
+Các sản phẩm được chế biến từ bông như chỉ, quần áo,...
+
+Bụi mía
+Cây mía chưa thu hoạch được
+Cây mía được thu hoạch
+Các sản phẩm được chế biến từ mía như đường,...
+
+Cây thuốc lá
+Lá cây thuốc lá chưa được hái
+Lá cây được hái
+Các sản phẩm được chế biến từ lá cây thuốc lá như sợi thuốc lá phơi khô,...
+
+Bụi cây chè
+Lá cây chè chưa được hái
+Lá cây được hái
+Các sản phẩm được chế biến từ lá cây chè nhe chè khô,...
+
+Cây nho
+Quả nho chưa thu hoạch được
+Nho được thu hoạch
+Các sản phẩm được chế biến từ nho như rượu vang,...
+
+Cây ăn quả
+Quả trên cây chưa thu hoạch được
+Trái cây được thu hoạch
+Các sản phẩm được chế biến từ trái cây như dứa đóng hộp,...
+
+Cây cọ dầu
+Quả chưa được hái
+Quả được hái
+Các sản phẩm được chế biến từ quả cọ dầu như dầu cọ
+
+Cây cao su
+Mủ cao su trên cây chưa thu hoạch
+Mủ thu hoạch
+Các sản phẩm được chế biến từ mủ cao su như lốp xe, đệm cao su, găng tay y tế,...
+
+
+Cây trồng trong rừng lấy gỗ
+Cây đã được chặt hạ
+Khúc gỗ, gỗ xẻ
+
+
+Bò sữa
+Sữa vắt
+Các sản phẩm từ sữa
+
+
+Lợn
+Thịt lợn
+Các sản phẩm từ thịt lợn
+
+
+Cừu
+Lông
+Sợi, thảm
+
+1.3. Nguyên tắc kế toán đối với tài sản sinh học
+1.3.1. Đối với cây lâu năm cho sản phẩm định kỳ, súc vật làm việc được kế toán theo hướng dẫn tại Tài khoản 211 - TSCĐ hữu hình.
+1.3.2. Đối với các tài sản sinh học còn lại không phải là cây lâu năm cho sản phẩm định kỳ hoặc súc vật làm việc: 
+a) Súc vật nuôi cho sản phẩm định kỳ: Việc kế toán tương tự như đối với TSCĐ. Theo đó:
+- Các chi phí mua, chăm sóc, nuôi dưỡng các con vật này,... phát sinh từ khi bắt đầu cho đến giai đoạn trưởng thành (sẵn sàng cho sản phẩm hoặc sẵn sàng thực hiện được nhiệm vụ cụ thể theo yêu cầu kỹ thuật) thì được tính vào giá gốc của tài sản sinh học. 
+- Khi tài sản sinh học đến giai đoạn trưởng thành (tài sản sinh học đạt đến giai đoạn về mặt kỹ thuật theo cách thức dự định của doanh nghiệp, như để tạo ra sản phẩm sinh học mới (ví dụ: gà đẻ trứng, bò mẹ mang thai...),... thì doanh nghiệp bắt đầu thực hiện việc trích khấu hao tài sản sinh học trên cơ sở giá trị phải khấu hao. Cách thức xác định giá trị phải khấu hao của tài sản sinh học mẹ được thực hiện tương tự như khấu hao TSCĐ của doanh nghiệp. 
+- Khi tài sản sinh học mẹ bắt đầu cho sản phẩm (ví dụ gà đẻ trứng, bò cho sữa,...) hoặc sinh ra các tài sản sinh học khác (bò mẹ sinh ra bê con,...): Giá gốc của tài sản sinh học mới tạo ra (bê con, trứng gà, sữa bò...) phải bao gồm phần chi phí chăm sóc, nuôi dưỡng phát sinh trong kỳ tính cho tài sản sinh học mới đó và chi phí khấu hao tài sản sinh học mẹ. Việc phân bổ chi phí chăm sóc, nuôi trồng trong kỳ cho các tài sản sinh học liên quan (tài sản sinh học mẹ, tài sản sinh học mới tạo ra, sản phẩm nông nghiệp,...) cần căn cứ vào đặc điểm, tính chất cũng như yêu cầu quản lý, cách thức thu hồi lợi ích kinh tế các tài sản sinh học của doanh nghiệp. Doanh nghiệp phải áp dụng nhất quán phương pháp đã chọn để phân bổ chi phí chăm sóc, nuôi trồng trong kỳ cho các tài sản sinh học liên quan qua các kỳ kế toán và phải thuyết minh trên Báo cáo tài chính về phương pháp đã lựa chọn đó.
+- Khi lập và trình bày Báo cáo tài chính, giá trị các tài sản sinh học là súc vật nuôi cho sản phẩm định kỳ phải được trình bày là tài sản dài hạn trên Báo cáo tình hình tài chính của doanh nghiệp. 
+Tại thời điểm kết thúc kỳ kế toán: Trường hợp có dấu hiệu hoặc bằng chứng về việc các tài sản sinh học này bị tổn thất hoặc giá trị thuần có thể thực hiện được thấp hơn so với giá trị ghi sổ của tài sản sinh học thì doanh nghiệp phải trích lập dự phòng tổn thất tài sản.
+b) Súc vật nuôi lấy sản phẩm một lần 
+- Toàn bộ chi phí mua, chăm sóc, nuôi dưỡng,... phát sinh liên quan trực tiếp đến các tài sản này được hạch toán vào giá gốc của tài sản sinh học. 
+- Tại thời điểm kết thúc kỳ kế toán: Trường hợp có bất kỳ dấu hiệu hoặc bằng chứng nào cho thấy các tài sản này bị tổn thất hoặc giá trị thuần có thể thực hiện được thấp hơn so với giá trị ghi sổ của tài sản sinh học thì doanh nghiệp phải trích lập dự phòng tổn thất tài sản sinh học. 
+- Trường hợp súc vật nuôi lấy sản phẩm một lần có thời gian dự kiến thu hoạch từ 12 tháng trở xuống hoặc trong một chu kỳ kinh doanh thông thường kể từ thời điểm kết thúc kỳ kế toán thì các tài sản sinh học này được trình bày là tài sản ngắn hạn trên Báo cáo tình hình tài chính của doanh nghiệp. Đối với súc vật nuôi lấy sản phẩm một lần còn lại được trình bày là tài sản dài hạn trên Báo cáo tình hình tài chính của doanh nghiệp.
+c) Cây trồng theo mùa vụ hoặc lấy sản phẩm một lần: 
+- Toàn bộ chi phí mua, nuôi trồng, chăm sóc,... phát sinh liên quan trực tiếp đến các tài sản này được hạch toán vào giá gốc của tài sản sinh học. Trường hợp nếu các chi phí này phát sinh không làm tăng lợi ích kinh tế trong tương lai của doanh nghiệp thì phải được ghi nhận là chi phí sản xuất kinh doanh trong kỳ. 
+- Tại thời điểm kết thúc kỳ kế toán: Trường hợp có dấu hiệu hoặc bằng chứng về việc các tài sản này bị tổn thất hoặc giá trị thuần có thể thực hiện được thấp hơn so với giá trị ghi sổ của tài sản sinh học thì doanh nghiệp phải trích lập dự phòng tổn thất tài sản. 
+- Trường hợp cây trồng theo mùa vụ hoặc lấy sản phẩm một lần có thời gian dự kiến thu hoạch từ 12 tháng trở xuống hoặc trong một chu kỳ kinh doanh thông thường kể từ thời điểm kết thúc kỳ kế toán thì các tài sản sinh học này được trình bày là tài sản ngắn hạn trên Báo cáo tình hình tài chính của doanh nghiệp. Đối với cây trồng theo mùa vụ hoặc lấy sản phẩm một lần còn lại được trình bày là tài sản dài hạn trên Báo cáo tình hình tài chính của doanh nghiệp.
+1.4. Trường hợp chi phí mua, nuôi trồng, chăm sóc,... phát sinh không tạo ra hoặc không liên quan đến tài sản sinh học cụ thể, không làm tăng lợi ích kinh tế trong tương lai của doanh nghiệp (ví dụ nghiên cứu loại tài sản sinh học mới) thì phải được ghi nhận là chi phí sản xuất kinh doanh trong kỳ.
+1.5. Tùy thuộc vào đặc điểm của từng loại tài sản sinh học của doanh nghiệp trong quá trình sản xuất kinh doanh và yêu cầu quản lý của đơn vị mình để các doanh nghiệp tổ chức việc quản lý, theo dõi chi tiết và kế toán các tài sản sinh học cho phù hợp.
+Việc mua sắm, đầu tư, phân loại tài sản, khấu hao, thủ tục thanh lý, nhượng bán đối với vườn cây lâu năm, súc vật làm việc và/hoặc cho sản phẩm của các doanh nghiệp nhà nước thực hiện theo hướng dẫn của pháp luật đối với doanh nghiệp nhà nước.
+1.6. Doanh nghiệp thuyết minh trên Báo cáo tài chính của đơn vị mình các thông tin cho các tài sản sinh học theo quy định:
+a) Miêu tả về các tài sản sinh học có giá trị chiếm từ 10% tổng giá trị tài sản sinh học trở lên: tính chất, đặc điểm của từng loại tài sản sinh học, chính sách kế toán áp dụng cho từng loại tài sản sinh học đó,...
+b) Phương pháp phân bổ chi phí chăm sóc, nuôi trồng trong kỳ đối với các tài sản sinh học mẹ, tài sản sinh học mới tạo ra, sản phẩm nông nghiệp...;
+c) Phương pháp khấu hao tài sản sinh học;
+d) Thời gian sử dụng hữu ích hoặc tỷ lệ khấu hao tài sản sinh học; 
+đ) Tổng giá trị ghi sổ và giá trị khấu hao lũy kế tại thời điểm đầu kỳ và cuối kỳ kế toán;
+e) Các khoản dự phòng tổn thất tài sản sinh học (nếu có);
+g) Giá trị tài sản sinh học dùng để thế chấp, cầm cố bảo đảm các khoản nợ phải trả tại thời điểm cuối kỳ;
+h) Các cam kết về đầu tư hoặc mua các tài sản sinh học;
+i) Các thay đổi như thuyết minh về giá trị hợp lý trừ chi phí bán của tài sản sinh học mà doanh nghiệp có thể quan sát được và có thể đo đếm được (nếu có).
+2. Kết cấu và nội dung phản ánh của Tài khoản 215 - Tài sản sinh học
+Bên Nợ:
+- Giá trị tài sản sinh học tăng do mua, chăm sóc, nuôi trồng,... thực tế phát sinh trong kỳ.
+Bên Có:
+- Giá trị tài sản sinh học giảm do khấu hao, bán, thanh lý, tổn thất, sử dụng cho các hoạt động của doanh nghiệp,... 
+Số dư bên Nợ: 
+Giá trị tài sản sinh học hiện có của doanh nghiệp tại thời điểm kết thúc kỳ kế toán.
+Tài khoản 215 có 3 tài khoản cấp 2:
+- TK 2151 - Súc vật nuôi cho sản phẩm định kỳ. TK này có 2 tài khoản cấp 3:
++ TK 21511 - Súc vật nuôi cho sản phẩm định kỳ chưa đạt đến giai đoạn trưởng thành;
++ TK 21512 - Súc vật nuôi cho sản phẩm định kỳ đến giai đoạn trưởng thành, TK này bao gồm 2 tài khoản cấp 4: TK 215121 - Nguyên giá;TK 215122 - Giá trị khấu hao lũy kế.
+- TK 2152 - Súc vật nuôi lấy sản phẩm một lần. 
+- TK 2153 - Cây trồng theo mùa vụ hoặc lấy sản phẩm một lần.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết Tài khoản 215 - Tài sản sinh học để theo dõi cho từng loại tài sản sinh học cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình. 
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Đối với súc vật nuôi cho sản phẩm định kỳ: 
+a) Khi doanh nghiệp phát sinh các chi phí mua, chăm sóc, nuôi dưỡng các tài sản sinh học này tính đến giai đoạn trưởng thành (bắt đầu đạt đến giai đoạn về mặt kỹ thuật để tạo ra sản phẩm sinh học mới), căn cứ vào các chứng từ liên quan, ghi:
+Nợ TK 215 - Tài sản sinh học (21511) 
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331, 334, 338,...
+b) Khi tài sản sinh học là súc vật nuôi cho sản phẩm định kỳ đến giai đoạn trưởng thành, bắt đầu ở trạng thái sẵn sàng làm việc hoặc đạt đến giai đoạn về mặt kỹ thuật để tạo ra sản phẩm sinh học mới:
+- Chuyển tài sản sinh học từ loại súc vật nuôi cho sản phẩm định kỳ chưa đạt đến giai đoạn trưởng thành sang súc vật nuôi cho sản phẩm định kỳ đạt đến giai đoạn trưởng thành, ghi:
+Nợ TK 21512 - Súc vật làm việc hoặc cho sản phẩm định kỳ đạt đến giai đoạn trưởng thành 
+Có TK 21511 - Súc vật làm việc hoặc cho sản phẩm định kỳ chưa đạt đến giai đoạn trưởng thành.
+- Hạch toán hoặc phân bổ chi phí chăm sóc, nuôi trồng và các chi phí khác phát sinh sau giai đoạn trưởng thành cho các tài sản sinh học mới được tạo ra theo tiêu thức phù hợp tùy theo đặc điểm của tài sản sinh học và hoạt động sản xuất kinh doanh cũng như yêu cầu quản lý của doanh nghiệp:
+Nợ TK 215 - Tài sản sinh học (chi tiết cho từng loại tài sản sinh học liên quan)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331, 334, 338,...
+c) Trích khấu hao súc vật nuôi cho sản phẩm định kỳ đạt đến giai đoạn trưởng thành phân bổ cho các tài sản sinh học mới được tạo ra theo tiêu thức phù hợp tùy theo đặc điểm của tài sản sinh học và hoạt động sản xuất kinh doanh cũng như yêu cầu quản lý của doanh nghiệp:
+Nợ TK 215 - Tài sản sinh học (chi tiết cho từng loại tài sản sinh học)
+Có TK 215122 - Giá trị khấu hao lũy kế.
+d) Khi tài sản sinh học mới đến kỳ thu hoạch:
+- Nếu doanh nghiệp chuyển các tài sản sinh học mới thành sản phẩm nông nghiệp để tiếp tục chế biến, ghi: 
+Nợ các TK 152, 154,...
+Có TK 215 - Tài sản sinh học (chi tiết cho từng loại tài sản sinh học mới).
+- Nếu doanh nghiệp bán ngay các tài sản sinh học mới mà không chuyển sang giai đoạn chế biến:
++ Phản ánh giá vốn hàng bán:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 215 - Tài sản sinh học (chi tiết cho từng loại tài sản sinh học).
++ Phản ánh doanh thu bán tài sản sinh học:
+Nợ các TK 111, 112, 131,...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 333 - Thuế và các khoản phải nộp nhà nước (nếu có).
+3.2. Đối với súc vật nuôi lấy sản phẩm một lần: 
+a) Trong kỳ, khi doanh nghiệp phát sinh các chi phí mua, chăm sóc, nuôi trồng các tài sản sinh học, căn cứ vào các chứng từ liên quan, ghi:
+Nợ TK 215 - Tài sản sinh học (2152)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 331,...
+b) Khi các tài sản sinh học đến kỳ thu hoạch, nếu doanh nghiệp chuyển các tài sản sinh học thành sản phẩm nông nghiệp để tiếp tục chế biến, ghi: 
+Nợ các TK 152, 154,...
+		Có TK 215 - Tài sản sinh học (2152).
+c) Trường hợp doanh nghiệp bán ngay các tài sản sinh học khi đến kỳ thu hoạch mà không chuyển sang giai đoạn chế biến, ghi:
+- Phản ánh giá vốn hàng bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có TK 215 - Tài sản sinh học (2152).
+- Phản ánh doanh thu bán tài sản sinh học, ghi:
+Nợ các TK 111, 112, 131,...
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+		Có TK 333 - Thuế và các khoản phải nộp nhà nước (nếu có).
+d) Trường hợp doanh nghiệp sử dụng tài sản sinh học phục vụ cho các hoạt động của doanh nghiệp (ví dụ như bán hàng, nghiên cứu, cho, biếu, tặng,...), căn cứ vào mục đích sử dụng tài sản sinh học và chứng từ liên quan, ghi:
+Nợ các TK 641, 642,...
+Có TK 215 - Tài sản sinh học
+Có TK 3331 - Thuế và các khoản phải nộp nhà nước (nếu có).
+3.3. Đối với cây trồng theo mùa vụ hoặc lấy sản phẩm một lần: Việc hạch toán kế toán tương tự súc vật nuôi lấy sản phẩm một lần hướng dẫn tại mục 3.2 nêu trên.
+3.4. Đối với cây lâu năm cho sản phẩm định kỳ và súc vật làm việc: Việc hạch toán kế toán được thực hiện theo hướng dẫn tại Tài khoản 211 - TSCĐ hữu hình.
+
+TÀI KHOẢN 217 - BẤT ĐỘNG SẢN ĐẦU TƯ
+
+	1. Nguyên tắc kế toán
+1.1. Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm bất động sản đầu tư (BĐSĐT) của doanh nghiệp theo nguyên giá, được theo dõi chi tiết theo từng đối tượng tương tự như TSCĐ. BĐSĐT gồm: Quyền sử dụng đất, nhà hoặc một phần của nhà hoặc cả nhà và đất, cơ sở hạ tầng do người chủ sở hữu hoặc người đi thuê tài sản theo hợp đồng thuê tài chính nắm giữ nhằm mục đích thu lợi từ việc cho thuê hoặc chờ tăng giá mà không phải để:
+- Sử dụng trong sản xuất, cung cấp hàng hóa, dịch vụ hoặc sử dụng cho các mục đích quản lý; hoặc
+- Bán trong kỳ sản xuất, kinh doanh thông thường.
+1.2. Tài khoản này dùng để phản ánh giá trị bất động sản đủ tiêu chuẩn ghi nhận là BĐSĐT. Không phản ánh vào tài khoản này giá trị bất động sản nắm giữ để bán trong kỳ hoạt động kinh doanh thông thường hoặc xây dựng để bán trong tương lai gần, bất động sản chủ sở hữu sử dụng, bất động sản trong quá trình xây dựng chưa hoàn thành với mục đích để sử dụng trong tương lai dưới dạng BĐSĐT.
+Bất động sản đầu tư được ghi nhận là tài sản phải thỏa mãn đồng thời hai điều kiện sau:
+- Chắc chắn thu được lợi ích kinh tế trong tương lai; và
+- Nguyên giá phải được xác định một cách đáng tin cậy.
+1.3. Bất động sản đầu tư được ghi nhận trên tài khoản này theo nguyên giá. Nguyên giá của BĐSĐT là toàn bộ các chi phí (tiền hoặc tương đương tiền) mà doanh nghiệp bỏ ra hoặc giá trị hợp lý của các khoản khác đưa ra trao đổi để có được BĐSĐT tính đến thời điểm mua hoặc xây dựng hoàn thành BĐSĐT đó.
+- Tùy thuộc vào từng trường hợp, nguyên giá của BĐSĐT được xác định như sau:
++ Nguyên giá của BĐSĐT được mua bao gồm giá mua và các chi phí liên quan trực tiếp đến việc mua, như: Phí dịch vụ tư vấn, lệ phí trước bạ và chi phí giao dịch liên quan khác,...
++ Nguyên giá của BĐSĐT tự xây dựng là giá thành thực tế và các chi phí liên quan trực tiếp của BĐSĐT tính đến ngày hoàn thành công việc xây dựng;
++ Trường hợp bất động sản thuê tài chính với mục đích để cho thuê hoạt động thỏa mãn tiêu chuẩn ghi nhận là BĐSĐT thì nguyên giá của BĐSĐT đó tại thời điểm khởi đầu thuê được thực hiện theo quy định của Chuẩn mực kế toán Việt Nam số 06 - Thuê tài sản.
+- Các chi phí sau không được tính vào nguyên giá của BĐSĐT: 
++ Chi phí phát sinh ban đầu nhưng không phải là các chi phí cần thiết để đưa BĐSĐT vào trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp;
++ Các chi phí khi mới đưa BĐSĐT vào hoạt động lần đầu trước khi BĐSĐT đạt tới trạng thái hoạt động bình thường theo dự kiến;
++ Các chi phí không bình thường về nguyên liệu, vật liệu, lao động hoặc các nguồn lực khác trong quá trình xây dựng BĐSĐT. 
+1.4. Các chi phí liên quan đến BĐSĐT phát sinh sau ghi nhận ban đầu phải được ghi nhận là chi phí sản xuất, kinh doanh trong kỳ, trừ khi chi phí này có khả năng chắc chắn làm cho BĐSĐT tạo ra lợi ích kinh tế trong tương lai nhiều hơn mức hoạt động được đánh giá ban đầu thì được ghi tăng nguyên giá BĐSĐT. 
+1.5 Trong quá trình cho thuê hoạt động phải tiến hành trích khấu hao BĐSĐT và ghi nhận vào chi phí kinh doanh trong kỳ (kể cả trong thời gian ngừng cho thuê). Doanh nghiệp có thể dựa vào các bất động sản chủ sở hữu sử dụng cùng loại để ước tính thời gian trích khấu hao và xác định phương pháp khấu hao của BĐSĐT cho phù hợp. 
+- Trường hợp doanh nghiệp cho thuê BĐSĐT có nhận trước tiền cho thuê của nhiều kỳ thì việc ghi nhận doanh thu dịch vụ cho thuê BĐSĐT được thực hiện theo nguyên tắc phân bổ số tiền cho thuê nhận trước phù hợp với thời gian cho thuê.
+- Các chi phí khấu hao BĐSĐT và các chi phí liên quan trực tiếp khác tới việc cho thuê, như: Chi phí dịch vụ mua ngoài, chi phí tiền lương nhân viên trực tiếp quản lý bất động sản cho thuê, chi phí khấu hao các công trình phụ trợ phục vụ việc cho thuê BĐSĐT,... được hạch toán vào giá vốn của dịch vụ cho thuê BĐSĐT.
+1.6. Doanh nghiệp không trích khấu hao đối với BĐSĐT nắm giữ chờ tăng giá (trừ trường hợp BĐSĐT đang trong thời gian cho thuê). Trường hợp có bằng chứng chắc chắn cho thấy BĐSĐT bị giảm giá so với giá trị thị trường và khoản giảm giá được xác định một cách đáng tin cậy thì doanh nghiệp được đánh giá giảm nguyên giá BĐSĐT và ghi nhận khoản tổn thất vào giá vốn hàng bán (tương tự như việc lập dự phòng đối với hàng hóa bất động sản). 
+Tại các thời điểm kết thúc kỳ kế toán, nếu có bằng chứng chắc chắn, tin cậy về việc khoản giảm giá BĐSĐT không còn tồn tại thì doanh nghiệp được ghi tăng nguyên giá BĐSĐT và ghi giảm giá vốn hàng bán tối đa bằng số đã ghi giảm và không vượt quá giá gốc ban đầu của BĐSĐT. 
+1.7. Đối với những BĐSĐT được mua vào nhưng phải tiến hành xây dựng, cải tạo, nâng cấp trước khi sử dụng cho mục đích đầu tư thì giá trị bất động sản, chi phí mua sắm và chi phí cho quá trình xây dựng, cải tạo, nâng cấp BĐSĐT được phản ánh trên Tài khoản 241 - Xây dựng cơ bản dở dang. Khi quá trình xây dựng, cải tạo, nâng cấp hoàn thành phải xác định nguyên giá BĐSĐT hoàn thành để kết chuyển vào Tài khoản 217 - Bất động sản đầu tư.
+1.8. Việc chuyển từ bất động sản chủ sở hữu sử dụng thành BĐSĐT hoặc từ BĐSĐT sang bất động sản chủ sở hữu sử dụng hay hàng tồn kho chỉ khi có sự thay đổi về mục đích sử dụng như các trường hợp sau:
+- BĐSĐT chuyển thành bất động sản chủ sở hữu sử dụng khi chủ sở hữu bắt đầu sử dụng tài sản này;
+- BĐSĐT chuyển thành hàng tồn kho khi chủ sở hữu bắt đầu triển khai cho mục đích bán; 
+- Bất động sản chủ sở hữu sử dụng chuyển thành BĐSĐT khi chủ sở hữu kết thúc sử dụng tài sản đó để cho bên khác thuê hoạt động;
+- Hàng tồn kho chuyển thành BĐSĐT khi chủ sở hữu bắt đầu cho bên khác thuê hoạt động;
+- Bất động sản xây dựng chuyển thành BĐSĐT khi kết thúc giai đoạn xây dựng, bàn giao đưa vào hoạt động đầu tư cho thuê hoặc nắm giữ chờ tăng giá để bán (trong giai đoạn xây dựng phải kế toán theo Chuẩn mực kế toán Việt Nam số 03 - Tài sản cố định hữu hình).
+Việc chuyển đổi mục đích sử dụng giữa BĐSĐT với bất động sản chủ sở hữu sử dụng hoặc hàng tồn kho không làm thay đổi giá trị ghi sổ của tài sản được chuyển đổi và không làm thay đổi nguyên giá của bất động sản trong việc xác định giá trị hay để lập Báo cáo tài chính.
+1.9. Khi doanh nghiệp quyết định bán một BĐSĐT mà không có giai đoạn sửa chữa, cải tạo nâng cấp thì doanh nghiệp vẫn tiếp tục ghi nhận là BĐSĐT trên Tài khoản 217 - Bất động sản đầu tư cho đến khi BĐSĐT đó được bán mà không chuyển thành hàng tồn kho.
+1.10. Các khoản lãi hoặc lỗ phát sinh từ việc bán BĐSĐT được xác định bằng số chênh lệch giữa doanh thu với chi phí liên quan trực tiếp đến việc bán BĐSĐT và giá trị còn lại của BĐSĐT. Số lãi hoặc lỗ này được trình bày theo số thuần trên Báo cáo kết quả hoạt động kinh doanh trong kỳ (Trường hợp bán và thuê lại tài sản là BĐSĐT được thực hiện theo quy định tại Chuẩn mực kế toán Việt Nam số 06 - Thuê tài sản). 
+- Doanh thu từ việc bán BĐSĐT là giá bán chưa có thuế GTGT đối với trường hợp doanh nghiệp nộp thuế GTGT tính theo phương pháp khấu trừ thuế. 
+- Trường hợp bán BĐSĐT theo phương thức trả chậm, trả góp thì doanh thu bán BĐSĐT được xác định theo giá bán trả tiền ngay (giá bán chưa có thuế GTGT đối với doanh nghiệp nộp thuế GTGT tính theo phương pháp khấu trừ thuế). Định kỳ, doanh nghiệp ghi nhận khoản lãi trả chậm, trả góp vào doanh thu tài chính của từng kỳ. Thông tin về tiền lãi trả chậm, trả góp khi bán BĐSĐT theo phương thức trả chậm, trả góp phải được theo dõi chi tiết trên sổ kế toán và thuyết minh trên Báo cáo tài chính của doanh nghiệp (tổng số lãi trả chậm, trả góp phải thu, số lãi đã thu và số lãi còn phải thu).
+1.11. Doanh nghiệp ghi giảm BĐSĐT trong các trường hợp sau:
+- Chuyển đổi mục đích sử dụng từ BĐSĐT sang hàng tồn kho hoặc sang bất động sản chủ sở hữu sử dụng;
+- Bán, thanh lý BĐSĐT;
+- Hết thời hạn thuê tài chính trả lại BĐSĐT cho người cho thuê.
+2. Kết cấu và nội dung phản ánh của Tài khoản 217 - Bất động sản đầu tư
+Bên Nợ: 
+Nguyên giá BĐSĐT tăng trong kỳ. 
+Bên Có: 
+Nguyên giá BĐSĐT giảm trong kỳ. 
+Số dư bên Nợ: 
+Nguyên giá BĐSĐT hiện có tại thời điểm kết thúc kỳ kế toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi mua Bất động sản đầu tư:
+a) Trường hợp mua BĐSĐT trả tiền ngay, nếu thuế GTGT đầu vào được khấu trừ, ghi:
+Nợ TK 217 - Bất động sản đầu tư 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332)
+Có các TK 111, 112.
+Trường hợp thuế GTGT đầu vào không được khấu trừ thì nguyên giá BĐSĐT bao gồm cả thuế GTGT.
+b) Mua BĐSĐT theo phương thức trả chậm, trả góp:
+- Khi mua BĐSĐT theo phương thức trả chậm, trả góp, ghi:
+Nợ TK 217 - Bất động sản đầu tư (giá mua trả tiền ngay)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+Có các TK 111, 112, 331,... 
+- Định kỳ, phản ánh lãi mua trả chậm, trả góp BĐSĐT phải trả cho người bán vào chi phí tài chính của từng kỳ, ghi:
+Nợ TK 635 - Chi phí tài chính
+Có TK 331 - Phải trả cho người bán.
+- Định kỳ, khi trả tiền cho người bán bao gồm cả nợ gốc và tiền lãi trả chậm, trả góp, ghi:
+Nợ TK 331 - Phải trả cho người bán
+		Có các TK 111, 112
+3.2. Trường hợp BĐSĐT hình thành do xây dựng cơ bản hoàn thành bàn giao:
+- Khi phát sinh chi phí xây dựng BĐSĐT, căn cứ vào các tài liệu và chứng từ có liên quan, doanh nghiệp tập hợp chi phí vào bên Nợ Tài khoản 241 - XDCB dở dang (tương tự như xây dựng cơ bản TSCĐ hữu hình, đã hướng dẫn tại phần Tài khoản 211 - TSCĐ hữu hình).
+- Khi giai đoạn đầu tư XDCB hoàn thành bàn giao chuyển tài sản đầu tư thành BĐSĐT, kế toán căn cứ vào hồ sơ bàn giao, ghi:
+Nợ TK 217 - Bất động sản đầu tư
+		Có TK 241 - XDCB dở dang.
+3.3. Khi chuyển từ bất động sản chủ sở hữu sử dụng hoặc hàng tồn kho thành BĐSĐT, doanh nghiệp vào hồ sơ chuyển đổi mục đích sử dụng, ghi:
+	a) Trường hợp chuyển đổi TSCĐ thành BĐSĐT để cho thuê hoặc BĐSĐT nắm giữ chờ tăng giá, ghi:
+Nợ TK 217 - Bất động sản đầu tư 
+		Có các TK 211, 213,... 
+Đồng thời kết chuyển số hao mòn luỹ kế, ghi:
+	Nợ các TK 2141, 2143
+		Có TK 2147 - Hao mòn BĐSĐT 
+b) Khi chuyển từ hàng tồn kho thành BĐSĐT, căn cứ vào hồ sơ chuyển đổi mục đích sử dụng, ghi:	
+	Nợ TK 217 - Bất động sản đầu tư
+		Có các TK 155, 156.
+3.4. Khi doanh nghiệp đi thuê bất động sản theo phương thức thuê tài chính với mục đích để cho thuê theo một hoặc nhiều hợp đồng thuê hoạt động, nếu tài sản thuê đó thỏa mãn tiêu chuẩn là BĐSĐT:
+a) Căn cứ vào hợp đồng thuê tài chính và các chứng từ liên quan, ghi:
+Nợ TK 217 - Bất động sản đầu tư
+		Có các TK 111, 112, 3412,...
+(Việc kế toán các giao dịch liên quan đến thuê tài chính BĐSĐT được thực hiện tương tự như hướng dẫn tại Tài khoản 212 - TSCĐ thuê tài chính).
+b) Khi hết hạn thuê tài sản theo phương thức thuê tài chính
+- Nếu trả lại tài sản thuê tài chính đang phân loại là BĐSĐT, ghi:
+Nợ TK 2147 - Hao mòn BĐSĐT
+Nợ TK 632 - Giá vốn hàng bán (số chênh lệch giữa nguyên giá BĐSĐT 	thuê và giá trị hao mòn luỹ kế) (nếu có)
+		Có TK 217 - Bất động sản đầu tư (nguyên giá).
+- Nếu mua lại bất động sản thuê tài chính đang phân loại là BĐSĐT để tiếp tục đầu tư, số tiền phải trả thêm được ghi tăng nguyên giá BĐSĐT, ghi:
+Nợ TK 217 - Bất động sản đầu tư
+		Có các TK 111, 112,...
+- Nếu mua lại bất động sản thuê tài chính đang phân loại là BĐSĐT để sử dụng cho hoạt động sản xuất, kinh doanh hoặc quản lý của doanh nghiệp thì phải phân loại lại thành bất động sản chủ sở hữu sử dụng, ghi:
+Nợ TK 211 - TSCĐ hữu hình, hoặc 
+Nợ TK 213 - TSCĐ vô hình
+		Có TK 217 - Bất động sản đầu tư
+		Có các TK 111, 112 (số tiền phải trả thêm).
+Đồng thời kết chuyển số hao mòn lũy kế, ghi:
+Nợ TK 2147 - Hao mòn BĐSĐT
+		Có các TK 2141, 2143.
+3.5. Khi phát sinh chi phí sau ghi nhận ban đầu của BĐSĐT, nếu thỏa mãn các điều kiện được vốn hóa hoặc giá mua tài sản bao gồm cả các nghĩa vụ của doanh nghiệp phải chịu các chi phí cần thiết sẽ phát sinh để đưa BĐSĐT tới trạng thái có khả năng hoạt động theo cách thức dự định của doanh nghiệp thì các chi phí này cũng được ghi tăng nguyên giá BĐSĐT:
+- Tập hợp chi phí phát sinh sau ghi nhận ban đầu (nâng cấp, cải tạo BĐSĐT) thực tế phát sinh, ghi:
+Nợ TK 241 - XDCB dở dang
+Nợ TK 133 - Thuế GTGT được khấu trừ (1332) (nếu có)
+		Có các TK 111, 112, 152, 331,...
+- Khi kết thúc hoạt động nâng cấp, cải tạo,... BĐSĐT, bàn giao ghi tăng nguyên giá BĐSĐT, ghi:
+Nợ TK 217 - Bất động sản đầu tư
+		Có TK 241 - XDCB dở dang.
+3.6. Kế toán hoạt động bán, thanh lý BĐSĐT nắm giữ để cho thuê, nắm giữ chờ tăng giá để bán:
+a) Ghi nhận doanh thu bán, thanh lý BĐSĐT:
+	Nợ các TK 111, 112, 131 (tổng giá thanh toán)
+	Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá bán
+chưa có thuế GTGT)
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+b) Ghi giảm nguyên giá và giá trị còn lại của BĐSĐT đã được bán:
+Nợ TK 2147 - Hao mòn BĐSĐT (2147) (nếu có)
+Nợ TK 632 - Giá vốn hàng bán (giá trị còn lại của BĐSĐT)
+		Có TK 217 - Bất động sản đầu tư (nguyên giá của BĐSĐT).	
+c) Khi phát sinh chi phí bán BĐSĐT, căn cứ vào các chứng từ kế toán có liên quan, ghi:
+Nợ TK 632 - Giá vốn hàng bán (giá trị còn lại của BĐSĐT)
+	Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331,...
+	d) Cuối kỳ, kết chuyển để bù trừ giữa giá bán với giá trị còn lại và chi phí bán, thanh lý BĐSĐT để xác định lãi/lỗ của hoạt động bán, thanh lý BĐSĐT:
+- Trường hợp có lãi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá bán, thanh lý BĐSĐT)
+Có TK 632 - Giá vốn hàng bán (giá trị còn lại + chi phí bán, thanh lý BĐSĐT)
+Có TK 911 - Xác định kết quả kinh doanh (số lãi)
+	- Trường hợp bị lỗ:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá bán, thanh lý BĐSĐT)
+Nợ TK 911 - Xác định kết quả kinh doanh (số lỗ)
+Có TK 632 - Giá vốn hàng bán (giá trị còn lại + chi phí bán, thanh lý BĐSĐT)
+Khi lập và trình bày Báo cáo kết quả hoạt động kinh doanh, doanh nghiệp căn cứ vào số lãi hoặc số lỗ sau khi bù trừ giữa doanh thu với giá trị còn lại và chi phí bán, thanh lý BĐSĐT để trình bày vào chỉ tiêu “Lãi/lỗ của hoạt động bán, thanh lý BĐSĐT”.
+3.7. Kế toán cho thuê hoạt động BĐSĐT
+a) Ghi nhận doanh thu từ việc cho thuê BĐSĐT:
+Nợ các TK 111, 112, 131,...
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+		Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+b) Ghi nhận giá vốn BĐSĐT cho thuê
+Nợ TK 632 - Giá vốn hàng bán
+		Có TK 2147 - Hao mòn BĐSĐT
+		Có các TK 111, 112, 331, 335,...
+3.8. Kế toán chuyển BĐSĐT thành hàng tồn kho hoặc thành bất động sản chủ sở hữu sử dụng:
+a) Trường hợp BĐSĐT chuyển thành hàng tồn kho khi chủ sở hữu có quyết định sửa chữa, cải tạo nâng cấp để bán:
+- Khi có quyết định sửa chữa, cải tạo, nâng cấp BĐSĐT để bán, doanh nghiệp kết chuyển giá trị còn lại của BĐSĐT vào Tài khoản 156 - Hàng hóa, ghi:
+Nợ TK 156 - Hàng hóa (Giá trị còn lại của BĐSĐT)
+Nợ TK 2147 - Hao mòn BĐSĐT (nếu có)
+		Có TK 217 - Bất động sản đầu tư (nguyên giá). 
+- Khi phát sinh các chi phí sửa chữa, cải tạo, nâng cấp triển khai cho mục đích bán, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 152, 334, 331,...
+- Khi kết thúc giai đoạn sửa chữa, cải tạo, nâng cấp triển khai cho mục đích bán, kết chuyển toàn bộ chi phí ghi tăng giá gốc hàng hóa bất động sản chờ bán, ghi:
+Nợ TK 156 - Hàng hóa (Hàng hóa bất động sản)
+		Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+b) Trường hợp chuyển BĐSĐT thành bất động sản chủ sở hữu sử dụng, ghi:
+Nợ các TK 211, 213
+		Có TK 217 - Bất động sản đầu tư.
+Đồng thời, kết chuyển số hao mòn luỹ kế, ghi:
+Nợ TK 2147 - Hao mòn BĐSĐT (nếu có)
+		Có các TK 2141, 2143.
+3.9. Đối với BĐSĐT nắm giữ chờ tăng giá, doanh nghiệp không thực hiện trích khấu hao mà xác định tổn thất BĐSĐT phản ánh vào giá vốn hàng bán nếu có bằng chứng cho thấy BĐSĐT bị suy giảm giá trị, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có TK 217 - Bất động sản đầu tư.
+3.10. Khi có bằng chứng chắc chắn, tin cậy về việc khoản giảm giá BĐSĐT không còn thì doanh nghiệp hoàn nhập để ghi giảm giá vốn hàng bán như sau:
+Nợ TK 217 - Bất động sản đầu tư
+		Có TK 632 - Giá vốn hàng bán
+
+(Xem tiếp Công báo số 1569 + 1570)

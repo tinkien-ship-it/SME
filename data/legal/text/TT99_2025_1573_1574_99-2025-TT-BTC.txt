@@ -1,0 +1,1657 @@
+VĂN BẢN QUY PHẠM PHÁP LUẬT
+
+BỘ TÀI CHÍNH
+
+Thông tư số 99/2025/TT-BTC ngày 27 tháng 10 năm 2025
+hướng dẫn Chế độ kế toán doanh nghiệp
+
+(Tiếp theo Công báo số 1571 + 1572)
+
+TÀI KHOẢN 419 - CỔ PHIẾU MUA LẠI CỦA CHÍNH MÌNH
+1. Nguyên tắc kế toán 
+a) Tài khoản này dùng để phản ánh giá trị hiện có và tình hình biến động tăng, giảm giá trị cổ phiếu quỹ hoặc cổ phiếu đã phát hành bởi công ty cổ phần và được mua lại bởi chính công ty đó (cổ phiếu mua lại của chính mình). Việc doanh nghiệp mua lại cổ phiếu của chính mình để hủy bỏ hoặc bán ra hoặc sử dụng cổ phiếu quỹ để tái phát hành hoặc dùng làm cổ phiếu thưởng được thực hiện theo quy định của pháp luật hiện hành. 
+b) Giá trị cổ phiếu mua lại của chính mình được doanh nghiệp phản ánh trên tài khoản này theo giá thực tế mua lại bao gồm giá mua lại và các chi phí liên quan trực tiếp đến việc mua lại cổ phiếu, như chi phí giao dịch, thông tin...
+c) Tại thời điểm kết thúc kỳ kế toán, giá trị thực tế cổ phiếu quỹ, cổ phiếu mua lại của chính mình được trình bày trên Báo cáo tình hình tài chính bằng cách ghi số âm (...) để ghi giảm Vốn đầu tư của chủ sở hữu trên Báo cáo tình hình tài chính.
+d) Tài khoản này không phản ánh trị giá cổ phiếu mà công ty mua của các công ty cổ phần khác vì mục đích nắm giữ để đầu tư.
+đ) Trường hợp theo quy định của pháp luật hiện hành doanh nghiệp được dùng cổ phiếu mua lại của chính mình để bán ra ngay sau khi mua lại hoặc dùng cổ phiếu quỹ để tái phát hành hoặc làm cổ phiếu thưởng thì giá vốn của cổ phiếu bán ra được tính theo phương pháp bình quân gia quyền.
+2. Kết cấu và nội dung phản ánh của Tài khoản 419 - Cổ phiếu mua lại của chính mình
+Bên Nợ: 
+Trị giá thực tế cổ phiếu mua lại của chính mình khi mua vào.
+Bên Có: 
+- Trị giá thực tế cổ phiếu mua lại của chính mình được bán ra ngay sau khi mua lại theo quy định của pháp luật. 
+- Trị giá thực tế cổ phiếu quỹ được bán ra hoặc được dùng làm cổ phiếu thưởng theo quy định của pháp luật.
+Số dư bên Nợ: 
+Trị giá thực tế cổ phiếu mua lại của chính mình mà doanh nghiệp hiện đang nắm giữ tại thời điểm kết thúc kỳ kế toán.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+ a) Kế toán mua lại cổ phiếu do chính công ty đã phát hành:
+- Khi doanh nghiệp đã hoàn tất các thủ tục mua lại số cổ phiếu do chính công ty đã phát hành theo quy định của pháp luật, ghi:
+Nợ TK 419 - Cổ phiếu mua lại của chính mình (giá mua lại cổ phiếu)
+Có các TK 111, 112.
+- Trong quá trình mua lại cổ phiếu, khi phát sinh chi phí liên quan trực tiếp đến việc mua lại cổ phiếu, ghi:
+Nợ TK 419 - Cổ phiếu mua lại của chính mình 
+Có các TK 111, 112.
+b) Khi doanh nghiệp hủy bỏ số cổ phiếu quỹ, cổ phiếu mua lại của chính mình theo quy định của pháp luật, ghi:
+Nợ TK 4111 - Vốn góp của chủ sở hữu (mệnh giá cổ phiếu);
+Nợ TK 4112 - Thặng dư vốn (nếu giá mua lại cao hơn mệnh giá) (nếu có) 
+Có TK 419 - Cổ phiếu mua lại của chính mình (giá thực tế mua lại cổ phiếu)
+Có TK 4112 - Thặng dư vốn (nếu giá mua lại thấp hơn mệnh giá) (nếu có). 
+c) Trường hợp doanh nghiệp được bán ra cổ phiếu mua lại của chính mình theo quy định của pháp luật:
+Nợ các TK 111, 112 (giá bán)
+Nợ TK 4112 - Thặng dư vốn (giá bán thấp hơn giá vốn cổ phiếu mua lại của chính mình) (nếu có)
+Có TK 419 - Cổ phiếu mua lại của chính mình (giá vốn của cổ phiếu mua lại của chính mình)
+Có TK 4112 - Thặng dư vốn (giá bán cao hơn giá vốn cổ phiếu mua lại của chính mình) (nếu có).
+- Chi phí phát sinh liên quan trực tiếp đến việc bán cổ phiếu mua lại của chính mình theo quy định của pháp luật, ghi:
+Nợ TK 4112 - Thặng dư vốn
+Có các TK 111, 112.
+d) Trường hợp doanh nghiệp được dùng cổ phiếu mua lại của chính mình làm cổ phiếu thưởng theo quy định của pháp luật: 
+Nợ các TK 421, 414,... (giá phát hành cổ phiếu quỹ)
+Nợ TK 4112 - Thặng dư vốn (số chênh lệch giữa giá mua lại cao hơn giá phát hành cổ phiếu mua lại của chính mình) (nếu có) 
+Có TK 419 - Cổ phiếu mua lại của chính mình (giá vốn cổ phiếu mua lại của chính mình)
+Có TK 4112 - Thặng dư vốn (số chênh lệch giữa giá mua lại thấp hơn giá phát hành cổ phiếu mua lại của chính mình) (nếu có).
+đ) Khi doanh nghiệp sử dụng nguồn thặng dư vốn cổ phần, quỹ đầu tư phát triển, lợi nhuận sau thuế chưa phân phối, quỹ khác thuộc vốn chủ sở hữu để mua lại cổ phiếu theo quy định của pháp luật: 
++ Khi mua lại cổ phiếu:
+Nợ TK 419 - Cổ phiếu mua lại của chính mình
+	Có TK 112 - Tiền gửi không kỳ hạn.
++ Đồng thời, ghi giảm nguồn thặng dư vốn cổ phần, quỹ đầu tư phát triển, lợi nhuận sau thuế chưa phân phối, quỹ khác thuộc vốn chủ sở hữu 
+Nợ các TK 414, 4112, 421, 418
+	Có TK 419 - Cổ phiếu mua lại của chính mình.
+TÀI KHOẢN 421 - LỢI NHUẬN SAU THUẾ CHƯA PHÂN PHỐI
+1. Nguyên tắc kế toán 
+a) Tài khoản này dùng để phản ánh kết quả kinh doanh (lãi, lỗ) sau thuế thu nhập doanh nghiệp và tình hình phân chia lợi nhuận hoặc xử lý lỗ của doanh nghiệp (nếu có) theo quy định của pháp luật.
+b) Việc phân chia lợi nhuận hoạt động kinh doanh của doanh nghiệp phải đảm bảo rõ ràng, rành mạch và đúng cơ chế tài chính hiện hành hoặc quy định của pháp luật liên quan.
+c) Phải hạch toán chi tiết kết quả hoạt động kinh doanh của từng năm tài chính (năm trước, năm nay), đồng thời theo dõi chi tiết theo từng nội dung phân chia lợi nhuận của doanh nghiệp (trích lập các quỹ, bổ sung vốn đầu tư của chủ sở hữu, chia cổ tức, lợi nhuận cho các cổ đông, cho các nhà đầu tư).
+d) Khi áp dụng hồi tố do thay đổi chính sách kế toán và điều chỉnh hồi tố các sai sót trọng yếu của các năm trước nhưng năm nay mới phát hiện dẫn đến phải điều chỉnh số dư đầu năm phần lợi nhuận sau thuế chưa phân phối thì doanh nghiệp phải điều chỉnh tăng hoặc giảm số dư đầu năm của TK 4211 - Lợi nhuận sau thuế chưa phân phối năm trước trên sổ kế toán và điều chỉnh tăng hoặc giảm chỉ tiêu “Lợi nhuận sau thuế chưa phân phối” trên Báo cáo tình hình tài chính theo quy định tại Chuẩn mực kế toán Việt Nam số 29 - Thay đổi chính sách kế toán, ước tính kế toán và các sai sót và Chuẩn mực kế toán Việt Nam số 17 - Thuế thu nhập doanh nghiệp.
+đ) Các doanh nghiệp khi phân phối lợi nhuận cần cân nhắc đến các khoản mục phi tiền tệ nằm trong lợi nhuận sau thuế chưa phân phối có thể ảnh hưởng đến luồng tiền và khả năng chi trả cổ tức, lợi nhuận của doanh nghiệp, như:
+- Khoản lãi do đánh giá lại tài sản mang đi góp vốn; do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ; do đánh giá lại các công cụ tài chính;
+- Các khoản mục phi tiền tệ khác...
+e) Đối với cổ tức ưu đãi phải trả: Doanh nghiệp phải loại khoản cổ tức ưu đãi phải trả theo bản chất của cổ phiếu ưu đãi và đảm bảo nguyên tắc:
+- Nếu cổ phiếu ưu đãi được phân loại là nợ phải trả, doanh nghiệp không ghi nhận cổ tức phải trả cho cổ phần ưu đãi từ lợi nhuận sau thuế chưa phân phối;
+- Nếu cổ phiếu ưu đãi được phân loại là vốn chủ sở hữu, khoản cổ tức ưu đãi phải trả được kế toán tương tự như việc trả cổ tức của cổ phiếu phổ thông.
+g) Doanh nghiệp phải theo dõi trong hệ thống quản trị nội bộ số lỗ tính thuế và số lỗ không tính thuế, trong đó: 
+- Khoản lỗ tính thuế là khoản lỗ tạo ra bởi các khoản chi phí được trừ khi xác định thu nhập chịu thuế;
+- Khoản lỗ không tính thuế là khoản lỗ tạo ra bởi các khoản chi phí không được trừ khi xác định thu nhập chịu thuế.
+Khi chuyển lỗ theo quy định của pháp luật thuế, doanh nghiệp chỉ được chuyển phần lỗ tính thuế làm căn cứ giảm trừ số thuế phải nộp trong tương lai. 
+2. Kết cấu và nội dung phản ánh của Tài khoản 421 - Lợi nhuận sau thuế chưa phân phối
+Bên Nợ:
+- Số lỗ về hoạt động kinh doanh của doanh nghiệp;
+- Trích lập các quỹ của doanh nghiệp;
+- Chia cổ tức, lợi nhuận cho các chủ sở hữu bằng tiền;
+- Sử dụng lợi nhuận sau thuế chưa phân phối để trả cổ tức bằng cổ phiếu hoặc bổ sung vốn đầu tư của chủ sở hữu;
+Bên Có:
+- Số lợi nhuận sau thuế chưa phân phối thực tế của hoạt động kinh doanh của doanh nghiệp trong kỳ;
+- Số lỗ của cấp dưới được cấp trên cấp bù (nếu có);
+Tài khoản 421 có thể có số dư Nợ hoặc số dư Có.
+Số dư bên Nợ: 
+Số lỗ hoạt động kinh doanh chưa xử lý tại thời điểm kết thúc kỳ kế toán.
+Số dư bên Có: 
+Số lợi nhuận sau thuế chưa phân phối hoặc chưa sử dụng tại thời điểm kết thúc kỳ kế toán.
+Tài khoản 421 - Lợi nhuận sau thuế chưa phân phối, có 2 tài khoản cấp 2:
+- Tài khoản 4211 - Lợi nhuận sau thuế chưa phân phối lũy kế đến cuối năm trước: Phản ánh kết quả hoạt động kinh doanh, tình hình phân chia lợi nhuận hoặc xử lý lỗ thuộc các năm trước. Tài khoản 4211 còn dùng để phản ánh số điều chỉnh tăng hoặc giảm số dư đầu năm của TK 4211 khi áp dụng hồi tố do thay đổi chính sách kế toán và điều chỉnh hồi tố các sai sót trọng yếu của năm trước, năm nay mới phát hiện.
+Đầu năm sau, kế toán kết chuyển số dư đầu năm từ TK 4212 - Lợi nhuận sau thuế chưa phân phối năm nay sang TK 4211 - Lợi nhuận sau thuế chưa phân phối lũy kế đến cuối năm trước”.
+- Tài khoản 4212 - Lợi nhuận sau thuế chưa phân phối năm nay: Phản ánh kết quả kinh doanh, tình hình phân chia lợi nhuận và xử lý lỗ của năm nay.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Tại thời điểm kết thúc kỳ kế toán, kết chuyển kết quả hoạt động kinh doanh:
+- Trường hợp lãi, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 421 - Lợi nhuận sau thuế chưa phân phối (4212).
+- Trường hợp lỗ, ghi:
+Nợ TK 421 - Lợi nhuận sau thuế chưa phân phối (4212)
+	Có TK 911 - Xác định kết quả kinh doanh.
+b) Tại thời điểm doanh nghiệp không có quyền từ chối nghĩa vụ chi trả cổ tức, lợi nhuận bằng tiền cho các cổ đông, thành viên góp vốn của công ty theo quy định của pháp luật, ghi:
+Nợ TK 421 - Lợi nhuận sau thuế chưa phân phối
+		Có TK 332 - Phải trả cổ tức, lợi nhuận.
+Khi trả cổ tức, lợi nhuận bằng tiền, ghi:
+Nợ TK 332 - Phải trả cổ tức, lợi nhuận 
+		Có các TK 111, 112,... (số tiền thực trả).
+c) Trường hợp công ty cổ phần sử dụng lợi nhuận sau thuế chưa phân phối để trả cổ tức bằng cổ phiếu, ghi:
+- Tại thời điểm doanh nghiệp phát hành cổ phiếu để trả cổ tức, ghi:
+Nợ TK 421 - Lợi nhuận sau thuế chưa phân phối
+Có TK 4118 - Vốn khác.
+- Khi doanh nghiệp được cấp Giấy chứng nhận đăng ký doanh nghiệp, ghi:
+Nợ TK 4118 - Vốn khác
+		Có TK 4111 - Vốn góp của chủ sở hữu.
+d) Các doanh nghiệp không phải là công ty cổ phần sử dụng lợi nhuận sau thuế chưa phân phối để tăng thêm hoặc bổ sung vốn điều lệ, tại thời điểm doanh nghiệp quyết định sử dụng lợi nhuận sau thuế chưa phân phối để tăng thêm hoặc bổ sung vốn điều lệ, ghi:
+- Tại thời điểm doanh nghiệp phát hành cổ phiếu để trả cổ tức, ghi:
+Nợ TK 421 - Lợi nhuận sau thuế chưa phân phối
+Có TK 4118 - Vốn khác.
+- Khi doanh nghiệp được cấp Giấy chứng nhận đăng ký doanh nghiệp, ghi:
+Nợ TK 4118 - Vốn khác
+		Có TK 4111 - Vốn góp của chủ sở hữu.
+đ) Khi doanh nghiệp trích các quỹ từ lợi nhuận sau thuế thu nhập doanh nghiệp theo quy định, ghi:
+Nợ TK 421 - Lợi nhuận sau thuế chưa phân phối 
+		Có các TK 414, 418, 353,...
+e) Đầu kỳ kế toán năm, kết chuyển lợi nhuận sau thuế chưa phân phối năm nay sang lợi nhuận sau thuế chưa phân phối năm trước, ghi:
+- Trường hợp TK 4212 có số dư Có (lãi), ghi:
+Nợ TK 4212 - Lợi nhuận sau thuế chưa phân phối năm nay
+		Có TK 4211 - Lợi nhuận sau thuế chưa phân phối năm trước.
+- Trường hợp TK 4212 có số dư Nợ (lỗ), ghi:
+Nợ TK 4211 - Lợi nhuận sau thuế chưa phân phối năm trước
+		Có TK 4212 - Lợi nhuận sau thuế chưa phân phối năm nay.
+NGUYÊN TẮC KẾ TOÁN CÁC KHOẢN DOANH THU
+1. Doanh thu là lợi ích kinh tế thu được làm tăng vốn chủ sở hữu của doanh nghiệp ngoại trừ phần đóng góp thêm của các cổ đông. Doanh thu được ghi nhận tại thời điểm giao dịch phát sinh, khi chắc chắn thu được lợi ích kinh tế, được xác định theo giá trị hợp lý của các khoản được quyền nhận, không phân biệt đã thu tiền hay sẽ thu được tiền. 
+2. Doanh thu và chi phí liên quan đến việc tạo ra khoản doanh thu đó (bao gồm chi phí của kỳ tạo ra doanh thu và chi phí của các kỳ trước hoặc chi phí phải trả nhưng liên quan đến doanh thu của kỳ đó) phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Tuy nhiên trong một số trường hợp, nguyên tắc phù hợp có thể xung đột với nguyên tắc thận trọng trong kế toán thì doanh nghiệp phải căn cứ vào bản chất và các Chuẩn mực kế toán Việt Nam và quy định tại Thông tư này để phản ánh giao dịch một cách trung thực, hợp lý.
+- Một hợp đồng kinh tế có thể bao gồm nhiều giao dịch, doanh nghiệp phải nhận biết các giao dịch để áp dụng các điều kiện ghi nhận doanh thu phù hợp với quy định.
+- Doanh thu phải được ghi nhận phù hợp với bản chất hơn là hình thức hoặc tên gọi của giao dịch và phải được phân bổ theo nghĩa vụ cung ứng hàng hóa, dịch vụ. Ví dụ khách hàng chỉ được nhận hàng khuyến mại khi mua sản phẩm hàng hóa, dịch vụ của đơn vị (như mua 2 sản phẩm được tặng thêm một sản phẩm) thì bản chất giao dịch là giảm giá hàng bán, sản phẩm, tặng miễn phí cho khách hàng về hình thức được gọi là khuyến mại nhưng về bản chất là bán vì khách hàng sẽ không được hưởng nếu không mua sản phẩm, dịch vụ. Trường hợp này giá trị sản phẩm, dịch vụ tặng cho khách hàng được phản ánh vào giá vốn và doanh thu tương ứng với giá trị hợp lý của sản phẩm, dịch vụ đó phải được ghi nhận. Doanh nghiệp phải phân bổ giá giao dịch cho cả sản phẩm, dịch vụ bán và sản phẩm, dịch vụ miễn phí trên cơ sở giá bán đơn lẻ của từng loại sản phẩm, dịch vụ làm cơ sở xác định doanh thu của từng sản phẩm; giá trị sản phẩm miễn phí được phản ánh vào giá vốn hàng bán. Tuy nhiên, nguyên tắc này có thể ngoại lệ đối với trường hợp doanh nghiệp tặng hàng hóa, dịch vụ miễn phí cho khách hàng mà theo đặc điểm mô hình kinh doanh, giá bán hàng hóa, dịch vụ chính của doanh nghiệp không thay đổi cho dù khách hàng có nhận hay không nhận hàng hóa, dịch vụ tặng kèm thì doanh nghiệp ghi nhận giá trị hàng hóa, dịch vụ tặng kèm cho khách hàng vào chi phí bán hàng của doanh nghiệp tương tự trường hợp khuyến mại không kèm theo điều kiện.
+- Đối với các giao dịch làm phát sinh nghĩa vụ của doanh nghiệp ở thời điểm hiện tại và trong tương lai, doanh thu phải được phân bổ theo giá trị hợp lý của từng nghĩa vụ thực hiện và được ghi nhận khi nghĩa vụ đã được thực hiện. 
+3. Doanh thu, lãi hoặc lỗ chỉ được coi là chưa thực hiện nếu doanh nghiệp còn có trách nhiệm thực hiện các nghĩa vụ trong tương lai (trừ nghĩa vụ bảo hành thông thường) hoặc chưa chắc chắn thu được lợi ích kinh tế; Việc phân loại các khoản lãi, lỗ là thực hiện hoặc chưa thực hiện không phụ thuộc vào việc đã phát sinh dòng tiền hay chưa.
+Các khoản lãi, lỗ phát sinh do đánh giá lại tài sản, nợ phải trả không được coi là chưa thực hiện do tại thời điểm đánh giá lại, đơn vị đã có quyền đối với tài sản và đã có nghĩa vụ nợ hiện tại đối với các khoản nợ phải trả, ví dụ: Các khoản lãi, lỗ phát sinh do đánh giá lại tài sản mang đi góp vốn đầu tư vào đơn vị khác, chênh lệch tỷ giá do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ,... đều được coi là đã thực hiện.
+4. Doanh thu không bao gồm các khoản thu hộ bên thứ ba, ví dụ: 
+- Các loại thuế gián thu (thuế GTGT, thuế xuất khẩu,...) phải nộp; 
+- Các khoản phụ thu và phí thu thêm ngoài giá bán mà doanh nghiệp không được hưởng; 
+- Số tiền người bán hàng đại lý thu hộ cho bên chủ hàng; 
+- Các trường hợp khác như các khoản doanh nghiệp đã thu từ khách hàng nhưng khách hàng không sử dụng để thanh toán cho các hàng hóa, dịch vụ của doanh nghiệp mà dùng để thanh toán cho các đối tác khác về các khoản như: ủng hộ nhân đạo, thanh toán cho hàng hóa, dịch vụ do bên thứ ba cung cấp,... theo quy định của pháp luật.
+Trường hợp các khoản thuế gián thu phải nộp không tách riêng ngay được tại thời điểm phát sinh doanh thu thì để thuận lợi cho công tác kế toán, doanh nghiệp có thể ghi nhận doanh thu trên sổ kế toán bao gồm cả số thuế gián thu nhưng định kỳ doanh nghiệp phải ghi giảm doanh thu đối với số thuế gián thu phải nộp. Tuy nhiên, khi lập Báo cáo tài chính, doanh nghiệp bắt buộc phải xác định và loại trừ toàn bộ số thuế gián thu phải nộp ra khỏi các chỉ tiêu phản ánh doanh thu bán hàng và cung cấp dịch vụ trên Báo cáo kết quả hoạt động kinh doanh. 
+5. Thời điểm, căn cứ để ghi nhận doanh thu kế toán và doanh thu tính thuế có thể khác nhau tùy vào từng tình huống cụ thể. Doanh thu tính thuế chỉ được sử dụng để xác định số thuế phải nộp theo luật định; Doanh thu ghi nhận trên sổ kế toán để lập Báo cáo tài chính phải tuân thủ các nguyên tắc kế toán và tùy theo từng trường hợp không nhất thiết phải bằng số đã ghi trên hóa đơn bán hàng. 
+6. Khi luân chuyển sản phẩm, hàng hóa, dịch vụ giữa các đơn vị trực thuộc của doanh nghiệp, tùy theo đặc điểm hoạt động, phân cấp quản lý của từng đơn vị, doanh nghiệp có thể quyết định việc ghi nhận doanh thu tại các đơn vị trực thuộc mà không phụ thuộc vào chứng từ kèm theo (hóa đơn hay chứng từ nội bộ). Khi lập Báo cáo tài chính tổng hợp, tất cả các khoản doanh thu giữa các đơn vị trực thuộc đều phải được loại trừ.
+7. Doanh thu được ghi nhận chỉ bao gồm doanh thu của kỳ báo cáo. Tại thời điểm kết thúc kỳ kế toán, doanh nghiệp phải kết chuyển doanh thu để xác định kết quả kinh doanh trong kỳ. Các tài khoản phản ánh doanh thu không có số dư.
+TÀI KHOẢN 511 - DOANH THU BÁN HÀNG VÀ CUNG CẤP DỊCH VỤ
+1. Nguyên tắc kế toán
+1.1. Tài khoản này dùng để phản ánh doanh thu bán hàng và cung cấp dịch vụ của doanh nghiệp trong một kỳ kế toán, bao gồm: 
+a) Doanh thu bán hàng (bao gồm bán hàng hóa, sản phẩm, bất động sản đầu tư, bán quyền được nhận hàng hóa, sử dụng dịch vụ của đơn vị khác,...); 
+b) Doanh thu cung cấp dịch vụ (bao gồm cả dịch vụ cho thuê hoạt động tài sản); 
+c) Các khoản trợ cấp, trợ giá của Nhà nước cho doanh nghiệp theo quy định của pháp luật;
+d) Doanh thu khác.
+1.2. Điều kiện ghi nhận doanh thu
+a) Doanh nghiệp chỉ ghi nhận doanh thu bán hàng khi đồng thời thỏa mãn các điều kiện sau:
+- Doanh nghiệp đã chuyển giao phần lớn rủi ro và lợi ích gắn liền với quyền sở hữu sản phẩm, hàng hóa cho người mua;
+- Doanh nghiệp không còn nắm giữ quyền quản lý hàng hóa như người sở hữu hoặc quyền kiểm soát hàng hóa;
+- Doanh thu được xác định tương đối chắc chắn;
+- Doanh nghiệp đã hoặc sẽ thu được lợi ích kinh tế từ giao dịch bán hàng;
+- Xác định được các chi phí liên quan đến giao dịch bán hàng.
+b) Doanh nghiệp chỉ ghi nhận doanh thu cung cấp dịch vụ khi đồng thời thỏa mãn các điều kiện sau:
+- Doanh thu được xác định tương đối chắc chắn. Khi hợp đồng quy định người mua được quyền trả lại dịch vụ đã mua theo những điều kiện cụ thể, doanh nghiệp chỉ được ghi nhận doanh thu khi những điều kiện cụ thể đó không còn tồn tại và người mua không được quyền trả lại dịch vụ đã cung cấp;
+- Doanh nghiệp đã hoặc sẽ thu được lợi ích kinh tế từ giao dịch cung cấp dịch vụ đó;
+- Xác định được phần công việc đã hoàn thành vào thời điểm báo cáo;
+- Xác định được chi phí phát sinh cho giao dịch và chi phí để hoàn thành giao dịch cung cấp dịch vụ đó.
+1.3. Trường hợp hợp đồng kinh tế bao gồm nhiều giao dịch, doanh nghiệp phải nhận biết các giao dịch để ghi nhận doanh thu phù hợp với Chuẩn mực kế toán Việt Nam, ví dụ:
+- Trường hợp doanh nghiệp bán hàng kèm theo nghĩa vụ cung cấp dịch vụ sau bán hàng (ngoài điều khoản bảo hành thông thường), doanh nghiệp phải ghi nhận riêng doanh thu bán hàng và doanh thu cung cấp dịch vụ;
+- Trường hợp hợp đồng quy định bên bán hàng chịu trách nhiệm lắp đặt sản phẩm, hàng hóa cho người mua thì doanh thu chỉ được ghi nhận sau khi việc lắp đặt được thực hiện xong;
+- Trường hợp doanh nghiệp có nghĩa vụ phải cung cấp cho người mua hàng hóa, dịch vụ miễn phí hoặc chiết khấu, giảm giá trong giao dịch dành cho khách hàng truyền thống: doanh nghiệp căn cứ bản chất hợp đồng, cam kết của doanh nghiệp với khách hàng xem doanh nghiệp có tham gia vào việc cung cấp hàng hóa, dịch vụ (đơn vị là chủ thể trực tiếp cung cấp hàng hóa, dịch vụ) hay chỉ là đơn vị trung gian sắp xếp (đơn vị là đại lý hoặc đóng vai trò là bên bán quyền sử dụng dịch vụ mà dịch vụ này do đơn vị khác chịu trách nhiệm cung cấp cho khách hàng, kiểm soát về giá cả, chất lượng) để xác định thời điểm hoàn thành cung cấp hàng hóa, dịch vụ làm căn cứ ghi nhận doanh thu tương ứng với hàng hóa, dịch vụ cung cấp miễn phí đó với người mua.
+Trường hợp doanh nghiệp là chủ thể thực hiện cung cấp các hàng hóa, dịch vụ cho khách hàng nếu doanh nghiệp có quyền kiểm soát hàng hóa, dịch vụ cụ thể trước khi chuyển giao hàng hóa, dịch vụ đó cho khách hàng. Tuy nhiên, doanh nghiệp có thể không nhất thiết phải kiểm soát một hàng hóa, dịch vụ cụ thể nếu doanh nghiệp có quyền sở hữu, quyền sử dụng về mặt pháp lý đối với hàng hóa, dịch vụ đó chỉ trong một khoảng thời gian ngắn trước khi chuyển giao quyền sở hữu, quyền sử dụng cho khách hàng.
+Trường hợp doanh nghiệp đóng vai trò là đại lý nếu nghĩa vụ thực hiện của doanh nghiệp là sắp xếp, tổ chức để bên thứ 3 cung cấp hàng hóa hoặc dịch vụ cụ thể. Doanh nghiệp là đại lý sẽ không kiểm soát một trong các yếu tố về giá bán, chất lượng,... của hàng hóa, dịch vụ cụ thể được cung cấp cho khách hàng. Trong trường hợp này, doanh thu bán hàng và cung cấp dịch vụ của doanh nghiệp là phần hoa hồng hoặc số tiền doanh nghiệp được hưởng thông qua việc sắp xếp, tổ chức để bên thứ 3 cung cấp hàng hóa hoặc dịch vụ đó trực tiếp cho khách hàng.
+1.4. Doanh thu bán hàng và cung cấp dịch vụ thuần mà doanh nghiệp thực hiện được trong kỳ kế toán có thể thấp hơn doanh thu bán hàng và cung cấp dịch vụ ghi nhận ban đầu do có các khoản chiết khấu thương mại, giảm giá hàng bán cho khách hàng hoặc hàng đã bán bị trả lại (do không đảm bảo điều kiện về quy cách, phẩm chất,... ghi trong hợp đồng kinh tế).
+Trường hợp sản phẩm, hàng hóa, dịch vụ đã tiêu thụ từ các kỳ trước, đến kỳ sau phải chiết khấu thương mại, giảm giá hàng bán, hoặc hàng bán bị trả lại thì doanh nghiệp được ghi giảm doanh thu theo nguyên tắc:
+- Nếu sản phẩm, hàng hóa, dịch vụ đã tiêu thụ từ các kỳ trước, đến kỳ sau phải giảm giá, phải chiết khấu thương mại, bị trả lại nhưng phát sinh trước thời điểm phát hành Báo cáo tài chính, doanh nghiệp phải coi đây là một sự kiện phát sinh sau ngày kết thúc kỳ kế toán cần điều chỉnh và ghi giảm doanh thu trên Báo cáo tài chính của kỳ lập báo cáo.
+- Nếu sản phẩm, hàng hóa, dịch vụ đã tiêu thụ từ các kỳ trước, đến kỳ sau phải giảm giá, phải chiết khấu thương mại, bị trả lại sau thời điểm phát hành Báo cáo tài chính thì doanh nghiệp ghi giảm doanh thu của kỳ phát sinh. 
+1.5. Doanh thu trong một số trường hợp được xác định như sau:
+1.5.1. Doanh thu bán hàng, cung cấp dịch vụ không bao gồm các khoản thuế gián thu phải nộp, như thuế GTGT (kể cả trường hợp nộp thuế GTGT theo phương pháp trực tiếp), thuế TTĐB, thuế xuất khẩu, thuế bảo vệ môi trường,...
+Trường hợp không tách ngay được số thuế gián thu phải nộp tại thời điểm ghi nhận doanh thu, doanh nghiệp được ghi nhận doanh thu bao gồm cả số thuế phải nộp và định kỳ phải ghi giảm doanh thu đối với số thuế gián thu phải nộp. Khi lập báo cáo kết quả hoạt động kinh doanh, chỉ tiêu “Doanh thu bán hàng và cung cấp dịch vụ” và chỉ tiêu “Các khoản giảm trừ doanh thu” đều không bao gồm số thuế gián thu phải nộp trong kỳ do về bản chất các khoản thuế gián thu không được coi là một bộ phận của doanh thu.
+1.5.2. Trường hợp trong kỳ doanh nghiệp đã thu tiền nhưng đến cuối kỳ vẫn chưa giao hàng, chưa cung cấp dịch vụ cho khách hàng thì không được coi là đã bán hàng, đã cung cấp dịch vụ trong kỳ và không được ghi vào Tài khoản 511 - Doanh thu bán hàng và cung cấp dịch vụ mà chỉ hạch toán vào bên Có Tài khoản 131 - Phải thu của khách hàng về khoản tiền đã thu của khách hàng. Khi thực giao hàng, cung cấp dịch vụ cho người mua sẽ hạch toán vào Tài khoản 511 - Doanh thu bán hàng và cung cấp dịch vụ về trị giá hàng đã giao, dịch vụ đã cung cấp phù hợp với các điều kiện ghi nhận doanh thu.
+1.5.3. Trường hợp doanh nghiệp sử dụng hàng hóa, dịch vụ để khuyến mại, giảm giá cho khách hàng thì phải căn cứ vào bản chất của giao dịch để kế toán hàng hóa, dịch vụ khuyến mại, giảm giá cho phù hợp theo nguyên tắc:
+a) Trường hợp khách hàng được nhận khuyến mại, giảm giá mà không kèm theo điều kiện phải tham gia bất kỳ hợp đồng mua hàng hóa, dịch vụ nào của doanh nghiệp thì doanh nghiệp ghi nhận giá trị sản phẩm tặng kèm cho khách hàng vào chi phí bán hàng của doanh nghiệp.
+b) Trường hợp khách hàng chỉ được nhận khuyến mại, giảm giá khi đã mua hàng hóa, dịch vụ của doanh nghiệp hoặc đang tham gia vào hợp đồng mua hàng hóa, dịch vụ của doanh nghiệp thì doanh nghiệp phải phân bổ số tiền thu được để tính doanh thu cho cả hàng hóa, dịch vụ bán và hàng hóa, dịch vụ khuyến mại, giảm giá và giá trị sản phẩm, hàng hóa miễn phí được phản ánh vào giá vốn hàng bán. Tuy nhiên, doanh nghiệp căn cứ vào bản chất của hàng hóa, dịch vụ đã cam kết; cách thức, thông lệ kinh doanh; danh mục hàng hóa, dịch vụ kinh doanh của doanh nghiệp để hạch toán cho phù hợp. 
+1.5.4. Trường hợp doanh nghiệp có doanh thu bán hàng và cung cấp dịch vụ bằng ngoại tệ thì phải quy đổi ngoại tệ ra đơn vị tiền tệ kế toán theo tỷ giá giao dịch thực tế tại thời điểm phát sinh nghiệp vụ kinh tế. Trường hợp có nhận tiền ứng trước của khách hàng bằng ngoại tệ thì doanh thu tương ứng với số tiền ứng trước được quy đổi ra đơn vị tiền tệ kế toán theo tỷ giá giao dịch thực tế tại thời điểm nhận ứng trước. 
+1.5.5. Doanh thu bán bất động sản của doanh nghiệp là chủ đầu tư phải thực hiện theo nguyên tắc:	
+a) Đối với các công trình, hạng mục công trình mà doanh nghiệp là chủ đầu tư (kể cả các công trình, hạng mục công trình doanh nghiệp vừa là chủ đầu tư, vừa tự thi công), doanh nghiệp không được ghi nhận doanh thu bán bất động sản theo Chuẩn mực kế toán Hợp đồng xây dựng và không được ghi nhận doanh thu đối với số tiền thu trước của khách hàng theo tiến độ. Việc ghi nhận doanh thu bán bất động sản phải đảm bảo thỏa mãn đồng thời 5 điều kiện sau:
+- Bất động sản đã hoàn thành toàn bộ và bàn giao cho người mua, doanh nghiệp đã chuyển giao rủi ro và lợi ích gắn liền với quyền sở hữu bất động sản cho người mua;
+- Doanh nghiệp không còn nắm giữ quyền quản lý bất động sản như người sở hữu bất động sản hoặc quyền kiểm soát bất động sản;
+- Doanh thu được xác định tương đối chắc chắn;
+- Doanh nghiệp đã thu được hoặc sẽ thu được lợi ích kinh tế từ giao dịch bán bất động sản;
+- Xác định được chi phí liên quan đến giao dịch bán bất động sản.
+b) Đối với các công trình, hạng mục công trình mà doanh nghiệp là chủ đầu tư (kể cả các công trình, hạng mục công trình doanh nghiệp vừa là chủ đầu tư, vừa tự thi công), trường hợp khách hàng có quyền hoàn thiện nội thất của bất động sản và doanh nghiệp thực hiện việc hoàn thiện nội thất của bất động sản theo đúng thiết kế, mẫu mã, yêu cầu của khách hàng thì doanh nghiệp được ghi nhận doanh thu khi hoàn thành, bàn giao phần xây thô cho khách hàng. Trường hợp này, doanh nghiệp phải có hợp đồng hoàn thiện nội thất bất động sản riêng với khách hàng, trong đó quy định rõ yêu cầu của khách hàng về thiết kế, kỹ thuật, mẫu mã, hình thức hoàn thiện nội thất bất động sản và biên bản bàn giao phần xây thô cho khách hàng.
+c) Đối với bất động sản phân lô bán nền, nếu đã chuyển giao nền đất cho khách hàng (không phụ thuộc đã làm xong thủ tục pháp lý về giấy chứng nhận quyền sử dụng đất hay chưa) và hợp đồng không hủy ngang, chủ đầu tư được ghi nhận doanh thu đối với nền đất đã bán khi thỏa mãn đồng thời các điều kiện sau:
+- Đã chuyển giao rủi ro và lợi ích gắn liền với quyền sử dụng đất cho người mua;
+- Doanh thu được xác định tương đối chắc chắn;
+- Xác định được chi phí liên quan đến giao dịch bán nền đất;
+- Doanh nghiệp đã thu được hoặc chắc chắn sẽ thu được lợi ích kinh tế từ giao dịch bán nền đất.
+d) Đối với các công trình là căn hộ du lịch, căn hộ văn phòng kết hợp lưu trú hoặc sản phẩm tương tự theo quy định của pháp luật hiện hành về kinh doanh bất động sản: Doanh nghiệp căn cứ vào bản chất các điều khoản trong hợp đồng về thời hạn, về quyền và nghĩa vụ của các bên trong hợp đồng bán căn hộ du lịch, căn hộ văn phòng kết hợp lưu trú hoặc sản phẩm tương tự; các Chuẩn mực kế toán Việt Nam có liên quan và chế độ kế toán doanh nghiệp để xác định từng cấu phần bán, cấu phần thuê, cấu phần tài chính (nếu có),... có liên quan đến hợp đồng đó để áp dụng chính sách kế toán phù hợp nhất với đặc điểm, bản chất của giao dịch để làm cơ sở cho việc ghi nhận doanh thu tương ứng với từng cấu phần. Đồng thời, doanh nghiệp phải thuyết minh trên Báo cáo tài chính về chính sách kế toán, bản chất của hợp đồng (quyền và nghĩa vụ của các bên) và cách thức hạch toán mà doanh nghiệp đánh giá là phù hợp nhất.
+1.5.6. Đối với doanh nghiệp cung cấp dịch vụ ủy thác xuất nhập khẩu, doanh thu là phí ủy thác xuất nhập khẩu mà doanh nghiệp được hưởng.
+1.5.7. Đối với đơn vị nhận gia công vật tư, hàng hóa, doanh thu là số tiền gia công thực tế được hưởng, không bao gồm giá trị vật tư, hàng hóa nhận gia công.
+1.5.8. Trường hợp bán hàng theo phương thức trả chậm, trả góp, doanh thu được xác định theo giá bán trả tiền ngay.
+1.5.9. Đối với hoạt động quản lý đầu tư xây dựng
+- Đối với các doanh nghiệp được giao quản lý các dự án đầu tư, xây dựng sử dụng nguồn vốn NSNN hoặc vốn trái phiếu Chính phủ, trái phiếu địa phương, trường hợp lập dự toán chi phí quản lý dự án theo các quy định của Nhà nước về đầu tư xây dựng sử dụng vốn NSNN thì khoản kinh phí quản lý dự án mà được NSNN chi trả không được hạch toán là doanh thu, chi phí của doanh nghiệp mà hạch toán là khoản thu hộ, chi hộ. 
+- Đối với các doanh nghiệp làm nhiệm vụ quản lý dự án theo hợp đồng tư vấn thì số tiền thu theo hợp đồng được ghi nhận là doanh thu cung cấp dịch vụ. Trường hợp doanh nghiệp dự án nếu bản chất chỉ là đơn vị thay mặt cho các nhà đầu tư thực hiện công việc quản lý dự án theo quy định trong hợp đồng, thanh toán các hợp đồng xây lắp, tư vấn, giải phóng mặt bằng,... cho các nhà thầu và tập hợp chi phí đầu tư xây dựng các công trình, hạng mục công trình để quyết toán toàn bộ kinh phí cũng như bàn giao lại các công trình, hạng mục công trình hoàn thành cho chủ đầu tư thì doanh nghiệp dự án không được ghi nhận khoản kinh phí dự án nhận được từ các chủ đầu tư hoặc từ vốn vay là doanh thu của doanh nghiệp mà phải ghi nhận là một khoản phải trả, phải nộp khác (thu hộ - chi hộ).
+1.5.10. Nguyên tắc ghi nhận doanh thu đối với giao dịch bán hàng hóa, cung cấp dịch vụ theo chương trình dành cho khách hàng truyền thống
+a) Đặc điểm của giao dịch bán hàng hóa, cung cấp dịch vụ theo chương trình dành cho khách hàng truyền thống: Giao dịch theo chương trình dành cho khách hàng truyền thống phải thỏa mãn đồng thời tất cả các điều kiện sau
+- Khi mua hàng hóa, dịch vụ, khách hàng được tích điểm thưởng để khi đạt đủ số điểm theo quy định sẽ được nhận một lượng hàng hóa, dịch vụ miễn phí hoặc được giảm giá chiết khấu;
+- Người bán phải xác định được giá trị hợp lý của hàng hóa, dịch vụ sẽ phải cung cấp miễn phí hoặc số tiền sẽ chiết khấu, giảm giá cho người mua khi người mua đạt được các điều kiện của chương trình (tích đủ điểm thưởng);
+- Chương trình phải có giới hạn về thời gian cụ thể, rõ ràng, nếu quá thời hạn theo quy định của chương trình mà khách hàng chưa đáp ứng được các điều kiện đặt ra thì người bán sẽ không còn nghĩa vụ phải cung cấp hàng hóa, dịch vụ miễn phí hoặc giảm giá, chiết khấu cho người mua (số điểm thưởng của người mua tích lũy hết giá trị sử dụng);
+- Sau khi nhận hàng hóa, dịch vụ miễn phí hoặc được chiết khấu giảm giá, người mua bị trừ số điểm tích lũy theo quy định của chương trình (đổi điểm tích lũy để lấy hàng hóa, dịch vụ hoặc số tiền chiết khấu, giảm giá khi mua hàng);
+- Việc cung cấp hàng hóa, dịch vụ miễn phí hoặc chiết khấu, giảm giá cho người mua khi đạt đủ số điểm thưởng có thể được thực hiện bởi chính người bán hoặc một bên thứ ba theo quy định của chương trình. 
+b) Nguyên tắc kế toán
+- Tại thời điểm bán hàng hóa, cung cấp dịch vụ, người bán phải xác định riêng giá trị hợp lý của hàng hóa, dịch vụ phải cung cấp miễn phí hoặc số tiền phải chiết khấu, giảm giá cho người mua khi người mua đạt được các điều kiện theo quy định của chương trình. 
+- Doanh thu được ghi nhận là tổng số tiền phải thu hoặc đã thu trừ đi giá trị hợp lý của hàng hóa, dịch vụ phải cung cấp miễn phí hoặc số phải chiết khấu, giảm giá cho người mua. Giá trị của hàng hóa, dịch vụ phải cung cấp miễn phí hoặc số phải chiết khấu, giảm giá cho người mua chỉ được ghi nhận là doanh thu chờ phân bổ. Nếu hết thời hạn của chương trình mà người mua không đạt đủ điều kiện theo quy định và không được hưởng hàng hóa dịch vụ miễn phí, khoản doanh thu chờ phân bổ nêu trên được kết chuyển vào doanh thu bán hàng, cung cấp dịch vụ.
+- Khi người mua đạt được các điều kiện theo quy định của chương trình, việc xử lý khoản doanh thu chờ phân bổ được thực hiện như sau: 
++ Trường hợp người bán trực tiếp cung cấp hàng hóa, dịch vụ miễn phí hoặc chiết khấu, giảm giá cho người mua: Khoản doanh thu chờ phân bổ tương ứng với giá trị hợp lý của số hàng hóa, dịch vụ cung cấp miễn phí hoặc số phải giảm giá, chiết khấu cho người mua được ghi nhận là doanh thu bán hàng, cung cấp dịch vụ tại thời điểm người mua đã nhận được hàng hóa, đã được cung cấp dịch vụ miễn phí hoặc được chiết khấu, giảm giá theo quy định của chương trình.
++ Trường hợp bên thứ ba có nghĩa vụ cung cấp hàng hóa, dịch vụ miễn phí hoặc chiết khấu, giảm giá cho người mua: Nếu hợp đồng giữa người bán và bên thứ ba đó không mang tính chất hợp đồng đại lý, khi bên thứ ba thực hiện việc cung cấp hàng hóa, dịch vụ, chiết khấu giảm giá, khoản doanh thu chờ phân bổ được kết chuyển sang doanh thu bán hàng, cung cấp dịch vụ. Nếu hợp đồng mang tính đại lý, chỉ phần chênh lệch giữa khoản doanh thu chờ phân bổ và số tiền phải trả cho bên thứ ba mới được ghi nhận là doanh thu. Số tiền thanh toán cho bên thứ ba được coi như việc thanh toán khoản nợ phải trả.
++ Trường hợp có phát sinh chênh lệch giữa số ước tính nghĩa vụ phải trả cho khách hàng truyền thống với số thực tế phát sinh thì cuối kỳ kế toán doanh nghiệp điều chỉnh tăng, giảm doanh thu bán hàng và cung cấp dịch vụ trong kỳ.
+1.5.11. Nguyên tắc ghi nhận và xác định doanh thu của hợp đồng xây dựng
+a) Doanh thu của hợp đồng xây dựng bao gồm:
+- Doanh thu ban đầu được ghi trong hợp đồng;
+- Các khoản tăng, giảm khi thực hiện hợp đồng, các khoản tiền thưởng và các khoản thanh toán khác nếu các khoản này có khả năng làm thay đổi doanh thu và có thể xác định được một cách đáng tin cậy:
++ Doanh thu của hợp đồng có thể tăng hay giảm ở từng thời kỳ, ví dụ: Nhà thầu và khách hàng có thể đồng ý với nhau về các thay đổi và các yêu cầu làm tăng hoặc giảm doanh thu của hợp đồng trong kỳ tiếp theo so với hợp đồng được chấp thuận lần đầu tiên; Doanh thu đã được thỏa thuận trong hợp đồng với giá cố định có thể tăng vì lý do giá cả tăng lên; Doanh thu theo hợp đồng có thể bị giảm do nhà thầu không thực hiện đúng tiến độ hoặc không đảm bảo chất lượng xây dựng theo thỏa thuận trong hợp đồng; Khi hợp đồng với giá cố định quy định mức giá cố định cho một đơn vị sản phẩm hoàn thành thì doanh thu theo hợp đồng sẽ tăng hoặc giảm khi khối lượng sản phẩm tăng hoặc giảm.
++ Khoản tiền thưởng là các khoản phụ thêm trả cho nhà thầu nếu nhà thầu thực hiện hợp đồng đạt hay vượt mức yêu cầu. Khoản tiền thưởng được tính vào doanh thu của hợp đồng xây dựng khi có đủ 02 điều kiện: (i) Chắc chắn đạt hoặc vượt mức một số tiêu chuẩn cụ thể đã được ghi trong hợp đồng; (ii) Khoản tiền thưởng được xác định một cách đáng tin cậy.
+- Khoản thanh toán khác mà nhà thầu thu được từ khách hàng hay một bên khác để bù đắp cho các chi phí không bao gồm trong giá hợp đồng. Ví dụ: Sự chậm trễ do khách hàng gây nên; Sai sót trong các chỉ tiêu kỹ thuật hoặc thiết kế và các tranh chấp về các thay đổi trong việc thực hiện hợp đồng. Việc xác định doanh thu tăng thêm từ các khoản thanh toán trên còn tùy thuộc vào rất nhiều yếu tố không chắc chắn và thường phụ thuộc vào kết quả của nhiều cuộc đàm phán. Do đó, các khoản thanh toán khác chỉ được tính vào doanh thu của hợp đồng xây dựng khi:
++ Các cuộc thỏa thuận đã đạt được kết quả là khách hàng sẽ chấp thuận bồi thường;
++ Khoản thanh toán khác được khách hàng chấp thuận và có thể xác định được một cách đáng tin cậy.
+b) Ghi nhận doanh thu của hợp đồng xây dựng theo 1 trong 2 trường hợp sau:
+- Trường hợp hợp đồng xây dựng quy định nhà thầu được thanh toán theo tiến độ kế hoạch, khi kết quả thực hiện hợp đồng xây dựng được ước tính một cách đáng tin cậy thì doanh thu của hợp đồng xây dựng được ghi nhận tương ứng với phần công việc đã hoàn thành do nhà thầu tự xác định vào ngày kết thúc kỳ kế toán mà không phụ thuộc vào hóa đơn thanh toán theo tiến độ kế hoạch đã lập hay chưa và số tiền ghi trên hóa đơn là bao nhiêu;
+- Trường hợp hợp đồng xây dựng quy định nhà thầu được thanh toán theo giá trị khối lượng thực hiện, khi kết quả thực hiện hợp đồng xây dựng được xác định một cách đáng tin cậy và được khách hàng xác nhận thì doanh thu và chi phí liên quan đến hợp đồng được ghi nhận tương ứng với phần công việc đã hoàn thành được khách hàng xác nhận trong kỳ phản ánh trên hóa đơn đã lập.
+c) Khi kết quả thực hiện hợp đồng xây dựng không thể ước tính được một cách đáng tin cậy thì:
+- Doanh thu chỉ được ghi nhận tương đương với chi phí của hợp đồng đã phát sinh mà việc được hoàn trả là tương đối chắc chắn;
+- Chi phí của hợp đồng chỉ được ghi nhận là chi phí trong kỳ khi các chi phí này đã phát sinh.
+1.5.12. Đối với trường hợp cho thuê tài sản có nhận trước tiền cho thuê của nhiều kỳ thì việc ghi nhận doanh thu được thực hiện theo nguyên tắc phân bổ số tiền cho thuê nhận trước phù hợp với thời hạn cho thuê. Trường hợp hợp đồng có nhiều cấu phần (bán, thuê,...) thì đơn vị căn cứ điều khoản hợp đồng liên quan đến thời hạn, điều kiện thuê để ghi nhận doanh thu tương ứng với từng cấu phần, đồng thời, doanh nghiệp phải theo dõi, thuyết minh trong Thuyết minh báo cáo tài chính về thời hạn, đặc điểm, giá trị làm căn cứ để xác định, ghi nhận doanh thu tương ứng với từng cấu phần. 
+1.5.13. Đối với doanh nghiệp thực hiện nhiệm vụ cung cấp sản phẩm, hàng hóa, dịch vụ được Nhà nước trợ cấp, trợ giá theo quy định thì doanh thu trợ cấp, trợ giá là khoản trợ cấp, trợ giá được hưởng.
+1.5.14. Trường hợp bán sản phẩm, hàng hóa kèm theo sản phẩm, hàng hóa, thiết bị thay thế (phòng ngừa trong những trường hợp sản phẩm, hàng hóa bị hỏng hóc) thì doanh nghiệp phải phân bổ doanh thu cho sản phẩm, hàng hóa được bán và sản phẩm hàng hóa, thiết bị giao cho khách hàng để thay thế phòng ngừa hỏng hóc. Giá trị của sản phẩm, hàng hóa, thiết bị thay thế được ghi nhận vào giá vốn hàng bán.
+1.5.15. Không ghi nhận doanh thu bán hàng và cung cấp dịch vụ đối với:
+- Trị giá hàng hóa, vật tư, bán thành phẩm xuất giao cho bên ngoài gia công chế biến; 
+- Trị giá hàng gửi đi bán theo phương thức gửi bán đại lý, ký gửi (chưa được xác định là đã bán);
+- Số tiền thu từ việc bán sản phẩm sản xuất thử;
+- Các khoản doanh thu hoạt động tài chính;
+- Các khoản thu nhập khác.
+2. Kết cấu và nội dung phản ánh của Tài khoản 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Bên Nợ:
+- Các khoản thuế gián thu phải nộp (GTGT, TTĐB, xuất khẩu...);
+- Doanh thu hàng bán bị trả lại kết chuyển cuối kỳ;
+- Khoản giảm giá hàng bán kết chuyển cuối kỳ;
+- Khoản chiết khấu thương mại kết chuyển cuối kỳ;
+- Kết chuyển doanh thu thuần vào Tài khoản 911 - Xác định kết quả kinh doanh.
+Bên Có: Doanh thu bán sản phẩm, hàng hóa, bất động sản đầu tư và cung cấp dịch vụ của doanh nghiệp thực hiện trong kỳ kế toán.
+Tài khoản 511 không có số dư cuối kỳ.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết doanh thu phát sinh từ hợp đồng với khách hàng (ví dụ doanh thu bán hàng hóa, sản phẩm, cung cấp dịch vụ, bán BĐSĐT, bán quyền được nhận hàng hóa, quyền được sử dụng dịch vụ,...) cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Doanh thu của hàng hóa, dịch vụ được xác định là đã bán trong kỳ kế toán:
+Nợ các TK 111, 112, 131,... (tổng giá thanh toán)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có). 
+Trường hợp không tách ngay được các khoản thuế gián thu phải nộp, doanh nghiệp ghi nhận doanh thu bao gồm cả thuế phải nộp. Định kỳ, doanh nghiệp xác định nghĩa vụ thuế phải nộp và ghi giảm doanh thu, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+3.2. Đối với giao dịch hàng đổi hàng không tương tự:
+Khi xuất sản phẩm, hàng hóa đổi lấy vật tư, hàng hóa, TSCĐ không tương tự, kế toán phản ánh doanh thu bán hàng và cung cấp dịch vụ để đổi lấy vật tư, hàng hóa, TSCĐ khác theo giá trị hợp lý tài sản nhận về sau khi điều chỉnh các khoản tiền thu thêm hoặc trả thêm. Trường hợp không xác định được giá trị hợp lý tài sản nhận về thì doanh thu xác định theo giá trị hợp lý của tài sản mang đi trao đổi.
+- Khi ghi nhận doanh thu, ghi:
+Nợ TK 131 - Phải thu của khách hàng (tổng giá thanh toán) 
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+Đồng thời ghi nhận giá vốn hàng mang đi trao đổi, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+	Có các TK 155, 156,...
+- Khi nhận vật tư, hàng hóa, TSCĐ do trao đổi, doanh nghiệp phản ánh giá trị vật tư, hàng hóa, TSCĐ nhận được do trao đổi, ghi:
+Nợ các TK 152, 153, 156, 211,... 
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có TK 131 - Phải thu của khách hàng (tổng giá thanh toán).
+- Trường hợp được thu thêm tiền do giá trị hợp lý của sản phẩm, hàng hóa đưa đi trao đổi lớn hơn giá trị hợp lý của vật tư, hàng hóa, TSCĐ nhận được do trao đổi thì khi nhận được tiền của bên có vật tư, hàng hóa, TSCĐ trao đổi, ghi:
+Nợ các TK 111, 112 (số tiền đã thu thêm)
+Có TK 131 - Phải thu của khách hàng.
+- Trường hợp phải trả thêm tiền do giá trị hợp lý của sản phẩm, hàng hóa đưa đi trao đổi nhỏ hơn giá trị hợp lý của vật tư, hàng hóa, TSCĐ nhận được do trao đổi thì khi trả tiền cho bên có vật tư, hàng hóa, TSCĐ trao đổi, ghi:
+Nợ TK 131 - Phải thu của khách hàng
+Có các TK 111, 112, ...
+3.3. Khi bán hàng hóa theo phương thức trả chậm, trả góp:
+- Khi bán hàng trả chậm, trả góp, doanh nghiệp phản ánh doanh thu bán hàng theo giá bán thu tiền ngay, ghi :
+Nợ TK 131 - Phải thu của khách hàng
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (giá bán thu tiền ngay)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+- Định kỳ, ghi nhận doanh thu tiền lãi bán hàng trả chậm, trả góp trong kỳ, ghi:
+Nợ TK 131 - Phải thu của khách hàng
+Có TK 515 - Doanh thu hoạt động tài chính (lãi trả chậm, trả góp).
+- Khi thu được tiền gồm cả gốc và tiền lãi trả chậm, trả góp, ghi:
+Nợ các TK 111, 112,...
+Có TK 131 - Phải thu của khách hàng.
+3.4. Trường hợp bán hàng hóa, dịch vụ kèm theo hàng hóa, dịch vụ và bản chất giao dịch là doanh nghiệp phải phân bổ giá giao dịch cho cả hàng hóa, dịch vụ chính và hàng hóa, dịch vụ tặng kèm:
+a) Phản ánh giá vốn hàng bán bao gồm giá trị hàng hóa, dịch vụ được bán và giá trị hàng hóa, dịch vụ tặng kèm, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+	Có các TK 153, 155, 156,...
+b) Ghi nhận doanh thu bán hàng và cung cấp dịch vụ (bao gồm cả doanh thu bán hàng hóa, dịch vụ chính và doanh thu bán hàng hóa, dịch vụ tặng kèm), ghi:
+Nợ các TK 111, 112, 131
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+	Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+3.5. Doanh thu phát sinh từ chương trình dành cho khách hàng truyền thống
+a) Khi bán hàng hóa, cung cấp dịch vụ trong chương trình dành cho khách hàng truyền thống, doanh nghiệp ghi nhận doanh thu trên cơ sở tổng số tiền thu được trừ (-) đi phần doanh thu chưa thực hiện là ước tính giá trị hợp lý của hàng hóa, dịch vụ sẽ cung cấp miễn phí hoặc số tiền chiết khấu, giảm giá cho khách hàng:
+Nợ các TK 111, 112, 131
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+	Có TK 3387 - Doanh thu chờ phân bổ	
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+b) Khi hết thời hạn quy định của chương trình, nếu khách hàng không đáp ứng được các điều kiện để hưởng các ưu đãi như nhận hàng hóa, dịch vụ miễn phí hoặc chiết khấu giảm giá, doanh nghiệp không phát sinh nghĩa vụ phải thanh toán cho khách hàng, doanh nghiệp kết chuyển doanh thu chưa thực hiện thành doanh thu bán hàng và cung cấp dịch vụ, ghi:
+Nợ TK 3387 - Doanh thu chờ phân bổ
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ.	
+c) Khi khách hàng đáp ứng đủ các điều kiện của chương trình để được hưởng ưu đãi, khoản doanh thu chưa thực hiện được xử lý như sau:
+- Trường hợp doanh nghiệp là chủ thể trực tiếp cung cấp hàng hóa, dịch vụ miễn phí hoặc chiết khấu, giảm giá cho khách hàng, khoản doanh thu chưa thực hiện được kết chuyển sang ghi nhận là doanh thu bán hàng và cung cấp dịch vụ tại thời điểm thực hiện xong nghĩa vụ với khách hàng (đã chuyển giao hàng hóa, dịch vụ miễn phí hoặc đã chiết khấu, giảm giá cho khách hàng):
+Nợ TK 3387 - Doanh thu chờ phân bổ
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+	Đồng thời phản ánh giá vốn hàng bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+	Có các TK 154, 155, 156,...
+- Trường hợp bên thứ ba là người cung cấp hàng hóa, dịch vụ hoặc chiết khấu giảm giá cho khách hàng, ghi:
+Nợ TK 3387 - Doanh thu chờ phân bổ
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (phần chênh lệch giữa doanh thu chưa thực hiện và số tiền trả cho bên thứ ba được coi như doanh thu hoa hồng đại lý)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có)
+Có các TK 111, 112, 331, ... (Số tiền phải trả cho bên thứ ba).
+d) Cuối kỳ kế toán, trường hợp giá trị ước tính nghĩa vụ nợ phải trả chênh lệch so với số tiền trả cho bên thứ ba:
++ Chênh lệch lớn hơn:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3387 - Doanh thu chờ phân bổ.
++ Chênh lệch nhỏ hơn:
+Nợ TK 3387 - Doanh thu chờ phân bổ
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ.
+3.6. Khi phát sinh doanh thu cung cấp dịch vụ của từng kỳ, căn cứ vào chứng từ liên quan, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+3.7. Trường hợp thu trước tiền nhiều kỳ từ hoạt động cung cấp dịch vụ:
+- Khi nhận tiền của khách hàng trả trước cho nhiều kỳ, ghi:
+Nợ các TK 111, 112 (tổng số tiền nhận trước)
+Có TK 3387 - Doanh thu chờ phân bổ 
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+- Định kỳ, tính và kết chuyển doanh thu của kỳ kế toán, ghi:
+Nợ TK 3387 - Doanh thu chờ phân bổ 
+Có TK 511- Doanh thu bán hàng và cung cấp dịch vụ. 
+- Số tiền phải trả lại cho khách hàng vì hợp đồng không được thực hiện tiếp hoặc thời gian thực hiện ngắn hơn thời gian đã thu tiền trước (nếu có), ghi:
+Nợ TK 3387 - Doanh thu chờ phân bổ 
+Nợ TK 3331 - Thuế GTGT phải nộp (số tiền trả lại cho bên thuê về thuế GTGT của hoạt động cung cấp dịch vụ không được thực hiện) (nếu có)
+Có các TK 111, 112,... (tổng số tiền trả lại).
+3.8. Trường hợp bán hàng thông qua đại lý, doanh nghiệp vẫn có quyền kiểm soát hàng giao đại lý
+a) Kế toán ở đơn vị giao hàng đại lý:
+- Khi xuất kho sản phẩm, hàng hóa giao cho các đại lý phải lập Phiếu xuất kho hàng gửi bán đại lý. Căn cứ vào phiếu xuất kho hàng gửi bán đại lý, ghi:
+Nợ TK 157 - Hàng gửi đi bán 
+Có các TK 155, 156,...
+- Khi hàng hóa giao cho đại lý đã bán được, căn cứ vào Bảng kê hóa đơn bán ra của hàng hóa đã bán do các bên nhận đại lý lập và gửi về để doanh nghiệp phản ánh doanh thu bán hàng, ghi:
+Nợ các TK 111, 112, 131,... (tổng giá thanh toán)
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+Đồng thời phản ánh giá vốn của hàng bán ra, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 157 - Hàng gửi đi bán.
+- Số tiền hoa hồng phải trả cho đơn vị nhận bán hàng đại lý, ghi:
+Nợ TK 641 - Chi phí bán hàng 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có các TK 111, 112, 131,...
+b) Kế toán ở đơn vị nhận đại lý: 
+- Khi nhận hàng đại lý, doanh nghiệp chủ động mở sổ theo dõi và ghi chép thông tin về toàn bộ giá trị hàng hóa nhận bán đại lý phản ánh vào tài sản nhận giữ hộ và thuyết minh trong Báo cáo tài chính.
+- Khi hàng hóa nhận bán đại lý đã bán được, căn cứ vào Hóa đơn GTGT hoặc Hóa đơn bán hàng và các chứng từ liên quan, doanh nghiệp phản ánh số tiền bán hàng đại lý phải trả cho bên giao hàng, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 331 - Phải trả cho người bán (tổng giá thanh toán).
+- Định kỳ, khi xác định doanh thu hoa hồng bán hàng đại lý được hưởng, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+- Khi trả tiền bán hàng đại lý cho bên giao hàng, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có các TK 111, 112.
+3.9. Đối với sản phẩm, hàng hóa, dịch vụ xuất bán giữa các đơn vị trực thuộc trong nội bộ doanh nghiệp
+3.9.1. Trường hợp không ghi nhận doanh thu giữa các khâu trong nội bộ doanh nghiệp, chỉ ghi nhận doanh thu khi thực bán hàng ra bên ngoài:
+a) Kế toán tại đơn vị bán
+- Khi xuất sản phẩm, hàng hóa, dịch vụ đến các đơn vị trực thuộc trong nội bộ doanh nghiệp, lập Phiếu xuất kho kiêm vận chuyển nội bộ hoặc hóa đơn GTGT, ghi:
+Nợ TK 136 - Phải thu nội bộ (giá vốn) 
+	Có các TK 155, 156,...
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+- Khi nhận được thông báo từ đơn vị mua là sản phẩm, hàng hóa đã được tiêu thụ ra bên ngoài, đơn vị bán ghi nhận doanh thu, giá vốn:
++ Phản ánh giá vốn hàng bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có TK 136 - Phải thu nội bộ.
++ Phản ánh doanh thu, ghi:
+Nợ TK 136 - Phải thu nội bộ
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ.
+b) Kế toán tại đơn vị mua
+- Khi nhận được sản phẩm, hàng hóa, dịch vụ do đơn vị trực thuộc trong nội bộ doanh nghiệp chuyển đến, doanh nghiệp căn cứ vào các chứng từ có liên quan, ghi:
+Nợ các TK 155, 156,... (giá vốn) 
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+	Có TK 336 - Phải trả nội bộ.
+- Khi bán sản phẩm, hàng hóa, dịch vụ ra bên ngoài, doanh nghiệp ghi nhận doanh thu, giá vốn như giao dịch bán hàng thông thường.
+- Trường hợp đơn vị trực thuộc không được phân cấp hạch toán đến kết quả kinh doanh sau thuế, doanh nghiệp phải kết chuyển doanh thu, giá vốn cho đơn vị cấp trên:
++ Kết chuyển giá vốn, ghi:
+Nợ TK 336 - Phải trả nội bộ
+		Có TK 632 - Giá vốn hàng bán.
++ Kết chuyển doanh thu, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+		Có TK 336 - Phải trả nội bộ.
+3.9.2. Trường hợp có ghi nhận doanh thu bán hàng giữa các khâu trong nội bộ doanh nghiệp:
+- Bên bán ghi:
+Nợ TK 136 - Phải thu nội bộ
+ Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (chi tiết giao dịch bán hàng nội bộ)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (nếu có).
+- Bên mua ghi:
+Nợ các TK 155, 156,...
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có).
+		Có TK 336 - Phải trả nội bộ.
+- Tại thời điểm kết thúc kỳ kế toán, căn cứ vào Biên bản đối chiếu công nợ giữa nợ phải thu và nợ phải trả nội bộ của cùng một đối tượng thì doanh nghiệp bù trừ trên sổ kế toán tương ứng, ghi:
+Nợ TK 336 - Phải trả nội bộ (3368)
+		Có TK 136 - Phải thu nội bộ (1368).
+3.10. Đối với hoạt động gia công hàng hóa:
+a) Kế toán tại đơn vị giao hàng để gia công:
+- Khi xuất kho giao hàng để gia công, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Có các TK 152, 156,... 
+- Ghi nhận chi phí gia công hàng hóa và thuế GTGT được khấu trừ:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331,...
+- Khi nhận lại hàng gửi gia công chế biến hoàn thành nhập kho, ghi:
+Nợ các TK 152, 156,...
+Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
+b) Kế toán tại đơn vị nhận hàng để gia công:
+- Khi nhận hàng để gia công, doanh nghiệp chủ động theo dõi và ghi chép thông tin về toàn bộ giá trị vật tư, hàng hóa nhận gia công vào vật tư, hàng hóa, TSCĐ nhận giữ hộ, nhận ký gửi, nhận gia công và thuyết minh trong Báo cáo tài chính.
+- Khi xác định doanh thu từ số tiền gia công thực tế được hưởng, ghi:
+ Nợ các TK 111, 112, 131,...
+ 		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+ 	Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+3.11. Kế toán doanh thu hợp đồng xây dựng.
+- Trường hợp hợp đồng xây dựng quy định nhà thầu được thanh toán theo tiến độ, khi kết quả thực hiện hợp đồng xây dựng được ước tính một cách đáng tin cậy thì kế toán căn cứ vào chứng từ phản ánh doanh thu tương ứng với phần công việc đã hoàn thành (không phải hóa đơn) do nhà thầu tự xác định tại thời điểm lập Báo cáo tài chính, ghi:	
+Nợ TK 337 - Thanh toán theo tiến độ hợp đồng xây dựng 
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ.
+- Căn cứ vào Hóa đơn GTGT được lập theo tiến độ để phản ánh số tiền khách hàng phải trả theo tiến độ đã ghi trong hợp đồng, ghi:
+Nợ TK 131 - Phải thu của khách hàng
+Có TK 337 - Thanh toán theo tiến độ hợp đồng xây dựng 
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+- Khi nhận được tiền do khách hàng trả, hoặc nhận tiền khách hàng ứng trước, ghi:
+Nợ các TK 111, 112,...
+Có TK 131 - Phải thu của khách hàng.
+- Trường hợp hợp đồng xây dựng quy định nhà thầu được thanh toán theo giá trị khối lượng thực hiện, khi kết quả thực hiện hợp đồng xây dựng được xác định một cách đáng tin cậy và được khách hàng xác nhận thì doanh nghiệp căn cứ vào hóa đơn, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+- Khoản tiền thưởng thu được từ khách hàng trả phụ thêm cho nhà thầu khi thực hiện hợp đồng đạt hoặc vượt một số chỉ tiêu cụ thể đã được ghi trong hợp đồng, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+- Khoản bồi thường thu được từ khách hàng hay bên khác để bù đắp cho các chi phí không bao gồm trong giá trị hợp đồng (ví dụ: Sự chậm trễ do khách hàng gây nên; sai sót trong các chỉ tiêu kỹ thuật hoặc thiết kế và các tranh chấp về các thay đổi trong việc thực hiện hợp đồng), ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+- Khi nhận được tiền thanh toán khối lượng công trình hoàn thành hoặc khoản ứng trước từ khách hàng, ghi:
+Nợ các TK 111, 112,...
+Có TK 131 - Phải thu của khách hàng.
+3.12. Kế toán doanh thu từ các khoản trợ cấp, trợ giá của Nhà nước cho doanh nghiệp:
+- Phản ánh khoản trợ cấp, trợ giá được hưởng theo quy định, ghi:
+ Nợ TK 333 - Thuế và các khoản phải nộp Nhà nước (3339) 
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ.
+- Khi nhận được tiền trợ cấp, trợ giá của Nhà nước, ghi: 
+Nợ các TK 111, 112,...
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3339).
+3.13. Kế toán bán, thanh lý bất động sản đầu tư xem hướng dẫn tại Tài khoản 217 - Bất động sản đầu tư.
+ 3.14. Trường hợp trả lương cho người lao động bằng sản phẩm, hàng hóa: Doanh nghiệp phải ghi nhận doanh thu đối với sản phẩm, hàng hóa như đối với giao dịch bán hàng thông thường, ghi:
+Nợ TK 334 - Phải trả người lao động (tổng giá thanh toán) 
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (33311, 3335) (nếu có).
+3.15. Trường hợp sử dụng sản phẩm, hàng hóa để biếu, tặng cho người lao động được trang trải bằng quỹ khen thưởng, phúc lợi: Doanh nghiệp phải ghi nhận doanh thu đối với sản phẩm, hàng hóa như đối với giao dịch bán hàng thông thường, ghi:
+Nợ TK 353 - Quỹ khen thưởng, phúc lợi (tổng giá thanh toán) 
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ 
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+3.16. Trường hợp, doanh thu bán hàng và cung cấp dịch vụ phát sinh bằng ngoại tệ: Việc xác định tỷ giá giao dịch thực tế, tỷ giá ghi sổ và các giao dịch phát sinh liên quan đến các giao dịch bán hàng và cung cấp dịch vụ phát sinh bằng ngoại tệ được hướng dẫn tại Tài khoản 413 - Chênh lệch tỷ giá hối đoái.
+3.17. Tại thời điểm kết thúc kỳ kế toán, kết chuyển doanh thu của hàng bán bị trả lại, khoản giảm giá hàng bán và chiết khấu thương mại phát sinh trong kỳ trừ vào doanh thu thực tế trong kỳ để xác định doanh thu thuần, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+	Có TK 521 - Các khoản giảm trừ doanh thu.
+3.18. Tại thời điểm kết thúc kỳ kế toán, kết chuyển doanh thu thuần sang Tài khoản 911 - Xác định kết quả kinh doanh, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+	Có TK 911 - Xác định kết quả kinh doanh.
+TÀI KHOẢN 515 - DOANH THU HOẠT ĐỘNG TÀI CHÍNH
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh doanh thu tiền lãi, cổ tức, lợi nhuận được chia và doanh thu hoạt động tài chính khác của doanh nghiệp, gồm:
+- Tiền lãi: Lãi cho vay; lãi tiền gửi; lãi bán hàng trả chậm, trả góp; lãi đầu tư trái phiếu, tín phiếu; chiết khấu thanh toán được hưởng do mua hàng hóa, dịch vụ; phần chênh lệch giá bán lại và giá mua trái phiếu của hợp đồng mua, bán lại trái phiếu Chính phủ; phần chênh lệch giữa giá mua lại trước hạn trái phiếu đã phát hành thấp hơn giá trị ghi sổ của trái phiếu; các khoản lãi dồn tích phải trả của trái phiếu (nếu có) tính đến thời điểm mua lại trái phiếu...
+- Cổ tức, lợi nhuận được chia bằng tiền hoặc tài sản phi tiền tệ cho giai đoạn sau ngày đầu tư (cổ tức, lợi nhuận được chia bằng tiền hoặc tài sản phi tiền tệ cho giai đoạn trước ngày đầu tư được ghi giảm giá gốc khoản đầu tư). Việc xác định lãi dồn tích trước ngày mua do doanh nghiệp ước tính trên cơ sở thông tin của khoản đầu tư, tình hình tài chính, kết quả kinh doanh của đơn vị nhận đầu tư;
+- Thu nhập về hoạt động đầu tư mua, bán chứng khoán ngắn hạn, dài hạn; Lãi chuyển nhượng vốn khi thanh lý các khoản vốn góp liên doanh, đầu tư vào công ty liên kết, đầu tư vào công ty con, đầu tư vốn khác;	
+- Thu nhập về các hoạt động đầu tư khác;
+- Lãi tỷ giá hối đoái phát sinh hoặc khi lãi khi đánh giá lại khoản mục có gốc ngoại tệ, gồm cả lãi do bán ngoại tệ; 
+- Các khoản doanh thu hoạt động tài chính khác. 
+b) Đối với việc nhượng bán các khoản đầu tư tài chính (khoản đầu tư vào công ty con, công ty liên doanh, công ty liên kết; chứng khoán kinh doanh;...), doanh thu được ghi nhận là số chênh lệch giữa giá bán lớn hơn giá vốn, trong đó giá vốn là giá trị ghi sổ của khoản đầu tư, trường hợp tài sản nhận được khi bán các khoản đầu tư là tài sản phi tiền tệ thì giá bán được tính theo theo giá trị hợp lý tương tự như giao dịch bán, trao đổi các tài sản phi tiền tệ đó.
+c) Đối với khoản doanh thu từ hoạt động mua, bán ngoại tệ, doanh thu được ghi nhận là số chênh lệch lãi giữa giá ngoại tệ bán ra và giá ngoại tệ mua vào.
+d) Đối với lãi tiền gửi: Doanh thu lãi tiền gửi phản ánh vào tài khoản này không bao gồm khoản lãi tiền gửi phát sinh do hoạt động đầu tư tạm thời của khoản vốn vay riêng biệt chỉ sử dụng cho mục đích xây dựng hoặc sản xuất tài sản dở dang (vì được giảm trừ vào chi phí đi vay phát sinh khi vốn hóa).
+đ) Đối với tiền lãi phải thu từ các khoản cho vay, bán hàng trả chậm, trả góp: Doanh thu chỉ được ghi nhận khi chắc chắn thu được và khoản gốc cho vay, nợ gốc phải thu không thuộc trường hợp cần phải lập dự phòng.
+e) Đối với khoản tiền lãi nhận được từ khoản đầu tư cổ phiếu, trái phiếu thì chỉ có phần tiền lãi của các kỳ tương ứng với giai đoạn sau ngày doanh nghiệp mua lại khoản đầu tư được ghi nhận vào doanh thu hoạt động tài chính trong từng kỳ, còn khoản tiền lãi nhận được tương ứng với giai đoạn trước khi doanh nghiệp mua lại khoản đầu tư đó thì ghi giảm giá gốc khoản đầu tư đó. 
+g) Khi nhà đầu tư nhận cổ tức bằng cổ phiếu (tại ngày đăng ký cuối cùng hoặc tại ngày mà nhà đầu tư được quyền nhận cổ tức bằng cổ phiếu) hoặc khi đơn vị nhận đầu tư sử dụng vốn khác của chủ sở hữu, các quỹ thuộc vốn chủ sở hữu và lợi nhuận sau thuế chưa phân phối để tăng thêm vốn điều lệ.
+Nếu nhà đầu tư là công ty cổ phần thì nhà đầu tư chỉ theo dõi số lượng cổ phiếu tăng thêm trên thuyết minh Báo cáo tài chính còn nếu nhà đầu tư là các loại hình doanh nghiệp khác thì nhà đầu tư chỉ theo dõi giá trị phần vốn được tăng thêm trên thuyết minh Báo cáo tài chính và đều không được ghi nhận doanh thu hoạt động tài chính, không ghi nhận tăng giá trị khoản đầu tư vào đơn vị nhận đầu tư, trừ trường hợp đối với doanh nghiệp nhà nước nếu có quy định khác biệt với nguyên tắc quy định tại Thông tư này thì được thực hiện theo quy định của pháp luật đối với doanh nghiệp nhà nước.
+2. Kết cấu và nội dung phản ánh của Tài khoản 515 - Doanh thu hoạt động tài chính
+Bên Nợ:
+- Số thuế GTGT phải nộp tính theo phương pháp trực tiếp (nếu có);
+- Kết chuyển doanh thu hoạt động tài chính thuần sang tài khoản 911- Xác định kết quả kinh doanh.
+Bên Có: Các khoản doanh thu hoạt động tài chính phát sinh trong kỳ.
+Tài khoản 515 không có số dư cuối kỳ.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Phản ánh doanh thu cổ tức, lợi nhuận được chia bằng tiền hoặc tài sản phi tiền tệ phát sinh trong kỳ từ các khoản đầu tư:
+- Trường hợp nếu cổ tức, lợi nhuận được chia bao gồm cả khoản lãi đầu tư dồn tích trước khi doanh nghiệp mua lại khoản đầu tư đó thì doanh nghiệp phải phân bổ số cổ tức, lợi nhuận này cho giai đoạn trước và sau ngày đầu tư, ghi:
+Nợ TK 138 - Phải thu khác (tổng số cổ tức, lợi nhuận sẽ thu được)
+Có các TK 121, 221, 222, 228 (phần cổ tức, lợi nhuận phân bổ cho giai đoạn trước khi doanh nghiệp mua lại khoản đầu tư)
+Có TK 515 - Doanh thu hoạt động tài chính (phần cổ tức, lợi nhuận phân bổ cho giai đoạn sau khi doanh nghiệp mua lại khoản đầu tư này).
+- Khi nhận cổ tức, lợi nhuận được chia bằng tiền, ghi: 
+	Nợ các TK 111, 112,...
+		Có TK 138 - Phải thu khác (1388).
+b) Định kỳ, khi có bằng chứng chắc chắn thu được khoản lãi đầu tư nắm giữ đến ngày đáo hạn, lãi trả chậm, trả góp, ghi:
+Nợ các TK 128, 131,...
+Có TK 515 - Doanh thu hoạt động tài chính.
+Bằng chứng chắc chắn thu được các khoản phải thu này là các tài liệu chứng minh: 
+- Các khoản phải thu gốc không bị coi là nợ khó đòi không có khả năng thu hồi hoặc khó có khả năng thu hồi, không thuộc diện bị khoanh nợ, giãn nợ; 
+- Có xác nhận nợ và cam kết trả nợ của bên nhận nợ; 
+- Các bằng chứng khác (nếu có).
+c) Khi nhượng bán hoặc thu hồi các khoản đầu tư tài chính, ghi:
+Nợ các TK 111, 112, 131,...
+Nợ TK 229 - Dự phòng tổn thất tài sản (khoản dự phòng đã trích lập để bù đắp số tổn thất) (nếu có)
+Nợ TK 635 - Chi phí tài chính (nếu lỗ)
+Có các TK 121, 221, 222, 228
+Có TK 515 - Doanh thu hoạt động tài chính (nếu lãi).
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản đầu tư có thể được ghi nhận ngay cho từng giao dịch tại thời điểm nhượng bán hoặc khi xác định lập số trích lập dự phòng tổn thất đầu tư vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của Chuẩn mực kế toán Việt Nam.
+d) Trường hợp hoán đổi cổ phiếu, căn cứ giá trị hợp lý của cổ phiếu nhận về và giá trị ghi sổ của cổ phiếu mang đi hoán đổi, ghi:
+Nợ các TK 121, 228 (giá trị hợp lý của cổ phiếu nhận về)
+Nợ TK 635 - Chi phí tài chính (chênh lệch giữa giá trị hợp lý của cổ phiếu nhận về nhỏ hơn giá trị ghi sổ của cổ phiếu mang đi hoán đổi)
+Có các TK 121, 228 (giá trị ghi sổ của cổ phiếu mang đi hoán đổi)
+Có TK 515 - Doanh thu hoạt động tài chính (chênh lệch giữa giá trị hợp lý của cổ phiếu nhận về lớn hơn giá trị ghi sổ của cổ phiếu mang đi hoán đổi).
+đ) Trường hợp doanh nghiệp có bán hàng theo phương thức trả chậm, trả góp 
+- Khi bán sản phẩm, hàng hóa theo phương thức trả chậm, trả góp thì ghi nhận doanh thu bán hàng và cung cấp dịch vụ của kỳ kế toán theo giá bán trả tiền ngay, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (theo giá bán trả tiền ngay)
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+- Định kỳ, xác định và kết chuyển doanh thu tiền lãi bán hàng trả chậm, trả góp trong kỳ, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 515 - Doanh thu hoạt động tài chính. 
+e) Hàng kỳ, xác định và kết chuyển doanh thu tiền lãi đối với các khoản đầu tư nắm giữ đến ngày đáo hạn nhận lãi trước, ghi:
+Nợ TK 128 - Đầu tư nắm giữ đến ngày đáo hạn
+Có TK 515 - Doanh thu hoạt động tài chính.	
+g) Trường hợp mua trái phiếu Chính phủ theo hợp đồng mua bán lại (repo):
+- Khi bên mua thanh toán cho bên bán số coupon mà bên mua nhận hộ bên bán tại (các) thời điểm nằm trong thời hạn hợp đồng, bên bán ghi:
+Nợ các TK 111, 112, 138
+		Có TK 515 - Doanh thu hoạt động tài chính.
+- Khi phân bổ số chênh lệch giữa giá bán lại với giá mua trái phiếu Chính phủ theo hợp đồng mua bán lại trái phiếu Chính phủ vào doanh thu định kỳ phù hợp với thời gian của hợp đồng, bên mua ghi:
+Nợ TK 171 - Giao dịch mua bán lại trái phiếu chính phủ
+		Có TK 515 - Doanh thu hoạt động tài chính.
+h) Số tiền chiết khấu thanh toán được hưởng do thanh toán tiền mua hàng trước thời hạn được người bán chấp thuận, ghi:
+Nợ TK 331 - Phải trả cho người bán
+Có TK 515 - Doanh thu hoạt động tài chính.
+i) Khi nhận lại vốn góp vào công ty con, công ty liên doanh, liên kết, đầu tư khác mà giá trị hợp lý hoặc giá thỏa thuận do các bên thống nhất đánh giá tài sản được chia nhỏ hơn giá trị vốn góp, ghi:
+Nợ các TK 111, 112, 152, 156, 211,... (giá trị hợp lý tài sản được chia)
+Nợ TK 229 - Dự phòng tổn thất tài sản (khoản dự phòng đã trích lập để bù đắp số tổn thất) (nếu có)
+		Có TK 515 - Doanh thu hoạt động tài chính (số lãi) 
+		Có các TK 221, 222,...
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản đầu tư có thể được ghi nhận ngay cho từng giao dịch tại thời điểm thu hồi hoặc khi xác định số trích lập dự phòng tổn thất khoản đầu tư vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của Chuẩn mực kế toán Việt Nam.
+k) Tại thời điểm kết thúc kỳ kế toán, kết chuyển doanh thu hoạt động tài chính để xác định kết quả kinh doanh, ghi:
+Nợ TK 515 - Doanh thu hoạt động tài chính
+Có TK 911 - Xác định kết quả kinh doanh.
+TÀI KHOẢN 521 - CÁC KHOẢN GIẢM TRỪ DOANH THU
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh các khoản được điều chỉnh giảm trừ vào doanh thu bán hàng và cung cấp dịch vụ phát sinh trong kỳ, bao gồm: chiết khấu thương mại, giảm giá hàng bán và hàng bán bị trả lại. Tài khoản này không phản ánh các khoản thuế được giảm trừ vào doanh thu như thuế GTGT đầu ra phải nộp tính theo phương pháp trực tiếp.
+b) Việc điều chỉnh giảm doanh thu được thực hiện như sau:
+- Khoản chiết khấu thương mại, giảm giá hàng bán, hàng bán bị trả lại phát sinh cùng kỳ tiêu thụ sản phẩm, hàng hóa dịch vụ được điều chỉnh giảm doanh thu của kỳ phát sinh;
+- Trường hợp sản phẩm, hàng hóa, dịch vụ đã tiêu thụ từ các kỳ trước, đến kỳ sau mới phát sinh chiết khấu thương mại, giảm giá hàng bán hoặc hàng bán bị trả lại thì doanh nghiệp ghi giảm doanh thu theo nguyên tắc:
++ Nếu sản phẩm, hàng hóa, dịch vụ đã tiêu thụ từ các kỳ trước, đến kỳ sau phải giảm giá, phải chiết khấu thương mại, bị trả lại nhưng phát sinh trước thời điểm phát hành Báo cáo tài chính, kế toán phải coi đây là một sự kiện cần điều chỉnh phát sinh sau ngày lập Báo cáo tài chính và ghi giảm doanh thu, trên Báo cáo tài chính của kỳ lập báo cáo (kỳ trước).
++ Trường hợp sản phẩm, hàng hóa, dịch vụ đã tiêu thụ từ các kỳ trước, đến kỳ sau phải giảm giá, phải chiết khấu thương mại, bị trả lại sau thời điểm phát hành Báo cáo tài chính thì doanh nghiệp ghi giảm doanh thu của kỳ phát sinh (kỳ sau). 
+c) Chiết khấu thương mại phải trả là khoản doanh nghiệp giảm giá so với giá bán niêm yết cho khách hàng mua hàng với khối lượng lớn hoặc giá trị lớn. Bên bán hàng thực hiện kế toán chiết khấu thương mại theo những nguyên tắc sau:
+- Trường hợp trong hóa đơn GTGT hoặc hóa đơn bán hàng đã thể hiện khoản chiết khấu thương mại cho người mua là khoản giảm trừ vào số tiền người mua phải thanh toán (giá bán phản ánh trên hóa đơn là giá đã trừ chiết khấu thương mại) thì doanh nghiệp (bên bán hàng) không sử dụng tài khoản này, doanh thu bán hàng phản ánh theo giá đã trừ chiết khấu thương mại (doanh thu thuần).
+ - Doanh nghiệp phải theo dõi riêng khoản chiết khấu thương mại mà doanh nghiệp chi trả cho người mua nhưng chưa được phản ánh là khoản giảm trừ số tiền phải thanh toán trên hóa đơn. Trường hợp này, bên bán ghi nhận doanh thu ban đầu theo giá chưa trừ chiết khấu thương mại (doanh thu gộp). Khoản chiết khấu thương mại cần phải theo dõi riêng trên tài khoản này thường phát sinh trong các trường hợp như:
++ Số chiết khấu thương mại người mua được hưởng lớn hơn số tiền bán hàng được ghi trên hóa đơn lần cuối cùng. Trường hợp này có thể phát sinh do người mua hàng nhiều lần mới đạt được lượng hàng mua được hưởng chiết khấu và khoản chiết khấu thương mại chỉ được xác định trong lần mua cuối cùng;
++ Các nhà sản xuất cuối kỳ mới xác định được số lượng hàng mà nhà phân phối (như các siêu thị) đã tiêu thụ và từ đó mới có căn cứ để xác định được số chiết khấu thương mại phải trả dựa trên doanh số bán hoặc số lượng sản phẩm đã tiêu thụ. 
+d) Giảm giá hàng bán là khoản giảm giảm giá so với giá bán niêm yết cho khách hàng do sản phẩm, hàng hóa kém, mất phẩm chất, không đúng quy cách,... theo quy định trong hợp đồng kinh tế. Bên bán hàng thực hiện kế toán giảm giá hàng bán theo những nguyên tắc sau:
+- Trường hợp trong hóa đơn GTGT hoặc hóa đơn bán hàng đã thể hiện khoản giảm giá hàng bán cho người mua là khoản giảm trừ vào số tiền người mua phải thanh toán (giá bán phản ánh trên hóa đơn là giá đã giảm) thì doanh nghiệp (bên bán hàng) không sử dụng tài khoản này, doanh thu bán hàng phản ánh theo giá đã giảm (doanh thu thuần).
+- Chỉ phản ánh vào tài khoản này các khoản giảm trừ do việc chấp thuận giảm giá sau khi đã bán hàng (đã ghi nhận doanh thu) và phát hành hóa đơn (giảm giá ngoài hóa đơn).
+đ) Đối với hàng bán bị trả lại, tài khoản này dùng để phản ánh giá trị của số sản phẩm, hàng hóa bị khách hàng trả lại do các nguyên nhân: Vi phạm cam kết, vi phạm hợp đồng kinh tế, hàng bị kém, mất phẩm chất, không đúng chủng loại, quy cách,...
+e) Kế toán phải theo dõi chi tiết chiết khấu thương mại, giảm giá hàng bán, hàng bán bị trả lại cho từng khách hàng và từng loại hàng bán, như: bán hàng (sản phẩm, hàng hóa), cung cấp dịch vụ. Cuối kỳ, kết chuyển toàn bộ sang tài khoản 511 - Doanh thu bán hàng và cung cấp dịch vụ để xác định doanh thu thuần của khối lượng sản phẩm, hàng hóa, dịch vụ thực tế thực hiện trong kỳ báo cáo.
+2. Kết cấu và nội dung phản ánh của Tài khoản 521 - Các khoản giảm trừ doanh thu
+Bên Nợ: 
+- Khoản chiết khấu thương mại đã chấp nhận thanh toán cho khách hàng;
+- Khoản giảm giá hàng bán đã chấp thuận cho người mua hàng;
+- Doanh thu của hàng bán bị trả lại đã được trả lại bằng tiền cho người mua hoặc tính trừ vào khoản phải thu khách hàng về số sản phẩm, hàng hóa đã bán.
+Bên Có: Tại thời điểm kết thúc kỳ kế toán, kết chuyển toàn bộ số chiết khấu thương mại, giảm giá hàng bán, doanh thu của hàng bán bị trả lại sang Tài khoản 511 - Doanh thu bán hàng và cung cấp dịch vụ để xác định doanh thu thuần của kỳ báo cáo.
+Tài khoản 521 - Các khoản giảm trừ doanh thu không có số dư cuối kỳ.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết các khoản giảm trừ doanh thu phát sinh (như: Chiết khấu thương mại, Giảm giá hàng bán, Hàng bán bị trả lại...) cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Phản ánh số chiết khấu thương mại, giảm giá hàng bán thực tế phát sinh trong kỳ, ghi:
+- Trường hợp sản phẩm, hàng hóa đã bán phải giảm giá, chiết khấu thương mại cho người mua thuộc đối tượng chịu thuế GTGT tính theo phương pháp khấu trừ và doanh nghiệp tính thuế GTGT theo phương pháp khấu trừ, ghi:
+Nợ TK 521 - Các khoản giảm trừ doanh thu 
+Nợ TK 3331 - Thuế GTGT phải nộp (thuế GTGT đầu ra được giảm)
+Có các TK 111, 112, 131,...
+- Trường hợp sản phẩm, hàng hóa đã bán phải giảm giá, chiết khấu thương mại cho người mua không thuộc đối tượng chịu thuế GTGT hoặc thuộc đối tượng chịu thuế GTGT tính theo phương pháp trực tiếp thì khoản giảm giá hàng bán cho người mua, ghi:
+Nợ TK 521 - Các khoản giảm trừ doanh thu 
+Có các TK 111, 112, 131,...
+b) Kế toán hàng bán bị trả lại
+- Khi doanh nghiệp nhận lại sản phẩm, hàng hóa bị trả lại, kế toán phản ánh giá vốn của hàng bán bị trả lại:
+Nợ các TK 154, 155, 156,... 
+Có TK 632 - Giá vốn hàng bán.
+- Thanh toán với người mua hàng về doanh thu của hàng bán bị trả lại:
+Nợ TK 521 - Các khoản giảm trừ doanh thu
+Nợ TK 3331 - Thuế GTGT phải nộp (33311) (nếu có)
+Có các TK 111, 112, 131,...
+- Các chi phí phát sinh liên quan đến hàng bán bị trả lại (nếu có), ghi:
+Nợ TK 641 - Chi phí bán hàng
+Có các TK 111, 112, 141, 334,...
+c) Cuối kỳ kế toán, kết chuyển tổng số giảm trừ doanh thu phát sinh trong kỳ sang tài khoản 511 - Doanh thu bán hàng và cung cấp dịch vụ, ghi: 
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 521 - Các khoản giảm trừ doanh thu.
+NGUYÊN TẮC KẾ TOÁN CÁC KHOẢN CHI PHÍ
+1. Chi phí là những khoản làm giảm lợi ích kinh tế, được ghi nhận tại thời điểm giao dịch phát sinh hoặc khi có khả năng tương đối chắc chắn sẽ phát sinh trong tương lai không phân biệt đã chi tiền hay chưa. 
+2. Việc ghi nhận chi phí ngay cả khi chưa đến kỳ hạn thanh toán nhưng có khả năng chắc chắn sẽ phát sinh nhằm đảm bảo nguyên tắc thận trọng và bảo toàn vốn. Khi doanh nghiệp ghi nhận một khoản doanh thu thì phải ghi nhận một khoản chi phí tương ứng có liên quan đến việc tạo ra doanh thu đó. Chi phí tương ứng tạo ra doanh thu gồm chi phí của kỳ tạo ra doanh thu và chi phí của các kỳ trước hoặc chi phí phải trả nhưng liên quan đến doanh thu của kỳ đó. Tuy nhiên trong một số trường hợp, nguyên tắc phù hợp có thể xung đột với nguyên tắc thận trọng thì doanh nghiệp phải căn cứ vào bản chất của giao dịch và các Chuẩn mực kế toán Việt Nam để phản ánh giao dịch một cách trung thực, hợp lý.
+3. Doanh nghiệp căn cứ vào đặc điểm, tính chất, số lượng, chủng loại của từng mặt hàng tồn kho cũng như yêu cầu quản lý và điều kiện vật chất để xác định số lượng và giá trị hàng xuất kho theo từng lần phát sinh hoặc tính trên cơ sở số lượng và giá trị hàng tồn kho cuối kỳ cho phù hợp và phải được áp dụng nhất quán giữa các kỳ kế toán, trừ khi có sự thay đổi chính sách kế toán.
+4. Doanh nghiệp phải theo dõi chi tiết các khoản chi phí phát sinh theo yếu tố như chi phí về tiền lương, nguyên vật liệu, chi phí mua ngoài, khấu hao TSCĐ,... 
+5. Các khoản chi phí không được coi là chi phí tính thuế TNDN theo quy định pháp luật về thuế nhưng có đầy đủ hóa đơn chứng từ và đã hạch toán đúng theo Chế độ kế toán thì không được ghi giảm chi phí kế toán mà chỉ điều chỉnh trong quyết toán thuế TNDN để làm tăng số thuế TNDN phải nộp.
+6. Các tài khoản phản ánh chi phí không có số dư nên tại thời điểm kết thúc kỳ kế toán, doanh nghiệp phải kết chuyển tất cả các khoản chi phí phát sinh trong kỳ sang Tài khoản 911 để xác định kết quả kinh doanh. 
+TÀI KHOẢN 621 - CHI PHÍ NGUYÊN LIỆU, VẬT LIỆU TRỰC TIẾP
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh chi phí nguyên liệu, vật liệu sử dụng trực tiếp cho hoạt động sản xuất sản phẩm, thực hiện dịch vụ của doanh nghiệp.
+b) Chỉ hạch toán vào Tài khoản 621 những chi phí nguyên liệu, vật liệu (gồm cả nguyên liệu, vật liệu chính và vật liệu phụ) được sử dụng trực tiếp để sản xuất sản phẩm, thực hiện dịch vụ trong kỳ sản xuất, kinh doanh. Chi phí nguyên liệu, vật liệu phải tính theo giá thực tế khi xuất sử dụng.
+c) Trong kỳ kế toán thực hiện việc ghi chép, tập hợp chi phí nguyên liệu, vật liệu trực tiếp vào bên Nợ Tài khoản 621 - Chi phí nguyên liệu, vật liệu trực tiếp theo từng đối tượng sử dụng trực tiếp các nguyên liệu, vật liệu này (nếu khi xuất nguyên liệu, vật liệu cho quá trình sản xuất sản phẩm, thực hiện dịch vụ, xác định được cụ thể, rõ ràng cho từng đối tượng sử dụng); hoặc tập hợp chung cho quá trình sản xuất, chế tạo sản phẩm, thực hiện dịch vụ (nếu khi xuất sử dụng nguyên liệu, vật liệu cho quá trình sản xuất sản phẩm, dịch vụ không thể xác định cụ thể, rõ ràng cho từng đối tượng sử dụng).
+d) Tại thời điểm kết thúc kỳ kế toán, thực hiện kết chuyển (nếu nguyên liệu, vật liệu đã được tập hợp riêng biệt cho đối tượng sử dụng), hoặc tiến hành tính phân bổ và kết chuyển chi phí nguyên liệu, vật liệu (nếu không tập hợp riêng biệt cho từng đối tượng sử dụng) vào Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang phục vụ cho việc tính giá thành sản xuất của sản phẩm, dịch vụ trong kỳ kế toán. Việc phân bổ trị giá nguyên liệu, vật liệu vào giá thành sản phẩm, dịch vụ, doanh nghiệp phải dựa trên cơ sở các tiêu thức phân bổ phù hợp với đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý của doanh nghiệp.
+đ) Khi mua nguyên liệu, vật liệu, nếu thuế GTGT đầu vào được khấu trừ thì trị giá nguyên liệu, vật liệu sẽ không bao gồm thuế GTGT. Nếu thuế GTGT đầu vào không được khấu trừ thì trị giá nguyên liệu, vật liệu bao gồm cả thuế GTGT.
+e) Phần chi phí nguyên liệu, vật liệu trực tiếp vượt trên mức bình thường không được tính vào giá thành sản phẩm, dịch vụ mà phải kết chuyển ngay vào Tài khoản 632 - Giá vốn hàng bán.
+2. Kết cấu và nội dung phản ánh của Tài khoản 621 - Chi phí nguyên liệu, vật liệu trực tiếp
+Bên Nợ: 
+Trị giá thực tế nguyên liệu, vật liệu xuất dùng trực tiếp cho hoạt động sản xuất sản phẩm hoặc thực hiện dịch vụ trong kỳ kế toán.
+Bên Có:
+- Kết chuyển trị giá nguyên liệu, vật liệu thực tế sử dụng cho sản xuất, kinh doanh trong kỳ vào Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang và chi tiết cho từng đối tượng để tính giá thành sản phẩm, dịch vụ.
+- Kết chuyển chi phí nguyên vật liệu trực tiếp vượt trên mức bình thường vào Tài khoản 632 - Giá vốn hàng bán.
+- Trị giá nguyên liệu, vật liệu trực tiếp sử dụng không hết được nhập lại kho.
+Tài khoản 621 không có số dư cuối kỳ.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Khi xuất nguyên liệu, vật liệu sử dụng cho hoạt động sản xuất sản phẩm hoặc thực hiện dịch vụ trong kỳ, ghi:
+Nợ TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp 
+		Có TK 152 - Nguyên liệu, vật liệu.
+b) Trường hợp mua nguyên liệu, vật liệu sử dụng ngay (không qua nhập kho) cho hoạt động sản xuất sản phẩm hoặc thực hiện dịch vụ, ghi:
+Nợ TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp 
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 141, 331,...
+c) Trường hợp số nguyên liệu, vật liệu xuất ra không sử dụng hết vào hoạt động sản xuất sản phẩm hoặc thực hiện dịch vụ cuối kỳ nhập lại kho, ghi:
+Nợ TK 152 - Nguyên liệu, vật liệu
+		Có TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp.
+d) Đối với chi phí nguyên vật liệu trực tiếp vượt trên mức bình thường hoặc hao hụt được tính ngay vào giá vốn hàng bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp.
+đ) Đối với chi phí nguyên vật liệu sử dụng chung cho hợp đồng BCC tại bên kế toán cho hợp đồng BCC
+- Khi phát sinh chi phí nguyên vật liệu sử dụng chung cho hợp đồng BCC, căn cứ các chứng từ liên quan, ghi:
+Nợ TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp (chi tiết từng hợp đồng)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 331,...
+- Định kỳ, kế toán lập Bảng phân bổ chi phí chung (có sự xác nhận của các bên) để phân bổ chi phí nguyên vật liệu sử dụng chung cho hợp đồng BCC cho các bên, ghi:
+Nợ TK 138 - Phải thu khác (chi tiết cho từng đối tác)
+		Có TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp
+		Có TK 133 - Thuế GTGT được khấu trừ (nếu chia thuế đầu vào)
+		Có TK 3331 - Thuế GTGT phải nộp (nếu thuế đầu vào của chi phí chung đã khấu trừ hết, phải ghi tăng số thuế đầu ra phải nộp).
+e) Tại thời điểm kết thúc kỳ kế toán, căn cứ vào Bảng phân bổ nguyên liệu, vật liệu tính cho từng đối tượng sử dụng nguyên liệu, vật liệu (phân xưởng sản xuất sản phẩm, loại sản phẩm, công trình, hạng mục công trình của hoạt động xây lắp, loại dịch vụ,... theo phương pháp trực tiếp hoặc phân bổ) để kết chuyển chi phí nguyên liệu, vật liệu trực tiếp, tính giá thành sản phẩm, dịch vụ, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang 
+Nợ TK 632 - Giá vốn hàng bán (phần vượt trên mức bình thường)
+		Có TK 621 - Chi phí nguyên liệu, vật liệu trực tiếp.
+TÀI KHOẢN 622 - CHI PHÍ NHÂN CÔNG TRỰC TIẾP
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh chi phí nhân công trực tiếp tham gia vào hoạt động sản xuất, kinh doanh trong các ngành công nghiệp, xây lắp, nông, lâm, ngư nghiệp, dịch vụ (giao thông vận tải, bưu chính viễn thông, du lịch, khách sạn, tư vấn,...).
+Chi phí nhân công trực tiếp bao gồm các khoản phải trả cho người lao động trực tiếp sản xuất sản phẩm, thực hiện dịch vụ thuộc danh sách quản lý của doanh nghiệp và lao động thuê ngoài theo từng loại công việc, như: Tiền lương, tiền công, các khoản phụ cấp, các khoản trích theo lương (bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp).
+b) Không hạch toán vào tài khoản này những khoản phải trả về tiền lương, tiền công và các khoản phụ cấp... cho nhân viên quản lý phân xưởng, nhân viên quản lý doanh nghiệp, nhân viên bán hàng.
+c) Riêng đối với hoạt động xây lắp, không hạch toán vào tài khoản này khoản tiền lương, tiền công và các khoản phụ cấp có tính chất lương trả cho công nhân trực tiếp điều khiển xe, máy thi công, phục vụ máy thi công, khoản trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp tính trên quỹ lương phải trả công nhân trực tiếp của hoạt động xây lắp, điều khiển máy thi công, phục vụ máy thi công, nhân viên phân xưởng.
+d) Tài khoản 622 - Chi phí nhân công trực tiếp phải mở chi tiết theo đối tượng tập hợp chi phí sản xuất, kinh doanh.
+đ) Phần chi phí nhân công trực tiếp vượt trên mức bình thường không được tính vào giá thành sản phẩm, dịch vụ mà phải kết chuyển ngay vào Tài khoản 632 - Giá vốn hàng bán.
+2. Kết cấu và nội dung phản ánh của Tài khoản 622 - Chi phí nhân công trực tiếp
+Bên Nợ: 
+Chi phí nhân công trực tiếp tham gia quá trình sản xuất sản phẩm, thực hiện dịch vụ bao gồm: Tiền lương, tiền công lao động và các khoản trích trên tiền lương, tiền công theo quy định phát sinh trong kỳ.
+Bên Có:
+- Kết chuyển chi phí nhân công trực tiếp vào bên Nợ Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang;
+- Kết chuyển chi phí nhân công trực tiếp vượt trên mức bình thường vào Tài khoản 632 - Giá vốn hàng bán.
+Tài khoản 622 không có số dư cuối kỳ.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Căn cứ vào số tiền lương, tiền công và các khoản khác phải trả cho nhân công trực tiếp sản xuất sản phẩm, thực hiện dịch vụ, ghi:
+Nợ TK 622 - Chi phí nhân công trực tiếp
+		Có TK 334 - Phải trả người lao động.
+b) Tính, trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp, các khoản hỗ trợ (như bảo hiểm nhân thọ, bảo hiểm hưu trí tự nguyện...) của công nhân trực tiếp sản xuất sản phẩm, thực hiện dịch vụ (phần tính vào chi phí doanh nghiệp phải chịu) trên số tiền lương, tiền công phải trả theo chế độ quy định, ghi:
+Nợ TK 622 - Chi phí nhân công trực tiếp.
+		Có TK 338 - Phải trả, phải nộp khác.
+c) Khi trích trước tiền lương nghỉ phép của công nhân sản xuất, ghi:
+Nợ TK 622 - Chi phí nhân công trực tiếp
+	Có TK 335 - Chi phí phải trả.
+d) Khi công nhân sản xuất thực tế nghỉ phép, doanh nghiệp phản ánh số phải trả về tiền lương nghỉ phép của công nhân sản xuất, ghi:
+Nợ TK 335 - Chi phí phải trả
+	Có TK 334 - Phải trả người lao động.
+đ) Đối với chi phí nhân công sử dụng chung cho hợp đồng BCC tại bên kế toán cho hợp đồng BCC
+- Khi phát sinh chi phí nhân công sử dụng chung cho hợp đồng BCC, căn cứ các chứng từ liên quan, ghi:
+Nợ TK 622 - Chi phí nhân công trực tiếp (chi tiết cho từng hợp đồng)
+Có các TK 111, 112, 334,...
+- Định kỳ, kế toán lập Bảng phân bổ chi phí chung (có sự xác nhận của các bên) để phân bổ chi phí nhân công sử dụng chung cho hợp đồng BCC cho các bên, ghi:
+Nợ TK 138 - Phải thu khác (chi tiết cho từng đối tác)
+Có TK 622 - Chi phí nhân công trực tiếp.
+e) Tại thời điểm kết thúc kỳ kế toán, căn cứ vào Bảng phân bổ tiền lương và các khoản trích theo lương để tính phân bổ và kết chuyển chi phí nhân công trực tiếp vào bên Nợ Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang theo đối tượng tập hợp chi phí để tính giá thành sản phẩm, dịch vụ, ghi:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang 
+Nợ TK 632 - Giá vốn hàng bán (phần vượt trên mức bình thường)
+		Có TK 622 - Chi phí nhân công trực tiếp.
+TÀI KHOẢN 623 - CHI PHÍ SỬ DỤNG MÁY THI CÔNG
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để tập hợp và phân bổ chi phí sử dụng xe, máy thi công phục vụ trực tiếp cho hoạt động xây, lắp công trình trong trường hợp doanh nghiệp thực hiện xây, lắp công trình theo phương thức thi công hỗn hợp vừa thủ công vừa kết hợp bằng máy.
+b) Trường hợp doanh nghiệp thực hiện xây lắp công trình hoàn toàn theo phương thức bằng máy thì không sử dụng Tài khoản 623 - Chi phí sử dụng máy thi công mà hạch toán toàn bộ chi phí xây, lắp trực tiếp vào các Tài khoản 621, 622, 627.
+c) Không hạch toán vào Tài khoản 623 - Chi phí sử dụng máy thi công khoản trích về bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp tính trên lương phải trả công nhân sử dụng xe, máy thi công. Phần chi phí sử dụng máy thi công vượt trên mức bình thường không tính vào giá thành công trình xây lắp mà được kết chuyển ngay vào Tài khoản 632 - Giá vốn hàng bán.
+2. Kết cấu và nội dung phản ánh của Tài khoản 623 - Chi phí sử dụng máy thi công
+Bên Nợ: 
+Các chi phí liên quan đến hoạt động của máy thi công phát sinh (chi phí vật liệu cho máy hoạt động, chi phí tiền lương và các khoản phụ cấp lương, tiền công của công nhân trực tiếp điều khiển máy, chi phí bảo dưỡng, sửa chữa xe, máy thi công...). Chi phí vật liệu, chi phí dịch vụ khác phục vụ cho xe, máy thi công.
+Bên Có:
+- Kết chuyển chi phí sử dụng xe, máy thi công vào bên Nợ Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang.
+- Kết chuyển chi phí sử dụng máy thi công vượt trên mức bình thường vào Tài khoản 632 - Giá vốn hàng bán.
+Tài khoản 623 không có số dư cuối kỳ.
+Tài khoản 623 - Chi phí sử dụng máy thi công, có 6 tài khoản cấp 2: 
+- Tài khoản 6231 - Chi phí nhân công: Dùng để phản ánh lương chính, lương phụ, phụ cấp lương phải trả cho công nhân trực tiếp điều khiển xe, máy thi công, phục vụ máy thi công như: Vận chuyển, cung cấp nhiên liệu, vật liệu... cho xe, máy thi công.
+Tài khoản này không phản ánh khoản trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn theo quy định hiện hành được tính trên lương của công nhân sử dụng xe, máy thi công. Các khoản trích này được phản ánh vào Tài khoản 627 - Chi phí sản xuất chung.
+- Tài khoản 6232 - Chi phí vật liệu: Dùng để phản ánh chi phí nhiên liệu (xăng, dầu, mỡ...), vật liệu khác phục vụ xe, máy thi công.
+- Tài khoản 6233 - Chi phí dụng cụ sản xuất: Dùng để phản ánh công cụ, dụng cụ lao động liên quan tới hoạt động của xe, máy thi công.
+- Tài khoản 6234 - Chi phí khấu hao máy thi công: Dùng để phản ánh chi phí khấu hao xe, máy thi công sử dụng vào hoạt động xây lắp công trình.
+- Tài khoản 6237 - Chi phí dịch vụ mua ngoài: Dùng để phản ánh chi phí dịch vụ mua ngoài như thuê ngoài sửa chữa xe, máy thi công; tiền mua bảo hiểm xe, máy thi công; chi phí điện, nước, tiền thuê TSCĐ, chi phí trả cho nhà thầu phụ,... 
+- Tài khoản 6238 - Chi phí bằng tiền khác: Dùng để phản ánh các chi phí bằng tiền phục vụ cho hoạt động của xe, máy thi công.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+Hạch toán chi phí sử dụng xe, máy thi công phụ thuộc vào hình thức sử dụng máy thi công: Tổ chức đội máy thi công riêng chuyên thực hiện các khối lượng thi công bằng máy hoặc giao máy thi công cho các đội, xí nghiệp xây lắp:
+a) Nếu tổ chức đội xe, máy thi công riêng, được phân cấp hạch toán và có tổ chức kế toán riêng thì công việc kế toán được tiến hành như sau:
+- Hạch toán các chi phí liên quan tới hoạt động của đội xe, máy thi công, ghi:
+Nợ các TK 621, 622, 627
+		Có các TK 111, 112, 152, 331, 334, 214,...
+- Tại thời điểm kết thúc kỳ kế toán, kết chuyển chi phí sử dụng máy thi công vào bên Nợ Tài khoản 154 - Chi phí sản xuất kinh doanh, dở dang, ghi:
+Nợ TK 154 - Chi phí sản xuất kinh doanh dở dang
+		Có các TK 621, 622, 627.
+- Hạch toán chi phí sử dụng xe, máy và tính giá thành ca xe, máy thực hiện trên Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang căn cứ vào giá thành ca máy (theo giá thành thực tế hoặc giá khoán nội bộ) cung cấp cho các đối tượng xây, lắp (công trình, hạng mục công trình); tùy theo phương thức tổ chức công tác kế toán và mối quan hệ giữa đội xe máy thi công với đơn vị xây, lắp công trình để ghi sổ: 
++ Nếu doanh nghiệp thực hiện theo phương thức cung cấp dịch vụ xe, máy lẫn nhau giữa các bộ phận, ghi:
+Nợ TK 623 - Chi phí sử dụng máy thi công 
+		Có TK 154 - Chi phí sản xuất, kinh doanh dở dang.
++ Nếu doanh nghiệp thực hiện theo phương thức bán dịch vụ xe, máy lẫn nhau giữa các bộ phận trong nội bộ, ghi:
+Nợ TK 623 - Chi phí sử dụng máy thi công 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có) 
+Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ (chi tiết cung cấp dịch vụ trong nội bộ)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (33311) (thuế GTGT phải nộp tính trên giá bán nội bộ về ca xe, máy bán dịch vụ) (nếu có).
+b) Nếu không tổ chức đội xe, máy thi công riêng; hoặc có tổ chức đội xe, máy thi công riêng nhưng không tổ chức kế toán riêng cho đội thì toàn bộ chi phí sử dụng xe, máy (kể cả chi phí thường xuyên và chi phí tạm thời như: phụ cấp lương, phụ cấp lưu động của xe, máy thi công) sẽ hạch toán như sau:
+- Căn cứ vào số tiền lương, tiền công và các khoản khác phải trả cho công nhân điều khiển xe, máy, phục vụ xe, máy, ghi: 
+Nợ TK 623 - Chi phí sử dụng máy thi công (6231)
+		Có TK 334 - Phải trả người lao động.
+- Giá trị vật liệu, công cụ, dụng cụ sử dụng cho hoạt động của xe, máy thi công trong kỳ, ghi:
+Nợ TK 623 - Chi phí sử dụng máy thi công (6232, 6233)
+		Có các TK 152, 153, 242,...
+- Trường hợp mua vật liệu, công cụ, dụng cụ sử dụng ngay (không qua nhập kho) cho hoạt động của xe, máy thi công trong kỳ, ghi:
+Nợ TK 623 - Chi phí sử dụng máy thi công (6232, 6233)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 331,...
+- Trích khấu hao xe, máy thi công sử dụng ở Đội xe, máy thi công, ghi:
+Nợ TK 623 - Chi phí sử dụng máy thi công (6234)
+		Có TK 214 - Hao mòn TSCĐ.
+- Chi phí dịch vụ mua ngoài phát sinh (sửa chữa xe, máy thi công, điện, nước, tiền thuê TSCĐ, chi phí trả cho nhà thầu phụ,...), ghi:
+Nợ TK 623 - Chi phí sử dụng máy thi công (6237)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 331,...
+- Chi phí bằng tiền khác phát sinh, ghi:
+Nợ TK 623 - Chi phí sử dụng máy thi công (6238)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112,...
+- Căn cứ vào Bảng phân bổ chi phí sử dụng xe, máy (chi phí thực tế ca xe, máy) tính cho từng công trình, hạng mục công trình, ghi: 
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang (khoản mục chi phí sử dụng máy thi công)
+Nợ TK 632 - Giá vốn hàng bán (phần chi phí vượt trên mức bình thường)
+		Có TK 623 - Chi phí sử dụng máy thi công.
+TÀI KHOẢN 627 - CHI PHÍ SẢN XUẤT CHUNG
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh chi phí phục vụ sản xuất, kinh doanh chung phát sinh ở phân xưởng, bộ phận, đội, công trường,... phục vụ sản xuất sản phẩm, thực hiện dịch vụ, gồm: Chi phí lương nhân viên quản lý phân xưởng, bộ phận, đội sản xuất; Khấu hao TSCĐ sử dụng trực tiếp để sản xuất; Khoản trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp được tính theo tỷ lệ quy định trên tiền lương phải trả của nhân viên phân xưởng, bộ phận, đội sản xuất và các chi phí có liên quan trực tiếp khác đến phân xưởng, bộ phận, đội sản xuất. 
+b) Riêng đối với hoạt động kinh doanh xây lắp, tài khoản này phản ánh cả các khoản trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp của công nhân trực tiếp xây, lắp, nhân viên sử dụng máy thi công và nhân viên quản lý đội (thuộc danh sách lao động trong doanh nghiệp); Khấu hao TSCĐ dùng cho phân xưởng, bộ phận sản xuất; chi phí đi vay nếu được vốn hóa tính vào giá trị tài sản đang trong quá trình sản xuất dở dang; Những chi phí khác liên quan tới hoạt động của phân xưởng, bộ phận, tổ, đội sản xuất,...
+c) Tài khoản 627 - Chi phí sản xuất chung chỉ sử dụng ở các doanh nghiệp sản xuất công nghiệp, nông, lâm, ngư nghiệp, XDCB, giao thông, bưu điện, du lịch, dịch vụ.
+d) Tài khoản 627 - Chi phí sản xuất chung được hạch toán chi tiết cho từng phân xưởng, bộ phận, tổ, đội sản xuất.
+đ) Chi phí sản xuất chung phản ánh trên Tài khoản 627 - Chi phí sản xuất chung phải được hạch toán chi tiết theo 2 loại: Chi phí sản xuất chung cố định và chi phí sản xuất chung biến đổi, trong đó:
+- Chi phí sản xuất chung cố định là những chi phí sản xuất, thường không thay đổi theo số lượng sản phẩm sản xuất, như chi phí bảo dưỡng máy móc thiết bị, nhà xưởng,... và chi phí quản lý hành chính ở các phân xưởng, bộ phận, tổ, đội sản xuất,...
++ Chi phí sản xuất chung cố định phân bổ vào chi phí chế biến cho mỗi đơn vị sản phẩm được dựa trên công suất bình thường của máy móc sản xuất. Công suất bình thường là số lượng sản phẩm đạt được ở mức trung bình trong các điều kiện sản xuất bình thường;
++ Trường hợp mức sản phẩm thực tế sản xuất ra cao hơn công suất bình thường thì chi phí sản xuất chung cố định được phân bổ vào chi phí chế biến cho mỗi đơn vị sản phẩm theo chi phí thực tế phát sinh;
++ Trường hợp mức sản phẩm thực tế sản xuất ra thấp hơn công suất bình thường thì chi phí sản xuất chung cố định chỉ được phân bổ vào chi phí chế biến cho mỗi đơn vị sản phẩm theo mức công suất bình thường. Khoản chi phí sản xuất chung còn lại không phân bổ được ghi nhận vào giá vốn hàng bán trong kỳ.
+- Chi phí sản xuất chung biến đổi là những chi phí sản xuất, thường thay đổi trực tiếp hoặc gần như trực tiếp theo số lượng sản phẩm sản xuất, như chi phí nguyên liệu, vật liệu gián tiếp, chi phí nhân công gián tiếp. Chi phí sản xuất chung biến đổi được phân bổ hết vào chi phí chế biến cho mỗi đơn vị sản phẩm theo chi phí thực tế phát sinh.
+e) Trường hợp một quy trình sản xuất ra nhiều loại sản phẩm trong cùng một khoảng thời gian mà chi phí sản xuất chung của mỗi loại sản phẩm không được phản ánh một cách tách biệt thì chi phí sản xuất chung được phân bổ cho các loại sản phẩm theo tiêu thức phù hợp và nhất quán giữa các kỳ kế toán theo quy định của chuẩn mực kế toán Việt Nam.
+g) Cuối kỳ, kế toán tiến hành tính toán, phân bổ kết chuyển chi phí sản xuất chung vào bên Nợ Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang. 
+h) Tài khoản 627 - Chi phí sản xuất chung không sử dụng cho hoạt động kinh doanh thương mại.
+2. Kết cấu và nội dung phản ánh của Tài khoản 627 - Chi phí sản xuất chung
+Bên Nợ: 
+Các chi phí sản xuất chung phát sinh trong kỳ.
+Bên Có:
+- Các khoản ghi giảm chi phí sản xuất chung;
+- Chi phí sản xuất chung cố định không phân bổ trong kỳ do mức sản phẩm thực tế sản xuất ra thấp hơn công suất bình thường được ghi nhận vào giá vốn hàng bán;
+- Kết chuyển chi phí sản xuất chung vào bên Nợ Tài khoản 154 - Chi phí sản xuất, kinh doanh dở dang.
+Tài khoản 627 không có số dư cuối kỳ.
+Tài khoản 627 - Chi phí sản xuất chung, có 7 tài khoản cấp 2: 
+- Tài khoản 6271 - Chi phí nhân viên phân xưởng: Phản ánh các khoản tiền lương, các khoản phụ cấp phải trả cho nhân viên quản lý phân xưởng, bộ phận sản xuất; Tiền ăn giữa ca của nhân viên quản lý phân xưởng, bộ phận sản xuất; Khoản trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp,... được tính theo tỷ lệ quy định hiện hành trên tiền lương phải trả cho nhân viên phân xưởng, bộ phận, tổ, đội sản xuất,...
+- Tài khoản 6272 - Chi phí vật liệu: Phản ánh chi phí nguyên liệu, vật liệu xuất dùng cho phân xưởng, như vật liệu dùng để sửa chữa, bảo dưỡng TSCĐ, công cụ, dụng cụ thuộc phân xưởng quản lý và sử dụng, chi phí lán trại tạm thời,...
+- Tài khoản 6273 - Chi phí dụng cụ sản xuất: Phản ánh chi phí về công cụ, dụng cụ xuất dùng cho hoạt động quản lý của phân xưởng, bộ phận, tổ, đội sản xuất,...
+- Tài khoản 6274 - Chi phí khấu hao TSCĐ: Phản ánh chi phí khấu hao TSCĐ dùng trực tiếp cho hoạt động sản xuất sản phẩm, thực hiện dịch vụ và TSCĐ dùng chung cho hoạt động của phân xưởng, bộ phận, tổ, đội sản xuất,...
+Tài khoản 6275 - Thuế, phí, lệ phí: Phản ánh các khoản chi phí thuế, phí, lệ phí liên quan trực tiếp đến phân xưởng, bộ phận, tổ, đội sản xuất,... phục vụ cho sản xuất sản phẩm, thực hiện dịch vụ như: tiền thuê đất, thuế tài nguyên, phí bảo vệ môi trường,...
+- Tài khoản 6277 - Chi phí dịch vụ mua ngoài: Phản ánh các chi phí dịch vụ mua ngoài phục vụ cho hoạt động của phân xưởng, bộ phận sản xuất như: Chi phí sửa chữa, chi phí thuê ngoài, chi phí điện, nước, điện thoại, tiền thuê TSCĐ, chi phí trả cho nhà thầu phụ (đối với doanh nghiệp xây lắp).
+- Tài khoản 6278 - Chi phí bằng tiền khác: Phản ánh các chi phí bằng tiền ngoài các chi phí đã kể trên phục vụ cho hoạt động của phân xưởng, bộ phận, tổ, đội sản xuất.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Khi tính tiền lương, tiền công, các khoản phụ cấp phải trả cho nhân viên của phân xưởng; tiền ăn giữa ca của nhân viên quản lý phân xưởng, bộ phận, tổ, đội sản xuất, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6271)
+		Có TK 334 - Phải trả người lao động.
+b) Khi trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp, các khoản hỗ trợ người lao động (như bảo hiểm nhân thọ, bảo hiểm hưu trí tự nguyện) được tính theo tỷ lệ quy định hiện hành trên tiền lương phải trả cho nhân viên phân xưởng, nhân viên sử dụng máy thi công, bộ phận quản lý sản xuất, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6271)
+		Có TK 338 - Phải trả, phải nộp khác.
+c) Kế toán chi phí nguyên liệu, vật liệu, công cụ, dụng cụ xuất dùng cho phân xưởng: 
+- Khi xuất vật liệu dùng chung cho phân xưởng, như sửa chữa, bảo dưỡng TSCĐ dùng cho quản lý điều hành hoạt động của phân xưởng, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6272)
+		Có TK 152 - Nguyên liệu, vật liệu.
+- Khi xuất công cụ, dụng cụ sản xuất có tổng giá trị nhỏ sử dụng cho phân xưởng, bộ phận, tổ, đội sản xuất, căn cứ vào phiếu xuất kho, ghi: 
+Nợ TK 627 - Chi phí sản xuất chung (6273)
+		Có TK 153 - Công cụ, dụng cụ.
+- Khi xuất công cụ, dụng cụ sản xuất có tổng giá trị lớn sử dụng cho phân xưởng, bộ phận, tổ, đội sản xuất, phải phân bổ dần, ghi:
+Nợ TK 242 - Chi phí chờ phân bổ
+		Có TK 153 - Công cụ, dụng cụ.
+- Khi phân bổ giá trị công cụ, dụng cụ vào chi phí sản xuất chung, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6273)
+		Có TK 242 - Chi phí chờ phân bổ.
+d) Trích khấu hao máy móc, thiết bị, nhà xưởng sản xuất,... thuộc phân xưởng, bộ phận, tổ, đội sản xuất, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6274)
+		Có TK 214 - Hao mòn TSCĐ.
+đ) Chi phí điện, nước, điện thoại,... và các chi phí khác bằng tiền thuộc phân xưởng, bộ phận, tổ, đội sản xuất, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6277, 6278)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu được khấu trừ thuế GTGT)
+		Có các TK 111, 112, 331,...
+e) Khi phát sinh các khoản chi phí thuế, phí, lệ phí như tiền thuê đất, thuế tài nguyên, phí bảo vệ môi trường,... liên quan trực tiếp đến phân xưởng, bộ phận, tổ, đội sản xuất,..., ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6275)
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước 
+g) Trường hợp sửa chữa, bảo dưỡng định kỳ TSCĐ thuộc phân xưởng:
+- Khi chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ thực tế phát sinh, ghi:
+Nợ TK 2413 - Sửa chữa, bảo dưỡng định kỳ TSCĐ
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 331, 111, 112,...
+- Khi chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ hoàn thành, kết chuyển chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ vào chi phí chờ phân bổ, ghi:
+Nợ TK 242 - Chi phí chờ phân bổ
+		Có TK 2413 - Sửa chữa, bảo dưỡng định kỳ TSCĐ.
+- Định kỳ, phân bổ dần chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ vào chi phí sản xuất chung, ghi:
+Nợ TK 627 - Chi phí sản xuất chung
+		Có TK 242 - Chi phí chờ phân bổ
+h) Trường hợp doanh nghiệp có TSCĐ cho thuê hoạt động, khi phát sinh chi phí liên quan đến TSCĐ cho thuê hoạt động:
+- Khi phát sinh các chi phí trực tiếp ban đầu liên quan đến cho thuê hoạt động, ghi:
+Nợ TK 627 - Chi phí sản xuất chung 
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 331,...
+- Định kỳ, tính, trích khấu hao TSCĐ cho thuê hoạt động vào chi phí SXKD, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6274)
+		Có TK 214 - Hao mòn TSCĐ (hao mòn TSCĐ cho thuê hoạt động).
+i) Tại thời điểm kết thúc kỳ kế toán, xác định lãi tiền vay phải trả được vốn hóa vào sản phẩm sản xuất dở dang theo quy định, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (tài sản đang sản xuất dở dang)
+		Có các TK 111, 112, 335, 341,...	
+k) Các chi phí sản xuất chung bằng tiền hoặc dịch vụ mua ngoài, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (6277, 6278)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 331,...
+l) Nếu phát sinh các khoản giảm chi phí sản xuất chung, ghi: 
+Nợ các TK 111, 112, 138,...
+		Có TK 627 - Chi phí sản xuất chung.
+m) Đối với chi phí sản xuất chung sử dụng chung cho hợp đồng BCC tại bên kế toán cho hợp đồng BCC
+- Khi phát sinh chi phí sản xuất chung sử dụng chung cho hợp đồng BCC, căn cứ hóa đơn và các chứng từ liên quan, ghi:
+Nợ TK 627 - Chi phí sản xuất chung (chi tiết cho từng hợp đồng)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331...
+- Định kỳ, kế toán lập Bảng phân bổ chi phí chung (có sự xác nhận của các bên) để phân bổ chi phí sản xuất chung sử dụng chung cho hợp đồng BCC cho các bên, ghi:
+Nợ TK 138 - Phải thu khác (chi tiết cho từng đối tác)
+Có các TK 627 - Chi phí sản xuất chung
+Có TK 133 - Thuế GTGT được khấu trừ (nếu chia thuế đầu vào)
+Có TK 3331 - Thuế GTGT phải nộp (nếu thuế đầu vào của chi phí chung đã khấu trừ hết, phải ghi tăng số thuế đầu ra phải nộp).
+n) Tại thời điểm kết thúc kỳ kế toán, căn cứ vào Bảng phân bổ chi phí sản xuất chung để kết chuyển hoặc phân bổ chi phí sản xuất chung vào các tài khoản có liên quan cho từng sản phẩm, nhóm sản phẩm, dịch vụ theo tiêu thức phù hợp:
+Nợ TK 154 - Chi phí sản xuất, kinh doanh dở dang
+Nợ TK 632 - Giá vốn hàng bán (chi phí SXC cố định không phân bổ)
+		Có TK 627 - Chi phí sản xuất chung.
+TÀI KHOẢN 632 - GIÁ VỐN HÀNG BÁN
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh trị giá vốn của sản phẩm, hàng hóa, dịch vụ, tài sản sinh học (trừ cây lâu năm cho sản phẩm định kỳ và súc vật làm việc được kế toán là TSCĐ), BĐSĐT; giá thành sản xuất của sản phẩm xây lắp bán trong kỳ. Ngoài ra, tài khoản này còn dùng để phản ánh các chi phí liên quan đến hoạt động kinh doanh BĐSĐT như: Chi phí khấu hao; chi phí sửa chữa; chi phí cho thuê BĐSĐT theo phương thức cho thuê hoạt động, chi phí bán BĐSĐT,...
+b) Khoản dự phòng giảm giá hàng tồn kho được tính vào giá vốn hàng bán trên cơ sở số lượng hàng tồn kho và phần chênh lệch giữa giá trị thuần có thể thực hiện được nhỏ hơn giá gốc hàng tồn kho. Khi xác định khối lượng hàng tồn kho bị giảm giá cần phải trích lập dự phòng, doanh nghiệp phải loại trừ khối lượng hàng tồn kho đã ký được hợp đồng tiêu thụ (có giá trị thuần có thể thực hiện được không thấp hơn giá trị ghi sổ) nhưng chưa chuyển giao cho khách hàng nếu có bằng chứng chắc chắn về việc khách hàng sẽ không từ bỏ thực hiện hợp đồng. 
+c) Khoản dự phòng hợp đồng có rủi ro lớn liên quan đến bán hàng tồn kho được ghi nhận vào giá vốn hàng bán.
+d) Đối với phần giá trị hàng tồn kho hao hụt, mất mát, doanh nghiệp phải tính ngay vào giá vốn hàng bán (sau khi trừ đi các khoản bồi thường, nếu có). 
+đ) Đối với chi phí nguyên vật liệu trực tiếp tiêu hao vượt mức bình thường, chi phí nhân công trực tiếp, chi phí sản xuất chung cố định không phân bổ vào giá thành sản phẩm, dịch vụ sản xuất, doanh nghiệp phải tính ngay vào giá vốn hàng bán (sau khi trừ đi các khoản bồi thường, nếu có) kể cả khi sản phẩm, dịch vụ chưa được xác định là tiêu thụ. 
+e) Các khoản thuế nhập khẩu, thuế TTĐB, thuế bảo vệ môi trường đã tính vào giá trị hàng mua, nếu khi xuất bán hàng hóa mà các khoản thuế đó được hoàn lại thì được ghi giảm giá vốn hàng bán.
+g) Các khoản chi phí không được coi là chi phí tính thuế TNDN theo quy định của Luật thuế nhưng có đầy đủ hóa đơn chứng từ và đã hạch toán đúng theo Chế độ kế toán thì không được ghi giảm chi phí kế toán mà chỉ điều chỉnh trong quyết toán thuế TNDN để làm tăng số thuế TNDN phải nộp.
+2. Kết cấu và nội dung phản ánh của Tài khoản 632 - Giá vốn hàng bán
+Bên Nợ:
+- Đối với hoạt động sản xuất, kinh doanh, phản ánh:
++ Trị giá vốn của sản phẩm, hàng hóa, dịch vụ, tài sản sinh học (trừ cây lâu năm cho sản phẩm định kỳ và súc vật làm việc) đã bán trong kỳ;
++ Chi phí nguyên liệu, vật liệu trực tiếp, chi phí nhân công trực tiếp vượt trên mức bình thường và chi phí sản xuất chung cố định không phân bổ được tính vào giá vốn hàng bán trong kỳ;
++ Các khoản hao hụt, mất mát của hàng tồn kho sau khi trừ phần bồi thường do trách nhiệm cá nhân gây ra;
++ Số trích lập dự phòng giảm giá hàng tồn kho (chênh lệch giữa số dự phòng giảm giá hàng tồn kho phải lập kỳ này lớn hơn số dự phòng đã lập kỳ trước chưa sử dụng hết).
+- Đối với hoạt động kinh doanh BĐSĐT, phản ánh:
++ Số khấu hao BĐSĐT dùng để cho thuê hoạt động trích trong kỳ;
++ Chi phí sửa chữa, bảo dưỡng BĐSĐT không được tính vào nguyên giá BĐSĐT;
++ Chi phí phát sinh từ nghiệp vụ cho thuê hoạt động BĐSĐT trong kỳ;
++ Giá trị còn lại và chi phí bán của BĐSĐT bán trong kỳ.
+Bên Có:
+- Trị giá vốn của hàng bán bị trả lại;
+- Khoản chiết khấu thương mại, giảm giá hàng mua nhận được sau khi hàng mua đã tiêu thụ;
+- Các khoản thuế nhập khẩu, thuế TTĐB, thuế bảo vệ môi trường, thuế tài nguyên đã tính vào giá trị hàng mua, nếu khi xuất bán hàng hóa mà các khoản thuế đó được hoàn lại;
+- Khoản hoàn nhập dự phòng giảm giá hàng tồn kho cuối kỳ báo cáo (chênh lệch giữa số dự phòng phải lập kỳ này nhỏ hơn số dự phòng đã lập kỳ trước chưa sử dụng hết);
+- Kết chuyển giá vốn của sản phẩm, hàng hóa, dịch vụ đã bán trong kỳ sang Tài khoản 911 - Xác định kết quả kinh doanh;
+- Kết chuyển giá trị còn lại và chi phí bán, thanh lý BĐSĐT để xác định lãi/lỗ của hoạt động bán, thanh lý BĐSĐT trong kỳ.
+Tài khoản 632 không có số dư cuối kỳ.
+Doanh nghiệp có thể mở thêm các tài khoản chi tiết giá vốn hàng bán cho phù hợp với đặc điểm hoạt động sản xuất, kinh doanh và yêu cầu quản lý của đơn vị mình (như: giá vốn hàng hóa, sản phẩm, dịch vụ, BĐSĐT,...). 
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Khi xuất bán các sản phẩm, hàng hóa, tài sản sinh học, dịch vụ hoàn thành được xác định là đã bán trong kỳ (kể cả sản phẩm, hàng hóa, dịch vụ tặng kèm), ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có các TK 154, 155, 156, 157, 215,...
+b) Phản ánh các khoản chi phí được hạch toán trực tiếp vào giá vốn hàng bán:
+- Trường hợp mức sản phẩm thực tế sản xuất ra thấp hơn công suất bình thường thì doanh nghiệp phải tính và xác định chi phí sản xuất chung cố định phân bổ vào chi phí chế biến cho một đơn vị sản phẩm theo mức công suất bình thường. Khoản chi phí sản xuất chung cố định không phân bổ (không được tính vào giá thành sản xuất của sản phẩm phần chênh lệch giữa tổng số chi phí sản xuất chung cố định thực tế phát sinh lớn hơn chi phí sản xuất chung cố định tính vào giá thành sản xuất sản phẩm) được ghi nhận vào giá vốn hàng bán trong kỳ, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có TK 627 - Chi phí sản xuất chung.
+- Phản ánh khoản hao hụt, mất mát của hàng tồn kho sau khi trừ (-) phần bồi thường do trách nhiệm cá nhân gây ra theo quyết định xử lý của cấp có thẩm quyền được tính vào giá vốn hàng bán, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có các TK 152, 153, 156, 138 (1381),...
+c) Hạch toán khoản trích lập hoặc hoàn nhập dự phòng giảm giá hàng tồn kho 
+- Trường hợp số dự phòng giảm giá hàng tồn kho phải lập kỳ này lớn hơn số đã lập kỳ trước chưa sử dụng hết, doanh nghiệp trích lập bổ sung phần chênh lệch, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+		Có TK 229 - Dự phòng tổn thất tài sản (2294).
+- Trường hợp số dự phòng giảm giá hàng tồn kho phải lập kỳ này nhỏ hơn số đã lập kỳ trước chưa sử dụng hết, doanh nghiệp hoàn nhập phần chênh lệch, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (2294)
+		Có TK 632 - Giá vốn hàng bán.
+d) Khi trích lập dự phòng cho các hợp đồng có rủi ro lớn liên quan đến hàng tồn kho, ghi:
+Nợ TK 632 - Giá vốn hàng bán
+Có TK 352 - Dự phòng phải trả. 
+đ) Các nghiệp vụ kinh tế liên quan đến hoạt động kinh doanh BĐSĐT:
+- Định kỳ tính, trích khấu hao BĐSĐT đang cho thuê hoạt động, ghi:
+Nợ TK 632 - Giá vốn hàng bán (chi tiết chi phí kinh doanh BĐSĐT)
+		Có TK 2147 - Hao mòn BĐSĐT.
+- Khi phát sinh chi phí liên quan đến BĐSĐT sau ghi nhận ban đầu nếu không thỏa mãn điều kiện ghi tăng giá trị BĐSĐT, ghi:
+Nợ TK 632 - Giá vốn hàng bán (chi phí sửa chữa, bảo dưỡng thường xuyên)
+Nợ TK 242 - Chi phí chờ phân bổ (chi phí sửa chữa, bảo dưỡng định kỳ)
+		Có các TK 111, 112, 152, 153, 334,...
+- Định kỳ, phân bổ chi phí sửa chữa, bảo dưỡng định kỳ BĐSĐT, ghi:
+Nợ TK 632 - Giá vốn hàng bán (chi tiết chi phí kinh doanh BĐSĐT)
+		Có TK 242 - Chi phí chờ phân bổ.
+- Các chi phí liên quan đến cho thuê hoạt động BĐSĐT, ghi:
+Nợ TK 632 - Giá vốn hàng bán (chi tiết chi phí kinh doanh BĐSĐT)
+		Có các TK 111, 112, 331, 334,...
+- Kế toán giảm nguyên giá và giá trị hao mòn của BĐSĐT (nếu có) do bán, thanh lý, ghi:
+Nợ TK 2147 - Hao mòn BĐSĐT (giá trị hao mòn lũy kế BĐSĐT)
+Nợ TK 632 - Giá vốn hàng bán (giá trị còn lại của BĐSĐT)
+		Có TK 217 - Bất động sản đầu tư (nguyên giá).
+- Các chi phí bán BĐSĐT phát sinh, ghi:
+Nợ TK 632 - Giá vốn hàng bán (chi tiết chi phí kinh doanh BĐSĐT)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 331,...
+- Kế toán bán, thanh lý bất động sản đầu tư xem hướng dẫn tại Tài khoản 217 - Bất động sản đầu tư.
+e) Trường hợp dùng sản phẩm do doanh nghiệp sản xuất ra chuyển thành TSCĐ để sử dụng, ghi:
+Nợ TK 211 - TSCĐ hữu hình 
+		Có TK 154 - Chi phí sản xuất, kinh doanh dở dang
+		Có TK 3331 - Thuế giá trị gia tăng phải nộp (nếu có).
+g) Hàng bán bị trả lại nhập kho, ghi:
+Nợ các TK 155, 156
+Có TK 632 - Giá vốn hàng bán.
+h) Trường hợp khoản chiết khấu thương mại hoặc giảm giá hàng bán nhận được sau khi mua hàng, doanh nghiệp phải căn cứ vào tình hình biến động của hàng tồn kho để phân bổ số chiết khấu thương mại, giảm giá hàng bán được hưởng dựa trên số hàng tồn kho chưa tiêu thụ, số đã xuất dùng cho hoạt động đầu tư xây dựng hoặc đã xác định là tiêu thụ trong kỳ:
+Nợ các TK 111, 112, 331,...
+Có các TK 152, 153, 154, 155, 156 (giá trị khoản CKTM, GGHB của số hàng tồn kho chưa tiêu thụ trong kỳ)
+Có TK 241 - Xây dựng cơ bản dở dang (giá trị khoản CKTM, GGHB của số 	hàng tồn kho đã xuất dùng cho 				hoạt động đầu tư xây dựng)
+Có TK 632 - Giá vốn hàng bán (giá trị khoản CKTM, GGHB của số hàng tồn kho đã tiêu thụ trong kỳ).
+i) Kết chuyển giá vốn hàng bán của các sản phẩm, hàng hóa, BĐSĐT, dịch vụ được xác định là đã bán trong kỳ vào bên Nợ Tài khoản 911 - Xác định kết quả kinh doanh, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh 
+		Có TK 632 - Giá vốn hàng bán.
+TÀI KHOẢN 635 - CHI PHÍ TÀI CHÍNH
+1. Nguyên tắc kế toán
+a) Tài khoản này phản ánh những khoản chi phí hoạt động tài chính bao gồm các khoản chi phí hoặc các khoản lỗ liên quan đến các hoạt động đầu tư tài chính, chi phí mua chứng khoán kinh doanh, chi phí đi vay vốn nhưng không được vốn hóa theo quy định, lỗ chuyển nhượng các khoản đầu tư tài chính, chi phí giao dịch bán các khoản đầu tư tài chính; phần chênh lệch giữa giá mua lại trước hạn trái phiếu đã phát hành cao hơn giá trị ghi sổ của trái phiếu; Dự phòng giảm giá chứng khoán kinh doanh và dự phòng tổn thất các khoản đầu tư vào đơn vị khác, khoản lỗ tỷ giá hối đoái phát sinh khi bán ngoại tệ hoặc đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ cuối kỳ; Các khoản chiết khấu thanh toán cho người mua,...
+b) Tài khoản 635 - Chi phí tài chính phải được hạch toán chi tiết cho từng nội dung chi phí. Không hạch toán vào Tài khoản 635 - Chi phí tài chính những nội dung chi phí sau đây:
+- Chi phí phục vụ cho việc sản xuất sản phẩm, cung cấp dịch vụ;
+- Chi phí bán hàng;
+- Chi phí quản lý doanh nghiệp;
+- Chi phí kinh doanh bất động sản;
+- Chi phí đầu tư xây dựng cơ bản;
+- Các khoản chi phí được trang trải bằng nguồn kinh phí khác;
+- Chi phí khác.
+c) Chi phí phát hành trái phiếu, chi phí đi vay được phân bổ dần phù hợp với kỳ hạn trái phiếu hoặc kỳ hạn vay và được ghi nhận vào chi phí tài chính nếu việc phát hành trái phiếu hoặc đi vay phục vụ cho mục đích sản xuất, kinh doanh thông thường. 
+d) Lãi phải trả của trái phiếu chuyển đổi được tính vào chi phí tài chính trong kỳ được xác định bằng cách lấy giá trị phần nợ gốc đầu kỳ của trái phiếu chuyển đổi nhân (x) với lãi suất của trái phiếu tương tự trên thị trường nhưng không có quyền chuyển đổi thành cổ phiếu hoặc lãi suất đi vay phổ biến trên thị trường tại thời điểm phát hành trái phiếu chuyển đổi (xem quy định chi tiết tại phần hướng dẫn Tài khoản 343 - Trái phiếu phát hành).
+đ) Nếu cổ phiếu ưu đãi được phân loại là nợ phải trả, khoản cổ tức ưu đãi đó về bản chất là khoản lãi vay và phải được ghi nhận vào chi phí tài chính. 
+2. Kết cấu và nội dung phản ánh của Tài khoản 635 - Chi phí tài chính
+Bên Nợ: 
+- Chi phí lãi tiền vay, lãi mua hàng trả chậm, lãi thuê tài sản thuê tài chính;
+- Chiết khấu thanh toán cho người mua;
+- Các khoản lỗ do thanh lý, nhượng bán các khoản đầu tư tài chính;
+- Lỗ tỷ giá hối đoái phát sinh trong kỳ; Lỗ tỷ giá hối đoái do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ tại thời điểm kết thúc kỳ kế toán;
+- Số trích lập dự phòng giảm giá chứng khoán kinh doanh, dự phòng tổn thất đầu tư vào đơn vị khác (đầu tư vào công ty con, công ty liên doanh, liên kết; đầu tư khác; đầu tư nắm giữ đến ngày đáo hạn) (chênh lệch giữa số dự phòng phải lập kỳ này lớn hơn số dự phòng đã trích lập kỳ trước chưa sử dụng hết);
+- Các khoản chi phí mua chứng khoán kinh doanh, chi phí chuyển nhượng các khoản đầu tư tài chính.
+Bên Có:
+- Hoàn nhập dự phòng giảm giá chứng khoán kinh doanh, dự phòng tổn thất đầu tư vào đơn vị khác (chênh lệch giữa số dự phòng phải lập kỳ này nhỏ hơn số dự phòng đã trích lập kỳ trước chưa sử dụng hết);
+- Các khoản được ghi giảm chi phí tài chính;
+- Tại thời điểm kết thúc kỳ kế toán, kết chuyển toàn bộ chi phí tài chính phát sinh trong kỳ sang Tài khoản 911 để xác định kết quả hoạt động kinh doanh.
+Tài khoản 635 không có số dư cuối kỳ.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Khi phát sinh chi phí liên quan đến hoạt động mua chứng khoán kinh doanh, bán các khoản đầu tư tài chính, cho vay vốn, mua bán ngoại tệ..., ghi:
+Nợ TK 635 - Chi phí tài chính
+		Có các TK 111, 112, 141,...
+3.2. Khi bán chứng khoán kinh doanh, thanh lý nhượng bán các khoản đầu tư vào công ty con, công ty liên doanh, liên kết phát sinh lỗ, ghi:
+Nợ các TK 111, 112,... 
+Nợ TK 229 - Dự phòng tổn thất tài sản (khoản dự phòng đã trích lập để bù đắp số tổn thất) (nếu có)
+Nợ TK 635 - Chi phí tài chính (số lỗ)
+		Có các TK 121, 221, 222, 228 (giá trị ghi sổ).
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản đầu tư có thể được ghi nhận ngay cho từng giao dịch tại thời điểm bán khoản đầu tư hoặc khi xác định số trích lập dự phòng tổn thất khoản đầu tư vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của Chuẩn mực kế toán Việt Nam.
+3.3. Khi nhận lại vốn góp vào công ty con, công ty liên doanh, liên kết, đầu tư khác mà giá trị hợp lý hoặc giá thỏa thuận do các bên thống nhất đánh giá tài sản được chia nhỏ hơn giá trị vốn góp, ghi:
+Nợ các TK 111, 112, 152, 156, 211,... (giá trị hợp lý tài sản được chia)
+Nợ TK 229 - Dự phòng tổn thất tài sản (khoản dự phòng đã trích lập để bù đắp số tổn thất) (nếu có)
+Nợ TK 635 - Chi phí tài chính (số lỗ) 
+		Có các TK 221, 222,...
+Việc hoàn nhập các khoản dự phòng đã trích lập đối với các khoản đầu tư có thể được ghi nhận ngay cho từng giao dịch tại thời điểm thu hồi hoặc khi xác định số trích lập dự phòng tổn thất khoản đầu tư vào cuối mỗi kỳ kế toán nhưng phải nhất quán theo quy định của Chuẩn mực kế toán Việt Nam.
+3.4. Trường hợp doanh nghiệp bán khoản đầu tư vào cổ phiếu của doanh nghiệp khác dưới hình thức hoán đổi cổ phiếu, doanh nghiệp phải xác định giá trị hợp lý của cổ phiếu nhận về tại thời điểm hoán đổi. Phần chênh lệch (nếu có) giữa giá trị hợp lý của cổ phiếu nhận về nhỏ hơn giá trị ghi sổ của cổ phiếu mang đi hoán đổi được ghi nhận là chi phí tài chính, ghi:
+Nợ các TK 121, 221, 222, 228 (giá trị hợp lý cổ phiếu nhận về)
+Nợ TK 635 - Chi phí tài chính (phần chênh lệch giữa giá trị hợp lý của cổ phiếu nhận về thấp hơn giá trị ghi sổ của cổ phiếu mang đi hoán đổi)
+Có các TK 121, 221, 222, 228 (giá trị ghi sổ cổ phiếu mang hoán 										đổi).
+3.5. Kế toán dự phòng giảm giá chứng khoán kinh doanh và dự phòng tổn thất đầu tư vào đơn vị khác tại thời điểm kết thúc kỳ kế toán:
+- Trường hợp số dự phòng phải lập kỳ này lớn hơn số dự phòng đã lập kỳ trước chưa sử dụng hết, doanh nghiệp trích lập bổ sung phần chênh lệch, ghi:
+Nợ TK 635 - Chi phí tài chính
+		Có TK 229 - Dự phòng tổn thất tài sản (2291, 2292).
+- Trường hợp số dự phòng phải lập kỳ này nhỏ hơn số dự phòng đã lập kỳ trước chưa sử dụng hết, doanh nghiệp hoàn nhập phần chênh lệch, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (2291, 2292)
+		Có TK 635 - Chi phí tài chính.
+3.6. Khoản chiết khấu thanh toán cho người mua hàng hóa, dịch vụ được hưởng do thanh toán trước hạn theo thỏa thuận khi mua, bán hàng, ghi:
+Nợ TK 635 - Chi phí tài chính
+		Có các TK 131, 111, 112,...
+3.7. Chi phí liên quan trực tiếp đến khoản vay (ngoài lãi vay phải trả), như chi phí kiểm toán, thẩm định hồ sơ vay vốn, chi phí thu xếp khoản vay,... nếu không được vốn hóa mà được tính vào chi phí tài chính:
++ Khi phát sinh các khoản chi phí, ghi:
+Nợ TK 341 - Vay và nợ thuê tài chính (3411)
+	Có các TK 111, 112, 331,...
++ Khi phân bổ chi phí vay, ghi:
+Nợ TK 635 - Chi phí tài chính 
+		Có TK 341 - Vay và nợ thuê tài chính (3411).
+3.8. Doanh nghiệp phản ánh lãi tiền vay định kỳ phải trả, ghi:
+Nợ TK 635 - Chi phí tài chính
+		Có các TK 111, 112, 335,...
+3.9. Trường hợp doanh nghiệp thanh toán định kỳ tiền lãi thuê của TSCĐ thuê tài chính, khi bên thuê nhận được hóa đơn thanh toán của bên cho thuê, ghi:
+Nợ TK 635 - Chi phí tài chính (tiền lãi thuê trả từng kỳ)
+		Có các TK 111, 112,...
+3.10. Khi mua vật tư, hàng hóa, TSCĐ theo phương thức trả chậm, trả góp về sử dụng ngay cho hoạt động SXKD, ghi:
+Nợ các TK 152, 153, 156, 211, 213 (theo giá mua trả tiền ngay)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331,... 
+- Định kỳ, phản ánh phải trả khoản lãi trả chậm, trả góp cho người bán từng kỳ, ghi:
+Nợ TK 635 - Chi phí tài chính
+Có TK 331 - Phải trả cho người bán.	
+- Định kỳ, khi trả tiền cho người bán bao gồm cả nợ gốc và tiền lãi trả chậm, trả góp, ghi:
+	Nợ TK 331 - Phải trả cho người bán
+		Có các TK 111, 112. 
+Đồng thời doanh nghiệp mở sổ theo dõi chi tiết về tình hình tăng, giảm lãi trả chậm, trả góp khi mua tài sản.
+3.11. Đối với trường hợp bán trái phiếu Chính phủ theo hợp đồng mua bán lại (repo), khi thực hiện phân bổ số chênh lệch giữa giá bán và giá mua lại trái phiếu Chính phủ của hợp đồng mua bán lại trái phiếu Chính phủ vào chi phí định kỳ theo thời gian của hợp đồng, ghi:
+Nợ TK 635 - Chi phí tài chính
+		Có TK 171 - Giao dịch mua, bán lại trái phiếu Chính phủ.
+3.12. Trường hợp cổ phiếu ưu đãi được phân loại là nợ phải trả, doanh nghiệp phải trả cổ tức theo một tỷ lệ/mức nhất định mà không phụ thuộc vào kết quả kinh doanh trong kỳ là lãi hay lỗ, khoản cổ tức ưu đãi đó về bản chất là khoản lãi vay và phải được ghi nhận vào chi phí tài chính, ghi: 
+Nợ TK 635 - Chi phí tài chính
+		Có TK 332 - Phải trả cổ tức, lợi nhuận.
+3.13. Cuối kỳ, kết chuyển toàn bộ chi phí tài chính phát sinh trong kỳ sang Tài khoản 911 để xác định kết quả kinh doanh, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 635 - Chi phí tài chính.
+TÀI KHOẢN 641 - CHI PHÍ BÁN HÀNG
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh các chi phí thực tế phát sinh trong quá trình bán sản phẩm, hàng hóa, cung cấp dịch vụ, bao gồm các chi phí về lương nhân viên bộ phận bán hàng (tiền lương, tiền công, các khoản phụ cấp,...); bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp của nhân viên bộ phận bán hàng; các chi phí chào hàng, giới thiệu sản phẩm, quảng cáo sản phẩm, hoa hồng bán hàng, chi phí bảo quản, đóng gói, vận chuyển, chi phí bảo hành sản phẩm, hàng hóa, dịch vụ, bảo hành công trình xây dựng (đối với doanh nghiệp xây lắp), chi phí sửa chữa TSCĐ dùng cho bộ phận bán hàng,...
+b) Các khoản chi phí bán hàng không được coi là chi phí tính thuế TNDN theo quy định của Luật thuế nhưng có đầy đủ hóa đơn chứng từ và đã hạch toán đúng theo Chế độ kế toán thì không được ghi giảm chi phí kế toán mà chỉ điều chỉnh trong quyết toán thuế TNDN để làm tăng số thuế TNDN phải nộp.
+c) Các chi phí tăng thêm để doanh nghiệp có được hợp đồng với khách hàng phân bổ cho từng kỳ.
+d) Tài khoản 641 được mở chi tiết theo từng nội dung chi phí như: Chi phí nhân viên, vật liệu, bao bì, dụng cụ, đồ dùng, khấu hao TSCĐ; dịch vụ mua ngoài, chi phí bằng tiền khác. Tùy theo đặc điểm kinh doanh, yêu cầu quản lý từng ngành, từng doanh nghiệp, Tài khoản 641 - Chi phí bán hàng có thể được mở thêm một số nội dung chi phí. Cuối kỳ, kế toán kết chuyển chi phí bán hàng vào bên Nợ Tài khoản 911 - Xác định kết quả kinh doanh để xác định kết quả kinh doanh.
+2. Kết cấu và nội dung phản ánh của Tài khoản 641 - Chi phí bán hàng
+Bên Nợ: 
+Các chi phí phát sinh liên quan đến quá trình bán sản phẩm, hàng hóa, cung cấp dịch vụ phát sinh trong kỳ.
+Bên Có:
+- Khoản được ghi giảm chi phí bán hàng trong kỳ (nếu có);
+- Kết chuyển chi phí bán hàng vào Tài khoản 911 để xác định kết quả kinh doanh trong kỳ.
+Tài khoản 641 không có số dư cuối kỳ.
+Tài khoản 641 - Chi phí bán hàng, có 7 tài khoản cấp 2:
+- Tài khoản 6411 - Chi phí nhân viên: Phản ánh các khoản phải trả cho nhân viên bán hàng, nhân viên đóng gói, vận chuyển, bảo quản sản phẩm, hàng hóa,... bao gồm tiền lương, tiền ăn giữa ca, tiền công và các khoản trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp, các khoản khen thưởng, phúc lợi cho nhân viên bộ phận bán hàng trong trường hợp doanh nghiệp không chi từ nguồn quỹ khen thưởng, phúc lợi mà hạch toán trực tiếp vào chi phí sản xuất kinh doanh trong kỳ,...
+- Tài khoản 6412 - Chi phí vật liệu, bao bì: Phản ánh các chi phí vật liệu, bao bì xuất dùng cho việc giữ gìn, tiêu thụ sản phẩm, hàng hóa, dịch vụ, như chi phí vật liệu đóng gói sản phẩm, hàng hóa, chi phí vật liệu, nhiên liệu dùng cho bảo quản, bốc vác, vận chuyển sản phẩm, hàng hóa trong quá trình tiêu thụ, vật liệu dùng cho sửa chữa, bảo quản TSCĐ,... cho bộ phận bán hàng.
+- Tài khoản 6413 - Chi phí dụng cụ, đồ dùng: Phản ánh chi phí về công cụ, dụng cụ phục vụ cho quá trình tiêu thụ sản phẩm, hàng hóa như dụng cụ đo lường, phương tiện tính toán, phương tiện làm việc,...
+- Tài khoản 6414 - Chi phí khấu hao TSCĐ: Phản ánh chi phí khấu hao TSCĐ ở bộ phận bảo quản, bán hàng, như nhà kho, cửa hàng, bến bãi, phương tiện bốc dỡ, vận chuyển, phương tiện tính toán, đo lường, kiểm nghiệm chất lượng,...
+- Tài khoản 6415 - Thuế, phí, lệ phí: Phản ánh các khoản chi phí thuế, phí, lệ phí liên quan trực tiếp đến bộ phận bán hàng như: tiền thuê đất,...
+- Tài khoản 6417 - Chi phí dịch vụ mua ngoài: Phản ánh các chi phí dịch vụ mua ngoài phục vụ cho bán hàng như chi phí thuê ngoài sửa chữa TSCĐ phục vụ trực tiếp cho khâu bán hàng, tiền thuê kho, thuê bãi, tiền thuê bốc vác, vận chuyển sản phẩm, hàng hóa đi bán, tiền trả hoa hồng cho đại lý bán hàng, cho đơn vị nhận ủy thác xuất khẩu,...
+- Tài khoản 6418 - Chi phí bằng tiền khác: Phản ánh các chi phí bằng tiền khác phát sinh trong khâu bán hàng ngoài các chi phí đã kể trên như chi phí tiếp khách ở bộ phận bán hàng, chi phí giới thiệu sản phẩm, hàng hóa, quảng cáo, chào hàng, chi phí hội nghị khách hàng,...
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Tính tiền lương, phụ cấp, tiền ăn giữa ca và tính, trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp, các khoản hỗ trợ khác (như bảo hiểm nhân thọ, bảo hiểm hưu trí tự nguyện...) cho nhân viên phục vụ trực tiếp cho quá trình bán các sản phẩm, hàng hóa, cung cấp dịch vụ, ghi:
+Nợ TK 641 - Chi phí bán hàng
+		Có các TK 334, 338,...
+b) Giá trị vật liệu, dụng cụ phục vụ cho quá trình bán hàng, ghi: 
+Nợ TK 641 - Chi phí bán hàng
+		Có các TK 152, 153, 242,...
+c) Trích khấu hao TSCĐ của bộ phận bán hàng, ghi:
+Nợ TK 641 - Chi phí bán hàng
+		Có TK 214 - Hao mòn TSCĐ.
+d) Chi phí điện, nước mua ngoài, chi phí thông tin (điện thoại, fax...), chi phí thuê ngoài sửa chữa TSCĐ có giá trị không lớn, được tính trực tiếp vào chi phí bán hàng, ghi:
+Nợ TK 641 - Chi phí bán hàng
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 141, 331,...
+đ) Kế toán chi phí sửa chữa TSCĐ phục vụ cho bán hàng
+- Đối với sửa chữa, bảo dưỡng thường xuyên, căn cứ vào chứng từ có liên quan, ghi:
+Nợ TK 641 - Chi phí bán hàng
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112,...
+- Đối với sửa chữa, bảo dưỡng định kỳ, căn cứ vào chứng từ có liên quan, ghi:
++ Khi chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ thực tế phát sinh, ghi:
+Nợ TK 2413 - Sửa chữa, bảo dưỡng định kỳ TSCĐ
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có các TK 111, 112, 331,...
++ Khi công tác sửa chữa, bảo dưỡng định kỳ TSCĐ hoàn thành bàn giao đưa vào sử dụng, ghi:
+Nợ TK 242 - Chi phí chờ phân bổ
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+		Có TK 2413 - Sửa chữa, bảo dưỡng định kỳ TSCĐ
++ Định kỳ, kế toán phân bổ chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ vào chi phí bán hàng trong từng kỳ, ghi:
+Nợ TK 641 - Chi phí bán hàng
+		Có TK 242 - Chi phí chờ phân bổ.
+e) Đối với chi phí bảo hành sản phẩm, hàng hóa, dịch vụ và trích lập và hoàn nhập dự phòng bảo hành công trình xây dựng, việc kế toán được thực hiện theo hướng dẫn tại Tài khoản 352 - Dự phòng phải trả.
+g) Đối với sản phẩm, hàng hóa dùng để khuyến mại, quảng cáo
+- Đối với hàng hóa mua vào hoặc sản phẩm do doanh nghiệp sản xuất ra dùng để khuyến mại, quảng cáo không thu tiền, không kèm theo các điều kiện khác như phải mua sản phẩm, hàng hóa, ghi:
+Nợ TK 641 - Chi phí bán hàng 
+		Có các TK 155, 156,...
+	Có TK 3331 - Thuế giá trị gia tăng phải nộp (nếu có).
+h) Đối với sản phẩm, hàng hóa tiêu dùng nội bộ cho hoạt động bán hàng, căn cứ vào chứng từ liên quan, doanh nghiệp ghi:
+Nợ TK 641 - Chi phí bán hàng 
+	Có các TK 155, 156,... 
+		Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+i) Trường hợp sản phẩm, hàng hóa dùng để biếu, tặng: 
+- Trường hợp sản phẩm, hàng hóa dùng để biếu, tặng cho khách hàng bên ngoài doanh nghiệp được tính vào chi phí sản xuất, kinh doanh:
+Nợ TK 641 - Chi phí bán hàng (chi phí SX sản phẩm, giá vốn hàng hóa)
+		Có các TK 155, 156,...
+		Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+- Trường hợp sản phẩm, hàng hóa dùng để biếu, tặng cho người lao động được trang trải bằng quỹ khen thưởng, phúc lợi:
+Nợ TK 353 - Quỹ khen thưởng, phúc lợi (tổng giá thanh toán)
+		Có TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+		Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+Đồng thời ghi nhận giá vốn hàng bán đối với giá trị sản phẩm, hàng hóa dùng để biếu, tặng người lao động:
+Nợ TK 632 - Giá vốn hàng bán
+		Có các TK 155, 156,...
+k) Số tiền phải trả hộ cho đơn vị nhận ủy thác xuất khẩu về các khoản đã chi liên quan đến hàng ủy thác xuất khẩu và phí ủy thác xuất khẩu, căn cứ các chứng từ liên quan, ghi:
+Nợ TK 641 - Chi phí bán hàng 
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có TK 338 - Phải trả, phải nộp khác (3388).
+l) Tiền sử dụng đất, thuê đất phải nộp Nhà nước liên quan đến bộ phận bán hàng, ghi: 
+Nợ TK 641 - Chi phí bán hàng (6415)
+		Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3337).
+m) Hoa hồng bán hàng bên giao đại lý phải trả cho bên nhận đại lý, ghi:
+Nợ TK 641 - Chi phí bán hàng 
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có TK 131 - Phải thu của khách hàng.
+n) Khi phát sinh các khoản ghi giảm chi phí bán hàng, ghi:
+Nợ các TK 111, 112,...
+		Có TK 641 - Chi phí bán hàng. 
+o) Tại thời điểm kết thúc kỳ kế toán, kết chuyển chi phí bán hàng phát sinh trong kỳ vào Tài khoản 911 để xác định kết quả kinh doanh, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+		Có TK 641 - Chi phí bán hàng.
+TÀI KHOẢN 642 - CHI PHÍ QUẢN LÝ DOANH NGHIỆP
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh các chi phí quản lý chung của doanh nghiệp gồm các chi phí về lương nhân viên bộ phận quản lý doanh nghiệp (tiền lương, tiền công, các khoản phụ cấp,...); bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp của nhân viên quản lý doanh nghiệp; chi phí vật liệu văn phòng, công cụ lao động, khấu hao TSCĐ dùng cho quản lý doanh nghiệp; tiền thuê đất của bộ phận quản lý, lệ phí môn bài; khoản trích lập dự phòng nợ phải thu khó đòi; dự phòng tái cơ cấu doanh nghiệp; dịch vụ mua ngoài (điện, nước, điện thoại, fax, bảo hiểm tài sản, cháy nổ...); chi phí bằng tiền khác (tiếp khách, hội nghị khách hàng...).
+b) Các khoản chi phí quản lý doanh nghiệp không được coi là chi phí tính thuế TNDN theo quy định của Luật thuế nhưng có đầy đủ hóa đơn chứng từ và đã hạch toán đúng theo Chế độ kế toán thì không được ghi giảm chi phí kế toán mà chỉ điều chỉnh trong quyết toán thuế TNDN để làm tăng số thuế TNDN phải nộp.
+c) Tài khoản 642 - Chi phí quản lý doanh nghiệp được mở chi tiết theo từng nội dung chi phí theo quy định. Tùy theo yêu cầu quản lý của từng ngành, từng doanh nghiệp, Tài khoản 642 - Chi phí quản lý doanh nghiệp có thể được mở thêm các tài khoản cấp 2 để phản ánh các nội dung chi phí thuộc chi phí quản lý ở doanh nghiệp. Cuối kỳ, doanh nghiệp kết chuyển chi phí quản lý doanh nghiệp vào bên Nợ Tài khoản 911 - Xác định kết quả kinh doanh để xác định kết quả kinh doanh.
+2. Kết cấu và nội dung phản ánh của Tài khoản 642 - Chi phí quản lý doanh nghiệp
+Bên Nợ:
+- Các chi phí quản lý doanh nghiệp thực tế phát sinh trong kỳ;
+- Số dự phòng nợ phải thu khó đòi, dự phòng phải trả tính vào chi phí quản lý doanh nghiệp (Chênh lệch giữa số dự phòng phải lập kỳ này lớn hơn số dự phòng đã lập kỳ trước chưa sử dụng hết);
+Bên Có:
+- Các khoản được ghi giảm chi phí quản lý doanh nghiệp;
+- Hoàn nhập dự phòng nợ phải thu khó đòi, dự phòng phải trả tính vào chi phí quản lý doanh nghiệp (chênh lệch giữa số dự phòng phải lập kỳ này nhỏ hơn số dự phòng đã lập kỳ trước chưa sử dụng hết);
+- Kết chuyển chi phí quản lý doanh nghiệp vào Tài khoản 911 để Xác định kết quả kinh doanh.
+Tài khoản 642 không có số dư cuối kỳ.
+Tài khoản 642 - Chi phí quản lý doanh nghiệp, có 8 tài khoản cấp 2:
+- Tài khoản 6421 - Chi phí nhân viên quản lý: Phản ánh các khoản phải trả cho cán bộ nhân viên quản lý doanh nghiệp, như tiền lương, các khoản phụ cấp, bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp,... của Ban Giám đốc, nhân viên quản lý ở các phòng, ban của doanh nghiệp, các khoản khen thưởng, phúc lợi cho nhân viên quản lý trong trường hợp doanh nghiệp không chi từ nguồn quỹ khen thưởng, phúc lợi mà hạch toán trực tiếp vào chi phí sản xuất kinh doanh trong kỳ.
+- Tài khoản 6422 - Chi phí vật liệu quản lý: Phản ánh chi phí vật liệu xuất dùng cho công tác quản lý doanh nghiệp như văn phòng phẩm... vật liệu sử dụng cho việc sửa chữa TSCĐ, công cụ, dụng cụ,... 
+- Tài khoản 6423 - Chi phí đồ dùng văn phòng: Phản ánh chi phí dụng cụ, đồ dùng văn phòng, phương tiện làm việc dùng cho công tác quản lý.
+- Tài khoản 6424 - Chi phí khấu hao TSCĐ: Phản ánh chi phí khấu hao TSCĐ dùng chung cho công tác quản lý doanh nghiệp như: Nhà cửa làm việc của các phòng ban, kho tàng, vật kiến trúc, phương tiện vận tải truyền dẫn, máy móc thiết bị quản lý dùng trên văn phòng,...
+- Tài khoản 6425 - Thuế, phí và lệ phí: Phản ánh chi phí về thuế, phí và lệ phí như: lệ phí môn bài, tiền thuê đất,... và các khoản thuế, phí, lệ phí khác.
+- Tài khoản 6426 - Chi phí dự phòng: Phản ánh các khoản dự phòng nợ phải thu khó đòi, dự phòng tái cơ cấu doanh nghiệp,...
+- Tài khoản 6427 - Chi phí dịch vụ mua ngoài: Phản ánh các chi phí dịch vụ mua ngoài phục vụ cho công tác quản lý doanh nghiệp như chi phí thuê TSCĐ, chi phí điện, nước,...
+- Tài khoản 6428 - Chi phí bằng tiền khác: Phản ánh các chi phí khác thuộc quản lý chung của doanh nghiệp, ngoài các chi phí đã kể trên, như: Chi phí hội nghị, tiếp khách ở bộ phận quản lý, công tác phí, tàu xe, khoản chi cho lao động nữ,...
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Tiền lương, tiền công, phụ cấp và các khoản khác phải trả cho nhân viên bộ phận quản lý doanh nghiệp, trích bảo hiểm xã hội, bảo hiểm y tế, kinh phí công đoàn, bảo hiểm thất nghiệp, các khoản hỗ trợ khác (như bảo hiểm nhân thọ, bảo hiểm hưu trí tự nguyện...) của nhân viên quản lý doanh nghiệp, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (6421)
+		Có các TK 334, 338.
+3.2. Giá trị vật liệu xuất dùng hoặc mua vào sử dụng ngay cho quản lý doanh nghiệp như: Xăng, dầu, mỡ để chạy xe, vật liệu dùng cho sửa chữa TSCĐ chung của doanh nghiệp,..., ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (6422)
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có) 
+		Có các TK 111, 112, 152, 242, 331,... 
+3.3. Trị giá dụng cụ, đồ dùng văn phòng xuất dùng hoặc mua sử dụng ngay không qua kho cho bộ phận quản lý được tính trực tiếp một lần vào chi phí quản lý doanh nghiệp, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (6423)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có) 
+			Có các TK 111, 112, 153, 331,...
+3.4. Trích khấu hao TSCĐ dùng cho quản lý chung của doanh nghiệp, như: Nhà cửa, vật kiến trúc, kho tàng, thiết bị truyền dẫn,..., ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (6424)
+Có TK 214 - Hao mòn TSCĐ.
+3.5. Lệ phí môn bài, tiền thuê đất,... phải nộp Nhà nước, ghi: 
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (6425)
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước.
+3.6. Lệ phí giao thông, lệ phí qua cầu, phà phải nộp, ghi: 
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (6425)
+Có các TK 111, 112,...
+3.7. Kế toán dự phòng các khoản nợ phải thu khó đòi tại thời điểm kết thúc kỳ kế toán: 
+- Trường hợp số dự phòng nợ phải thu khó đòi phải trích lập kỳ này lớn hơn số đã trích lập từ kỳ trước chưa sử dụng hết, doanh nghiệp trích lập bổ sung phần chênh lệch, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (6426)
+Có TK 229 - Dự phòng tổn thất tài sản (2293).
+- Trường hợp số dự phòng nợ phải thu khó đòi phải trích lập kỳ này nhỏ hơn số đã trích lập từ kỳ trước chưa sử dụng hết, doanh nghiệp hoàn nhập phần chênh lệch, ghi:
+Nợ TK 229 - Dự phòng tổn thất tài sản (2293)
+Có TK 642 - Chi phí quản lý doanh nghiệp (6426).
+3.8. Khi trích lập dự phòng phải trả (trừ dự phòng phải trả về bảo hành sản phẩm, hàng hóa, công trình xây dựng) tính vào chi phí quản lý doanh nghiệp, ví dụ như dự phòng tái cơ cấu doanh nghiệp,..., ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp
+Có TK 352 - Dự phòng phải trả.
+- Trường hợp số dự phòng phải trả cần lập ở thời điểm kết thúc kỳ kế toán này nhỏ hơn số dự phòng phải trả đã lập ở thời điểm kết thúc kỳ kế toán trước chưa sử dụng hết thì số chênh lệch được hoàn nhập ghi giảm chi phí, ghi:
+Nợ TK 352 - Dự phòng phải trả
+Có TK 642 - Chi phí quản lý doanh nghiệp.
+3.9. Tiền điện thoại, điện, nước mua ngoài phải trả, chi phí sửa chữa TSCĐ một lần với giá trị nhỏ, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (6427)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331, 335,...
+3.10. Kế toán chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ phục vụ cho quản lý doanh nghiệp:
+- Đối với sửa chữa, bảo dưỡng thường xuyên, căn cứ vào chứng từ có liên quan, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112,...
+- Đối với sửa chữa, bảo dưỡng định kỳ, căn cứ vào chứng từ có liên quan, ghi:
++ Khi chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ thực tế phát sinh, ghi:
+Nợ TK 2413 - Sửa chữa, bảo dưỡng định kỳ TSCĐ
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 331,...
++ Khi công tác sửa chữa, bảo dưỡng định kỳ TSCĐ hoàn thành bàn giao đưa vào sử dụng, ghi:
+Nợ TK 242 - Chi phí chờ phân bổ
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có TK 2413 - Sửa chữa, bảo dưỡng định kỳ TSCĐ.
++ Định kỳ, kế toán phân bổ chi phí sửa chữa, bảo dưỡng định kỳ TSCĐ vào chi phí quản lý doanh nghiệp trong từng kỳ, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp
+Có TK 242 - Chi phí chờ phân bổ.
+3.11. Chi phí phát sinh về hội nghị, tiếp khách, chi cho lao động nữ, chi cho nghiên cứu, đào tạo, chi nộp phí tham gia hiệp hội và chi phí quản lý khác, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (6428)
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có) 
+Có các TK 111, 112, 331,...
+3.12. Thuế GTGT đầu vào liên quan đến bộ phận quản lý doanh nghiệp không được khấu trừ nếu được tính vào chi phí quản lý doanh nghiệp, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp
+		Có TK 133 - Thuế GTGT được khấu trừ (1331, 1332).
+3.13. Đối với sản phẩm, hàng hóa tiêu dùng nội bộ sử dụng cho mục đích quản lý; Sản phẩm, hàng hóa dùng để biếu, tặng, ghi:
+Nợ TK 642 - Chi phí quản lý doanh nghiệp
+Có các TK 155, 156,...
+		Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+3.14. Khi phát sinh các khoản ghi giảm chi phí quản lý doanh nghiệp, ghi:
+Nợ các TK 111, 112,...
+Có TK 642 - Chi phí quản lý doanh nghiệp.
+3.15. Tại thời điểm kết thúc kỳ kế toán, kết chuyển chi phí quản lý doanh nghiệp phát sinh trong kỳ vào Tài khoản 911 để xác định kết quả kinh doanh, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 642 - Chi phí quản lý doanh nghiệp.
+TÀI KHOẢN 711 - THU NHẬP KHÁC
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để phản ánh các khoản thu nhập khác ngoài hoạt động sản xuất, kinh doanh của doanh nghiệp, gồm:
+- Thu nhập từ nhượng bán, thanh lý TSCĐ; 
+- Chênh lệch giữa giá trị hợp lý tài sản được chia từ BCC cao hơn chi phí đầu tư xây dựng tài sản đồng kiểm soát;
+- Chênh lệch lãi do đánh giá lại vật tư, hàng hóa, TSCĐ đưa đi góp vốn liên doanh, đầu tư vào công ty con, công ty liên kết, đầu tư dài hạn khác,...;
+- Thu nhập từ nghiệp vụ bán và thuê lại tài sản;
+- Các khoản thuế phải nộp khi bán hàng hóa, cung cấp dịch vụ nhưng sau đó được giảm, được hoàn;
+- Thu tiền phạt do khách hàng vi phạm hợp đồng;
+- Thu tiền bồi thường của bên thứ ba để bù đắp cho tài sản bị tổn thất (ví dụ thu tiền bảo hiểm được bồi thường và các khoản có tính chất tương tự);
+- Thu các khoản nợ khó đòi đã xử lý xóa sổ;
+- Thu các khoản nợ phải trả không xác định được chủ nợ hoặc đã xác định được là không phải trả nợ;
+- Các khoản tiền thưởng của khách hàng liên quan đến tiêu thụ hàng hóa, sản phẩm, dịch vụ không tính trong doanh thu (nếu có);
+- Thu nhập quà biếu, quà tặng bằng tiền, hiện vật, cổ phần, phần vốn góp tại doanh nghiệp khác,... của các tổ chức, cá nhân tặng cho doanh nghiệp (trừ khoản hỗ trợ, tài trợ, biếu, tặng được ghi tăng vốn đầu tư của chủ sở hữu theo quyết định của cấp có thẩm quyền).
+- Giá trị số hàng khuyến mại không phải trả lại;
+- Các khoản thu nhập khác ngoài các khoản nêu trên.
+b) Khi có khả năng chắc chắn thu được các khoản tiền phạt vi phạm hợp đồng, doanh nghiệp phải xét bản chất của khoản tiền phạt để hạch toán phù hợp với nguyên tắc sau:
+- Đối với bên bán: Tất cả các khoản tiền phạt vi phạm hợp đồng thu được từ bên mua nằm ngoài giá trị hợp đồng được ghi nhận là thu nhập khác.
+- Đối với bên mua: Các khoản tiền phạt vi phạm hợp đồng thu được từ bên bán nằm ngoài giá trị hợp đồng được ghi nhận là thu nhập khác, trừ trường hợp người bán vi phạm hợp đồng nhưng người mua vẫn nhận hàng và người bán chấp nhận giảm trừ số tiền phạt vào số tiền người mua phải thanh toán thì giá trị hàng mua phải được ghi nhận theo số thực tế phải thanh toán cho nhà cung cấp sau khi trừ (-) khoản tiền phạt vi phạm hợp đồng được hưởng.
+c) Trường hợp doanh nghiệp được tài trợ, biếu, tặng tài sản phi tiền tệ hoặc cổ phần/cổ phiếu/phần vốn góp mà chưa có thông tin về giá trị thì việc xác định giá trị của các tài sản này có thể căn cứ vào giá thị trường của tài sản hoặc giá trị theo đánh giá của Hội đồng đánh giá tài sản của doanh nghiệp hoặc tổ chức thẩm định giá chuyên nghiệp. Doanh nghiệp phải thuyết minh trên Báo cáo tài chính về căn cứ xác định giá trị tài sản phi tiền tệ đó.
+2. Kết cấu và nội dung phản ánh của Tài khoản 711 - Thu nhập khác
+Bên Nợ:
+- Số thuế GTGT phải nộp (nếu có) tính theo phương pháp trực tiếp đối với các khoản thu nhập khác ở doanh nghiệp nộp thuế GTGT tính theo phương pháp trực tiếp.
+- Tại thời điểm kết thúc kỳ kế toán, kết chuyển các khoản thu nhập khác phát sinh trong kỳ sang tài khoản 911 để xác định kết quả kinh doanh.
+Bên Có: 
+Các khoản thu nhập khác phát sinh trong kỳ.
+Tài khoản 711 - Thu nhập khác không có số dư cuối kỳ.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Kế toán nghiệp vụ nhượng bán, thanh lý TSCĐ:
+- Phản ánh số thu nhập về thanh lý, nhượng bán TSCĐ:
+Nợ các TK 111, 112, 131, 152, 153,... (tổng giá thanh toán)
+Có TK 711 - Thu nhập khác 
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+- Các chi phí phát sinh cho hoạt động thanh lý, nhượng bán TSCĐ, ghi:
+Nợ TK 811 - Chi phí khác
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 141, 331,... (tổng giá thanh toán).
+- Đồng thời ghi giảm nguyên giá TSCĐ thanh lý, nhượng bán, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn)
+Nợ TK 811 - Chi phí khác (giá trị còn lại)
+Có các TK 211, 213
+b) Kế toán thu nhập khác phát sinh khi đánh giá lại vật tư, hàng hóa, TSCĐ đưa đi đầu tư vào công ty con, công ty liên kết, góp vốn đầu tư dài hạn khác:
+- Khi đầu tư vào công ty con, công ty liên doanh, công ty liên kết, đầu tư dài hạn khác dưới hình thức góp vốn bằng vật tư, hàng hóa, trường hợp giá đánh giá lại của vật tư, hàng hóa lớn hơn giá trị ghi sổ của vật tư, hàng hóa, ghi:
+Nợ các TK 221, 222, 228 (giá đánh giá lại)
+Có các TK 152, 153, 155, 156 (giá trị ghi sổ)
+Có TK 711 - Thu nhập khác (chênh lệch giữa giá đánh giá lại lớn hơn giá trị ghi sổ của vật tư, hàng hóa).
+- Khi đầu tư vào công ty con, công ty liên doanh, liên kết, đầu tư dài hạn khác dưới hình thức góp vốn bằng TSCĐ, trường hợp giá đánh giá lại của TSCĐ lớn hơn giá trị còn lại của TSCĐ, ghi:
+Nợ các TK 221, 222, 228 (giá trị đánh giá lại)
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+Có các TK 211, 213 (nguyên giá)
+Có TK 711 - Thu nhập khác (chênh lệch giữa giá trị đánh giá lại của TSCĐ lớn hơn giá trị còn lại của TSCĐ).
+c) Kế toán thu nhập khác phát sinh từ giao dịch bán và thuê lại TSCĐ là thuê tài chính:
+- Trường hợp giá bán cao hơn giá trị còn lại của TSCĐ, khi hoàn tất thủ tục bán TSCĐ, căn cứ vào hóa đơn và các chứng từ liên quan, ghi:
+Nợ các TK 111, 112, 131,... (tổng giá thanh toán)
+Có TK 711 - Thu nhập khác (giá trị còn lại của TSCĐ bán và thuê lại)
+Có TK 3387 - Doanh thu chờ phân bổ (chênh lệch giữa giá bán lớn hơn giá trị còn lại của TSCĐ)
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+Đồng thời, ghi giảm TSCĐ:
+Nợ TK 811 - Chi phí khác (giá trị còn lại của TSCĐ bán và thuê lại)	
+Nợ TK 214 - Hao mòn TSCĐ (nếu có)
+Có TK 211 - TSCĐ hữu hình (nguyên giá TSCĐ).
+- Trường hợp giá bán thấp hơn giá trị còn lại của TSCĐ, khi hoàn tất thủ tục bán tài sản, căn cứ vào hóa đơn và các chứng từ liên quan, ghi:
+Nợ các TK 111, 112, 131,... (tổng giá thanh toán)
+Có TK 711 - Thu nhập khác (giá bán TSCĐ)
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+Đồng thời, ghi giảm TSCĐ:
+Nợ TK 811 - Chi phí khác (tính bằng giá bán TSCĐ)
+Nợ TK 242 - Chi phí chờ phân bổ (giá bán nhỏ hơn giá trị còn lại của TSCĐ)
+Nợ TK 214 - Hao mòn TSCĐ (nếu có)
+Có TK 211 - TSCĐ hữu hình (nguyên giá TSCĐ).
+- Các bút toán ghi nhận tài sản thuê và nợ phải trả về thuê tài chính, trả tiền thuê từng kỳ thực hiện theo quy định tại Tài khoản 212 - TSCĐ thuê tài chính.
+- Trường hợp doanh nghiệp phát sinh các giao dịch kinh tế có bản chất tương tự như giao dịch bán quyền mua tài sản và cam kết thuê lại tài sản đó từ khách hàng dưới hình thức như thuê tài chính thì việc hạch toán kế toán tương tự giao dịch bán và thuê lại TSCĐ là thuê tài chính.
+d) Kế toán giao dịch bán và thuê lại TSCĐ là thuê hoạt động: Khi bán TSCĐ và thuê lại, căn cứ vào hóa đơn GTGT và các chứng từ liên quan đến việc bán TSCĐ, doanh nghiệp phản ánh giao dịch bán theo các trường hợp sau:
+- Nếu giá bán được thỏa thuận ở mức giá trị hợp lý thì các khoản lỗ hay lãi phải được ghi nhận ngay trong kỳ phát sinh. 
+Phản ánh số thu nhập bán TSCĐ, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 711 - Thu nhập khác (giá bán TSCĐ)
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+Đồng thời, ghi giảm TSCĐ:
+Nợ TK 811 - Chi phí khác (tính bằng giá bán TSCĐ)
+Nợ TK 242 - Chi phí chờ phân bổ (giá bán nhỏ hơn giá trị còn lại của TSCĐ)
+Nợ TK 214 - Hao mòn TSCĐ (nếu có)
+Có TK 211 - TSCĐ hữu hình (nguyên giá TSCĐ).
+- Nếu giá bán và thuê lại TSCĐ thấp hơn giá trị hợp lý nhưng mức giá thuê thấp hơn giá thuê thị trường thì khoản lỗ này không được ghi nhận ngay mà phải phân bổ dần phù hợp với khoản thanh toán tiền thuê trong thời gian thuê tài sản. Căn cứ vào hóa đơn GTGT và các chứng từ liên quan đến việc bán TSCĐ, phản ánh thu nhập bán TSCĐ, ghi:
+Nợ các TK 111, 112,... (giá bán)
+Nợ TK 242 - Chi phí chờ phân bổ (giá bán nhỏ hơn giá trị hợp lý)
+Có TK 711 - Thu nhập khác (giá trị hợp lý của TSCĐ)
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
++ Đồng thời, ghi giảm TSCĐ như sau:
+Nợ TK 811 - Chi phí khác
+Nợ TK 214 - Hao mòn TSCĐ (nếu có)
+Có TK 211 - TSCĐ hữu hình (nguyên giá TSCĐ).
++ Định kỳ, phân bổ số lỗ về giao dịch bán và thuê lại TSCĐ là thuê hoạt động (chênh lệch giữa giá bán nhỏ hơn giá trị hợp lý) vào chi phí sản xuất, kinh doanh trong kỳ phù hợp với khoản thanh toán tiền thuê trong suốt thời gian mà tài sản đó dự kiến sử dụng, ghi:
+Nợ các TK 623, 627, 641, 642,...
+Có TK 242 - Chi phí chờ phân bổ. 
+- Nếu giá bán và thuê lại tài sản cao hơn giá trị hợp lý thì khoản chênh lệch giá bán cao hơn giá trị hợp lý không được ghi nhận ngay là một khoản lãi trong kỳ mà được phân bổ dần trong suốt thời gian mà tài sản đó được dự kiến sử dụng, còn số chênh lệch giữa giá trị hợp lý và giá trị còn lại được ghi nhận ngay là một khoản lãi trong kỳ. 
++ Căn cứ vào Hóa đơn GTGT bán TSCĐ, ghi:
+Nợ các TK 111, 112, 131,... (giá bán)
+Có TK 711 - Thu nhập khác (tính bằng giá trị hợp lý của TSCĐ)
+Có TK 3387 - Doanh thu chờ phân bổ (chênh lệch giữa giá bán cao hơn giá trị hợp lý của TSCĐ)
+Có TK 3331 - Thuế GTGT phải nộp (nếu có).
+Đồng thời, ghi giảm giá trị TSCĐ bán và thuê lại:
+Nợ TK 811 - Chi phí khác
+Nợ TK 214 - Hao mòn TSCĐ (nếu có)
+Có TK 211 - TSCĐ hữu hình (nguyên giá TSCĐ).
++ Định kỳ, phân bổ chênh lệch giữa giá bán cao hơn giá trị hợp lý của TSCĐ bán và thuê lại ghi giảm chi phí sản xuất, kinh doanh trong kỳ phù hợp với khoản thanh toán tiền thuê trong suốt thời gian mà tài sản đó dự kiến sử dụng, ghi:
+Nợ TK 3387 - Doanh thu chờ phân bổ
+Có các TK 623, 627, 641, 642,...
+- Trường hợp doanh nghiệp phát sinh các giao dịch kinh tế có bản chất tương tự như giao dịch bán quyền mua tài sản và cam kết thuê lại tài sản đó từ khách hàng dưới hình thức như thuê hoạt động thì việc hạch toán kế toán tương tự giao dịch bán và thuê lại TSCĐ là thuê hoạt động.
+đ) Phản ánh các khoản thu tiền phạt 
+Nợ các TK liên quan
+Có các TK 151, 153, 154, 156, 241, 211... (nếu khoản tiền phạt được ghi giảm giá trị tài sản)
+Có TK 711 - Thu nhập khác (nếu khoản tiền phạt được ghi nhận vào thu nhập khác).
+e) Phản ánh các khoản được bên thứ ba bồi thường (như tiền bảo hiểm được bồi thường,...), ghi:
+Nợ các TK 111, 112,...
+Có TK 711 - Thu nhập khác.
+- Các khoản chi phí liên quan đến xử lý các thiệt hại đối với những trường hợp đã mua bảo hiểm, ghi:
+Nợ TK 811 - Chi phí khác
+Nợ TK 133 - Thuế GTGT được khấu trừ (nếu có)
+Có các TK 111, 112, 152,...
+g) Hạch toán các khoản phải thu khó đòi đã xử lý xóa sổ, nay thu lại được tiền:
+- Nếu có khoản nợ phải thu khó đòi thực sự không thể thu nợ được phải xử lý xóa sổ, căn cứ vào biên bản xử lý xóa nợ, ghi: 
+Nợ TK 229 - Dự phòng tổn thất tài sản (2293) (nếu đã lập dự phòng)
+Nợ TK 642 - Chi phí quản lý doanh nghiệp (nếu chưa lập dự phòng)
+Có TK 131 - Phải thu của khách hàng.
+- Khi thu được khoản nợ khó đòi đã xử lý xóa sổ, ghi: 
+Nợ các TK 111, 112,...
+Có TK 711 - Thu nhập khác.
+h) Các khoản nợ phải trả không xác định được chủ nợ hoặc đã xác định được là không phải trả được tính vào thu nhập khác, ghi:
+Nợ các TK 331, 338, 341,...
+Có TK 711 - Thu nhập khác.
+i) Kế toán các khoản thuế phải nộp khi bán hàng hóa, cung cấp dịch vụ nhưng sau đó được hoàn, được giảm: 
+- Khi nhận được quyết định của cơ quan có thẩm quyền về số thuế được hoàn, được giảm, ghi:
+Nợ các TK 3331, 3332, 3333, 33381
+Có TK 711 - Thu nhập khác.
+- Khi NSNN trả lại bằng tiền, ghi:
+Nợ các TK 111, 112
+Có các TK 3331, 3332, 3333, 33381.
+k) Kế toán các khoản tiền, vật tư, hàng hóa, TSCĐ, cổ phần được hỗ trợ, tài trợ, biếu tặng từ các tổ chức, cá nhân (trừ các khoản hỗ trợ, tài trợ, biếu, tặng được ghi tăng vốn đầu tư của chủ sở hữu theo quy định của cấp có thẩm quyền). 
+- Trường hợp tài sản được hỗ trợ, tài trợ, biếu, tặng nhưng không kèm theo điều kiện để được quản lý, sử dụng, kiểm soát tài sản đó, ghi:
+Nợ các TK 111, 112, 152, 153, 156, 211,... 
+Có TK 711 - Thu nhập khác.
+	- Trường hợp tài sản được hỗ trợ, tài trợ, biếu, tặng nhưng kèm theo điều kiện để được quản lý, sử dụng, kiểm soát tài sản đó, doanh nghiệp thực hiện theo hướng dẫn tại Tài khoản 3387 - Doanh thu chờ phân bổ.
+l) Trường hợp doanh nghiệp có hoạt động thương mại được nhận hàng hóa (không phải trả tiền) từ nhà sản xuất, nhà phân phối để quảng cáo, khuyến mại cho khách hàng mua hàng của nhà sản xuất, nhà phân phối. Khi hết chương trình khuyến mại, nếu không phải trả lại nhà sản xuất số hàng khuyến mại chưa sử dụng hết, doanh nghiệp ghi nhận thu nhập khác là giá trị số hàng khuyến mại không phải trả lại, ghi:
+Nợ TK 156 - Hàng hóa (giá trị tương đương của sản phẩm cùng loại)
+		Có TK 711 - Thu nhập khác.
+m) Tại thời điểm kết thúc kỳ kế toán, tính và phản ánh số thuế GTGT phải nộp theo phương pháp trực tiếp của số thu nhập khác, ghi:
+Nợ TK 711 - Thu nhập khác
+		Có TK 3331 - Thuế GTGT phải nộp. 
+n) Cuối kỳ, kết chuyển các khoản thu nhập khác phát sinh trong kỳ vào Tài khoản 911 để xác định kết quả kinh doanh, ghi:
+Nợ TK 711 - Thu nhập khác 
+Có TK 911 - Xác định kết quả kinh doanh.
+TÀI KHOẢN 811 - CHI PHÍ KHÁC
+1. Nguyên tắc kế toán
+a) Tài khoản này phản ánh những khoản chi phí phát sinh do các sự kiện hay các nghiệp vụ riêng biệt với hoạt động thông thường của các doanh nghiệp. Chi phí khác của doanh nghiệp có thể gồm:
+- Chi phí thanh lý, nhượng bán TSCĐ (gồm cả chi phí đấu thầu hoạt động thanh lý). Số tiền thu từ bán hồ sơ thầu hoạt động thanh lý, nhượng bán TSCĐ được ghi giảm chi phí thanh lý, nhượng bán TSCĐ;
+- Chênh lệch giữa giá trị hợp lý tài sản được chia từ BCC nhỏ hơn chi phí đầu tư xây dựng tài sản đồng kiểm soát;
+- Giá trị còn lại của TSCĐ bị tháo dỡ, di dời,...;
+- Giá trị còn lại của TSCĐ thanh lý, nhượng bán TSCĐ (nếu có); 
+- Chênh lệch lỗ do đánh giá lại vật tư, hàng hóa, TSCĐ đưa đi góp vốn vào công ty con, công ty liên doanh, đầu tư vào công ty liên kết, đầu tư dài hạn khác,...; 
+- Tiền phạt phải trả do vi phạm hợp đồng kinh tế, phạt hành chính; 
+- Các khoản chi phí khác.
+b) Các khoản chi phí không được coi là chi phí tính thuế TNDN theo quy định của Luật thuế nhưng có đầy đủ hóa đơn chứng từ và đã hạch toán đúng theo Chế độ kế toán thì không được ghi giảm chi phí kế toán mà chỉ điều chỉnh trong quyết toán thuế TNDN để làm tăng số thuế TNDN phải nộp.
+2. Kết cấu và nội dung phản ánh của Tài khoản 811 - Chi phí khác
+Bên Nợ: 
+Các khoản chi phí khác phát sinh.
+Bên Có: 
+Cuối kỳ, kết chuyển toàn bộ các khoản chi phí khác phát sinh trong kỳ vào Tài khoản 911 - Xác định kết quả kinh doanh để xác định kết quả kinh doanh.
+Tài khoản 811 không có số dư cuối kỳ.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Hạch toán nghiệp vụ nhượng bán, thanh lý TSCĐ:
+- Ghi nhận thu nhập khác do nhượng bán, thanh lý TSCĐ, ghi:
+Nợ các TK 111, 112, 131,...
+Có TK 711 - Thu nhập khác 
+Có TK 3331 - Thuế GTGT phải nộp (33311) (nếu có).
+- Ghi giảm TSCĐ dùng vào SXKD đã nhượng bán, thanh lý, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+Nợ TK 811 - Chi phí khác (giá trị còn lại)
+Có các TK 211, 213 
+- Ghi nhận các chi phí phát sinh cho hoạt động nhượng bán, thanh lý TSCĐ, ghi:
+Nợ TK 811 - Chi phí khác 
+Nợ TK 133 - Thuế GTGT được khấu trừ (1331) (nếu có)
+Có các TK 111, 112, 141,...
+- Ghi nhận khoản thu từ bán hồ sơ thầu liên quan đến hoạt động thanh lý, nhượng bán TSCĐ, ghi:
+Nợ các TK 111, 112, 138...	
+		Có TK 811 - Chi phí khác.
+b) Khi tháo dỡ, di dời TSCĐ, ghi:
+Nợ TK 214 - Hao mòn TSCĐ (giá trị hao mòn lũy kế)
+Nợ TK 811 - Chi phí khác (giá trị còn lại)
+Có các TK 211, 213 
+c) Kế toán chi phí khác phát sinh khi đánh giá lại vật tư, hàng hóa, TSCĐ đầu tư vào công ty con, công ty liên doanh, liên kết: Thực hiện theo hướng dẫn tại các TK 221, 222, 228.
+d) Hạch toán các khoản tiền bị phạt do vi phạm hợp đồng kinh tế, phạt vi phạm hành chính, ghi:
+Nợ TK 811 - Chi phí khác
+Có các TK 111, 112, 338,...
+Có TK 333 - Thuế và các khoản phải nộp Nhà nước (3339) (nếu có).
+đ) Tại thời điểm kết thúc kỳ kế toán, kết chuyển toàn bộ chi phí khác phát sinh trong kỳ để xác định kết quả kinh doanh, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 811 - Chi phí khác.
+TÀI KHOẢN 821 - CHI PHÍ THUẾ THU NHẬP DOANH NGHIỆP
+1. Nguyên tắc kế toán
+a) Nguyên tắc chung
+- Tài khoản này dùng để phản ánh chi phí thuế thu nhập doanh nghiệp của doanh nghiệp bao gồm chi phí thuế thu nhập doanh nghiệp hiện hành, chi phí thuế thu nhập doanh nghiệp hoãn lại phát sinh trong năm làm căn cứ xác định kết quả hoạt động kinh doanh sau thuế của doanh nghiệp trong năm tài chính hiện hành.
+- Chi phí thuế thu nhập doanh nghiệp hiện hành bao gồm chi phí thuế TNDN hiện hành theo quy định của Luật thuế thu nhập doanh nghiệp và chi phí thuế TNDN bổ sung theo quy định về thuế tối thiểu toàn cầu. Trong đó:
++ Chi phí thuế thu nhập doanh nghiệp hiện hành theo quy định của Luật thuế thu nhập doanh nghiệp là số thuế thu nhập doanh nghiệp phải nộp tính trên thu nhập chịu thuế trong năm và thuế suất thuế thu nhập doanh nghiệp hiện hành.
++ Chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu là số thuế thu nhập doanh nghiệp mà doanh nghiệp phải nộp bổ sung vào NSNN được xác định theo quy định của pháp luật về thuế tối thiểu toàn cầu. Khi ghi nhận chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu, doanh nghiệp đồng thời ghi nhận tài sản thuế thu nhập hoãn lại.
+- Chi phí thuế thu nhập doanh nghiệp hoãn lại là số thuế thu nhập doanh nghiệp sẽ phải nộp trong tương lai phát sinh từ việc:
++ Ghi nhận thuế thu nhập hoãn lại phải trả trong năm;
++ Hoàn nhập tài sản thuế thu nhập hoãn lại đã được ghi nhận từ các năm trước.
+- Thu nhập thuế thu nhập doanh nghiệp hoãn lại là khoản ghi giảm chi phí thuế thu nhập doanh nghiệp hoãn lại phát sinh từ việc:
++ Ghi nhận tài sản thuế thu nhập hoãn lại trong năm;
++ Hoàn nhập thuế thu nhập hoãn lại phải trả đã được ghi nhận từ các năm trước.
+b) Nguyên tắc kế toán chi phí thuế thu nhập doanh nghiệp hiện hành
+- Hàng quý, doanh nghiệp căn cứ vào tờ khai thuế thu nhập doanh nghiệp để ghi nhận số thuế thu nhập doanh nghiệp tạm phải nộp vào chi phí thuế thu nhập doanh nghiệp hiện hành. 
+Cuối năm tài chính, căn cứ vào tờ khai quyết toán thuế thu nhập doanh nghiệp, nếu số thuế thu nhập doanh nghiệp tạm phải nộp trong năm nhỏ hơn số phải nộp cho năm đó, doanh nghiệp ghi tăng chi phí thuế thu nhập doanh nghiệp hiện hành là số chênh lệch giữa số thuế thu nhập doanh nghiệp phải nộp trong năm lớn hơn số đã tạm nộp của năm đó. Trường hợp số thuế thu nhập doanh nghiệp tạm phải nộp trong năm lớn hơn số phải nộp của năm đó, doanh nghiệp phải ghi giảm chi phí thuế thu nhập doanh nghiệp hiện hành là số chênh lệch giữa số thuế thu nhập doanh nghiệp tạm phải nộp trong năm lớn hơn số phải nộp.
+- Trường hợp phát hiện sai sót không trọng yếu liên quan đến khoản thuế thu nhập doanh nghiệp phải nộp của các năm trước, doanh nghiệp được hạch toán tăng (hoặc giảm) số thuế thu nhập doanh nghiệp phải nộp của các năm trước vào chi phí thuế thu nhập doanh nghiệp hiện hành của năm phát hiện sai sót. 
+- Đối với các sai sót trọng yếu, doanh nghiệp điều chỉnh hồi tố theo quy định của Chuẩn mực kế toán Việt Nam số 29 - Thay đổi chính sách kế toán, ước tính kế toán và các sai sót.
+ - Cuối kỳ kế toán, doanh nghiệp phải kết chuyển chi phí thuế thu nhập doanh nghiệp hiện hành phát sinh trong kỳ vào tài khoản 911 - Xác định kết quả kinh doanh để xác định lợi nhuận sau thuế trong kỳ kế toán.
+c) Nguyên tắc kế toán chi phí thuế thu nhập doanh nghiệp hoãn lại
+- Cuối kỳ kế toán, doanh nghiệp phải xác định chi phí thuế thu nhập hoãn lại theo quy định của Chuẩn mực kế toán Việt Nam số 17 - Thuế thu nhập doanh nghiệp.
+- Doanh nghiệp không được phản ánh vào tài khoản này tài sản thuế thu nhập hoãn lại hoặc thuế thu nhập hoãn lại phải trả phát sinh từ các giao dịch được ghi nhận trực tiếp vào vốn chủ sở hữu.
+- Cuối kỳ kế toán, doanh nghiệp phải kết chuyển số chênh lệch giữa số phát sinh bên Nợ và số phát sinh bên Có Tài khoản 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại vào Tài khoản 911 - Xác định kết quả kinh doanh.
+2. Kết cấu và nội dung phản ánh của Tài khoản 821 - Chi phí thuế thu nhập doanh nghiệp
+a) Kết cấu và nội dung phản ánh chung 
+Bên Nợ: 
+- Chi phí thuế thu nhập doanh nghiệp hiện hành phát sinh trong năm;
+- Số thuế thu nhập doanh nghiệp hiện hành của các năm trước phải nộp bổ sung do phát hiện sai sót không trọng yếu của các năm trước được ghi tăng chi phí thuế thu nhập doanh nghiệp của năm hiện tại;
+- Chi phí thuế thu nhập doanh nghiệp hoãn lại phát sinh trong năm từ việc ghi nhận thuế thu nhập hoãn lại phải trả (là số chênh lệch giữa thuế thu nhập hoãn lại phải trả phát sinh trong năm lớn hơn thuế thu nhập hoãn lại phải trả được hoàn nhập trong năm);
+- Chi phí thuế thu nhập doanh nghiệp hoãn lại tương ứng với khoản hoàn nhập tài sản thuế thu nhập hoãn lại (số chênh lệch giữa tài sản thuế thu nhập hoãn lại được hoàn nhập trong năm lớn hơn tài sản thuế thu nhập hoãn lại phát sinh trong năm);
+- Chi phí thuế thu nhập doanh nghiệp hiện hành phải nộp bổ sung phát sinh trong năm theo quy định về thuế tối thiểu toàn cầu; 
+- Số chi phí thuế thu nhập doanh nghiệp hiện hành phải nộp bổ sung vào năm kê khai do số thuế thu nhập doanh nghiệp đã ghi nhận của năm phát sinh nghĩa vụ nhỏ hơn số thuế thu nhập doanh nghiệp phải nộp theo kê khai theo quy định về thuế tối thiểu toàn cầu;
+- Kết chuyển chênh lệch giữa số phát sinh trong kỳ của bên Có Tài khoản 8212 lớn hơn số phát sinh trong kỳ của bên Nợ Tài khoản 8212 vào bên Có Tài khoản 911 - Xác định kết quả kinh doanh.
+Bên Có: 
+- Số thuế thu nhập doanh nghiệp hiện hành thực tế phải nộp trong năm nhỏ hơn số thuế thu nhập doanh nghiệp hiện hành tạm phải nộp, được giảm trừ vào chi phí thuế thu nhập doanh nghiệp hiện hành đã ghi nhận trong năm;
+- Số thuế thu nhập doanh nghiệp hiện hành phải nộp trong năm hiện tại được ghi giảm do phát hiện sai sót không trọng yếu của các năm trước;
+- Ghi giảm chi phí thuế thu nhập doanh nghiệp hoãn lại tương ứng với ghi nhận tài sản thuế thu nhập hoãn lại (số chênh lệch giữa tài sản thuế thu nhập hoãn lại phát sinh trong năm lớn hơn tài sản thuế thu nhập hoãn lại được hoàn nhập trong năm);
+- Ghi giảm chi phí thuế thu nhập doanh nghiệp hoãn lại tương ứng với hoàn nhập thuế thu nhập hoãn lại phải trả (số chênh lệch giữa thuế thu nhập hoãn lại phải trả được hoàn nhập trong năm lớn hơn thuế thu nhập hoãn lại phải trả phát sinh trong năm);
+- Ghi giảm chi phí thuế thu nhập doanh nghiệp hiện hành của năm kê khai do số đã ghi nhận của năm phát sinh nghĩa vụ lớn hơn số phải nộp theo kê khai theo quy định về thuế tối thiểu toàn cầu;
+- Kết chuyển số chênh lệch giữa chi phí thuế thu nhập doanh nghiệp hiện hành phát sinh trong năm lớn hơn khoản được ghi giảm chi phí thuế thu nhập doanh nghiệp hiện hành trong năm vào Tài khoản 911 - Xác định kết quả kinh doanh;
+- Kết chuyển số chênh lệch giữa số phát sinh trong kỳ của bên Nợ TK 8212 lớn hơn số phát sinh trong kỳ của bên Có TK 8212 vào bên Nợ tài khoản 911 - Xác định kết quả kinh doanh.
+Tài khoản 821 - Chi phí thuế thu nhập doanh nghiệp không có số dư cuối kỳ.
+Tài khoản 821 - Chi phí thuế thu nhập doanh nghiệp có 2 tài khoản cấp 2:
+- Tài khoản 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành, bao gồm 2 tài khoản cấp 3:
++ Tài khoản 82111 - Chi phí thuế thu nhập doanh nghiệp hiện hành theo quy định của Luật thuế thu nhập doanh nghiệp 
++ Tài khoản 82112 - Chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu 
+- Tài khoản 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại;
+b) Kết cấu và nội dung phản ánh của Tài khoản 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành
+Bên Nợ: 
+- Số thuế thu nhập doanh nghiệp phải nộp tính vào chi phí thuế thu nhập doanh nghiệp hiện hành phát sinh trong năm;
+- Số thuế thu nhập doanh nghiệp của các năm trước phải nộp bổ sung do phát hiện sai sót không trọng yếu của các năm trước được ghi tăng chi phí thuế thu nhập doanh nghiệp hiện hành của năm hiện tại;
+- Số thuế thu nhập doanh nghiệp phát sinh trong năm phải nộp bổ sung theo quy định về thuế tối thiểu toàn cầu;
+- Điều chỉnh tăng số chi phí thuế thu nhập doanh nghiệp hiện hành phải nộp bổ sung vào năm kê khai do số đã ghi nhận của năm phát sinh nghĩa vụ nhỏ hơn số phải nộp theo kê khai theo quy định về thuế tối thiểu toàn cầu;
+Bên Có: 
+- Số thuế thu nhập doanh nghiệp hiện hành thực tế phải nộp trong năm nhỏ hơn số thuế thu nhập doanh nghiệp tạm phải nộp, được giảm trừ vào chi phí thuế thu nhập doanh nghiệp hiện hành ghi nhận trong năm;
+- Số thuế thu nhập doanh nghiệp phải nộp được ghi giảm do phát hiện sai sót không trọng yếu của các năm trước được ghi giảm chi phí thuế thu nhập doanh nghiệp hiện hành trong năm hiện tại;
+- Điều chỉnh giảm số chi phí thuế thu nhập doanh nghiệp hiện hành cho năm kê khai (nếu có) do số đã ghi nhận của năm phát sinh nghĩa vụ lớn hơn số phải nộp theo kê khai theo quy định về thuế tối thiểu toàn cầu;
+- Kết chuyển chi phí thuế thu nhập doanh nghiệp hiện hành vào bên Nợ Tài khoản 911 - Xác định kết quả kinh doanh.
+Tài khoản 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành không có số dư cuối kỳ.
+c) Kết cấu và nội dung phản ánh của Tài khoản 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại
+Bên Nợ: 
+- Chi phí thuế thu nhập doanh nghiệp hoãn lại phát sinh trong năm từ việc ghi nhận thuế thu nhập hoãn lại phải trả (là số chênh lệch giữa thuế thu nhập hoãn lại phải trả phát sinh trong năm lớn hơn thuế thu nhập hoãn lại phải trả được hoàn nhập trong năm);
+- Số hoàn nhập tài sản thuế thu nhập hoãn lại đã ghi nhận từ các năm trước (là số chênh lệch giữa tài sản thuế thu nhập hoãn lại được hoàn nhập trong năm lớn hơn tài sản thuế thu nhập hoãn lại phát sinh trong năm);
+- Kết chuyển chênh lệch giữa số phát sinh trong kỳ của bên Có Tài khoản 8212 lớn hơn số phát sinh trong kỳ của bên Nợ Tài khoản 8212 vào bên Có Tài khoản 911 - Xác định kết quả kinh doanh.
+Bên Có: 
+- Ghi giảm chi phí thuế thu nhập doanh nghiệp hoãn lại tương ứng với ghi nhận tài sản thuế thu nhập hoãn lại (số chênh lệch giữa tài sản thuế thu nhập hoãn lại phát sinh trong năm lớn hơn tài sản thuế thu nhập hoãn lại được hoàn nhập trong năm);
+- Ghi giảm chi phí thuế thu nhập doanh nghiệp hoãn lại tương ứng với hoàn nhập thuế thu nhập hoãn lại phải trả (số chênh lệch giữa thuế thu nhập hoãn lại phải trả được hoàn nhập trong năm lớn hơn thuế thu nhập hoãn lại phải trả phát sinh trong năm);
+- Kết chuyển chênh lệch giữa số phát sinh bên Có Tài khoản 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại nhỏ hơn số phát sinh bên Nợ Tài khoản 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại phát sinh trong kỳ vào bên Nợ Tài khoản 911 - Xác định kết quả kinh doanh.
+Tài khoản 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại không có số dư cuối kỳ.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+3.1. Phương pháp kế toán chi phí thuế thu nhập doanh nghiệp hiện hành
+- Hàng quý, doanh nghiệp phản ánh số thuế thu nhập doanh nghiệp hiện hành tạm phải nộp vào ngân sách Nhà nước (không bao gồm chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định của pháp luật thuế tối thiểu toàn cầu), ghi:
+Nợ TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành
+Có TK 3334 - Thuế thu nhập doanh nghiệp.
+Khi nộp thuế thu nhập doanh nghiệp vào NSNN, ghi:
+Nợ TK 3334 - Thuế thu nhập doanh nghiệp
+Có TK 111, 112,...
+- Cuối năm tài chính, căn cứ vào số thuế thu nhập doanh nghiệp thực tế phải nộp theo tờ khai quyết toán thuế hoặc số thuế do cơ quan thuế thông báo phải nộp (không bao gồm chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định của pháp luật thuế tối thiểu toàn cầu):
++ Nếu số thuế thu nhập doanh nghiệp thực tế phải nộp trong năm lớn hơn số thuế thu nhập doanh nghiệp tạm phải nộp, doanh nghiệp phản ánh bổ sung số thuế thu nhập doanh nghiệp hiện hành còn phải nộp, ghi:
+Nợ TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành
+Có TK 3334 - Thuế thu nhập doanh nghiệp.
++ Nếu số thuế thu nhập doanh nghiệp thực tế phải nộp trong năm nhỏ hơn số thuế thu nhập doanh nghiệp tạm phải nộp, doanh nghiệp ghi giảm chi phí thuế thu nhập doanh nghiệp hiện hành, ghi:
+Nợ TK 3334 - Thuế thu nhập doanh nghiệp
+Có TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành.
+- Trường hợp phát hiện sai sót không trọng yếu của các năm trước liên quan đến thuế thu nhập doanh nghiệp phải nộp của các năm trước, doanh nghiệp được hạch toán tăng (hoặc giảm) số thuế thu nhập doanh nghiệp phải nộp của các năm trước vào chi phí thuế thu nhập hiện hành của năm phát hiện sai sót. 
++ Trường hợp được ghi tăng chi phí thuế thu nhập doanh nghiệp hiện hành của năm hiện tại, ghi:
+Nợ TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành
+Có TK 3334 - Thuế thu nhập doanh nghiệp.
++ Trường hợp được ghi giảm chi phí thuế thu nhập doanh nghiệp hiện hành trong năm hiện tại, ghi:
+Nợ TK 3334 - Thuế thu nhập doanh nghiệp
+Có TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành.
+- Cuối kỳ kế toán, kết chuyển chi phí thuế thu nhập hiện hành, ghi:
++ Nếu TK 8211 có số phát sinh Nợ lớn hơn số phát sinh Có thì số chênh lệch, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành.
++ Nếu TK 8211 có số phát sinh Nợ nhỏ hơn số phát sinh Có thì số chênh lệch, ghi:
+Nợ TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành
+Có TK 911 - Xác định kết quả kinh doanh.
+3.2. Phương pháp kế toán chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu
+a) Đối với doanh nghiệp là đơn vị hợp thành chịu trách nhiệm kê khai:
+- Đơn vị hợp thành chịu trách nhiệm kê khai phải ghi nhận số thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu và phân bổ số thuế cho các đơn vị hợp thành không chịu trách nhiệm kê khai (tiêu thức phân bổ do doanh nghiệp lựa chọn cho phù hợp với đặc điểm và yêu cầu quản lý của đơn vị nhưng phải đảm bảo nhất quán theo quy định của chuẩn mực kế toán), ghi:
+ Nợ TK 82112 - Chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu (tương ứng với nghĩa vụ của đơn vị hợp thành chịu trách nhiệm kê khai)
+Nợ TK 1388 - Phải thu khác (tương ứng với nghĩa vụ của các đơn vị hợp thành không chịu trách nhiệm kê khai)
+		Có TK 3334 - Thuế thu nhập doanh nghiệp.
+Đồng thời, đơn vị hợp thành chịu trách nhiệm kê khai ghi nhận tài sản thuế thu nhập hoãn lại tương ứng với phần ước tính nghĩa vụ chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu của đơn vị:
+Nợ TK 243 - Tài sản thuế thu nhập hoãn lại
+Có TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại.	
+- Khi đơn vị hợp thành thực hiện kê khai số thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu theo tờ khai thuế thu nhập doanh nghiệp bổ sung:
++ Nếu số thuế thu nhập doanh nghiệp bổ sung thực tế phải nộp vào năm kê khai lớn hơn số thuế thu nhập doanh nghiệp bổ sung đã ghi nhận, doanh nghiệp phản ánh số chi phí thuế thu nhập doanh nghiệp phải nộp bổ sung vào năm kê khai, ghi:
+Nợ TK 82112 - Chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu (số phải nộp bổ sung vào năm kê khai tương ứng với nghĩa vụ của đơn vị hợp thành chịu trách nhiệm kê khai)
+Nợ TK 1388 - Phải thu khác (số phải nộp bổ sung vào năm kê khai tương ứng với nghĩa vụ của các đơn vị hợp thành không chịu trách nhiệm kê khai)
+		Có TK 3334 - Thuế thu nhập doanh nghiệp.
++ Nếu số thuế thu nhập doanh nghiệp bổ sung thực tế phải nộp vào năm kê khai nhỏ hơn số thuế thu nhập doanh nghiệp bổ sung đã ghi nhận, doanh nghiệp ghi giảm số chi phí thuế thu nhập doanh nghiệp phải nộp bổ sung vào năm kê khai, ghi:
+Nợ TK 3334 - Thuế thu nhập doanh nghiệp 
+Có TK 82112 - Chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu (số thuế thu nhập doanh nghiệp bổ sung được ghi giảm vào năm kê khai tương ứng với nghĩa vụ của đơn vị hợp thành chịu trách nhiệm kê khai)
+Có TK 1388 - Phải thu khác (số thuế thu nhập doanh nghiệp bổ sung được ghi giảm vào năm kê khai tương ứng với nghĩa vụ của các đơn vị hợp thành không chịu trách nhiệm kê khai).
+- Khi đơn vị hợp thành chịu trách nhiệm kê khai nhận được khoản thanh toán về tiền thuế thu nhập doanh nghiệp bổ sung do các đơn vị hợp thành không chịu trách nhiệm kê khai, căn cứ vào chứng từ có liên quan, ghi:
+Nợ TK 111, 112,...
+Có TK 1388 - Phải thu khác
++ Khi doanh nghiệp nộp thuế vào NSNN, ghi:
+Nợ TK 3334 - Thuế thu nhập doanh nghiệp 
+Có các TK 111, 112,...
+Đồng thời, doanh nghiệp hoàn nhập tài sản thuế thu nhập hoãn lại đã ghi nhận từ trước, ghi:
+Nợ TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại
+Có TK 243 - Tài sản thuế thu nhập hoãn lại.
+b) Đối với doanh nghiệp là đơn vị hợp thành không chịu trách nhiệm kê khai:
+- Khi được thông báo số thuế thu nhập doanh nghiệp bổ sung phải nộp theo quy định về thuế tối thiểu toàn cầu được phân bổ từ đơn vị hợp thành chịu trách nhiệm kê khai, ghi:
+Nợ TK 82112 - Chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu 
+Có TK 3388 - Phải trả, phải nộp khác.
+Đồng thời, đơn vị hợp thành không chịu trách nhiệm kê khai ghi nhận tài sản thuế thu nhập hoãn lại tương ứng với phần ước tính nghĩa vụ chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu của đơn vị:
+Nợ TK 243 - Tài sản thuế thu nhập hoãn lại
+Có TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại.
+- Khi doanh nghiệp trả tiền cho đơn vị hợp thành chịu trách nhiệm kê khai, ghi:
+Nợ TK 3388 - Phải trả, phải nộp khác
+Có TK 111, 112,...
+- Cuối kỳ kế toán, kết chuyển chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành.
+3.3. Phương pháp kế toán chi phí thuế thu nhập doanh nghiệp hoãn lại
+- Chi phí thuế thu nhập doanh nghiệp hoãn lại phát sinh trong năm từ việc ghi nhận thuế thu nhập hoãn lại phải trả (là số chênh lệch giữa thuế thu nhập hoãn lại phải trả phát sinh trong năm lớn hơn thuế thu nhập hoãn lại phải trả được hoàn nhập trong năm), ghi:
+Nợ TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại
+Có TK 347 - Thuế thu nhập hoãn lại phải trả.
+- Chi phí thuế thu nhập doanh nghiệp hoãn lại phát sinh trong năm từ việc hoàn nhập tài sản thuế thu nhập hoãn lại đã ghi nhận từ các năm trước (là số chênh lệch giữa tài sản thuế thu nhập hoãn lại được hoàn nhập trong năm lớn hơn tài sản thuế thu nhập hoãn lại phát sinh trong năm), ghi:
+Nợ TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại
+Có TK 243 - Tài sản thuế thu nhập hoãn lại.
+- Ghi giảm chi phí thuế thu nhập doanh nghiệp hoãn lại (số chênh lệch giữa tài sản thuế thu nhập hoãn lại phát sinh trong năm lớn hơn tài sản thuế thu nhập hoãn lại được hoàn nhập trong năm), ghi:
+Nợ TK 243 - Tài sản thuế thu nhập hoãn lại
+Có TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại.
+- Ghi giảm chi phí thuế thu nhập doanh nghiệp hoãn lại (số chênh lệch giữa thuế thu nhập hoãn lại phải trả được hoàn nhập trong năm lớn hơn thuế thu nhập hoãn lại phải trả phát sinh trong năm), ghi:
+Nợ TK 347 - Thuế thu nhập hoãn lại phải trả
+Có TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại.
+- Cuối kỳ kế toán, kết chuyển số chênh lệch giữa số phát sinh bên Nợ và số phát sinh bên Có TK 8212:
++ Nếu TK 8212 có số phát sinh Nợ lớn hơn số phát sinh Có, thì số chênh lệch ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại.
++ Nếu TK 8212 có số phát sinh Nợ nhỏ hơn số phát sinh Có thì số chênh lệch ghi:
+Nợ TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại
+Có TK 911 - Xác định kết quả kinh doanh.
+TÀI KHOẢN 911 - XÁC ĐỊNH KẾT QUẢ KINH DOANH
+1. Nguyên tắc kế toán
+a) Tài khoản này dùng để xác định và phản ánh kết quả hoạt động kinh doanh và các hoạt động khác của doanh nghiệp trong một kỳ kế toán. Kết quả hoạt động kinh doanh của doanh nghiệp bao gồm: Kết quả hoạt động sản xuất, kinh doanh; Kết quả hoạt động tài chính và kết quả hoạt động khác.
+- Kết quả hoạt động sản xuất, kinh doanh là số chênh lệch giữa doanh thu thuần và trị giá vốn hàng bán, chi phí bán hàng và chi phí quản lý doanh nghiệp. 
+- Kết quả hoạt động tài chính là số chênh lệch giữa doanh thu hoạt động tài chính và chi phí tài chính. 
+- Kết quả hoạt động khác là số chênh lệch giữa các khoản thu nhập khác và các khoản chi phí khác và chi phí thuế thu nhập doanh nghiệp.
+b) Tài khoản này phải phản ánh đầy đủ, chính xác kết quả hoạt động kinh doanh của kỳ kế toán. Tùy theo đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý của doanh nghiệp để hạch toán chi tiết theo từng loại hoạt động (ví dụ như hoạt động sản xuất, chế biến, hoạt động kinh doanh thương mại, dịch vụ, hoạt động tài chính...). Trong từng loại hoạt động kinh doanh có thể hạch toán chi tiết cho từng loại sản phẩm, từng ngành hàng, từng loại dịch vụ.
+c) Các khoản doanh thu và thu nhập được kết chuyển vào tài khoản này là số doanh thu thuần và thu nhập thuần.
+	2. Kết cấu và nội dung phản ánh của Tài khoản 911 - Xác định kết quả kinh doanh
+Bên Nợ: 
+- Kết chuyển trị giá vốn của sản phẩm, hàng hóa và dịch vụ đã bán;
+- Kết chuyển phần chênh lệch giữa giá bán nhỏ hơn giá trị còn lại và chi phí bán, thanh lý BĐSĐT;
+- Kết chuyển chi phí tài chính, chi phí bán hàng, chi phí quản lý doanh nghiệp và chi phí khác;
+- Kết chuyển chi phí thuế thu nhập doanh nghiệp;
+- Kết chuyển lãi.
+Bên Có:
+- Kết chuyển doanh thu thuần về số sản phẩm, hàng hóa và dịch vụ đã bán trong kỳ;
+- Kết chuyển phần chênh lệch giữa giá bán lớn hơn giá trị còn lại và chi phí bán, thanh lý BĐSĐT;
+- Kết chuyển doanh thu hoạt động tài chính, các khoản thu nhập khác;
+- Kết chuyển lỗ.
+Tài khoản 911 không có số dư cuối kỳ.
+3. Phương pháp kế toán một số giao dịch kinh tế chủ yếu
+a) Tại thời điểm kết thúc kỳ kế toán, thực hiện việc kết chuyển số doanh thu bán hàng thuần, doanh thu bán BĐSĐT vào Tài khoản 911 để xác định kết quả kinh doanh, ghi:
+Nợ TK 511 - Doanh thu bán hàng và cung cấp dịch vụ
+Có TK 911 - Xác định kết quả kinh doanh.
+b) Kết chuyển trị giá vốn của sản phẩm, hàng hóa, dịch vụ đã tiêu thụ trong kỳ, chi phí liên quan đến hoạt động kinh doanh BĐSĐT, như chi phí khấu hao, chi phí sửa chữa, nâng cấp, chi phí cho thuê hoạt động, giá trị còn lại và chi phí thanh lý nhượng bán BĐSĐT, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 632 - Giá vốn hàng bán.
+c) Tại thời điểm kết thúc kỳ kế toán, kết chuyển chi phí bán hàng phát sinh trong kỳ, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 641 - Chi phí bán hàng.
+d) Tại thời điểm kết thúc kỳ kế toán, kết chuyển chi phí quản lý doanh nghiệp phát sinh trong kỳ, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 642 - Chi phí quản lý doanh nghiệp.
+đ) Tại thời điểm kết thúc kỳ kế toán, kết chuyển doanh thu hoạt động tài chính và các khoản thu nhập khác, ghi:
+Nợ TK 515 - Doanh thu hoạt động tài chính
+Nợ TK 711 - Thu nhập khác
+Có TK 911 - Xác định kết quả kinh doanh.
+e) Tại thời điểm kết thúc kỳ kế toán, kết chuyển chi phí tài chính và các khoản chi phí khác, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 635 - Chi phí tài chính
+Có TK 811 - Chi phí khác.
+g) Tại thời điểm kết thúc kỳ kế toán, kết chuyển chi phí thuế thu nhập doanh nghiệp hiện hành, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+		Có TK 8211 - Chi phí thuế thu nhập doanh nghiệp hiện hành.
+h) Tại thời điểm kết thúc kỳ kế toán, kết chuyển số chênh lệch giữa số phát sinh bên Nợ và số phát sinh bên Có Tài khoản 8212 - Chi phí thuế thu nhập hoãn lại:
+- Nếu có số phát sinh bên Nợ lớn hơn số phát sinh bên Có Tài khoản 8212, thì kết chuyển số chênh lệch, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+		Có TK 8212 - Chi phí thuế thu nhập hoãn lại. 
+- Nếu số phát sinh Nợ Tài khoản 8212 nhỏ hơn số phát sinh Có Tài khoản 8212, thì kết chuyển số chênh lệch, ghi:
+Nợ TK 8212 - Chi phí thuế thu nhập doanh nghiệp hoãn lại
+		Có TK 911 - Xác định kết quả kinh doanh.
+i) Kết chuyển kết quả hoạt động kinh doanh trong kỳ vào lợi nhuận sau thuế chưa phân phối:
+- Kết chuyển lãi, ghi:
+Nợ TK 911 - Xác định kết quả kinh doanh
+Có TK 421 - Lợi nhuận sau thuế chưa phân phối.
+- Kết chuyển lỗ, ghi: 
+Nợ TK 421 - Lợi nhuận sau thuế chưa phân phối
+Có TK 911 - Xác định kết quả kinh doanh.
+k) Định kỳ, đơn vị trực thuộc được phân cấp theo dõi kết quả kinh doanh trong kỳ nhưng không theo dõi đến lợi nhuận sau thuế chưa phân phối thực hiện kết chuyển kết quả kinh doanh trong kỳ lên doanh nghiệp:
+- Kết chuyển lãi, ghi:
+ Nợ TK 911 - Xác định kết quả kinh doanh 
+Có TK 336 - Phải trả nội bộ.
+- Kết chuyển lỗ, ghi:
+ Nợ TK 336 - Phải trả nội bộ 
+Có TK 911 - Xác định kết quả kinh doanh. 
+
+
+
+
+
+
+(Xem tiếp Công báo số 1575 + 1576)

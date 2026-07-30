@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Tạo / sửa đơn đặt hàng NCC{% endblock %}
+{% block content %}
+<div class="container-fluid py-3" style="max-width:960px">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="fw-bold mb-1" id="pageTitle">Tạo đơn đặt hàng NCC</h4>
+      <a href="{{ url_for('SME_purchase_order_list') }}" class="small">← Danh sách đơn</a>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="btnConfirm" style="display:none">Xác nhận</button>
+      <button type="button" class="btn btn-outline-danger btn-sm" id="btnCancel" style="display:none">Hủy đơn</button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnSave">Lưu</button>
+    </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3"><div class="card-body">
+    <input type="hidden" id="poId">
+    <div class="row g-2">
+      <div class="col-md-3"><label class="form-label small">Số ĐH</label><input id="poNo" class="form-control form-control-sm" readonly placeholder="Tự sinh"></div>
+      <div class="col-md-3"><label class="form-label small">Ngày ĐH *</label><input type="date" id="poDate" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">Ngày nhận dự kiến</label><input type="date" id="expDate" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">Trạng thái</label><input id="poStatus" class="form-control form-control-sm" readonly value="draft"></div>
+      <div class="col-md-6"><label class="form-label small">Nhà cung cấp *</label><input id="supName" class="form-control form-control-sm" list="supList" placeholder="Tên NCC"></div>
+      <datalist id="supList"></datalist>
+      <div class="col-md-3"><label class="form-label small">Mã số thuế</label><input id="supTax" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">Mã NCC</label><input id="supCode" class="form-control form-control-sm"></div>
+      <div class="col-12"><label class="form-label small">Ghi chú</label><textarea id="note" class="form-control form-control-sm" rows="2"></textarea></div>
+    </div>
+  </div></div>
+  <div class="card border-0 shadow-sm"><div class="card-body">
+    <div class="d-flex justify-content-between mb-2">
+      <strong>Chi tiết hàng</strong>
+      <button type="button" class="btn btn-outline-primary btn-sm" id="btnAdd">+ Dòng</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle" id="lineTable">
+        <thead class="table-light"><tr><th>Tên hàng *</th><th style="width:90px">ĐVT</th><th style="width:100px">SL</th><th style="width:120px">Đơn giá</th><th style="width:120px">Thành tiền</th><th></th></tr></thead>
+        <tbody></tbody>
+        <tfoot><tr><td colspan="4" class="text-end fw-semibold">Tổng</td><td class="text-end fw-bold" id="sumAmt">0</td><td></td></tr></tfoot>
+      </table>
+    </div>
+  </div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+  const params=new URLSearchParams(location.search);
+  const editId=params.get('id');
+  const money=v=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:0});
+  const tbody=document.querySelector('#lineTable tbody');
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('poDate').value=today;
+
+  function addRow(ln){
+    ln=ln||{};
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><input class="form-control form-control-sm name" value="${ln.product_name||''}"></td>
+      <td><input class="form-control form-control-sm unit" value="${ln.unit||''}"></td>
+      <td><input type="number" step="any" class="form-control form-control-sm qty" value="${ln.qty||1}"></td>
+      <td><input type="number" step="any" class="form-control form-control-sm price" value="${ln.unit_price||0}"></td>
+      <td class="text-end amt">0</td>
+      <td><button type="button" class="btn btn-sm btn-outline-danger py-0 btnDel">&times;</button></td>`;
+    tbody.appendChild(tr);
+    const recalc=()=>{
+      const q=Number(tr.querySelector('.qty').value||0);
+      const p=Number(tr.querySelector('.price').value||0);
+      tr.querySelector('.amt').textContent=money(q*p);
+      sumAll();
+    };
+    tr.querySelectorAll('.qty,.price').forEach(el=>el.addEventListener('input', recalc));
+    tr.querySelector('.btnDel').addEventListener('click', ()=>{ tr.remove(); sumAll(); });
+    recalc();
+  }
+  function sumAll(){
+    let s=0;
+    tbody.querySelectorAll('tr').forEach(tr=>{
+      const q=Number(tr.querySelector('.qty').value||0);
+      const p=Number(tr.querySelector('.price').value||0);
+      s+=q*p;
+    });
+    document.getElementById('sumAmt').textContent=money(s);
+  }
+  function collectLines(){
+    return Array.from(tbody.querySelectorAll('tr')).map(tr=>({
+      product_name: tr.querySelector('.name').value.trim(),
+      unit: tr.querySelector('.unit').value.trim(),
+      qty: Number(tr.querySelector('.qty').value||0),
+      unit_price: Number(tr.querySelector('.price').value||0),
+    })).filter(x=>x.product_name && x.qty>0);
+  }
+  document.getElementById('btnAdd').addEventListener('click', ()=>addRow());
+
+  async function loadSuppliers(){
+    try{
+      const res=await fetch('/api/suppliers');
+      const rows=await res.json();
+      const list=Array.isArray(rows)?rows:(rows.data||[]);
+      document.getElementById('supList').innerHTML=list.map(s=>`<option value="${s.name||''}">`).join('');
+      const nameEl=document.getElementById('supName');
+      nameEl.addEventListener('change', ()=>{
+        const hit=list.find(s=>s.name===nameEl.value);
+        if(hit){ document.getElementById('supTax').value=hit.tax_code||''; document.getElementById('supCode').value=hit.code||''; }
+      });
+    }catch(e){}
+  }
+
+  async function loadOne(id){
+    const res=await fetch('/api/sme/purchase-orders/'+id);
+    const data=await res.json();
+    if(!data.success){ alert(data.error||'Lỗi'); return; }
+    const d=data.data;
+    document.getElementById('pageTitle').textContent='Sửa đơn '+d.po_no;
+    document.getElementById('poId').value=d.id;
+    document.getElementById('poNo').value=d.po_no||'';
+    document.getElementById('poDate').value=(d.po_date||'').slice(0,10);
+    document.getElementById('expDate').value=(d.expected_date||'').slice(0,10);
+    document.getElementById('poStatus').value=d.status||'draft';
+    document.getElementById('supName').value=d.supplier_name||'';
+    document.getElementById('supTax').value=d.supplier_tax_code||'';
+    document.getElementById('supCode').value=d.supplier_code||'';
+    document.getElementById('note').value=d.note||'';
+    tbody.innerHTML='';
+    (d.lines||[]).forEach(addRow);
+    if(!d.lines||!d.lines.length) addRow();
+    document.getElementById('btnConfirm').style.display = d.status==='draft' ? '' : 'none';
+    document.getElementById('btnCancel').style.display = (d.status==='draft'||d.status==='confirmed') ? '' : 'none';
+  }
+
+  document.getElementById('btnSave').addEventListener('click', async ()=>{
+    const payload={
+      po_date: document.getElementById('poDate').value,
+      expected_date: document.getElementById('expDate').value,
+      supplier_name: document.getElementById('supName').value.trim(),
+      supplier_tax_code: document.getElementById('supTax').value.trim(),
+      supplier_code: document.getElementById('supCode').value.trim(),
+      note: document.getElementById('note').value.trim(),
+      lines: collectLines(),
+    };
+    if(!payload.supplier_name){ alert('Nhập NCC'); return; }
+    if(!payload.lines.length){ alert('Thêm ít nhất một dòng hàng'); return; }
+    const id=document.getElementById('poId').value;
+    const res=await fetch(id?('/api/sme/purchase-orders/'+id):'/api/sme/purchase-orders',{
+      method:id?'PUT':'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload),
+    });
+    const data=await res.json();
+    if(!data.success){ alert(data.error||'Lỗi'); return; }
+    location.href='/SME_purchase_order_create?id='+data.data.id;
+  });
+
+  async function setStatus(status){
+    const id=document.getElementById('poId').value;
+    if(!id) return;
+    const res=await fetch('/api/sme/purchase-orders/'+id+'/status',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({status}),
+    });
+    const data=await res.json();
+    if(!data.success){ alert(data.error||'Lỗi'); return; }
+    loadOne(id);
+  }
+  document.getElementById('btnConfirm').addEventListener('click', ()=>setStatus('confirmed'));
+  document.getElementById('btnCancel').addEventListener('click', ()=>{ if(confirm('Hủy đơn này?')) setStatus('cancelled'); });
+
+  loadSuppliers();
+  if(editId) loadOne(editId); else addRow();
+})();
+</script>
+{% endblock %}

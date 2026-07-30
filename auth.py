@@ -169,7 +169,7 @@ def admin_or_master_required(f):
     def decorated_function(*args, **kwargs):
         role = _session_role()
         # Cho phép nếu là admin HOẶC là master
-        if role not in ['admin', 'admin*', 'adminFB', 'master']:
+        if role not in ['admin', 'admin*', 'adminFB', 'adminSME', 'master']:
             if request.path.startswith('/api/'):
                 return jsonify({"success": False, "error": "Forbidden"}), 403
             return redirect(url_for('sale'))
@@ -215,7 +215,7 @@ def require_permission(target_perm):
 
             # ==================== QUYỀN SIÊU CAO (BYPASS) ====================
             # Master và Admin (không dấu *) có toàn quyền
-            if role in ['master', 'admin', 'adminFB']:
+            if role in ['master', 'admin', 'adminFB', 'adminSME']:
                 return f(*args, **kwargs)
 
             # ==================== KIỂM TRA QUYỀN THỰC TẾ ====================

@@ -1,0 +1,2192 @@
+BỘ TÀI CHÍNH
+
+
+Số: 58/2026/TT-BTC
+  CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM
+Độc lập - Tự do - Hạnh phúc
+
+Hà Nội, ngày 25 tháng 05 năm 2026
+
+
+ 
+
+
+THÔNG TƯ
+Hướng dẫn Chế độ kế toán cho doanh nghiệp siêu nhỏ
+
+Căn cứ Luật Kế toán số 88/2015/QH13;
+Căn cứ Luật sửa đổi, bổ sung một số điều của Luật Chứng khoán, Luật Kế toán, Luật Kiểm toán độc lập, Luật Ngân sách nhà nước, Luật Quản lý, sử dụng tài sản công, Luật Quản lý thuế, Luật Thuế thu nhập cá nhân, Luật Dự trữ quốc gia, Luật Xử lý vi phạm hành chính số 56/2024/QH15; 
+Căn cứ Nghị định số 29/2025/NĐ-CP ngày 24 tháng 02 năm 2025 của Chính phủ quy định chức năng, nhiệm vụ, quyền hạn và cơ cấu tổ chức của Bộ Tài chính được sửa đổi, bổ sung bởi Nghị định số 166/2025/NĐ-CP;
+Theo đề nghị của Cục trưởng Cục Quản lý, giám sát kế toán, kiểm toán; 
+Bộ trưởng Bộ Tài chính ban hành Thông tư hướng dẫn chế độ kế toán cho doanh nghiệp siêu nhỏ.
+
+Chương I
+QUY ĐỊNH CHUNG
+Điều 1. Phạm vi điều chỉnh
+Thông tư này hướng dẫn về chứng từ kế toán, ghi sổ kế toán, lập và trình bày Báo cáo tài chính của doanh nghiệp siêu nhỏ. Việc xác định nghĩa vụ thuế của doanh nghiệp siêu nhỏ được thực hiện theo quy định của pháp luật về thuế.
+Điều 2. Đối tượng áp dụng
+1. Đối tượng áp dụng Thông tư này là các doanh nghiệp siêu nhỏ, trong đó, tiêu chí xác định doanh nghiệp siêu nhỏ thực hiện theo quy định của pháp luật về hỗ trợ doanh nghiệp nhỏ và vừa. 
+2. Hộ kinh doanh, cá nhân kinh doanh nếu có nhu cầu thì được lựa chọn áp dụng Thông tư này để thực hiện công tác kế toán.
+Điều 3. Tổ chức công tác kế toán
+1. Doanh nghiệp siêu nhỏ được bố trí người làm kế toán là cha đẻ, mẹ đẻ, cha nuôi, mẹ nuôi, vợ, chồng, con đẻ, con nuôi, anh, chị, em ruột của người đại diện theo pháp luật, của người đứng đầu, của giám đốc hoặc tổng giám đốc và của cấp phó của người đứng đầu, phó giám đốc hoặc phó tổng giám đốc phụ trách công tác tài chính - kế toán; Người đang làm quản lý, điều hành, thủ kho, thủ quỹ, người được giao nhiệm vụ thường xuyên mua, bán tài sản trong doanh nghiệp siêu nhỏ hoặc thuê dịch vụ làm kế toán cho doanh nghiệp siêu nhỏ theo quy định của pháp luật phù hợp với nhu cầu của doanh nghiệp. 
+2. Doanh nghiệp siêu nhỏ không bắt buộc phải bố trí kế toán trưởng, trường hợp doanh nghiệp siêu nhỏ bố trí phụ trách kế toán thay cho kế toán trưởng thì phụ trách kế toán được ký thay kế toán trưởng tại các chứng từ kế toán, sổ kế toán, báo cáo tài chính của đơn vị.
+Điều 4. Áp dụng chế độ kế toán
+1. Doanh nghiệp siêu nhỏ căn cứ vào phương pháp nộp thuế giá trị gia tăng (GTGT), thuế thu nhập doanh nghiệp (TNDN) theo pháp luật về thuế GTGT, thuế TNDN để thực hiện ghi sổ kế toán theo một trong các trường hợp quy định tại Điều 5, Điều 6, Điều 7, Điều 8 Thông tư này và lập báo cáo tài chính theo hướng dẫn tại Điều 10 Thông tư này. Trường hợp doanh nghiệp siêu nhỏ chuyển đổi phương pháp nộp thuế GTGT, thuế TNDN theo quy định của pháp luật thuế thì áp dụng danh mục sổ kế toán được hướng dẫn tại Thông tư này phù hợp với phương pháp nộp thuế của doanh nghiệp.
+2. Trường hợp trong năm tài chính, doanh nghiệp siêu nhỏ có những thay đổi các tiêu chí dẫn đến không còn thuộc đối tượng áp dụng Thông tư này thì được áp dụng Thông tư này cho đến hết năm tài chính hiện tại và phải áp dụng chế độ kế toán phù hợp với quy định của pháp luật kể từ năm tài chính kế tiếp.
+3. Doanh nghiệp siêu nhỏ được lựa chọn áp dụng chế độ kế toán doanh nghiệp nhỏ và vừa cho phù hợp với đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý của đơn vị nhưng phải áp dụng nhất quán trong một năm tài chính. Việc thay đổi chế độ kế toán áp dụng chỉ được thực hiện tại ngày bắt đầu kỳ kế toán năm tiếp theo.
+4. Trường hợp hộ kinh doanh, cá nhân kinh doanh lựa chọn áp dụng chế độ kế toán theo Thông tư này thì phải áp dụng nhất quán trong một năm tài chính. Việc thay đổi chế độ kế toán áp dụng chỉ được thực hiện tại ngày bắt đầu kỳ kế toán năm tiếp theo.
+5. Trường hợp để phù hợp với đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý, doanh nghiệp siêu nhỏ được thiết kế thêm hoặc sửa đổi, bổ sung biểu mẫu chứng từ kế toán và sổ kế toán so với các biểu mẫu chứng từ kế toán và sổ kế toán được hướng dẫn tại Thông tư này. Biểu mẫu chứng từ kế toán và sổ kế toán của doanh nghiệp khi sửa đổi, bổ sung phải đảm bảo tuân thủ quy định tại Điều 16, các khoản 1, 2, 3, 4 của Điều 24 Luật Kế toán và phải phản ánh đầy đủ, kịp thời, trung thực, minh bạch, để kiểm tra, kiểm soát và đối chiếu được tài sản, nguồn vốn của doanh nghiệp. Doanh nghiệp có phát sinh các chứng từ kế toán thuộc đối tượng điều chỉnh của pháp luật khác thì phải thực hiện theo quy định của pháp luật đó.
+6. Trường hợp doanh nghiệp siêu nhỏ sử dụng hóa đơn điện tử và được hệ thống thông tin quản lý thuế của cơ quan thuế hỗ trợ xác định, thông báo thông tin số thuế GTGT, thuế TNDN, các loại thuế khác phải nộp (nếu có) thì doanh nghiệp siêu nhỏ sử dụng các mẫu sổ kế toán hướng dẫn tại Thông tư này để theo dõi, đối chiếu với số thuế phải nộp theo thông báo của cơ quan thuế.
+Chương II
+QUY ĐỊNH CỤ THỂ
+Điều 5. Doanh nghiệp siêu nhỏ nộp thuế GTGT và thuế TNDN theo tỷ lệ phần trăm (%) trên doanh thu
+1. Chứng từ kế toán
+Doanh nghiệp siêu nhỏ sử dụng hóa đơn và các chứng từ kế toán khác theo quy định của pháp luật kế toán, pháp luật thuế làm căn cứ xác định doanh thu.
+2. Sổ kế toán	
+2.1. Trường hợp này, doanh nghiệp siêu nhỏ áp dụng Sổ doanh thu bán hàng hóa, dịch vụ (Mẫu số S1-DNSN) để ghi doanh thu bán hàng hóa, dịch vụ.
+2.2. Biểu mẫu sổ kế toán, nội dung và phương pháp ghi sổ kế toán
+a) Biểu mẫu sổ kế toán 
+ĐƠN VỊ:.............................
+Địa chỉ:...............................
+Mẫu số S1-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+SỔ DOANH THU BÁN HÀNG HÓA, DỊCH VỤ
+Năm:................
+Đơn vị tính:.....
+
+Hóa đơn, Chứng từ
+Diễn giải
+Số tiền
+
+Số hiệu
+Ngày, tháng
+
+
+
+A
+B
+C
+1
+
+
+
+1. Nhóm hàng hóa, dịch vụ, ngành nghề ....
+
+
+
+
+.....
+
+
+
+
+Tổng cộng (1)
+
+
+
+
+Thuế GTGT
+
+
+
+
+Thuế TNDN
+
+
+
+
+2. Nhóm hàng hóa, dịch vụ, ngành nghề  ....
+
+
+
+
+.....
+
+
+
+
+Tổng cộng (2)
+
+
+
+
+Thuế GTGT
+
+
+
+
+Thuế TNDN
+
+
+
+
+3. Nhóm hàng hóa, dịch vụ, ngành nghề....
+
+
+
+
+.....
+
+
+
+
+Tổng cộng (3)
+
+
+
+
+Thuế GTGT
+
+
+
+
+Thuế TNDN
+
+
+
+
+Tổng số thuế GTGT phải nộp
+
+
+
+
+Tổng số thuế TNDN phải nộp
+
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+b) Nội dung: Sổ này được mở để ghi doanh thu bán hàng hóa, cung cấp dịch vụ trong kỳ theo từng nhóm hàng hóa, dịch vụ, ngành nghề có cùng tỷ lệ % tính thuế GTGT hoặc cùng tỷ lệ % tính thuế TNDN. Trường hợp doanh nghiệp siêu nhỏ có nhiều nhóm hàng hóa, dịch vụ, ngành nghề khác nhau thì sổ này có thể mở cho từng nhóm hàng hóa, dịch vụ, ngành nghề có cùng tỷ lệ % tính thuế GTGT hoặc cùng tỷ lệ % tính thuế TNDN.  
+c) Phương pháp ghi sổ
+- Cột A, B: Ghi số hiệu, ngày, tháng của hóa đơn, chứng từ.
+- Cột C: Ghi diễn giải nội dung nghiệp vụ phát sinh doanh thu bán hàng hóa, dịch vụ. Tùy theo yêu cầu quản lý, doanh nghiệp siêu nhỏ có thể ghi doanh thu theo từng hóa đơn, chứng từ hoặc theo số tổng cộng kèm theo bảng dữ liệu chi tiết về hóa đơn, chứng từ theo quy định của pháp luật.
+- Cột 1: Ghi số tiền bán hàng hóa, dịch vụ theo từng nhóm hàng hóa, dịch vụ, ngành nghề để làm căn cứ xác định doanh thu bán hàng hóa, cung cấp dịch vụ có cùng tỷ lệ % tính thuế GTGT hoặc cùng tỷ lệ % tính thuế TNDN. Trên cơ sở doanh thu bán hàng hóa, dịch vụ trong kỳ, doanh nghiệp siêu nhỏ xác định số thuế GTGT, thuế TNDN phải nộp theo quy định của pháp luật thuế. Dòng cuối cùng ghi tổng số thuế GTGT, thuế TNDN phải nộp trong kỳ.
+Điều 6. Doanh nghiệp siêu nhỏ nộp thuế GTGT theo tỷ lệ % trên doanh thu và nộp thuế TNDN trên thu nhập tính thuế  
+1. Chứng từ kế toán 
+Doanh nghiệp siêu nhỏ sử dụng hóa đơn, Bảng kê thu mua hàng hóa, dịch vụ không có hóa đơn và các chứng từ kế toán khác theo quy định của pháp luật kế toán, pháp luật thuế làm căn cứ xác định các khoản doanh thu, thu nhập, các khoản chi phí và số thuế GTGT, thuế TNDN phải nộp, đã nộp trong kỳ.
+2. Sổ kế toán
+2.1. Trường hợp này, doanh nghiệp siêu nhỏ áp dụng các sổ kế toán theo danh mục sau đây
+STT
+Tên sổ kế toán
+Ký hiệu
+
+1
+Sổ doanh thu bán hàng hóa, dịch vụ
+Mẫu số S2a-DNSN
+
+2
+Sổ chi tiết doanh thu, chi phí 
+Mẫu số S2b-DNSN
+
+3
+Sổ chi tiết vật liệu, dụng cụ, sản phẩm, hàng hóa
+Mẫu số S2c-DNSN
+
+4
+Sổ chi tiết tiền
+Mẫu số S2d-DNSN
+
+
+ 2.2. Biểu mẫu sổ kế toán, nội dung và phương pháp ghi sổ kế toán
+ a) Sổ doanh thu bán hàng hóa, dịch vụ (Mẫu số S2a-DNSN)
+ a1) Biểu mẫu sổ kế toán
+ĐƠN VỊ:.............................
+Địa chỉ:...............................
+Mẫu số S2a-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+SỔ DOANH THU BÁN HÀNG HÓA, DỊCH VỤ
+Năm:................
+Đơn vị tính:.....
+
+Hóa đơn, Chứng từ
+Diễn giải
+Số tiền
+
+Số hiệu
+Ngày, tháng
+
+
+
+A
+B
+C
+1
+
+
+
+Số thuế GTGT còn phải nộp đầu kỳ (1)
+
+
+
+
+ Số phát sinh trong kỳ
+
+
+
+
+A. Nhóm hàng hóa, dịch vụ, ngành nghề ....
+
+
+
+
+.....
+
+
+
+
+Tổng cộng (1)
+
+
+
+
+Thuế GTGT
+
+
+
+
+B. Nhóm hàng hóa, dịch vụ, ngành nghề ....
+
+
+
+
+.....
+
+
+
+
+Tổng cộng (2)
+
+
+
+
+Thuế GTGT
+
+
+
+
+C. Nhóm hàng hóa, dịch vụ, ngành nghề ....
+
+
+
+
+.....
+
+
+
+
+Tổng cộng (3)
+
+
+
+
+Thuế GTGT
+
+
+
+
+Tổng số thuế GTGT phải nộp trong kỳ (2)
+
+
+
+
+Số thuế GTGT đã nộp trong kỳ (3)
+
+
+
+
+Số thuế GTGT còn phải nộp cuối kỳ {(4)= (1) + (2) - (3)}
+
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+a2) Nội dung 
+Sổ này được mở để ghi doanh thu bán hàng hóa, cung cấp dịch vụ trong kỳ theo từng nhóm hàng hóa, dịch vụ, ngành nghề kinh doanh có cùng tỷ lệ % tính thuế GTGT. Trường hợp doanh nghiệp siêu nhỏ có nhiều nhóm hàng hóa, dịch vụ, ngành nghề khác nhau thì sổ này có thể mở cho từng nhóm hàng hóa, dịch vụ, ngành nghề có cùng tỷ lệ % tính thuế GTGT.
+a3) Phương pháp ghi sổ
+- Cột A, B: Ghi số hiệu, ngày, tháng của hóa đơn, chứng từ.
+- Cột C: Ghi diễn giải nội dung doanh thu bán hàng hóa, dịch vụ theo từng nhóm hàng hóa, dịch vụ, ngành nghề có cùng tỷ lệ % tính thuế GTGT. Doanh nghiệp siêu nhỏ có thể ghi doanh thu theo từng hóa đơn, chứng từ hoặc theo số tổng cộng kèm theo bảng dữ liệu chi tiết về hóa đơn, chứng từ theo quy định của pháp luật.
+- Cột 1: Ghi số tiền bán hàng hóa, dịch vụ theo từng nhóm hàng hóa, dịch vụ, ngành nghề để làm căn cứ xác định doanh thu bán hàng hóa, dịch vụ theo từng ngành, nghề có cùng tỷ lệ % tính thuế GTGT. Trên cơ sở doanh thu bán hàng hóa, dịch vụ trong kỳ, doanh nghiệp siêu nhỏ xác định số thuế GTGT phải nộp theo quy định của pháp luật thuế. 
+- Dòng “Số thuế GTGT còn phải nộp đầu kỳ”: Doanh nghiệp siêu nhỏ căn cứ số thuế GTGT còn phải nộp cuối kỳ trước chuyển sang để theo dõi, phản ánh số thuế GTGT còn phải nộp đầu kỳ.
+- Dòng “Số phát sinh trong kỳ”: Doanh nghiệp siêu nhỏ phản ánh doanh thu bán hàng hóa, dịch vụ theo từng nhóm hàng hóa, dịch vụ, ngành nghề hoặc theo từng giao dịch có cùng tỷ lệ % tính thuế GTGT phát sinh trong kỳ.
+- Dòng “Tổng số thuế GTGT phải nộp trong kỳ”: Doanh nghiệp siêu nhỏ căn cứ số thuế GTGT phải nộp theo từng ngành, nghề có cùng tỷ lệ % tính thuế GTGT để xác định tổng số thuế GTGT phải nộp trong kỳ.
+- Dòng “Số thuế GTGT đã nộp trong kỳ”: Doanh nghiệp siêu nhỏ ghi số thuế GTGT đã nộp trong kỳ.
+- Dòng “Số thuế GTGT còn phải nộp cuối kỳ”: Doanh nghiệp siêu nhỏ căn cứ chênh lệch của số thuế GTGT còn phải nộp đầu kỳ, số thuế GTGT phải nộp trong kỳ, số thuế GTGT đã nộp trong kỳ để xác định số thuế GTGT còn phải nộp cuối kỳ chuyển sang kỳ sau.
+b) Sổ chi tiết doanh thu, chi phí (Mẫu số S2b-DNSN)
+b1) Biểu mẫu sổ kế toán 
+ĐƠN VỊ:.............................
+Địa chỉ:...............................
+Mẫu số S2b-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+SỔ CHI TIẾT DOANH THU, CHI PHÍ
+Năm:................
+ Đơn vị tính:.....
+
+Hóa đơn, Chứng từ
+Diễn giải
+Số tiền
+
+Số hiệu
+Ngày, tháng
+
+
+
+A
+B
+C
+1
+
+
+
+Số thuế TNDN còn phải nộp đầu kỳ (1)
+
+
+
+
+Số phát sinh trong kỳ
+
+
+
+
+1. Doanh thu và thu nhập
+
+
+
+
+2. Chi phí 
+
+
+
+
+Chi phí nguyên liệu, vật liệu, nhiên liệu, năng lượng, hàng hóa sử dụng vào sản xuất, kinh doanh
+
+
+
+
+Chi phí tiền lương, tiền công, các khoản phụ cấp, bảo hiểm bắt buộc và các khoản chi trả cho người lao động có đóng bảo hiểm bắt buộc theo quy định; chi phí tiền lương, tiền công, các khoản phụ cấp và các khoản chi trả cho người lao động dưới 01 tháng
+
+
+
+
+Chi phí khấu hao tài sản cố định phục vụ cho hoạt động sản xuất, kinh doanh theo chế độ quản lý, sử dụng và trích khấu hao tài sản cố định
+
+
+
+
+Chi phí dịch vụ mua ngoài như điện, nước, điện thoại, internet, vận chuyển, thuê tài sản, sửa chữa, bảo dưỡng.
+
+
+
+
+đ) Chi phí trả lãi tiền vay vốn sản xuất, kinh doanh của tổ chức tín dụng,...
+
+
+
+
+e) Các khoản chi khác phục vụ trực tiếp hoạt động sản xuất, kinh doanh..............
+
+
+
+
+Tổng số thuế TNDN phải nộp trong kỳ (2)
+
+
+
+
+Số thuế TNDN đã nộp trong kỳ (3)
+
+
+
+
+Số thuế TNDN còn phải nộp cuối kỳ {(4)=(1) +(2) - (3)}
+
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+
+b2) Nội dung 
+Sổ này được mở để theo dõi doanh thu, thu nhập và chi phí phát sinh trong hoạt động sản xuất, kinh doanh và hoạt động khác của doanh nghiệp siêu nhỏ. Trên cơ sở doanh thu, thu nhập và các khoản chi phí, doanh nghiệp siêu nhỏ xác định số thuế TNDN phải nộp theo quy định của pháp luật thuế. 
+b3) Phương pháp ghi sổ
+- Cột A, B: Ghi số hiệu, ngày, tháng của hóa đơn, chứng từ.
+- Cột C: Ghi diễn giải nội dung nghiệp vụ phát sinh. 
+- Cột 1: Ghi số tiền phù hợp với từng nội dung nêu tại cột C.
+- Dòng “Số thuế TNDN còn phải nộp đầu kỳ”: Doanh nghiệp siêu nhỏ căn cứ vào số thuế TNDN phải nộp kỳ trước chuyển sang để theo dõi, phản ánh số thuế TNDN còn phải nộp đầu kỳ.
+- Dòng “Số phát sinh trong kỳ”: Doanh nghiệp siêu nhỏ phản ánh doanh thu, thu nhập, chi phí từ hoạt động bán hàng hóa, dịch vụ và hoạt động khác phát sinh trong kỳ.
+- Dòng “1. Doanh thu và thu nhập”: Doanh nghiệp siêu nhỏ căn cứ vào hóa đơn, chứng từ để ghi doanh thu, thu nhập phát sinh từ hoạt động bán hàng hóa, dịch vụ và hoạt động khác theo từng hóa đơn, chứng từ hoặc theo số tổng cộng kèm theo bảng dữ liệu chi tiết về hóa đơn, chứng từ theo quy định của pháp luật.
+- Dòng “2. Chi phí”: Doanh nghiệp siêu nhỏ căn cứ vào hóa đơn, chứng từ liên quan để ghi tổng chi phí phát sinh trong kỳ theo từng nghiệp vụ phát sinh.
+- Dòng “Tổng số thuế TNDN phải nộp trong kỳ”: Doanh nghiệp siêu nhỏ căn cứ vào thông tin chi tiết trong phần “1. Doanh thu và thu nhập”, “2. Chi phí” để xác định thu nhập tính thuế TNDN và căn cứ vào thuế suất thuế TNDN tương ứng với từng hoạt động theo quy định của pháp luật thuế để xác định tổng số thuế TNDN phải nộp trong kỳ.
+- Dòng “Số thuế TNDN đã nộp trong kỳ”: Doanh nghiệp siêu nhỏ ghi số tiền thuế TNDN đã tạm nộp trong kỳ.
+- Dòng “Số thuế TNDN còn phải nộp cuối kỳ”: Doanh nghiệp siêu nhỏ căn cứ số thuế TNDN còn phải nộp hoặc được hoàn của kỳ trước; chênh lệch giữa tổng số thuế TNDN phải nộp và số thuế TNDN đã tạm nộp trong kỳ để xác định số tiền thuế TNDN còn phải nộp cuối kỳ để chuyển sang kỳ sau.
+c) Sổ chi tiết vật liệu, dụng cụ, sản phẩm, hàng hóa (Mẫu số S2c-DNSN)
+c1) Biểu mẫu sổ kế toán
+ĐƠN VỊ:..............................
+Địa chỉ:................................
+Mẫu số S2c-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+SỔ CHI TIẾT VẬT LIỆU, DỤNG CỤ, SẢN PHẨM, HÀNG HÓA
+ Tên vật liệu, dụng cụ, sản phẩm, hàng hóa.....................
+Kho:……...................
+
+Hóa đơn, Chứng từ
+Diễn giải
+Đơn vị tính
+
+Đơn giá
+Nhập
+Xuất
+Tồn
+Ghi chú
+
+Số hiệu
+Ngày, tháng
+
+
+
+Số lượng
+Thành tiền
+Số lượng
+Thành tiền
+Số lượng
+Thành tiền
+
+
+A
+B
+C
+D
+1
+2
+3
+4
+5
+6
+7
+8
+
+
+
+Số dư đầu kỳ
+X
+X
+
+
+
+
+
+
+X
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Cộng phát sinh trong kỳ
+
+
+
+
+
+
+
+
+
+
+
+
+Số dư cuối kỳ
+X
+ X
+
+
+
+
+
+
+X
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+c2) Nội dung 
+Sổ này được mở để theo dõi, quản lý về tình hình nhập, xuất, tồn kho cho từng vật liệu, dụng cụ, sản phẩm, hàng hóa.
+c3) Phương pháp ghi sổ
+- Cột A, B: Ghi số hiệu, ngày, tháng của hóa đơn, chứng từ. 
+- Cột C: Ghi diễn giải nội dung nghiệp vụ phát sinh.
+- Cột D: Đơn vị tính của từng vật liệu, dụng cụ, sản phẩm, hàng hóa.
+- Cột 1: Ghi đơn giá nhập, xuất, tồn của từng vật liệu, dụng cụ, sản phẩm, hàng hóa. Trong đó, đơn giá nhập kho của từng vật liệu, dụng cụ, sản phẩm, hàng hóa căn cứ vào chứng từ nhập vật liệu, dụng cụ, sản phẩm, hàng hóa theo từng nguồn nhập.
+Đơn giá xuất kho được tính riêng cho từng loại vật liệu, dụng cụ, sản phẩm, hàng hóa theo công thức sau:
+        Đơn giá 
+        xuất kho  
+
+=
+(Giá trị hàng tồn đầu kỳ + Giá trị hàng nhập trong kỳ)
+
+
+
+(Số lượng hàng tồn đầu kỳ + Số lượng hàng nhập trong kỳ)
+
+- Cột 2: Ghi số lượng của từng vật liệu, dụng cụ, sản phẩm, hàng hóa nhập kho.
+- Cột 3: Ghi giá trị (thành tiền) của từng vật liệu, dụng cụ, sản phẩm, hàng hóa nhập kho (Cột 3 = Cột 1 x Cột 2).
+- Cột 4: Ghi số lượng của từng vật liệu, dụng cụ, sản phẩm, hàng hóa xuất kho.
+- Cột 5: Ghi giá trị (thành tiền) của từng vật liệu, dụng cụ, sản phẩm, hàng hóa xuất kho (Cột 5 = Cột 1 x Cột 4).
+- Cột 6: Ghi số lượng của từng vật liệu, dụng cụ, sản phẩm, hàng hóa tồn kho.
+- Cột 7: Ghi giá trị (thành tiền) của từng vật liệu, dụng cụ, sản phẩm, hàng hóa tồn kho (Cột 7 = Cột 1 x Cột 6).
+d) Sổ chi tiết tiền (Mẫu số S2d-DNSN)
+d1) Biểu mẫu sổ kế toán
+ĐƠN VỊ:.............................
+Địa chỉ:...............................
+Mẫu số S2d-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+SỔ CHI TIẾT TIỀN
+Năm: ................
+	                                                				  Đơn vị tính:.....
+
+Hóa đơn, Chứng từ
+Diễn giải
+Số tiền
+
+Số hiệu
+Ngày tháng
+
+Thu/Gửi vào
+Chi/Rút ra
+
+A
+B
+C
+1
+2
+
+
+
+Tiền mặt
+
+
+
+
+
+Tiền mặt tồn đầu kỳ
+
+
+
+
+
+....
+
+
+
+
+
+Tổng tiền thu vào trong kỳ
+
+
+
+
+
+Tổng tiền chi ra trong kỳ
+
+
+
+
+
+Tiền mặt tồn cuối kỳ
+
+
+
+
+
+Tiền gửi không kỳ hạn
+
+
+
+
+
+Ngân hàng....
+
+
+
+
+
+Tiền gửi tồn đầu kỳ
+
+
+
+
+
+....
+
+
+
+
+
+Tổng tiền gửi vào trong kỳ
+
+
+
+
+
+Tổng tiền rút ra trong kỳ
+
+
+
+
+
+Tiền gửi tồn cuối kỳ 
+
+
+
+
+
+         Ngày … tháng … năm …
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+d2) Nội dung 
+Sổ này được mở để theo dõi tình hình thu, chi bằng tiền mặt hoặc tiền gửi không kỳ hạn (tiền gửi để thanh toán) trong tài khoản của doanh nghiệp siêu nhỏ tại các ngân hàng và tổ chức cung ứng dịch vụ thanh toán theo quy định của pháp luật. Doanh nghiệp có thể mở sổ này chi tiết theo từng loại tiền (tiền mặt, tiền gửi không kỳ hạn). Đối với tiền gửi không kỳ hạn, sổ này có thể được mở để theo dõi riêng số tiền gửi tại từng ngân hàng hoặc từng tổ chức cung ứng dịch vụ thanh toán.
+d3) Phương pháp ghi sổ
+- Cột A, B: Ghi số hiệu, ngày, tháng của hóa đơn, chứng từ.
+- Cột C: Ghi diễn giải nội dung nghiệp vụ phát sinh. 
+- Cột 1, 2: Ghi số tiền thu, chi tiền mặt hoặc số tiền gửi không kỳ hạn gửi vào, rút ra.
+Cuối kỳ, doanh nghiệp siêu nhỏ tính ra số tiền mặt thu, chi, tồn quỹ và số tiền gửi không kỳ hạn gửi vào, rút ra, dư cuối kỳ.
+Điều 7. Doanh nghiệp siêu nhỏ nộp thuế GTGT theo phương pháp khấu trừ và thuế TNDN theo tỷ lệ % trên doanh thu
+1. Chứng từ kế toán
+Doanh nghiệp siêu nhỏ sử dụng hóa đơn, Bảng kê thu mua hàng hóa, dịch vụ không có hóa đơn và các chứng từ kế toán khác theo quy định của pháp luật kế toán, pháp luật thuế làm căn cứ xác định doanh thu.
+2. Sổ kế toán
+2.1. Trường hợp này, doanh nghiệp siêu nhỏ áp dụng các sổ kế toán theo danh mục sau đây
+
+STT
+Tên sổ kế toán
+Ký hiệu
+
+1
+Sổ doanh thu bán hàng hóa, dịch vụ 
+Mẫu số S3a- DNSN
+
+2
+Sổ theo dõi nghĩa vụ thuế GTGT 
+Mẫu số S3b- DNSN
+
+
+2.2. Biểu mẫu sổ kế toán, nội dung và phương pháp ghi sổ kế toán
+a) Sổ doanh thu bán hàng hóa, dịch vụ (Mẫu số S3a- DNSN) 
+a1) Biểu mẫu sổ kế toán
+
+
+ĐƠN VỊ:.............................
+Địa chỉ:...............................
+Mẫu số S3a-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+SỔ DOANH THU BÁN HÀNG HÓA, DỊCH VỤ
+Năm:................
+Đơn vị tính:.....
+
+Hóa đơn, Chứng từ
+Diễn giải
+Số tiền
+
+Số hiệu
+Ngày, tháng
+
+
+
+A
+B
+C
+1
+
+
+
+Số thuế TNDN còn phải nộp đầu kỳ (1)
+
+
+
+
+Số phát sinh trong kỳ
+
+
+
+
+A. Nhóm hàng hóa, dịch vụ, ngành nghề ....
+
+
+
+
+.....
+
+
+
+
+Tổng cộng (1)
+
+
+
+
+Thuế TNDN
+
+
+
+
+B. Nhóm hàng hóa, dịch vụ, ngành nghề ....
+
+
+
+
+.....
+
+
+
+
+Tổng cộng (2)
+
+
+
+
+Thuế TNDN
+
+
+
+
+Tổng số thuế TNDN phải nộp trong kỳ (2)
+
+
+
+
+Số thuế TNDN đã nộp trong kỳ (3)
+
+
+
+
+Số thuế TNDN còn phải nộp cuối kỳ {(4)= (1)+(2)-(3)}
+
+
+
+
+Ngày … tháng … năm …
+
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+a2) Nội dung 
+Sổ này được mở để ghi doanh thu bán hàng hóa, cung cấp dịch vụ trong kỳ theo từng nhóm hàng hóa, dịch vụ, ngành nghề kinh doanh có cùng tỷ lệ % tính thuế TNDN. Trường hợp doanh nghiệp siêu nhỏ có nhiều nhóm hàng hóa, dịch vụ, ngành nghề khác nhau thì sổ này có thể mở cho từng nhóm hàng hóa, dịch vụ, ngành nghề có cùng tỷ lệ % tính thuế TNDN.
+a3) Phương pháp ghi sổ
+- Cột A, B: Ghi số hiệu, ngày, tháng của hóa đơn, chứng từ.
+- Cột C: Ghi diễn giải nội dung doanh thu bán hàng hóa, dịch vụ theo từng nhóm hàng hóa, dịch vụ, ngành nghề có cùng tỷ lệ % tính thuế TNDN. 
+- Cột 1: Ghi số tiền bán hàng hóa, dịch vụ theo từng nhóm hàng hóa, dịch vụ, ngành nghề để làm căn cứ xác định doanh thu bán hàng hóa, dịch vụ theo từng nhóm hàng hóa, dịch vụ, ngành nghề có cùng tỷ lệ % tính thuế TNDN.  
+- Dòng “Số thuế TNDN còn phải nộp đầu kỳ”: Doanh nghiệp siêu nhỏ căn cứ số thuế TNDN phải nộp kỳ trước chuyển sang để theo dõi, phản ánh số thuế TNDN còn phải nộp đầu kỳ.
+- Dòng “Số phát sinh trong kỳ”: Doanh nghiệp siêu nhỏ phản ánh doanh thu bán hàng hóa, dịch vụ theo từng nhóm hàng hóa, dịch vụ, ngành nghề hoặc theo từng giao dịch có cùng tỷ lệ % tính thuế TNDN phát sinh trong kỳ. Doanh nghiệp siêu nhỏ có thể ghi doanh thu theo từng hóa đơn, chứng từ hoặc theo số tổng cộng kèm theo bảng dữ liệu chi tiết về hóa đơn, chứng từ theo quy định của pháp luật. 
+- Dòng “Tổng số thuế TNDN phải nộp trong kỳ”: Trên cơ sở doanh thu bán hàng hóa, dịch vụ trong kỳ, doanh nghiệp siêu nhỏ xác định số tiền thuế TNDN phải nộp theo từng ngành, nghề hoặc theo từng giao dịch có cùng tỷ lệ % tính thuế TNDN để xác định tổng số thuế TNDN phải nộp trong kỳ theo quy định của pháp luật thuế. 
+- Dòng “Số thuế TNDN đã nộp trong kỳ”: Doanh nghiệp siêu nhỏ ghi số tiền thuế TNDN đã tạm nộp trong kỳ.
+- Dòng “Số thuế TNDN còn phải nộp cuối kỳ”: Doanh nghiệp siêu nhỏ căn cứ số thuế TNDN còn phải nộp kỳ trước; số thuế TNDN phải nộp và số thuế TNDN đã tạm nộp trong kỳ để xác định số tiền thuế TNDN còn phải nộp cuối kỳ chuyển sang kỳ sau.
+b) Sổ theo dõi nghĩa vụ thuế GTGT (Mẫu số S3b- DNSN)
+b1) Biểu mẫu sổ kế toán 
+
+ĐƠN VỊ:..............................
+Địa chỉ:...........................
+Mẫu số S3b-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+
+SỔ THEO DÕI NGHĨA VỤ THUẾ GTGT
+Năm: ................
+
+
+
+
+Đơn vị tính:.....
+
+Hóa đơn, chứng từ
+Diễn giải
+Số thuế GTGT đầu vào
+Số thuế GTGT đầu ra 
+
+Số  hiệu
+Ngày, tháng
+
+
+
+
+A
+B
+C
+1
+2
+
+
+
+Số dư đầu kỳ
+
+
+
+
+
+
+Số thuế GTGT còn được khấu trừ hoặc được hoàn đầu kỳ
+
+
+
+
+
+Số thuế GTGT còn phải nộp đầu kỳ
+
+
+
+
+
+Số phát sinh trong kỳ
+
+
+
+
+
+…
+
+
+
+
+
+…
+
+
+
+
+
+…
+
+
+
+
+
+Cộng số phát sinh trong kỳ
+
+
+
+
+
+Tổng số thuế GTGT phải nộp trong kỳ (2)
+
+
+
+
+
+...
+
+
+
+
+
+Số thuế GTGT đã nộp trong kỳ (3) 
+
+
+
+
+
+...
+
+
+
+
+
+Số thuế GTGT đã được hoàn trong kỳ (4)
+
+
+
+
+
+...
+
+
+
+
+
+Số dư cuối kỳ
+
+
+
+
+
+Số thuế GTGT còn được khấu trừ hoặc được hoàn cuối kỳ
+
+
+
+
+
+
+Số thuế GTGT còn phải nộp cuối kỳ
+
+
+
+
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+b2) Nội dung 
+Sổ này được mở để theo dõi tình hình thực hiện nghĩa vụ thuế GTGT mà doanh nghiệp siêu nhỏ phải nộp, đã nộp và còn phải nộp. Thông tin, số liệu trên sổ này làm căn cứ để cơ quan thuế xác định doanh nghiệp có nộp thuế đúng, đủ và kịp thời vào ngân sách nhà nước theo quy định của pháp luật thuế hay không.
+b3) Phương pháp ghi sổ
+- Cột A, B: Ghi số hiệu, ngày, tháng của hóa đơn, chứng từ.
+- Cột C: Ghi nội dung nghiệp vụ kinh tế phát sinh. 
+- Dòng “Số dư đầu kỳ”: Doanh nghiệp siêu nhỏ căn cứ nghĩa vụ thuế GTGT cuối kỳ trước chuyển sang là số thuế GTGT còn được khấu trừ hoặc được hoàn hoặc là số thuế GTGT còn phải nộp để ghi dòng số dư đầu kỳ tương ứng với cột 1 hoặc cột 2.
+- Dòng “Số phát sinh trong kỳ”: Doanh nghiệp siêu nhỏ căn cứ vào hóa đơn, chứng từ phát sinh trong kỳ liên quan đến số thuế GTGT đầu vào được khấu trừ để ghi nhận vào cột 1, liên quan đến số thuế GTGT đầu ra để ghi nhận vào cột 2.
+- Dòng “Tổng số thuế GTGT phải nộp trong kỳ”: Doanh nghiệp siêu nhỏ căn cứ chênh lệch giữa số thuế GTGT đầu ra và số thuế GTGT đầu vào được khấu trừ để xác định số thuế GTGT phải nộp trong kỳ.
+- Dòng “Số thuế GTGT đã nộp trong kỳ”: Doanh nghiệp siêu nhỏ phản ánh số thuế GTGT doanh nghiệp đã nộp trong kỳ.
+- Dòng “Số thuế GTGT đã được hoàn trong kỳ”: Doanh nghiệp siêu nhỏ phản ánh số thuế GTGT doanh nghiệp đã được hoàn trong kỳ.
+- Dòng “Số dư cuối kỳ”: Doanh nghiệp siêu nhỏ căn cứ vào số thuế GTGT còn được khấu trừ hoặc được hoàn cuối kỳ để ghi nhận vào dòng “Số thuế GTGT còn được khấu trừ hoặc được hoàn cuối kỳ” tại cột 1; căn cứ vào số thuế GTGT còn phải nộp cuối kỳ để ghi nhận vào dòng “Số thuế GTGT còn phải nộp cuối kỳ” tại cột 2. Trong đó:
++ Số thuế GTGT còn được khấu trừ hoặc được hoàn cuối kỳ = Số thuế GTGT đầu vào dư đầu kỳ + Số thuế GTGT đầu vào phát sinh trong kỳ - Số thuế GTGT đầu ra phát sinh trong kỳ + Số thuế GTGT đã nộp trong kỳ - Số thuế GTGT đã được hoàn trong kỳ.
++ Số thuế GTGT còn phải nộp cuối kỳ = Số thuế GTGT đầu ra phải nộp dư đầu kỳ + Số thuế GTGT đầu ra phát sinh trong kỳ - Số thuế GTGT đầu vào phát sinh trong kỳ - Số thuế GTGT đã nộp trong kỳ + Số thuế GTGT đã được hoàn trong kỳ.
+Điều 8. Doanh nghiệp siêu nhỏ nộp thuế GTGT theo phương pháp khấu trừ và nộp thuế TNDN trên thu nhập tính thuế
+1. Chứng từ kế toán 
+Doanh nghiệp siêu nhỏ sử dụng hóa đơn, Bảng kê thu mua hàng hóa, dịch vụ không có hóa đơn và các chứng từ kế toán khác theo quy định của pháp luật kế toán, pháp luật thuế làm căn cứ xác định các khoản doanh thu, thu nhập, các khoản chi phí và số thuế GTGT, thuế TNDN phải nộp, đã nộp trong kỳ.
+2. Sổ kế toán
+2.1. Trường hợp này, doanh nghiệp siêu nhỏ áp dụng các sổ kế toán theo danh mục sau đây:
+STT
+Tên sổ kế toán
+Ký hiệu
+
+1
+Sổ chi tiết doanh thu, chi phí 
+Mẫu số S2b-DNSN
+
+2
+Sổ chi tiết vật liệu, dụng cụ, sản phẩm, hàng hóa
+Mẫu số S2c-DNSN
+
+3
+Sổ chi tiết tiền
+Mẫu số S2d-DNSN
+
+4
+Sổ theo dõi nghĩa vụ thuế GTGT
+Mẫu số S3b-DNSN
+
+
+2.2. Biểu mẫu sổ kế toán, nội dung và phương pháp ghi sổ kế toán 
+a) Sổ chi tiết doanh thu, chi phí (Mẫu số S2b-DNSN)
+Biểu mẫu, nội dung và phương pháp ghi sổ được thực hiện theo hướng dẫn tại tiết b điểm 2.2 khoản 2 Điều 6 Thông tư này.
+b) Sổ chi tiết vật liệu, dụng cụ, sản phẩm, hàng hóa (Mẫu số S2c-DNSN)
+Biểu mẫu, nội dung và phương pháp ghi sổ được thực hiện theo hướng dẫn tại tiết c điểm 2.2 khoản 2 Điều 6 Thông tư này.
+c) Sổ chi tiết tiền (Mẫu số S2d-DNSN) 
+Biểu mẫu, nội dung và phương pháp ghi sổ được thực hiện theo hướng dẫn tại tiết d điểm 2.2 khoản 2 Điều 6 Thông tư này.
+d) Sổ theo dõi nghĩa vụ thuế GTGT (Mẫu số S3b-DNSN)
+Biểu mẫu, nội dung và phương pháp ghi sổ được thực hiện theo hướng dẫn tại tiết b điểm 2.2 khoản 2 Điều 7 Thông tư này.
+Điều 9. Danh mục sổ kế toán khác và chứng từ kế toán khác
+1. Danh mục sổ kế toán khác
+Ngoài các sổ kế toán hướng dẫn tại Điều 5, Điều 6, Điều 7, Điều 8 Thông tư này, căn cứ vào đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý của đơn vị, doanh nghiệp siêu nhỏ có thể sử dụng các sổ kế toán chi tiết theo danh mục sau đây:
+STT
+Tên sổ kế toán
+Ký hiệu
+
+1
+Sổ chi tiết thanh toán công nợ 
+Mẫu số S4a-DNSN
+
+2
+Sổ tài sản cố định
+Mẫu số S4b-DNSN
+
+3
+Sổ theo dõi nghĩa vụ thuế khác
+Mẫu số S4c-DNSN
+
+4
+Sổ theo dõi vốn chủ sở hữu
+Mẫu số S4d-DNSN
+
+
+1.1. Sổ chi tiết thanh toán công nợ (Mẫu số S4a-DNSN)
+a) Biểu mẫu sổ kế toán 
+
+ĐƠN VỊ:.............................
+Địa chỉ:...............................
+Mẫu số S4a-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+SỔ CHI TIẾT THANH TOÁN CÔNG NỢ 
+Đối tượng:.....................…
+Đơn vị tính:.....
+
+Hóa đơn, Chứng từ
+Diễn giải
+Các khoản nợ phải thu
+Các khoản nợ phải trả
+
+Số hiệu
+Ngày, tháng
+
+Số phải thu
+Số đã thu
+Số còn phải thu
+Số phải trả
+Số đã trả
+Số còn phải trả
+
+A
+B
+C
+1
+2
+3
+4
+5
+6
+
+
+
+-Số dư đầu kỳ
+-Số phát sinh trong kỳ
+..........
+
+
+
+
+
+
+
+
+
+- Cộng số phát sinh trong kỳ
+
+
+
+
+
+
+
+
+
+- Số dư cuối kỳ
+
+
+
+
+
+
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+
+b) Nội dung 
+Sổ này được mở để theo dõi tình hình thanh toán các khoản nợ phải thu và các khoản nợ phải trả của doanh nghiệp siêu nhỏ. Trường hợp doanh nghiệp siêu nhỏ có nhiều khoản nợ phải thu và nhiều khoản nợ phải trả với nội dung, tính chất và các đối tượng công nợ khác nhau (ví dụ nợ phải thu của khách hàng, về cho vay, về tạm ứng; nợ phải trả cho người bán, về nợ vay, về nhận ký quỹ, ký cược của đơn vị khác, tiền lương và các khoản phải nộp theo lương; thuế và các khoản phải nộp nhà nước thì căn cứ vào đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý, sổ này có thể được mở chi tiết theo từng đối tượng công nợ (khách hàng, người bán,…) để theo dõi việc thanh toán các khoản công nợ theo từng đối tượng, từng thời hạn thanh toán, từng lần thanh toán,...
+Riêng các nghĩa vụ thuế và các khoản phải nộp nhà nước phản ánh vào sổ này không bao gồm thuế GTGT, thuế TNDN mà chỉ bao gồm thuế thu nhập cá nhân, thuế xuất khẩu, thuế nhập khẩu, thuế tiêu thụ đặc biệt, thuế tài nguyên, thuế bảo vệ môi trường, thuế sử dụng đất và thuế khác.
+c) Phương pháp ghi sổ
+- Cột A, B: Ghi số hiệu, ngày, tháng của hóa đơn, chứng từ.
+- Cột C: Ghi nội dung của nghiệp vụ kinh tế phát sinh.
+- Cột 1: Ghi giá trị các khoản nợ phải thu về bán hàng hoá, dịch vụ, cho vay, tạm ứng, ký cược, ký quỹ,....
+- Cột 2: Ghi giá trị các khoản nợ phải thu đã thu được tiền.
+- Cột 3: Ghi giá trị các khoản nợ còn phải thu.
+- Cột 4: Ghi giá trị các khoản nợ phải trả về mua hàng hóa, dịch vụ, khoản đi vay, nhận ký quỹ, ký cược,...
+- Cột 5: Ghi giá trị các khoản nợ phải trả đã trả tiền.
+- Cột 6: Ghi giá trị các khoản nợ còn phải trả.
+1.2. Sổ tài sản cố định (Mẫu số S4b-DNSN)
+ĐƠN VỊ:...................................
+Địa chỉ:.....................................
+Mẫu số S4b-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+SỔ TÀI SẢN CỐ ĐỊNH
+Loại tài sản: ……
+
+
+Ghi tăng TSCĐ
+Số khấu hao TSCĐ
+Ghi giảm TSCĐ
+
+Chứng từ
+Tên, đặc điểm, ký hiệu TSCĐ
+Tháng, năm đưa vào sử dụng
+Nguyên giá TSCĐ
+Khấu hao
+Khấu hao lũy kế
+Chứng từ
+Lý do giảm TSCĐ
+
+Số hiệu
+Ngày, tháng
+
+
+
+Tỷ lệ (%) khấu hao
+Mức khấu hao
+
+Số hiệu
+Ngày, tháng, năm
+
+
+A
+B
+C
+D
+1
+2
+3
+4
+E
+G
+H
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Cộng
+x
+x
+
+
+
+x
+x
+x
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+a) Biểu mẫu sổ kế toán 
+
+b) Nội dung 
+Sổ này được mở để theo dõi và quản lý tài sản cố định của doanh nghiệp siêu nhỏ từ khi mua sắm, đưa vào sử dụng cho đến khi ghi giảm TSCĐ.
+c) Phương pháp ghi sổ
+Sổ này được mở để theo dõi cho từng loại TSCĐ hoặc các loại TSCĐ của doanh nghiệp siêu nhỏ (nhà cửa, máy móc thiết bị,...). Căn cứ vào chứng từ tăng, giảm TSCĐ để ghi vào sổ TSCĐ: 
+- Cột A, B: Ghi số hiệu, ngày, tháng của chứng từ.
+- Cột C: Ghi tên, đặc điểm, ký hiệu của TSCĐ.
+- Cột D: Ghi tháng, năm đưa TSCĐ vào sử dụng.
+- Cột 1: Ghi nguyên giá TSCĐ.
+- Cột 2: Ghi tỷ lệ khấu hao hàng năm của TSCĐ.
+- Cột 3: Ghi số khấu hao TSCĐ trong năm.
+- Cột 4: Ghi số khấu hao lũy kế của TSCĐ tính đến cuối kỳ hoặc đến thời điểm ghi giảm TSCĐ.
+- Cột E, G: Ghi số hiệu, ngày, tháng, năm của chứng từ ghi giảm TSCĐ.
+- Cột H: Ghi lý do giảm TSCĐ (nhượng bán, thanh lý,...).
+1.3. Sổ theo dõi nghĩa vụ thuế khác (Mẫu số S4c-DNSN)
+a) Biểu mẫu sổ kế toán 
+ĐƠN VỊ:...................................
+Địa chỉ:.....................................
+
+Mẫu số S4c-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+
+SỔ THEO DÕI NGHĨA VỤ THUẾ KHÁC 
+Năm:………
+Đơn vị tính:.....
+
+Ngày tháng ghi sổ 
+Giao dịch 
+Lượng hàng hóa, dịch vụ chịu thuế
+Mức thuế tuyệt đối
+
+Giá tính thuế/01 đơn vị hàng hóa, dịch vụ chịu thuế
+Thuế suất
+Các loại thuế khác
+
+
+
+
+
+
+
+Thuế xuất khẩu, thuế nhập khẩu, thuế tiêu thụ đặc biệt
+Thuế bảo vệ môi trường 
+Thuế tài nguyên 
+Thuế sử dụng đất
+
+Khác
+
+
+
+
+
+
+
+Áp dụng phương pháp tính thuế theo tỷ lệ %
+Áp dụng phương pháp tính thuế tuyệt đối (nếu có)
+Số thuế phải nộp
+
+
+
+
+
+A
+B
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Tổng cộng
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+
+b) Nội dung 
+Sổ này được mở để doanh nghiệp siêu nhỏ theo dõi các loại thuế khác (nếu có): thuế xuất khẩu, thuế nhập khẩu, thuế tiêu thụ đặc biệt, thuế tài nguyên, thuế bảo vệ môi trường, thuế sử dụng đất và thuế khác. Tuỳ theo đặc điểm hoạt động sản xuất kinh doanh và yêu cầu quản lý, doanh nghiệp siêu nhỏ có thể mở sổ này chi tiết cho từng loại thuế.
+c) Phương pháp ghi sổ
+- Cột A: Ghi ngày, tháng ghi sổ.
+- Cột B: Ghi nội dung nghiệp vụ phát sinh.
+- Cột 1: Ghi lượng hàng hóa, dịch vụ chịu thuế.
+- Cột 2: Ghi mức thuế tuyệt đối theo quy định của pháp luật thuế xuất khẩu, thuế nhập khẩu, thuế tiêu thụ đặc biệt, thuế bảo vệ môi trường.
+- Cột 3: Giá tính thuế/01 đơn vị hàng hóa, dịch vụ thực hiện theo quy định của pháp luật về thuế.
+- Cột 4: Ghi mức thuế suất theo quy định của pháp luật thuế xuất khẩu, thuế nhập khẩu, thuế tiêu thụ đặc biệt, thuế tài nguyên, thuế sử dụng đất.
+- Cột 5: Thuế xuất khẩu, thuế nhập khẩu, thuế tiêu thụ đặc biệt áp dụng phương pháp tính thuế theo tỷ lệ %.
+- Cột 6: Tính thuế xuất khẩu, thuế nhập khẩu, thuế tiêu thụ đặc biệt áp dụng phương pháp tính thuế tuyệt đối. 
+- Cột 7: Tính thuế xuất khẩu, thuế nhập khẩu, thuế tiêu thụ đặc biệt phải nộp theo quy định của pháp luật thuế.
+- Cột 8: Tính thuế bảo vệ môi trường phải nộp theo quy định của pháp luật thuế.
+- Cột 9: Tính thuế tài nguyên phải nộp theo quy định của pháp luật thuế.
+- Cột 10: Tính thuế sử dụng đất phải nộp theo quy định của pháp luật thuế.
+- Cột 11: Tính thuế khác theo quy định của pháp luật thuế.
+1.4. Sổ theo dõi vốn chủ sở hữu (Mẫu số S4d-DNSN)
+a) Biểu mẫu sổ kế toán 
+ĐƠN VỊ:................................
+Địa chỉ:..................................
+Mẫu số S4d-DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+SỔ THEO DÕI VỐN CHỦ SỞ HỮU
+ Năm:……...................
+Đơn vị tính:.....
+
+Chứng từ
+Diễn giải
+Tăng trong kỳ
+Giảm trong kỳ
+Số dư
+
+Số hiệu
+Ngày, tháng
+
+
+
+
+
+A
+B
+C
+1
+2
+3
+
+
+
+Vốn góp của chủ sở hữu
+
+
+
+
+
+
+1.1. Số dư đầu kỳ
+
+
+
+
+
+
+1.2. Phát sinh trong kỳ
+
+
+
+
+
+
+...........
+
+
+
+
+
+
+1.3. Số dư cuối kỳ
+
+
+
+
+
+
+2. Lợi nhuận sau thuế chưa phân phối
+
+
+
+
+
+
+2.1. Số dư đầu kỳ
+
+
+
+
+
+
+2.2. Phát sinh trong kỳ
+
+
+
+
+
+
+..............
+
+
+
+
+
+
+2.3. Số dư cuối kỳ
+
+
+
+
+
+
+3. Các quỹ thuộc vốn chủ sở hữu
+
+
+
+
+
+
+3.1. Số dư đầu kỳ
+
+
+
+
+
+
+3.2. Phát sinh trong kỳ
+
+
+
+
+
+
+..............
+
+
+
+
+
+
+3.3. Số dư cuối kỳ
+
+
+
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+b) Nội dung 
+Sổ này được mở để theo dõi chi tiết tình hình tăng, giảm và số dư các loại vốn chủ sở hữu của doanh nghiệp, như vốn góp của chủ sở hữu, lợi nhuận sau thuế chưa phân phối, các quỹ thuộc vốn chủ sở hữu. 
+c) Phương pháp ghi sổ
+- Cột A, B: Ghi số hiệu, ngày, tháng của chứng từ.
+- Cột C: Ghi diễn giải nội dung nghiệp vụ phát sinh.
+- Cột 1: Ghi giá trị các loại vốn chủ sở hữu tăng trong kỳ.
+- Cột 2: Ghi giá trị các loại vốn chủ sở hữu giảm trong kỳ.
+- Cột 3: Ghi giá trị số dư đầu kỳ và số dư cuối kỳ của các loại vốn chủ sở hữu.
+2. Danh mục chứng từ khác
+Ngoài hóa đơn, bảng kê mua hàng hóa, dịch vụ không có hóa đơn, doanh nghiệp siêu nhỏ có thể lựa chọn sử dụng các chứng từ kế toán theo danh mục sau đây:
+STT
+Tên chứng từ kế toán
+Ký hiệu
+
+1
+Phiếu thu
+Mẫu số 01-TT
+
+2
+Phiếu chi
+Mẫu số 02-TT
+
+3
+Phiếu nhập kho
+Mẫu số 01-VT
+
+4
+Phiếu xuất kho
+Mẫu số 02-VT
+
+
+2.1. Phiếu thu (Mẫu số 01-TT)
+a) Biểu mẫu chứng từ kế toán
+ĐƠN VỊ:...................................
+Địa chỉ:.....................................
+Mẫu số 01-TT
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+PHIẾU THU
+
+
+
+ Ngày..... tháng.....năm........
+Số: .................
+
+Họ và tên người nộp tiền:............................................................................................
+Địa chỉ:........................................................................................................................
+Lý do nộp:...................................................................................................................
+Số tiền:...............................(Viết bằng chữ):................................................................
+....................................................................................................................................
+Kèm theo:.....................................................................Chứng từ gốc:
+
+
+
+Ngày … tháng … năm …
+
+GIÁM ĐỐC
+(Ký, ghi rõ họ tên, đóng dấu)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI NỘP TIỀN
+(Ký, ghi rõ họ tên)
+THỦ QUỸ
+(Ký, họ tên)
+
+Đã nhận đủ số tiền (viết bằng chữ):.............................................................................
+
+b) Nội dung 
+Chứng từ này được lập để phản ánh số tiền mặt thực tế nhập quỹ và làm căn cứ để ghi sổ chi tiết tiền. Mọi khoản tiền mặt nhập quỹ đều phải có Phiếu thu.
+c) Phương pháp lập
+- Phiếu thu phải ghi rõ tên doanh nghiệp và địa chỉ của doanh nghiệp; Ghi rõ họ, tên, địa chỉ người nộp tiền.      
+- Dòng “Lý do nộp" ghi rõ nội dung nộp tiền như: Thu tiền bán hàng hoá, sản phẩm, thu tiền tạm ứng còn thừa,...
+- Dòng “Số tiền": Ghi bằng số và bằng chữ số tiền nộp vào quỹ, ghi rõ đơn vị tính là đồng Việt Nam,...
+- Dòng tiếp theo ghi số lượng chứng từ gốc kèm theo Phiếu thu.
+2.2. Phiếu chi (Mẫu số 02-TT)
+a) Biểu mẫu chứng từ kế toán
+
+ĐƠN VỊ:...................................
+Địa chỉ:.....................................
+Mẫu số 02-TT
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+PHIẾU CHI
+
+
+ Ngày..... tháng.....năm........
+Số: ...................
+
+Họ và tên người nhận tiền:...................................................................................
+Địa chỉ:................................................................................................................
+Lý do chi:.............................................................................................................
+Số tiền:........................................(Viết bằng chữ):...............................................
+............................................................................................................................
+Kèm theo .............................................................. Chứng từ gốc:
+
+
+
+Ngày … tháng … năm …
+
+GIÁM ĐỐC
+(Ký, ghi rõ họ tên, đóng dấu)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+THỦ QUỸ
+(Ký, họ tên)
+NGƯỜI NHẬN TIỀN
+(Ký, ghi rõ họ tên)
+
+Đã nhận đủ số tiền (viết bằng chữ):.............................................................................
+
+b) Nội dung
+Chứng từ này được lập để phản ánh các khoản tiền mặt thực tế xuất quỹ và làm căn cứ để để ghi sổ chi tiết tiền.
+c) Phương pháp lập
+ - Phiếu chi phải ghi rõ tên doanh nghiệp và địa chỉ của doanh nghiệp; Ghi rõ họ, tên, địa chỉ người nhận tiền.      
+- Dòng “Lý do chi" ghi rõ nội dung chi tiền. 
+- Dòng “Số tiền": Ghi bằng số hoặc bằng chữ số tiền xuất quỹ, ghi rõ đơn vị tính là đồng Việt Nam,...
+- Dòng tiếp theo ghi số lượng chứng từ gốc kèm theo Phiếu chi.
+2.3. Phiếu nhập kho (Mẫu số 01-VT)
+a) Biểu mẫu chứng từ kế toán
+
+ĐƠN VỊ:.....................................
+Bộ phận:.....................................
+Mẫu số 01-VT
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+
+PHIẾU NHẬP KHO
+
+
+
+
+ Ngày..... tháng.....năm........
+              Số: ...................
+
+- Họ và tên người giao: ............................................................................
+- Theo ............ số ........... ngày ..... tháng ..... năm ..... của ......................
+Nhập tại kho: ...............................địa điểm.............................................
+
+STT
+Tên, nhãn hiệu, quy cách, phẩm chất vật liệu, dụng cụ, sản phẩm, hàng hoá
+Mã
+số
+Đơn
+vị
+tính
+Số lượng
+Đơn
+giá
+Thành
+tiền
+
+
+
+
+
+Theo
+chứng từ
+Thực nhập
+
+
+
+A
+B
+C
+D
+1
+2
+3
+4
+
+
+
+
+
+
+
+
+
+
+
+Cộng
+x
+x
+
+
+
+
+
+- Tổng số tiền (viết bằng chữ):..................................................................
+- Số chứng từ gốc kèm theo:.....................................................................
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI GIAO HÀNG
+(Ký, ghi rõ họ tên)
+THỦ KHO
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+ (Hoặc bộ phận có nhu cầu nhập)
+(Ký, ghi rõ họ tên)
+
+
+
+ b) Nội dung 
+ Chứng từ này được lập để theo dõi và phản ánh vật liệu, dụng cụ, sản phẩm, hàng hoá nhập kho do mua ngoài, tự sản xuất, thuê ngoài gia công chế biến, nhận góp vốn hoặc thừa phát hiện trong kiểm kê làm căn cứ ghi sổ chi tiết vật liệu, dụng cụ, sản phẩm, hàng hóa, thanh toán tiền hàng, xác định trách nhiệm với người có liên quan và ghi sổ kế toán.
+ c) Phương pháp lập
+ Góc trên bên trái của Phiếu nhập kho phải ghi rõ tên của đơn vị, bộ phận nhập kho. Phiếu nhập kho có thể lập cho một hoặc nhiều loại vật liệu, dụng cụ, sản phẩm, hàng hóa cùng nhập tại một kho.
+ Khi lập phiếu nhập kho phải ghi rõ số phiếu nhập và ngày, tháng, năm lập phiếu; họ tên người giao vật liệu, dụng cụ, sản phẩm, hàng hoá; số hoá đơn hoặc  lệnh nhập kho; tên kho, địa điểm nhập kho.
+Cột A, B, C, D: Ghi số thứ tự, tên, nhãn hiệu, qui cách, phẩm chất; mã số và đơn vị tính của vật liệu, dụng cụ, sản phẩm, hàng hoá.
+Cột 1: Ghi số lượng theo chứng từ (hoá đơn hoặc lệnh nhập).
+Cột 2: Ghi số lượng thực nhập vào kho.
+Cột 3, 4: Ghi đơn giá và tính ra số tiền của từng loại vật liệu, dụng cụ, sản phẩm, hàng hoá thực nhập kho (cột 4 = cột 2 x cột 3). 
+Dòng cộng: Ghi tổng số tiền của các loại vật liệu, dụng cụ, sản phẩm, hàng hoá nhập kho.
+Dòng “Tổng số tiền (viết bằng chữ)”: Ghi tổng số tiền trên Phiếu nhập kho bằng chữ.
+2.4. Phiếu xuất kho (Mẫu số 02-VT)
+a) Biểu mẫu chứng từ kế toán
+
+ĐƠN VỊ:.....................................
+Bộ phận:.....................................
+Mẫu số 02-VT
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+PHIẾU XUẤT KHO
+
+
+ Ngày..... tháng.....năm........
+     Số: ...................
+
+- Họ và tên người nhận hàng: ................ Địa chỉ (bộ phận).....................
+- Lý do xuất kho: ......................................................................................
+- Xuất tại kho (ngăn lô): ..........................Địa điểm .................................
+
+
+STT
+Tên, nhãn hiệu, quy cách, phẩm chất vật liệu, dụng cụ, sản phẩm, hàng hoá
+Mã
+số
+Đơn
+vị
+tính
+Số lượng
+Đơn
+giá
+Thành
+tiền
+
+
+
+
+
+Yêu cầu
+Thực xuất
+
+
+
+A
+B
+C
+D
+1
+2
+3
+4
+
+
+
+
+
+
+
+
+
+
+
+Cộng
+x
+x
+
+
+
+
+
+- Tổng số tiền (viết bằng chữ):..................................................................
+- Số chứng từ gốc kèm theo:....................................................................
+
+
+
+Ngày … tháng … năm …
+
+NGƯỜI NHẬN HÀNG
+(Ký, ghi rõ họ tên)
+THỦ KHO
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Hoặc bộ phận có nhu cầu nhập)
+(Ký, ghi rõ họ tên)
+GIÁM ĐỐC
+(Ký, ghi rõ họ tên, đóng dấu)
+
+b) Nội dung 
+Chứng từ này được lập để theo dõi vật liệu, dụng cụ, sản phẩm, hàng hoá xuất kho cho các bộ phận sử dụng trong doanh nghiệp, làm căn cứ để hạch toán chi phí sản xuất kinh doanh, tính và kiểm tra việc sử dụng, thực hiện định mức tiêu hao vật tư.
+c) Phương pháp lập
+Góc bên trái của Phiếu xuất kho phải ghi rõ tên của đơn vị, bộ phận xuất kho. Phiếu xuất kho có thể lập cho một hoặc nhiều loại vật liệu, dụng cụ, sản phẩm, hàng hoá cùng xuất tại một kho. 
+Khi lập phiếu xuất kho phải ghi rõ số phiếu xuất và ngày, tháng, năm lập phiếu; họ tên, đơn vị (bộ phận) của người nhận vật liệu, dụng cụ, sản phẩm, hàng hoá; lý do xuất kho; tên kho, địa điểm xuất kho.
+- Cột A, B, C, D: Ghi số thứ tự, tên, nhãn hiệu, qui cách, phẩm chất, mã số và đơn vị tính của vật liệu, dụng cụ, sản phẩm, hàng hoá.
+- Cột 1: Ghi số lượng vật liệu, dụng cụ, sản phẩm, hàng hoá yêu cầu xuất kho.
+- Cột 2: Ghi số lượng vật liệu, dụng cụ, sản phẩm, hàng hoá thực tế xuất kho (số lượng thực tế xuất kho chỉ có thể bằng hoặc ít hơn số lượng yêu cầu).
+- Cột 3, 4: Ghi đơn giá và tính thành tiền của từng loại vật liệu, dụng cụ, sản phẩm, hàng hoá xuất kho (cột 4 = cột 2 x cột 3).
+- Dòng Cộng: Ghi tổng số tiền của các loại vật liệu, dụng cụ, sản phẩm, hàng hoá thực tế đã xuất kho.
+- Dòng "Tổng số tiền (viết bằng chữ)": Ghi tổng số tiền viết bằng chữ trên Phiếu xuất kho.
+Điều 10. Báo cáo tài chính
+1. Về trách nhiệm lập và nộp báo cáo tài chính
+a) Hàng năm, doanh nghiệp siêu nhỏ nộp thuế TNDN theo phương pháp tính thuế trên thu nhập tính thuế phải lập báo cáo tài chính theo hướng dẫn tại Thông tư này, trừ trường hợp pháp luật có quy định khác. 
+Báo cáo tài chính năm của doanh nghiệp siêu nhỏ phải được nộp cho cơ quan nhà nước có thẩm quyền trong thời hạn 90 ngày, kể từ ngày kết thúc kỳ kế toán năm. 
+Nơi nhận báo cáo tài chính của doanh nghiệp siêu nhỏ được thực hiện theo quy định của pháp luật có liên quan, trường hợp khi báo cáo tài chính của doanh nghiệp siêu nhỏ được lưu giữ tại Hệ thống thông tin quốc gia về đăng ký doanh nghiệp thì các cơ quan nhận báo cáo tài chính của doanh nghiệp được yêu cầu cung cấp thông tin về báo cáo tài chính của doanh nghiệp theo quy định của pháp luật.
+b) Doanh nghiệp siêu nhỏ nộp thuế TNDN theo tỷ lệ % trên doanh thu bán hàng hóa, dịch vụ không bắt buộc phải lập báo cáo tài chính để nộp cho cơ quan nhà nước có thẩm quyền, trừ trường hợp pháp luật khác có yêu cầu.  
+Trường hợp doanh nghiệp siêu nhỏ nộp thuế TNDN theo tỷ lệ % trên doanh thu bán hàng hóa, dịch vụ nếu lựa chọn áp dụng chế độ kế toán quy định tại Điều 6, Điều 8 Thông tư này để phục vụ cho nhu cầu quản lý hoạt động sản xuất kinh doanh của doanh nghiệp thì vẫn lập báo cáo tài chính nhưng không bắt buộc phải nộp cho cơ quan nhà nước có thẩm quyền mà được bảo quản, lưu trữ, sử dụng tại doanh nghiệp theo quy định và cung cấp thông tin khi có yêu cầu của cơ quan nhà nước có thẩm quyền.
+2. Hệ thống báo cáo tài chính của doanh nghiệp siêu nhỏ	
+2.1. Hàng năm, các doanh nghiệp siêu nhỏ nộp thuế TNDN theo phương pháp tính thuế trên thu nhập tính thuế lập các báo cáo tài chính theo danh mục sau đây:
+STT
+Tên báo cáo tài chính
+Ký hiệu
+
+1
+Báo cáo tình hình tài chính
+Mẫu số B01 - DNSN
+
+2
+Báo cáo kết quả hoạt động kinh doanh
+Mẫu số B02 - DNSN
+
+
+2.2. Biểu mẫu, nội dung và phương pháp lập báo cáo tài chính của doanh nghiệp siêu nhỏ
+2.2.1. Báo cáo tình hình tài chính (Mẫu số B01 – DNSN)
+a) Biểu mẫu báo cáo tài chính
+ĐƠN VỊ:........................ 
+Địa chỉ:……………….
+Mẫu số B01 – DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+BÁO CÁO TÌNH HÌNH TÀI CHÍNH
+Tại ngày ... tháng ... năm ...
+Đơn vị tính:...........
+
+CHỈ TIÊU
+Mã số
+Số cuối năm
+Số đầu  năm
+
+1
+2
+3
+4
+
+TÀI SẢN
+
+
+
+
+1. Tiền
+
+110
+
+
+
+2. Các khoản nợ phải thu 
+
+120
+
+
+
+3. Hàng tồn kho
+130
+
+
+
+4. Tài sản cố định
+140
+
+
+
+5. Tài sản khác
+150
+
+
+
+TỔNG CỘNG TÀI SẢN (200=110+120+130+140+150)
+200
+
+
+
+NGUỒN VỐN
+
+
+
+
+I. Nợ phải trả
+300
+
+
+
+1. Các khoản nợ phải trả 
+310
+
+
+
+2. Thuế và các khoản phải nộp Nhà nước
+320
+
+
+
+II. Vốn chủ sở hữu
+400
+
+
+
+1. Vốn đầu tư của chủ sở hữu    
+410
+
+
+
+2. Lợi nhuận sau thuế chưa phân phối         
+420
+
+
+
+3. Các quỹ thuộc vốn chủ sở hữu
+430
+
+
+
+TỔNG CỘNG NGUỒN VỐN
+(500=300+400)
+500
+
+
+
+
+
+Phê duyệt, ngày ... tháng ... năm ... 
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+NGƯỜI ĐẠI DIỆN 
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+
+b) Nội dung và phương pháp lập báo cáo tình hình tài chính
+b1) Tài sản
+ - Tiền (Mã số 110)
+Chỉ tiêu này phản ánh toàn bộ số dư tiền mặt tại quỹ, tiền gửi không kỳ hạn (tiền gửi để thanh toán) trong tài khoản của doanh nghiệp siêu nhỏ tại các ngân hàng và tổ chức cung ứng dịch vụ thanh toán tại thời điểm kết thúc kỳ kế toán.
+Số liệu để ghi vào chỉ tiêu này là số dư cuối kỳ của tiền mặt và tiền gửi không kỳ hạn trên Sổ chi tiết tiền. 
+- Các khoản nợ phải thu (Mã số 120)
+Chỉ tiêu này phản ánh toàn bộ giá trị các khoản nợ phải thu của doanh nghiệp siêu nhỏ tại thời điểm kết thúc kỳ kế toán, như: Phải thu của khách hàng, thuế GTGT được khấu trừ, phải thu về cho vay, tạm ứng, ký cược, ký quỹ,.…
+Số liệu để ghi vào chỉ tiêu này căn cứ vào số dư cuối kỳ của các khoản nợ phải thu trên Sổ chi tiết thanh toán công nợ và các sổ kế toán khác có liên quan.
+- Hàng tồn kho (Mã số 130)
+Chỉ tiêu này phản ánh toàn bộ giá trị các loại hàng tồn kho dự trữ cho quá trình sản xuất, kinh doanh của doanh nghiệp siêu nhỏ tại thời điểm kết thúc kỳ kế toán.
+Số liệu để ghi vào chỉ tiêu này là số dư cuối kỳ của các hàng tồn kho trên các sổ chi tiết vật liệu, dụng cụ, sản phẩm, hàng hóa.
+- Tài sản cố định (Mã số 140)
+Chỉ tiêu này phản ánh toàn bộ giá trị còn lại (nguyên giá trừ giá trị hao mòn lũy kế) của các loại TSCĐ tại thời điểm kết thúc kỳ kế toán. 
+Số liệu để ghi vào chỉ tiêu này là số dư cuối kỳ chi tiết của các loại TSCĐ trên sổ TSCĐ.
+- Tài sản khác (Mã số 150)
+Chỉ tiêu này phản ánh giá trị các tài sản khác ngoài các tài sản đã được phản ánh tại các Mã số 110, 120, 130, 140 nêu trên (nếu có), ví dụ tiền gửi có kỳ hạn (tiền gửi tiết kiệm,…), chênh lệch số thuế doanh nghiệp đã tạm nộp lớn hơn số thuế phải nộp nhà nước,....  
+- Tổng cộng tài sản (Mã số 200)
+Chỉ tiêu này phản ánh tổng trị giá tài sản của doanh nghiệp siêu nhỏ tại thời điểm kết thúc kỳ kế toán. 
+Mã số 200 = Mã số 110 + Mã số 120 + Mã số 130 + Mã số 140 + Mã số 150
+b2) Nợ phải trả (Mã số 300)
+Là chỉ tiêu tổng hợp phản ánh toàn bộ số nợ phải trả của doanh nghiệp siêu nhỏ tại thời điểm kết thúc kỳ kế toán. 
+Mã số 300 = Mã số 310 + Mã số 320
+- Các khoản nợ phải trả (Mã số 310)
+Chỉ tiêu này phản ánh số tiền mà doanh nghiệp siêu nhỏ còn phải trả cho các đối tượng công nợ như phải trả người bán, phải trả nợ vay, tiền lương và các khoản trích theo lương, nhận ký quỹ, ký cược, các khoản nợ phải trả khác,.....
+Số liệu để ghi vào chỉ tiêu này căn cứ vào số dư cuối kỳ của các khoản nợ phải trả trên Sổ chi tiết thanh toán công nợ.
+- Thuế và các khoản phải nộp Nhà nước (Mã số 320)
+Chỉ tiêu này phản ánh tổng các khoản thuế GTGT, thuế TNDN và các nghĩa vụ thuế khác mà doanh nghiệp siêu nhỏ còn phải nộp nhà nước tại thời điểm kết thúc kỳ kế toán. 
+Tùy theo từng phương pháp tính thuế GTGT, thuế TNDN và các nghĩa vụ thuế khác, số liệu ghi vào chỉ tiêu này căn cứ vào số dư chi tiết cuối kỳ trên các Sổ doanh thu bán hàng hóa, dịch vụ; Sổ theo dõi nghĩa vụ thuế GTGT; Sổ chi tiết doanh thu, chi phí; Sổ chi tiết thanh toán công nợ,... 
+b3) Vốn chủ sở hữu (Mã số 400)
+Chỉ tiêu này phản ánh các khoản vốn chủ sở hữu của doanh nghiệp siêu nhỏ, bao gồm vốn đầu tư của chủ sở hữu, lợi nhuận sau thuế chưa phân phối và các quỹ thuộc vốn chủ sở hữu.
+Mã số 400 = Mã số 410 + Mã số 420 + Mã số 430
+- Vốn đầu tư của chủ sở hữu (Mã số 410)
+Chỉ tiêu này phản ánh tổng số vốn mà các chủ sở hữu (cổ đông, thành viên góp vốn) đã thực góp vào doanh nghiệp tại thời điểm kết thúc kỳ kế toán. 
+Số liệu ghi vào chỉ tiêu này căn cứ vào số dư cuối kỳ trên Sổ theo dõi vốn chủ sở hữu (chi tiết vốn góp của chủ sở hữu).
+- Lợi nhuận sau thuế chưa phân phối (Mã số 420)
+Chỉ tiêu này phản ánh số lãi (hoặc lỗ) sau thuế chưa phân phối còn lại tại thời điểm kết thúc kỳ kế toán. 
+Số liệu ghi vào chỉ tiêu này căn cứ vào số dư cuối kỳ trên Sổ theo dõi vốn chủ sở hữu (chi tiết lợi nhuận sau thuế chưa phân phối). 
+- Các quỹ thuộc vốn chủ sở hữu (Mã số 430)
+Chỉ tiêu này phản ánh số dư các quỹ thuộc vốn chủ sở hữu tại thời điểm kết thúc kỳ kế toán. 
+Số liệu ghi vào chỉ tiêu này căn cứ vào số dư cuối kỳ trên Sổ theo dõi vốn chủ sở hữu (chi tiết các quỹ thuộc vốn chủ sở hữu).
+- Tổng cộng nguồn vốn (Mã số 500)
+Phản ánh tổng số các nguồn vốn hình thành tài sản của doanh nghiệp tại thời điểm kết thúc kỳ kế toán. 
+Mã số 500 = Mã số 300 + Mã số 400.
+Chỉ tiêu “Tổng cộng Tài sản” 
+(Mã số 200)
+=
+Chỉ tiêu “Tổng cộng Nguồn vốn”
+(Mã số 500)
+
+2.2.2. Báo cáo kết quả hoạt động kinh doanh	 (Mẫu số B02 – DNSN)
+ĐƠN VỊ:............................. 
+Địa chỉ:…………...............
+Mẫu số B02 – DNSN
+(Kèm theo Thông tư số 58/2026/TT-BTC
+ ngày 25 tháng 5 năm 2026 của Bộ trưởng Bộ Tài chính)
+
+
+BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Năm .....…
+Đơn vị tính:.....
+
+CHỈ TIÊU
+Mã
+số
+Năm
+Nay
+Năm
+trước
+
+1
+2
+3
+4
+
+1. Doanh thu và thu nhập thuần
+01
+
+
+
+2. Các khoản chi phí
+02
+
+
+
+3. Lợi nhuận kế toán trước thuế TNDN {(03)= (01)- (02)}
+03
+
+
+
+4. Chi phí thuế TNDN
+10
+
+
+
+5. Lợi nhuận sau thuế TNDN {(20) = (03)-(10)}
+20
+
+
+
+
+
+Phê duyệt, ngày...tháng... năm ...
+
+NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)
+KẾ TOÁN TRƯỞNG
+(Ký, ghi rõ họ tên)
+
+NGƯỜI ĐẠI DIỆN
+THEO PHÁP LUẬT
+(Ký, ghi rõ họ tên, đóng dấu)
+
+a) Biểu mẫu báo cáo tài chính
+
+b) Nội dung và phương pháp lập báo cáo tài chính
+b1) Doanh thu và thu nhập thuần (Mã số 01)
+Chỉ tiêu này phản ánh tổng doanh thu thuần về bán hàng và cung cấp dịch vụ và thu nhập khác sau khi đã trừ đi các khoản giảm trừ doanh thu trong kỳ báo cáo (nếu có). 
+Số liệu để ghi vào chỉ tiêu này căn cứ tổng doanh thu bán hàng hóa, dịch vụ và các khoản thu nhập khác trên Sổ chi tiết doanh thu, chi phí hoặc Sổ doanh thu bán hàng hóa, dịch vụ. 
+b2) Các khoản chi phí (Mã số 02)
+Chỉ tiêu này phản ánh tổng số chi phí phát sinh trong kỳ báo cáo gồm chi phí nguyên vật liệu, chi phí nhân công, chi phí khấu hao tài sản cố định, chi phí dịch vụ mua ngoài, chi phí lãi vay,... 
+Số liệu để ghi vào chỉ tiêu này căn cứ vào tổng chi phí trong kỳ trên Sổ chi tiết doanh thu, chi phí.
+b3) Lợi nhuận kế toán trước thuế TNDN (Mã số 03) 
+Chỉ tiêu này phản ánh tổng số lợi nhuận thuần (hoặc lỗ) từ các hoạt động của doanh nghiệp siêu nhỏ. Số liệu để ghi vào chỉ tiêu này căn cứ vào số chênh lệch giữa doanh thu và thu nhập thuần với các khoản chi phí trong kỳ. 
+Mã số 03 = Mã số 01 - Mã số 02.
+b4) Chi phí thuế TNDN (Mã số 10)
+Chỉ tiêu này phản ánh số chi phí thuế TNDN phải nộp trong năm báo cáo theo quy định của pháp luật thuế. Số liệu để ghi vào chỉ tiêu này căn cứ vào tổng số thuế TNDN phải nộp trên Sổ chi tiết doanh thu, chi phí.
+b5) Lợi nhuận sau thuế TNDN (Mã số 20)
+Chỉ tiêu này phản ánh số lợi nhuận sau thuế TNDN của doanh nghiệp siêu nhỏ trong năm báo cáo. 
+Số liệu để ghi vào chỉ tiêu này căn cứ vào chênh lệch giữa lợi nhuận kế toán trước thuế TNDN và chi phí thuế TNDN.
+Mã số 20 = Mã số 03 - Mã số 10.
+
+Chương III
+TỔ CHỨC THỰC HIỆN
+
+Điều 11. Chuyển số dư trên sổ kế toán
+1. Doanh nghiệp siêu nhỏ căn cứ vào số dư các tài khoản kế toán theo quy định tại Thông tư số 132/2018/TT-BTC ngày 28/12/2018 của Bộ trưởng Bộ Tài chính hướng dẫn chế độ kế toán cho doanh nghiệp siêu nhỏ để thực hiện chuyển vào các sổ kế toán liên quan khi áp dụng Thông tư này như sau:
+a) Doanh nghiệp căn cứ vào số dư Nợ của TK 1111 “Tiền mặt” chuyển sang số dư đầu kỳ của Sổ chi tiết tiền (chi tiết phần tiền mặt), số dư Nợ của TK 1112 “Tiền gửi ngân hàng” chuyển sang số dư đầu kỳ của Sổ chi tiết tiền (chi tiết phần tiền gửi không kỳ hạn (tiền gửi để thanh toán) tại các ngân hàng và tổ chức cung ứng dịch vụ thanh toán theo quy định của pháp luật;
+b) Doanh nghiệp căn cứ vào số dư Nợ TK 1311 “Phải thu khách hàng”, số dư Nợ TK 1318 “Các khoản nợ phải thu khác”, số dư Có TK 3311 “Phải trả người lao động”, số dư Có TK 3312 “Các khoản trích theo lương”, số dư Có TK 3318 “Các khoản nợ phải trả khác”, chuyển sang số dư đầu kỳ tương ứng với các khoản nợ phải thu hoặc các khoản nợ phải trả của Sổ chi tiết thanh toán công nợ theo từng đối tượng công nợ;
+c) Doanh nghiệp căn cứ vào số dư Nợ TK 1313 “Thuế GTGT được khấu trừ”, số dư Có TK 33131 “Thuế GTGT phải nộp” chuyển sang các dòng tương ứng với số thuế GTGT đầu vào hoặc số thuế GTGT đầu ra trên Sổ theo dõi nghĩa vụ thuế GTGT;
+d) Doanh nghiệp căn cứ số dư Nợ TK 1521 “Nguyên vật liệu, dụng cụ”, TK 1524 “Chi phí sản xuất kinh doanh dở dang”, TK 1526 “Thành phẩm, hàng hóa” chuyển sang số dư đầu kỳ trên Sổ chi tiết vật liệu, dụng cụ, sản phẩm, hàng hoá mở chi tiết cho từng vật liệu, dụng cụ, sản phẩm, hàng hoá;
+đ) Doanh nghiệp căn cứ số dư Nợ TK 211 “Tài sản cố định” chuyển sang số dư đầu kỳ của Sổ Tài sản cố định;
+e) Doanh nghiệp căn cứ số dư Có của các TK 33134 “Thuế thu nhập doanh nghiệp”, TK 33138 “Thuế khác, phí, lệ phí và các khoản khác phải nộp Nhà nước” chuyển sang số dư đầu kỳ của các cột tương ứng trên Sổ doanh thu bán hàng hóa, dịch vụ hoặc Sổ theo dõi thuế GTGT (đối với thuế GTGT), Sổ chi tiết doanh thu, chi phí (đối với thuế TNDN) và Sổ chi tiết thanh toán công nợ (đối với thuế thu nhập cá nhân và các loại thuế khác);
+g) Doanh nghiệp căn cứ số dư Có của các TK 4111 “Vốn góp của chủ sở hữu”, TK 4118 “Lợi nhuận sau thuế chưa phân phối” chuyển sang số dư đầu kỳ của Sổ theo dõi vốn chủ sở hữu (chi tiết vốn góp của chủ sở hữu và lợi nhuận sau thuế chưa phân phối).
+2. Doanh nghiệp siêu nhỏ khi thay đổi chế độ kế toán áp dụng (do chuyển đổi phương pháp nộp thuế GTGT, thuế TNDN theo quy định của pháp luật thuế hoặc do lựa chọn hoặc bỏ lựa chọn áp dụng chế độ kế toán cho doanh nghiệp nhỏ và vừa) thì căn cứ số dư cuối kỳ trên các sổ kế toán kỳ trước để chuyển sang số dư đầu kỳ của sổ kế toán tương ứng ở kỳ sau cho phù hợp.
+Điều 12. Hiệu lực thi hành
+1. Thông tư này có hiệu lực thi hành kể từ ngày 01/7/2026 và áp dụng cho năm tài chính bắt đầu từ ngày hoặc sau ngày 01/7/2026. 
+2. Thông tư số 132/2018/TT-BTC ngày 28/12/2018 của Bộ trưởng Bộ Tài chính hướng dẫn chế độ kế toán cho doanh nghiệp siêu nhỏ hết hiệu lực kể từ ngày Thông tư này có hiệu lực thi hành. 
+3. Uỷ ban Nhân dân, Sở Tài chính, Thuế các Tỉnh, Thành phố trực thuộc Trung ương có trách nhiệm triển khai hướng dẫn các doanh nghiệp siêu nhỏ thực hiện Thông tư này. 
+4. Trong quá trình thực hiện nếu có vướng mắc, đề nghị phản ánh về Bộ Tài chính để nghiên cứu giải quyết./.
+
+
+KT. BỘ TRƯỞNG
+THỨ TRƯỞNG
+
+Tạ Anh Tuấn
+
+
+
+
+

@@ -1,0 +1,336 @@
+"""Đơn đặt hàng nhà cung cấp (SME) — theo dõi trước khi nhập kho / nhận HĐ."""
+from __future__ import annotations
+
+import sqlite3
+from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP
+from typing import Any
+
+MONEY_Q = Decimal('0.01')
+STATUSES = ('draft', 'confirmed', 'partial', 'received', 'cancelled')
+
+
+def _money(val) -> Decimal:
+    if val is None:
+        return Decimal('0.00')
+    return Decimal(str(val)).quantize(MONEY_Q, rounding=ROUND_HALF_UP)
+
+
+def _f(val) -> float:
+    return float(_money(val))
+
+
+def ensure_purchase_order_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS sme_purchase_orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            po_no TEXT NOT NULL UNIQUE,
+            po_date TEXT NOT NULL,
+            expected_date TEXT,
+            supplier_id INTEGER,
+            supplier_code TEXT,
+            supplier_name TEXT NOT NULL,
+            supplier_tax_code TEXT,
+            status TEXT NOT NULL DEFAULT 'draft',
+            note TEXT,
+            total_amount REAL NOT NULL DEFAULT 0,
+            created_by TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS sme_purchase_order_lines (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            po_id INTEGER NOT NULL,
+            sequence INTEGER NOT NULL DEFAULT 1,
+            product_id INTEGER,
+            product_code TEXT,
+            product_name TEXT NOT NULL,
+            unit TEXT,
+            qty REAL NOT NULL DEFAULT 0,
+            unit_price REAL NOT NULL DEFAULT 0,
+            amount REAL NOT NULL DEFAULT 0,
+            received_qty REAL NOT NULL DEFAULT 0,
+            note TEXT,
+            FOREIGN KEY (po_id) REFERENCES sme_purchase_orders(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sme_po_date ON sme_purchase_orders(po_date)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sme_po_status ON sme_purchase_orders(status)"
+    )
+    if commit:
+        conn.commit()
+
+
+def _next_po_no(conn: sqlite3.Connection, po_date: str) -> str:
+    ymd = (po_date or datetime.now().strftime('%Y-%m-%d'))[:10].replace('-', '')
+    prefix = f'PO{ymd}'
+    row = conn.execute(
+        "SELECT po_no FROM sme_purchase_orders WHERE po_no LIKE ? ORDER BY id DESC LIMIT 1",
+        (prefix + '%',),
+    ).fetchone()
+    seq = 1
+    if row:
+        last = row[0] if not isinstance(row, sqlite3.Row) else row['po_no']
+        try:
+            seq = int(str(last)[len(prefix):]) + 1
+        except ValueError:
+            seq = 1
+    return f'{prefix}{seq:03d}'
+
+
+def _row_to_dict(row) -> dict:
+    if row is None:
+        return {}
+    if isinstance(row, sqlite3.Row):
+        return dict(row)
+    return dict(row)
+
+
+def get_purchase_order(conn: sqlite3.Connection, po_id: int) -> dict[str, Any] | None:
+    ensure_purchase_order_schema(conn, commit=False)
+    conn.row_factory = sqlite3.Row
+    head = conn.execute(
+        "SELECT * FROM sme_purchase_orders WHERE id = ?", (po_id,)
+    ).fetchone()
+    if not head:
+        return None
+    lines = conn.execute(
+        """
+        SELECT * FROM sme_purchase_order_lines
+        WHERE po_id = ? ORDER BY sequence, id
+        """,
+        (po_id,),
+    ).fetchall()
+    data = dict(head)
+    data['lines'] = [dict(x) for x in lines]
+    return data
+
+
+def list_purchase_orders(
+    conn: sqlite3.Connection,
+    *,
+    status: str | None = None,
+    keyword: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 200,
+) -> list[dict[str, Any]]:
+    ensure_purchase_order_schema(conn, commit=False)
+    conn.row_factory = sqlite3.Row
+    sql = "SELECT * FROM sme_purchase_orders WHERE 1=1"
+    params: list[Any] = []
+    if status:
+        sql += " AND status = ?"
+        params.append(status)
+    if keyword:
+        sql += " AND (po_no LIKE ? OR supplier_name LIKE ? OR IFNULL(supplier_tax_code,'') LIKE ?)"
+        like = f'%{keyword.strip()}%'
+        params.extend([like, like, like])
+    if date_from:
+        sql += " AND po_date >= ?"
+        params.append(date_from[:10])
+    if date_to:
+        sql += " AND po_date <= ?"
+        params.append(date_to[:10])
+    sql += " ORDER BY po_date DESC, id DESC LIMIT ?"
+    params.append(int(limit) or 200)
+    return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+
+def create_purchase_order(
+    conn: sqlite3.Connection,
+    *,
+    po_date: str,
+    supplier_name: str,
+    lines: list[dict],
+    expected_date: str | None = None,
+    supplier_id: int | None = None,
+    supplier_code: str | None = None,
+    supplier_tax_code: str | None = None,
+    note: str | None = None,
+    status: str = 'draft',
+    created_by: str | None = None,
+    po_no: str | None = None,
+) -> dict[str, Any]:
+    ensure_purchase_order_schema(conn, commit=False)
+    supplier_name = (supplier_name or '').strip()
+    if not supplier_name:
+        raise ValueError('Thiếu tên nhà cung cấp')
+    if not lines:
+        raise ValueError('Đơn hàng phải có ít nhất một dòng')
+    po_date = (po_date or datetime.now().strftime('%Y-%m-%d'))[:10]
+    status = status if status in STATUSES else 'draft'
+    po_no = (po_no or '').strip() or _next_po_no(conn, po_date)
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    prepared = []
+    total = Decimal('0.00')
+    for i, raw in enumerate(lines, start=1):
+        name = str(raw.get('product_name') or '').strip()
+        if not name:
+            continue
+        qty = _money(raw.get('qty'))
+        price = _money(raw.get('unit_price'))
+        if qty <= 0:
+            continue
+        amount = _money(qty * price)
+        total += amount
+        prepared.append({
+            'sequence': int(raw.get('sequence') or i),
+            'product_id': raw.get('product_id'),
+            'product_code': raw.get('product_code'),
+            'product_name': name,
+            'unit': raw.get('unit') or '',
+            'qty': float(qty),
+            'unit_price': float(price),
+            'amount': float(amount),
+            'received_qty': float(_money(raw.get('received_qty') or 0)),
+            'note': raw.get('note') or '',
+        })
+    if not prepared:
+        raise ValueError('Không có dòng hợp lệ (số lượng > 0)')
+
+    cur = conn.execute(
+        """
+        INSERT INTO sme_purchase_orders (
+            po_no, po_date, expected_date, supplier_id, supplier_code, supplier_name,
+            supplier_tax_code, status, note, total_amount, created_by, created_at, updated_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            po_no, po_date, (expected_date or '')[:10] or None,
+            supplier_id, supplier_code, supplier_name, supplier_tax_code,
+            status, note, float(total), created_by, now, now,
+        ),
+    )
+    po_id = int(cur.lastrowid)
+    for ln in prepared:
+        conn.execute(
+            """
+            INSERT INTO sme_purchase_order_lines (
+                po_id, sequence, product_id, product_code, product_name, unit,
+                qty, unit_price, amount, received_qty, note
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                po_id, ln['sequence'], ln['product_id'], ln['product_code'],
+                ln['product_name'], ln['unit'], ln['qty'], ln['unit_price'],
+                ln['amount'], ln['received_qty'], ln['note'],
+            ),
+        )
+    return get_purchase_order(conn, po_id) or {'id': po_id}
+
+
+def update_purchase_order(
+    conn: sqlite3.Connection,
+    po_id: int,
+    *,
+    po_date: str | None = None,
+    expected_date: str | None = None,
+    supplier_name: str | None = None,
+    supplier_id: int | None = None,
+    supplier_code: str | None = None,
+    supplier_tax_code: str | None = None,
+    note: str | None = None,
+    status: str | None = None,
+    lines: list[dict] | None = None,
+) -> dict[str, Any]:
+    ensure_purchase_order_schema(conn, commit=False)
+    existing = get_purchase_order(conn, po_id)
+    if not existing:
+        raise ValueError('Không tìm thấy đơn đặt hàng')
+    if existing.get('status') == 'cancelled':
+        raise ValueError('Đơn đã hủy — không sửa được')
+    if existing.get('status') == 'received' and lines is not None:
+        raise ValueError('Đơn đã nhận đủ — không sửa dòng')
+
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    fields = {
+        'po_date': (po_date or existing['po_date'])[:10],
+        'expected_date': (expected_date if expected_date is not None else existing.get('expected_date')),
+        'supplier_name': (supplier_name or existing['supplier_name']).strip(),
+        'supplier_id': supplier_id if supplier_id is not None else existing.get('supplier_id'),
+        'supplier_code': supplier_code if supplier_code is not None else existing.get('supplier_code'),
+        'supplier_tax_code': supplier_tax_code if supplier_tax_code is not None else existing.get('supplier_tax_code'),
+        'note': note if note is not None else existing.get('note'),
+        'status': status if status in STATUSES else existing.get('status'),
+    }
+    if not fields['supplier_name']:
+        raise ValueError('Thiếu tên nhà cung cấp')
+
+    total = _money(existing.get('total_amount'))
+    if lines is not None:
+        prepared = []
+        total = Decimal('0.00')
+        for i, raw in enumerate(lines, start=1):
+            name = str(raw.get('product_name') or '').strip()
+            if not name:
+                continue
+            qty = _money(raw.get('qty'))
+            price = _money(raw.get('unit_price'))
+            if qty <= 0:
+                continue
+            amount = _money(qty * price)
+            total += amount
+            prepared.append((
+                po_id, int(raw.get('sequence') or i), raw.get('product_id'),
+                raw.get('product_code'), name, raw.get('unit') or '',
+                float(qty), float(price), float(amount),
+                float(_money(raw.get('received_qty') or 0)), raw.get('note') or '',
+            ))
+        if not prepared:
+            raise ValueError('Không có dòng hợp lệ')
+        conn.execute("DELETE FROM sme_purchase_order_lines WHERE po_id = ?", (po_id,))
+        conn.executemany(
+            """
+            INSERT INTO sme_purchase_order_lines (
+                po_id, sequence, product_id, product_code, product_name, unit,
+                qty, unit_price, amount, received_qty, note
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            prepared,
+        )
+
+    conn.execute(
+        """
+        UPDATE sme_purchase_orders SET
+            po_date=?, expected_date=?, supplier_id=?, supplier_code=?, supplier_name=?,
+            supplier_tax_code=?, status=?, note=?, total_amount=?, updated_at=?
+        WHERE id=?
+        """,
+        (
+            fields['po_date'], fields['expected_date'], fields['supplier_id'],
+            fields['supplier_code'], fields['supplier_name'], fields['supplier_tax_code'],
+            fields['status'], fields['note'], float(total), now, po_id,
+        ),
+    )
+    return get_purchase_order(conn, po_id) or existing
+
+
+def set_purchase_order_status(
+    conn: sqlite3.Connection, po_id: int, status: str,
+) -> dict[str, Any]:
+    if status not in STATUSES:
+        raise ValueError('Trạng thái không hợp lệ')
+    return update_purchase_order(conn, po_id, status=status)
+
+
+def delete_purchase_order(conn: sqlite3.Connection, po_id: int) -> bool:
+    ensure_purchase_order_schema(conn, commit=False)
+    existing = get_purchase_order(conn, po_id)
+    if not existing:
+        return False
+    if existing.get('status') not in ('draft', 'cancelled'):
+        raise ValueError('Chỉ xóa đơn nháp hoặc đã hủy')
+    conn.execute("DELETE FROM sme_purchase_order_lines WHERE po_id = ?", (po_id,))
+    conn.execute("DELETE FROM sme_purchase_orders WHERE id = ?", (po_id,))
+    return True

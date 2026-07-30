@@ -9,7 +9,7 @@ from flask import g, jsonify, redirect, request, url_for, flash
 from Services.subscription_service import parse_tenant_settings
 
 # ---------------------------------------------------------------------------
-# Chế độ kế toán (SME triển khai sau)
+# Chế độ kế toán
 # ---------------------------------------------------------------------------
 ACCOUNTING_REGIMES = {
     'HKD': {
@@ -21,16 +21,116 @@ ACCOUNTING_REGIMES = {
     'SME_MICRO_TT58': {
         'code': 'SME_MICRO_TT58',
         'label': 'Doanh nghiệp siêu nhỏ (TT58 / VAS)',
-        'active': False,
-        'coming_soon': True,
+        'active': True,
+        'coming_soon': False,
     },
     'SME_TT99': {
         'code': 'SME_TT99',
-        'label': 'Doanh nghiệp lớn (TT99 / VAS)',
-        'active': False,
-        'coming_soon': True,
+        'label': 'Doanh nghiệp (TT99 / VAS)',
+        'active': True,
+        'coming_soon': False,
     },
 }
+
+SME_BASE_FEATURES = {
+    'SME_MICRO_TT58': {
+        'accounting_enabled': True,
+        'regime_coming_soon': False,
+        'ledger_profile': 'sme_tt58',
+        'double_entry': True,
+        'coa_enabled': True,
+        'journal_posting': True,
+        'auto_depreciation': True,
+        'auto_period_close': True,
+        'auto_vat_settlement': True,
+        'auto_lock_period': True,
+        'bctc_enabled': True,
+        # Mặc định kê khai GTGT theo quý; tenant có thể đổi sang tháng
+        'filing_period': 'quarterly',
+        'vat_filing_period': 'quarterly',
+        'nsnn_s4': False,
+        'tax_debt_summary': True,
+        'profit_report_s2c': False,
+        'monthly_vat_filing': False,
+        'einvoice_required': True,
+        'einvoice_enabled': True,
+    },
+    'SME_TT99': {
+        'accounting_enabled': True,
+        'regime_coming_soon': False,
+        'ledger_profile': 'sme_tt99',
+        'double_entry': True,
+        'coa_enabled': True,
+        'journal_posting': True,
+        'auto_depreciation': True,
+        'auto_period_close': True,
+        'auto_vat_settlement': True,
+        'auto_lock_period': True,
+        'bctc_enabled': True,
+        # Mặc định kê khai GTGT theo tháng; tenant có thể đổi sang quý
+        'filing_period': 'monthly',
+        'vat_filing_period': 'monthly',
+        'nsnn_s4': False,
+        'tax_debt_summary': True,
+        'profit_report_s2c': False,
+        'monthly_vat_filing': True,
+        'einvoice_required': True,
+        'einvoice_enabled': True,
+    },
+}
+
+VAT_FILING_PERIODS = ('monthly', 'quarterly')
+
+
+def normalize_vat_filing_period(value, default='quarterly'):
+    """Chuẩn hoá kỳ kê khai GTGT: monthly | quarterly."""
+    raw = str(value or '').strip().lower()
+    if raw in ('month', 'monthly', 'thang', 'tháng', 'm'):
+        return 'monthly'
+    if raw in ('quarter', 'quarterly', 'quy', 'quý', 'q'):
+        return 'quarterly'
+    fallback = str(default or 'quarterly').strip().lower()
+    return fallback if fallback in VAT_FILING_PERIODS else 'quarterly'
+
+
+def default_vat_filing_period_for_regime(accounting_regime):
+    regime = normalize_accounting_regime(accounting_regime)
+    base = SME_BASE_FEATURES.get(regime) or SME_BASE_FEATURES['SME_TT99']
+    return normalize_vat_filing_period(
+        base.get('vat_filing_period') or base.get('filing_period'),
+        default='monthly' if base.get('monthly_vat_filing') else 'quarterly',
+    )
+
+
+def apply_vat_filing_period_to_features(features, settings=None, accounting_regime=None):
+    """Ghi đè filing_period / monthly_vat_filing theo lựa chọn tenant."""
+    features = dict(features or {})
+    settings = settings or {}
+    if accounting_regime:
+        default = default_vat_filing_period_for_regime(accounting_regime)
+    elif features.get('vat_filing_period') or features.get('filing_period'):
+        default = normalize_vat_filing_period(
+            features.get('vat_filing_period') or features.get('filing_period'),
+            default='quarterly',
+        )
+    elif features.get('monthly_vat_filing') is True:
+        default = 'monthly'
+    else:
+        default = 'quarterly'
+
+    raw = (
+        settings.get('vat_filing_period')
+        or settings.get('filing_period')
+        or (settings.get('features') or {}).get('vat_filing_period')
+        or (settings.get('features') or {}).get('filing_period')
+        or features.get('vat_filing_period')
+        or features.get('filing_period')
+    )
+    period = normalize_vat_filing_period(raw, default=default)
+    features['vat_filing_period'] = period
+    features['filing_period'] = period
+    features['monthly_vat_filing'] = period == 'monthly'
+    return features, period
 
 # ---------------------------------------------------------------------------
 # Nhóm doanh thu pháp lý HKD — DT1–DT4 (alias legacy R1–R4)
@@ -148,6 +248,8 @@ def normalize_revenue_tier(value, default='DT1'):
     if value is None:
         return default
     raw = str(value).strip().upper()
+    if not raw:
+        return default
     if raw in REVENUE_TIERS:
         return raw
     if raw in LEGACY_R_TO_DT:
@@ -157,6 +259,16 @@ def normalize_revenue_tier(value, default='DT1'):
     if raw.isdigit() and raw in LEGACY_GROUP_TO_TIER:
         return LEGACY_GROUP_TO_TIER[raw]
     return default
+
+
+def normalize_revenue_tier_optional(value):
+    """Cho SME: cho phép DT trống (None). HKD vẫn normalize về DT hợp lệ."""
+    if value is None:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    return normalize_revenue_tier(raw)
 
 
 def tier_from_subscription_plan(plan_code, default='DT1'):
@@ -223,8 +335,49 @@ def build_tenant_settings(
     from Services.hkd_sector import normalize_enabled_nn_sectors, normalize_nn_code, nn_to_storage_code
 
     regime = normalize_accounting_regime(accounting_regime)
-    tier = normalize_revenue_tier(revenue_tier)
     bl = (business_line or 'pos').strip()
+
+    # Doanh nghiệp (TT58/TT99): không dùng nhóm DT / NN của HKD
+    if is_sme_regime(regime):
+        features = resolve_features(regime, None, {})
+        default_fp = default_vat_filing_period_for_regime(regime)
+        settings = {
+            'accounting_regime': regime,
+            'revenue_tier': None,
+            'revenue_tier_declared': None,
+            'revenue_tier_effective': None,
+            'business_line': bl,
+            'enabled_nn_sectors': [],
+            'primary_nn_sector': None,
+            'default_hkd_sector': None,
+            'onboarding_completed': bool(onboarding_completed),
+            'filing_period': default_fp,
+            'vat_filing_period': default_fp,
+            'features': features,
+        }
+        plan = (subscription_plan or '').strip().lower()
+        if plan:
+            settings['plan'] = plan
+        if extra:
+            settings.update(extra)
+            # Giữ SME: không để patch lỡ gán lại DT/NN
+            settings['accounting_regime'] = regime
+            settings['revenue_tier'] = None
+            settings['revenue_tier_declared'] = None
+            settings['revenue_tier_effective'] = None
+            settings['enabled_nn_sectors'] = []
+            settings['primary_nn_sector'] = None
+            settings['default_hkd_sector'] = None
+        fp = normalize_vat_filing_period(
+            settings.get('vat_filing_period') or settings.get('filing_period'),
+            default=default_fp,
+        )
+        settings['vat_filing_period'] = fp
+        settings['filing_period'] = fp
+        settings['features'] = resolve_features(regime, None, settings)
+        return settings
+
+    tier = normalize_revenue_tier(revenue_tier)
     nn_list = normalize_enabled_nn_sectors(
         enabled_nn_sectors or [hkd_sector],
         default=infer_enabled_nn_sectors({'business_line': bl}, bl),
@@ -258,12 +411,19 @@ def build_tenant_settings(
     return settings
 
 
+def is_sme_regime(regime) -> bool:
+    return str(regime or '').strip().upper().startswith('SME')
+
+
 def resolve_features(accounting_regime, revenue_tier, settings=None):
     regime = normalize_accounting_regime(accounting_regime)
-    if regime != 'HKD' or not ACCOUNTING_REGIMES[regime]['active']:
+    regime_meta = ACCOUNTING_REGIMES.get(regime, ACCOUNTING_REGIMES['HKD'])
+    settings = settings or {}
+
+    if not regime_meta.get('active'):
         return {
             'accounting_enabled': False,
-            'regime_coming_soon': ACCOUNTING_REGIMES.get(regime, {}).get('coming_soon', True),
+            'regime_coming_soon': regime_meta.get('coming_soon', True),
             'ledger_profile': 'disabled',
             'filing_period': None,
             'nsnn_s4': False,
@@ -271,15 +431,44 @@ def resolve_features(accounting_regime, revenue_tier, settings=None):
             'profit_report_s2c': False,
             'monthly_vat_filing': False,
             'einvoice_required': False,
+            'einvoice_enabled': False,
+            'double_entry': False,
+            'journal_posting': False,
+            'bctc_enabled': False,
         }
 
+    if is_sme_regime(regime):
+        features = dict(SME_BASE_FEATURES.get(regime, SME_BASE_FEATURES['SME_TT99']))
+        opt_tier = normalize_revenue_tier_optional(revenue_tier)
+        if opt_tier:
+            features['revenue_tier'] = opt_tier
+        else:
+            features['revenue_tier'] = None
+        plan = (settings.get('plan') or '').upper()
+        if plan in ('DV001',):
+            features['einvoice_enabled'] = False
+        elif plan in ('DV002', 'DV003', 'DV004'):
+            features['einvoice_enabled'] = True
+        if settings.get('features') and isinstance(settings['features'], dict):
+            features.update({
+                k: v for k, v in settings['features'].items()
+                if k in features or k.startswith('custom_')
+            })
+        features, _period = apply_vat_filing_period_to_features(
+            features, settings, accounting_regime=regime,
+        )
+        return features
+
+    # HKD
     tier = normalize_revenue_tier(revenue_tier)
     features = dict(TIER_BASE_FEATURES.get(tier, TIER_BASE_FEATURES['DT1']))
     features['accounting_enabled'] = True
     features['regime_coming_soon'] = False
     features['revenue_tier'] = tier
+    features['double_entry'] = False
+    features['journal_posting'] = False
+    features['bctc_enabled'] = False
 
-    settings = settings or {}
     plan = (settings.get('plan') or '').upper()
     if plan in ('DV002', 'DV003', 'DV004'):
         features['einvoice_enabled'] = True
@@ -299,10 +488,47 @@ def build_profile_from_registry(registry_row):
         return _empty_profile()
     settings = parse_tenant_settings(registry_row.get('settings'))
     regime = normalize_accounting_regime(settings.get('accounting_regime'))
+    regime_meta = ACCOUNTING_REGIMES.get(regime, ACCOUNTING_REGIMES['HKD'])
+    sme = is_sme_regime(regime)
+
+    if sme:
+        tier = normalize_revenue_tier_optional(
+            settings.get('revenue_tier_effective')
+            or settings.get('revenue_tier')
+            or settings.get('revenue_tier_declared')
+        )
+        features = resolve_features(regime, tier, settings)
+        nn_sectors = list(settings.get('enabled_nn_sectors') or [])
+        primary = settings.get('primary_nn_sector') or None
+        storage = settings.get('default_hkd_sector') or None
+        tier_meta = REVENUE_TIERS.get(tier) if tier else None
+        return {
+            'tenant_id': registry_row.get('tenant_id'),
+            'business_name': registry_row.get('business_name'),
+            'accounting_regime': regime,
+            'accounting_regime_label': regime_meta['label'],
+            'regime_active': regime_meta['active'],
+            'regime_coming_soon': regime_meta.get('coming_soon', False),
+            'revenue_tier': tier,
+            'revenue_tier_label': (tier_meta or {}).get('label'),
+            'revenue_tier_short': (tier_meta or {}).get('short_label'),
+            'legacy_business_group': (tier_meta or {}).get('legacy_group'),
+            'filing_period': features.get('filing_period') or 'quarterly',
+            'vat_filing_period': features.get('vat_filing_period')
+                or features.get('filing_period')
+                or 'quarterly',
+            'business_line': settings.get('business_line', registry_row.get('business_type') or 'pos'),
+            'enabled_nn_sectors': nn_sectors,
+            'primary_nn_sector': primary,
+            'default_hkd_sector': storage,
+            'features': features,
+            'settings': settings,
+            'is_sme': True,
+        }
+
     tier = infer_revenue_tier(settings)
     features = resolve_features(regime, tier, settings)
     tier_meta = REVENUE_TIERS.get(tier, REVENUE_TIERS['DT1'])
-    regime_meta = ACCOUNTING_REGIMES.get(regime, ACCOUNTING_REGIMES['HKD'])
     nn_sectors = infer_enabled_nn_sectors(settings, settings.get('business_line'))
     from Services.hkd_sector import normalize_nn_code, nn_to_storage_code
 
@@ -327,6 +553,7 @@ def build_profile_from_registry(registry_row):
         'default_hkd_sector': nn_to_storage_code(primary),
         'features': features,
         'settings': settings,
+        'is_sme': False,
     }
 
 
@@ -467,9 +694,31 @@ def update_registry_settings(tenant_id, settings_patch, conn=None):
         current = parse_tenant_settings(row[0] if not hasattr(row, 'keys') else row['settings'])
         current.update(settings_patch)
         regime = normalize_accounting_regime(current.get('accounting_regime'))
-        tier = infer_revenue_tier(current)
-        current['features'] = resolve_features(regime, tier, current)
-        current['filing_period'] = REVENUE_TIERS[tier]['filing_period']
+        if is_sme_regime(regime):
+            current['accounting_regime'] = regime
+            current['revenue_tier'] = None
+            current['revenue_tier_declared'] = None
+            current['revenue_tier_effective'] = None
+            current['enabled_nn_sectors'] = []
+            current['primary_nn_sector'] = None
+            current['default_hkd_sector'] = None
+            if 'vat_filing_period' in settings_patch or 'filing_period' in settings_patch:
+                fp = normalize_vat_filing_period(
+                    current.get('vat_filing_period') or current.get('filing_period'),
+                    default=default_vat_filing_period_for_regime(regime),
+                )
+                current['vat_filing_period'] = fp
+                current['filing_period'] = fp
+            current['features'] = resolve_features(regime, None, current)
+            current['filing_period'] = (current.get('features') or {}).get('filing_period') or 'quarterly'
+            current['vat_filing_period'] = (
+                (current.get('features') or {}).get('vat_filing_period')
+                or current['filing_period']
+            )
+        else:
+            tier = infer_revenue_tier(current)
+            current['features'] = resolve_features(regime, tier, current)
+            current['filing_period'] = REVENUE_TIERS[tier]['filing_period']
         conn.execute(
             'UPDATE tenants SET settings = ? WHERE tenant_id = ?',
             (json.dumps(current, ensure_ascii=False), tenant_id),
@@ -534,6 +783,8 @@ def check_revenue_tier_drift(cursor, profile, year=None):
 def require_hkd_regime(view_func):
     @wraps(view_func)
     def wrapped(*args, **kwargs):
+        if is_master_session():
+            return view_func(*args, **kwargs)
         profile = get_current_tenant_profile()
         if not profile.get('regime_active') or profile.get('accounting_regime') != 'HKD':
             msg = 'Chế độ kế toán này chưa được kích hoạt trên hệ thống.'
@@ -543,6 +794,41 @@ def require_hkd_regime(view_func):
                 return jsonify({'success': False, 'error': msg}), 403
             flash(msg, 'warning')
             return redirect(url_for('HKD_dashboard'))
+        return view_func(*args, **kwargs)
+    return wrapped
+
+
+def require_sme_regime(view_func):
+    """Cho phép regime SME_MICRO_TT58 / SME_TT99 đã kích hoạt. HKD bị chặn (trừ master)."""
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if is_master_session():
+            return view_func(*args, **kwargs)
+        profile = get_current_tenant_profile()
+        regime = (profile.get('accounting_regime') or '').upper()
+        if not is_sme_regime(regime):
+            msg = (
+                'Chức năng này dành cho chế độ Kế toán Doanh nghiệp (TT58/TT99). '
+                'Tenant hiện tại đang dùng chế độ Hộ kinh doanh.'
+            )
+            if request.path.startswith('/api/') or request.is_json:
+                return jsonify({'success': False, 'error': msg}), 403
+            flash(msg, 'warning')
+            try:
+                return redirect(url_for('HKD_dashboard'))
+            except Exception:
+                return redirect('/HKD_dashboard')
+        if not profile.get('regime_active'):
+            msg = 'Chế độ kế toán doanh nghiệp chưa được kích hoạt trên hệ thống.'
+            if profile.get('regime_coming_soon'):
+                msg = 'Kế toán doanh nghiệp (TT58/TT99) sẽ được triển khai trong phiên bản tới.'
+            if request.path.startswith('/api/') or request.is_json:
+                return jsonify({'success': False, 'error': msg}), 403
+            flash(msg, 'warning')
+            try:
+                return redirect(url_for('HKD_dashboard'))
+            except Exception:
+                return redirect('/')
         return view_func(*args, **kwargs)
     return wrapped
 

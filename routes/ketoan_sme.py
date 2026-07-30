@@ -47,15 +47,36 @@ def register_ketoan_sme_routes(app):
     """Đăng ký route KeToan SME (giữ nguyên URL/endpoint)."""
     from auth import login_required
     from helpers import parse_date
+    from Services.tenant_profile import require_sme_regime
+
+    def _bootstrap_sme_db():
+        conn = get_db_connection()
+        try:
+            from Services.sme.bootstrap import ensure_sme_accounting_ready
+            from Services.tenant_profile import get_current_tenant_profile
+            profile = get_current_tenant_profile()
+            return ensure_sme_accounting_ready(
+                conn,
+                accounting_regime=profile.get('accounting_regime'),
+            )
+        finally:
+            conn.close()
 
     #============================================================================== Start of SME Accounting=========================================================================#
     @app.route('/SME_dashboard')
+    @login_required
+    @require_sme_regime
     def SME_dashboard():
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            logger.exception('SME bootstrap on dashboard')
         return render_template('KeToanSME/main_dashboard.html')
 
     @app.route('/SME_order')
+    @login_required
     def SME_order():
-        return render_template('KeToanSME/sme_order.html')
+        return redirect(url_for('order'))
 
     @app.route('/SME_purchasing')
     @login_required
@@ -74,12 +95,22 @@ def register_ketoan_sme_routes(app):
 
     @app.route('/SME_purchase_order_create')
     @login_required
+    @require_sme_regime
     def SME_purchase_order_create():
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            pass
         return render_template('KeToanSME/purchase_order_create.html')
 
     @app.route('/SME_purchase_order_list')
     @login_required
+    @require_sme_regime
     def SME_purchase_order_list():
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            pass
         return render_template('KeToanSME/purchase_order_list.html')
 
     @app.route('/SME_inward_invoice')
@@ -119,13 +150,18 @@ def register_ketoan_sme_routes(app):
 
     @app.route('/SME_PhaiThuCongNhanVien')
     @login_required
+    @require_sme_regime
     def SME_PhaiThuCongNhanVien():
-        return render_template('KeToanSME/PhaiThuCongNhanVien.html')
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            pass
+        return render_template('KeToanSME/employee_receivable.html')
 
     @app.route('/SME_PhaiTraCongNhanVien')
     @login_required
     def SME_PhaiTraCongNhanVien():
-        return render_template('KeToanSME/PhaiTraCongNhanVien.html')
+        return redirect(url_for('SoCongNoPhaiTraNhanVien'))
 
     @app.route('/SME_dashboard_HRSalary')
     @login_required
@@ -134,6 +170,7 @@ def register_ketoan_sme_routes(app):
 
     @app.route('/SME_SoSachKeToan')
     @login_required
+    @require_sme_regime
     def SME_SoSachKeToan():
         return render_template('KeToanSME/dashboard_sosachketoan.html')
 
@@ -149,8 +186,9 @@ def register_ketoan_sme_routes(app):
 
     @app.route('/SME_BCTC')
     @login_required
+    @require_sme_regime
     def SME_BCTC():
-        return render_template('KeToanSME/dashboard_BCTC.html')
+        return render_template('KeToanSME/bctc_reports.html')
 
     @app.route('/SME_SoQuyTienMat')
     def SME_SoQuyTienMat():
@@ -330,6 +368,7 @@ def register_ketoan_sme_routes(app):
 
     @app.route('/api/import_sme', methods=['POST'])
     @login_required
+    @require_sme_regime
     def api_fb_import_post():
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
@@ -400,101 +439,73 @@ def register_ketoan_sme_routes(app):
                 b_type = 'NHAP_KHO_NVL' if frontend_type == 'raw_materials' else 'NHAP_KHO_HANG_HOA'
                 items_by_business[b_type].append(item)
 
-            posting_dt = datetime.strptime(import_date, "%Y-%m-%d") if import_date else datetime.now()
-            fiscal_year = posting_dt.year
-            period = posting_dt.month
-        
             accounting_tx_ids = []
             items_for_json = []
 
-            # --- 6. DUYỆT TỪNG NHÓM NGHIỆP VỤ ĐỂ TIẾN HÀNH ĐỊNH KHOẢN ---
+            # --- 6. DUYỆT TỪNG NHÓM NGHIỆP VỤ: KHO VẬT LÝ + BÚT TOÁN SME ---
+            from Services.sme.journal_engine import (
+                build_import_stock_lines,
+                ensure_sme_journal_ready,
+                post_journal_entry,
+            )
+            ensure_sme_journal_ready(conn, commit=False)
+
             for b_type, business_items in items_by_business.items():
                 if not business_items:
                     continue
-                
-                # Lấy cấu hình quy tắc định khoản tự động
-                c.execute("""
-                    SELECT * FROM accounting_rule 
-                    WHERE business_type = ? AND payment_method = ? AND active = 1
-                """, (b_type, payment_method))
-                acc_rule = c.fetchone()
-            
-                if not acc_rule:
-                    raise ValueError(f"Chưa cấu hình tài khoản định khoản cho nghiệp vụ {b_type} qua {payment_method}")
 
-                tx_uuid = str(uuid.uuid4())
                 desc_text = "Nhập kho hàng hóa" if b_type == 'NHAP_KHO_HANG_HOA' else "Nhập kho nguyên vật liệu"
-            
-                # Ghi nhận chứng từ Kế toán Tổng hợp (Transaction)
-                c.execute("""
-                    INSERT INTO accounting_transaction (
-                        transaction_uuid, company_id, fiscal_year, period, posting_date, document_date, 
-                        document_type, document_no, document_id, business_type, event_type, 
-                        currency, exchange_rate, description, reference_document, status
-                    ) VALUES (?, 0, ?, ?, ?, ?, 'PNK', ?, ?, ?, 'RECEIVE_GOODS', ?, ?, ?, ?, 'Posted')
-                """, (tx_uuid, fiscal_year, period, import_date, bill_date or import_date, import_no, import_id, b_type, currency, float(exchange_rate), f"{desc_text} theo HĐ/Tờ khai số {bill_no}", bill_no))
-            
-                accounting_tx_id = c.lastrowid
-                accounting_tx_ids.append(accounting_tx_id)
-            
                 tx_subtotal_payable_vnd = Decimal('0.00')
                 tx_total_vat_vnd = Decimal('0.00')
                 tx_total_import_tax_vnd = Decimal('0.00')
-                sequence = 1
+                journal_inventory_lines = []
 
                 for item in business_items:
                     pid = item.get('product_id')
                     p_info = p_map.get(pid)
-                    if not p_info: continue
+                    if not p_info:
+                        continue
 
                     qty_in = round_money(item.get('qty', 0))
-                    if qty_in <= 0: continue
+                    if qty_in <= 0:
+                        continue
 
-                    # Thông số tài chính gốc từ Client
                     price_original = round_money(item.get('buyprice', 0))
                     tax_p = Decimal(str(item.get('tax_pct', 0) or 0))
                     import_tax_p = Decimal(str(item.get('import_tax_pct', 0) or 0)) if import_type == 'IMPORT' else Decimal('0.00')
                     disc_p = Decimal(str(item.get('discount_pct', 0) or 0))
                     unit_in = str(item.get('unit', '')).strip().lower()
+                    frontend_type = item.get('invoice_product_type', 'ready_made')
 
                     product_name = p_info['name']
                     retail_unit = str(p_info['unit'] or "Cái").strip()
                     wholesale_unit = str(p_info['unit1'] or "").strip().lower()
                     ratio = Decimal(str(p_info['unit_ratio'] or 1))
 
-                    # Quy đổi đơn vị tính vật lý về đơn vị nhỏ nhất (Đơn vị lẻ)
                     is_wholesale = wholesale_unit and unit_in == wholesale_unit
                     qty_retail = qty_in * ratio if is_wholesale else qty_in
 
-                    # --- ĐỒNG BỘ TÍNH TOÁN QUY ĐỔI GIÁ VỐN (VND) KHÔNG CHỨA THUẾ GTGT ---
                     price_vnd = round_money(price_original * exchange_rate)
                     line_subtotal_vnd = round_money(qty_in * price_vnd)
                     line_disc_vnd = round_money(line_subtotal_vnd * (disc_p / Decimal('100.00')))
                     line_net_vnd = line_subtotal_vnd - line_disc_vnd
 
-                    # Tính Thuế Nhập Khẩu (Nếu có -> Cộng trực tiếp vào nguyên giá kho)
                     line_import_tax_vnd = Decimal('0.00')
                     if import_type == 'IMPORT' and import_tax_p > 0:
                         line_import_tax_vnd = round_money(line_net_vnd * (import_tax_p / Decimal('100.00')))
                         tx_total_import_tax_vnd += line_import_tax_vnd
 
-                    # Phân bổ chi phí thu mua (Phí vận chuyển, bốc dỡ...)
                     line_extra_vnd = round_money((line_subtotal_vnd / total_base_safe) * extra_cost)
-
-                    # NGUYÊN GIÁ NHẬP KHO CHUẨN (Không bao gồm Thuế GTGT)
                     line_inventory_value_vnd = line_net_vnd + line_import_tax_vnd + line_extra_vnd
                     cost_per_retail_vnd = round_money(line_inventory_value_vnd / qty_retail) if qty_retail > 0 else Decimal('0.00')
 
-                    # Tính Thuế GTGT (Nếu là hàng nhập khẩu, thuế GTGT tính trên cả gốc + thuế NK)
                     tax_base_vnd = line_net_vnd + line_import_tax_vnd if import_type == 'IMPORT' else line_net_vnd
                     line_vat_vnd = round_money(tax_base_vnd * (tax_p / Decimal('100.00')))
                     tx_total_vat_vnd += line_vat_vnd
 
-                    # Tổng giá trị thanh toán cuối của dòng hàng
                     line_total_payment_vnd = line_net_vnd + line_vat_vnd + line_extra_vnd
                     tx_subtotal_payable_vnd += line_total_payment_vnd
 
-                    # Gom cấu trúc JSON để hiển thị phiếu in công khai
                     items_for_json.append({
                         "product_id": pid, "product_name": product_name, "barcode": p_info['barcode'] or "",
                         "unit": item.get('unit'), "qty": float(qty_in), "buyprice": float(price_original),
@@ -502,93 +513,93 @@ def register_ketoan_sme_routes(app):
                         "line_total": float(line_total_payment_vnd), "invoice_product_type": frontend_type
                     })
 
-                    # Ghi nhận chi tiết chứng từ kho vật lý (Sử dụng giá vốn lẻ chuẩn không thuế)
                     params_detail = (
-                        import_id, pid, float(qty_in), float(price_original), float(line_subtotal_vnd), 
-                        float(line_disc_vnd), float(line_vat_vnd), float(cost_per_retail_vnd), 
+                        import_id, pid, float(qty_in), float(price_original), float(line_subtotal_vnd),
+                        float(line_disc_vnd), float(line_vat_vnd), float(cost_per_retail_vnd),
                         1 if is_wholesale else 0, float(tax_p), float(disc_p)
                     )
-                    c.execute("INSERT INTO import_details (import_id, product_id, qty, buyprice, subtotal, discount, tax, cost_price, unit_type, tax_pct, discount_pct) VALUES (?,?,?,?,?,?,?,?,?,?,?)", params_detail)
-                    c.execute("INSERT INTO chi_tiet_phieu_nhap_kho (import_id, product_id, quantity, buyprice, subtotal, discount_amount, tax_amount, cost_price, unit_type, tax_pct, discount_pct) VALUES (?,?,?,?,?,?,?,?,?,?,?)", params_detail)
+                    c.execute(
+                        "INSERT INTO import_details (import_id, product_id, qty, buyprice, subtotal, discount, tax, cost_price, unit_type, tax_pct, discount_pct) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                        params_detail,
+                    )
+                    c.execute(
+                        "INSERT INTO chi_tiet_phieu_nhap_kho (import_id, product_id, quantity, buyprice, subtotal, discount_amount, tax_amount, cost_price, unit_type, tax_pct, discount_pct) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                        params_detail,
+                    )
 
-                    # --- HẠCH TOÁN NỢ TÀI KHOẢN KHO (156 / 152) VỚI NGUYÊN GIÁ KHÔNG THUẾ GTGT ---
-                    c.execute("""
-                        INSERT INTO accounting_transaction_detail (
-                            transaction_id, sequence, account_code, debit, credit, currency, exchange_rate,
-                            debit_fc, credit_fc, partner_id, warehouse_id, inventory_item_id, cost_price,
-                            tax_code, tax_rate, vat_invoice_no, description
-                        ) VALUES (?, ?, ?, ?, 0.00, 'VND', 1.000000, ?, 0.00, ?, 1, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        accounting_tx_id, sequence, acc_rule['debit_account_code'], float(line_inventory_value_vnd),
-                        float(line_inventory_value_vnd), supplier_id, pid, float(cost_per_retail_vnd),
-                        tax_code, float(tax_p), bill_no, f"Nhập kho [{desc_text} - Giá vốn ko thuế]: {product_name}"
-                    ))
-                    sequence += 1
-
-                    # CẬP NHẬT GIÁ VỐN BÌNH QUÂN GIA QUYỀN DI ĐỘNG KHO VẬT LÝ (AVG_COST) KHÔNG THUẾ GTGT
                     c.execute("SELECT quantity, avg_cost FROM inventory WHERE product_id = ?", (pid,))
                     inv = c.fetchone()
                     old_q = Decimal(str(inv['quantity'] if inv else 0))
                     old_c = Decimal(str(inv['avg_cost'] if inv else 0))
                     new_q = old_q + qty_retail
                     new_avg = round_money(((old_q * old_c) + line_inventory_value_vnd) / new_q) if new_q > 0 else cost_per_retail_vnd
-
-                    c.execute("""
+                    c.execute(
+                        """
                         INSERT INTO inventory (product_id, quantity, avg_cost) VALUES (?, ?, ?)
                         ON CONFLICT(product_id) DO UPDATE SET quantity=excluded.quantity, avg_cost=excluded.avg_cost
-                    """, (pid, float(new_q), float(new_avg)))
-
-                    # Ghi nhận lịch sử dịch chuyển kho vật lý
+                        """,
+                        (pid, float(new_q), float(new_avg)),
+                    )
                     move_note = f"Nhập kho từ {supplier_name} ({desc_text})"
-                    c.execute("""
+                    c.execute(
+                        """
                         INSERT INTO stock_moves (product_id, date, type, ref_id, quantity, cost_price, note, ref_document, ref_type, type1, unit, unit1, unit_ratio)
                         VALUES (?, ?, 'import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (pid, import_date, import_id, float(qty_retail), float(cost_per_retail_vnd), move_note, import_no, 'import', 'Nhập', retail_unit, wholesale_unit, float(ratio)))
+                        """,
+                        (
+                            pid, import_date, import_id, float(qty_retail), float(cost_per_retail_vnd),
+                            move_note, import_no, 'import', 'Nhập', retail_unit, wholesale_unit, float(ratio),
+                        ),
+                    )
 
-                # --- HẠCH TOÁN THUẾ GTGT ĐẦU VÀO ĐƯỢC KHẤU TRỪ (TÀI KHOẢN 133) ---
-                if acc_rule['is_vat_applicable'] and tx_total_vat_vnd > 0:
-                    # Nếu là hàng nhập khẩu, tách riêng tiểu khoản thuế GTGT hàng nhập khẩu 13312 / 33312
-                    acc_vat = '13312' if import_type == 'IMPORT' else acc_rule['vat_account_code']
-                    c.execute("""
-                        INSERT INTO accounting_transaction_detail (
-                            transaction_id, sequence, account_code, debit, credit, currency, exchange_rate,
-                            debit_fc, credit_fc, partner_id, tax_code, vat_invoice_no, description
-                        ) VALUES (?, ?, ?, ?, 0.00, 'VND', 1.000000, ?, 0.00, ?, ?, ?, ?)
-                    """, (
-                        accounting_tx_id, sequence, acc_vat, float(tx_total_vat_vnd),
-                        float(tx_total_vat_vnd), supplier_id, tax_code, bill_no, f"Thuế GTGT hàng mua của nghiệp vụ {b_type}"
-                    ))
-                    sequence += 1
+                    journal_inventory_lines.append({
+                        'product_id': pid,
+                        'product_name': product_name,
+                        'amount': line_inventory_value_vnd,
+                        'tax_pct': float(tax_p),
+                        'warehouse_code': (item.get('warehouse_code') or 'KHO_001'),
+                        'description': f"Nhập kho [{desc_text}]: {product_name}",
+                    })
 
-                # --- HẠCH TOÁN THUẾ NHẬP KHẨU PHẢI NỘP NHÀ NƯỚC (3333) NẾU CÓ ---
-                if import_type == 'IMPORT' and tx_total_import_tax_vnd > 0:
-                    c.execute("""
-                        INSERT INTO accounting_transaction_detail (
-                            transaction_id, sequence, account_code, debit, credit, currency, exchange_rate,
-                            debit_fc, credit_fc, partner_id, description
-                        ) VALUES (?, ?, '3333', 0.00, ?, 'VND', 1.000000, 0.00, ?, ?, ?)
-                    """, (
-                        accounting_tx_id, sequence, float(tx_total_import_tax_vnd),
-                        float(tx_total_import_tax_vnd), supplier_id, f"Thuế nhập khẩu phải nộp cấu thành nguyên giá"
-                    ))
-                    sequence += 1
+                if not journal_inventory_lines:
+                    continue
 
-                # --- HẠCH TOÁN BÚT TOÁN CÓ ĐỐI ỨNG (1111 / 1121 / 331) ---
-                c.execute("""
-                    INSERT INTO accounting_transaction_detail (
-                        transaction_id, sequence, account_code, debit, credit, currency, exchange_rate,
-                        debit_fc, credit_fc, partner_id, description
-                    ) VALUES (?, ?, ?, 0.00, ?, 'VND', 1.000000, 0.00, ?, ?, ?)
-                """, (
-                    accounting_tx_id, sequence, acc_rule['credit_account_code'], float(tx_subtotal_payable_vnd),
-                    float(tx_subtotal_payable_vnd), supplier_id, f"Thanh toán đối ứng tổng hợp nghiệp vụ {b_type}"
-                ))
+                _rule, journal_lines = build_import_stock_lines(
+                    conn,
+                    business_type=b_type,
+                    payment_method=payment_method,
+                    inventory_lines=journal_inventory_lines,
+                    vat_amount=tx_total_vat_vnd,
+                    import_tax_amount=tx_total_import_tax_vnd,
+                    payable_amount=tx_subtotal_payable_vnd,
+                    supplier_id=supplier_id,
+                    bill_no=bill_no,
+                    tax_code=tax_code,
+                    import_type=import_type,
+                    description=f"{desc_text} HĐ {bill_no or import_no}",
+                )
+                posted = post_journal_entry(
+                    conn,
+                    posting_date=import_date,
+                    document_date=bill_date or import_date,
+                    document_type='PNK',
+                    document_no=import_no,
+                    document_id=import_id,
+                    business_type=b_type,
+                    currency=currency,
+                    exchange_rate=exchange_rate,
+                    description=f"{desc_text} theo HĐ/Tờ khai số {bill_no or import_no}",
+                    reference_document=bill_no,
+                    created_by=(session.get('user') or {}).get('username'),
+                    lines=journal_lines,
+                )
+                accounting_tx_ids.append(posted['id'])
 
             # --- 7. ĐỒNG BỘ PHIẾU IN HOÀN THIỆN ---
             total_overall_payment_vnd = sum(round_money(x['line_total'] or 0) for x in items_for_json)
             total_final_float = float(total_overall_payment_vnd)
             final_paid = total_final_float if payment_status_input == 'Đã thanh toán' else 0.0
-        
+
             c.execute("UPDATE import SET total_value = ?, paid_amount = ? WHERE id = ?", (total_final_float, final_paid, import_id))
 
             items_json_str = json.dumps(items_for_json, ensure_ascii=False)
@@ -599,16 +610,983 @@ def register_ketoan_sme_routes(app):
 
             conn.commit()
             return jsonify({
-                "success": True, 
-                "import_id": import_id, 
-                "voucher_no": import_no, 
+                "success": True,
+                "import_id": import_id,
+                "voucher_no": import_no,
                 "total_payment_vnd": total_final_float,
-                "accounting_tx_ids": accounting_tx_ids
+                "journal_entry_ids": accounting_tx_ids,
+                "accounting_tx_ids": accounting_tx_ids,
             })
 
         except Exception as e:
             conn.rollback()
             logging.error(f"LỖI HỆ THỐNG KẾ TOÁN VÀ GIÁ VỐN: {str(e)}", exc_info=True)
             return jsonify({"error": f"Lỗi xử lý: {str(e)}"}), 500
+        finally:
+            conn.close()
+
+    # --------------------------------------------------------------------------
+    # Danh mục tài khoản SME (TT99) — tách biệt HKD
+    # --------------------------------------------------------------------------
+    @app.route('/SME_chart_of_accounts')
+    @login_required
+    @require_sme_regime
+    def SME_chart_of_accounts():
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            logger.exception('SME bootstrap on COA page')
+        return render_template('KeToanSME/chart_of_accounts.html')
+
+    @app.route('/SME_journal')
+    @login_required
+    @require_sme_regime
+    def SME_journal():
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            logger.exception('SME bootstrap on journal page')
+        return render_template('KeToanSME/journal.html')
+
+    @app.route('/SME_general_ledger')
+    @login_required
+    @require_sme_regime
+    def SME_general_ledger():
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            logger.exception('SME bootstrap on ledger page')
+        return render_template('KeToanSME/general_ledger.html')
+
+    @app.route('/api/sme/coa', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_coa_list():
+        conn = get_db_connection()
+        try:
+            from Services.sme.coa_service import account_tree, ensure_sme_coa_ready
+            meta = ensure_sme_coa_ready(conn)
+            q = (request.args.get('q') or '').strip() or None
+            active = request.args.get('active', '1') != '0'
+            if q:
+                from Services.sme.coa_service import list_accounts
+                rows = list_accounts(conn, active_only=active, q=q)
+            else:
+                rows = account_tree(conn, active_only=active)
+            return jsonify({
+                'success': True,
+                'data': rows,
+                'meta': meta,
+            })
+        except Exception as e:
+            logger.exception('api_sme_coa_list')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/coa/<code>', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_coa_get(code):
+        conn = get_db_connection()
+        try:
+            from Services.sme.coa_service import get_account, list_children, ensure_sme_coa_ready
+            ensure_sme_coa_ready(conn)
+            acc = get_account(conn, code)
+            if not acc:
+                return jsonify({'success': False, 'error': 'Không tìm thấy tài khoản'}), 404
+            return jsonify({
+                'success': True,
+                'data': acc,
+                'children': list_children(conn, code),
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/coa/<parent_code>/suggest-child', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_coa_suggest_child(parent_code):
+        conn = get_db_connection()
+        try:
+            from Services.sme.coa_service import suggest_next_child_code, ensure_sme_coa_ready
+            ensure_sme_coa_ready(conn)
+            return jsonify({
+                'success': True,
+                'next_code': suggest_next_child_code(conn, parent_code),
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/coa/children', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_coa_create_child():
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        try:
+            from Services.sme.coa_service import create_child_account, ensure_sme_coa_ready
+            ensure_sme_coa_ready(conn)
+            created = create_child_account(
+                conn,
+                parent_code=(payload.get('parent_code') or '').strip(),
+                code=(payload.get('code') or '').strip() or None,
+                name=(payload.get('name') or '').strip(),
+                custom_reason=(payload.get('custom_reason') or '').strip(),
+                tracks=payload.get('tracks') or None,
+                bctc_line_code=payload.get('bctc_line_code'),
+                description=(payload.get('description') or '').strip(),
+            )
+            return jsonify({'success': True, 'data': created})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            logger.exception('api_sme_coa_create_child')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/coa/<code>', methods=['PUT'])
+    @login_required
+    @require_sme_regime
+    def api_sme_coa_update(code):
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        try:
+            from Services.sme.coa_service import update_account_meta, ensure_sme_coa_ready
+            ensure_sme_coa_ready(conn)
+            updated = update_account_meta(
+                conn,
+                code,
+                name=payload.get('name'),
+                description=payload.get('description'),
+                bctc_line_code=payload.get('bctc_line_code'),
+                tracks=payload.get('tracks'),
+            )
+            return jsonify({'success': True, 'data': updated})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/coa/<code>/deactivate', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_coa_deactivate(code):
+        conn = get_db_connection()
+        try:
+            from Services.sme.coa_service import deactivate_account, ensure_sme_coa_ready
+            ensure_sme_coa_ready(conn)
+            data = deactivate_account(conn, code)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/coa/reseed', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_coa_reseed():
+        """Nạp lại seed hệ thống (giữ tài khoản custom của DN)."""
+        conn = get_db_connection()
+        try:
+            from Services.sme.coa_service import ensure_sme_coa_ready
+            meta = ensure_sme_coa_ready(conn, force_reseed=True)
+            return jsonify({'success': True, 'meta': meta})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    # --------------------------------------------------------------------------
+    # Nhật ký / bút toán SME
+    # --------------------------------------------------------------------------
+    @app.route('/api/sme/journal/ready', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_journal_ready():
+        conn = get_db_connection()
+        try:
+            from Services.sme.bootstrap import ensure_sme_accounting_ready
+            meta = ensure_sme_accounting_ready(conn)
+            return jsonify({'success': True, **meta})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/journal', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_journal_list():
+        conn = get_db_connection()
+        try:
+            from Services.sme.journal_engine import list_journal_entries
+            doc_type = (request.args.get('document_type') or '').strip() or None
+            doc_id = request.args.get('document_id', type=int)
+            status = (request.args.get('status') or '').strip() or None
+            date_from = (request.args.get('date_from') or '').strip() or None
+            date_to = (request.args.get('date_to') or '').strip() or None
+            q = (request.args.get('q') or '').strip() or None
+            limit = request.args.get('limit', default=50, type=int) or 50
+            offset = request.args.get('offset', default=0, type=int) or 0
+            rows = list_journal_entries(
+                conn,
+                document_type=doc_type,
+                document_id=doc_id,
+                status=status,
+                date_from=date_from,
+                date_to=date_to,
+                q=q,
+                limit=min(max(limit, 1), 200),
+                offset=max(offset, 0),
+            )
+            return jsonify({'success': True, 'data': rows, 'count': len(rows)})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/journal/<int:entry_id>', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_journal_get(entry_id):
+        conn = get_db_connection()
+        try:
+            from Services.sme.journal_engine import get_journal_entry
+            data = get_journal_entry(conn, entry_id)
+            if not data:
+                return jsonify({'success': False, 'error': 'Không tìm thấy bút toán'}), 404
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/journal/<int:entry_id>/reverse', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_journal_reverse(entry_id):
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        try:
+            from Services.sme.journal_engine import reverse_journal_entry
+            rev = reverse_journal_entry(
+                conn,
+                entry_id,
+                posting_date=(payload.get('posting_date') or None),
+                created_by=(session.get('user') or {}).get('username') or session.get('user_name'),
+                reason=(payload.get('reason') or 'Đảo bút toán'),
+            )
+            conn.commit()
+            return jsonify({'success': True, 'data': rev})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/posting-rules', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_posting_rules():
+        conn = get_db_connection()
+        try:
+            from Services.sme.journal_engine import ensure_sme_journal_ready
+            ensure_sme_journal_ready(conn)
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM sme_posting_rules WHERE active = 1 ORDER BY business_type, payment_method"
+            ).fetchall()
+            return jsonify({'success': True, 'data': [dict(r) for r in rows]})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    # --------------------------------------------------------------------------
+    # Sổ cái / cân đối phát sinh
+    # --------------------------------------------------------------------------
+    @app.route('/api/sme/trial-balance', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_trial_balance():
+        conn = get_db_connection()
+        try:
+            from Services.sme.general_ledger import trial_balance
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_from = request.args.get('period_from', type=int) or 1
+            period_to = request.args.get('period_to', type=int) or period_from
+            include_zero = request.args.get('include_zero', '0') in ('1', 'true', 'True')
+            postable_only = request.args.get('postable_only', '1') not in ('0', 'false', 'False')
+            data = trial_balance(
+                conn,
+                fiscal_year=year,
+                period_from=period_from,
+                period_to=period_to,
+                postable_only=postable_only,
+                include_zero=include_zero,
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/ledger/<account_code>', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_account_ledger(account_code):
+        conn = get_db_connection()
+        try:
+            from Services.sme.general_ledger import account_ledger, period_bounds
+            year = request.args.get('year', type=int) or datetime.now().year
+            period = request.args.get('period', type=int)
+            date_from = (request.args.get('date_from') or '').strip()
+            date_to = (request.args.get('date_to') or '').strip()
+            if not date_from or not date_to:
+                if period:
+                    date_from, date_to = period_bounds(year, period)
+                else:
+                    date_from, date_to = f'{year}-01-01', f'{year}-12-31'
+            data = account_ledger(conn, account_code, date_from=date_from, date_to=date_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    # --------------------------------------------------------------------------
+    # BCTC (B01 / B02)
+    # --------------------------------------------------------------------------
+    @app.route('/api/sme/bctc/b01', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_bctc_b01():
+        conn = get_db_connection()
+        try:
+            from Services.sme.bctc_report import balance_sheet
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            include_profit = request.args.get('include_current_profit', '1') not in ('0', 'false', 'False')
+            data = balance_sheet(
+                conn,
+                fiscal_year=year,
+                period_to=period_to,
+                include_current_profit=include_profit,
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/bctc/b02', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_bctc_b02():
+        conn = get_db_connection()
+        try:
+            from Services.sme.bctc_report import income_statement
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_from = request.args.get('period_from', type=int) or 1
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = income_statement(
+                conn,
+                fiscal_year=year,
+                period_from=period_from,
+                period_to=period_to,
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/bctc/b03', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_bctc_b03():
+        conn = get_db_connection()
+        try:
+            from Services.sme.bctc_report import cash_flow_statement
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_from = request.args.get('period_from', type=int) or 1
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = cash_flow_statement(
+                conn,
+                fiscal_year=year,
+                period_from=period_from,
+                period_to=period_to,
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/bctc/b09', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_bctc_b09():
+        conn = get_db_connection()
+        try:
+            from Services.sme.b09_notes import notes_to_financial_statements
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = notes_to_financial_statements(
+                conn,
+                fiscal_year=year,
+                period_to=period_to,
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/SME_auto_posting')
+    @login_required
+    @require_sme_regime
+    def SME_auto_posting():
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            logger.exception('SME bootstrap on auto posting page')
+        return render_template('KeToanSME/auto_posting.html')
+
+    @app.route('/SME_tax_nsnn')
+    @login_required
+    @require_sme_regime
+    def SME_tax_nsnn():
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            logger.exception('SME bootstrap tax page')
+        return render_template('KeToanSME/tax_nsnn.html')
+
+    @app.route('/SME_mgmt_report')
+    @login_required
+    @require_sme_regime
+    def SME_mgmt_report():
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            pass
+        return render_template('KeToanSME/mgmt_report.html')
+
+    @app.route('/SME_costing')
+    @login_required
+    @require_sme_regime
+    def SME_costing():
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            pass
+        return render_template('KeToanSME/costing.html')
+
+    @app.route('/SME_utilities')
+    @login_required
+    @require_sme_regime
+    def SME_utilities():
+        return render_template('KeToanSME/utilities.html')
+
+    @app.route('/api/sme/dashboard-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_dashboard_metrics():
+        conn = get_db_connection()
+        try:
+            from Services.sme.dashboard_metrics import dashboard_metrics
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = dashboard_metrics(conn, fiscal_year=year, period_to=period_to)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/tax-nsnn', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_tax_nsnn():
+        conn = get_db_connection()
+        try:
+            from Services.sme.tax_nsnn import tax_nsnn_summary
+            from Services.tenant_profile import get_current_tenant_profile, normalize_vat_filing_period
+            profile = get_current_tenant_profile()
+            features = profile.get('features') or {}
+            default_mode = normalize_vat_filing_period(
+                request.args.get('filing_mode')
+                or profile.get('vat_filing_period')
+                or features.get('vat_filing_period')
+                or features.get('filing_period'),
+                default='monthly' if features.get('monthly_vat_filing') else 'quarterly',
+            )
+            year = request.args.get('year', type=int) or datetime.now().year
+            now = datetime.now()
+            period = request.args.get('period', type=int)
+            quarter = request.args.get('quarter', type=int)
+            if default_mode == 'quarterly' and quarter is None and period is None:
+                quarter = (now.month - 1) // 3 + 1
+            elif default_mode == 'monthly' and period is None:
+                period = now.month
+            data = tax_nsnn_summary(
+                conn,
+                fiscal_year=year,
+                period=period,
+                quarter=quarter,
+                filing_mode=default_mode,
+            )
+            data['configured_vat_filing_period'] = normalize_vat_filing_period(
+                profile.get('vat_filing_period')
+                or features.get('vat_filing_period')
+                or features.get('filing_period'),
+                default=default_mode,
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/settings/vat-filing-period', methods=['GET', 'POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_vat_filing_period():
+        from Services.tenant_profile import (
+            get_current_tenant_profile,
+            normalize_vat_filing_period,
+            default_vat_filing_period_for_regime,
+            update_registry_settings,
+        )
+        profile = get_current_tenant_profile()
+        features = profile.get('features') or {}
+        current = normalize_vat_filing_period(
+            profile.get('vat_filing_period')
+            or features.get('vat_filing_period')
+            or features.get('filing_period'),
+            default=default_vat_filing_period_for_regime(profile.get('accounting_regime')),
+        )
+        if request.method == 'GET':
+            return jsonify({
+                'success': True,
+                'data': {
+                    'vat_filing_period': current,
+                    'monthly_vat_filing': current == 'monthly',
+                    'accounting_regime': profile.get('accounting_regime'),
+                    'default_for_regime': default_vat_filing_period_for_regime(
+                        profile.get('accounting_regime'),
+                    ),
+                },
+            })
+
+        payload = request.get_json(silent=True) or {}
+        period = normalize_vat_filing_period(
+            payload.get('vat_filing_period') or payload.get('filing_period'),
+            default=current,
+        )
+        tenant_id = (
+            getattr(g, 'tenant_id', None)
+            or session.get('last_tenant_id')
+            or profile.get('tenant_id')
+        )
+        if not tenant_id:
+            return jsonify({'success': False, 'error': 'Không xác định được tenant'}), 400
+        ok = update_registry_settings(tenant_id, {
+            'vat_filing_period': period,
+            'filing_period': period,
+        })
+        if not ok:
+            return jsonify({'success': False, 'error': 'Không lưu được cấu hình'}), 500
+        try:
+            from Services.tenant_profile import load_tenant_profile
+            g.tenant_profile = load_tenant_profile(tenant_id)
+        except Exception:
+            pass
+        return jsonify({
+            'success': True,
+            'data': {
+                'vat_filing_period': period,
+                'monthly_vat_filing': period == 'monthly',
+                'message': 'Đã lưu kỳ kê khai GTGT',
+            },
+        })
+
+    @app.route('/api/sme/mgmt-report', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_mgmt_report():
+        conn = get_db_connection()
+        try:
+            from Services.sme.mgmt_report import management_report
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_from = request.args.get('period_from', type=int) or 1
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = management_report(
+                conn, fiscal_year=year, period_from=period_from, period_to=period_to,
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/costing', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_costing():
+        conn = get_db_connection()
+        try:
+            from Services.sme.costing import costing_summary
+            year = request.args.get('year', type=int) or datetime.now().year
+            period = request.args.get('period', type=int) or datetime.now().month
+            data = costing_summary(conn, fiscal_year=year, period=period)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/bctc/b09/narrative', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_b09_narrative_save():
+        conn = get_db_connection()
+        try:
+            from Services.sme.b09_notes import save_b09_narrative_items
+            payload = request.get_json(silent=True) or {}
+            items = payload.get('items') or []
+            n = save_b09_narrative_items(
+                conn,
+                items,
+                updated_by=session.get('user_name') or session.get('username'),
+            )
+            conn.commit()
+            return jsonify({'success': True, 'saved': n})
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/purchase-orders', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_po_list():
+        conn = get_db_connection()
+        try:
+            from Services.sme.purchase_order import list_purchase_orders
+            rows = list_purchase_orders(
+                conn,
+                status=request.args.get('status') or None,
+                keyword=request.args.get('keyword') or None,
+                date_from=request.args.get('date_from') or None,
+                date_to=request.args.get('date_to') or None,
+            )
+            return jsonify({'success': True, 'data': rows})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/purchase-orders', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_po_create():
+        conn = get_db_connection()
+        try:
+            from Services.sme.purchase_order import create_purchase_order
+            payload = request.get_json(silent=True) or {}
+            data = create_purchase_order(
+                conn,
+                po_date=payload.get('po_date') or datetime.now().strftime('%Y-%m-%d'),
+                expected_date=payload.get('expected_date'),
+                supplier_name=payload.get('supplier_name') or '',
+                supplier_id=payload.get('supplier_id'),
+                supplier_code=payload.get('supplier_code'),
+                supplier_tax_code=payload.get('supplier_tax_code'),
+                note=payload.get('note'),
+                lines=payload.get('lines') or [],
+                created_by=session.get('user_name') or session.get('username'),
+            )
+            conn.commit()
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/purchase-orders/<int:po_id>', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_po_get(po_id):
+        conn = get_db_connection()
+        try:
+            from Services.sme.purchase_order import get_purchase_order
+            data = get_purchase_order(conn, po_id)
+            if not data:
+                return jsonify({'success': False, 'error': 'Không tìm thấy đơn'}), 404
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/purchase-orders/<int:po_id>', methods=['PUT'])
+    @login_required
+    @require_sme_regime
+    def api_sme_po_update(po_id):
+        conn = get_db_connection()
+        try:
+            from Services.sme.purchase_order import update_purchase_order
+            payload = request.get_json(silent=True) or {}
+            data = update_purchase_order(
+                conn,
+                po_id,
+                po_date=payload.get('po_date'),
+                expected_date=payload.get('expected_date'),
+                supplier_name=payload.get('supplier_name'),
+                supplier_id=payload.get('supplier_id'),
+                supplier_code=payload.get('supplier_code'),
+                supplier_tax_code=payload.get('supplier_tax_code'),
+                note=payload.get('note'),
+                status=payload.get('status'),
+                lines=payload.get('lines'),
+            )
+            conn.commit()
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/purchase-orders/<int:po_id>/status', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_po_status(po_id):
+        conn = get_db_connection()
+        try:
+            from Services.sme.purchase_order import set_purchase_order_status
+            payload = request.get_json(silent=True) or {}
+            data = set_purchase_order_status(conn, po_id, payload.get('status') or '')
+            conn.commit()
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/employee-receivable', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_employee_receivable():
+        conn = get_db_connection()
+        try:
+            from Services.sme.employee_receivable import employee_receivable_summary
+            year = request.args.get('year', type=int) or datetime.now().year
+            period = request.args.get('period', type=int) or datetime.now().month
+            data = employee_receivable_summary(conn, fiscal_year=year, period=period)
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/auto/run-period', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_auto_run_period():
+        conn = get_db_connection()
+        try:
+            from Services.sme.auto_posting import run_period_automation
+            from Services.tenant_profile import get_current_tenant_profile
+            payload = request.get_json(silent=True) or {}
+            now = datetime.now()
+            year = int(payload.get('year') or now.year)
+            period = int(payload.get('period') or now.month)
+            replace_existing = bool(payload.get('replace_existing'))
+            auto_activate = payload.get('auto_activate', True)
+            profile = get_current_tenant_profile()
+            result = run_period_automation(
+                conn,
+                fiscal_year=year,
+                period=period,
+                accounting_regime=profile.get('accounting_regime'),
+                features=profile.get('features'),
+                created_by=session.get('user_name') or session.get('username'),
+                replace_existing=replace_existing,
+                auto_activate=bool(auto_activate),
+            )
+            conn.commit()
+            return jsonify({'success': True, 'data': result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/auto/period-close', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_auto_period_close():
+        """Chỉ chạy kết chuyển KQKD (không KH/PB)."""
+        conn = get_db_connection()
+        try:
+            from Services.sme.period_close import run_period_close
+            from Services.tenant_profile import get_current_tenant_profile
+            payload = request.get_json(silent=True) or {}
+            now = datetime.now()
+            year = int(payload.get('year') or now.year)
+            period = int(payload.get('period') or now.month)
+            profile = get_current_tenant_profile()
+            result = run_period_close(
+                conn,
+                fiscal_year=year,
+                period=period,
+                accounting_regime=profile.get('accounting_regime'),
+                features=profile.get('features'),
+                created_by=session.get('user_name') or session.get('username'),
+                replace_existing=bool(payload.get('replace_existing')),
+            )
+            conn.commit()
+            return jsonify({'success': True, 'data': result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/auto/vat-settle', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_auto_vat_settle():
+        conn = get_db_connection()
+        try:
+            from Services.sme.vat_settlement import run_vat_settlement
+            from Services.tenant_profile import get_current_tenant_profile
+            payload = request.get_json(silent=True) or {}
+            now = datetime.now()
+            year = int(payload.get('year') or now.year)
+            period = int(payload.get('period') or now.month)
+            profile = get_current_tenant_profile()
+            result = run_vat_settlement(
+                conn,
+                fiscal_year=year,
+                period=period,
+                accounting_regime=profile.get('accounting_regime'),
+                features=profile.get('features'),
+                created_by=session.get('user_name') or session.get('username'),
+                replace_existing=bool(payload.get('replace_existing')),
+            )
+            conn.commit()
+            return jsonify({'success': True, 'data': result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/period-lock', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_period_lock_list():
+        conn = get_db_connection()
+        try:
+            from Services.sme.period_lock import list_locked_periods
+            year = request.args.get('year', type=int)
+            rows = list_locked_periods(conn, fiscal_year=year)
+            return jsonify({'success': True, 'data': rows})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/period-lock', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_period_lock_set():
+        conn = get_db_connection()
+        try:
+            from Services.sme.period_lock import lock_period, unlock_period
+            payload = request.get_json(silent=True) or {}
+            year = int(payload.get('year') or datetime.now().year)
+            period = int(payload.get('period') or datetime.now().month)
+            action = (payload.get('action') or 'lock').strip().lower()
+            if action == 'unlock':
+                ok = unlock_period(conn, fiscal_year=year, period=period)
+                conn.commit()
+                return jsonify({'success': True, 'unlocked': ok, 'year': year, 'period': period})
+            data = lock_period(
+                conn,
+                fiscal_year=year,
+                period=period,
+                locked_by=session.get('user_name') or session.get('username'),
+                reason=payload.get('reason') or 'Khóa sổ thủ công',
+            )
+            conn.commit()
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()

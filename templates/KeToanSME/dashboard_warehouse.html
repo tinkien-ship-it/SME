@@ -99,20 +99,12 @@
             <a class="nav-link-sub active" href="#"><i class="fas fa-bag-shopping text-warning me-2"></i> Quản Lý Kho</a>
             
             <div class="submenu">
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuNhapKho') }}"><i class="fas fa-clipboard-list me-2"></i> Phiếu Nhập Kho (Mẫu số 01-VT)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Phiếu xuất kho (Mẫu số 02-VT)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Biên bản kiểm kê vật tư, công cụ, sản phẩm, hàng hóa (Mẫu số 03-VT)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Bảng kê mua hàng (Mẫu số 04-VT)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Bảng phân bổ nguyên liệu, vật liệu, công cụ, dụng cụ (Mẫu số 05-VT)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Sổ kho/Thẻ kho (S21-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Sổ chi tiết nguyên liệu, vật liệu, công cụ, dụng cụ, sản phẩm, hàng hóa (S22-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Sổ chi tiết chi phí sản xuất, kinh doanh (S23-DN)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Thẻ tính giá thành sản phẩm (S24-DN)</a>
-
-                <a class="nav-link-sub" href="{{ url_for('SoChiTietHangHoa') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Tồn Kho Chi Tiết</a>
-                <a class="nav-link-sub" href="{{ url_for('inventory') }}"><i class="fas fa-boxes me-2"></i> Tổng Quan Tồn Kho</a>
-                <a class="nav-link-sub" href="{{ url_for('inventory_detail') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Báo Cáo Tồn Kho</a>
-
+                <a class="nav-link-sub" href="{{ url_for('SME_import') }}"><i class="fas fa-boxes me-2"></i> Lập phiếu nhập kho</a>
+                <a class="nav-link-sub" href="{{ url_for('SME_DanhSachPhieuNhapKho') }}"><i class="fas fa-clipboard-list me-2"></i> Danh sách phiếu nhập</a>
+                <a class="nav-link-sub" href="{{ url_for('inventory') }}"><i class="fas fa-warehouse me-2"></i> Tổng quan tồn kho</a>
+                <a class="nav-link-sub" href="{{ url_for('inventory_detail') }}"><i class="fas fa-chart-bar me-2"></i> Báo cáo tồn kho</a>
+                <a class="nav-link-sub" href="{{ url_for('SoChiTietHangHoa') }}"><i class="fas fa-list me-2"></i> Chi tiết hàng hóa</a>
+                <a class="nav-link-sub" href="{{ url_for('SME_costing') }}"><i class="fas fa-calculator me-2"></i> Giá thành / SX dở dang</a>
                 <a class="nav-link-sub text-danger" href="{{ url_for('SME_dashboard') }}"><i class="fas fa-home me-2 text-danger"></i> Quay lại trang chủ</a>
             </div>
         </nav>

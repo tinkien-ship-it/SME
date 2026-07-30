@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+{% block title %}Sổ cái / Cân đối phát sinh — SME{% endblock %}
+
+{% block extra_style %}
+<style>
+    .gl-wrap { max-width: 1400px; margin: 0 auto; }
+    .gl-mono { font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
+    .gl-amount { text-align: right; white-space: nowrap; }
+    .gl-table td, .gl-table th { vertical-align: middle; font-size: .875rem; }
+    .gl-muted { color: #94a3b8; font-size: .8rem; }
+    .gl-row { cursor: pointer; }
+    .gl-row:hover { background: #f8fafc; }
+    .gl-ok { color: #0f5132; }
+    .gl-bad { color: #842029; }
+    .gl-panel { display: none; }
+    .gl-panel.active { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gl-wrap">
+    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1"><i class="fas fa-scale-balanced text-primary me-2"></i>Sổ cái &amp; Cân đối phát sinh</h4>
+            <p class="text-muted small mb-0">
+                Tổng hợp từ nhật ký bút toán SME (TT99). Click mã TK để xem sổ cái chi tiết.
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Dashboard
+            </a>
+            <a href="{{ url_for('SME_journal') }}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-book-open me-1"></i> Nhật ký
+            </a>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" type="button" data-panel="tb">Cân đối phát sinh</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" type="button" data-panel="ld">Sổ cái chi tiết</button>
+        </li>
+    </ul>
+
+    <!-- Trial balance -->
+    <div class="gl-panel active" id="panel-tb">
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">Năm</label>
+                        <input type="number" id="tbYear" class="form-control form-control-sm" min="2000" max="2100">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">Từ kỳ</label>
+                        <select id="tbFrom" class="form-select form-select-sm"></select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">Đến kỳ</label>
+                        <select id="tbTo" class="form-select form-select-sm"></select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="tbZero">
+                            <label class="form-check-label small" for="tbZero">Hiện TK số dư 0</label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-md-end">
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTbLoad">
+                            <i class="fas fa-rotate me-1"></i> Xem báo cáo
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2 gl-muted" id="tbMeta">—</div>
+            </div>
+        </div>
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive" style="max-height: 65vh;">
+                <table class="table table-sm table-hover mb-0 gl-table">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th rowspan="2" style="width:80px;">Mã</th>
+                            <th rowspan="2">Tên tài khoản</th>
+                            <th colspan="2" class="text-center">Số dư đầu kỳ</th>
+                            <th colspan="2" class="text-center">Phát sinh kỳ</th>
+                            <th colspan="2" class="text-center">Số dư cuối kỳ</th>
+                        </tr>
+                        <tr>
+                            <th class="text-end">Nợ</th><th class="text-end">Có</th>
+                            <th class="text-end">Nợ</th><th class="text-end">Có</th>
+                            <th class="text-end">Nợ</th><th class="text-end">Có</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbBody">
+                        <tr><td colspan="8" class="text-center text-muted py-4">Chọn kỳ và nhấn Xem báo cáo</td></tr>
+                    </tbody>
+                    <tfoot id="tbFoot" class="table-light fw-bold"></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ledger detail -->
+    <div class="gl-panel" id="panel-ld">
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">Mã TK *</label>
+                        <input type="text" id="ldCode" class="form-control form-control-sm" placeholder="vd: 156">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">Từ ngày</label>
+                        <input type="date" id="ldFrom" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">Đến ngày</label>
+                        <input type="date" id="ldTo" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <button type="button" class="btn btn-primary btn-sm" id="btnLdLoad">
+                            <i class="fas fa-search me-1"></i> Xem sổ cái
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2" id="ldMeta" class="gl-muted">—</div>
+            </div>
+        </div>
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive" style="max-height: 65vh;">
+                <table class="table table-sm table-hover mb-0 gl-table">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th style="width:100px;">Ngày</th>
+                            <th style="width:130px;">Số BT</th>
+                            <th style="width:100px;">Chứng từ</th>
+                            <th>Diễn giải</th>
+                            <th class="text-end" style="width:110px;">Nợ</th>
+                            <th class="text-end" style="width:110px;">Có</th>
+                            <th class="text-end" style="width:110px;">Dư Nợ</th>
+                            <th class="text-end" style="width:110px;">Dư Có</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ldBody">
+                        <tr><td colspan="8" class="text-center text-muted py-4">Nhập mã TK để xem</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const now = new Date();
+    const yearEl = document.getElementById('tbYear');
+    yearEl.value = now.getFullYear();
+    const fromSel = document.getElementById('tbFrom');
+    const toSel = document.getElementById('tbTo');
+    for (let m = 1; m <= 12; m++) {
+        const o1 = new Option('Tháng ' + m, m);
+        const o2 = new Option('Tháng ' + m, m);
+        fromSel.add(o1);
+        toSel.add(o2);
+    }
+    fromSel.value = String(now.getMonth() + 1);
+    toSel.value = String(now.getMonth() + 1);
+
+    // default ledger dates = current month
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const last = new Date(y, now.getMonth() + 1, 0).getDate();
+    document.getElementById('ldFrom').value = `${y}-${m}-01`;
+    document.getElementById('ldTo').value = `${y}-${m}-${String(last).padStart(2, '0')}`;
+
+    function money(v) {
+        const n = Number(v || 0);
+        if (!n) return '';
+        return n.toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+    }
+    function money0(v) {
+        return Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+    }
+
+    document.querySelectorAll('[data-panel]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-panel]').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.gl-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+        });
+    });
+
+    async function loadTb() {
+        const body = document.getElementById('tbBody');
+        const foot = document.getElementById('tbFoot');
+        body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Đang tải…</td></tr>';
+        foot.innerHTML = '';
+        const p = new URLSearchParams({
+            year: yearEl.value,
+            period_from: fromSel.value,
+            period_to: toSel.value,
+            include_zero: document.getElementById('tbZero').checked ? '1' : '0',
+        });
+        try {
+            const res = await fetch('/api/sme/trial-balance?' + p);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Lỗi');
+            const d = json.data;
+            const t = d.totals || {};
+            const balOk = t.period_balanced && t.closing_balanced;
+            document.getElementById('tbMeta').innerHTML =
+                `${d.date_from} → ${d.date_to} · ${d.rows.length} TK · ` +
+                `<span class="${balOk ? 'gl-ok' : 'gl-bad'}">${balOk ? 'Cân đối Nợ/Có' : 'Lệch cân đối — kiểm tra nhật ký'}</span>`;
+            if (!d.rows.length) {
+                body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không có phát sinh trong kỳ</td></tr>';
+                return;
+            }
+            body.innerHTML = d.rows.map(r => `
+                <tr class="gl-row" data-code="${r.code}">
+                    <td class="gl-mono">${r.code}</td>
+                    <td>${r.name}</td>
+                    <td class="gl-amount">${money(r.opening_debit)}</td>
+                    <td class="gl-amount">${money(r.opening_credit)}</td>
+                    <td class="gl-amount">${money(r.period_debit)}</td>
+                    <td class="gl-amount">${money(r.period_credit)}</td>
+                    <td class="gl-amount">${money(r.closing_debit)}</td>
+                    <td class="gl-amount">${money(r.closing_credit)}</td>
+                </tr>
+            `).join('');
+            foot.innerHTML = `
+                <tr>
+                    <td colspan="2" class="text-end">Tổng</td>
+                    <td class="gl-amount">${money0(t.opening_debit)}</td>
+                    <td class="gl-amount">${money0(t.opening_credit)}</td>
+                    <td class="gl-amount">${money0(t.period_debit)}</td>
+                    <td class="gl-amount">${money0(t.period_credit)}</td>
+                    <td class="gl-amount">${money0(t.closing_debit)}</td>
+                    <td class="gl-amount">${money0(t.closing_credit)}</td>
+                </tr>`;
+        } catch (e) {
+            body.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${e.message}</td></tr>`;
+        }
+    }
+
+    async function loadLd(code) {
+        if (code) document.getElementById('ldCode').value = code;
+        const c = document.getElementById('ldCode').value.trim();
+        if (!c) { alert('Nhập mã tài khoản'); return; }
+        // switch tab
+        document.querySelectorAll('[data-panel]').forEach(b => b.classList.toggle('active', b.dataset.panel === 'ld'));
+        document.querySelectorAll('.gl-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-ld'));
+
+        const body = document.getElementById('ldBody');
+        body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Đang tải…</td></tr>';
+        const p = new URLSearchParams({
+            date_from: document.getElementById('ldFrom').value,
+            date_to: document.getElementById('ldTo').value,
+        });
+        try {
+            const res = await fetch('/api/sme/ledger/' + encodeURIComponent(c) + '?' + p);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Lỗi');
+            const d = json.data;
+            const a = d.account;
+            document.getElementById('ldMeta').innerHTML =
+                `<strong class="gl-mono">${a.code}</strong> — ${a.name} · ` +
+                `Đầu kỳ: Nợ ${money0(d.opening.debit)} / Có ${money0(d.opening.credit)} · ` +
+                `Cuối kỳ: Nợ ${money0(d.closing.debit)} / Có ${money0(d.closing.credit)} · ` +
+                `${d.line_count} dòng`;
+
+            const openRow = `
+                <tr class="table-light">
+                    <td></td><td></td><td></td>
+                    <td class="fw-semibold">Số dư đầu kỳ</td>
+                    <td></td><td></td>
+                    <td class="gl-amount">${money(d.opening.debit)}</td>
+                    <td class="gl-amount">${money(d.opening.credit)}</td>
+                </tr>`;
+            const lines = (d.lines || []).map(ln => `
+                <tr>
+                    <td>${(ln.posting_date || '').slice(0, 10)}</td>
+                    <td class="gl-mono"><a href="/SME_journal" title="Mở nhật ký">${ln.entry_no || '#' + ln.entry_id}</a></td>
+                    <td class="gl-mono">${ln.document_no || '—'}</td>
+                    <td>${ln.description || ''}</td>
+                    <td class="gl-amount">${money(ln.debit)}</td>
+                    <td class="gl-amount">${money(ln.credit)}</td>
+                    <td class="gl-amount">${money(ln.balance_debit)}</td>
+                    <td class="gl-amount">${money(ln.balance_credit)}</td>
+                </tr>
+            `).join('');
+            const closeRow = `
+                <tr class="table-light fw-bold">
+                    <td></td><td></td><td></td>
+                    <td>Cộng phát sinh / Số dư cuối</td>
+                    <td class="gl-amount">${money0(d.period_debit)}</td>
+                    <td class="gl-amount">${money0(d.period_credit)}</td>
+                    <td class="gl-amount">${money(d.closing.debit)}</td>
+                    <td class="gl-amount">${money(d.closing.credit)}</td>
+                </tr>`;
+            body.innerHTML = openRow + (lines || '<tr><td colspan="8" class="text-center text-muted">Không có phát sinh</td></tr>') + closeRow;
+        } catch (e) {
+            body.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${e.message}</td></tr>`;
+        }
+    }
+
+    document.getElementById('btnTbLoad').addEventListener('click', loadTb);
+    document.getElementById('btnLdLoad').addEventListener('click', () => loadLd());
+    document.getElementById('tbBody').addEventListener('click', (ev) => {
+        const tr = ev.target.closest('tr[data-code]');
+        if (!tr) return;
+        // sync dates from selected periods
+        const y = Number(yearEl.value);
+        const pf = Number(fromSel.value);
+        const pt = Number(toSel.value);
+        const pad = n => String(n).padStart(2, '0');
+        const lastDay = new Date(y, pt, 0).getDate();
+        document.getElementById('ldFrom').value = `${y}-${pad(pf)}-01`;
+        document.getElementById('ldTo').value = `${y}-${pad(pt)}-${pad(lastDay)}`;
+        loadLd(tr.dataset.code);
+    });
+
+    loadTb();
+})();
+</script>
+{% endblock %}

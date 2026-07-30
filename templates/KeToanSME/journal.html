@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% block title %}Nhật ký bút toán — SME{% endblock %}
+
+{% block extra_style %}
+<style>
+    .jl-wrap { max-width: 1280px; margin: 0 auto; }
+    .jl-toolbar { gap: .5rem; flex-wrap: wrap; }
+    .jl-table td, .jl-table th { vertical-align: middle; font-size: .9rem; }
+    .jl-mono { font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
+    .jl-muted { color: #94a3b8; font-size: .8rem; }
+    .badge-posted { background: #d1e7dd; color: #0f5132; }
+    .badge-reversed { background: #f8d7da; color: #842029; }
+    .jl-row { cursor: pointer; }
+    .jl-row:hover { background: #f8fafc; }
+    .jl-detail-table td, .jl-detail-table th { font-size: .875rem; }
+    .jl-amount { text-align: right; white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jl-wrap">
+    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1"><i class="fas fa-book-open text-primary me-2"></i>Nhật ký bút toán SME</h4>
+            <p class="text-muted small mb-0">
+                Sổ chứng từ kế toán kép (TT99) — nhập kho, bán hàng, đảo bút toán.
+                Không dùng chung sổ HKD.
+            </p>
+        </div>
+        <div class="d-flex jl-toolbar">
+            <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Dashboard SME
+            </a>
+            <a href="{{ url_for('SME_general_ledger') }}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-scale-balanced me-1"></i> Sổ cái
+            </a>
+            <a href="{{ url_for('SME_chart_of_accounts') }}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-sitemap me-1"></i> Danh mục TK
+            </a>
+            <button type="button" class="btn btn-primary btn-sm" id="btnReload">
+                <i class="fas fa-rotate me-1"></i> Tải lại
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">Tìm kiếm</label>
+                    <input type="search" id="jlQ" class="form-control form-control-sm"
+                           placeholder="Số BT, chứng từ, mô tả…">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Loại chứng từ</label>
+                    <select id="jlDocType" class="form-select form-select-sm">
+                        <option value="">Tất cả</option>
+                        <option value="PNK">PNK — Nhập kho</option>
+                        <option value="SALE_REVENUE">Doanh thu bán hàng</option>
+                        <option value="SALE_COGS">Giá vốn bán hàng</option>
+                        <option value="REV_PNK">Đảo nhập kho</option>
+                        <option value="REV_SALE_REVENUE">Đảo doanh thu</option>
+                        <option value="REV_SALE_COGS">Đảo giá vốn</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Trạng thái</label>
+                    <select id="jlStatus" class="form-select form-select-sm">
+                        <option value="">Tất cả</option>
+                        <option value="posted" selected>Đã ghi sổ</option>
+                        <option value="reversed">Đã đảo</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Từ ngày</label>
+                    <input type="date" id="jlFrom" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Đến ngày</label>
+                    <input type="date" id="jlTo" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-1">
+                    <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="btnFilter">Lọc</button>
+                </div>
+            </div>
+            <div class="mt-2 jl-muted" id="jlMeta">—</div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive" style="max-height: 68vh;">
+            <table class="table table-sm table-hover mb-0 jl-table">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th style="width:140px;">Số BT</th>
+                        <th style="width:100px;">Ngày</th>
+                        <th style="width:120px;">Loại</th>
+                        <th style="width:120px;">Chứng từ</th>
+                        <th>Diễn giải</th>
+                        <th class="text-end" style="width:120px;">Nợ</th>
+                        <th class="text-end" style="width:120px;">Có</th>
+                        <th style="width:90px;">TT</th>
+                        <th style="width:90px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="jlBody">
+                    <tr><td colspan="9" class="text-center text-muted py-4">Đang tải…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal chi tiết -->
+<div class="modal fade" id="modalDetail" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailTitle">Chi tiết bút toán</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3 small" id="detailMeta"></div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered jl-detail-table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px;">#</th>
+                                <th style="width:90px;">TK</th>
+                                <th>Diễn giải</th>
+                                <th class="text-end" style="width:130px;">Nợ</th>
+                                <th class="text-end" style="width:130px;">Có</th>
+                                <th style="width:90px;">Đối tượng</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailLines"></tbody>
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td colspan="3" class="text-end">Tổng</td>
+                                <td class="jl-amount" id="detailTotalDebit">0</td>
+                                <td class="jl-amount" id="detailTotalCredit">0</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger btn-sm d-none" id="btnReverse">
+                    <i class="fas fa-rotate-left me-1"></i> Đảo bút toán
+                </button>
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const body = document.getElementById('jlBody');
+    const metaEl = document.getElementById('jlMeta');
+    let currentId = null;
+    let detailModal = null;
+
+    function money(v) {
+        const n = Number(v || 0);
+        return n.toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+    }
+
+    function statusBadge(st) {
+        if (st === 'reversed') return '<span class="badge badge-reversed">Đã đảo</span>';
+        return '<span class="badge badge-posted">Ghi sổ</span>';
+    }
+
+    function docTypeLabel(t) {
+        const map = {
+            PNK: 'Nhập kho',
+            SALE_REVENUE: 'Doanh thu',
+            SALE_COGS: 'Giá vốn',
+            REV_PNK: 'Đảo PNK',
+            REV_SALE_REVENUE: 'Đảo DT',
+            REV_SALE_COGS: 'Đảo GV',
+        };
+        return map[t] || t || '—';
+    }
+
+    function qs() {
+        const p = new URLSearchParams();
+        const q = document.getElementById('jlQ').value.trim();
+        const dt = document.getElementById('jlDocType').value;
+        const st = document.getElementById('jlStatus').value;
+        const f = document.getElementById('jlFrom').value;
+        const t = document.getElementById('jlTo').value;
+        if (q) p.set('q', q);
+        if (dt) p.set('document_type', dt);
+        if (st) p.set('status', st);
+        if (f) p.set('date_from', f);
+        if (t) p.set('date_to', t);
+        p.set('limit', '100');
+        return p.toString();
+    }
+
+    async function loadList() {
+        body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Đang tải…</td></tr>';
+        try {
+            const res = await fetch('/api/sme/journal?' + qs());
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Lỗi tải');
+            const rows = json.data || [];
+            metaEl.textContent = rows.length + ' bút toán';
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Chưa có bút toán phù hợp bộ lọc.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(r => `
+                <tr class="jl-row" data-id="${r.id}">
+                    <td class="jl-mono">${r.entry_no || ('#' + r.id)}</td>
+                    <td>${(r.posting_date || '').slice(0, 10)}</td>
+                    <td><span class="badge text-bg-light border">${docTypeLabel(r.document_type)}</span></td>
+                    <td class="jl-mono">${r.document_no || '—'}</td>
+                    <td>${(r.description || '').slice(0, 80) || '—'}</td>
+                    <td class="jl-amount">${money(r.total_debit)}</td>
+                    <td class="jl-amount">${money(r.total_credit)}</td>
+                    <td>${statusBadge(r.status)}</td>
+                    <td>
+                        <button type="button" class="btn btn-outline-primary btn-sm btn-view" data-id="${r.id}">
+                            Xem
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            body.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">${e.message}</td></tr>`;
+            metaEl.textContent = 'Lỗi';
+        }
+    }
+
+    async function openDetail(id) {
+        currentId = id;
+        if (!detailModal) detailModal = new bootstrap.Modal(document.getElementById('modalDetail'));
+        document.getElementById('detailTitle').textContent = 'Đang tải…';
+        document.getElementById('detailLines').innerHTML = '';
+        document.getElementById('btnReverse').classList.add('d-none');
+        detailModal.show();
+        try {
+            const res = await fetch('/api/sme/journal/' + id);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Không tải được');
+            const e = json.data;
+            document.getElementById('detailTitle').textContent =
+                (e.entry_no || ('#' + e.id)) + ' — ' + docTypeLabel(e.document_type);
+            document.getElementById('detailMeta').innerHTML = `
+                <div class="col-md-3"><strong>Ngày ghi:</strong> ${(e.posting_date || '').slice(0, 10)}</div>
+                <div class="col-md-3"><strong>Chứng từ:</strong> ${e.document_no || '—'}</div>
+                <div class="col-md-3"><strong>Nghiệp vụ:</strong> ${e.business_type || '—'}</div>
+                <div class="col-md-3"><strong>Trạng thái:</strong> ${statusBadge(e.status)}</div>
+                <div class="col-12"><strong>Diễn giải:</strong> ${e.description || '—'}</div>
+            `;
+            const lines = e.lines || [];
+            document.getElementById('detailLines').innerHTML = lines.map(ln => `
+                <tr>
+                    <td>${ln.sequence || ''}</td>
+                    <td class="jl-mono">${ln.account_code}</td>
+                    <td>${ln.description || ''}</td>
+                    <td class="jl-amount">${Number(ln.debit) ? money(ln.debit) : ''}</td>
+                    <td class="jl-amount">${Number(ln.credit) ? money(ln.credit) : ''}</td>
+                    <td class="small">${ln.partner_type || ''}${ln.partner_id ? (' #' + ln.partner_id) : ''}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="text-muted text-center">Không có dòng</td></tr>';
+            document.getElementById('detailTotalDebit').textContent = money(e.total_debit);
+            document.getElementById('detailTotalCredit').textContent = money(e.total_credit);
+            if (e.status === 'posted' && !e.reversed_by_id && !(e.document_type || '').startsWith('REV_')) {
+                document.getElementById('btnReverse').classList.remove('d-none');
+            }
+        } catch (err) {
+            document.getElementById('detailTitle').textContent = 'Lỗi';
+            document.getElementById('detailMeta').innerHTML =
+                `<div class="col-12 text-danger">${err.message}</div>`;
+        }
+    }
+
+    async function reverseCurrent() {
+        if (!currentId) return;
+        if (!confirm('Đảo bút toán này? Hệ thống sẽ tạo chứng từ đảo (không xóa lịch sử).')) return;
+        const reason = prompt('Lý do đảo bút toán:', 'Đảo bút toán từ nhật ký SME') || 'Đảo bút toán';
+        try {
+            const res = await fetch('/api/sme/journal/' + currentId + '/reverse', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Không đảo được');
+            alert('Đã tạo bút toán đảo: ' + (json.data.entry_no || ('#' + json.data.id)));
+            detailModal.hide();
+            loadList();
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    body.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('.btn-view, .jl-row');
+        if (!btn) return;
+        const id = btn.dataset.id || btn.closest('tr')?.dataset.id;
+        if (id) openDetail(id);
+    });
+    document.getElementById('btnReload').addEventListener('click', loadList);
+    document.getElementById('btnFilter').addEventListener('click', loadList);
+    document.getElementById('jlQ').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') loadList();
+    });
+    document.getElementById('btnReverse').addEventListener('click', reverseCurrent);
+
+    loadList();
+})();
+</script>
+{% endblock %}

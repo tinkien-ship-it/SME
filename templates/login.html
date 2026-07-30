@@ -619,6 +619,17 @@ function openTrialRegisterModal(credential, info) {
                     Swal.fire('Thành công', data.message, 'success').then(() => {
                         window.location.href = data.redirect || '/login';
                     });
+                } else if (data.retry_url) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Cần xác thực lại',
+                        text: data.error,
+                        confirmButtonText: 'Xác thực lại',
+                        showCancelButton: true,
+                        cancelButtonText: 'Đóng',
+                    }).then(r => {
+                        if (r.isConfirmed) window.location.href = data.retry_url;
+                    });
                 } else {
                     Swal.fire('Lỗi', data.error || 'Đăng ký thất bại', 'error');
                 }
@@ -721,8 +732,8 @@ function initGoogleSignIn() {
 
     {% if trial_google_pending %}
     openTrialRegisterModal(null, {
-        email: {{ trial_google_pending.email | tojson }},
-        name: {{ trial_google_pending.name | tojson }},
+        email: {{ trial_google_pending.email | default('', true) | tojson }},
+        name: {{ trial_google_pending.name | default('', true) | tojson }},
     });
     {% endif %}
 }

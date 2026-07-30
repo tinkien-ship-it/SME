@@ -8,7 +8,6 @@
         min-height: calc(100vh - 160px);
         margin: -1.5rem;
     }
-   
     .sme-sidebar {
         width: 280px;
         background: #ffffff;
@@ -27,120 +26,60 @@
         border-left: 4px solid transparent;
         transition: all 0.2s;
     }
-    .sme-sidebar .nav-link-sub:hover {
-        background: #f8f9fa;
-        color: var(--primary);
-    }
+    .sme-sidebar .nav-link-sub:hover { background: #f8f9fa; color: var(--primary); }
     .sme-sidebar .nav-link-sub.active {
-        background: #e7f1ff;
-        color: #0d6efd;
-        border-left-color: #0d6efd;
-        font-weight: 600;
+        background: #e7f1ff; color: #0d6efd; border-left-color: #0d6efd; font-weight: 600;
     }
-    .sme-sidebar .nav-link-sub i {
-        width: 25px;
-        font-size: 1.1rem;
-    }
-
-    /* Submenu cho Mua Hàng */
-    .submenu {
-        padding-left: 2.5rem;
-        font-size: 0.95rem;
-    }
-    .submenu .nav-link-sub {
-        padding: 0.6rem 1.5rem;
-        font-weight: 400;
-    }
-
-    .sme-content {
-        flex-grow: 1;
-        padding: 2rem;
-        background: #f4f6f9;
-        overflow-y: auto;
-    }
-    .metric-card {
-        border: none;
-        border-radius: 0.5rem;
-        transition: transform 0.2s;
-    }
-    .metric-card:hover {
-        transform: translateY(-3px);
-    }
+    .sme-sidebar .nav-link-sub i { width: 25px; font-size: 1.1rem; }
+    .sme-content { flex-grow: 1; padding: 2rem; background: #f4f6f9; overflow-y: auto; }
+    .metric-card { border: none; border-radius: 0.5rem; transition: transform 0.2s; }
+    .metric-card:hover { transform: translateY(-3px); }
     .metric-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
+        width: 48px; height: 48px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
+{% set regime = (tenant_profile.accounting_regime or 'SME_TT99')|upper %}
+{% set regime_label = tenant_profile.accounting_regime_label or regime %}
 <div class="sme-dashboard-container">
-   
-    <!-- ================= BÊN TRÁI: DANH SÁCH MENU ================= -->
     <div class="sme-sidebar shadow-sm">
-        <div class="px-3 mb-3">
-            <span class="text-primary text-uppercase fw-bold" style="font-size: 0.85rem; letter-spacing: 0.05em;">Pos & Kế Toán Doanh Nghiệp</span>
-        </div>
-        <nav class="nav flex-column">
-            <a class="nav-link-sub" href="#"><i class="fas fa-chart-pie text-primary"></i> Tổng Quan (Dashboard)</a>
-            <a class="nav-link-sub" href="{{ url_for('sale') }}"><i class="fas fa-cart-shopping text-success"></i> Điểm Bán Hàng</a>
-            <a class="nav-link-sub" href="{{ url_for('SME_dashboard_sale') }}"><i class="fas fa-cart-shopping text-success"></i> Quản Lý Bán Hàng</a>
-            
-            <!-- ================= MUA HÀNG ================= -->
-            <a class="nav-link-sub" href="{{ url_for('SME_purchasing') }}"><i class="fas fa-bag-shopping text-warning"></i> Quản Lý Mua Hàng</a> 
-            
-            <a class="nav-link-sub" href="{{ url_for('SME_dashboard_warehouse') }}"><i class="fas fa-warehouse text-warning"></i> Kho</a>
-            <a class="nav-link-sub" href="{{ url_for('SME_SoSachKeToan') }}"><i class="fas fa-book text-indigo"></i> Sổ Kế Toán</a>
-            <a class="nav-link-sub" href="{{ url_for('SME_TSCD') }}"><i class="fas fa-building text-danger"></i> Kế Toán TSCĐ</a>
-            <a class="nav-link-sub" href="{{ url_for('SME_CCDC') }}"><i class="fas fa-screwdriver-wrench text-secondary"></i> Kế Toán CCDC</a>
-            <a class="nav-link-sub" href="#"><i class="fas fa-calculator text-dark"></i> Kế Toán Giá Thành</a>
-            <a class="nav-link-sub" href="{{ url_for('SME_BCTC') }}"><i class="fas fa-chart-line text-indigo"></i> Báo Cáo Tài Chính</a>
-            <a class="nav-link-sub" href="#"><i class="fas fa-chart-bar text-indigo"></i> Báo Cáo Quản Trị</a>
-            <a class="nav-link-sub" href="#"><i class="fas fa-landmark text-violet"></i> Thuế & NSNN</a>
-            <a class="nav-link-sub" href="{{ url_for('SME_SoQuyTienMat') }}"><i class="fas fa-wallet text-violet"></i> Tiền Mặt</a>
-            <a class="nav-link-sub" href="{{ url_for('SME_SoTienGuiNganHang') }}"><i class="fas fa-building-columns text-violet"></i> Tiền Gửi Ngân Hàng</a>
-            <a class="nav-link-sub" href="{{ url_for('SME_dashboard_debt') }}"><i class="fas fa-book text-indigo"></i> Công Nợ</a>
-            <a class="nav-link-sub" href="{{ url_for('SME_dashboard_HRSalary') }}"><i class="fas fa-user-tie text-muted"></i> Nhân Sự và Tiền Lương</a>
-            <a class="nav-link-sub" href="#"><i class="fas fa-user-tie text-muted"></i> Hướng Dẫn Sử Dụng</a>
-            <a class="nav-link-sub" href="#"><i class="fas fa-cubes text-muted"></i> Tiện Ích</a>
-            <a class="nav-link-sub" href="#"><i class="fas fa-sliders text-muted"></i> Hệ Thống</a>
-        </nav>
+        {% include 'KeToanSME/_sidebar.html' %}
     </div>
-
-    <!-- ================= BÊN PHẢI: NỘI DUNG DASHBOARD ================= -->
     <div class="sme-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
                 <h4 class="fw-bold text-dark mb-1">Trung Tâm Chỉ Số Tài Chính Doanh Nghiệp</h4>
-                <p class="text-muted small mb-0">Hệ thống hạch toán tự động theo Thông tư 99/2025/TT-BTC</p>
+                <p class="text-muted small mb-0">
+                    {{ regime_label }}
+                    {% if 'TT58' in regime %} · Chế độ siêu nhỏ (TT58){% else %} · Chế độ doanh nghiệp (TT99){% endif %}
+                </p>
             </div>
-            <div class="d-flex gap-2">
-                <select class="form-select form-select-sm shadow-sm" style="width: 150px;">
-                    <option value="this_month">Tháng này</option>
-                    <option value="this_quarter">Quý này</option>
-                    <option value="this_year" selected>Năm 2026</option>
-                </select>
-                <button class="btn btn-white btn-sm shadow-sm border"><i class="fas fa-download me-1"></i> Xuất Báo Cáo</button>
+            <div class="d-flex gap-2 align-items-end">
+                <div>
+                    <label class="form-label small mb-1">Năm</label>
+                    <input type="number" id="dashYear" class="form-control form-control-sm" style="width:100px">
+                </div>
+                <div>
+                    <label class="form-label small mb-1">Đến tháng</label>
+                    <select id="dashPeriod" class="form-select form-select-sm" style="width:110px"></select>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" id="btnDashRefresh">Làm mới</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_BCTC') }}"><i class="fas fa-file-excel me-1"></i> BCTC</a>
             </div>
         </div>
 
-        <!-- Metric Cards -->
         <div class="row g-3 mb-4">
             <div class="col-xl-3 col-md-6">
                 <div class="card metric-card shadow-sm h-100">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Doanh Thu Thuần (511)</span>
-                            <h4 class="fw-bold mb-0 text-primary" id="metric-revenue">0 đ</h4>
+                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Doanh Thu Thuần</span>
+                            <h4 class="fw-bold mb-0 text-primary" id="metric-revenue">—</h4>
                         </div>
-                        <div class="metric-icon bg-primary bg-opacity-10 text-primary">
-                            <i class="fas fa-arrow-trend-up"></i>
-                        </div>
+                        <div class="metric-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-arrow-trend-up"></i></div>
                     </div>
                 </div>
             </div>
@@ -149,11 +88,9 @@
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
                             <span class="text-muted small fw-bold text-uppercase d-block mb-1">Lợi Nhuận Gộp</span>
-                            <h4 class="fw-bold mb-0 text-success" id="metric-profit">0 đ</h4>
+                            <h4 class="fw-bold mb-0 text-success" id="metric-profit">—</h4>
                         </div>
-                        <div class="metric-icon bg-success bg-opacity-10 text-success">
-                            <i class="fas fa-coins"></i>
-                        </div>
+                        <div class="metric-icon bg-success bg-opacity-10 text-success"><i class="fas fa-coins"></i></div>
                     </div>
                 </div>
             </div>
@@ -161,12 +98,10 @@
                 <div class="card metric-card shadow-sm h-100">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Phải Thu Khách Hàng (131)</span>
-                            <h4 class="fw-bold mb-0 text-warning" id="metric-receivable">0 đ</h4>
+                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Phải Thu (131)</span>
+                            <h4 class="fw-bold mb-0 text-warning" id="metric-receivable">—</h4>
                         </div>
-                        <div class="metric-icon bg-warning bg-opacity-10 text-warning">
-                            <i class="fas fa-user-clock"></i>
-                        </div>
+                        <div class="metric-icon bg-warning bg-opacity-10 text-warning"><i class="fas fa-user-clock"></i></div>
                     </div>
                 </div>
             </div>
@@ -174,51 +109,30 @@
                 <div class="card metric-card shadow-sm h-100">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Phải Trả NCC (331)</span>
-                            <h4 class="fw-bold mb-0 text-danger" id="metric-payable">0 đ</h4>
+                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Phải Trả (331)</span>
+                            <h4 class="fw-bold mb-0 text-danger" id="metric-payable">—</h4>
                         </div>
-                        <div class="metric-icon bg-danger bg-opacity-10 text-danger">
-                            <i class="fas fa-hand-holding-dollar"></i>
-                        </div>
+                        <div class="metric-icon bg-danger bg-opacity-10 text-danger"><i class="fas fa-hand-holding-dollar"></i></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Charts -->
         <div class="row g-4">
             <div class="col-lg-8">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body">
-                        <h6 class="fw-bold">Phân Tích Kết Quả Kinh Doanh (P&L)</h6>
-                        <div style="height: 320px;">
-                            <canvas id="smePlChart"></canvas>
-                        </div>
+                        <h6 class="fw-bold">Kết quả kinh doanh theo tháng</h6>
+                        <div style="height: 320px;"><canvas id="smePlChart"></canvas></div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-4">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body">
-                        <h6 class="fw-bold">Cơ Cấu Nghĩa Vụ Thuế (TK 333)</h6>
-                        <div style="height: 230px;">
-                            <canvas id="smeTaxChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Công nợ cảnh báo -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white d-flex justify-content-between">
-                        <h6 class="fw-bold"><i class="fas fa-bell text-warning"></i> Công Nợ Đến Hạn / Quá Hạn</h6>
-                    </div>
-                    <!-- Table giữ nguyên hoặc bạn có thể mở rộng sau -->
-                    <div class="table-responsive">
-                        <!-- bảng demo của bạn giữ nguyên -->
+                        <h6 class="fw-bold">Cơ cấu thuế (số dư Có 333*)</h6>
+                        <div style="height: 230px;"><canvas id="smeTaxChart"></canvas></div>
+                        <div class="small text-muted mt-2" id="vatHint">—</div>
                     </div>
                 </div>
             </div>
@@ -230,29 +144,65 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    function formatCurrency(amount) {
-        return amount.toLocaleString('vi-VN') + ' đ';
+(function () {
+    const now = new Date();
+    const yEl = document.getElementById('dashYear');
+    const pEl = document.getElementById('dashPeriod');
+    yEl.value = now.getFullYear();
+    for (let m = 1; m <= 12; m++) pEl.add(new Option('Tháng ' + m, m));
+    pEl.value = String(now.getMonth() + 1);
+
+    const money = v => Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' đ';
+    let plChart, taxChart;
+
+    async function refresh() {
+        try {
+            const res = await fetch(`/api/sme/dashboard-metrics?year=${yEl.value}&period_to=${pEl.value}`);
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Lỗi');
+            const d = data.data || {};
+            document.getElementById('metric-revenue').innerText = money(d.revenue);
+            document.getElementById('metric-profit').innerText = money(d.gross_profit);
+            document.getElementById('metric-receivable').innerText = money(d.receivable);
+            document.getElementById('metric-payable').innerText = money(d.payable);
+            document.getElementById('vatHint').innerText =
+                `GTGT phải nộp ${money(d.vat_payable)} · còn khấu trừ ${money(d.vat_credit)}`;
+
+            const months = d.monthly || [];
+            if (plChart) plChart.destroy();
+            plChart = new Chart(document.getElementById('smePlChart'), {
+                type: 'bar',
+                data: {
+                    labels: months.map(m => m.label),
+                    datasets: [
+                        { label: 'Doanh thu', data: months.map(m => m.revenue), backgroundColor: '#0d6efd88' },
+                        { label: 'Giá vốn', data: months.map(m => m.cogs), backgroundColor: '#fd7e1488' },
+                        { label: 'LN', data: months.map(m => m.profit), type: 'line', borderColor: '#198754', tension: 0.2 },
+                    ],
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } },
+            });
+
+            const tb = d.tax_breakdown || {};
+            if (taxChart) taxChart.destroy();
+            taxChart = new Chart(document.getElementById('smeTaxChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['GTGT', 'TNDN', 'TNCN', 'Khác'],
+                    datasets: [{
+                        data: [tb.gtgt || 0, tb.tndn || 0, tb.tncn || 0, tb.other || 0],
+                        backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#6c757d'],
+                    }],
+                },
+                options: { responsive: true, maintainAspectRatio: false },
+            });
+        } catch (e) {
+            document.getElementById('metric-revenue').innerText = e.message;
+        }
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
-        document.getElementById('metric-revenue').innerText = formatCurrency(1250000000);
-        document.getElementById('metric-profit').innerText = formatCurrency(420000000);
-        document.getElementById('metric-receivable').innerText = formatCurrency(210000000);
-        document.getElementById('metric-payable').innerText = formatCurrency(150000000);
-
-        // Chart P&L
-        new Chart(document.getElementById('smePlChart'), {
-            type: 'bar',
-            data: { /* giữ nguyên data chart cũ */ },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-        // Chart Thuế
-        new Chart(document.getElementById('smeTaxChart'), {
-            type: 'doughnut',
-            data: { /* giữ nguyên */ },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    });
+    document.getElementById('btnDashRefresh').addEventListener('click', refresh);
+    refresh();
+})();
 </script>
 {% endblock %}

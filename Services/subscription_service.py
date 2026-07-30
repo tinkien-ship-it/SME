@@ -269,14 +269,20 @@ def parse_tenant_settings(raw):
         return {}
 
 
-def role_for_business_line(business_line):
-    """Role cho chủ HKD đăng ký trial — manager*, managerFB, manager (không vào Settings)."""
+def role_for_business_line(business_line, accounting_regime=None):
+    """Role chủ tenant. SME → adminSME; HKD theo ngành vụ."""
+    from Services.tenant_profile import is_sme_regime
+    if is_sme_regime(accounting_regime):
+        return 'adminSME'
     bl = (business_line or 'pos').strip()
     return BUSINESS_LINE_OPTIONS.get(bl, BUSINESS_LINE_OPTIONS['pos'])['role']
 
 
-def support_role_for_business_line(business_line):
-    """Role tài khoản hỗ trợ KETO ({phone}admin) — giữ admin để cấu hình hệ thống."""
+def support_role_for_business_line(business_line, accounting_regime=None):
+    """Role tài khoản hỗ trợ KETO. SME → adminSME."""
+    from Services.tenant_profile import is_sme_regime
+    if is_sme_regime(accounting_regime):
+        return 'adminSME'
     bl = (business_line or 'pos').strip()
     return BUSINESS_LINE_OPTIONS.get(bl, BUSINESS_LINE_OPTIONS['pos'])['support_role']
 
@@ -880,7 +886,7 @@ def provision_tenant(
 ):
     """Luồng provisioning thống nhất — Master và Google trial."""
     from tenant_middleware import init_tenant_database
-    from Services.tenant_profile import build_tenant_settings, normalize_revenue_tier
+    from Services.tenant_profile import build_tenant_settings, is_sme_regime, normalize_revenue_tier
 
     if get_tenant_record(tenant_id, include_inactive=True):
         return {'success': False, 'error': f"Tenant '{tenant_id}' đã tồn tại"}
@@ -888,11 +894,16 @@ def provision_tenant(
     if business_line not in BUSINESS_LINE_OPTIONS:
         return {'success': False, 'error': 'Ngành kinh doanh không hợp lệ'}
 
-    sectors, primary = resolve_provision_nn_profile(
-        business_line, enabled_nn_sectors, hkd_sector,
-    )
+    sme = is_sme_regime(accounting_regime)
+    if sme:
+        sectors, primary = [], None
+        revenue_tier = None
+    else:
+        sectors, primary = resolve_provision_nn_profile(
+            business_line, enabled_nn_sectors, hkd_sector,
+        )
+        revenue_tier = normalize_revenue_tier(revenue_tier)
 
-    revenue_tier = normalize_revenue_tier(revenue_tier)
     customer_password = customer_password or generate_password()
     support_username = support_username or f"{tenant_id}admin"
     support_password = support_password or generate_password()
@@ -903,9 +914,9 @@ def provision_tenant(
 
     settings = build_tenant_settings(
         business_line=business_line,
-        hkd_sector=primary,
+        hkd_sector=primary or 'NN1',
         enabled_nn_sectors=sectors,
-        revenue_tier=revenue_tier,
+        revenue_tier=revenue_tier or 'DT1',
         accounting_regime=accounting_regime,
         subscription_plan=subscription_plan or 'trial',
         onboarding_completed=False,

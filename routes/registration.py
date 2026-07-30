@@ -1,5 +1,6 @@
 """Đăng ký dùng thử Google và gia hạn subscription."""
 import sqlite3
+from datetime import datetime, timedelta
 
 from flask import jsonify, redirect, render_template, request, session, url_for
 
@@ -21,6 +22,25 @@ from Services.subscription_service import (
     tenant_is_expired,
 )
 from tenant_middleware import get_tenant_by_username
+
+
+TRIAL_GOOGLE_TTL_MINUTES = 60
+
+
+def _valid_trial_google_email(trial_sess):
+    """Email Google đã xác thực qua OAuth redirect, còn hiệu lực trong phiên."""
+    email = (trial_sess or {}).get('email')
+    if not email:
+        return ''
+    verified_at = (trial_sess or {}).get('verified_at')
+    if verified_at:
+        try:
+            age = datetime.now() - datetime.fromisoformat(verified_at)
+            if age > timedelta(minutes=TRIAL_GOOGLE_TTL_MINUTES):
+                return ''
+        except ValueError:
+            return ''
+    return str(email).strip().lower()
 
 
 def register_registration_routes(app):
@@ -134,17 +154,25 @@ def register_registration_routes(app):
     def api_trial_register():
         payload = request.get_json(silent=True) or {}
         google_email = ''
-        oauth_from_session = False
 
+        credential = (payload.get('credential') or '').strip()
         trial_sess = session.get('trial_google') or {}
-        if payload.get('oauth_register') and trial_sess.get('email'):
-            google_email = (trial_sess.get('email') or '').strip().lower()
-            oauth_from_session = True
-        else:
-            user_info, err = verify_google_credential(payload.get('credential'))
+        session_email = _valid_trial_google_email(trial_sess)
+
+        if credential:
+            user_info, err = verify_google_credential(credential)
             if err:
                 return jsonify({'success': False, 'error': err}), 400
             google_email = (user_info.get('email') or '').strip().lower()
+        elif session_email:
+            google_email = session_email
+        else:
+            session.pop('trial_google', None)
+            return jsonify({
+                'success': False,
+                'error': 'Phiên xác thực Google đã hết hạn. Vui lòng xác thực lại để tiếp tục đăng ký.',
+                'retry_url': url_for('trial_google_start'),
+            }), 400
 
         if not google_email:
             return jsonify({'success': False, 'error': 'Thiếu xác thực Google'}), 400
@@ -185,8 +213,7 @@ def register_registration_routes(app):
             'tenant_id': tenant_id,
             'message': 'Đăng ký thành công! Mật khẩu đã gửi qua email.',
         }
-        if oauth_from_session:
-            session.pop('trial_google', None)
+        session.pop('trial_google', None)
         return jsonify({
             'success': True,
             'tenant_id': tenant_id,

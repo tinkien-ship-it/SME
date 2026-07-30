@@ -1,0 +1,904 @@
+
+
+
+
+
+
+
+
+Số 1575 + 1576	Ngày 16 tháng 11 năm 2025
+
+
+
+MỤC LỤC
+
+
+
+
+Trang
+
+VĂN BẢN QUY PHẠM PHÁP LUẬT
+
+
+BỘ TÀI CHÍNH
+
+
+27-10-2025 -
+Thông tư số 99/2025/TT-BTC hướng dẫn Chế độ kế toán doanh nghiệp.
+
+(Đăng từ Công báo số 1563 + 1564 đến số 1581 + 1582)
+2
+
+
+VĂN BẢN QUY PHẠM PHÁP LUẬT
+
+BỘ TÀI CHÍNH
+
+Thông tư số 99/2025/TT-BTC ngày 27 tháng 10 năm 2025
+hướng dẫn Chế độ kế toán doanh nghiệp
+
+(Tiếp theo Công báo số 1573 + 1574)
+
+Phụ lục III 
+SỔ KẾ TOÁN
+(Kèm theo Thông tư số 99/2025/TT-BTC
+ ngày 27 tháng 10 năm 2025 của Bộ trưởng Bộ Tài chính)
+
+PHẦN A - DANH MỤC BIỂU MẪU SỔ KẾ TOÁN
+
+Số TT
+Tên sổ
+Ký hiệu
+Hình thức kế toán
+
+
+
+
+Nhật ký chung
+Nhật ký - Sổ Cái
+Chứng từ
+ghi sổ
+Nhật ký- Chứng từ
+
+1
+2
+3
+4
+5
+6
+7
+
+01
+Nhật ký - Sổ Cái
+S01-DN
+-
+x
+-
+-
+
+02
+Chứng từ ghi sổ
+S02a-DN
+-
+-
+x
+-
+
+03
+Sổ Đăng ký Chứng từ ghi sổ
+S02b-DN
+-
+-
+x
+-
+
+04
+Sổ Cái (dùng cho hình thức 
+Chứng từ ghi sổ)
+S02c1-DN
+S02c2-DN
+-
+-
+x
+x
+-
+
+05
+Sổ Nhật ký chung
+S03a-DN
+x
+-
+-
+-
+
+06
+Sổ Nhật ký thu tiền
+S03a1-DN
+x
+-
+-
+-
+
+07
+Sổ Nhật ký chi tiền
+S03a2-DN
+x
+-
+-
+-
+
+08
+Sổ Nhật ký mua hàng
+S03a3-DN
+x
+-
+-
+-
+
+09
+Sổ Nhật ký bán hàng
+S03a4-DN
+x
+-
+-
+-
+
+10
+Sổ Cái (dùng cho hình thức 
+Nhật ký chung)
+S03b-DN
+x
+-
+-
+-
+
+11
+Nhật ký - Chứng từ, các loại Nhật ký - Chứng từ, Bảng kê
+Gồm: - Nhật ký - Chứng từ
+từ số 1 đến số 10
+
+- Bảng kê từ số 1 đến số 10
+S04-DN
+S04a-DN
+(từ S04a1-DN đến S04a10-DN)
+S04b-DN
+(từ S04b1-DN đến S04b10- DN)
+-
+
+-
+
+
+-
+-
+
+-
+
+
+-
+-
+
+-
+
+
+-
+x
+
+x
+
+
+x
+
+12
+Sổ Cái (dùng cho hình thức 
+Nhật ký - Chứng từ)
+S05-DN
+-
+-
+-
+x
+
+13
+Bảng cân đối số phát sinh
+S06-DN
+x
+-
+x
+-
+
+14
+Sổ quỹ tiền mặt
+S07-DN
+x
+x
+x
+-
+
+15
+Sổ kế toán chi tiết quỹ tiền mặt
+S07a-DN
+x
+x
+x
+-
+
+16
+Sổ tiền gửi không kỳ hạn
+S08-DN
+x
+x
+x
+x
+
+17
+Sổ chi tiết vật liệu, dụng cụ 
+(sản phẩm, hàng hóa)
+S10-DN
+x
+x
+x
+x
+
+18
+Bảng tổng hợp chi tiết vật liệu, dụng cụ, sản phẩm, hàng hóa
+S11-DN
+x
+x
+x
+x
+
+19
+Thẻ kho (Sổ kho)
+S12-DN
+x
+x
+x
+x
+
+20
+Sổ tài sản cố định
+S21-DN
+x
+x
+x
+x
+
+21
+Sổ theo dõi TSCĐ và công cụ, dụng cụ tại nơi sử dụng
+S22-DN
+x
+x
+x
+x
+
+22
+Thẻ Tài sản cố định
+S23-DN
+x
+x
+x
+x
+
+23
+Sổ chi tiết thanh toán với người mua (người bán)
+S31-DN
+x
+x
+x
+x
+
+24
+Sổ chi tiết thanh toán với người mua (người bán) bằng ngoại tệ
+S32-DN
+x
+x
+x
+x
+
+25
+Sổ theo dõi thanh toán bằng ngoại tệ
+S33-DN
+x
+x
+x
+x
+
+26
+Sổ chi tiết tiền vay
+S34-DN
+x
+x
+x
+x
+
+27
+Sổ chi tiết bán hàng
+S35-DN
+x
+x
+x
+x
+
+28
+Sổ chi phí sản xuất, kinh doanh
+S36-DN
+x
+x
+x
+x
+
+29
+Thẻ tính giá thành sản phẩm, dịch vụ
+S37-DN
+x
+x
+x
+x
+
+30
+Sổ chi tiết các tài khoản
+S38-DN
+x
+x
+x
+x
+
+31
+Sổ kế toán chi tiết theo dõi các khoản đầu tư vào công ty liên doanh
+S41a-DN
+x
+x
+x
+x
+
+32
+Sổ theo dõi phân bổ các khoản chênh lệch phát sinh khi mua khoản đầu tư vào công ty liên doanh
+S42a-DN
+x
+x
+x
+x
+
+33
+Sổ kế toán chi tiết theo dõi các khoản đầu tư vào công ty liên kết
+S41b-DN
+x
+x
+x
+x
+
+34
+Sổ theo dõi phân bổ các khoản chênh lệch phát sinh khi mua khoản đầu tư vào công ty liên kết
+S42b-DN
+x
+x
+x
+x
+
+35
+Sổ chi tiết phát hành cổ phiếu
+S43-DN
+x
+x
+x
+x
+
+36
+Sổ chi tiết cổ phiếu mua lại của chính mình
+S44-DN
+x
+x
+x
+x
+
+37
+Sổ chi tiết đầu tư chứng khoán
+S45-DN
+x
+x
+x
+x
+
+38
+Sổ theo dõi chi tiết vốn đầu tư của chủ sở hữu
+S51-DN
+x
+x
+x
+x
+
+39
+Sổ chi phí đầu tư xây dựng
+S52-DN
+x
+x
+x
+x
+
+40
+Sổ theo dõi thuế GTGT
+S61-DN
+x
+x
+x
+x
+
+41
+Sổ chi tiết thuế GTGT được hoàn lại
+S62-DN
+x
+x
+x
+x
+
+42
+Sổ chi tiết thuế GTGT được miễn giảm
+S63-DN
+x
+x
+x
+x
+
+
+Các sổ chi tiết khác theo yêu cầu quản lý của doanh nghiệp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PHẦN B - CÁC HÌNH THỨC SỔ KẾ TOÁN
+
+1. Các loại sổ kế toán và hình thức sổ kế toán
+Sổ kế toán gồm sổ kế toán tổng hợp và sổ kế toán chi tiết. Sổ kế toán tổng hợp, gồm: Sổ Nhật ký, Sổ Cái. Số kế toán chi tiết, gồm: Sổ, thẻ kế toán chi tiết. 
+	a) Sổ kế toán tổng hợp
+	- Sổ Nhật ký dùng để ghi chép các nghiệp vụ kinh tế, tài chính phát sinh trong từng kỳ kế toán và trong một niên độ kế toán theo trình tự thời gian và quan hệ đối ứng các tài khoản của các nghiệp vụ đó. Số liệu kế toán trên sổ Nhật ký phản ánh tổng số phát sinh bên Nợ và bên Có của tất cả các tài khoản kế toán sử dụng ở doanh nghiệp. Sổ Nhật ký phải phản ánh đầy đủ các nội dung sau:
++ Ngày, tháng ghi sổ;
++ Số hiệu và ngày, tháng của chứng từ kế toán dùng làm căn cứ ghi sổ;
++ Tóm tắt nội dung của nghiệp vụ kinh tế, tài chính phát sinh;
++ Số tiền của nghiệp vụ kinh tế, tài chính phát sinh.
+- Sổ Cái dùng để ghi chép các nghiệp vụ kinh tế, tài chính phát sinh trong từng kỳ và trong một niên độ kế toán theo các tài khoản kế toán được quy định trong chế độ tài khoản kế toán áp dụng cho doanh nghiệp. Số liệu kế toán trên Sổ Cái phản ánh tổng hợp tình hình tài sản, nguồn vốn, tình hình và kết quả hoạt động sản xuất, kinh doanh của doanh nghiệp. Sổ Cái phải phản ánh đầy đủ các nội dung sau:
++ Ngày, tháng ghi sổ;
++ Số hiệu và ngày, tháng của chứng từ kế toán dùng làm căn cứ ghi sổ;
++ Tóm tắt nội dung của nghiệp vụ kinh tế, tài chính phát sinh;
++ Số tiền của nghiệp vụ kinh tế, tài chính phát sinh ghi vào bên Nợ hoặc bên Có của tài khoản.
+b) Sổ, thẻ kế toán chi tiết
+Sổ, thẻ kế toán chi tiết dùng để ghi chép các nghiệp vụ kinh tế, tài chính phát sinh liên quan đến các đối tượng kế toán cần thiết phải theo dõi chi tiết theo yêu cầu quản lý. Số liệu trên sổ, thẻ kế toán chi tiết cung cấp các thông tin phục vụ cho việc quản lý từng loại tài sản, nguồn vốn, doanh thu, chi phí chưa được phản ánh trên sổ Nhật ký và Sổ Cái. Số lượng, kết cấu các sổ, thẻ kế toán chi tiết không quy định bắt buộc. Các doanh nghiệp căn cứ vào quy định mang tính hướng dẫn của Nhà nước về sổ, thẻ kế toán chi tiết và yêu cầu quản lý của doanh nghiệp để mở các sổ, thẻ kế toán chi tiết cần thiết, phù hợp.
+c) Các hình thức sổ kế toán
+- Hình thức kế toán Nhật ký chung;
+- Hình thức kế toán Nhật ký - Sổ Cái;
+- Hình thức kế toán Chứng từ ghi sổ;
+- Hình thức kế toán Nhật ký- Chứng từ;
+- Hình thức kế toán trên máy vi tính.
+Trong mỗi hình thức sổ kế toán có những quy định cụ thể về số lượng, kết cấu, mẫu sổ, trình tự, phương pháp ghi chép và mối quan hệ giữa các sổ kế toán.
+	2. Hình thức kế toán Nhật ký chung
+a) Nguyên tắc, đặc trưng cơ bản của hình thức kế toán Nhật ký chung: Tất cả các nghiệp vụ kinh tế, tài chính phát sinh đều phải được ghi vào sổ Nhật ký, mà trọng tâm là sổ Nhật ký chung, theo trình tự thời gian phát sinh và theo nội dung kinh tế (định khoản kế toán) của nghiệp vụ đó. Sau đó lấy số liệu trên các sổ Nhật ký để ghi Sổ Cái theo từng nghiệp vụ phát sinh. Hình thức kế toán Nhật ký chung gồm các loại sổ chủ yếu sau:
+- Sổ Nhật ký chung, Sổ Nhật ký đặc biệt;
+- Sổ Cái;
+- Các sổ, thẻ kế toán chi tiết.
+b) Trình tự ghi sổ kế toán theo hình thức kế toán Nhật ký chung (Sơ đồ 01 dưới đây)
+-  Hàng ngày, căn cứ vào các chứng từ đã kiểm tra được dùng làm căn cứ ghi sổ, trước hết ghi nghiệp vụ phát sinh vào sổ Nhật ký chung, sau đó căn cứ số liệu đã ghi trên sổ Nhật ký chung để ghi vào Sổ Cái theo các tài khoản kế toán phù hợp. Nếu đơn vị có mở sổ, thẻ kế toán chi tiết thì đồng thời với việc ghi sổ Nhật ký chung, các nghiệp vụ phát sinh được ghi vào các sổ, thẻ kế toán chi tiết liên quan.
+Trường hợp đơn vị mở các sổ Nhật ký đặc biệt thì hàng ngày, căn cứ vào các chứng từ được dùng làm căn cứ ghi sổ, ghi nghiệp vụ phát sinh vào sổ Nhật ký đặc biệt liên quan. Định kỳ (3, 5, 10... ngày) hoặc cuối tháng, tùy khối lượng nghiệp vụ phát sinh, tổng hợp từng sổ Nhật ký đặc biệt, lấy số liệu để ghi vào các tài khoản phù hợp trên Sổ Cái, sau khi đã loại trừ số trùng lặp do một nghiệp vụ được ghi đồng thời vào nhiều sổ Nhật ký đặc biệt (nếu có).
+- Cuối tháng, cuối quý, cuối năm, cộng số liệu trên Sổ Cái, lập Bảng cân đối số phát sinh. Sau khi đã kiểm tra đối chiếu khớp đúng, số liệu ghi trên Sổ Cái và bảng tổng hợp chi tiết (được lập từ các Sổ, thẻ kế toán chi tiết) được dùng để lập các Báo cáo tài chính.Về nguyên tắc, Tổng số phát sinh Nợ và Tổng số phát sinh Có trên Bảng cân đối số phát sinh phải bằng Tổng số phát sinh Nợ và Tổng số phát sinh Có trên sổ Nhật ký chung (hoặc sổ Nhật ký chung và các sổ Nhật ký đặc biệt sau khi đã loại trừ số trùng lặp trên các sổ Nhật ký đặc biệt) cùng kỳ.
+
+Biểu số 01
+TRÌNH TỰ GHI SỔ KẾ TOÁN
+ THEO HÌNH THỨC KẾ TOÁN NHẬT KÝ CHUNG
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Ghi chú:
+Ghi hàng ngày
+Ghi cuối tháng, hoặc định kỳ 
+Quan hệ đối chiếu, kiểm tra
+3. Hình thức kế toán Nhật ký - Sổ Cái 
+a) Đặc trưng cơ bản của hình thức kế toán Nhật ký - Sổ Cái: Các nghiệp vụ kinh tế, tài chính phát sinh được kết hợp ghi chép theo trình tự thời gian và theo nội dung kinh tế (theo tài khoản kế toán) trên cùng một quyển sổ kế toán tổng hợp duy nhất là sổ Nhật ký - Sổ Cái. Căn cứ để ghi vào sổ Nhật ký - Sổ Cái là các chứng từ kế toán hoặc Bảng tổng hợp chứng từ kế toán cùng loại. Hình thức kế toán Nhật ký - Sổ Cái gồm có các loại sổ kế toán sau:
+- Nhật ký - Sổ Cái;
+- Các Sổ, Thẻ kế toán chi tiết.
+b) Trình tự ghi sổ kế toán theo hình thức kế toán Nhật ký - Sổ Cái (Sơ đồ số 02)
+- Hàng ngày, căn cứ vào các chứng từ kế toán hoặc Bảng tổng hợp chứng từ kế toán cùng loại đã được kiểm tra và được dùng làm căn cứ ghi sổ, trước hết xác định tài khoản ghi Nợ, tài khoản ghi Có để ghi vào Sổ Nhật ký - Sổ Cái. Số liệu của mỗi chứng từ (hoặc Bảng tổng hợp chứng từ kế toán cùng loại) được ghi trên một dòng ở cả 2 phần Nhật ký và phần Sổ Cái. Bảng tổng hợp chứng từ kế toán được lập cho những chứng từ cùng loại (Phiếu thu, phiếu chi, phiếu xuất, phiếu nhập,...) phát sinh nhiều lần trong một ngày hoặc định kỳ 1 đến 3 ngày. Chứng từ kế toán và Bảng tổng hợp chứng từ kế toán cùng loại sau khi đã ghi Sổ Nhật ký - Sổ Cái, được dùng để ghi vào Sổ, Thẻ kế toán chi tiết có liên quan.
+- Cuối tháng, sau khi đã phản ánh toàn bộ chứng từ kế toán phát sinh trong tháng vào Sổ Nhật ký - Sổ Cái và các sổ, thẻ kế toán chi tiết, kế toán tiến hành cộng số liệu của cột số phát sinh ở phần Nhật ký và các cột Nợ, cột Có của từng tài khoản ở phần Sổ Cái để ghi vào dòng cộng phát sinh cuối tháng. Căn cứ vào số phát sinh các tháng trước và số phát sinh tháng này tính ra số phát sinh luỹ kế từ đầu quý đến cuối tháng này. Căn cứ vào số dư đầu tháng (đầu quý) và số phát sinh trong tháng kế toán tính ra số dư cuối tháng (cuối quý) của từng tài khoản trên Nhật ký - Sổ Cái.
+- Khi kiểm tra, đối chiếu số cộng cuối tháng (cuối quý) trong Sổ Nhật ký - Sổ Cái phải đảm bảo các yêu cầu sau:
+Tổng số tiền 
+của cột “Phát sinh”
+ở phần Nhật ký
+==
+
+Tổng số phát sinh Nợ của tất cả các TK
+=
+=
+
+Tổng số phát sinh
+Có của tất cả các TK
+
+
+   Tổng số dư Nợ các Tài khoản
+=
+Tổng số dư Có các tài khoản
+
+- Các sổ, thẻ kế toán chi tiết cũng phải được khoá sổ để cộng số phát sinh Nợ, số phát sinh Có và tính ra số dư cuối tháng của từng đối tượng. Căn cứ vào số liệu khoá sổ của các đối tượng lập “Bảng tổng hợp chi tiết" cho từng tài khoản. Số liệu trên “Bảng tổng hợp chi tiết” được đối chiếu với số phát sinh Nợ, số phát sinh Có và Số dư cuối tháng của từng tài khoản trên Sổ Nhật ký - Sổ Cái. Số liệu trên Nhật ký - Sổ Cái và trên “Bảng tổng hợp chi tiết” sau khi khóa sổ được kiểm tra, đối chiếu nếu khớp, đúng sẽ được sử dụng để lập báo cáo tài chính.
+
+Biểu số 02
+TRÌNH TỰ GHI SỔ KẾ TOÁN THEO HÌNH THỨC KẾ TOÁN
+NHẬT KÝ - SỔ CÁI
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+Ghi chú:
+Ghi hàng ngày
+Ghi cuối tháng
+Đối chiếu, kiểm tra
+
+4. Hình thức kế toán Chứng từ ghi sổ
+a) Đặc trưng cơ bản của hình thức kế toán Chứng từ ghi sổ: Căn cứ trực tiếp để ghi sổ kế toán tổng hợp là “Chứng từ ghi sổ”. Việc ghi sổ kế toán tổng hợp bao gồm:
+- Ghi theo trình tự thời gian trên Sổ Đăng ký Chứng từ ghi sổ. 
+- Ghi theo nội dung kinh tế trên Sổ Cái.
+Chứng từ ghi sổ do kế toán lập trên cơ sở từng chứng từ kế toán hoặc Bảng Tổng hợp chứng từ kế toán cùng loại, có cùng nội dung kinh tế. Chứng từ ghi sổ được đánh số hiệu liên tục trong từng tháng hoặc cả năm (theo số thứ tự trong Sổ Đăng ký Chứng từ ghi sổ) và có chứng từ kế toán đính kèm, phải được kế toán trưởng duyệt trước khi ghi sổ kế toán. Hình thức kế toán Chứng từ ghi sổ gồm có các loại sổ kế toán sau:
++ Chứng từ ghi sổ;
++ Sổ Đăng ký Chứng từ ghi sổ;
++ Sổ Cái;
++ Các Sổ, Thẻ kế toán chi tiết. 
+b) Trình tự ghi sổ kế toán theo hình thức kế toán Chứng từ ghi sổ (Sơ đồ số 03)
+- Hàng ngày, căn cứ vào các chứng từ kế toán hoặc Bảng Tổng hợp chứng từ kế toán cùng loại đã được kiểm tra, được dùng làm căn cứ ghi sổ, kế toán lập Chứng từ ghi sổ. Căn cứ vào Chứng từ ghi sổ để ghi vào sổ Đăng ký Chứng từ ghi sổ, sau đó được dùng để ghi vào Sổ Cái. Các chứng từ kế toán sau khi làm căn cứ lập Chứng từ ghi sổ được dùng để ghi vào Sổ, Thẻ kế toán chi tiết có liên quan.
+- Cuối tháng, phải khóa sổ tính ra tổng số tiền của các nghiệp vụ kinh tế, tài chính phát sinh trong tháng trên sổ Đăng ký Chứng từ ghi sổ, tính ra Tổng số phát sinh Nợ, Tổng số phát sinh Có và Số dư của từng tài khoản trên Sổ Cái. Căn cứ vào Sổ Cái lập Bảng Cân đối số phát sinh.
+- Sau khi đối chiếu khớp đúng, số liệu ghi trên Sổ Cái và Bảng tổng hợp chi tiết (được lập từ các sổ, thẻ kế toán chi tiết) được dùng để lập Báo cáo tài chính. Quan hệ đối chiếu, kiểm tra phải đảm bảo Tổng số phát sinh Nợ và Tổng số phát sinh Có của tất cả các tài khoản trên Bảng Cân đối số phát sinh phải bằng nhau và bằng Tổng số tiền phát sinh trên sổ Đăng ký Chứng từ ghi sổ. Tổng số dư Nợ và Tổng số dư Có của các tài khoản trên Bảng Cân đối số phát sinh phải bằng nhau, và số dư của từng tài khoản trên Bảng Cân đối số phát sinh phải bằng số dư của từng tài khoản tương ứng trên Bảng tổng hợp chi tiết.
+Biểu số 03
+TRÌNH TỰ GHI SỔ KẾ TOÁN THEO HÌNH THỨC KẾ TOÁN
+CHỨNG TỪ GHI SỔ
+
+	
+
+
+
+
+
+
+                                    
+
+
+
+
+
+
+
+
+
+
+Ghi chú:
+Ghi hàng ngày
+Ghi cuối tháng
+Đối chiếu, kiểm tra 
+
+5. Hình thức sổ kế toán Nhật ký - Chứng từ
+a)  Đặc trưng cơ bản của hình thức kế toán Nhật ký - Chứng từ (NKCT)
+- Tập hợp và hệ thống hóa các nghiệp vụ kinh tế phát sinh theo bên Có của các tài khoản kết hợp với việc phân tích các nghiệp vụ kinh tế đó theo các tài khoản đối ứng Nợ. 
+- Kết hợp chặt chẽ việc ghi chép các nghiệp vụ kinh tế phát sinh theo trình tự thời gian với việc hệ thống hoá các nghiệp vụ theo nội dung kinh tế (theo tài khoản). 
+- Kết hợp rộng rãi việc hạch toán tổng hợp với hạch toán chi tiết trên cùng một sổ kế toán và trong cùng một quá trình ghi chép. 
+- Sử dụng các mẫu sổ in sẵn các quan hệ đối ứng tài khoản, chỉ tiêu quản lý kinh tế, tài chính và lập báo cáo tài chính.
+Hình thức kế toán Nhật ký - Chứng từ gồm có các loại sổ kế toán sau:
++ Nhật ký chứng từ;
++ Bảng kê;
++ Sổ Cái; 
++ Sổ hoặc thẻ kế toán chi tiết.
+b)  Trình tự ghi sổ kế toán theo hình thức kế toán Nhật ký - Chứng từ  (Sơ đồ số 04)
+- Hàng ngày căn cứ vào các chứng từ kế toán đã được kiểm tra lấy số liệu ghi trực tiếp vào các Nhật ký - Chứng từ hoặc Bảng kê, sổ chi tiết có liên quan. Đối với các loại chi phí sản xuất, kinh doanh phát sinh nhiều lần hoặc mang tính chất phân bổ, các chứng từ gốc trước hết được tập hợp và phân loại trong các bảng phân bổ, sau đó lấy số liệu kết quả của bảng phân bổ ghi vào các Bảng kê và Nhật ký - Chứng từ có liên quan. Đối với các Nhật ký - Chứng từ được ghi căn cứ vào các Bảng kê, sổ chi tiết thì căn cứ vào số liệu tổng cộng của bảng kê, sổ chi tiết, cuối tháng chuyển số liệu vào Nhật ký - Chứng từ.
+- Cuối tháng khóa sổ, cộng số liệu trên các Nhật ký - Chứng từ, kiểm tra, đối chiếu số liệu trên các Nhật ký - Chứng từ với các sổ, thẻ kế toán chi tiết, bảng tổng hợp chi tiết có liên quan và lấy số liệu tổng cộng của các Nhật ký - Chứng từ ghi trực tiếp vào Sổ Cái. Đối với các chứng từ có liên quan đến các sổ, thẻ kế toán chi tiết thì được ghi trực tiếp vào các sổ, thẻ có liên quan. Cuối tháng, cộng các sổ hoặc thẻ kế toán chi tiết và căn cứ vào sổ hoặc thẻ kế toán chi tiết để lập các Bảng tổng hợp chi tiết theo từng tài khoản để đối chiếu với Sổ Cái. Số liệu tổng cộng ở Sổ Cái và một số chỉ tiêu chi tiết trong Nhật ký - Chứng từ, Bảng kê và các Bảng tổng hợp chi tiết được dùng để lập báo cáo tài chính.
+Biểu số 04
+TRÌNH TỰ GHI SỔ KẾ TOÁN THEO HÌNH THỨC KẾ TOÁN
+NHẬT KÝ - CHỨNG TỪ
+
+
+
+
+
+
+                                    
+
+
+
+
+
+
+
+Ghi chú:
+Ghi hàng ngày
+Ghi cuối tháng 
+Đối chiếu, kiểm tra
+
+6. Hình thức kế toán trên máy vi tính 
+a) Đặc trưng cơ bản của Hình thức kế toán trên máy vi tính: Công việc kế toán được thực hiện theo một chương trình phần mềm kế toán trên máy vi tính. Phần mềm kế toán được thiết kế theo nguyên tắc của một trong bốn hình thức kế toán hoặc kết hợp các hình thức kế toán quy định trên đây. Phần mềm kế toán không hiển thị đầy đủ quy trình ghi sổ kế toán, nhưng phải in được đầy đủ sổ kế toán và báo cáo tài chính theo quy định. Phần mềm kế toán được thiết kế theo Hình thức kế toán nào sẽ có các loại sổ của hình thức kế toán đó nhưng không hoàn toàn giống mẫu sổ kế toán ghi bằng tay. 
+b)  Trình tự ghi sổ kế toán theo Hình thức kế toán trên máy vi tính (Biểu số 05)
+- Hàng ngày, kế toán căn cứ vào chứng từ kế toán hoặc Bảng tổng hợp chứng từ kế toán cùng loại đã được kiểm tra, được dùng làm căn cứ ghi sổ, xác định tài khoản ghi Nợ, tài khoản ghi Có để nhập dữ liệu vào máy vi tính theo các bảng, biểu được thiết kế sẵn trên phần mềm kế toán. Theo quy trình của phần mềm kế toán, các thông tin được tự động nhập vào sổ kế toán tổng hợp (Sổ Cái hoặc Nhật ký - Sổ Cái...) và các sổ, thẻ kế toán chi tiết liên quan. 
+- Cuối tháng (hoặc bất kỳ vào thời điểm cần thiết nào), kế toán thực hiện các thao tác khóa sổ (cộng sổ) và lập báo cáo tài chính. Việc đối chiếu giữa số liệu tổng hợp với số liệu chi tiết được thực hiện tự động và luôn đảm bảo chính xác, trung thực theo thông tin đã được nhập trong kỳ. Người làm kế toán có thể kiểm tra, đối chiếu số liệu giữa sổ kế toán với báo cáo tài chính sau khi đã in ra giấy. Cuối tháng, cuối năm sổ kế toán tổng hợp và sổ kế toán chi tiết được in ra giấy, đóng thành quyển và thực hiện các thủ tục pháp lý theo quy định.
+
+Biểu số 05
+TRÌNH TỰ GHI SỔ KẾ TOÁN
+THEO HÌNH THỨC KẾ TOÁN TRÊN MÁY VI TÍNH
+
+
+
+
+
+
+                                                                      
+
+
+ Ghi chú:             
+                        Nhập số liệu  hàng ngày                    
+                            In sổ, báo cáo cuối tháng, cuối năm
+                               Đối chiếu, kiểm tra 
+
+
+PHẦN C -  GIẢI THÍCH NỘI DUNG VÀ PHƯƠNG PHÁP 
+GHI SỔ KẾ TOÁN
+
+I. Giải thích nội dung và phương pháp ghi sổ tổng hợp
+1. Nội dung, kết cấu và phương pháp ghi sổ theo hình thức Nhật ký - Sổ Cái:
+Sổ kế toán tổng hợp của hình thức kế toán Nhật ký - Sổ Cái chỉ có một quyển sổ duy nhất là sổ Nhật ký - Sổ Cái (Mấu số S01-DN)
+a) Nội dung:
+- Nhật ký - Sổ Cái là sổ kế toán tổng hợp duy nhất dùng để phản ánh tất cả các nghiệp vụ kinh tế phát sinh theo trình tự thời gian và hệ thống hóa theo nội dung kinh tế (Theo tài khoản kế toán).
+- Số liệu ghi trên Nhật ký - Sổ Cái dùng để lập Báo cáo tài chính.
+b) Kết cấu và phương pháp ghi sổ:
++ Kết cấu:
+Nhật ký - Sổ Cái là sổ kế toán tổng hợp gồm 2 phần: Phần Nhật ký và phần Sổ Cái.
+Phần Nhật ký: gồm các cột: Cột "Ngày, tháng ghi sổ", cột "Số hiệu”, cột "Ngày, tháng” của chứng từ, cột “Diễn giải" nội dung nghiệp vụ và cột "Số tiền phát sinh". Phần Nhật ký dùng để phản ánh các nghiệp vụ kinh tế phát sinh theo trình tự thời gian. 
+Phần Sổ Cái: Có nhiều cột, mỗi tài khoản ghi 2 cột: cột Nợ, cột Có. Số lượng cột nhiều hay ít phụ thuộc vào số lượng các tài khoản sử dụng ở đơn vị kế toán. Phần Sổ Cái dùng để phản ánh các nghiệp vụ kinh tế phát sinh theo nội dung kinh tế (Theo tài khoản kế toán).
++ Phương pháp ghi sổ:
+- Ghi chép hàng ngày:
+Hàng ngày, mỗi khi nhận được chứng từ kế toán, người giữ Nhật ký - Sổ Cái phải kiểm tra tính chất pháp lý của chứng từ. Căn cứ vào nội dung nghiệp vụ ghi trên chứng từ để xác định tài khoản ghi Nợ, tài khoản ghi Có. Đối với các chứng từ kế toán cùng loại, kế toán lập “Bảng tổng hợp chứng từ kế toán cùng loại”. Sau đó ghi các nội dung cần thiết của chứng từ kế toán hoặc “Bảng tổng hợp chứng từ kế toán cùng loại” vào Nhật ký - Sổ Cái.
+Mỗi chứng từ kế toán hoặc “Bảng tổng hợp chứng từ kế toán cùng loại” được ghi vào Nhật ký - Sổ Cái trên một dòng, đồng thời cả ở 2 phần: Phần Nhật ký và phần Sổ Cái. Trước hết ghi vào phần Nhật ký ở các cột: Cột "Ngày, tháng ghi sổ", cột "Số hiệu" và cột "Ngày, tháng” của chứng từ, cột "Diễn giải" nội dung nghiệp vụ kinh tế phát sinh và căn cứ vào số tiền ghi trên chứng từ để ghi vào cột “số tiền phát sinh”. Sau đó ghi số tiền của nghiệp vụ kinh tế phát sinh vào cột ghi Nợ, cột ghi Có của các tài khoản liên quan trong phần Sổ Cái, cụ thể:
+	- Cột F, G: Ghi số hiệu tài khoản đối ứng của nghiệp vụ kinh tế;
+	- Cột H: Ghi số thứ tự dòng của nghiệp vụ trong Nhật ký - Sổ Cái;
+	- Từ cột 2 trở đi: Ghi số tiền phát sinh của mỗi tài khoản theo quan hệ đối ứng đã được định khoản ở các cột F, G.
+	Cuối tháng phải cộng số tiền phát sinh ở phần nhật ký và số phát sinh nợ, số phát sinh có, tính ra số dư và cộng luỹ kế số phát sinh từ đầu quý của từng tài khoản để làm căn cứ lập Báo cáo tài chính.
+2. Nội dung, kết cấu và phương pháp ghi sổ theo hình thức Chứng từ ghi sổ
+(1) Sổ Đăng ký chứng từ ghi sổ (Mẫu số S02b-DN)
+a) Nội dung:
+Sổ Đăng ký chứng từ ghi sổ là sổ kế toán tổng hợp dùng để ghi chép các nghiệp vụ kinh tế phát sinh theo trình tự thời gian (Nhật ký). Sổ này vừa dùng để đăng ký các nghiệp vụ kinh tế phát sinh, quản lý chứng từ ghi sổ, vừa để kiểm tra, đối chiếu số liệu với Bảng Cân đối số phát sinh.
+b) Kết cấu  và phương pháp ghi chép:
+Cột A: Ghi số hiệu của Chứng từ ghi sổ.
+Cột B: Ghi ngày, tháng lập Chứng từ ghi sổ.
+Cột 1: Ghi số tiền của Chứng từ ghi sổ.
+Cuối trang sổ phải cộng số lũy kế để chuyển sang trang sau.
+Đầu trang sổ phải ghi số cộng trang trước chuyển sang.
+Cuối tháng, cuối năm, kế toán cộng tổng số tiền phát sinh trên Sổ Đăng ký chứng từ ghi sổ, lấy số liệu đối chiếu với Bảng Cân đối số phát sinh.
+(2) Sổ Cái (Mẫu số S02c1-DN và S02c2- DN)
+a) Nội dung:
+Sổ Cái là sổ kế toán tổng hợp dùng để ghi các nghiệp vụ kinh tế phát sinh theo tài khoản kế toán được quy định trong chế độ tài khoản kế toán áp dụng cho doanh nghiệp.
+Số liệu ghi trên Sổ Cái dùng để kiểm tra, đối chiếu với số liệu ghi trên Bảng tổng hợp chi tiết hoặc các Sổ (thẻ) kế toán chi tiết và dùng để lập Bảng cân đối số phát sinh và Báo cáo Tài chính.
+b) Kết cấu và phương pháp ghi Sổ Cái:
+Sổ Cái của hình thức kế toán Chứng từ ghi sổ được mở riêng cho từng tài khoản. Mỗi tài khoản được mở một trang hoặc một số trang tũy theo số lượng ghi chép các nghiệp vụ kinh tế phát sinh nhiều hay ít của từng tài khoản.
+Sổ Cái có 2 loại: Sổ Cái ít cột và Sổ Cái nhiều cột.
++ Sổ Cái ít cột: thường được áp dụng cho những tài khoản có ít nghiệp vụ kinh tế phát sinh, hoặc nghiệp vụ kinh tế phát sinh đơn giản.
+Kết cấu của Sổ Cái loại ít cột (Mẫu số S02c1-DN)
+- Cột A: Ghi ngày, tháng ghi sổ.
+- Cột B, C: Ghi số hiệu, ngày, tháng của Chứng từ ghi sổ.
+- Cột D: Ghi tóm tắt nội dung nghiệp vụ kinh tế phát sinh.
+- Cột E: Ghi số hiệu tài khoản đối ứng.
+- Cột 1, 2: Ghi số tiền ghi Nợ, ghi Có của tài khoản này.
++ Sổ Cái nhiều cột: thường được áp dụng cho những tài khoản có nhiều nghiệp vụ kinh tế phát sinh, hoặc nghiệp vụ kinh tế phát sinh phức tạp cần phải theo dõi chi tiết có thể kết hợp mở riêng cho một trang sổ trên Sổ Cái và được phân tích chi tiết theo tài khoản đối ứng.
+Kết cấu của Sổ Cái loại nhiều cột (Mẫu số S02c2-DN)
+- Cột A: Ghi ngày, tháng ghi sổ.
+- Cột B, C: Ghi số hiệu, ngày, tháng của Chứng từ ghi sổ.
+- Cột D: Ghi tóm tắt nội dung nghiệp vụ kinh tế phát sinh.
+- Cột E: Ghi số hiệu tài khoản đối ứng.
+- Cột 1, 2: Ghi tổng số tiền phát sinh Nợ, phát sinh Có của tài khoản này.
+- Cột 3 đến cột 10: Ghi số tiền phát sinh bên Nợ, bên Có của các tài khoản cấp 2.
+* Phương pháp ghi Sổ Cái:
+- Căn cứ vào Chứng từ ghi sổ để ghi vào Sổ Đăng ký chứng từ ghi sổ, sau đó Chứng từ ghi sổ được sử dụng để ghi vào Sổ Cái và các sổ, thẻ kế toán chi tiết liên quan.
+- Hàng ngày, căn cứ vào Chứng từ ghi sổ để ghi vào Sổ Cái ở các cột phù hợp.
+- Cuối mỗi trang phải cộng tổng số tiền theo từng cột và chuyển sang đầu trang sau.
+- Cuối tháng, (quý, năm) kế toán phải khóa sổ, cộng số phát sinh Nợ, số phát sinh Có, tính ra số dư và cộng luỹ kế số phát sinh từ đầu quý, đầu năm của từng tài khoản để làm căn cứ lập Bảng Cân đối số phát sinh và Báo cáo tài chính.
+3. Nội dung, kết cấu và phương pháp ghi sổ theo hình thức nhật ký chung:
+(1) Nhật ký chung (Mẫu số 03a-DN)
+a) Nội dung:
+Sổ Nhật ký chung là sổ kế toán tổng hợp dùng để ghi chép các nghiệp vụ kinh tế, tài chính phát sinh theo trình tự thời gian đồng thời phản ánh theo quan hệ đối ứng tài khoản (Định khoản kế toán) để phục vụ việc ghi Sổ Cái. Số liệu ghi trên sổ Nhật ký chung được dùng làm căn cứ để ghi vào Sổ Cái.
+b) Kết cấu và phương pháp ghi sổ:
+Kết cấu sổ Nhật ký chung được quy định thống nhất theo mẫu ban hành trong chế độ này:
+- Cột A: Ghi ngày, tháng ghi sổ.
+- Cột B, C: Ghi số hiệu và ngày, tháng lập của chứng từ kế toán dùng làm căn cứ ghi sổ.
+- Cột D: Ghi tóm tắt nội dung nghiệp vụ kinh tế, tài chính phát sinh của chứng từ kế toán. 
+- Cột E: Đánh dấu các nghiệp vụ ghi sổ Nhật ký chung đã được ghi vào Sổ Cái.
+- Cột G: Ghi số thứ tự dòng của Nhật ký chung
+- Cột H: Ghi số hiệu các tài khoản ghi Nợ, ghi Có theo định khoản kế toán các nghiệp vụ phát sinh. Tài khoản ghi Nợ được ghi trước, Tài khoản ghi Có được ghi sau, mỗi tài khoản được ghi một dòng riêng.
+- Cột 1: Ghi số tiền phát sinh các Tài khoản ghi Nợ.
+- Cột 2: Ghi số tiền phát sinh các Tài khoản ghi Có.
+Cuối trang sổ, cộng số phát sinh luỹ kế để chuyển sang trang sau. Đầu trang sổ, ghi số cộng trang trước chuyển sang.
+Về nguyên tắc tất cả các nghiệp vụ kinh tế, tài chính phát sinh đều phải ghi vào sổ Nhật ký chung. Tuy nhiên, trong trường hợp một hoặc một số đối tượng kế toán có số lượng phát sinh lớn, để đơn giản và giảm bớt khối lượng ghi Sổ Cái, doanh nghiệp có thể mở các sổ Nhật ký đặc biệt để ghi riêng các nghiệp vụ phát sinh liên quan đến các đối tượng kế toán đó.
+Các sổ Nhật ký đặc biệt là một phần của sổ Nhật ký chung nên phương pháp ghi chép tương tự như sổ Nhật ký chung. Song để tránh sự trùng lặp các nghiệp vụ đã ghi vào sổ Nhật ký đặc biệt thì không ghi vào sổ Nhật ký chung. Trường hợp này, căn cứ để ghi Sổ Cái là Sổ Nhật ký chung và các Sổ Nhật ký đặc biệt.
+Dưới đây là hướng dẫn nội dung, kết cấu và cách ghi sổ của một số Nhật ký đặc biệt thông dụng.
+(1.1) Sổ Nhật ký thu tiền (Mẫu số 03a1-DN)
+a) Nội dung: Là sổ Nhật ký đặc biệt dùng để ghi chép các nghiệp vụ thu tiền của doanh nghiệp. Mẫu sổ này được mở riêng cho thu tiền mặt, thu qua ngân hàng, cho từng loại tiền (đồng Việt Nam, ngoại tệ) hoặc cho từng nơi thu tiền (Ngân hàng A, Ngân hàng B...).
+b) Kết cấu và phương pháp ghi sổ:
+- Cột A: Ghi ngày, tháng ghi sổ.
+- Cột B, C: Ghi số hiệu và ngày, tháng lập của chứng từ kế toán dùng làm căn cứ ghi sổ. 
+- Cột D: Ghi tóm tắt nội dung nghiệp vụ kinh tế phát sinh của chứng từ kế toán.
+- Cột 1: Ghi số tiền thu được vào bên Nợ của tài khoản tiền được theo dõi trên sổ này như: Tiền mặt, tiền gửi không kỳ hạn,...
+- Cột 2, 3, 4, 5, 6: Ghi số tiền phát sinh bên Có của các tài khoản đối ứng.
+Cuối trang sổ, cộng số phát sinh luỹ kế để chuyển sang trang sau.
+Đầu trang sổ, ghi số cộng trang trước chuyển sang.
+(1.2) Nhật ký chi tiền (Mẫu số S03a2-DN)
+a) Nội dung: Là sổ Nhật ký đặc biệt dùng để ghi chép các nghiệp vụ chi tiền của doanh nghiệp. Mẫu sổ này được mở riêng cho chi tiền mặt, chi tiền qua ngân hàng, cho từng loại tiền (đồng Việt Nam, ngoại tệ) hoặc cho từng nơi chi tiền (Ngân hàng A, Ngân hàng B...).
+b) Kết cấu và phương pháp ghi sổ:
+- Cột A: Ghi ngày, tháng ghi sổ.
+- Cột B, C: Ghi số hiệu và ngày, tháng lập của chứng từ dùng làm căn cứ ghi sổ.
+- Cột D: Ghi tóm tắt nội dung nghiệp vụ phát sinh của chứng từ kế toán.
+- Cột 1: Ghi số tiền chi ra vào bên Có của tài khoản tiền được theo dõi trên sổ này, như: Tiền mặt, tiền gửi không kỳ hạn...
+- Cột 2, 3, 4, 5, 6 : Ghi số tiền phát sinh bên Nợ của các tài khoản đối ứng.
+Cuối trang sổ, cộng số phát sinh luỹ kế để chuyển sang trang sau. Đầu trang sổ, ghi số cộng trang trước chuyển sang.
+(1.3)  Nhật ký mua hàng (Mẫu số S03a3-DN)
+a) Nội dung: Là Sổ Nhật ký đặc biệt dùng để ghi chép các nghiệp vụ mua hàng theo từng loại hàng tồn kho của đơn vị, như: Nguyên liệu, vật liệu; công cụ, dụng cụ; hàng hóa;...
+Sổ Nhật ký mua hàng dùng để ghi chép các nghiệp vụ mua hàng theo hình thức trả tiền sau (mua chịu). Trường hợp trả tiền trước cho người bán thì khi phát sinh nghiệp vụ mua hàng cũng ghi vào sổ này.
+b) Kết cấu và phương pháp ghi sổ.
+- Cột A: Ghi ngày, tháng ghi sổ.
+- Cột B, C: Ghi số hiệu và ngày, tháng lập của chứng từ kế toán dùng làm căn cứ ghi sổ.
+- Cột D: Ghi tóm tắt nội dung nghiệp vụ phát sinh của chứng từ kế toán.
+- Cột 1, 2, 3: Ghi Nợ các tài khoản hàng tồn kho như: Hàng hóa, nguyên liệu vật liệu, công cụ, dụng cụ... Trường hợp đơn vị mở sổ này cho từng loại hàng tồn kho thì các cột này có thể dùng để ghi chi tiết cho loại hàng tồn kho đó như: Hàng hóa A, hàng hóa B...
+- Cột 4: Ghi số tiền phải trả người bán tương ứng với số hàng đã mua.
+Cuối trang sổ, cộng số luỹ kế để chuyển sang trang sau. Đầu trang sổ, ghi số cộng trang trước chuyển sang.
+(1.4) Nhật ký bán hàng (Mẫu số S03a4-DN)
+a) Nội dung: Là Sổ Nhật ký đặc biệt dùng để ghi chép các nghiệp vụ bán hàng của doanh nghiệp như: Bán hàng hóa, bán sản phẩm, bán dịch vụ.
+Sổ Nhật ký bán hàng dùng để ghi chép các nghiệp vụ bán hàng theo hình thức thu tiền sau (bán chịu). Trường hợp người mua trả tiền trước thì khi phát sinh nghiệp vụ bán hàng cũng ghi vào sổ này.
+b) Kết cấu và cách ghi sổ:
+- Cột A: Ghi ngày, tháng ghi sổ.
+- Cột B, C: Ghi số hiệu và ngày, tháng lập của chứng từ dùng làm căn cứ ghi sổ.
+- Cột D: Ghi tóm tắt nội dung nghiệp vụ phát sinh của chứng từ kế toán.
+- Cột 1: Ghi số tiền phải thu từ người mua theo doanh thu bán hàng.
+- Cột 2, 3, 4: Mở theo yêu cầu của doanh nghiệp để ghi doanh thu theo từng loại nghiệp vụ: Bán hàng hóa, bán sản phẩm, bán bất động sản đầu tư, cung cấp dịch vụ... Trường hợp doanh nghiệp mở sổ này cho từng loại doanh thu: Bán hàng hóa, bán sản phẩm, bán bất động sản đầu tư, cung cấp dịch vụ... thì các cột này có thể dùng để ghi chi tiết cho từng loại hàng hóa, sản phẩm, bất động sản đầu tư, dịch vụ. Trường hợp không cần thiết, doanh nghiệp có thể gộp 3 cột này thành 1 cột để ghi doanh thu bán hàng chung.
+Cuối trang sổ, cộng số luỹ kế để chuyển sang trang sau. Đầu trang sổ, ghi số cộng trang trước chuyển sang.
+Doanh nghiệp có thể mở một hoặc một số sổ Nhật ký đặc biệt như đã nêu trên để ghi chép. Trường hợp cần mở thêm các sổ Nhật ký đặc biệt khác phải tuân theo các nguyên tắc mở sổ và ghi sổ đã quy định.
+(2) Sổ Cái (Mẫu số S03b- DN)
+a) Nội dung: Sổ Cái là sổ kế toán tổng hợp dùng để ghi chép các nghiệp vụ kinh tế, tài chính phát sinh trong niên độ kế toán theo tài khoản kế toán được quy định trong hệ thống tài khoản kế toán áp dụng cho doanh nghiệp. Mỗi tài khoản được mở một hoặc một số trang liên tiếp trên Sổ Cái đủ để ghi chép trong một niên độ kế toán.
+b) Kết cấu và phương pháp ghi sổ:
+Sổ Cái được quy định thống nhất theo mẫu ban hành trong chế độ này.
+Cách ghi Sổ Cái được quy định như sau:
+- Cột A: Ghi ngày, tháng ghi sổ.
+- Cột B, C: Ghi số hiệu và ngày, tháng lập của chứng từ kế toán được dùng làm căn cứ ghi sổ.
+- Cột D: Ghi tóm tắt nội dung nghiệp vụ phát sinh.
+- Cột E: Ghi số trang của sổ Nhật ký chung đã ghi nghiệp vụ này.
+- Cột G: Ghi số dòng của sổ Nhật ký chung đã ghi nghiệp vụ này.
+- Cột H: Ghi số hiệu của các tài khoản đối ứng liên quan đến nghiệp vụ phát sinh với tài khoản trang Sổ Cái này (Tài khoản ghi Nợ trước, tài khoản ghi Có sau).
+- Cột 1, 2: Ghi số tiền phát sinh bên Nợ hoặc bên Có của Tài khoản theo từng nghiệp vụ kinh tế.
+Đầu tháng, ghi số dư đầu kỳ của tài khoản vào dòng đầu tiên, cột số dư (Nợ hoặc Có). Cuối tháng, cộng số phát sinh Nợ, số phát sinh Có, tính ra số dư và cộng luỹ kế số phát sinh từ đầu quý của từng tài khoản để làm căn cứ lập Bảng Cân đối số phát sinh và báo cáo tài chính.
+4. Nội dung, kết cấu và phương pháp ghi sổ theo hình thức Nhật ký - Chứng từ
+(1) Nhật ký chứng từ
+Trong hình thức Nhật ký - Chứng từ có 10 Nhật ký - Chứng từ, được đánh số từ Nhật ký - Chứng từ số 1 đến Nhật ký - Chứng từ số 10.
+Nhật ký chứng từ là sổ kế toán tổng hợp, dùng để phản ánh toàn bộ các nghiệp vụ kinh tế, tài chính phát sinh theo vế Có của các tài khoản. Một NKCT có thể mở cho một tài khoản hoặc có thể mở cho một số tài khoản có nội dung kinh tế giống nhau hoặc có quan hệ đối ứng mật thiết với nhau. Khi mở NKCT dùng chung cho nhiều tài khoản thì trên NKCT đó số phát sinh của mỗi tài khoản được phản ánh riêng biệt ở một số dòng hoặc một số cột dành cho mỗi tài khoản. Trong mọi trường hợp số phát sinh bên Có của mỗi tài khoản chỉ tập trung phản ánh trên một NKCT và từ NKCT này ghi vào Sổ Cái một lần vào cuối tháng. Số phát sinh Nợ của mỗi tài khoản được phản ánh trên các NKCT khác nhau, ghi Có các tài khoản có liên quan đối ứng Nợ với tài khoản này và cuối tháng được tập hợp vào Sổ Cái từ các NKCT đó.
+ Để phục vụ nhu cầu phân tích và kiểm tra, ngoài phần chính dùng để phản ánh số phát sinh bên Có, một số NKCT có bố trí thêm các cột phản ánh số phát sinh Nợ, số dư đầu kỳ và số dư cuối kỳ của tài khoản. Số liệu của các cột phản ánh số phát sinh bên Nợ các tài khoản trong trường hợp này chỉ dùng cho mục đích kiểm tra, phân tích không dùng để ghi Sổ Cái.
+Căn cứ để ghi chép các NKCT là chứng từ gốc, số liệu của sổ kế toán chi tiết, của bảng kê và bảng phân bổ.
+NKCT phải mở từng tháng một, hết mỗi tháng phải khóa sổ NKCT cũ và mở NKCT mới cho tháng sau. Mỗi lần khóa sổ cũ, mở sổ mới phải chuyển toàn bộ số dư cần thiết từ NKCT cũ sang NKCT mới tùy theo yêu cầu cụ thể của từng tài khoản.
+Nội dung cơ bản và trình tự ghi chép các NKCT
+(1.1) Nhật ký - Chứng từ số 1 (Mẫu số S04a1-DN)
+Dùng để phản ánh số phát sinh bên Có TK 111 “Tiền mặt" (phần chi) đối ứng Nợ với các tài khoản có liên quan.
+- Kết cấu và phương pháp ghi sổ:
+NKCT số 1 gồm có các cột số thứ tự, ngày của chứng từ ghi sổ các cột phản ánh số phát sinh bên Có của TK 111 "Tiền mặt" đối ứng Nợ với các tài khoản có liên quan và cột cộng Có TK 111. Cơ sở để ghi NKCT số 1 (ghi Có TK 111) là báo cáo quỹ kèm theo các chứng từ gốc (Phiếu chi, Hóa đơn...). Mỗi báo cáo quỹ được ghi một dòng trên NKCT số 1 theo thứ tự thời gian.
+Cuối tháng hoặc cuối quý, khóa sổ NKCT số 1, xác định tổng số phát sinh bên Có  TK 111 đối ứng Nợ của các tài khoản liên quan và lấy số tổng cộng của NKCT số 1 để ghi Sổ Cái (Có TK 111, Nợ các tài khoản).
+(1.2) Nhật ký - Chứng từ số 2 (Mẫu số S04a2-DN)
+Dùng để phản ánh số phát sinh bên Có TK 112 "Tiền gửi không kỳ hạn" đối ứng Nợ với các tài khoản có liên quan. Kết cấu và phương pháp ghi sổ: NKCT số 2 gồm có các cột số thứ tự, số hiệu, ngày tháng của chứng từ ghi sổ, diễn giải nội dung nghiệp vụ ghi sổ, các cột phản ánh số phát sinh bên Có của TK 112 đối ứng Nợ với các tài khoản có liên quan và cột cộng Có TK 112. Cơ sở để ghi NKCT số 2 là các giấy báo Nợ của Ngân hàng kèm theo các chứng từ gốc có liên quan.
+Cuối tháng hoặc cuối quý, khoá sổ NKCT số 2, xác định tổng số phát sinh bên Có TK 112 đối ứng Nợ của các tài khoản liên quan, và lấy số tổng cộng của NKCT số 2 để ghi Sổ Cái (Có TK 112, Nợ các tài khoản).
+(1.3) Nhật ký - Chứng từ số 3 (Mẫu số S04a3-DN)
+Dùng để phản ánh số phát sinh bên Có TK 113 “Tiền đang chuyển" đối ứng Nợ với các tài khoản có liên quan. Kết cấu và phương pháp ghi sổ: NKCT số 3 gồm có các cột số thứ tự, số hiệu, ngày tháng của Chứng từ ghi sổ, diễn giải nội dung nghiệp vụ ghi sổ, các cột phản ánh số phát sinh bên Có TK 113 đối ứng Nợ với các tài khoản có liên quan và cột cộng Có TK 113. Cơ sở để ghi vào NKCT số 3:
++ Đầu tháng khi mở NKCT số 3 phải căn cứ vào NKCT số 3 tháng trước để ghi vào dòng số dư đầu tháng TK 113.
++ Phần ghi Có TK 113, căn cứ vào giấy báo Có của Ngân hàng để ghi.
+Cuối tháng hoặc cuối quý, khóa sổ NKCT số 3, xác định tổng số phát sinh Có của TK 113 đối ứng Nợ các tài khoản liên quan và lấy số tổng cộng của NKCT số 3 để ghi Sổ Cái (Có TK 113, Nợ các tài khoản).
+(1.4) Nhật ký chứng từ số 4 (Mẫu số S04a4-DN)
+Dùng để phản ánh số phát sinh bên Có các TK 341 "Vay và nợ thuê tài chính", TK 343 “Trái phiếu phát hành” đối ứng Nợ của các tài khoản có liên quan.
+NKCT số 4 ngoài phần ghi Có TK 341, 343 đối ứng Nợ các tài khoản liên quan, còn có phần theo dõi thanh toán (ghi Nợ TK 341, 343, đối ứng Có các tài khoản liên quan). Kết cấu và phương pháp ghi sổ:
+NKCT số 4 gồm có các cột số thứ tự, số hiệu, ngày tháng của Chứng từ ghi sổ, diễn giải nội dung nghiệp vụ ghi sổ, các cột phản ánh số phát sinh bên Có, bên Nợ của các tài khoản  341, 343 đối ứng Nợ và đối ứng Có các tài khoản liên quan.
+Khi mở NKCT số 4, số phát sinh của mỗi tài khoản tiền vay, nợ ngắn hạn và dài hạn được phản ánh riêng biệt ở một số trang dành cho mỗi tài khoản.
+Cơ sở để ghi vào NKCT số 4 là khế ước vay, hợp đồng kinh tế (thuê mua TSCĐ, các khoản nợ dài hạn), giấy báo Nợ, báo Có của Ngân hàng và các chứng từ liên quan khác đến các khoản vay, nợ ngắn hạn và dài hạn.
+Cuối tháng hoặc cuối quý khóa sổ NKCT số 4, xác định tổng số phát sinh bên Có của từng TK  341, 343 đối ứng Nợ của các tài khoản liên quan.
+Số liệu tổng cộng của NKCT số 4 được dùng để ghi Sổ Cái của các Tài khoản  341, 343 (Có TK 341, Nợ các tài khoản; Có TK 343, Nợ các tài khoản).
+(1.5) Nhật ký chứng từ số 5 (Mẫu số S04a5-DN)
+Dùng để tổng hợp tình hình thanh toán và công nợ với người cung cấp vật tư, hàng hóa, dịch vụ cho doanh nghiệp (Tài khoản 331 “Phải trả cho người bán").
+NKCT số 5 gồm có 2 phần: Phần phản ánh số phát sinh bên Có TK 331 đối ứng Nợ với các tài khoản có liên quan và phần theo dõi thanh toán (ghi Nợ TK 331 đối ứng Có với các tài khoản liên quan). Kết cấu và phương pháp ghi sổ:
+NKCT số 5 gồm có các cột số thứ tự, tên đơn vị (hoặc người bán), số dư đầu tháng, các cột phản ánh số phát sinh bên Có của TK 331 đối ứng Nợ với các tài khoản liên quan và các cột phản ánh số phát sinh bên Nợ của TK 331 đối ứng Có với các tài khoản liên quan.
+Cơ sở để ghi vào NKCT số 5 là sổ theo dõi thanh toán (TK 331 “Phải trả cho người bán"). Cuối mỗi tháng sau khi đã hoàn thành việc ghi sổ chi tiết TK 331, kế toán lấy số liệu cộng cuối tháng của từng sổ chi tiết được mở cho từng đối tượng để ghi vào NKCT số 5 (Số liệu tổng cộng của mỗi sổ chi tiết được ghi vào NKCT số 5 một dòng).
+Cuối tháng khoá sổ NKCT số 5, xác định tổng số phát sinh bên Có TK 331 đối ứng Nợ các tài khoản liên quan, và lấy số liệu tổng cộng của NKCT số 5 để ghi Sổ Cái (Có TK 331, Nợ các tài khoản).
+(1.6) Nhật ký chứng từ số 6 (Mẫu số S04a6 -DN)
+Dùng để phản ánh số phát sinh bên Có TK 151 "Hàng mua đang đi đường” nhằm theo dõi tình hình mua vật tư, dụng cụ, hàng hoá còn đang đi đường. Kết cấu và phương pháp ghi sổ:
+NKCT số 6 gồm có các cột số thứ tự, diễn giải nội dung nghiệp vụ ghi sổ, số hiệu ngày tháng của chứng từ dùng để ghi sổ, các cột phản ánh số phát sinh bên Có của TK 151 đối ứng Nợ với các tài khoản liên quan, các cột số dư đầu tháng và cuối tháng. 
+Cơ sở để ghi NKCT số 6 là hóa đơn của người bán, phiếu nhập kho. Nguyên tắc ghi NKCT này là ghi theo từng hóa đơn, phiếu nhập kho vật tư, hàng hóa.
+Toàn bộ hóa đơn mua vật tư, hàng hóa đã mua, đã thanh toán tiền hoặc đã chấp nhận thanh toán, nhưng đến cuối tháng hàng vẫn chưa về thì căn cứ vào các hóa đơn này ghi cột "Số dư đầu tháng" của NKCT số 6 tháng sau (mỗi hoá đơn ghi một dòng), sang tháng, khi hàng về căn cứ vào phiếu nhập kho ghi số hàng đã nhập vào các cột phù hợp phần "ghi Có TK 151, Nợ các tài khoản".
+Cuối tháng hoặc cuối quý khóa sổ NKCT số 6, xác định tổng số phát sinh Có TK 151 đối ứng Nợ của các tài khoản liên quan, và lấy số tổng cộng của NKCT số 6 để ghi Sổ Cái (Có TK 151, Nợ các tài khoản).
+(1.7) Nhật ký chứng từ số 7(Mẫu số S04a7-DN)
+Dùng để tổng hợp toàn bộ chi phí sản xuất, kinh doanh của doanh nghiệp và dùng để phản ánh số phát sinh bên Có các tài khoản liên quan đến chi phí sản xuất, kinh doanh bao gồm, TK 152, TK 153, TK 154, TK 214, TK 241, TK 242, TK 334, TK 335, TK 338, TK 352, TK 621, TK 622, TK 623, TK 627 và một số tài khoản đã phản ánh ở các Nhật ký - Chứng từ khác, nhưng có liên quan đến chi phí sản xuất, kinh doanh phát sinh trong kỳ, và dùng để ghi Nợ các tài khoản 154, 621, 622, 623, 627, 242, 2413, 335, 641, 642...
+NKCT số 7 gồm có 3 phần:
+- Phần I: Tập hợp chi phí SXKD toàn doanh nghiệp, phản ánh toàn bộ số phát sinh bên Có của các tài khoản liên quan đến chi phí sản xuất, kinh doanh.
+- Phần II: Chi phí sản xuất theo yếu tố. 
+- Phần III: Luân chuyển nội bộ không tính vào chi phí sản xuất, kinh doanh.
+Phương pháp ghi chép Nhật ký - Chứng từ số 7:
+Phần I. Tập hợp chi phí SXKD toàn doanh nghiệp, phản ánh toàn bộ số phát sinh bên Có của các tài khoản liên quan đến chi phí sản xuất, kinh doanh. Cơ sở để ghi phần này là:
+- Căn cứ vào dòng cộng Nợ của các Tài khoản 154, 621, 622, 623, 627 trên các Bảng kê số 4 để xác định số tổng cộng Nợ của từng TK 154, 621, 622, 623, 627 ghi vào các cột và dòng phù hợp của phần này.
+- Lấy số liệu từ Bảng kê số 5 phần ghi bên Nợ của các TK 2413, 641, 642 để ghi vào các dòng liên quan.
+- Lấy số liệu từ Bảng kê số 6, phần ghi bên Nợ của các TK 242 và của TK 335, TK 352, TK 356 để ghi vào các dòng Nợ TK 242 và Nợ TK 335, Nợ TK 352, Nợ TK 356 của phần này.
+- Căn cứ vào các Bảng phân bổ, các Nhật ký - Chứng từ và các chứng từ có liên quan để ghi vào các dòng phù hợp trên mục B Phần I của Nhật ký - Chứng từ số 7.
+- Số liệu tổng cộng của Phần I được sử dụng để ghi vào Sổ Cái.
+Phần II . Chi phí sản xuất, theo yếu tố: Theo quy định hiện hành, chi phí sản xuất, kinh doanh của doanh nghiệp gồm 5 yếu tố chi phí:
+- Chi phí nguyên liệu, vật liệu;
+- Chi phí nhân công;
+- Chi phí khấu hao TSCĐ;
+- Chi phí dịch vụ mua ngoài;
+- Chi phí khác bằng tiền.
+Cách lập Phần II NKCT số 7
+1. Yếu tố nguyên liệu, vật liệu:
+Căn cứ vào số phát sinh bên Có của các TK l52, 153, đối ứng với Nợ các tài khoản ghi ở Mục A Phần I trên Nhật ký - Chứng từ số 7 để ghi vào các dòng phù hợp của phần này.
+Căn cứ vào chứng từ và các sổ kế toán có liên quan để xác định phần nguyên liệu mua ngoài không qua nhập kho đưa ngay sử dụng để ghi vào yếu tố nguyên liệu, vật liệu ở các dòng phù hợp của Phần II Nhật ký - Chứng từ số 7.
+Yếu tố chi phí nguyên liệu, vật liệu khi tính phải loại trừ nguyên liệu, vật liệu, nhiên liệu dùng không hết nhập lại kho và phế liệu thu hồi.
+2. Yếu tố chi phí nhân công:
+Căn cứ vào số phát sinh bên Có TK 334 và số phát sinh bên Có TK 338 (3382, 3383, 3384, ) đối ứng Nợ các tài khoản ghi ở Mục A Phần I trên Nhật ký - Chứng từ số 7 để ghi vào yếu tố chi phí nhân công ở các dòng phù hợp của Phần II Nhật ký - Chứng từ số 7.
+3. Yếu tố khấu hao TSCĐ:
+Căn cứ vào số phát sinh bên Có TK 214 đối ứng Nợ các tài khoản ghi ở Mục A Phần I trên Nhật ký - Chứng từ số 7 để ghi vào yếu tố khấu hao TSCĐ ở các dòng phù hợp của Phần II NKCT số 7.
+4. Yếu tố chi phí dịch vụ mua ngoài:
+Căn cứ vào các Bảng kê, Sổ chi tiết, Nhật ký - Chứng từ số 1, 2, 5,... liên quan, xác định phần chi phí dịch vụ mua ngoài để ghi vào cột 4 (các dòng phù hợp) trên Phần II của Nhật ký - Chứng từ số 7.
+5. Yếu tố chi phí khác bằng tiền:
+Căn cứ vào các Bảng kê, Sổ chi tiết, Nhật ký - Chứng từ số 1, 2, 5,... liên quan, xác định phần chi phí khác bằng tiền để ghi vào cột 5 (các dòng phù hợp) trên Phần II của Nhật ký - Chứng từ số 7. 
+Phần III. Luân chuyển nội bộ không tính vào chi phí sản xuất, kinh doanh
+Cách lập Phần III NKCT số 7:
+- Căn cứ vào số phát sinh bên Có TK 154 đối ứng Nợ các TK có liên quan (154, 242, 2413, 335, 621, 627, 641, 642,...) ở Mục A Phần I trên Nhật ký - Chứng từ số 7 để ghi vào cột 1 ở các dòng TK 154, 242, 2413, 335, 621, 623, 627, 641, 642, 632 cho phù hợp của Phần III NKCT số 7.
+- Căn cứ vào số phát sinh bên Có TK 621 đối ứng Nợ tài khoản 154 ở Mục A Phần I trên Nhật ký - Chứng từ số 7 để ghi vào cột 2 ở dòng TK 154 ở Phần III NKCT số 7.
+- Căn cứ vào số phát sinh bên Có TK 622 đối ứng Nợ TK 154 ở Mục A Phần I trên Nhật ký - Chứng từ số 7 để ghi vào cột 3 ở dòng TK 154 ở Phần III NKCT số 7.
+- Căn cứ vào số phát sinh bên Có TK 623 đối ứng Nợ TK 154  ở Mục A Phần I trên Nhật ký - Chứng từ số 7 để ghi vào cột 4 ở dòng TK 154 ở Phần III NKCT số 7.
+- Căn cứ vào số phát sinh bên Có TK 627 đối ứng Nợ TK 154 ở Mục A Phần I trên Nhật ký - Chứng từ số 7 để ghi vào cột 5 ở dòng TK 154 ở Phần III NKCT số 7.
+- Căn cứ vào số phát sinh bên Có các TK 242, 335, 2413, 352 đối ứng Nợ các TK 154, 621, 623, 627, 641, 642 ở Mục A Phần I trên Nhật ký - Chứng từ số 7 để ghi vào cột 6, Cột 7, cột 8, cột 9 ở các dòng TK 154, 621, 622, 623, 627, 641, 642 cho phù hợp ở Phần III NKCT số 7.
+(1.8) Nhật ký - Chứng từ số 8 (Mẫu số S04a8-DN)
+Dùng để phản ánh số phát sinh bên Có TK 155, 156, 157, 158, 131, 511, 515, 632, 635, 641, 642, 711, 811, 821, 911. Kết cấu và phương pháp ghi sổ:
+NKCT số 8 gồm có các cột số thứ tự, số hiệu tài khoản ghi Nợ và các cột phản ánh số phát sinh bên Có của các TK 155, 156, 157, 158, 131, 511, 515, 632, 635, 641, 642, 711, 811, 821, 911, các dòng ngang phản ánh số phát sinh bên Nợ của các tài khoản liên quan với các tài khoản ghi Có ở các cột dọc. Cơ sở và phương pháp ghi NKCT số 8:
+- Căn cứ vào Bảng kê số 8 và Bảng kê số 10 phần ghi Có để ghi vào các cột ghi Có TK 155, 156, 157, 158.
+- Căn cứ vào Bảng kê số 11 phần ghi Có để ghi vào cột ghi Có TK 131.
+- Căn cứ vào sổ chi tiết bán hàng dùng cho TK 511 phần ghi Có để ghi vào các cột ghi Có TK 511.
+- Căn cứ vào sổ chi tiết dùng chung cho các tài khoản 515, 632, 635, 641, 642, 711, 811, 821, 911 phần ghi Có để ghi vào các cột ghi Có TK 515, 632, 635, 641, 642, 711, 811, 821, 911.
+Cuối tháng hoặc cuối quý khóa sổ NKCT số 8 xác định tổng số phát sinh bên Có của các TK 155, 156, 157, 158, 131, 511, 515, 632, 641, 642, 711, 811, 821, 911 đối ứng Nợ các tài khoản liên quan và lấy số tổng cộng của NKCT số 8 để ghi Sổ Cái.
+(1.9) Nhật ký - Chứng từ số 9 (Mẫu số S04a9-DN)
+Dùng để phản ánh số phát sinh bên Có TK 211 "TSCĐ hữu hình", TK 212 "TSCĐ thuê tài chính", TK 213 "TSCĐ vô hình", TK 215 - Tài sản sinh học, TK 217 “Bất động sản đầu tư”. Kết cấu và phương pháp ghi sổ:
+NKCT số 9 gồm có các cột số thứ tự, số hiệu, ngày tháng của chứng từ dùng để ghi sổ, diễn giải nội dung nghiệp vụ ghi sổ, các cột phản ánh số phát sinh bên Có của TK 211, 212, 213, 215, 217 đối ứng Nợ với các tài khoản có liên quan.
+Cơ sở để ghi NKCT số 9 là các Biên bản bàn giao, nhượng bán, thanh lý TSCĐ và các chứng từ có liên quan đến giảm TSCĐ của doanh nghiệp.
+Cuối tháng hoặc cuối quý khóa sổ NKCT số 9, xác định số phát sinh bên Có TK 211, 212, 213, 215, 217 đối ứng Nợ của các tài khoản liên quan và lấy số tổng cộng của NKCT số 9 để ghi Sổ Cái.
+(1.10) Nhật ký - Chứng từ số 10 (Mẫu số S04a10-DN)
+Dùng để phản ánh số phát sinh bên Có của các TK 121, 128, 136, 138, 141, 171, 221, 222, 228, 229, 243, 244, 333, 336, 337, 338, 344, 347, 353, 411, 412, 413, 414, 418, 419, 421 mỗi tài khoản được ghi trên một tờ Nhật ký- Chứng từ.
+- Kết cấu và phương pháp ghi sổ: NKCT số 10 gồm có các cột số thứ tự, diễn giải nội dung nghiệp vụ ghi sổ, các cột phản ánh số phát sinh bên Có và bên Nợ của các TK 121, 128, 136, 138, 141, 171, 221, 222, 228, 229, 243, 244, 333, 336, 337, 338, 344, 347, 353, 411, 412, 413, 414, 418, 419, 421 đối ứng Nợ và Có với các tài khoản liên quan, các cột số dư đầu tháng, số dư cuối tháng. Cơ sở để ghi NKCT số 10:
+Căn cứ vào sổ chi tiết đầu tư chứng khoán dùng cho TK 121, 221 phần ghi Có để ghi vào các cột ghi Có TK 121, 221, Nợ các tài khoản liên quan ở các cột phù hợp.
+- Căn cứ vào sổ theo dõi thanh toán dùng cho các TK 136, 138, 141, 222, 244, 333, 336, 344 phần ghi Có để ghi vào các cột ghi Có TK 136, 138, 141, 222, 244, 333, 336, 344, Nợ các tài khoản liên quan ở các cột phù hợp.
+- Căn cứ vào sổ chi tiết dùng chung cho các Tài khoản 128, 228, 229, 171, 353, 411, 412, 413, 414, 418, 421 phần ghi Có để ghi vào các cột ghi Có TK 128, 228, 229, 171, 353, 411, 412, 413, 414, 418, 421.
+Cuối tháng hoặc cuối quý khóa sổ NKCT số 10, xác định số phát sinh bên Có TK 121, 128, 136, 138, 141, 171, 221, 222, 228, 229, 243, 244, 333, 336,  338, 344, 347, 353, 411, 412, 413, 414, 418, 419, 421 và lấy số tổng cộng của NKCT số 10 để ghi Sổ Cái.
+
+
+(Xem tiếp Công báo số 1577 + 1578)

@@ -337,12 +337,15 @@
                                             <option value="staff*">Nhân Viên Dịch Vụ Lưu Trú</option>
                                             <option value="staff**">Nhân Viên Dịch Vụ Ăn Uống</option>
                                             <option value="accountant">Kế Toán</option>
+                                            <option value="accountantSME">Kế Toán SME</option>
                                             <option value="manager">Quản Lý Cửa Hàng POS</option>
                                             <option value="manager*">Quản lý Dịch Vụ Lưu Trú</option>
                                             <option value="managerFB">Quản lý Dịch Vụ Ăn Uống</option>
+                                            <option value="managerSME">Quản lý SME</option>
                                             <option value="admin">Quản Trị Viên Cửa Hàng POS</option>
                                             <option value="admin*">Quản Trị Viên Dịch Vụ Lưu Trú</option>
                                             <option value="adminFB">Quản Trị Viên Dịch Vụ Ăn Uống</option>
+                                            <option value="adminSME">Quản Trị Viên SME</option>
                                             <option value="master">Master</option>
                                         </select>
                                     </div>
@@ -924,10 +927,13 @@ const ROLE_LABELS = {
     admin: ['bg-danger', 'Quản Trị Viên'],
     'admin*': ['bg-danger', 'Quản Trị Viên'],
     adminFB: ['bg-danger', 'Quản Trị Viên'],
+    adminSME: ['bg-primary', 'Quản trị SME'],
     manager: ['bg-danger', 'Quản Lý'],
     'manager*': ['bg-warning', 'Quản lý'],
     managerFB: ['bg-warning', 'Quản lý'],
+    managerSME: ['bg-warning', 'Quản lý SME'],
     accountant: ['bg-info', 'Kế toán'],
+    accountantSME: ['bg-info', 'Kế toán SME'],
 };
 
 async function loadUsers() {
@@ -947,7 +953,7 @@ async function loadUsers() {
 
         tbody.innerHTML = list.map(u => {
             const [roleBadge, roleName] = ROLE_LABELS[u.role] || ['bg-secondary', 'Nhân viên'];
-            const canDelete = !['master', 'admin', 'admin*', 'adminFB'].includes(u.role);
+            const canDelete = !['master', 'admin', 'admin*', 'adminFB', 'adminSME'].includes(u.role);
             return `
                 <tr>
                     <td class="fw-bold">${escapeHtml(u.username)}</td>

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Phải thu nhân viên{% endblock %}
+{% block content %}
+<div class="container-fluid py-3" style="max-width:900px">
+  <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
+    <div>
+      <h4 class="fw-bold mb-1">Phải thu nhân viên (TK 141)</h4>
+      <p class="text-muted small mb-0">Số dư Nợ trên sổ kép ·
+        <a href="{{ url_for('SME_dashboard_debt') }}">Công nợ</a> ·
+        <a href="{{ url_for('SME_general_ledger') }}">Sổ cái</a></p>
+    </div>
+    <div class="d-flex gap-2 align-items-end">
+      <div><label class="form-label small mb-1">Năm</label><input type="number" id="y" class="form-control form-control-sm" style="width:100px"></div>
+      <div><label class="form-label small mb-1">Tháng</label><select id="p" class="form-select form-select-sm" style="width:110px"></select></div>
+      <button class="btn btn-primary btn-sm" id="btn">Xem</button>
+    </div>
+  </div>
+  <div class="card border-0 shadow-sm mb-3"><div class="card-body">
+    <div class="small text-muted" id="hint">—</div>
+    <div class="fs-4 fw-bold mt-1" id="total">0 đ</div>
+  </div></div>
+  <div class="card border-0 shadow-sm"><div class="card-body" id="body">Đang tải…</div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+  const now=new Date(); const y=document.getElementById('y'); const p=document.getElementById('p');
+  y.value=now.getFullYear();
+  for(let m=1;m<=12;m++) p.add(new Option('Tháng '+m,m));
+  p.value=String(now.getMonth()+1);
+  const money=v=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:0})+' đ';
+  async function load(){
+    const res=await fetch(`/api/sme/employee-receivable?year=${y.value}&period=${p.value}`);
+    const data=await res.json();
+    if(!data.success){ document.getElementById('body').innerHTML=`<div class="text-danger">${data.error||'Lỗi'}</div>`; return; }
+    const d=data.data||{};
+    document.getElementById('hint').textContent=d.hint||'';
+    document.getElementById('total').textContent=money(d.total);
+    const lines=d.lines||[];
+    if(!lines.length){ document.getElementById('body').innerHTML='<div class="text-muted">Không có số dư TK 141 trong kỳ.</div>'; return; }
+    let html='<table class="table table-sm"><thead><tr><th>TK</th><th>Tên</th><th class="text-end">Nợ</th><th class="text-end">Có</th><th class="text-end">Số dư</th></tr></thead><tbody>';
+    lines.forEach(r=>{
+      html+=`<tr><td>${r.account_code}</td><td>${r.name}</td><td class="text-end">${money(r.debit)}</td><td class="text-end">${money(r.credit)}</td><td class="text-end fw-semibold">${money(r.balance)}</td></tr>`;
+    });
+    html+='</tbody></table>';
+    document.getElementById('body').innerHTML=html;
+  }
+  document.getElementById('btn').addEventListener('click', load);
+  load();
+})();
+</script>
+{% endblock %}

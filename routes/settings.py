@@ -210,7 +210,8 @@ def register_settings_routes(app):
             subscription_plans = []
         trial_google = None
         if request.args.get('trial_google') == '1':
-            trial_google = session.pop('trial_google', None)
+            # Giữ lại trong session để /api/trial/register xác thực được email Google
+            trial_google = session.get('trial_google')
         return dict(
             google_visible=google_login_visible(),
             google_ready=google_login_enabled(),
@@ -437,6 +438,8 @@ def register_settings_routes(app):
                     return redirect(url_for('rental_service'))
                 if user_role in ('adminFB', 'managerFB') and current_tenant_id is not None:
                     return redirect(url_for('F_and_B_service'))
+                if user_role in ('adminSME', 'managerSME', 'accountantSME') and current_tenant_id is not None:
+                    return redirect(url_for('SME_dashboard'))
                 elif user_role == 'master' and current_tenant_id is None:
                     return redirect(url_for('master_settings'))
                 return redirect(url_for('sale'))
@@ -447,6 +450,8 @@ def register_settings_routes(app):
                     return redirect('/rental_service')
                 if user_role in ('adminFB', 'managerFB'):
                     return redirect('/F_and_B_service')
+                if user_role in ('adminSME', 'managerSME', 'accountantSME'):
+                    return redirect('/SME_dashboard')
                 elif user_role == 'master' and current_tenant_id is None:
                     return redirect('/master_settings')
                 return redirect('/sale')
@@ -533,6 +538,8 @@ def register_settings_routes(app):
             tenant_dict['hkd_sector'] = profile.get('primary_nn_sector')
             tenant_dict['primary_nn_sector'] = profile.get('primary_nn_sector')
             tenant_dict['enabled_nn_sectors'] = profile.get('enabled_nn_sectors') or []
+            tenant_dict['vat_filing_period'] = profile.get('vat_filing_period') or profile.get('filing_period')
+            tenant_dict['filing_period'] = profile.get('filing_period')
             tenant_dict['settings'] = parse_tenant_settings(tenant_dict.get('settings'))
 
             return jsonify({
@@ -975,6 +982,7 @@ def register_settings_routes(app):
             session['trial_google'] = {
                 'email': email,
                 'name': user_info.get('name') or '',
+                'verified_at': datetime.now().isoformat(timespec='seconds'),
             }
             session.modified = True
             return redirect(url_for('login', trial_google=1))
@@ -1789,8 +1797,25 @@ Trân trọng,
             return jsonify({"success": False, "error": "Vui lòng nhập Tenant ID và Số điện thoại"}), 400
 
         from Services.subscription_service import provision_tenant
+        from Services.tenant_profile import is_sme_regime
 
         try:
+            regime = (data.get('accounting_regime') or 'HKD').strip()
+            sme = is_sme_regime(regime)
+            extra_settings = None
+            if sme:
+                from Services.tenant_profile import (
+                    normalize_vat_filing_period,
+                    default_vat_filing_period_for_regime,
+                )
+                fp = normalize_vat_filing_period(
+                    data.get('vat_filing_period') or data.get('filing_period'),
+                    default=default_vat_filing_period_for_regime(regime),
+                )
+                extra_settings = {
+                    'vat_filing_period': fp,
+                    'filing_period': fp,
+                }
             result = provision_tenant(
                 tenant_id,
                 business_name,
@@ -1799,14 +1824,15 @@ Trân trọng,
                 address=data.get('address', '').strip(),
                 tax_code=data.get('tax_code', '').strip(),
                 business_line=(data.get('business_line') or 'pos').strip(),
-                hkd_sector=(data.get('hkd_sector') or 'G1').strip(),
-                revenue_tier=(data.get('revenue_tier') or 'DT1').strip(),
-                accounting_regime=(data.get('accounting_regime') or 'HKD').strip(),
+                hkd_sector='' if sme else (data.get('hkd_sector') or data.get('primary_nn_sector') or 'G1').strip(),
+                revenue_tier=None if sme else (data.get('revenue_tier') or 'DT1').strip(),
+                accounting_regime=regime,
                 expiry_date=data.get('expiry_date'),
                 representative_name=data.get('representative_name', '').strip(),
                 subscription_plan=(data.get('subscription_plan') or '').strip(),
                 customer_password=data.get('customer_password') or 'admin',
-                enabled_nn_sectors=data.get('enabled_nn_sectors'),
+                enabled_nn_sectors=[] if sme else data.get('enabled_nn_sectors'),
+                extra_settings=extra_settings,
             )
             if not result.get('success'):
                 return jsonify(result), 400
@@ -1873,48 +1899,76 @@ Trân trọng,
             """, (business_name, phone, address, email, expiry_date, tenant_id))
 
             settings_patch = {}
-            if revenue_tier:
-                settings_patch['revenue_tier'] = revenue_tier
-                settings_patch['revenue_tier_declared'] = revenue_tier
-                settings_patch['revenue_tier_effective'] = revenue_tier
-            if enabled_nn_sectors is not None:
-                nn_list = normalize_enabled_nn_sectors(enabled_nn_sectors)
-                settings_patch['enabled_nn_sectors'] = nn_list
-                primary = normalize_nn_code(hkd_sector or nn_list[0])
-                settings_patch['primary_nn_sector'] = primary
-                from Services.hkd_sector import nn_to_storage_code
-                settings_patch['default_hkd_sector'] = nn_to_storage_code(primary)
-            elif business_line:
-                settings_patch['business_line'] = business_line
-                c.execute(
-                    "UPDATE tenants SET business_type = ? WHERE tenant_id = ?",
-                    (business_line, tenant_id),
-                )
-                from Services.subscription_service import resolve_provision_nn_profile
-                nn_list, primary = resolve_provision_nn_profile(business_line, None, hkd_sector)
-                settings_patch['enabled_nn_sectors'] = nn_list
-                settings_patch['primary_nn_sector'] = primary
-                from Services.hkd_sector import nn_to_storage_code
-                settings_patch['default_hkd_sector'] = nn_to_storage_code(primary)
-            elif hkd_sector:
-                primary = normalize_nn_code(hkd_sector)
-                settings_patch['primary_nn_sector'] = primary
-                from Services.hkd_sector import nn_to_storage_code
-                settings_patch['default_hkd_sector'] = nn_to_storage_code(primary)
-            if business_line and enabled_nn_sectors is not None:
-                settings_patch['business_line'] = business_line
-                c.execute(
-                    "UPDATE tenants SET business_type = ? WHERE tenant_id = ?",
-                    (business_line, tenant_id),
-                )
-            elif business_line and 'business_line' not in settings_patch:
-                settings_patch['business_line'] = business_line
-                c.execute(
-                    "UPDATE tenants SET business_type = ? WHERE tenant_id = ?",
-                    (business_line, tenant_id),
-                )
-            if accounting_regime:
+            from Services.tenant_profile import is_sme_regime, update_registry_settings
+
+            if accounting_regime and is_sme_regime(accounting_regime):
                 settings_patch['accounting_regime'] = accounting_regime
+                settings_patch['revenue_tier'] = None
+                settings_patch['revenue_tier_declared'] = None
+                settings_patch['revenue_tier_effective'] = None
+                settings_patch['enabled_nn_sectors'] = []
+                settings_patch['primary_nn_sector'] = None
+                settings_patch['default_hkd_sector'] = None
+                from Services.tenant_profile import (
+                    normalize_vat_filing_period,
+                    default_vat_filing_period_for_regime,
+                )
+                if data.get('vat_filing_period') or data.get('filing_period'):
+                    fp = normalize_vat_filing_period(
+                        data.get('vat_filing_period') or data.get('filing_period'),
+                        default=default_vat_filing_period_for_regime(accounting_regime),
+                    )
+                    settings_patch['vat_filing_period'] = fp
+                    settings_patch['filing_period'] = fp
+                if business_line:
+                    settings_patch['business_line'] = business_line
+                    c.execute(
+                        "UPDATE tenants SET business_type = ? WHERE tenant_id = ?",
+                        (business_line, tenant_id),
+                    )
+            else:
+                if revenue_tier:
+                    settings_patch['revenue_tier'] = revenue_tier
+                    settings_patch['revenue_tier_declared'] = revenue_tier
+                    settings_patch['revenue_tier_effective'] = revenue_tier
+                if enabled_nn_sectors is not None:
+                    nn_list = normalize_enabled_nn_sectors(enabled_nn_sectors)
+                    settings_patch['enabled_nn_sectors'] = nn_list
+                    primary = normalize_nn_code(hkd_sector or (nn_list[0] if nn_list else 'NN1'))
+                    settings_patch['primary_nn_sector'] = primary
+                    from Services.hkd_sector import nn_to_storage_code
+                    settings_patch['default_hkd_sector'] = nn_to_storage_code(primary)
+                elif business_line:
+                    settings_patch['business_line'] = business_line
+                    c.execute(
+                        "UPDATE tenants SET business_type = ? WHERE tenant_id = ?",
+                        (business_line, tenant_id),
+                    )
+                    from Services.subscription_service import resolve_provision_nn_profile
+                    nn_list, primary = resolve_provision_nn_profile(business_line, None, hkd_sector)
+                    settings_patch['enabled_nn_sectors'] = nn_list
+                    settings_patch['primary_nn_sector'] = primary
+                    from Services.hkd_sector import nn_to_storage_code
+                    settings_patch['default_hkd_sector'] = nn_to_storage_code(primary)
+                elif hkd_sector:
+                    primary = normalize_nn_code(hkd_sector)
+                    settings_patch['primary_nn_sector'] = primary
+                    from Services.hkd_sector import nn_to_storage_code
+                    settings_patch['default_hkd_sector'] = nn_to_storage_code(primary)
+                if business_line and enabled_nn_sectors is not None:
+                    settings_patch['business_line'] = business_line
+                    c.execute(
+                        "UPDATE tenants SET business_type = ? WHERE tenant_id = ?",
+                        (business_line, tenant_id),
+                    )
+                elif business_line and 'business_line' not in settings_patch:
+                    settings_patch['business_line'] = business_line
+                    c.execute(
+                        "UPDATE tenants SET business_type = ? WHERE tenant_id = ?",
+                        (business_line, tenant_id),
+                    )
+                if accounting_regime:
+                    settings_patch['accounting_regime'] = accounting_regime
 
             if settings_patch:
                 from Services.tenant_profile import update_registry_settings
@@ -2047,15 +2101,21 @@ Trân trọng,
         ), remember=True)
         session.modified = True
 
-        from Services.tenant_profile import load_tenant_profile
+        from Services.tenant_profile import load_tenant_profile, is_sme_regime
         profile = load_tenant_profile(tenant_id.strip())
+        regime = profile.get('accounting_regime') or 'HKD'
+        if is_sme_regime(regime):
+            redirect_to = url_for('SME_dashboard')
+        else:
+            redirect_to = url_for('HKD_dashboard')
         return jsonify({
             'success': True,
             'tenant_id': tenant_id.strip(),
+            'accounting_regime': regime,
             'revenue_tier': profile.get('revenue_tier'),
             'enabled_nn_sectors': profile.get('enabled_nn_sectors'),
-            'redirect': url_for('HKD_dashboard'),
-            'message': f"Đã vào tenant {tenant_id} (DT: {profile.get('revenue_tier')})",
+            'redirect': redirect_to,
+            'message': f"Đã vào tenant {tenant_id} ({profile.get('accounting_regime_label') or regime})",
         })
 
     @app.route('/api/master/leave_tenant', methods=['POST'])

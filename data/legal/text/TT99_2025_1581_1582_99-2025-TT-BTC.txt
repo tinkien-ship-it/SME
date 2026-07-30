@@ -1,0 +1,565 @@
+VĂN BẢN QUY PHẠM PHÁP LUẬT
+
+BỘ TÀI CHÍNH
+
+Thông tư số 99/2025/TT-BTC ngày 27 tháng 10 năm 2025
+hướng dẫn Chế độ kế toán doanh nghiệp
+
+(Tiếp theo Công báo số 1579 + 1580)
+
+3.20. Lãi cơ bản trên cổ phiếu (Mã số 70): 
+Chỉ tiêu này phản ánh lãi cơ bản trên cổ phiếu, chưa tính đến các công cụ được phát hành trong tương lai có khả năng pha loãng giá trị cổ phiếu. Chỉ tiêu này được trình bày trên Báo cáo tài chính của công ty cổ phần là doanh nghiệp độc lập. Đối với công ty mẹ là công ty cổ phần, chỉ tiêu này chỉ được trình bày trên Báo cáo tài chính hợp nhất, không trình bày trên Báo cáo tài chính riêng của công ty mẹ.
+Trường hợp Quỹ khen thưởng, phúc lợi được trích từ lợi nhuận sau thuế, lãi cơ bản trên cổ phiếu được xác định theo công thức sau:
+Lãi cơ bản
+trên cổ phiếu
+=
+Lợi nhuận hoặc lỗ phân bổ cho cổ đông sở hữu cổ phiếu phổ thông
+-
+Số trích quỹ 
+khen thưởng, phúc lợi
+
+
+
+Số lượng bình quân gia quyền của
+cổ phiếu phổ thông đang lưu hành trong kỳ
+
+	
+Việc xác định lợi nhuận hoặc lỗ phân bổ cho cổ đông sở hữu cổ phiếu phổ thông và số lượng bình quân gia quyền của cổ phiếu phổ thông đang lưu hành trong kỳ được thực hiện theo hướng dẫn của Thông tư số 21/2006/TT-BTC ngày 20/3/2006 của Bộ Tài chính và các văn bản sửa đổi, bổ sung thay thế (nếu có).
+Số trích quỹ khen thưởng, phúc lợi là số ước tính Quỹ khen thưởng, phúc lợi trích trong năm báo cáo, nếu năm sau số trích Quỹ khen thưởng, phúc lợi được phê duyệt có chênh lệch với số đã ước tính của năm báo cáo, khoản chênh lệch đó được điều chỉnh hồi tố, tính vào lãi cơ bản trên cổ phiếu của năm trước.
+3.21. Lãi suy giảm trên cổ phiếu (Mã số 71)
+3.21.1. Chỉ tiêu này phản ánh lãi suy giảm trên cổ phiếu, có tính đến sự tác động của các công cụ trong tương lai có thể được chuyển đổi thành cổ phiếu và pha loãng giá trị cổ phiếu. 
+Chỉ tiêu này được trình bày trên Báo cáo tài chính của công ty cổ phần là doanh nghiệp độc lập. Đối với công ty mẹ là công ty cổ phần, chỉ tiêu này chỉ được trình bày trên Báo cáo tài chính hợp nhất, không trình bày trên Báo cáo tài chính riêng của công ty mẹ.
+3.21.2. Lãi suy giảm trên cổ phiếu được xác định như sau:
+Lãi suy giảm trên cổ phiếu
+=
+Lợi nhuận hoặc lỗ phân bổ cho cổ đông sở hữu cổ phiếu phổ thông
+-
+Số trích quỹ 
+khen thưởng, phúc lợi
+
+
+
+Số bình quân gia quyền của cổ phiếu  phổ thông đang lưu hành trong kỳ       
++
+Số lượng cổ phiếu       phổ thông dự kiến được phát hành thêm                        
+
+Số trích quỹ khen thưởng, phúc lợi là số ước tính Quỹ khen thưởng, phúc lợi trích trong năm báo cáo, nếu năm sau số trích Quỹ khen thưởng, phúc lợi được phê duyệt có chênh lệch với số đã ước tính của năm báo cáo, khoản chênh lệch đó được điều chỉnh hồi tố, tính vào lãi suy giảm trên cổ phiếu của năm trước. 
+3.21.3. Xác định lợi nhuận (hoặc lỗ) phân bổ cho cổ đông sở hữu cổ phiếu phổ thông để tính lãi suy giảm trên cổ phiếu:
+Lợi nhuận hoặc lỗ   phân bổ cho cổ phiếu phổ thông
+=
+Lợi nhuận hoặc lỗ  sau thuế TNDN
+-
+Các khoản điều chỉnh giảm
++
+Các khoản  điều chỉnh tăng
+
+Trường hợp công ty trình bày lãi cơ bản trên cổ phiếu trên Báo cáo tài chính hợp nhất thì lợi nhuận hoặc lỗ sau thuế thu nhập doanh nghiệp trong kỳ là lợi nhuận hoặc lỗ sau thuế thu nhập doanh nghiệp được tính trên cơ sở thông tin hợp nhất. Trường hợp công ty trình bày trên Báo cáo tài chính riêng thì lợi nhuận hoặc lỗ sau thuế thu nhập doanh nghiệp trong kỳ là lợi nhuận hoặc lỗ sau thuế của riêng công ty. 
+a) Các khoản điều chỉnh giảm lợi nhuận hoặc lỗ sau thuế thu nhập doanh nghiệp để tính lợi nhuận hoặc lỗ phân bổ cho cổ phiếu phổ thông khi xác định lãi suy giảm trên cổ phiếu.
+- Cổ tức của cổ phiếu ưu đãi: Cổ tức của cổ phiếu ưu đãi bao gồm: Cổ tức của cổ phiếu ưu đãi không lũy kế được thông báo trong kỳ báo cáo và cổ tức của cổ phiếu ưu đãi lũy kế phát sinh trong kỳ báo cáo. Cổ tức của cổ phiếu ưu đãi được tính như sau:
+Cổ tức của cổ phiếu ưu đãi
+=
+Tỷ lệ cổ tức của    cổ phiếu ưu đãi
+x
+Mệnh giá cổ phiếu ưu đãi
+
+- Khoản chênh lệch lớn hơn giữa giá trị hợp lý của khoản thanh toán cho người sở hữu với giá trị ghi sổ của cổ phiếu ưu đãi khi công ty cổ phần mua lại cổ phiếu ưu đãi của người sở hữu. 
+- Khoản chênh lệch lớn hơn giữa giá trị hợp lý của cổ phiếu phổ thông hoặc các khoản thanh toán khác thực hiện theo điều kiện chuyển đổi có lợi tại thời điểm thanh toán với giá trị hợp lý của cổ phiếu phổ thông được phát hành theo điều kiện chuyển đổi gốc. 
+- Các khoản cổ tức hoặc các khoản khác liên quan tới cổ phiếu phổ thông tiềm năng có tác động suy giảm;
+- Các khoản lãi được ghi nhận trong kỳ liên quan tới cổ phiếu phổ thông tiềm năng có tác động suy giảm; và
+- Các yếu tố khác làm giảm lợi nhuận sau thuế nếu chuyển đổi cổ phiếu phổ thông tiềm năng có tác động suy giảm thành cổ phiếu phổ thông. Ví dụ, các khoản chi phí để chuyển đổi trái phiếu chuyển đổi thành cổ phiếu phổ thông làm giảm lợi nhuận sau thuế thu nhập doanh nghiệp trong kỳ. 
+b) Xác định các khoản điều chỉnh tăng lợi nhuận hoặc lỗ sau thuế thu nhập doanh nghiệp:
+- Khoản chênh lệch lớn hơn giữa giá trị hợp lý của khoản thanh toán cho người sở hữu với giá trị ghi sổ của cổ phiếu ưu đãi khi công ty cổ phần mua lại cổ phiếu ưu đãi của người sở hữu.
+- Các yếu tố làm tăng lợi nhuận sau thuế nếu chuyển đổi cổ phiếu phổ thông tiềm năng có tác động suy giảm thành cổ phiếu phổ thông. Ví dụ, khi chuyển đổi trái phiếu chuyển đổi thành cổ phiếu phổ thông thì doanh nghiệp sẽ được giảm chi phí lãi vay liên quan tới trái phiếu chuyển đổi và làm tăng lợi nhuận sau thuế thu nhập doanh nghiệp trong kỳ. 
+	3.21.4. Số lượng cổ phiếu để tính lãi suy giảm trên cổ phiếu
+Số lượng cổ phiếu để tính lãi suy giảm trên cổ phiếu được xác định là số bình quân gia quyền của cổ phiếu phổ thông lưu hành trong kỳ cộng (+) với số bình quân gia quyền của cổ phiếu phổ thông sẽ được phát hành thêm trong trường hợp tất cả các cổ phiếu phổ thông tiềm năng có tác động suy giảm đều được chuyển đổi thành cổ phiếu phổ thông. 
+a) Việc xác định số lượng bình quân gia quyền của cổ phiếu phổ thông đang lưu hành trong kỳ được thực hiện theo hướng dẫn của Thông tư số 21/2006/TT-BTC ngày 20/3/2006 của Bộ Tài chính và các văn bản sửa đổi, bổ sung, thay thế (nếu có).
+b) Xác định số lượng bình quân gia quyền của cổ phiếu phổ thông sẽ được phát hành thêm trong kỳ
+Cổ phiếu phổ thông sẽ được phát hành thêm trong kỳ được coi là cổ phiếu phổ thông tiềm năng có tác động làm suy giảm lãi trên cổ phiếu, gồm:
+- Quyền chọn mua chứng quyền và các công cụ tương đương;
+	- Công cụ tài chính có thể chuyển đổi;
+	- Cổ phiếu phổ thông phát hành có điều kiện;
+- Hợp đồng được thanh toán bằng cổ phiếu phổ thông hoặc bằng tiền;
+- Các quyền chọn đã được mua;
+- Quyền chọn bán đã phát hành.
+Việc xác định số lượng cổ phiếu phổ thông sẽ được phát hành thêm trong kỳ được thực hiện theo quy định của Chuẩn mực kế toán Việt Nam số 30 - Lãi trên cổ phiếu.
+D. Hướng dẫn lập và trình bày Báo cáo lưu chuyển tiền tệ (Mẫu số B03 - DN)
+1. Nguyên tắc lập và trình bày Báo cáo lưu chuyển tiền tệ 
+1.1. Việc lập và trình bày báo cáo lưu chuyển tiền tệ hàng năm và các kỳ kế toán giữa niên độ phải tuân thủ các quy định của Chuẩn mực kế toán Việt Nam số 24 - Báo cáo lưu chuyển tiền tệ và Chuẩn mực kế toán Việt Nam số 27 - Báo cáo tài chính giữa niên độ. Phương pháp lập Báo cáo lưu chuyển tiền tệ được hướng dẫn cho các giao dịch phổ biến nhất, doanh nghiệp căn cứ bản chất từng giao dịch để trình bày các luồng tiền một cách phù hợp nếu chưa có hướng dẫn cụ thể trong Thông tư này. Các chỉ tiêu không có số liệu thì không phải trình bày, doanh nghiệp được đánh lại số thứ tự nhưng không được thay đổi mã số của các chỉ tiêu. 
+1.2. Các khoản đầu tư ngắn hạn được coi là tương đương tiền trình bày trên Báo cáo lưu chuyển tiền tệ chỉ bao gồm các khoản đầu tư ngắn hạn có thời hạn thu hồi hoặc đáo hạn không quá 3 tháng, có khả năng chuyển đổi dễ dàng thành một lượng tiền xác định và không có rủi ro trong chuyển đổi thành tiền kể từ ngày mua khoản đầu tư đó tại thời điểm kết thúc kỳ kế toán. Ví dụ: kỳ phiếu ngân hàng, tín phiếu kho bạc,... có thời hạn thu hồi hoặc đáo hạn không quá 3 tháng kể từ ngày mua.
+1.3. Doanh nghiệp phải trình bày các luồng tiền trên Báo cáo lưu chuyển tiền tệ theo ba loại hoạt động: Hoạt động kinh doanh, hoạt động đầu tư và hoạt động tài chính theo quy định của Chuẩn mực kế toán Việt Nam số 24 - Báo cáo lưu chuyển tiền tệ.
+ - Luồng tiền từ hoạt động kinh doanh là luồng tiền phát sinh từ các hoạt động tạo ra doanh thu chủ yếu của doanh nghiệp và các hoạt động khác không phải là các hoạt động đầu tư hay hoạt động tài chính;
+- Luồng tiền từ hoạt động đầu tư là luồng tiền phát sinh từ các hoạt động mua sắm, xây dựng, thanh lý, nhượng bán các tài sản dài hạn và các khoản đầu tư khác không được phân loại là các khoản tương đương tiền;
+- Luồng tiền từ hoạt động tài chính là luồng tiền phát sinh từ các hoạt động tạo ra các thay đổi về quy mô và kết cấu của vốn chủ sở hữu và vốn vay của doanh nghiệp.
+1.4. Doanh nghiệp được trình bày luồng tiền từ các hoạt động kinh doanh, hoạt động đầu tư và hoạt động tài chính theo cách thức phù hợp nhất với đặc điểm kinh doanh của doanh nghiệp.
+1.5. Các luồng tiền phát sinh từ các hoạt động kinh doanh, hoạt động đầu tư và hoạt động tài chính sau đây được báo cáo trên cơ sở thuần:
+- Thu tiền và chi trả tiền hộ khách hàng như tiền thuê thu hộ, chi hộ và trả lại cho chủ sở hữu tài sản; 
+- Thu tiền và chi tiền đối với các khoản có vòng quay nhanh, thời gian đáo hạn ngắn như: Mua, bán ngoại tệ; Mua, bán các khoản đầu tư; Các khoản đi vay hoặc cho vay ngắn hạn khác có thời hạn thanh toán không quá 3 tháng.
+1.6. Các luồng tiền phát sinh từ các giao dịch bằng ngoại tệ phải được quy đổi ra đồng tiền chính thức sử dụng trong ghi sổ kế toán và lập Báo cáo tài chính theo tỷ giá hối đoái tại thời điểm phát sinh giao dịch. 
+1.7. Các giao dịch về đầu tư và tài chính không trực tiếp sử dụng tiền hay các khoản tương đương tiền không được trình bày trong Báo cáo lưu chuyển tiền tệ. Ví dụ: 
+- Việc mua tài sản bằng cách nhận các khoản nợ liên quan trực tiếp hoặc thông qua nghiệp vụ cho thuê tài chính; 
+- Việc mua một doanh nghiệp thông qua phát hành cổ phiếu;
+- Việc chuyển nợ vay và nợ thuê tài chính thành vốn chủ sở hữu.
+1.8. Các khoản mục tiền và tương đương tiền đầu kỳ và cuối kỳ, ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi tiền và các khoản tương đương tiền bằng ngoại tệ hiện có cuối kỳ phải được trình bày thành các chỉ tiêu riêng biệt trên Báo cáo lưu chuyển tiền tệ để đối chiếu số liệu với các khoản mục tương ứng trên Báo cáo tình hình tài chính. 
+1.9. Doanh nghiệp phải trình bày giá trị và lý do của các khoản tiền và tương đương tiền có số dư cuối kỳ lớn do doanh nghiệp nắm giữ nhưng không được sử dụng do có sự hạn chế của pháp luật hoặc các ràng buộc khác mà doanh nghiệp phải thực hiện.
+1.10. Trường hợp doanh nghiệp đi vay để thanh toán thẳng cho nhà thầu, người cung cấp hàng hóa, dịch vụ (tiền vay được chuyển thẳng từ bên cho vay sang nhà thầu, người cung cấp mà không chuyển qua tài khoản của doanh nghiệp) thì doanh nghiệp vẫn phải trình bày trên Báo cáo lưu chuyển tiền tệ, cụ thể:
+- Số tiền đi vay được trình bày là luồng tiền vào của hoạt động tài chính;
+- Số tiền trả cho người cung cấp hàng hóa, dịch vụ hoặc trả cho nhà thầu được trình bày là luồng tiền ra từ hoạt động kinh doanh hoặc hoạt động đầu tư tùy thuộc vào từng giao dịch.
+1.11. Trường hợp doanh nghiệp phát sinh khoản thanh toán bù trừ với cùng một đối tượng, việc trình bày báo cáo lưu chuyển tiền tệ được thực hiện theo nguyên tắc:
+- Nếu việc thanh toán bù trừ liên quan đến các giao dịch được phân loại trong cùng một luồng tiền thì được trình bày trên cơ sở thuần (ví dụ: trong giao dịch hàng đổi hàng không tương tự khi bù trừ tiền mua hàng tồn kho và tiền bán hàng tồn kho,...);
+- Nếu việc thanh toán bù trừ liên quan đến các giao dịch được phân loại trong các luồng tiền khác nhau thì doanh nghiệp không được trình bày trên cơ sở thuần mà phải trình bày riêng rẽ giá trị của từng giao dịch (Ví dụ bù trừ tiền bán hàng phải thu với khoản đi vay,...).
+1.12. Đối với luồng tiền từ giao dịch mua, bán lại trái phiếu chính phủ và các giao dịch REPO chứng khoán: Bên bán trình bày là luồng tiền từ hoạt động tài chính; Bên mua trình bày là luồng tiền từ hoạt động đầu tư. 
+2. Cơ sở lập Báo cáo lưu chuyển tiền tệ 
+Việc lập Báo cáo lưu chuyển tiền tệ được căn cứ vào:
+- Báo cáo tình hình tài chính; 
+- Báo cáo kết quả hoạt động kinh doanh;
+- Bản thuyết minh Báo cáo tài chính; 
+- Báo cáo lưu chuyển tiền tệ kỳ trước;
+- Các tài liệu kế toán khác, như: Sổ kế toán tổng hợp, sổ kế toán chi tiết các tài khoản “Tiền mặt”, “Tiền gửi không kỳ hạn”, “Tiền đang chuyển”; Sổ kế toán tổng hợp và sổ kế toán chi tiết của các tài khoản liên quan khác, bảng tính và phân bổ khấu hao TSCĐ và các tài liệu kế toán chi tiết khác,...
+3. Yêu cầu về mở và ghi sổ kế toán phục vụ lập Báo cáo lưu chuyển tiền tệ 
+- Sổ kế toán chi tiết các tài khoản phải thu, phải trả, hàng tồn kho phải được theo dõi chi tiết cho từng giao dịch để có thể trình bày luồng tiền thu hồi hoặc thanh toán theo 3 loại hoạt động: Hoạt động kinh doanh, hoạt động đầu tư và hoạt động tài chính. Ví dụ: Khoản tiền trả nợ cho nhà thầu liên quan đến hoạt động XDCB được phân loại là luồng tiền từ hoạt động đầu tư, khoản tiền trả nợ người cung cấp hàng hóa dịch vụ cho sản xuất, kinh doanh được phân loại là luồng tiền từ hoạt động kinh doanh.
+- Đối với sổ kế toán chi tiết các tài khoản phản ánh tiền phải được chi tiết để theo dõi các luồng tiền thu và chi liên quan đến 3 loại hoạt động: Hoạt động kinh doanh, hoạt động đầu tư và hoạt động tài chính làm căn cứ tổng hợp khi lập Báo cáo lưu chuyển tiền tệ. Ví dụ, đối với khoản tiền trả ngân hàng về gốc và lãi vay, doanh nghiệp phải phản ánh riêng số tiền trả lãi vay là luồng tiền từ hoạt động kinh doanh hoặc đầu tư và số tiền trả gốc vay là luồng tiền từ hoạt động tài chính.
+- Tại thời điểm cuối niên độ kế toán, khi lập Báo cáo lưu chuyển tiền tệ, doanh nghiệp phải xác định các khoản đầu tư ngắn hạn có thời hạn thu hồi hoặc đáo hạn không quá 3 tháng kể từ ngày mua thỏa mãn định nghĩa được coi là tương đương tiền phù hợp với quy định của Chuẩn mực “Báo cáo lưu chuyển tiền tệ” để loại trừ ra khỏi luồng tiền từ hoạt động đầu tư. Giá trị của các khoản tương đương tiền được cộng (+) vào chỉ tiêu “Tiền và các khoản tương đương tiền cuối kỳ” trên Báo cáo lưu chuyển tiền tệ.
+4. Phương pháp lập Báo cáo lưu chuyển tiền tệ năm
+4.1. Lập báo cáo các chỉ tiêu luồng tiền từ hoạt động kinh doanh 
+Luồng tiền từ hoạt động kinh doanh phản ánh các luồng tiền vào và luồng tiền ra liên quan đến hoạt động sản xuất, kinh doanh trong kỳ, bao gồm cả luồng tiền liên quan đến chứng khoán nắm giữ vì mục đích kinh doanh. 
+Luồng tiền từ hoạt động kinh doanh được lập theo một trong hai phương pháp: Phương pháp trực tiếp hoặc phương pháp gián tiếp.
+4.1.1. Lập báo cáo các chỉ tiêu luồng tiền từ hoạt động kinh doanh theo phương pháp trực tiếp (Xem Mẫu số B 03-DN)
+a) Nguyên tắc lập: 
+Theo phương pháp trực tiếp, các luồng tiền vào và luồng tiền ra từ hoạt động kinh doanh được xác định và trình bày trong Báo cáo lưu chuyển tiền tệ bằng cách phân tích và tổng hợp trực tiếp các khoản tiền thu vào và chi ra theo từng nội dung thu, chi từ các sổ kế toán tổng hợp và chi tiết của doanh nghiệp. 
+b) Phương pháp lập các chỉ tiêu cụ thể 
+- Tiền thu từ bán hàng, cung cấp dịch vụ và doanh thu khác (Mã số 01)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã thu (tổng giá thanh toán) trong kỳ do bán hàng hóa, sản phẩm, cung cấp dịch vụ, tiền bản quyền, phí, hoa hồng và các khoản doanh thu khác (bao gồm cả thu về bán thành phẩm và hàng hóa bất động sản, thu về cho thuê BĐSĐT & cho thuê TSCĐ, bán chứng khoán kinh doanh,...), kể cả các khoản tiền đã thu từ các khoản nợ phải thu liên quan đến các giao dịch bán hàng hóa, cung cấp dịch vụ và doanh thu khác phát sinh từ các kỳ trước nhưng kỳ này mới thu được tiền và số tiền ứng trước của người mua hàng hóa, dịch vụ.
+Chỉ tiêu này không bao gồm các khoản tiền thu từ thanh lý, nhượng bán TSCĐ, BĐSĐT (kể cả BĐSĐT nắm giữ để cho thuê và BĐSĐT nắm giữ chờ tăng giá), tiền thu hồi các khoản cho vay, góp vốn đầu tư vào đơn vị khác, cổ tức và lợi nhuận được chia và các khoản tiền thu khác được phân loại là luồng tiền từ hoạt động đầu tư; Các khoản tiền thu được do đi vay, nhận vốn góp của chủ sở hữu và các khoản tiền thu khác được phân loại là luồng tiền từ hoạt động tài chính.
+Số liệu để ghi vào chỉ tiêu này được lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn (phần thu tiền), sổ kế toán các tài khoản phải thu (chi tiết tiền thu từ bán hàng, cung cấp dịch vụ chuyển trả ngay các khoản nợ phải trả), sau khi đối chiếu với sổ kế toán các Tài khoản 511 - Doanh thu bán hàng và cung cấp dịch vụ, Tài khoản 131 - Phải thu của khách hàng (chi tiết các khoản doanh thu bán hàng, cung cấp dịch vụ đã thực hiện thu tiền ngay, số tiền thu hồi các khoản phải thu hoặc thu tiền ứng trước trong kỳ,...) hoặc các Tài khoản 515 - Doanh thu hoạt động tài chính, Tài khoản 121 - Chứng khoán kinh doanh (chi tiết số tiền thu từ bán chứng khoán kinh doanh). 
+- Tiền chi trả cho người cung cấp hàng hóa, dịch vụ (Mã số 02)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã trả trong kỳ do mua hàng hóa, dịch vụ, thanh toán các khoản chi phí phục vụ cho sản xuất, kinh doanh, kể cả số tiền chi mua chứng khoán kinh doanh và số tiền đã thanh toán các khoản nợ phải trả hoặc ứng trước cho người bán hàng hóa, cung cấp dịch vụ liên quan đến hoạt động sản xuất, kinh doanh.
+Chỉ tiêu này không bao gồm các khoản tiền chi để mua sắm, đầu tư xây dựng TSCĐ, BĐSĐT (kể cả chi mua nguyên vật liệu để sử dụng cho XDCB), tiền chi cho vay, góp vốn đầu tư vào đơn vị khác và các khoản tiền chi khác được phân loại là luồng tiền từ hoạt động đầu tư; Các khoản tiền chi trả nợ gốc vay, trả lại vốn góp cho chủ sở hữu, cổ tức và lợi nhuận đã trả cho chủ sở hữu và các khoản tiền chi khác được phân loại là luồng tiền từ hoạt động tài chính.
+Số liệu để ghi vào chỉ tiêu này được lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn (phần chi tiền), sổ kế toán các tài khoản phải thu và đi vay (chi tiết tiền đi vay nhận được hoặc thu nợ phải thu chuyển trả ngay các khoản nợ phải trả), sau khi đối chiếu với sổ kế toán các Tài khoản 331 - Phải trả cho người bán, các Tài khoản phản ánh hàng tồn kho. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Tiền chi trả cho người lao động (Mã số 03)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã trả cho người lao động trong kỳ báo cáo về tiền lương, tiền công, phụ cấp, tiền thưởng,... do doanh nghiệp đã thanh toán hoặc tạm ứng. 
+Số liệu để ghi vào chỉ tiêu này được lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn (chi tiết tiền trả cho người lao động), sau khi đối chiếu với sổ kế toán Tài khoản 334 - Phải trả người lao động (chi tiết số đã trả bằng tiền) trong kỳ báo cáo. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Chi phí đi vay đã trả (Mã số 04)
+Chỉ tiêu này được lập căn cứ vào tổng số chi phí đi vay đã trả trong kỳ báo cáo, bao gồm tiền chi phí đi vay phát sinh trong kỳ và trả ngay kỳ này, tiền lãi vay phải trả của các kỳ trước đã trả trong kỳ này, chi phí đi vay trả trước trong kỳ này. 
+Chỉ tiêu này không bao gồm số chi phí đi vay đã trả trong kỳ được vốn hóa vào giá trị các tài sản dở dang được phân loại là luồng tiền từ hoạt động đầu tư. Trường hợp số chi phí đi vay đã trả trong kỳ vừa được vốn hóa, vừa được tính vào chi phí tài chính thì doanh nghiệp căn cứ tỷ lệ vốn hóa lãi vay áp dụng cho kỳ báo cáo theo quy định của Chuẩn mực kế toán Việt Nam số 16 - Chi phí đi vay để xác định số chi phí đi vay đã trả của luồng tiền từ hoạt động kinh doanh và luồng tiền hoạt động đầu tư.
+Số liệu để ghi vào chỉ tiêu này được lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển (chi tiết tiền chi trả chi phí đi vay); sổ kế toán các tài khoản phải thu (chi tiết tiền trả chi phí đi vay từ tiền thu các khoản phải thu) trong kỳ báo cáo, sau khi đối chiếu với sổ kế toán Tài khoản 335 - Chi phí phải trả, Tài khoản 635 - Chi phí tài chính, Tài khoản 341 - Vay và nợ thuê tài chính và các Tài khoản liên quan khác. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Thuế TNDN đã nộp (Mã số 05)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã nộp thuế TNDN cho Nhà nước trong kỳ báo cáo, bao gồm số tiền thuế TNDN đã nộp của kỳ này, số thuế TNDN còn nợ từ các kỳ trước đã nộp trong kỳ này và số thuế TNDN nộp trước (nếu có).
+Số liệu để ghi vào chỉ tiêu này được lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển (chi tiết tiền nộp thuế TNDN), sau khi đối chiếu với sổ kế toán Tài khoản 3334 - Thuế thu nhập doanh nghiệp. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Tiền thu khác từ hoạt động kinh doanh (Mã số 06)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã thu từ các khoản khác từ hoạt động kinh doanh, ngoài khoản tiền thu được phản ánh ở Mã số 01, như: Tiền thu từ khoản thu nhập khác (tiền thu về được bồi thường, được phạt, tiền thưởng và các khoản tiền thu khác,...); Tiền đã thu do được hoàn thuế; Tiền thu được do nhận ký quỹ, ký cược; Tiền thu hồi các khoản đưa đi ký quỹ, ký cược; Tiền được các tổ chức, cá nhân bên ngoài thưởng, hỗ trợ; Tiền nhận được ghi tăng các quỹ do cấp trên cấp hoặc cấp dưới nộp,...; 
+Số liệu để ghi vào chỉ tiêu này lấy từ số thu trên sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn sau khi đối chiếu với sổ kế toán các Tài khoản 711- Thu nhập khác, Tài khoản 133 - Thuế GTGT được khấu trừ, Tài khoản 1383 - Thuế TTĐB của hàng nhập khẩu, Tài khoản 141 - Tạm ứng, Tài khoản 244 - Ký quỹ, ký cược, Tài khoản 333 - Thuế và các khoản phải nộp Nhà nước và sổ kế toán các tài khoản khác có liên quan trong kỳ báo cáo.
+- Tiền chi khác cho hoạt động kinh doanh (Mã số 07)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã chi cho các khoản khác, ngoài các khoản tiền chi liên quan đến hoạt động sản xuất, kinh doanh trong kỳ báo cáo được phản ánh ở Mã số 02, 03, 04, 05, như: Tiền chi bồi thường, bị phạt và các khoản chi phí khác; Tiền nộp các loại thuế (không bao gồm thuế TNDN); Tiền nộp các loại phí, lệ phí, tiền thuê đất trả hàng năm; Tiền nộp các khoản BHXH, BHYT, BHTN, KPCĐ; Tiền chi đưa đi ký quỹ, ký cược; Tiền trả lại các khoản nhận ký quỹ, ký cược; Tiền chi trực tiếp bằng nguồn dự phòng phải trả; Tiền chi trực tiếp từ quỹ khen thưởng, phúc lợi; Tiền chi trực tiếp từ các quỹ khác thuộc vốn chủ sở hữu;...
+Số liệu để ghi vào chỉ tiêu này lấy từ số chi trên sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển trong kỳ báo cáo, sau khi đối chiếu với sổ kế toán các Tài khoản 811 - Chi phí khác, Tài khoản 244 - Ký quỹ, ký cược, Tài khoản 333 - Thuế và các khoản phải nộp Nhà nước, Tài khoản 338 - Phải trả, phải nộp khác, Tài khoản 344 - Nhận ký quỹ, ký cược, Tài khoản 352 - Dự phòng phải trả, Tài khoản 353 - Quỹ khen thưởng, phúc lợi, Tài khoản 356 - Quỹ phát triển khoa học và công nghệ và các Tài khoản liên quan khác. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).”
+- Lưu chuyển tiền thuần từ hoạt động kinh doanh (Mã số 20)
+Chỉ tiêu “Lưu chuyển tiền thuần từ hoạt động kinh doanh” phản ánh chênh lệch giữa tổng số tiền thu vào với tổng số tiền chi ra từ hoạt động kinh doanh trong kỳ báo cáo. Số liệu để ghi vào chỉ tiêu này được tính bằng tổng cộng số liệu các chỉ tiêu từ Mã số 01 đến Mã số 07. Nếu số liệu chỉ tiêu này là số âm thì ghi trong ngoặc đơn (...).
+Mã số 20 = Mã số 01 + Mã số 02 + Mã số 03 + Mã số 04 + Mã số 05 + Mã số 06 + Mã số 07
+4.1.2. Lập báo cáo các chỉ tiêu luồng tiền từ hoạt động kinh doanh theo phương pháp gián tiếp (Xem Mẫu số B03-DN)
+ a. Nguyên tắc lập: 
+Theo phương pháp gián tiếp, các luồng tiền vào và các luồng tiền ra từ hoạt động kinh doanh được tính và xác định trước hết bằng cách điều chỉnh lợi nhuận trước thuế TNDN của hoạt động kinh doanh khỏi ảnh hưởng của các khoản mục không phải bằng tiền, các thay đổi trong kỳ của hàng tồn kho, các khoản phải thu, phải trả từ hoạt động kinh doanh và các khoản mà ảnh hưởng về tiền của chúng là luồng tiền từ hoạt động đầu tư hoặc luồng tiền từ hoạt động tài chính, gồm:
+- Các khoản chi phí không bằng tiền, như: Khấu hao TSCĐ và BĐSĐT, phân bổ tiền thuê đất trả một lần, dự phòng,... 
+- Các khoản lãi, lỗ không bằng tiền, như lãi, lỗ chênh lệch tỷ giá hối đoái; góp vốn bằng tài sản phi tiền tệ;
+- Các khoản lãi, lỗ được phân loại là luồng tiền từ hoạt động đầu tư, như: Lãi, lỗ về thanh lý, nhượng bán TSCĐ và bất động sản đầu tư, tiền lãi cho vay, lãi tiền gửi, cổ tức và lợi nhuận được chia,...;
+- Chi phí đi vay đã ghi nhận vào Báo cáo kết quả hoạt động kinh doanh trong kỳ.
+- Luồng tiền từ hoạt động kinh doanh được điều chỉnh tiếp tục với sự thay đổi vốn lưu động, chi phí chờ phân bổ dài hạn và các khoản thu, chi khác từ hoạt động kinh doanh, như:
++ Các thay đổi trong kỳ báo cáo của khoản mục hàng tồn kho, các khoản phải thu, các khoản phải trả từ hoạt động kinh doanh;
++ Các thay đổi của chi phí chờ phân bổ; 
++ Chi phí đi vay đã trả;
++ Thuế TNDN đã nộp;
++ Tiền thu khác từ hoạt động kinh doanh;
++ Tiền chi khác từ hoạt động kinh doanh.
+b. Phương pháp lập các chỉ tiêu cụ thể 
+- Lợi nhuận trước thuế (Mã số 01)
+Chỉ tiêu này được lấy từ chỉ tiêu Tổng lợi nhuận kế toán trước thuế (Mã số 50) trên Báo cáo kết quả hoạt động kinh doanh của kỳ báo cáo. Nếu số liệu này là số âm (trường hợp lỗ) thì ghi trong ngoặc đơn (...).
+- Khấu hao TSCĐ và BĐSĐT (Mã số 02)
++ Trường hợp doanh nghiệp bóc tách riêng được số khấu hao còn nằm trong hàng tồn kho và số khấu hao đã được tính vào báo cáo kết quả hoạt động kinh doanh trong kỳ: Chỉ tiêu “Khấu hao TSCĐ và BĐSĐT” chỉ bao gồm số khấu hao đã được tính vào Báo cáo kết quả hoạt động kinh doanh trong kỳ và khoản phân bổ chi phí chờ phân bổ về tiền thuê đất trả một lần không đủ điều kiện ghi nhận là TSCĐ vô hình; Chỉ tiêu “Tăng, giảm hàng tồn kho” không bao gồm số khấu hao nằm trong giá trị hàng tồn kho cuối kỳ (chưa được xác định là tiêu thụ trong kỳ);
++ Trường hợp doanh nghiệp không thể bóc tách riêng được số khấu hao còn nằm trong hàng tồn kho và số khấu hao đã được tính vào Báo cáo kết quả hoạt động kinh doanh trong kỳ báo cáo thì thực hiện theo nguyên tắc: Chỉ tiêu “Khấu hao TSCĐ và BĐSĐT” bao gồm số khấu hao đã được tính vào Báo cáo kết quả hoạt động kinh doanh trong kỳ cộng với số khấu hao liên quan đến hàng tồn kho chưa tiêu thụ; Chỉ tiêu “Tăng, giảm hàng tồn kho” bao gồm cả số khấu hao TSCĐ nằm trong giá trị hàng tồn kho cuối kỳ (chưa được xác định là tiêu thụ trong kỳ).
+Trong mọi trường hợp, doanh nghiệp đều phải loại trừ khỏi Báo cáo lưu chuyển tiền tệ số khấu hao nằm trong giá trị xây dựng cơ bản dở dang, số hao mòn đã ghi giảm Quỹ phát triển khoa học và công nghệ đã hình thành TSCĐ, Quỹ khen thưởng phúc lợi đã hình thành TSCĐ phát sinh trong kỳ. Số liệu chỉ tiêu này được cộng (+) vào số liệu chỉ tiêu "Lợi nhuận trước thuế".”
+- Các khoản dự phòng (Mã số 03)
+Chỉ tiêu này phản ánh ảnh hưởng của việc trích lập, hoàn nhập và sử dụng các khoản dự phòng đến các luồng tiền trong kỳ báo cáo. Chỉ tiêu này được lập căn cứ vào số chênh lệch giữa số dư đầu kỳ và số dư cuối kỳ của các khoản dự phòng tổn thất tài sản (dự phòng giảm giá chứng khoán kinh doanh, dự phòng tổn thất đầu tư vào đơn vị khác, dự phòng đầu tư nắm giữ đến ngày đáo hạn, dự phòng giảm giá hàng tồn kho, dự phòng nợ phải thu khó đòi, dự phòng tổn thất tài sản sinh học) và dự phòng phải trả trên Báo cáo tình hình tài chính.
+Số liệu chỉ tiêu này được cộng (+) vào số liệu chỉ tiêu “Lợi nhuận trước thuế” nếu tổng số dư cuối kỳ của các khoản dự phòng lớn hơn tổng số dư đầu kỳ hoặc được trừ vào số liệu chỉ tiêu “Lợi nhuận trước thuế” nếu tổng số dư cuối kỳ của các khoản dự phòng nhỏ hơn tổng số dư đầu kỳ và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Lãi/lỗ chênh lệch tỷ giá hối đoái do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ (Mã số 04)
+Chỉ tiêu này phản ánh lãi (hoặc lỗ) chênh lệch tỷ giá hối đoái do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ đã được phản ánh vào lợi nhuận trước thuế trong kỳ báo cáo. Chỉ tiêu này được lập căn cứ vào chênh lệch số phát sinh Có hoặc phát sinh Nợ Tài khoản 911 - Xác định kết quả kinh doanh đối chiếu sổ kế toán Tài khoản 515 - Doanh thu hoạt động tài chính (nếu lãi do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ) hoặc Tài khoản 635 - Chi phí tài chính (nếu lỗ do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ).
+Số liệu chỉ tiêu này được trừ (-) vào số liệu chỉ tiêu “Lợi nhuận trước thuế” (nếu có lãi chênh lệch tỷ giá hối đoái) hoặc được cộng (+) vào chỉ tiêu “Lợi nhuận trước thuế” (nếu có lỗ chênh lệch tỷ giá hối đoái).
+- Lãi/lỗ từ hoạt động đầu tư, tài chính (Mã số 05)
+Chỉ tiêu này căn cứ vào tổng số lãi, lỗ phát sinh trong kỳ đã được phản ánh vào lợi nhuận trước thuế nhưng được phân loại là luồng tiền từ hoạt động đầu tư, tài chính, bao gồm:  
++ Lãi, lỗ từ việc thanh lý, nhượng bán TSCĐ, BĐSĐT;
++ Lãi, lỗ từ việc đánh giá lại tài sản phi tiền tệ mang đi góp vốn, đầu tư vào đơn vị khác;
++ Lãi/lỗ chênh lệch tỷ giá phát sinh khi thanh toán của hoạt động đầu tư, tài chính;
++ Lãi, lỗ từ việc bán, thu hồi các khoản đầu tư tài chính (không bao gồm lãi, lỗ mua bán chứng khoán kinh doanh), như: Các khoản đầu tư vào công ty con, liên doanh, liên kết, đầu tư khác; Các khoản đầu tư nắm giữ đến ngày đáo hạn; 
++ Lãi cho vay, lãi tiền gửi, cổ tức và lợi nhuận được chia. 
+Chỉ tiêu này được lập căn cứ vào sổ kế toán chi tiết của các Tài khoản 511 - Doanh thu bán hàng và cung cấp dịch vụ, Tài khoản 515 - Doanh thu hoạt động tài chính, Tài khoản 711 - Thu nhập khác, Tài khoản 632 - Giá vốn hàng bán, Tài khoản 635 - Chi phí tài chính, Tài khoản 811 - Chi phí khác và các tài khoản khác có liên quan (chi tiết phần lãi, lỗ được xác định là luồng tiền từ hoạt động đầu tư) trong kỳ báo cáo. 
+Số liệu chỉ tiêu này được trừ (-) vào số liệu chỉ tiêu “Lợi nhuận trước thuế” (nếu hoạt động đầu tư có lãi thuần) và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...); hoặc được cộng (+) vào chỉ tiêu “Lợi nhuận trước thuế” (nếu hoạt động đầu tư có lỗ thuần).
+- Chi phí đi vay (Mã số 06)
+Chỉ tiêu này phản ánh chi phí đi vay đã ghi nhận vào Báo cáo kết quả hoạt động kinh doanh trong kỳ báo cáo, kể cả chi phí phát hành trái phiếu của trái phiếu thường và trái phiếu chuyển đổi; Số chi phí đi vay hàng kỳ tính theo lãi suất thực được ghi tăng cấu phần nợ của trái phiếu chuyển đổi. Chỉ tiêu này được lập căn cứ vào sổ kế toán Tài khoản 635 - Chi phí tài chính (chi tiết chi phí đi vay của kỳ báo cáo) sau khi đối chiếu với chỉ tiêu “Chi phí đi vay” trong Báo cáo kết quả hoạt động kinh doanh.
+Số liệu chỉ tiêu này được cộng vào số liệu chỉ tiêu “Lợi nhuận trước thuế”.
+- Các khoản điều chỉnh khác (Mã số 07)
+Chỉ tiêu này phản ánh số trích lập hoặc hoàn nhập Quỹ bình ổn giá hoặc Quỹ phát triển khoa học công nghệ trong kỳ. Chỉ tiêu này được lập căn cứ vào sổ kế toán Tài khoản 356 - Quỹ phát triển khoa học và công nghệ, Tài khoản 357 - Quỹ bình ổn giá.
+Số liệu chỉ tiêu này được cộng vào số liệu chỉ tiêu “Lợi nhuận trước thuế” nếu trong kỳ trích lập thêm các Quỹ hoặc được trừ khỏi chỉ tiêu “Lợi nhuận trước thuế” nếu trong kỳ hoàn nhập các quỹ.
+- Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động (Mã số 08)
+Chỉ tiêu này phản ánh luồng tiền được tạo ra từ hoạt động kinh doanh trong kỳ báo cáo sau khi đã loại trừ ảnh hưởng của các khoản mục thu nhập và chi phí không phải bằng tiền. Chỉ tiêu này được lập căn cứ vào lợi nhuận trước thuế TNDN cộng (+) các khoản điều chỉnh.
+Mã số 08 = Mã số 01 + Mã số 02 + Mã số 03 + Mã số 04 + Mã số 05 + Mã số 06 + Mã số 07. 
+Nếu số liệu chỉ tiêu này là số âm thì ghi trong ngoặc đơn (...).
+- Tăng, giảm các khoản phải thu (Mã số 09)
+Chỉ tiêu này được lập căn cứ vào tổng các chênh lệch giữa số dư cuối kỳ và số dư đầu kỳ của các tài khoản phải thu (chi tiết phần liên quan đến hoạt động sản xuất, kinh doanh), như: Tài khoản 131 - Phải thu của khách hàng, Tài khoản 136 - Phải thu nội bộ, Tài khoản 138 - Phải thu khác, Tài khoản 133 - Thuế GTGT được khấu trừ, Tài khoản 141 - Tạm ứng,  Tài khoản 244 - Kỹ quỹ, ký cược, Tài khoản 331 - Phải trả cho người bán (bao gồm cả phần thuế GTGT đầu vào của hoạt động đầu tư và số đã trả trước cho người bán) trong kỳ báo cáo.
+Chỉ tiêu này không bao gồm các khoản phải thu liên quan đến hoạt động đầu tư, như: Số tiền ứng trước cho nhà thầu XDCB; Phải thu về cho vay (cả gốc và lãi); Phải thu về lãi tiền gửi, cổ tức và lợi nhuận được chia; Phải thu về thanh lý, nhượng bán TSCĐ, BĐSĐT, các khoản đầu tư vào đơn vị khác (trừ chứng khoán kinh doanh); Giá trị TSCĐ mang đi cầm cố, thế chấp,...
+Số liệu chỉ tiêu này được cộng (+) vào chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” nếu tổng các số dư cuối kỳ nhỏ hơn tổng các số dư đầu kỳ. Số liệu chỉ tiêu này được trừ (-) vào số liệu chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” nếu tổng các số dư cuối kỳ lớn hơn tổng các số dư đầu kỳ và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Tăng, giảm hàng tồn kho (Mã số 10)
+Chỉ tiêu này được lập căn cứ vào tổng các chênh lệch giữa số dư cuối kỳ và số dư đầu kỳ của các tài khoản hàng tồn kho (không bao gồm số dư của tài khoản “Dự phòng giảm giá hàng tồn kho” trên cơ sở đã loại trừ: Giá trị hàng tồn kho dùng cho hoạt động đầu tư XDCB hoặc hàng tồn kho dùng để trao đổi lấy TSCĐ, BĐSĐT; Chi phí sản xuất thử được tính vào nguyên giá TSCĐ hình thành từ XDCB). Trường hợp trong kỳ mua hàng tồn kho nhưng chưa xác định được mục đích sử dụng (cho hoạt động kinh doanh hay đầu tư XDCB) thì giá trị hàng tồn kho được tính trong chỉ tiêu này.
+Trường hợp doanh nghiệp bóc tách riêng được số khấu hao TSCĐ còn nằm trong hàng tồn kho và số khấu hao đã được tính vào Báo cáo kết quả hoạt động kinh doanh trong kỳ (chỉ tiêu “Khấu hao TSCĐ” - Mã số 02 chỉ bao gồm số khấu hao TSCĐ đã được tính vào báo cáo kết quả hoạt động kinh doanh trong kỳ) thì chỉ tiêu này không bao gồm số khấu hao TSCĐ nằm trong giá trị hàng tồn kho cuối kỳ (chưa được xác định là tiêu thụ trong kỳ);
+Trường hợp doanh nghiệp không thể bóc tách riêng được số khấu hao TSCĐ còn nằm trong hàng tồn kho và số khấu hao đã được tính vào Báo cáo kết quả hoạt động kinh doanh trong kỳ (chỉ tiêu “Khấu hao TSCĐ và BĐSĐT” - Mã số 02 bao gồm cả số khấu hao TSCĐ liên quan đến hàng tồn kho chưa tiêu thụ) thì chỉ tiêu này bao gồm cả số khấu hao TSCĐ nằm trong giá trị hàng tồn kho cuối kỳ (chưa được xác định là tiêu thụ trong kỳ).
+Số liệu chỉ tiêu này được cộng (+) vào chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” nếu tổng các số dư cuối kỳ nhỏ hơn tổng các số dư đầu kỳ. Số liệu chỉ tiêu này được trừ (-) vào chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” nếu tổng các số dư cuối kỳ lớn hơn tổng các số dư đầu kỳ và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Tăng, giảm các khoản phải trả (Không kể lãi vay phải trả, thuế thu nhập doanh nghiệp phải nộp) (Mã số 11)
+Chỉ tiêu này được lập căn cứ vào tổng các chênh lệch giữa số dư cuối kỳ với số dư đầu kỳ của các tài khoản nợ phải trả (chi tiết phần liên quan đến hoạt động sản xuất, kinh doanh), như Tài khoản 331- Phải trả cho người bán, Tài khoản 333 - Thuế và các khoản phải nộp Nhà nước, Tài khoản 334 - Phải trả người lao động, Tài khoản 335 - Chi phí phải trả, Tài khoản 336 - Phải trả nội bộ, Tài khoản 337- Thanh toán theo tiến độ hợp đồng xây dựng, Tài khoản 338 - Phải trả, phải nộp khác, Tài khoản 344 - Nhận ký quỹ, ký cược, Tài khoản 131 - Phải thu của khách hàng (chi tiết người mua trả tiền trước).
+Chỉ tiêu này không bao gồm số thuế TNDN phải nộp (phát sinh Có Tài khoản 3334 - Thuế thu nhập doanh nghiệp), chi phí đi vay phải trả (phát sinh Có Tài khoản 335 - Chi phí phải trả, chi tiết lãi vay phải trả).
+Chỉ tiêu này không bao gồm các khoản phải trả liên quan đến hoạt động đầu tư, như: Số tiền người mua trả trước liên quan đến việc thanh lý, nhượng bán TSCĐ, BĐSĐT; Các khoản phải trả liên quan đến hoạt động mua sắm, xây dựng TSCĐ, BĐSĐT; Các khoản phải trả mua các công cụ vốn và công cụ nợ,...; và các khoản phải trả liên quan đến hoạt động tài chính, như: Phải trả gốc vay, gốc trái phiếu, nợ thuê tài chính; Cổ tức, lợi nhuận phải trả.
+Số liệu chỉ tiêu này được cộng (+) vào chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” nếu tổng các số dư cuối kỳ lớn hơn tổng số dư đầu kỳ. Số liệu chỉ tiêu này được trừ (-) vào số liệu chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” nếu tổng các số dư cuối kỳ nhỏ hơn tổng các số dư đầu kỳ và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Tăng, giảm chi phí chờ phân bổ (Mã số 12)
+Chỉ tiêu này được lập căn cứ vào tổng chênh lệch giữa số dư cuối kỳ và số dư đầu kỳ của Tài khoản 242 - Chi phí chờ phân bổ trong kỳ báo cáo trên cơ sở đã loại trừ khoản chi phí chờ phân bổ liên quan đến luồng tiền từ hoạt động đầu tư, như: Tiền thuê đất trả 1 lần không đủ tiêu chuẩn ghi nhận là TSCĐ vô hình,...
+Số liệu chỉ tiêu này được cộng (+) vào chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” nếu số dư cuối kỳ nhỏ hơn số dư đầu kỳ. Số liệu chỉ tiêu này được trừ (-) vào số liệu chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” nếu số dư cuối kỳ lớn hơn số dư đầu kỳ và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Tăng, giảm chứng khoán kinh doanh (Mã số 13)
+Chỉ tiêu này được lập căn cứ vào tổng chênh lệch giữa số dư cuối kỳ và số dư đầu kỳ của Tài khoản 121 - Chứng khoán kinh doanh trong kỳ báo cáo. 
+Số liệu chỉ tiêu này được cộng (+) vào chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” nếu số dư cuối kỳ nhỏ hơn số dư đầu kỳ. Số liệu chỉ tiêu này được trừ (-) vào số liệu chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” nếu số dư cuối kỳ lớn hơn số dư đầu kỳ và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Chi phí đi vay đã trả (Mã số 14)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền chi phí đi vay đã trả trong kỳ báo cáo, bao gồm tiền chi phí đi vay phát sinh trong kỳ và trả ngay kỳ này, tiền chi phí đi vay phải trả của các kỳ trước đã trả trong kỳ này, chi phí đi vay trả trước trong kỳ này. 
+Chỉ tiêu này không bao gồm số tiền chi phí đi vay đã trả trong kỳ được vốn hóa vào giá trị các tài sản dở dang được phân loại là luồng tiền từ hoạt động đầu tư. Trường hợp số chi phí đi vay đã trả trong kỳ vừa được vốn hóa, vừa được tính vào chi phí tài chính thì doanh nghiệp căn cứ tỷ lệ vốn hóa lãi vay áp dụng cho kỳ báo cáo theo quy định của Chuẩn mực kế toán Việt Nam số 16 - Chi phí đi vay để xác định số chi phí đi vay đã trả của luồng tiền từ hoạt động kinh doanh và luồng tiền hoạt động đầu tư.
+Số liệu để ghi vào chỉ tiêu này được lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển (chi tiết tiền chi trả chi phí đi vay); sổ kế toán các tài khoản phải thu (chi tiết tiền chi phí đi vay từ tiền thu các khoản phải thu) trong kỳ báo cáo, sau khi đối chiếu với sổ kế toán Tài khoản 335 - Chi phí phải trả, Tài khoản 635 - Chi phí tài chính, Tài khoản 341 - Vay và nợ thuê tài chính và các Tài khoản liên quan khác. 
+Số liệu chỉ tiêu này được trừ (-) vào số liệu chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Thuế TNDN đã nộp (Mã số 15)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã nộp thuế TNDN cho Nhà nước trong kỳ báo cáo, bao gồm số tiền thuế TNDN đã nộp của kỳ này, số thuế TNDN còn nợ từ các kỳ trước đã nộp trong kỳ này và số thuế TNDN nộp trước (nếu có).
+Số liệu để ghi vào chỉ tiêu này được lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển (chi tiết tiền nộp thuế TNDN), sau khi đối chiếu với sổ kế toán Tài khoản 3334 - Thuế thu nhập doanh nghiệp. Số liệu chỉ tiêu này được trừ (-) vào số liệu chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động” và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Tiền thu khác từ hoạt động kinh doanh (Mã số 16)
+Chỉ tiêu này phản ánh các khoản tiền thu khác phát sinh từ hoạt động kinh doanh ngoài các khoản đã nêu ở các Mã số từ 01 đến 14, như: Tiền được các tổ chức, cá nhân bên ngoài thưởng, hỗ trợ ghi tăng các quỹ của doanh nghiệp; Tiền nhận được ghi tăng các quỹ do cấp trên cấp hoặc cấp dưới nộp; Lãi tiền gửi của Quỹ bình ổn giá được ghi tăng Quỹ;... trong kỳ báo cáo.
+Chỉ tiêu này được lập căn cứ vào sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển sau khi đối chiếu với sổ kế toán các tài khoản có liên quan trong kỳ báo cáo. Số liệu chỉ tiêu này được cộng (+) vào số liệu chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động”.
+- Tiền chi khác cho hoạt động kinh doanh (Mã số 17)	
+Chỉ tiêu này phản ánh các khoản tiền chi khác phát sinh từ hoạt động kinh doanh ngoài các khoản đã nêu ở các Mã số từ 01 đến 14, như: Tiền chi từ Quỹ khen thưởng, phúc lợi, Quỹ phát triển khoa học và công nghệ,...
+Chỉ tiêu này được lập căn cứ vào sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển sau khi đối chiếu với sổ kế toán các tài khoản có liên quan trong kỳ báo cáo. Số liệu chỉ tiêu này được trừ (-) vào số liệu chỉ tiêu “Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động”.
+- Lưu chuyển tiền thuần từ hoạt động kinh doanh (Mã số 20)
+Chỉ tiêu “Lưu chuyển tiền thuần từ hoạt động kinh doanh” phản ánh chênh lệch giữa tổng số tiền thu vào với tổng số tiền chi ra từ hoạt động kinh doanh trong kỳ báo cáo. Số liệu chỉ tiêu này được tính bằng tổng cộng số liệu các chỉ tiêu có mã số từ Mã số 08 đến Mã số 17. Nếu số liệu chỉ tiêu này là số âm thì sẽ được ghi dưới hình thức trong ngoặc đơn (...).
+Mã số 20 = Mã số 08 + Mã số 09 + Mã số 10 + Mã số 11 + Mã số 12 + Mã số 13 + Mã số 14 + Mã số 15 + Mã số 16 + Mã số 17
+4.2. Lập báo cáo các chỉ tiêu luồng tiền từ hoạt động đầu tư
+a) Nguyên tắc lập:
+- Luồng tiền từ hoạt động đầu tư được lập và trình bày trên Báo cáo lưu chuyển tiền tệ một cách riêng biệt các luồng tiền vào và các luồng tiền ra, trừ trường hợp các luồng tiền được báo cáo trên cơ sở thuần đề cập trong đoạn 18 của Chuẩn mực kế toán Việt Nam số 24 - Báo cáo lưu chuyển tiền tệ.
+- Luồng tiền từ hoạt động đầu tư được lập theo phương pháp trực tiếp hoặc trực tiếp có điều chỉnh. 
++ Theo phương pháp trực tiếp, các luồng tiền vào, ra trong kỳ từ hoạt động đầu tư được xác định bằng cách phân tích và tổng hợp trực tiếp các khoản tiền thu vào và chi ra theo từng nội dung thu, chi từ các ghi chép kế toán của doanh nghiệp. 
++ Theo phương pháp trực tiếp có điều chỉnh, các luồng tiền vào và ra trong kỳ được xác định bằng số chênh lệch giữa số dư cuối kỳ và số dư đầu kỳ của các khoản mục trên Báo cáo tình hình tài chính có liên quan sau đó điều chỉnh cho ảnh hưởng của các khoản mục phi tiền tệ. 
++ Phụ lục này hướng dẫn lập luồng tiền từ hoạt động đầu tư theo phương pháp trực tiếp. Trường hợp lập theo phương pháp trực tiếp có điều chỉnh, doanh nghiệp vận dụng phương pháp lập Báo cáo lưu chuyển tiền tệ hợp nhất được quy định tại Thông tư số 202/2014/TT-BTC ngày 22/12/2014 của Bộ Tài chính hướng dẫn phương pháp lập và trình bày Báo cáo tài chính hợp nhất và các văn bản sửa đổi, bổ sung, thay thế (nếu có) để thực hiện.
+b) Phương pháp lập các chỉ tiêu cụ thể theo phương pháp trực tiếp (Xem Mẫu số B03-DN)
+ - Tiền chi để mua sắm, xây dựng TSCĐ và các tài sản dài hạn khác (Mã số 21) 
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã thực chi để mua sắm, xây dựng TSCĐ hữu hình, TSCĐ vô hình, BĐSĐT, tiền thuê đất trả tiền một lần không đủ tiêu chuẩn ghi nhận là TSCĐ vô hình, tiền chi cho giai đoạn triển khai đã được vốn hóa thành TSCĐ vô hình, tiền chi cho hoạt động đầu tư xây dựng dở dang TSCĐ, BĐSĐT trong kỳ báo cáo. Chi phí sản xuất thử sau khi bù trừ với số tiền thu từ bán sản phẩm sản xuất thử của TSCĐ hình thành từ hoạt động XDCB được cộng vào chỉ tiêu này (nếu chi lớn hơn thu) hoặc trừ vào chỉ tiêu này (nếu chi nhỏ hơn thu).
+Chỉ tiêu này phản ánh cả số tiền đã thực trả để mua nguyên vật liệu, tài sản, sử dụng cho XDCB nhưng đến cuối kỳ chưa xuất dùng cho hoạt động đầu tư XDCB; Số tiền đã ứng trước cho nhà thầu XDCB nhưng chưa nghiệm thu khối lượng; Số tiền đã trả để trả nợ người bán trong kỳ liên quan trực tiếp tới việc mua sắm, đầu tư XDCB.
+Trường hợp mua nguyên vật liệu, tài sản sử dụng chung cho cả mục đích sản xuất, kinh doanh và đầu tư XDCB nhưng cuối kỳ chưa xác định được giá trị nguyên vật liệu, tài sản sẽ sử dụng cho hoạt động đầu tư XDCB hay hoạt động sản xuất, kinh doanh thì số tiền đã trả không phản ánh vào chỉ tiêu này mà phản ánh ở luồng tiền từ hoạt động kinh doanh.
+Chỉ tiêu này không bao gồm số nhận nợ thuê tài chính, giá trị tài sản phi tiền tệ khác dùng để thanh toán khi mua sắm TSCĐ, BĐSĐT, XDCB hoặc giá trị TSCĐ, BĐSĐT, XDCB tăng trong kỳ nhưng chưa được trả bằng tiền.
+Số liệu để ghi vào chỉ tiêu này căn cứ vào sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển (chi tiết số tiền chi mua sắm, xây dựng TSCĐ và các tài sản dài hạn khác, kể cả chi phí đi vay đã trả được vốn hóa), sổ kế toán các tài khoản phải thu (chi tiết tiền thu nợ chuyển trả ngay cho hoạt động mua sắm, XDCB), sổ kế toán Tài khoản 3411 - Các khoản đi vay (chi tiết số tiền vay nhận được chuyển trả ngay cho người bán), sổ kế toán Tài khoản 331 - Phải trả cho người bán (chi tiết khoản ứng trước hoặc trả nợ cho nhà thầu XDCB, trả nợ cho người bán TSCĐ, BĐSĐT), sau khi đối chiếu với sổ kế toán các Tài khoản 211 - Tài sản cố định hữu hình, Tài khoản 213 - Tài sản cố định vô hình, Tài khoản 217 - Bất động sản đầu tư, Tài khoản 241 - Xây dựng cơ bản dở dang, Tài khoản 242 - Chi phí chờ phân bổ trong kỳ báo cáo. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+ - Tiền thu từ thanh lý, nhượng bán TSCĐ và các tài sản dài hạn khác (Mã số 22)
+Chỉ tiêu này được lập căn cứ vào số tiền thuần đã thu từ việc thanh lý, nhượng bán TSCĐ hữu hình, TSCĐ vô hình, BĐSĐT (bao gồm BĐSĐT nắm giữ để cho thuê hoặc chờ tăng giá) trong kỳ báo cáo, kể cả số tiền thu hồi các khoản nợ phải thu liên quan trực tiếp tới việc thanh lý, nhượng bán TSCĐ và tài sản dài hạn khác.
+Chỉ tiêu này không bao gồm số thu bằng tài sản phi tiền tệ hoặc số tiền phải thu nhưng chưa thu được trong kỳ báo cáo từ việc thanh lý nhượng bán TSCĐ, BĐSĐT và tài sản dài hạn khác; Không bao gồm các khoản chi phí phi tiền tệ liên quan đến hoạt động thanh lý nhượng bán TSCĐ, BĐSĐT và giá trị còn lại của TSCĐ, BĐSĐT do đem đi góp vốn liên doanh, liên kết hoặc các khoản tổn thất.
+Số liệu để ghi vào chỉ tiêu này là chênh lệch giữa số tiền thu và số tiền chi cho việc thanh lý, nhượng bán TSCĐ, BĐSĐT và các tài sản dài hạn khác. Số tiền thu được lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, sau khi đối chiếu với sổ kế toán các Tài khoản 511 - Doanh thu bán hàng và cung cấp dịch vụ, Tài khoản 711 - Thu nhập khác, Tài khoản 131 - Phải thu của khách hàng (chi tiết tiền thu thanh lý, nhượng bán TSCĐ, BĐSĐT và các tài sản dài hạn khác) trong kỳ báo cáo. Số tiền chi được lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, sau khi đối chiếu với sổ kế toán các Tài khoản 811 - Chi phí khác, Tài khoản 632 - Giá vốn hàng bán (Chi tiết chi về thanh lý, nhượng bán TSCĐ, BĐSĐT) trong kỳ báo cáo. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...) nếu số tiền thực thu nhỏ hơn số tiền thực chi.
+- Tiền chi cho vay, mua các công cụ nợ của đơn vị khác (Mã số 23)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã gửi vào ngân hàng có kỳ hạn trên 3 tháng, tiền đã chi cho bên khác vay, tiền chi của bên mua trong giao dịch mua bán lại trái phiếu Chính phủ và REPO chứng khoán, chi mua các công cụ nợ của đơn vị khác (trái phiếu, thương phiếu, cổ phiếu ưu đãi phân loại là nợ phải trả,...) vì mục đích đầu tư nắm giữ đến ngày đáo hạn trong kỳ báo cáo. 
+Chỉ tiêu này không bao gồm tiền chi mua các công cụ nợ được coi là các khoản tương đương tiền và mua các công cụ nợ nắm giữ vì mục đích kinh doanh (kiếm lời từ chênh lệch giá mua, bán); Các khoản cho vay, mua các công cụ nợ đã trả bằng tài sản phi tiền tệ hoặc đảo nợ. 
+Số liệu để ghi vào chỉ tiêu này lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, sau khi đối chiếu với sổ kế toán Tài khoản 128 - Đầu tư nắm giữ đến ngày đáo hạn, Tài khoản 171 - Giao dịch mua bán lại trái phiếu chính phủ trong kỳ báo cáo. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+ - Tiền thu hồi cho vay, bán lại công cụ nợ của đơn vị  khác (Mã số 24)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã thu từ việc rút tiền gửi ngân hàng có kỳ hạn trên 3 tháng; Tiền thu của bên mua trong giao dịch mua bán lại trái phiếu Chính phủ và REPO chứng khoán; Tiền thu hồi lại gốc đã cho vay, gốc trái phiếu, cổ phiếu ưu đãi được phân loại là nợ phải trả và các công cụ nợ của đơn vị khác trong kỳ báo cáo. 
+Chỉ tiêu này không bao gồm tiền thu từ bán các công cụ nợ được coi là các khoản tương đương tiền và bán các công cụ nợ được phân loại là chứng khoán kinh doanh; Không bao gồm các khoản thu hồi bằng tài sản phi tiền tệ hoặc chuyển công cụ nợ thành công cụ vốn của đơn vị khác.
+Số liệu để ghi vào chỉ tiêu này lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, sau khi đối chiếu với sổ kế toán Tài khoản 128 - Đầu tư nắm giữ đến ngày đáo hạn, Tài khoản 171 - Giao dịch mua bán lại trái phiếu chính phủ trong kỳ báo cáo.
+ - Tiền chi đầu tư góp vốn vào đơn vị khác (Mã số 25)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã chi để đầu tư vào công cụ vốn của đơn vị khác trong kỳ báo cáo (kể cả tiền chi trả nợ để mua công cụ vốn từ kỳ trước), bao gồm tiền chi đầu tư vốn dưới hình thức mua cổ phiếu phổ thông có quyền biểu quyết, mua cổ phiếu ưu đãi được phân loại là vốn chủ sở hữu, góp vốn vào công ty con, công ty liên doanh, liên kết, đầu tư khác,...
+Chỉ tiêu này không bao gồm tiền chi mua cổ phiếu nắm giữ vì mục đích kinh doanh; Chi mua cổ phiếu ưu đãi được phân loại là nợ phải trả; Đầu tư vào đơn vị khác bằng tài sản phi tiền tệ; đầu tư dưới hình thức phát hành cổ phiếu hoặc trái phiếu; Chuyển công cụ nợ thành vốn góp hoặc còn nợ chưa thanh toán.
+Số liệu để ghi vào chỉ tiêu này lấy từ  sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, sau khi đối chiếu với sổ kế toán các Tài khoản 221 - Đầu tư vào công ty con, Tài khoản 222 - Đầu tư vào công ty liên doanh, liên kết, Tài khoản 228 - Đầu tư khác, Tài khoản 331 - Phải trả cho người bán trong kỳ báo cáo và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+ - Tiền thu hồi đầu tư vốn vào đơn vị khác (Mã số 26)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã thu hồi do bán lại hoặc thanh lý các khoản đầu tư vào đơn vị khác trong kỳ báo cáo (kể cả tiền thu nợ phải thu bán công cụ vốn từ kỳ trước, bán tranh ảnh, vật phẩm nắm giữ chờ tăng giá).
+Chỉ tiêu này không bao gồm tiền thu do bán cổ phiếu nắm giữ vì mục đích kinh doanh; Giá trị khoản đầu tư được thu hồi bằng tài sản phi tiền tệ, bằng công cụ nợ hoặc công cụ vốn của đơn vị khác hoặc chưa được thanh toán bằng tiền. 
+Số liệu để ghi vào chỉ tiêu này lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, sau khi đối chiếu với sổ kế toán các Tài khoản 221 - Đầu tư vào công ty con, Tài khoản 222 - Đầu tư vào công ty liên doanh, liên kết, Tài khoản 228 - Đầu tư khác, Tài khoản 131 - Phải thu của khách hàng trong kỳ báo cáo.
+ - Tiền thu lãi cho vay, cổ tức và lợi nhuận được chia (Mã số 27)
+Chỉ tiêu này được lập căn cứ vào số tiền thu về các khoản tiền lãi cho vay, lãi tiền gửi có kỳ hạn, lãi trái phiếu, cổ tức và lợi nhuận nhận được từ đầu tư vốn vào các đơn vị khác trong kỳ báo cáo. 
+Chỉ tiêu này không bao gồm các khoản lãi, cổ tức nhận được bằng cổ phiếu hoặc bằng tài sản phi tiền tệ, các khoản lãi từ tiền gửi không kỳ hạn của doanh nghiệp tại các ngân hàng.
+Số liệu để ghi vào chỉ tiêu này lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, sau khi đối chiếu với sổ kế toán Tài khoản 515 - Doanh thu hoạt động tài chính.  
+- Lưu chuyển tiền thuần từ hoạt động đầu tư (Mã số 30)
+Chỉ tiêu “Lưu chuyển tiền thuần từ hoạt động đầu tư” phản ánh chênh lệch giữa tổng số tiền thu vào với tổng số tiền chi ra từ hoạt động đầu tư trong kỳ báo cáo. Chỉ tiêu này được tính bằng tổng cộng số liệu các chỉ tiêu có mã số từ Mã số 21 đến Mã số 27. Nếu số liệu chỉ tiêu này là số âm thì được ghi dưới hình thức ghi trong ngoặc đơn (...).
+Mã số 30 = Mã số 21 + Mã số 22 + Mã số 23 + Mã số 24 + Mã số 25 + Mã số 26 + Mã số 27.
+4.3. Lập báo cáo các chỉ tiêu luồng tiền từ hoạt động tài chính 
+a. Nguyên tắc lập: 
+- Luồng tiền từ hoạt động tài chính được lập và trình bày trên Báo cáo lưu chuyển tiền tệ một cách riêng biệt các luồng tiền vào và các luồng tiền ra, trừ trường hợp các luồng tiền được báo cáo trên cơ sở thuần được đề cập trong Chuẩn mực kế toán Việt Nam số 24 - Báo cáo lưu chuyển tiền tệ.
+- Luồng tiền từ hoạt động tài chính được lập theo phương pháp trực tiếp hoặc trực tiếp có điều chỉnh. 
++ Theo phương pháp trực tiếp, các luồng tiền vào và ra trong kỳ từ hoạt động tài chính được xác định bằng cách phân tích và tổng hợp trực tiếp các khoản tiền thu vào và chi ra theo từng nội dung thu, chi từ các ghi chép kế toán của doanh nghiệp.
++ Theo phương pháp trực tiếp có điều chỉnh, các luồng tiền vào và ra trong kỳ được xác định bằng số chênh lệch giữa số dư cuối kỳ và số dư đầu kỳ của các khoản mục trên Báo cáo tình hình tài chính có liên quan sau đó điều chỉnh cho ảnh hưởng của các khoản mục phi tiền tệ. 
++ Thông tư này hướng dẫn lập luồng tiền từ hoạt động tài chính theo phương pháp trực tiếp. Trường hợp lập theo phương pháp trực tiếp có điều chỉnh, doanh nghiệp vận dụng phương pháp lập Báo cáo lưu chuyển tiền tệ hợp nhất được quy định tại Thông tư số 202/2014/TT-BTC ngày 22/12/2014 của Bộ Tài chính hướng dẫn phương pháp lập và trình bày Báo cáo tài chính hợp nhất và các văn bản sửa đổi, bổ sung, thay thế (nếu có) để thực hiện.
+b. Phương pháp lập các chỉ tiêu cụ thể theo phương pháp trực tiếp (Xem Mẫu số B03-DN)
+ - Tiền thu từ phát hành cổ phiếu, nhận vốn góp của chủ sở hữu (Mã số 31)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã thu do các chủ sở hữu của doanh nghiệp góp vốn trong kỳ báo cáo. Chỉ tiêu này không bao gồm các khoản vay và nợ thuê tài chính được chuyển thành vốn, khoản lợi nhuận sau thuế chưa phân phối chuyển thành vốn góp (kể cả trả cổ tức bằng cổ phiếu) hoặc nhận vốn góp của chủ sở hữu bằng tài sản phi tiền tệ.
+Đối với công ty cổ phần, chỉ tiêu này phản ánh số tiền đã thu do phát hành cổ phiếu phổ thông theo giá thực tế phát hành, kể cả tiền thu từ phát hành cổ phiếu ưu đãi được phân loại là vốn chủ sở hữu và phần quyền chọn của trái phiếu chuyển đổi nhưng không bao gồm số tiền đã thu do phát hành cổ phiếu ưu đãi được phân loại là nợ phải trả.
+Số liệu để ghi vào chỉ tiêu này lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển sau khi đối chiếu với sổ kế toán Tài khoản 411 - Vốn đầu tư của chủ sở hữu trong kỳ báo cáo. 
+- Tiền trả lại vốn góp cho các chủ sở hữu, mua lại cổ phiếu đã phát hành (Mã số 32)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã trả do hoàn lại vốn góp cho các chủ sở hữu của doanh nghiệp dưới các hình thức hoàn trả bằng tiền hoặc mua lại cổ phiếu của chính mình bằng tiền để hủy bỏ hoặc sử dụng cổ phiếu quỹ làm cổ phiếu thưởng trong kỳ báo cáo theo quy định của pháp luật.
+Chỉ tiêu này không bao gồm các khoản trả lại cổ phiếu ưu đãi được phân loại là nợ phải trả, vốn góp của chủ sở hữu bằng tài sản phi tiền tệ.
+Số liệu để ghi vào chỉ tiêu này lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, sau khi đối chiếu với sổ kế toán các Tài khoản 411 - Vốn đầu tư của chủ sở hữu, Tài khoản 419 - Cổ phiếu mua lại của chính mình trong kỳ báo cáo. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+ - Tiền thu từ đi vay (Mã số 33)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã nhận được trong kỳ do doanh nghiệp đi vay các tổ chức tài chính, tín dụng và các đối tượng khác trong kỳ báo cáo, kể cả vay dưới hình thức phát hành trái phiếu thông thường hoặc trái phiếu chuyển đổi hoặc phát hành cổ phiếu ưu đãi được phân loại là nợ phải trả. Chỉ tiêu này cũng bao gồm số tiền bên bán nhận được trong giao dịch mua bán lại trái phiếu Chính phủ và các giao dịch Repo chứng khoán khác. Chỉ tiêu này không bao gồm các khoản đi vay bằng tài sản phi tiền tệ hoặc nợ thuê tài chính.
+Trường hợp vay dưới hình thức phát hành trái phiếu thường, chỉ tiêu này phản ánh tổng số tiền đã nhận được trong kỳ (bằng mệnh giá trái phiếu điều chỉnh với các khoản chi phí phát hành trái phiếu, chiết khấu, phụ trội trái phiếu hoặc lãi trái phiếu trả trước - nếu có).
+Trường hợp vay dưới hình thức phát hành trái phiếu chuyển đổi, chỉ tiêu này phản ánh số tiền tương ứng với phần nợ gốc của trái phiếu chuyển đổi.
+Trường hợp vay dưới hình thức phát hành cổ phiếu ưu đãi, chỉ tiêu này phản ánh tổng số tiền đã nhận được trong kỳ do doanh nghiệp phát hành cổ phiếu ưu đãi được phân loại là nợ phải trả trong đó có kèm theo điều kiện người phát hành phải mua lại cổ phiếu tại một thời điểm nhất định trong tương lai. Trường hợp điều khoản quy định người phát hành chỉ có nghĩa vụ mua lại cổ phiếu từ người nắm giữ theo mệnh giá, chỉ tiêu này chỉ phản ánh số tiền thu được theo mệnh giá cổ phiếu ưu đãi (số tiền thu được cao hơn mệnh giá đã được hạch toán là thặng dư vốn được trình bày ở chỉ tiêu “Tiền thu từ phát hành cổ phiếu, nhận vốn góp của chủ sở hữu” (Mã số 31)). 
+Trường hợp vay dưới trong giao dịch mua bán lại trái phiếu Chính phủ, chỉ tiêu này phản ánh tổng số tiền đã nhận được trong kỳ tại bên bán trong giao dịch mua, bán lại trái phiếu Chính phủ và REPO chứng khoán. 
+Số liệu để ghi vào chỉ tiêu này lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, các tài khoản phải trả (chi tiết tiền vay nhận được chuyển trả ngay các khoản nợ phải trả) sau khi đối chiếu với sổ kế toán các Tài khoản 171 - Giao dịch mua bán lại trái phiếu chính phủ, Tài khoản 3411 - Các khoản đi vay, Tài khoản 343 - Trái phiếu phát hành, Tài khoản 41112 - Cổ phiếu ưu đãi và các tài khoản khác có liên quan trong kỳ báo cáo. 
+- Tiền trả nợ gốc vay (Mã số 34)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã trả về khoản nợ gốc vay, kể cả tiền trả nợ gốc trái phiếu thông thường, trái phiếu chuyển đổi hoặc cổ phiếu ưu đãi được phân loại là nợ phải trả trong kỳ báo cáo. Chỉ tiêu này cũng bao gồm số tiền bên bán đã trả lại cho bên mua trong giao dịch mua bán lại trái phiếu Chính phủ và các giao dịch Repo chứng khoán khác.
+Chỉ tiêu này không bao gồm các khoản trả gốc vay bằng tài sản phi tiền tệ hoặc chuyển nợ vay thành vốn góp.
+Số liệu để ghi vào chỉ tiêu này lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, sổ kế toán các tài khoản phải thu (phần tiền trả nợ vay từ tiền thu các khoản phải thu), sau khi đối chiếu với sổ kế toán Tài khoản 171 - Giao dịch mua bán lại trái phiếu chính phủ, Tài khoản 3411 - Các khoản đi vay, Tài khoản 343 - Trái phiếu phát hành, Tài khoản 41112 - Cổ phiếu ưu đãi trong kỳ báo cáo. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...). 
+ - Tiền trả nợ gốc thuê tài chính (Mã số 35)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền đã trả về khoản nợ thuê tài chính trong kỳ báo cáo. Chỉ tiêu không bao gồm khoản trả nợ thuê tài chính bằng tài sản phi tiền tệ hoặc chuyển nợ thuê tài chính thành vốn góp.
+Số liệu để ghi vào chỉ tiêu này lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, sổ kế toán các tài khoản phải thu (chi tiết tiền trả nợ thuê tài chính từ tiền thu các khoản phải thu), sau khi đối chiếu với sổ kế toán Tài khoản 3412 - Nợ thuê tài chính trong kỳ báo cáo. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+ - Cổ tức, lợi nhuận đã trả cho chủ sở hữu (Mã số 36)
+Chỉ tiêu này được lập căn cứ vào tổng số tiền cổ tức và lợi nhuận đã trả cho các chủ sở hữu của doanh nghiệp (kể cả số thuế thu nhập cá nhân đã nộp thay cho chủ sở hữu) trong kỳ báo cáo. 
+Chỉ tiêu này không bao gồm khoản lợi nhuận được chuyển thành vốn góp của chủ sở hữu, trả cổ tức bằng cổ phiếu hoặc trả bằng tài sản phi tiền tệ và các khoản lợi nhuận đã dùng để trích lập các quỹ.
+Số liệu để ghi vào chỉ tiêu này lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, sau khi đối chiếu với sổ kế toán các Tài khoản 421 - Lợi nhuận sau thuế chưa phân phối, Tài khoản 332 - Phải trả cổ tức, lợi nhuận (chi tiết số tiền đã trả về cổ tức và lợi nhuận) trong kỳ báo cáo. Chỉ tiêu này được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...).
+- Lưu chuyển tiền thuần từ hoạt động tài chính (Mã số 40)
+Chỉ tiêu lưu chuyển tiền thuần từ hoạt động tài chính phản ánh chênh lệch giữa tổng số tiền thu vào với tổng số tiền chi ra từ hoạt động tài chính trong kỳ báo cáo. Chỉ tiêu này được tính bằng tổng cộng số liệu các chỉ tiêu có mã số từ Mã số 31 đến Mã số 36. Nếu số liệu chỉ tiêu này là số âm thì ghi trong ngoặc đơn (...).  
+Mã số 40 = Mã số 31 + Mã số 32 + Mã số 33  + Mã số 34 + Mã số 35 + Mã số 36.
+4.4. Tổng hợp các luồng tiền trong kỳ (Xem Mẫu số B03-DN)
+- Lưu chuyển tiền thuần trong kỳ (Mã số 50)
+Chỉ tiêu “Lưu chuyển tiền thuần trong kỳ” phản ánh chênh lệch giữa tổng số tiền thu vào với tổng số tiền chi ra từ ba loại hoạt động: Hoạt động kinh doanh, hoạt động đầu tư và hoạt động tài chính của doanh nghiệp trong kỳ báo cáo. Nếu số liệu chỉ tiêu này là số âm thì ghi trong ngoặc đơn (...).
+Mã số 50 = Mã số 20 + Mã số 30 + Mã số 40. 
+- Tiền và tương đương tiền đầu kỳ (Mã số 60)
+Chỉ tiêu này được lập căn cứ vào số liệu chỉ tiêu “Tiền và tương đương tiền” đầu kỳ báo cáo (Mã số 110, cột “Số đầu kỳ” trên Báo cáo tình hình tài chính).
+- Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ (Mã số 61)
+Chỉ tiêu này được lập căn cứ vào tổng số chênh lệch tỷ giá hối đoái do đánh giá lại số dư cuối kỳ của tiền và các khoản tương đương tiền bằng ngoại tệ, vàng tiền tệ (Mã số 110 của Báo cáo tình hình tài chính) tại thời điểm kết thúc kỳ kế toán.
+Số liệu để ghi vào chỉ tiêu này được lấy từ sổ kế toán các Tài khoản 111 - Tiền mặt, Tài khoản 112 - Tiền gửi không kỳ hạn, Tài khoản 113 - Tiền đang chuyển, Tài khoản 128 - Đầu tư nắm giữ đến ngày đáo hạn và các tài khoản liên quan (chi tiết các khoản thỏa mãn định nghĩa là tương đương tiền), sau khi đối chiếu với sổ kế toán chi tiết Tài khoản 515 - Doanh thu hoạt động tài chính hoặc Tài khoản 635 - Chi phí tài chính trong kỳ báo cáo. Chỉ tiêu này được ghi bằng số dương nếu có lãi tỷ giá và được ghi bằng số âm dưới hình thức ghi trong ngoặc đơn (...) nếu phát sinh lỗ tỷ giá.
+- Tiền và tương đương tiền cuối kỳ (Mã số 70)
+Chỉ tiêu này được lập căn cứ vào số liệu chỉ tiêu “Tiền và tương đương tiền” cuối kỳ báo cáo (Mã số 110, cột “Số cuối kỳ” trên Báo cáo tình hình tài chính).
+Chỉ tiêu này bằng số “Tổng cộng” của các chỉ tiêu Mã số 50, 60 và 61 và bằng chỉ tiêu Mã số 110 trên Báo cáo tình hình tài chính kỳ đó. 
+Mã số 70 = Mã số 50 + Mã số 60 + Mã số 61.
+E. Phương pháp lập và trình bày Thuyết minh BCTC (Mẫu số B09 - DN)
+1. Mục đích của Bản thuyết minh Báo cáo tài chính:
+a) Bản thuyết minh Báo cáo tài chính là một bộ phận hợp thành không thể tách rời của Báo cáo tài chính doanh nghiệp dùng để mô tả mang tính tường thuật hoặc phân tích chi tiết các thông tin số liệu đã được trình bày trong Báo cáo tình hình tài chính, Báo cáo kết quả hoạt động kinh doanh, Báo cáo lưu chuyển tiền tệ cũng như các thông tin cần thiết khác theo yêu cầu của các Chuẩn mực kế toán Việt Nam cụ thể. 
+b) Bản thuyết minh Báo cáo tài chính cũng có thể trình bày những thông tin khác nếu doanh nghiệp xét thấy cần thiết cho việc trình bày trung thực, hợp lý Báo cáo tài chính.
+2.  Nguyên tắc lập và trình bày Bản thuyết minh Báo cáo tài chính 
+a) Khi lập Báo cáo tài chính năm, doanh nghiệp phải lập Bản thuyết minh Báo cáo tài chính theo đúng quy định của Chuẩn mực kế toán Việt Nam số 21 - Trình bày Báo cáo tài chính và hướng dẫn tại Chế độ Báo cáo tài chính này.
+b) Khi lập Báo cáo tài chính giữa niên độ (kể cả dạng đầy đủ và dạng tóm lược) doanh nghiệp phải lập Bản thuyết minh Báo cáo tài chính chọn lọc theo quy định của Chuẩn mực kế toán Việt Nam số 27 - Báo cáo tài chính giữa niên độ và Thông tư hướng dẫn chuẩn mực.
+c) Bản thuyết minh Báo cáo tài chính của doanh nghiệp phải trình bày những nội dung dưới đây:
+- Các thông tin về cơ sở lập và trình bày Báo cáo tài chính và các chính sách kế toán cụ thể được chọn và áp dụng đối với các giao dịch và các sự kiện quan trọng;
+- Trình bày các thông tin theo quy định của các Chuẩn mực kế toán Việt Nam chưa được trình bày trong các Báo cáo tài chính khác (Các thông tin trọng yếu);
+- Cung cấp thông tin bổ sung chưa được trình bày trong các Báo cáo tài chính khác, nhưng lại cần thiết cho việc trình bày trung thực và hợp lý tình hình tài chính của doanh nghiệp.
+d) Bản thuyết minh Báo cáo tài chính phải được trình bày một cách có hệ thống. Doanh nghiệp được chủ động sắp xếp số thứ tự trong thuyết minh Báo cáo tài chính theo cách thức phù hợp nhất với đặc thù của mình theo nguyên tắc mỗi khoản mục trong Báo cáo tình hình tài chính, Báo cáo kết quả hoạt động kinh doanh và Báo cáo lưu chuyển tiền tệ cần được đánh dấu dẫn tới các thông tin liên quan trong Bản thuyết minh Báo cáo tài chính. 
+3. Cơ sở lập Bản thuyết minh Báo cáo tài chính
+- Căn cứ vào Báo cáo tình hình tài chính, Báo cáo kết quả hoạt động kinh doanh, Báo cáo lưu chuyển tiền tệ năm báo cáo;
+- Căn cứ vào sổ kế toán tổng hợp; Sổ, thẻ kế toán chi tiết hoặc bảng tổng hợp chi tiết có liên quan;
+- Căn cứ vào Bản thuyết minh Báo cáo tài chính năm trước;
+- Căn cứ vào tình hình thực tế của doanh nghiệp và các tài liệu liên quan.
+4. Nội dung và phương pháp lập các chỉ tiêu
+4.1. Đặc điểm hoạt động của doanh nghiệp
+Trong phần này doanh nghiệp nêu rõ:
+a) Hình thức sở hữu vốn: Là doanh nghiệp Nhà nước, công ty cổ phần, công ty trách nhiệm hữu hạn, công ty hợp danh hay doanh nghiệp tư nhân. Đối với doanh nghiệp có vốn đầu tư nước ngoài phải thuyết minh rõ: Tên quốc gia và vùng lãnh thổ của từng nhà đầu tư trong doanh nghiệp (bao gồm chủ đầu tư có quốc tịch VN và quốc tịch nước ngoài) và biến động về cơ cấu vốn chủ sở hữu giữa các nhà đầu tư (tỷ lệ % góp vốn) tại thời điểm kết thúc năm tài chính.
+b) Lĩnh vực kinh doanh: Nêu rõ là sản xuất công nghiệp, kinh doanh thương mại, dịch vụ, xây lắp hoặc tổng hợp nhiều lĩnh vực kinh doanh.
+c) Ngành nghề kinh doanh: Nêu rõ hoạt động kinh doanh chính (Nội dung thuyết minh về hoạt động kinh doanh chính dẫn chiếu theo quy định về hệ thống ngành kinh tế của Việt Nam) và đặc điểm sản phẩm sản xuất hoặc dịch vụ cung cấp của doanh nghiệp.  
+d) Chu kỳ sản xuất, kinh doanh thông thường: Trường hợp chu kỳ kéo dài hơn 12 tháng thì thuyết minh thêm chu kỳ sản xuất kinh doanh bình quân của ngành, lĩnh vực.
+đ) Đặc điểm hoạt động của doanh nghiệp trong năm tài chính có ảnh hưởng đến Báo cáo tài chính: Nêu rõ những sự kiện về môi trường pháp lý, diễn biến thị trường, đặc điểm hoạt động kinh doanh, quản lý, tài chính, các sự kiện sáp nhập, chia, tách, thay đổi quy mô,... có ảnh hưởng đến Báo cáo tài chính của doanh nghiệp.
+e) Cấu trúc doanh nghiệp
+- Danh sách các công ty con: Trình bày chi tiết tên, địa chỉ, tỷ lệ quyền biểu quyết, tỷ lệ vốn góp, tỷ lệ lợi ích của công ty mẹ tại từng công ty con; 
+- Danh sách các công ty liên doanh, liên kết: Trình bày chi tiết tên, địa chỉ, tỷ lệ quyền biểu quyết, tỷ lệ vốn góp, tỷ lệ lợi ích của doanh nghiệp tại từng công ty liên doanh, liên kết;
+- Danh sách các đơn vị trực thuộc: Trình bày chi tiết tên, địa chỉ từng đơn vị.
+g) Số lượng người lao động tại thời điểm cuối niên độ hoặc số lượng người lao động bình quân trong niên độ: Nêu rõ số lượng người lao động của doanh nghiệp tại thời điểm cuối niên độ kế toán hoặc số lượng người lao động bình quân của doanh nghiệp trong niên độ kế toán.
+h) Tuyên bố về khả năng có thể so sánh được hay không của thông tin trên Báo cáo tài chính.
+i) Thuyết minh các thông tin khác theo quy định của pháp luật có liên quan.
+4.2. Kỳ kế toán, đơn vị tiền tệ sử dụng trong kế toán
+a) Kỳ kế toán năm ghi rõ kỳ kế toán năm theo năm dương lịch bắt đầu từ ngày 01/01/... đến 31/12/... Nếu doanh nghiệp có năm tài chính khác với năm dương lịch thì ghi rõ ngày bắt đầu và ngày kết thúc kỳ kế toán năm.
+b) Đơn vị tiền tệ sử dụng trong kế toán: ghi rõ là Đồng Việt Nam, hoặc một đơn vị tiền tệ khác được lựa chọn theo quy định của Luật Kế toán.
+4.3. Chuẩn mực và Chế độ kế toán áp dụng
+a) Chế độ kế toán áp dụng: Nêu rõ các văn bản ban hành chế độ kế toán mà doanh nghiệp áp dụng.
+b) Tuyên bố về việc tuân thủ Chuẩn mực kế toán Việt Nam và Chế độ kế toán: Nêu rõ Báo cáo tài chính có được lập và trình bày phù hợp với các Chuẩn mực và Chế độ kế toán Việt Nam hay không? Báo cáo tài chính được coi là lập và trình bày phù hợp với Chuẩn mực và Chế độ kế toán Việt Nam nếu Báo cáo tài chính tuân thủ mọi quy định của từng chuẩn mực, Thông tư hướng dẫn thực hiện Chuẩn mực kế toán Việt Nam và Chế độ kế toán hiện hành mà doanh nghiệp đang áp dụng. Trường hợp không áp dụng Chuẩn mực kế toán Việt Nam nào thì phải ghi rõ.
+4.4. Các chính sách kế toán áp dụng trong trường hợp doanh nghiệp đáp ứng giả định hoạt động liên tục
+(1) Nguyên tắc chuyển đổi Báo cáo tài chính lập bằng ngoại tệ sang Đồng Việt Nam: Việc áp dụng tỷ giá khi chuyển đổi Báo cáo tài chính có tuân thủ theo đúng hướng dẫn tại điểm a khoản 3 Điều 6 Thông tư này không.
+(2) Các loại tỷ giá hối đoái áp dụng trong kế toán
+- Tỷ giá hối đoái lựa chọn áp dụng khi kế toán chênh lệch tỷ giá phát sinh trong kỳ và tỷ giá hối đoái khi đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ.
+- Tỷ giá giao dịch tính chéo đối với trường hợp ngân hàng không công bố tỷ giá giao dịch của đồng ngoại tệ.
+- Giá mua vàng của Ngân hàng Nhà nước công bố hay giá mua tham chiếu của đơn vị được phép kinh doanh vàng theo luật định để sử dụng khi đánh giá lại vàng tiền tệ tại thời điểm kết thúc kỳ kế toán.
+(3) Nguyên tắc xác định lãi suất thực tế (hay còn gọi là lãi suất hiệu lực) dùng để chiết khấu dòng tiền đối với các khoản mục được ghi nhận theo giá trị hiện tại, giá trị phân bổ, giá trị thu hồi,... (Mục thuyết minh này chỉ cần thực hiện khi doanh nghiệp đã áp dụng các loại lãi suất để chiết khấu các dòng tiền trong tương lai):
+- Căn cứ xác định lãi suất thực tế (là lãi suất thị trường hay lãi suất ngân hàng thương mại hay lãi suất áp dụng đối với các khoản doanh nghiệp đi vay hoặc căn cứ khác); 
+- Lý do lựa chọn lãi suất thực tế.
+(4) Nguyên tắc ghi nhận các khoản tiền và các khoản tương đương tiền 
+- Nêu rõ tiền gửi ngân hàng là có kỳ hạn hay không kỳ hạn;
+- Nêu rõ vàng tiền tệ gồm những loại nào, có sử dụng như hàng tồn kho hay không;
+- Nêu rõ các khoản tương đương tiền được xác định trên cơ sở nào? Có phù hợp với quy định của Chuẩn mực kế toán Việt Nam số 24 - Báo cáo lưu chuyển tiền tệ hay không?
+(5) Nguyên tắc kế toán các khoản đầu tư tài chính
+a) Đối với chứng khoán kinh doanh: 
+- Thời điểm ghi nhận (đối với chứng khoán niêm yết thuyết minh rõ là T+0 hay thời điểm khác);
+- Giá trị ghi sổ được xác định là giá trị hợp lý, giá gốc hay giá trị khác, nguyên tắc xác định giá trị hợp lý của chứng khoán kinh doanh;
+	- Căn cứ trích lập dự phòng giảm giá chứng khoán kinh doanh;
+	- Phương pháp tính giá vốn của chứng khoán kinh doanh; thay đổi chính sách kế toán nếu doanh nghiệp có thay đổi phương pháp tính giá vốn.
+b) Đối với các khoản đầu tư nắm giữ đến ngày đáo hạn:
+- Giá trị ghi sổ được xác định là giá trị hợp lý, giá gốc hay giá trị khác;
+	- Căn cứ trích lập dự phòng đầu tư vào đơn vị khác (chi tiết cho khoản đầu tư nắm giữ đến ngày đáo hạn);
+	- Có đánh giá lại các khoản thỏa mãn định nghĩa các khoản mục tiền tệ có gốc ngoại tệ không?
+c) Đối với các khoản đầu tư vào công ty con, công ty liên doanh, liên kết:
+- Đối với các công ty con, công ty liên doanh, liên kết được mua trong kỳ, thời điểm ghi nhận ban đầu là thời điểm nào? Có tuân thủ Chuẩn mực kế toán Việt Nam số 11 - Hợp nhất kinh doanh đối với công ty con được mua trong kỳ không? Có tuân thủ Chuẩn mực kế toán Việt Nam số 07 - Kế toán các khoản đầu tư vào công ty liên kết, Chuẩn mực kế toán Việt Nam số 08 - Thông tin tài chính về những khoản vốn góp liên doanh không?
+- Nguyên tắc xác định công ty con, công ty liên doanh, liên kết (dựa theo tỷ lệ quyền biểu quyết, tỷ lệ vốn góp hay tỷ lệ lợi ích);
+- Giá trị ghi sổ của khoản đầu tư vào công ty con được xác định theo giá gốc, giá trị hợp lý hay giá trị khác? Giá trị ghi sổ của khoản đầu tư vào công ty liên doanh, liên kết được xác định theo giá gốc, phương pháp vốn chủ sở hữu hay phương pháp khác? 
+- Căn cứ lập dự phòng tổn thất đầu tư vào công ty con, công ty liên doanh, liên kết; căn cứ vào loại Báo cáo tài chính để xác định tổn thất (Báo cáo tài chính hợp nhất hay Báo cáo tài chính riêng của công ty con, công ty liên doanh, liên kết); Nguyên tắc xác định giá trị thu hồi của các khoản đầu tư vào đơn vị khác trong trường hợp các khoản đầu tư có dấu hiệu suy giảm giá trị.
+d) Đối với các khoản đầu tư vào công cụ vốn của đơn vị khác:
+- Giá trị ghi sổ của khoản đầu tư vào đơn vị khác được xác định theo giá gốc hay phương pháp khác? 
+- Căn cứ lập dự phòng tổn thất đầu tư vào đơn vị khác; Báo cáo tài chính để xác định tổn thất (Báo cáo tài chính hợp nhất hay Báo cáo tài chính riêng của đơn vị được đầu tư);
+	đ) Phương pháp kế toán đối với các giao dịch khác liên quan đến đầu tư tài chính:
+	- Giao dịch hoán đổi cổ phiếu;
+	- Giao dịch đầu tư dưới hình thức góp vốn;
+	- Giao dịch dưới hình thức mua lại phần vốn góp;
+	- Phương pháp kế toán đối với khoản cổ tức được chia bằng cổ phiếu.
+	(6) Nguyên tắc kế toán nợ phải thu
+	- Tiêu chí phân loại các khoản nợ phải thu (phải thu khách hàng, phải thu khác, phải thu nội bộ);
+	- Có được theo dõi chi tiết theo kỳ hạn nợ gốc, kỳ hạn còn lại tại thời điểm báo cáo, theo nguyên tệ và theo từng đối tượng không?	
+	- Có đánh giá lại các khoản nợ phải thu thỏa mãn định nghĩa của các khoản mục tiền tệ có gốc ngoại tệ không? Tỷ giá dùng để đánh giá lại là gì?
+	- Có ghi nhận nợ phải thu không vượt quá giá trị có thể thu hồi không?
+	- Nguyên tắc và phương pháp trích lập dự phòng nợ phải thu khó đòi.	
+(7) Nguyên tắc kế toán hàng tồn kho
+- Nguyên tắc ghi nhận hàng tồn kho: Nêu rõ hàng tồn kho được ghi nhận theo giá gốc hoặc theo giá trị thuần có thể thực hiện được.
+- Phương pháp tính giá trị hàng tồn kho: Nêu rõ doanh nghiệp áp dụng phương pháp nào (Bình quân gia quyền; nhập trước, xuất trước; giá thực tế đích danh; phương pháp giá bán lẻ;...).
+- Phương pháp hạch toán hàng tồn kho: Nêu rõ doanh nghiệp tính giá trị hàng xuất kho theo từng lần phát sinh hay tính giá trị hàng xuất kho trên cơ sở giá trị hàng tồn kho cuối kỳ.
+- Phương pháp trích lập dự phòng giảm giá hàng tồn kho: Nêu rõ doanh nghiệp lập dự phòng giảm giá hàng tồn kho trên cơ sở chênh lệch lớn hơn của giá gốc và giá trị thuần có thể thực hiện được của hàng tồn kho. Giá trị thuần có thể thực hiện được của hàng tồn kho có được xác định theo đúng quy định của Chuẩn mực kế toán Việt Nam số 02 - Hàng tồn kho hay không? Phương pháp lập dự phòng giảm giá hàng tồn kho là lập theo số chênh lệch giữa số dự phòng phải lập năm nay với số dự phòng đã lập năm trước chưa sử dụng hết dẫn đến năm nay phải lập thêm hay hoàn nhập.
+- Tiêu thức phân bổ nguyên liệu, vật liệu.
+- Chính sách kế toán liên quan đến hàng tồn kho đối với những hợp đồng có rủi ro lớn.
+(8) Nguyên tắc kế toán và khấu hao TSCĐ hữu hình (bao gồm cả cây lâu năm cho sản phẩm định kỳ, súc vật làm việc), TSCĐ vô hình, TSCĐ thuê tài chính, bất động sản đầu tư
+a) Nguyên tắc kế toán TSCĐ hữu hình, TSCĐ vô hình 
+- Nêu rõ giá trị ghi sổ của TSCĐ là theo nguyên giá hay giá đánh giá lại; 
+- Nguyên tắc kế toán các khoản chi phí phát sinh sau ghi nhận ban đầu (chi phí sửa chữa, bảo dưỡng thường xuyên; sửa chữa, bảo dưỡng định kỳ; nâng cấp, cải tạo) được ghi nhận vào giá trị ghi sổ hay chi phí sản xuất, kinh doanh;
+- Nêu rõ các phương pháp khấu hao TSCĐ; Số phải khấu hao tính theo nguyên giá hay giá trị phải khấu hao;
+- Các quy định khác về quản lý, sử dụng, khấu hao TSCĐ có được tuân thủ không?
+b) Nguyên tắc kế toán TSCĐ thuê tài chính: 
+- Nêu rõ giá trị ghi sổ được xác định như thế nào; 
+- Nêu rõ các phương pháp khấu hao TSCĐ thuê tài chính.
+c) Nguyên tắc kế toán Bất động sản đầu tư.
+- Giá trị ghi sổ BĐS đầu tư được ghi nhận theo phương pháp nào?
+- Nêu rõ các phương pháp khấu hao BĐS đầu tư.
+(9) Nguyên tắc kế toán tài sản sinh học
+- Súc vật nuôi cho sản phẩm định kỳ;
+- Súc vật nuôi lấy sản phẩm một lần;
+- Cây trồng theo mùa vụ hoặc lấy sản phẩm một lần.
+(10) Nguyên tắc kế toán hợp đồng hợp tác kinh doanh
+- Bản chất hoạt động của hợp đồng BCC là đồng kiểm soát hay không đồng kiểm soát? Chia sản phẩm hay lợi nhuận? Quyền và nghĩa vụ của doanh nghiệp liên quan đến hợp đồng BCC như thế nào?...
+	- Đối với bên góp vốn
+	+ Các khoản vốn (bằng tiền hoặc tài sản phi tiền tệ) góp vào BCC được ghi nhận như thế nào?
+	+ Ghi nhận doanh thu, chi phí liên quan đến hợp đồng được ghi nhận như thế nào?
+	 - Đối với bên nhận vốn góp (bên thực hiện việc điều hành, phát sinh chi phí chung)
+	+ Nguyên tắc ghi nhận vốn góp của các bên khác;
+	+ Nguyên tắc phân chia doanh thu, chi phí, sản phẩm của hợp đồng.
+(11)  Nguyên tắc kế toán chi phí chờ phân bổ
+- Nêu rõ chi phí chờ phân bổ được phân bổ dần vào chi phí sản xuất, kinh doanh bao gồm những khoản chi phí nào?
+- Phương pháp và thời gian phân bổ chi phí chờ phân bổ;
+- Có theo dõi chi tiết chi phí chờ phân bổ theo kỳ hạn không?
+(12) Nguyên tắc kế toán phải trả người bán
+- Phân loại nợ phải trả như thế nào?	
+	- Có được theo dõi chi tiết nợ phải trả theo kỳ hạn trả nợ gốc, kỳ hạn còn lại tại thời điểm báo cáo, theo nguyên tệ và theo từng đối tượng không?	
+	- Có đánh giá lại các khoản nợ phải trả thỏa mãn định nghĩa của các khoản mục tiền tệ có gốc ngoại tệ không? Tỷ giá dùng để đánh giá lại là gì?
+	- Có ghi nhận nợ phải trả thấp hơn nghĩa vụ phải thanh toán không?
+(13) Nguyên tắc kế toán phải trả cổ tức, lợi nhuận
+- Thời điểm ghi nhận khoản phải trả cổ tức, lợi nhuận; 
+- Thời hạn cam kết trả cổ tức, lợi nhuận cho các chủ sở hữu doanh nghiệp;
+- Tình hình thanh toán các khoản phải trả cổ tức, lợi nhuận đã cam kết;
+- Khoản cổ tức, lợi nhuận phải trả trong kỳ có xác định được liên quan đến phân phối từ lợi nhuận của năm tài chính nào hay không?
+(14) Nguyên tắc ghi nhận chi phí phải trả: 
+- Nêu rõ các khoản chi phí nào được ước tính để ghi nhận vào chi phí sản xuất, kinh doanh trong kỳ? 
+- Cơ sở xác định giá trị của những khoản chi phí đó.
+	(15) Nguyên tắc ghi nhận doanh thu chờ phân bổ
+	- Các trường hợp nào phát sinh doanh thu chờ phân bổ;
+	- Phương pháp phân bổ doanh thu chờ phân bổ.
+(16) Nguyên tắc kế toán các khoản dự phòng phải trả:
+- Nguyên tắc ghi nhận dự phòng phải trả: Nêu rõ các khoản dự phòng phải trả đã ghi nhận có thỏa mãn các điều kiện quy định trong Chuẩn mực kế toán Việt Nam số 18 - Các khoản dự phòng, tài sản và nợ tiềm tàng không?.
+- Phương pháp ghi nhận dự phòng phải trả: 
++ Căn cứ trích lập dự phòng phải trả
++ Nêu rõ các khoản dự phòng phải trả được lập thêm (hoặc hoàn nhập) theo số chênh lệch lớn hơn (hoặc nhỏ hơn) giữa số dự phòng phải trả phải lập năm nay so với số dự phòng phải trả đã lập năm trước chưa sử dụng đang ghi trên sổ kế toán. 
+(17) Nguyên tắc kế toán thuế TNDN hoãn lại
+	a) Nguyên tắc kế toán tài sản thuế thu nhập hoãn lại
+	- Căn cứ ghi nhận tài sản thuế thu nhập hoãn lại (chênh lệch tạm thời được khấu trừ, lỗ tính thuế hay ưu đãi thuế chưa sử dụng); 	
+	- Thuế suất (%) được sử dụng để xác định giá trị tài sản thuế thu nhập hoãn lại;
+	- Có bù trừ với thuế thu nhập hoãn lại phải trả không?	
+	- Có xác định khả năng có thu nhập chịu thuế trong tương lai khi ghi nhận tài sản thuế thu nhập hoãn lại không? Có đánh giá lại tài sản thuế thu nhập hoãn lại chưa được ghi nhận không?
+	b) Nguyên tắc kế toán thuế TNDN hoãn lại phải trả
+	- Căn cứ ghi nhận thuế thu nhập hoãn lại phải trả (chênh lệch tạm thời chịu thuế); 	
+	- Thuế suất (%) được sử dụng để xác định giá trị thuế thu nhập hoãn lại phải trả;
+	- Có bù trừ với tài sản thuế thu nhập hoãn lại không?	
+(18) Nguyên tắc ghi nhận vay và nợ thuê tài chính
+- Giá trị khoản vay và nợ thuê tài chính được ghi nhận như thế nào?
+	- Có theo dõi theo từng đối tượng, kỳ hạn, nguyên tệ không?
+- Có đánh giá lại các khoản vay và nợ thuê tài chính bằng ngoại tệ không?
+	(19) Nguyên tắc ghi nhận và vốn hóa các khoản chi phí đi vay:
+- Nguyên tắc ghi nhận chi phí đi vay: Nêu rõ chi phí đi vay được ghi nhận vào chi phí sản xuất, kinh doanh trong kỳ khi phát sinh, trừ khi được vốn hóa theo quy định của Chuẩn mực kế toán Việt Nam số 16 - Chi phí đi vay.
+- Tỷ lệ vốn hóa được sử dụng để xác định chi phí đi vay được vốn hóa trong kỳ: Nêu rõ tỷ lệ vốn hóa này là bao nhiêu (Tỷ lệ vốn hóa này được xác định theo công thức tính quy định trong Thông tư hướng dẫn kế toán Chuẩn mực kế toán Việt Nam số 16 - Chi phí đi vay. 
+(20) Nguyên tắc ghi nhận trái phiếu chuyển đổi
+	- Cơ sở xác định cấu phần nợ và cấu phần vốn của trái phiếu chuyển đổi.
+- Việc ghi nhận riêng cấu phần nợ và cấu phần vốn và thời điểm xử lý cấu phần nợ và cấu phần vốn của trái phiếu chuyển đổi.
+- Lãi suất được sử dụng để chiết khấu dòng tiền là lãi suất nào?
+(21) Nguyên tắc ghi nhận vốn chủ sở hữu:
+- Vốn góp của chủ sở hữu có được ghi nhận theo số vốn thực góp không; Thặng dư vốn được ghi nhận như thế nào? Khoản quyền chọn trái phiếu chuyển đổi được xác định như thế nào?
+- Lý do ghi nhận khoản chênh lệch đánh giá lại tài sản và chênh lệch tỷ giá hối đoái?
+- Lợi nhuận chưa phân phối được xác định như thế nào? Nguyên tắc phân phối lợi nhuận, cổ tức.
+(22) Nguyên tắc và phương pháp ghi nhận doanh thu, thu nhập khác:
+- Doanh thu bán hàng và cung cấp dịch vụ: Có tuân thủ nguyên tắc ghi nhận doanh thu theo nghĩa vụ thực hiện hay không? Các phương pháp nào được sử dụng để ghi nhận doanh thu?
++ Doanh thu bán hàng và cung cấp dịch vụ.
++ Doanh thu hợp đồng xây dựng;
++  Doanh thu bán BĐSĐT: có tuân thủ Chuẩn mực kế toán Việt Nam số 05 - Bất động sản đầu tư không? Phương pháp ghi nhận lãi/lỗ phát sinh từ việc bán BĐS. 
++ Doanh thu bán bất động sản là các căn hộ du lịch, căn hộ văn phòng kết hợp lưu trú hoặc sản phẩm tương tự: Nội dung, đặc điểm và bản chất của hợp đồng về quyền và nghĩa vụ của các bên; chính sách kế toán nào được sử dụng để ghi nhận doanh thu,...
+- Các phương pháp ghi nhận doanh thu hoạt động tài chính. 
+	- Các nguyên tắc ghi nhận thu nhập khác.
+	(23) Nguyên tắc kế toán các khoản giảm trừ doanh thu
+	- Các khoản giảm trừ doanh thu gồm những gì?
+- Có tuân thủ Chuẩn mực kế toán “Các sự kiện phát sinh sau ngày kết thúc kỳ kế toán năm” để điều chỉnh doanh thu không?
+	(24) Nguyên tắc kế toán giá vốn hàng bán
+	- Các khoản ghi giảm giá vốn hàng bán là gì?
+- Có đảm bảo nguyên tắc doanh thu phù hợp với chi phí hay không?
+	- Có đảm bảo nguyên tắc thận trọng, ghi nhận ngay các chi phí vượt trên mức bình thường của hàng tồn kho không?
+	- Giá trị hàng tồn kho hao hụt, mất mát được ghi nhận như thế nào?
+	- Nguyên tắc ghi nhận khoản dự phòng giảm giá hàng tồn kho.
+(25) Nguyên tắc và phương pháp ghi nhận chi phí tài chính: 
+- Nội dung chi phí tài chính bao gồm các khoản nào?
+- Nguyên tắc ghi nhận chi phí lãi vay vốn dùng cho sản xuất kinh doanh;
+- Nguyên tắc hạch toán khoản lỗ chênh lệch tỷ giá khi phát sinh và đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ của kỳ báo cáo.
+	(26) Nguyên tắc kế toán chi phí bán hàng và chi phí quản lý doanh nghiệp
+	- Có ghi nhận đầy đủ chi phí bán hàng và chi phí quản lý doanh nghiệp phát sinh trong kỳ không?
+	- Các khoản điều chỉnh giảm chi phí bán hàng và chi phí quản lý doanh nghiệp là gì?
+	- Nguyên tắc ghi nhận khoản dự phòng tái cơ cấu doanh nghiệp, dự phòng nợ phải thu khó đòi, dự phòng bảo hành sản phẩm, hàng hóa, công trình xây dựng.
+(27) Nguyên tắc kế toán bán, thanh lý TSCĐ, BĐS ĐT
+(28) Nguyên tắc và phương pháp ghi nhận chi phí thuế thu nhập doanh nghiệp hiện hành, chi phí thuế thu nhập doanh nghiệp hoãn lại: 
+Chi phí thuế thu nhập doanh nghiệp hiện hành bao gồm chi phí thuế TNDN hiện hành theo quy định của Luật thuế thu nhập doanh nghiệp và chi phí thuế TNDN bổ sung theo quy định về thuế tối thiểu toàn cầu. 
++ Chi phí thuế thu nhập doanh nghiệp hiện hành theo quy định của Luật thuế thu nhập doanh nghiệp là số thuế thu nhập doanh nghiệp phải nộp tính trên thu nhập chịu thuế trong năm và thuế suất thuế thu nhập doanh nghiệp hiện hành.
+ + Chi phí thuế thu nhập doanh nghiệp bổ sung theo quy định về thuế tối thiểu toàn cầu là số thuế thu nhập doanh nghiệp mà doanh nghiệp phải nộp bổ sung vào NSNN được xác định theo quy định của pháp luật về thuế tối thiểu toàn cầu.
+Chi phí thuế thu nhập doanh nghiệp hoãn lại được xác định trên cơ sở số chênh lệch tạm thời được khấu trừ, số chênh lệch tạm thời chịu thuế và thuế suất thuế TNDN. Không bù trừ chi phí thuế TNDN hiện hành với chi phí thuế TNDN hoãn lại.
+ (29) Các nguyên tắc và phương pháp kế toán khác: Nêu rõ các nguyên tắc và phương pháp kế toán khác với mục đích giúp cho người sử dụng hiểu được là Báo cáo tài chính của doanh nghiệp đã được trình bày trên cơ sở tuân thủ chuẩn mực và chế độ kế toán doanh nghiệp do Bộ Tài chính ban hành.
+4.5. Các chính sách kế toán áp dụng trong trường hợp doanh nghiệp không đáp ứng giả định hoạt động liên tục
+	a) Các trường hợp được coi là doanh nghiệp không đáp ứng giả định hoạt động liên tục.
+b) Chính sách tái phân loại tài sản và nợ phải trả dài hạn thành ngắn hạn khi doanh nghiệp không đáp ứng giả định hoạt động liên tục.
+c) Nguyên tắc xác định giá trị của các khoản mục và trình bày trên Báo cáo tình hình tài chính đối với:
+	- Các khoản đầu tư tài chính;
+	- Các khoản phải thu;
+	- Các khoản phải trả;
+	- Hàng tồn kho;
+	- Tài sản sinh học;
+	- TSCĐ, Bất động sản đầu tư;
+	- Các tài sản và nợ phải trả khác.
+ 	4.6. Thông tin bổ sung cho các khoản mục trình bày trong Báo cáo tình hình tài chính
+- Trong phần này, doanh nghiệp phải trình bày và phân tích chi tiết các số liệu đã được trình bày trong Báo cáo tình hình tài chính để giúp người sử dụng Báo cáo tài chính hiểu rõ hơn nội dung các khoản mục tài sản, nợ phải trả và vốn chủ sở hữu.
+- Đơn vị tính giá trị trình bày trong phần “Thông tin bổ sung cho các khoản mục trình bày trong Báo cáo tình hình tài chính” là đơn vị tính được sử dụng trong Báo cáo tình hình tài chính. Số liệu ghi vào cột “Đầu năm” được lấy từ cột “Cuối năm” trong Bản thuyết minh Báo cáo tài chính năm trước. Số liệu ghi vào cột “Cuối năm” được lập trên cơ sở số liệu lấy từ:
+	+ Báo cáo tình hình tài chính năm nay;
+	+ Sổ kế toán tổng hợp;
++ Sổ kế toán chi tiết hoặc Bảng tổng hợp chi tiết có liên quan.
+- Doanh nghiệp được chủ động đánh số thứ tự của thông tin chi tiết được trình bày trong phần này theo nguyên tắc không thay đổi số chỉ tiêu dẫn từ Báo cáo tình hình tài chính và đảm bảo dễ đối chiếu và có thể so sánh giữa các kỳ.
+- Trường hợp doanh nghiệp có áp dụng hồi tố thay đổi chính sách kế toán hoặc điều chỉnh hồi tố sai sót trọng yếu của các năm trước thì phải điều chỉnh số liệu so sánh (số liệu ở cột “Đầu năm”) để đảm bảo nguyên tắc có thể so sánh và giải trình rõ điều này. Trường hợp vì lý do nào đó dẫn đến số liệu ở cột “Đầu năm” không có khả năng so sánh được với số liệu ở cột “Cuối năm” thì phải được nêu rõ lý do trong Bản thuyết minh Báo cáo tài chính. 
+	- Đối với các khoản mục yêu cầu thuyết minh theo giá trị hợp lý, trường hợp không xác định được giá trị hợp lý thì phải ghi rõ lý do.
+4.7. Thông tin bổ sung cho các khoản mục trình bày trong Báo cáo kết quả hoạt động kinh doanh.
+	- Trong phần này, doanh nghiệp phải trình bày và phân tích chi tiết các số liệu đã được thể hiện trong Báo cáo kết quả hoạt động kinh doanh để giúp người sử dụng Báo cáo tài chính hiểu rõ hơn nội dung của các khoản mục doanh thu, chi phí.
+	- Đơn vị tính giá trị trình bày trong phần “Thông tin bổ sung cho các khoản mục trình bày trong Báo cáo kết quả hoạt động kinh doanh” là đơn vị tính được sử dụng trong Báo cáo kết quả hoạt động kinh doanh. Số liệu ghi vào cột “Năm trước” được lấy từ Bản thuyết minh Báo cáo tài chính năm trước. Số liệu ghi vào cột “Năm nay” được lập trên cơ sở số liệu lấy từ:
+	+ Báo cáo kết quả hoạt động kinh doanh năm nay;	
+	+ Sổ kế toán tổng hợp;
++ Sổ kế toán chi tiết hoặc Bảng tổng hợp chi tiết có liên quan.
+	- Doanh nghiệp được chủ động đánh số thứ tự của thông tin chi tiết được trình bày trong phần này theo nguyên tắc phù hợp với số chỉ tiêu dẫn từ Báo cáo kết quả hoạt động kinh doanh để đảm bảo dễ đối chiếu và có thể so sánh giữa các kỳ.
+	- Trường hợp vì lý do nào đó dẫn đến số liệu ở cột “Năm trước” không có khả năng so sánh được với số liệu ở cột “Năm nay” thì điều này phải được nêu rõ trong Bản thuyết minh Báo cáo tài chính.
+4.8. Thông tin bổ sung cho Báo cáo lưu chuyển tiền tệ
+	- Trong phần này, doanh nghiệp phải trình bày và phân tích các số liệu đã được thể hiện trong Báo cáo lưu chuyển tiền tệ để giúp người sử dụng hiểu rõ hơn về các yếu tố ảnh hưởng đến lưu chuyển tiền trong kỳ của doanh nghiệp.
+	- Trường hợp trong kỳ doanh nghiệp có mua hoặc thanh lý các khoản đầu tư vào công ty con hoặc đơn vị kinh doanh khác thì những luồng tiền này phải được trình bày thành những chỉ tiêu riêng biệt trên Báo cáo lưu chuyển tiền tệ. Trong phần này phải cung cấp những thông tin chi tiết liên quan đến việc mua hoặc thanh lý các khoản đầu tư vào công ty con hoặc đơn vị kinh doanh khác.
+	- Đơn vị tính giá trị trình bày trong phần “Thông tin bổ sung cho các khoản mục trình bày trong Báo cáo lưu chuyển tiền tệ” là đơn vị tính được sử dụng trong Báo cáo lưu chuyển tiền tệ. Số liệu ghi vào cột “Năm trước” được lấy từ Bản thuyết minh Báo cáo tài chính năm trước; Số liệu ghi vào cột “Năm nay” được lập trên cơ sở số liệu lấy từ:
+	+ Báo cáo lưu chuyển tiền tệ năm nay;
+	+ Sổ kế toán tổng hợp;
++ Sổ kế toán chi tiết hoặc Bảng tổng hợp chi tiết  có liên quan.
+4.9. Những thông tin khác
+	- Trong phần này, doanh nghiệp phải trình bày những thông tin quan trọng khác (nếu có) ngoài những thông tin đã trình bày trong các phần trên nhằm cung cấp thông tin mô tả bằng lời hoặc số liệu theo quy định của các Chuẩn mực kế toán Việt Nam cụ thể nhằm giúp cho người sử dụng hiểu Báo cáo tài chính của doanh nghiệp đã được trình bày trung thực, hợp lý.
+	- Khi trình bày thông tin thuyết minh ở phần này, tùy theo yêu cầu và đặc điểm thông tin theo quy định từ điểm 1 đến điểm 7 của phần này, doanh nghiệp có thể đưa ra biểu mẫu chi tiết, cụ thể một cách phù hợp và những thông tin so sánh cần thiết.
+	- Ngoài những thông tin phải trình bày theo quy định từ phần 4.1 đến phần 4.8, doanh nghiệp được trình bày thêm các thông tin khác nếu xét thấy cần thiết cho người sử dụng Báo cáo tài chính của doanh nghiệp.
+
+
+

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Đơn đặt hàng NCC{% endblock %}
+{% block extra_style %}
+<style>
+.money{font-family:ui-monospace,Consolas,monospace;text-align:right}
+.badge-draft{background:#6c757d}.badge-confirmed{background:#0d6efd}
+.badge-partial{background:#fd7e14}.badge-received{background:#198754}.badge-cancelled{background:#dc3545}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-3" style="max-width:1100px">
+  <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
+    <div>
+      <h4 class="fw-bold mb-1">Đơn đặt hàng nhà cung cấp</h4>
+      <p class="text-muted small mb-0">Theo dõi nhu cầu mua trước khi nhận HĐ / nhập kho ·
+        <a href="{{ url_for('SME_purchasing') }}">Mua hàng</a></p>
+    </div>
+    <a class="btn btn-primary btn-sm" href="{{ url_for('SME_purchase_order_create') }}"><i class="fas fa-plus me-1"></i> Tạo đơn</a>
+  </div>
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body row g-2 align-items-end">
+      <div class="col-md-3"><label class="form-label small mb-1">Từ ngày</label><input type="date" id="df" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small mb-1">Đến ngày</label><input type="date" id="dt" class="form-control form-control-sm"></div>
+      <div class="col-md-2"><label class="form-label small mb-1">Trạng thái</label>
+        <select id="st" class="form-select form-select-sm">
+          <option value="">Tất cả</option>
+          <option value="draft">Nháp</option>
+          <option value="confirmed">Đã xác nhận</option>
+          <option value="partial">Nhận một phần</option>
+          <option value="received">Đã nhận đủ</option>
+          <option value="cancelled">Đã hủy</option>
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label small mb-1">Tìm</label><input id="kw" class="form-control form-control-sm" placeholder="Số ĐH / NCC"></div>
+      <div class="col-md-1"><button class="btn btn-outline-primary btn-sm w-100" id="btn">Lọc</button></div>
+    </div>
+  </div>
+  <div class="card border-0 shadow-sm"><div class="table-responsive">
+    <table class="table table-sm table-hover mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Số ĐH</th><th>Ngày</th><th>NCC</th><th class="text-end">Tổng</th><th>TT</th><th></th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="6" class="text-muted text-center py-4">Đang tải…</td></tr></tbody>
+    </table>
+  </div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+  const money=v=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:0});
+  const label={draft:'Nháp',confirmed:'Xác nhận',partial:'Một phần',received:'Đủ',cancelled:'Hủy'};
+  async function load(){
+    const q=new URLSearchParams({
+      date_from:document.getElementById('df').value||'',
+      date_to:document.getElementById('dt').value||'',
+      status:document.getElementById('st').value||'',
+      keyword:document.getElementById('kw').value||'',
+    });
+    const res=await fetch('/api/sme/purchase-orders?'+q);
+    const data=await res.json();
+    const tbody=document.getElementById('tbody');
+    if(!data.success){ tbody.innerHTML=`<tr><td colspan="6" class="text-danger text-center py-3">${data.error||'Lỗi'}</td></tr>`; return; }
+    const rows=data.data||[];
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="6" class="text-muted text-center py-4">Chưa có đơn</td></tr>'; return; }
+    tbody.innerHTML=rows.map(r=>`<tr>
+      <td><a href="/SME_purchase_order_create?id=${r.id}">${r.po_no}</a></td>
+      <td>${r.po_date||''}</td>
+      <td>${r.supplier_name||''}</td>
+      <td class="money">${money(r.total_amount)}</td>
+      <td><span class="badge badge-${r.status}">${label[r.status]||r.status}</span></td>
+      <td class="text-end">
+        <a class="btn btn-outline-secondary btn-sm py-0" href="/SME_purchase_order_create?id=${r.id}">Sửa</a>
+      </td>
+    </tr>`).join('');
+  }
+  document.getElementById('btn').addEventListener('click', load);
+  load();
+})();
+</script>
+{% endblock %}

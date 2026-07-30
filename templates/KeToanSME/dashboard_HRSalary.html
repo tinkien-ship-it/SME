@@ -99,17 +99,12 @@
             <a class="nav-link-sub active" href="#"><i class="fas fa-bag-shopping text-warning me-2"></i> Quản Lý Nhân Sự và Tiền Lương</a>
             
             <div class="submenu">
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuNhapKho') }}"><i class="fas fa-clipboard-list me-2"></i> Bảng chấm công (Mẫu số 01a-LĐTL)</a>
-                <a class="nav-link-sub" href="{{ url_for('DanhSachPhieuXuatKho') }}"><i class="fas fa-file-invoice me-2"></i> Bảng chấm công làm thêm giờ (Mẫu số 01b-LĐTL)</a>
-                <a class="nav-link-sub" href="{{ url_for('SoChiTietHangHoa') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Bảng thanh toán tiền lương (Mẫu số 02-LĐTL)</a>
-                <a class="nav-link-sub" href="{{ url_for('inventory') }}"><i class="fas fa-boxes me-2"></i> Bảng thanh toán tiền thưởng (Mẫu số 03-LĐTL)</a>
-                <a class="nav-link-sub" href="{{ url_for('inventory_detail') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Giấy chứng nhận nghỉ việc hưởng BHXH (Mẫu số 04-LĐTL)</a>
-                <a class="nav-link-sub" href="{{ url_for('inventory_detail') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Danh sách người lao động hưởng trợ cấp BHXH (Mẫu số 05-LĐTL)</a>
-                <a class="nav-link-sub" href="{{ url_for('inventory_detail') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Bảng thanh toán tiền thuê ngoài (Mẫu số 06-LĐTL)</a>
-                <a class="nav-link-sub" href="{{ url_for('inventory_detail') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Bảng kê trích nộp các khoản theo lương (Mẫu số 07-LĐTL)</a>
-                <a class="nav-link-sub" href="{{ url_for('inventory_detail') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Bảng phân bổ tiền lương và các khoản trích theo lương (Mẫu số 08-LĐTL)</a>
-
-
+                <a class="nav-link-sub" href="{{ url_for('employees_page') }}"><i class="fas fa-users me-2"></i> Hồ sơ nhân sự</a>
+                <a class="nav-link-sub" href="{{ url_for('attendance_page') }}"><i class="fas fa-clipboard-list me-2"></i> Chấm công</a>
+                <a class="nav-link-sub" href="{{ url_for('salary_create') }}"><i class="fas fa-file-invoice me-2"></i> Lập bảng lương</a>
+                <a class="nav-link-sub" href="{{ url_for('DanhSachBangLuong_05LDTL') }}"><i class="fas fa-hand-holding-dollar me-2"></i> Danh sách bảng lương</a>
+                <a class="nav-link-sub" href="{{ url_for('SoCongNoPhaiTraNhanVien') }}"><i class="fas fa-user-minus me-2"></i> Công nợ phải trả NLĐ</a>
+                <a class="nav-link-sub" href="{{ url_for('SoCongNoBaoHiem') }}"><i class="fas fa-shield-heart me-2"></i> Công nợ BHXH/BHYT/BHTN</a>
                 <a class="nav-link-sub text-danger" href="{{ url_for('SME_dashboard') }}"><i class="fas fa-home me-2 text-danger"></i> Quay lại trang chủ</a>
             </div>
         </nav>

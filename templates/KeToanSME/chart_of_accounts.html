@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% block title %}Danh mục tài khoản (TT99) — SME{% endblock %}
+
+{% block extra_style %}
+<style>
+    .coa-wrap { max-width: 1200px; margin: 0 auto; }
+    .coa-toolbar { gap: .5rem; flex-wrap: wrap; }
+    .coa-table td, .coa-table th { vertical-align: middle; font-size: .9rem; }
+    .coa-code { font-family: ui-monospace, Consolas, monospace; font-weight: 700; }
+    .coa-indent-1 { padding-left: .5rem !important; }
+    .coa-indent-2 { padding-left: 1.5rem !important; }
+    .coa-indent-3 { padding-left: 2.5rem !important; }
+    .coa-indent-4 { padding-left: 3.5rem !important; }
+    .badge-src-TT99 { background: #e7f1ff; color: #0d6efd; }
+    .badge-src-recommended { background: #fff3cd; color: #856404; }
+    .badge-src-custom { background: #d1e7dd; color: #0f5132; }
+    .coa-row-parent { background: #f8fafc; }
+    .coa-muted { color: #94a3b8; font-size: .8rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="coa-wrap">
+    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1"><i class="fas fa-sitemap text-primary me-2"></i>Danh mục tài khoản kế toán</h4>
+            <p class="text-muted small mb-0">
+                Hệ thống tài khoản theo <strong>TT99/2025/TT-BTC</strong> + tiểu khoản khuyến nghị.
+                Doanh nghiệp được <strong>mở thêm tài khoản con</strong> theo Điều 11 (không ảnh hưởng chỉ tiêu BCTC).
+            </p>
+        </div>
+        <div class="d-flex coa-toolbar">
+            <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Dashboard SME
+            </a>
+            <button type="button" class="btn btn-primary btn-sm" id="btnOpenCreate">
+                <i class="fas fa-plus me-1"></i> Tạo tài khoản con
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-5">
+                    <input type="search" id="coaSearch" class="form-control form-control-sm"
+                           placeholder="Tìm mã hoặc tên tài khoản…">
+                </div>
+                <div class="col-md-3">
+                    <select id="coaFilterSrc" class="form-select form-select-sm">
+                        <option value="">Tất cả nguồn</option>
+                        <option value="TT99">Pháp định TT99</option>
+                        <option value="recommended">Khuyến nghị</option>
+                        <option value="custom">Doanh nghiệp tự mở</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="coaFilterPost" class="form-select form-select-sm">
+                        <option value="">Mọi cấp</option>
+                        <option value="1">Chỉ TK ghi sổ được</option>
+                        <option value="0">Chỉ TK tổng hợp</option>
+                    </select>
+                </div>
+                <div class="col-md-2 text-md-end">
+                    <span class="coa-muted" id="coaMeta">—</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive" style="max-height: 70vh;">
+            <table class="table table-sm table-hover mb-0 coa-table">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th style="width:110px;">Mã</th>
+                        <th>Tên tài khoản</th>
+                        <th style="width:90px;">Cấp</th>
+                        <th style="width:110px;">Nguồn</th>
+                        <th style="width:100px;">Ghi sổ</th>
+                        <th style="width:160px;">Theo dõi</th>
+                        <th style="width:120px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="coaBody">
+                    <tr><td colspan="7" class="text-center text-muted py-4">Đang tải…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal tạo TK con -->
+<div class="modal fade" id="modalCreateChild" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" id="formCreateChild">
+            <div class="modal-header">
+                <h5 class="modal-title">Tạo tài khoản con</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Tài khoản cha *</label>
+                    <input list="parentOptions" id="parent_code" class="form-control form-control-sm" required
+                           placeholder="Ví dụ: 112 hoặc 1121">
+                    <datalist id="parentOptions"></datalist>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Mã tài khoản con</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="child_code" class="form-control" placeholder="Để trống = tự gợi ý">
+                        <button type="button" class="btn btn-outline-secondary" id="btnSuggest">Gợi ý</button>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Tên tài khoản *</label>
+                    <input type="text" id="child_name" class="form-control form-control-sm" required
+                           placeholder="Ví dụ: VND — Vietcombank CN HCM">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Lý do mở (Quy chế hạch toán)</label>
+                    <input type="text" id="custom_reason" class="form-control form-control-sm"
+                           placeholder="Theo dõi từng ngân hàng / bộ phận…">
+                </div>
+                <p class="small text-muted mb-0">
+                    Tài khoản cha sẽ chuyển thành <em>tổng hợp</em> (không ghi sổ trực tiếp). Bút toán phải chọn TK con.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary btn-sm">Lưu tài khoản</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    let allRows = [];
+    const body = document.getElementById('coaBody');
+    const metaEl = document.getElementById('coaMeta');
+
+    function trackLabels(r) {
+        const map = [
+            ['track_customer', 'KH'], ['track_supplier', 'NCC'], ['track_employee', 'NV'],
+            ['track_bank', 'NH'], ['track_currency', 'NT'], ['track_warehouse', 'Kho'],
+            ['track_product', 'SP'], ['track_project', 'DA'], ['track_department', 'BP'],
+        ];
+        return map.filter(([k]) => r[k]).map(([, l]) => l).join(', ') || '—';
+    }
+
+    function srcBadge(src) {
+        const cls = src === 'custom' ? 'badge-src-custom'
+            : src === 'recommended' ? 'badge-src-recommended' : 'badge-src-TT99';
+        const label = src === 'custom' ? 'Tự mở' : src === 'recommended' ? 'Khuyến nghị' : 'TT99';
+        return `<span class="badge ${cls}">${label}</span>`;
+    }
+
+    function render() {
+        const q = (document.getElementById('coaSearch').value || '').trim().toLowerCase();
+        const src = document.getElementById('coaFilterSrc').value;
+        const post = document.getElementById('coaFilterPost').value;
+        const rows = allRows.filter(r => {
+            if (src && r.legal_source !== src) return false;
+            if (post !== '' && String(r.is_postable) !== post) return false;
+            if (!q) return true;
+            return (r.code + ' ' + r.name).toLowerCase().includes(q);
+        });
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Không có tài khoản phù hợp</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.map(r => {
+            const lv = Math.min(4, r.level || 1);
+            const parentCls = r.has_children || r.is_postable === 0 ? 'coa-row-parent' : '';
+            return `<tr class="${parentCls}" data-code="${r.code}">
+                <td class="coa-code coa-indent-${lv}">${r.code}</td>
+                <td>
+                    <div>${r.name}</div>
+                    ${r.bctc_line_code ? `<div class="coa-muted">BCTC: ${r.bctc_line_code}</div>` : ''}
+                </td>
+                <td>Cấp ${r.level}</td>
+                <td>${srcBadge(r.legal_source)}</td>
+                <td>${r.is_postable ? '<span class="text-success">Ghi sổ</span>' : '<span class="text-muted">Tổng hợp</span>'}</td>
+                <td class="small">${trackLabels(r)}</td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 btn-add-child"
+                            data-parent="${r.code}" title="Tạo tài khoản con">+</button>
+                    ${r.is_custom || r.is_recommended ? `<button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 btn-off"
+                            data-code="${r.code}" title="Ngừng sử dụng">×</button>` : ''}
+                </td>
+            </tr>`;
+        }).join('');
+
+        body.querySelectorAll('.btn-add-child').forEach(btn => {
+            btn.addEventListener('click', () => openCreate(btn.dataset.parent));
+        });
+        body.querySelectorAll('.btn-off').forEach(btn => {
+            btn.addEventListener('click', () => deactivate(btn.dataset.code));
+        });
+    }
+
+    async function load() {
+        body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Đang tải…</td></tr>';
+        const res = await fetch('/api/sme/coa');
+        const json = await res.json();
+        if (!json.success) {
+            body.innerHTML = `<tr><td colspan="7" class="text-danger text-center py-4">${json.error || 'Lỗi tải'}</td></tr>`;
+            return;
+        }
+        allRows = json.data || [];
+        const dl = document.getElementById('parentOptions');
+        dl.innerHTML = allRows.map(r => `<option value="${r.code}">${r.code} — ${r.name}</option>`).join('');
+        metaEl.textContent = `${json.meta?.count || allRows.length} TK · seed ${json.meta?.seed_version || ''}`;
+        render();
+    }
+
+    function openCreate(parent) {
+        document.getElementById('parent_code').value = parent || '';
+        document.getElementById('child_code').value = '';
+        document.getElementById('child_name').value = '';
+        document.getElementById('custom_reason').value = '';
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCreateChild'));
+        modal.show();
+        if (parent) suggest();
+    }
+
+    async function suggest() {
+        const parent = document.getElementById('parent_code').value.trim();
+        if (!parent) return;
+        const res = await fetch('/api/sme/coa/' + encodeURIComponent(parent) + '/suggest-child');
+        const json = await res.json();
+        if (json.success) document.getElementById('child_code').value = json.next_code;
+        else if (json.error) alert(json.error);
+    }
+
+    async function deactivate(code) {
+        if (!confirm('Ngừng sử dụng tài khoản ' + code + '? (không xóa lịch sử)')) return;
+        const res = await fetch('/api/sme/coa/' + encodeURIComponent(code) + '/deactivate', { method: 'POST' });
+        const json = await res.json();
+        if (!json.success) return alert(json.error || 'Không thể ngừng');
+        load();
+    }
+
+    document.getElementById('btnOpenCreate').addEventListener('click', () => openCreate(''));
+    document.getElementById('btnSuggest').addEventListener('click', suggest);
+    document.getElementById('coaSearch').addEventListener('input', render);
+    document.getElementById('coaFilterSrc').addEventListener('change', render);
+    document.getElementById('coaFilterPost').addEventListener('change', render);
+
+    document.getElementById('formCreateChild').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            parent_code: document.getElementById('parent_code').value.trim(),
+            code: document.getElementById('child_code').value.trim() || null,
+            name: document.getElementById('child_name').value.trim(),
+            custom_reason: document.getElementById('custom_reason').value.trim(),
+        };
+        const res = await fetch('/api/sme/coa/children', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!json.success) return alert(json.error || 'Lỗi tạo tài khoản');
+        bootstrap.Modal.getInstance(document.getElementById('modalCreateChild'))?.hide();
+        load();
+    });
+
+    load();
+})();
+</script>
+{% endblock %}

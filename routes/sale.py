@@ -41,6 +41,8 @@ from Services.sale_helpers import (
     snapshot_item_hkd_sector,
     table_has_column,
 )
+from Services.sme.sale_journal import sync_sale_journals
+from Services.tenant_profile import get_current_tenant_profile
 
 
 def _apply_sale_business_line(cursor, update_sql, update_params, ref_doc):
@@ -407,6 +409,13 @@ def complete_pos_bank_payment(sale_id):
             """, (customer_name, company_name, address, tax_code, '131', '511', sale_date, total_amount, sale_id, ref_doc))
 
         cursor.execute("UPDATE sale SET status = 'completed', date = ? WHERE id = ?", (sale_date, sale_id))
+        sync_sale_journals(
+            conn,
+            sale_id,
+            accounting_regime=get_current_tenant_profile().get('accounting_regime'),
+            features=get_current_tenant_profile().get('features'),
+            created_by=session.get('user_name'),
+        )
         conn.commit()
         return {"success": True, "sale_id": sale_id}
     except Exception as e:
@@ -717,6 +726,15 @@ def register_sale_routes(app):
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (customer_name, company_name, address, tax_code, '131', '511', sale_date, total_amount, sale_id, ref_doc))
 
+            if status == 'completed' or old_status == 'completed':
+                sync_sale_journals(
+                    conn,
+                    sale_id,
+                    accounting_regime=get_current_tenant_profile().get('accounting_regime'),
+            features=get_current_tenant_profile().get('features'),
+                    created_by=session.get('user_name'),
+                    replace_existing=old_status == 'completed',
+                )
             conn.commit()
             return jsonify({"success": True, "sale_id": sale_id, "status": status}), 200
 
@@ -962,6 +980,14 @@ def register_sale_routes(app):
                          date_of_debt, unpaid_amount, sale_id, sale_no)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (customer_name, company_name, address, tax_code, '131', '511', sale_date, total_amount, sale_id, ref_doc))
+            sync_sale_journals(
+                conn,
+                sale_id,
+                accounting_regime=get_current_tenant_profile().get('accounting_regime'),
+            features=get_current_tenant_profile().get('features'),
+                created_by=session.get('user_name'),
+                replace_existing=old_status != 'draft',
+            )
             conn.commit()
             return jsonify({"success": True, "sale_id": sale_id, "status": new_status}), 200
         except Exception as e:
@@ -1785,7 +1811,7 @@ def register_sale_routes(app):
 
             # === 2. Lấy thông tin Item từ sale_items (Dùng sale_id & product_id & UseSaleUnit) ===
             c.execute("""
-                SELECT si.quantity AS sold_qty, si.price, si.discount_pct,
+                SELECT si.quantity AS sold_qty, si.price, si.discount_pct, si.tax_pct,
                        si.cost_price AS cost_price_base, 
                        COALESCE(p.unit_ratio, 1) AS unit_ratio,
                        p.name AS product_name, p.unit AS base_unit,
@@ -1832,12 +1858,17 @@ def register_sale_routes(app):
                     WHERE sale_id = ? AND product_id = ? AND UseSaleUnit = ?
                 """, (new_qty, sale_id, product_id, use_unit))
             
-                # Tính lại tổng tiền thực tế còn lại cho bảng sale
-                c.execute("""
-                    SELECT SUM(quantity * price * (1 - COALESCE(discount_pct, 0) / 100)) 
+                # Tính lại đúng như checkout: sau chiết khấu + VAT từng dòng.
+                remaining_rows = c.execute("""
+                    SELECT quantity, price, discount_pct, tax_pct
                     FROM sale_items WHERE sale_id = ?
-                """, (sale_id,))
-                new_total_amount = round(float(c.fetchone()[0] or 0), 0)
+                """, (sale_id,)).fetchall()
+                new_total_amount = sum(
+                    _calc_sale_line_amounts(
+                        row['quantity'], row['price'], row['discount_pct'], row['tax_pct'],
+                    )['line_total']
+                    for row in remaining_rows
+                )
 
             c.execute("UPDATE sale SET total_amount = ?, status = ?, updated_at = ? WHERE id = ?", 
                      (new_total_amount, new_status, return_date, sale_id))
@@ -1876,7 +1907,12 @@ def register_sale_routes(app):
             pn_num = (int(last_pn['import_no'][2:]) + 1) if (last_pn and last_pn['import_no'][2:].isdigit()) else 1
             import_no = f"PN{pn_num:06d}"
 
-            refund_amount = round(qty_return * float(item['price']) * (1 - float(item['discount_pct'] or 0)/100), 0)
+            refund_amount = _calc_sale_line_amounts(
+                qty_return,
+                item['price'],
+                item['discount_pct'],
+                item['tax_pct'],
+            )['line_total']
             items_json = [{
                 "product_name": item['product_name'], "unit": item['sale_unit'] if use_unit == 1 else item['base_unit'],
                 "qty": qty_return, "import_price": cost_price_base * (unit_ratio if use_unit == 1 else 1),
@@ -1915,6 +1951,14 @@ def register_sale_routes(app):
                 c.execute("UPDATE cong_no SET unpaid_amount = MAX(0, unpaid_amount - ?) WHERE sale_no = ?", 
                          (refund_amount, sale_master['sale_no']))
 
+            sync_sale_journals(
+                conn,
+                sale_id,
+                accounting_regime=get_current_tenant_profile().get('accounting_regime'),
+            features=get_current_tenant_profile().get('features'),
+                created_by=session.get('user_name'),
+                replace_existing=True,
+            )
             conn.commit()
             return jsonify({"success": True, "import_no": import_no, "is_full_return": is_full_return, "new_status": new_status})
 

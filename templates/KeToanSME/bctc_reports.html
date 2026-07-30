@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo tài chính — SME{% endblock %}
+
+{% block extra_style %}
+<style>
+    .bctc-wrap { max-width: 1100px; margin: 0 auto; }
+    .bctc-mono { font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
+    .bctc-amount { text-align: right; white-space: nowrap; }
+    .bctc-table td, .bctc-table th { vertical-align: middle; font-size: .9rem; }
+    .bctc-header-row { background: #f1f5f9; font-weight: 700; }
+    .bctc-bold { font-weight: 700; }
+    .bctc-hi { background: #e7f1ff; font-weight: 700; }
+    .bctc-muted { color: #94a3b8; font-size: .8rem; }
+    .bctc-ok { color: #0f5132; }
+    .bctc-bad { color: #842029; }
+    .bctc-indent-0 { padding-left: .5rem !important; }
+    .bctc-indent-1 { padding-left: 1.25rem !important; }
+    .bctc-indent-2 { padding-left: 2.25rem !important; }
+    .bctc-panel { display: none; }
+    .bctc-panel.active { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bctc-wrap">
+    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1"><i class="fas fa-chart-line text-primary me-2"></i>Báo cáo tài chính SME</h4>
+            <p class="text-muted small mb-0">
+                B01 / B02 / B03 / B09 lập từ nhật ký bút toán và <code>bctc_line_code</code> trên danh mục TK (TT99).
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Dashboard
+            </a>
+            <a href="{{ url_for('SME_general_ledger') }}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-scale-balanced me-1"></i> Sổ cái
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Năm</label>
+                    <input type="number" id="rpYear" class="form-control form-control-sm" min="2000" max="2100">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Từ kỳ (B02)</label>
+                    <select id="rpFrom" class="form-select form-select-sm"></select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Đến kỳ</label>
+                    <select id="rpTo" class="form-select form-select-sm"></select>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="rpProfit" checked>
+                        <label class="form-check-label small" for="rpProfit">B01 cộng LN năm nay vào 421</label>
+                    </div>
+                </div>
+                <div class="col-md-3 text-md-end">
+                    <button type="button" class="btn btn-primary btn-sm" id="btnLoad">
+                        <i class="fas fa-rotate me-1"></i> Lập báo cáo
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2 bctc-muted" id="rpMeta">—</div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <button class="nav-link active" type="button" data-panel="b01">Bảng CĐKT (B01-DN)</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" type="button" data-panel="b02">KQHĐKD (B02-DN)</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" type="button" data-panel="b03">LCTT (B03-DN)</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" type="button" data-panel="b09" id="tabB09">Thuyết minh (B09-DN)</button>
+        </li>
+    </ul>
+
+    <div class="bctc-panel active" id="panel-b01">
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive" style="max-height: 68vh;">
+                <table class="table table-sm mb-0 bctc-table">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th style="width:70px;">Mã</th>
+                            <th>Chỉ tiêu</th>
+                            <th class="text-end" style="width:160px;">Số cuối kỳ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="b01Body">
+                        <tr><td colspan="3" class="text-center text-muted py-4">Nhấn Lập báo cáo</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="bctc-panel" id="panel-b02">
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive" style="max-height: 68vh;">
+                <table class="table table-sm mb-0 bctc-table">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th style="width:70px;">Mã</th>
+                            <th>Chỉ tiêu</th>
+                            <th class="text-end" style="width:160px;">Số kỳ này</th>
+                        </tr>
+                    </thead>
+                    <tbody id="b02Body">
+                        <tr><td colspan="3" class="text-center text-muted py-4">Nhấn Lập báo cáo</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="bctc-panel" id="panel-b03">
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive" style="max-height: 68vh;">
+                <table class="table table-sm mb-0 bctc-table">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th style="width:70px;">Mã</th>
+                            <th>Chỉ tiêu</th>
+                            <th class="text-end" style="width:160px;">Số kỳ này</th>
+                        </tr>
+                    </thead>
+                    <tbody id="b03Body">
+                        <tr><td colspan="3" class="text-center text-muted py-4">Nhấn Lập báo cáo</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="bctc-panel" id="panel-b09">
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body py-2" id="b09Entity">—</div>
+        </div>
+        <div id="b09Body" class="pb-4">
+            <div class="text-center text-muted py-4">Nhấn Lập báo cáo</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const now = new Date();
+    const yearEl = document.getElementById('rpYear');
+    yearEl.value = now.getFullYear();
+    const fromSel = document.getElementById('rpFrom');
+    const toSel = document.getElementById('rpTo');
+    for (let m = 1; m <= 12; m++) {
+        fromSel.add(new Option('Tháng ' + m, m));
+        toSel.add(new Option('Tháng ' + m, m));
+    }
+    fromSel.value = '1';
+    toSel.value = String(now.getMonth() + 1);
+
+    function money(v) {
+        if (v === null || v === undefined) return '';
+        return Number(v).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+    }
+
+    function activatePanel(panel) {
+        document.querySelectorAll('[data-panel]').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.bctc-panel').forEach(p => p.classList.remove('active'));
+        const btn = document.querySelector('[data-panel="' + panel + '"]');
+        if (btn) btn.classList.add('active');
+        const el = document.getElementById('panel-' + panel);
+        if (el) el.classList.add('active');
+    }
+
+    document.querySelectorAll('[data-panel]').forEach(btn => {
+        btn.addEventListener('click', () => activatePanel(btn.dataset.panel));
+    });
+
+    if (location.hash === '#b09') activatePanel('b09');
+
+    function renderRows(tbody, rows) {
+        if (!rows || !rows.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">Không có dữ liệu</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(r => {
+            const cls = [
+                r.kind === 'header' ? 'bctc-header-row' : '',
+                r.bold ? 'bctc-bold' : '',
+                r.highlight ? 'bctc-hi' : '',
+            ].filter(Boolean).join(' ');
+            const indent = 'bctc-indent-' + Math.min(r.level || 0, 2);
+            const amt = r.kind === 'header' ? '' : money(r.amount);
+            return `<tr class="${cls}">
+                <td class="bctc-mono">${r.kind === 'header' ? '' : r.code}</td>
+                <td class="${indent}">${r.name}</td>
+                <td class="bctc-amount">${amt}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function renderB09(data) {
+        const ent = data.entity || {};
+        document.getElementById('b09Entity').innerHTML =
+            `<strong>${ent.business_name || 'Doanh nghiệp'}</strong>` +
+            (ent.tax_code ? ` · MST ${ent.tax_code}` : '') +
+            (ent.address ? `<div class="small text-muted">${ent.address}</div>` : '') +
+            `<div class="small text-muted">Mẫu B09-DN · Năm ${data.fiscal_year} · Đến kỳ ${data.period_to} (${data.as_of_date})</div>` +
+            `<div class="mt-2"><button type="button" class="btn btn-sm btn-outline-primary" id="btnSaveB09">Lưu thuyết minh I–IV</button>
+             <span class="small text-muted ms-2">Chỉnh ô bên dưới rồi Lưu (áp dụng mọi kỳ).</span></div>`;
+
+        let html = '';
+        const narrative = data.narrative || {};
+        ['I', 'II', 'III', 'IV'].forEach(key => {
+            const sec = narrative[key];
+            if (!sec) return;
+            html += `<div class="card shadow-sm border-0 mb-3"><div class="card-body">`;
+            html += `<h6 class="fw-bold text-primary mb-3">${key}. ${sec.title}</h6>`;
+            (sec.items || []).forEach(it => {
+                const labelEsc = String(it.label || '').replace(/"/g, '&quot;');
+                html += `<div class="mb-2"><div class="small fw-semibold">${it.code} — ${it.label}</div>` +
+                    `<textarea class="form-control form-control-sm b09-edit" data-code="${it.code}" data-section="${key}" data-label="${labelEsc}" rows="2">${it.value || ''}</textarea></div>`;
+            });
+            html += `</div></div>`;
+        });
+
+        const supp = data.supplementary || {};
+        ['V', 'VI'].forEach(key => {
+            const sec = supp[key];
+            if (!sec) return;
+            html += `<div class="card shadow-sm border-0 mb-3"><div class="card-body">`;
+            html += `<h6 class="fw-bold text-primary mb-3">${key}. ${sec.title}</h6>`;
+            (sec.notes || []).forEach(note => {
+                html += `<div class="mb-3"><div class="fw-semibold mb-1">${note.code} ${note.title}</div>`;
+                if (note.hint) html += `<div class="bctc-muted mb-1">${note.hint}</div>`;
+                const hasAmt = (note.columns || []).indexOf('amount') >= 0;
+                html += `<div class="table-responsive"><table class="table table-sm bctc-table mb-1">
+                    <thead class="table-light"><tr>
+                        <th style="width:90px;">TK</th><th>Chỉ tiêu</th>`;
+                if (hasAmt) {
+                    html += `<th class="text-end">Số kỳ</th>`;
+                } else {
+                    html += `<th class="text-end">Đầu năm</th><th class="text-end">Cuối kỳ</th>`;
+                }
+                html += `</tr></thead><tbody>`;
+                const rows = note.rows || [];
+                if (!rows.length) {
+                    html += `<tr><td colspan="${hasAmt ? 3 : 4}" class="text-muted small">Không phát sinh</td></tr>`;
+                } else {
+                    rows.forEach(r => {
+                        html += `<tr><td class="bctc-mono">${r.account_code}</td><td>${r.name}</td>`;
+                        if (hasAmt) html += `<td class="bctc-amount">${money(r.amount)}</td>`;
+                        else html += `<td class="bctc-amount">${money(r.opening)}</td><td class="bctc-amount">${money(r.closing)}</td>`;
+                        html += `</tr>`;
+                    });
+                    const t = note.totals || {};
+                    html += `<tr class="bctc-bold"><td></td><td>Cộng</td>`;
+                    if (hasAmt) html += `<td class="bctc-amount">${money(t.amount)}</td>`;
+                    else html += `<td class="bctc-amount">${money(t.opening)}</td><td class="bctc-amount">${money(t.closing)}</td>`;
+                    html += `</tr>`;
+                }
+                html += `</tbody></table></div></div>`;
+            });
+            html += `</div></div>`;
+        });
+        document.getElementById('b09Body').innerHTML = html;
+        const saveBtn = document.getElementById('btnSaveB09');
+        if (saveBtn) {
+            saveBtn.onclick = async () => {
+                const items = Array.from(document.querySelectorAll('.b09-edit')).map(el => ({
+                    code: el.dataset.code,
+                    section: el.dataset.section,
+                    label: el.dataset.label,
+                    value: el.value,
+                }));
+                try {
+                    const res = await fetch('/api/sme/bctc/b09/narrative', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ items }),
+                    });
+                    const out = await res.json();
+                    if (!out.success) throw new Error(out.error || 'Lỗi lưu');
+                    saveBtn.textContent = `Đã lưu ${out.saved || items.length} mục`;
+                    setTimeout(() => { saveBtn.textContent = 'Lưu thuyết minh I–IV'; }, 2000);
+                } catch (e) {
+                    alert(e.message);
+                }
+            };
+        }
+    }
+
+    async function loadAll() {
+        const y = yearEl.value;
+        const pf = fromSel.value;
+        const pt = toSel.value;
+        const profit = document.getElementById('rpProfit').checked ? '1' : '0';
+        ['b01Body', 'b02Body', 'b03Body'].forEach(id => {
+            document.getElementById(id).innerHTML =
+                '<tr><td colspan="3" class="text-center text-muted py-4">Đang tải…</td></tr>';
+        });
+        document.getElementById('b09Body').innerHTML =
+            '<div class="text-center text-muted py-4">Đang tải…</div>';
+        try {
+            const [b01Res, b02Res, b03Res, b09Res] = await Promise.all([
+                fetch(`/api/sme/bctc/b01?year=${y}&period_to=${pt}&include_current_profit=${profit}`),
+                fetch(`/api/sme/bctc/b02?year=${y}&period_from=${pf}&period_to=${pt}`),
+                fetch(`/api/sme/bctc/b03?year=${y}&period_from=${pf}&period_to=${pt}`),
+                fetch(`/api/sme/bctc/b09?year=${y}&period_to=${pt}`),
+            ]);
+            const b01 = await b01Res.json();
+            const b02 = await b02Res.json();
+            const b03 = await b03Res.json();
+            const b09 = await b09Res.json();
+            if (!b01.success) throw new Error(b01.error || 'Lỗi B01');
+            if (!b02.success) throw new Error(b02.error || 'Lỗi B02');
+            if (!b03.success) throw new Error(b03.error || 'Lỗi B03');
+            if (!b09.success) throw new Error(b09.error || 'Lỗi B09');
+
+            renderRows(document.getElementById('b01Body'), b01.data.rows);
+            renderRows(document.getElementById('b02Body'), b02.data.rows);
+            renderRows(document.getElementById('b03Body'), b03.data.rows);
+            renderB09(b09.data);
+
+            const t = b01.data.totals || {};
+            const balCls = t.balanced ? 'bctc-ok' : 'bctc-bad';
+            const balTxt = t.balanced
+                ? 'Cân đối Tài sản = Nguồn vốn'
+                : `Lệch ${money(t.difference)} (TS ${money(t.total_assets)} vs NV ${money(t.total_equity_and_liabilities)})`;
+            const cf = b03.data.totals || {};
+            const cfCls = cf.balanced ? 'bctc-ok' : 'bctc-bad';
+            const cfTxt = cf.balanced
+                ? 'LCTT khớp tiền đầu/cuối kỳ'
+                : `LCTT lệch ${money(cf.difference)}`;
+            const s = b09.data.summary || {};
+            document.getElementById('rpMeta').innerHTML =
+                `B01 tại ${b01.data.as_of_date}` +
+                (b01.data.include_current_profit
+                    ? ` · LN năm nay ${money(b01.data.current_year_profit)} → 421`
+                    : '') +
+                ` · <span class="${balCls}">${balTxt}</span>` +
+                ` · B02 LNST ${money(b02.data.totals.profit_after_tax)}` +
+                ` · B03 tiền cuối ${money(cf.cash_closing)} · <span class="${cfCls}">${cfTxt}</span>` +
+                ` · B09 tiền ${money(s.cash_closing)} · HTK ${money(s.inventory_closing)}`;
+        } catch (e) {
+            document.getElementById('rpMeta').textContent = e.message;
+            document.getElementById('b01Body').innerHTML =
+                `<tr><td colspan="3" class="text-center text-danger py-4">${e.message}</td></tr>`;
+            document.getElementById('b09Body').innerHTML =
+                `<div class="text-center text-danger py-4">${e.message}</div>`;
+        }
+    }
+
+    document.getElementById('btnLoad').addEventListener('click', loadAll);
+    loadAll();
+})();
+</script>
+{% endblock %}

@@ -60,3 +60,7 @@ pos_backup_*
 
 # --- Uploads runtime (tùy chọn — bỏ comment nếu muốn sync uploads) ---
 # uploads/
+
+# --- Legal source binaries (giữ bản text/ trong repo để AI/dev tham chiếu) ---
+data/legal/tt99_2025/*.doc
+data/legal/tt58_2026/*.docx

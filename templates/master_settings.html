@@ -613,9 +613,15 @@ async function showTenantModal(mode, data = {}) {
     const legalIntro = sectorPayload.nn_sector_legal_intro || sectorPayload.hkd_sector_legal_intro || '';
     const initialNn = data.enabled_nn_sectors && data.enabled_nn_sectors.length
         ? data.enabled_nn_sectors
-        : HkdSectorForm.suggestNnForBusinessLine(data.business_line || 'pos', sectors);
+        : (HkdSectorForm.isSmeRegime(data.accounting_regime)
+            ? []
+            : HkdSectorForm.suggestNnForBusinessLine(data.business_line || 'pos', sectors));
     const nnField = HkdSectorForm.buildNnCheckboxGroup('swal-nn-box', 'swal-nn-help', sectors, initialNn, legalIntro);
-    const dtOptions = HkdSectorForm.buildDtTierOptions(data.revenue_tier || 'DT1');
+    const dtOptions = HkdSectorForm.buildDtTierOptions(
+        HkdSectorForm.isSmeRegime(data.accounting_regime) ? '' : (data.revenue_tier || 'DT1'),
+        { allowEmpty: true }
+    );
+    const regimeOptions = HkdSectorForm.buildRegimeOptions(data.accounting_regime || 'HKD');
     const blOpts = `
         <option value="pos" ${data.business_line === 'pos' ? 'selected' : ''}>Bán Hàng - Dịch Vụ - Sản Xuất</option>
         <option value="fb_service" ${data.business_line === 'fb_service' ? 'selected' : ''}>Dịch Vụ Ăn Uống</option>
@@ -645,14 +651,22 @@ async function showTenantModal(mode, data = {}) {
                 <div class="row g-2 mb-2">
                     <div class="col-6">
                         <label class="form-label small fw-bold">Chế độ kế toán</label>
-                        <select id="swal-regime" class="form-select" disabled>
-                            <option value="HKD" selected>HKD (Hộ kinh doanh)</option>
-                        </select>
+                        <select id="swal-regime" class="form-select">${regimeOptions}</select>
+                        <div class="form-text">HKD = sổ hộ; SME TT58/TT99 = sổ kép DN</div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-6" id="swal-dt-wrap">
                         <label class="form-label small fw-bold">Nhóm doanh thu DT1–DT4</label>
                         <select id="swal-revenue-tier" class="form-select">${dtOptions}</select>
+                        <div class="form-text">Chỉ áp dụng Hộ kinh doanh</div>
                     </div>
+                </div>
+                <div class="mb-2" id="swal-vat-filing-wrap" style="display:none">
+                    <label class="form-label small fw-bold">Kỳ kê khai GTGT (SME)</label>
+                    <select id="swal-vat-filing" class="form-select">
+                        <option value="monthly" ${(data.vat_filing_period || data.filing_period) === 'monthly' ? 'selected' : ''}>Theo tháng</option>
+                        <option value="quarterly" ${(data.vat_filing_period || data.filing_period || 'quarterly') !== 'monthly' ? 'selected' : ''}>Theo quý</option>
+                    </select>
+                    <div class="form-text">TT58 mặc định quý · TT99 mặc định tháng — có thể đổi</div>
                 </div>
                 <div class="mb-2">
                     <label class="form-label small fw-bold">Ngành nghiệp vụ</label>
@@ -669,6 +683,16 @@ async function showTenantModal(mode, data = {}) {
         didOpen: () => {
             HkdSectorForm.bindNnSectorHelp('swal-nn-box', 'swal-nn-help', sectors, legalIntro);
             HkdSectorForm.bindBusinessLineNnSuggest('swal-business-line', 'swal-nn-box', 'swal-nn-help', sectors, legalIntro);
+            HkdSectorForm.bindRegimeHkdFields('swal-regime', {
+                tierSelectId: 'swal-revenue-tier',
+                nnContainerId: 'swal-nn-box',
+                helpId: 'swal-nn-help',
+                businessLineId: 'swal-business-line',
+                vatFilingWrapId: 'swal-vat-filing-wrap',
+                vatFilingSelectId: 'swal-vat-filing',
+                sectors,
+                legalIntro,
+            });
             const expiryEl = document.getElementById('swal-expiry-date');
             if (expiryEl) {
                 KetoDatePicker.init(expiryEl, data.expiry_date || null);
@@ -677,7 +701,13 @@ async function showTenantModal(mode, data = {}) {
         preConfirm: () => {
             const tid = document.getElementById('swal-tenant-id').value.trim();
             if (!tid) return Swal.showValidationMessage('Vui lòng nhập Tenant ID');
-            const nnList = HkdSectorForm.getSelectedNnSectors('swal-nn-box');
+            const regime = document.getElementById('swal-regime').value;
+            const sme = HkdSectorForm.isSmeRegime(regime);
+            const nnList = HkdSectorForm.getSelectedNnSectors('swal-nn-box', { allowEmpty: sme });
+            if (!sme && !nnList.length) {
+                return Swal.showValidationMessage('HKD cần chọn ít nhất một ngành nghề NN');
+            }
+            const vatEl = document.getElementById('swal-vat-filing');
             return {
                 tenant_id: tid,
                 business_name: document.getElementById('swal-business-name').value.trim(),
@@ -685,11 +715,13 @@ async function showTenantModal(mode, data = {}) {
                 email: document.getElementById('swal-email').value.trim(),
                 address: document.getElementById('swal-address').value.trim(),
                 expiry_date: KetoDatePicker.getIsoValue('swal-expiry-date'),
-                accounting_regime: document.getElementById('swal-regime').value,
-                revenue_tier: document.getElementById('swal-revenue-tier').value,
+                accounting_regime: regime,
+                revenue_tier: sme ? '' : document.getElementById('swal-revenue-tier').value,
                 business_line: document.getElementById('swal-business-line').value,
-                enabled_nn_sectors: nnList,
-                primary_nn_sector: nnList[0],
+                enabled_nn_sectors: sme ? [] : nnList,
+                primary_nn_sector: sme ? '' : (nnList[0] || ''),
+                vat_filing_period: sme && vatEl ? vatEl.value : undefined,
+                filing_period: sme && vatEl ? vatEl.value : undefined,
             };
         }
     }).then(async (result) => {
