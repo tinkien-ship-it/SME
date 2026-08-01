@@ -15,9 +15,11 @@
   th,td{border:1px solid #333;padding:4px 6px}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN CHỨNG TỪ' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div>
     <div><strong>DOANH NGHIỆP:</strong> {{ info.business_name or info.company_name or '' }}</div>
@@ -35,7 +37,7 @@
   '05-TT': 'GIẤY ĐỀ NGHỊ THANH TOÁN'
 } %}
 <div class="title">{{ titles.get(doc.form_code, 'CHỨNG TỪ TẠM ỨNG') }}</div>
-<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.doc_date }}</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.doc_date|format_vn_date }}</div>
 <div class="row">Họ tên: <strong>{{ doc.employee_name }}</strong></div>
 <div class="row">Nội dung: {{ doc.purpose or '' }}</div>
 <div class="row">Số tiền: <strong>{{ '{:,.0f}'.format(doc.amount|float).replace(',', '.') }} đ</strong></div>
@@ -46,7 +48,7 @@
 {% endif %}
 {% if doc.lines %}
 <table>
-  <thead><tr><th>STT</th><th>Diễn giải</th><th>TK</th><th>Số tiền</th><th>Hóa đơn</th></tr></thead>
+  <thead><tr><th>STT</th><th>Diễn giải</th><th>Tài khoản</th><th>Số tiền</th><th>Hóa đơn</th></tr></thead>
   <tbody>
   {% for ln in doc.lines %}
   <tr>
@@ -63,6 +65,7 @@
   <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Người đề nghị<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Thủ quỹ<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
 </div>
 </body>
 </html>

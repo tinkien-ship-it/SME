@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}Tờ khai GTGT SME{% endblock %}
+{% block title %}Tờ khai thuế giá trị gia tăng — Kế toán doanh nghiệp{% endblock %}
 {% block sme_head %}
 <style>
 .money{font-family:ui-monospace,Consolas,monospace;text-align:right}
@@ -12,10 +12,10 @@
 
     <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3 no-print">
       <div>
-        <h4 class="fw-bold mb-1">Tờ khai GTGT (bảng chỉ tiêu)</h4>
+        <h4 class="fw-bold mb-1">Tờ khai thuế giá trị gia tăng (bảng chỉ tiêu)</h4>
         <p class="text-muted small mb-0">Đối chiếu sổ kép theo tháng/quý · xuất XML khung HTKK (SME-1.0) ·
-          <a href="{{ url_for('SME_tax_nsnn') }}">Thuế &amp; NSNN</a> ·
-          <a href="{{ url_for('SME_auto_posting') }}">Quyết toán GTGT</a>
+          <a href="{{ url_for('SME_tax_nsnn') }}">Thuế và ngân sách nhà nước</a> ·
+          <a href="{{ url_for('SME_auto_posting') }}">Quyết toán thuế giá trị gia tăng</a>
           <span id="regimeVatHint" class="ms-1"></span>
         </p>
       </div>
@@ -66,7 +66,7 @@
       modeEl.value=def; sync();
     }
     const hint=document.getElementById('regimeVatHint');
-    if(hint) hint.textContent=j.data.label+' · mặc định GTGT '+def;
+    if(hint) hint.textContent=j.data.label+' · mặc định thuế giá trị gia tăng '+def;
   }).catch(()=>{});
   modeEl.addEventListener('change',()=>{ modeEl.dataset.userSet='1'; });
   const money=v=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:0});
@@ -85,7 +85,7 @@
       document.getElementById('sumCards').innerHTML=`
         <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Kỳ kê khai</div><div class="fw-bold">${last.filing_label||''}</div></div></div></div>
         <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">DT bán ra (21)</div><div class="fs-5 fw-bold">${money(s.revenue)} đ</div></div></div></div>
-        <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">GTGT phải nộp (25)</div><div class="fs-5 fw-bold text-danger">${money(s.vat_payable)} đ</div></div></div></div>
+        <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Thuế giá trị gia tăng phải nộp (25)</div><div class="fs-5 fw-bold text-danger">${money(s.vat_payable)} đ</div></div></div></div>
         <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Còn khấu trừ (24)</div><div class="fs-5 fw-bold text-success">${money(s.vat_credit)} đ</div></div></div></div>`;
       let html='<h6 class="fw-bold">Chỉ tiêu tờ khai (đối chiếu sổ)</h6><table class="table table-sm"><thead><tr><th>Mã</th><th>Chỉ tiêu</th><th class="text-end">Số tiền</th></tr></thead><tbody>';
       (last.indicators||[]).forEach(r=>{
@@ -94,7 +94,7 @@
       html+='</tbody></table>';
       const rb=last.rate_breakdown||[];
       if(rb.length){
-        html+='<h6 class="fw-bold mt-3">Phân bổ GTGT đầu ra theo thuế suất</h6><table class="table table-sm"><thead><tr><th>Thuế suất</th><th class="text-end">GTGT đầu ra</th></tr></thead><tbody>';
+        html+='<h6 class="fw-bold mt-3">Phân bổ thuế giá trị gia tăng đầu ra theo thuế suất</h6><table class="table table-sm"><thead><tr><th>Thuế suất</th><th class="text-end">Thuế giá trị gia tăng đầu ra</th></tr></thead><tbody>';
         rb.forEach(r=>{
           html+=`<tr><td>${r.label||((r.tax_rate!=null)?(r.tax_rate+'%'):'')}</td><td class="money">${money(r.vat_output||r.vat||0)}</td></tr>`;
         });
@@ -105,7 +105,7 @@
 
       const rows=last.monthly_break||[];
       if(rows.length>1){
-        let mhtml='<h6 class="fw-bold">Chi tiết theo tháng trong kỳ</h6><table class="table table-sm"><thead><tr><th>Tháng</th><th class="text-end">DT</th><th class="text-end">GTGT ra</th><th class="text-end">GTGT vào</th><th class="text-end">Phải nộp</th></tr></thead><tbody>';
+        let mhtml='<h6 class="fw-bold">Chi tiết theo tháng trong kỳ</h6><table class="table table-sm"><thead><tr><th>Tháng</th><th class="text-end">Doanh thu</th><th class="text-end">Thuế ra</th><th class="text-end">Thuế vào</th><th class="text-end">Phải nộp</th></tr></thead><tbody>';
         rows.forEach(r=>{
           mhtml+=`<tr><td>${r.label}</td><td class="money">${money(r.revenue)}</td><td class="money">${money(r.vat_output)}</td><td class="money">${money(r.vat_input)}</td><td class="money">${money(r.vat_payable)}</td></tr>`;
         });

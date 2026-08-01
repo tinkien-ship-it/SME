@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}Dashboard Bán Hàng - SME{% endblock %}
+{% block title %}Tổng quan bán hàng — Kế toán doanh nghiệp{% endblock %}
 
 {% block sme_head %}
 <style>
@@ -13,7 +13,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
       <div>
         <h3 class="fw-bold text-primary mb-1">Tổng quan bán hàng</h3>
-        <p class="text-muted mb-0">Doanh thu / giá vốn / phải thu từ sổ kép SME</p>
+        <p class="text-muted mb-0">Doanh thu, giá vốn và phải thu từ sổ kế toán kép</p>
       </div>
       <div class="d-flex gap-2 align-items-center">
         <select class="form-select shadow-sm" id="dateFilter" style="width:160px;height:42px">
@@ -27,7 +27,7 @@
     <div class="row g-4 mb-4">
 <div class="col-xl-3 col-md-6"><div class="card metric-card h-100"><div class="card-body">
   <div class="d-flex justify-content-between align-items-start">
-    <div><span class="text-muted small fw-semibold text-uppercase">Doanh thu YTD</span>
+    <div><span class="text-muted small fw-semibold text-uppercase">Doanh thu từ đầu năm</span>
     <h3 class="fw-bold text-primary mt-2 mb-0" id="m1">0</h3></div>
     <div class="metric-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-chart-line"></i></div>
   </div>
@@ -51,7 +51,7 @@
 </div></div></div>
 <div class="col-xl-3 col-md-6"><div class="card metric-card h-100"><div class="card-body">
   <div class="d-flex justify-content-between align-items-start">
-    <div><span class="text-muted small fw-semibold text-uppercase">Phải thu KH (131)</span>
+    <div><span class="text-muted small fw-semibold text-uppercase">Phải thu khách hàng (131)</span>
     <h3 class="fw-bold text-warning mt-2 mb-0" id="m4">0</h3></div>
     <div class="metric-icon bg-warning bg-opacity-10 text-warning"><i class="fas fa-hand-holding-dollar"></i></div>
   </div>
@@ -104,7 +104,7 @@ async function loadDash(){
   document.getElementById('m3').textContent=money(d.gross_profit);
   document.getElementById('m3sub').textContent=d.gross_margin_pct==null?'—':('Biên lãi gộp '+d.gross_margin_pct.toFixed(1)+'%');
   document.getElementById('m4').textContent=money(d.receivable);
-  document.getElementById('m4sub').textContent='Đã thu YTD '+money(d.collected_ytd)+' · Đơn '+ (d.order_count||0);
+  document.getElementById('m4sub').textContent='Đã thu từ đầu năm '+money(d.collected_ytd)+' · Đơn '+ (d.order_count||0);
   const months=d.monthly||[];
   if(trendChart) trendChart.destroy();
   trendChart=new Chart(document.getElementById('saleTrend').getContext('2d'),{type:'bar',data:{labels:months.map(x=>x.label),datasets:[

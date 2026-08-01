@@ -953,6 +953,8 @@ def register_inventory_routes(app):
                         discount_amount=float(line_disc),
                         line_total=float(line_total),
                         subtotal=float(line_subtotal),
+                        so_thang_khau_hao=item.get('so_thang_khau_hao') or item.get('depreciation_months'),
+                        ngay_bat_dau_su_dung=item.get('ngay_bat_dau_su_dung') or item.get('start_date') or import_date,
                     )
                 elif line_type == 'tools':
                     register_tool_from_import(

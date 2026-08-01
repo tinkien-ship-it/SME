@@ -1,16 +1,16 @@
 {% set sme_active = request.endpoint or '' %}
 {% set regime = (tenant_profile.accounting_regime or 'SME_TT99')|upper %}
-{% set regime_short = 'TT58 siêu nhỏ' if 'TT58' in regime else 'TT99' %}
+{% set regime_short = 'Thông tư 58 — doanh nghiệp siêu nhỏ' if 'TT58' in regime else 'Thông tư 99 — doanh nghiệp' %}
 
 <aside class="accounting-hub-sidebar shadow-sm" id="smeSidebar">
     <div class="px-3 mb-2">
-        <span class="hub-brand text-uppercase fw-bold">{{ sme_hub_title | default('Kế Toán SME') }}</span>
+        <span class="hub-brand text-uppercase fw-bold">{{ sme_hub_title | default('Kế toán doanh nghiệp') }}</span>
         <div class="text-muted small">{{ regime_short }} · Kế toán sổ kép</div>
     </div>
 
     <div class="hub-search">
         <input type="search" class="form-control form-control-sm" id="smeMenuSearch"
-               placeholder="Tìm menu..." autocomplete="off">
+               placeholder="Tìm trong menu..." autocomplete="off">
     </div>
 
     <nav class="nav flex-column" id="smeSidebarNav">
@@ -55,7 +55,7 @@
                 </div>
             {% endif %}
         {% else %}
-        <div class="px-3 text-muted small">Không có menu Kế Toán SME.</div>
+        <div class="px-3 text-muted small">Không có menu kế toán doanh nghiệp.</div>
         {% endfor %}
     </nav>
 </aside>

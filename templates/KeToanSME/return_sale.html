@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Khách trả hàng{% endblock %}
+{% block title %}Khách trả hàng{% endblock %}
 
 {% block sme_head %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -369,7 +369,7 @@ async function loadRecentReturns() {
             <td>${r.id}</td><td>${r.sale_no || r.sale_id || ''}</td>
             <td>${r.product_name || r.product_id || ''}</td>
             <td class="text-end">${r.quantity || 0}</td>
-            <td>${(r.date || '').toString().slice(0, 10)}</td>
+            <td>${fmtDateVi(r.date)}</td>
             <td><button class="btn btn-sm btn-outline-danger" onclick="voidReturnSale(${r.id})">Hủy</button></td>
         </tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center">Chưa có phiếu trả</td></tr>';
     } catch (e) { console.warn(e); }

@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}Dashboard Kế Toán SME{% endblock %}
+{% block title %}Tổng quan kế toán doanh nghiệp{% endblock %}
 
 {% block sme_head %}
 <style>
@@ -17,10 +17,10 @@
 {% set regime_label = tenant_profile.accounting_regime_label or regime %}
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <div>
-                <h4 class="fw-bold text-dark mb-0">{{ sme_hub_title | default('Kế Toán SME') }}</h4>
+                <h4 class="fw-bold text-dark mb-0">{{ sme_hub_title | default('Kế toán doanh nghiệp') }}</h4>
                 <p class="text-muted small mb-0">
                     {{ regime_label }}
-                    {% if 'TT58' in regime %} · Chế độ siêu nhỏ (TT58){% else %} · Chế độ doanh nghiệp (TT99){% endif %}
+                    {% if 'TT58' in regime %} · Chế độ siêu nhỏ (Thông tư 58){% else %} · Chế độ doanh nghiệp (Thông tư 99){% endif %}
                 </p>
             </div>
             <div class="d-flex gap-2 align-items-end">
@@ -173,7 +173,7 @@
             document.getElementById('metric-receivable').innerText = money(d.receivable);
             document.getElementById('metric-payable').innerText = money(d.payable);
             document.getElementById('vatHint').innerText =
-                `GTGT phải nộp ${money(d.vat_payable)} · còn khấu trừ ${money(d.vat_credit)}`;
+                `Thuế giá trị gia tăng phải nộp ${money(d.vat_payable)} · còn khấu trừ ${money(d.vat_credit)}`;
 
             const months = d.monthly || [];
             if (plChart) plChart.destroy();
@@ -195,7 +195,7 @@
             taxChart = new Chart(document.getElementById('smeTaxChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: ['GTGT', 'TNDN', 'TNCN', 'Khác'],
+                    labels: ['Thuế giá trị gia tăng', 'Thuế thu nhập doanh nghiệp', 'Thuế thu nhập cá nhân', 'Khác'],
                     datasets: [{
                         data: [tb.gtgt || 0, tb.tndn || 0, tb.tncn || 0, tb.other || 0],
                         backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#6c757d'],

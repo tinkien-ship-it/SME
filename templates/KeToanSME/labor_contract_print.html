@@ -13,9 +13,11 @@
   .sign div{width:45%}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div>
     <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
@@ -23,11 +25,11 @@
   </div>
   <div style="text-align:right">
     <div><strong>Mẫu số 05 - LĐTL</strong></div>
-    <div class="muted">(TT 99/2025/TT-BTC)</div>
+    <div class="muted">(Thông tư 99/2025/TT-BTC)</div>
   </div>
 </div>
 <div class="title">HỢP ĐỒNG GIAO KHOÁN</div>
-<div style="text-align:center">Số: <strong>{{ doc.contract_no }}</strong> — Ngày {{ doc.contract_date }}</div>
+<div style="text-align:center">Số: <strong>{{ doc.contract_no }}</strong> — Ngày {{ doc.contract_date|format_vn_date }}</div>
 <div class="row"><strong>Bên giao khoán:</strong> {{ doc.employer_rep_name or info.business_name or '' }}
   — {{ doc.employer_rep_title or '' }}</div>
 <div class="row"><strong>Bên nhận khoán:</strong> {{ doc.contractor_name }}
@@ -44,6 +46,7 @@
 <div class="sign">
   <div>ĐẠI DIỆN BÊN GIAO KHOÁN<br><span class="muted">(Ký, họ tên)</span><br><br>{{ doc.employer_rep_name or '' }}</div>
   <div>ĐẠI DIỆN BÊN NHẬN KHOÁN<br><span class="muted">(Ký, họ tên)</span><br><br>{{ doc.contractor_name }}</div>
+</div>
 </div>
 </body>
 </html>

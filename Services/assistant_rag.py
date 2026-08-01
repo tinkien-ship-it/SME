@@ -16,7 +16,7 @@ _H5_RE = re.compile(r'<h5[^>]*>(.*?)</h5>', re.I | re.S)
 _H6_RE = re.compile(r'<h6[^>]*>(.*?)</h6>', re.I | re.S)
 _LI_RE = re.compile(r'<li[^>]*>(.*?)</li>', re.I | re.S)
 _P_RE = re.compile(r'<p[^>]*>(.*?)</p>', re.I | re.S)
-_TAB_RE = re.compile(r'id="(banhang|ketoan|fb|phongtro)"', re.I)
+_TAB_RE = re.compile(r'id="(banhang|ketoan-sme|ketoan|fb|phongtro)"', re.I)
 
 _CACHE: dict[str, Any] = {'mtime': 0.0, 'chunks': []}
 
@@ -58,7 +58,8 @@ def _parse_huongdan_chunks(html: str) -> list[dict[str, str]]:
     chunks: list[dict[str, str]] = []
     section_names = {
         'banhang': 'Phân hệ Bán hàng',
-        'ketoan': 'Phân hệ Kế toán',
+        'ketoan-sme': 'Kế toán SME',
+        'ketoan': 'Kế toán HKD',
         'fb': 'Dịch vụ ẩm thực (F&B)',
         'phongtro': 'Quản lý Phòng trọ',
     }
@@ -114,45 +115,55 @@ def _parse_huongdan_chunks(html: str) -> list[dict[str, str]]:
     return chunks
 
 
-def _parse_release_notes(text: str) -> list[dict[str, str]]:
+def _parse_markdown_guide(text: str, *, section: str, doc_prefix: str) -> list[dict[str, str]]:
+    """Parse file markdown kiểu ## tiêu đề / nội dung (release notes hoặc guide SME)."""
     chunks: list[dict[str, str]] = []
-    current_title = 'Release notes'
+    current_title = section
     buf: list[str] = []
     for line in text.splitlines():
         line = line.strip()
+        if line.startswith('##'):
+            if buf:
+                body = ' '.join(buf).strip()
+                if body:
+                    chunks.append({
+                        'doc_id': f'{doc_prefix}_{len(chunks)}',
+                        'title': current_title,
+                        'section': section,
+                        'text': body[:1200],
+                    })
+                buf = []
+            current_title = line.lstrip('#').strip()
+            continue
         if not line or line.startswith('#'):
-            if line.startswith('##'):
-                if buf:
-                    body = ' '.join(buf).strip()
-                    if body:
-                        chunks.append({
-                            'doc_id': f'release_{len(chunks)}',
-                            'title': current_title,
-                            'section': 'Phiên bản',
-                            'text': body,
-                        })
-                    buf = []
-                current_title = line.lstrip('#').strip()
             continue
         if line.startswith('-'):
             buf.append(line.lstrip('- '))
+        else:
+            buf.append(line)
     if buf:
         body = ' '.join(buf).strip()
         if body:
             chunks.append({
-                'doc_id': f'release_{len(chunks)}',
+                'doc_id': f'{doc_prefix}_{len(chunks)}',
                 'title': current_title,
-                'section': 'Phiên bản',
-                'text': body,
+                'section': section,
+                'text': body[:1200],
             })
     return chunks
+
+
+def _parse_release_notes(text: str) -> list[dict[str, str]]:
+    return _parse_markdown_guide(text, section='Phiên bản', doc_prefix='release')
 
 
 def _load_all_chunks() -> list[dict[str, str]]:
     huongdan_path = os.path.join(BASE_DIR, 'templates', 'huongdansudung.html')
     notes_path = os.path.join(BASE_DIR, 'data', 'assistant_release_notes.txt')
+    sme_guide_path = os.path.join(BASE_DIR, 'data', 'assistant_sme_guide.txt')
+    paths = (huongdan_path, notes_path, sme_guide_path)
     mtimes = []
-    for p in (huongdan_path, notes_path):
+    for p in paths:
         if os.path.isfile(p):
             mtimes.append(os.path.getmtime(p))
     cache_mtime = max(mtimes) if mtimes else 0.0
@@ -166,6 +177,11 @@ def _load_all_chunks() -> list[dict[str, str]]:
     notes = _read_file(notes_path)
     if notes:
         chunks.extend(_parse_release_notes(notes))
+    sme_guide = _read_file(sme_guide_path)
+    if sme_guide:
+        chunks.extend(_parse_markdown_guide(
+            sme_guide, section='Kế toán SME', doc_prefix='sme_guide',
+        ))
 
     _CACHE['mtime'] = cache_mtime
     _CACHE['chunks'] = chunks
@@ -180,7 +196,7 @@ def search_rag(query: str, *, top_k: int = 3, section: str | None = None) -> lis
 
     results: list[RagChunk] = []
     for raw in _load_all_chunks():
-        if section and section.lower() not in (raw.get('section') or '').lower():
+        if section and _normalize(section) not in _normalize(raw.get('section') or ''):
             continue
         text = raw['text']
         title = raw.get('title') or ''
@@ -203,6 +219,10 @@ def search_rag(query: str, *, top_k: int = 3, section: str | None = None) -> lis
                 text=text,
                 score=score,
             ))
+
+    # SME: nếu lọc section không ra kết quả, thử lại không lọc (tránh trống hoàn toàn)
+    if not results and section:
+        return search_rag(query, top_k=top_k, section=None)
 
     results.sort(key=lambda c: c.score, reverse=True)
     return results[:top_k]

@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Phiếu nhập kho 01-VT{% endblock %}
+{% block title %}Phiếu nhập kho 01-VT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
@@ -19,7 +19,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light"><tr>
-        <th>Số PN</th><th>Ngày</th><th>Nhà cung cấp</th><th>Hóa đơn</th><th class="text-end">Giá trị</th><th>TT</th><th></th>
+        <th>Số phiếu nhập</th><th>Ngày</th><th>Nhà cung cấp</th><th>Hóa đơn</th><th class="text-end">Giá trị</th><th>Tình trạng</th><th></th>
       </tr></thead>
       <tbody id="tbody"><tr><td colspan="7" class="text-center text-muted py-4">Đang tải…</td></tr></tbody>
     </table>
@@ -42,7 +42,7 @@ async function loadList(){
   if(!json.data.length){ tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Không có phiếu nhập</td></tr>'; return; }
   tbody.innerHTML = json.data.map(r => `<tr>
     <td class="fw-bold">${r.voucher_no||'—'}</td>
-    <td>${(r.date||'').toString().slice(0,10)}</td>
+    <td>${fmtDateVi(r.date)}</td>
     <td>${r.supplier_name||''}</td>
     <td class="small">${r.bill_no||'—'}</td>
     <td class="text-end fw-bold">${fmt(r.total_amount)}</td>

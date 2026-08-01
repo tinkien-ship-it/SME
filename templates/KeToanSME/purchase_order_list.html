@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Đơn đặt hàng NCC{% endblock %}
+{% block title %}Đơn đặt hàng nhà cung cấp{% endblock %}
 {% block extra_style %}
 <style>
 .money{font-family:ui-monospace,Consolas,monospace;text-align:right}
@@ -12,7 +12,7 @@
   <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
     <div>
       <h4 class="fw-bold mb-1">Đơn đặt hàng nhà cung cấp</h4>
-      <p class="text-muted small mb-0">Theo dõi nhu cầu mua trước khi nhận HĐ / nhập kho ·
+      <p class="text-muted small mb-0">Theo dõi nhu cầu mua trước khi nhận hóa đơn / nhập kho ·
         <a href="{{ url_for('SME_purchasing') }}">Mua hàng</a></p>
     </div>
     <a class="btn btn-primary btn-sm" href="{{ url_for('SME_purchase_order_create') }}"><i class="fas fa-plus me-1"></i> Tạo đơn</a>
@@ -31,14 +31,14 @@
           <option value="cancelled">Đã hủy</option>
         </select>
       </div>
-      <div class="col-md-3"><label class="form-label small mb-1">Tìm</label><input id="kw" class="form-control form-control-sm" placeholder="Số ĐH / NCC"></div>
+      <div class="col-md-3"><label class="form-label small mb-1">Tìm</label><input id="kw" class="form-control form-control-sm" placeholder="Số đơn hàng / nhà cung cấp"></div>
       <div class="col-md-1"><button class="btn btn-outline-primary btn-sm w-100" id="btn">Lọc</button></div>
     </div>
   </div>
   <div class="card border-0 shadow-sm"><div class="table-responsive">
     <table class="table table-sm table-hover mb-0 align-middle">
       <thead class="table-light"><tr>
-        <th>Số ĐH</th><th>Ngày</th><th>NCC</th><th class="text-end">Tổng</th><th>TT</th><th></th>
+        <th>Số đơn hàng</th><th>Ngày</th><th>Nhà cung cấp</th><th class="text-end">Tổng</th><th>Tình trạng</th><th></th>
       </tr></thead>
       <tbody id="tbody"><tr><td colspan="6" class="text-muted text-center py-4">Đang tải…</td></tr></tbody>
     </table>
@@ -49,7 +49,7 @@
 <script>
 (function(){
   const money=v=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:0});
-  const label={draft:'Nháp',confirmed:'Xác nhận',partial:'Một phần',received:'Đủ',cancelled:'Hủy'};
+  const label={draft:'Nháp',confirmed:'Đã xác nhận',partial:'Nhận một phần',received:'Đã nhận đủ',cancelled:'Đã hủy'};
   async function load(){
     const q=new URLSearchParams({
       date_from:document.getElementById('df').value||'',
@@ -65,10 +65,10 @@
     if(!rows.length){ tbody.innerHTML='<tr><td colspan="6" class="text-muted text-center py-4">Chưa có đơn</td></tr>'; return; }
     tbody.innerHTML=rows.map(r=>`<tr>
       <td><a href="/SME_purchase_order_create?id=${r.id}">${r.po_no}</a></td>
-      <td>${r.po_date||''}</td>
+      <td>${typeof fmtDateVi==='function'?fmtDateVi(r.po_date):(r.po_date||'')}</td>
       <td>${r.supplier_name||''}</td>
       <td class="money">${money(r.total_amount)}</td>
-      <td><span class="badge badge-${r.status}">${label[r.status]||r.status}</span></td>
+      <td><span class="badge badge-${r.status}">${label[r.status]||statusLabelVi(r.status)}</span></td>
       <td class="text-end">
         ${['draft','confirmed','partial'].includes(r.status)
           ? `<a class="btn btn-outline-success btn-sm py-0 me-1" href="/SME_import?po_id=${r.id}">Nhập kho</a>` : ''}

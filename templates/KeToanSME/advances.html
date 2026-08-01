@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Tạm ứng / Thanh toán 03–05 TT{% endblock %}
+{% block title %}Tạm ứng / Thanh toán 03–05 TT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
@@ -31,7 +31,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light"><tr>
-        <th>Số CT</th><th>Mẫu</th><th>Ngày</th><th>Nhân viên</th><th class="text-end">Số tiền</th><th>TT</th><th>Diễn giải</th><th></th>
+        <th>Số chứng từ</th><th>Mẫu</th><th>Ngày</th><th>Nhân viên</th><th class="text-end">Số tiền</th><th>Tình trạng</th><th>Diễn giải</th><th></th>
       </tr></thead>
       <tbody id="tbody"><tr><td colspan="8" class="text-center text-muted py-4">Đang tải…</td></tr></tbody>
     </table>
@@ -140,10 +140,10 @@ async function loadList(){
   tbody.innerHTML = json.data.map(r => `<tr>
     <td class="fw-bold">${r.doc_no}</td>
     <td><span class="badge bg-secondary">${r.form_code}</span></td>
-    <td>${(r.doc_date||'').slice(0,10)}</td>
+    <td>${fmtDateVi(r.doc_date)}</td>
     <td>${r.employee_name||''}</td>
     <td class="text-end fw-bold">${fmt(r.amount)}</td>
-    <td><span class="badge bg-light text-dark border">${r.status}</span></td>
+    <td><span class="badge bg-light text-dark border">${statusLabelVi(r.status)}</span></td>
     <td class="small">${r.purpose||''}</td>
     <td class="text-nowrap">
       <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_advance/in/${r.id}">In</a>

@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Kiểm kê quỹ 08a-TT{% endblock %}
+{% block title %}Kiểm kê quỹ 08a-TT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
@@ -19,7 +19,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light"><tr>
-        <th>Số BB</th><th>Ngày</th><th>TK</th><th class="text-end">Sổ sách</th><th class="text-end">Thực tế</th><th class="text-end">Chênh lệch</th><th>TT</th><th></th>
+        <th>Số biên bản</th><th>Ngày</th><th>Tài khoản</th><th class="text-end">Sổ sách</th><th class="text-end">Thực tế</th><th class="text-end">Chênh lệch</th><th>Tình trạng</th><th></th>
       </tr></thead>
       <tbody id="tbody"></tbody>
     </table>
@@ -60,9 +60,9 @@ async function loadList(){
     const diff = r.difference||0;
     const cls = diff>0?'text-success':(diff<0?'text-danger':'');
     return `<tr>
-      <td class="fw-bold">${r.doc_no}</td><td>${(r.count_date||'').slice(0,10)}</td><td>${r.account_code}</td>
+      <td class="fw-bold">${r.doc_no}</td><td>${fmtDateVi(r.count_date)}</td><td>${r.account_code}</td>
       <td class="text-end">${fmt(r.book_balance)}</td><td class="text-end">${fmt(r.counted_amount)}</td>
-      <td class="text-end fw-bold ${cls}">${fmt(diff)}</td><td>${r.status}</td>
+      <td class="text-end fw-bold ${cls}">${fmt(diff)}</td><td>${statusLabelVi(r.status)}</td>
       <td><a class="btn btn-sm btn-outline-info" target="_blank" href="/SME_cash_count/in/${r.id}">In</a>
       ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger" onclick="voidDoc(${r.id})">Hủy</button>`:''}</td>
     </tr>`;

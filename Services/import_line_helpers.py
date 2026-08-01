@@ -75,9 +75,9 @@ def assign_product_codes(c, product_id, product_type, unit1=None):
 
 
 DEFAULT_WAREHOUSES = (
-    ('KHO_001', 'Kho mặc định', 1),
-    ('KHO_002', 'Kho chi nhánh 2', 0),
-    ('KHO_003', 'Kho chi nhánh 3', 0),
+    ('KHO_001', 'Kho trung tâm', 1),
+    ('KHO_002', 'Kho 2', 0),
+    ('KHO_003', 'Kho 3', 0),
 )
 
 # Dòng ghi nhận tồn kho bán hàng / WAC (156, 152…)
@@ -89,6 +89,69 @@ ASSET_REGISTER_LINE_TYPES = frozenset({'fixed_asset', 'tools'})
 
 def tracks_retail_inventory(line_type):
     return (line_type or 'goods').strip().lower() in INVENTORY_TRACKED_LINE_TYPES
+
+
+def _migrate_legacy_warehouse_codes(c):
+    """Đổi MAIN→KHO_001, KHO-CN2→KHO_002 rồi xóa mã cũ nếu đã có kho chuẩn."""
+    mapping = (
+        ('MAIN', 'KHO_001'),
+        ('KHO-CN2', 'KHO_002'),
+        ('KHO_CN2', 'KHO_002'),
+    )
+    tables_cols = (
+        ('warehouses', None),  # handled separately
+        ('import', 'warehouse_code'),
+        ('import_details', 'warehouse_code'),
+        ('stock_moves', 'warehouse_code'),
+        ('sale', 'warehouse_code'),
+    )
+    for old, new in mapping:
+        has_old = c.execute(
+            'SELECT 1 FROM warehouses WHERE UPPER(code) = ? LIMIT 1', (old.upper(),)
+        ).fetchone()
+        has_new = c.execute(
+            'SELECT 1 FROM warehouses WHERE code = ? LIMIT 1', (new,)
+        ).fetchone()
+        if not has_old or not has_new:
+            continue
+        for table, col in tables_cols:
+            if col is None:
+                continue
+            try:
+                cols = {r[1] for r in c.execute(f'PRAGMA table_info("{table}")').fetchall()}
+            except sqlite3.Error:
+                continue
+            if col not in cols:
+                continue
+            try:
+                c.execute(
+                    f'UPDATE "{table}" SET {col} = ? WHERE UPPER(COALESCE({col}, \'\')) = ?',
+                    (new, old.upper()),
+                )
+            except sqlite3.Error:
+                pass
+        # Giữ branch_code của kho cũ nếu kho mới chưa gắn
+        try:
+            wh_cols = {r[1] for r in c.execute('PRAGMA table_info(warehouses)').fetchall()}
+            if 'branch_code' in wh_cols:
+                old_br = c.execute(
+                    'SELECT branch_code FROM warehouses WHERE UPPER(code) = ?',
+                    (old.upper(),),
+                ).fetchone()
+                new_br = c.execute(
+                    'SELECT branch_code FROM warehouses WHERE code = ?', (new,)
+                ).fetchone()
+                if old_br and (old_br[0] or '').strip():
+                    old_bc = (old_br[0] or '').strip().upper()
+                    new_bc = ((new_br[0] if new_br else '') or '').strip().upper()
+                    if old_bc and old_bc != 'HQ' and (not new_bc or new_bc == 'HQ'):
+                        c.execute(
+                            'UPDATE warehouses SET branch_code = ? WHERE code = ?',
+                            (old_bc, new),
+                        )
+        except sqlite3.Error:
+            pass
+        c.execute('DELETE FROM warehouses WHERE UPPER(code) = ?', (old.upper(),))
 
 
 def ensure_warehouse_schema(conn):
@@ -105,12 +168,62 @@ def ensure_warehouse_schema(conn):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    count = c.execute("SELECT COUNT(*) FROM warehouses").fetchone()[0]
-    if count == 0:
-        for code, name, is_def in DEFAULT_WAREHOUSES:
+    # Bổ sung cột branch_code nếu thiếu (SME multi-CN)
+    wh_cols = {r[1] for r in c.execute('PRAGMA table_info(warehouses)').fetchall()}
+    if 'branch_code' not in wh_cols:
+        try:
+            c.execute('ALTER TABLE warehouses ADD COLUMN branch_code TEXT')
+            wh_cols.add('branch_code')
+        except sqlite3.OperationalError:
+            pass
+
+    # Luôn đảm bảo có đủ KHO_001 / KHO_002 / KHO_003
+    existing = {
+        (r[0] or '').strip().upper()
+        for r in c.execute('SELECT code FROM warehouses').fetchall()
+    }
+    for code, name, is_def in DEFAULT_WAREHOUSES:
+        if code in existing:
+            continue
+        if 'branch_code' in wh_cols:
             c.execute(
-                "INSERT INTO warehouses (code, name, is_default, is_active) VALUES (?, ?, ?, 1)",
+                """
+                INSERT INTO warehouses (code, name, is_default, is_active, branch_code)
+                VALUES (?, ?, ?, 1, 'HQ')
+                """,
                 (code, name, is_def),
+            )
+        else:
+            c.execute(
+                """
+                INSERT INTO warehouses (code, name, is_default, is_active)
+                VALUES (?, ?, ?, 1)
+                """,
+                (code, name, is_def),
+            )
+
+    # Gộp mã kho cũ (MAIN / KHO-CN2) → chuẩn KHO_001 / KHO_002
+    _migrate_legacy_warehouse_codes(c)
+
+    # Đảm bảo đúng 1 kho mặc định = KHO_001 nếu có
+    has_kho001 = c.execute(
+        "SELECT 1 FROM warehouses WHERE code = 'KHO_001' AND is_active = 1 LIMIT 1"
+    ).fetchone()
+    if has_kho001:
+        c.execute("UPDATE warehouses SET is_default = 0 WHERE code != 'KHO_001'")
+        c.execute("UPDATE warehouses SET is_default = 1 WHERE code = 'KHO_001'")
+    else:
+        has_default = c.execute(
+            'SELECT 1 FROM warehouses WHERE is_active = 1 AND is_default = 1 LIMIT 1'
+        ).fetchone()
+        if not has_default:
+            c.execute(
+                """
+                UPDATE warehouses SET is_default = 1
+                WHERE id = (
+                    SELECT id FROM warehouses WHERE is_active = 1 ORDER BY code LIMIT 1
+                )
+                """
             )
 
     for table, col in (('import', 'warehouse_code'), ('import_details', 'warehouse_code')):
@@ -129,6 +242,80 @@ def ensure_warehouse_schema(conn):
             c.execute("ALTER TABLE stock_moves ADD COLUMN warehouse_code TEXT DEFAULT 'KHO_001'")
         except sqlite3.OperationalError:
             pass
+
+
+def create_warehouse(
+    conn,
+    *,
+    code: str,
+    name: str,
+    address: str = '',
+    branch_code: str = 'HQ',
+    is_default: bool = False,
+    commit: bool = True,
+) -> dict:
+    """Thêm kho mới (SME). Mã tự chuẩn hoá chữ hoa."""
+    ensure_warehouse_schema(conn)
+    code = (code or '').strip().upper().replace(' ', '_')
+    name = (name or '').strip()
+    if not code:
+        raise ValueError('Thiếu mã kho')
+    if not name:
+        raise ValueError('Thiếu tên kho')
+    if not code.startswith('KHO_') and not code.startswith('KHO'):
+        # Cho phép mã tự do nhưng khuyến nghị KHO_xxx
+        pass
+    exists = conn.execute(
+        'SELECT 1 FROM warehouses WHERE UPPER(code) = ?', (code,)
+    ).fetchone()
+    if exists:
+        raise ValueError(f'Mã kho {code} đã tồn tại')
+
+    cols = {r[1] for r in conn.execute('PRAGMA table_info(warehouses)').fetchall()}
+    if is_default:
+        conn.execute('UPDATE warehouses SET is_default = 0')
+
+    fields = ['code', 'name', 'is_default', 'is_active']
+    vals = [code, name, 1 if is_default else 0, 1]
+    if 'address' in cols:
+        fields.append('address')
+        vals.append((address or '').strip() or None)
+    if 'branch_code' in cols:
+        fields.append('branch_code')
+        vals.append((branch_code or 'HQ').strip().upper() or 'HQ')
+    if 'branch_name' in cols:
+        fields.append('branch_name')
+        vals.append(None)
+
+    conn.execute(
+        f"INSERT INTO warehouses ({','.join(fields)}) VALUES ({','.join('?' for _ in fields)})",
+        vals,
+    )
+    if commit:
+        conn.commit()
+    row = conn.execute(
+        'SELECT * FROM warehouses WHERE code = ?', (code,)
+    ).fetchone()
+    if row is None:
+        return {'code': code, 'name': name}
+    if hasattr(row, 'keys'):
+        return dict(row)
+    return {'code': code, 'name': name}
+
+
+def next_warehouse_code(conn) -> str:
+    """Gợi ý mã kho tiếp theo: KHO_004, KHO_005, …"""
+    ensure_warehouse_schema(conn)
+    rows = conn.execute(
+        "SELECT code FROM warehouses WHERE code GLOB 'KHO_[0-9]*'"
+    ).fetchall()
+    max_n = 3
+    for r in rows:
+        code = (r[0] if not hasattr(r, 'keys') else r['code']) or ''
+        tail = code[4:] if code.upper().startswith('KHO_') else ''
+        if tail.isdigit():
+            max_n = max(max_n, int(tail))
+    return f'KHO_{max_n + 1:03d}'
 
 
 def list_active_warehouses(conn, *, branch_code: str | None = None):

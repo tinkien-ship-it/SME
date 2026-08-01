@@ -4,7 +4,7 @@
             <i class="{{ report_icon }} text-primary me-2"></i>{{ report_title }}
         </h4>
         <p class="text-muted small mb-0">
-            Nguồn: nhật ký bút toán kép SME · TK {{ book.account_code }}
+            Nguồn: nhật ký bút toán kép · Tài khoản {{ book.account_code }}
             — {{ book.account_name }}
         </p>
     </div>
@@ -30,11 +30,156 @@
                 </select>
             </div>
         </form>
+        <button type="button" class="btn btn-success btn-sm" id="btnCashReceipt">
+            <i class="fas fa-plus me-1"></i> Lập phiếu thu
+        </button>
         <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">
             <i class="fas fa-print me-1"></i> In sổ
         </button>
     </div>
 </div>
+
+<div class="modal fade no-print" id="modalCashReceipt" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Lập phiếu thu (mẫu 01-TT)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3">
+          {% if report_kind == 'bank' %}
+          Góp vốn / nộp tiền vào <strong>tiền gửi ngân hàng</strong>: Nợ <strong>1121</strong> · Có <strong>4111 — Vốn góp chủ sở hữu</strong>.
+          {% else %}
+          Góp vốn / nộp tiền vào <strong>quỹ tiền mặt</strong>: Nợ <strong>1111</strong> · Có <strong>4111 — Vốn góp chủ sở hữu</strong>.
+          {% endif %}
+        </p>
+        <div class="mb-2">
+          <label class="form-label small">Ngày *</label>
+          <input type="date" id="crDate" class="form-control" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Người nộp *</label>
+          <input type="text" id="crParty" class="form-control" placeholder="Tên người nộp / chủ sở hữu">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Số tiền *</label>
+          <input type="number" id="crAmount" class="form-control" min="1" step="1" placeholder="0">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Tài khoản Nợ *</label>
+          <select id="crPay" class="form-select">
+            <option value="cash" {% if report_kind != 'bank' %}selected{% endif %}>1111 — Tiền mặt tại quỹ</option>
+            <option value="bank" {% if report_kind == 'bank' %}selected{% endif %}>1121 — Tiền gửi ngân hàng</option>
+          </select>
+          <div class="form-text">
+            {% if report_kind == 'bank' %}Mặc định Nợ 1121 trên sổ tiền gửi.{% else %}Mặc định Nợ 1111 trên sổ quỹ tiền mặt.{% endif %}
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Tài khoản Có (đối ứng) *</label>
+          <input type="text" id="crCredit" class="form-control" value="4111" list="crCreditHints">
+          <datalist id="crCreditHints">
+            <option value="4111">Vốn góp chủ sở hữu</option>
+            <option value="131">Phải thu khách hàng</option>
+            <option value="141">Tạm ứng nhân viên</option>
+            <option value="3388">Phải trả khác</option>
+            <option value="511">Doanh thu bán hàng</option>
+            <option value="711">Thu nhập khác</option>
+          </datalist>
+          <div class="form-text">Mặc định 4111 — Vốn góp chủ sở hữu.</div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Lý do / diễn giải</label>
+          <input type="text" id="crReason" class="form-control"
+                 placeholder="{% if report_kind == 'bank' %}Góp vốn chủ sở hữu qua ngân hàng{% else %}Góp vốn chủ sở hữu bằng tiền mặt{% endif %}">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-success" id="btnSaveCashReceipt">Lưu và ghi sổ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const defaultPay = {{ ('bank' if report_kind == 'bank' else 'cash') | tojson }};
+  const defaultCredit = '4111';
+  const defaultReason = {{ ('Góp vốn chủ sở hữu qua ngân hàng' if report_kind == 'bank' else 'Góp vốn chủ sở hữu bằng tiền mặt') | tojson }};
+  let modal;
+  function isoToday() {
+    if (typeof window.todayISO === 'function') return window.todayISO();
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function resetReceiptForm() {
+    const crDate = document.getElementById('crDate');
+    const crPay = document.getElementById('crPay');
+    const crCredit = document.getElementById('crCredit');
+    const crReason = document.getElementById('crReason');
+    const crAmount = document.getElementById('crAmount');
+    const crParty = document.getElementById('crParty');
+    crDate.value = isoToday();
+    crPay.value = defaultPay;
+    crCredit.value = defaultCredit;
+    crReason.placeholder = defaultReason;
+    if (!crReason.value) crReason.value = '';
+    crAmount.value = '';
+    crParty.value = '';
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('modalCashReceipt');
+    if (!el) return;
+    modal = new bootstrap.Modal(el);
+    resetReceiptForm();
+
+    document.getElementById('btnCashReceipt')?.addEventListener('click', () => {
+      resetReceiptForm();
+      modal.show();
+    });
+
+    document.getElementById('btnSaveCashReceipt')?.addEventListener('click', async () => {
+      const amount = parseFloat(document.getElementById('crAmount').value) || 0;
+      const party = (document.getElementById('crParty').value || '').trim();
+      const credit = (document.getElementById('crCredit').value || '').trim() || defaultCredit;
+      const crDate = document.getElementById('crDate');
+      const crPay = document.getElementById('crPay');
+      if (!crDate.value) return alert('Chọn ngày phiếu thu');
+      if (!party) return alert('Nhập người nộp');
+      if (amount <= 0) return alert('Số tiền phải lớn hơn 0');
+      if (!credit) return alert('Nhập tài khoản Có');
+      const reason = (document.getElementById('crReason').value || '').trim() || defaultReason;
+      const btn = document.getElementById('btnSaveCashReceipt');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/sme/vouchers/receipts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: crDate.value,
+            payer_name: party,
+            amount,
+            payment_method: crPay.value,
+            credit_account: credit,
+            reason,
+          }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Không lập được phiếu thu');
+        modal.hide();
+        alert('Đã lập phiếu thu ' + (json.voucher_no || '') + ' — đang tải lại sổ…');
+        location.reload();
+      } catch (e) {
+        alert(e.message || 'Lỗi');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+})();
+</script>
 
 <div class="cash-book-paper">
     <div class="row cash-book-header">

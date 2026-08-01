@@ -1,9 +1,9 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Thanh lý TSCĐ 02-TSCĐ{% endblock %}
+{% block title %}Thanh lý tài sản cố định — mẫu 02{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
-    <h4 class="fw-bold mb-1">Thanh lý / nhượng bán TSCĐ <span class="badge bg-danger">02-TSCĐ</span></h4>
+    <h4 class="fw-bold mb-1">Thanh lý / nhượng bán tài sản cố định <span class="badge bg-danger">02-TSCĐ</span></h4>
     <p class="text-muted small mb-0">Xóa sổ 211/214 · ghi nhận lãi (711) / lỗ (811)</p>
   </div>
   <button class="btn btn-danger" id="btnNew"><i class="fas fa-trash-can me-1"></i>Lập biên bản</button>
@@ -19,7 +19,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light"><tr>
-        <th>Số BB</th><th>Ngày</th><th>Mã TS</th><th>Tên</th><th class="text-end">Nguyên giá</th><th class="text-end">HM LK</th>
+        <th>Số biên bản</th><th>Ngày</th><th>Mã TS</th><th>Tên</th><th class="text-end">Nguyên giá</th><th class="text-end">HM LK</th>
         <th class="text-end">GTCL</th><th class="text-end">Thu</th><th class="text-end">Lãi/Lỗ</th><th></th>
       </tr></thead>
       <tbody id="tbody"></tbody>
@@ -28,7 +28,7 @@
 </div>
 
 <div class="modal fade" id="modalNew" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
-  <div class="modal-header bg-danger text-white"><h5 class="modal-title">Biên bản thanh lý TSCĐ</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <div class="modal-header bg-danger text-white"><h5 class="modal-title">Biên bản thanh lý tài sản cố định</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
     <div class="mb-2"><label class="form-label small">Tài sản</label><select id="fAsset" class="form-select"></select></div>
     <div class="row g-2 mb-2">
@@ -64,7 +64,7 @@ async function loadAssets(){
     `<option value="${a.id}" data-cost="${a.original_cost}" data-accum="${a.accum_dep}" data-net="${a.net_book}">
       ${a.ma_tai_san} — ${a.ten_tai_san} [${a.branch_code||'HQ'}]
     </option>`
-  ).join('') || '<option value="">Không có TSCĐ</option>';
+  ).join('') || '<option value="">Không có tài sản cố định</option>';
   syncAsset();
 }
 function syncAsset(){
@@ -85,7 +85,7 @@ async function loadList(){
   if(!json.success){ tbody.innerHTML=`<tr><td colspan="10" class="text-danger">${json.error}</td></tr>`; return; }
   if(!json.data.length){ tbody.innerHTML='<tr><td colspan="10" class="text-center text-muted py-4">Chưa có biên bản</td></tr>'; return; }
   tbody.innerHTML = json.data.map(r => `<tr>
-    <td class="fw-bold">${r.doc_no}</td><td>${(r.disposal_date||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.doc_no}</td><td>${fmtDateVi(r.disposal_date)}</td>
     <td>${r.asset_code||''}</td><td>${r.asset_name||''}</td>
     <td class="text-end">${fmt(r.original_cost)}</td><td class="text-end">${fmt(r.accum_dep)}</td>
     <td class="text-end">${fmt(r.net_book)}</td><td class="text-end">${fmt(r.proceeds)}</td>

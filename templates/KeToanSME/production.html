@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Sản xuất & tính giá thành{% endblock %}
+{% block title %}Sản xuất & tính giá thành{% endblock %}
 
 {% block sme_head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -21,7 +21,7 @@
 {% block sme_breadcrumb %}
 <nav aria-label="breadcrumb" class="mb-0">
     <ol class="breadcrumb mb-0 small">
-        <li class="breadcrumb-item"><a href="{{ url_for('SME_dashboard') }}">Kế toán SME</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('SME_dashboard') }}">Kế toán doanh nghiệp</a></li>
         <li class="breadcrumb-item active">Sản xuất &amp; giá thành</li>
     </ol>
 </nav>
@@ -47,7 +47,7 @@
     </div>
 
     <div class="alert alert-info small py-2 no-print">
-        <strong>Hạch toán SME đã bật:</strong> mỗi phiếu SX hoàn thành ghi bút toán
+        <strong>Hạch toán kế toán doanh nghiệp đã bật:</strong> mỗi phiếu SX hoàn thành ghi bút toán
         <code>SAN_XUAT_TP</code> vào nhật ký kế toán (cột «Sổ» trong danh sách).
         Tenant HKD trên trang riêng chỉ cập nhật tồn WAC, không ghi journal này.
         Cột «Sổ kép» hiển thị ID bút toán sau khi hoàn thành phiếu.
@@ -153,7 +153,7 @@
                         <input type="text" id="orderTo" class="form-control form-control-sm" style="width:120px" placeholder="Đến ngày">
                         <input type="text" id="orderQ" class="form-control form-control-sm" style="width:160px" placeholder="Số phiếu / tên TP">
                         <select id="orderStatus" class="form-select form-select-sm" style="width:140px">
-                            <option value="">Tất cả TT</option>
+                            <option value="">Tất cả tình trạng</option>
                             <option value="completed">Hoàn thành</option>
                             <option value="cancelled">Đã hủy</option>
                         </select>
@@ -170,7 +170,7 @@
                                 <th class="text-end">SL</th>
                                 <th class="text-end">Giá thành ĐV</th>
                                 <th class="text-end">Tổng giá thành</th>
-                                <th>TT</th>
+                                <th>Tình trạng</th>
                                 <th>Sổ kép</th>
                                 <th class="text-end no-print">Thao tác</th>
                             </tr>
@@ -489,7 +489,7 @@ async function createProduction() {
     if (!fg || qty <= 0) return;
     const confirm = await Swal.fire({
         title: 'Hoàn thành phiếu SX?',
-        html: 'Xuất NVL + nhập TP (WAC) và <strong>ghi sổ kép</strong> Nợ 155 / Có 152 (+3341/1111 nếu có).',
+        html: 'Xuất nguyên vật liệu và nhập thành phẩm (bình quân gia quyền) và <strong>ghi sổ kép</strong> Nợ 155 / Có 152 (+3341/1111 nếu có).',
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Xác nhận & ghi sổ',

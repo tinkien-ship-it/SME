@@ -168,7 +168,7 @@
                                 <th style="width:90px;">Tiền CK</th>
                                 <th style="width:70px;">% VAT</th>
                                 <th style="width:70px;" class="nk-col">% NK</th>
-                                <th style="width:90px;">Thuế GTGT</th>
+                                <th style="width:90px;">Thuế giá trị gia tăng</th>
                                 <th style="width:90px;" class="nk-col">Thuế NK</th>
                                 <th style="width:120px; background:#fff7ed;">Thanh toán</th>
                                 <th style="width:90px;">Mã SP</th>
@@ -228,9 +228,9 @@ const IMPORT_MODE = {{ (import_mode|default('stock'))|tojson }};
 const IS_SERVICE_MODE = IMPORT_MODE === 'service';
 const LINE_TYPE_OPTIONS = [
     { value: 'goods', label: 'Hàng hóa', debit: '156', needsWarehouse: true },
-    { value: 'materials', label: 'Vật tư (NVL)', debit: '152', needsWarehouse: true },
-    { value: 'fixed_asset', label: 'TSCĐ', debit: '2112', needsWarehouse: false },
-    { value: 'tools', label: 'CCDC', debit: '153', needsWarehouse: false },
+    { value: 'materials', label: 'Nguyên vật liệu', debit: '152', needsWarehouse: true },
+    { value: 'fixed_asset', label: 'Tài sản cố định', debit: '2112', needsWarehouse: false },
+    { value: 'tools', label: 'Công cụ dụng cụ', debit: '153', needsWarehouse: false },
     { value: 'service', label: 'Dịch vụ', debit: '642', needsWarehouse: false },
 ];
 const DEFAULT_LINE_TYPE = IS_SERVICE_MODE ? 'service' : 'goods';
@@ -1233,8 +1233,8 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
             if (result.purchase_order) {
                 parts.push(`ĐĐH ${result.purchase_order.po_no || ''} → ${result.purchase_order.status}`);
             }
-            if (result.fixed_assets_created) parts.push(`TSCĐ: ${result.fixed_assets_created}`);
-            if (result.tools_created) parts.push(`CCDC: ${result.tools_created}`);
+            if (result.fixed_assets_created) parts.push(`Tài sản cố định: ${result.fixed_assets_created}`);
+            if (result.tools_created) parts.push(`Công cụ dụng cụ: ${result.tools_created}`);
             if (result.journal_entry_ids?.length) parts.push(`NK: ${result.journal_entry_ids.length} bút toán`);
             toast(
                 (editId ? 'Cập nhật phiếu nhập thành công!' : 'Lưu phiếu nhập mua thành công!')

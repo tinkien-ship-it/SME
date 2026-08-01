@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Danh mục tài khoản (TT99) — SME{% endblock %}
+{% block title %}Danh mục tài khoản (Thông tư 99){% endblock %}
 
 {% block extra_style %}
 <style>
@@ -25,13 +25,13 @@
         <div>
             <h4 class="fw-bold mb-1"><i class="fas fa-sitemap text-primary me-2"></i>Danh mục tài khoản kế toán</h4>
             <p class="text-muted small mb-0">
-                Hệ thống tài khoản theo <strong>TT99/2025/TT-BTC</strong> + tiểu khoản khuyến nghị.
-                Doanh nghiệp được <strong>mở thêm tài khoản con</strong> theo Điều 11 (không ảnh hưởng chỉ tiêu BCTC).
+                Hệ thống tài khoản theo <strong>Thông tư 99/2025/TT-BTC</strong> + tiểu khoản khuyến nghị.
+                Doanh nghiệp được <strong>mở thêm tài khoản con</strong> theo Điều 11 (không ảnh hưởng chỉ tiêu báo cáo tài chính).
             </p>
         </div>
         <div class="d-flex coa-toolbar">
             <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Dashboard SME
+                <i class="fas fa-arrow-left me-1"></i> Tổng quan
             </a>
             <button type="button" class="btn btn-primary btn-sm" id="btnOpenCreate">
                 <i class="fas fa-plus me-1"></i> Tạo tài khoản con

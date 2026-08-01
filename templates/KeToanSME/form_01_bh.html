@@ -98,7 +98,7 @@
     const q=agent?('?agent='+encodeURIComponent(agent)):'';
     const res=await fetch('/api/sme/agent-deliveries'+q); const json=await res.json();
     delivBody.innerHTML=(json.data||[]).map(r=>`<tr>
-      <td class="fw-bold">${r.doc_no}</td><td>${(r.delivery_date||'').slice(0,10)}</td>
+      <td class="fw-bold">${r.doc_no}</td><td>${fmtDateVi(r.delivery_date)}</td>
       <td>${r.agent_name||''}</td><td class="small">${r.notes||''}</td>
       <td><button class="btn btn-sm btn-outline-danger" onclick="voidDeliv(${r.id})">Hủy</button></td>
     </tr>`).join('')||'<tr><td colspan="5" class="text-muted text-center">Chưa có phiếu giao</td></tr>';

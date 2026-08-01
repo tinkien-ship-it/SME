@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Đánh giá tỷ giá{% endblock %}
+{% block title %}Đánh giá tỷ giá{% endblock %}
 {% block sme_content %}
 <div class="mb-3"><h4 class="fw-bold mb-1">Đánh giá lại chênh lệch tỷ giá</h4>
 <p class="text-muted small mb-0">Điều chỉnh TK ngoại tệ · lãi 515 / lỗ 635 (hoặc 413 vốn chủ)</p></div>
@@ -13,7 +13,7 @@
     <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100" id="btnSave">Ghi sổ</button></div>
   </div>
   <p class="small text-muted">Nhập số dư ngoại tệ và số dư VND sổ sách từng TK (1122, 131…).</p>
-  <table class="table table-sm"><thead><tr><th>TK</th><th class="text-end">Số dư NT</th><th class="text-end">Số dư VND sổ</th><th></th></tr></thead>
+  <table class="table table-sm"><thead><tr><th>Tài khoản</th><th class="text-end">Số dư NT</th><th class="text-end">Số dư VND sổ</th><th></th></tr></thead>
   <tbody id="lines">
     <tr><td><input class="form-control form-control-sm acc" value="1122"></td>
       <td><input type="number" class="form-control form-control-sm text-end fc" step="any" value="0"></td>

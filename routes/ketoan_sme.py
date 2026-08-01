@@ -1510,6 +1510,34 @@ def register_ketoan_sme_routes(app):
     def SME_SoSachKeToan():
         return render_template('KeToanSME/dashboard_sosachketoan.html')
 
+    @app.route('/SME_chung_tu')
+    @login_required
+    @require_sme_regime
+    def SME_chung_tu():
+        from Services.sme_menu import get_sme_group_by_id
+        group = get_sme_group_by_id('vouchers')
+        if not group:
+            abort(404)
+        return render_template(
+            'KeToanSME/group_dashboard.html',
+            group=group,
+            group_id='vouchers',
+        )
+
+    @app.route('/SME_san_xuat_gia_thanh')
+    @login_required
+    @require_sme_regime
+    def SME_san_xuat_gia_thanh():
+        from Services.sme_menu import get_sme_group_by_id
+        group = get_sme_group_by_id('production')
+        if not group:
+            abort(404)
+        return render_template(
+            'KeToanSME/group_dashboard.html',
+            group=group,
+            group_id='production',
+        )
+
     @app.route('/SME_TSCD')
     @login_required
     @require_sme_regime
@@ -2249,6 +2277,8 @@ def register_ketoan_sme_routes(app):
                         discount_amount=float(line_disc_vnd),
                         line_total=float(line_total_payment_vnd),
                         subtotal=float(line_subtotal_vnd),
+                        so_thang_khau_hao=item.get('so_thang_khau_hao') or item.get('depreciation_months'),
+                        ngay_bat_dau_su_dung=item.get('ngay_bat_dau_su_dung') or item.get('start_date') or import_date,
                     )
                     fixed_assets_created += 1
                 elif line_type == 'tools':
@@ -3505,6 +3535,35 @@ def register_ketoan_sme_routes(app):
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/hub-group-metrics', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_hub_group_metrics():
+        from Services.sme_menu import get_sme_group_by_id
+        from Services.sme.hub_group_metrics import fetch_hub_group_metrics
+        group_id = (request.args.get('group_id') or '').strip()
+        group = get_sme_group_by_id(group_id)
+        if not group:
+            return jsonify({'success': False, 'error': 'Không tìm thấy nhóm menu'}), 404
+        conn = get_db_connection()
+        try:
+            year = request.args.get('year', type=int) or datetime.now().year
+            period_to = request.args.get('period_to', type=int) or datetime.now().month
+            data = fetch_hub_group_metrics(
+                conn, group,
+                fiscal_year=year,
+                period_to=period_to,
+                branch_code=_sme_branch_arg(),
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            logger.exception('api_sme_hub_group_metrics')
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()

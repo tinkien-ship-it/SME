@@ -37,7 +37,7 @@
     document.getElementById('total').textContent=money(d.total);
     const lines=d.lines||[];
     if(!lines.length){ document.getElementById('body').innerHTML='<div class="text-muted">Không có số dư TK 141 trong kỳ.</div>'; return; }
-    let html='<table class="table table-sm"><thead><tr><th>TK</th><th>Tên</th><th class="text-end">Nợ</th><th class="text-end">Có</th><th class="text-end">Số dư</th></tr></thead><tbody>';
+    let html='<table class="table table-sm"><thead><tr><th>Tài khoản</th><th>Tên</th><th class="text-end">Nợ</th><th class="text-end">Có</th><th class="text-end">Số dư</th></tr></thead><tbody>';
     lines.forEach(r=>{
       html+=`<tr><td>${r.account_code}</td><td>${r.name}</td><td class="text-end">${money(r.debit)}</td><td class="text-end">${money(r.credit)}</td><td class="text-end fw-semibold">${money(r.balance)}</td></tr>`;
     });

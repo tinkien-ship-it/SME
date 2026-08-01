@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Thuế TNDN{% endblock %}
+{% block title %}Thuế thu nhập doanh nghiệp tạm nộp{% endblock %}
 {% block sme_content %}
 <div class="mb-3"><h4 class="fw-bold mb-1">Tạm nộp &amp; nộp thuế TNDN</h4>
 <p class="text-muted small mb-0">Nợ 8211 / Có 3334 · thanh toán Nợ 3334 / Có 112</p></div>
@@ -12,7 +12,7 @@
   <div class="col-md-2"><button class="btn btn-primary w-100" id="btnAccrue">Ghi tạm nộp</button></div>
 </div></div>
 <div class="card shadow-sm border-0"><div class="table-responsive">
-<table class="table mb-0"><thead class="table-light"><tr><th>Kỳ</th><th>Ngày</th><th class="text-end">Số thuế</th><th>TT</th><th></th></tr></thead><tbody id="tbody"></tbody></table>
+<table class="table mb-0"><thead class="table-light"><tr><th>Kỳ</th><th>Ngày</th><th class="text-end">Số thuế</th><th>Tình trạng</th><th></th></tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 {% endblock %}
 {% block sme_scripts %}
@@ -22,8 +22,8 @@ fYear.value=new Date().getFullYear(); fPeriod.value=new Date().getMonth()+1;
 async function load(){
   const res=await fetch('/api/sme/cit?year='+fYear.value); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td>${r.period}/${r.fiscal_year}</td><td>${(r.provision_date||'').slice(0,10)}</td>
-    <td class="text-end fw-bold">${fmt(r.tax_amount)}</td><td>${r.status}</td>
+    <td>${r.period}/${r.fiscal_year}</td><td>${fmtDateVi(r.provision_date)}</td>
+    <td class="text-end fw-bold">${fmt(r.tax_amount)}</td><td>${statusLabelVi(r.status)}</td>
     <td>${r.status==='accrued'?`<button class="btn btn-sm btn-success" onclick="pay(${r.fiscal_year},${r.period})">Nộp thuế</button>`:''}</td>
   </tr>`).join('')||'<tr><td colspan="5" class="text-muted text-center">Chưa có</td></tr>';
 }

@@ -1,28 +1,31 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Chi nhánh{% endblock %}
+{% block title %}Chi nhánh{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
     <h4 class="fw-bold mb-1">Chi nhánh / đơn vị phụ thuộc</h4>
-    <p class="text-muted small mb-0">Cùng pháp nhân · gắn bút toán &amp; kho · BCTC hợp nhất vẫn lấy toàn DN</p>
+    <p class="text-muted small mb-0">Cùng pháp nhân · gắn bút toán &amp; kho · Báo cáo tài chính hợp nhất vẫn lấy toàn doanh nghiệp</p>
   </div>
   <button class="btn btn-primary btn-sm" id="btnNew">Thêm chi nhánh</button>
 </div>
 <div class="alert alert-info small py-2">
-  Chọn chi nhánh làm việc ở thanh trên để ghi sổ. Lọc sổ cái/sổ quỹ theo CN hoặc «Tất cả».
-  Dữ liệu cũ không gắn CN được xem như <strong>HQ</strong>.
+  Chọn chi nhánh làm việc ở thanh trên để ghi sổ. Lọc sổ cái và sổ quỹ theo chi nhánh hoặc «Tất cả».
+  Dữ liệu cũ không gắn chi nhánh được xem như <strong>Trụ sở chính (HQ)</strong>.
 </div>
 <div class="card shadow-sm border-0 mb-4"><div class="table-responsive">
 <table class="table table-sm mb-0"><thead class="table-light"><tr>
-  <th>Mã</th><th>Tên</th><th>Địa chỉ</th><th>ĐT</th><th>Mặc định</th><th>TT</th><th></th>
+  <th>Mã</th><th>Tên</th><th>Địa chỉ</th><th>Điện thoại</th><th>Mặc định</th><th>Tình trạng</th><th></th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 
 <div class="d-flex justify-content-between align-items-center mb-2">
-  <h5 class="fw-bold mb-0">Kho ↔ chi nhánh</h5>
-  <button class="btn btn-outline-secondary btn-sm" id="btnReloadWh">Tải lại kho</button>
+  <h5 class="fw-bold mb-0">Kho hàng (KHO_001 · KHO_002 · KHO_003…)</h5>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary btn-sm" id="btnReloadWh">Tải lại</button>
+    <button class="btn btn-primary btn-sm" id="btnNewWh"><i class="fas fa-plus me-1"></i>Thêm kho</button>
+  </div>
 </div>
-<p class="text-muted small">Gắn kho vào CN để nhập/xuất và phiếu kho theo đúng đơn vị đang làm việc.</p>
+<p class="text-muted small">Mặc định hệ thống tạo <strong>KHO_001</strong> (kho chính), <strong>KHO_002</strong>, <strong>KHO_003</strong>. Gắn kho vào chi nhánh để nhập xuất đúng đơn vị đang làm việc.</p>
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table table-sm mb-0"><thead class="table-light"><tr>
   <th>Mã kho</th><th>Tên kho</th><th>Chi nhánh</th><th></th>
@@ -40,10 +43,28 @@
   </div>
   <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button><button class="btn btn-primary" id="btnSave">Lưu</button></div>
 </div></div></div>
+
+<div class="modal fade" id="whModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Thêm kho hàng</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Mã kho *</label>
+      <input id="whCode" class="form-control text-uppercase" maxlength="24" placeholder="VD: KHO_004">
+      <div class="form-text">Gợi ý tự động theo chuỗi KHO_001, KHO_002…</div>
+    </div>
+    <div class="mb-2"><label class="form-label small">Tên kho *</label><input id="whName" class="form-control" placeholder="VD: Kho phụ Q.7"></div>
+    <div class="mb-2"><label class="form-label small">Địa chỉ</label><input id="whAddr" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Chi nhánh</label>
+      <select id="whBranch" class="form-select"></select>
+    </div>
+    <div class="form-check mb-2"><input type="checkbox" class="form-check-input" id="whDef"><label class="form-check-label" for="whDef">Đặt làm kho mặc định</label></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button><button class="btn btn-primary" id="btnSaveWh">Lưu kho</button></div>
+</div></div></div>
 {% endblock %}
 {% block sme_scripts %}
 <script>
 let branchOpts = [];
+let nextWhCode = 'KHO_004';
 
 async function load(){
   const res=await fetch('/api/sme/branches?active=0'); const json=await res.json();
@@ -52,7 +73,7 @@ async function load(){
     <td class="fw-bold">${r.code}</td><td>${r.name||''}</td>
     <td class="small">${r.address||''}</td><td>${r.phone||''}</td>
     <td>${r.is_default?'★':''}</td>
-    <td>${r.is_active?'Active':'Off'}</td>
+    <td>${r.is_active ? 'Đang dùng' : 'Ngừng dùng'}</td>
     <td class="text-nowrap">
       <button class="btn btn-sm btn-outline-primary" onclick="useBr('${r.code}')">Làm việc</button>
       ${r.is_active?`<button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggle(${JSON.stringify(r.code)},0)">Tắt</button>`:
@@ -66,14 +87,15 @@ async function load(){
 function branchSelectHtml(current){
   const cur = (current||'HQ').toUpperCase();
   return `<select class="form-select form-select-sm wh-br" style="min-width:140px">
-    ${branchOpts.map(b=>`<option value="${b.code}" ${b.code===cur?'selected':''}>${b.code} — ${b.name}</option>`).join('')||
-      `<option value="HQ">HQ</option>`}
+    ${branchOpts.map(b => `<option value="${b.code}" ${b.code === cur ? 'selected' : ''}>${b.code === 'HQ' ? 'HQ — Trụ sở chính' : (b.code + ' — ' + b.name)}</option>`).join('') ||
+      `<option value="HQ">HQ — Trụ sở chính</option>`}
   </select>`;
 }
 
 async function loadWh(){
   const res=await fetch('/api/sme/warehouses?all=1'); const json=await res.json();
   if(!json.success){ whBody.innerHTML=`<tr><td colspan="4" class="text-danger">${json.error||'Lỗi'}</td></tr>`; return; }
+  nextWhCode = json.next_code || 'KHO_004';
   const rows=json.data||[];
   whBody.innerHTML=rows.map(w=>`<tr data-code="${w.code}">
     <td class="fw-bold">${w.code}</td>
@@ -93,7 +115,7 @@ whBody.addEventListener('click', async (ev)=>{
   });
   const json=await res.json();
   if(!json.success) return alert(json.error||'Lỗi');
-  btn.textContent='OK'; setTimeout(()=>{btn.textContent='Gắn';},800);
+  btn.textContent = 'Đã gắn'; setTimeout(() => { btn.textContent = 'Gắn'; }, 800);
 });
 
 async function useBr(code){
@@ -118,6 +140,33 @@ btnSave.onclick=async()=>{
   bootstrap.Modal.getInstance(modal).hide(); load();
 };
 btnReloadWh.onclick=loadWh;
+
+btnNewWh.onclick=()=>{
+  whCode.value = nextWhCode || 'KHO_004';
+  whName.value = '';
+  whAddr.value = '';
+  whDef.checked = false;
+  whBranch.innerHTML = (branchOpts.map(b => `<option value="${b.code}">${b.code === 'HQ' ? 'HQ — Trụ sở chính' : (b.code + ' — ' + b.name)}</option>`).join('')
+    || '<option value="HQ">HQ — Trụ sở chính</option>');
+  new bootstrap.Modal(whModal).show();
+};
+btnSaveWh.onclick=async()=>{
+  const res=await fetch('/api/sme/warehouses',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      code: whCode.value,
+      name: whName.value,
+      address: whAddr.value,
+      branch_code: whBranch.value,
+      is_default: whDef.checked
+    })
+  });
+  const json=await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(whModal).hide();
+  loadWh();
+};
+
 load();
 </script>
 {% endblock %}

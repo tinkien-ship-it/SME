@@ -106,6 +106,8 @@ def ensure_fixed_assets_schema(conn):
         ('warehouse_code', "TEXT DEFAULT 'KHO_001'"),
         ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
         ('branch_code', 'TEXT'),
+        ('so_thang_phan_bo', 'INTEGER DEFAULT 12'),
+        ('ngay_bat_dau_su_dung', 'TEXT'),
     ):
         _add_col(c, TOOLS_TABLE, col, typ)
 
@@ -127,12 +129,22 @@ def register_fixed_asset_from_import(
     discount_amount,
     line_total,
     subtotal,
+    so_thang_khau_hao: int | None = None,
+    ngay_bat_dau_su_dung: str | None = None,
 ):
     """Ghi nhận TSCĐ khi nhập kho — không qua tồn POS."""
     ensure_fixed_assets_schema(c.connection)
     ma_ts = (product_code or f'TSCD{product_id:04d}').strip()
     base_val = float(subtotal or 0) - float(discount_amount or 0)
     nguyen_gia = float(line_total or base_val + float(tax_amount or 0))
+    start_date = (ngay_bat_dau_su_dung or import_date or '')[:10]
+    if not start_date:
+        from datetime import date as _date
+        start_date = _date.today().isoformat()
+    months = int(so_thang_khau_hao or 36)
+    if months <= 0:
+        months = 36
+
     branch = 'HQ'
     try:
         from Services.sme.branches import get_warehouse_branch_code
@@ -140,29 +152,34 @@ def register_fixed_asset_from_import(
     except Exception:
         pass
 
-    c.execute(f"""
-        INSERT INTO {FIXED_ASSETS_TABLE} (
-            ma_tai_san, ten_tai_san, voucher_no, ngay_chung_tu,
-            gia_mua_chua_thue, nguyen_gia_tinh_khau_hao, thue_gtgt,
-            tinh_trang, product_id, import_id, import_detail_id,
-            warehouse_code, so_luong, branch_code
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        ma_ts,
-        product_name,
-        import_no,
-        import_date,
-        float(buyprice or 0),
-        nguyen_gia,
-        float(tax_amount or 0),
-        STATUS_IN_STOCK,
-        product_id,
-        import_id,
-        import_detail_id,
-        warehouse_code or 'KHO_001',
-        float(qty or 1),
-        branch,
-    ))
+    cols = _columns(c, FIXED_ASSETS_TABLE)
+    data = {
+        'ma_tai_san': ma_ts,
+        'ten_tai_san': product_name,
+        'voucher_no': import_no,
+        'ngay_chung_tu': import_date,
+        'gia_mua_chua_thue': float(buyprice or 0),
+        'nguyen_gia_tinh_khau_hao': nguyen_gia,
+        'thue_gtgt': float(tax_amount or 0),
+        'ngay_bat_dau_su_dung': start_date,
+        'so_thang_khau_hao': months,
+        'tinh_trang': STATUS_IN_STOCK,
+        'product_id': product_id,
+        'import_id': import_id,
+        'import_detail_id': import_detail_id,
+        'warehouse_code': warehouse_code or 'KHO_001',
+        'so_luong': float(qty or 1),
+        'branch_code': branch,
+    }
+    # Một số DB cũ dùng so_chung_tu_kho thay voucher_no
+    if 'voucher_no' not in cols and 'so_chung_tu_kho' in cols:
+        data['so_chung_tu_kho'] = data.pop('voucher_no')
+    fields = [k for k in data if k in cols]
+    placeholders = ','.join('?' for _ in fields)
+    c.execute(
+        f"INSERT INTO {FIXED_ASSETS_TABLE} ({','.join(fields)}) VALUES ({placeholders})",
+        [data[k] for k in fields],
+    )
     return c.lastrowid
 
 
@@ -199,9 +216,9 @@ def register_tool_from_import(
         INSERT INTO {TOOLS_TABLE} (
             ma_ccdc, ten_ccdc, voucher_no, ngay_nhap,
             gia_mua_chua_thue, nguyen_gia, thue_gtgt,
-            so_luong, tinh_trang, product_id, import_id, import_detail_id,
+            so_luong, so_thang_phan_bo, tinh_trang, product_id, import_id, import_detail_id,
             warehouse_code, branch_code
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         ma,
         product_name,
@@ -211,6 +228,7 @@ def register_tool_from_import(
         nguyen_gia,
         float(tax_amount or 0),
         float(qty or 1),
+        12,
         STATUS_IN_STOCK,
         product_id,
         import_id,

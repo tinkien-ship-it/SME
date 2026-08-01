@@ -1,9 +1,9 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Lập bảng lương{% endblock %}
+{% block title %}Lập bảng lương{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
   <div>
-    <h4 class="fw-bold mb-1">Bảng lương SME <span class="badge bg-primary">TT99/TT58</span></h4>
+    <h4 class="fw-bold mb-1">Bảng lương <span class="badge bg-primary">Thông tư 99 / Thông tư 58</span></h4>
     <p class="text-muted small mb-0">Chốt → Nợ 642/622 · Có 3341/338 ·</p>
   </div>
   <div class="d-flex gap-2 flex-wrap">
@@ -55,7 +55,7 @@
           <th class="text-end">PC quỹ</th>
           <th class="text-end">PC khác</th>
           <th class="text-end">Thưởng</th>
-          <th class="text-end">BHXH</th>
+          <th class="text-end">Bảo hiểm xã hội</th>
           <th class="text-end">BHYT</th>
           <th class="text-end">BHTN</th>
           <th class="text-end">TNCN</th>
@@ -72,12 +72,12 @@
 </div>
 
 <div class="card shadow-sm border-0">
-  <div class="card-header bg-white fw-semibold">Kỳ đã chốt (SME)</div>
+  <div class="card-header bg-white fw-semibold">Kỳ đã chốt</div>
   <div class="table-responsive">
     <table class="table table-sm mb-0">
       <thead class="table-light"><tr>
         <th>Kỳ</th><th>Ngày</th><th class="text-end">Thu nhập</th><th class="text-end">Thực lĩnh</th>
-        <th class="text-end">BH chủ</th><th>TK CP</th><th>Journal</th>
+        <th class="text-end">BH chủ</th><th>Tài khoản chi phí</th><th>Journal</th>
       </tr></thead>
       <tbody id="runsBody"><tr><td colspan="7" class="text-muted text-center py-3">…</td></tr></tbody>
     </table>
@@ -178,7 +178,7 @@ async function loadRuns(){
   }
   body.innerHTML = json.data.map(r => `<tr>
     <td class="fw-bold">T${r.month}/${r.year}</td>
-    <td>${(r.posting_date||'').slice(0,10)}</td>
+    <td>${fmtDateVi(r.posting_date)}</td>
     <td class="text-end">${fmt(r.total_income)}</td>
     <td class="text-end">${fmt(r.total_net)}</td>
     <td class="text-end">${fmt(r.employer_insurance)}</td>

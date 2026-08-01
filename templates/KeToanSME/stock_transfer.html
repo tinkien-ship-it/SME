@@ -1,9 +1,9 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Chuyển kho{% endblock %}
+{% block title %}Chuyển kho{% endblock %}
 {% block sme_content %}
 <div class="mb-3">
-  <h4 class="fw-bold mb-1">Chuyển kho nội bộ / liên CN</h4>
-  <p class="text-muted small mb-0">Xuất/nhập cặp stock_moves — không ghi GL (cùng pháp nhân). Kho khác CN = chuyển liên chi nhánh.</p>
+  <h4 class="fw-bold mb-1">Chuyển kho nội bộ / liên chi nhánh</h4>
+  <p class="text-muted small mb-0">Xuất/nhập cặp sổ kho — không ghi sổ cái (cùng pháp nhân). Kho khác chi nhánh = chuyển liên chi nhánh.</p>
 </div>
 <div class="card shadow-sm border-0 mb-3"><div class="card-body">
   <div class="row g-2 mb-3">
@@ -13,12 +13,12 @@
     <div class="col-md-2"><label class="form-label small">Ghi chú</label><input type="text" id="fNotes" class="form-control"></div>
     <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100" id="btnSave">Lưu chuyển kho</button></div>
   </div>
-  <div id="interHint" class="small text-warning mb-2 d-none">⚠ Kho đi/đến thuộc chi nhánh khác — phiếu liên CN.</div>
-  <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Hàng</th><th class="text-end">Tồn kho đi</th><th class="text-end">SL chuyển</th></tr></thead><tbody id="lines"></tbody></table></div>
+  <div id="interHint" class="small text-warning mb-2 d-none">⚠ Kho đi/đến thuộc chi nhánh khác — phiếu liên chi nhánh.</div>
+  <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Hàng</th><th class="text-end">Tồn kho đi</th><th class="text-end">Số lượng chuyển</th></tr></thead><tbody id="lines"></tbody></table></div>
 </div></div>
 <div class="card shadow-sm border-0"><div class="card-header bg-white fw-bold">Lịch sử chuyển kho</div>
 <div class="table-responsive"><table class="table table-sm mb-0">
-  <thead class="table-light"><tr><th>Số</th><th>Ngày</th><th>Từ</th><th>Đến</th><th>CN</th><th>TT</th><th>Ghi chú</th><th></th></tr></thead>
+  <thead class="table-light"><tr><th>Số</th><th>Ngày</th><th>Từ</th><th>Đến</th><th>Chi nhánh</th><th>Tình trạng</th><th>Ghi chú</th><th></th></tr></thead>
   <tbody id="hist"></tbody>
 </table></div></div>
 {% endblock %}
@@ -54,16 +54,16 @@ async function loadHist(){
     const br=`${r.from_branch_code||'HQ'}→${r.to_branch_code||'HQ'}`;
     const badge=r.is_inter_branch?'<span class="badge text-bg-warning">Liên CN</span>':'';
     return `<tr>
-    <td class="fw-bold">${r.doc_no}</td><td>${(r.transfer_date||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.doc_no}</td><td>${fmtDateVi(r.transfer_date)}</td>
     <td>${r.from_warehouse}</td><td>${r.to_warehouse}</td>
-    <td class="small">${br} ${badge}</td><td>${r.status}</td>
+    <td class="small">${br} ${badge}</td><td>${statusLabelVi(r.status)}</td>
     <td class="small">${r.notes||''}</td>
     <td><button class="btn btn-sm btn-outline-danger" onclick="voidCk(${r.id})">Hủy</button></td>
   </tr>`;
   }).join('')||'<tr><td colspan="8" class="text-muted text-center">Chưa có</td></tr>';
 }
 async function voidCk(id){
-  if(!confirm('Hủy chuyển kho (đảo stock_moves)?')) return;
+  if(!confirm('Hủy chuyển kho (đảo sổ kho)?')) return;
   const res=await fetch('/api/sme/stock-transfer/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
   const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); loadHist(); loadProducts();
 }
@@ -71,7 +71,11 @@ async function voidCk(id){
   const res=await fetch('/api/sme/warehouses?all=1'); const json=await res.json();
   warehouses=json.data||[];
   if(!warehouses.length){
-    warehouses=[{code:'KHO_001',name:'Kho mặc định',branch_code:'HQ'},{code:'KHO_002',name:'Kho 2',branch_code:'HQ'}];
+    warehouses=[
+      {code:'KHO_001',name:'Kho trung tâm',branch_code:'HQ'},
+      {code:'KHO_002',name:'Kho 2',branch_code:'HQ'},
+      {code:'KHO_003',name:'Kho 3',branch_code:'HQ'}
+    ];
   }
   fillWhSelects();
   await loadProducts();
@@ -89,7 +93,7 @@ btnSave.onclick=async()=>{
   const res=await fetch('/api/sme/stock-transfer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:fDate.value,from_warehouse:fFrom.value,to_warehouse:fTo.value,notes:fNotes.value,items})});
   const json=await res.json();
   if(!json.success) return alert(json.error||'Lỗi');
-  alert('Đã lập '+json.data.doc_no+(json.data.is_inter_branch?' (liên CN)':''));
+  alert('Đã lập '+json.data.doc_no+(json.data.is_inter_branch?' (liên chi nhánh)':''));
   loadHist(); loadProducts();
 };
 </script>

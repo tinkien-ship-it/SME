@@ -1,55 +1,139 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Danh mục CCDC{% endblock %}
+{% block title %}Danh mục công cụ dụng cụ — Kế toán doanh nghiệp{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
     <h4 class="fw-bold mb-1">Danh mục công cụ dụng cụ</h4>
-    <p class="text-muted small mb-0">InStock → Active (bắt đầu phân bổ) · thanh lý Disposed</p>
+    <p class="text-muted small mb-0">Thiết lập số tháng phân bổ · Trong kho → Đang sử dụng (bắt đầu phân bổ)</p>
   </div>
   <div class="d-flex gap-2">
-    <select id="fStatus" class="form-select form-select-sm" style="width:140px">
+    <select id="fStatus" class="form-select form-select-sm" style="width:160px">
       <option value="">Tất cả</option>
-      <option value="InStock">InStock</option>
-      <option value="Active">Active</option>
-      <option value="Disposed">Disposed</option>
+      <option value="InStock">Trong kho</option>
+      <option value="Active">Đang sử dụng</option>
+      <option value="Disposed">Đã thanh lý</option>
     </select>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_CCDC') }}">Dashboard</a>
-    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_import') }}">Nhập CCDC</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_CCDC') }}">Tổng quan</a>
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_import') }}">Nhập công cụ dụng cụ</a>
   </div>
 </div>
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table table-sm mb-0"><thead class="table-light"><tr>
-  <th>Mã</th><th>Tên</th><th>CN</th><th class="text-end">Nguyên giá</th><th>Tháng PB</th><th>TT</th><th></th>
+  <th>Mã</th><th>Tên</th><th>Chi nhánh</th><th class="text-end">Nguyên giá</th>
+  <th>Số tháng phân bổ</th><th>Ngày bắt đầu sử dụng</th><th>Tình trạng</th><th></th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
+
+<div class="modal fade" id="periodModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Thiết lập kỳ phân bổ công cụ dụng cụ</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="pId">
+    <div class="mb-2 small text-muted" id="pLabel"></div>
+    <div class="mb-3">
+      <label class="form-label small">Số tháng phân bổ *</label>
+      <input type="number" id="pMonths" class="form-control" min="1" max="120" value="12">
+    </div>
+    <div class="mb-2">
+      <label class="form-label small">Ngày bắt đầu sử dụng</label>
+      <input type="date" id="pStart" class="form-control" lang="vi">
+      <div class="form-text">Để trống nếu giữ nguyên ngày hiện tại.</div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+    <button type="button" class="btn btn-primary" id="btnSavePeriod">Lưu</button>
+  </div>
+</div></div></div>
 {% endblock %}
 {% block sme_scripts %}
 <script>
-const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+const fmt = (n) => (typeof moneyVi === 'function' ? moneyVi(n, false) : Number(n || 0).toLocaleString('vi-VN'));
+let periodModal;
 async function load(){
-  const q=fStatus.value?('?status='+encodeURIComponent(fStatus.value)):'';
-  const res=await fetch('/api/sme/tools'+q); const json=await res.json();
-  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.ma_ccdc||''}</td><td>${r.ten_ccdc||''}</td>
-    <td class="small">${r.branch_code||'HQ'}</td>
-    <td class="text-end">${fmt(r.nguyen_gia||r.gia_mua_chua_thue||0)}</td>
-    <td>${r.so_thang_phan_bo||''}</td><td>${r.tinh_trang||''}</td>
-    <td class="text-nowrap">
-      ${r.tinh_trang==='InStock'?`<button class="btn btn-sm btn-outline-success" onclick="act(${r.id})">Đưa vào dùng</button>`:''}
-      ${r.tinh_trang!=='Disposed'?`<button class="btn btn-sm btn-outline-danger ms-1" onclick="scrap(${r.id})">Thanh lý</button>`:''}
-    </td>
-  </tr>`).join('')||'<tr><td colspan="7" class="text-muted text-center">Chưa có CCDC — nhập qua phiếu nhập kho</td></tr>';
+  try {
+    const q = fStatus.value ? ('?status=' + encodeURIComponent(fStatus.value)) : '';
+    const res = await fetch('/api/sme/tools' + q);
+    const json = await res.json();
+    if (!json.success) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${json.error || 'Không tải được dữ liệu'}</td></tr>`;
+      return;
+    }
+    const rows = json.data || [];
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td class="fw-bold">${r.ma_ccdc || ''}</td><td>${r.ten_ccdc || ''}</td>
+      <td class="small">${branchLabelVi(r.branch_code)}</td>
+      <td class="text-end">${fmt(r.nguyen_gia || r.gia_mua_chua_thue || 0)}</td>
+      <td class="fw-semibold">${r.so_thang_phan_bo || '—'}</td>
+      <td class="small">${fmtDateVi(r.ngay_bat_dau_su_dung)}</td>
+      <td>${statusLabelVi(r.tinh_trang)}</td>
+      <td class="text-nowrap">
+        ${r.tinh_trang !== 'Disposed'
+          ? `<button type="button" class="btn btn-sm btn-outline-primary btn-period">Thiết lập phân bổ</button>` : ''}
+        ${r.tinh_trang === 'InStock' ? `<button type="button" class="btn btn-sm btn-outline-success ms-1 btn-act">Đưa vào sử dụng</button>` : ''}
+        ${r.tinh_trang !== 'Disposed' ? `<button type="button" class="btn btn-sm btn-outline-danger ms-1 btn-scrap">Thanh lý</button>` : ''}
+      </td>
+    </tr>`).join('') || '<tr><td colspan="8" class="text-muted text-center">Chưa có công cụ dụng cụ — nhập qua phiếu nhập kho</td></tr>';
+    [...tbody.querySelectorAll('tr')].forEach((tr, i) => {
+      const row = rows[i];
+      if (!row) return;
+      const periodBtn = tr.querySelector('.btn-period');
+      if (periodBtn) periodBtn.addEventListener('click', () => openPeriod({
+        id: row.id, ma: row.ma_ccdc, ten: row.ten_ccdc,
+        months: row.so_thang_phan_bo, start: row.ngay_bat_dau_su_dung
+      }));
+      const actBtn = tr.querySelector('.btn-act');
+      if (actBtn) actBtn.addEventListener('click', () => act(row.id));
+      const scrapBtn = tr.querySelector('.btn-scrap');
+      if (scrapBtn) scrapBtn.addEventListener('click', () => scrap(row.id));
+    });
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${e.message || 'Lỗi tải danh mục'}</td></tr>`;
+  }
 }
+function openPeriod(r){
+  pId.value = r.id;
+  pLabel.textContent = (r.ma || '') + ' — ' + (r.ten || '');
+  pMonths.value = r.months || 12;
+  pStart.value = (r.start || '').toString().slice(0, 10);
+  periodModal.show();
+}
+btnSavePeriod.onclick = async () => {
+  const body = { so_thang_phan_bo: Number(pMonths.value || 0) };
+  if (pStart.value) body.ngay_bat_dau_su_dung = pStart.value;
+  const res = await fetch('/api/sme/tools/' + pId.value + '/period', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Không lưu được');
+  periodModal.hide();
+  load();
+};
 async function act(id){
-  if(!confirm('Đưa CCDC vào sử dụng (Active)?')) return;
-  const res=await fetch('/api/sme/tools/'+id+'/activate',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+  const months = prompt('Số tháng phân bổ khi đưa vào sử dụng:', '12');
+  if (months === null) return;
+  const res = await fetch('/api/sme/tools/' + id + '/activate', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ so_thang_phan_bo: Number(months || 12) })
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Không thực hiện được');
+  load();
 }
 async function scrap(id){
-  if(!confirm('Thanh lý CCDC này?')) return;
-  const res=await fetch('/api/sme/tools/'+id+'/scrap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:'Thanh lý CCDC'})});
-  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+  if (!confirm('Thanh lý công cụ dụng cụ này?')) return;
+  const res = await fetch('/api/sme/tools/' + id + '/scrap', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: 'Thanh lý công cụ dụng cụ' })
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Không thực hiện được');
+  load();
 }
-fStatus.onchange=load; load();
+document.addEventListener('DOMContentLoaded', () => {
+  periodModal = new bootstrap.Modal(document.getElementById('periodModal'));
+  fStatus.onchange = load;
+  load();
+});
 </script>
 {% endblock %}

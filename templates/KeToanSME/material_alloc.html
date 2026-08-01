@@ -1,9 +1,9 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Phân bổ NVL 07-VT{% endblock %}
+{% block title %}Phân bổ nguyên vật liệu — mẫu 07-VT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
-    <h4 class="fw-bold mb-1">Phân bổ NVL / CCDC xuất dùng <span class="badge bg-secondary">07-VT</span></h4>
+    <h4 class="fw-bold mb-1">Phân bổ nguyên vật liệu / công cụ dụng cụ xuất dùng <span class="badge bg-secondary">07-VT</span></h4>
     <p class="text-muted small mb-0">Nợ TK chi phí (621/627/642…) · Có 152/153/156 · theo kho / chi nhánh</p>
   </div>
 </div>
@@ -19,7 +19,7 @@
 </div></div>
 <div class="card shadow-sm border-0"><div class="card-header bg-white fw-bold">Lịch sử 07-VT</div>
 <div class="table-responsive"><table class="table table-sm mb-0">
-  <thead class="table-light"><tr><th>Số</th><th>Ngày</th><th>CN</th><th>Kho</th><th>TK CP</th><th>TT</th><th></th></tr></thead>
+  <thead class="table-light"><tr><th>Số</th><th>Ngày</th><th>Chi nhánh</th><th>Kho</th><th>Tài khoản chi phí</th><th>Tình trạng</th><th></th></tr></thead>
   <tbody id="hist"></tbody>
 </table></div></div>
 {% endblock %}
@@ -41,9 +41,9 @@ async function loadProducts(){
 async function loadHist(){
   const res=await fetch('/api/sme/material-alloc'); const json=await res.json();
   hist.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.doc_no}</td><td>${(r.alloc_date||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.doc_no}</td><td>${fmtDateVi(r.alloc_date)}</td>
     <td class="small">${r.branch_code||'HQ'}</td><td class="small">${r.warehouse_code||''}</td>
-    <td>${r.expense_account||''}</td><td>${r.status}</td>
+    <td>${r.expense_account||''}</td><td>${statusLabelVi(r.status)}</td>
     <td class="text-nowrap">
       <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_material_alloc/in/${r.id}">In</a>
       ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger" onclick="voidDoc(${r.id})">Hủy</button>`:''}

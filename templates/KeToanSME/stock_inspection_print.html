@@ -17,9 +17,11 @@
   .sign div{width:24%}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div>
     <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
@@ -27,11 +29,11 @@
   </div>
   <div style="text-align:right">
     <div><strong>Mẫu số 03 - VT</strong></div>
-    <div class="muted">(TT 99/2025/TT-BTC)</div>
+    <div class="muted">(Thông tư 99/2025/TT-BTC)</div>
   </div>
 </div>
 <div class="title">BIÊN BẢN KIỂM NGHIỆM<br>VẬT TƯ, CÔNG CỤ, SẢN PHẨM, HÀNG HÓA</div>
-<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.inspect_date }}</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.inspect_date|format_vn_date }}</div>
 <div class="row">Căn cứ phiếu nhập / hóa đơn: {{ doc.import_no or '' }}</div>
 <div class="row">Nhà cung cấp: {{ doc.supplier_name or '' }}</div>
 <div class="row">Phương thức kiểm nghiệm: {{ doc.method or '' }}</div>
@@ -60,6 +62,7 @@
   <div>Người giao hàng<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Trưởng ban KN<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
 </div>
 </body>
 </html>

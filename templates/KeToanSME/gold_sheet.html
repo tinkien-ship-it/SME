@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Bảng kê vàng 07-TT{% endblock %}
+{% block title %}Bảng kê vàng 07-TT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
@@ -44,7 +44,7 @@ btnAdd.onclick=()=>addLine();
 async function load(){
   const res=await fetch('/api/sme/gold-sheets'); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.doc_no}</td><td>${(r.sheet_date||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.doc_no}</td><td>${fmtDateVi(r.sheet_date)}</td>
     <td class="text-end">${r.total_weight}</td><td class="text-end">${fmt(r.total_amount)}</td>
     <td class="text-nowrap">
       <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_gold_sheet/in/${r.id}">In</a>

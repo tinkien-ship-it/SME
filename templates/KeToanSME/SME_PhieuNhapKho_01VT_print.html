@@ -26,15 +26,13 @@
   .sign-space { height: 70px; }
   @media print { body { background: #fff; } .no-print-zone { display: none; } .print-container { width: 100%; margin: 0; padding: 0; box-shadow: none; } }
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
+{% with print_label='IN PHIẾU NHẬP' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 {% set raw_date = (imp.date or '')|string %}
 {% set d = raw_date[:10].split('-') %}
-<div class="no-print-zone">
-  <button class="btn-print" onclick="window.print()">In phiếu nhập 01-VT</button>
-  <button onclick="window.close()" style="margin-left:8px;padding:8px 16px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer">Đóng</button>
-</div>
-<div class="print-container">
   <table class="header-table">
     <tr>
       <td class="info-dn">
@@ -49,17 +47,15 @@
     </tr>
   </table>
   <div class="title">PHIẾU NHẬP KHO</div>
-  {% if d|length >= 3 %}
-  <div class="date-line">Ngày {{ d[2] }} tháng {{ d[1] }} năm {{ d[0] }}</div>
-  {% endif %}
+  <div class="date-line">{{ imp.date|format_vn_date_long }}</div>
   <div class="number-line">Số: <strong>{{ imp.import_no }}</strong></div>
   <div class="info-line"><span class="info-label">- Bên / Người giao hàng:</span><span class="dotted bold">{{ imp.supplier_name or 'Nhà cung cấp' }}</span></div>
-  <div class="info-line"><span class="info-label">- Theo hóa đơn số:</span><span class="dotted">{{ imp.bill_no or '—' }}{% if imp.bill_date %} ngày {{ (imp.bill_date|string)[:10] }}{% endif %}</span></div>
+  <div class="info-line"><span class="info-label">- Theo hóa đơn số:</span><span class="dotted">{{ imp.bill_no or '—' }}{% if imp.bill_date %} ngày {{ imp.bill_date|format_vn_date }}{% endif %}</span></div>
   <div class="info-line"><span class="info-label">- Nhập tại kho:</span><span class="dotted">{{ imp.warehouse_location or info.warehouse_location or 'Kho tổng' }}</span></div>
   <table class="content-table">
     <thead>
       <tr>
-        <th style="width:4%">TT</th>
+        <th style="width:4%">Tình trạng</th>
         <th style="width:28%">Tên hàng hóa</th>
         <th style="width:7%">ĐVT</th>
         <th style="width:8%">SL CT</th>

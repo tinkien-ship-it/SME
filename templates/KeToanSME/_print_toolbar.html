@@ -1,0 +1,10 @@
+{# Thanh công cụ IN / ĐÓNG TRANG — chuẩn Phiếu thu HKD #}
+{% set _print_label = print_label|default('IN') %}
+<div class="no-print-zone">
+  <button type="button" class="btn-action btn-print" onclick="window.print()">
+    <span aria-hidden="true">🖨</span> {{ _print_label }}
+  </button>
+  <button type="button" class="btn-action btn-close-action" onclick="window.close()">
+    <span aria-hidden="true">✕</span> ĐÓNG TRANG
+  </button>
+</div>

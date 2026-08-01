@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Phiếu xuất kho 02-VT{% endblock %}
+{% block title %}Phiếu xuất kho 02-VT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
@@ -41,7 +41,7 @@ async function loadList(){
   if(!json.data.length){ tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Chưa có phiếu xuất</td></tr>'; return; }
   tbody.innerHTML = json.data.map(r => `<tr>
     <td class="fw-bold">${r.voucher_no||'—'}</td>
-    <td>${(r.date||'').toString().slice(0,10)}</td>
+    <td>${fmtDateVi(r.date)}</td>
     <td>${r.customer_name||''}</td>
     <td class="text-end fw-bold">${fmt(r.total_amount)}</td>
     <td class="small">${r.note||''}</td>

@@ -3,43 +3,48 @@
 <head>
 <meta charset="utf-8">
 <title>Phiếu thu {{ voucher_no }} — 01-TT</title>
-<style>
-  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
-  .header{display:flex;justify-content:space-between}
-  .title{text-align:center;font-size:18pt;font-weight:bold;margin:16px 0 4px}
-  .muted{font-style:italic;font-size:10pt}
-  .row{margin:6px 0}
-  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
-  .sign div{width:24%}
-  @media print{.no-print{display:none}}
-</style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
-<div class="header">
-  <div>
-    <div><strong>DOANH NGHIỆP:</strong> {{ info.business_name or info.company_name or '' }}</div>
-    <div>Địa chỉ: {{ info.address or '' }}</div>
-    <div>MST: {{ info.tax_code or '' }}</div>
+{% with print_label='IN PHIẾU THU' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
+  {% set amount_raw = receipt.amount|float %}
+  {% set formatted_money = "{:,.0f}".format(amount_raw).replace(',', '.') %}
+
+  <table class="header-table">
+    <tr>
+      <td class="info-dn">
+        <div class="fw-bold text-uppercase"><strong>DOANH NGHIỆP:</strong> {{ info.business_name or info.company_name or '' }}</div>
+        <div>Địa chỉ: {{ info.address or '' }}</div>
+        <div><strong>MST:</strong> {{ info.tax_code or '' }}</div>
+      </td>
+      <td class="mau-so">
+        <div class="fw-bold"><strong>Mẫu số 01 - TT</strong></div>
+        <div class="muted">(Ban hành kèm theo Thông tư số 99/2025/TT-BTC<br>áp dụng doanh nghiệp / siêu nhỏ Thông tư 58)</div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="title">PHIẾU THU</div>
+  <div class="date-line">{{ receipt.voucher_date|format_vn_date_long }}</div>
+  <div class="number-line">Số: <strong>{{ voucher_no }}</strong></div>
+
+  <div class="row">Họ và tên người nộp tiền: <strong>{{ receipt.party_name }}</strong></div>
+  <div class="row">Địa chỉ: {{ receipt.party_address or '' }}</div>
+  <div class="row">Lý do thu: {{ receipt.reason or '' }}</div>
+  <div class="row">Số tiền: <strong>{{ formatted_money }} đ</strong>
+    (Nợ {{ receipt.debit_account }} / Có {{ receipt.credit_account }})</div>
+  <div class="row">Bằng chữ: <em>{{ amount_raw|so_thanh_chu|capitalize }}.</em></div>
+  <div class="row">Kèm theo: {{ receipt.attached_docs or 0 }} chứng từ gốc</div>
+
+  <div class="text-end fst-italic mt-3" style="padding-right:40px;">{{ receipt.voucher_date|format_vn_date_long }}</div>
+
+  <div class="sign">
+    <div><span class="sign-title">Giám đốc</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
+    <div><span class="sign-title">Kế toán trưởng</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
+    <div><span class="sign-title">Người nộp tiền</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
+    <div><span class="sign-title">Thủ quỹ</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
   </div>
-  <div style="text-align:right">
-    <div><strong>Mẫu số 01 - TT</strong></div>
-    <div class="muted">(Ban hành kèm theo Thông tư số 99/2025/TT-BTC<br>áp dụng DN / siêu nhỏ TT58)</div>
-  </div>
-</div>
-<div class="title">PHIẾU THU</div>
-<div style="text-align:center">Số: <strong>{{ voucher_no }}</strong> — Ngày {{ receipt.voucher_date }}</div>
-<div class="row">Họ tên người nộp tiền: <strong>{{ receipt.party_name }}</strong></div>
-<div class="row">Địa chỉ: {{ receipt.party_address or '' }}</div>
-<div class="row">Lý do thu: {{ receipt.reason or '' }}</div>
-<div class="row">Số tiền: <strong>{{ '{:,.0f}'.format(receipt.amount|float).replace(',', '.') }} đ</strong>
-  (Nợ {{ receipt.debit_account }} / Có {{ receipt.credit_account }})</div>
-<div class="row">Kèm theo: {{ receipt.attached_docs or 0 }} chứng từ gốc</div>
-<div class="sign">
-  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
-  <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
-  <div>Người nộp tiền<br><span class="muted">(Ký, họ tên)</span></div>
-  <div>Thủ quỹ<br><span class="muted">(Ký, họ tên)</span></div>
 </div>
 </body>
 </html>

@@ -1,9 +1,9 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Bảng KH TSCĐ 06-TSCĐ{% endblock %}
+{% block title %}Bảng khấu hao tài sản cố định — mẫu 06{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
-    <h4 class="fw-bold mb-1">Bảng tính &amp; phân bổ khấu hao TSCĐ <span class="badge bg-secondary">06-TSCĐ</span></h4>
+    <h4 class="fw-bold mb-1">Bảng tính và phân bổ khấu hao tài sản cố định <span class="badge bg-secondary">06-TSCĐ</span></h4>
     <p class="text-muted small mb-0">Theo lịch đường thẳng · đối chiếu với bút toán KHTS đã ghi</p>
   </div>
   <a class="btn btn-outline-secondary" id="btnPrint" target="_blank"><i class="fas fa-print me-1"></i>In</a>
@@ -48,7 +48,7 @@ async function load(){
   const d = json.data;
   btnPrint.href = '/SME_fa_depreciation_table/in?'+q.toString();
   const periods = d.periods||[];
-  thead.innerHTML = `<tr><th>Mã</th><th>Tên TSCĐ</th><th class="text-end">Nguyên giá</th><th class="text-end">Số tháng</th>` +
+  thead.innerHTML = `<tr><th>Mã</th><th>Tên tài sản cố định</th><th class="text-end">Nguyên giá</th><th class="text-end">Số tháng</th>` +
     periods.map(p => `<th class="text-end">T${p}</th>`).join('') +
     `<th class="text-end">Cộng</th></tr>`;
   tbody.innerHTML = (d.lines||[]).map(r => `<tr>

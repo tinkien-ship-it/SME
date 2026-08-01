@@ -13,23 +13,25 @@
   .num{text-align:right}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div>
     <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
     <div>{{ info.address or '' }}</div>
     <div>MST: {{ info.tax_code or '' }}</div>
   </div>
-  <div style="text-align:right"><strong>Sổ chi tiết công nợ phải thu</strong><br><span class="muted">SME · TT99</span></div>
+  <div style="text-align:right"><strong>Sổ chi tiết công nợ phải thu</strong><br><span class="muted">Kế toán doanh nghiệp · Thông tư 99</span></div>
 </div>
 <div class="title">SỔ CHI TIẾT CÔNG NỢ PHẢI THU</div>
 <div style="text-align:center">TK 131 — Khách hàng: <strong>{{ customer }}</strong></div>
 {% if start or end %}<div style="text-align:center">Kỳ: {{ start or '…' }} → {{ end or '…' }}</div>{% endif %}
 <table>
   <thead>
-    <tr><th>Số CT</th><th>Ngày</th><th>Diễn giải</th><th>Nợ</th><th>Có</th></tr>
+    <tr><th>Số chứng từ</th><th>Ngày</th><th>Diễn giải</th><th>Nợ</th><th>Có</th></tr>
   </thead>
   <tbody>
     <tr><td></td><td></td><td><strong>Số dư đầu kỳ</strong></td><td></td><td class="num">{{ '{:,.0f}'.format(totals.opening|float).replace(',', '.') }}</td></tr>
@@ -55,5 +57,6 @@
     </tr>
   </tfoot>
 </table>
+</div>
 </body>
 </html>

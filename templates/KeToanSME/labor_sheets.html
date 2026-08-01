@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Bảng LĐTL 02/03/04{% endblock %}
+{% block title %}Bảng LĐTL 02/03/04{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
@@ -14,7 +14,7 @@
 </div>
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table mb-0"><thead class="table-light"><tr>
-  <th>Số</th><th>Mẫu</th><th>Ngày</th><th class="text-end">Tổng</th><th class="text-end">TNCN</th><th class="text-end">Thực lĩnh</th><th>TT</th>
+  <th>Số</th><th>Mẫu</th><th>Ngày</th><th class="text-end">Tổng</th><th class="text-end">TNCN</th><th class="text-end">Thực lĩnh</th><th>Tình trạng</th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 
@@ -58,10 +58,10 @@ function openNew(type){
 async function load(){
   const res=await fetch('/api/sme/labor-sheets'); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.sheet_no}</td><td>${r.form_code}</td><td>${(r.sheet_date||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.sheet_no}</td><td>${r.form_code}</td><td>${fmtDateVi(r.sheet_date)}</td>
     <td class="text-end">${fmt(r.total_amount)}</td><td class="text-end">${fmt(r.tax_withheld)}</td>
     <td class="text-end fw-bold">${fmt(r.net_amount)}</td>
-    <td class="text-nowrap">${r.status}
+    <td class="text-nowrap">${statusLabelVi(r.status)}
       <a class="btn btn-sm btn-outline-primary ms-1" target="_blank" href="/SME_labor_sheet/in/${r.id}">In</a>
       ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger" onclick="voidSheet(${r.id})">Hủy</button>`:''}
     </td>

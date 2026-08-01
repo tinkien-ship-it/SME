@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}SME — Công Nợ Phải Thu{% endblock %}
+{% block title %}Sổ công nợ phải thu{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -21,7 +21,7 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold text-danger mb-1">📘 CHI TIẾT CÔNG NỢ PHẢI THU <span class="badge bg-primary fs-6 align-middle">SME</span></h4>
+            <h4 class="fw-bold text-danger mb-1">📘 CHI TIẾT CÔNG NỢ PHẢI THU <span class="badge bg-primary fs-6 align-middle">Doanh nghiệp</span></h4>
             <p class="text-muted small mb-0">Theo dõi công nợ khách hàng (nghiệp vụ DN — không dùng mẫu sổ HKD)</p>
         </div>
         <button class="btn btn-danger" onclick="printLedger()">
@@ -413,7 +413,7 @@ document.getElementById('btnSavePayment').addEventListener('click', async functi
         const result = await res.json();
 
         if (result.success) {
-            alert(`Đã lập phiếu thu SME (01-TT)!\nSố phiếu: ${result.voucher_no}`);
+            alert(`Đã lập phiếu thu (mẫu 01-TT)!\nSố phiếu: ${result.voucher_no}`);
             const modalEl = document.getElementById('paymentModal');
             bootstrap.Modal.getInstance(modalEl).hide();
             loadDebtData();

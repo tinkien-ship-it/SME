@@ -37,16 +37,10 @@
             .table-print th { background-color: #eee !important; -webkit-print-color-adjust: exact; }
         }
     </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-
-<div class="no-print-zone">
-    <button onclick="window.print()" class="btn btn-primary px-4">
-        <i class="bi bi-printer-fill me-2"></i>XÁC NHẬN IN SỔ (A4 NGANG)
-    </button>
-    <button onclick="window.close()" class="btn btn-secondary px-4">ĐÓNG</button>
-</div>
-
+{% with print_label='IN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
 <div class="print-container">
     <div class="row">
         <div class="col-7">
@@ -56,7 +50,7 @@
         </div>
         <div class="col-5 text-end">
             <p class="mb-0 fw-bold">Sổ chi tiết công nợ phải trả</p>
-            <small>(SME · TT 99/2025/TT-BTC)</small>
+            <small>(Kế toán doanh nghiệp · Thông tư 99/2025/TT-BTC)</small>
         </div>
     </div>
 
@@ -213,5 +207,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 </script>
+</div>
 </body>
 </html>

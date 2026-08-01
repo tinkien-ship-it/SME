@@ -13,31 +13,33 @@
   .num{text-align:right}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
-  <div style="text-align:right"><strong>Bảng tổng hợp giá thành</strong><br><span class="muted">SME · TT99</span></div>
+  <div style="text-align:right"><strong>Bảng tổng hợp giá thành</strong><br><span class="muted">Kế toán doanh nghiệp · Thông tư 99</span></div>
 </div>
 <div class="title">BẢNG TỔNG HỢP CHI PHÍ SẢN XUẤT — GIÁ THÀNH</div>
 <div style="text-align:center">Tháng {{ '%02d'|format(doc.period) }}/{{ doc.fiscal_year }}</div>
 <table>
   <tr><th>Chỉ tiêu</th><th>Số tiền</th></tr>
-  <tr><td>621 — NVL trực tiếp (phát sinh kỳ)</td><td class="num">{{ '{:,.0f}'.format(doc.cp_621|float).replace(',', '.') }}</td></tr>
+  <tr><td>621 — Nguyên vật liệu trực tiếp (phát sinh kỳ)</td><td class="num">{{ '{:,.0f}'.format(doc.cp_621|float).replace(',', '.') }}</td></tr>
   <tr><td>622 — Nhân công trực tiếp</td><td class="num">{{ '{:,.0f}'.format(doc.cp_622|float).replace(',', '.') }}</td></tr>
-  <tr><td>627 — SXC</td><td class="num">{{ '{:,.0f}'.format(doc.cp_627|float).replace(',', '.') }}</td></tr>
+  <tr><td>627 — Chi phí sản xuất chung</td><td class="num">{{ '{:,.0f}'.format(doc.cp_627|float).replace(',', '.') }}</td></tr>
   <tr><th>Tổng tập hợp kỳ</th><th class="num">{{ '{:,.0f}'.format(doc.collected_period|float).replace(',', '.') }}</th></tr>
-  <tr><td>154 — Chi phí SXKD dở dang (cuối kỳ)</td><td class="num">{{ '{:,.0f}'.format(doc.wip_154|float).replace(',', '.') }}</td></tr>
+  <tr><td>154 — Chi phí sản xuất kinh doanh dở dang (cuối kỳ)</td><td class="num">{{ '{:,.0f}'.format(doc.wip_154|float).replace(',', '.') }}</td></tr>
   <tr><td>155 — Thành phẩm (cuối kỳ)</td><td class="num">{{ '{:,.0f}'.format(doc.finished_goods_155|float).replace(',', '.') }}</td></tr>
-  <tr><td>Nhập TP trong kỳ (Nợ 155)</td><td class="num">{{ '{:,.0f}'.format(doc.fg_receipts_period|float).replace(',', '.') }}</td></tr>
+  <tr><td>Nhập thành phẩm trong kỳ (Nợ 155)</td><td class="num">{{ '{:,.0f}'.format(doc.fg_receipts_period|float).replace(',', '.') }}</td></tr>
   <tr><td>632 — Giá vốn kỳ</td><td class="num">{{ '{:,.0f}'.format(doc.cogs_period|float).replace(',', '.') }}</td></tr>
-  <tr><td>632 — Giá vốn YTD</td><td class="num">{{ '{:,.0f}'.format(doc.cogs_ytd|float).replace(',', '.') }}</td></tr>
+  <tr><td>632 — Giá vốn từ đầu năm</td><td class="num">{{ '{:,.0f}'.format(doc.cogs_ytd|float).replace(',', '.') }}</td></tr>
 </table>
 {% if doc.recent_orders %}
 <p><strong>Lệnh sản xuất gần đây</strong></p>
 <table>
-  <thead><tr><th>Số</th><th>Ngày</th><th>NVL</th><th>NC</th><th>Chung</th><th>Tổng</th><th>Mode</th></tr></thead>
+  <thead><tr><th>Số</th><th>Ngày</th><th>Nguyên vật liệu</th><th>Nhân công</th><th>Chung</th><th>Tổng</th><th>Chế độ</th></tr></thead>
   <tbody>
   {% for o in doc.recent_orders[:15] %}
     <tr>
@@ -53,5 +55,6 @@
   </tbody>
 </table>
 {% endif %}
+</div>
 </body>
 </html>

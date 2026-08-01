@@ -235,8 +235,27 @@ def format_vn_date(date_obj):
     if not date_obj:
         return '—'
     if isinstance(date_obj, str):
-        date_obj = parse_date(date_obj)
-    return date_obj.strftime('%d/%m/%Y') if date_obj else '—'
+        parsed = parse_date(date_obj)
+        if parsed:
+            return parsed.strftime('%d/%m/%Y')
+        # Fallback: ISO / already dd/mm/yyyy
+        return format_date(date_obj, '%d/%m/%Y')
+    return date_obj.strftime('%d/%m/%Y') if hasattr(date_obj, 'strftime') else '—'
+
+
+def format_vn_date_long(date_obj):
+    """Ngày dd tháng mm năm yyyy (dùng trên chứng từ in)."""
+    if not date_obj:
+        return 'Ngày … tháng … năm …'
+    if isinstance(date_obj, str):
+        date_obj = parse_date(date_obj) or date_obj
+    if hasattr(date_obj, 'strftime'):
+        return date_obj.strftime('Ngày %d tháng %m năm %Y')
+    s = format_vn_date(date_obj)
+    if s == '—' or '/' not in s:
+        return 'Ngày … tháng … năm …'
+    d, m, y = s.split('/')
+    return f'Ngày {d} tháng {m} năm {y}'
 
 
 def format_vn_number(num, decimals=2):
@@ -307,5 +326,6 @@ def register_jinja_filters(app):
     app.jinja_env.filters['vnd'] = vnd
     app.jinja_env.filters['format_currency'] = format_currency
     app.jinja_env.filters['format_vn_date'] = format_vn_date
+    app.jinja_env.filters['format_vn_date_long'] = format_vn_date_long
     app.jinja_env.filters['format_vn_number'] = format_vn_number
     app.config['parse_date'] = parse_date

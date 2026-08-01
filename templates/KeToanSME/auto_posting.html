@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Tự động hóa kế toán SME{% endblock %}
+{% block title %}Kết chuyển, khóa sổ và cuối năm{% endblock %}
 
 {% block extra_style %}
 <style>
@@ -16,18 +16,18 @@
         <div>
             <h4 class="fw-bold mb-1"><i class="fas fa-robot text-primary me-2"></i>Tự động hóa kỳ kế toán</h4>
             <p class="text-muted small mb-0">
-                Một lần chạy kỳ: KH TSCĐ → PB CCDC → kết chuyển DT/CP → 911 → 4212 → quyết toán GTGT (133↔33311) → khóa sổ.
+                Một lần chạy kỳ: khấu hao tài sản cố định → phân bổ công cụ dụng cụ → kết chuyển doanh thu/chi phí → tài khoản 911 → 4212 → quyết toán thuế giá trị gia tăng (133↔33311) → khóa sổ.
                 Cuối năm: kết chuyển 4212 → 4211.
-                Tài sản <code>InStock</code> được kích hoạt tự động. Lịch hệ thống: ngày 1 hàng tháng.
+                Tài sản đang ở trạng thái «Trong kho» được kích hoạt tự động. Lịch hệ thống: ngày 1 hàng tháng.
                 {% set feat = tenant_profile.features or {} %}
                 {% set filing = tenant_profile.vat_filing_period or feat.vat_filing_period or feat.filing_period or ('monthly' if feat.monthly_vat_filing else 'quarterly') %}
-                <br><span class="text-primary">Kê khai GTGT đang cấu hình theo <strong>{{ 'tháng' if filing == 'monthly' else 'quý' }}</strong>
-                — đổi tại <a href="{{ url_for('SME_tax_nsnn') }}">Thuế &amp; NSNN</a>. Quyết toán sổ kép vẫn theo tháng.</span>
+                <br><span class="text-primary">Kê khai thuế giá trị gia tăng đang cấu hình theo <strong>{{ 'tháng' if filing == 'monthly' else 'quý' }}</strong>
+                — đổi tại <a href="{{ url_for('SME_tax_nsnn') }}">Thuế và ngân sách nhà nước</a>. Quyết toán sổ kép vẫn theo tháng.</span>
             </p>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ url_for('SME_journal') }}" class="btn btn-outline-primary btn-sm">Nhật ký</a>
-            <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">Dashboard</a>
+            <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">Tổng quan</a>
         </div>
     </div>
 
@@ -55,12 +55,12 @@
                 </div>
             </div>
             <div class="d-flex flex-wrap gap-2 mt-3">
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnVatOnly">Chỉ QT GTGT</button>
-                <button type="button" class="btn btn-outline-dark btn-sm" id="btnYearEnd" title="Chuyển 4212 → 4211 sau khi đã KC tháng 12">Kết chuyển cuối năm (4212→4211)</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnVatOnly">Chỉ quyết toán thuế giá trị gia tăng</button>
+                <button type="button" class="btn btn-outline-dark btn-sm" id="btnYearEnd" title="Chuyển 4212 → 4211 sau khi đã kết chuyển tháng 12">Kết chuyển cuối năm (4212→4211)</button>
                 <button type="button" class="btn btn-outline-warning btn-sm" id="btnUnlock">Mở khóa kỳ</button>
                 <button type="button" class="btn btn-outline-danger btn-sm" id="btnLock">Khóa sổ thủ công</button>
             </div>
-            <div class="auto-muted mt-2">Lịch hệ thống cũng chạy tự động ngày 1 hàng tháng (kỳ tháng trước) cho mọi tenant SME. Cuối năm: chạy KC tháng 12 rồi bấm <strong>Kết chuyển cuối năm</strong>.</div>
+            <div class="auto-muted mt-2">Lịch hệ thống cũng chạy tự động ngày 1 hàng tháng (kỳ tháng trước) cho mọi đơn vị kế toán doanh nghiệp. Cuối năm: chạy kết chuyển tháng 12 rồi bấm <strong>Kết chuyển cuối năm</strong>.</div>
             <div id="lockStatus" class="small mt-2 text-muted">Đang kiểm tra khóa sổ…</div>
         </div>
     </div>
@@ -127,34 +127,34 @@
             html += `<div class="text-warning mb-2">Kỳ đã khóa — bật “Ghi đè” để mở khóa và chạy lại.</div>`;
         }
         if (act.fixed_assets_activated != null) {
-            html += `<div class="auto-muted mb-3">Kích hoạt: TSCĐ ${act.fixed_assets_activated || 0} · CCDC ${act.tools_activated || 0}</div>`;
+            html += `<div class="auto-muted mb-3">Kích hoạt: tài sản cố định ${act.fixed_assets_activated || 0} · công cụ dụng cụ ${act.tools_activated || 0}</div>`;
         }
         if (d.depreciation) {
             html += `<div class="mb-2">Khấu hao: <span class="auto-ok">${money(dep.amount)} đ</span> · ${dep.assets || 0} tài sản`;
-            if (dep.entry_id) html += ` · BT#${dep.entry_id}`;
+            if (dep.entry_id) html += ` · bút toán #${dep.entry_id}`;
             if (dep.reason) html += ` · <span class="text-warning">${dep.reason}</span>`;
             html += `</div>`;
         }
         if (d.tools) {
-            html += `<div class="mb-2">Phân bổ CCDC: <span class="auto-ok">${money(tools.amount)} đ</span> · ${tools.assets || 0} món`;
-            if (tools.entry_id) html += ` · BT#${tools.entry_id}`;
+            html += `<div class="mb-2">Phân bổ công cụ dụng cụ: <span class="auto-ok">${money(tools.amount)} đ</span> · ${tools.assets || 0} món`;
+            if (tools.entry_id) html += ` · bút toán #${tools.entry_id}`;
             if (tools.reason) html += ` · <span class="text-warning">${tools.reason}</span>`;
             html += `</div>`;
         }
         if (d.period_close) {
-            html += `<div class="mb-2">Kết chuyển KQKD: DT ${money(close.revenue_total)} − CP ${money(close.expense_total)} → `;
+            html += `<div class="mb-2">Kết chuyển kết quả kinh doanh: doanh thu ${money(close.revenue_total)} − chi phí ${money(close.expense_total)} → `;
             const profit = Number(close.profit || 0);
             html += profit >= 0
                 ? `<span class="auto-ok">Lãi ${money(profit)}</span>`
                 : `<span class="text-danger">Lỗ ${money(-profit)}</span>`;
-            if (close.entry_id) html += ` · BT#${close.entry_id}`;
+            if (close.entry_id) html += ` · bút toán #${close.entry_id}`;
             if (close.reason) html += ` · <span class="text-warning">${close.reason}</span>`;
             html += `</div>`;
         }
         if (d.vat_settlement || vat.reason || vat.offset_amount != null) {
-            html += `<div class="mb-2">QT GTGT: đầu vào ${money(vat.input_total)} · đầu ra ${money(vat.output_total)} · bù trừ ${money(vat.offset_amount)}`;
+            html += `<div class="mb-2">Quyết toán thuế giá trị gia tăng: đầu vào ${money(vat.input_total)} · đầu ra ${money(vat.output_total)} · bù trừ ${money(vat.offset_amount)}`;
             html += ` · phải nộp <strong>${money(vat.vat_payable)}</strong> · còn khấu trừ ${money(vat.vat_credit_carry)}`;
-            if (vat.entry_id) html += ` · BT#${vat.entry_id}`;
+            if (vat.entry_id) html += ` · bút toán #${vat.entry_id}`;
             if (vat.reason) html += ` · <span class="text-warning">${vat.reason}</span>`;
             html += `</div>`;
         }
@@ -174,14 +174,14 @@
         }
         if (d.reason && d.reason !== 'period_locked') html += `<div class="text-muted">${d.reason}</div>`;
         if ((dep.details || []).length) {
-            html += `<div class="mt-3 small fw-semibold">Chi tiết TSCĐ</div><ul class="small">`;
+            html += `<div class="mt-3 small fw-semibold">Chi tiết tài sản cố định</div><ul class="small">`;
             dep.details.forEach(x => {
                 html += `<li class="auto-mono">${x.code || x.id}: ${money(x.amount)}</li>`;
             });
             html += `</ul>`;
         }
         if ((tools.details || []).length) {
-            html += `<div class="mt-2 small fw-semibold">Chi tiết CCDC</div><ul class="small">`;
+            html += `<div class="mt-2 small fw-semibold">Chi tiết công cụ dụng cụ</div><ul class="small">`;
             tools.details.forEach(x => {
                 html += `<li class="auto-mono">${x.code || x.id}: ${money(x.amount)}</li>`;
             });
@@ -210,7 +210,7 @@
 
     document.getElementById('btnVatOnly').addEventListener('click', async () => {
         const box = document.getElementById('autoResult');
-        box.innerHTML = '<div class="text-muted">Đang quyết toán GTGT…</div>';
+        box.innerHTML = '<div class="text-muted">Đang quyết toán thuế giá trị gia tăng…</div>';
         try {
             const res = await fetch('/api/sme/auto/vat-settle', {
                 method: 'POST',

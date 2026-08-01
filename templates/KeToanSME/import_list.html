@@ -193,7 +193,7 @@ let paymentFilter = '';
 let importTableCtrl = null;
 
 const PAYMENT_PIVOT_ITEMS = [
-    { value: '', label: 'Tất cả TT' },
+    { value: '', label: 'Tất cả tình trạng' },
     { value: 'Đã thanh toán', label: 'Đã thanh toán' },
     { value: 'Chưa thanh toán', label: 'Chưa thanh toán' },
 ];
@@ -436,7 +436,7 @@ async function deleteImport(id, importNo) {
         const res = await fetch(`/api/sme/import/${id}/void`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reason: 'Hủy từ danh sách SME' }),
+            body: JSON.stringify({ reason: 'Hủy từ danh sách' }),
         });
         const data = await res.json();
 

@@ -85,7 +85,14 @@
                             <button class="nav-link fw-bold py-3" id="ketoan-tab" data-bs-toggle="tab"
                                     data-bs-target="#ketoan" type="button" role="tab">
                                 <i class="fas fa-calculator me-2"></i>
-                                Phân Hệ Kế Toán
+                                Kế Toán HKD
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold py-3" id="ketoan-sme-tab" data-bs-toggle="tab"
+                                    data-bs-target="#ketoan-sme" type="button" role="tab">
+                                <i class="fas fa-building me-2"></i>
+                                Kế Toán SME
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -190,13 +197,14 @@
                             </p>
                         </div>
 
-                        <!-- ==================== TAB: PHÂN HỆ KẾ TOÁN ==================== -->
+                        <!-- ==================== TAB: KẾ TOÁN HKD ==================== -->
                         <div class="tab-pane fade p-4 p-md-5" id="ketoan" role="tabpanel">
                             <h4 class="text-primary fw-bold mb-4 border-bottom pb-2">
-                                <i class="fas fa-calculator me-2"></i> PHÂN HỆ KẾ TOÁN
+                                <i class="fas fa-calculator me-2"></i> KẾ TOÁN HỘ KINH DOANH (HKD)
                             </h4>
                             <p class="text-justify mb-4">
-                                Chứng từ và sổ sách kế toán hầu hết đã được lập tự động; chỉ còn một số thao tác sau:
+                                Áp dụng hộ kinh doanh theo Thông tư 88. Doanh nghiệp dùng sổ kép TT99/TT58: xem tab
+                                <strong>Kế Toán SME</strong>. Chứng từ và sổ sách HKD hầu hết đã được lập tự động; chỉ còn một số thao tác sau:
                             </p>
 
                             <h5 class="text-primary fw-bold mb-3"><i class="fas fa-hand-holding-usd me-2"></i>Công nợ</h5>
@@ -255,6 +263,123 @@
                                 <li><strong>Điều chỉnh thông tin khoản vay:</strong> Nút thứ ba</li>
                             </ul>
 
+                        </div>
+
+                        <!-- ==================== TAB: KẾ TOÁN SME ==================== -->
+                        <div class="tab-pane fade p-4 p-md-5" id="ketoan-sme" role="tabpanel">
+                            <h4 class="text-primary fw-bold mb-4 border-bottom pb-2">
+                                <i class="fas fa-building me-2"></i> KẾ TOÁN DOANH NGHIỆP (SME) — TT99 / TT58
+                            </h4>
+                            <p class="text-justify mb-4">
+                                Menu trung tâm <strong>Kế toán doanh nghiệp</strong> dùng sổ kép theo
+                                <strong>Thông tư 99/2025/TT-BTC</strong> (doanh nghiệp) hoặc <strong>Thông tư 58</strong> (siêu nhỏ).
+                                Trên thanh trên có chọn <strong>chi nhánh</strong>: chọn một chi nhánh để ghi sổ / lọc báo cáo vận hành,
+                                hoặc <strong>Tất cả chi nhánh</strong> để xem hợp nhất. Trụ sở chính có mã <strong>HQ</strong>.
+                            </p>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-play-circle me-2"></i>Bắt đầu sử dụng</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Thiết lập thông tin doang nghiệp:</strong> tên, MST, địa chỉ, tài khoản ngân hàng (Hệ thống → Thiết lập).</li>
+                                <li><strong>Ghi vốn góp ban đầu:</strong> vào <strong>Tiền Và Công Nợ → Sổ Quỹ Tiền Mặt</strong> hoặc
+                                    <strong>Sổ Tiền Gửi Ngân Hàng</strong> → <strong>Lập phiếu thu</strong>.
+                                    Mặc định Nợ <strong>1111</strong> (tiền mặt) hoặc <strong>1121</strong> (ngân hàng), Có <strong>4111</strong> Vốn góp chủ sở hữu.</li>
+                                <li>Nhập danh mục sản phẩm / nhà cung cấp / khách hàng; nhập kho hoặc mua hàng; bán hàng tại <strong>Điểm bán hàng</strong>.</li>
+                                <li>Cuối kỳ chạy <strong>Kết chuyển, khóa sổ và cuối năm</strong>; xem báo cáo tài chính và tờ khai thuế.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-code-branch me-2"></i>Chi nhánh và kho</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Sổ sách kế toán → Chi nhánh và đơn vị</strong> hoặc <strong>Tồn kho → Danh mục kho và chi nhánh</strong>.</li>
+                                <li>Kho mặc định thường là <strong>KHO_001</strong>, <strong>KHO_002</strong>, <strong>KHO_003</strong> — gắn kho vào đúng chi nhánh trước khi nhập/xuất.</li>
+                                <li>Dữ liệu cũ chưa gắn chi nhánh được xem như Trụ sở chính (HQ).</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-wallet me-2"></i>Tiền Và Công Nợ</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Sổ Quỹ Tiền Mặt:</strong> theo dõi TK 111; <strong>Lập phiếu thu</strong> mặc định Nợ 1111 · Có 4111 (đổi tài khoản Có khi thu nợ 131, tạm ứng 141…).</li>
+                                <li><strong>Sổ Tiền Gửi Ngân Hàng:</strong> theo dõi TK 112; phiếu thu mặc định Nợ 1121 · Có 4111.</li>
+                                <li><strong>Phiếu chi</strong> (Chứng từ kế toán → Phiếu chi — mẫu 02-TT): chi tiền mặt / chuyển khoản, Nợ chi phí hoặc công nợ · Có 1111/1121.</li>
+                                <li><strong>Sổ Công Nợ Phải Thu (131)</strong>, <strong>Phải Trả (331)</strong>, <strong>Phải Thu / Phải Trả Nhân Viên (141/334)</strong>: thu nợ / trả nợ gắn đúng đối tượng.</li>
+                                <li>Danh sách phiếu thu đầy đủ: <strong>Chứng từ kế toán → Phiếu thu — mẫu 01-TT</strong>.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-cart-shopping me-2"></i>Bán hàng</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Điểm bán hàng</strong> ghi doanh thu và giá vốn vào nhật ký bút toán.</li>
+                                <li>Xem đơn tại <strong>Danh sách đơn hàng</strong>; hóa đơn bán; <strong>Khách trả hàng</strong>.</li>
+                                <li>Tổng quan: nhóm <strong>Doanh thu / giá vốn / phải thu</strong> trên hub bán hàng.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-bag-shopping me-2"></i>Mua hàng và nhập kho</h5>
+                            <ul class="step-list mb-4">
+                                <li>Lập <strong>đơn mua</strong> → <strong>Hóa đơn mua hàng</strong> → <strong>Lập phiếu nhập kho</strong>.</li>
+                                <li>Chọn loại hàng: hàng hóa, nguyên vật liệu, tài sản cố định, công cụ dụng cụ.</li>
+                                <li><strong>Phân bổ chi phí mua hàng</strong> (vận chuyển, lắp đặt) vào giá vốn.</li>
+                                <li>Trả nhà cung cấp từ sổ công nợ phải trả hoặc phiếu chi.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-warehouse me-2"></i>Tồn kho</h5>
+                            <ul class="step-list mb-4">
+                                <li>Xem tồn và báo cáo tồn kho theo chi nhánh / kho.</li>
+                                <li><strong>Chuyển kho liên chi nhánh</strong> (Chứng từ): cùng pháp nhân thường không ghi sổ cái.</li>
+                                <li>Kiểm kê kho mẫu <strong>05-VT</strong>; kiểm nghiệm vật tư mẫu <strong>03-VT</strong>.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-book me-2"></i>Nhật ký bút toán và sổ cái</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Sổ sách kế toán → Nhật ký bút toán:</strong> lọc chi nhánh / loại chứng từ / ngày; có thể đảo bút toán (khi kỳ chưa khóa).</li>
+                                <li><strong>Sổ cái và cân đối phát sinh:</strong> đối chiếu số dư tài khoản. Số bút toán dạng <strong>BT0000001</strong>.</li>
+                                <li><strong>Danh mục tài khoản:</strong> hệ thống tài khoản theo chế độ SME đã chọn.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-building me-2"></i>Tài sản cố định và công cụ dụng cụ</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>TSCĐ:</strong> nhập qua phiếu nhập (loại tài sản cố định) → <strong>Danh mục tài sản cố định</strong> → thiết lập khấu hao (số tháng, ngày bắt đầu). Trạng thái: Trong kho → Đang sử dụng → Đã thanh lý.</li>
+                                <li>Chạy khấu hao kỳ tại <strong>Kết chuyển, khóa sổ và cuối năm</strong>. Biên bản giao nhận / thanh lý / bảng khấu hao mẫu 01–06 TSCĐ.</li>
+                                <li><strong>CCDC:</strong> nhập qua phiếu nhập → danh mục → thiết lập phân bổ hoặc đưa vào sử dụng; phân bổ theo kỳ khi chạy tự động hóa kỳ.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-industry me-2"></i>Sản xuất và giá thành</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Sản xuất và giá thành → Sản xuất:</strong> định mức, phiếu sản xuất, xuất nguyên vật liệu, nhập thành phẩm theo giá vốn bình quân.</li>
+                                <li><strong>Kế toán giá thành:</strong> tập hợp chi phí 621 / 622 / 627.</li>
+                                <li>Mẫu <strong>04-VT</strong> vật tư còn lại; <strong>07-VT</strong> phân bổ nguyên vật liệu.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-user-tie me-2"></i>Nhân sự và tiền lương</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Danh sách nhân viên</strong> → <strong>Bảng chấm công</strong> → <strong>Lập bảng lương</strong> (mẫu 01-LĐTL).</li>
+                                <li>Thưởng / ngoài giờ / thuê ngoài; hợp đồng giao khoán; nộp bảo hiểm xã hội; phân bổ lương.</li>
+                                <li>Trả lương qua <strong>Sổ Phải Trả Nhân Viên</strong> hoặc phiếu chi.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-robot me-2"></i>Kết chuyển, khóa sổ và cuối năm</h5>
+                            <ul class="step-list mb-4">
+                                <li>Vào <strong>Sổ sách kế toán → Kết chuyển, khóa sổ và cuối năm</strong> (hoặc Tiện ích).</li>
+                                <li>Một lần chạy kỳ thường gồm: khấu hao TSCĐ → phân bổ CCDC → kết chuyển doanh thu/chi phí → 911 → 4212 → quyết toán thuế giá trị gia tăng → <strong>khóa sổ</strong>.</li>
+                                <li>Cuối năm: kết chuyển 4212 → 4211. Có thể chỉ chạy quyết toán thuế giá trị gia tăng.</li>
+                                <li>Kỳ đã khóa: không ghi / đảo bút toán — mở khóa tại cùng trang nếu cần chỉnh sửa.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-chart-line me-2"></i>Báo cáo tài chính và thuế</h5>
+                            <ul class="step-list mb-4">
+                                <li><strong>Bộ báo cáo tài chính</strong> mẫu B01–B09; <strong>Báo cáo quản trị</strong>.</li>
+                                <li><strong>Thuế và ngân sách nhà nước</strong> (133 / 333); <strong>Tờ khai thuế giá trị gia tăng</strong>.</li>
+                                <li>Thuế thu nhập doanh nghiệp tạm nộp và quyết toán; thuế thu nhập cá nhân khấu trừ từ lương.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-print me-2"></i>In chứng từ và ngày tháng</h5>
+                            <ul class="step-list mb-4">
+                                <li>Trang in SME có thanh <strong>IN</strong> và <strong>ĐÓNG TRANG</strong>.</li>
+                                <li>Ngày trên bản in dạng <strong>dd/mm/yyyy</strong> hoặc <strong>Ngày dd tháng mm năm yyyy</strong>.</li>
+                            </ul>
+
+                            <h5 class="text-primary fw-bold mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Lỗi thường gặp</h5>
+                            <ul class="step-list mb-0">
+                                <li>Danh mục TSCĐ/CCDC trống: tải lại trang (Ctrl+F5); kiểm tra đã nhập qua phiếu nhập và chi nhánh đang chọn.</li>
+                                <li>Không ghi được sổ: kỳ đã khóa — mở khóa hoặc bật ghi đè khi chạy kỳ.</li>
+                                <li>Số dư quỹ không khớp: đối chiếu nhật ký bút toán tài khoản 111/112 với phiếu thu/chi.</li>
+                            </ul>
                         </div>
 
                         <!-- ==================== TAB: DỊCH VỤ ẨM THỰC (F&B) ==================== -->

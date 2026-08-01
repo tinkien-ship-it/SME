@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}Sổ cái / Cân đối phát sinh — SME{% endblock %}
+{% block title %}Sổ cái và cân đối phát sinh{% endblock %}
 
 {% block sme_head %}
 <style>
@@ -339,7 +339,7 @@
                 </tr>`;
             const lines = (d.lines || []).map(ln => `
                 <tr>
-                    <td>${(ln.posting_date || '').slice(0, 10)}</td>
+                    <td>${fmtDateVi(ln.posting_date)}</td>
                     <td class="gl-mono"><a href="/SME_journal" title="Mở nhật ký">${ln.entry_no || '#' + ln.entry_id}</a></td>
                     <td class="gl-mono">${ln.document_no || '—'}</td>
                     <td>${ln.description || ''}</td>

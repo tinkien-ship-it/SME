@@ -408,7 +408,7 @@ async function loadRecentReturns(){
       <td>${r.id}</td><td>${r.import_no||r.import_id||''}</td>
       <td>${r.product_name||r.product_id||''}</td>
       <td class="text-end">${r.quantity||0}</td>
-      <td>${(r.date||'').toString().slice(0,10)}</td>
+      <td>${fmtDateVi(r.date)}</td>
       <td><button class="btn btn-sm btn-outline-danger" onclick="voidReturnImport(${r.id})">Hủy</button></td>
     </tr>`).join('')||'<tr><td colspan="6" class="text-muted text-center">Chưa có phiếu trả</td></tr>';
   }catch(e){ console.warn(e); }

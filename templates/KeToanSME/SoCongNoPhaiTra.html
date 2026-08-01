@@ -326,7 +326,7 @@ $('#btnSaveImportPayment').on('click', async function() {
 
         if (result.success) {
             getPayModal().hide();
-            Swal.fire('Thành công', `Đã lập phiếu chi SME (02-TT) ${result.voucher_no}`, 'success');
+            Swal.fire('Thành công', `Đã lập phiếu chi (mẫu 02-TT) ${result.voucher_no}`, 'success');
             loadDebtData();
         } else {
             Swal.fire('Lỗi', result.error || 'Không thể lưu phiếu chi', 'error');

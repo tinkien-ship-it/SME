@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}Dashboard Công Nợ - SME Accounting{% endblock %}
+{% block title %}Tổng quan công nợ — Kế toán doanh nghiệp{% endblock %}
 
 {% block sme_head %}
 <style>
@@ -29,7 +29,7 @@
 
         <div class="row g-4 mb-4">
             <div class="col-xl-3 col-md-6"><div class="card metric-card h-100"><div class="card-body">
-                <span class="text-muted small fw-semibold text-uppercase">Phải thu KH (131)</span>
+                <span class="text-muted small fw-semibold text-uppercase">Phải thu khách hàng (131)</span>
                 <h3 class="fw-bold text-primary mt-2 mb-0" id="total-ar">0 đ</h3>
                 <div class="mt-3 text-muted small">Thu trong kỳ: <span id="ar-collected">0</span></div>
             </div></div></div>
@@ -66,10 +66,13 @@
         <div class="card shadow-sm border-0 mt-4">
             <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">Lối tắt</h6></div>
             <div class="card-body d-flex flex-wrap gap-2">
-                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoCongNoPhaiTra') }}">Công nợ phải trả</a>
-                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_PhaiThuCongNhanVien') }}">Phải thu nhân viên</a>
-                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_general_ledger') }}">Sổ cái</a>
-                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_tax_nsnn') }}">Thuế &amp; NSNN</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoQuyTienMat') }}">Sổ Quỹ Tiền Mặt</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoTienGuiNganHang') }}">Sổ Tiền Gửi Ngân Hàng</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoCongNoPhaiThu') }}">Sổ phải thu</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoCongNoPhaiTra') }}">Sổ phải trả</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_chung_tu') }}">Chứng từ thu/chi</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoSachKeToan') }}">Sổ sách kế toán</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_tax_nsnn') }}">Thuế và ngân sách nhà nước</a>
             </div>
         </div>
 {% endblock %}

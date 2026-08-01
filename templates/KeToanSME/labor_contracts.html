@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Hợp đồng giao khoán 05/06-LĐTL{% endblock %}
+{% block title %}Hợp đồng giao khoán 05/06-LĐTL{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
@@ -10,7 +10,7 @@
 </div>
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table table-hover mb-0"><thead class="table-light"><tr>
-  <th>Số HĐ</th><th>Ngày</th><th>Bên nhận khoán</th><th class="text-end">Giá trị</th><th>TT</th><th></th>
+  <th>Số HĐ</th><th>Ngày</th><th>Bên nhận khoán</th><th class="text-end">Giá trị</th><th>Tình trạng</th><th></th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 
@@ -56,9 +56,9 @@ fDate.value=fStart.value=tlDate.value=today();
 async function load(){
   const res=await fetch('/api/sme/labor-contracts'); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.contract_no}</td><td>${(r.contract_date||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.contract_no}</td><td>${fmtDateVi(r.contract_date)}</td>
     <td>${r.contractor_name}</td><td class="text-end">${fmt(r.contract_amount)}</td>
-    <td><span class="badge bg-light text-dark border">${r.status}</span></td>
+    <td><span class="badge bg-light text-dark border">${statusLabelVi(r.status)}</span></td>
     <td class="text-nowrap">
       <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_labor_contract/in/${r.id}">In 05</a>
       ${r.status==='active'?`<button class="btn btn-sm btn-warning" onclick="openTL(${r.id},'${r.contract_no}',${r.contract_amount},'${(r.contractor_name||'').replace(/'/g,'')}')">Thanh lý 06</button>`:''}

@@ -12,7 +12,7 @@
     <main class="accounting-hub-content">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <button type="button" class="btn btn-outline-primary btn-sm accounting-hub-mobile-toggle"
-                    id="smeSidebarToggle" aria-label="Mở menu Kế Toán SME">
+                    id="smeSidebarToggle" aria-label="Mở menu kế toán doanh nghiệp">
                 <i class="fas fa-bars me-1"></i> Menu
             </button>
             {% block sme_breadcrumb %}{% endblock %}
@@ -21,11 +21,11 @@
                 <label class="small text-muted mb-0" for="smeBranchSelect">Chi nhánh</label>
                 <select id="smeBranchSelect" class="form-select form-select-sm" style="width:auto;min-width:160px"
                         title="Chi nhánh ghi sổ / lọc báo cáo vận hành">
-                    <option value="ALL" {% if (br.filter or 'ALL') == 'ALL' %}selected{% endif %}>Tất cả (hợp nhất)</option>
+                    <option value="ALL" {% if (br.filter or 'ALL') == 'ALL' %}selected{% endif %}>Tất cả chi nhánh (hợp nhất)</option>
                     {% for b in br.branches or [] %}
                     <option value="{{ b.code }}"
                         {% if (br.filter or br.current_branch_code) == b.code %}selected{% endif %}>
-                        {{ b.code }} — {{ b.name }}{% if b.is_default %} ★{% endif %}
+                        {% if b.code == 'HQ' %}Trụ sở chính{% else %}{{ b.code }} — {{ b.name }}{% endif %}{% if b.is_default %} ★{% endif %}
                     </option>
                     {% endfor %}
                 </select>
@@ -93,6 +93,12 @@
                 location.reload();
             } catch (e) {
                 alert('Lỗi kết nối khi đổi chi nhánh');
+            }
+        });
+        // Hiển thị tên đầy đủ cho trụ sở chính trên ô chọn
+        [...brSel.options].forEach(opt => {
+            if ((opt.value || '').toUpperCase() === 'HQ' && !opt.textContent.includes('Trụ sở')) {
+                opt.textContent = 'HQ — Trụ sở chính' + (opt.textContent.includes('★') ? ' ★' : '');
             }
         });
     }

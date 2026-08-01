@@ -16,9 +16,11 @@
   .sign div{width:45%}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div>
     <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
@@ -27,11 +29,11 @@
   </div>
   <div style="text-align:right">
     <div><strong>Mẫu số 04 - VT</strong></div>
-    <div class="muted">(TT 99/2025/TT-BTC)</div>
+    <div class="muted">(Thông tư 99/2025/TT-BTC)</div>
   </div>
 </div>
 <div class="title">BẢNG KÊ CHI TIẾT VẬT TƯ CÒN LẠI CUỐI KỲ</div>
-<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.as_of_date }}</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.as_of_date|format_vn_date }}</div>
 <table>
   <thead>
     <tr>
@@ -65,6 +67,7 @@
 <div class="sign">
   <div>Phụ trách bộ phận<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
 </div>
 </body>
 </html>

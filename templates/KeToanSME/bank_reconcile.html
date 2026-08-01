@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Đối chiếu ngân hàng{% endblock %}
+{% block title %}Đối chiếu ngân hàng{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
@@ -46,7 +46,7 @@
 <div class="card shadow-sm border-0 mt-3">
   <div class="card-header bg-white fw-bold">Lịch sử phiên</div>
   <div class="table-responsive"><table class="table table-sm mb-0">
-    <thead><tr><th>ID</th><th>Ngày</th><th>Kỳ</th><th class="text-end">Sổ</th><th class="text-end">Sao kê</th><th class="text-end">Lệch</th><th>TT</th></tr></thead>
+    <thead><tr><th>ID</th><th>Ngày</th><th>Kỳ</th><th class="text-end">Sổ</th><th class="text-end">Sao kê</th><th class="text-end">Lệch</th><th>Tình trạng</th></tr></thead>
     <tbody id="histBody"></tbody>
   </table></div>
 </div>
@@ -63,11 +63,11 @@ async function loadHist(){
   const res = await fetch('/api/sme/bank-reconcile');
   const json = await res.json();
   histBody.innerHTML = (json.data||[]).map(r => `<tr>
-    <td>${r.id}</td><td>${(r.reconcile_date||'').slice(0,10)}</td>
-    <td class="small">${(r.date_from||'').slice(0,10)} → ${(r.date_to||'').slice(0,10)}</td>
+    <td>${r.id}</td><td>${fmtDateVi(r.reconcile_date)}</td>
+    <td class="small">${fmtDateVi(r.date_from)} → ${fmtDateVi(r.date_to)}</td>
     <td class="text-end">${fmt(r.book_balance)}</td><td class="text-end">${fmt(r.statement_balance)}</td>
     <td class="text-end">${fmt(r.difference)}</td>
-    <td>${r.status} <a class="btn btn-sm btn-outline-primary ms-1" target="_blank" href="/SME_bank_reconcile/in/${r.id}">In</a></td>
+    <td>${statusLabelVi(r.status)} <a class="btn btn-sm btn-outline-primary ms-1" target="_blank" href="/SME_bank_reconcile/in/${r.id}">In</a></td>
   </tr>`).join('') || '<tr><td colspan="7" class="text-muted text-center">Chưa có phiên</td></tr>';
 }
 
@@ -90,7 +90,7 @@ async function loadWorkspace(){
   </tr>`).join('') || '<tr><td colspan="5" class="text-muted text-center">Không còn dòng chưa khớp</td></tr>';
   bankBody.innerHTML = d.bank_lines.map(r => `<tr>
     <td><input type="radio" name="bank" value="${r.id}" data-amt="${r.signed_amount}"></td>
-    <td>${(r.transaction_date||'').slice(0,10)}</td>
+    <td>${fmtDateVi(r.transaction_date)}</td>
     <td class="text-end">${fmt(r.signed_amount)}</td><td class="small">${r.content||''}</td>
   </tr>`).join('') || '<tr><td colspan="4" class="text-muted text-center">Không còn giao dịch chưa khớp (hoặc chưa đồng bộ sao kê)</td></tr>';
   bookBody.querySelectorAll('input[name=book]').forEach(el => el.onchange = () => { selectedBook = +el.value; btnMatch.disabled = !(selectedBook&&selectedBank&&reconcileId); });

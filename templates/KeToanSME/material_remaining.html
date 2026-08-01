@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Vật tư còn lại 04-VT{% endblock %}
+{% block title %}Vật tư còn lại 04-VT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
@@ -10,7 +10,7 @@
 </div>
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table mb-0"><thead class="table-light"><tr>
-  <th>Số</th><th>Ngày CK</th><th>CN</th><th>Bộ phận</th><th class="text-end">Tổng tiền</th><th></th>
+  <th>Số</th><th>Ngày cuối kỳ</th><th>Chi nhánh</th><th>Bộ phận</th><th class="text-end">Tổng tiền</th><th></th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 
@@ -43,7 +43,7 @@ async function loadWh(){
 async function load(){
   const res=await fetch('/api/sme/material-remaining'); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.doc_no}</td><td>${(r.as_of_date||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.doc_no}</td><td>${fmtDateVi(r.as_of_date)}</td>
     <td class="small">${r.branch_code||'HQ'}</td>
     <td>${r.department||''}</td><td class="text-end">${fmt(r.total_amount)}</td>
     <td class="text-nowrap">

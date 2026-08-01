@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Kiểm kê kho 05-VT{% endblock %}
+{% block title %}Kiểm kê kho 05-VT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
@@ -10,7 +10,7 @@
 </div>
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table table-hover mb-0"><thead class="table-light"><tr>
-  <th>Số BB</th><th>Ngày</th><th>Kho</th><th>TT</th><th>Ghi chú</th>
+  <th>Số biên bản</th><th>Ngày</th><th>Kho</th><th>Tình trạng</th><th>Ghi chú</th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 <div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content">
@@ -37,8 +37,8 @@ let products=[];
 async function loadList(){
   const res=await fetch('/api/sme/stock-count'); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.doc_no}</td><td>${(r.count_date||'').slice(0,10)}</td>
-    <td>${r.warehouse_code||''}</td><td>${r.status}</td>
+    <td class="fw-bold">${r.doc_no}</td><td>${fmtDateVi(r.count_date)}</td>
+    <td>${r.warehouse_code||''}</td><td>${statusLabelVi(r.status)}</td>
     <td class="small text-nowrap">${r.notes||''}
       <a class="btn btn-sm btn-outline-primary ms-1" target="_blank" href="/SME_stock_count/in/${r.id}">In</a>
       ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger" onclick="voidCount(${r.id})">Hủy</button>`:''}

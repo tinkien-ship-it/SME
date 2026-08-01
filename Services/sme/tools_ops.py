@@ -62,6 +62,7 @@ def activate_tool(
     tool_id: int,
     *,
     start_date: str | None = None,
+    so_thang_phan_bo: int | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
     if not _table_ok(conn):
@@ -74,16 +75,62 @@ def activate_tool(
     d = dict(row)
     if d.get('tinh_trang') == STATUS_DISPOSED:
         raise ValueError('CCDC đã thanh lý')
-    if d.get('tinh_trang') == STATUS_ACTIVE:
+    if d.get('tinh_trang') == STATUS_ACTIVE and so_thang_phan_bo is None:
         return d
     date_s = str(start_date or datetime.now().strftime('%Y-%m-%d'))[:10]
+    cols = {r[1] for r in conn.execute(f'PRAGMA table_info({TOOLS_TABLE})').fetchall()}
+    sets = ['tinh_trang = ?', 'ngay_bat_dau_su_dung = COALESCE(ngay_bat_dau_su_dung, ?)']
+    params: list[Any] = [STATUS_ACTIVE, date_s]
+    if so_thang_phan_bo is not None and 'so_thang_phan_bo' in cols:
+        months = int(so_thang_phan_bo)
+        if months <= 0:
+            raise ValueError('Số tháng phân bổ phải > 0')
+        sets.append('so_thang_phan_bo = ?')
+        params.append(months)
+    params.append(tool_id)
     conn.execute(
-        f"""
-        UPDATE {TOOLS_TABLE}
-        SET tinh_trang = ?, ngay_bat_dau_su_dung = COALESCE(ngay_bat_dau_su_dung, ?)
-        WHERE id = ?
-        """,
-        (STATUS_ACTIVE, date_s, tool_id),
+        f"UPDATE {TOOLS_TABLE} SET {', '.join(sets)} WHERE id = ?",
+        params,
+    )
+    if commit:
+        conn.commit()
+    return dict(conn.execute(f'SELECT * FROM {TOOLS_TABLE} WHERE id = ?', (tool_id,)).fetchone())
+
+
+def update_tool_allocation_period(
+    conn: sqlite3.Connection,
+    tool_id: int,
+    *,
+    so_thang_phan_bo: int,
+    start_date: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Thiết lập số tháng phân bổ CCDC (và tùy chọn ngày bắt đầu)."""
+    if not _table_ok(conn):
+        raise ValueError('Chưa có bảng CCDC')
+    from Services.sme.branch_filter import assert_row_in_branch
+    assert_row_in_branch(conn, TOOLS_TABLE, tool_id, label='CCDC')
+    row = conn.execute(f'SELECT * FROM {TOOLS_TABLE} WHERE id = ?', (tool_id,)).fetchone()
+    if not row:
+        raise ValueError('Không tìm thấy CCDC')
+    d = dict(row)
+    if d.get('tinh_trang') == STATUS_DISPOSED:
+        raise ValueError('CCDC đã thanh lý — không đổi kỳ phân bổ')
+    months = int(so_thang_phan_bo or 0)
+    if months <= 0:
+        raise ValueError('Số tháng phân bổ phải > 0')
+    cols = {r[1] for r in conn.execute(f'PRAGMA table_info({TOOLS_TABLE})').fetchall()}
+    if 'so_thang_phan_bo' not in cols:
+        raise ValueError('Bảng CCDC thiếu cột so_thang_phan_bo')
+    sets = ['so_thang_phan_bo = ?']
+    params: list[Any] = [months]
+    if start_date and 'ngay_bat_dau_su_dung' in cols:
+        sets.append('ngay_bat_dau_su_dung = ?')
+        params.append(str(start_date)[:10])
+    params.append(tool_id)
+    conn.execute(
+        f"UPDATE {TOOLS_TABLE} SET {', '.join(sets)} WHERE id = ?",
+        params,
     )
     if commit:
         conn.commit()

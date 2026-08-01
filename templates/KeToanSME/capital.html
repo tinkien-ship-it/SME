@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Góp vốn / cổ tức{% endblock %}
+{% block title %}Góp vốn / cổ tức{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
@@ -14,7 +14,7 @@
 </div>
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table mb-0"><thead class="table-light"><tr>
-  <th>Số</th><th>Loại</th><th>Ngày</th><th>Đối tượng</th><th class="text-end">Số tiền</th><th>TK</th>
+  <th>Số</th><th>Loại</th><th>Ngày</th><th>Đối tượng</th><th class="text-end">Số tiền</th><th>Tài khoản</th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 
@@ -39,7 +39,7 @@ async function load(){
   const res=await fetch('/api/sme/capital'); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
     <td class="fw-bold">${r.doc_no}</td><td>${labels[r.doc_type]||r.doc_type}</td>
-    <td>${(r.doc_date||'').slice(0,10)}</td><td>${r.party_name||''}</td>
+    <td>${fmtDateVi(r.doc_date)}</td><td>${r.party_name||''}</td>
     <td class="text-end">${fmt(r.amount)}</td>
     <td class="small text-nowrap">${r.equity_account}/${r.cash_account}
       ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger ms-1" onclick="voidCap(${r.id})">Hủy</button>`:''}

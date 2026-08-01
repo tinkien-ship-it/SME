@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<title>Bảng KH TSCĐ — 06-TSCĐ</title>
+<title>Bảng khấu hao tài sản cố định — 06-TSCĐ</title>
 <style>
   body{font-family:'Times New Roman',serif;font-size:11pt;margin:16px}
   .header{display:flex;justify-content:space-between}
@@ -14,19 +14,21 @@
   .num{text-align:right}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN BẢNG KHẤU HAO' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
-  <div style="text-align:right"><strong>Mẫu số 06 - TSCĐ</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+  <div style="text-align:right"><strong>Mẫu số 06 - TSCĐ</strong><br><span class="muted">Thông tư 99/2025/TT-BTC</span></div>
 </div>
-<div class="title">BẢNG TÍNH VÀ PHÂN BỔ KHẤU HAO TSCĐ</div>
+<div class="title">BẢNG TÍNH VÀ PHÂN BỔ KHẤU HAO TÀI SẢN CỐ ĐỊNH</div>
 <div style="text-align:center">{{ data.period_label }}</div>
 <table>
   <thead>
     <tr>
-      <th>Mã</th><th>Tên TSCĐ</th><th>Nguyên giá</th><th>Số tháng</th>
+      <th>Mã</th><th>Tên tài sản cố định</th><th>Nguyên giá</th><th>Số tháng</th>
       {% for p in data.periods %}<th>T{{ p }}</th>{% endfor %}
       <th>Cộng</th>
     </tr>
@@ -54,5 +56,6 @@
     </tr>
   </tfoot>
 </table>
+</div>
 </body>
 </html>

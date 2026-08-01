@@ -1,0 +1,101 @@
+{# CSS khung in A4 — cùng phong cách Phiếu thu Hộ kinh doanh #}
+<style>
+@page { size: A4; margin: 10mm; }
+body {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  line-height: 1.4;
+  margin: 0;
+  color: #000;
+  background-color: #f4f4f4;
+}
+.no-print-zone {
+  text-align: center;
+  padding: 15px;
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.btn-action {
+  padding: 10px 25px;
+  font-weight: 600;
+  font-size: 11pt;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.btn-print {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #fff;
+}
+.btn-print:hover {
+  background: linear-gradient(135deg, #0056b3, #004085);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  color: #fff;
+}
+.btn-close-action {
+  background: linear-gradient(135deg, #6c757d, #495057);
+  color: #fff;
+}
+.btn-close-action:hover {
+  background: linear-gradient(135deg, #495057, #343a40);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+  color: #fff;
+}
+.print-container {
+  width: 210mm;
+  margin: 15px auto;
+  padding: 15mm 20mm;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  box-sizing: border-box;
+}
+.header-table { width: 100%; margin-bottom: 10px; border: none; }
+.info-dn { width: 60%; vertical-align: top; text-align: left; }
+.mau-so { width: 40%; text-align: center; vertical-align: top; }
+.title {
+  text-align: center;
+  font-weight: bold;
+  font-size: 16pt;
+  margin: 15px 0 5px;
+  text-transform: uppercase;
+}
+.date-line { text-align: center; font-style: italic; margin-bottom: 5px; }
+.number-line { text-align: center; margin-bottom: 16px; }
+.muted { font-style: italic; font-size: 10pt; }
+.row { margin: 6px 0; }
+table.data-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+table.data-table th, table.data-table td { border: 1px solid #333; padding: 5px 6px; }
+table.data-table th { background: #f5f5f5; }
+.num { text-align: right; }
+.sign, .footer-sign { width: 100%; margin-top: 36px; border: none; }
+.sign { display: flex; justify-content: space-between; text-align: center; }
+.sign div { width: 24%; }
+.footer-sign td { text-align: center; vertical-align: top; width: 25%; border: none; }
+.sign-title { font-weight: bold; display: block; }
+.sign-space { height: 70px; }
+@media print {
+  body { background-color: #fff; }
+  .no-print-zone, .no-print { display: none !important; }
+  .print-container {
+    width: 100%;
+    margin: 0;
+    padding: 5mm;
+    box-shadow: none;
+  }
+}
+</style>

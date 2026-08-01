@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}Thuế & NSNN SME{% endblock %}
+{% block title %}Thuế và ngân sách nhà nước — Kế toán doanh nghiệp{% endblock %}
 {% block sme_head %}
 <style>
 .money{font-family:ui-monospace,Consolas,monospace;text-align:right}
@@ -11,9 +11,9 @@
 
     <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
       <div>
-        <h4 class="fw-bold mb-1">Thuế & NSNN</h4>
-        <p class="text-muted small mb-0">Số dư TK 133 / 333 từ sổ kép · quyết toán GTGT tại <a href="{{ url_for('SME_auto_posting') }}">Tự động kỳ</a>
-          · <a href="{{ url_for('SME_vat_declaration') }}">Tờ khai GTGT</a>
+        <h4 class="fw-bold mb-1">Thuế và ngân sách nhà nước</h4>
+        <p class="text-muted small mb-0">Số dư tài khoản 133 / 333 từ sổ kép · quyết toán thuế giá trị gia tăng tại <a href="{{ url_for('SME_auto_posting') }}">Tự động kỳ</a>
+          · <a href="{{ url_for('SME_vat_declaration') }}">Tờ khai thuế giá trị gia tăng</a>
           · Kỳ kê khai mặc định: <strong id="filingHint">{{ 'tháng' if filing == 'monthly' else 'quý' }}</strong>
         </p>
       </div>
@@ -77,10 +77,10 @@
       document.getElementById('filingHint').textContent=cfg==='monthly'?'tháng':'quý';
       document.getElementById('sumCards').innerHTML=`
         <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Kỳ xem</div><div class="fs-6 fw-bold">${d.filing_label||''}</div></div></div></div>
-        <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">GTGT phải nộp (số dư)</div><div class="fs-5 fw-bold text-danger">${money(s.vat_payable)} đ</div></div></div></div>
+        <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Thuế giá trị gia tăng phải nộp (số dư)</div><div class="fs-5 fw-bold text-danger">${money(s.vat_payable)} đ</div></div></div></div>
         <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Phát sinh kỳ (ra − vào)</div><div class="fs-5 fw-bold">${money(s.vat_payable_period)} đ</div><div class="small text-muted">Vào ${money(s.vat_input_period)} · Ra ${money(s.vat_output_period)}</div></div></div></div>
         <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Khóa sổ</div><div class="fs-6 fw-bold ${d.period_locked?'text-danger':'text-success'}">${d.period_locked?'Đã khóa cuối kỳ':'Đang mở'}${d.months_locked&&d.months_locked.length?` · T${d.months_locked.join(',T')}`:''}</div></div></div></div>`;
-      let html='<table class="table table-sm align-middle"><thead><tr><th>TK</th><th>Chỉ tiêu</th><th class="text-end">Số dư cuối kỳ</th><th class="text-end">PS trong kỳ kê khai</th></tr></thead><tbody>';
+      let html='<table class="table table-sm align-middle"><thead><tr><th>Tài khoản</th><th>Chỉ tiêu</th><th class="text-end">Số dư cuối kỳ</th><th class="text-end">PS trong kỳ kê khai</th></tr></thead><tbody>';
       (d.lines||[]).forEach(r=>{
         html+=`<tr><td class="money">${r.code}</td><td>${r.label}</td><td class="money ${r.kind==='liability'&&r.amount>0?'text-danger':''}">${money(r.amount)}</td><td class="money">${money(r.period_amount)}</td></tr>`;
         (r.details||[]).forEach(x=>{
@@ -103,7 +103,7 @@
       const data=await res.json();
       if(!data.success) throw new Error(data.error||'Lỗi lưu');
       document.getElementById('filingHint').textContent=modeEl.value==='monthly'?'tháng':'quý';
-      if(window.Swal) Swal.fire({icon:'success',title:'Đã lưu',text:'Kỳ kê khai GTGT mặc định đã cập nhật',timer:1600,showConfirmButton:false});
+      if(window.Swal) Swal.fire({icon:'success',title:'Đã lưu',text:'Kỳ kê khai thuế giá trị gia tăng mặc định đã cập nhật',timer:1600,showConfirmButton:false});
       else alert('Đã lưu kỳ kê khai');
       load();
     }catch(e){

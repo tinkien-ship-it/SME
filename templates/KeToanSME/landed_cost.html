@@ -22,7 +22,7 @@
   <div>
     <h4 class="fw-bold mb-1">Phân bổ chi phí mua hàng</h4>
     <p class="text-muted small mb-0">
-      Vốn hóa HĐ chi phí (vận chuyển, bốc xếp, bảo hiểm, lắp đặt…) vào giá vốn HH/NVL/TSCĐ/CCDC.
+      Vốn hóa HĐ chi phí (vận chuyển, bốc xếp, bảo hiểm, lắp đặt…) vào giá vốn hàng hóa / nguyên vật liệu / tài sản cố định / công cụ dụng cụ.
       Không sửa phiếu nhập hàng gốc — tạo phiếu CP riêng và điều chỉnh WAC/nguyên giá.
     </p>
   </div>
@@ -48,7 +48,7 @@
           <button type="button" class="btn btn-outline-danger btn-sm w-100 fw-bold" id="btnReverse">
             <i class="fas fa-undo me-1"></i> Hủy phân bổ để sửa lại
           </button>
-          <div class="form-text">Đảo WAC / vốn stock_moves / bút toán, mở lại HĐ chờ xử lý.</div>
+          <div class="form-text">Đảo giá vốn bình quân / vốn sổ kho / bút toán, mở lại hóa đơn chờ xử lý.</div>
         </div>
         <hr>
         <div class="mb-2">
@@ -58,11 +58,11 @@
         <div class="mb-2">
           <label class="form-label small">Phạm vi nhận phân bổ</label>
           <select class="form-select form-select-sm" id="scope">
-            <option value="all">Tất cả (HH + NVL + TSCĐ + CCDC)</option>
+            <option value="all">Tất cả (hàng hóa + nguyên vật liệu + tài sản cố định + công cụ dụng cụ)</option>
             <option value="goods">Chỉ hàng hóa (156)</option>
-            <option value="materials">Chỉ NVL (152)</option>
-            <option value="fixed_asset">Chỉ TSCĐ (211)</option>
-            <option value="tools">Chỉ CCDC (153)</option>
+            <option value="materials">Chỉ nguyên vật liệu (152)</option>
+            <option value="fixed_asset">Chỉ tài sản cố định (211)</option>
+            <option value="tools">Chỉ công cụ dụng cụ (153)</option>
           </select>
         </div>
         <div class="mb-2">
@@ -102,10 +102,10 @@
             <thead class="table-light sticky-top">
               <tr>
                 <th style="width:40px"></th>
-                <th>Số PN</th>
+                <th>Số phiếu nhập</th>
                 <th>Ngày</th>
                 <th>HĐ hàng</th>
-                <th>NCC</th>
+                <th>Nhà cung cấp</th>
                 <th class="text-end">Giá trị gốc</th>
               </tr>
             </thead>
@@ -130,7 +130,7 @@
                 <th>PN</th>
                 <th>Hàng / tài sản</th>
                 <th>Loại</th>
-                <th>TK</th>
+                <th>Tài khoản</th>
                 <th class="text-end">Giá trị gốc</th>
                 <th class="text-end">CP phân bổ</th>
               </tr>
@@ -159,9 +159,9 @@
   const money = (v) => Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' ₫';
   const LINE_TYPE_LABEL = {
     goods: 'Hàng hóa',
-    materials: 'Vật tư (NVL)',
-    fixed_asset: 'TSCĐ',
-    tools: 'CCDC',
+    materials: 'Nguyên vật liệu',
+    fixed_asset: 'Tài sản cố định',
+    tools: 'Công cụ dụng cụ',
     service: 'Dịch vụ',
     finished_goods: 'Thành phẩm',
   };
@@ -266,7 +266,7 @@
       return `<tr class="lc-target-row ${selCls}" data-id="${r.import_id}">
         <td class="text-center"><input type="checkbox" class="form-check-input target-cb" value="${r.import_id}" ${checked}></td>
         <td class="lc-mono fw-bold">${r.import_no || '—'}</td>
-        <td>${(r.date || '').toString().slice(0,10)}</td>
+        <td>${fmtDateVi(r.date)}</td>
         <td>${r.bill_no || '—'}</td>
         <td>${r.supplier_name || '—'}</td>
         <td class="text-end">${money(r.base_value)}</td>
@@ -322,7 +322,7 @@
     const confirm = await Swal.fire({
       title: 'Xác nhận phân bổ?',
       html: `Vốn hóa <b>${money(state.preview.amount_net)}</b> vào ${state.preview.lines.length} dòng.<br>`
-        + `Tạo phiếu CP + bút toán Nợ kho/TSCĐ · Có công nợ/tiền.`,
+        + `Tạo phiếu CP + bút toán Nợ kho / tài sản cố định · Có công nợ/tiền.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Phân bổ',

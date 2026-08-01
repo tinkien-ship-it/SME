@@ -3,87 +3,83 @@
 <head>
 <meta charset="utf-8">
 <title>{{ doc.form_code }} {{ doc.doc_no }}</title>
-<style>
-  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
-  .header{display:flex;justify-content:space-between}
-  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0;text-transform:uppercase}
-  .muted{font-style:italic;font-size:10pt}
-  .row{margin:6px 0}
-  table{width:100%;border-collapse:collapse;margin:12px 0}
-  th,td{border:1px solid #333;padding:5px 6px}
-  th{background:#f5f5f5}
-  .num{text-align:right}
-  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
-  .sign div{width:24%}
-  @media print{.no-print{display:none}}
-</style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
-<div class="header">
-  <div>
-    <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
-    <div>{{ info.address or '' }}</div>
-  </div>
-  <div style="text-align:right">
-    <div><strong>Mẫu số {{ doc.form_code }}</strong></div>
-    <div class="muted">(TT 99/2025/TT-BTC)</div>
-  </div>
-</div>
-
-{% if doc.doc_type == 'handover' %}
-<div class="title">Biên bản giao nhận TSCĐ</div>
-{% elif doc.doc_type == 'upgrade' %}
-<div class="title">Biên bản bàn giao TSCĐ<br>sửa chữa / nâng cấp hoàn thành</div>
-{% elif doc.doc_type == 'revaluation' %}
-<div class="title">Biên bản đánh giá lại TSCĐ</div>
-{% else %}
-<div class="title">Biên bản tổng hợp kiểm kê TSCĐ</div>
-{% endif %}
-
-<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.doc_date }}</div>
-
-{% if doc.doc_type != 'inventory' %}
-<table>
-  <tr><th>Mã TSCĐ</th><td>{{ doc.asset_code }}</td><th>Tên TSCĐ</th><td>{{ doc.asset_name }}</td></tr>
-  {% if doc.doc_type == 'handover' %}
-  <tr><th>Từ bộ phận</th><td>{{ doc.from_dept or '' }}</td><th>Đến bộ phận</th><td>{{ doc.to_dept or '' }}</td></tr>
-  <tr><th>Nguyên giá</th><td class="num" colspan="3">{{ '{:,.0f}'.format((doc.amount or 0)|float).replace(',', '.') }}</td></tr>
-  {% elif doc.doc_type == 'upgrade' %}
-  <tr><th>Chi phí nâng cấp</th><td class="num">{{ '{:,.0f}'.format((doc.amount or 0)|float).replace(',', '.') }}</td>
-      <th>Nguyên giá mới</th><td class="num">{{ '{:,.0f}'.format((doc.new_cost or 0)|float).replace(',', '.') }}</td></tr>
-  {% elif doc.doc_type == 'revaluation' %}
-  <tr><th>Nguyên giá cũ</th><td class="num">{{ '{:,.0f}'.format((doc.old_cost or 0)|float).replace(',', '.') }}</td>
-      <th>Nguyên giá mới</th><td class="num">{{ '{:,.0f}'.format((doc.new_cost or 0)|float).replace(',', '.') }}</td></tr>
-  <tr><th>Chênh lệch</th><td class="num" colspan="3">{{ '{:,.0f}'.format((doc.amount or 0)|float).replace(',', '.') }}</td></tr>
-  {% endif %}
-</table>
-{% else %}
-<table>
-  <thead>
-    <tr><th>STT</th><th>Mã</th><th>Tên TSCĐ</th><th>Nguyên giá sổ</th><th>Có mặt</th><th>Ghi chú</th></tr>
-  </thead>
-  <tbody>
-  {% for ln in doc.lines or [] %}
+{% with print_label='IN BIÊN BẢN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
+  <table class="header-table">
     <tr>
-      <td class="num">{{ loop.index }}</td>
-      <td>{{ ln.asset_code }}</td>
-      <td>{{ ln.asset_name }}</td>
-      <td class="num">{{ '{:,.0f}'.format((ln.book_cost or 0)|float).replace(',', '.') }}</td>
-      <td style="text-align:center">{{ 'Có' if ln.actual_ok else 'Không' }}</td>
-      <td>{{ ln.note or '' }}</td>
+      <td class="info-dn">
+        <div class="fw-bold text-uppercase"><strong>DOANH NGHIỆP:</strong> {{ info.business_name or info.company_name or '' }}</div>
+        <div>Địa chỉ: {{ info.address or '' }}</div>
+        <div><strong>MST:</strong> {{ info.tax_code or '' }}</div>
+      </td>
+      <td class="mau-so">
+        <div class="fw-bold"><strong>Mẫu số {{ doc.form_code }}</strong></div>
+        <div class="muted">(Ban hành kèm theo Thông tư số 99/2025/TT-BTC)</div>
+      </td>
     </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% endif %}
+  </table>
 
-<div class="row">Nội dung: {{ doc.content or '' }}</div>
-<div class="sign">
-  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
-  <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
-  <div>Phụ trách TS<br><span class="muted">(Ký, họ tên)</span></div>
-  <div>Thành viên<br><span class="muted">(Ký, họ tên)</span></div>
+  {% if doc.doc_type == 'handover' %}
+  <div class="title">Biên bản giao nhận tài sản cố định</div>
+  {% elif doc.doc_type == 'upgrade' %}
+  <div class="title">Biên bản bàn giao tài sản cố định<br>sửa chữa / nâng cấp hoàn thành</div>
+  {% elif doc.doc_type == 'revaluation' %}
+  <div class="title">Biên bản đánh giá lại tài sản cố định</div>
+  {% else %}
+  <div class="title">Biên bản tổng hợp kiểm kê tài sản cố định</div>
+  {% endif %}
+
+  <div class="date-line">{{ doc.doc_date|format_vn_date_long }}</div>
+  <div class="number-line">Số: <strong>{{ doc.doc_no }}</strong></div>
+
+  {% if doc.doc_type != 'inventory' %}
+  <table class="data-table">
+    <tr><th>Mã tài sản cố định</th><td>{{ doc.asset_code }}</td><th>Tên tài sản cố định</th><td>{{ doc.asset_name }}</td></tr>
+    {% if doc.doc_type == 'handover' %}
+    <tr><th>Từ bộ phận</th><td>{{ doc.from_dept or '' }}</td><th>Đến bộ phận</th><td>{{ doc.to_dept or '' }}</td></tr>
+    <tr><th>Nguyên giá</th><td class="num" colspan="3">{{ '{:,.0f}'.format((doc.amount or 0)|float).replace(',', '.') }}</td></tr>
+    {% elif doc.doc_type == 'upgrade' %}
+    <tr><th>Chi phí nâng cấp</th><td class="num">{{ '{:,.0f}'.format((doc.amount or 0)|float).replace(',', '.') }}</td>
+        <th>Nguyên giá mới</th><td class="num">{{ '{:,.0f}'.format((doc.new_cost or 0)|float).replace(',', '.') }}</td></tr>
+    {% elif doc.doc_type == 'revaluation' %}
+    <tr><th>Nguyên giá cũ</th><td class="num">{{ '{:,.0f}'.format((doc.old_cost or 0)|float).replace(',', '.') }}</td>
+        <th>Nguyên giá mới</th><td class="num">{{ '{:,.0f}'.format((doc.new_cost or 0)|float).replace(',', '.') }}</td></tr>
+    <tr><th>Chênh lệch</th><td class="num" colspan="3">{{ '{:,.0f}'.format((doc.amount or 0)|float).replace(',', '.') }}</td></tr>
+    {% endif %}
+  </table>
+  {% else %}
+  <table class="data-table">
+    <thead>
+      <tr><th>STT</th><th>Mã</th><th>Tên tài sản cố định</th><th>Nguyên giá sổ</th><th>Có mặt</th><th>Ghi chú</th></tr>
+    </thead>
+    <tbody>
+    {% for ln in doc.lines or [] %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td>{{ ln.asset_code }}</td>
+        <td>{{ ln.asset_name }}</td>
+        <td class="num">{{ '{:,.0f}'.format((ln.book_cost or 0)|float).replace(',', '.') }}</td>
+        <td style="text-align:center">{{ 'Có' if ln.actual_ok else 'Không' }}</td>
+        <td>{{ ln.note or '' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <div class="row">Nội dung: {{ doc.content or '' }}</div>
+
+  <div class="text-end fst-italic mt-3" style="padding-right:40px;">{{ doc.doc_date|format_vn_date_long }}</div>
+
+  <div class="sign">
+    <div><span class="sign-title">Giám đốc</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
+    <div><span class="sign-title">Kế toán trưởng</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
+    <div><span class="sign-title">Phụ trách tài sản</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
+    <div><span class="sign-title">Thành viên</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
+  </div>
 </div>
 </body>
 </html>

@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Biên lai thu 06-TT{% endblock %}
+{% block title %}Biên lai thu 06-TT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
@@ -35,7 +35,7 @@ fDate.value=new Date().toISOString().slice(0,10);
 async function load(){
   const res=await fetch('/api/sme/temp-receipts'); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.voucher_no}</td><td>${(r.voucher_date||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.voucher_no}</td><td>${fmtDateVi(r.voucher_date)}</td>
     <td>${r.party_name||''}</td><td class="text-end">${fmt(r.amount)}</td>
     <td class="text-nowrap">
       <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_temp_receipt/in/${r.id}">In</a>

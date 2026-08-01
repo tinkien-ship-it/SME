@@ -16,18 +16,20 @@
   .sign div{width:30%}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
-  <div style="text-align:right"><strong>Mẫu số 09 - TT</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+  <div style="text-align:right"><strong>Mẫu số 09 - TT</strong><br><span class="muted">Thông tư 99/2025/TT-BTC</span></div>
 </div>
 <div class="title">BẢNG KÊ CHI TIỀN</div>
-<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.listing_date }}</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.listing_date|format_vn_date }}</div>
 <div style="text-align:center">Kỳ: {{ doc.date_from }} → {{ doc.date_to }}</div>
 <table>
-  <thead><tr><th>STT</th><th>Số PC</th><th>Ngày</th><th>Người nhận</th><th>Lý do</th><th>TK Nợ</th><th>Số tiền</th></tr></thead>
+  <thead><tr><th>STT</th><th>Số phiếu chi</th><th>Ngày</th><th>Người nhận</th><th>Lý do</th><th>TK Nợ</th><th>Số tiền</th></tr></thead>
   <tbody>
   {% for ln in doc.lines %}
     <tr>
@@ -50,6 +52,7 @@
   <div>Người lập<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Thủ quỹ<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
 </div>
 </body>
 </html>

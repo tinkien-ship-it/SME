@@ -15,12 +15,14 @@
   .sign div{width:30%}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
-  <div style="text-align:right"><strong>Mẫu số 08 - LĐTL</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+  <div style="text-align:right"><strong>Mẫu số 08 - LĐTL</strong><br><span class="muted">Thông tư 99/2025/TT-BTC</span></div>
 </div>
 <div class="title">BẢNG PHÂN BỔ TIỀN LƯƠNG<br>VÀ CÁC KHOẢN TRÍCH THEO LƯƠNG</div>
 <div style="text-align:center">Tháng {{ '%02d'|format(doc.month) }}/{{ doc.year }}</div>
@@ -28,7 +30,7 @@
   <thead>
     <tr>
       <th>STT</th><th>Họ tên</th><th>Vị trí</th><th>Lương CB</th><th>Phụ cấp</th><th>Thưởng</th>
-      <th>Thực lĩnh</th><th>BHXH</th><th>BHYT</th><th>BHTN</th>
+      <th>Thực lĩnh</th><th>Bảo hiểm xã hội</th><th>Bảo hiểm y tế</th><th>Bảo hiểm thất nghiệp</th>
     </tr>
   </thead>
   <tbody>
@@ -59,6 +61,7 @@
   <div>Người lập<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
 </div>
 </body>
 </html>

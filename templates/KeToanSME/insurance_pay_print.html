@@ -14,17 +14,19 @@
   .sign div{width:30%}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
-  <div style="text-align:right"><strong>Mẫu số 07 - LĐTL</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+  <div style="text-align:right"><strong>Mẫu số 07 - LĐTL</strong><br><span class="muted">Thông tư 99/2025/TT-BTC</span></div>
 </div>
 <div class="title">BẢNG KÊ TRÍCH NỘP CÁC KHOẢN THEO LƯƠNG</div>
 <div style="text-align:center">(Kèm phiếu chi {{ doc.voucher_no }})</div>
 <div class="box">
-  <div class="row">Ngày nộp: <strong>{{ doc.voucher_date }}</strong></div>
+  <div class="row">Ngày nộp: <strong>{{ doc.voucher_date|format_vn_date }}</strong></div>
   <div class="row">Cơ quan nhận: <strong>{{ doc.party_name }}</strong></div>
   <div class="row">Tài khoản Nợ: <strong>{{ doc.debit_account }}</strong> · Có: <strong>{{ doc.credit_account }}</strong></div>
   <div class="row">Số tiền: <strong>{{ '{:,.0f}'.format(doc.amount|float).replace(',', '.') }} đ</strong></div>
@@ -35,6 +37,7 @@
   <div>Người lập<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
 </div>
 </body>
 </html>

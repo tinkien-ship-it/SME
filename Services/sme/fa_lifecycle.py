@@ -99,6 +99,7 @@ def list_active_assets(
     conn: sqlite3.Connection,
     *,
     branch_code: str | None = None,
+    status: str | None = None,
 ) -> list[dict[str, Any]]:
     ensure_fixed_assets_schema(conn)
     from Services.sme.branches import DEFAULT_BRANCH_CODE
@@ -113,9 +114,16 @@ def list_active_assets(
                gia_mua_chua_thue, so_luong, so_thang_khau_hao, ngay_bat_dau_su_dung, tinh_trang
                {extra}
         FROM {FIXED_ASSETS_TABLE}
-        WHERE tinh_trang IN (?, ?)
+        WHERE 1=1
     """
-    params: list[Any] = [STATUS_ACTIVE, STATUS_IN_STOCK]
+    params: list[Any] = []
+    st = (status or '').strip()
+    if st:
+        sql += ' AND tinh_trang = ?'
+        params.append(st)
+    else:
+        sql += ' AND tinh_trang IN (?, ?)'
+        params.extend([STATUS_ACTIVE, STATUS_IN_STOCK])
     code = (branch_code or '').strip().upper()
     if has_br and code and code != 'ALL':
         if code == DEFAULT_BRANCH_CODE:
@@ -123,7 +131,7 @@ def list_active_assets(
         else:
             sql += ' AND branch_code = ?'
         params.append(code)
-    sql += ' ORDER BY ma_tai_san'
+    sql += ' ORDER BY id DESC, ma_tai_san'
     rows = conn.execute(sql, params).fetchall()
     out = []
     for r in rows:
@@ -134,6 +142,51 @@ def list_active_assets(
             d['branch_code'] = DEFAULT_BRANCH_CODE
         out.append(d)
     return out
+
+
+def update_asset_depreciation_period(
+    conn: sqlite3.Connection,
+    asset_id: int,
+    *,
+    so_thang_khau_hao: int,
+    start_date: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Thiết lập số tháng khấu hao TSCĐ (và tùy chọn ngày bắt đầu sử dụng)."""
+    ensure_fixed_assets_schema(conn)
+    from Services.sme.branch_filter import assert_row_in_branch
+    assert_row_in_branch(conn, FIXED_ASSETS_TABLE, asset_id, label='TSCĐ')
+    row = conn.execute(
+        f'SELECT * FROM {FIXED_ASSETS_TABLE} WHERE id = ?', (asset_id,)
+    ).fetchone()
+    if not row:
+        raise ValueError('Không tìm thấy TSCĐ')
+    d = dict(row)
+    if str(d.get('tinh_trang') or '') == STATUS_DISPOSED:
+        raise ValueError('TSCĐ đã thanh lý — không đổi thời hạn khấu hao')
+    months = int(so_thang_khau_hao or 0)
+    if months <= 0:
+        raise ValueError('Số tháng khấu hao phải > 0')
+    cols = {r[1] for r in conn.execute(f'PRAGMA table_info({FIXED_ASSETS_TABLE})').fetchall()}
+    sets = ['so_thang_khau_hao = ?']
+    params: list[Any] = [months]
+    if start_date and 'ngay_bat_dau_su_dung' in cols:
+        sets.append('ngay_bat_dau_su_dung = ?')
+        params.append(str(start_date)[:10])
+    if 'updated_at' in cols:
+        sets.append('updated_at = ?')
+        params.append(_now())
+    params.append(asset_id)
+    conn.execute(
+        f"UPDATE {FIXED_ASSETS_TABLE} SET {', '.join(sets)} WHERE id = ?",
+        params,
+    )
+    if commit:
+        conn.commit()
+    row2 = conn.execute(
+        f'SELECT * FROM {FIXED_ASSETS_TABLE} WHERE id = ?', (asset_id,)
+    ).fetchone()
+    return dict(row2) if row2 else d
 
 
 def asset_book_values(

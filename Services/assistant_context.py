@@ -92,7 +92,10 @@ PAGE_CONTEXT: dict[str, dict[str, Any]] = {
     },
     'huong_dan_su_dung': {
         'label': 'Hướng Dẫn Sử Dụng',
-        'hint': 'Tài liệu đầy đủ 3 phân hệ: Bán hàng, Kế toán, Phòng trọ.',
+        'hint': (
+            'Tab: Bán hàng | Kế Toán HKD | Kế Toán SME | F&B | Phòng trọ. '
+            'Doanh nghiệp SME mở tab Kế Toán SME.'
+        ),
     },
     'order': {
         'label': 'Quản Lý Đơn Hàng',
@@ -141,12 +144,131 @@ PAGE_CONTEXT: dict[str, dict[str, Any]] = {
             'Định mức hoặc Kiểm kê NVL cuối ngày',
         ],
     },
+    # —— Kế toán SME (TT99 / TT58) ——
+    'SME_dashboard': {
+        'label': 'Hub Kế toán doanh nghiệp',
+        'hint': 'Menu trung tâm SME. Chọn chi nhánh trên thanh trên (Tất cả = hợp nhất).',
+    },
+    'SME_SoQuyTienMat': {
+        'label': 'Sổ Quỹ Tiền Mặt (SME)',
+        'hint': (
+            'Sổ kép TK 111. Nút Lập phiếu thu: mặc định Nợ 1111 · Có 4111 Vốn góp chủ sở hữu. '
+            'Đổi tài khoản Có khi thu nợ khách (131) hoặc tạm ứng (141).'
+        ),
+        'steps': ['Chọn chi nhánh', 'Lập phiếu thu / lọc kỳ', 'Đối chiếu nhật ký bút toán'],
+    },
+    'SME_SoTienGuiNganHang': {
+        'label': 'Sổ Tiền Gửi Ngân Hàng (SME)',
+        'hint': 'Sổ kép TK 112. Lập phiếu thu mặc định Nợ 1121 · Có 4111.',
+    },
+    'SME_SoCongNoPhaiThu': {
+        'label': 'Sổ Công Nợ Phải Thu (SME)',
+        'hint': 'Theo dõi phải thu khách (131). Thu nợ bằng phiếu thu gắn đúng đối tượng.',
+    },
+    'SME_SoCongNoPhaiTra': {
+        'label': 'Sổ Công Nợ Phải Trả (SME)',
+        'hint': 'Theo dõi phải trả NCC (331). Trả nợ bằng phiếu chi hoặc chức năng trả trên sổ.',
+    },
+    'SME_PhaiThuCongNhanVien': {
+        'label': 'Sổ Phải Thu Nhân Viên (SME)',
+        'hint': 'Tạm ứng / phải thu nhân viên (141).',
+    },
+    'SME_PhaiTraCongNhanVien': {
+        'label': 'Sổ Phải Trả Nhân Viên (SME)',
+        'hint': 'Lương và khoản phải trả nhân viên (334).',
+    },
+    'SME_dashboard_debt': {
+        'label': 'Tiền Và Công Nợ (SME)',
+        'hint': 'Nhóm sổ quỹ, ngân hàng, công nợ phải thu/trả và nhân viên.',
+    },
+    'SME_journal': {
+        'label': 'Nhật ký bút toán (SME)',
+        'hint': 'Xem/lọc/đảo bút toán sổ kép. Kỳ đã khóa thì không ghi mới.',
+    },
+    'SME_general_ledger': {
+        'label': 'Sổ cái và cân đối phát sinh (SME)',
+        'hint': 'Đối chiếu số dư tài khoản theo kỳ và chi nhánh.',
+    },
+    'SME_auto_posting': {
+        'label': 'Kết chuyển, khóa sổ và cuối năm',
+        'hint': (
+            'Chạy kỳ: khấu hao TSCĐ → phân bổ CCDC → kết chuyển DT/CP → 911 → 4212 → '
+            'quyết toán thuế GTGT → khóa sổ. Cuối năm: 4212 → 4211.'
+        ),
+        'steps': ['Chọn kỳ', 'Chạy tự động hóa', 'Kiểm tra nhật ký', 'Khóa sổ'],
+    },
+    'SME_fixed_assets': {
+        'label': 'Danh mục tài sản cố định (SME)',
+        'hint': 'Nhập TSCĐ qua phiếu nhập → thiết lập khấu hao → chạy kỳ tại Kết chuyển khóa sổ.',
+    },
+    'SME_TSCD': {
+        'label': 'Tổng quan tài sản cố định (SME)',
+        'hint': 'Dashboard TSCĐ — trạng thái Trong kho / Đang sử dụng / Đã thanh lý.',
+    },
+    'SME_tools': {
+        'label': 'Danh mục công cụ dụng cụ (SME)',
+        'hint': 'Nhập CCDC qua phiếu nhập → thiết lập phân bổ hoặc đưa vào sử dụng.',
+    },
+    'SME_CCDC': {
+        'label': 'Tổng quan công cụ dụng cụ (SME)',
+        'hint': 'Dashboard CCDC và phân bổ theo kỳ.',
+    },
+    'SME_import': {
+        'label': 'Lập phiếu nhập kho (SME)',
+        'hint': 'Chọn loại hàng: hàng hóa, NVL, TSCĐ, CCDC. Gắn đúng kho/chi nhánh.',
+    },
+    'SME_inward_invoice': {
+        'label': 'Hóa đơn mua hàng (SME)',
+        'hint': 'Từ HĐ mua → lập phiếu nhập hoặc hạch toán dịch vụ.',
+    },
+    'SME_production': {
+        'label': 'Sản xuất (SME)',
+        'hint': 'Định mức → phiếu sản xuất → xuất NVL → nhập thành phẩm (giá vốn bình quân).',
+    },
+    'SME_costing': {
+        'label': 'Kế toán giá thành (SME)',
+        'hint': 'Tập hợp chi phí 621/622/627 và lệnh sản xuất.',
+    },
+    'SME_BCTC_reports': {
+        'label': 'Bộ báo cáo tài chính (SME)',
+        'hint': 'Báo cáo B01–B09 theo kỳ; xuất Excel khi cần.',
+    },
+    'SME_vat_declaration': {
+        'label': 'Tờ khai thuế GTGT (SME)',
+        'hint': 'Lập tờ khai thuế giá trị gia tăng theo kỳ kê khai của doanh nghiệp.',
+    },
+    'SME_tax_nsnn': {
+        'label': 'Thuế và ngân sách nhà nước (SME)',
+        'hint': 'Theo dõi số dư TK 133 / 333 từ sổ kép.',
+    },
+    'SME_salary_create': {
+        'label': 'Lập bảng lương (SME)',
+        'hint': 'Mẫu 01-LĐTL — tải chấm công → chốt bảng lương → trả qua sổ phải trả NV.',
+    },
+    'SME_branches': {
+        'label': 'Chi nhánh và kho (SME)',
+        'hint': 'Danh mục chi nhánh/đơn vị và gắn kho (KHO_001…). HQ = trụ sở chính.',
+    },
+    'SME_DanhSachPhieuThu': {
+        'label': 'Phiếu thu — mẫu 01-TT',
+        'hint': 'Danh sách phiếu thu SME; có thể lập nhanh từ sổ quỹ / sổ ngân hàng.',
+    },
+    'SME_DanhSachPhieuChi': {
+        'label': 'Phiếu chi — mẫu 02-TT',
+        'hint': 'Chi tiền mặt hoặc chuyển khoản; Nợ chi phí/công nợ · Có 1111/1121.',
+    },
 }
 
 REGIME_HINTS = {
-    'HKD': 'Loại hình: Hộ kinh doanh — sổ kế toán TT 88/2021, thuế HKD.',
-    'DN': 'Loại hình: Doanh nghiệp — TT99/TT58, VAS, thuế DN.',
-    'SME': 'Loại hình: Doanh nghiệp SME.',
+    'HKD': 'Loại hình: Hộ kinh doanh — sổ kế toán TT 88/2021, thuế HKD. Không hướng dẫn menu SME.',
+    'DN': 'Loại hình: Doanh nghiệp — TT99/TT58, sổ kép. Dùng ngôn ngữ menu Kế toán doanh nghiệp.',
+    'SME': (
+        'Loại hình: Doanh nghiệp SME (TT99 hoặc TT58) — sổ kép. '
+        'Menu: Kế toán doanh nghiệp. Ưu tiên tab Hướng dẫn Kế Toán SME. '
+        'Không nhầm với thao tác HKD (Nộp Quỹ kiểu TT88).'
+    ),
+    'SME_TT99': 'Doanh nghiệp theo Thông tư 99/2025/TT-BTC — sổ kép SME.',
+    'SME_MICRO_TT58': 'Doanh nghiệp siêu nhỏ theo Thông tư 58 — sổ kép SME.',
 }
 
 ROLE_HINTS = {
@@ -185,6 +307,8 @@ def build_context_prompt(ctx: dict[str, Any] | None) -> str:
 
     if regime and regime in REGIME_HINTS:
         parts.append(REGIME_HINTS[regime])
+    elif regime and regime.startswith('SME'):
+        parts.append(REGIME_HINTS['SME'])
     elif regime:
         parts.append(f'Chế độ kế toán: {regime}')
 
@@ -212,6 +336,6 @@ def rag_section_for_regime(regime: str | None) -> str | None:
     r = (regime or '').upper()
     if r == 'HKD':
         return None
-    if r in ('DN', 'SME'):
-        return 'Kế toán'
+    if r.startswith('SME') or r in ('DN',):
+        return 'Kế toán SME'
     return None

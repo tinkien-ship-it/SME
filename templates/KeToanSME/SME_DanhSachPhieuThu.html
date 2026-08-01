@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Phiếu thu 01-TT{% endblock %}
+{% block title %}Phiếu thu 01-TT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
@@ -19,7 +19,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light"><tr>
-        <th>Số PT</th><th>Ngày</th><th>CN</th><th>Người nộp</th><th class="text-end">Số tiền</th><th>Nợ</th><th>Có</th><th>Diễn giải</th><th></th>
+        <th>Số phiếu thu</th><th>Ngày</th><th>Chi nhánh</th><th>Người nộp</th><th class="text-end">Số tiền</th><th>Nợ</th><th>Có</th><th>Diễn giải</th><th></th>
       </tr></thead>
       <tbody id="tbody"><tr><td colspan="8" class="text-center text-muted py-4">Chọn khoảng ngày và tải</td></tr></tbody>
     </table>
@@ -58,7 +58,7 @@ async function loadList(){
   if(!json.data.length){ tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Không có phiếu</td></tr>'; return; }
   tbody.innerHTML = json.data.map(r => `<tr>
     <td class="fw-bold">${r.voucher_no}</td>
-    <td>${(r.voucher_date||'').slice(0,10)}</td>
+    <td>${fmtDateVi(r.voucher_date)}</td>
     <td class="small">${r.branch_code||'HQ'}</td>
     <td>${r.party_name||''}</td>
     <td class="text-end text-success fw-bold">${fmt(r.amount)}</td>

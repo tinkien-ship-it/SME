@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Bảng kê chi 09-TT{% endblock %}
+{% block title %}Bảng kê chi 09-TT{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
@@ -27,8 +27,8 @@ fFrom.value=`${y}-${m}-01`; fTo.value=t.toISOString().slice(0,10);
 async function load(){
   const res=await fetch('/api/sme/payment-listing'); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.doc_no}</td><td>${(r.listing_date||'').slice(0,10)}</td>
-    <td>${(r.date_from||'').slice(0,10)} → ${(r.date_to||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.doc_no}</td><td>${fmtDateVi(r.listing_date)}</td>
+    <td>${fmtDateVi(r.date_from)} → ${fmtDateVi(r.date_to)}</td>
     <td class="text-end">${fmt(r.total_amount)}</td>
     <td class="text-nowrap">
       <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_payment_listing/in/${r.id}">In</a>

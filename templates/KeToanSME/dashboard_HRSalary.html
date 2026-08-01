@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}Dashboard Nhân sự & Lương - SME{% endblock %}
+{% block title %}Tổng quan nhân sự và tiền lương{% endblock %}
 
 {% block sme_head %}
 <style>
@@ -12,8 +12,8 @@
 
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
       <div>
-        <h3 class="fw-bold text-primary mb-1">Tổng quan nhân sự & lương</h3>
-        <p class="text-muted mb-0">Phải trả lương 334 · BHXH 338 · tạm ứng 141 từ sổ kép</p>
+        <h3 class="fw-bold text-primary mb-1">Tổng quan nhân sự và tiền lương</h3>
+        <p class="text-muted mb-0">Phải trả lương tài khoản 334 · bảo hiểm xã hội tài khoản 338 · tạm ứng tài khoản 141 từ sổ kép</p>
       </div>
       <div class="d-flex gap-2 align-items-center">
         <select class="form-select shadow-sm" id="dateFilter" style="width:160px;height:42px">
@@ -21,7 +21,7 @@
           <option value="this_quarter">Quý này</option>
           <option value="this_year">Năm nay</option>
         </select>
-        <a href="{{ url_for('SME_PhaiThuCongNhanVien') }}" class="btn btn-primary quick-action-btn px-4"><i class="fas fa-user-tie me-2"></i>Tạm ứng NV</a>
+        <a href="{{ url_for('SME_PhaiThuCongNhanVien') }}" class="btn btn-primary quick-action-btn px-4"><i class="fas fa-user-tie me-2"></i>Tạm ứng nhân viên</a>
       </div>
     </div>
     <div class="row g-4 mb-4">
@@ -35,7 +35,7 @@
 </div></div></div>
 <div class="col-xl-3 col-md-6"><div class="card metric-card h-100"><div class="card-body">
   <div class="d-flex justify-content-between align-items-start">
-    <div><span class="text-muted small fw-semibold text-uppercase">Đã trả YTD</span>
+    <div><span class="text-muted small fw-semibold text-uppercase">Đã trả từ đầu năm</span>
     <h3 class="fw-bold text-success mt-2 mb-0" id="m2">0</h3></div>
     <div class="metric-icon bg-success bg-opacity-10 text-success"><i class="fas fa-hand-holding-dollar"></i></div>
   </div>
@@ -75,8 +75,8 @@
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_employees') }}">Nhân viên</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_attendance') }}">Chấm công</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_salary_create') }}">Lập lương</a>
-<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_PhaiThuCongNhanVien') }}">Phải thu NV</a>
-<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_PhaiTraCongNhanVien') }}">Phải trả NV</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_PhaiThuCongNhanVien') }}">Phải thu nhân viên</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_PhaiTraCongNhanVien') }}">Phải trả nhân viên</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_general_ledger') }}">Sổ cái</a>
 </div>
     </div>
@@ -103,7 +103,7 @@ async function loadDash(){
   document.getElementById('m2').textContent=money(d.salary_paid_ytd);
   document.getElementById('m3').textContent=money(d.employee_advance);
   document.getElementById('m4').textContent=String(d.employee_count||0);
-  document.getElementById('m4sub').textContent='Ghi nhận lương YTD '+money(d.salary_accrued_ytd)+' · BHXH '+money(d.social_insurance);
+  document.getElementById('m4sub').textContent='Ghi nhận lương từ đầu năm '+money(d.salary_accrued_ytd)+' · bảo hiểm xã hội '+money(d.social_insurance);
   const months=d.monthly||[];
   if(trendChart) trendChart.destroy();
   trendChart=new Chart(document.getElementById('hrTrend').getContext('2d'),{type:'bar',data:{labels:months.map(x=>x.label),datasets:[
@@ -111,7 +111,7 @@ async function loadDash(){
     {label:'Chi trả',data:months.map(x=>x.paid),backgroundColor:'#198754'}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+money(c.parsed.y)}}}}});
   if(pieChart) pieChart.destroy();
-  pieChart=new Chart(document.getElementById('hrPie').getContext('2d'),{type:'doughnut',data:{labels:['Phải trả 334','BHXH 338','Tạm ứng 141'],datasets:[{data:[d.salary_payable||0,d.social_insurance||0,d.employee_advance||0],backgroundColor:['#dc3545','#6f42c1','#ffc107']}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>' '+c.label+': '+money(c.parsed)}}}}});
+  pieChart=new Chart(document.getElementById('hrPie').getContext('2d'),{type:'doughnut',data:{labels:['Phải trả lương 334','Bảo hiểm xã hội 338','Tạm ứng 141'],datasets:[{data:[d.salary_payable||0,d.social_insurance||0,d.employee_advance||0],backgroundColor:['#dc3545','#6f42c1','#ffc107']}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>' '+c.label+': '+money(c.parsed)}}}}});
 
 }
 document.addEventListener('DOMContentLoaded',()=>{

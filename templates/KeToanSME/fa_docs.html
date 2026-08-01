@@ -1,9 +1,9 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Biên bản TSCĐ 01/03/04/05{% endblock %}
+{% block title %}Biên bản tài sản cố định — mẫu 01/03/04/05{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
-    <h4 class="fw-bold mb-1">Biên bản TSCĐ</h4>
+    <h4 class="fw-bold mb-1">Biên bản tài sản cố định</h4>
     <p class="text-muted small mb-0">01 giao nhận · 03 SC/nâng cấp · 04 đánh giá lại · 05 kiểm kê</p>
   </div>
   <div class="btn-group flex-wrap">
@@ -16,7 +16,7 @@
 </div>
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table mb-0"><thead class="table-light"><tr>
-  <th>Số</th><th>Mẫu</th><th>Ngày</th><th>TSCĐ</th><th class="text-end">Số tiền</th><th>Loại</th>
+  <th>Số</th><th>Mẫu</th><th>Ngày</th><th>Tài sản cố định</th><th class="text-end">Số tiền</th><th>Loại</th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 
@@ -25,7 +25,7 @@
   <div class="modal-body">
     <input type="hidden" id="fType">
     <div class="mb-2"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
-    <div class="mb-2" id="wrapAsset"><label class="form-label small">TSCĐ</label><select id="fAsset" class="form-select"></select></div>
+    <div class="mb-2" id="wrapAsset"><label class="form-label small">Tài sản cố định</label><select id="fAsset" class="form-select"></select></div>
     <div class="mb-2" id="wrapDept" style="display:none">
       <label class="form-label small">Từ bộ phận</label><input type="text" id="fFrom" class="form-control">
       <label class="form-label small mt-1">Đến bộ phận</label><input type="text" id="fTo" class="form-control">
@@ -48,7 +48,7 @@ async function loadAssets(){
 async function load(){
   const res=await fetch('/api/sme/fa-docs'); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.doc_no}</td><td>${r.form_code}</td><td>${(r.doc_date||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.doc_no}</td><td>${r.form_code}</td><td>${fmtDateVi(r.doc_date)}</td>
     <td>${r.asset_code||''} ${r.asset_name||''}</td><td class="text-end">${fmt(r.amount||r.new_cost||0)}</td>
     <td class="text-nowrap">${r.doc_type}
       <a class="btn btn-sm btn-outline-primary ms-1" target="_blank" href="/SME_fa_doc/in/${r.id}">In</a>
@@ -63,7 +63,7 @@ async function voidDoc(id){
 }
 async function openDoc(type){
   fType.value=type;
-  const titles={handover:'01-TSCĐ Giao nhận',upgrade:'03-TSCĐ Nâng cấp',revaluation:'04-TSCĐ Đánh giá lại',inventory:'05-TSCĐ Kiểm kê'};
+  const titles={handover:'Mẫu 01 — Giao nhận tài sản cố định',upgrade:'Mẫu 03 — Nâng cấp tài sản cố định',revaluation:'Mẫu 04 — Đánh giá lại tài sản cố định',inventory:'Mẫu 05 — Kiểm kê tài sản cố định'};
   mTitle.textContent=titles[type];
   wrapAsset.style.display=type==='inventory'?'none':'';
   wrapDept.style.display=type==='handover'?'':'none';

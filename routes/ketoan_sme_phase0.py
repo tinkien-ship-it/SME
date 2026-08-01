@@ -637,7 +637,8 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
                 or session.get('sme_branch_filter')
                 or 'ALL'
             )
-            assets = list_active_assets(conn, branch_code=branch)
+            status = request.args.get('status') or None
+            assets = list_active_assets(conn, branch_code=branch, status=status)
             enriched = []
             for a in assets:
                 try:
@@ -650,6 +651,41 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
                 enriched.append(a)
             return jsonify({'success': True, 'data': enriched, 'branch_code': branch})
         except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/SME_fixed_assets')
+    @login_required
+    @require_sme_regime
+    def SME_fixed_assets():
+        return render_template('KeToanSME/fixed_assets.html')
+
+    @app.route('/api/sme/fixed-assets/<int:asset_id>/period', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_fa_set_period(asset_id):
+        from Services.sme.fa_lifecycle import update_asset_depreciation_period
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            _bootstrap()
+            data = request.get_json(silent=True) or {}
+            months = data.get('so_thang_khau_hao') or data.get('months')
+            doc = update_asset_depreciation_period(
+                conn,
+                asset_id,
+                so_thang_khau_hao=int(months or 0),
+                start_date=data.get('ngay_bat_dau_su_dung') or data.get('start_date'),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': doc})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_fa_set_period')
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()

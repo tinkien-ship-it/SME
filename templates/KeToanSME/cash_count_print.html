@@ -13,11 +13,13 @@
   .sign div{width:22%}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
+{% with print_label='IN BIÊN BẢN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 {% set form = doc.form_code or '08a-TT' %}
 {% set den = doc.denominations or {} %}
-<button class="no-print" onclick="window.print()">In</button>
 <div class="header">
   <div>
     <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
@@ -25,13 +27,13 @@
   </div>
   <div style="text-align:right">
     <div><strong>Mẫu số {{ '08b - TT' if '08b' in form else '08a - TT' }}</strong></div>
-    <div class="muted">(TT 99/2025/TT-BTC)</div>
+    <div class="muted">(Thông tư 99/2025/TT-BTC)</div>
   </div>
 </div>
 <div class="title">BIÊN BẢN KIỂM KÊ QUỸ
   {% if '08b' in form %}<br><span style="font-size:12pt">(Ngoại tệ / vàng tiền tệ)</span>{% endif %}
 </div>
-<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.count_date }}</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.count_date|format_vn_date }}</div>
 <div class="row">Tài khoản quỹ: <strong>{{ doc.account_code }}</strong></div>
 {% if '08b' in form %}
 <div class="row">Loại tiền: <strong>{{ den.currency or 'USD' }}</strong></div>
@@ -51,6 +53,7 @@
   <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Thủ quỹ<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Thành viên<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
 </div>
 </body>
 </html>

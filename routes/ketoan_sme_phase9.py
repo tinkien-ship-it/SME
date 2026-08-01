@@ -136,7 +136,7 @@ def register_sme_phase9_routes(app, *, login_required, require_sme_regime):
     @login_required
     @require_sme_regime
     def api_sme_warehouses():
-        from Services.import_line_helpers import list_active_warehouses
+        from Services.import_line_helpers import list_active_warehouses, next_warehouse_code
         conn = get_db_connection()
         try:
             branch = (
@@ -149,10 +149,42 @@ def register_sme_phase9_routes(app, *, login_required, require_sme_regime):
                 branch = 'ALL'
             rows = list_active_warehouses(conn, branch_code=branch)
             return jsonify({
-                'success': True, 'data': rows, 'branch_code': branch,
+                'success': True,
+                'data': rows,
+                'branch_code': branch,
+                'next_code': next_warehouse_code(conn),
             })
         except Exception as e:
             logger.exception('api_sme_warehouses')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/warehouses', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_warehouses_create():
+        from Services.import_line_helpers import create_warehouse, next_warehouse_code
+        conn = get_db_connection()
+        try:
+            data = request.get_json(silent=True) or {}
+            code = (data.get('code') or '').strip() or next_warehouse_code(conn)
+            row = create_warehouse(
+                conn,
+                code=code,
+                name=data.get('name') or '',
+                address=data.get('address') or '',
+                branch_code=data.get('branch_code') or 'HQ',
+                is_default=bool(data.get('is_default')),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': row})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_warehouses_create')
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()

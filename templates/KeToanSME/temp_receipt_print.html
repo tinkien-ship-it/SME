@@ -14,15 +14,17 @@
   .sign div{width:45%}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div><strong>{{ info.business_name or info.company_name or '' }}</strong><br>{{ info.address or '' }}</div>
-  <div style="text-align:right"><strong>Mẫu số 06 - TT</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+  <div style="text-align:right"><strong>Mẫu số 06 - TT</strong><br><span class="muted">Thông tư 99/2025/TT-BTC</span></div>
 </div>
 <div class="title">BIÊN LAI THU TIỀN</div>
-<div style="text-align:center">Số: <strong>{{ doc.voucher_no }}</strong> — Ngày {{ doc.voucher_date }}</div>
+<div style="text-align:center">Số: <strong>{{ doc.voucher_no }}</strong> — Ngày {{ doc.voucher_date|format_vn_date }}</div>
 <div class="box">
   <div class="row">Họ tên người nộp: <strong>{{ doc.party_name }}</strong></div>
   <div class="row">Địa chỉ: {{ doc.party_address or '' }}</div>
@@ -33,6 +35,7 @@
 <div class="sign">
   <div>Người nộp tiền<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Người thu tiền<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
 </div>
 </body>
 </html>

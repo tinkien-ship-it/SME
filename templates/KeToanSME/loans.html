@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}SME — Vay nợ{% endblock %}
+{% block title %}Vay nợ{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div><h4 class="fw-bold mb-1">Vay &amp; trả nợ</h4><p class="text-muted small mb-0">Giải ngân 341/311 · trích lãi 635/335 · trả gốc/lãi</p></div>
@@ -7,7 +7,7 @@
 </div>
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table mb-0"><thead class="table-light"><tr>
-  <th>Số</th><th>Bên cho vay</th><th>Ngày</th><th class="text-end">Gốc</th><th>LSãi suất</th><th>TK</th><th>TT</th><th></th>
+  <th>Số</th><th>Bên cho vay</th><th>Ngày</th><th class="text-end">Gốc</th><th>LSãi suất</th><th>Tài khoản</th><th>Tình trạng</th><th></th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 <div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
@@ -30,9 +30,9 @@ fDate.value=new Date().toISOString().slice(0,10);
 async function load(){
   const res=await fetch('/api/sme/loans'); const json=await res.json();
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.loan_no}</td><td>${r.lender_name}</td><td>${(r.start_date||'').slice(0,10)}</td>
+    <td class="fw-bold">${r.loan_no}</td><td>${r.lender_name}</td><td>${fmtDateVi(r.start_date)}</td>
     <td class="text-end">${fmt(r.principal)}</td><td>${((r.interest_rate||0)*100).toFixed(1)}%</td>
-    <td>${r.liability_account}</td><td>${r.status}</td>
+    <td>${r.liability_account}</td><td>${statusLabelVi(r.status)}</td>
     <td class="text-nowrap">
       ${r.status==='active'?`<button class="btn btn-sm btn-outline-warning" onclick="interest(${r.id})">Trích lãi</button>
       <button class="btn btn-sm btn-outline-success" onclick="repay(${r.id},${r.principal})">Trả nợ</button>

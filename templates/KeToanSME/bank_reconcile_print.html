@@ -16,15 +16,17 @@
   .sign div{width:30%}
   @media print{.no-print{display:none}}
 </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<button class="no-print" onclick="window.print()">In</button>
+{% with print_label='IN BIÊN BẢN' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="header">
   <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
-  <div style="text-align:right"><strong>Biên bản đối chiếu NH</strong><br><span class="muted">SME · TT99</span></div>
+  <div style="text-align:right"><strong>Biên bản đối chiếu ngân hàng</strong><br><span class="muted">Kế toán doanh nghiệp · Thông tư 99</span></div>
 </div>
 <div class="title">BIÊN BẢN ĐỐI CHIẾU TÀI KHOẢN NGÂN HÀNG</div>
-<div style="text-align:center">Phiên #{{ doc.id }} — Ngày {{ doc.reconcile_date }} — TT: {{ doc.status }}</div>
+<div style="text-align:center">Phiên #{{ doc.id }} — Ngày {{ doc.reconcile_date|format_vn_date }} — Tình trạng: {{ doc.status|default("") }}</div>
 <div class="row">Tài khoản: <strong>{{ doc.account_code }}</strong></div>
 <div class="row">Kỳ: {{ doc.date_from }} → {{ doc.date_to }}</div>
 <div class="row">Số dư sổ sách: <strong>{{ '{:,.0f}'.format((doc.book_balance or 0)|float).replace(',', '.') }}</strong></div>
@@ -49,6 +51,7 @@
   <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Thủ quỹ / thủ quỹ NH<br><span class="muted">(Ký, họ tên)</span></div>
   <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
 </div>
 </body>
 </html>

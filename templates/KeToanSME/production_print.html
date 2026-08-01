@@ -37,13 +37,11 @@
             .sheet { width: 100%; margin: 0; padding: 0; box-shadow: none; }
         }
     </style>
+{% include "KeToanSME/_print_styles.html" %}
 </head>
 <body>
-<div class="toolbar">
-    <button class="btn btn-print" onclick="window.print()">In phiếu</button>
-    <button class="btn btn-close" onclick="window.close()">Đóng</button>
-</div>
-
+{% with print_label='IN PHIẾU' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
+<div class="print-container">
 <div class="sheet">
     <table class="header">
         <tr>
@@ -61,14 +59,11 @@
     </table>
 
     <div class="title">Phiếu sản xuất</div>
-    {% set d = (order.production_date or '')[:10].split('-') %}
-    <div class="sub">
-        {% if d|length == 3 %}Ngày {{ d[2] }} tháng {{ d[1] }} năm {{ d[0] }}{% else %}{{ order.production_date }}{% endif %}
-    </div>
+    <div class="sub">{{ order.production_date|format_vn_date_long }}</div>
     <div class="num">Số: <strong>{{ order.voucher_no }}</strong></div>
 
     {% if order.status == 'cancelled' %}
-    <div class="cancelled">ĐÃ HỦY{% if order.cancelled_at %} — {{ order.cancelled_at }}{% endif %}
+    <div class="cancelled">ĐÃ HỦY{% if order.cancelled_at %} — {{ order.cancelled_at|format_vn_date }}{% endif %}
         {% if order.cancel_note %} ({{ order.cancel_note }}){% endif %}
     </div>
     {% endif %}

@@ -62,9 +62,9 @@
                     Hướng dẫn xử lý hóa đơn
                 </h6>
                 <p class="card-text text-dark mb-0">
-                    Chỉ <span class="badge bg-primary text-white p-1 px-2">Lập phiếu nhập</span> cho hàng mua (HH/NVL/TSCĐ/CCDC).
+                    Chỉ <span class="badge bg-primary text-white p-1 px-2">Lập phiếu nhập</span> cho hàng mua (hàng hóa / nguyên vật liệu / tài sản cố định / công cụ dụng cụ).
                     <span class="badge bg-warning text-dark p-1 px-2">Hạch toán</span> cho dịch vụ thuần (642).
-                    <span class="badge bg-success text-white p-1 px-2">Phân bổ chi phí</span> để vốn hóa CP vận chuyển/lắp đặt vào giá vốn hàng/TSCĐ.
+                    <span class="badge bg-success text-white p-1 px-2">Phân bổ chi phí</span> để vốn hóa CP vận chuyển/lắp đặt vào giá vốn hàng hóa / tài sản cố định.
                     <br>
                     <strong>CP vận chuyển nước ngoài / không có HĐĐT:</strong> dùng
                     <span class="badge bg-success text-white p-1 px-2">Nhập tay HĐ chi phí</span>
@@ -190,11 +190,11 @@
                         <input type="text" class="form-control text-end fw-bold" id="man_amount_net" required placeholder="0">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small fw-bold">% thuế GTGT</label>
+                        <label class="form-label small fw-bold">% thuế giá trị gia tăng</label>
                         <input type="number" class="form-control" id="man_tax_pct" value="0" min="0" step="0.1">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label small fw-bold">Tiền thuế GTGT</label>
+                        <label class="form-label small fw-bold">Tiền thuế giá trị gia tăng</label>
                         <input type="text" class="form-control text-end bg-light" id="man_tax_amount" value="0" readonly>
                     </div>
                     <div class="col-md-4">
@@ -770,7 +770,7 @@ $('#btnSaveHachToan').on('click', async function() {
             Swal.fire({
                 icon: 'success',
                 title: 'Thành công!',
-                text: `Đã tạo phiếu chi SME (02-TT) ${result.voucher_no || ''}`,
+                text: `Đã tạo phiếu chi (mẫu 02-TT) ${result.voucher_no || ''}`,
                 timer: 2000
             }).then(() => {
                 loadInvoices();

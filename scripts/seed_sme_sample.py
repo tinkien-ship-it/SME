@@ -77,6 +77,20 @@ def main():
         '| sample entries:', seed['posted_sample_entries'],
         '| close through:', seed['close_through'],
     )
+    ops = seed.get('ops') or {}
+    inv = seed.get('inventory_check') or {}
+    print(
+        'Master:', seed.get('master'),
+        '| imports:', ops.get('imports'),
+        '| sales:', ops.get('sales'),
+    )
+    print(
+        'Inventory match:', inv.get('ok'),
+        '| qty:', inv.get('total_qty'),
+        '| value:', f"{float(inv.get('total_value') or 0):,.0f}",
+    )
+    if inv.get('mismatches'):
+        print('MISMATCHES:', inv['mismatches'])
 
     conn = sqlite3.connect(result['db_path'])
     conn.row_factory = sqlite3.Row

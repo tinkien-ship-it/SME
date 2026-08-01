@@ -1,5 +1,5 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}Báo cáo quản trị SME{% endblock %}
+{% block title %}Báo cáo quản trị{% endblock %}
 {% block sme_head %}
 <style>
 .money{font-family:ui-monospace,Consolas,monospace;text-align:right}
@@ -57,7 +57,7 @@
         ]},
         options:{responsive:true,scales:{y:{beginAtZero:true}}}
       });
-      let html='<table class="table table-sm"><thead><tr><th>Tháng</th><th class="text-end">DT</th><th class="text-end">GV</th><th class="text-end">CP</th><th class="text-end">LN</th></tr></thead><tbody>';
+      let html='<table class="table table-sm"><thead><tr><th>Tháng</th><th class="text-end">Doanh thu</th><th class="text-end">GV</th><th class="text-end">CP</th><th class="text-end">LN</th></tr></thead><tbody>';
       months.forEach(m=>{ html+=`<tr><td>${m.label}</td><td class="money">${money(m.revenue)}</td><td class="money">${money(m.cogs)}</td><td class="money">${money(m.expenses)}</td><td class="money">${money(m.profit)}</td></tr>`; });
       html+='</tbody></table>';
       document.getElementById('tbl').innerHTML=html;

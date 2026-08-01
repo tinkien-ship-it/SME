@@ -3,7 +3,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Hệ thống POS quản lý bán hàng, tồn kho, nhập kho, báo cáo">
-    <title>{% block title %}POS Cửa Hàng{% endblock %} - {{ info.business_name or 'POS System' }}</title>
+    <title>{% block title %}Điểm bán hàng{% endblock %} — {{ info.business_name or 'Hệ thống kế toán doanh nghiệp' }}</title>
     <link rel="icon" href="data:,">
     
     <!-- Bootstrap 5.3.3 CSS -->
@@ -319,11 +319,11 @@
                     </li>
                     {% endif %}
 
-                    <!-- Master Settings -->
+                    <!-- Thiết lập tổng quản trị -->
                     {% if current_user.role == 'master' %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'master_settings' %}active{% endif %}" href="{{ url_for('master_settings') }}">
-                            <i class="fas fa-tools"></i> Master Settings
+                            <i class="fas fa-tools"></i> Thiết lập tổng quản trị
                         </a>
                     </li>
                     {% endif %}
@@ -335,13 +335,13 @@
                     <span class="me-3 text-center text-lg-start">
                         <i class="fas fa-user-circle me-1"></i>
                         {{ current_user.full_name or current_user.username or 'Người dùng' }}
-                        {% if current_user.role == 'admin' %}<span class="badge bg-danger ms-1">Admin</span>{% endif %}
-                        {% if current_user.role == 'admin*' %}<span class="badge bg-danger ms-1">Admin</span>{% endif %}
-                        {% if current_user.role == 'adminFB' %}<span class="badge bg-danger ms-1">Admin</span>{% endif %}
-                        {% if current_user.role == 'manager*' %}<span class="badge bg-danger ms-1">Quản Lý</span>{% endif %}
-                        {% if current_user.role == 'managerFB' %}<span class="badge bg-danger ms-1">Quản Lý</span>{% endif %}
-                        {% if current_user.role == 'manager' %}<span class="badge bg-warning ms-1">Quản Lý</span>{% endif %}
-                        {% if current_user.role == 'master' %}<span class="badge bg-dark ms-1">Master</span>{% endif %}
+                        {% if current_user.role == 'admin' %}<span class="badge bg-danger ms-1">Quản trị</span>{% endif %}
+                        {% if current_user.role == 'admin*' %}<span class="badge bg-danger ms-1">Quản trị</span>{% endif %}
+                        {% if current_user.role == 'adminFB' %}<span class="badge bg-danger ms-1">Quản trị</span>{% endif %}
+                        {% if current_user.role == 'manager*' %}<span class="badge bg-danger ms-1">Quản lý</span>{% endif %}
+                        {% if current_user.role == 'managerFB' %}<span class="badge bg-danger ms-1">Quản lý</span>{% endif %}
+                        {% if current_user.role == 'manager' %}<span class="badge bg-warning ms-1">Quản lý</span>{% endif %}
+                        {% if current_user.role == 'master' %}<span class="badge bg-dark ms-1">Tổng quản trị</span>{% endif %}
                     </span>
                     <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">
                         <i class="fas fa-sign-out-alt"></i> Thoát
@@ -373,7 +373,7 @@
     <!-- Footer -->
     <footer class="footer text-center">
         <div class="container">
-            © POS System V1.0 | © 2026 | Phát triển bởi <strong>Trung Tín</strong>
+            © Hệ thống kế toán doanh nghiệp | © 2026 | Phát triển bởi <strong>Trung Tín</strong>
             · Hỗ trợ Zalo:
             <a href="{{ support_zalo_url }}" target="_blank" rel="noopener" class="footer-zalo-link">
                 <i class="fas fa-comment-dots"></i> {{ support_zalo_display }}
@@ -546,6 +546,7 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
     <script src="{{ url_for('static', filename='js/keto-date-picker.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sme-ui-vi.js') }}"></script>
     {% block scripts %}{% endblock %}
     {% block extra_script %}{% endblock %}
 

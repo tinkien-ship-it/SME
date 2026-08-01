@@ -483,10 +483,12 @@ STATIC_FAQ: list[dict[str, Any]] = [
     {
         'id': 'help_full',
         'keywords': ['hướng dẫn', 'hd sd', 'cách dùng', 'tutorial', 'ultraview', 'từ xa'],
-        'pages': [],
+        'pages': ['huong_dan_su_dung'],
         'title': 'Hướng dẫn đầy đủ',
         'answer': (
-            'Xem **Hướng Dẫn Sử Dụng** trong menu Kế Toán HKD. '
+            'Mở **Hướng Dẫn Sử Dụng** (Tiện ích trong menu SME hoặc menu Kế toán HKD). '
+            'Tab **Kế Toán SME** cho doanh nghiệp TT99/TT58; tab **Kế Toán HKD** cho hộ kinh doanh TT88; '
+            'có thêm tab Bán hàng, F&B, Phòng trọ. '
             'Cần hỗ trợ từ xa: cài **UltraViewer**, gửi mã kết nối qua Zalo **0908870287**.'
         ),
     },
@@ -498,6 +500,164 @@ STATIC_FAQ: list[dict[str, Any]] = [
         'answer': (
             'Nhắn Zalo **0908870287** (Trung Tín — KETO POS) để được tư vấn và hỗ trợ trực tiếp. '
             'Giờ hành chính: phản hồi trong ngày; ngoài giờ có thể trả lời sáng hôm sau.'
+        ),
+    },
+    # —— FAQ Kế toán SME ——
+    {
+        'id': 'sme_overview',
+        'keywords': [
+            'kế toán sme', 'kế toán doanh nghiệp', 'tt99', 'tt58', 'sổ kép',
+            'menu sme', 'hub sme',
+        ],
+        'pages': ['SME_dashboard', 'huong_dan_su_dung'],
+        'title': 'Kế toán doanh nghiệp (SME) là gì?',
+        'answer': (
+            'Menu **Kế toán doanh nghiệp** dùng sổ kép theo **Thông tư 99** hoặc **Thông tư 58**. '
+            'Chọn **chi nhánh** trên thanh trên (Tất cả = hợp nhất). '
+            'Hướng dẫn chi tiết: tab **Kế Toán SME** trong **Hướng Dẫn Sử Dụng**.'
+        ),
+    },
+    {
+        'id': 'sme_cash_receipt',
+        'keywords': [
+            'lập phiếu thu', 'phiếu thu sme', 'vốn góp', '4111', '1111',
+            'nộp quỹ sme', 'sổ quỹ tiền mặt sme', 'góp vốn',
+        ],
+        'pages': ['SME_SoQuyTienMat', 'SME_DanhSachPhieuThu', 'SME_dashboard_debt'],
+        'title': 'Lập phiếu thu trên Sổ Quỹ Tiền Mặt (SME)',
+        'answer': (
+            '**Tiền Và Công Nợ → Sổ Quỹ Tiền Mặt → Lập phiếu thu**. '
+            'Mặc định Nợ **1111**, Có **4111** Vốn góp chủ sở hữu (đổi Có khi thu nợ 131 hoặc tạm ứng 141). '
+            'Danh sách đầy đủ: **Chứng từ kế toán → Phiếu thu — mẫu 01-TT**.'
+        ),
+    },
+    {
+        'id': 'sme_bank_receipt',
+        'keywords': [
+            'phiếu thu ngân hàng', '1121', 'sổ tiền gửi sme', 'nộp ngân hàng sme',
+        ],
+        'pages': ['SME_SoTienGuiNganHang'],
+        'title': 'Lập phiếu thu trên Sổ Tiền Gửi Ngân Hàng (SME)',
+        'answer': (
+            '**Tiền Và Công Nợ → Sổ Tiền Gửi Ngân Hàng → Lập phiếu thu**. '
+            'Mặc định Nợ **1121**, Có **4111**. Sau khi lưu, sổ tự tải lại số dư.'
+        ),
+    },
+    {
+        'id': 'sme_period_close',
+        'keywords': [
+            'khóa sổ', 'kết chuyển', 'cuối năm', 'tự động hóa kỳ', 'mở khóa sổ',
+            'kết chuyển doanh thu', '4212', '911',
+        ],
+        'pages': ['SME_auto_posting'],
+        'title': 'Kết chuyển, khóa sổ và cuối năm',
+        'answer': (
+            '**Sổ sách kế toán → Kết chuyển, khóa sổ và cuối năm**: chạy kỳ gồm khấu hao TSCĐ → '
+            'phân bổ CCDC → kết chuyển doanh thu/chi phí → 911 → 4212 → quyết toán thuế GTGT → khóa sổ. '
+            'Cuối năm kết chuyển 4212 → 4211. Kỳ đã khóa thì mở khóa tại cùng trang nếu cần sửa.'
+        ),
+    },
+    {
+        'id': 'sme_branch',
+        'keywords': [
+            'chi nhánh', 'tất cả chi nhánh', 'kho_001', 'đơn vị', 'trụ sở hq',
+        ],
+        'pages': ['SME_branches', 'SME_dashboard'],
+        'title': 'Chi nhánh và kho SME',
+        'answer': (
+            'Chọn chi nhánh trên thanh trên hub SME. **Tất cả chi nhánh** = xem hợp nhất; '
+            'một chi nhánh = ghi sổ / lọc vận hành. Trụ sở mã **HQ**. '
+            'Gắn kho tại **Danh mục kho và chi nhánh** (thường KHO_001…).'
+        ),
+    },
+    {
+        'id': 'sme_fa',
+        'keywords': [
+            'tscđ sme', 'tài sản cố định sme', 'khấu hao sme', 'đưa tscđ vào sử dụng sme',
+        ],
+        'pages': ['SME_fixed_assets', 'SME_TSCD', 'SME_fa_docs'],
+        'title': 'Tài sản cố định SME',
+        'answer': (
+            'Nhập TSCĐ qua **Lập phiếu nhập kho** (loại tài sản cố định) → **Danh mục tài sản cố định** '
+            '→ thiết lập số tháng khấu hao và ngày bắt đầu. Chạy khấu hao kỳ tại '
+            '**Kết chuyển, khóa sổ và cuối năm**. Biên bản mẫu 01–06 tại Chứng từ kế toán.'
+        ),
+    },
+    {
+        'id': 'sme_ccdc',
+        'keywords': [
+            'ccdc sme', 'công cụ dụng cụ sme', 'phân bổ ccdc',
+        ],
+        'pages': ['SME_tools', 'SME_CCDC'],
+        'title': 'Công cụ dụng cụ SME',
+        'answer': (
+            'Nhập CCDC qua phiếu nhập → **Danh mục công cụ dụng cụ** → thiết lập phân bổ hoặc đưa vào sử dụng. '
+            'Phân bổ theo kỳ khi chạy **Kết chuyển, khóa sổ và cuối năm**.'
+        ),
+    },
+    {
+        'id': 'sme_debt',
+        'keywords': [
+            'công nợ sme', 'phải thu sme', 'phải trả sme', 'thu nợ sme', 'trả nợ ncc sme',
+        ],
+        'pages': [
+            'SME_SoCongNoPhaiThu', 'SME_SoCongNoPhaiTra',
+            'SME_PhaiThuCongNhanVien', 'SME_PhaiTraCongNhanVien', 'SME_dashboard_debt',
+        ],
+        'title': 'Công nợ SME',
+        'answer': (
+            'Nhóm **Tiền Và Công Nợ**: Sổ phải thu (131), phải trả (331), phải thu/trả nhân viên (141/334). '
+            'Thu nợ / trả nợ lập **phiếu thu** hoặc **phiếu chi** gắn đúng đối tượng.'
+        ),
+    },
+    {
+        'id': 'sme_journal',
+        'keywords': [
+            'nhật ký bút toán', 'sổ cái sme', 'cân đối phát sinh', 'đảo bút toán', 'bt000',
+        ],
+        'pages': ['SME_journal', 'SME_general_ledger', 'SME_chart_of_accounts'],
+        'title': 'Nhật ký bút toán và sổ cái',
+        'answer': (
+            '**Sổ sách kế toán → Nhật ký bút toán**: lọc chi nhánh / loại chứng từ / ngày; đảo bút toán nếu kỳ chưa khóa. '
+            '**Sổ cái và cân đối phát sinh** để đối chiếu số dư. Số bút toán dạng BT0000001.'
+        ),
+    },
+    {
+        'id': 'sme_bctc',
+        'keywords': [
+            'bctc', 'báo cáo tài chính sme', 'b01', 'b02', 'tờ khai gtgt sme', 'thuế tndn',
+        ],
+        'pages': ['SME_BCTC_reports', 'SME_vat_declaration', 'SME_tax_nsnn', 'SME_cit'],
+        'title': 'Báo cáo tài chính và thuế SME',
+        'answer': (
+            '**Báo cáo tài chính → Bộ báo cáo tài chính** (B01–B09). '
+            '**Tờ khai thuế giá trị gia tăng**; **Thuế và ngân sách nhà nước** (133/333); '
+            'thuế TNDN tạm nộp / quyết toán; TNCN khấu trừ từ lương.'
+        ),
+    },
+    {
+        'id': 'sme_production',
+        'keywords': [
+            'sản xuất sme', 'giá thành sme', '621', '622', '627',
+        ],
+        'pages': ['SME_production', 'SME_costing'],
+        'title': 'Sản xuất và giá thành SME',
+        'answer': (
+            '**Sản xuất và giá thành → Sản xuất**: định mức, phiếu sản xuất, xuất NVL, nhập thành phẩm (giá vốn bình quân). '
+            '**Kế toán giá thành** tập hợp 621/622/627.'
+        ),
+    },
+    {
+        'id': 'sme_vs_hkd',
+        'keywords': [
+            'khác hkd', 'phân biệt hkd', 'hkd hay sme', 'doanh nghiệp hay hộ',
+        ],
+        'pages': [],
+        'title': 'Phân biệt HKD và SME',
+        'answer': (
+            '**HKD** (TT88): menu kế toán hộ kinh doanh, phiếu quỹ kiểu Nộp Quỹ. '
+            '**SME** (TT99/TT58): menu **Kế toán doanh nghiệp**, sổ kép, phiếu thu 01-TT / phiếu chi 02-TT, '
+            'Lập phiếu thu trên sổ quỹ/ngân hàng với TK 1111/1121 và 4111. Không dùng chung thao tác hai chế độ.'
         ),
     },
 ]
@@ -551,6 +711,43 @@ PAGE_SUGGESTIONS: dict[str, list[str]] = {
         'Sửa phiếu nhập kho sai?',
     ],
     'cap_nhat_kien_thuc_page': ['Tin pháp luật HKD mới?', 'Tra cứu thông tư thuế?'],
+    'SME_dashboard': [
+        'Kế toán doanh nghiệp SME bắt đầu thế nào?',
+        'Chọn chi nhánh ra sao?',
+        'Lập phiếu thu vốn góp?',
+    ],
+    'SME_SoQuyTienMat': [
+        'Lập phiếu thu trên sổ quỹ thế nào?',
+        'Tài khoản Có mặc định là gì?',
+        'Vốn góp chủ sở hữu 4111?',
+    ],
+    'SME_SoTienGuiNganHang': [
+        'Lập phiếu thu ngân hàng SME?',
+        'Nợ 1121 Có 4111 nghĩa là gì?',
+    ],
+    'SME_SoCongNoPhaiThu': ['Thu nợ khách trên SME?', 'Xem sổ phải thu 131?'],
+    'SME_SoCongNoPhaiTra': ['Trả nợ nhà cung cấp SME?'],
+    'SME_dashboard_debt': [
+        'Tiền Và Công Nợ gồm những sổ nào?',
+        'Lập phiếu thu vốn góp?',
+    ],
+    'SME_auto_posting': [
+        'Kết chuyển khóa sổ cuối kỳ thế nào?',
+        'Mở khóa sổ khi cần sửa?',
+        'Cuối năm 4212 → 4211?',
+    ],
+    'SME_journal': ['Xem nhật ký bút toán?', 'Đảo bút toán khi nào?'],
+    'SME_general_ledger': ['Xem sổ cái và cân đối phát sinh?'],
+    'SME_fixed_assets': ['Nhập TSCĐ và thiết lập khấu hao?', 'Chạy khấu hao kỳ ở đâu?'],
+    'SME_tools': ['Nhập CCDC và phân bổ?', 'Danh mục CCDC trống?'],
+    'SME_production': ['Sản xuất và giá thành SME?', 'Định mức và phiếu sản xuất?'],
+    'SME_BCTC_reports': ['Xem bộ báo cáo tài chính B01–B09?'],
+    'SME_vat_declaration': ['Lập tờ khai thuế GTGT?'],
+    'huong_dan_su_dung': [
+        'Tab Kế Toán SME ở đâu?',
+        'Khác nhau HKD và SME?',
+        'Bắt đầu dùng kế toán doanh nghiệp?',
+    ],
     '_default': [
         'Kế toán tính giá thành?',
         'Quản lý quán ăn, Cà Phê, Trà sửa, Nhà hàng?',

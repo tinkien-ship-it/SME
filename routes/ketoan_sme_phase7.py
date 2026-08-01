@@ -112,7 +112,10 @@ def register_sme_phase7_routes(app, *, login_required, require_sme_regime):
         try:
             data = request.get_json(silent=True) or {}
             doc = activate_tool(
-                conn, tool_id, start_date=data.get('date'), commit=True,
+                conn, tool_id,
+                start_date=data.get('date') or data.get('start_date'),
+                so_thang_phan_bo=data.get('so_thang_phan_bo') or data.get('months'),
+                commit=True,
             )
             return jsonify({'success': True, 'data': doc})
         except ValueError as e:
@@ -121,6 +124,34 @@ def register_sme_phase7_routes(app, *, login_required, require_sme_regime):
         except Exception as e:
             conn.rollback()
             logger.exception('api_sme_tools_activate')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/tools/<int:tool_id>/period', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_tools_set_period(tool_id):
+        from Services.sme.tools_ops import update_tool_allocation_period
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            months = data.get('so_thang_phan_bo') or data.get('months')
+            doc = update_tool_allocation_period(
+                conn,
+                tool_id,
+                so_thang_phan_bo=int(months or 0),
+                start_date=data.get('ngay_bat_dau_su_dung') or data.get('start_date') or data.get('date'),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': doc})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_tools_set_period')
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
