@@ -2233,28 +2233,29 @@ Trân trọng,
     @admin_or_master_required
     def settings_page():
         from helpers import get_setting as _get_setting
+        from Services.invoice_config import get_active_invoice_config
         db = get_db_connection()
     
         # 1. Lấy thông tin doanh nghiệp
-        # Mẹo: Chuyển thành dict ngay để an toàn tuyệt đối
         info_row = db.execute("SELECT * FROM business_info LIMIT 1").fetchone()
         info = dict(info_row) if info_row else {}
     
-        # 2. Lấy thông tin eSign
-        esign_rows = db.execute("SELECT key, value FROM settings WHERE key LIKE 'esign_%'").fetchall()
-    
+        # 2. Lấy cấu hình HĐĐT đang active (invoice_settings) — không dùng legacy esign_%
         esign = {}
-        for row in esign_rows:
-            clean_key = row['key'].replace('esign_', '')
-            esign[clean_key] = row['value']
+        active = get_active_invoice_config() or {}
+        if active:
+            esign = dict(active)
+        else:
+            # Fallback legacy settings.esign_* nếu chưa migrate
+            esign_rows = db.execute("SELECT key, value FROM settings WHERE key LIKE 'esign_%'").fetchall()
+            for row in esign_rows:
+                clean_key = row['key'].replace('esign_', '')
+                esign[clean_key] = row['value']
 
         for field in ('password', 'app_secret', 'esign_pin', 'etax_password'):
             if esign.get(field):
                 esign[f'has_{field}'] = True
             esign[field] = ''
-    
-        # XÓA BỎ: conn.close() -> Tuyệt đối không đóng thủ công ở đây!
-        # Flask sẽ tự gọi hàm close_db(error) bạn đã viết ở trên khi kết thúc request.
     
         return render_template('settings.html', 
                                info=info, 
@@ -2754,9 +2755,9 @@ Trân trọng,
                 'username': data.get('username', old.get('username', '')),
                 'api_key': data.get('api_key', old.get('api_key', '')),
                 'serial_number': data.get('serial_number', old.get('serial_number', '')),
-                'tax_code': data.get('tax_code', old.get('tax_code', '')),
-                'invoice_series': data.get('invoice_series', old.get('invoice_series', 'C26MES')),
-                'invoice_type': data.get('invoice_type', old.get('invoice_type', '2')),
+                'tax_code': str(data.get('tax_code', old.get('tax_code', '')) or '').strip(),
+                'invoice_series': str(data.get('invoice_series', old.get('invoice_series', 'C26MES')) or '').strip() or 'C26MES',
+                'invoice_type': str(data.get('invoice_type', old.get('invoice_type', '2')) or '').strip() or '2',
                 'sign_service_url': data.get('sign_service_url', old.get('sign_service_url', '')),
                 'misa_has_code': 1 if data.get('misa_has_code') in (True, 'true', '1', 1) else 0,
                 'minvoice_cctbao_id': data.get('minvoice_cctbao_id', old.get('minvoice_cctbao_id', '')),

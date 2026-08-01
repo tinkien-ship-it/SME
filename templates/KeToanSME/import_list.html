@@ -1,12 +1,31 @@
 {% extends "base.html" %}
 
 {% block head_extra %}
+    {% include 'partials/data_list_table_assets.html' %}
     <!-- Flatpickr CSS + Theme -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
+        .import-list-page {
+            max-width: 100%;
+        }
+
+        .import-list-page .card {
+            border-radius: 10px;
+        }
+
+        .import-list-page .table-responsive {
+            overflow-x: auto;
+        }
+
+        #importTable {
+            width: 100%;
+            min-width: 1100px;
+            table-layout: auto;
+        }
+
         .form-control, .btn { 
             border-radius: 8px !important; 
         }
@@ -20,8 +39,8 @@
         }
 
         .action-column {
-            width: 140px;
-            min-width: 130px;
+            width: 180px;
+            min-width: 175px;
             white-space: nowrap;
             text-align: center;
         }
@@ -30,6 +49,7 @@
             display: inline-flex;
             gap: 6px;
             justify-content: center;
+            flex-wrap: nowrap;
         }
 
         .action-btn-group .btn {
@@ -51,6 +71,9 @@
 
         /* Responsive mobile */
         @media (max-width: 768px) {
+            #importTable {
+                min-width: 0;
+            }
             .action-column {
                 width: 115px;
                 min-width: 110px;
@@ -62,14 +85,14 @@
             }
         }
 
-        /* Độ rộng các cột khác (giữ nguyên logic cũ nhưng tối ưu) */
-        #importTable th:nth-child(1), #importTable td:nth-child(1) { width: 10%; min-width: 100px; }
-        #importTable th:nth-child(2), #importTable td:nth-child(2) { width: 12%; min-width: 110px; }
-        #importTable th:nth-child(3), #importTable td:nth-child(3) { width: 22%; min-width: 180px; }
-        #importTable th:nth-child(4), #importTable td:nth-child(4) { width: 12%; min-width: 100px; }
-        #importTable th:nth-child(5), #importTable td:nth-child(5) { width: 13%; }
-        #importTable th:nth-child(6), #importTable td:nth-child(6) { width: 13%; }
-        #importTable th:nth-child(7), #importTable td:nth-child(7) { width: 10%; min-width: 100px; }
+        /* Độ rộng các cột — tận dụng màn hình rộng */
+        #importTable th:nth-child(1), #importTable td:nth-child(1) { width: 9%; min-width: 110px; }
+        #importTable th:nth-child(2), #importTable td:nth-child(2) { width: 10%; min-width: 110px; }
+        #importTable th:nth-child(3), #importTable td:nth-child(3) { width: 28%; min-width: 240px; }
+        #importTable th:nth-child(4), #importTable td:nth-child(4) { width: 11%; min-width: 120px; }
+        #importTable th:nth-child(5), #importTable td:nth-child(5) { width: 12%; min-width: 130px; }
+        #importTable th:nth-child(6), #importTable td:nth-child(6) { width: 12%; min-width: 130px; }
+        #importTable th:nth-child(7), #importTable td:nth-child(7) { width: 10%; min-width: 120px; }
     </style>
 {% endblock %}
 
@@ -85,10 +108,10 @@
     </div>
 </div>
 
-<div class="container mt-4">
+<div class="container-fluid import-list-page px-3 px-md-4 px-lg-4 mt-2 mb-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0 text-primary fw-bold">Danh Sách Phiếu Nhập Kho Theo Hóa Đơn Mua Hàng</h3>
-        <a href="{{ url_for('import_stock') }}" class="btn btn-success shadow-sm px-4 py-2">
+        <a href="{{ url_for('SME_import') }}" class="btn btn-success shadow-sm px-4 py-2">
             <i class="bi bi-plus-circle me-2"></i>Tạo Phiếu Nhập
         </a>
     </div>
@@ -123,30 +146,35 @@
                     </button>
                 </div>
             </div>
+            <div class="pivot-panel mt-3 mb-0">
+                <div class="pivot-label"><i class="bi bi-diagram-3 me-1"></i> Nhóm theo nhà cung cấp / thanh toán</div>
+                <div class="mb-2">
+                    <select id="supplierPivot" class="form-select form-select-sm" onchange="applyImportPivot()">
+                        <option value="">Tất cả nhà cung cấp</option>
+                    </select>
+                </div>
+                <div class="pivot-chips" id="paymentPivotChips"></div>
+                <div class="pivot-summary" id="importPivotSummary"></div>
+            </div>
         </div>
     </div>
 
     <!-- Bảng -->
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0" id="importTable">
-                    <thead class="table-light text-secondary small text-uppercase">
-                        <tr>
-                            <th class="text-center">Số Phiếu</th>
-                            <th class="text-center">Ngày Nhập</th>
-                            <th class="text-start">Nhà Cung Cấp</th>
-                            <th class="text-center">Số HĐ</th>
-                            <th class="text-end">Tổng Tiền Hàng</th>
-                            <th class="text-end">Tổng Giá Trị Nhập</th>
-                            <th class="text-center">Tình Trạng</th>
-                            <th class="text-center action-column">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td colspan="8" class="text-center text-muted py-5">Đang tải dữ liệu...</td></tr>
-                    </tbody>
-                </table>
+    <div class="card shadow-sm overflow-hidden">
+        <div class="table-responsive table-desktop-only">
+            <table class="table table-hover mb-0" id="importTable">
+                <thead><tr></tr></thead>
+                <tbody>
+                    <tr><td colspan="8" class="text-center text-muted py-5">Đang tải dữ liệu...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="mobile-card-list p-3" id="importMobileList"></div>
+        <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="enhanced-table-toolbar">
+                <span class="text-muted small">Hiển thị <strong id="importTableCount">0</strong> / <strong id="importTableTotal">0</strong> phiếu</span>
+                <span id="importColFilters" class="active-filters-badge d-none"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearImportColFilters">Xóa lọc cột</button>
             </div>
         </div>
     </div>
@@ -156,13 +184,180 @@
 {% block scripts %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- Flatpickr -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 
 <script>
 const toastEl = document.getElementById('liveToast');
 const toast = new bootstrap.Toast(toastEl);
+let importCache = [];
+let paymentFilter = '';
+let importTableCtrl = null;
+
+const PAYMENT_PIVOT_ITEMS = [
+    { value: '', label: 'Tất cả TT' },
+    { value: 'Đã thanh toán', label: 'Đã thanh toán' },
+    { value: 'Chưa thanh toán', label: 'Chưa thanh toán' },
+];
+
+function renderImportRows(data, tbody) {
+    const el = tbody || document.querySelector('#importTable tbody');
+    if (!el) return;
+    if (!data.length) {
+        el.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-5">Không có phiếu nhập phù hợp.</td></tr>';
+        return;
+    }
+    el.innerHTML = data.map(item => {
+        const statusClass = item.payment_status === 'Đã thanh toán' ? 'bg-success' : 'bg-warning text-dark';
+        const importNo = item.import_no || item.id;
+        return `
+        <tr data-id="${item.id}">
+            <td class="text-center"><strong>${escapeHtml(String(importNo))}</strong></td>
+            <td class="text-center">${formatDate(item.date)}</td>
+            <td class="text-start" title="${escapeHtml(item.supplier_name || '')}">${escapeHtml(item.supplier_name || '—')}</td>
+            <td class="text-center">${escapeHtml(item.bill_no || '—')}</td>
+            <td class="text-end">${formatNumber(item.payment_amt)}</td>
+            <td class="text-end text-primary fw-bold">${formatNumber(item.total_value)}</td>
+            <td class="text-center"><span class="badge ${statusClass}">${escapeHtml(item.payment_status || '—')}</span></td>
+            <td class="text-center action-column">
+                <div class="action-btn-group">
+                    <button class="btn btn-sm btn-outline-primary" title="Xem" onclick="viewImport(${item.id})"><i class="bi bi-eye"></i></button>
+                    <button class="btn btn-sm btn-outline-success" title="In mã vạch Tommy 40 tem" onclick="openBarcodePrint(${item.id})"><i class="bi bi-upc-scan"></i></button>
+                    <button class="btn btn-sm btn-outline-info" title="Sửa" onclick="editImport(${item.id})"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteImport(${item.id}, '${escapeHtml(String(importNo))}')"><i class="bi bi-trash"></i></button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function initImportTable() {
+    importTableCtrl = DataListTable.create({
+        table: '#importTable',
+        countSelector: '#importTableCount',
+        activeFiltersSelector: '#importColFilters',
+        defaultSort: { key: 'date', dir: 'desc' },
+        columns: [
+            { key: 'import_no', label: 'Số phiếu', sortable: true, filterType: 'text', width: '120px', align: 'center',
+              getValue: i => String(i.import_no || i.id), sortValue: i => Number(i.import_no || i.id) },
+            { key: 'date', label: 'Ngày nhập', sortable: true, filterType: 'date', width: '120px', align: 'center',
+              getValue: i => i.date || '', sortValue: i => i.date ? new Date(i.date) : new Date(0) },
+            { key: 'supplier_name', label: 'Nhà cung cấp', filterType: 'text', width: '280px',
+              getValue: i => i.supplier_name || '' },
+            { key: 'bill_no', label: 'Số HĐ', filterType: 'text', width: '130px', align: 'center',
+              getValue: i => i.bill_no || '' },
+            { key: 'payment_amt', label: 'Tổng tiền hàng', sortable: true, filterType: 'number', width: '150px', align: 'end',
+              getValue: i => i.payment_amt, sortValue: i => parseFloat(i.payment_amt || 0) },
+            { key: 'total_value', label: 'Tổng GT nhập', sortable: true, filterType: 'number', width: '150px', align: 'end',
+              getValue: i => i.total_value, sortValue: i => parseFloat(i.total_value || 0) },
+            { key: 'payment_status', label: 'Tình trạng', filterType: 'select', width: '140px', align: 'center',
+              getValue: i => i.payment_status || '',
+              filterOptions: ['Đã thanh toán', 'Chưa thanh toán'] },
+            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '190px', align: 'center' },
+        ],
+        renderRows: (rows, tbody) => {
+            renderImportRows(rows, tbody);
+            document.getElementById('importMobileList').innerHTML = rows.length
+                ? rows.map(renderImportMobile).join('')
+                : '<div class="text-center text-muted py-4">Không có phiếu nhập phù hợp.</div>';
+        },
+        onFiltered: (rows, total) => {
+            document.getElementById('importTableTotal').textContent = total;
+        },
+    });
+}
+
+function applyImportPivot() {
+    const filtered = getFilteredImports();
+    if (importTableCtrl) {
+        importTableCtrl.setData(filtered);
+    } else {
+        renderImportTable(filtered);
+    }
+}
+
+function getFilteredImports() {
+    const supplier = document.getElementById('supplierPivot')?.value || '';
+    return applyDataFilters(importCache, {
+        supplier: row => !supplier || (row.supplier_name || '—') === supplier,
+        payment: row => !paymentFilter || (row.payment_status || '') === paymentFilter,
+    });
+}
+
+function updateImportPivotUI() {
+    const suppliers = [...new Set(importCache.map(i => i.supplier_name || '—'))].sort();
+    const sel = document.getElementById('supplierPivot');
+    if (sel) {
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">Tất cả nhà cung cấp</option>' +
+            suppliers.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+        sel.value = cur && suppliers.includes(cur) ? cur : '';
+    }
+    renderPivotChips(document.getElementById('paymentPivotChips'), PAYMENT_PIVOT_ITEMS, paymentFilter, val => {
+        paymentFilter = val;
+        applyImportPivot();
+    });
+    const filtered = getFilteredImports();
+    const total = filtered.reduce((s, i) => s + (parseFloat(i.total_value) || 0), 0);
+    const el = document.getElementById('importPivotSummary');
+    if (el) el.textContent = `${filtered.length}/${importCache.length} phiếu · Tổng GT nhập: ${formatNumber(total)} đ`;
+}
+
+function renderImportRow(item) {
+    const statusClass = item.payment_status === 'Đã thanh toán' ? 'bg-success' : 'bg-warning text-dark';
+    const importNo = item.import_no || item.id;
+    return `
+        <tr data-id="${item.id}">
+            <td class="text-center"><strong>${escapeHtml(String(importNo))}</strong></td>
+            <td class="text-center">${formatDate(item.date)}</td>
+            <td class="text-start" title="${escapeHtml(item.supplier_name || '')}">${escapeHtml(item.supplier_name || '—')}</td>
+            <td class="text-center">${escapeHtml(item.bill_no || '—')}</td>
+            <td class="text-end">${formatNumber(item.payment_amt)}</td>
+            <td class="text-end text-primary fw-bold">${formatNumber(item.total_value)}</td>
+            <td class="text-center"><span class="badge ${statusClass}">${escapeHtml(item.payment_status || '—')}</span></td>
+            <td class="text-center action-column">
+                <div class="action-btn-group">
+                    <button class="btn btn-sm btn-outline-primary" title="Xem" onclick="viewImport(${item.id})"><i class="bi bi-eye"></i></button>
+                    <button class="btn btn-sm btn-outline-success" title="In mã vạch Tommy 40 tem" onclick="openBarcodePrint(${item.id})"><i class="bi bi-upc-scan"></i></button>
+                    <button class="btn btn-sm btn-outline-info" title="Sửa" onclick="editImport(${item.id})"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteImport(${item.id}, '${escapeHtml(String(importNo))}')"><i class="bi bi-trash"></i></button>
+                </div>
+            </td>
+        </tr>`;
+}
+
+function renderImportMobile(item) {
+    const statusClass = item.payment_status === 'Đã thanh toán' ? 'bg-success' : 'bg-warning text-dark';
+    const importNo = item.import_no || item.id;
+    return `
+        <div class="mobile-card" data-id="${item.id}">
+            <div class="d-flex justify-content-between">
+                <div class="card-title">Phiếu #${escapeHtml(String(importNo))}</div>
+                <span class="badge ${statusClass}">${escapeHtml(item.payment_status || '—')}</span>
+            </div>
+            <div class="card-row"><span class="label">Ngày</span><span class="value">${formatDate(item.date)}</span></div>
+            <div class="card-row"><span class="label">NCC</span><span class="value">${escapeHtml(item.supplier_name || '—')}</span></div>
+            <div class="card-row"><span class="label">Tổng GT</span><span class="value text-primary fw-bold">${formatNumber(item.total_value)}</span></div>
+            <div class="card-actions">
+                <button class="btn btn-sm btn-outline-primary" onclick="viewImport(${item.id})"><i class="bi bi-eye"></i> Xem</button>
+                <button class="btn btn-sm btn-outline-success" onclick="openBarcodePrint(${item.id})"><i class="bi bi-upc-scan"></i> In tem</button>
+                <button class="btn btn-sm btn-outline-info" onclick="editImport(${item.id})"><i class="bi bi-pencil"></i> Sửa</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteImport(${item.id}, '${escapeHtml(String(importNo))}')"><i class="bi bi-trash"></i></button>
+            </div>
+        </div>`;
+}
+
+function renderImportTable(data) {
+    if (importTableCtrl) {
+        importTableCtrl.setData(data || []);
+        return;
+    }
+    renderImportRows(data || []);
+    const mobile = document.getElementById('importMobileList');
+    if (mobile) {
+        mobile.innerHTML = (data && data.length)
+            ? data.map(renderImportMobile).join('')
+            : '<div class="text-center text-muted py-4">Không có phiếu nhập phù hợp.</div>';
+    }
+}
 
 function showToast(msg, isError = false) {
     document.getElementById('toastHeader').textContent = isError ? 'Lỗi' : 'Thành công';
@@ -194,8 +389,8 @@ async function loadImport() {
     const end = toISO($('#endDate').val());
 
     let url = '/api/import?';
-    if (start) url += `start=${start}&`;
-    if (end) url += `end=${end}&`;
+    if (start) url += `start_date=${start}&`;
+    if (end) url += `end_date=${end}&`;
     if (q) url += `q=${encodeURIComponent(q)}&`;
     url = url.replace(/&$/, '');
 
@@ -206,51 +401,20 @@ async function loadImport() {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-
-        tbody.empty();
-        if (!data || data.length === 0) {
-            tbody.html('<tr><td colspan="8" class="text-center text-muted py-5">Không có phiếu nhập nào.</td></tr>');
-            return;
-        }
-
-        data.forEach(item => {
-            const statusClass = item.payment_status === 'Đã thanh toán' ? 'bg-success' : 'bg-warning text-dark';
-            const importNo = item.import_no || item.id;
-
-            tbody.append(`
-                <tr data-id="${item.id}">
-                    <td class="text-center"><strong>${importNo}</strong></td>
-                    <td class="text-center">${formatDate(item.date)}</td>
-                    <td class="text-start text-truncate" title="${item.supplier_name || ''}">${item.supplier_name || '—'}</td>
-                    <td class="text-center">${item.bill_no || '—'}</td>
-                    <td class="text-end">${formatNumber(item.payment_amt)}</td>
-                    <td class="text-end text-primary fw-bold">${formatNumber(item.total_value)}</td>
-                    <td class="text-center"><span class="badge ${statusClass}">${item.payment_status || '—'}</span></td>
-                    <td class="text-center action-column">
-                        <div class="action-btn-group">
-                            <button class="btn btn-sm btn-outline-primary" title="Xem" onclick="viewImport(${item.id})">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-info" title="Sửa" onclick="editImport(${item.id})">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteImport(${item.id}, '${importNo}')">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `);
-        });
+        importCache = Array.isArray(data) ? data : (data.data || []);
+        updateImportPivotUI();
+        renderImportTable(getFilteredImports());
     } catch (err) {
         console.error(err);
-        tbody.html('<tr><td colspan="8" class="text-center text-danger py-5">Lỗi tải dữ liệu</td></tr>');
+        $('#importTable tbody').html('<tr><td colspan="8" class="text-center text-danger py-5">Lỗi tải dữ liệu</td></tr>');
+        const mobile = document.getElementById('importMobileList');
+        if (mobile) mobile.innerHTML = '';
         showToast('Không tải được danh sách phiếu nhập!', true);
     }
 }
 
-function viewImport(id) { location.href = `/import/view/${id}`; }
-function editImport(id) { location.href = `/import/edit/${id}`; }
+function viewImport(id) { location.href = `/SME_import?import_id=${id}`; }
+function editImport(id) { location.href = `/SME_import?import_id=${id}`; }
 
 async function deleteImport(id, importNo) {
     const displayNo = importNo || id;
@@ -272,7 +436,11 @@ async function deleteImport(id, importNo) {
         const data = await res.json();
 
         if (res.ok && data.success) {
+            importCache = importCache.filter(i => i.id !== id);
             $(`tr[data-id="${id}"]`).fadeOut(400, function() { $(this).remove(); });
+            $(`.mobile-card[data-id="${id}"]`).fadeOut(400, function() { $(this).remove(); });
+            updateImportPivotUI();
+            applyImportPivot();
             showToast(data.message || `Đã xóa phiếu nhập #${displayNo}`);
         } else {
             throw new Error(data.error || 'Xóa thất bại');
@@ -282,23 +450,42 @@ async function deleteImport(id, importNo) {
     }
 }
 
+function openBarcodePrint(importId) {
+    const win = window.open(`/print_barcode_import_select/${importId}`, '_blank');
+    if (!win) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi',
+            text: 'Vui lòng cho phép popup để in mã vạch!',
+        });
+    }
+}
+
 // Khởi tạo
 $(document).ready(function() {
-    const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    initImportTable();
+    $('#btnClearImportColFilters').on('click', () => importTableCtrl?.clearColumnFilters());
 
-    const fpConfig = {
-        dateFormat: "d/m/Y",
-        locale: "vn",
-        allowInput: true,
-        clickOpens: true,
-        onChange: function() {
-            if ($('#startDate').val() && $('#endDate').val()) loadImport();
-        }
+    const onDateChange = function() {
+        if ($('#startDate').val() && $('#endDate').val()) loadImport();
     };
-
-    flatpickr("#startDate", fpConfig).setDate(firstDayOfMonth);
-    flatpickr("#endDate", fpConfig).setDate(today);
+    if (window.KetoDatePicker) {
+        KetoDatePicker.initMonthToToday('startDate', 'endDate', onDateChange);
+    } else if (typeof flatpickr === 'function') {
+        const fpConfig = {
+            dateFormat: 'd/m/Y',
+            locale: (flatpickr.l10ns && flatpickr.l10ns.vn) || 'vn',
+            allowInput: true,
+            clickOpens: true,
+            onChange: onDateChange,
+        };
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const startFp = flatpickr('#startDate', fpConfig);
+        const endFp = flatpickr('#endDate', fpConfig);
+        if (startFp && typeof startFp.setDate === 'function') startFp.setDate(firstDay);
+        if (endFp && typeof endFp.setDate === 'function') endFp.setDate(today);
+    }
 
     loadImport();
 });

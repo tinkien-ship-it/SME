@@ -1,0 +1,14 @@
+POST login -> https://demo-api-hddt.matbao.in:11443/api/auth/login
+GET templates -> https://demo-api-hddt.matbao.in:11443/api/invoice/templates?year=2025
+POST create-invoice -> https://demo-api-hddt.matbao.in:11443/api/invoice/create-invoice
+POST create-invoice (vé  máy bay) -> https://demo-api-hddt.matbao.in:11443/api/invoice/create-invoice
+POST create-invoice-dieu-chinh -> https://demo-api-hddt.matbao.in:11443/api/invoice/create-invoice
+POST create-invoice-thay-the -> https://demo-api-hddt.matbao.in:11443/api/invoice/create-invoice
+POST cancel-invoice -> https://demo-api-hddt.matbao.in:11443/api/invoice/cancel-invoice
+POST create-template-04 -> https://demo-api-hddt.matbao.in:11443/api/invoice/create-template-04
+POST download-invoice -> https://demo-api-hddt.matbao.in:11443/api/invoice/download-invoice
+POST invoice-detail -> https://demo-api-hddt.matbao.in:11443/api/invoice/invoice-detail
+POST sign -> https://demo-api-hddt.matbao.in:11443/api/invoice/sign-invoice
+GET get-xml-not-sign -> https://demo-api-hddt.matbao.in:11443/api/invoice/get-xml-not-sign?MaSoHDon=QVh5dWZsYksyS0svQ0FtWjgrWnk1R3k0OUd4OHVIcTZhM0EvOXZydExFQWNmRDVFM2hDV1I0Y1ZkQVVrT213UA==
+POST sign-xml -> https://demo-api-hddt.matbao.in:11443/api/invoice/sign-xml
+POST delete-invoice -> https://demo-api-hddt.matbao.in:11443/api/invoice/delete-invoice

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Xuất Hóa Đơn Thay Thế - KETO POS{% endblock %}
+{% block title %}Xuất HĐ Thay thế / Điều chỉnh - KETO POS{% endblock %}
 
 {% block content %}
 <style>
@@ -173,11 +173,11 @@
         <div class="d-flex align-items-center">
             <i class="fas fa-exclamation-circle fa-lg me-2 text-warning"></i>
             <div>
-                Đang thay thế HĐ số: <strong id="origInvoiceNo" class="badge bg-danger fs-6">---</strong>
+                Đang xử lý HĐ số: <strong id="origInvoiceNo" class="badge bg-danger fs-6">---</strong>
                 <span class="ms-2 small text-muted">Ngày: <span id="origDate">--/--/----</span></span>
             </div>
         </div>
-        <span class="badge bg-light text-dark border">CHẾ ĐỘ THAY THẾ</span>
+        <span class="badge bg-light text-dark border" id="modeBadge">CHẾ ĐỘ THAY THẾ</span>
     </div>
 
     <div class="row g-3">
@@ -186,7 +186,7 @@
                 <div class="input-group">
                     <span class="input-group-text bg-white border-0"><i class="fa fa-search text-muted"></i></span>
                     <input type="text" id="searchInput" class="form-control search-input border-0"
-                           placeholder="Tìm sản phẩm bổ sung vào hóa đơn thay thế..." autocomplete="off">
+                           placeholder="Tìm sản phẩm bổ sung vào hóa đơn..." autocomplete="off">
                     <button class="btn btn-camera" type="button" onclick="startScanner()">
                         <i class="fa fa-camera"></i>
                     </button>
@@ -196,7 +196,7 @@
 
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fa fa-shopping-basket me-2 text-primary"></i>GIỎ HÀNG THAY THẾ</span>
+                    <span><i class="fa fa-shopping-basket me-2 text-primary"></i><span id="cartHeaderLabel">GIỎ HÀNG THAY THẾ</span></span>
                     <button class="btn btn-sm btn-outline-danger border-0 rounded-pill" onclick="clearCart()">
                         <i class="fa fa-trash-alt me-1"></i> Xóa tất cả
                     </button>
@@ -311,6 +311,31 @@
     let originalInvoiceNo = '';
     let editingOrderId = null;
     let html5QrCode = null;
+    let selectedTchdon = 1;
+
+    const TCHDON_META = {
+        1: { badge: 'CHẾ ĐỘ THAY THẾ', cart: 'GIỎ HÀNG THAY THẾ', btn: 'XÁC NHẬN THAY THẾ (F2)', title: 'Xác nhận thay thế',
+             text: (no) => `Phát hành hóa đơn thay thế cho HĐ ${no} (không hủy/xóa hóa đơn gốc).` },
+        2: { badge: 'ĐIỀU CHỈNH TĂNG', cart: 'GIỎ HÀNG ĐIỀU CHỈNH', btn: 'XÁC NHẬN ĐIỀU CHỈNH TĂNG (F2)', title: 'Xác nhận điều chỉnh tăng',
+             text: (no) => `Phát hành hóa đơn điều chỉnh tăng liên quan HĐ ${no}. Hóa đơn gốc vẫn còn hiệu lực.` },
+        3: { badge: 'ĐIỀU CHỈNH GIẢM', cart: 'GIỎ HÀNG ĐIỀU CHỈNH', btn: 'XÁC NHẬN ĐIỀU CHỈNH GIẢM (F2)', title: 'Xác nhận điều chỉnh giảm',
+             text: (no) => `Phát hành hóa đơn điều chỉnh giảm liên quan HĐ ${no}. Hóa đơn gốc vẫn còn hiệu lực.` },
+        4: { badge: 'ĐIỀU CHỈNH THÔNG TIN', cart: 'GIỎ HÀNG ĐIỀU CHỈNH', btn: 'XÁC NHẬN ĐIỀU CHỈNH TT (F2)', title: 'Xác nhận điều chỉnh thông tin',
+             text: (no) => `Phát hành hóa đơn điều chỉnh thông tin liên quan HĐ ${no}. Hóa đơn gốc vẫn còn hiệu lực.` },
+        5: { badge: 'ĐIỀU CHỈNH TĂNG/GIẢM', cart: 'GIỎ HÀNG ĐIỀU CHỈNH', btn: 'XÁC NHẬN ĐIỀU CHỈNH TĂNG/GIẢM (F2)', title: 'Xác nhận điều chỉnh tăng/giảm',
+             text: (no) => `Phát hành hóa đơn điều chỉnh tăng/giảm liên quan HĐ ${no}. Hóa đơn gốc vẫn còn hiệu lực.` },
+    };
+
+    function applyTchdonUi() {
+        const meta = TCHDON_META[selectedTchdon] || TCHDON_META[1];
+        const badge = document.getElementById('modeBadge');
+        const cartLbl = document.getElementById('cartHeaderLabel');
+        const btnText = document.getElementById('btnText');
+        if (badge) badge.textContent = meta.badge;
+        if (cartLbl) cartLbl.textContent = meta.cart;
+        if (btnText) btnText.innerHTML = `<i class="fas fa-exchange-alt me-2"></i> ${meta.btn}`;
+        document.title = meta.badge + ' - KETO POS';
+    }
 
     function formatVND(a) { return new Intl.NumberFormat('vi-VN').format(Math.round(a || 0)) + 'đ'; }
 
@@ -331,6 +356,9 @@
         const params = new URLSearchParams(window.location.search);
         originalInvoiceNo = params.get('replace') || params.get('invoice_no');
         editingOrderId = params.get('sale_id');
+        const rawTch = parseInt(params.get('tchdon') || params.get('TCHDon') || '1', 10);
+        selectedTchdon = [1, 2, 3, 4, 5].includes(rawTch) ? rawTch : 1;
+        applyTchdonUi();
 
         if (originalInvoiceNo) {
             document.getElementById('origInvoiceNo').textContent = originalInvoiceNo;
@@ -531,9 +559,10 @@
     async function issueReplacementInvoice() {
         if (!cart.length) return Swal.fire('Giỏ hàng trống', '', 'warning');
 
+        const meta = TCHDON_META[selectedTchdon] || TCHDON_META[1];
         const confirm = await Swal.fire({
-            title: 'Xác nhận thay thế',
-            text: `Hệ thống sẽ hủy hóa đơn ${originalInvoiceNo} và phát hành hóa đơn mới.`,
+            title: meta.title,
+            text: meta.text(originalInvoiceNo),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#e67e22',
@@ -552,7 +581,7 @@
             const orderData = {
                 customer_name: document.getElementById('customerName').value,
                 company_name: document.getElementById('customerCompany').value,
-                tax_code: document.getElementById('customerTaxCode').value, // Đồng bộ field name
+                tax_code: document.getElementById('customerTaxCode').value,
                 address: document.getElementById('customerAddress').value,
                 email: document.getElementById('customerEmail').value,
                 customer_phone: document.getElementById('customerPhone').value,
@@ -568,7 +597,10 @@
                     unit: i.unit,
                     UseSaleUnit: i.useUnit1 ? 1 : 0
                 })),
-                is_replacement: true,
+                is_replacement: selectedTchdon === 1,
+                is_adjustment: selectedTchdon >= 2,
+                tchdon: selectedTchdon,
+                TCHDon: selectedTchdon,
                 replacement_for: originalInvoiceNo
             };
 
@@ -591,7 +623,8 @@
             const invResult = await invRes.json();
 
             if (invResult.success) {
-                await Swal.fire('Thành công', `Hóa đơn mới: ${invResult.invoice_no}`, 'success');
+                const kind = invResult.ten_LoaiHDon || meta.badge;
+                await Swal.fire('Thành công', `${kind}: ${invResult.invoice_no}`, 'success');
                 window.location.href = '/outward-invoice';
             } else {
                 throw new Error(invResult.error);

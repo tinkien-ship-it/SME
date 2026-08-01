@@ -20,11 +20,17 @@ def ensure_sme_accounting_ready(
     from Services.sme.coa_service import ensure_sme_coa_ready
     from Services.sme.journal_engine import ensure_sme_journal_ready
     from Services.sme.purchase_order import ensure_purchase_order_schema
+    from Services.sme.vouchers import ensure_sme_voucher_schema
+    from Services.sme.payroll import ensure_sme_payroll_schema
+    from Services.sme.landed_cost import ensure_sme_landed_cost_schema
     from Services.tenant_profile import is_sme_regime, normalize_accounting_regime
 
     coa = ensure_sme_coa_ready(conn, commit=False)
     rules = ensure_sme_journal_ready(conn, commit=False)
     ensure_purchase_order_schema(conn, commit=False)
+    ensure_sme_voucher_schema(conn, commit=False)
+    ensure_sme_payroll_schema(conn, commit=False)
+    ensure_sme_landed_cost_schema(conn, commit=False)
 
     regime = normalize_accounting_regime(accounting_regime or 'SME_TT99')
     if not is_sme_regime(regime):

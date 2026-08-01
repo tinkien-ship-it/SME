@@ -1,7 +1,7 @@
 """Routes Tính Giá Thành (Thành Phẩm) — Kế Toán HKD."""
 import logging
 
-from flask import jsonify, render_template, request
+from flask import jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from db_utils import get_db_connection
@@ -28,7 +28,39 @@ def register_production_routes(app):
     @app.route('/production')
     @login_required
     def production_page():
+        """HKD dùng trang này; tenant SME chuyển sang UI riêng."""
+        try:
+            from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
+            if is_sme_regime(get_current_tenant_profile().get('accounting_regime')):
+                return redirect(url_for('SME_production'))
+        except Exception:
+            pass
         return render_template('KeToanHKD/production.html')
+
+    @app.route('/ketoan_hkd/production/<int:order_id>/print')
+    @app.route('/production/<int:order_id>/print')
+    @login_required
+    def production_print(order_id):
+        try:
+            from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
+            if is_sme_regime(get_current_tenant_profile().get('accounting_regime')):
+                return redirect(url_for('SME_production_print', order_id=order_id))
+        except Exception:
+            pass
+        conn = get_db_connection()
+        try:
+            ensure_production_schema(conn)
+            order = get_production_order(conn, order_id)
+            if not order:
+                return 'Không tìm thấy phiếu sản xuất', 404
+            info = conn.execute('SELECT * FROM business_info LIMIT 1').fetchone()
+            return render_template(
+                'KeToanHKD/production_print.html',
+                order=order,
+                info=dict(info) if info else {},
+            )
+        finally:
+            conn.close()
 
     # ---- Products ----
     @app.route('/api/production/finished-products')
@@ -194,6 +226,11 @@ def register_production_routes(app):
         conn = get_db_connection()
         try:
             ensure_production_schema(conn)
+            try:
+                from Services.sme.production_journal import ensure_production_journal_column
+                ensure_production_journal_column(conn, commit=True)
+            except Exception:
+                pass
             rows = list_production_orders(
                 conn,
                 date_from=request.args.get('from', ''),
@@ -255,13 +292,39 @@ def register_production_routes(app):
                 created_by=username,
                 allow_negative_stock=bool(data.get('allow_negative_stock')),
             )
+            journal_info = None
+            try:
+                from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
+                profile = get_current_tenant_profile()
+                if is_sme_regime(profile.get('accounting_regime')):
+                    from Services.sme.bootstrap import ensure_sme_accounting_ready
+                    from Services.sme.production_journal import post_production_journal
+                    ensure_sme_accounting_ready(
+                        conn,
+                        accounting_regime=profile.get('accounting_regime'),
+                        commit=False,
+                    )
+                    journal_info = post_production_journal(
+                        conn, order, created_by=username, commit=True,
+                    )
+                    if journal_info and not journal_info.get('skipped'):
+                        order = get_production_order(conn, order['id']) or order
+                        order['journal_entry_id'] = journal_info.get('journal_entry_id')
+            except Exception as jexc:
+                logger.exception('SME production journal: %s', jexc)
+                journal_info = {'error': str(jexc)}
+
+            msg = (
+                f"Đã sản xuất {order['voucher_no']}: "
+                f"giá thành {order['unit_cost']:,.0f} đ/{order.get('finished_unit') or 'ĐV'}"
+            )
+            if journal_info and journal_info.get('entry_no'):
+                msg += f" · sổ {journal_info['entry_no']}"
             return jsonify({
                 'success': True,
                 'data': order,
-                'message': (
-                    f"Đã sản xuất {order['voucher_no']}: "
-                    f"giá thành {order['unit_cost']:,.0f} đ/{order.get('finished_unit') or 'ĐV'}"
-                ),
+                'journal': journal_info,
+                'message': msg,
             })
         except ValueError as exc:
             return jsonify({'success': False, 'error': str(exc)}), 400
@@ -294,32 +357,5 @@ def register_production_routes(app):
         except Exception as exc:
             logger.exception('order cancel: %s', exc)
             return jsonify({'success': False, 'error': str(exc)}), 500
-        finally:
-            conn.close()
-
-    @app.route('/ketoan_hkd/production/<int:order_id>/print')
-    @app.route('/production/<int:order_id>/print')
-    @login_required
-    def production_print(order_id):
-        conn = get_db_connection()
-        try:
-            ensure_production_schema(conn)
-            order = get_production_order(conn, order_id)
-            if not order:
-                return 'Không tìm thấy phiếu sản xuất', 404
-            biz = {'business_name': '', 'address': '', 'phone': ''}
-            try:
-                info = conn.execute(
-                    "SELECT business_name, address, phone FROM business_info LIMIT 1"
-                ).fetchone()
-                if info:
-                    biz = dict(info)
-            except Exception:
-                pass
-            return render_template(
-                'KeToanHKD/production_print.html',
-                order=order,
-                info=biz,
-            )
         finally:
             conn.close()

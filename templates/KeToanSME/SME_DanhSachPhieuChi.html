@@ -1,0 +1,85 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Phiếu chi 02-TT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Danh sách phiếu chi <span class="badge bg-danger">02-TT</span></h4>
+    <p class="text-muted small mb-0">Doanh nghiệp TT99/TT58 — ghi sổ kép (không dùng phiếu HKD)</p>
+  </div>
+  <button class="btn btn-danger" id="btnNew"><i class="fas fa-plus me-1"></i>Lập phiếu chi</button>
+</div>
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-md-3"><label class="form-label small fw-bold">Từ ngày</label><input type="date" id="fromDate" class="form-control"></div>
+    <div class="col-md-3"><label class="form-label small fw-bold">Đến ngày</label><input type="date" id="toDate" class="form-control"></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" id="btnLoad">Tải</button></div>
+  </div>
+</div>
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Số PC</th><th>Ngày</th><th>Người nhận</th><th class="text-end">Số tiền</th><th>Nợ</th><th>Có</th><th>Diễn giải</th><th></th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="8" class="text-center text-muted py-4">Chọn khoảng ngày và tải</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="modalNew" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header bg-danger text-white"><h5 class="modal-title">Lập phiếu chi (02-TT)</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Người nhận</label><input type="text" id="fParty" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Số tiền</label><input type="number" id="fAmount" class="form-control" min="0" step="1"></div>
+    <div class="mb-2"><label class="form-label small">Hình thức</label>
+      <select id="fPay" class="form-select"><option value="cash">Tiền mặt (1111)</option><option value="bank">Chuyển khoản (1121)</option></select>
+    </div>
+    <div class="mb-2"><label class="form-label small">TK Nợ</label><input type="text" id="fDebit" class="form-control" value="331"></div>
+    <div class="mb-2"><label class="form-label small">Lý do</label><input type="text" id="fReason" class="form-control"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-danger" id="btnSave">Lưu & ghi sổ</button></div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+document.getElementById('fDate').value = todayISO();
+document.getElementById('fromDate').value = todayISO().slice(0,8)+'01';
+document.getElementById('toDate').value = todayISO();
+
+async function loadList(){
+  const q = new URLSearchParams({from: fromDate.value, to: toDate.value});
+  const res = await fetch('/api/sme/vouchers/payments?'+q);
+  const json = await res.json();
+  const tbody = document.getElementById('tbody');
+  if(!json.success){ tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center">${json.error||'Lỗi'}</td></tr>`; return; }
+  if(!json.data.length){ tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không có phiếu</td></tr>'; return; }
+  tbody.innerHTML = json.data.map(r => `<tr>
+    <td class="fw-bold">${r.voucher_no}</td>
+    <td>${(r.voucher_date||'').slice(0,10)}</td>
+    <td>${r.party_name||''}</td>
+    <td class="text-end text-danger fw-bold">${fmt(r.amount)}</td>
+    <td>${r.debit_account}</td><td>${r.credit_account}</td>
+    <td class="small">${r.reason||''}</td>
+    <td><a class="btn btn-sm btn-outline-danger" target="_blank" href="/SME_PhieuChi/in/${r.id}">In</a></td>
+  </tr>`).join('');
+}
+document.getElementById('btnLoad').onclick = loadList;
+document.getElementById('btnNew').onclick = () => new bootstrap.Modal(document.getElementById('modalNew')).show();
+document.getElementById('btnSave').onclick = async () => {
+  const payload = {
+    date: fDate.value, receiver_name: fParty.value, amount: parseFloat(fAmount.value)||0,
+    payment_method: fPay.value, debit_account: fDebit.value, reason: fReason.value
+  };
+  const res = await fetch('/api/sme/vouchers/payments', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modalNew')).hide();
+  alert('Đã lập '+json.voucher_no);
+  loadList();
+};
+loadList();
+</script>
+{% endblock %}

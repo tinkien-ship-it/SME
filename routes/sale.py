@@ -42,6 +42,7 @@ from Services.sale_helpers import (
     table_has_column,
 )
 from Services.sme.sale_journal import sync_sale_journals
+from Services.sme.hkd_side_effects import write_hkd_cash_vouchers
 from Services.tenant_profile import get_current_tenant_profile
 
 
@@ -390,7 +391,7 @@ def complete_pos_bank_payment(sale_id):
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (px_voucher_no, sale_date, customer_name, json.dumps(px_items, ensure_ascii=False), total_amount, sale_id))
 
-        if payment_method in ["111", "112"]:
+        if payment_method in ["111", "112"] and write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
             last_pt = cursor.execute(
                 "SELECT voucher_no FROM phieu_thu WHERE voucher_no LIKE 'PT%' ORDER BY id DESC LIMIT 1").fetchone()
             pt_num = (int(last_pt['voucher_no'][2:]) + 1) if last_pt else 1
@@ -706,8 +707,8 @@ def register_sale_routes(app):
                         VALUES (?, ?, ?, ?, ?, ?)
                     """, (px_voucher_no, sale_date, customer_name, json.dumps(px_items, ensure_ascii=False), total_amount, sale_id))
 
-                # Tạo chứng từ tài chính
-                if payment_method in ["111", "112"]:
+                # Tạo chứng từ tài chính (chỉ HKD — SME dùng sme_journal / sme_vouchers)
+                if payment_method in ["111", "112"] and write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
                     last_pt = cursor.execute("SELECT voucher_no FROM phieu_thu WHERE voucher_no LIKE 'PT%' ORDER BY id DESC LIMIT 1").fetchone()
                     pt_num = (int(last_pt['voucher_no'][2:]) + 1) if last_pt else 1
                     pt_vno = f"PT{pt_num:06d}"
@@ -962,8 +963,8 @@ def register_sale_routes(app):
                         INSERT INTO phieu_xuat_kho (voucher_no, date, customer_name, items_json, total_amount, sale_id)
                         VALUES (?, ?, ?, ?, ?, ?)
                     """, (px_voucher_no, sale_date, customer_name, json.dumps(px_items, ensure_ascii=False), total_amount, sale_id))
-                # Chứng từ tài chính
-                if payment_method in ["111", "112"]:
+                # Chứng từ tài chính (chỉ HKD — SME dùng sme_journal / sme_vouchers)
+                if payment_method in ["111", "112"] and write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
                     last_pt = cursor.execute("SELECT voucher_no FROM phieu_thu WHERE voucher_no LIKE 'PT%' ORDER BY id DESC LIMIT 1").fetchone()
                     pt_num = (int(last_pt['voucher_no'][2:]) + 1) if last_pt else 1
                     pt_vno = f"PT{pt_num:06d}"

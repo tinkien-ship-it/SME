@@ -1,0 +1,236 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Lập bảng lương{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Bảng lương SME <span class="badge bg-primary">TT99/TT58</span></h4>
+    <p class="text-muted small mb-0">Chốt → Nợ 642/622 · Có 3341/338 ·</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_employees') }}">Nhân viên</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_attendance') }}">Chấm công</a>
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_DanhSachPhieuChi') }}">Phiếu chi 02-TT</a>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label small fw-bold">Tháng</label>
+      <input type="number" id="m" class="form-control" min="1" max="12" value="{{ month or '' }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-bold">Năm</label>
+      <input type="number" id="y" class="form-control" value="{{ year or '' }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-bold">Ngày chốt</label>
+      <input type="date" id="postDate" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-bold">TK chi phí</label>
+      <select id="expAcct" class="form-select">
+        <option value="642">642 — QLDN</option>
+        <option value="622">622 — NC trực tiếp</option>
+        <option value="641">641 — Bán hàng</option>
+      </select>
+    </div>
+    <div class="col-md-4 d-flex gap-2">
+      <button class="btn btn-dark" id="btnLoad">Tải NV</button>
+      <button class="btn btn-danger" id="btnAccrue">Chốt &amp; ghi sổ</button>
+      <button class="btn btn-success" id="btnPay">Trả lương</button>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-3">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0" id="tbl">
+      <thead class="table-light">
+        <tr>
+          <th>Nhân viên</th>
+          <th class="text-end">Công</th>
+          <th class="text-end">Lương TG</th>
+          <th class="text-end">PC quỹ</th>
+          <th class="text-end">PC khác</th>
+          <th class="text-end">Thưởng</th>
+          <th class="text-end">BHXH</th>
+          <th class="text-end">BHYT</th>
+          <th class="text-end">BHTN</th>
+          <th class="text-end">TNCN</th>
+          <th class="text-end">Thực lĩnh</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="11" class="text-center text-muted py-4">Chọn kỳ và tải</td></tr></tbody>
+      <tfoot><tr class="fw-bold table-secondary">
+        <td colspan="10" class="text-end">Tổng thực lĩnh</td>
+        <td class="text-end" id="sumNet">0</td>
+      </tr></tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white fw-semibold">Kỳ đã chốt (SME)</div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead class="table-light"><tr>
+        <th>Kỳ</th><th>Ngày</th><th class="text-end">Thu nhập</th><th class="text-end">Thực lĩnh</th>
+        <th class="text-end">BH chủ</th><th>TK CP</th><th>Journal</th>
+      </tr></thead>
+      <tbody id="runsBody"><tr><td colspan="7" class="text-muted text-center py-3">…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n)||0));
+const today = () => new Date().toISOString().slice(0,10);
+const now = new Date();
+if (!document.getElementById('m').value) document.getElementById('m').value = now.getMonth()+1;
+if (!document.getElementById('y').value) document.getElementById('y').value = now.getFullYear();
+document.getElementById('postDate').value = today();
+
+let rows = [];
+
+function num(el){ return parseFloat(String(el.value||'0').replace(/,/g,''))||0; }
+function recalcRow(tr){
+  const time = num(tr.querySelector('[data-f=time_salary]'));
+  const af = num(tr.querySelector('[data-f=allowance_fund]'));
+  const ao = num(tr.querySelector('[data-f=allowance_other]'));
+  const bonus = num(tr.querySelector('[data-f=bonus]'));
+  const bhxh = num(tr.querySelector('[data-f=bhxh]'));
+  const bhyt = num(tr.querySelector('[data-f=bhyt]'));
+  const bhtn = num(tr.querySelector('[data-f=bhtn]'));
+  const tncn = num(tr.querySelector('[data-f=tncn_tax]'));
+  const income = time + af + ao + bonus;
+  const deduct = bhxh + bhyt + bhtn + tncn;
+  const net = income - deduct;
+  tr.querySelector('[data-f=final_amount]').textContent = fmt(net);
+  tr.dataset.net = String(net);
+  tr.dataset.income = String(income);
+  tr.dataset.deduct = String(deduct);
+  sumAll();
+}
+function sumAll(){
+  let t = 0;
+  document.querySelectorAll('#tbody tr[data-eid]').forEach(tr => t += parseFloat(tr.dataset.net||0));
+  document.getElementById('sumNet').textContent = fmt(t);
+}
+function render(){
+  const tbody = document.getElementById('tbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">Không có nhân viên đang làm việc</td></tr>';
+    sumAll(); return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const income = Number(r.total_income)||0;
+    const deduct = Number(r.total_deduct)||0;
+    const net = Number(r.final_amount)|| (income-deduct);
+    return `<tr data-eid="${r.employee_id}" data-name="${(r.fullname||'').replace(/"/g,'&quot;')}" data-net="${net}" data-income="${income}" data-deduct="${deduct}">
+      <td class="fw-semibold">${r.fullname||''}</td>
+      <td><input class="form-control form-control-sm text-end" data-f="actual_working_days" value="${r.actual_working_days||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="time_salary" value="${r.time_salary||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_fund" value="${r.allowance_fund||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_other" value="${r.allowance_other||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="bonus" value="${r.bonus||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="bhxh" value="${r.bhxh||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="bhyt" value="${r.bhyt||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="bhtn" value="${r.bhtn||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="tncn_tax" value="${r.tncn_tax||0}"></td>
+      <td class="text-end fw-bold text-primary" data-f="final_amount">${fmt(net)}</td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', () => recalcRow(inp.closest('tr')));
+  });
+  sumAll();
+}
+function collectRecords(){
+  return [...document.querySelectorAll('#tbody tr[data-eid]')].map(tr => {
+    const g = f => num(tr.querySelector(`[data-f=${f}]`));
+    const time = g('time_salary'), af=g('allowance_fund'), ao=g('allowance_other'), bonus=g('bonus');
+    const bhxh=g('bhxh'), bhyt=g('bhyt'), bhtn=g('bhtn'), tncn=g('tncn_tax');
+    const income = time+af+ao+bonus;
+    const deduct = bhxh+bhyt+bhtn+tncn;
+    return {
+      employee_id: parseInt(tr.dataset.eid,10),
+      fullname: tr.dataset.name,
+      base_salary: time,
+      actual_working_days: g('actual_working_days'),
+      time_salary: time,
+      allowance_fund: af, allowance_other: ao, bonus,
+      bhxh, bhyt, bhtn, tncn_tax: tncn,
+      total_income: income, total_deduct: deduct, final_amount: income-deduct
+    };
+  });
+}
+
+async function loadRuns(){
+  const res = await fetch('/api/sme/payroll/runs');
+  const json = await res.json();
+  const body = document.getElementById('runsBody');
+  if (!json.success || !json.data.length) {
+    body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Chưa chốt kỳ nào</td></tr>';
+    return;
+  }
+  body.innerHTML = json.data.map(r => `<tr>
+    <td class="fw-bold">T${r.month}/${r.year}</td>
+    <td>${(r.posting_date||'').slice(0,10)}</td>
+    <td class="text-end">${fmt(r.total_income)}</td>
+    <td class="text-end">${fmt(r.total_net)}</td>
+    <td class="text-end">${fmt(r.employer_insurance)}</td>
+    <td>${r.expense_account||''}</td>
+    <td class="small">#${r.journal_entry_id||'—'}</td>
+  </tr>`).join('');
+}
+
+document.getElementById('btnLoad').onclick = async () => {
+  const q = new URLSearchParams({month: m.value, year: y.value});
+  const res = await fetch('/api/get_salary?'+q);
+  const json = await res.json();
+  if (json.message && !json.records) {
+    return alert(json.message || 'Không tải được');
+  }
+  rows = json.records || json.data || [];
+  render();
+};
+document.getElementById('btnAccrue').onclick = async () => {
+  const records = collectRecords();
+  if (!records.length) return alert('Chưa có dòng lương');
+  if (!confirm(`Chốt bảng lương T${m.value}/${y.value} và ghi sổ kép?`)) return;
+  const res = await fetch('/api/sme/payroll/accrue', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      month: parseInt(m.value,10), year: parseInt(y.value,10),
+      date: postDate.value, expense_account: expAcct.value, records
+    })
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error||'Lỗi');
+  alert(json.message||'Đã chốt');
+  loadRuns();
+};
+document.getElementById('btnPay').onclick = async () => {
+  const payDate = prompt('Ngày trả lương (YYYY-MM-DD)', today());
+  if (!payDate) return;
+  const method = confirm('OK = chuyển khoản (1121), Cancel = tiền mặt (1111)') ? 'bank' : 'cash';
+  const res = await fetch('/api/sme/payroll/pay', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      month: parseInt(m.value,10), year: parseInt(y.value,10),
+      pay_date: payDate, payment_method: method
+    })
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error||'Lỗi');
+  alert(json.message||'Đã trả lương');
+};
+{% if focus == 'payable' %}
+document.getElementById('btnPay').classList.add('btn-lg');
+{% endif %}
+loadRuns();
+document.getElementById('btnLoad').click();
+</script>
+{% endblock %}

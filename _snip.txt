@@ -1,0 +1,28 @@
+const upsertRes = await fetch('/api/products/upsert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: it.product_id || null,
+                    name: it.name,
+                    invoice_name: it.invoice_name || it.name,
+                    unit: it.unit || 'Cái',
+                    buyprice: it.buyprice,
+                    sale_price: it.sale_price || 0,
+                    base_unit: it.base_unit || it.unit || 'Cái',
+                    wholesale_unit: it.wholesale_unit || '',
+                    conversion_ratio: it.ratio || 1,
+                    base_sale_price: it.base_sale_price || 0,
+                    product_type: it.line_type,
+                    tax_rate: it.tax_pct || 0
+                })
+            });
+            const upsertData = await upsertRes.json();
+            if (!upsertData.success) {
+                throw new Error(upsertData.error || `Không lưu được sản phẩm: ${it.name}`);
+            }
+            it.product_id = upsertData.id;
+            if (upsertData.code) it.product_code = upsertData.code;
+        }
+
+        const payload = {
+       

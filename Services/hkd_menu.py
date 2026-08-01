@@ -8,6 +8,10 @@ HKD_DEFAULT_ROLES = (
     'admin', 'admin*', 'adminFB', 'master',
 )
 
+SME_ACCOUNTING_ROLES = (
+    'accountantSME', 'managerSME', 'adminSME',
+)
+
 # Tiêu đề phân hệ trên sidebar (không phải menu con)
 MENU_SECTIONS = (
     {'id': 'sales', 'label': 'PHÂN HỆ BÁN HÀNG'},
@@ -487,12 +491,33 @@ def _user_perms(user):
     return list(perms)
 
 
+def _is_sme_accounting_user(user) -> bool:
+    """User thuộc nhóm role Kế toán SME (không dùng hub HKD)."""
+    if not user:
+        return False
+    role = str(user.get('role') or '').strip()
+    if role in SME_ACCOUNTING_ROLES:
+        return True
+    perms = _user_perms(user)
+    return any(p in perms for p in ('SME_dashboard', 'view_sme_accounting'))
+
+
+def _tenant_is_sme(tenant_profile) -> bool:
+    if not tenant_profile:
+        return False
+    from Services.tenant_profile import is_sme_regime
+    return is_sme_regime(tenant_profile.get('accounting_regime'))
+
+
 def user_can_access_item(user, item, tenant_profile=None):
     if not user:
         return False
     if tenant_profile is not None:
         from Services.tenant_profile import is_master_session
         if not is_master_session():
+            # Tenant SME: ẩn toàn bộ mục menu POS & HKD
+            if _tenant_is_sme(tenant_profile):
+                return False
             if not tenant_profile.get('regime_active', True):
                 ep = item.get('endpoint')
                 if ep not in ('HKD_dashboard', 'huong_dan_su_dung'):
@@ -500,9 +525,12 @@ def user_can_access_item(user, item, tenant_profile=None):
             feature = item.get('feature') or HKD_MENU_FEATURE_MAP.get(item.get('endpoint'))
             if feature and not tenant_has_feature(tenant_profile, feature):
                 return False
+    # User role SME: không vào hub HKD dù tenant HKD (trừ master)
+    role = user.get('role') or ''
+    if role in SME_ACCOUNTING_ROLES and role != 'master':
+        return False
     if item.get('public'):
         return True
-    role = user.get('role') or ''
     perms = _user_perms(user)
     perm = item.get('perm')
     roles = item.get('roles')
@@ -519,15 +547,40 @@ def user_can_access_item(user, item, tenant_profile=None):
     return False
 
 
-def user_can_access_hkd(user, perm='view_accounting'):
-    return user_can_access_item(user, {'perm': perm, 'roles': HKD_DEFAULT_ROLES})
+def user_can_access_hkd(user, perm='view_accounting', tenant_profile=None):
+    return user_can_access_item(
+        user, {'perm': perm, 'roles': HKD_DEFAULT_ROLES}, tenant_profile,
+    )
 
 
-def user_can_access_hub(user):
+def user_can_access_hub(user, tenant_profile=None):
+    """Navbar «POS và Kế Toán HKD» — ẩn với tenant SME và user role SME."""
+    if _tenant_is_sme(tenant_profile):
+        return False
+    if _is_sme_accounting_user(user):
+        return False
     for group in POS_HKD_MENU:
         for item in group['items']:
-            if user_can_access_item(user, item):
+            if user_can_access_item(user, item, tenant_profile):
                 return True
+    return False
+
+
+def user_can_see_sme_nav(user, tenant_profile=None) -> bool:
+    """Navbar «Kế Toán SME»."""
+    if not user:
+        return False
+    role = str(user.get('role') or '').strip()
+    if role == 'master' or role in SME_ACCOUNTING_ROLES:
+        return True
+    perms = _user_perms(user)
+    if 'SME_dashboard' in perms or 'view_sme_accounting' in perms:
+        return True
+    # Tenant SME: hiện menu cho admin/manager vận hành DN
+    if _tenant_is_sme(tenant_profile) and role in (
+        'admin', 'adminSME', 'manager', 'managerSME', 'accountant', 'accountantSME',
+    ):
+        return True
     return False
 
 

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Phiếu nhập kho 01-VT — {{ imp.import_no }}</title>
+<style>
+  @page { size: A4; margin: 10mm; }
+  body { font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.35; margin: 0; color: #000; background: #f0f2f5; }
+  .print-container { width: 210mm; margin: 10px auto; padding: 10mm; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,.1); }
+  .no-print-zone { text-align: center; padding: 12px; background: #fff; border-bottom: 1px solid #dee2e6; position: sticky; top: 0; z-index: 99; }
+  .btn-print { padding: 8px 20px; font-weight: bold; cursor: pointer; background: #0d6efd; color: #fff; border: none; border-radius: 4px; }
+  .header-table { width: 100%; margin-bottom: 6px; }
+  .info-dn { width: 62%; vertical-align: top; }
+  .mau-so { width: 38%; text-align: center; font-size: 10pt; vertical-align: top; }
+  .title { text-align: center; font-weight: bold; font-size: 18pt; margin: 12px 0 4px; text-transform: uppercase; }
+  .date-line, .number-line { text-align: center; margin-bottom: 4px; }
+  .info-line { display: flex; margin-bottom: 5px; align-items: baseline; }
+  .info-label { white-space: nowrap; }
+  .dotted { flex: 1; border-bottom: 1px dotted #000; padding-left: 8px; min-height: 18px; }
+  table.content-table { width: 100%; border-collapse: collapse; margin-top: 8px; table-layout: fixed; }
+  table.content-table th, table.content-table td { border: 1px solid #000; padding: 4px 2px; word-wrap: break-word; font-size: 9pt; }
+  table.content-table th { text-align: center; background: #fafafa; }
+  .text-center { text-align: center; } .text-right { text-align: right; } .bold { font-weight: bold; }
+  .footer-sign { width: 100%; margin-top: 22px; table-layout: fixed; }
+  .footer-sign td { text-align: center; vertical-align: top; font-size: 11pt; }
+  .sign-space { height: 70px; }
+  @media print { body { background: #fff; } .no-print-zone { display: none; } .print-container { width: 100%; margin: 0; padding: 0; box-shadow: none; } }
+</style>
+</head>
+<body>
+{% set raw_date = (imp.date or '')|string %}
+{% set d = raw_date[:10].split('-') %}
+<div class="no-print-zone">
+  <button class="btn-print" onclick="window.print()">In phiếu nhập 01-VT</button>
+  <button onclick="window.close()" style="margin-left:8px;padding:8px 16px;background:#6c757d;color:#fff;border:none;border-radius:4px;cursor:pointer">Đóng</button>
+</div>
+<div class="print-container">
+  <table class="header-table">
+    <tr>
+      <td class="info-dn">
+        <div class="bold">DOANH NGHIỆP: {{ info.business_name or info.company_name or '' }}</div>
+        <div>Địa chỉ: {{ info.address or '' }}</div>
+        <div class="bold">MST: {{ info.tax_code or '' }}</div>
+      </td>
+      <td class="mau-so">
+        <div class="bold">Mẫu số 01 - VT</div>
+        <div style="font-style:italic;font-size:9pt">(Ban hành kèm theo Thông tư số 99/2025/TT-BTC<br>áp dụng DN / siêu nhỏ TT58)</div>
+      </td>
+    </tr>
+  </table>
+  <div class="title">PHIẾU NHẬP KHO</div>
+  {% if d|length >= 3 %}
+  <div class="date-line">Ngày {{ d[2] }} tháng {{ d[1] }} năm {{ d[0] }}</div>
+  {% endif %}
+  <div class="number-line">Số: <strong>{{ imp.import_no }}</strong></div>
+  <div class="info-line"><span class="info-label">- Bên / Người giao hàng:</span><span class="dotted bold">{{ imp.supplier_name or 'Nhà cung cấp' }}</span></div>
+  <div class="info-line"><span class="info-label">- Theo hóa đơn số:</span><span class="dotted">{{ imp.bill_no or '—' }}{% if imp.bill_date %} ngày {{ (imp.bill_date|string)[:10] }}{% endif %}</span></div>
+  <div class="info-line"><span class="info-label">- Nhập tại kho:</span><span class="dotted">{{ imp.warehouse_location or info.warehouse_location or 'Kho tổng' }}</span></div>
+  <table class="content-table">
+    <thead>
+      <tr>
+        <th style="width:4%">TT</th>
+        <th style="width:28%">Tên hàng hóa</th>
+        <th style="width:7%">ĐVT</th>
+        <th style="width:8%">SL CT</th>
+        <th style="width:8%">SL thực</th>
+        <th style="width:11%">Đơn giá</th>
+        <th style="width:12%">Thành tiền</th>
+        <th style="width:7%">CK%</th>
+        <th style="width:7%">VAT%</th>
+        <th style="width:8%">Thanh toán</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+        {% set price = (item.buyprice or item.import_price or item.cost_price or 0)|float %}
+        {% set qty = (item.qty or item.quantity or 0)|float %}
+        {% set amount = qty * price %}
+        {% set discount_rate = (item.discount_pct or 0)|float %}
+        {% set discount_amount = amount * discount_rate / 100 %}
+        {% set tax_rate = (item.tax_pct if item.tax_pct is not none else 10)|float %}
+        {% set tax_amount = (amount - discount_amount) * tax_rate / 100 %}
+        {% set line_total = amount - discount_amount + tax_amount %}
+        <tr>
+          <td class="text-center">{{ loop.index }}</td>
+          <td>{{ item.product_name or item.name }}{% if item.barcode %} ({{ item.barcode }}){% endif %}</td>
+          <td class="text-center">{{ item.display_unit|default('—') }}</td>
+          <td class="text-right">{{ '{:g}'.format(qty) }}</td>
+          <td class="text-right">{{ '{:g}'.format(qty) }}</td>
+          <td class="text-right">{{ '{:,.0f}'.format(price).replace(',', '.') }}</td>
+          <td class="text-right">{{ '{:,.0f}'.format(amount).replace(',', '.') }}</td>
+          <td class="text-center">{{ '%.1f'|format(discount_rate) }}</td>
+          <td class="text-center">{{ '%.0f'|format(tax_rate) }}</td>
+          <td class="text-right bold">{{ '{:,.0f}'.format(line_total).replace(',', '.') }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="10" class="text-center">Không có dòng hàng</td></tr>
+      {% endfor %}
+      <tr class="bold">
+        <td colspan="9" class="text-right">TỔNG CỘNG:</td>
+        <td class="text-right">{{ '{:,.0f}'.format((imp.total_value or 0)|float).replace(',', '.') }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="info-line" style="margin-top:12px">
+    <span class="info-label">- Tổng số tiền (bằng chữ):</span>
+    <span class="dotted" style="font-style:italic">{{ (imp.total_value or 0)|so_thanh_chu|capitalize }}.</span>
+  </div>
+  <table class="footer-sign">
+    <tr>
+      <td><strong>Người lập phiếu</strong><br><i>(Ký, họ tên)</i><div class="sign-space"></div></td>
+      <td><strong>Người giao hàng</strong><br><i>(Ký, họ tên)</i><div class="sign-space"></div></td>
+      <td><strong>Thủ kho</strong><br><i>(Ký, họ tên)</i><div class="sign-space"></div></td>
+      <td><strong>Kế toán trưởng</strong><br><i>(Ký, họ tên)</i><div class="sign-space"></div>
+        <div class="bold">{{ info.representative_name or '' }}</div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
+</html>

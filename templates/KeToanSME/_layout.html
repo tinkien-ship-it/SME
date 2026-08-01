@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/accounting-hub.css') }}">
+{% block sme_head %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="accounting-hub-container sme-hub-theme">
+    {% include 'KeToanSME/_sidebar.html' %}
+
+    <main class="accounting-hub-content">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <button type="button" class="btn btn-outline-primary btn-sm accounting-hub-mobile-toggle"
+                    id="smeSidebarToggle" aria-label="Mở menu Kế Toán SME">
+                <i class="fas fa-bars me-1"></i> Menu
+            </button>
+            {% block sme_breadcrumb %}{% endblock %}
+        </div>
+        {% block sme_content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const search = document.getElementById('smeMenuSearch');
+    const sidebar = document.getElementById('smeSidebar');
+    const toggle = document.getElementById('smeSidebarToggle');
+
+    if (toggle && sidebar) {
+        toggle.addEventListener('click', () => sidebar.classList.toggle('show-mobile'));
+    }
+
+    document.querySelectorAll('[data-sme-collapse]').forEach(button => {
+        button.addEventListener('click', function (event) {
+            if (event.target.closest('.sme-group-link')) return;
+            const target = document.getElementById(this.dataset.smeCollapse);
+            target?.classList.toggle('show');
+            this.setAttribute('aria-expanded', target?.classList.contains('show') ? 'true' : 'false');
+        });
+    });
+
+    if (search) {
+        search.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            document.querySelectorAll('.sme-menu-item').forEach(item => {
+                const label = item.dataset.label || '';
+                item.style.display = !query || label.includes(query) ? '' : 'none';
+            });
+            document.querySelectorAll('.sme-menu-group').forEach(group => {
+                const visible = [...group.querySelectorAll('.sme-menu-item')]
+                    .some(item => item.style.display !== 'none');
+                group.style.display = visible || !query ? '' : 'none';
+                if (query && visible) group.querySelector('.collapse')?.classList.add('show');
+            });
+        });
+    }
+})();
+</script>
+{% block sme_scripts %}{% endblock %}
+{% endblock %}

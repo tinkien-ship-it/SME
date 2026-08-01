@@ -10,10 +10,14 @@
     .gl-muted { color: #94a3b8; font-size: .8rem; }
     .gl-row { cursor: pointer; }
     .gl-row:hover { background: #f8fafc; }
+    .gl-row-l1 { background: #f8fafc; font-weight: 700; }
+    .gl-row-l1 td { border-top: 1px solid #e2e8f0; }
+    .gl-row-child .gl-acc-name { color: #334155; font-weight: 500; }
     .gl-ok { color: #0f5132; }
     .gl-bad { color: #842029; }
     .gl-panel { display: none; }
     .gl-panel.active { display: block; }
+    #ldCode { max-width: 100%; }
 </style>
 {% endblock %}
 
@@ -23,7 +27,8 @@
         <div>
             <h4 class="fw-bold mb-1"><i class="fas fa-scale-balanced text-primary me-2"></i>Sổ cái &amp; Cân đối phát sinh</h4>
             <p class="text-muted small mb-0">
-                Tổng hợp từ nhật ký bút toán SME (TT99). Click mã TK để xem sổ cái chi tiết.
+                Liệt kê đủ hệ thống tài khoản TT99 (cấp 1 và mọi TK con). Tổng cộng theo TK cấp 1.
+                Click mã tài khoản để xem sổ cái chi tiết.
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
@@ -64,8 +69,8 @@
                     </div>
                     <div class="col-md-3">
                         <div class="form-check mt-3">
-                            <input class="form-check-input" type="checkbox" id="tbZero">
-                            <label class="form-check-label small" for="tbZero">Hiện TK số dư 0</label>
+                            <input class="form-check-input" type="checkbox" id="tbZero" checked>
+                            <label class="form-check-label small" for="tbZero">Hiện đủ hệ thống TK (kể cả số dư 0)</label>
                         </div>
                     </div>
                     <div class="col-md-3 text-md-end">
@@ -108,9 +113,12 @@
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-body py-2">
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-2">
-                        <label class="form-label small mb-1">Mã TK *</label>
-                        <input type="text" id="ldCode" class="form-control form-control-sm" placeholder="vd: 156">
+                    <div class="col-md-4">
+                        <label class="form-label small mb-1" for="ldCode">Mã Tài Khoản cấp 1 *</label>
+                        <select id="ldCode" class="form-select form-select-sm" title="Chọn tài khoản cấp 1 có phát sinh">
+                            <option value="">— Chọn TK cấp 1 có phát sinh —</option>
+                        </select>
+                        <div class="form-text gl-muted" id="ldAccountHint">Đang tải danh sách TK cấp 1…</div>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small mb-1">Từ ngày</label>
@@ -120,13 +128,16 @@
                         <label class="form-label small mb-1">Đến ngày</label>
                         <input type="date" id="ldTo" class="form-control form-control-sm">
                     </div>
-                    <div class="col-md-6 text-md-end">
+                    <div class="col-md-4 text-md-end">
+                        <button type="button" class="btn btn-outline-secondary btn-sm me-1" id="btnLdRefreshAcc" title="Tải lại danh sách TK cấp 1 có phát sinh">
+                            <i class="fas fa-list"></i>
+                        </button>
                         <button type="button" class="btn btn-primary btn-sm" id="btnLdLoad">
                             <i class="fas fa-search me-1"></i> Xem sổ cái
                         </button>
                     </div>
                 </div>
-                <div class="mt-2" id="ldMeta" class="gl-muted">—</div>
+                <div class="mt-2 gl-muted" id="ldMeta">—</div>
             </div>
         </div>
         <div class="card shadow-sm border-0">
@@ -145,7 +156,7 @@
                         </tr>
                     </thead>
                     <tbody id="ldBody">
-                        <tr><td colspan="8" class="text-center text-muted py-4">Nhập mã TK để xem</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted py-4">Chọn TK cấp 1 để xem sổ cái (gộp mọi TK con)</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -171,7 +182,6 @@
     fromSel.value = String(now.getMonth() + 1);
     toSel.value = String(now.getMonth() + 1);
 
-    // default ledger dates = current month
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const last = new Date(y, now.getMonth() + 1, 0).getDate();
@@ -193,8 +203,52 @@
             document.querySelectorAll('.gl-panel').forEach(p => p.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+            if (btn.dataset.panel === 'ld') loadLedgerAccounts();
         });
     });
+
+    async function loadLedgerAccounts(preferCode) {
+        const sel = document.getElementById('ldCode');
+        const hint = document.getElementById('ldAccountHint');
+        const keep = preferCode || sel.value;
+        hint.classList.remove('text-danger');
+        hint.textContent = 'Đang tải danh sách TK cấp 1 có phát sinh…';
+        const p = new URLSearchParams({
+            date_from: document.getElementById('ldFrom').value,
+            date_to: document.getElementById('ldTo').value,
+        });
+        try {
+            const res = await fetch('/api/sme/ledger/accounts?' + p);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Lỗi tải danh sách TK');
+            const accounts = json.data?.accounts || [];
+            sel.innerHTML = '<option value="">— Chọn TK cấp 1 có phát sinh —</option>';
+            accounts.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.code;
+                const dr = Number(a.period_debit || 0);
+                const cr = Number(a.period_credit || 0);
+                opt.textContent = `${a.code} — ${a.name}  (Nợ ${dr.toLocaleString('vi-VN')} / Có ${cr.toLocaleString('vi-VN')})`;
+                sel.appendChild(opt);
+            });
+            if (keep) {
+                let best = '';
+                for (const o of sel.options) {
+                    if (!o.value) continue;
+                    if (keep === o.value || keep.startsWith(o.value)) {
+                        if (o.value.length >= best.length) best = o.value;
+                    }
+                }
+                if (best) sel.value = best;
+            }
+            hint.textContent = accounts.length
+                ? `${accounts.length} TK cấp 1 có phát sinh trong kỳ (đã gộp TK con)`
+                : 'Không có TK cấp 1 nào phát sinh trong kỳ — đổi khoảng ngày hoặc kiểm tra Nhật ký';
+        } catch (e) {
+            hint.textContent = e.message || 'Không tải được danh sách TK';
+            hint.classList.add('text-danger');
+        }
+    }
 
     async function loadTb() {
         const body = document.getElementById('tbBody');
@@ -206,6 +260,7 @@
             period_from: fromSel.value,
             period_to: toSel.value,
             include_zero: document.getElementById('tbZero').checked ? '1' : '0',
+            postable_only: '0',
         });
         try {
             const res = await fetch('/api/sme/trial-balance?' + p);
@@ -215,27 +270,31 @@
             const t = d.totals || {};
             const balOk = t.period_balanced && t.closing_balanced;
             document.getElementById('tbMeta').innerHTML =
-                `${d.date_from} → ${d.date_to} · ${d.rows.length} TK · ` +
+                `${d.date_from} → ${d.date_to} · ${d.rows.length} TK · tổng theo cấp 1 · ` +
                 `<span class="${balOk ? 'gl-ok' : 'gl-bad'}">${balOk ? 'Cân đối Nợ/Có' : 'Lệch cân đối — kiểm tra nhật ký'}</span>`;
             if (!d.rows.length) {
-                body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không có phát sinh trong kỳ</td></tr>';
+                body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không có tài khoản trong danh mục</td></tr>';
                 return;
             }
-            body.innerHTML = d.rows.map(r => `
-                <tr class="gl-row" data-code="${r.code}">
+            body.innerHTML = d.rows.map(r => {
+                const level = Number(r.level || 1);
+                const pad = Math.max(0, level - 1) * 1.1;
+                const rowClass = level <= 1 ? 'gl-row gl-row-l1' : 'gl-row gl-row-child';
+                return `
+                <tr class="${rowClass}" data-code="${r.code}" data-level="${level}">
                     <td class="gl-mono">${r.code}</td>
-                    <td>${r.name}</td>
+                    <td class="gl-acc-name" style="padding-left:${pad}rem">${r.name}</td>
                     <td class="gl-amount">${money(r.opening_debit)}</td>
                     <td class="gl-amount">${money(r.opening_credit)}</td>
                     <td class="gl-amount">${money(r.period_debit)}</td>
                     <td class="gl-amount">${money(r.period_credit)}</td>
                     <td class="gl-amount">${money(r.closing_debit)}</td>
                     <td class="gl-amount">${money(r.closing_credit)}</td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
             foot.innerHTML = `
                 <tr>
-                    <td colspan="2" class="text-end">Tổng</td>
+                    <td colspan="2" class="text-end">Tổng (TK cấp 1)</td>
                     <td class="gl-amount">${money0(t.opening_debit)}</td>
                     <td class="gl-amount">${money0(t.opening_credit)}</td>
                     <td class="gl-amount">${money0(t.period_debit)}</td>
@@ -249,10 +308,8 @@
     }
 
     async function loadLd(code) {
-        if (code) document.getElementById('ldCode').value = code;
-        const c = document.getElementById('ldCode').value.trim();
-        if (!c) { alert('Nhập mã tài khoản'); return; }
-        // switch tab
+        const c = (code || document.getElementById('ldCode').value || '').trim();
+        if (!c) { alert('Chọn Mã Tài Khoản cấp 1'); return; }
         document.querySelectorAll('[data-panel]').forEach(b => b.classList.toggle('active', b.dataset.panel === 'ld'));
         document.querySelectorAll('.gl-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-ld'));
 
@@ -268,8 +325,10 @@
             if (!json.success) throw new Error(json.error || 'Lỗi');
             const d = json.data;
             const a = d.account;
+            await loadLedgerAccounts(a.code);
+            document.getElementById('ldCode').value = a.code;
             document.getElementById('ldMeta').innerHTML =
-                `<strong class="gl-mono">${a.code}</strong> — ${a.name} · ` +
+                `<strong class="gl-mono">TK cấp 1 ${a.code}</strong> — ${a.name} · gộp TK con · ` +
                 `Đầu kỳ: Nợ ${money0(d.opening.debit)} / Có ${money0(d.opening.credit)} · ` +
                 `Cuối kỳ: Nợ ${money0(d.closing.debit)} / Có ${money0(d.closing.credit)} · ` +
                 `${d.line_count} dòng`;
@@ -311,21 +370,27 @@
 
     document.getElementById('btnTbLoad').addEventListener('click', loadTb);
     document.getElementById('btnLdLoad').addEventListener('click', () => loadLd());
+    document.getElementById('btnLdRefreshAcc').addEventListener('click', () => loadLedgerAccounts());
+    document.getElementById('ldFrom').addEventListener('change', () => loadLedgerAccounts());
+    document.getElementById('ldTo').addEventListener('change', () => loadLedgerAccounts());
+    document.getElementById('ldCode').addEventListener('change', () => {
+        if (document.getElementById('ldCode').value) loadLd();
+    });
     document.getElementById('tbBody').addEventListener('click', (ev) => {
         const tr = ev.target.closest('tr[data-code]');
         if (!tr) return;
-        // sync dates from selected periods
-        const y = Number(yearEl.value);
+        const yy = Number(yearEl.value);
         const pf = Number(fromSel.value);
         const pt = Number(toSel.value);
         const pad = n => String(n).padStart(2, '0');
-        const lastDay = new Date(y, pt, 0).getDate();
-        document.getElementById('ldFrom').value = `${y}-${pad(pf)}-01`;
-        document.getElementById('ldTo').value = `${y}-${pad(pt)}-${pad(lastDay)}`;
+        const lastDay = new Date(yy, pt, 0).getDate();
+        document.getElementById('ldFrom').value = `${yy}-${pad(pf)}-01`;
+        document.getElementById('ldTo').value = `${yy}-${pad(pt)}-${pad(lastDay)}`;
         loadLd(tr.dataset.code);
     });
 
     loadTb();
+    loadLedgerAccounts();
 })();
 </script>
 {% endblock %}

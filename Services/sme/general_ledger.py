@@ -101,10 +101,15 @@ def trial_balance(
     fiscal_year: int,
     period_from: int = 1,
     period_to: int | None = None,
-    postable_only: bool = True,
-    include_zero: bool = False,
+    postable_only: bool = False,
+    include_zero: bool = True,
 ) -> dict[str, Any]:
-    """Bảng cân đối phát sinh: đầu kỳ / trong kỳ / cuối kỳ."""
+    """Bảng cân đối phát sinh theo hệ thống TK pháp định.
+
+    - Liệt kê toàn bộ tài khoản đang hiệu lực (cấp 1 và mọi TK con).
+    - Số liệu TK cha = cộng dồn phát sinh/dư của toàn bộ cấp con (+ ghi trực tiếp nếu có).
+    - Dòng Tổng chỉ cộng các TK cấp 1 để tránh đếm trùng.
+    """
     ensure_sme_journal_ready(conn, commit=False)
     period_to = period_to or period_from
     if period_from > period_to:
@@ -112,7 +117,8 @@ def trial_balance(
 
     conn.row_factory = sqlite3.Row
     acc_sql = """
-        SELECT code, name, normal_balance, is_postable, account_class, level
+        SELECT code, name, normal_balance, is_postable, account_class, level,
+               parent_code, legal_source
         FROM sme_chart_of_accounts
         WHERE is_active = 1
     """
@@ -120,10 +126,56 @@ def trial_balance(
         acc_sql += " AND is_postable = 1"
     acc_sql += " ORDER BY code"
     accounts = [dict(r) for r in conn.execute(acc_sql).fetchall()]
+    by_code = {a['code']: a for a in accounts}
 
-    opening_all = _activity_before_period(conn, fiscal_year, period_from)
-    period_map = _activity_in_periods(conn, fiscal_year, period_from, period_to)
-    codes_needed = set(opening_all) | set(period_map)
+    opening_direct = _activity_before_period(conn, fiscal_year, period_from)
+    period_direct = _activity_in_periods(conn, fiscal_year, period_from, period_to)
+
+    # TK có phát sinh nhưng chưa có trong COA (lệch danh mục) — vẫn liệt kê cuối bảng.
+    orphan_codes = sorted(
+        (set(opening_direct) | set(period_direct)) - set(by_code)
+    )
+    for code in orphan_codes:
+        accounts.append({
+            'code': code,
+            'name': f'(Ngoài danh mục) {code}',
+            'normal_balance': 'debit',
+            'is_postable': 1,
+            'account_class': None,
+            'level': max(1, len(str(code)) - 2),
+            'parent_code': None,
+            'legal_source': 'orphan',
+        })
+        by_code[code] = accounts[-1]
+
+    children: dict[str, list[str]] = {}
+    for acc in accounts:
+        parent = acc.get('parent_code')
+        if parent:
+            children.setdefault(parent, []).append(acc['code'])
+
+    def _rollup(direct: dict[str, dict[str, Decimal]]) -> dict[str, dict[str, Decimal]]:
+        memo: dict[str, dict[str, Decimal]] = {}
+
+        def total(code: str) -> dict[str, Decimal]:
+            if code in memo:
+                return memo[code]
+            base = direct.get(code) or {'debit': Decimal('0.00'), 'credit': Decimal('0.00')}
+            debit = _money(base['debit'])
+            credit = _money(base['credit'])
+            for child in children.get(code, ()):
+                child_tot = total(child)
+                debit += child_tot['debit']
+                credit += child_tot['credit']
+            memo[code] = {'debit': debit, 'credit': credit}
+            return memo[code]
+
+        for acc in accounts:
+            total(acc['code'])
+        return memo
+
+    opening_all = _rollup(opening_direct)
+    period_map = _rollup(period_direct)
 
     rows_out = []
     sum_open_d = sum_open_c = Decimal('0.00')
@@ -132,16 +184,15 @@ def trial_balance(
 
     for acc in accounts:
         code = acc['code']
-        if code not in codes_needed and not include_zero:
-            continue
-        op = opening_all.get(code, {'debit': Decimal('0.00'), 'credit': Decimal('0.00')})
-        pe = period_map.get(code, {'debit': Decimal('0.00'), 'credit': Decimal('0.00')})
-        if (
-            not include_zero
-            and op['debit'] == 0 and op['credit'] == 0
+        level = int(acc.get('level') or 1)
+        op = opening_all.get(code) or {'debit': Decimal('0.00'), 'credit': Decimal('0.00')}
+        pe = period_map.get(code) or {'debit': Decimal('0.00'), 'credit': Decimal('0.00')}
+        has_children = bool(children.get(code))
+
+        is_zero = (
+            op['debit'] == 0 and op['credit'] == 0
             and pe['debit'] == 0 and pe['credit'] == 0
-        ):
-            continue
+        )
 
         normal = acc.get('normal_balance') or 'debit'
         close_d = op['debit'] + pe['debit']
@@ -154,20 +205,43 @@ def trial_balance(
             'name': acc['name'],
             'normal_balance': normal,
             'account_class': acc.get('account_class'),
-            'level': acc.get('level'),
+            'level': level,
+            'parent_code': acc.get('parent_code'),
+            'is_postable': int(acc.get('is_postable') or 0),
+            'has_children': has_children,
+            'legal_source': acc.get('legal_source'),
             'opening_debit': open_bal['debit'],
             'opening_credit': open_bal['credit'],
             'period_debit': float(pe['debit']),
             'period_credit': float(pe['credit']),
             'closing_debit': close_bal['debit'],
             'closing_credit': close_bal['credit'],
+            'is_zero': is_zero,
         })
-        sum_open_d += _money(open_bal['debit'])
-        sum_open_c += _money(open_bal['credit'])
-        sum_per_d += pe['debit']
-        sum_per_c += pe['credit']
-        sum_close_d += _money(close_bal['debit'])
-        sum_close_c += _money(close_bal['credit'])
+
+    if not include_zero:
+        # Giữ mọi TK cấp 1; giữ TK con nếu bản thân/hậu duệ có số liệu (và tổ tiên của chúng).
+        keep: set[str] = set()
+        codes = {r['code'] for r in rows_out}
+        for r in rows_out:
+            if r['level'] == 1 or not r['is_zero']:
+                keep.add(r['code'])
+                parent = r.get('parent_code')
+                while parent and parent in codes:
+                    keep.add(parent)
+                    parent = (by_code.get(parent) or {}).get('parent_code')
+        rows_out = [r for r in rows_out if r['code'] in keep]
+
+    for r in rows_out:
+        # Tổng chỉ theo TK cấp 1 (quan trọng nhất theo pháp luật / tránh trùng số).
+        if int(r.get('level') or 1) != 1:
+            continue
+        sum_open_d += _money(r['opening_debit'])
+        sum_open_c += _money(r['opening_credit'])
+        sum_per_d += _money(r['period_debit'])
+        sum_per_c += _money(r['period_credit'])
+        sum_close_d += _money(r['closing_debit'])
+        sum_close_c += _money(r['closing_credit'])
 
     date_from, _ = _period_bounds(fiscal_year, period_from)
     _, date_to = _period_bounds(fiscal_year, period_to)
@@ -177,6 +251,9 @@ def trial_balance(
         'period_to': period_to,
         'date_from': date_from,
         'date_to': date_to,
+        'include_zero': include_zero,
+        'postable_only': postable_only,
+        'totals_basis': 'level1',
         'rows': rows_out,
         'totals': {
             'opening_debit': float(sum_open_d),
@@ -192,6 +269,54 @@ def trial_balance(
     }
 
 
+def _level1_account(conn: sqlite3.Connection, account_code: str) -> sqlite3.Row | None:
+    """Leo cây COA tới tài khoản cấp 1 (Sổ cái chỉ theo TK cấp 1)."""
+    code = (account_code or '').strip()
+    if not code:
+        return None
+    row = conn.execute(
+        """
+        SELECT code, name, normal_balance, is_postable, level, parent_code
+        FROM sme_chart_of_accounts WHERE code = ?
+        """,
+        (code,),
+    ).fetchone()
+    if not row:
+        root = code[:3] if len(code) >= 3 else code
+        row = conn.execute(
+            """
+            SELECT code, name, normal_balance, is_postable, level, parent_code
+            FROM sme_chart_of_accounts WHERE code = ?
+            """,
+            (root,),
+        ).fetchone()
+        return row
+    seen = set()
+    while row and int(row['level'] or 1) > 1 and row['parent_code']:
+        if row['code'] in seen:
+            break
+        seen.add(row['code'])
+        parent = conn.execute(
+            """
+            SELECT code, name, normal_balance, is_postable, level, parent_code
+            FROM sme_chart_of_accounts WHERE code = ?
+            """,
+            (row['parent_code'],),
+        ).fetchone()
+        if not parent:
+            break
+        row = parent
+    return row
+
+
+def _descendant_account_filter(code: str) -> tuple[str, list[Any]]:
+    """Khớp TK cấp 1 và mọi TK con (111 → 111, 1111; không khớp 112)."""
+    return (
+        '(jl.account_code = ? OR jl.account_code LIKE ?)',
+        [code, f'{code}%'],
+    )
+
+
 def account_ledger(
     conn: sqlite3.Connection,
     account_code: str,
@@ -199,56 +324,53 @@ def account_ledger(
     date_from: str,
     date_to: str,
 ) -> dict[str, Any]:
-    """Sổ cái chi tiết một tài khoản theo khoảng ngày."""
+    """Sổ cái chi tiết theo tài khoản cấp 1 (gộp phát sinh mọi TK con)."""
     ensure_sme_journal_ready(conn, commit=False)
     conn.row_factory = sqlite3.Row
-    code = (account_code or '').strip()
-    if not code:
+    code_in = (account_code or '').strip()
+    if not code_in:
         raise ValueError('Thiếu mã tài khoản')
 
-    acc = conn.execute(
-        """
-        SELECT code, name, normal_balance, is_postable
-        FROM sme_chart_of_accounts WHERE code = ?
-        """,
-        (code,),
-    ).fetchone()
+    acc = _level1_account(conn, code_in)
     if not acc:
-        raise ValueError(f'Không tìm thấy tài khoản {code}')
+        raise ValueError(f'Không tìm thấy tài khoản {code_in}')
+    code = acc['code']
 
     d_from = date_from[:10]
     d_to = date_to[:10]
     normal = acc['normal_balance'] or 'debit'
+    match_sql, match_params = _descendant_account_filter(code)
 
     op = conn.execute(
-        """
+        f"""
         SELECT COALESCE(SUM(jl.debit), 0), COALESCE(SUM(jl.credit), 0)
         FROM sme_journal_lines jl
         JOIN sme_journal_entries je ON je.id = jl.entry_id
-        WHERE jl.account_code = ?
+        WHERE {match_sql}
           AND je.status IN ('posted', 'reversed')
           AND je.posting_date < ?
         """,
-        (code, d_from),
+        (*match_params, d_from),
     ).fetchone()
     open_d, open_c = _money(op[0]), _money(op[1])
     open_bal = _net_balance(open_d, open_c, normal)
 
     lines = conn.execute(
-        """
+        f"""
         SELECT jl.id AS line_id, jl.sequence, jl.debit, jl.credit, jl.description,
+               jl.account_code AS line_account_code,
                jl.partner_id, jl.partner_type, jl.product_id, jl.warehouse_code,
                je.id AS entry_id, je.entry_no, je.posting_date, je.document_type,
                je.document_no, je.document_id, je.business_type, je.status,
                je.description AS entry_description
         FROM sme_journal_lines jl
         JOIN sme_journal_entries je ON je.id = jl.entry_id
-        WHERE jl.account_code = ?
+        WHERE {match_sql}
           AND je.status IN ('posted', 'reversed')
           AND je.posting_date >= ? AND je.posting_date <= ?
         ORDER BY je.posting_date, je.id, jl.sequence, jl.id
         """,
-        (code, d_from, d_to),
+        (*match_params, d_from, d_to),
     ).fetchall()
 
     run_d, run_c = open_d, open_c
@@ -263,6 +385,10 @@ def account_ledger(
         run_d += d
         run_c += c
         run_bal = _net_balance(run_d, run_c, normal)
+        line_acc = ln['line_account_code'] or code
+        desc = ln['description'] or ln['entry_description'] or ''
+        if line_acc != code:
+            desc = f'[{line_acc}] {desc}'.strip()
         detail.append({
             'line_id': ln['line_id'],
             'entry_id': ln['entry_id'],
@@ -273,7 +399,8 @@ def account_ledger(
             'document_id': ln['document_id'],
             'business_type': ln['business_type'],
             'status': ln['status'],
-            'description': ln['description'] or ln['entry_description'] or '',
+            'description': desc,
+            'account_code': line_acc,
             'debit': float(d),
             'credit': float(c),
             'balance_debit': run_bal['debit'],
@@ -289,6 +416,8 @@ def account_ledger(
             'name': acc['name'],
             'normal_balance': normal,
             'is_postable': acc['is_postable'],
+            'level': int(acc['level'] or 1),
+            'includes_children': True,
         },
         'date_from': d_from,
         'date_to': d_to,
@@ -299,3 +428,81 @@ def account_ledger(
         'lines': detail,
         'line_count': len(detail),
     }
+
+
+def accounts_with_activity(
+    conn: sqlite3.Connection,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> list[dict[str, Any]]:
+    """Danh sách tài khoản cấp 1 có phát sinh (gồm TK con) — chọn nhanh sổ cái."""
+    ensure_sme_journal_ready(conn, commit=False)
+    conn.row_factory = sqlite3.Row
+
+    d_from = (date_from or '').strip()[:10] or None
+    d_to = (date_to or '').strip()[:10] or None
+
+    params: list[Any] = []
+    date_sql = ''
+    if d_from:
+        date_sql += ' AND je.posting_date >= ?'
+        params.append(d_from)
+    if d_to:
+        date_sql += ' AND je.posting_date <= ?'
+        params.append(d_to)
+
+    leaf_rows = conn.execute(
+        f"""
+        SELECT jl.account_code AS code,
+               COALESCE(SUM(jl.debit), 0) AS period_debit,
+               COALESCE(SUM(jl.credit), 0) AS period_credit,
+               COUNT(*) AS line_count
+        FROM sme_journal_lines jl
+        JOIN sme_journal_entries je ON je.id = jl.entry_id
+        WHERE je.status IN ('posted', 'reversed')
+          {date_sql}
+        GROUP BY jl.account_code
+        HAVING SUM(jl.debit) <> 0 OR SUM(jl.credit) <> 0
+        """,
+        params,
+    ).fetchall()
+
+    l1_map: dict[str, str] = {}
+    agg: dict[str, dict[str, Any]] = {}
+
+    for r in leaf_rows:
+        leaf = (r['code'] or '').strip()
+        if not leaf:
+            continue
+        if leaf not in l1_map:
+            root = _level1_account(conn, leaf)
+            l1_map[leaf] = root['code'] if root else (leaf[:3] if len(leaf) >= 3 else leaf)
+        l1 = l1_map[leaf]
+        bucket = agg.get(l1)
+        if not bucket:
+            root_acc = _level1_account(conn, l1)
+            bucket = {
+                'code': l1,
+                'name': (root_acc['name'] if root_acc else l1),
+                'level': 1,
+                'period_debit': Decimal('0.00'),
+                'period_credit': Decimal('0.00'),
+                'line_count': 0,
+            }
+            agg[l1] = bucket
+        bucket['period_debit'] += _money(r['period_debit'])
+        bucket['period_credit'] += _money(r['period_credit'])
+        bucket['line_count'] += int(r['line_count'] or 0)
+
+    return [
+        {
+            'code': agg[code]['code'],
+            'name': agg[code]['name'],
+            'level': 1,
+            'period_debit': float(agg[code]['period_debit']),
+            'period_credit': float(agg[code]['period_credit']),
+            'line_count': agg[code]['line_count'],
+        }
+        for code in sorted(agg.keys())
+    ]

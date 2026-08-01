@@ -670,14 +670,17 @@ def register_invoice_routes(app):
             url_create = f"{self.base_url}/api/invoice/create-invoice"
             loai = _normalize_loai_hdon(loai_hdon, default=1)
             buyer_fields = extract_buyer_invoice_fields(sale_data)
+            # Strip bắt buộc: Settings từng lưu ' C26TFF' → Matbao báo KHMSHDon/KHHDon không hợp lệ
+            khms = str(self.config.get('invoice_type') or '2').strip() or '2'
+            khh = str(self.config.get('invoice_series') or 'C26MES').strip() or 'C26MES'
             logging.info(
-                "Matbao create-invoice: LoaiHDon=%s replace_unpublished=%s sale_no=%s",
-                loai, replace_unpublished, sale_data.get('sale_no'),
+                "Matbao create-invoice: LoaiHDon=%s replace_unpublished=%s sale_no=%s KHMSHDon=%s KHHDon=%s",
+                loai, replace_unpublished, sale_data.get('sale_no'), khms, khh,
             )
 
             payload = [{
-                "KHMSHDon": str(self.config.get('invoice_type', '2')),
-                "KHHDon": str(self.config.get('invoice_series', 'C26MES')),
+                "KHMSHDon": khms,
+                "KHHDon": khh,
                 "LoaiHDon": loai,
                 "TCHDon": 0,
                 "NLap": datetime.now().strftime('%Y-%m-%dT00:00:00'),
@@ -754,48 +757,72 @@ def register_invoice_routes(app):
                 return {"success": False, "error": f"Lỗi kết nối Mắt Bão: {str(e)}"}
 
         def issue_replacement(self, sale_data, items, replacement_info):
-            """Phát hành hóa đơn thay thế (TCHDon: 1)"""
+            """Phát hành HĐ thay thế (TCHDon=1) hoặc điều chỉnh (TCHDon=2..5) + *DCLQuan."""
             if not self._token and not self._get_token():
                 return {"success": False, "error": "Lỗi xác thực hệ thống."}
 
             dsh_hd_vu, total_untaxed, total_tax = self._prepare_dsh_hd_vu(items)
             url_create = f"{self.base_url}/api/invoice/create-invoice"
             buyer_fields = extract_buyer_invoice_fields(sale_data)
+            # Cùng default/strip với issue() — tránh lệch mẫu/ký hiệu khi Settings trống
+            khms = str(self.config.get('invoice_type') or '2').strip() or '2'
+            khh = str(self.config.get('invoice_series') or 'C26MES').strip() or 'C26MES'
+            info = replacement_info or {}
+            try:
+                tchdon = int(info.get('TCHDon') if info.get('TCHDon') is not None else 1)
+            except (TypeError, ValueError):
+                tchdon = 1
+            if tchdon not in (1, 2, 3, 4, 5):
+                return {"success": False, "error": f"TCHDon không hợp lệ: {tchdon} (chỉ nhận 1..5)."}
+
+            khms_gq = str(info.get('KHMSHDCLQuan') or khms).strip() or khms
+            khh_gq = str(info.get('KHHDCLQuan') or khh).strip() or khh
+            # Giữ format ngày HĐ gốc như DB (YYYY-MM-DD) — đã test ổn với Matbao
+            nl_gq = str(info.get('NLHDCLQuan') or '').strip()[:10]
+            sale_no = str(sale_data.get('sale_no') or "").strip()
+            sh_old = int(info.get("SHDCLQuan") or 0)
+            # MTChieu gốc đã tồn tại → dùng mã riêng; KTra=0 không chặn trùng
+            prefix = 'TT' if tchdon == 1 else f'DC{tchdon}'
+            mt_chieu = (
+                f"{sale_no}-{prefix}{sh_old}-{datetime.now().strftime('%H%M%S')}"
+                if sale_no
+                else f"{prefix}{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            )
 
             payload = [{
-                "KHMSHDon": str(self.config.get('invoice_type', '1')),
-                "KHHDon": str(self.config.get('invoice_series', 'C26TAT')),
+                "KHMSHDon": khms,
+                "KHHDon": khh,
                 "MaTraCuu": datetime.now().strftime('%Y%m%d_%H%M%S'),
-                "MTChieu": str(sale_data.get('sale_no') or ""),
-                "NLap": datetime.now().strftime('%Y-%m-%d'),
+                "NLap": datetime.now().strftime('%Y-%m-%dT00:00:00'),
                 "LoaiHDon": 1,
-                "TCHDon": 1,  # 1: Hóa đơn thay thế
+                "TCHDon": tchdon,
                 "LoaiTraHang": 0,
                 "DVTTe": 704,
                 "TGia": 1.0,
                 "HTTToan": "TM/CK",
-                "NMua_Ten": str(sale_data.get('company_name') or ""),
+                "NMua_HVTNMHang": str(sale_data.get('customer_name') or "").strip(),
+                "NMua_Ten": str(sale_data.get('company_name') or "").strip(),
                 "NMua_MST": buyer_fields['tax_code'],
                 "NMua_MDVQHNSach": buyer_fields['budget_unit_code'],
                 "NMua_SHChieu": buyer_fields['passport_no'],
-                "NMua_DChi": str(sale_data.get('address') or ""),
-                "NMua_HVTNMHang": str(sale_data.get('customer_name') or ""),
-                "NMua_SDThoai": str(sale_data.get('customer_phone') or sale_data.get('phone') or ""),
-                "NMua_DCTDTu": str(sale_data.get('email') or ""),
+                "NMua_DChi": str(sale_data.get('address') or "").strip(),
+                "NMua_SDThoai": str(sale_data.get('customer_phone') or sale_data.get('phone') or "").strip(),
+                "NMua_DCTDTu": str(sale_data.get('email') or "").strip(),
 
-                # Thông tin hóa đơn gốc cần thay thế (Lấy từ frontend truyền vào)
-                "MSHDonDCLQuan": replacement_info.get("MSHDonDCLQuan"),
-                "KHMSHDCLQuan": replacement_info.get("KHMSHDCLQuan"),
-                "KHHDCLQuan": replacement_info.get("KHHDCLQuan"),
-                "SHDCLQuan": int(replacement_info.get("SHDCLQuan") or 0),
-                "NLHDCLQuan": replacement_info.get("NLHDCLQuan"),
+                # Thông tin hóa đơn gốc liên quan
+                "MSHDonDCLQuan": info.get("MSHDonDCLQuan"),
+                "KHMSHDCLQuan": khms_gq,
+                "KHHDCLQuan": khh_gq,
+                "SHDCLQuan": sh_old,
+                "NLHDCLQuan": nl_gq,
 
                 "DSHHDVu": dsh_hd_vu,
                 "TgThTien": total_untaxed,
                 "TgTThue": total_tax,
                 "TgTTTBSo": round(total_untaxed + total_tax, 2),
                 "TgTTTBChu": "",
-                "MTChieu": str(sale_data.get('sale_no') or "").strip()
+                "KTraMTChieuTrung": 0,
+                "MTChieu": mt_chieu,
             }]
 
             return self._send_request(url_create, payload)
@@ -1417,7 +1444,7 @@ def register_invoice_routes(app):
     
         if not invoice_no:
             flash('Thiếu số hóa đơn gốc để thay thế!', 'danger')
-            return redirect(url_for('outward_invoices'))  # hoặc trang danh sách hóa đơn của bạn
+            return redirect(url_for('outward_invoice'))
     
         return render_template(
             'edit_order_reissue_invoice.html',
@@ -1806,59 +1833,93 @@ def register_invoice_routes(app):
             """, (sale_id,)).fetchall()
             items = [dict(r) for r in items_rows]
 
-            if provider_key == 'vnpt':
-                sale = _enrich_sale_buyer_identity(cursor, sale)
-                service = create_einvoice_service(config, matbao_cls=MatbaoProvider)
-                sale_data = {
-                    "id": sale_id,
-                    "sale_no": sale.get('sale_no'),
-                    "total_amount": sale.get('total_amount'),
-                    "customer_name": form_data.get('customer_name') or sale.get('customer_name'),
-                    "company_name": form_data.get('company_name') or sale.get('company_name'),
-                    "tax_code": form_data.get('tax_code') or sale.get('tax_code'),
-                    "address": form_data.get('address') or sale.get('address'),
-                    "email": form_data.get('email') or sale.get('email'),
-                    "phone": form_data.get('phone') or sale.get('customer_phone'),
-                    "customer_phone": form_data.get('phone') or sale.get('customer_phone'),
-                    "budget_unit_code": sale.get('budget_unit_code'),
-                    "passport_no": sale.get('passport_no'),
-                }
-                old_fkey = (
-                    old_inv.get('invoice_id')
-                    or old_inv.get('fkey')
-                    or sale.get('invoice_id')
-                    or sale.get('fkey')
+            # Luôn dùng factory theo provider đang active ở Settings (không hardcode Matbao)
+            sale = _enrich_sale_buyer_identity(cursor, sale)
+            service = create_einvoice_service(config, matbao_cls=MatbaoProvider)
+            sale_data = {
+                "id": sale_id,
+                "sale_no": sale.get('sale_no'),
+                "total_amount": sale.get('total_amount'),
+                "customer_name": form_data.get('customer_name') or sale.get('customer_name'),
+                "company_name": form_data.get('company_name') or sale.get('company_name'),
+                "tax_code": form_data.get('tax_code') or sale.get('tax_code'),
+                "address": form_data.get('address') or sale.get('address'),
+                "email": form_data.get('email') or sale.get('email'),
+                "phone": form_data.get('phone') or sale.get('customer_phone'),
+                "customer_phone": form_data.get('phone') or sale.get('customer_phone'),
+                "budget_unit_code": sale.get('budget_unit_code'),
+                "passport_no": sale.get('passport_no'),
+            }
+            old_fkey = (
+                old_inv.get('invoice_id')
+                or old_inv.get('fkey')
+                or sale.get('invoice_id')
+                or sale.get('fkey')
+            )
+            try:
+                sh_dcl = int(str(old_inv.get('invoice_no') or invoice_number or '0').strip() or 0)
+            except (TypeError, ValueError):
+                sh_dcl = 0
+            try:
+                tchdon = int(
+                    form_data.get('tchdon')
+                    if form_data.get('tchdon') is not None
+                    else form_data.get('TCHDon', 1)
                 )
-                replacement_info = {
-                    "old_fkey": old_fkey,
-                    "MSHDonDCLQuan": old_fkey,
-                    "KHMSHDCLQuan": old_inv.get('pattern') or config.get('invoice_type'),
-                    "KHHDCLQuan": old_inv.get('serial') or config.get('invoice_series'),
-                    "SHDCLQuan": int(old_inv.get('invoice_no') or invoice_number or 0),
-                    "NLHDCLQuan": str(
-                        old_inv.get('invoice_date') or sale.get('invoice_date') or ''
-                    ).split(' ')[0],
-                }
-                result = service.issue_replacement(sale_data, items, replacement_info)
-            else:
-                # Mắt Bão — giữ nguyên luồng gốc, không đi qua adapter wrapper
-                service = MatbaoProvider(config)
-                sale_data = {
-                    "sale_no": sale.get('sale_no'),
-                    "customer_name": form_data.get('customer_name') or sale.get('customer_name'),
-                    "company_name": form_data.get('company_name') or sale.get('company_name'),
-                    "tax_code": form_data.get('tax_code') or sale.get('tax_code'),
-                    "address": form_data.get('address') or sale.get('address'),
-                    "email": form_data.get('email') or sale.get('email'),
-                }
-                replacement_info = {
-                    "MSHDonDCLQuan": old_inv.get("invoice_id"),
-                    "KHMSHDCLQuan": config.get('invoice_type'),
-                    "KHHDCLQuan": config.get('invoice_series'),
-                    "SHDCLQuan": int(old_inv.get('invoice_no') or 0),
-                    "NLHDCLQuan": str(old_inv.get('invoice_date')).split(' ')[0],
-                }
-                result = service.issue_replacement(sale_data, items, replacement_info)
+            except (TypeError, ValueError):
+                tchdon = 1
+            if tchdon not in (1, 2, 3, 4, 5):
+                return jsonify({
+                    "success": False,
+                    "error": "Loại hóa đơn không hợp lệ. Chọn Thay thế (1) hoặc Điều chỉnh (2–5).",
+                }), 400
+
+            tchdon_labels = {
+                1: 'Hóa đơn thay thế',
+                2: 'Hóa đơn điều chỉnh tăng',
+                3: 'Hóa đơn điều chỉnh giảm',
+                4: 'Hóa đơn điều chỉnh thông tin',
+                5: 'Hóa đơn điều chỉnh tăng/giảm',
+            }
+            tchdon_label = tchdon_labels.get(tchdon, 'Hóa đơn liên quan')
+
+            if provider_key == 'vnpt' and tchdon != 1:
+                return jsonify({
+                    "success": False,
+                    "error": (
+                        "VNPT hiện chỉ hỗ trợ hóa đơn thay thế trong phần mềm. "
+                        "Điều chỉnh (TCHDon 2–5) dùng nhà cung cấp Mắt Bão hoặc portal VNPT."
+                    ),
+                }), 400
+
+            replacement_info = {
+                "old_fkey": old_fkey,
+                "TCHDon": tchdon,
+                "MSHDonDCLQuan": old_fkey or old_inv.get("invoice_id"),
+                "KHMSHDCLQuan": str(
+                    old_inv.get('pattern') or config.get('invoice_type') or ''
+                ).strip(),
+                "KHHDCLQuan": str(
+                    old_inv.get('serial') or config.get('invoice_series') or ''
+                ).strip(),
+                "SHDCLQuan": sh_dcl,
+                "NLHDCLQuan": str(
+                    old_inv.get('invoice_date') or sale.get('invoice_date') or ''
+                ).split(' ')[0],
+            }
+            # Chặn sớm khi thiếu liên kết HĐ gốc — tránh Matbao error khó hiểu
+            if not replacement_info.get('MSHDonDCLQuan'):
+                return jsonify({
+                    "success": False,
+                    "error": "Thiếu mã hóa đơn gốc (InvID/Fkey). Đồng bộ danh sách HĐ rồi thử lại.",
+                }), 400
+            if not replacement_info.get('SHDCLQuan'):
+                return jsonify({
+                    "success": False,
+                    "error": "Số hóa đơn gốc không hợp lệ để phát hành.",
+                }), 400
+
+            result = service.issue_replacement(sale_data, items, replacement_info)
             if not result.get('success'):
                 return jsonify({"success": False, "error": result.get('error')}), 400
 
@@ -1880,14 +1941,33 @@ def register_invoice_routes(app):
                 replacement_invoice_no=?, updated_at=CURRENT_TIMESTAMP WHERE id=?
             """, (res_data["no"], res_data["id"], res_data["pdf"], res_data["xml"], res_data["date"], res_data["status"], invoice_number, sale_id))
 
-            if provider_key == 'vnpt':
+            # Chỉ HĐ thay thế khóa HĐ gốc; điều chỉnh giữ HĐ gốc còn hiệu lực
+            if tchdon == 1:
                 cursor.execute("""
                     UPDATE outward_invoices
-                    SET note = COALESCE(note, '') || ' | Đã bị thay thế bởi HĐ ' || ?,
+                    SET note = CASE
+                            WHEN COALESCE(note, '') LIKE '%Đã bị thay thế bởi HĐ%' THEN note
+                            ELSE TRIM(COALESCE(note, '') || ' | Đã bị thay thế bởi HĐ ' || ?)
+                        END,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE invoice_no = ? AND sale_id = ?
+                """, (str(res_data["no"]), invoice_number, sale_id))
+            else:
+                cursor.execute("""
+                    UPDATE outward_invoices
+                    SET note = CASE
+                            WHEN COALESCE(note, '') LIKE '%Đã bị điều chỉnh bởi HĐ%' THEN note
+                            ELSE TRIM(COALESCE(note, '') || ' | Đã bị điều chỉnh bởi HĐ ' || ?)
+                        END,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE invoice_no = ? AND sale_id = ?
                 """, (str(res_data["no"]), invoice_number, sale_id))
 
+            new_note = (
+                f"{tchdon_label} cho HĐ {invoice_number} (Fkey gốc: {replacement_info.get('old_fkey')})"
+                if provider_key == 'vnpt'
+                else f"{tchdon_label} cho {invoice_number}"
+            )
             # Cập nhật bảng OUTWARD_INVOICES (Đã fix thứ tự 12 cột)
             cursor.execute("""
                 INSERT INTO outward_invoices (
@@ -1899,15 +1979,17 @@ def register_invoice_routes(app):
                 sale_data["company_name"] or sale_data["customer_name"], sale_data.get("tax_code"), sale_data.get("address"),
                 sale.get('total_amount'), res_data["pdf"], res_data["xml"],
                 res_data["date"], current_time, current_time,
-                (
-                    f"Thay thế cho HĐ {invoice_number} (Fkey gốc: {replacement_info.get('old_fkey')})"
-                    if provider_key == 'vnpt'
-                    else f"Thay thế cho {invoice_number}"
-                ),
+                new_note,
             ))
 
             conn.commit()
-            return jsonify({"success": True, "invoice_no": res_data["no"], "pdf_url": res_data["pdf"]})
+            return jsonify({
+                "success": True,
+                "invoice_no": res_data["no"],
+                "pdf_url": res_data["pdf"],
+                "tchdon": tchdon,
+                "ten_LoaiHDon": tchdon_label,
+            })
 
         except Exception as e:
             if conn: conn.rollback()
@@ -2092,11 +2174,8 @@ def register_invoice_routes(app):
             return jsonify({"success": False, "error": str(e)}), 500
 
     def get_active_invoice_config():
-        conn = get_db_connection()
-        conn.row_factory = sqlite3.Row
-        config = conn.execute("SELECT * FROM invoice_settings WHERE is_active = 1").fetchone()
-        conn.close()
-        return dict(config) if config else None
+        from Services.invoice_config import get_active_invoice_config as _shared
+        return _shared()
 
     def _load_all_invoice_configs():
         conn = get_db_connection()
@@ -2343,6 +2422,7 @@ def register_invoice_routes(app):
             if merge_local:
                 formatted = _merge_local_outward_invoices(cursor, formatted, from_date, to_date, 'vnpt')
             formatted = _enrich_vnpt_outward_items(formatted, config)
+            formatted = _attach_local_outward_notes(cursor, formatted)
             formatted = _attach_provider_labels(formatted)
             formatted.sort(key=lambda x: (x.get('invoice_date', ''), x.get('invoice_no', '')), reverse=True)
             conn.commit()
@@ -2439,6 +2519,7 @@ def register_invoice_routes(app):
                 cursor, formatted, from_date, to_date, local_filter,
             )
             formatted = _dedupe_outward_formatted(formatted)
+            formatted = _attach_local_outward_notes(cursor, formatted)
             formatted = _attach_provider_labels(formatted)
             formatted.sort(key=lambda x: (x.get('invoice_date', ''), x.get('invoice_no', '')), reverse=True)
         finally:
@@ -2490,6 +2571,138 @@ def register_invoice_routes(app):
             return 'matbao'
         return ''
 
+    # LoaiHDon trên API invoice-detail (1..10) — khác LoaiHDon lúc create (0=nháp, 1=phát hành)
+    _MATBAO_LIST_LOAI_LABELS = {
+        1: 'Hóa đơn nháp',
+        2: 'Hóa đơn mới',
+        3: 'Hóa đơn xóa bỏ',
+        4: 'Hóa đơn thay thế',
+        5: 'Hóa đơn bị thay thế',
+        6: 'Hóa đơn điều chỉnh tăng',
+        7: 'Hóa đơn điều chỉnh giảm',
+        8: 'Hóa đơn điều chỉnh thông tin',
+        9: 'Hóa đơn điều chỉnh tăng/giảm',
+        10: 'Hóa đơn bị điều chỉnh',
+    }
+    _MATBAO_TCHDON_LABELS = {
+        0: 'Hóa đơn mới',
+        1: 'Hóa đơn thay thế',
+        2: 'Hóa đơn điều chỉnh tăng',
+        3: 'Hóa đơn điều chỉnh giảm',
+        4: 'Hóa đơn điều chỉnh thông tin',
+        5: 'Hóa đơn điều chỉnh tăng/giảm',
+    }
+
+    def _coerce_int_code(value):
+        try:
+            if value is None:
+                return None
+            text = str(value).strip()
+            if not text:
+                return None
+            return int(float(text))
+        except (TypeError, ValueError):
+            return None
+
+    def _ten_loai_from_local_note(is_draft=False, note=''):
+        note = str(note or '')
+        if is_draft:
+            return 'Hóa đơn nháp'
+        if 'Đã bị thay thế' in note:
+            return 'Hóa đơn bị thay thế'
+        if 'Đã bị điều chỉnh' in note:
+            return 'Hóa đơn bị điều chỉnh'
+        note_l = note.lower()
+        if 'điều chỉnh tăng/giảm' in note_l or 'điều chỉnh tăng và giảm' in note_l:
+            return 'Hóa đơn điều chỉnh tăng/giảm'
+        if 'điều chỉnh tăng' in note_l:
+            return 'Hóa đơn điều chỉnh tăng'
+        if 'điều chỉnh giảm' in note_l:
+            return 'Hóa đơn điều chỉnh giảm'
+        if 'điều chỉnh thông tin' in note_l:
+            return 'Hóa đơn điều chỉnh thông tin'
+        if 'Thay thế cho' in note:
+            return 'Hóa đơn thay thế'
+        if 'Điều chỉnh' in note or 'điều chỉnh' in note_l:
+            return 'Hóa đơn điều chỉnh'
+        return 'Hóa đơn mới'
+
+    def _resolve_matbao_ten_loai_hdon(inv, *, is_draft=False, note=''):
+        """Map tên loại HĐ từ response Matbao (chữ hoặc mã số) + note cục bộ."""
+        if not isinstance(inv, dict):
+            inv = {}
+        for key in (
+            'tenLoaiHDon', 'TenLoaiHDon', 'ten_LoaiHDon',
+            'tenLoai', 'TenLoai', 'tenTCHDon', 'tenTcHDon', 'TenTCHDon',
+        ):
+            val = inv.get(key)
+            if val is not None and str(val).strip():
+                return str(val).strip()
+
+        # Mã phân loại danh sách (1..10); bỏ qua -1/0 (= "tất cả" trên request)
+        for key in ('loaiHDon', 'LoaiHDon', 'loaiHD', 'LoaiHD'):
+            code = _coerce_int_code(inv.get(key))
+            if code in _MATBAO_LIST_LOAI_LABELS:
+                return _MATBAO_LIST_LOAI_LABELS[code]
+
+        for key in ('tcHDon', 'TCHDon', 'tchDon', 'TcHDon'):
+            code = _coerce_int_code(inv.get(key))
+            if code in _MATBAO_TCHDON_LABELS:
+                if is_draft and code == 0:
+                    return 'Hóa đơn nháp'
+                return _MATBAO_TCHDON_LABELS[code]
+
+        return _ten_loai_from_local_note(is_draft=is_draft, note=note)
+
+    def _normalize_matbao_sale_no(raw):
+        """MTChieu HĐ TT/DC dạng ĐH009112-TT116-… / -DC2… → ĐH009112 để khớp sale."""
+        sale_no = str(raw or '').strip()
+        for sep in ('-TT', '-DC'):
+            if sep in sale_no:
+                sale_no = sale_no.split(sep, 1)[0].strip()
+                break
+        return sale_no
+
+    def _attach_local_outward_notes(cursor, formatted):
+        """Gắn note cục bộ + bổ sung ten_LoaiHDon khi portal không trả tên loại."""
+        if not formatted:
+            return formatted
+        try:
+            rows = cursor.execute(
+                """
+                SELECT invoice_no, sale_no, note
+                FROM outward_invoices
+                WHERE note IS NOT NULL AND TRIM(note) != ''
+                """
+            ).fetchall()
+        except sqlite3.OperationalError:
+            return formatted
+        by_pair = {}
+        by_no = {}
+        for r in rows:
+            inv_no = str(r['invoice_no'] or '').strip()
+            sale_no = str(r['sale_no'] or '').strip()
+            note = str(r['note'] or '')
+            if inv_no:
+                by_no[inv_no] = note
+            if inv_no or sale_no:
+                by_pair[(inv_no, sale_no)] = note
+        for item in formatted:
+            inv_no = str(item.get('invoice_no') or '').strip()
+            sale_no = str(item.get('sale_no') or '').strip()
+            note = by_pair.get((inv_no, sale_no)) or by_no.get(inv_no) or item.get('note') or ''
+            if note:
+                item['note'] = note
+            current = str(item.get('ten_LoaiHDon') or '').strip()
+            if not current or current == '-':
+                item['ten_LoaiHDon'] = _ten_loai_from_local_note(
+                    is_draft=bool(item.get('is_draft')),
+                    note=note,
+                )
+            elif 'Đã bị thay thế' in str(note) and 'bị thay thế' not in current.lower():
+                item['ten_LoaiHDon'] = 'Hóa đơn bị thay thế'
+        return formatted
+
     def _merge_local_outward_invoices(cursor, formatted, from_date, to_date, provider_key=None):
         """Bổ sung HĐ nháp/cục bộ chưa có trong response portal (mọi NCC khi provider_key=None)."""
         existing = {_outward_invoice_dedupe_key(x) for x in formatted}
@@ -2499,6 +2712,7 @@ def register_invoice_routes(app):
                 """
                 SELECT o.sale_no, o.sale_id, o.invoice_no, o.invoice_id, o.invoice_date,
                        o.customer_name, o.total, o.amount, o.pdf_url, o.xml_file, o.status, o.fkey,
+                       o.note,
                        s.tax_authority_status, s.invoice_status, s.invoice_pdf_url, s.invoice_provider,
                        s.company_name, s.customer_name AS sale_customer_name
                 FROM outward_invoices o
@@ -2531,6 +2745,11 @@ def register_invoice_routes(app):
             row_status = str(row['status'] or '').lower()
             sale_inv_status = str(row['invoice_status'] or '').lower()
             is_draft = sale_inv_status == 'draft' or row_status == 'draft' or inv_no == '0'
+            note = ''
+            try:
+                note = str(row['note'] or '')
+            except (KeyError, IndexError):
+                note = ''
             item = {
                 "sale_no": row['sale_no'] or '',
                 "sale_id": row['sale_id'],
@@ -2543,11 +2762,12 @@ def register_invoice_routes(app):
                 "invoice_id": row['invoice_id'] or '',
                 "pdf_url": row['pdf_url'] or row['invoice_pdf_url'] or '',
                 "xml_url": row['xml_file'] or '',
-                "ten_LoaiHDon": 'Hóa đơn nháp' if is_draft else '',
+                "ten_LoaiHDon": _ten_loai_from_local_note(is_draft=is_draft, note=note),
                 "tax_authority_status": row['tax_authority_status'] or ('Hóa đơn nháp' if is_draft else '—'),
                 "is_draft": is_draft,
                 "provider": inferred_provider or active_provider or '',
                 "provider_label": _provider_display_name(inferred_provider or active_provider or ''),
+                "note": note,
             }
             key = _outward_invoice_dedupe_key(item)
             if key in existing:
@@ -2606,7 +2826,8 @@ def register_invoice_routes(app):
             formatted = []
 
             for inv in raw_list:
-                sale_no = str(inv.get('so') or inv.get('SO') or inv.get('mtChieu') or inv.get('MTChieu') or '').strip()
+                sale_no_raw = str(inv.get('so') or inv.get('SO') or inv.get('mtChieu') or inv.get('MTChieu') or '').strip()
+                sale_no = _normalize_matbao_sale_no(sale_no_raw)
                 inv_no = str(inv.get('shDon') or inv.get('SHDon') or '').strip()
                 serial = str(inv.get('khHDon') or inv.get('KHHDon') or '').strip()
           
@@ -2629,13 +2850,16 @@ def register_invoice_routes(app):
                 discount_amount = float(inv.get('stcKhau') or 0)
                 tax_amount = float(inv.get('tgTThue') or 0)
                 amount_net = total_amount - tax_amount - discount_amount
-                 
-                ten_loai = inv.get('tenLoaiHDon') or inv.get('TenLoaiHDon') or ''
+
+                is_draft_hint = _normalize_invoice_no(inv_no) == '0'
+                ten_loai = _resolve_matbao_ten_loai_hdon(inv, is_draft=is_draft_hint)
                 is_draft = (
-                    _normalize_invoice_no(inv_no) == '0'
+                    is_draft_hint
                     or 'nháp' in ten_loai.lower()
                     or 'nhap' in ten_loai.lower()
                 )
+                if is_draft and (not ten_loai or ten_loai == 'Hóa đơn mới'):
+                    ten_loai = 'Hóa đơn nháp'
                 sale_id_val = None
 
                 if sale_no:
@@ -2741,6 +2965,7 @@ def register_invoice_routes(app):
 
             if merge_local:
                 formatted = _merge_local_outward_invoices(cursor, formatted, from_date, to_date, 'matbao')
+            formatted = _attach_local_outward_notes(cursor, formatted)
             formatted = _attach_provider_labels(formatted)
 
             # Sắp xếp kết quả trả về
@@ -2806,14 +3031,28 @@ def register_invoice_routes(app):
     @app.route('/api/matbao/download-file/<inv_system_id>', methods=['GET'])
     def api_matbao_download_proxy(inv_system_id):
         """
-        Route này đóng vai trò trung gian: 
-        Nhận ID -> Gọi API Mắt Bão lấy Base64 -> Trả về file cho trình duyệt
+        Proxy tải file PDF/XML qua API Mắt Bão.
+        Chỉ dùng khi provider đang active (hoặc có cấu hình matbao) là Mắt Bão.
         """
         is_pdf = request.args.get('type') == 'pdf'
         inline = request.args.get('inline', '').lower() in ('1', 'true', 'yes')
+        from Services.invoice_config import get_active_invoice_config, get_invoice_config_by_provider
+        from Services.einvoice_registry import normalize_provider_code
+
         config = get_active_invoice_config()
-        if not config: return "Config not found", 404
-    
+        active_key = normalize_provider_code((config or {}).get('provider_name') or '')
+        if active_key != 'matbao':
+            # Không ép MatbaoProvider với config VNPT/MISA…
+            config = get_invoice_config_by_provider('matbao')
+            if not config:
+                return (
+                    "Chức năng tải file Mắt Bão yêu cầu cấu hình provider Mắt Bão trong Settings "
+                    f"(đang chọn: {active_key or 'chưa có'}).",
+                    400,
+                )
+        if not config:
+            return "Config not found", 404
+
         provider = MatbaoProvider(config)
         if not provider._token: provider._get_token()
     

@@ -12,9 +12,10 @@ from Services.sme.journal_engine import (
 )
 
 IMPORT_DOCUMENT_TYPE = 'PNK'
-STOCK_LINE_TYPES = frozenset({'goods', 'materials', 'finished_goods'})
+# finished_goods chỉ qua SX (TK 155) — không phải dòng mua hàng SME
+STOCK_LINE_TYPES = frozenset({'goods', 'materials'})
 PURCHASE_LINE_TYPES = frozenset({
-    'goods', 'materials', 'finished_goods', 'service', 'fixed_asset', 'tools',
+    'goods', 'materials', 'service', 'fixed_asset', 'tools',
 })
 BUSINESS_TYPE_LABELS = {
     'NHAP_KHO_HANG_HOA': 'Nhập kho hàng hóa',
@@ -23,6 +24,10 @@ BUSINESS_TYPE_LABELS = {
     'MUA_TSCD': 'Mua TSCĐ',
     'MUA_CCDC': 'Mua CCDC',
 }
+# Thuế NK phân bổ vào nguyên giá (không áp dụng dịch vụ)
+IMPORT_TAX_BUSINESS_TYPES = frozenset({
+    'NHAP_KHO_HANG_HOA', 'NHAP_KHO_NVL', 'MUA_TSCD', 'MUA_CCDC',
+})
 
 
 def _money(value: Any) -> Decimal:
@@ -35,6 +40,9 @@ def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
 
 def _business_type_for_line(line_type: str | None) -> str | None:
     lt = (line_type or 'goods').strip().lower()
+    # Thành phẩm tự SX không nhập mua — nếu lọt vào thì coi như hàng hóa
+    if lt == 'finished_goods':
+        lt = 'goods'
     if lt not in PURCHASE_LINE_TYPES:
         return None
     if lt == 'materials':
@@ -110,10 +118,14 @@ def sync_import_journals(
     replace_existing: bool = False,
     features: dict | None = None,
     payment_method: str | None = None,
+    import_type: str | None = None,
+    import_tax_amount: Decimal | float | None = None,
+    exchange_rate: Decimal | float | None = None,
 ) -> dict:
     """
-    Ghi bút toán mua hàng từ phiếu import POS:
+    Ghi bút toán mua hàng từ phiếu import:
     hàng hóa/NVL (156/152), dịch vụ (642), TSCĐ (2112), CCDC (153) + VAT + đối ứng.
+    Hỗ trợ DOMESTIC / IMPORT (thuế NK → Nợ kho + Có 3333, VAT ưu tiên 13312).
 
     Không commit — caller commit cùng giao dịch nhập kho.
     """
@@ -153,6 +165,20 @@ def sync_import_journals(
             'reversed_entry_ids': reversed_ids,
         }
 
+    imp_keys = set(imp.keys()) if hasattr(imp, 'keys') else set()
+    resolved_import_type = (
+        (import_type or (imp['import_type'] if 'import_type' in imp_keys else None) or 'DOMESTIC')
+        .strip()
+        .upper()
+    )
+    if resolved_import_type not in ('DOMESTIC', 'IMPORT'):
+        resolved_import_type = 'DOMESTIC'
+    total_import_tax = _money(
+        import_tax_amount
+        if import_tax_amount is not None
+        else (imp['import_tax_amount'] if 'import_tax_amount' in imp_keys else 0)
+    )
+
     detail_cols = _table_columns(conn, 'import_details')
     select_parts = [
         'd.product_id',
@@ -190,7 +216,8 @@ def sync_import_journals(
         (import_id,),
     ).fetchall()
 
-    extra_cost = _money(imp['extra_cost'] if 'extra_cost' in imp.keys() else 0)
+    # SME: CP phát sinh có HĐ riêng → phân bổ landed cost; không dùng extra_cost HKD
+    extra_cost = Decimal('0.00')
     base_total = Decimal('0.00')
     stock_rows: list[dict] = []
     for row in details:
@@ -230,6 +257,11 @@ def sync_import_journals(
         }
 
     base_safe = base_total if base_total > 0 else Decimal('1.00')
+    nk_base_total = sum(
+        (item['subtotal'] for item in stock_rows if item['business_type'] in IMPORT_TAX_BUSINESS_TYPES),
+        Decimal('0.00'),
+    )
+    nk_base_safe = nk_base_total if nk_base_total > 0 else Decimal('1.00')
     pay_method = _resolve_payment_method(
         imp['payment_status'] if 'payment_status' in imp.keys() else None,
         payment_method
@@ -260,12 +292,27 @@ def sync_import_journals(
         inventory_lines = []
         vat_total = Decimal('0.00')
         payable_total = Decimal('0.00')
+        group_import_tax = Decimal('0.00')
         desc_text = BUSINESS_TYPE_LABELS.get(b_type, b_type)
+        group_base = sum((item['subtotal'] for item in items), Decimal('0.00'))
+        group_base_safe = group_base if group_base > 0 else Decimal('1.00')
+        # Phân bổ thuế NK theo tỷ trọng subtotal nhóm đủ điều kiện (không vào dịch vụ)
+        if (
+            resolved_import_type == 'IMPORT'
+            and total_import_tax > 0
+            and b_type in IMPORT_TAX_BUSINESS_TYPES
+        ):
+            group_import_tax_budget = _money(total_import_tax * (group_base / nk_base_safe))
+        else:
+            group_import_tax_budget = Decimal('0.00')
+
         for item in items:
             allocated_extra = _money((item['subtotal'] / base_safe) * extra_cost)
-            inv_amount = item['net'] + allocated_extra
+            allocated_nk = _money((item['subtotal'] / group_base_safe) * group_import_tax_budget)
+            inv_amount = item['net'] + allocated_extra + allocated_nk
             vat_total += item['tax']
             payable_total += item['net'] + item['tax'] + allocated_extra
+            group_import_tax += allocated_nk
             inventory_lines.append({
                 'product_id': item['product_id'],
                 'product_name': item['product_name'],
@@ -281,12 +328,12 @@ def sync_import_journals(
             payment_method=pay_method,
             inventory_lines=inventory_lines,
             vat_amount=vat_total,
-            import_tax_amount=0,
+            import_tax_amount=group_import_tax,
             payable_amount=payable_total,
             supplier_id=int(supplier_id) if supplier_id else None,
             bill_no=bill_no,
             tax_code=tax_code,
-            import_type='DOMESTIC',
+            import_type=resolved_import_type,
             description=f"{desc_text} HĐ {bill_no or import_no}",
         )
         posted.append(post_journal_entry(
@@ -307,4 +354,5 @@ def sync_import_journals(
         'posted': bool(posted),
         'entry_ids': [item['id'] for item in posted],
         'reversed_entry_ids': reversed_ids,
+        'import_type': resolved_import_type,
     }

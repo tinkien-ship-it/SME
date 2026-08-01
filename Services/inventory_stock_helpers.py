@@ -97,6 +97,26 @@ def apply_wac_inbound(cursor, product_id, qty_base, value_total):
     return new_c
 
 
+def apply_wac_value_adjustment(cursor, product_id, value_delta):
+    """
+    Điều chỉnh giá trị tồn không đổi số lượng (landed cost / phân bổ CP mua hàng).
+    C' = (Q·C + ΔV) / Q. Yêu cầu Q > 0.
+    Trả về (wac_before, wac_after, qty).
+    """
+    value_delta = float(value_delta or 0)
+    Q = ledger_quantity(cursor, product_id)
+    C = get_wac(cursor, product_id)
+    if abs(value_delta) < 1e-9:
+        return C, C, Q
+    if Q <= 1e-9:
+        raise ValueError(
+            f"Không thể vốn hóa CP vào SP #{product_id}: tồn kho = 0"
+        )
+    new_c = (Q * C + value_delta) / Q
+    _set_avg_cost(cursor, product_id, new_c)
+    return C, new_c, Q
+
+
 def apply_wac_outbound(cursor, product_id, qty_base, unit_cost=None):
     """
     Xuất giảm tồn: cập nhật WAC theo Cₜ (gọi TRƯỚC khi INSERT stock_moves −qty).
@@ -312,10 +332,21 @@ def import_cost_to_base(cost_price, unit_type, unit_ratio):
 
 
 def rebuild_wac_from_moves(cursor, product_id):
-    """Tính lại avg_cost từ lịch sử stock_moves (theo thứ tự thời gian)."""
+    """Tính lại avg_cost từ lịch sử stock_moves (theo thứ tự thời gian).
+
+    Hỗ trợ dòng value-only (quantity=0): cộng ``total_value`` vào giá trị tồn
+    (dùng cho phân bổ landed cost khi chưa gộp vào dòng import gốc).
+    Dòng ``type=landed_cost`` đã vốn hóa vào import gốc thì bỏ qua để tránh double-count.
+    """
+    cursor.execute('PRAGMA table_info(stock_moves)')
+    sm_cols = {row[1] for row in cursor.fetchall()}
+    has_total = 'total_value' in sm_cols
+    select = 'quantity, cost_price, type'
+    if has_total:
+        select += ', total_value'
     cursor.execute(
-        """
-        SELECT quantity, cost_price FROM stock_moves
+        f"""
+        SELECT {select} FROM stock_moves
         WHERE product_id = ?
         ORDER BY date ASC, id ASC
         """,
@@ -324,12 +355,35 @@ def rebuild_wac_from_moves(cursor, product_id):
     Q = 0.0
     C = 0.0
     for row in cursor.fetchall():
-        qty = float(row[0] if not hasattr(row, 'keys') else row['quantity'])
-        move_cost = float(row[1] if not hasattr(row, 'keys') else row['cost_price'] or 0)
+        if hasattr(row, 'keys'):
+            qty = float(row['quantity'] or 0)
+            move_cost = float(row['cost_price'] or 0)
+            move_type = str(row['type'] or '').strip().lower()
+            total_val = float(row['total_value'] or 0) if has_total else 0.0
+        else:
+            qty = float(row[0] or 0)
+            move_cost = float(row[1] or 0)
+            move_type = str(row[2] or '').strip().lower()
+            total_val = float(row[3] or 0) if has_total else 0.0
+
+        # Audit landed-cost: vốn đã cộng vào dòng import gốc — không replay
+        if move_type in ('landed_cost', 'pbcp', 'value_adj'):
+            continue
+
+        if abs(qty) < 1e-12:
+            # Value-only adj (nếu còn dùng): ΔV qua total_value
+            if Q > 1e-9 and abs(total_val) > 1e-9:
+                C = (Q * C + total_val) / Q
+            continue
+
         if qty > 0:
             Q_new = Q + qty
-            unit_in = move_cost if move_cost > 0 else C
-            C = (Q * C + qty * unit_in) / Q_new if Q_new > 0 else unit_in
+            if has_total and abs(total_val) > 1e-9:
+                value_in = total_val
+            else:
+                unit_in = move_cost if move_cost > 0 else C
+                value_in = qty * unit_in
+            C = (Q * C + value_in) / Q_new if Q_new > 0 else (value_in / qty if qty else 0.0)
             Q = Q_new
         else:
             out = abs(qty)

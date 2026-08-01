@@ -43,6 +43,7 @@ from Services.inventory_stock_helpers import (
 from Services.return_import_checkout import process_return_import_checkout
 from Services.sme.import_journal import reverse_import_journals, sync_import_journals
 from Services.sme.return_import_journal import sync_return_import_journals
+from Services.sme.hkd_side_effects import write_hkd_cash_vouchers
 from Services.tenant_profile import get_current_tenant_profile
 
 logger = logging.getLogger(__name__)
@@ -233,42 +234,76 @@ def clean_xml_value(val):
     if not val: return 0
     # Thay dấu phẩy thành dấu chấm và chuyển sang float
     return float(val.replace(',', '.'))
+
+
+def decode_xml_bytes(raw) -> str:
+    from Services.invoice_xml_parse import decode_xml_bytes as _decode
+    return _decode(raw)
+
+
+def strip_xml_namespaces(root):
+    from Services.invoice_xml_parse import strip_xml_namespaces as _strip
+    return _strip(root)
+
+
+def find_invoice_payload_node(root):
+    from Services.invoice_xml_parse import find_invoice_payload_node as _find
+    return _find(root)
+
+
 def xml_to_invoice_json(xml_content: str):
     try:
         import xml.etree.ElementTree as ET
-        xml_content = xml_content.strip().encode('utf-8').decode('utf-8-sig', errors='replace')
+        from Services.invoice_xml_parse import (
+            decode_xml_bytes,
+            find_invoice_payload_node,
+            strip_xml_namespaces,
+        )
+        xml_content = decode_xml_bytes(xml_content)
         root = ET.fromstring(xml_content)
+        strip_xml_namespaces(root)
 
         # Tìm NDHDon hoặc DLHDon
-        ndhdon = root.find('.//NDHDon') or root.find('.//DLHDon')
+        ndhdon = find_invoice_payload_node(root)
         if ndhdon is None:
             raise ValueError("Không tìm thấy NDHDon hoặc DLHDon")
 
         ttchung = ndhdon.find('.//TTChung')
-        nban   = ndhdon.find('.//NBan')
+        if ttchung is None:
+            ttchung = root.find('.//TTChung')
+        nban = ndhdon.find('.//NBan')
+        if nban is None:
+            nban = root.find('.//NBan')
 
         data = {
-            "SHDon": (ttchung.findtext('SHDon') or '').strip(),
-            "NLap":  (ttchung.findtext('NLap')  or '').strip(),
-            "NBanTen":  (nban.findtext('Ten')   or '').strip(),
-            "NBanMST":  (nban.findtext('MST')   or '').strip(),
-            "NBanDChi": (nban.findtext('DChi')  or '').strip(),
+            "SHDon": ((ttchung.findtext('SHDon') if ttchung is not None else None) or '').strip(),
+            "NLap":  ((ttchung.findtext('NLap') if ttchung is not None else None) or '').strip(),
+            "NBanTen":  ((nban.findtext('Ten') if nban is not None else None) or '').strip(),
+            "NBanMST":  ((nban.findtext('MST') if nban is not None else None) or '').strip(),
+            "NBanDChi": ((nban.findtext('DChi') if nban is not None else None) or '').strip(),
             "DSHHDVu": []
         }
 
-        for hh in ndhdon.findall('.//HHDVu'):
+        hh_nodes = list(ndhdon.findall('.//HHDVu'))
+        if not hh_nodes:
+            hh_nodes = list(root.findall('.//HHDVu'))
+
+        for hh in hh_nodes:
             try:
                 # Xử lý Thuế suất
                 vat_str = (hh.findtext('TSuat') or '0').replace('%','').strip()
-                vat_rate = float(vat_str) if vat_str.replace('.','').isdigit() else 0
+                vat_rate = float(vat_str) if vat_str.replace('.', '', 1).isdigit() else 0
                 
                 # --- BỔ SUNG CHIẾT KHẤU ---
                 # Lấy % chiết khấu (TLCKhau)
                 tl_ck_str = (hh.findtext('TLCKhau') or '0').replace('%','').strip()
-                tl_ck = float(tl_ck_str) if tl_ck_str.replace('.','').isdigit() else 0
+                tl_ck = float(tl_ck_str) if tl_ck_str.replace('.', '', 1).isdigit() else 0
                 
                 # Lấy số tiền chiết khấu (STCKhau hoặc TienCKhau)
-                st_ck = float(hh.findtext('STCKhau', hh.findtext('TienCKhau', '0')) or 0)
+                st_ck_raw = hh.findtext('STCKhau')
+                if st_ck_raw is None:
+                    st_ck_raw = hh.findtext('TienCKhau')
+                st_ck = float(st_ck_raw or 0)
 
                 data["DSHHDVu"].append({
                     "THHDVu": (hh.findtext('THHDVu') or '').strip(),
@@ -279,7 +314,7 @@ def xml_to_invoice_json(xml_content: str):
                     "TyLeCK": tl_ck,      # Đồng bộ key với JS
                     "STCKhau": st_ck      # Số tiền chiết khấu
                 })
-            except:
+            except Exception:
                 continue
 
         return data
@@ -291,32 +326,84 @@ def _next_import_no_from_db(c, mode='stock'):
     """Sinh số phiếu kế tiếp: PNxxxxxx (nhập kho) hoặc HTxxxxxx (hạch toán dịch vụ)."""
     mode = (mode or 'stock').strip().lower()
     prefix = 'HT' if mode == 'service' else 'PN'
+    plen = len(prefix)
+
+    def _max_from_sql(sql, params=()):
+        try:
+            row = c.execute(sql, params).fetchone()
+            if not row or row[0] is None:
+                return 0
+            return int(row[0] or 0)
+        except Exception:
+            return 0
 
     if mode == 'service':
-        c.execute("""
-            SELECT MAX(CAST(SUBSTR(import_no, 3) AS INTEGER))
+        max_num = _max_from_sql(
+            f"""
+            SELECT MAX(CAST(SUBSTR(import_no, {plen + 1}) AS INTEGER))
             FROM import
-            WHERE import_no LIKE 'HT%'
-        """)
+            WHERE import_no LIKE ?
+            """,
+            (f'{prefix}%',),
+        )
     else:
-        c.execute("""
-            SELECT MAX(CAST(SUBSTR(ref_document, 3) AS INTEGER))
+        # Lấy max từ cả import + stock_moves (SME/HKD có thể chỉ có một trong hai)
+        max_import = _max_from_sql(
+            f"""
+            SELECT MAX(CAST(SUBSTR(import_no, {plen + 1}) AS INTEGER))
+            FROM import
+            WHERE import_no LIKE ?
+            """,
+            (f'{prefix}%',),
+        )
+        max_moves = _max_from_sql(
+            f"""
+            SELECT MAX(CAST(SUBSTR(ref_document, {plen + 1}) AS INTEGER))
             FROM stock_moves
-            WHERE ref_document LIKE 'PN%'
-              AND ref_type = 'import'
-        """)
+            WHERE ref_document LIKE ?
+              AND COALESCE(ref_type, 'import') = 'import'
+            """,
+            (f'{prefix}%',),
+        )
+        max_phieu = _max_from_sql(
+            f"""
+            SELECT MAX(CAST(SUBSTR(import_no, {plen + 1}) AS INTEGER))
+            FROM phieu_nhap_kho
+            WHERE import_no LIKE ?
+            """,
+            (f'{prefix}%',),
+        )
+        max_num = max(max_import, max_moves, max_phieu)
 
-    row = c.fetchone()
-    max_num = row[0] if row and row[0] is not None else 0
     next_num = max_num + 1
     next_no = f"{prefix}{next_num:06d}"
 
     while True:
-        if mode == 'service':
-            c.execute("SELECT 1 FROM import WHERE import_no = ?", (next_no,))
-        else:
-            c.execute("SELECT 1 FROM stock_moves WHERE ref_document = ?", (next_no,))
-        if not c.fetchone():
+        exists = False
+        try:
+            if c.execute("SELECT 1 FROM import WHERE import_no = ?", (next_no,)).fetchone():
+                exists = True
+        except Exception:
+            pass
+        if not exists:
+            try:
+                if c.execute(
+                    "SELECT 1 FROM stock_moves WHERE ref_document = ?",
+                    (next_no,),
+                ).fetchone():
+                    exists = True
+            except Exception:
+                pass
+        if not exists:
+            try:
+                if c.execute(
+                    "SELECT 1 FROM phieu_nhap_kho WHERE import_no = ?",
+                    (next_no,),
+                ).fetchone():
+                    exists = True
+            except Exception:
+                pass
+        if not exists:
             break
         next_num += 1
         next_no = f"{prefix}{next_num:06d}"
@@ -341,61 +428,72 @@ def register_inventory_routes(app):
     @app.route('/api/parse-xml-invoice', methods=['POST'])
     def parse_xml_invoice():
         try:
+            from Services.invoice_xml_parse import (
+                decode_xml_bytes,
+                find_invoice_payload_node,
+                strip_xml_namespaces,
+            )
 
             xml_content = None
-            data = request.get_json(silent=True) or {}
 
-            # ==================== LẤY XML ====================
+            # Ưu tiên file upload (không gọi get_json trước — tránh nuốt body multipart)
+            if request.files:
+                file = request.files.get('file') or next(iter(request.files.values()), None)
+                if file is not None and (file.filename or '').strip():
+                    xml_content = decode_xml_bytes(file.read())
 
-            xml_url = data.get('xml_url')
+            data = {}
+            if xml_content is None:
+                data = request.get_json(silent=True) or {}
+                xml_url = data.get('xml_url')
+                if xml_url:
+                    if xml_url.startswith('/'):
+                        base_url = request.host_url.rstrip('/')
+                        xml_url = base_url + xml_url
+                    try:
+                        r = requests.get(xml_url, timeout=15)
+                        r.raise_for_status()
+                        xml_content = decode_xml_bytes(r.content)
+                    except requests.exceptions.RequestException as url_err:
+                        return jsonify({
+                            "success": False,
+                            "error": f"Không tải được XML từ link: {str(url_err)}"
+                        }), 400
+                elif data.get('xml'):
+                    xml_content = decode_xml_bytes(data.get('xml'))
+                elif data.get('xml_content'):
+                    xml_content = decode_xml_bytes(data.get('xml_content'))
 
-            if xml_url:
-
-                # Nếu là link tương đối
-                if xml_url.startswith('/'):
-                    base_url = request.host_url.rstrip('/')
-                    xml_url = base_url + xml_url
-
-                try:
-                    r = requests.get(xml_url, timeout=15)
-                    r.raise_for_status()
-                    xml_content = r.text
-                except requests.exceptions.RequestException as url_err:
-                    return jsonify({
-                        "success": False,
-                        "error": f"Không tải được XML từ link: {str(url_err)}"
-                    }), 400
-
-            # upload file
-            elif 'file' in request.files:
-                file = request.files['file']
-                xml_content = file.read().decode('utf-8')
-
-            # xml string
-            elif data.get('xml'):
-                xml_content = data.get('xml')
+            # Fallback: raw body là XML thuần
+            if xml_content is None and request.data:
+                raw = request.get_data(cache=False)
+                if raw and (b'<' in raw[:200] or b'HDon' in raw[:500] or b'Invoice' in raw[:500]):
+                    xml_content = decode_xml_bytes(raw)
 
             if not xml_content:
                 return jsonify({
                     "success": False,
-                    "error": "Không có dữ liệu XML"
+                    "error": "Không có dữ liệu XML — hãy chọn file .xml hóa đơn điện tử"
                 }), 400
 
             # ==================== PARSE XML ====================
 
             root = ET.fromstring(xml_content)
+            strip_xml_namespaces(root)
 
-            ndhdon = root.find('.//NDHDon') or root.find('NDHDon')
+            ndhdon = find_invoice_payload_node(root)
 
             if ndhdon is None:
                 return jsonify({
                     "success": False,
-                    "error": "Không tìm thấy NDHDon"
+                    "error": "Không tìm thấy NDHDon/DLHDon trong file XML hóa đơn"
                 }), 400
 
             # ==================== NHÀ BÁN ====================
 
             nban = ndhdon.find('.//NBan')
+            if nban is None:
+                nban = root.find('.//NBan')
 
             supplier = {
                 "name": "",
@@ -404,13 +502,15 @@ def register_inventory_routes(app):
             }
 
             if nban is not None:
-                supplier["name"] = nban.findtext('Ten', '').strip()
-                supplier["tax_code"] = nban.findtext('MST', '').strip()
-                supplier["address"] = nban.findtext('DChi', '').strip()
+                supplier["name"] = (nban.findtext('Ten') or '').strip()
+                supplier["tax_code"] = (nban.findtext('MST') or '').strip()
+                supplier["address"] = (nban.findtext('DChi') or '').strip()
 
             # ==================== NGƯỜI MUA ====================
 
             nmua = ndhdon.find('.//NMua')
+            if nmua is None:
+                nmua = root.find('.//NMua')
 
             buyer = {
                 "name": "",
@@ -422,18 +522,18 @@ def register_inventory_routes(app):
 
             if nmua is not None:
 
-                buyer["name"] = nmua.findtext('Ten', '').strip()
-                buyer["tax_code"] = nmua.findtext('MST', '').strip()
-                buyer["address"] = nmua.findtext('DChi', '').strip()
-                buyer["contact_name"] = nmua.findtext('HVTNMHang', '').strip()
+                buyer["name"] = (nmua.findtext('Ten') or '').strip()
+                buyer["tax_code"] = (nmua.findtext('MST') or '').strip()
+                buyer["address"] = (nmua.findtext('DChi') or '').strip()
+                buyer["contact_name"] = (nmua.findtext('HVTNMHang') or '').strip()
 
                 # Hình thức thanh toán
                 for ttin in nmua.findall('.//TTin'):
 
-                    ttruong = ttin.findtext('TTruong', '').lower()
+                    ttruong = (ttin.findtext('TTruong') or '').lower()
 
                     if "thanh toán" in ttruong or "payment" in ttruong:
-                        buyer["payment_method"] = ttin.findtext('DLieu', '').strip()
+                        buyer["payment_method"] = (ttin.findtext('DLieu') or '').strip()
 
             # ==================== THÔNG TIN HÓA ĐƠN ====================
 
@@ -446,45 +546,51 @@ def register_inventory_routes(app):
 
             if ttchung is not None:
 
-                raw_date = ttchung.findtext('NLap', '').strip()
+                raw_date = (ttchung.findtext('NLap') or '').strip()
 
                 if 'T' in raw_date:
                     raw_date = raw_date.split('T')[0]
 
-                invoice["invoice_no"] = ttchung.findtext('SHDon', '').strip()
+                invoice["invoice_no"] = (ttchung.findtext('SHDon') or '').strip()
                 invoice["invoice_date"] = raw_date
 
-    # ==================== DANH SÁCH HÀNG ====================
+            # ==================== DANH SÁCH HÀNG ====================
 
             items = []
+            hh_nodes = list(ndhdon.findall('.//HHDVu'))
+            if not hh_nodes:
+                hh_nodes = list(root.findall('.//HHDVu'))
 
-            for hh in ndhdon.findall('.//HHDVu'):
+            for hh in hh_nodes:
 
                 try:
-                    name = hh.findtext('THHDVu', '').strip()
-                    unit = hh.findtext('DVTinh', 'Cái').strip()
+                    name = (hh.findtext('THHDVu') or '').strip()
+                    if not name:
+                        continue
+                    unit = (hh.findtext('DVTinh') or 'Cái').strip() or 'Cái'
 
-                    qty = float(hh.findtext('SLuong', '0') or 0)
-                    price = float(hh.findtext('DGia', '0') or 0)
+                    qty = float(hh.findtext('SLuong') or 0)
+                    price = float(hh.findtext('DGia') or 0)
 
                     # --- VAT ---
-                    vat_text = hh.findtext('TSuat', '0').replace('%', '').strip()
+                    vat_text = (hh.findtext('TSuat') or '0').replace('%', '').strip()
                     vat_rate = 0
-                    if vat_text.replace('.', '').isdigit():
+                    if vat_text.replace('.', '', 1).isdigit():
                         vat_rate = float(vat_text)
 
-                    # --- CHIẾT KHẤU (MỚI BỔ SUNG) ---
-                    # 1. Lấy tỷ lệ chiết khấu (%)
-                    discount_pct_text = hh.findtext('TLCKhau', '0').replace('%', '').strip()
+                    # --- CHIẾT KHẤU ---
+                    discount_pct_text = (hh.findtext('TLCKhau') or '0').replace('%', '').strip()
                     discount_pct = 0.0
                     try:
                         if discount_pct_text:
                             discount_pct = float(discount_pct_text)
-                    except:
+                    except Exception:
                         discount_pct = 0.0
 
-                    # 2. Lấy số tiền chiết khấu (STCKhau hoặc TienCKhau)
-                    discount_amount = float(hh.findtext('STCKhau', hh.findtext('TienCKhau', '0')) or 0)
+                    st_ck_raw = hh.findtext('STCKhau')
+                    if st_ck_raw is None:
+                        st_ck_raw = hh.findtext('TienCKhau')
+                    discount_amount = float(st_ck_raw or 0)
 
                     items.append({
                         "name": name,
@@ -492,8 +598,8 @@ def register_inventory_routes(app):
                         "quantity": qty,
                         "price": price,
                         "vat_rate": vat_rate,
-                        "discount_percent": discount_pct,   # Tỷ lệ %
-                        "discount_amount": discount_amount  # Số tiền
+                        "discount_percent": discount_pct,
+                        "discount_amount": discount_amount
                     })
 
                 except Exception:
@@ -508,6 +614,12 @@ def register_inventory_routes(app):
                 "invoice": invoice,
                 "items": items
             })
+
+        except ET.ParseError as e:
+            return jsonify({
+                "success": False,
+                "error": f"File XML không hợp lệ: {str(e)}"
+            }), 400
 
         except Exception as e:
 
@@ -542,58 +654,7 @@ def register_inventory_routes(app):
             return {"success": False, "error": str(e)}, 500
 
     #===API TẢI JSON TẠO PHIẾU NHẬP KHO TỰ ĐỘNG TỪ TRANG QUẢN LÝ HÓA ĐƠN ĐẦU VÀO===#
-    def xml_to_invoice_json(xml_content: str):
-        try:
-            import xml.etree.ElementTree as ET
-            xml_content = xml_content.strip().encode('utf-8').decode('utf-8-sig', errors='replace')
-            root = ET.fromstring(xml_content)
-
-            # Tìm NDHDon hoặc DLHDon
-            ndhdon = root.find('.//NDHDon') or root.find('.//DLHDon')
-            if ndhdon is None:
-                raise ValueError("Không tìm thấy NDHDon hoặc DLHDon")
-
-            ttchung = ndhdon.find('.//TTChung')
-            nban   = ndhdon.find('.//NBan')
-
-            data = {
-                "SHDon": (ttchung.findtext('SHDon') or '').strip(),
-                "NLap":  (ttchung.findtext('NLap')  or '').strip(),
-                "NBanTen":  (nban.findtext('Ten')   or '').strip(),
-                "NBanMST":  (nban.findtext('MST')   or '').strip(),
-                "NBanDChi": (nban.findtext('DChi')  or '').strip(),
-                "DSHHDVu": []
-            }
-
-            for hh in ndhdon.findall('.//HHDVu'):
-                try:
-                    # Xử lý Thuế suất
-                    vat_str = (hh.findtext('TSuat') or '0').replace('%','').strip()
-                    vat_rate = float(vat_str) if vat_str.replace('.','').isdigit() else 0
-                
-                    # --- BỔ SUNG CHIẾT KHẤU ---
-                    # Lấy % chiết khấu (TLCKhau)
-                    tl_ck_str = (hh.findtext('TLCKhau') or '0').replace('%','').strip()
-                    tl_ck = float(tl_ck_str) if tl_ck_str.replace('.','').isdigit() else 0
-                
-                    # Lấy số tiền chiết khấu (STCKhau hoặc TienCKhau)
-                    st_ck = float(hh.findtext('STCKhau', hh.findtext('TienCKhau', '0')) or 0)
-
-                    data["DSHHDVu"].append({
-                        "THHDVu": (hh.findtext('THHDVu') or '').strip(),
-                        "DVTinh": (hh.findtext('DVTinh') or '').strip(),
-                        "SLuong": float(hh.findtext('SLuong') or 0),
-                        "DGia":   float(hh.findtext('DGia')   or 0),
-                        "TSuat":  f"{int(vat_rate)}",
-                        "TyLeCK": tl_ck,      # Đồng bộ key với JS
-                        "STCKhau": st_ck      # Số tiền chiết khấu
-                    })
-                except:
-                    continue
-
-            return data
-        except Exception as e:
-            raise ValueError(f"Lỗi parse XML: {str(e)}")
+    # Dùng xml_to_invoice_json() ở module-level (đã hỗ trợ encoding + namespace + NDHDon/DLHDon)
 
     import json
     import sqlite3
@@ -944,9 +1005,9 @@ def register_inventory_routes(app):
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (import_no, import_date, bill_no, bill_date, supplier_name, supplier_id, items_json_str, total_final_float, import_id, note))
 
-            # --- 7. MỘT PHIẾU CHI cho cả phiếu nhập (HH + VT + DV + TSCĐ + CCDC) ---
+            # --- 7. MỘT PHIẾU CHI cho cả phiếu nhập (chỉ HKD; SME → journal qua sync_import_journals)
             res_pc_vouch = None
-            if payment_status_input == 'Đã thanh toán':
+            if payment_status_input == 'Đã thanh toán' and write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
                 from Services.inward_invoice_helpers import next_pc_voucher_no
                 res_pc_vouch = next_pc_voucher_no(c)
                 credit_acc = '111' if payment_method == 'cash' else '112'
@@ -1160,7 +1221,7 @@ def register_inventory_routes(app):
 
             preparer = session.get('user_name', 'Admin')
             res_pc_vouch = None
-            if is_paid:
+            if is_paid and write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
                 res_pc_vouch = next_pc_voucher_no(c)
                 credit_acc = '111' if payment_method == 'cash' else '112'
                 c.execute("""
@@ -1578,9 +1639,9 @@ def register_inventory_routes(app):
             """, (import_id, product_id, return_qty_input, cost_price_base, return_date, reason))
             return_row_id = c.lastrowid
 
-            # 9. Phiếu thu — theo giá trị mua/thuế (tiền NCC hoàn)
+            # 9. Phiếu thu HKD — SME chỉ journal qua sync_return_import_journals
             voucher_thu = None
-            if refund_amount > 0:
+            if refund_amount > 0 and write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
                 c.execute("SELECT voucher_no FROM phieu_thu WHERE voucher_no LIKE 'PT%' ORDER BY id DESC LIMIT 1")
                 last_pt = c.fetchone()
                 pt_num = int(last_pt['voucher_no'][2:]) + 1 if last_pt else 1
@@ -1698,8 +1759,8 @@ def register_inventory_routes(app):
     @app.route('/api/import', methods=['GET'])
     def api_import_get():
         q = request.args.get('q', '').strip()
-        start_date_str = request.args.get('start_date')
-        end_date_str = request.args.get('end_date')
+        start_date_str = request.args.get('start_date') or request.args.get('start')
+        end_date_str = request.args.get('end_date') or request.args.get('end')
         filter_today = request.args.get('filter_today', '').lower() == 'true'
 
         conn = get_db_connection()
@@ -2083,6 +2144,12 @@ def register_inventory_routes(app):
     @app.route('/import/edit/<int:import_id>')
     @login_required
     def import_edit(import_id):
+        from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
+
+        profile = get_current_tenant_profile() or {}
+        if is_sme_regime(profile.get('accounting_regime')):
+            return redirect(url_for('SME_import', import_id=import_id))
+
         conn = get_db_connection()
         try:
             row = conn.execute(
@@ -2324,7 +2391,7 @@ def register_inventory_routes(app):
                 if sync_pids:
                     sync_inventory_quantities(c, [p for p in sync_pids if p])
 
-                # ================== XỬ LÝ QUỸ SỔ SÁCH DÒNG TIỀN (PHIẾU CHI) ==================
+                # ================== XỬ LÝ QUỸ SỔ SÁCH DÒNG TIỀN (PHIẾU CHI) — chỉ HKD ==================
                 c.execute(
                     "DELETE FROM phieu_chi WHERE source_type IN ('import', 'import_service') AND source_id = ?",
                     (import_id,),
@@ -2334,7 +2401,10 @@ def register_inventory_routes(app):
                     (import_id,),
                 )
 
-                if payment_status in ['Đã thanh toán', 'Thanh toán một phần']:
+                if (
+                    payment_status in ['Đã thanh toán', 'Thanh toán một phần']
+                    and write_hkd_cash_vouchers(profile=get_current_tenant_profile())
+                ):
                     final_paid = float(total_value + extra_cost)
                     credit_acc = '111' if payment_method == 'cash' else '112'
 

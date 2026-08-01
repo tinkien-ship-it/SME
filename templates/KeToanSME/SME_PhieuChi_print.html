@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Phiếu chi {{ voucher_no }} — 02-TT</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:18pt;font-weight:bold;margin:16px 0 4px}
+  .muted{font-style:italic;font-size:10pt}
+  .row{margin:6px 0}
+  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
+  .sign div{width:24%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div>
+    <div><strong>DOANH NGHIỆP:</strong> {{ info.business_name or info.company_name or '' }}</div>
+    <div>Địa chỉ: {{ info.address or '' }}</div>
+    <div>MST: {{ info.tax_code or '' }}</div>
+  </div>
+  <div style="text-align:right">
+    <div><strong>Mẫu số 02 - TT</strong></div>
+    <div class="muted">(Ban hành kèm theo Thông tư số 99/2025/TT-BTC<br>áp dụng DN / siêu nhỏ TT58)</div>
+  </div>
+</div>
+<div class="title">PHIẾU CHI</div>
+<div style="text-align:center">Số: <strong>{{ voucher_no }}</strong> — Ngày {{ payment.voucher_date }}</div>
+<div class="row">Họ tên người nhận tiền: <strong>{{ payment.party_name }}</strong></div>
+<div class="row">Địa chỉ: {{ payment.party_address or '' }}</div>
+<div class="row">Lý do chi: {{ payment.reason or '' }}</div>
+<div class="row">Số tiền: <strong>{{ '{:,.0f}'.format(payment.amount|float).replace(',', '.') }} đ</strong>
+  (Nợ {{ payment.debit_account }} / Có {{ payment.credit_account }})</div>
+<div class="row">Kèm theo: {{ payment.attached_docs or 0 }} chứng từ gốc</div>
+<div class="sign">
+  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Người nhận tiền<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Thủ quỹ<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

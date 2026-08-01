@@ -236,7 +236,7 @@
             {% if tenant_profile.revenue_tier %} · {{ tenant_profile.revenue_tier }}{% endif %}
             {% if tenant_profile.enabled_nn_sectors %} · NN: {{ tenant_profile.enabled_nn_sectors|join(', ') }}{% endif %}
         </span>
-        <a class="btn btn-sm btn-outline-dark" href="{{ url_for('HKD_dashboard') }}">Kế toán HKD</a>
+        <a class="btn btn-sm btn-outline-dark" href="{{ url_for('HKD_dashboard') }}" {% if tenant_is_sme %}title="Tenant SME — HKD chỉ để đối chiếu"{% endif %}>Kế toán HKD</a>
         <a class="btn btn-sm btn-outline-dark" href="{{ url_for('SME_dashboard') }}">Kế toán SME</a>
         <button type="button" class="btn btn-sm btn-dark" onclick="leaveMasterTenant()">Rời tenant</button>
     </div>
@@ -258,7 +258,7 @@
     <!-- Navbar chính -->
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background: linear-gradient(135deg, #1e3a8a, #1e40af);">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('sale') }}">
+            <a class="navbar-brand" href="{% if tenant_is_sme or user_has_sme_nav %}{{ url_for('SME_dashboard') }}{% else %}{{ url_for('sale') }}{% endif %}">
                 <div class="d-flex flex-column">
                     <span class="fw-bold">KETO POS 68</span>
                     <span style="font-size: 0.95rem;" class="fw-bold">TẦM NHÌN VIỆT</span>
@@ -292,8 +292,8 @@
                     </li>
                     {% endif %}
 
-                    <!-- POS và Kế Toán HKD -->
-                    {% if user_has_hub %}
+                    <!-- POS và Kế Toán HKD (ẩn với tenant/user SME) -->
+                    {% if user_has_hub and not tenant_is_sme %}
                     <li class="nav-item">
                         <a class="nav-link {% if hub_active %}active{% endif %}" href="{{ url_for('HKD_dashboard') }}">
                             <i class="fas fa-store"></i> {{ hub_title | default('POS và Kế Toán HKD') }}
@@ -302,9 +302,9 @@
                     {% endif %}
 
                     <!-- Kế Toán SME -->
-                    {% if current_user.role in ['accountantSME', 'managerSME', 'managerSME', 'adminSME', 'master'] or 'SME_dashboard' in current_user.permissions %}
+                    {% if user_has_sme_nav or current_user.role in ['accountantSME', 'managerSME', 'adminSME', 'master'] or 'SME_dashboard' in (current_user.permissions or '') %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'SME_dashboard' %}active{% endif %}" href="{{ url_for('SME_dashboard') }}">
+                        <a class="nav-link {% if request.endpoint == 'SME_dashboard' or (request.endpoint or '')[:4] == 'SME_' %}active{% endif %}" href="{{ url_for('SME_dashboard') }}">
                             <i class="fas fa-calculator"></i> Kế Toán SME
                         </a>
                     </li>

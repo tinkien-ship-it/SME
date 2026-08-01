@@ -84,6 +84,9 @@ class MatbaoAdapterWrapper(BaseEInvoiceAdapter):
     def sign_draft(self, invoice_id):
         return self._inner.sign_draft(invoice_id)
 
+    def issue_replacement(self, sale_data, items, replacement_info):
+        return self._inner.issue_replacement(sale_data, items, replacement_info)
+
 
 class PendingProviderAdapter(BaseEInvoiceAdapter):
     """Provider chưa có tài liệu API đầy đủ — báo lỗi rõ ràng, không trả số HĐ giả."""
@@ -1338,7 +1341,7 @@ class VNPTInvoiceAdapter(BaseEInvoiceAdapter):
                 ),
                 'ten_LoaiHDon': (
                     'Hóa đơn nháp' if is_draft
-                    else ('Hóa đơn bị thay thế' if is_replaced else '')
+                    else ('Hóa đơn bị thay thế' if is_replaced else 'Hóa đơn mới')
                 ),
                 'tax_authority_status': (
                     status_raw or ('Hóa đơn nháp' if is_draft else 'Đã phát hành')
@@ -2106,6 +2109,19 @@ class VNPTInvoiceAdapter(BaseEInvoiceAdapter):
             }
 
         info = dict(replacement_info or {})
+        try:
+            tchdon = int(info.get('TCHDon') if info.get('TCHDon') is not None else 1)
+        except (TypeError, ValueError):
+            tchdon = 1
+        if tchdon != 1:
+            return {
+                'success': False,
+                'error': (
+                    'VNPT: phần mềm chỉ hỗ trợ hóa đơn thay thế (type=1). '
+                    'Điều chỉnh vui lòng dùng Mắt Bão hoặc portal VNPT.'
+                ),
+            }
+
         old_fkey = str(
             info.get('old_fkey')
             or info.get('MSHDonDCLQuan')

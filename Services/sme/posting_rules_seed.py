@@ -1,7 +1,7 @@
 """Quy tắc định khoản mặc định SME (TT99) — tham chiếu mã trong sme_chart_of_accounts."""
 from __future__ import annotations
 
-RULES_SEED_VERSION = 'posting_rules_v3_2026-07'
+RULES_SEED_VERSION = 'posting_rules_v5_2026-07-payroll-sx'
 
 # payment_method: CASH | BANK_TRANSFER | CREDIT
 # business_type: mã nghiệp vụ nội bộ phần mềm
@@ -212,5 +212,67 @@ DEFAULT_POSTING_RULES: list[dict] = [
         'import_tax_credit_account': None,
         'is_vat_applicable': 1,
         'description': 'Bán hàng công nợ',
+    },
+    # Phiếu thu / chi thủ công (01-TT / 02-TT)
+    {
+        'business_type': 'THU_TIEN',
+        'payment_method': 'CASH',
+        'debit_account_code': '1111',
+        'credit_account_code': '131',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Phiếu thu tiền mặt (01-TT)',
+    },
+    {
+        'business_type': 'THU_TIEN',
+        'payment_method': 'BANK_TRANSFER',
+        'debit_account_code': '1121',
+        'credit_account_code': '131',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Phiếu thu chuyển khoản (01-TT)',
+    },
+    {
+        'business_type': 'CHI_TIEN',
+        'payment_method': 'CASH',
+        'debit_account_code': '331',
+        'credit_account_code': '1111',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Phiếu chi tiền mặt (02-TT)',
+    },
+    {
+        'business_type': 'CHI_TIEN',
+        'payment_method': 'BANK_TRANSFER',
+        'debit_account_code': '331',
+        'credit_account_code': '1121',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Phiếu chi chuyển khoản (02-TT)',
+    },
+    # Trích lương / trả lương
+    {
+        'business_type': 'TRICH_LUONG',
+        'payment_method': 'CREDIT',
+        'debit_account_code': '642',
+        'credit_account_code': '3341',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Trích lương phải trả NLĐ',
+    },
+    {
+        'business_type': 'SAN_XUAT_TP',
+        'payment_method': 'CREDIT',
+        'debit_account_code': '155',
+        'credit_account_code': '152',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Sản xuất — nhập thành phẩm / xuất NVL',
     },
 ]

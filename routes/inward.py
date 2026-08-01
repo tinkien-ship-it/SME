@@ -103,32 +103,48 @@ class MatbaoPurchaseProvider:
             return {"success": False, "error": str(e)}
 
     def login_tct(self):
-        """BƯỚC 2: Đăng nhập TCT bằng data từ DB (invoice_settings)"""
+        """BƯỚC 2: Đăng nhập TCT bằng data từ DB (invoice_settings — provider đang active)."""
         conn = None
         try:
+            from Services.einvoice_registry import normalize_provider_code
+            provider_key = normalize_provider_code(
+                self.config.get('provider_name') or self.config.get('name') or 'matbao'
+            )
             conn = get_db_connection()
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            # Truy vấn đúng các trường như trong ảnh Screenshot (635).png
+            # Ưu tiên đúng provider đang dùng; không hardcode matbao + is_active riêng
             cursor.execute("""
-                SELECT tax_code, etax_password, etax_cvalue, etax_ckey 
-                FROM invoice_settings 
-                WHERE provider_name = 'matbao' AND is_active = 1
+                SELECT tax_code, etax_password, etax_cvalue, etax_ckey
+                FROM invoice_settings
+                WHERE LOWER(TRIM(provider_name)) = ?
                 LIMIT 1
-            """)
+            """, (provider_key,))
             row = cursor.fetchone()
+            if not row:
+                cursor.execute("""
+                    SELECT tax_code, etax_password, etax_cvalue, etax_ckey
+                    FROM invoice_settings
+                    WHERE is_active = 1
+                    LIMIT 1
+                """)
+                row = cursor.fetchone()
 
             if not row:
-                return {"success": False, "error": "Không tìm thấy cấu hình hoạt động trong DB"}
+                return {"success": False, "error": "Không tìm thấy cấu hình HĐĐT / eTax trong Settings"}
 
-            # Map dữ liệu chuẩn theo tài liệu Docx
             payload = {
-                "username": str(row['tax_code']).strip(),
-                "password": str(row['etax_password']).strip(),
-                "cvalue":   str(row['etax_cvalue']).strip(), # Mã captcha người dùng gõ
-                "ckey":     str(row['etax_ckey']).strip()     # Key captcha lấy từ Bước 1
+                "username": str(row['tax_code'] or '').strip(),
+                "password": str(row['etax_password'] or '').strip(),
+                "cvalue":   str(row['etax_cvalue'] or '').strip(),
+                "ckey":     str(row['etax_ckey'] or '').strip(),
             }
+            if not payload["username"] or not payload["password"]:
+                return {
+                    "success": False,
+                    "error": "Thiếu MST hoặc mật khẩu eTax (CQT) trong Settings → HĐĐT",
+                }
 
             url = f"{self.base_url}/hoa-don-dau-vao/login-tct"
             r = self.session.post(url, json=payload, headers=self._get_headers(), timeout=20, verify=False)
@@ -280,33 +296,14 @@ def prepare_invoice_data(inv):
         logging.error(f"Lỗi format dữ liệu hóa đơn: {str(e)}")
         return None
 
-# ====================== LẤY CONFIG TỪ DB ======================
+# ====================== LẤY CONFIG TỪ DB (theo Settings) ======================
 def get_matbao_config():
-    conn = None
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Lấy thông tin API từ bảng invoice_settings
-        cursor.execute("""
-            SELECT api_url, api_key 
-            FROM invoice_settings 
-            WHERE provider_name = 'matbao' 
-              AND (is_active = 1 OR is_active IS NULL)
-            LIMIT 1
-        """)
-        row = cursor.fetchone()
-        
-        if not row:
-            raise ValueError("Chưa cấu hình API Mắt Bão trong invoice_settings")
-
-        return {
-            "api_url": row['api_url'].strip().rstrip('/'),
-            "api_key": row['api_key'].strip(),
-            "name": "matbao"
-        }
-    finally:
-        if conn: conn.close()
+    """
+    Backward-compatible: trả config đồng bộ HĐ đầu vào theo provider đang active.
+    (Trước đây hardcode provider_name='matbao'.)
+    """
+    from Services.invoice_config import get_purchase_sync_config
+    return get_purchase_sync_config()
 
 
 def _decode_inward_pdf_from_row(row):
@@ -355,7 +352,7 @@ def register_inward_routes(app):
     @app.route('/api/invoices/sync-gdt', methods=['POST'])
     def sync_gdt():
         """
-        Endpoint gọi từ giao diện để bắt đầu tải hóa đơn từ Mắt Bão về DB
+        Đồng bộ HĐ đầu vào theo nhà cung cấp đang chọn ở Settings.
         """
         data = request.get_json(silent=True) or {}
         month_str = data.get('month') # Định dạng MM/YYYY
@@ -365,11 +362,25 @@ def register_inward_routes(app):
 
         conn = None
         try:
-            # 1. Khởi tạo Provider
-            config = get_matbao_config()
-            provider = MatbaoPurchaseProvider(config) # Class đã fix ở bước trước
+            from Services.invoice_config import get_purchase_sync_config
+            from Services.einvoice_registry import normalize_provider_code, get_provider_meta
 
-            # 2. Gọi API Mắt Bão lấy danh sách
+            config = get_purchase_sync_config()
+            provider_key = normalize_provider_code(config.get('provider_name') or 'matbao')
+            # Hiện chỉ Matbao có API hoa-don-dau-vao; registry đã chặn provider khác
+            if provider_key != 'matbao':
+                label = (get_provider_meta(provider_key) or {}).get('label') or provider_key
+                return jsonify({
+                    "success": False,
+                    "error": (
+                        f"Đồng bộ HĐ mua hàng chưa hỗ trợ {label}. "
+                        "Vào Settings chọn Mắt Bão (hoặc provider có supports_purchase_sync)."
+                    ),
+                }), 400
+
+            provider = MatbaoPurchaseProvider(config)
+
+            # 2. Gọi API lấy danh sách
             result = provider.sync_invoices_by_month(month_str)
 
             if not result["success"]:
@@ -484,14 +495,14 @@ def register_inward_routes(app):
                     CASE WHEN EXISTS (
                         SELECT 1 FROM import i_stock
                         WHERE TRIM(COALESCE(i_stock.bill_no, '')) = TRIM(COALESCE(si.invoice_no, ''))
-                          AND COALESCE(i_stock.doc_type, 'stock') != 'service'
+                          AND COALESCE(i_stock.doc_type, 'stock') NOT IN ('service', 'landed_cost')
                     ) THEN 1 ELSE 0 END AS has_import,
                     CASE WHEN si.status = 'accounted' OR EXISTS (
                         SELECT 1 FROM import i_svc
                         WHERE i_svc.from_invoice_id = si.id
                            OR (
                                TRIM(COALESCE(i_svc.bill_no, '')) = TRIM(COALESCE(si.invoice_no, ''))
-                               AND COALESCE(i_svc.doc_type, '') = 'service'
+                               AND COALESCE(i_svc.doc_type, '') IN ('service', 'landed_cost')
                            )
                     ) THEN 1 ELSE 0 END AS has_accounted
                 FROM supplier_invoice si
@@ -517,9 +528,40 @@ def register_inward_routes(app):
             rows = c.fetchall()
 
             result = []
+            # Bảng landed cost chỉ có trên tenant SME đã dùng tính năng
+            has_lcd_table = bool(c.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='sme_landed_cost_docs'"
+            ).fetchone())
+            landed_ids = set()
+            if has_lcd_table:
+                for r in c.execute(
+                    """
+                    SELECT cost_invoice_id FROM sme_landed_cost_docs
+                    WHERE COALESCE(status, 'posted') = 'posted'
+                    """
+                ).fetchall():
+                    if r[0] is not None:
+                        landed_ids.add(int(r[0]))
+
             for row in rows:
                 inv = dict(row)
                 inv['has_hach_toan'] = bool(inv.get('has_accounted'))
+                inv['has_landed_cost'] = 1 if int(inv.get('id') or 0) in landed_ids else 0
+                inv['is_manual'] = 0
+                inv['is_foreign'] = 0
+                raw = inv.get('xml_data') or ''
+                if isinstance(raw, str) and raw.strip().startswith('{'):
+                    try:
+                        meta = json.loads(raw)
+                        if str(meta.get('SourceType') or '').lower() == 'manual':
+                            inv['is_manual'] = 1
+                        if meta.get('IsForeign') or str(inv.get('serial') or '').upper() in (
+                            'NGOAI', 'FOREIGN', 'MANUAL',
+                        ):
+                            inv['is_foreign'] = 1
+                        inv['cost_category'] = meta.get('CostCategory') or None
+                    except (TypeError, ValueError, json.JSONDecodeError):
+                        pass
                 result.append(inv)
 
             if status == 'imported':

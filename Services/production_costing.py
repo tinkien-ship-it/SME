@@ -673,6 +673,12 @@ def list_production_orders(
         JOIN products p ON p.id = o.finished_product_id
         WHERE 1=1
     """
+    cols = {r[1] for r in c.execute('PRAGMA table_info(production_orders)').fetchall()}
+    if 'journal_entry_id' in cols:
+        sql = sql.replace(
+            'o.note, o.created_at, o.cancelled_at,',
+            'o.note, o.created_at, o.cancelled_at, o.journal_entry_id,',
+        )
     params: list = []
     if date_from:
         sql += " AND o.production_date >= ?"

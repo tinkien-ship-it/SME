@@ -42,9 +42,14 @@
                 </ol>
             </nav>
         </div>
-        <button class="btn btn-primary shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#syncModal">
-            <i class="fas fa-sync-alt me-2"></i>Đồng bộ hóa đơn mới
-        </button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-success shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#manualInvoiceModal">
+                <i class="fas fa-keyboard me-2"></i>Nhập tay HĐ chi phí
+            </button>
+            <button class="btn btn-primary shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#syncModal">
+                <i class="fas fa-sync-alt me-2"></i>Đồng bộ hóa đơn mới
+            </button>
+        </div>
     </div>
 
     <div class="card shadow-sm mb-4 border-0" style="border-left: 5px solid #ffc107 !important; background-color: #fff9e6;">
@@ -57,11 +62,15 @@
                     Hướng dẫn xử lý hóa đơn
                 </h6>
                 <p class="card-text text-dark mb-0">
-                    Chỉ <span class="badge bg-primary text-white p-1 px-2">Lập phiếu nhập</span> cho hàng mua để bán, sản xuất và tài sản cố định.
+                    Chỉ <span class="badge bg-primary text-white p-1 px-2">Lập phiếu nhập</span> cho hàng mua (HH/NVL/TSCĐ/CCDC).
+                    <span class="badge bg-warning text-dark p-1 px-2">Hạch toán</span> cho dịch vụ thuần (642).
+                    <span class="badge bg-success text-white p-1 px-2">Phân bổ chi phí</span> để vốn hóa CP vận chuyển/lắp đặt vào giá vốn hàng/TSCĐ.
+                    <br>
+                    <strong>CP vận chuyển nước ngoài / không có HĐĐT:</strong> dùng
+                    <span class="badge bg-success text-white p-1 px-2">Nhập tay HĐ chi phí</span>
+                    rồi <strong>Phân bổ chi phí</strong> vào phiếu nhập hàng tương ứng.
                     <br>
                     Đối với dịch vụ hoặc hàng dùng ngay như Dịch vụ ăn uống, văn phòng phẩm,...: Hãy nhấn nút <strong class="text-danger border-bottom border-danger">Hạch Toán</strong>.
-                    <br>
-                    Nếu hạch toán sai, hãy vào Danh Sách Phiếu Chi để sửa và hạch toán lại. Nếu đã lỡ Hạch Toán, nhưng muốn Lập Phiếu Nhập Kho thì xóa phiếu chi liên quan để Lập Phiếu Nhập. 
                 </p>
             </div>
         </div>
@@ -109,6 +118,105 @@
                 </thead>
                 <tbody id="invoiceTableBody"></tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="manualInvoiceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-keyboard me-2"></i>Nhập tay hóa đơn chi phí</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="small text-muted mb-3">
+                    Dùng cho chứng từ CP mua hàng không có hóa đơn điện tử Việt Nam
+                    (ví dụ vận chuyển quốc tế, freight, AWB, bill of lading…). Sau khi lưu có thể phân bổ vào phiếu nhập hàng như HĐĐT.
+                </p>
+                <form id="manualInvoiceForm" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Ngày chứng từ <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control datepicker" id="man_date" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Số chứng từ / HĐ <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="man_invoice_no" placeholder="VD: AWB123 / BL456" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Ký hiệu / nguồn</label>
+                        <input type="text" class="form-control" id="man_serial" value="NGOẠI" placeholder="NGOẠI">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Nhà cung cấp / hãng vận chuyển <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="man_seller_name" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Mã số thuế (nếu có)</label>
+                        <input type="text" class="form-control" id="man_tax_code" placeholder="Để trống nếu nước ngoài">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Loại chi phí</label>
+                        <select class="form-select" id="man_cost_category">
+                            <option value="FREIGHT" selected>Vận chuyển</option>
+                            <option value="HANDLING">Bốc xếp</option>
+                            <option value="INSURANCE">Bảo hiểm</option>
+                            <option value="INSTALL">Lắp đặt</option>
+                            <option value="OTHER">Chi phí khác</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Địa chỉ NCC</label>
+                        <input type="text" class="form-control" id="man_address">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Diễn giải dòng chi phí</label>
+                        <input type="text" class="form-control" id="man_description" value="Chi phí vận chuyển quốc tế">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Nguyên tệ</label>
+                        <input type="text" class="form-control" id="man_currency" value="USD" placeholder="USD / EUR…">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Số tiền nguyên tệ</label>
+                        <input type="text" class="form-control text-end" id="man_foreign_amount" placeholder="0">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Tỷ giá (→ VND)</label>
+                        <input type="text" class="form-control text-end" id="man_fx" value="1">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Thành tiền VND <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control text-end fw-bold" id="man_amount_net" required placeholder="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">% thuế GTGT</label>
+                        <input type="number" class="form-control" id="man_tax_pct" value="0" min="0" step="0.1">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Tiền thuế GTGT</label>
+                        <input type="text" class="form-control text-end bg-light" id="man_tax_amount" value="0" readonly>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Tổng thanh toán VND</label>
+                        <input type="text" class="form-control text-end fw-bold text-success bg-light" id="man_total" value="0" readonly>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="man_goto_allocate" checked>
+                            <label class="form-check-label" for="man_goto_allocate">
+                                Sau khi lưu, mở luôn màn <strong>Phân bổ chi phí</strong>
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-success fw-bold" id="btnSaveManualInvoice">
+                    <i class="fas fa-save me-1"></i> Lưu chứng từ
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -184,6 +292,8 @@
                             <select class="form-select" id="ht_payment_method">
                                 <option value="cash">Tiền Mặt (111)</option>
                                 <option value="transfer" selected>Chuyển Khoản (112)</option>
+                                <option value="unpaid" selected>Chưa Thanh Toán (331)</option>
+
                             </select>
                         </div>
 
@@ -278,7 +388,8 @@ document.addEventListener('DOMContentLoaded', function() {
         locale: "vn", 
         dateFormat: "Y-m-d", 
         altInput: true, 
-        altFormat: "d/m/Y" 
+        altFormat: "d/m/Y",
+        defaultDate: "today",
     });
 
     flatpickr("#syncMonth", {
@@ -315,8 +426,9 @@ async function loadInvoices() {
         data.forEach(inv => {
             // SỬA LỖI TẠI ĐÂY: Xử lý hiển thị ngày dạng Việt Nam (DD/MM/YYYY) bằng đối tượng Date
             let dateVN = '—';
-            if (inv.date) {
-                const dateObj = new Date(inv.date);
+            const dateSrc = inv.invoice_date || inv.date;
+            if (dateSrc) {
+                const dateObj = new Date(dateSrc);
                 if (!isNaN(dateObj.getTime())) {
                     const day = String(dateObj.getDate()).padStart(2, '0');
                     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -329,6 +441,7 @@ async function loadInvoices() {
             const sellerAddress = inv.address || '';
             
             const isImported = inv.has_import === 1;
+            const isLanded = inv.has_landed_cost === 1;
             const isHachToan = inv.has_hach_toan === true || inv.has_accounted === 1 || inv.status === 'accounted';
             const isProcessed = isImported || isHachToan;
 
@@ -336,15 +449,24 @@ async function loadInvoices() {
             let statusHtml = '';
             if (isImported) {
                 statusHtml = '<span class="badge bg-success-subtle text-success border border-success status-badge">ĐÃ NHẬP KHO</span>';
+            } else if (isLanded) {
+                statusHtml = '<span class="badge bg-success-subtle text-success border border-success status-badge">ĐÃ PHÂN BỔ CP</span>';
             } else if (isHachToan) {
                 statusHtml = '<span class="badge bg-info-subtle text-info border border-info status-badge">ĐÃ HẠCH TOÁN</span>';
             } else {
                 statusHtml = '<span class="badge bg-warning-subtle text-warning border border-warning status-badge">CHỜ XỬ LÝ</span>';
             }
 
-            // Action Buttons: Khóa nếu đã xử lý
+            // Action Buttons
             let actionHtml = '';
-            if (isProcessed) {
+            if (isLanded && !isImported) {
+                actionHtml = `
+                    <button class="btn btn-sm btn-outline-danger shadow-sm px-3 fw-bold me-1"
+                            onclick="goToLandedCost('${inv.id}')">
+                        <i class="fas fa-undo me-1"></i> Sửa phân bổ CP
+                    </button>
+                `;
+            } else if (isProcessed) {
                 actionHtml = `
                     <button class="btn btn-sm btn-outline-secondary px-3 opacity-50" disabled style="cursor: not-allowed;">
                         <i class="fas fa-lock me-1"></i> Đã xử lý
@@ -355,9 +477,13 @@ async function loadInvoices() {
                     <button class="btn btn-sm btn-primary shadow-sm px-3 fw-bold me-1" onclick="goToImport('${inv.id}')">
                         <i class="fas fa-plus me-1"></i> Lập Phiếu Nhập
                     </button>
-                    <button class="btn btn-sm btn-warning shadow-sm px-3 fw-bold" 
+                    <button class="btn btn-sm btn-warning shadow-sm px-3 fw-bold me-1"
                             onclick="goToServiceImport('${inv.id}')">
                         <i class="fas fa-calculator me-1"></i> Hạch Toán
+                    </button>
+                    <button class="btn btn-sm btn-success shadow-sm px-3 fw-bold"
+                            onclick="goToLandedCost('${inv.id}')">
+                        <i class="fas fa-share-alt me-1"></i> Phân bổ CP
                     </button>
                 `;
             }
@@ -371,10 +497,12 @@ async function loadInvoices() {
                     <td>
                         <div class="invoice-id" 
                              style="cursor: pointer; color: #0d6efd; text-decoration: underline; font-weight: bold;" 
-                             onclick="viewPdfById(${inv.id})">
+                             onclick="${inv.is_manual === 1 ? `Swal.fire('Chứng từ nhập tay','Không có file PDF HĐĐT.','info')` : `viewPdfById(${inv.id})`}">
                              ${inv.invoice_no || '—'}
                         </div>
                         <div class="text-muted" style="font-size: 0.75rem;">KH: ${inv.serial || '—'}</div>
+                        ${inv.is_manual === 1 ? '<span class="badge bg-secondary mt-1">Nhập tay</span>' : ''}
+                        ${inv.is_foreign === 1 && inv.is_manual !== 1 ? '<span class="badge bg-info text-dark mt-1">Ngoại</span>' : ''}
                     </td>
                     <td>
                         <div class="fw-bold ${isProcessed ? 'text-muted' : ''}" style="font-size: 0.9rem;">${inv.seller_name || '—'}</div>
@@ -406,6 +534,99 @@ function viewPdfById(invoiceId) {
     window.open(`/api/invoices/inward/${invoiceId}/pdf`, '_blank');
 }
 
+function parseManMoney(el) {
+    const raw = String(el?.value || '').replace(/[^\d.,-]/g, '').replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(raw);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function formatManMoney(n) {
+    return Number(n || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+}
+
+function recalcManualInvoice() {
+    const foreign = parseManMoney(document.getElementById('man_foreign_amount'));
+    const fx = parseManMoney(document.getElementById('man_fx')) || 1;
+    let net = parseManMoney(document.getElementById('man_amount_net'));
+    if (foreign > 0 && fx > 0) {
+        net = Math.round(foreign * fx);
+        document.getElementById('man_amount_net').value = formatManMoney(net);
+    }
+    const taxPct = parseFloat(document.getElementById('man_tax_pct').value) || 0;
+    const tax = Math.round(net * taxPct / 100);
+    const total = net + tax;
+    document.getElementById('man_tax_amount').value = formatManMoney(tax);
+    document.getElementById('man_total').value = formatManMoney(total);
+}
+
+['man_foreign_amount', 'man_fx', 'man_amount_net', 'man_tax_pct'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', recalcManualInvoice);
+});
+
+document.getElementById('btnSaveManualInvoice')?.addEventListener('click', async () => {
+    recalcManualInvoice();
+    const amountNet = parseManMoney(document.getElementById('man_amount_net'));
+    const taxPct = parseFloat(document.getElementById('man_tax_pct').value) || 0;
+    const taxAmount = parseManMoney(document.getElementById('man_tax_amount'));
+    const total = parseManMoney(document.getElementById('man_total'));
+    const invoiceNo = (document.getElementById('man_invoice_no').value || '').trim();
+    const sellerName = (document.getElementById('man_seller_name').value || '').trim();
+    const invoiceDateRaw = document.getElementById('man_date').value || '';
+    let invoiceDate = invoiceDateRaw;
+    const dateEl = document.getElementById('man_date');
+    if (dateEl?._flatpickr?.selectedDates?.[0]) {
+        const d = dateEl._flatpickr.selectedDates[0];
+        invoiceDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(invoiceDateRaw)) {
+        const [dd, mm, yyyy] = invoiceDateRaw.split('/');
+        invoiceDate = `${yyyy}-${mm}-${dd}`;
+    }
+    if (!invoiceNo || !sellerName || amountNet <= 0) {
+        Swal.fire('Thiếu dữ liệu', 'Nhập số chứng từ, nhà cung cấp và thành tiền VND > 0.', 'warning');
+        return;
+    }
+    const payload = {
+        invoice_date: invoiceDate,
+        invoice_no: invoiceNo,
+        serial: (document.getElementById('man_serial').value || 'NGOẠI').trim(),
+        seller_name: sellerName,
+        seller_tax_code: (document.getElementById('man_tax_code').value || '').trim(),
+        seller_address: (document.getElementById('man_address').value || '').trim(),
+        description: (document.getElementById('man_description').value || '').trim(),
+        cost_category: document.getElementById('man_cost_category').value,
+        currency: (document.getElementById('man_currency').value || 'VND').trim(),
+        foreign_amount: parseManMoney(document.getElementById('man_foreign_amount')) || null,
+        exchange_rate: parseManMoney(document.getElementById('man_fx')) || 1,
+        amount_net: amountNet,
+        tax_pct: taxPct,
+        tax_amount: taxAmount,
+        total: total,
+    };
+    try {
+        const res = await fetch('/api/sme/invoices/inward/manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!json.success) {
+            Swal.fire('Lỗi', json.error || 'Không lưu được chứng từ', 'error');
+            return;
+        }
+        const id = json.data?.id;
+        bootstrap.Modal.getInstance(document.getElementById('manualInvoiceModal'))?.hide();
+        if (document.getElementById('man_goto_allocate')?.checked && id) {
+            const cat = encodeURIComponent(payload.cost_category || 'FREIGHT');
+            window.location.href = `/SME_landed_cost?invoice_id=${id}&cost_category=${cat}`;
+            return;
+        }
+        await Swal.fire('Thành công', `Đã tạo chứng từ ${json.data.invoice_no}`, 'success');
+        loadInvoices();
+    } catch (e) {
+        Swal.fire('Lỗi kết nối', String(e.message || e), 'error');
+    }
+});
+
 async function viewPdf(pdfUrl) {
     if (!pdfUrl || pdfUrl === '#' || pdfUrl === '') {
         Swal.fire('Thông báo', 'Không tìm thấy link PDF cho hóa đơn này.', 'info');
@@ -431,8 +652,8 @@ const CURRENT_ROLE = {{ (current_user.role or '') | tojson }};
 const IS_FB_BUSINESS = {{ ((tenant_profile.business_line or '') == 'fb_service') | tojson }};
 
 function importPageUrl() {
-    const isFB = IS_FB_BUSINESS || FB_ROLES.includes(CURRENT_ROLE);
-    return isFB ? '/importFB' : '/import';
+    // Trang này chỉ phục vụ SME hub — luôn dùng SME_import
+    return '/SME_import';
 }
 
 function goToImport(invoiceId) {
@@ -440,7 +661,11 @@ function goToImport(invoiceId) {
 }
 
 function goToServiceImport(invoiceId) {
-    window.location.href = `/import?invoice_id=${invoiceId}&mode=service`;
+    window.location.href = `/SME_import?invoice_id=${invoiceId}&mode=service`;
+}
+
+function goToLandedCost(invoiceId) {
+    window.location.href = `/SME_landed_cost?invoice_id=${invoiceId}`;
 }
 
 // ====================== MODAL HẠCH TOÁN ======================

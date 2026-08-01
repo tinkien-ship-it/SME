@@ -182,7 +182,8 @@ async function loadInvoices() {
             const invNo = isDraft ? '0 (Nháp)' : (inv.invoice_no || '---');
             const displayCustomer = inv.company || inv.customer || 'Bán cho người tiêu dùng';
             const providerLabel = inv.provider_label || inv.provider || '—';
-            const isReplaced = inv.ten_LoaiHDon === "Hóa đơn bị thay thế";
+            const isReplaced = inv.ten_LoaiHDon === "Hóa đơn bị thay thế"
+                || (String(inv.note || '').includes('Đã bị thay thế bởi HĐ'));
             const saleId = inv.sale_id || '';
             const invId = inv.invoice_id || '';
 
@@ -203,7 +204,9 @@ async function loadInvoices() {
             } else {
                 const disabledAttr = isReplaced ? 'disabled' : '';
                 const blurStyle = isReplaced ? 'style="opacity: 0.5; cursor: not-allowed;"' : '';
-                const buttonText = isReplaced ? '<i class="fas fa-ban"></i> Đã bị thay thế' : '<i class="fas fa-exchange-alt"></i> Xuất HĐ Thay Thế';
+                const buttonText = isReplaced
+                    ? '<i class="fas fa-ban"></i> Đã bị thay thế'
+                    : '<i class="fas fa-exchange-alt"></i> Thay thế / Đ.chỉnh';
                 actionHtml = `
                     <div class="d-flex justify-content-center gap-1 flex-wrap">
                         <button onclick="viewPdfOnly('${inv.invoice_no}')" class="btn btn-xs btn-outline-secondary">
@@ -211,7 +214,7 @@ async function loadInvoices() {
                         </button>
                         <button onclick="downloadFile('${inv.invoice_no}', 'pdf')" class="btn btn-xs btn-danger fw-bold">PDF</button>
                         <button onclick="downloadFile('${inv.invoice_no}', 'xml')" class="btn btn-xs btn-success fw-bold">XML</button>
-                        <button onclick="openReplacePage('${inv.invoice_no}', '${saleId}')"
+                        <button onclick="openCorrectOrAdjustDialog('${inv.invoice_no}', '${saleId}')"
                                 class="btn btn-xs btn-warning fw-bold"
                                 ${disabledAttr} ${blurStyle}>${buttonText}</button>
                     </div>`;
@@ -229,7 +232,7 @@ async function loadInvoices() {
                     <td class="small text-muted">${formatDateVN(inv.invoice_date)}</td>
                     <td>
                         <div class="fw-bold small">${displayCustomer}</div>
-                        <div class="text-muted" style="font-size: 13px;">Loại: ${inv.ten_LoaiHDon || (isDraft ? 'Hóa đơn nháp' : '-')}</div>
+                        <div class="text-muted" style="font-size: 13px;">Loại: <span class="fw-semibold text-dark">${inv.ten_LoaiHDon || (isDraft ? 'Hóa đơn nháp' : 'Hóa đơn mới')}</span></div>
                     </td>
                     <td class="text-end fw-bold text-danger">${amount} đ</td>
                     <td class="text-center">
@@ -276,9 +279,41 @@ function formatDateVN(dateStr) {
         return dateStr || '---';
     }
 }
-// ====================== CHUYỂN ĐẾN TRANG THAY THẾ ======================
-function openReplacePage(invoiceNo, saleId = '') {
-    let url = `/sale/edit-reissue?invoice_no=${encodeURIComponent(invoiceNo)}`;
+// ====================== CHỌN THAY THẾ / ĐIỀU CHỈNH ======================
+async function openCorrectOrAdjustDialog(invoiceNo, saleId = '') {
+    const result = await Swal.fire({
+        title: `HĐ số ${invoiceNo}`,
+        html: `
+            <p class="text-start small text-muted mb-2">Chọn loại hóa đơn cần phát hành (theo Mắt Bão / TT78):</p>
+            <div class="text-start">
+                <label class="d-block mb-2"><input type="radio" name="tchdonPick" value="1" checked>
+                    <strong>Thay thế</strong> — thay toàn bộ HĐ gốc</label>
+                <label class="d-block mb-2"><input type="radio" name="tchdonPick" value="2">
+                    <strong>Điều chỉnh tăng</strong></label>
+                <label class="d-block mb-2"><input type="radio" name="tchdonPick" value="3">
+                    <strong>Điều chỉnh giảm</strong></label>
+                <label class="d-block mb-2"><input type="radio" name="tchdonPick" value="4">
+                    <strong>Điều chỉnh thông tin</strong></label>
+                <label class="d-block mb-1"><input type="radio" name="tchdonPick" value="5">
+                    <strong>Điều chỉnh tăng và giảm</strong></label>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Tiếp tục',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: '#e67e22',
+        preConfirm: () => {
+            const checked = document.querySelector('input[name="tchdonPick"]:checked');
+            return checked ? checked.value : '1';
+        },
+    });
+    if (!result.isConfirmed) return;
+    openReplacePage(invoiceNo, saleId, result.value || '1');
+}
+
+function openReplacePage(invoiceNo, saleId = '', tchdon = '1') {
+    let url = `/sale/edit-reissue?invoice_no=${encodeURIComponent(invoiceNo)}&tchdon=${encodeURIComponent(tchdon)}`;
     if (saleId) url += `&sale_id=${saleId}`;
     window.location.href = url;
 }

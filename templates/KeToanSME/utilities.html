@@ -1,22 +1,13 @@
-{% extends "base.html" %}
+{% extends "KeToanSME/_layout.html" %}
 {% block title %}Tiện ích SME{% endblock %}
-{% block extra_style %}
+{% block sme_head %}
 <style>
-.sme-dashboard-container{display:flex;min-height:calc(100vh - 160px);margin:-1.5rem}
-.sme-sidebar{width:280px;background:#fff;border-right:1px solid #dee2e6;padding:1.5rem 0;flex-shrink:0;overflow-y:auto}
-.sme-sidebar .nav-link-sub{display:flex;align-items:center;padding:.75rem 1.5rem;color:#495057;text-decoration:none;font-weight:500;border-left:4px solid transparent}
-.sme-sidebar .nav-link-sub:hover{background:#f8f9fa}
-.sme-sidebar .nav-link-sub.active{background:#e7f1ff;color:#0d6efd;border-left-color:#0d6efd}
-.sme-sidebar .nav-link-sub i{width:25px}
-.sme-content{flex-grow:1;padding:2rem;background:#f4f6f9}
 .util-card{border:0;border-radius:.5rem;transition:transform .15s}
 .util-card:hover{transform:translateY(-2px)}
 </style>
 {% endblock %}
-{% block content %}
-<div class="sme-dashboard-container">
-  <div class="sme-sidebar shadow-sm">{% include 'KeToanSME/_sidebar.html' %}</div>
-  <div class="sme-content">
+{% block sme_content %}
+
     <h4 class="fw-bold mb-1">Tiện ích</h4>
     <p class="text-muted small mb-4">Lối tắt các chức năng tự động hóa và sổ sách SME</p>
     <div class="row g-3">
@@ -30,8 +21,6 @@
       <div class="col-md-4"><a class="card util-card shadow-sm text-decoration-none text-dark h-100" href="{{ url_for('SME_form_01_bh') }}"><div class="card-body"><i class="fas fa-file-signature text-primary mb-2"></i><div class="fw-semibold">01-BH Đại lý / ký gửi</div><div class="small text-muted">Bảng thanh toán · In</div></div></a></div>
       <div class="col-md-4"><a class="card util-card shadow-sm text-decoration-none text-dark h-100" href="{{ url_for('SME_form_02_bh') }}"><div class="card-body"><i class="fas fa-id-card text-primary mb-2"></i><div class="fw-semibold">02-BH Thẻ quầy hàng</div><div class="small text-muted">Nhập–xuất–tồn theo ngày</div></div></a></div>
       <div class="col-md-4"><a class="card util-card shadow-sm text-decoration-none text-dark h-100" href="{{ url_for('store_setup_page') }}"><div class="card-body"><i class="fas fa-store text-primary mb-2"></i><div class="fw-semibold">Thiết lập cửa hàng</div><div class="small text-muted">Thông tin DN / MST</div></div></a></div>
-      <div class="col-md-4"><a class="card util-card shadow-sm text-decoration-none text-dark h-100" href="{{ url_for('audit_log_page') }}"><div class="card-body"><i class="fas fa-clock-rotate-left text-primary mb-2"></i><div class="fw-semibold">Nhật ký hệ thống</div><div class="small text-muted">Audit log thay đổi</div></div></a></div>
+      <div class="col-md-4"><a class="card util-card shadow-sm text-decoration-none text-dark h-100" href="{{ url_for('SME_audit_log') }}"><div class="card-body"><i class="fas fa-clock-rotate-left text-primary mb-2"></i><div class="fw-semibold">Nhật ký hệ thống</div><div class="small text-muted">Audit log thay đổi</div></div></a></div>
     </div>
-  </div>
-</div>
 {% endblock %}

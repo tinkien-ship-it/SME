@@ -1,57 +1,23 @@
-{% extends "base.html" %}
+{% extends "KeToanSME/_layout.html" %}
 {% block title %}Dashboard Kế Toán SME{% endblock %}
 
-{% block extra_style %}
+{% block sme_head %}
 <style>
-    .sme-dashboard-container {
-        display: flex;
-        min-height: calc(100vh - 160px);
-        margin: -1.5rem;
-    }
-    .sme-sidebar {
-        width: 280px;
-        background: #ffffff;
-        border-right: 1px solid #dee2e6;
-        padding: 1.5rem 0;
-        flex-shrink: 0;
-        overflow-y: auto;
-    }
-    .sme-sidebar .nav-link-sub {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem 1.5rem;
-        color: #495057;
-        text-decoration: none;
-        font-weight: 500;
-        border-left: 4px solid transparent;
-        transition: all 0.2s;
-    }
-    .sme-sidebar .nav-link-sub:hover { background: #f8f9fa; color: var(--primary); }
-    .sme-sidebar .nav-link-sub.active {
-        background: #e7f1ff; color: #0d6efd; border-left-color: #0d6efd; font-weight: 600;
-    }
-    .sme-sidebar .nav-link-sub i { width: 25px; font-size: 1.1rem; }
-    .sme-content { flex-grow: 1; padding: 2rem; background: #f4f6f9; overflow-y: auto; }
-    .metric-card { border: none; border-radius: 0.5rem; transition: transform 0.2s; }
-    .metric-card:hover { transform: translateY(-3px); }
-    .metric-icon {
-        width: 48px; height: 48px; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
-    }
+    .sme-dashboard-metric .card-body { padding: .75rem 1rem; }
+    .sme-dashboard-metric h5 { font-size: 1.05rem; }
+    .sme-dashboard-metric .metric-icon { width: 2.5rem; height: 2.5rem; font-size: 1rem; }
+    .sme-quick-btn { font-size: .85rem; padding: .4rem .6rem; }
+    .sme-featured-link { font-size: .88rem; padding: .55rem 1rem; }
+    .sme-chart-wrap { position: relative; height: 285px; }
 </style>
 {% endblock %}
 
-{% block content %}
+{% block sme_content %}
 {% set regime = (tenant_profile.accounting_regime or 'SME_TT99')|upper %}
 {% set regime_label = tenant_profile.accounting_regime_label or regime %}
-<div class="sme-dashboard-container">
-    <div class="sme-sidebar shadow-sm">
-        {% include 'KeToanSME/_sidebar.html' %}
-    </div>
-    <div class="sme-content">
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <div>
-                <h4 class="fw-bold text-dark mb-1">Trung Tâm Chỉ Số Tài Chính Doanh Nghiệp</h4>
+                <h4 class="fw-bold text-dark mb-0">{{ sme_hub_title | default('Kế Toán SME') }}</h4>
                 <p class="text-muted small mb-0">
                     {{ regime_label }}
                     {% if 'TT58' in regime %} · Chế độ siêu nhỏ (TT58){% else %} · Chế độ doanh nghiệp (TT99){% endif %}
@@ -66,52 +32,52 @@
                     <label class="form-label small mb-1">Đến tháng</label>
                     <select id="dashPeriod" class="form-select form-select-sm" style="width:110px"></select>
                 </div>
-                <button type="button" class="btn btn-primary btn-sm" id="btnDashRefresh">Làm mới</button>
-                <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_BCTC') }}"><i class="fas fa-file-excel me-1"></i> BCTC</a>
-                <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_vat_declaration') }}"><i class="fas fa-file-invoice me-1"></i> Tờ khai GTGT</a>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="btnDashRefresh" title="Tải lại số liệu">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
             </div>
         </div>
 
-        <div class="row g-3 mb-4">
+        <div class="row g-2 mb-3">
             <div class="col-xl-3 col-md-6">
-                <div class="card metric-card shadow-sm h-100">
+                <div class="card metric-card sme-dashboard-metric shadow-sm h-100">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Doanh Thu Thuần</span>
-                            <h4 class="fw-bold mb-0 text-primary" id="metric-revenue">—</h4>
+                            <span class="text-muted small fw-bold text-uppercase d-block mb-0" style="font-size:.68rem">Doanh thu thuần</span>
+                            <h5 class="fw-bold mb-0 text-primary" id="metric-revenue">—</h5>
                         </div>
                         <div class="metric-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-arrow-trend-up"></i></div>
                     </div>
                 </div>
             </div>
             <div class="col-xl-3 col-md-6">
-                <div class="card metric-card shadow-sm h-100">
+                <div class="card metric-card sme-dashboard-metric shadow-sm h-100">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Lợi Nhuận Gộp</span>
-                            <h4 class="fw-bold mb-0 text-success" id="metric-profit">—</h4>
+                            <span class="text-muted small fw-bold text-uppercase d-block mb-0" style="font-size:.68rem">Lợi nhuận gộp</span>
+                            <h5 class="fw-bold mb-0 text-success" id="metric-profit">—</h5>
                         </div>
                         <div class="metric-icon bg-success bg-opacity-10 text-success"><i class="fas fa-coins"></i></div>
                     </div>
                 </div>
             </div>
             <div class="col-xl-3 col-md-6">
-                <div class="card metric-card shadow-sm h-100">
+                <div class="card metric-card sme-dashboard-metric shadow-sm h-100">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Phải Thu (131)</span>
-                            <h4 class="fw-bold mb-0 text-warning" id="metric-receivable">—</h4>
+                            <span class="text-muted small fw-bold text-uppercase d-block mb-0" style="font-size:.68rem">Phải thu (131)</span>
+                            <h5 class="fw-bold mb-0 text-warning" id="metric-receivable">—</h5>
                         </div>
                         <div class="metric-icon bg-warning bg-opacity-10 text-warning"><i class="fas fa-user-clock"></i></div>
                     </div>
                 </div>
             </div>
             <div class="col-xl-3 col-md-6">
-                <div class="card metric-card shadow-sm h-100">
+                <div class="card metric-card sme-dashboard-metric shadow-sm h-100">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Phải Trả (331)</span>
-                            <h4 class="fw-bold mb-0 text-danger" id="metric-payable">—</h4>
+                            <span class="text-muted small fw-bold text-uppercase d-block mb-0" style="font-size:.68rem">Phải trả (331)</span>
+                            <h5 class="fw-bold mb-0 text-danger" id="metric-payable">—</h5>
                         </div>
                         <div class="metric-icon bg-danger bg-opacity-10 text-danger"><i class="fas fa-hand-holding-dollar"></i></div>
                     </div>
@@ -119,30 +85,70 @@
             </div>
         </div>
 
-        <div class="row g-4">
+        <div class="row g-2 mb-3">
+            <div class="col-lg-7">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white fw-bold py-2 small">
+                        <i class="fas fa-bolt text-warning me-1"></i> Thao tác nhanh
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="row g-1">
+                            {% for item in sme_dashboard_quick %}
+                            <div class="col-sm-6">
+                                <a href="{{ url_for(item['endpoint']) }}"
+                                   class="btn btn-outline-secondary w-100 text-start sme-quick-btn">
+                                    <i class="{{ item['icon'] }} me-1"></i>{{ item['label'] }}
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white fw-bold py-2 small">
+                        <i class="fas fa-star text-primary me-1"></i> Trang thường dùng
+                    </div>
+                    <div class="list-group list-group-flush">
+                        {% for item in sme_dashboard_featured %}
+                        <a href="{{ url_for(item['endpoint']) }}"
+                           class="list-group-item list-group-item-action sme-featured-link d-flex align-items-center py-2">
+                            <i class="{{ item['icon'] }} me-2"></i>{{ item['label'] }}
+                            <i class="fas fa-chevron-right ms-auto text-muted small"></i>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-2">
             <div class="col-lg-8">
                 <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body">
-                        <h6 class="fw-bold">Kết quả kinh doanh theo tháng</h6>
-                        <div style="height: 320px;"><canvas id="smePlChart"></canvas></div>
+                    <div class="card-header bg-white fw-bold py-2 small">
+                        <i class="fas fa-chart-column text-primary me-1"></i> Kết quả kinh doanh theo tháng
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="sme-chart-wrap"><canvas id="smePlChart"></canvas></div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-4">
                 <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body">
-                        <h6 class="fw-bold">Cơ cấu thuế (số dư Có 333*)</h6>
-                        <div style="height: 230px;"><canvas id="smeTaxChart"></canvas></div>
+                    <div class="card-header bg-white fw-bold py-2 small">
+                        <i class="fas fa-chart-pie text-success me-1"></i> Cơ cấu thuế (333*)
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="sme-chart-wrap"><canvas id="smeTaxChart"></canvas></div>
                         <div class="small text-muted mt-2" id="vatHint">—</div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 {% endblock %}
 
-{% block scripts %}
+{% block sme_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 (function () {

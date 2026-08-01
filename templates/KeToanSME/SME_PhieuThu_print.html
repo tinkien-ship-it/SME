@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Phiếu thu {{ voucher_no }} — 01-TT</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:18pt;font-weight:bold;margin:16px 0 4px}
+  .muted{font-style:italic;font-size:10pt}
+  .row{margin:6px 0}
+  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
+  .sign div{width:24%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div>
+    <div><strong>DOANH NGHIỆP:</strong> {{ info.business_name or info.company_name or '' }}</div>
+    <div>Địa chỉ: {{ info.address or '' }}</div>
+    <div>MST: {{ info.tax_code or '' }}</div>
+  </div>
+  <div style="text-align:right">
+    <div><strong>Mẫu số 01 - TT</strong></div>
+    <div class="muted">(Ban hành kèm theo Thông tư số 99/2025/TT-BTC<br>áp dụng DN / siêu nhỏ TT58)</div>
+  </div>
+</div>
+<div class="title">PHIẾU THU</div>
+<div style="text-align:center">Số: <strong>{{ voucher_no }}</strong> — Ngày {{ receipt.voucher_date }}</div>
+<div class="row">Họ tên người nộp tiền: <strong>{{ receipt.party_name }}</strong></div>
+<div class="row">Địa chỉ: {{ receipt.party_address or '' }}</div>
+<div class="row">Lý do thu: {{ receipt.reason or '' }}</div>
+<div class="row">Số tiền: <strong>{{ '{:,.0f}'.format(receipt.amount|float).replace(',', '.') }} đ</strong>
+  (Nợ {{ receipt.debit_account }} / Có {{ receipt.credit_account }})</div>
+<div class="row">Kèm theo: {{ receipt.attached_docs or 0 }} chứng từ gốc</div>
+<div class="sign">
+  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Người nộp tiền<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Thủ quỹ<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

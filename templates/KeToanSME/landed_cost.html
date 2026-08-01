@@ -1,0 +1,401 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Phân bổ chi phí mua hàng{% endblock %}
+{% block sme_head %}
+<style>
+  .lc-card { border: 0; box-shadow: 0 1px 3px rgba(15,23,42,.08); }
+  .lc-target-row:hover { background: #f8fafc; }
+  .lc-target-row.selected { background: #ecfdf5; }
+  .lc-mono { font-family: ui-monospace, Consolas, monospace; }
+</style>
+{% endblock %}
+{% block sme_breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item"><a href="{{ url_for('SME_purchasing') }}">Mua hàng</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('SME_inward_invoice') }}">Hóa đơn mua</a></li>
+    <li class="breadcrumb-item active">Phân bổ chi phí</li>
+  </ol>
+</nav>
+{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h4 class="fw-bold mb-1">Phân bổ chi phí mua hàng</h4>
+    <p class="text-muted small mb-0">
+      Vốn hóa HĐ chi phí (vận chuyển, bốc xếp, bảo hiểm, lắp đặt…) vào giá vốn HH/NVL/TSCĐ/CCDC.
+      Không sửa phiếu nhập hàng gốc — tạo phiếu CP riêng và điều chỉnh WAC/nguyên giá.
+    </p>
+  </div>
+  <a href="{{ url_for('SME_inward_invoice') }}" class="btn btn-outline-secondary btn-sm">← Hóa đơn mua</a>
+</div>
+
+<div class="alert alert-warning py-2 small" id="alertBox" style="display:none"></div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card lc-card mb-3">
+      <div class="card-header bg-white fw-bold">1. Hóa đơn chi phí</div>
+      <div class="card-body">
+        <div class="mb-2">
+          <label class="form-label small">ID hóa đơn</label>
+          <div class="input-group input-group-sm">
+            <input type="number" class="form-control" id="invoiceId" value="{{ invoice_id or '' }}">
+            <button class="btn btn-outline-primary" type="button" id="btnLoadInvoice">Tải</button>
+          </div>
+        </div>
+        <div id="invoiceMeta" class="small text-muted">Chưa tải hóa đơn.</div>
+        <div id="reverseBox" class="mt-3" style="display:none">
+          <button type="button" class="btn btn-outline-danger btn-sm w-100 fw-bold" id="btnReverse">
+            <i class="fas fa-undo me-1"></i> Hủy phân bổ để sửa lại
+          </button>
+          <div class="form-text">Đảo WAC / vốn stock_moves / bút toán, mở lại HĐ chờ xử lý.</div>
+        </div>
+        <hr>
+        <div class="mb-2">
+          <label class="form-label small">Loại chi phí</label>
+          <select class="form-select form-select-sm" id="costCategory"></select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Phạm vi nhận phân bổ</label>
+          <select class="form-select form-select-sm" id="scope">
+            <option value="all">Tất cả (HH + NVL + TSCĐ + CCDC)</option>
+            <option value="goods">Chỉ hàng hóa (156)</option>
+            <option value="materials">Chỉ NVL (152)</option>
+            <option value="fixed_asset">Chỉ TSCĐ (211)</option>
+            <option value="tools">Chỉ CCDC (153)</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Thanh toán</label>
+          <select class="form-select form-select-sm" id="paymentStatus">
+            <option value="Chưa thanh toán">Chưa thanh toán (331)</option>
+            <option value="Đã thanh toán">Đã thanh toán</option>
+          </select>
+        </div>
+        <div class="mb-2" id="payMethodWrap" style="display:none">
+          <label class="form-label small">Hình thức</label>
+          <select class="form-select form-select-sm" id="paymentMethod">
+            <option value="cash">Tiền mặt (111)</option>
+            <option value="bank">Chuyển khoản (112)</option>
+          </select>
+        </div>
+        <div class="mb-0">
+          <label class="form-label small">Ghi chú</label>
+          <input type="text" class="form-control form-control-sm" id="note" placeholder="Tùy chọn…">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card lc-card mb-3">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold">2. Chọn phiếu nhập hàng nhận phân bổ</span>
+        <div class="input-group input-group-sm" style="max-width:280px">
+          <input type="text" class="form-control" id="targetSearch" placeholder="Số PN / HĐ / NCC…">
+          <button class="btn btn-outline-secondary text-white" type="button" id="btnSearchTargets">Tìm</button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive" style="max-height:280px">
+          <table class="table table-sm mb-0">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th style="width:40px"></th>
+                <th>Số PN</th>
+                <th>Ngày</th>
+                <th>HĐ hàng</th>
+                <th>NCC</th>
+                <th class="text-end">Giá trị gốc</th>
+              </tr>
+            </thead>
+            <tbody id="targetBody">
+              <tr><td colspan="6" class="text-center text-muted py-4">Chọn phạm vi rồi tải danh sách</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card lc-card mb-3">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold">3. Xem trước phân bổ</span>
+        <button class="btn btn-sm btn-outline-primary text-white" type="button" id="btnPreview">Tính phân bổ</button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive" style="max-height:320px">
+          <table class="table table-sm mb-0">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th>PN</th>
+                <th>Hàng / tài sản</th>
+                <th>Loại</th>
+                <th>TK</th>
+                <th class="text-end">Giá trị gốc</th>
+                <th class="text-end">CP phân bổ</th>
+              </tr>
+            </thead>
+            <tbody id="previewBody">
+              <tr><td colspan="6" class="text-center text-muted py-4">Chưa có dữ liệu xem trước</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="small" id="previewSummary">—</div>
+          <button class="btn btn-success fw-bold" type="button" id="btnAllocate" disabled>
+            <i class="fas fa-check me-1"></i> Xác nhận phân bổ
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block sme_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function () {
+  const money = (v) => Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' ₫';
+  const LINE_TYPE_LABEL = {
+    goods: 'Hàng hóa',
+    materials: 'Vật tư (NVL)',
+    fixed_asset: 'TSCĐ',
+    tools: 'CCDC',
+    service: 'Dịch vụ',
+    finished_goods: 'Thành phẩm',
+  };
+  const lineTypeLabel = (t) => LINE_TYPE_LABEL[String(t || '').toLowerCase()] || t || '—';
+  const state = { invoice: null, preview: null, selected: new Set() };
+
+  const el = (id) => document.getElementById(id);
+  const alertBox = el('alertBox');
+
+  function showErr(msg) {
+    alertBox.style.display = '';
+    alertBox.className = 'alert alert-danger py-2 small';
+    alertBox.textContent = msg;
+  }
+  function showOk(msg) {
+    alertBox.style.display = '';
+    alertBox.className = 'alert alert-success py-2 small';
+    alertBox.textContent = msg;
+  }
+  function clearAlert() { alertBox.style.display = 'none'; }
+
+  el('paymentStatus').addEventListener('change', () => {
+    el('payMethodWrap').style.display =
+      el('paymentStatus').value === 'Đã thanh toán' ? '' : 'none';
+  });
+
+  el('costCategory').addEventListener('change', () => {
+    const opt = el('costCategory').selectedOptions[0];
+    const defScope = opt?.dataset?.defaultScope;
+    if (defScope && [...el('scope').options].some(o => o.value === defScope)) {
+      el('scope').value = defScope;
+    }
+    loadTargets();
+  });
+  el('scope').addEventListener('change', () => { state.selected.clear(); loadTargets(); });
+
+  async function loadInvoice() {
+    clearAlert();
+    const id = parseInt(el('invoiceId').value, 10);
+    if (!id) return showErr('Nhập ID hóa đơn chi phí');
+    const res = await fetch(`/api/sme/landed-cost/invoice/${id}`);
+    const json = await res.json();
+    if (!json.success) return showErr(json.error || 'Không tải được HĐ');
+    state.invoice = json.data;
+    const d = json.data;
+    const catSel = el('costCategory');
+    catSel.innerHTML = '';
+    (d.categories || []).forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.value;
+      o.textContent = c.label;
+      o.dataset.defaultScope = c.default_scope || 'all';
+      catSel.appendChild(o);
+    });
+    el('invoiceMeta').innerHTML = `
+      <div><b>${d.invoice_no || '—'}</b> · ${d.invoice_date || ''}</div>
+      <div>${d.seller_name || '—'}</div>
+      <div>MST: ${d.seller_tax_code || '—'}</div>
+      <div class="mt-2">Chưa thuế: <b>${money(d.amount_net)}</b></div>
+      <div>VAT: <b>${money(d.amount_vat)}</b></div>
+      <div>Tổng: <b class="text-success">${money(d.amount_total)}</b></div>
+      ${d.already_allocated ? `
+        <div class="text-danger mt-2">Đã phân bổ${d.existing_cost_import_no ? ' · phiếu ' + d.existing_cost_import_no : ''}</div>
+      ` : ''}
+    `;
+    el('reverseBox').style.display = d.already_allocated ? '' : 'none';
+    if (d.already_allocated) {
+      el('btnAllocate').disabled = true;
+      showErr('Hóa đơn đã phân bổ. Bấm «Hủy phân bổ để sửa lại» nếu cần làm lại.');
+    } else {
+      clearAlert();
+    }
+    const freight = [...catSel.options].find(o => o.value === 'FREIGHT');
+    const urlCat = new URLSearchParams(window.location.search).get('cost_category');
+    const metaCat = (d.cost_category || '').toUpperCase();
+    const prefer = (urlCat || metaCat || '').toUpperCase();
+    if (prefer && [...catSel.options].some(o => o.value === prefer)) catSel.value = prefer;
+    else if (freight) catSel.value = 'FREIGHT';
+    loadTargets();
+  }
+
+  async function loadTargets() {
+    const scope = el('scope').value;
+    const q = el('targetSearch').value.trim();
+    const params = new URLSearchParams({ scope, limit: '80' });
+    if (q) params.set('q', q);
+    const res = await fetch(`/api/sme/landed-cost/targets?${params}`);
+    const json = await res.json();
+    const tbody = el('targetBody');
+    if (!json.success) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-danger text-center py-3">${json.error}</td></tr>`;
+      return;
+    }
+    const rows = json.data || [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Không có phiếu nhập phù hợp</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(r => {
+      const checked = state.selected.has(r.import_id) ? 'checked' : '';
+      const selCls = checked ? 'selected' : '';
+      return `<tr class="lc-target-row ${selCls}" data-id="${r.import_id}">
+        <td class="text-center"><input type="checkbox" class="form-check-input target-cb" value="${r.import_id}" ${checked}></td>
+        <td class="lc-mono fw-bold">${r.import_no || '—'}</td>
+        <td>${(r.date || '').toString().slice(0,10)}</td>
+        <td>${r.bill_no || '—'}</td>
+        <td>${r.supplier_name || '—'}</td>
+        <td class="text-end">${money(r.base_value)}</td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('.target-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const id = parseInt(cb.value, 10);
+        if (cb.checked) state.selected.add(id); else state.selected.delete(id);
+        cb.closest('tr').classList.toggle('selected', cb.checked);
+        state.preview = null;
+        el('btnAllocate').disabled = true;
+      });
+    });
+  }
+
+  async function runPreview() {
+    clearAlert();
+    if (!state.invoice) return showErr('Hãy tải hóa đơn chi phí trước');
+    if (!state.selected.size) return showErr('Chọn ít nhất một phiếu nhập hàng');
+    const res = await fetch('/api/sme/landed-cost/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invoice_id: state.invoice.invoice_id,
+        target_import_ids: [...state.selected],
+        scope: el('scope').value,
+        cost_category: el('costCategory').value,
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) return showErr(json.error || 'Lỗi xem trước');
+    state.preview = json.data;
+    const lines = json.data.lines || [];
+    el('previewBody').innerHTML = lines.map(l => `
+      <tr>
+        <td class="lc-mono">${l.import_no || ''}</td>
+        <td>${l.product_name || ('#' + (l.product_id || l.detail_id))}</td>
+        <td>${lineTypeLabel(l.line_type)}</td>
+        <td>${l.debit_account}</td>
+        <td class="text-end">${money(l.base_value)}</td>
+        <td class="text-end fw-bold text-success">${money(l.allocated_net)}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" class="text-center text-muted py-3">Trống</td></tr>';
+    el('previewSummary').innerHTML =
+      `Phân bổ <b>${money(json.data.amount_net)}</b> (+ VAT ${money(json.data.amount_vat)}) · `
+      + `${lines.length} dòng · ${json.data.cost_category_label || ''}`;
+    el('btnAllocate').disabled = !!state.invoice.already_allocated || !lines.length;
+  }
+
+  async function allocate() {
+    if (!state.preview || !state.invoice) return;
+    const confirm = await Swal.fire({
+      title: 'Xác nhận phân bổ?',
+      html: `Vốn hóa <b>${money(state.preview.amount_net)}</b> vào ${state.preview.lines.length} dòng.<br>`
+        + `Tạo phiếu CP + bút toán Nợ kho/TSCĐ · Có công nợ/tiền.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Phân bổ',
+      cancelButtonText: 'Hủy',
+    });
+    if (!confirm.isConfirmed) return;
+    el('btnAllocate').disabled = true;
+    const res = await fetch('/api/sme/landed-cost/allocate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invoice_id: state.invoice.invoice_id,
+        target_import_ids: [...state.selected],
+        scope: el('scope').value,
+        cost_category: el('costCategory').value,
+        payment_status: el('paymentStatus').value,
+        payment_method: el('paymentMethod').value,
+        note: el('note').value || null,
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      el('btnAllocate').disabled = false;
+      return showErr(json.error || 'Phân bổ thất bại');
+    }
+    showOk(`Đã tạo phiếu ${json.import_no} · journal #${json.journal_entry_id}`);
+    await Swal.fire({
+      icon: 'success',
+      title: 'Phân bổ thành công',
+      html: `Phiếu CP: <b>${json.import_no}</b><br>Bút toán: #${json.journal_entry_id}`,
+      confirmButtonText: 'Về hóa đơn mua',
+    });
+    window.location.href = '{{ url_for("SME_inward_invoice") }}';
+  }
+
+  async function reverseAllocation() {
+    if (!state.invoice?.already_allocated) return;
+    const confirm = await Swal.fire({
+      title: 'Hủy phân bổ?',
+      html: 'Sẽ đảo vốn kho / bút toán và mở lại hóa đơn để phân bổ lại.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Hủy phân bổ',
+      cancelButtonText: 'Không',
+      confirmButtonColor: '#dc2626',
+    });
+    if (!confirm.isConfirmed) return;
+    const res = await fetch('/api/sme/landed-cost/reverse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invoice_id: state.invoice.invoice_id,
+        landed_cost_id: state.invoice.existing_landed_cost_id,
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) return showErr(json.error || 'Không hủy được phân bổ');
+    showOk('Đã hủy phân bổ — có thể chọn lại PN và phân bổ lại.');
+    await Swal.fire({ icon: 'success', title: 'Đã mở lại hóa đơn', timer: 1600, showConfirmButton: false });
+    state.selected.clear();
+    state.preview = null;
+    await loadInvoice();
+  }
+
+  el('btnLoadInvoice').addEventListener('click', loadInvoice);
+  el('btnSearchTargets').addEventListener('click', loadTargets);
+  el('targetSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadTargets(); });
+  el('btnPreview').addEventListener('click', runPreview);
+  el('btnAllocate').addEventListener('click', allocate);
+  el('btnReverse').addEventListener('click', reverseAllocation);
+
+  if (el('invoiceId').value) loadInvoice();
+  else loadTargets();
+})();
+</script>
+{% endblock %}

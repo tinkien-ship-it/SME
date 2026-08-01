@@ -88,6 +88,11 @@
     background: #f0f7ff;
 }
 
+.accounting-hub-sidebar .group-toggle a {
+    color: inherit;
+    min-width: 0;
+}
+
 .accounting-hub-sidebar .group-toggle.text-primary,
 .accounting-hub-sidebar .group-toggle.active {
     color: var(--hkd-sidebar-menu-hover) !important;
@@ -183,6 +188,19 @@
 
 .accounting-hub-mobile-toggle {
     display: none;
+}
+
+/* SME dùng cùng ngôn ngữ giao diện hub, phân biệt nhẹ bằng màu thương hiệu. */
+.sme-hub-theme {
+    --hkd-sidebar-title: #1e3a8a;
+    --hkd-sidebar-menu: #2563eb;
+    --hkd-sidebar-menu-hover: #1d4ed8;
+    --hkd-sidebar-submenu-active-bg: #eff6ff;
+    --hkd-sidebar-submenu-active: #1d4ed8;
+}
+
+.sme-hub-theme .hkd-section-header {
+    border-top-color: #dbeafe;
 }
 
 @media (max-width: 991.98px) {

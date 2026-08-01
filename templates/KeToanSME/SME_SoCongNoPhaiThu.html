@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+{% block title %}SME — Công Nợ Phải Thu{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+<style>
+    body { background: #f8f9fa; }
+    .card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .money { font-family: 'Courier New', Courier, monospace; font-weight: 700; font-size: 1.35rem; }
+    .debt { color: #e63946; }
+    .paid { color: #2a9d8f; }
+    .table th, .table td { vertical-align: middle; }
+    .table th { font-weight: 600; }
+    .btn-view, .btn-pay { white-space: nowrap; }
+    .summary-card:hover { transform: translateY(-4px); transition: all 0.25s; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-danger mb-1">📘 CHI TIẾT CÔNG NỢ PHẢI THU <span class="badge bg-primary fs-6 align-middle">SME</span></h4>
+            <p class="text-muted small mb-0">Theo dõi công nợ khách hàng (nghiệp vụ DN — không dùng mẫu sổ HKD)</p>
+        </div>
+        <button class="btn btn-danger" onclick="printLedger()">
+            🖨 In sổ công nợ
+        </button>
+    </div>
+
+    <!-- Bộ lọc -->
+    <div class="card shadow-sm p-4 mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Khách hàng (chỉ còn nợ)</label>
+                <select id="customerFilter" class="form-select">
+                    <option value="">-- Chọn khách hàng còn nợ --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button id="btnRefresh" class="btn btn-primary w-100" onclick="loadDebtData()">
+                    🔄 Làm mới
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm p-4 summary-card bg-white">
+                <div class="text-muted small mb-1">TỔNG NỢ PHÁT SINH</div>
+                <h4 id="totalReceivable" class="money debt">0 đ</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm p-4 summary-card bg-white">
+                <div class="text-muted small mb-1">TỔNG ĐÃ THANH TOÁN</div>
+                <h4 id="totalPaid" class="money paid">0 đ</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm p-4 summary-card bg-white">
+                <div class="text-muted small mb-1 fw-bold">CÒN PHẢI THU (HIỆN TẠI)</div>
+                <h4 id="remainingDebt" class="money debt fw-bold">0 đ</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bảng công nợ -->
+    <div class="card shadow-sm">
+        <div class="card-header fw-bold bg-white d-flex justify-content-between align-items-center">
+            <span>DANH SÁCH CÁC KHOẢN CÒN NỢ</span>
+            <small class="text-muted" id="recordCount">0 khoản</small>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center">Số Đơn Hàng</th>
+                        <th class="text-center">Khách Hàng/ Đơn Vị</th>
+                        <th class="text-center">Ngày Phát Sinh</th>
+                        <th class="text-center">Tổng Nợ Đơn Hàng</th>
+                        <th class="text-center">Đã Thanh Toán</th>
+                        <th class="text-center">Còn Phải Thu</th>
+                        <th class="text-center">Thanh Toán</th>
+                        <th class="text-center">Xem Phiếu</th>
+                    </tr>
+                </thead>
+                <tbody id="debtTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center text-muted p-5">
+                            Vui lòng chọn khách hàng còn nợ để xem công nợ
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Lập Phiếu Thu -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header p-4 border-0 bg-success text-white">
+                <h5 class="fw-bold mb-0">LẬP PHIẾU THU TIỀN TỪ KHÁCH HÀNG</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="paymentForm">
+                    <input type="hidden" id="sale_id_hidden">
+                    <input type="hidden" id="debt_id">
+                    <input type="hidden" id="sale_no">
+                    <input type="hidden" id="remaining_hidden">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Ngày lập phiếu thu <span class="text-danger">*</span></label>
+                            <input type="text" id="payment_date" class="form-control text-center" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Hình thức thu <span class="text-danger">*</span></label>
+                            <select class="form-select fw-bold text-primary" id="payment_method" required>
+                                <option value="111">Tiền Mặt (111)</option>
+                                <option value="112">Chuyển Khoản (112)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Số Đơn Hàng</label>
+                            <input type="text" id="sale_no_display" class="form-control bg-light" readonly>
+                        </div>
+                    </div>
+                    <div class="card border-success mb-4">
+                        <div class="card-body py-3">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Tổng nợ đơn hàng</label>
+                                    <input type="text" id="total_debt_display" class="form-control text-end fw-bold text-secondary bg-light" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold">Đã thanh toán</label>
+                                    <input type="text" id="paid_display" class="form-control text-end fw-bold text-success bg-light" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-danger">Còn phải thu</label>
+                                    <input type="text" id="remaining_display" class="form-control text-end fw-bold text-danger bg-light" readonly>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-danger">
+                                        Số tiền thu lần này <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="amount_input" class="form-control text-end fw-bold fs-5 text-success border-success"
+                                           placeholder="0" autocomplete="off" required>
+                                    <small class="text-muted">Nhập số tiền thu (tối đa bằng số còn phải thu)</small>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold">Diễn giải / Lý do thu</label>
+                                    <input type="text" id="reason" class="form-control" placeholder="Thu tiền công nợ đơn hàng..." required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer p-4 border-0 justify-content-between">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnSavePayment" class="btn btn-success rounded-pill px-5 fw-bold" disabled>
+                    LƯU PHIẾU THU
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+// ================== UTILITIES ==================
+function formatVND(value) {
+    return (parseFloat(value) || 0).toLocaleString('vi-VN') + ' đ';
+}
+function formatDateVN(dateStr) {
+    if (!dateStr) return '—';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const mins = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${mins}`;
+}
+function vnToISO(d){
+    if(!d) return '';
+    const [day,mon,yr] = d.split('/');
+    return `${yr}-${mon}-${day}`;
+}
+
+// ================== LOAD CUSTOMERS (chỉ còn nợ) ==================
+async function loadCustomerDropdown() {
+    try {
+        const res = await fetch('/api/debt/customers');
+        if (!res.ok) throw new Error('Không tải được danh sách khách hàng');
+        const customers = await res.json();
+        
+        const select = document.getElementById('customerFilter');
+        // Xóa nội dung cũ và thêm option mặc định
+        select.innerHTML = '<option value="">-- Chọn khách hàng còn nợ --</option>';
+        
+        customers.forEach(c => {
+            const option = document.createElement('option');
+            option.value = c.customer_name; // Value giữ nguyên customer_name để truy vấn chi tiết
+            
+            // Ưu tiên hiển thị: Tên Công Ty (Họ tên khách)
+            if (c.company_name) {
+                option.textContent = `${c.company_name} (${c.customer_name})`;
+            } else {
+                option.textContent = c.customer_name;
+            }
+            select.appendChild(option);
+        });
+    } catch (err) {
+        console.error("Lỗi tải danh sách khách hàng:", err);
+    }
+}
+
+// ================== LOAD DEBT DATA ==================
+async function loadDebtData() {
+    const customer = document.getElementById('customerFilter').value.trim();
+    if (!customer) return;
+
+    const btn = document.getElementById('btnRefresh');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang tải...';
+
+    const tbody = document.getElementById('debtTableBody');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center p-5">Đang tải công nợ...</td></tr>`;
+
+    try {
+        const res = await fetch(`/api/debt/customer-detail?customer=${encodeURIComponent(customer)}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Lỗi server');
+
+        document.getElementById('totalReceivable').textContent = formatVND(data.summary.total);
+        document.getElementById('totalPaid').textContent = formatVND(data.summary.paid);
+        document.getElementById('remainingDebt').textContent = formatVND(data.summary.remaining);
+
+        if (!data.records || data.records.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center p-5 text-muted">Hiện không có khoản nợ nào chưa thanh toán.</td></tr>`;
+        } else {
+            tbody.innerHTML = data.records.map(r => {
+                // Logic xử lý hiển thị tên
+                let customerDisplayHtml = "";
+                if (r.company_name) {
+                    customerDisplayHtml = `
+                        <div class="fw-bold text-primary">${r.company_name}</div>
+                        <div class="small text-muted" style="font-size: 0.8rem;">Người mua: ${r.customer_name}</div>
+                    `;
+                } else {
+                    customerDisplayHtml = `<div class="fw-bold">${r.customer_name}</div>`;
+                }
+
+                return `
+                <tr>
+                    <td class="text-center fw-bold">${r.sale_no || '—'}</td>
+                    <td class="text-start">${customerDisplayHtml}</td>
+                    <td class="text-center">${formatDateVN(r.date_of_debt)}</td>
+                    <td class="text-end money debt">${formatVND(r.total_debt)}</td>
+                    <td class="text-end money paid">${formatVND(r.paid_amount)}</td>
+                    <td class="text-end money debt fw-bold">${formatVND(r.remaining)}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-success btn-pay"
+                                onclick="openPaymentModal('${r.debt_id}', '${r.sale_no}', '${r.date_of_debt}', ${r.total_debt}, ${r.paid_amount}, ${r.remaining}, '${r.sale_id}')">
+                            <i class="bi bi-cash-coin"></i> Thu tiền
+                        </button>
+                    </td>
+                    <td class="text-center">
+                        <a href="/sale/view/${r.sale_id}" target="_blank"
+                           class="btn btn-sm btn-outline-primary btn-view">
+                            🔍 Xem
+                        </a>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        document.getElementById('recordCount').textContent = `${data.records.length} khoản`;
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger p-5">Lỗi: ${err.message}</td></tr>`;
+        console.error(err);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🔄 Làm mới';
+    }
+}
+
+// ================== MODAL THANH TOÁN ==================
+let currentRemaining = 0;
+
+// Thêm tham số sale_id vào cuối danh sách đối số
+function openPaymentModal(debt_id, sale_no, date_debt, total_debt, paid_amount, remaining, sale_id) {
+    currentRemaining = parseFloat(remaining) || 0;
+    
+    if (currentRemaining <= 0) {
+        alert("Khoản nợ này đã thanh toán hết.");
+        return;
+    }
+
+    // Gán các giá trị vào form
+    document.getElementById('debt_id').value = debt_id;
+    document.getElementById('sale_no').value = sale_no;
+    
+    // TRUYỀN SALE_ID: Đảm bảo bạn đã có <input type="hidden" id="sale_id_hidden"> trong HTML của modal
+    const saleIdInput = document.getElementById('sale_id_hidden');
+    if (saleIdInput) {
+        saleIdInput.value = sale_id || '';
+    }
+
+    document.getElementById('sale_no_display').value = sale_no;
+    document.getElementById('total_debt_display').value = formatVND(total_debt);
+    document.getElementById('paid_display').value = formatVND(paid_amount);
+    document.getElementById('remaining_display').value = formatVND(remaining);
+    document.getElementById('remaining_hidden').value = remaining;
+    document.getElementById('amount_input').value = '';
+    document.getElementById('reason').value = `Thu tiền công nợ đơn hàng ${sale_no}`;
+    document.getElementById('payment_method').value = '111';
+
+    // Khởi tạo Flatpickr cho ngày thu tiền
+    flatpickr("#payment_date", {
+        dateFormat: "d/m/Y",
+        defaultDate: new Date(),
+        onChange: checkSaveButton
+    });
+
+    checkSaveButton(); 
+
+    const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+    modal.show();
+}
+
+// Hàm kiểm tra nút lưu (giữ nguyên logic cũ, thêm debug)
+function checkSaveButton() {
+    const amountInput = document.getElementById('amount_input');
+    const method = document.getElementById('payment_method').value;
+    const reason = document.getElementById('reason').value.trim();
+    const date = document.getElementById('payment_date').value;
+
+    let inputVal = amountInput.value.replace(/[^0-9.,]/g, '').replace(',', '.');
+    inputVal = parseFloat(inputVal) || 0;
+
+    const isValid = inputVal > 0 && inputVal <= currentRemaining && !!method && !!reason && !!date;
+
+    // Debug: in ra console để xem tại sao nút disable
+    console.log('checkSaveButton → amount:', inputVal, 'valid:', isValid, 'date:', date, 'reason:', reason);
+
+    document.getElementById('btnSavePayment').disabled = !isValid;
+}
+
+// Gắn sự kiện (giữ nguyên + thêm amount_input)
+document.addEventListener('DOMContentLoaded', function() {
+    ['amount_input', 'payment_method', 'reason', 'payment_date'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener(id === 'payment_method' ? 'change' : 'input', checkSaveButton);
+        }
+    });
+});
+
+// Lưu phiếu thu (giữ gần nguyên gốc, thêm try-catch rõ ràng hơn)
+document.getElementById('btnSavePayment').addEventListener('click', async function() {
+    console.log("Nút Lưu được click!");
+
+    const amountStr = document.getElementById('amount_input').value.replace(/[^0-9.,]/g, '').replace(',', '.');
+    const amount = parseFloat(amountStr) || 0;
+
+    if (amount <= 0 || amount > currentRemaining) {
+        alert("Số tiền thu không hợp lệ!");
+        return;
+    }
+
+    const method = document.getElementById('payment_method').value;
+    const reason = document.getElementById('reason').value.trim();
+    const date = vnToISO(document.getElementById('payment_date').value);
+    
+    // Lấy sale_id từ input ẩn đã lưu ở bước trên
+    const saleIdInput = document.getElementById('sale_id_hidden');
+    const sale_id = saleIdInput ? saleIdInput.value : null;
+
+    if (!date || !reason || !method) {
+        alert("Vui lòng điền đầy đủ thông tin!");
+        return;
+    }
+
+    const payload = {
+        date: date,
+        payer_name: document.getElementById('customerFilter').value.trim(),
+        amount: amount,
+        payment_method: method,
+        credit_account: "131",
+        reason: reason,
+        reference_document: document.getElementById('sale_no').value,
+        sale_id: document.getElementById('sale_id_hidden').value
+    };
+
+    try {
+        const res = await fetch('/api/sme/vouchers/receipts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+            alert(`Đã lập phiếu thu SME (01-TT)!\nSố phiếu: ${result.voucher_no}`);
+            const modalEl = document.getElementById('paymentModal');
+            bootstrap.Modal.getInstance(modalEl).hide();
+            loadDebtData();
+        } else {
+            alert("Lỗi: " + (result.error || 'Không xác định'));
+        }
+    } catch (err) {
+        console.error("Lỗi khi lưu phiếu thu:", err);
+        alert("Lỗi kết nối: " + err.message);
+    }
+});
+
+// ================== PRINT ==================
+function printLedger() {
+    const customer = document.getElementById('customerFilter').value.trim();
+    if (!customer) return alert("Vui lòng chọn khách hàng để in!");
+    window.open(`/customer_debt/print-ledger?customer=${encodeURIComponent(customer)}`, '_blank');
+}
+
+// ================== INIT ==================
+document.addEventListener('DOMContentLoaded', () => {
+    loadCustomerDropdown();
+    document.getElementById('customerFilter').addEventListener('change', loadDebtData);
+});
+</script>
+{% endblock %}

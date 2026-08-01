@@ -55,7 +55,9 @@ def register_ketoan_hkd_routes(app):
             get_hub_dashboard_soso_links,
             is_hub_endpoint,
             user_can_access_hub,
+            user_can_see_sme_nav,
         )
+        from Services.tenant_profile import is_sme_regime
         user = session.get('user') or {}
         cu = {
             'role': user.get('role', 'guest'),
@@ -65,6 +67,7 @@ def register_ketoan_hkd_routes(app):
         hub_current_group = None
         if request.endpoint == 'HKD_hub_group':
             hub_current_group = request.view_args.get('group_id') if request.view_args else None
+        sme_tenant = is_sme_regime(tenant_profile.get('accounting_regime'))
         return {
             'hkd_menu_groups': get_hkd_menu_groups(cu, tenant_profile),
             'hub_group_cards': get_hub_group_cards(cu, tenant_profile),
@@ -74,12 +77,19 @@ def register_ketoan_hkd_routes(app):
             'hub_title': HUB_TITLE,
             'hub_active': is_hub_endpoint(request.endpoint),
             'hub_current_group': hub_current_group,
-            'user_has_hub': user_can_access_hub(cu),
+            'user_has_hub': user_can_access_hub(cu, tenant_profile),
+            'user_has_sme_nav': user_can_see_sme_nav(cu, tenant_profile),
+            'tenant_is_sme': sme_tenant,
             'hkd_active': is_hub_endpoint(request.endpoint),
         }
 
     @app.route('/HKD_dashboard')
     def HKD_dashboard():
+        from Services.tenant_profile import get_current_tenant_profile, is_sme_regime, is_master_session
+        profile = get_current_tenant_profile()
+        if is_sme_regime(profile.get('accounting_regime')) and not is_master_session():
+            flash('Tenant đang dùng chế độ Kế toán Doanh nghiệp (SME). Chuyển sang dashboard SME.', 'info')
+            return redirect(url_for('SME_dashboard'))
         return render_template('KeToanHKD/main_dashboard.html')
 
     @app.route('/api/hkd/revenue-tier-warning', methods=['GET'])
@@ -4371,6 +4381,14 @@ def register_ketoan_hkd_routes(app):
     @login_required
     def api_salary_pay_period():
         """Trả lương cả kỳ — 1 phiếu chi tổng (luồng mặc định)."""
+        from Services.sme.hkd_side_effects import write_hkd_cash_vouchers
+        from Services.tenant_profile import get_current_tenant_profile
+        if not write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
+            return jsonify({
+                'success': False,
+                'error': 'Tenant SME: dùng /api/sme/payroll/pay (phiếu chi 02-TT), không lập phieu_chi HKD',
+            }), 400
+
         data = request.get_json() or {}
         try:
             month = int(data.get('month'))
@@ -4447,6 +4465,14 @@ def register_ketoan_hkd_routes(app):
     @login_required
     def api_salary_pay():
         """Trả lương lẻ từng nhân viên (trường hợp đặc biệt)."""
+        from Services.sme.hkd_side_effects import write_hkd_cash_vouchers
+        from Services.tenant_profile import get_current_tenant_profile
+        if not write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
+            return jsonify({
+                'success': False,
+                'error': 'Tenant SME: dùng /api/sme/payroll/pay, không lập phieu_chi HKD',
+            }), 400
+
         data = request.get_json() or {}
         employee_id = data.get('employee_id')
         month = data.get('month')

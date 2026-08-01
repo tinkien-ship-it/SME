@@ -299,13 +299,13 @@ $('#btnSaveImportPayment').on('click', async function() {
     btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Đang lưu...');
 
     const payload = {
-        type: 'import',
-        ref_id: $('#import_ref_id').val(),
-        receiver: $('#import_receiver_name').val(),
+        import_id: $('#import_ref_id').val(),
+        receiver_name: $('#import_receiver_name').val(),
         amount: amount,
-        bill_no: $('#import_bill_no').val(),
+        reference_document: $('#import_bill_no').val() || $('#display_import_no').text(),
         address: $('#import_address').val(),
-        payment_method: $('#import_payment_method').val(),
+        payment_method: $('#import_payment_method').val() === '112' ? 'bank' : 'cash',
+        debit_account: '331',
         date: paymentDatePicker && paymentDatePicker.selectedDates[0]
             ? flatpickr.formatDate(paymentDatePicker.selectedDates[0], 'Y-m-d')
             : new Date().toISOString().slice(0, 10),
@@ -313,7 +313,7 @@ $('#btnSaveImportPayment').on('click', async function() {
     };
 
     try {
-        const res = await fetch('/api/expense/save', {
+        const res = await fetch('/api/sme/vouchers/payments', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -322,7 +322,7 @@ $('#btnSaveImportPayment').on('click', async function() {
 
         if (result.success) {
             getPayModal().hide();
-            Swal.fire('Thành công', `Đã lập phiếu chi ${result.Voucher_no}`, 'success');
+            Swal.fire('Thành công', `Đã lập phiếu chi SME (02-TT) ${result.voucher_no}`, 'success');
             loadDebtData();
         } else {
             Swal.fire('Lỗi', result.error || 'Không thể lưu phiếu chi', 'error');

@@ -184,9 +184,6 @@
 {% block scripts %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- Flatpickr -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 
 <script>
 const toastEl = document.getElementById('liveToast');
@@ -468,21 +465,27 @@ function openBarcodePrint(importId) {
 $(document).ready(function() {
     initImportTable();
     $('#btnClearImportColFilters').on('click', () => importTableCtrl?.clearColumnFilters());
-    const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    const fpConfig = {
-        dateFormat: "d/m/Y",
-        locale: "vn",
-        allowInput: true,
-        clickOpens: true,
-        onChange: function() {
-            if ($('#startDate').val() && $('#endDate').val()) loadImport();
-        }
+    const onDateChange = function() {
+        if ($('#startDate').val() && $('#endDate').val()) loadImport();
     };
-
-    flatpickr("#startDate", fpConfig).setDate(firstDayOfMonth);
-    flatpickr("#endDate", fpConfig).setDate(today);
+    if (window.KetoDatePicker) {
+        KetoDatePicker.initMonthToToday('startDate', 'endDate', onDateChange);
+    } else if (typeof flatpickr === 'function') {
+        const fpConfig = {
+            dateFormat: 'd/m/Y',
+            locale: (flatpickr.l10ns && flatpickr.l10ns.vn) || 'vn',
+            allowInput: true,
+            clickOpens: true,
+            onChange: onDateChange,
+        };
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const startFp = flatpickr('#startDate', fpConfig);
+        const endFp = flatpickr('#endDate', fpConfig);
+        if (startFp && typeof startFp.setDate === 'function') startFp.setDate(firstDay);
+        if (endFp && typeof endFp.setDate === 'function') endFp.setDate(today);
+    }
 
     loadImport();
 });

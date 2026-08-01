@@ -1,4 +1,4 @@
-from flask import g, request, current_app, redirect, url_for, session, flash
+from flask import g, request, current_app, redirect, url_for, session, flash, jsonify
 import sqlite3
 import os
 import shutil
@@ -429,13 +429,25 @@ def init_tenant(app):
     def inject_tenant():
         from flask import session
         from auth import build_template_user
+        from Services.tenant_profile import is_sme_regime
+        from Services.hkd_menu import user_can_access_hub, user_can_see_sme_nav
+        profile = getattr(g, 'tenant_profile', None) or {}
+        user = build_template_user()
+        cu = {
+            'role': user.get('role') or session.get('role') or '',
+            'permissions': user.get('permissions') or '',
+        }
+        sme = is_sme_regime(profile.get('accounting_regime'))
         return {
             'current_tenant': getattr(g, 'tenant_id', None),
             'is_main_tenant': getattr(g, 'is_main_tenant', True),
             'tenant_info': getattr(g, 'tenant_info', {}),
-            'tenant_profile': getattr(g, 'tenant_profile', {}),
+            'tenant_profile': profile,
             'master_viewing_tenant': session.get('master_viewing_tenant'),
-            'current_user': build_template_user(),
+            'current_user': user,
+            'tenant_is_sme': sme,
+            'user_has_hub': user_can_access_hub(cu, profile),
+            'user_has_sme_nav': user_can_see_sme_nav(cu, profile),
         }
 
 def init_tenant_middleware(app, get_db_connection_fn=None):
@@ -492,6 +504,9 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
         # NẾU CHƯA ĐĂNG NHẬP: Chặn đứng ngay lập tức, dọn rác và đá về trang login chính
         if not user_data or not session_token or not db_path:
             session.clear()  # Dọn sạch session tạm hoặc session lỗi nếu có
+            # API phải trả JSON — không redirect HTML (tránh fetch().json() vỡ)
+            if request.path.startswith('/api/') or request.accept_mimetypes.best == 'application/json':
+                return jsonify({"success": False, "error": "Unauthorized — vui lòng đăng nhập lại"}), 401
             try:
                 response = redirect(url_for('login'))
             except Exception:
@@ -557,6 +572,11 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             # Nếu Token trong DB đã đổi (do một thiết bị khác đăng nhập sau và chiếm quyền sở hữu)
             if current_db_token and current_db_token['last_session_id'] != session_token:
                 session.clear()  # Xóa sạch dữ liệu phiên làm việc hiện tại của trình duyệt này
+                if request.path.startswith('/api/'):
+                    return jsonify({
+                        "success": False,
+                        "error": "Phiên đăng nhập đã bị thay thế trên thiết bị khác — vui lòng đăng nhập lại",
+                    }), 401
                 
                 # Tạo phản hồi chuyển hướng an toàn cứng chống lặp vòng lặp (ERR_TOO_MANY_REDIRECTS)
                 try:
@@ -573,6 +593,8 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
 
         except Exception as e:
             current_app.logger.error("Tenant middleware error: %s", e, exc_info=True)
+            if request.path.startswith('/api/'):
+                return jsonify({"success": False, "error": "Lỗi phiên làm việc — thử đăng nhập lại"}), 500
             # Nếu lỗi kết nối DB trên VPS (như nghẽn file), đẩy về trang đăng nhập bằng URL tĩnh để cứu vớt hệ thống
             try:
                 response = redirect(url_for('login'))

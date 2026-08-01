@@ -1,0 +1,164 @@
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 no-print">
+    <div>
+        <h4 class="fw-bold text-dark mb-1">
+            <i class="{{ report_icon }} text-primary me-2"></i>{{ report_title }}
+        </h4>
+        <p class="text-muted small mb-0">
+            Nguồn: nhật ký bút toán kép SME · TK {{ book.account_code }}
+            — {{ book.account_name }}
+        </p>
+    </div>
+    <div class="d-flex gap-2 align-items-end flex-wrap">
+        <form method="GET" class="d-flex gap-2 align-items-end flex-wrap">
+            <div>
+                <label class="form-label small mb-1">Tài khoản</label>
+                <select name="account" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for account in book.accounts %}
+                    <option value="{{ account.code }}" {% if account.code == book.account_code %}selected{% endif %}>
+                        {{ '— ' * (account.level - 1) }}{{ account.code }} — {{ account.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label small mb-1">Năm</label>
+                <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for y in range(current_year_today + 1, 2019, -1) %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>Năm {{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+        <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">
+            <i class="fas fa-print me-1"></i> In sổ
+        </button>
+    </div>
+</div>
+
+<div class="cash-book-paper">
+    <div class="row cash-book-header">
+        <div class="col-7">
+            <p class="mb-1 fw-bold text-uppercase">
+                {{ info.business_name or info.company_name or 'Doanh nghiệp: ................' }}
+            </p>
+            <p class="mb-1">Mã số thuế: {{ info.tax_code or '................' }}</p>
+            <p class="mb-0">Địa chỉ: {{ info.address or '................' }}</p>
+        </div>
+        <div class="col-5 text-center">
+            <p class="fw-bold mb-1">Mẫu số {{ form_code }}</p>
+            <p class="small mb-0">{{ form_name }}</p>
+            <p class="small fst-italic mb-0">
+                (Ban hành kèm theo Thông tư số 99/2025/TT-BTC ngày 27/10/2025 của Bộ Tài chính —
+                Phụ lục III: Biểu mẫu sổ kế toán doanh nghiệp)
+            </p>
+        </div>
+    </div>
+
+    <div class="text-center my-4">
+        <h3 class="fw-bold mb-1">{{ report_title | upper }}</h3>
+        <p class="mb-1">Năm tài chính: <strong>{{ year }}</strong></p>
+        <p class="mb-0">
+            Tài khoản: <strong>{{ book.account_code }} — {{ book.account_name }}</strong>
+        </p>
+        {% if report_kind == 'bank' %}
+        <p class="mb-0">
+            Nơi mở tài khoản: <strong>{{ info.bank_name or '................' }}</strong>
+            · Số tài khoản: <strong>{{ info.bank_account or '................' }}</strong>
+        </p>
+        {% endif %}
+    </div>
+
+    <div class="table-responsive">
+        <table class="cash-book-table">
+            <thead>
+                <tr>
+                    <th rowspan="2" class="col-date">Ngày ghi sổ</th>
+                    <th colspan="2">Chứng từ</th>
+                    <th rowspan="2">Diễn giải</th>
+                    <th rowspan="2" class="col-account">TK đối ứng</th>
+                    <th rowspan="2" class="col-money">{{ receipt_label }}</th>
+                    <th rowspan="2" class="col-money">{{ payment_label }}</th>
+                    <th rowspan="2" class="col-money">Số dư</th>
+                </tr>
+                <tr>
+                    <th class="col-doc">Số hiệu</th>
+                    <th class="col-date">Ngày</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="fw-bold table-light">
+                    <td>01/01/{{ year }}</td>
+                    <td></td>
+                    <td></td>
+                    <td class="text-start">Số dư đầu kỳ</td>
+                    <td></td>
+                    <td class="amount-cell"></td>
+                    <td class="amount-cell"></td>
+                    <td class="amount-cell">{{ "{:,.0f}".format(book.opening_balance)|replace(',', '.') }}</td>
+                </tr>
+
+                {% for item in book.rows %}
+                <tr>
+                    <td>{{ item.posting_date[8:10] }}/{{ item.posting_date[5:7] }}/{{ item.posting_date[:4] }}</td>
+                    <td class="fw-semibold">{{ item.document_no }}</td>
+                    <td>
+                        {{ item.document_date[8:10] }}/{{ item.document_date[5:7] }}/{{ item.document_date[:4] }}
+                    </td>
+                    <td class="text-start">
+                        {{ item.description or item.business_type or item.document_type }}
+                        <div class="entry-note no-print">
+                            Bút toán {{ item.entry_no }} · TK {{ item.account_code }}
+                        </div>
+                    </td>
+                    <td class="account-cell">{{ item.counterpart_accounts or '—' }}</td>
+                    <td class="amount-cell">
+                        {{ "{:,.0f}".format(item.receipt)|replace(',', '.') if item.receipt else '' }}
+                    </td>
+                    <td class="amount-cell">
+                        {{ "{:,.0f}".format(item.payment)|replace(',', '.') if item.payment else '' }}
+                    </td>
+                    <td class="amount-cell">{{ "{:,.0f}".format(item.balance)|replace(',', '.') }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        Không có bút toán TK {{ book.account_code }} trong năm {{ year }}.
+                    </td>
+                </tr>
+                {% endfor %}
+
+                <tr class="fw-bold table-light">
+                    <td colspan="5" class="text-end">Cộng phát sinh trong kỳ</td>
+                    <td class="amount-cell">{{ "{:,.0f}".format(book.total_receipt)|replace(',', '.') }}</td>
+                    <td class="amount-cell">{{ "{:,.0f}".format(book.total_payment)|replace(',', '.') }}</td>
+                    <td></td>
+                </tr>
+                <tr class="fw-bold">
+                    <td colspan="7" class="text-end">Số dư cuối kỳ</td>
+                    <td class="amount-cell text-primary">
+                        {{ "{:,.0f}".format(book.closing_balance)|replace(',', '.') }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="row mt-5 cash-book-signatures">
+        <div class="col-4 text-center">
+            <p class="fw-bold mb-1">Người ghi sổ</p>
+            <p class="small fst-italic">(Ký, họ tên)</p>
+        </div>
+        <div class="col-4 text-center">
+            <p class="fw-bold mb-1">Kế toán trưởng</p>
+            <p class="small fst-italic">(Ký, họ tên)</p>
+        </div>
+        <div class="col-4 text-center">
+            {% set print_date = ngay_in.split('/') %}
+            <p class="fst-italic mb-1">
+                Ngày {{ print_date[0] }} tháng {{ print_date[1] }} năm {{ print_date[2] }}
+            </p>
+            <p class="fw-bold mb-1">Người đại diện theo pháp luật</p>
+            <p class="small fst-italic">(Ký, họ tên, đóng dấu)</p>
+        </div>
+    </div>
+</div>

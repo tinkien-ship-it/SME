@@ -1,36 +1,61 @@
-{# Menu trái dùng chung các trang SME có layout dashboard #}
 {% set sme_active = request.endpoint or '' %}
 {% set regime = (tenant_profile.accounting_regime or 'SME_TT99')|upper %}
 {% set regime_short = 'TT58 siêu nhỏ' if 'TT58' in regime else 'TT99' %}
-<div class="px-3 mb-3">
-    <span class="text-primary text-uppercase fw-bold" style="font-size: 0.85rem; letter-spacing: 0.05em;">Pos & Kế Toán Doanh Nghiệp</span>
-    <div class="small text-muted mt-1">{{ regime_short }} — sổ kép SME</div>
-</div>
-<nav class="nav flex-column">
-    <a class="nav-link-sub {% if sme_active == 'SME_dashboard' %}active{% endif %}" href="{{ url_for('SME_dashboard') }}"><i class="fas fa-chart-pie text-primary"></i> Tổng Quan (Dashboard)</a>
-    <a class="nav-link-sub" href="{{ url_for('sale') }}"><i class="fas fa-cart-shopping text-success"></i> Điểm Bán Hàng</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_dashboard_sale' %}active{% endif %}" href="{{ url_for('SME_dashboard_sale') }}"><i class="fas fa-cart-shopping text-success"></i> Quản Lý Bán Hàng</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_form_01_bh' %}active{% endif %}" href="{{ url_for('SME_form_01_bh') }}"><i class="fas fa-file-signature text-success"></i> 01-BH Đại lý</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_form_02_bh' %}active{% endif %}" href="{{ url_for('SME_form_02_bh') }}"><i class="fas fa-id-card text-success"></i> 02-BH Thẻ quầy</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_purchasing' %}active{% endif %}" href="{{ url_for('SME_purchasing') }}"><i class="fas fa-bag-shopping text-warning"></i> Quản Lý Mua Hàng</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_dashboard_warehouse' %}active{% endif %}" href="{{ url_for('SME_dashboard_warehouse') }}"><i class="fas fa-warehouse text-warning"></i> Kho</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_SoSachKeToan' %}active{% endif %}" href="{{ url_for('SME_SoSachKeToan') }}"><i class="fas fa-book text-indigo"></i> Sổ Kế Toán</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_journal' %}active{% endif %}" href="{{ url_for('SME_journal') }}"><i class="fas fa-book-open text-primary"></i> Nhật Ký Bút Toán</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_general_ledger' %}active{% endif %}" href="{{ url_for('SME_general_ledger') }}"><i class="fas fa-scale-balanced text-primary"></i> Sổ Cái / CĐPS</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_chart_of_accounts' %}active{% endif %}" href="{{ url_for('SME_chart_of_accounts') }}"><i class="fas fa-sitemap text-primary"></i> Danh Mục Tài Khoản</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_auto_posting' %}active{% endif %}" href="{{ url_for('SME_auto_posting') }}"><i class="fas fa-robot text-primary"></i> Tự Động Kỳ / QT GTGT</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_TSCD' %}active{% endif %}" href="{{ url_for('SME_TSCD') }}"><i class="fas fa-building text-danger"></i> Kế Toán TSCĐ</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_CCDC' %}active{% endif %}" href="{{ url_for('SME_CCDC') }}"><i class="fas fa-screwdriver-wrench text-secondary"></i> Kế Toán CCDC</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_costing' %}active{% endif %}" href="{{ url_for('SME_costing') }}"><i class="fas fa-calculator text-dark"></i> Kế Toán Giá Thành</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_BCTC' %}active{% endif %}" href="{{ url_for('SME_BCTC') }}"><i class="fas fa-chart-line text-indigo"></i> Báo Cáo Tài Chính</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_mgmt_report' %}active{% endif %}" href="{{ url_for('SME_mgmt_report') }}"><i class="fas fa-chart-bar text-indigo"></i> Báo Cáo Quản Trị</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_tax_nsnn' %}active{% endif %}" href="{{ url_for('SME_tax_nsnn') }}"><i class="fas fa-landmark text-violet"></i> Thuế & NSNN</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_vat_declaration' %}active{% endif %}" href="{{ url_for('SME_vat_declaration') }}"><i class="fas fa-file-invoice text-violet"></i> Tờ Khai GTGT</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_SoQuyTienMat' %}active{% endif %}" href="{{ url_for('SME_SoQuyTienMat') }}"><i class="fas fa-wallet text-violet"></i> Tiền Mặt</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_SoTienGuiNganHang' %}active{% endif %}" href="{{ url_for('SME_SoTienGuiNganHang') }}"><i class="fas fa-building-columns text-violet"></i> Tiền Gửi Ngân Hàng</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_dashboard_debt' %}active{% endif %}" href="{{ url_for('SME_dashboard_debt') }}"><i class="fas fa-book text-indigo"></i> Công Nợ</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_dashboard_HRSalary' %}active{% endif %}" href="{{ url_for('SME_dashboard_HRSalary') }}"><i class="fas fa-user-tie text-muted"></i> Nhân Sự và Tiền Lương</a>
-    <a class="nav-link-sub" href="{{ url_for('huong_dan_su_dung') }}"><i class="fas fa-book-open text-muted"></i> Hướng Dẫn Sử Dụng</a>
-    <a class="nav-link-sub {% if sme_active == 'SME_utilities' %}active{% endif %}" href="{{ url_for('SME_utilities') }}"><i class="fas fa-cubes text-muted"></i> Tiện Ích</a>
-    <a class="nav-link-sub" href="{{ url_for('settings_page') }}"><i class="fas fa-sliders text-muted"></i> Hệ Thống</a>
-</nav>
+
+<aside class="accounting-hub-sidebar shadow-sm" id="smeSidebar">
+    <div class="px-3 mb-2">
+        <span class="hub-brand text-uppercase fw-bold">{{ sme_hub_title | default('Kế Toán SME') }}</span>
+        <div class="text-muted small">{{ regime_short }} · Kế toán sổ kép</div>
+    </div>
+
+    <div class="hub-search">
+        <input type="search" class="form-control form-control-sm" id="smeMenuSearch"
+               placeholder="Tìm menu..." autocomplete="off">
+    </div>
+
+    <nav class="nav flex-column" id="smeSidebarNav">
+        {% for group in sme_menu_groups %}
+            {% if group.get('_type') == 'section_header' %}
+            <div class="hkd-section-header">{{ group['label'] }}</div>
+            {% else %}
+                {% set item_endpoints = group['items'] | map(attribute='endpoint') | list %}
+                {% set group_is_active = sme_current_group == group['id'] or sme_active == group['endpoint'] or sme_active in item_endpoints %}
+                {% set collapse_id = 'sme-group-' ~ group['id'] %}
+                <div class="hkd-menu-group sme-menu-group" data-group="{{ group['id'] }}">
+                    {% if not group['items'] %}
+                    <a href="{{ url_for(group['endpoint']) }}"
+                       class="group-toggle group-toggle-direct text-decoration-none sme-menu-item {% if group_is_active %}active{% endif %}"
+                       data-label="{{ group['label'] | lower }}">
+                        <i class="{{ group['icon'] }} me-2"></i>{{ group['label'] }}
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('SME_hub_group', group_id=group['id']) }}"
+                       class="group-toggle text-decoration-none sme-menu-item {% if group_is_active %}text-primary{% endif %}"
+                       data-label="{{ group['label'] | lower }}">
+                        <i class="{{ group['icon'] }} me-2"></i>{{ group['label'] }}
+                        <i class="fas fa-chevron-down" style="font-size:.65rem;opacity:.5"></i>
+                    </a>
+                    <div class="collapse {% if group_is_active %}show{% endif %}" id="{{ collapse_id }}">
+                        {% if group.get('endpoint') and group['endpoint'] not in item_endpoints %}
+                        <a class="nav-link-sub sme-menu-item {% if sme_active == group['endpoint'] %}active{% endif %}"
+                           href="{{ url_for(group['endpoint']) }}" data-label="tổng quan {{ group['label'] | lower }}">
+                            <i class="fas fa-chart-pie"></i>
+                            <span>Tổng quan {{ group['label'] }}</span>
+                        </a>
+                        {% endif %}
+                        {% for item in group['items'] %}
+                        <a class="nav-link-sub sme-menu-item {% if sme_active == item['endpoint'] %}active{% endif %}"
+                           href="{{ url_for(item['endpoint']) }}" data-label="{{ item['label'] | lower }}">
+                            <i class="{{ item['icon'] }}"></i>
+                            <span>{{ item['label'] }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+        <div class="px-3 text-muted small">Không có menu Kế Toán SME.</div>
+        {% endfor %}
+    </nav>
+</aside>

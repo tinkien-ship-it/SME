@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Phiếu Nhập Kho{% endblock %}
+{% block title %}{% if import_mode|default('stock') == 'service' %}Hạch Toán Dịch Vụ SME{% else %}Phiếu Nhập Kho SME{% endif %}{% endblock %}
 {% block head_extra %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
@@ -12,16 +12,22 @@
     .info-header { background: var(--header-bg); border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
     .form-label.small { margin-bottom: 2px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
    
-    #itemsTable { font-size: 13px; table-layout: fixed; width: 2600px; min-width: 100%; }
+    #itemsTable { font-size: 13px; table-layout: fixed; width: 2750px; min-width: 100%; }
     #itemsTable th { background: #f1f5f9; color: #475569; font-weight: 600; padding: 10px 5px; text-align: center; border-bottom: 2px solid #cbd5e1; }
     #itemsTable td { padding: 3px !important; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
    
     .format-input { text-align: right !important; }
     .hidden-field { display: none !important; }
 
-    .product-type-select { font-size: 12.5px; font-weight: 600; }
-    .type-ready { background: #fef3c7; color: #92400e; }
-    .type-raw   { background: #dbeafe; color: #1e40af; }
+    .product-type-select, .line-type-select, .warehouse-select { font-size: 12.5px; font-weight: 600; }
+    .type-goods { background: #fef3c7; color: #92400e; }
+    .type-materials { background: #dbeafe; color: #1e40af; }
+    .type-fixed_asset { background: #ede9fe; color: #5b21b6; }
+    .type-tools { background: #e0e7ff; color: #3730a3; }
+    .type-service { background: #dcfce7; color: #166534; }
+    .acct-hint { font-size: 10px; color: #64748b; font-weight: 600; }
+    .wh-disabled { opacity: .45; pointer-events: none; }
+    .hidden-field { display: none !important; }
 
     .summary-bar {
         position: sticky; bottom: 0; background: #1e3a8a; color: white;
@@ -42,11 +48,14 @@
 {% block content %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="text-primary fw-bold m-0"><i class="bi bi-box-arrow-in-right"></i> LẬP PHIẾU NHẬP KHO</h5>
-        <div class="badge bg-white text-dark border p-2">SỐ PHIẾU: <b id="import_no_val" class="text-danger">---</b></div>
+        <h5 class="text-primary fw-bold m-0" id="pageTitle"><i class="bi bi-box-arrow-in-right"></i> {% if import_mode|default('stock') == 'service' %}HẠCH TOÁN DỊCH VỤ (642){% else %}LẬP PHIẾU NHẬP KHO{% endif %}</h5>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('SME_DanhSachPhieuNhapKho') }}" class="btn btn-sm btn-outline-secondary">Danh sách</a>
+            <div class="badge bg-white text-dark border p-2">SỐ PHIẾU: <b id="import_no_val" class="text-danger">{{ next_import_no|default('---') }}</b></div>
+        </div>
     </div>
 
-    <!-- XML Upload -->
+    <!-- XML Upload — cùng markup/logic với templates/import.html (HKD) -->
     <div class="card xml-upload-zone mb-2" id="xmlUploadZone">
         <div class="card-body py-1">
             <div class="row align-items-center g-2">
@@ -64,7 +73,8 @@
     </div>
 
     <form id="importForm">
-        <input type="hidden" id="import_no">
+        <input type="hidden" id="import_no" value="{{ next_import_no|default('') }}">
+        <input type="hidden" id="editImportId" value="">
         <input type="hidden" id="supplierId">
         <input type="hidden" id="fromInvoiceId">
         <input type="hidden" id="fromPoId">
@@ -111,20 +121,20 @@
                         <option value="bank">Chuyển khoản (112)</option>
                     </select>
                 </div>
-                 <div class="col-md-2">
-                    <label class="form-label small fw-bold text-primary">Nhập Khẩu hay Mua Trong Nước</label>
-                    <select class="form-select form-select-sm fw-bold text-primary" id="source_of_goods">
-                        <option value="Imported_goods">Hàng Nhập Khẩu</option>
-                        <option value="Domestic_goods">Hàng Mua Trong Nước</option>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-primary">Nguồn hàng</label>
+                    <select class="form-select form-select-sm fw-bold text-primary" id="source_of_goods" onchange="toggleImportSource()">
+                        <option value="DOMESTIC" selected>Hàng mua trong nước</option>
+                        <option value="IMPORT">Hàng nhập khẩu</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold text-primary">Tỷ giá</label>
+                <div class="col-md-2" id="exchangeRateWrapper">
+                    <label class="form-label small fw-bold text-primary">Tỷ giá (VND)</label>
                     <input type="text" class="form-control form-control-sm text-end format-input fw-bold text-success" id="ExchangeRate" value="1">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold">CP Khác (Vận chuyển...)</label>
-                    <input type="text" class="form-control form-control-sm text-end format-input fw-bold text-success" id="extraCost" value="0">
+                <div class="col-md-2 d-none" id="extraCostWrapper" title="SME: dùng Phân bổ chi phí trên HĐ mua">
+                    <label class="form-label small fw-bold">CP Khác (HKD only)</label>
+                    <input type="text" class="form-control form-control-sm text-end format-input fw-bold text-success" id="extraCost" value="0" readonly>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small fw-bold text-primary">Ghi chú phiếu nhập</label>
@@ -145,24 +155,29 @@
                     <table class="table table-bordered table-sm mb-0" id="itemsTable">
                         <thead>
                             <tr>
-                                <th style="width:60px;">ID</th>
-                                <th style="width:130px; color:#b30000; font-weight:bold;">Loại Hàng</th>
-                                <th style="width:320px;">Tên hàng</th>
-                                <th style="width:100px;">ĐVT Phiếu</th>
-                                <th style="width:90px;">Số Lượng</th>
-                                <th style="width:120px;">Đơn giá</th>
-                                <th style="width:130px;">Thành tiền</th>
-                                <th style="width:70px;">% Chiếc Khấu</th>
-                                <th style="width:110px;">Tiền Chiếc Khấu</th>
-                                <th style="width:80px;">% VAT</th>
-                                <th style="width:110px;">Thuế VAT</th>
-                                <th style="width:140px; background:#fff7ed;">Tiền Thanh Toán</th>
-                                <th style="width:100px; color:#b30000; font-weight:bold;">ĐV Cơ bản</th>
-                                <th style="width:100px; color:#b30000; font-weight:bold;">ĐV Sỉ</th>
-                                <th style="width:80px; color:#b30000; font-weight:bold;">Tỷ lệ</th>
-                                <th style="width:130px; color:#b30000; font-weight:bold;">Giá bán lẻ</th>
-                                <th style="width:130px; bcolor:#b30000; font-weight:bold;">Giá bán sỉ</th>
-                                <th style="width:60px;">Xóa</th>
+                                <th style="width:55px;">ID</th>
+                                <th style="width:110px;">Kho</th>
+                                <th style="width:140px; color:#b30000;">Loại hàng</th>
+                                <th style="width:90px;">Định khoản</th>
+                                <th style="width:280px;">Tên hàng</th>
+                                <th style="width:90px;">ĐVT</th>
+                                <th style="width:80px;">SL</th>
+                                <th style="width:110px;">Đơn giá</th>
+                                <th style="width:110px;">Thành tiền</th>
+                                <th style="width:60px;">% CK</th>
+                                <th style="width:90px;">Tiền CK</th>
+                                <th style="width:70px;">% VAT</th>
+                                <th style="width:70px;" class="nk-col">% NK</th>
+                                <th style="width:90px;">Thuế GTGT</th>
+                                <th style="width:90px;" class="nk-col">Thuế NK</th>
+                                <th style="width:120px; background:#fff7ed;">Thanh toán</th>
+                                <th style="width:90px;">Mã SP</th>
+                                <th style="width:90px;" class="stock-col">ĐV CB</th>
+                                <th style="width:90px;" class="stock-col">ĐV sỉ</th>
+                                <th style="width:60px;" class="stock-col">TL</th>
+                                <th style="width:100px;" class="stock-col">Giá lẻ</th>
+                                <th style="width:100px;" class="stock-col">Giá sỉ</th>
+                                <th style="width:50px;">Xóa</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -179,12 +194,12 @@
                 </div>
                 <div class="vr opacity-25"></div>
                 <div>
-                    <div class="small opacity-75">TỔNG THANH TOÁN (GỒM CP Khác)</div>
+                    <div class="small opacity-75">TỔNG THANH TOÁN</div>
                     <div id="totalImport" class="summary-value mb-0">0</div>
                 </div>
             </div>
             <button type="submit" class="btn-save-final shadow-lg" id="btnSaveImport">
-                <i class="bi bi-floppy-fill"></i> LƯU PHIẾU NHẬP
+                <i class="bi bi-floppy-fill"></i> {% if import_mode|default('stock') == 'service' %}LƯU HẠCH TOÁN{% else %}LƯU PHIẾU NHẬP{% endif %}
             </button>
         </div>
     </form>
@@ -208,8 +223,130 @@
 
 <script>
 // ====================== 1. BIẾN TOÀN CỤC ======================
+const WAREHOUSES = {{ warehouses|default([])|tojson }};
+const IMPORT_MODE = {{ (import_mode|default('stock'))|tojson }};
+const IS_SERVICE_MODE = IMPORT_MODE === 'service';
+const LINE_TYPE_OPTIONS = [
+    { value: 'goods', label: 'Hàng hóa', debit: '156', needsWarehouse: true },
+    { value: 'materials', label: 'Vật tư (NVL)', debit: '152', needsWarehouse: true },
+    { value: 'fixed_asset', label: 'TSCĐ', debit: '2112', needsWarehouse: false },
+    { value: 'tools', label: 'CCDC', debit: '153', needsWarehouse: false },
+    { value: 'service', label: 'Dịch vụ', debit: '642', needsWarehouse: false },
+];
+const DEFAULT_LINE_TYPE = IS_SERVICE_MODE ? 'service' : 'goods';
+const LINE_TYPE_LABEL = Object.fromEntries(LINE_TYPE_OPTIONS.map(o => [o.value, o.label]));
+const NEXT_CODE_API = '/api/products/next-code';
 let currentCashBalance = 0;
 let currentBankBalance = 0;
+let suppliersCache = [];
+
+function getImportType() {
+    const v = (document.getElementById('source_of_goods')?.value || 'DOMESTIC').trim().toUpperCase();
+    if (v === 'IMPORT' || v === 'IMPORTED_GOODS' || v === 'IMPORTED') return 'IMPORT';
+    return 'DOMESTIC';
+}
+
+function getExchangeRate() {
+    if (getImportType() !== 'IMPORT') return 1;
+    const r = parseNumber(document.getElementById('ExchangeRate')?.value);
+    return r > 0 ? r : 1;
+}
+
+function toggleImportSource() {
+    const isImport = getImportType() === 'IMPORT';
+    const wrap = document.getElementById('exchangeRateWrapper');
+    if (wrap) wrap.classList.toggle('hidden-field', !isImport);
+    document.querySelectorAll('.nk-col, .nk-cell').forEach(el => {
+        el.classList.toggle('hidden-field', !isImport);
+    });
+    if (!isImport) {
+        const rateEl = document.getElementById('ExchangeRate');
+        if (rateEl) rateEl.value = '1';
+        document.querySelectorAll('.import-tax-pct').forEach(el => { el.value = '0'; });
+    }
+    document.querySelectorAll('#itemsTable tbody tr').forEach(row => calcRow(row));
+    calcTotal();
+}
+
+function normalizeLineType(raw) {
+    let t = String(raw || DEFAULT_LINE_TYPE).trim().toLowerCase();
+    if (t === 'raw_materials' || t === 'nvl') return 'materials';
+    if (t === 'ready_made' || t === 'hang_hoa' || t === 'finished_goods') return 'goods';
+    if (LINE_TYPE_OPTIONS.some(o => o.value === t)) return t;
+    return DEFAULT_LINE_TYPE;
+}
+
+function lineTypeMeta(type) {
+    const t = normalizeLineType(type);
+    return LINE_TYPE_OPTIONS.find(o => o.value === t) || LINE_TYPE_OPTIONS[0];
+}
+
+function buildWarehouseOptions(selected) {
+    const list = WAREHOUSES.length ? WAREHOUSES : [{ code: 'KHO_001', name: 'Kho mặc định', is_default: 1 }];
+    const def = list.find(w => w.is_default) || list[0];
+    const sel = selected || def.code;
+    return list.map(w =>
+        `<option value="${w.code}" ${w.code === sel ? 'selected' : ''}>${w.code}</option>`
+    ).join('');
+}
+
+function buildLineTypeOptions(selected) {
+    const sel = normalizeLineType(selected);
+    return LINE_TYPE_OPTIONS.map(o =>
+        `<option value="${o.value}" ${o.value === sel ? 'selected' : ''}>${o.label}</option>`
+    ).join('');
+}
+
+function isServiceLineType(type) {
+    return normalizeLineType(type) === 'service';
+}
+
+function needsWarehouse(type) {
+    return !!lineTypeMeta(type).needsWarehouse;
+}
+
+function updateCodePreview(row) {
+    const type = normalizeLineType(row.querySelector('.line-type-select')?.value);
+    const pid = row.querySelector('.p-id')?.value;
+    const codeEl = row.querySelector('.product-code-preview');
+    if (!codeEl || pid) return;
+    if (isServiceLineType(type)) {
+        codeEl.value = '';
+        return;
+    }
+    fetch(`${NEXT_CODE_API}?type=${encodeURIComponent(type)}`)
+        .then(r => r.json())
+        .then(d => { if (d.success) codeEl.value = d.next_code || ''; })
+        .catch(() => {});
+}
+
+function applyLineTypeUI(row) {
+    const type = normalizeLineType(row.querySelector('.line-type-select')?.value);
+    const meta = lineTypeMeta(type);
+    const isSvc = type === 'service';
+    const whCell = row.querySelector('.warehouse-cell');
+    const whSelect = row.querySelector('.warehouse-select');
+    if (whCell) whCell.classList.toggle('wh-disabled', !meta.needsWarehouse);
+    if (whSelect) whSelect.disabled = !meta.needsWarehouse;
+    row.querySelectorAll('.stock-only-cell').forEach(el => {
+        el.classList.toggle('hidden-field', isSvc || type === 'fixed_asset' || type === 'tools');
+    });
+    const hint = row.querySelector('.acct-hint');
+    if (hint) hint.textContent = `Nợ ${meta.debit}`;
+    const typeSelect = row.querySelector('.line-type-select');
+    if (typeSelect) {
+        typeSelect.className = `line-type-select form-select form-select-sm border-0 type-${type}`;
+    }
+    const nameInput = row.querySelector('.product-name');
+    if (nameInput) {
+        nameInput.placeholder = isSvc ? 'Tên dịch vụ trên HĐ...' : 'Gõ tên để tìm / tạo mới...';
+    }
+    if (isSvc) {
+        row.querySelector('.p-id').value = '';
+        row.classList.remove('row-exact-match', 'row-suggested', 'row-not-found');
+    }
+    updateCodePreview(row);
+}
 
 // ====================== 2. UTILITY FUNCTIONS ======================
 const formatVNDCustom = (val) => {
@@ -219,7 +356,7 @@ const formatVNDCustom = (val) => {
     return num.toLocaleString('vi-VN');
 };
 
-const formatVND = (v) => v ? parseFloat(String(v).replace(/,/g,'.')).toLocaleString('vi-VN') : "0";
+// Không khai báo lại formatVND — đã có trong base.html
 
 const parseNumber = (v) => {
     if (v === undefined || v === null || v === '') return 0;
@@ -228,13 +365,20 @@ const parseNumber = (v) => {
 };
 
 const toast = (msg, type = 'success') => {
-    Toastify({
-        text: msg,
-        duration: 4000,
-        gravity: "top",
-        position: "right",
-        style: { background: type === 'error' ? "#dc3545" : "#198754" }
-    }).showToast();
+    try {
+        if (typeof Toastify !== 'undefined') {
+            Toastify({
+                text: msg,
+                duration: 4000,
+                gravity: "top",
+                position: "right",
+                style: { background: type === 'error' ? "#dc3545" : "#198754" }
+            }).showToast();
+            return;
+        }
+    } catch (e) { /* fallthrough */ }
+    if (type === 'error') alert(msg);
+    else console.log(msg);
 };
 
 // ====================== DEBOUNCE ======================
@@ -328,7 +472,7 @@ const showSuggestions = debounce(async function(inputEl) {
 
 // ====================== CÁC HÀM CÒN LẠI (GIỮ NGUYÊN) ======================
 async function performInitialMatch(row, name, invUnit = '') {
-    if (!name) return;
+    if (!name || isServiceLineType(row.querySelector('.line-type-select')?.value)) return;
     try {
         const queryKey = name.split(' ')[0];
         const res = await fetch(`/api/products/manage?q=${encodeURIComponent(queryKey)}`);
@@ -349,6 +493,7 @@ async function performInitialMatch(row, name, invUnit = '') {
 function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
     if (invoiceUnit) row.querySelector('.invoice-unit').value = invoiceUnit;
     row.classList.remove('row-exact-match', 'row-suggested', 'row-not-found');
+    const codeEl = row.querySelector('.product-code-preview');
     if (product) {
         row.querySelector('.p-id').value = product.id;
         row.querySelector('.product-name').value = product.name;
@@ -357,6 +502,15 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         row.querySelector('.ratio').value = product.unit_ratio || 1;
         row.querySelector('.base-sale-price').value = formatVNDCustom(product.base_price);
         row.querySelector('.sale-price').value = formatVNDCustom(product.price);
+        if (codeEl) codeEl.value = product.product_code || '';
+        const typeSelect = row.querySelector('.line-type-select');
+        if (product.product_type && typeSelect) {
+            const nt = normalizeLineType(product.product_type);
+            if (LINE_TYPE_OPTIONS.some(o => o.value === nt)) {
+                typeSelect.value = nt;
+                applyLineTypeUI(row);
+            }
+        }
         if (matchType === 'exact') row.classList.add('row-exact-match');
         else if (matchType === 'suggest') row.classList.add('row-suggested');
     } else {
@@ -364,6 +518,7 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         row.querySelector('.base-unit').value = invoiceUnit || '';
         row.querySelector('.ratio').value = 1;
         row.classList.add('row-not-found');
+        updateCodePreview(row);
     }
     calcRow(row);
 }
@@ -372,15 +527,18 @@ function addRow(data = {}) {
     const tbody = document.querySelector('#itemsTable tbody');
     const tr = document.createElement('tr');
     tr.className = 'import-row';
+    const lineType = normalizeLineType(data.line_type || data.type || data.invoice_product_type || DEFAULT_LINE_TYPE);
+    const whCode = data.warehouse_code || '';
 
     tr.innerHTML = `
         <td><input type="text" class="p-id form-control form-control-sm bg-light text-center border-0" readonly value="${data.product_id || ''}"></td>
-        <td>
-            <select class="product-type-select form-select form-select-sm border-0" style="width:100%;">
-                <option value="goods" ${data.type === 'goods' ? 'selected' : ''} class="type-ready">HÀNG HÓA</option>
-                <option value="raw_materials" ${data.type === 'raw_materials' ? 'selected' : ''} class="type-raw">NGUYÊN VẬT LIỆU</option>
-            </select>
+        <td class="warehouse-cell">
+            <select class="warehouse-select form-select form-select-sm border-0">${buildWarehouseOptions(whCode)}</select>
         </td>
+        <td>
+            <select class="line-type-select form-select form-select-sm border-0">${buildLineTypeOptions(lineType)}</select>
+        </td>
+        <td class="text-center"><span class="acct-hint">Nợ ${lineTypeMeta(lineType).debit}</span></td>
         <td>
             <input type="text" class="product-name form-control form-control-sm border-0" value="${data.invoice_name || ''}" placeholder="Gõ tên sản phẩm...">
             <input type="hidden" class="invoice-name-hidden" value="${data.invoice_name || ''}">
@@ -392,18 +550,21 @@ function addRow(data = {}) {
         <td><input type="number" class="disc-pct form-control form-control-sm text-center border-0" value="${data.discount_pct || 0}" step="0.01"></td>
         <td class="disc-amt text-end pe-2">0</td>
         <td><select class="tax-pct form-select form-select-sm border-0">
-            <option value="0">0%</option>
-            <option value="5">5%</option>
-            <option value="8">8%</option>
-            <option value="10" selected>10%</option>
+            <option value="0" ${String(data.tax_pct) === '0' ? 'selected' : ''}>0%</option>
+            <option value="5" ${String(data.tax_pct) === '5' ? 'selected' : ''}>5%</option>
+            <option value="8" ${String(data.tax_pct) === '8' ? 'selected' : ''}>8%</option>
+            <option value="10" ${!data.tax_pct || String(data.tax_pct) === '10' ? 'selected' : ''}>10%</option>
         </select></td>
+        <td class="nk-cell"><input type="number" class="import-tax-pct form-control form-control-sm text-center border-0" value="${data.import_tax_pct || 0}" step="0.01" min="0" title="% thuế nhập khẩu"></td>
         <td class="tax-amt text-end pe-2">0</td>
+        <td class="nk-cell import-tax-amt text-end pe-2 text-warning">0</td>
         <td class="pay-amt text-end fw-bold text-danger pe-2">0</td>
-        <td><input type="text" class="base-unit form-control form-control-sm text-center border-0"></td>
-        <td><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0"></td>
-        <td><input type="number" class="ratio form-control form-control-sm text-center border-0" value="1"></td>
-        <td><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="0"></td>
-        <td><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="0"></td>
+        <td><input type="text" class="product-code-preview form-control form-control-sm bg-light text-center border-0" readonly placeholder="Mã..."></td>
+        <td class="stock-only-cell"><input type="text" class="base-unit form-control form-control-sm text-center border-0"></td>
+        <td class="stock-only-cell"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0"></td>
+        <td class="stock-only-cell"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="1"></td>
+        <td class="stock-only-cell"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="0"></td>
+        <td class="stock-only-cell"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="0"></td>
         <td class="text-center">
             <button type="button" class="btn btn-sm text-danger" onclick="this.closest('tr').remove(); calcTotal()">
                 <i class="bi bi-trash"></i>
@@ -414,10 +575,22 @@ function addRow(data = {}) {
     tbody.appendChild(tr);
 
     const nameInput = tr.querySelector('.product-name');
-    nameInput.addEventListener('input', () => showSuggestions(nameInput));
-    nameInput.addEventListener('focus', () => { if (nameInput.value.trim()) showSuggestions(nameInput); });
+    nameInput.addEventListener('input', () => {
+        if (!isServiceLineType(tr.querySelector('.line-type-select')?.value)) showSuggestions(nameInput);
+    });
+    nameInput.addEventListener('focus', () => {
+        if (!isServiceLineType(tr.querySelector('.line-type-select')?.value) && nameInput.value.trim()) {
+            showSuggestions(nameInput);
+        }
+    });
+    tr.querySelector('.line-type-select')?.addEventListener('change', () => applyLineTypeUI(tr));
+    tr.querySelector('.wholesale-unit')?.addEventListener('input', () => updateCodePreview(tr));
 
     attachRowEvents(tr);
+    applyLineTypeUI(tr);
+    // Ẩn/hiện cột % NK theo nguồn hàng (không gọi full toggleImportSource mỗi dòng)
+    const isImport = getImportType() === 'IMPORT';
+    tr.querySelectorAll('.nk-cell').forEach(el => el.classList.toggle('hidden-field', !isImport));
     if (data.invoice_name) performInitialMatch(tr, data.invoice_name, data.unit);
     calcRow(tr);
 }
@@ -429,17 +602,28 @@ function attachRowEvents(row) {
 function calcRow(row) {
     const qty = parseNumber(row.querySelector('.qty').value);
     const price = parseNumber(row.querySelector('.buy-price').value);
+    const rate = getExchangeRate();
+    const priceVnd = Math.round(price * rate);
     const discPct = parseFloat(row.querySelector('.disc-pct').value) || 0;
-    const rawTotal = Math.round(qty * price);
+    const rawTotal = Math.round(qty * priceVnd);
     const discAmt = Math.round(rawTotal * (discPct / 100));
     const afterDisc = rawTotal - discAmt;
+    const isImport = getImportType() === 'IMPORT';
+    const lineType = normalizeLineType(row.querySelector('.line-type-select')?.value);
+    const importTaxPct = (isImport && lineType !== 'service')
+        ? (parseFloat(row.querySelector('.import-tax-pct')?.value) || 0)
+        : 0;
+    const importTaxAmt = Math.round(afterDisc * (importTaxPct / 100));
     const vatPct = parseFloat(row.querySelector('.tax-pct').value) || 0;
-    const vatAmt = Math.round(afterDisc * (vatPct / 100));
-    const finalPay = afterDisc + vatAmt;
+    const vatBase = afterDisc + importTaxAmt;
+    const vatAmt = Math.round(vatBase * (vatPct / 100));
+    const finalPay = afterDisc + importTaxAmt + vatAmt;
 
     row.querySelector('.line-total').textContent = formatVNDCustom(rawTotal);
     row.querySelector('.disc-amt').textContent = formatVNDCustom(discAmt);
     row.querySelector('.tax-amt').textContent = formatVNDCustom(vatAmt);
+    const nkAmtEl = row.querySelector('.import-tax-amt');
+    if (nkAmtEl) nkAmtEl.textContent = formatVNDCustom(importTaxAmt);
     row.querySelector('.pay-amt').textContent = formatVNDCustom(finalPay);
     calcTotal();
 }
@@ -447,9 +631,8 @@ function calcRow(row) {
 function calcTotal() {
     let totalItemsPay = 0;
     document.querySelectorAll('.pay-amt').forEach(el => totalItemsPay += parseNumber(el.textContent));
-    const extra = parseNumber(document.getElementById('extraCost').value);
     document.getElementById('totalPayment').textContent = formatVNDCustom(totalItemsPay);
-    document.getElementById('totalImport').textContent = formatVNDCustom(totalItemsPay + extra);
+    document.getElementById('totalImport').textContent = formatVNDCustom(totalItemsPay);
 }
 
 async function loadQuySoDu() {
@@ -471,28 +654,95 @@ function checkSoDu(amount, paymentMethod) {
     if (isCash) { available = currentCashBalance; methodText = "tiền mặt (111)"; }
     else if (isBank) { available = currentBankBalance; methodText = "ngân hàng (112)"; }
     else return { ok: true };
+    // SME: số dư quỹ HKD có thể chưa đồng bộ — chỉ cảnh báo, không chặn cứng nếu API lỗi/0
+    if (available <= 0) return { ok: true, soft: true };
     if (amount > available) {
-        return { ok: false, message: `Số dư ${methodText} (${formatVNDCustom(available)} ₫) không đủ.` };
+        return {
+            ok: false,
+            soft: true,
+            message: `Số dư ${methodText} (${formatVNDCustom(available)} ₫) có thể không đủ so với ${formatVNDCustom(amount)} ₫.`,
+        };
     }
     return { ok: true };
 }
 
+async function loadSuppliersList() {
+    try {
+        const res = await fetch('/api/suppliers');
+        if (!res.ok) return;
+        suppliersCache = await res.json();
+        const dl = document.getElementById('supplierOptions');
+        if (!dl) return;
+        dl.innerHTML = '';
+        (suppliersCache || []).forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.name || '';
+            dl.appendChild(opt);
+        });
+    } catch (e) {
+        console.warn('loadSuppliersList:', e);
+    }
+}
+
+function applySupplierByName(name) {
+    const q = (name || '').trim().toLowerCase();
+    if (!q || !suppliersCache.length) return;
+    const found = suppliersCache.find(s => (s.name || '').trim().toLowerCase() === q)
+        || suppliersCache.find(s => (s.name || '').toLowerCase().includes(q));
+    if (!found) return;
+    document.getElementById('supplierId').value = found.id || '';
+    document.getElementById('taxCode').value = found.tax_code || '';
+    document.getElementById('supplierAddress').value = found.address || '';
+}
+
+async function fetchNextImportNo() {
+    const applyNo = (no) => {
+        if (!no) return;
+        const hidden = document.getElementById('import_no');
+        const badge = document.getElementById('import_no_val');
+        if (hidden) hidden.value = no;
+        if (badge) badge.textContent = no;
+    };
+    // Giữ số đã render từ server nếu API lỗi
+    const current = (document.getElementById('import_no')?.value || '').trim();
+    try {
+        const res = await fetch('/api/import/next_sequence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: IS_SERVICE_MODE ? 'service' : 'stock' }),
+            credentials: 'same-origin',
+        });
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        if (!ct.includes('application/json')) {
+            if (!current) applyNo(IS_SERVICE_MODE ? 'HT000001' : 'PN000001');
+            return;
+        }
+        const d = await res.json();
+        if (d.next_no) applyNo(d.next_no);
+        else if (!current) applyNo(IS_SERVICE_MODE ? 'HT000001' : 'PN000001');
+    } catch (e) {
+        console.warn('fetchNextImportNo:', e);
+        if (!current) applyNo(IS_SERVICE_MODE ? 'HT000001' : 'PN000001');
+    }
+}
+
 // ====================== KHỞI TẠO ======================
 document.addEventListener('DOMContentLoaded', () => {
-    flatpickr('#importDate', { dateFormat: 'd/m/Y', defaultDate: 'today', locale: 'vn' });
-    flatpickr('#bill_date', { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true });
+    try {
+        if (typeof flatpickr === 'function') {
+            flatpickr('#importDate', { dateFormat: 'd/m/Y', defaultDate: 'today', locale: 'vn' });
+            flatpickr('#bill_date', { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true });
+        }
+    } catch (e) { console.warn('flatpickr:', e); }
 
-    fetch('/api/import/next_sequence', { method: 'POST' })
-        .then(res => res.json())
-        .then(d => {
-            if (d.success) {
-                document.getElementById('import_no').value = d.next_no;
-                document.getElementById('import_no_val').textContent = d.next_no;
-            }
-        });
-
+    const urlParamsEarly = new URLSearchParams(window.location.search);
+    const editIdEarly = urlParamsEarly.get('import_id') || urlParamsEarly.get('id');
+    if (!editIdEarly) fetchNextImportNo();
+    loadSuppliersList();
     loadQuySoDu();
+    try { toggleImportSource(); } catch (e) {}
 
+    // XML — đúng logic import.html: chọn file chỉ hiện tên; TỰ ĐỘNG LẬP mới upload
     const btnUploadXML = document.getElementById('btnUploadXML');
     if (btnUploadXML) btnUploadXML.addEventListener('click', handleXMLUpload);
 
@@ -500,19 +750,155 @@ document.addEventListener('DOMContentLoaded', () => {
     if (xmlFileInput) {
         xmlFileInput.addEventListener('change', function() {
             const display = document.getElementById('fileNameDisplay');
-            if (this.files?.[0]) display.textContent = this.files[0].name;
+            const file = this.files?.[0];
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.xml')) {
+                this.value = '';
+                display.textContent = 'Chưa có file được chọn';
+                return toast('Chỉ hỗ trợ file XML của hóa đơn điện tử!', 'error');
+            }
+            display.textContent = file.name;
         });
     }
 
+    const supplierSearch = document.getElementById('supplierSearch');
+    if (supplierSearch) {
+        supplierSearch.addEventListener('change', () => applySupplierByName(supplierSearch.value));
+        supplierSearch.addEventListener('blur', () => applySupplierByName(supplierSearch.value));
+    }
+    const rateEl = document.getElementById('ExchangeRate');
+    if (rateEl) {
+        rateEl.addEventListener('input', () => {
+            document.querySelectorAll('#itemsTable tbody tr').forEach(row => calcRow(row));
+        });
+    }
+    const extraEl = document.getElementById('extraCost');
+    if (extraEl) extraEl.addEventListener('input', calcTotal);
+
     const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('import_id') || urlParams.get('id');
     const invoiceId = urlParams.get('invoice_id');
     const poId = urlParams.get('po_id');
-    if (invoiceId) loadInvoiceFromServer(invoiceId);
-    else if (poId) loadPurchaseOrder(poId);
-    else addRow();
+    if (editId) {
+        // Không lấy số phiếu mới khi sửa
+        loadImportForEdit(editId);
+    } else {
+        if (invoiceId) loadInvoiceFromServer(invoiceId);
+        else if (poId) loadPurchaseOrder(poId);
+        else addRow();
+    }
 
-    togglePaymentMethod();
+    try { togglePaymentMethod(); } catch (e) {}
 });
+
+function setFpDate(inputId, isoOrDisplay) {
+    const el = document.getElementById(inputId);
+    if (!el || !isoOrDisplay) return;
+    let display = String(isoOrDisplay).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(display)) {
+        display = display.slice(0, 10).split('-').reverse().join('/');
+    }
+    if (el._flatpickr) el._flatpickr.setDate(display, true);
+    else el.value = display;
+}
+
+async function loadImportForEdit(importId) {
+    try {
+        const res = await fetch('/api/import/' + encodeURIComponent(importId) + '/edit');
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Không tải được phiếu nhập');
+        const d = json.data || {};
+
+        document.getElementById('editImportId').value = d.id || importId;
+        const no = d.import_no || '';
+        document.getElementById('import_no').value = no;
+        const badge = document.getElementById('import_no_val');
+        if (badge) badge.textContent = no || '—';
+        const title = document.getElementById('pageTitle');
+        if (title) {
+            title.innerHTML = `<i class="bi bi-pencil-square"></i> SỬA PHIẾU NHẬP ${no ? '#' + no : ''}`;
+        }
+        const xmlZone = document.getElementById('xmlUploadZone');
+        if (xmlZone) xmlZone.classList.add('d-none');
+
+        document.getElementById('supplierId').value = d.supplier_id || '';
+        document.getElementById('supplierSearch').value = d.supplier_name || '';
+        document.getElementById('taxCode').value = d.tax_code || '';
+        document.getElementById('supplierAddress').value = d.address || '';
+        document.getElementById('bill_no').value = d.bill_no || '';
+        document.getElementById('note').value = d.note || '';
+        document.getElementById('extraCost').value = formatVNDCustom(d.extra_cost || 0);
+        if (d.from_invoice_id) document.getElementById('fromInvoiceId').value = d.from_invoice_id;
+
+        setFpDate('importDate', d.date);
+        setFpDate('bill_date', d.bill_date);
+
+        const src = document.getElementById('source_of_goods');
+        if (src) {
+            const it = String(d.import_type || 'DOMESTIC').toUpperCase();
+            src.value = (it === 'IMPORT' || it === 'IMPORTED') ? 'IMPORT' : 'DOMESTIC';
+        }
+        const rateEl = document.getElementById('ExchangeRate');
+        if (rateEl && d.exchange_rate) rateEl.value = d.exchange_rate;
+        try { toggleImportSource(); } catch (e) {}
+
+        const payStatus = d.payment_status || 'Chưa thanh toán';
+        const ps = document.getElementById('paymentStatus');
+        if (ps) ps.value = payStatus;
+        const pm = document.getElementById('paymentMethod');
+        if (pm) {
+            const raw = String(d.payment_method || 'cash').toLowerCase();
+            pm.value = (raw === 'bank' || raw === 'bank_transfer' || raw.includes('112')) ? 'bank' : 'cash';
+        }
+        try { togglePaymentMethod(); } catch (e) {}
+
+        const tbody = document.querySelector('#itemsTable tbody');
+        tbody.innerHTML = '';
+        const items = d.items || [];
+        for (const item of items) {
+            addRow({
+                product_id: item.product_id || '',
+                invoice_name: item.product_name || item.name || item.invoice_name || '',
+                unit: item.unit || item.invoice_unit || '',
+                qty: item.qty,
+                price: item.buyprice,
+                line_type: item.line_type || 'goods',
+                warehouse_code: item.warehouse_code || d.warehouse_code || '',
+                tax_pct: item.tax_pct,
+                discount_pct: item.discount_pct,
+                import_tax_pct: item.import_tax_pct || 0,
+            });
+            const row = tbody.lastElementChild;
+            if (row && item.product_id) {
+                row.querySelector('.p-id').value = item.product_id;
+                if (item.product_code) {
+                    const codeEl = row.querySelector('.product-code-preview');
+                    if (codeEl) codeEl.value = item.product_code;
+                }
+                if (item.base_unit) {
+                    const bu = row.querySelector('.base-unit');
+                    if (bu) bu.value = item.base_unit;
+                }
+                if (item.wholesale_unit && item.wholesale_unit !== '—') {
+                    const wu = row.querySelector('.wholesale-unit');
+                    if (wu) wu.value = item.wholesale_unit;
+                }
+                if (item.unit_ratio) {
+                    const r = row.querySelector('.ratio');
+                    if (r) r.value = item.unit_ratio;
+                }
+            }
+            if (row) calcRow(row);
+        }
+        if (!items.length) addRow();
+        calcTotal();
+        toast('Đã nạp phiếu nhập để chỉnh sửa', 'success');
+    } catch (err) {
+        console.error(err);
+        toast(err.message || 'Lỗi tải phiếu nhập', 'error');
+        addRow();
+    }
+}
 
 async function loadPurchaseOrder(poId) {
     try {
@@ -565,7 +951,7 @@ async function loadPurchaseOrder(poId) {
         addRow();
     }
 }
-// ====================== XML & LOAD INVOICE (GIỮ NGUYÊN) ======================
+
 async function handleXMLUpload() {
     const fileInput = document.getElementById('xmlFile');
     if (!fileInput?.files?.[0]) return toast('Vui lòng chọn file XML!', 'error');
@@ -576,7 +962,14 @@ async function handleXMLUpload() {
     try {
         const response = await fetch('/api/parse-xml-invoice', { method: 'POST', body: formData });
         const data = await response.json();
-        if (!data.success) throw new Error(data.error);
+        if (!data.success) throw new Error(data.error || 'Không đọc được XML');
+        if (!data.items || !data.items.length) throw new Error('File XML không có dòng hàng hóa');
+
+        // SME: HĐĐT trong nước
+        const src = document.getElementById('source_of_goods');
+        if (src) src.value = 'DOMESTIC';
+        try { toggleImportSource(); } catch (e) {}
+
         const realId = await updateSupplierFromXML(data.supplier);
         document.getElementById('supplierId').value = realId || '';
         document.getElementById('supplierSearch').value = data.supplier?.name || '';
@@ -586,7 +979,11 @@ async function handleXMLUpload() {
         if (data.invoice?.invoice_date) {
             let d = data.invoice.invoice_date.split('T')[0];
             const formattedDate = d.split('-').reverse().join('/');
-            if (document.getElementById('bill_date')._flatpickr) document.getElementById('bill_date')._flatpickr.setDate(formattedDate);
+            if (document.getElementById('bill_date')._flatpickr) {
+                document.getElementById('bill_date')._flatpickr.setDate(formattedDate);
+            } else {
+                document.getElementById('bill_date').value = formattedDate;
+            }
         }
         const tbody = document.querySelector('#itemsTable tbody');
         tbody.innerHTML = '';
@@ -603,13 +1000,17 @@ async function handleXMLUpload() {
             const taxVal = String(item.vat_rate || '0').replace('%', '').trim();
             const selTax = row.querySelector('.tax-pct');
             if (selTax) selTax.value = [...selTax.options].some(o => o.value === taxVal) ? taxVal : '10';
-            await performInitialMatch(row, name, unit);
+            try { await performInitialMatch(row, name, unit); } catch (e) { console.warn(e); }
             calcRow(row);
         }
         calcTotal();
         toast('Nạp dữ liệu XML thành công!');
-    } catch (err) { toast(err.message, 'error'); }
-    finally { btn.disabled = false; }
+    } catch (err) {
+        console.error('handleXMLUpload', err);
+        toast(err.message || String(err), 'error');
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 async function updateSupplierFromXML(sup) {
@@ -644,20 +1045,26 @@ async function loadInvoiceFromServer(invoiceId) {
         }
         const tbody = document.querySelector('#itemsTable tbody');
         tbody.innerHTML = '';
-        data.DSHHDVu.forEach(item => {
+        const lines = data.DSHHDVu || [];
+        if (!lines.length) {
+            toast('Hóa đơn không có dòng chi tiết — thêm dòng thủ công', 'error');
+            addRow();
+            return;
+        }
+        lines.forEach(item => {
             addRow({
                 invoice_name: item.THHDVu,
                 unit: item.DVTinh,
                 qty: item.SLuong,
                 price: item.DGia,
                 discount_pct: parseFloat(item.TyLeCK) || 0,
-                tax_pct: String(item.TSuat || '0').replace('%', '').trim()
+                tax_pct: String(item.TSuat || '0').replace('%', '').trim(),
+                line_type: IS_SERVICE_MODE ? 'service' : DEFAULT_LINE_TYPE,
             });
         });
     } catch (err) { toast(err.message, 'error'); }
 }
 
-// ====================== GET CONSOLIDATED ITEMS - ĐÃ NÂNG CẤP ĐỂ MATCH BACKEND ======================
 function getConsolidatedItems() {
     const rows = document.querySelectorAll('#itemsTable tbody tr');
     const consolidatedMap = new Map();
@@ -666,20 +1073,23 @@ function getConsolidatedItems() {
         const name = tr.querySelector('.product-name').value.trim();
         if (!name) return;
 
-        const type = tr.querySelector('.product-type-select').value;   // ← Quan trọng cho backend
-
-        const key = `${name.toLowerCase()}|${type}`;
+        const lineType = normalizeLineType(tr.querySelector('.line-type-select')?.value);
+        const wh = (tr.querySelector('.warehouse-select')?.value || '').trim();
+        const key = `${name.toLowerCase()}|${lineType}|${wh}`;
 
         const itemData = {
             product_id: parseInt(tr.querySelector('.p-id').value) || null,
             name: name,
             invoice_name: tr.querySelector('.invoice-name-hidden').value.trim() || name,
-            invoice_product_type: type,                     // ← Field backend cần
+            line_type: lineType,
+            invoice_product_type: lineType,
+            warehouse_code: wh || null,
             unit: tr.querySelector('.invoice-unit').value.trim(),
             qty: parseNumber(tr.querySelector('.qty').value),
             buyprice: parseNumber(tr.querySelector('.buy-price').value),
             tax_pct: parseFloat(tr.querySelector('.tax-pct').value) || 0,
             discount_pct: parseFloat(tr.querySelector('.disc-pct').value) || 0,
+            import_tax_pct: parseFloat(tr.querySelector('.import-tax-pct')?.value) || 0,
             base_unit: tr.querySelector('.base-unit').value.trim(),
             wholesale_unit: tr.querySelector('.wholesale-unit').value.trim(),
             ratio: parseFloat(tr.querySelector('.ratio').value) || 1,
@@ -699,7 +1109,6 @@ function getConsolidatedItems() {
     return Array.from(consolidatedMap.values());
 }
 
-// ====================== SUBMIT - ĐÃ CHỈNH ĐỂ GỌI /api/import_sme ======================
 document.getElementById('btnSaveImport').addEventListener('click', async function(e) {
     e.preventDefault();
     const btn = this;
@@ -712,16 +1121,26 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
         await loadQuySoDu();
         const check = checkSoDu(totalAmount, paymentMethod);
         if (!check.ok) {
-            return Swal.fire('Không đủ tiền', check.message, 'warning');
+            const cont = await Swal.fire({
+                title: 'Cảnh báo số dư',
+                html: (check.message || '') + '<br><small>SME ghi sổ nhật ký 111/112 — bạn vẫn có thể tiếp tục nếu đã xác nhận.</small>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Vẫn lưu',
+                cancelButtonText: 'Hủy',
+            });
+            if (!cont.isConfirmed) return;
         }
     }
 
+    const importType = getImportType();
+    const editId = (document.getElementById('editImportId')?.value || '').trim();
     const confirmResult = await Swal.fire({
-        title: 'Xác nhận lưu phiếu nhập kho',
-        text: "Vui lòng kiểm tra lại Loại Hàng?",
+        title: editId ? 'Xác nhận cập nhật phiếu nhập' : 'Xác nhận lưu phiếu nhập mua',
+        html: `Nguồn: <b>${importType === 'IMPORT' ? 'Nhập khẩu' : 'Trong nước'}</b>. Kiểm tra <b>Loại hàng</b>, <b>Kho</b> (HH/VT) và định khoản trước khi lưu.`,
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Lưu phiếu',
+        confirmButtonText: editId ? 'Cập nhật' : 'Lưu phiếu',
         cancelButtonText: 'Hủy',
         confirmButtonColor: '#2563eb'
     });
@@ -730,35 +1149,79 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
 
     try {
         const items = getConsolidatedItems();
-        if (items.length === 0) throw new Error("Vui lòng nhập ít nhất một mặt hàng!");
+        if (items.length === 0) throw new Error('Vui lòng nhập ít nhất một mặt hàng!');
+
+        for (const it of items) {
+            if (needsWarehouse(it.line_type) && !(it.warehouse_code || '').trim()) {
+                throw new Error(`Dòng "${it.name}" (${LINE_TYPE_LABEL[it.line_type] || it.line_type}) bắt buộc chọn kho.`);
+            }
+        }
+
+        const supplierId = parseInt(document.getElementById('supplierId').value) || null;
+        if (!supplierId) throw new Error('Vui lòng chọn nhà cung cấp!');
 
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang lưu...';
 
+        for (const it of items) {
+            if (it.line_type === 'service') continue;
+            const upsertRes = await fetch('/api/products/upsert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: it.product_id || null,
+                    name: it.name,
+                    unit: it.base_unit || it.unit || 'Cái',
+                    base_price: it.base_sale_price || 0,
+                    buyprice: it.buyprice,
+                    unit1: it.wholesale_unit || null,
+                    unit_ratio: it.ratio || 1,
+                    price: it.sale_price || 0,
+                    product_type: it.line_type || 'goods'
+                })
+            });
+            const upsertData = await upsertRes.json();
+            if (!upsertData.success) {
+                throw new Error(upsertData.error || `Không lưu được sản phẩm: ${it.name}`);
+            }
+            it.product_id = upsertData.product?.id || upsertData.id;
+            if (upsertData.product?.product_code) it.product_code = upsertData.product.product_code;
+        }
+
+        const defaultWh = document.querySelector('#itemsTable tbody tr .warehouse-select')?.value || 'KHO_001';
+        const rate = getExchangeRate();
         const payload = {
+            import_id: editId ? parseInt(editId, 10) : null,
             import_no: document.getElementById('import_no').value,
-            supplier_id: parseInt(document.getElementById('supplierId').value) || null,
+            supplier_id: supplierId,
             date: document.getElementById('importDate').value.split('/').reverse().join('-'),
             bill_no: document.getElementById('bill_no').value,
-            bill_date: document.getElementById('bill_date').value 
-                        ? document.getElementById('bill_date').value.split('/').reverse().join('-') 
-                        : null,
+            bill_date: document.getElementById('bill_date').value
+                ? document.getElementById('bill_date').value.split('/').reverse().join('-')
+                : null,
+            tax_code: document.getElementById('taxCode').value || '',
             note: document.getElementById('note').value || '',
-            extra_cost: parseNumber(document.getElementById('extraCost').value),
+            extra_cost: 0,
+            doc_type: IS_SERVICE_MODE ? 'service' : 'stock',
+            mode: IS_SERVICE_MODE ? 'service' : 'stock',
             from_invoice_id: parseInt(document.getElementById('fromInvoiceId')?.value) || null,
             po_id: parseInt(document.getElementById('fromPoId')?.value) || null,
             po_no: document.getElementById('fromPoNo')?.value || null,
-            
             payment_status: paymentStatus,
-            payment_method: (paymentStatus === 'Đã thanh toán') 
-                            ? (paymentMethod === 'cash' ? 'cash' : 'bank') 
-                            : null,
-            
+            payment_method: (paymentStatus === 'Đã thanh toán')
+                ? (paymentMethod === 'cash' ? 'cash' : 'bank')
+                : null,
+            import_type: importType,
+            source_of_goods: importType,
+            currency: importType === 'IMPORT' ? 'USD' : 'VND',
+            exchange_rate: rate,
+            warehouse_code: defaultWh,
             items: items
         };
 
-        const res = await fetch('/api/import_sme', {   // ← Đổi sang route backend mới
-            method: 'POST',
+        const url = editId ? `/api/import_sme/${encodeURIComponent(editId)}` : '/api/import_sme';
+        const res = await fetch(url, {
+            method: editId ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
@@ -766,17 +1229,25 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
         const result = await res.json();
 
         if (result.success) {
-            const poMsg = result.purchase_order
-                ? ` · ĐĐH ${result.purchase_order.po_no || ''} → ${result.purchase_order.status}`
-                : '';
-            toast('Lưu phiếu nhập kho thành công!' + poMsg, 'success');
+            const parts = [];
+            if (result.purchase_order) {
+                parts.push(`ĐĐH ${result.purchase_order.po_no || ''} → ${result.purchase_order.status}`);
+            }
+            if (result.fixed_assets_created) parts.push(`TSCĐ: ${result.fixed_assets_created}`);
+            if (result.tools_created) parts.push(`CCDC: ${result.tools_created}`);
+            if (result.journal_entry_ids?.length) parts.push(`NK: ${result.journal_entry_ids.length} bút toán`);
+            toast(
+                (editId ? 'Cập nhật phiếu nhập thành công!' : 'Lưu phiếu nhập mua thành công!')
+                + (parts.length ? ' · ' + parts.join(' · ') : ''),
+                'success'
+            );
             setTimeout(() => {
                 if (result.purchase_order && result.purchase_order.id) {
                     location.href = '/SME_purchase_order_list';
                 } else {
-                    location.reload();
+                    location.href = '/SME_import_list';
                 }
-            }, 1500);
+            }, 1200);
         } else {
             throw new Error(result.error || result.message || 'Lưu thất bại');
         }
@@ -786,7 +1257,7 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
         toast(err.message, 'error');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i class="bi bi-floppy-fill"></i> LƯU PHIẾU NHẬP`;
+        btn.innerHTML = `<i class="bi bi-floppy-fill"></i> ${IS_SERVICE_MODE ? 'LƯU HẠCH TOÁN' : 'LƯU PHIẾU NHẬP'}`;
     }
 });
 
@@ -795,5 +1266,6 @@ function togglePaymentMethod() {
     document.getElementById('methodWrapper').classList.toggle('hidden-field', status === 'Chưa thanh toán');
     if (status !== 'Chưa thanh toán') loadQuySoDu();
 }
+
 </script>
 {% endblock %}

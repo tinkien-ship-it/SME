@@ -1,0 +1,49 @@
+<style>
+.cash-book-paper {
+    background: #fff;
+    color: #000;
+    font-family: "Times New Roman", Times, serif;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px;
+    border-radius: .5rem;
+    box-shadow: 0 .125rem .5rem rgba(15, 23, 42, .09);
+}
+.cash-book-header p { font-size: .92rem; }
+.cash-book-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.cash-book-table th, .cash-book-table td {
+    border: 1px solid #111;
+    padding: 6px 5px;
+    text-align: center;
+    vertical-align: middle;
+}
+.cash-book-table th { background: #f1f5f9; font-weight: 700; }
+.cash-book-table .col-date { width: 90px; }
+.cash-book-table .col-doc { width: 105px; }
+.cash-book-table .col-account { width: 90px; }
+.cash-book-table .col-money { width: 115px; }
+.cash-book-table .amount-cell {
+    text-align: right;
+    white-space: nowrap;
+    font-family: ui-monospace, Consolas, monospace;
+}
+.cash-book-table .account-cell {
+    font-family: ui-monospace, Consolas, monospace;
+    font-weight: 600;
+}
+.entry-note { color: #64748b; font-family: system-ui, sans-serif; font-size: .7rem; }
+.cash-book-signatures { min-height: 145px; }
+@media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    nav, .navbar, footer, .no-print, .accounting-hub-sidebar { display: none !important; }
+    body, .accounting-hub-content { background: #fff !important; padding: 0 !important; }
+    .accounting-hub-container { display: block !important; margin: 0 !important; }
+    .cash-book-paper {
+        max-width: none !important; width: 100% !important; padding: 0 !important;
+        margin: 0 !important; box-shadow: none !important; border-radius: 0 !important;
+    }
+    .cash-book-table { font-size: 10px; }
+    .cash-book-table th, .cash-book-table td { padding: 4px 3px; }
+    .cash-book-table tr { break-inside: avoid; }
+}
+</style>
