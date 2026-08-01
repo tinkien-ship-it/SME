@@ -131,5 +131,20 @@ def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         )
         """
     )
+
+    # Multi-branch: cột analytic trên header chứng từ (NULL = dữ liệu cũ / HQ)
+    je_cols = {r[1] for r in c.execute('PRAGMA table_info(sme_journal_entries)').fetchall()}
+    if 'branch_code' not in je_cols:
+        try:
+            c.execute('ALTER TABLE sme_journal_entries ADD COLUMN branch_code TEXT')
+        except sqlite3.OperationalError:
+            pass
+    c.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_sme_je_branch
+        ON sme_journal_entries(branch_code, fiscal_year, period)
+        """
+    )
+
     if commit:
         conn.commit()

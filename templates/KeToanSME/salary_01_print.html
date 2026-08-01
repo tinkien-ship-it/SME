@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>01-LĐTL {{ doc.month }}/{{ doc.year }}</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:11pt;margin:20px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:14pt;font-weight:bold;margin:14px 0}
+  .muted{font-style:italic;font-size:9pt}
+  table{width:100%;border-collapse:collapse;margin:10px 0}
+  th,td{border:1px solid #333;padding:4px}
+  .num{text-align:right}
+  .sign{display:flex;justify-content:space-between;margin-top:36px;text-align:center}
+  .sign div{width:30%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+  <div style="text-align:right"><strong>Mẫu số 01 - LĐTL</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+</div>
+<div class="title">BẢNG THANH TOÁN TIỀN LƯƠNG</div>
+<div style="text-align:center">Tháng {{ '%02d'|format(doc.month) }}/{{ doc.year }}</div>
+<table>
+  <thead>
+    <tr>
+      <th>STT</th><th>Họ tên</th><th>Công</th><th>Lương CB</th><th>PC</th><th>Thưởng</th>
+      <th>Tổng thu</th><th>BHXH</th><th>BHYT</th><th>BHTN</th><th>TNCN</th><th>Thực lĩnh</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for ln in doc.lines %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ ln.fullname }}</td>
+      <td class="num">{{ '{:g}'.format((ln.actual_working_days or 0)|float) }}</td>
+      <td class="num">{{ '{:,.0f}'.format((ln.base_salary or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((ln.allowance or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((ln.bonus or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((ln.total_income or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((ln.bhxh or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((ln.bhyt or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((ln.bhtn or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((ln.tncn_tax or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((ln.net_pay or 0)|float).replace(',', '.') }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th colspan="6" style="text-align:right">Cộng</th>
+      <th class="num">{{ '{:,.0f}'.format(doc.total_income|float).replace(',', '.') }}</th>
+      <th colspan="3"></th>
+      <th></th>
+      <th class="num">{{ '{:,.0f}'.format(doc.total_net|float).replace(',', '.') }}</th>
+    </tr>
+  </tfoot>
+</table>
+<div class="sign">
+  <div>Người lập<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

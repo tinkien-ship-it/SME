@@ -1,0 +1,103 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Kiểm kê quỹ 08a-TT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Biên bản kiểm kê quỹ <span class="badge bg-info text-dark">08a-TT</span></h4>
+    <p class="text-muted small mb-0">Đối chiếu sổ quỹ TK 111 với tiền thực tế · ghi nhận thừa/thiếu</p>
+  </div>
+  <button class="btn btn-info" id="btnNew"><i class="fas fa-plus me-1"></i>Lập biên bản</button>
+</div>
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-md-3"><label class="form-label small fw-bold">Từ ngày</label><input type="date" id="fromDate" class="form-control"></div>
+    <div class="col-md-3"><label class="form-label small fw-bold">Đến ngày</label><input type="date" id="toDate" class="form-control"></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" id="btnLoad">Tải</button></div>
+  </div>
+</div>
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Số BB</th><th>Ngày</th><th>TK</th><th class="text-end">Sổ sách</th><th class="text-end">Thực tế</th><th class="text-end">Chênh lệch</th><th>TT</th><th></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="modalNew" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header bg-info"><h5 class="modal-title">Kiểm kê quỹ (08a-TT)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Ngày kiểm kê</label><input type="date" id="fDate" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Tài khoản quỹ</label><input type="text" id="fAcc" class="form-control" value="1111"></div>
+    <div class="mb-2"><label class="form-label small">Số dư sổ sách</label>
+      <div class="input-group"><input type="number" id="fBook" class="form-control" readonly><button class="btn btn-outline-secondary" type="button" id="btnBal">Lấy sổ</button></div>
+    </div>
+    <div class="mb-2"><label class="form-label small">Số tiền thực tế đếm</label><input type="number" id="fCounted" class="form-control" min="0" step="1000"></div>
+    <div class="mb-2"><label class="form-label small">Ban kiểm kê</label><input type="text" id="fCommittee" class="form-control" placeholder="Họ tên các thành viên"></div>
+    <div class="mb-2"><label class="form-label small">Ghi chú</label><input type="text" id="fNotes" class="form-control"></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" id="fPost" checked><label class="form-check-label small" for="fPost">Ghi sổ chênh lệch (thừa 711 / thiếu 811)</label></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-info" id="btnSave">Lưu biên bản</button></div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+const today = () => new Date().toISOString().slice(0,10);
+fDate.value = today(); toDate.value = today();
+fromDate.value = today().slice(0,8)+'01';
+
+async function loadList(){
+  const q = new URLSearchParams({from: fromDate.value, to: toDate.value});
+  const res = await fetch('/api/sme/cash-count?'+q);
+  const json = await res.json();
+  const tbody = document.getElementById('tbody');
+  if(!json.success){ tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${json.error}</td></tr>`; return; }
+  if(!json.data.length){ tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Chưa có biên bản</td></tr>'; return; }
+  tbody.innerHTML = json.data.map(r => {
+    const diff = r.difference||0;
+    const cls = diff>0?'text-success':(diff<0?'text-danger':'');
+    return `<tr>
+      <td class="fw-bold">${r.doc_no}</td><td>${(r.count_date||'').slice(0,10)}</td><td>${r.account_code}</td>
+      <td class="text-end">${fmt(r.book_balance)}</td><td class="text-end">${fmt(r.counted_amount)}</td>
+      <td class="text-end fw-bold ${cls}">${fmt(diff)}</td><td>${r.status}</td>
+      <td><a class="btn btn-sm btn-outline-info" target="_blank" href="/SME_cash_count/in/${r.id}">In</a>
+      ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger" onclick="voidDoc(${r.id})">Hủy</button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+async function voidDoc(id){
+  if(!confirm('Hủy biên bản và đảo bút toán chênh lệch?')) return;
+  const res = await fetch('/api/sme/cash-count/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  loadList();
+}
+document.getElementById('btnBal').onclick = async () => {
+  const q = new URLSearchParams({date: fDate.value, account: fAcc.value});
+  const res = await fetch('/api/sme/cash-count/book-balance?'+q);
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  fBook.value = json.book_balance;
+};
+document.getElementById('btnNew').onclick = () => { fDate.value=today(); new bootstrap.Modal(document.getElementById('modalNew')).show(); };
+document.getElementById('btnLoad').onclick = loadList;
+document.getElementById('btnSave').onclick = async () => {
+  const payload = {
+    date: fDate.value, account_code: fAcc.value,
+    counted_amount: parseFloat(fCounted.value)||0,
+    committee: fCommittee.value, notes: fNotes.value,
+    post_difference: fPost.checked
+  };
+  const res = await fetch('/api/sme/cash-count',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modalNew')).hide();
+  alert('Đã lập '+json.data.doc_no+(json.data.difference?` · Chênh ${fmt(json.data.difference)}`:''));
+  loadList();
+};
+loadList();
+</script>
+{% endblock %}

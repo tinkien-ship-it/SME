@@ -1,0 +1,123 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Chi nhánh{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Chi nhánh / đơn vị phụ thuộc</h4>
+    <p class="text-muted small mb-0">Cùng pháp nhân · gắn bút toán &amp; kho · BCTC hợp nhất vẫn lấy toàn DN</p>
+  </div>
+  <button class="btn btn-primary btn-sm" id="btnNew">Thêm chi nhánh</button>
+</div>
+<div class="alert alert-info small py-2">
+  Chọn chi nhánh làm việc ở thanh trên để ghi sổ. Lọc sổ cái/sổ quỹ theo CN hoặc «Tất cả».
+  Dữ liệu cũ không gắn CN được xem như <strong>HQ</strong>.
+</div>
+<div class="card shadow-sm border-0 mb-4"><div class="table-responsive">
+<table class="table table-sm mb-0"><thead class="table-light"><tr>
+  <th>Mã</th><th>Tên</th><th>Địa chỉ</th><th>ĐT</th><th>Mặc định</th><th>TT</th><th></th>
+</tr></thead><tbody id="tbody"></tbody></table>
+</div></div>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h5 class="fw-bold mb-0">Kho ↔ chi nhánh</h5>
+  <button class="btn btn-outline-secondary btn-sm" id="btnReloadWh">Tải lại kho</button>
+</div>
+<p class="text-muted small">Gắn kho vào CN để nhập/xuất và phiếu kho theo đúng đơn vị đang làm việc.</p>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table table-sm mb-0"><thead class="table-light"><tr>
+  <th>Mã kho</th><th>Tên kho</th><th>Chi nhánh</th><th></th>
+</tr></thead><tbody id="whBody"></tbody></table>
+</div></div>
+
+<div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Chi nhánh</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Mã *</label><input id="fCode" class="form-control text-uppercase" maxlength="16" placeholder="VD: CN01"></div>
+    <div class="mb-2"><label class="form-label small">Tên *</label><input id="fName" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Địa chỉ</label><input id="fAddr" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Điện thoại</label><input id="fPhone" class="form-control"></div>
+    <div class="form-check mb-2"><input type="checkbox" class="form-check-input" id="fDef"><label class="form-check-label" for="fDef">Đặt làm mặc định</label></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button><button class="btn btn-primary" id="btnSave">Lưu</button></div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+let branchOpts = [];
+
+async function load(){
+  const res=await fetch('/api/sme/branches?active=0'); const json=await res.json();
+  branchOpts = (json.data||[]).filter(r=>r.is_active);
+  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.code}</td><td>${r.name||''}</td>
+    <td class="small">${r.address||''}</td><td>${r.phone||''}</td>
+    <td>${r.is_default?'★':''}</td>
+    <td>${r.is_active?'Active':'Off'}</td>
+    <td class="text-nowrap">
+      <button class="btn btn-sm btn-outline-primary" onclick="useBr('${r.code}')">Làm việc</button>
+      ${r.is_active?`<button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggle(${JSON.stringify(r.code)},0)">Tắt</button>`:
+        `<button class="btn btn-sm btn-outline-success ms-1" onclick="toggle(${JSON.stringify(r.code)},1)">Bật</button>`}
+      ${!r.is_default&&r.is_active?`<button class="btn btn-sm btn-outline-warning ms-1" onclick="setDef(${JSON.stringify(r.code)})">Mặc định</button>`:''}
+    </td>
+  </tr>`).join('')||'<tr><td colspan="7" class="text-muted text-center">Chưa có</td></tr>';
+  loadWh();
+}
+
+function branchSelectHtml(current){
+  const cur = (current||'HQ').toUpperCase();
+  return `<select class="form-select form-select-sm wh-br" style="min-width:140px">
+    ${branchOpts.map(b=>`<option value="${b.code}" ${b.code===cur?'selected':''}>${b.code} — ${b.name}</option>`).join('')||
+      `<option value="HQ">HQ</option>`}
+  </select>`;
+}
+
+async function loadWh(){
+  const res=await fetch('/api/sme/warehouses?all=1'); const json=await res.json();
+  if(!json.success){ whBody.innerHTML=`<tr><td colspan="4" class="text-danger">${json.error||'Lỗi'}</td></tr>`; return; }
+  const rows=json.data||[];
+  whBody.innerHTML=rows.map(w=>`<tr data-code="${w.code}">
+    <td class="fw-bold">${w.code}</td>
+    <td>${w.name||''}${w.is_default?' ★':''}</td>
+    <td>${branchSelectHtml(w.branch_code)}</td>
+    <td><button class="btn btn-sm btn-outline-primary btn-save-wh">Gắn</button></td>
+  </tr>`).join('')||'<tr><td colspan="4" class="text-muted text-center">Chưa có kho</td></tr>';
+}
+
+whBody.addEventListener('click', async (ev)=>{
+  const btn=ev.target.closest('.btn-save-wh'); if(!btn) return;
+  const tr=btn.closest('tr'); const code=tr.dataset.code;
+  const branch=tr.querySelector('.wh-br').value;
+  const res=await fetch('/api/sme/warehouses/'+encodeURIComponent(code)+'/branch',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({branch_code:branch})
+  });
+  const json=await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  btn.textContent='OK'; setTimeout(()=>{btn.textContent='Gắn';},800);
+});
+
+async function useBr(code){
+  const res=await fetch('/api/sme/branches/select',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  location.reload();
+}
+async function toggle(code, active){
+  const res=await fetch('/api/sme/branches/'+encodeURIComponent(code),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_active:!!active})});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+}
+async function setDef(code){
+  const res=await fetch('/api/sme/branches/'+encodeURIComponent(code),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_default:true})});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+}
+btnNew.onclick=()=>{ fCode.value=''; fName.value=''; fAddr.value=''; fPhone.value=''; fDef.checked=false; new bootstrap.Modal(modal).show(); };
+btnSave.onclick=async()=>{
+  const res=await fetch('/api/sme/branches',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    code:fCode.value, name:fName.value, address:fAddr.value, phone:fPhone.value, is_default:fDef.checked
+  })});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(modal).hide(); load();
+};
+btnReloadWh.onclick=loadWh;
+load();
+</script>
+{% endblock %}

@@ -118,30 +118,60 @@ def _build_revenue_lines(
     return business_type, lines
 
 
+def _cogs_accounts_for_product_type(product_type: str | None, move_type: str) -> tuple[str, str, str]:
+    """Trả (TK GV, TK kho, nhãn) theo loại hàng / loại move."""
+    pt = (product_type or 'goods').strip().lower()
+    mt = (move_type or '').upper()
+    if mt == 'SALE_RECIPE' or pt in ('recipe', 'raw_materials', 'materials', 'material', 'nvl'):
+        return '6322', '152', 'nguyên liệu chế biến'
+    if pt in ('finished_goods', 'finished', 'thanh_pham', 'ready_made'):
+        return '6322', '155', 'thành phẩm'
+    return '6321', '156', 'hàng hóa'
+
+
 def _build_cogs_lines(conn: sqlite3.Connection, sale_id: int) -> list[dict]:
-    rows = conn.execute(
-        """
-        SELECT CASE WHEN UPPER(type) = 'SALE_RECIPE' THEN 'SALE_RECIPE' ELSE 'SALE' END AS move_type,
-               SUM(
-                   CASE WHEN UPPER(type) = 'RETURN_SALE' THEN -1 ELSE 1 END
-                   * ABS(COALESCE(quantity, 0)) * COALESCE(cost_price, 0)
-               ) AS amount
-        FROM stock_moves
-        WHERE ref_id = ? AND UPPER(type) IN ('SALE', 'SALE_RECIPE', 'RETURN_SALE')
-        GROUP BY CASE WHEN UPPER(type) = 'SALE_RECIPE' THEN 'SALE_RECIPE' ELSE 'SALE' END
-        """,
-        (sale_id,),
-    ).fetchall()
+    # Gom theo loại hàng để xuất đúng 156/152/155 (TP sản xuất)
+    try:
+        rows = conn.execute(
+            """
+            SELECT
+                UPPER(sm.type) AS move_type,
+                COALESCE(p.product_type, 'goods') AS product_type,
+                SUM(
+                    CASE WHEN UPPER(sm.type) = 'RETURN_SALE' THEN -1 ELSE 1 END
+                    * ABS(COALESCE(sm.quantity, 0)) * COALESCE(sm.cost_price, 0)
+                ) AS amount
+            FROM stock_moves sm
+            LEFT JOIN products p ON p.id = sm.product_id
+            WHERE sm.ref_id = ? AND UPPER(sm.type) IN ('SALE', 'SALE_RECIPE', 'RETURN_SALE')
+            GROUP BY UPPER(sm.type), COALESCE(p.product_type, 'goods')
+            """,
+            (sale_id,),
+        ).fetchall()
+    except sqlite3.Error:
+        rows = conn.execute(
+            """
+            SELECT CASE WHEN UPPER(type) = 'SALE_RECIPE' THEN 'SALE_RECIPE' ELSE 'SALE' END AS move_type,
+                   'goods' AS product_type,
+                   SUM(
+                       CASE WHEN UPPER(type) = 'RETURN_SALE' THEN -1 ELSE 1 END
+                       * ABS(COALESCE(quantity, 0)) * COALESCE(cost_price, 0)
+                   ) AS amount
+            FROM stock_moves
+            WHERE ref_id = ? AND UPPER(type) IN ('SALE', 'SALE_RECIPE', 'RETURN_SALE')
+            GROUP BY CASE WHEN UPPER(type) = 'SALE_RECIPE' THEN 'SALE_RECIPE' ELSE 'SALE' END
+            """,
+            (sale_id,),
+        ).fetchall()
     lines: list[dict] = []
     sequence = 1
     for row in rows:
-        amount = _money(row[1])
+        amount = _money(row[2] if len(row) > 2 else row[1])
         if amount <= 0:
             continue
-        is_recipe = row[0] == 'SALE_RECIPE'
-        debit_code = '6322' if is_recipe else '6321'
-        credit_code = '152' if is_recipe else '156'
-        label = 'nguyên liệu chế biến' if is_recipe else 'hàng hóa'
+        move_type = row[0]
+        product_type = row[1] if len(row) > 2 else 'goods'
+        debit_code, credit_code, label = _cogs_accounts_for_product_type(product_type, move_type)
         lines.extend([
             {
                 'sequence': sequence,
@@ -242,6 +272,24 @@ def sync_sale_journals(
     document_no = sale['sale_no'] if 'sale_no' in sale.keys() else None
     description = f"Bán hàng {document_no or ('#' + str(sale_id))}"
     business_type, revenue_lines = _build_revenue_lines(conn, sale)
+    from Services.sme.branch_filter import warehouse_branch_or_session
+    wh_code = None
+    try:
+        sm_cols = {r[1] for r in conn.execute('PRAGMA table_info(stock_moves)').fetchall()}
+        if 'warehouse_code' in sm_cols:
+            wh_row = conn.execute(
+                """
+                SELECT warehouse_code FROM stock_moves
+                WHERE ref_id = ? AND warehouse_code IS NOT NULL AND warehouse_code != ''
+                ORDER BY id DESC LIMIT 1
+                """,
+                (sale_id,),
+            ).fetchone()
+            if wh_row:
+                wh_code = wh_row[0] if not isinstance(wh_row, sqlite3.Row) else wh_row['warehouse_code']
+    except Exception:
+        pass
+    branch = warehouse_branch_or_session(conn, wh_code)
     posted: list[dict] = []
     if revenue_lines:
         posted.append(post_journal_entry(
@@ -255,6 +303,7 @@ def sync_sale_journals(
             description=description,
             reference_document=document_no,
             created_by=created_by,
+            branch_code=branch,
             lines=revenue_lines,
         ))
 
@@ -271,6 +320,7 @@ def sync_sale_journals(
             description=f'Giá vốn {description.lower()}',
             reference_document=document_no,
             created_by=created_by,
+            branch_code=branch,
             lines=cogs_lines,
         ))
     return {

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Đối chiếu NH #{{ doc.id }}</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  .row{margin:6px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #333;padding:5px}
+  .num{text-align:right}
+  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
+  .sign div{width:30%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+  <div style="text-align:right"><strong>Biên bản đối chiếu NH</strong><br><span class="muted">SME · TT99</span></div>
+</div>
+<div class="title">BIÊN BẢN ĐỐI CHIẾU TÀI KHOẢN NGÂN HÀNG</div>
+<div style="text-align:center">Phiên #{{ doc.id }} — Ngày {{ doc.reconcile_date }} — TT: {{ doc.status }}</div>
+<div class="row">Tài khoản: <strong>{{ doc.account_code }}</strong></div>
+<div class="row">Kỳ: {{ doc.date_from }} → {{ doc.date_to }}</div>
+<div class="row">Số dư sổ sách: <strong>{{ '{:,.0f}'.format((doc.book_balance or 0)|float).replace(',', '.') }}</strong></div>
+<div class="row">Số dư sao kê: <strong>{{ '{:,.0f}'.format((doc.statement_balance or 0)|float).replace(',', '.') }}</strong></div>
+<div class="row">Chênh lệch: <strong>{{ '{:,.0f}'.format((doc.difference or 0)|float).replace(',', '.') }}</strong></div>
+<table>
+  <thead><tr><th>STT</th><th>Ngày sổ</th><th>CT sổ</th><th>Ngày NH</th><th>Số tiền khớp</th><th>Ghi chú</th></tr></thead>
+  <tbody>
+  {% for m in doc.matches or [] %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ m.book_date or '' }}</td>
+      <td>{{ m.book_doc_no or m.journal_line_id or '' }}</td>
+      <td>{{ m.bank_date or '' }}</td>
+      <td class="num">{{ '{:,.0f}'.format((m.amount or 0)|float).replace(',', '.') }}</td>
+      <td>{{ m.match_note or m.note or '' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div class="sign">
+  <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Thủ quỹ / thủ quỹ NH<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

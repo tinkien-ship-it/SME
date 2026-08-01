@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>05-VT {{ doc.doc_no }}</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #333;padding:5px}
+  .num{text-align:right}
+  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
+  .sign div{width:24%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+  <div style="text-align:right"><strong>Mẫu số 05 - VT</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+</div>
+<div class="title">BIÊN BẢN TỔNG HỢP KIỂM KÊ<br>VẬT TƯ, CÔNG CỤ, SẢN PHẨM, HÀNG HÓA</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.count_date }} — Kho: {{ doc.warehouse_code or '' }}</div>
+<table>
+  <thead>
+    <tr><th>STT</th><th>Tên hàng</th><th>SL sổ</th><th>SL thực tế</th><th>Chênh lệch</th><th>Đơn giá</th><th>Thành tiền CL</th></tr>
+  </thead>
+  <tbody>
+  {% for ln in doc.lines %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ ln.product_name or ln.product_id }}</td>
+      <td class="num">{{ '{:g}'.format(ln.book_qty|float) }}</td>
+      <td class="num">{{ '{:g}'.format(ln.counted_qty|float) }}</td>
+      <td class="num">{{ '{:g}'.format(ln.diff_qty|float) }}</td>
+      <td class="num">{{ '{:,.0f}'.format(ln.unit_cost|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format(ln.amount|float).replace(',', '.') }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if doc.notes %}<p>Ghi chú: {{ doc.notes }}</p>{% endif %}
+<div class="sign">
+  <div>Trưởng ban<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Thủ kho<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

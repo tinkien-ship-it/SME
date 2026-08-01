@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
@@ -12,6 +13,31 @@ MONEY_Q = Decimal('0.01')
 
 def _money(value: Any) -> Decimal:
     return Decimal(str(value or 0)).quantize(MONEY_Q, rounding=ROUND_HALF_UP)
+
+
+def cash_fund_balances(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int | None = None,
+    branch_code: str | None = None,
+) -> dict[str, Any]:
+    """Số dư quỹ TM/NH từ sổ kép SME (thay /api/quy-so-du HKD)."""
+    year = int(fiscal_year or datetime.now().year)
+    cash_book = cash_account_book(
+        conn, fiscal_year=year, account_prefix='111', branch_code=branch_code,
+    )
+    bank_book = cash_account_book(
+        conn, fiscal_year=year, account_prefix='112', branch_code=branch_code,
+    )
+    return {
+        'fiscal_year': year,
+        'so_du_tien_mat': float(cash_book.get('closing_balance') or 0),
+        'so_du_ngan_hang': float(bank_book.get('closing_balance') or 0),
+        'cash_account': cash_book.get('account_code'),
+        'bank_account': bank_book.get('account_code'),
+        'source': 'sme_journal',
+        'branch_code': branch_code or 'ALL',
+    }
 
 
 def list_cash_accounts(
@@ -39,6 +65,7 @@ def cash_account_book(
     fiscal_year: int,
     account_prefix: str,
     account_code: str | None = None,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Lập sổ chi tiết tiền theo dòng Nợ/Có trong nhật ký SME.
 
@@ -46,6 +73,8 @@ def cash_account_book(
     TK 112*: Nợ là gửi vào, Có là rút/chuyển đi.
     Số dư đầu kỳ và lũy kế đều tính từ bút toán đã ghi sổ, không đọc phiếu HKD.
     """
+    from Services.sme.branches import branch_sql_filter
+
     if account_prefix not in ('111', '112'):
         raise ValueError('Sổ tiền chỉ hỗ trợ nhóm tài khoản 111 hoặc 112')
     if fiscal_year < 2000 or fiscal_year > 2100:
@@ -64,9 +93,10 @@ def cash_account_book(
     match_params = (selected, f'{selected}%')
     date_from = f'{fiscal_year:04d}-01-01'
     date_to = f'{fiscal_year:04d}-12-31'
+    bf, bp = branch_sql_filter(branch_code, alias='je')
 
     opening_row = conn.execute(
-        """
+        f"""
         SELECT COALESCE(SUM(jl.debit), 0) AS debit,
                COALESCE(SUM(jl.credit), 0) AS credit
         FROM sme_journal_lines jl
@@ -74,15 +104,16 @@ def cash_account_book(
         WHERE je.status IN ('posted', 'reversed')
           AND je.posting_date < ?
           AND (jl.account_code = ? OR jl.account_code LIKE ?)
+          {bf}
         """,
-        (date_from, *match_params),
+        (date_from, *match_params, *bp),
     ).fetchone()
     opening_debit = _money(opening_row['debit'])
     opening_credit = _money(opening_row['credit'])
     opening_balance = opening_debit - opening_credit
 
     journal_rows = conn.execute(
-        """
+        f"""
         SELECT
             jl.id AS line_id,
             jl.entry_id,
@@ -113,9 +144,10 @@ def cash_account_book(
         WHERE je.status IN ('posted', 'reversed')
           AND je.posting_date >= ? AND je.posting_date <= ?
           AND (jl.account_code = ? OR jl.account_code LIKE ?)
+          {bf}
         ORDER BY je.posting_date, je.id, jl.sequence, jl.id
         """,
-        (date_from, date_to, *match_params),
+        (date_from, date_to, *match_params, *bp),
     ).fetchall()
 
     running = opening_balance
@@ -165,4 +197,5 @@ def cash_account_book(
         'rows': rows,
         'row_count': len(rows),
         'source': 'sme_journal',
+        'branch_code': branch_code or 'ALL',
     }

@@ -764,6 +764,15 @@ def cancel_production_order(
         )
             sync_inventory_quantity_from_moves(c, mid)
 
+        # Đảo bút toán SME (full: collect/wip/fg hoặc simple)
+        try:
+            from Services.sme.production_journal import reverse_production_journals
+            reverse_production_journals(
+                conn, order_id, reason=f'Hủy SX {voucher_no}',
+            )
+        except Exception:
+            pass
+
         c.execute(
             """
             UPDATE production_orders

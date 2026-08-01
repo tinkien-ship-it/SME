@@ -292,8 +292,7 @@
                             <select class="form-select" id="ht_payment_method">
                                 <option value="cash">Tiền Mặt (111)</option>
                                 <option value="transfer" selected>Chuyển Khoản (112)</option>
-                                <option value="unpaid" selected>Chưa Thanh Toán (331)</option>
-
+                                <option value="unpaid">Chưa Thanh Toán (331)</option>
                             </select>
                         </div>
 
@@ -359,7 +358,7 @@ function formatMoneyInput(inputSelector, hiddenSelector) {
 
 async function loadQuySoDu() {
     try {
-        const res = await fetch('/api/quy-so-du');
+        const res = await fetch('/api/sme/cash-balances');
         const data = await res.json();
         if (data.success) {
             currentCashBalance = parseFloat(data.so_du_tien_mat || 0);
@@ -384,12 +383,31 @@ function checkSoDu(amount, paymentMethod) {
 
 // ====================== LOAD DANH SÁCH ======================
 document.addEventListener('DOMContentLoaded', function() {
-    flatpickr(".datepicker", { 
-        locale: "vn", 
-        dateFormat: "Y-m-d", 
-        altInput: true, 
+    // Bộ lọc: KHÔNG gán mặc định hôm nay — nếu gán sẽ lọc mất HĐ ngày khác
+    flatpickr("#from_date, #to_date", {
+        locale: "vn",
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d/m/Y",
+        allowInput: true,
+    });
+    flatpickr("#man_date", {
+        locale: "vn",
+        dateFormat: "Y-m-d",
+        altInput: true,
         altFormat: "d/m/Y",
         defaultDate: "today",
+    });
+    // Các datepicker còn lại (nếu có) — không ép ngày mặc định
+    document.querySelectorAll('.datepicker').forEach(el => {
+        if (el.id === 'from_date' || el.id === 'to_date' || el.id === 'man_date') return;
+        if (el._flatpickr) return;
+        flatpickr(el, {
+            locale: "vn",
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "d/m/Y",
+        });
     });
 
     flatpickr("#syncMonth", {
@@ -405,13 +423,19 @@ document.addEventListener('DOMContentLoaded', function() {
 async function loadInvoices() {
     const filterForm = document.getElementById('filterForm');
     const formData = new FormData(filterForm);
-    const params = new URLSearchParams(formData).toString();
+    const params = new URLSearchParams();
+    for (const [key, value] of formData.entries()) {
+        const v = String(value || '').trim();
+        if (!v) continue;
+        params.set(key, v);
+    }
 
     const tbody = document.getElementById('invoiceTableBody');
     tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
 
     try {
-        const response = await fetch(`/api/invoices/inward?${params}`);
+        const qs = params.toString();
+        const response = await fetch(`/api/sme/invoices/inward${qs ? `?${qs}` : ''}`);
         const result = await response.json();
 
         if (!result.success) throw new Error(result.error || 'Lỗi từ server');
@@ -697,27 +721,43 @@ $('#btnSaveHachToan').on('click', async function() {
     if (amount <= 0) return Swal.fire('Lỗi', 'Số tiền phải lớn hơn 0', 'error');
 
     const paymentMethod = $('#ht_payment_method').val();
-    const check = checkSoDu(amount, paymentMethod);
-    if (!check.ok) return Swal.fire({ icon: 'error', title: 'Không đủ số dư', html: check.message });
-
     const dateStr = $('#ht_date').val();
     if (!dateStr) return Swal.fire('Lỗi', 'Vui lòng chọn ngày chi', 'error');
 
+    if (paymentMethod === 'unpaid') {
+        $('#hachToanModal').modal('hide');
+        return Swal.fire({
+            icon: 'info',
+            title: 'Chưa thanh toán',
+            text: 'Không lập phiếu chi. Công nợ NCC (331) giữ nguyên đến khi chi tiền.',
+        });
+    }
+
+    const check = checkSoDu(amount, paymentMethod);
+    if (!check.ok) return Swal.fire({ icon: 'error', title: 'Không đủ số dư', html: check.message });
+
+    const expenseType = $('#ht_expense_type').val() || 'CP_KHAC';
+    const debitMap = {
+        CP_DIEN: '642', CP_NUOC: '642', CP_VT: '642', CP_MB: '642', CP_VPP: '642',
+        CP_BHXH: '3383', CP_BHYT: '3384', CP_BHTN: '3385', CP_KHAC: '331',
+    };
     const payload = {
-        receiver: $('#ht_receiver').val().trim(),
+        receiver_name: $('#ht_receiver').val().trim(),
         address: $('#ht_address').val().trim(),
         amount: amount,
-        payment_method: paymentMethod,
-        expense_type: $('#ht_expense_type').val(),
-        reason: $('#ht_reason').val().trim(),
-        bill_no: $('#ht_invoice_no').val(),
+        payment_method: paymentMethod === 'transfer' ? 'bank' : 'cash',
+        debit_account: debitMap[expenseType] || '331',
+        reason: $('#ht_reason').val().trim() || ('Thanh toán HĐ ' + ($('#ht_invoice_no').val() || '')),
+        reference_document: $('#ht_invoice_no').val() || '',
+        source_type: 'inward_invoice',
+        source_id: parseInt($('#ht_invoice_id').val(), 10) || null,
         date: dateStr.split('/').reverse().join('-')
     };
 
     Swal.showLoading();
 
     try {
-        const res = await fetch('/api/expense/create-other', {
+        const res = await fetch('/api/sme/vouchers/payments', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -730,11 +770,11 @@ $('#btnSaveHachToan').on('click', async function() {
             Swal.fire({
                 icon: 'success',
                 title: 'Thành công!',
-                text: `Đã tạo phiếu chi ${result.voucher_no || ''}`,
+                text: `Đã tạo phiếu chi SME (02-TT) ${result.voucher_no || ''}`,
                 timer: 2000
             }).then(() => {
                 loadInvoices();
-                if (result.id) window.open(`/PhieuChi/in/${result.id}`, '_blank');
+                if (result.id) window.open(`/SME_PhieuChi/in/${result.id}`, '_blank');
             });
         } else {
             Swal.fire('Lỗi', result.error || 'Không thể tạo phiếu chi', 'error');

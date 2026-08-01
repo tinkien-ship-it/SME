@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Bảng KH TSCĐ — 06-TSCĐ</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:11pt;margin:16px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:14pt;font-weight:bold;margin:12px 0}
+  .muted{font-style:italic;font-size:9pt}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #333;padding:3px 4px}
+  th{background:#f0f0f0}
+  .num{text-align:right}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+  <div style="text-align:right"><strong>Mẫu số 06 - TSCĐ</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+</div>
+<div class="title">BẢNG TÍNH VÀ PHÂN BỔ KHẤU HAO TSCĐ</div>
+<div style="text-align:center">{{ data.period_label }}</div>
+<table>
+  <thead>
+    <tr>
+      <th>Mã</th><th>Tên TSCĐ</th><th>Nguyên giá</th><th>Số tháng</th>
+      {% for p in data.periods %}<th>T{{ p }}</th>{% endfor %}
+      <th>Cộng</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in data.lines %}
+    <tr>
+      <td>{{ r.code }}</td><td>{{ r.name }}</td>
+      <td class="num">{{ '{:,.0f}'.format(r.original_cost).replace(',', '.') }}</td>
+      <td class="num">{{ r.months }}</td>
+      {% for p in data.periods %}
+      <td class="num">{{ '{:,.0f}'.format(r.periods.get(p, 0)).replace(',', '.') }}</td>
+      {% endfor %}
+      <td class="num"><strong>{{ '{:,.0f}'.format(r.total).replace(',', '.') }}</strong></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th colspan="4">Tổng cộng</th>
+      {% for p in data.periods %}
+      <th class="num">{{ '{:,.0f}'.format(data.totals_by_period.get(p, 0)).replace(',', '.') }}</th>
+      {% endfor %}
+      <th class="num">{{ '{:,.0f}'.format(data.grand_total).replace(',', '.') }}</th>
+    </tr>
+  </tfoot>
+</table>
+</body>
+</html>

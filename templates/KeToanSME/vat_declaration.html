@@ -16,6 +16,7 @@
         <p class="text-muted small mb-0">Đối chiếu sổ kép theo tháng/quý · xuất XML khung HTKK (SME-1.0) ·
           <a href="{{ url_for('SME_tax_nsnn') }}">Thuế &amp; NSNN</a> ·
           <a href="{{ url_for('SME_auto_posting') }}">Quyết toán GTGT</a>
+          <span id="regimeVatHint" class="ms-1"></span>
         </p>
       </div>
       <div class="d-flex gap-2 align-items-end flex-wrap">
@@ -58,6 +59,16 @@
     document.getElementById('quarterWrap').style.display=q?'':'none';
   }
   modeEl.addEventListener('change', sync); sync();
+  fetch('/api/sme/regime-profile').then(r=>r.json()).then(j=>{
+    if(!j.success || !j.data) return;
+    const def=j.data.default_vat_filing_mode;
+    if(def && !modeEl.dataset.userSet){
+      modeEl.value=def; sync();
+    }
+    const hint=document.getElementById('regimeVatHint');
+    if(hint) hint.textContent=j.data.label+' · mặc định GTGT '+def;
+  }).catch(()=>{});
+  modeEl.addEventListener('change',()=>{ modeEl.dataset.userSet='1'; });
   const money=v=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:0});
   let last=null;
 
@@ -81,6 +92,14 @@
         html+=`<tr><td class="money">${r.code}</td><td>${r.label}</td><td class="money">${money(r.amount)}</td></tr>`;
       });
       html+='</tbody></table>';
+      const rb=last.rate_breakdown||[];
+      if(rb.length){
+        html+='<h6 class="fw-bold mt-3">Phân bổ GTGT đầu ra theo thuế suất</h6><table class="table table-sm"><thead><tr><th>Thuế suất</th><th class="text-end">GTGT đầu ra</th></tr></thead><tbody>';
+        rb.forEach(r=>{
+          html+=`<tr><td>${r.label||((r.tax_rate!=null)?(r.tax_rate+'%'):'')}</td><td class="money">${money(r.vat_output||r.vat||0)}</td></tr>`;
+        });
+        html+='</tbody></table>';
+      }
       (last.notes||[]).forEach(n=>{ html+=`<div class="small text-muted">• ${n}</div>`; });
       document.getElementById('indBody').innerHTML=html;
 

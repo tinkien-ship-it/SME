@@ -430,6 +430,7 @@ def list_eligible_target_imports(
     scope: str = SCOPE_ALL,
     keyword: str | None = None,
     limit: int = 50,
+    branch_code: str | None = None,
 ) -> list[dict]:
     """Phiếu nhập hàng (stock) có dòng HH/NVL/TSCĐ/CCDC để nhận phân bổ."""
     ensure_sme_landed_cost_schema(conn, commit=False)
@@ -463,6 +464,9 @@ def list_eligible_target_imports(
         kw_filter = ' AND (i.import_no LIKE ? OR i.bill_no LIKE ? OR COALESCE(s.name, \'\') LIKE ?)'
         params.extend([kw, kw, kw])
 
+    from Services.sme.branches import import_branch_filter_sql
+    branch_filter, branch_params = import_branch_filter_sql(conn, branch_code, alias='i')
+
     sql = f"""
         SELECT i.id, i.import_no, i.date, i.bill_no, i.bill_date,
                i.supplier_id, COALESCE(s.name, '') AS supplier_name,
@@ -477,10 +481,12 @@ def list_eligible_target_imports(
         WHERE COALESCE(i.doc_type, 'stock') NOT IN ('service', 'landed_cost')
           {type_filter}
           {kw_filter}
+          {branch_filter}
         GROUP BY i.id
         ORDER BY i.date DESC, i.id DESC
         LIMIT ?
     """
+    params.extend(branch_params)
     params.append(int(limit or 50))
     rows = conn.execute(sql, params).fetchall()
     return [
@@ -601,6 +607,41 @@ def _fetch_target_lines(
     return result
 
 
+def _assert_target_imports_in_branch(
+    conn: sqlite3.Connection,
+    target_import_ids: list[int],
+    *,
+    branch_code: str | None = None,
+) -> None:
+    """Chặn phân bổ vào phiếu nhập ngoài chi nhánh đang chọn."""
+    if not target_import_ids:
+        return
+    from Services.sme.branches import import_branch_filter_sql, request_branch_filter
+
+    code = branch_code
+    if code is None:
+        try:
+            code = request_branch_filter()
+        except Exception:
+            code = None
+    bf, bp = import_branch_filter_sql(conn, code, alias='i')
+    if not bf:
+        return
+    ids = [int(x) for x in target_import_ids]
+    ph = ','.join('?' * len(ids))
+    rows = conn.execute(
+        f'SELECT i.id FROM import i WHERE i.id IN ({ph}) {bf}',
+        ids + list(bp),
+    ).fetchall()
+    found = {int(r[0] if not hasattr(r, 'keys') else r['id']) for r in rows}
+    missing = [i for i in ids if i not in found]
+    if missing:
+        raise ValueError(
+            'Phiếu nhập không thuộc chi nhánh đang chọn: '
+            + ', '.join(str(x) for x in missing)
+        )
+
+
 def preview_allocation(
     conn: sqlite3.Connection,
     *,
@@ -609,7 +650,13 @@ def preview_allocation(
     scope: str | None = None,
     cost_category: str | None = None,
     target_detail_ids: list[int] | None = None,
+    branch_code: str | None = None,
 ) -> dict:
+    _assert_target_imports_in_branch(
+        conn,
+        [int(x) for x in (target_import_ids or [])],
+        branch_code=branch_code,
+    )
     cat = _normalize_category(cost_category)
     sc = _normalize_scope(scope, cat)
     summary = get_cost_invoice_summary(conn, invoice_id)
@@ -899,6 +946,7 @@ def allocate_landed_cost(
     note: str | None = None,
     created_by: str | None = None,
     commit: bool = True,
+    branch_code: str | None = None,
 ) -> dict:
     """Tạo PN chi phí + phân bổ + journal. Không commit nếu commit=False."""
     from Services.inward_invoice_helpers import ensure_import_service_schema
@@ -919,6 +967,7 @@ def allocate_landed_cost(
         scope=sc,
         cost_category=cat,
         target_detail_ids=target_detail_ids,
+        branch_code=branch_code,
     )
     inv, cost_lines = _parse_invoice_payload(conn, invoice_id)
     supplier_id = _ensure_supplier(conn, inv)

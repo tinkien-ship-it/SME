@@ -19,7 +19,7 @@ MONEY_Q = Decimal('0.01')
 REVENUE_PREFIXES = ('511', '515', '711')
 # Chi phí / giảm trừ DT (đóng Nợ 911 / Có TK)
 EXPENSE_PREFIXES = (
-    '521', '632', '635', '641', '642', '811',
+    '521', '632', '635', '641', '642', '811', '821',
     '621', '622', '623', '627', '631', '611',
 )
 SKIP_CODES = frozenset({'911', '421', '4211', '4212'})
@@ -287,6 +287,7 @@ def run_period_close(
             **meta,
         }
 
+    from Services.sme.branches import DEFAULT_BRANCH_CODE
     entry = post_journal_entry(
         conn,
         posting_date=posting_date,
@@ -300,6 +301,7 @@ def run_period_close(
             f'(DT {meta["revenue_total"]:,.0f} − CP {meta["expense_total"]:,.0f})'
         ),
         created_by=created_by,
+        branch_code=DEFAULT_BRANCH_CODE,
         lines=lines,
     )
     return {
@@ -309,4 +311,151 @@ def run_period_close(
         'reversed_entry_ids': reversed_ids,
         'posting_date': posting_date,
         **meta,
+    }
+
+
+DOC_YEAR_END = 'KCN'
+
+
+def _active_year_end_entry(conn: sqlite3.Connection, fiscal_year: int) -> int | None:
+    row = conn.execute(
+        """
+        SELECT id FROM sme_journal_entries
+        WHERE document_type = ? AND document_id = ?
+          AND status = 'posted' AND reverses_id IS NULL
+        ORDER BY id DESC LIMIT 1
+        """,
+        (DOC_YEAR_END, int(fiscal_year)),
+    ).fetchone()
+    return int(row[0]) if row else None
+
+
+def _balance_of(conn: sqlite3.Connection, account_code: str, fiscal_year: int) -> Decimal:
+    """Số dư cuối năm (Nợ − Có) của một TK / nhóm TK."""
+    row = conn.execute(
+        """
+        SELECT COALESCE(SUM(jl.debit),0) AS d, COALESCE(SUM(jl.credit),0) AS c
+        FROM sme_journal_lines jl
+        JOIN sme_journal_entries je ON je.id = jl.entry_id
+        WHERE je.status IN ('posted', 'reversed')
+          AND je.fiscal_year = ?
+          AND (jl.account_code = ? OR jl.account_code LIKE ?)
+          AND je.document_type != ?
+        """,
+        (int(fiscal_year), account_code, f'{account_code}%', DOC_YEAR_END),
+    ).fetchone()
+    return _money(row[0]) - _money(row[1])
+
+
+def run_year_end_close(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    created_by: str | None = None,
+    replace_existing: bool = False,
+    lock_after: bool = True,
+) -> dict[str, Any]:
+    """
+    Kết chuyển cuối năm: chuyển số dư 4212 (LN năm nay) sang 4211 (LN năm trước).
+    Nên chạy sau khi đã kết chuyển KQKD tháng 12.
+    """
+    from Services.sme.bootstrap import ensure_sme_accounting_ready
+    from Services.sme.period_lock import lock_period
+
+    ensure_sme_accounting_ready(conn, commit=False)
+    conn.row_factory = sqlite3.Row
+    year = int(fiscal_year)
+    posting_date = f'{year:04d}-12-31'
+    reversed_ids: list[int] = []
+
+    existing = _active_year_end_entry(conn, year)
+    if existing and replace_existing:
+        rev = reverse_journal_entry(
+            conn, existing, posting_date=posting_date, created_by=created_by,
+            reason=f'Thay thế kết chuyển cuối năm {year}',
+        )
+        reversed_ids.append(int(rev['id']))
+        existing = None
+    if existing:
+        return {
+            'posted': False,
+            'reason': 'already_posted',
+            'entry_id': existing,
+            'entry_ids': [existing],
+            'reversed_entry_ids': reversed_ids,
+        }
+
+    bal_4212 = _balance_of(conn, '4212', year)
+    # 4212 normal credit: số dư Có = âm theo (debit-credit); lãi → credit > debit → bal < 0
+    # credit_balance = credit - debit = -bal_4212
+    credit_bal = -bal_4212
+    if credit_bal == 0:
+        return {
+            'posted': False,
+            'reason': 'nothing_to_close',
+            'balance_4212': 0.0,
+            'entry_ids': [],
+            'reversed_entry_ids': reversed_ids,
+        }
+
+    acct_4212 = resolve_postable_account(conn, '4212')
+    acct_4211 = resolve_postable_account(conn, '4211')
+    amt = abs(credit_bal)
+    if credit_bal > 0:
+        # Có lãi năm nay trên 4212 → Nợ 4212 / Có 4211
+        lines = [
+            {'sequence': 1, 'account_code': acct_4212, 'debit': float(amt), 'credit': 0,
+             'description': f'KC LN năm nay {year} sang 4211'},
+            {'sequence': 2, 'account_code': acct_4211, 'debit': 0, 'credit': float(amt),
+             'description': f'Nhận LN năm trước từ {year}'},
+        ]
+        direction = 'profit'
+    else:
+        # Lỗ năm nay → Nợ 4211 / Có 4212
+        lines = [
+            {'sequence': 1, 'account_code': acct_4211, 'debit': float(amt), 'credit': 0,
+             'description': f'KC lỗ năm nay {year} sang 4211'},
+            {'sequence': 2, 'account_code': acct_4212, 'debit': 0, 'credit': float(amt),
+             'description': f'Kết chuyển lỗ {year}'},
+        ]
+        direction = 'loss'
+
+    from Services.sme.branches import DEFAULT_BRANCH_CODE
+    entry = post_journal_entry(
+        conn,
+        posting_date=posting_date,
+        document_date=posting_date,
+        document_type=DOC_YEAR_END,
+        document_no=f'KCN{year}',
+        document_id=year,
+        business_type='KET_CHUYEN_CUOI_NAM',
+        description=f'Kết chuyển cuối năm {year}: 4212 → 4211 ({direction})',
+        created_by=created_by,
+        branch_code=DEFAULT_BRANCH_CODE,
+        lines=lines,
+    )
+
+    locked = False
+    if lock_after:
+        try:
+            lock_period(
+                conn, fiscal_year=year, period=12,
+                reason=f'Khóa sau kết chuyển cuối năm {year}',
+                locked_by=created_by,
+            )
+            locked = True
+        except Exception:
+            locked = False
+
+    return {
+        'posted': True,
+        'entry_id': entry['id'],
+        'entry_ids': [entry['id']],
+        'reversed_entry_ids': reversed_ids,
+        'posting_date': posting_date,
+        'amount': float(amt),
+        'direction': direction,
+        'account_4211': acct_4211,
+        'account_4212': acct_4212,
+        'locked_period_12': locked,
     }

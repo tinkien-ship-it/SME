@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Giá thành {{ doc.period }}/{{ doc.fiscal_year }}</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #333;padding:5px}
+  .num{text-align:right}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+  <div style="text-align:right"><strong>Bảng tổng hợp giá thành</strong><br><span class="muted">SME · TT99</span></div>
+</div>
+<div class="title">BẢNG TỔNG HỢP CHI PHÍ SẢN XUẤT — GIÁ THÀNH</div>
+<div style="text-align:center">Tháng {{ '%02d'|format(doc.period) }}/{{ doc.fiscal_year }}</div>
+<table>
+  <tr><th>Chỉ tiêu</th><th>Số tiền</th></tr>
+  <tr><td>621 — NVL trực tiếp (phát sinh kỳ)</td><td class="num">{{ '{:,.0f}'.format(doc.cp_621|float).replace(',', '.') }}</td></tr>
+  <tr><td>622 — Nhân công trực tiếp</td><td class="num">{{ '{:,.0f}'.format(doc.cp_622|float).replace(',', '.') }}</td></tr>
+  <tr><td>627 — SXC</td><td class="num">{{ '{:,.0f}'.format(doc.cp_627|float).replace(',', '.') }}</td></tr>
+  <tr><th>Tổng tập hợp kỳ</th><th class="num">{{ '{:,.0f}'.format(doc.collected_period|float).replace(',', '.') }}</th></tr>
+  <tr><td>154 — Chi phí SXKD dở dang (cuối kỳ)</td><td class="num">{{ '{:,.0f}'.format(doc.wip_154|float).replace(',', '.') }}</td></tr>
+  <tr><td>155 — Thành phẩm (cuối kỳ)</td><td class="num">{{ '{:,.0f}'.format(doc.finished_goods_155|float).replace(',', '.') }}</td></tr>
+  <tr><td>Nhập TP trong kỳ (Nợ 155)</td><td class="num">{{ '{:,.0f}'.format(doc.fg_receipts_period|float).replace(',', '.') }}</td></tr>
+  <tr><td>632 — Giá vốn kỳ</td><td class="num">{{ '{:,.0f}'.format(doc.cogs_period|float).replace(',', '.') }}</td></tr>
+  <tr><td>632 — Giá vốn YTD</td><td class="num">{{ '{:,.0f}'.format(doc.cogs_ytd|float).replace(',', '.') }}</td></tr>
+</table>
+{% if doc.recent_orders %}
+<p><strong>Lệnh sản xuất gần đây</strong></p>
+<table>
+  <thead><tr><th>Số</th><th>Ngày</th><th>NVL</th><th>NC</th><th>Chung</th><th>Tổng</th><th>Mode</th></tr></thead>
+  <tbody>
+  {% for o in doc.recent_orders[:15] %}
+    <tr>
+      <td>{{ o.voucher_no }}</td>
+      <td>{{ o.production_date }}</td>
+      <td class="num">{{ '{:,.0f}'.format((o.material or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((o.labor or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((o.other or 0)|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format((o.total_cost or 0)|float).replace(',', '.') }}</td>
+      <td>{{ o.costing_mode or '' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+</body>
+</html>

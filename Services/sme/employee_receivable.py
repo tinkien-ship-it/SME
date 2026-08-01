@@ -26,10 +26,11 @@ def employee_receivable_summary(
     *,
     fiscal_year: int,
     period: int,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Số dư Nợ TK 141 / 141x (tạm ứng / phải thu nội bộ nhân viên)."""
     ensure_sme_journal_ready(conn, commit=False)
-    bals = _closing_balances(conn, fiscal_year, period)
+    bals = _closing_balances(conn, fiscal_year, period, branch_code=branch_code)
     coa = {}
     try:
         rows = conn.execute(
@@ -64,4 +65,5 @@ def employee_receivable_summary(
         'lines': lines,
         'total': _f(total),
         'hint': 'Số dư Nợ TK 141* = tạm ứng / phải thu nhân viên trên sổ kép SME.',
+        'branch_code': branch_code or 'ALL',
     }

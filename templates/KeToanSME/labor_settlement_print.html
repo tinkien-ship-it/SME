@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thanh lý {{ st.settlement_no }} — 06-LĐTL</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  .row{margin:6px 0}
+  .sign{display:flex;justify-content:space-between;margin-top:48px;text-align:center}
+  .sign div{width:45%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+  <div style="text-align:right"><strong>Mẫu số 06 - LĐTL</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+</div>
+<div class="title">BIÊN BẢN THANH LÝ (NGHIỆM THU)<br>HỢP ĐỒNG GIAO KHOÁN</div>
+<div style="text-align:center">Số: <strong>{{ st.settlement_no }}</strong> — Ngày {{ st.settlement_date }}</div>
+<div class="row">Căn cứ HĐ số <strong>{{ contract.contract_no }}</strong> ngày {{ contract.contract_date }}</div>
+<div class="row">Bên giao khoán: {{ contract.employer_rep_name or info.business_name or '' }}</div>
+<div class="row">Bên nhận khoán: {{ contract.contractor_name }}</div>
+<div class="row">Nội dung đã thực hiện: {{ contract.work_content or '' }}</div>
+<div class="row">Giá trị nghiệm thu: <strong>{{ '{:,.0f}'.format(st.accepted_amount|float).replace(',', '.') }} đ</strong></div>
+<div class="row">Đã thanh toán: {{ '{:,.0f}'.format(st.paid_amount|float).replace(',', '.') }} đ</div>
+<div class="row">Phạt vi phạm: {{ '{:,.0f}'.format(st.penalty_amount|float).replace(',', '.') }} đ</div>
+<div class="row">Còn phải thanh toán: <strong>{{ '{:,.0f}'.format(st.payable_amount|float).replace(',', '.') }} đ</strong></div>
+<div class="row">Đánh giá chất lượng: {{ st.quality_note or '' }}</div>
+<div class="row">Kết luận: {{ st.conclusion or '' }}</div>
+<div class="sign">
+  <div>ĐẠI DIỆN BÊN GIAO KHOÁN<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>ĐẠI DIỆN BÊN NHẬN KHOÁN<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

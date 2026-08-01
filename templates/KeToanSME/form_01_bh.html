@@ -43,7 +43,30 @@
         <div class="col-md-2"><label class="form-label small mb-1">TT séc/CK</label><input type="number" id="paidCheque" class="form-control form-control-sm" value="0"></div>
       </div>
     </div></div>
+    <div class="card border-0 shadow-sm mb-3 no-print"><div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+      <span>Phiếu giao hàng đại lý (nhận trong kỳ)</span>
+      <button class="btn btn-sm btn-outline-primary" id="btnDeliv">Lập phiếu giao</button>
+    </div>
+    <div class="table-responsive"><table class="table table-sm mb-0">
+      <thead class="table-light"><tr><th>Số</th><th>Ngày</th><th>Đại lý</th><th>Ghi chú</th><th></th></tr></thead>
+      <tbody id="delivBody"></tbody>
+    </table></div></div>
     <div class="print-sheet" id="sheet"><div class="text-muted">Chọn đại lý và bấm Xem…</div></div>
+
+<div class="modal fade" id="delivModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Giao hàng đại lý / ký gửi</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small">Ngày giao</label><input type="date" id="dDate" class="form-control form-control-sm"></div>
+      <div class="col-md-8"><label class="form-label small">Đại lý</label><input type="text" id="dAgent" class="form-control form-control-sm" list="agentList"></div>
+    </div>
+    <div class="table-responsive" style="max-height:40vh"><table class="table table-sm">
+      <thead><tr><th>Hàng</th><th class="text-end">SL giao</th></tr></thead>
+      <tbody id="dLines"></tbody>
+    </table></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button><button class="btn btn-primary" id="btnSaveDeliv">Lưu</button></div>
+</div></div></div>
 {% endblock %}
 {% block sme_scripts %}
 <script>
@@ -53,6 +76,7 @@
   const y=now.getFullYear(), m=String(now.getMonth()+1).padStart(2,'0');
   document.getElementById('from').value=`${y}-${m}-01`;
   document.getElementById('to').value=now.toISOString().slice(0,10);
+  document.getElementById('dDate').value=now.toISOString().slice(0,10);
 
   async function loadAgents(){
     const res=await fetch('/api/sme/sale-forms/customers');
@@ -68,6 +92,48 @@
     });
   }
   loadAgents().catch(()=>{});
+
+  async function loadDeliv(){
+    const agent=document.getElementById('agent').value.trim();
+    const q=agent?('?agent='+encodeURIComponent(agent)):'';
+    const res=await fetch('/api/sme/agent-deliveries'+q); const json=await res.json();
+    delivBody.innerHTML=(json.data||[]).map(r=>`<tr>
+      <td class="fw-bold">${r.doc_no}</td><td>${(r.delivery_date||'').slice(0,10)}</td>
+      <td>${r.agent_name||''}</td><td class="small">${r.notes||''}</td>
+      <td><button class="btn btn-sm btn-outline-danger" onclick="voidDeliv(${r.id})">Hủy</button></td>
+    </tr>`).join('')||'<tr><td colspan="5" class="text-muted text-center">Chưa có phiếu giao</td></tr>';
+  }
+  window.voidDeliv=async(id)=>{
+    if(!confirm('Hủy phiếu giao?')) return;
+    const res=await fetch('/api/sme/agent-deliveries/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+    loadDeliv();
+  };
+  document.getElementById('btnDeliv').onclick=async()=>{
+    document.getElementById('dAgent').value=document.getElementById('agent').value;
+    const res=await fetch('/api/sme/sale-forms/products'); const json=await res.json();
+    dLines.innerHTML=(json.data||[]).slice(0,120).map(p=>`<tr data-id="${p.id}" data-code="${p.product_code||''}" data-name="${(p.name||'').replace(/"/g,'&quot;')}" data-unit="${p.unit||''}" data-price="${p.price||0}">
+      <td>${p.name}</td><td><input type="number" class="form-control form-control-sm text-end qty" min="0" step="any" value="0"></td>
+    </tr>`).join('');
+    new bootstrap.Modal(document.getElementById('delivModal')).show();
+  };
+  document.getElementById('btnSaveDeliv').onclick=async()=>{
+    const items=[];
+    dLines.querySelectorAll('tr').forEach(tr=>{
+      const q=parseFloat(tr.querySelector('.qty').value)||0;
+      if(q>0) items.push({
+        product_id:+tr.dataset.id, product_code:tr.dataset.code, product_name:tr.dataset.name,
+        unit:tr.dataset.unit, quantity:q, unit_price:parseFloat(tr.dataset.price)||0
+      });
+    });
+    if(!items.length) return alert('Nhập SL giao');
+    const res=await fetch('/api/sme/agent-deliveries',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({agent_name:dAgent.value, date:dDate.value, items})});
+    const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+    bootstrap.Modal.getInstance(document.getElementById('delivModal')).hide();
+    alert('Đã lập '+json.data.doc_no); loadDeliv();
+  };
+  loadDeliv();
 
   function render(d){
     const co=d.company||{};

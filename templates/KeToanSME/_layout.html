@@ -16,6 +16,23 @@
                 <i class="fas fa-bars me-1"></i> Menu
             </button>
             {% block sme_breadcrumb %}{% endblock %}
+            {% set br = sme_branch or {} %}
+            <div class="d-flex align-items-center gap-2 ms-auto">
+                <label class="small text-muted mb-0" for="smeBranchSelect">Chi nhánh</label>
+                <select id="smeBranchSelect" class="form-select form-select-sm" style="width:auto;min-width:160px"
+                        title="Chi nhánh ghi sổ / lọc báo cáo vận hành">
+                    <option value="ALL" {% if (br.filter or 'ALL') == 'ALL' %}selected{% endif %}>Tất cả (hợp nhất)</option>
+                    {% for b in br.branches or [] %}
+                    <option value="{{ b.code }}"
+                        {% if (br.filter or br.current_branch_code) == b.code %}selected{% endif %}>
+                        {{ b.code }} — {{ b.name }}{% if b.is_default %} ★{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <a href="{{ url_for('SME_branches') }}" class="btn btn-outline-secondary btn-sm" title="Danh mục chi nhánh">
+                    <i class="fas fa-cog"></i>
+                </a>
+            </div>
         </div>
         {% block sme_content %}{% endblock %}
     </main>
@@ -55,6 +72,28 @@
                 group.style.display = visible || !query ? '' : 'none';
                 if (query && visible) group.querySelector('.collapse')?.classList.add('show');
             });
+        });
+    }
+
+    const brSel = document.getElementById('smeBranchSelect');
+    if (brSel) {
+        brSel.addEventListener('change', async function () {
+            const code = this.value;
+            try {
+                const res = await fetch('/api/sme/branches/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code }),
+                });
+                const json = await res.json();
+                if (!json.success) {
+                    alert(json.error || 'Không đổi được chi nhánh');
+                    return;
+                }
+                location.reload();
+            } catch (e) {
+                alert('Lỗi kết nối khi đổi chi nhánh');
+            }
         });
     }
 })();

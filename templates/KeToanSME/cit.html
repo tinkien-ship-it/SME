@@ -1,0 +1,47 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Thuế TNDN{% endblock %}
+{% block sme_content %}
+<div class="mb-3"><h4 class="fw-bold mb-1">Tạm nộp &amp; nộp thuế TNDN</h4>
+<p class="text-muted small mb-0">Nợ 8211 / Có 3334 · thanh toán Nợ 3334 / Có 112</p></div>
+<div class="card shadow-sm border-0 mb-3"><div class="card-body row g-2 align-items-end">
+  <div class="col-md-2"><label class="form-label small">Năm</label><input type="number" id="fYear" class="form-control"></div>
+  <div class="col-md-2"><label class="form-label small">Kỳ</label><input type="number" id="fPeriod" class="form-control" min="1" max="12"></div>
+  <div class="col-md-2"><label class="form-label small">Thu nhập tính thuế</label><input type="number" id="fIncome" class="form-control" step="1000" value="0"></div>
+  <div class="col-md-2"><label class="form-label small">Thuế suất</label><input type="number" id="fRate" class="form-control" step="0.01" value="0.2"></div>
+  <div class="col-md-2"><label class="form-label small">Hoặc nhập số thuế</label><input type="number" id="fTax" class="form-control" step="1000" placeholder="Tự tính nếu trống"></div>
+  <div class="col-md-2"><button class="btn btn-primary w-100" id="btnAccrue">Ghi tạm nộp</button></div>
+</div></div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table mb-0"><thead class="table-light"><tr><th>Kỳ</th><th>Ngày</th><th class="text-end">Số thuế</th><th>TT</th><th></th></tr></thead><tbody id="tbody"></tbody></table>
+</div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+fYear.value=new Date().getFullYear(); fPeriod.value=new Date().getMonth()+1;
+async function load(){
+  const res=await fetch('/api/sme/cit?year='+fYear.value); const json=await res.json();
+  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td>${r.period}/${r.fiscal_year}</td><td>${(r.provision_date||'').slice(0,10)}</td>
+    <td class="text-end fw-bold">${fmt(r.tax_amount)}</td><td>${r.status}</td>
+    <td>${r.status==='accrued'?`<button class="btn btn-sm btn-success" onclick="pay(${r.fiscal_year},${r.period})">Nộp thuế</button>`:''}</td>
+  </tr>`).join('')||'<tr><td colspan="5" class="text-muted text-center">Chưa có</td></tr>';
+}
+btnAccrue.onclick=async()=>{
+  const payload={year:+fYear.value,period:+fPeriod.value,taxable_income:parseFloat(fIncome.value)||0,tax_rate:parseFloat(fRate.value)||0.2,replace_existing:true};
+  if(fTax.value!=='') payload.tax_amount=parseFloat(fTax.value);
+  const res=await fetch('/api/sme/cit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  alert('Đã ghi tạm nộp '+fmt(json.data.tax_amount)); load();
+};
+async function pay(y,p){
+  if(!confirm('Lập phiếu chi nộp TNDN?')) return;
+  const res=await fetch('/api/sme/cit/pay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({year:y,period:p})});
+  const json=await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  alert('Đã nộp'); load();
+}
+load();
+</script>
+{% endblock %}

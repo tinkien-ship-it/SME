@@ -338,6 +338,35 @@ def _decode_inward_pdf_from_row(row):
     return None
 
 
+def _inward_invoice_visible_for_branch(conn, inv: dict, branch_code: str) -> bool:
+    """HĐ mới: hiện mọi CN. HĐ đã nhập/hạch toán: chỉ CN có PN liên kết."""
+    if not inv.get('has_import') and not inv.get('has_accounted'):
+        return True
+    from Services.sme.branches import import_branch_filter_sql
+
+    bf, bp = import_branch_filter_sql(conn, branch_code, alias='i')
+    if not bf:
+        return True
+    inv_id = int(inv.get('id') or 0)
+    invoice_no = (inv.get('invoice_no') or '').strip()
+    row = conn.execute(
+        f"""
+        SELECT 1 FROM import i
+        WHERE (
+            i.from_invoice_id = ?
+            OR (
+                TRIM(COALESCE(i.bill_no, '')) != ''
+                AND TRIM(i.bill_no) = ?
+            )
+        )
+        {bf}
+        LIMIT 1
+        """,
+        [inv_id, invoice_no, *bp],
+    ).fetchone()
+    return bool(row)
+
+
 def register_inward_routes(app):
     """Đăng ký route hóa đơn đầu vào (giữ nguyên URL/endpoint)."""
 
@@ -514,15 +543,15 @@ def register_inward_routes(app):
                 query += " AND (si.seller_name LIKE ? OR si.seller_tax_code LIKE ? OR si.invoice_no LIKE ?)"
                 params.extend([f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"])
 
-            # Lọc theo ngày - Dùng đúng tên cột 'date' như code cũ của bạn
+            # Lọc theo ngày chứng từ (invoice_date) hoặc ngày ghi nhận (date)
             if from_date:
-                query += " AND si.date >= ?"
+                query += " AND date(COALESCE(NULLIF(TRIM(si.invoice_date), ''), si.date)) >= date(?)"
                 params.append(from_date)
             if to_date:
-                query += " AND si.date <= ?"
+                query += " AND date(COALESCE(NULLIF(TRIM(si.invoice_date), ''), si.date)) <= date(?)"
                 params.append(to_date)
 
-            query += " ORDER BY si.date DESC"
+            query += " ORDER BY date(COALESCE(NULLIF(TRIM(si.invoice_date), ''), si.date)) DESC, si.id DESC"
 
             c.execute(query, params)
             rows = c.fetchall()
@@ -563,6 +592,19 @@ def register_inward_routes(app):
                     except (TypeError, ValueError, json.JSONDecodeError):
                         pass
                 result.append(inv)
+
+            # SME multi-branch: HĐ đã nhập/hạch toán chỉ hiện nếu PN thuộc CN;
+            # HĐ mới (chưa nhập) vẫn hiện toàn DN để các CN nhận về.
+            try:
+                from Services.sme.branches import active_report_branch_filter
+                br = active_report_branch_filter()
+                if br is not None and str(br).strip().upper() not in ('', 'ALL'):
+                    result = [
+                        inv for inv in result
+                        if _inward_invoice_visible_for_branch(conn, inv, br)
+                    ]
+            except Exception:
+                logging.exception('inward branch filter')
 
             if status == 'imported':
                 result = [inv for inv in result if inv.get('has_import') == 1]

@@ -481,11 +481,21 @@ def sync_bank_transactions_from_provider(limit=50):
     }
 
 
-def list_bank_transactions(start_date=None, end_date=None, match_status=None, q=None, limit=200, offset=0):
+def list_bank_transactions(
+    start_date=None, end_date=None, match_status=None, q=None,
+    limit=200, offset=0, branch_code=None,
+):
     ensure_bank_transactions_table()
     conn = get_db_connection()
     conn.row_factory = __import__('sqlite3').Row
     try:
+        if branch_code is None:
+            try:
+                from Services.sme.branches import active_report_branch_filter
+                branch_code = active_report_branch_filter()
+            except Exception:
+                branch_code = None
+
         sql = """
             SELECT bt.*,
                    s.sale_no, s.status AS sale_status, s.total_amount AS sale_amount,
@@ -513,6 +523,27 @@ def list_bank_transactions(start_date=None, end_date=None, match_status=None, q=
             )"""
             params.extend([like] * 6)
 
+        code = (branch_code or '').strip().upper() if branch_code is not None else ''
+        branch_sql = ''
+        branch_params: list = []
+        if code and code != 'ALL':
+            try:
+                from Services.sme.branches import sale_branch_filter_sql
+                bf, bp = sale_branch_filter_sql(conn, code, alias='s2')
+                branch_sql = f"""
+                  AND (
+                    (COALESCE(bt.sale_id, bt.extracted_sale_id) IS NULL)
+                    OR COALESCE(bt.sale_id, bt.extracted_sale_id) IN (
+                        SELECT s2.id FROM sale s2 WHERE 1=1 {bf}
+                    )
+                  )
+                """
+                branch_params = list(bp)
+                sql += branch_sql
+                params.extend(branch_params)
+            except Exception:
+                pass
+
         count_sql = "SELECT COUNT(*) FROM (" + sql + ")"
         total = conn.execute(count_sql, params).fetchone()[0]
 
@@ -531,20 +562,36 @@ def list_bank_transactions(start_date=None, end_date=None, match_status=None, q=
                 item['raw'] = {}
             data.append(item)
 
-        summary = conn.execute("""
+        summary_sql = """
             SELECT
                 COUNT(*) AS total_count,
                 COALESCE(SUM(amount), 0) AS total_amount,
                 SUM(CASE WHEN match_status = 'matched' THEN 1 ELSE 0 END) AS matched_count,
                 SUM(CASE WHEN match_status = 'unmatched' THEN 1 ELSE 0 END) AS unmatched_count
-            FROM bank_transactions
-        """).fetchone()
+            FROM bank_transactions bt
+            WHERE 1=1
+        """
+        summary_params: list = []
+        if start_date:
+            summary_sql += " AND COALESCE(bt.transaction_date, bt.created_at, '') >= ?"
+            summary_params.append(start_date + ' 00:00:00')
+        if end_date:
+            summary_sql += " AND COALESCE(bt.transaction_date, bt.created_at, '') <= ?"
+            summary_params.append(end_date + ' 23:59:59')
+        if match_status:
+            summary_sql += " AND bt.match_status = ?"
+            summary_params.append(match_status)
+        if branch_sql:
+            summary_sql += branch_sql
+            summary_params.extend(branch_params)
+        summary = conn.execute(summary_sql, summary_params).fetchone()
 
         return {
             'success': True,
             'data': data,
             'total': total,
             'summary': dict(summary) if summary else {},
+            'branch_code': code or 'ALL',
         }
     finally:
         conn.close()

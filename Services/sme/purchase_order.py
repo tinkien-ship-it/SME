@@ -37,7 +37,8 @@ def ensure_purchase_order_schema(conn: sqlite3.Connection, *, commit: bool = Tru
             total_amount REAL NOT NULL DEFAULT 0,
             created_by TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            branch_code TEXT
         )
         """
     )
@@ -66,6 +67,8 @@ def ensure_purchase_order_schema(conn: sqlite3.Connection, *, commit: bool = Tru
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_sme_po_status ON sme_purchase_orders(status)"
     )
+    from Services.sme.branch_filter import ensure_branch_column
+    ensure_branch_column(conn, 'sme_purchase_orders')
     if commit:
         conn.commit()
 
@@ -122,6 +125,7 @@ def list_purchase_orders(
     keyword: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
+    branch_code: str | None = None,
     limit: int = 200,
 ) -> list[dict[str, Any]]:
     ensure_purchase_order_schema(conn, commit=False)
@@ -141,6 +145,10 @@ def list_purchase_orders(
     if date_to:
         sql += " AND po_date <= ?"
         params.append(date_to[:10])
+    from Services.sme.branch_filter import branch_where
+    bf, bp = branch_where(branch_code)
+    sql += bf
+    params.extend(bp)
     sql += " ORDER BY po_date DESC, id DESC LIMIT ?"
     params.append(int(limit) or 200)
     return [dict(r) for r in conn.execute(sql, params).fetchall()]
@@ -213,6 +221,8 @@ def create_purchase_order(
         ),
     )
     po_id = int(cur.lastrowid)
+    from Services.sme.branch_filter import stamp_row_branch
+    stamp_row_branch(conn, 'sme_purchase_orders', po_id)
     for ln in prepared:
         conn.execute(
             """
@@ -502,6 +512,7 @@ def purchasing_hub_metrics(
     *,
     fiscal_year: int,
     period_to: int | None = None,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Chỉ số hub Mua hàng: PS nhập kho, công nợ 331, ĐĐH chờ nhập."""
     from datetime import datetime as _dt
@@ -515,8 +526,12 @@ def purchasing_hub_metrics(
     if period_to < 1 or period_to > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
-    activity = _period_activity(conn, fiscal_year, 1, period_to)
-    bals = _closing_balances(conn, fiscal_year, period_to)
+    activity = _period_activity(
+        conn, fiscal_year, 1, period_to, branch_code=branch_code,
+    )
+    bals = _closing_balances(
+        conn, fiscal_year, period_to, branch_code=branch_code,
+    )
 
     # Giá trị mua hàng ≈ phát sinh Nợ TK hàng tồn (152/153/156)
     purchase = _sum_activity(activity, ('152', '153', '156'), side='debit')
@@ -529,7 +544,10 @@ def purchasing_hub_metrics(
         payable = Decimal('0.00')
 
     prev_to = max(1, period_to - 1)
-    prev_act = _period_activity(conn, fiscal_year, 1, prev_to) if period_to > 1 else {}
+    prev_act = (
+        _period_activity(conn, fiscal_year, 1, prev_to, branch_code=branch_code)
+        if period_to > 1 else {}
+    )
     prev_purchase = _sum_activity(prev_act, ('152', '153', '156'), side='debit') if period_to > 1 else Decimal('0.00')
     growth = None
     if prev_purchase > 0:

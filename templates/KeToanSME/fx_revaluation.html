@@ -1,0 +1,53 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Đánh giá tỷ giá{% endblock %}
+{% block sme_content %}
+<div class="mb-3"><h4 class="fw-bold mb-1">Đánh giá lại chênh lệch tỷ giá</h4>
+<p class="text-muted small mb-0">Điều chỉnh TK ngoại tệ · lãi 515 / lỗ 635 (hoặc 413 vốn chủ)</p></div>
+<div class="card shadow-sm border-0 mb-3"><div class="card-body">
+  <div class="row g-2 mb-2">
+    <div class="col-md-2"><label class="form-label small">Năm</label><input type="number" id="fYear" class="form-control"></div>
+    <div class="col-md-2"><label class="form-label small">Kỳ</label><input type="number" id="fPeriod" class="form-control" min="1" max="12"></div>
+    <div class="col-md-2"><label class="form-label small">NT</label><input type="text" id="fCur" class="form-control" value="USD"></div>
+    <div class="col-md-2"><label class="form-label small">Tỷ giá</label><input type="number" id="fRate" class="form-control" step="1" value="25000"></div>
+    <div class="col-md-2 form-check mt-4"><input class="form-check-input" type="checkbox" id="fEquity"><label class="form-check-label small" for="fEquity">Ghi 413 (vốn)</label></div>
+    <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100" id="btnSave">Ghi sổ</button></div>
+  </div>
+  <p class="small text-muted">Nhập số dư ngoại tệ và số dư VND sổ sách từng TK (1122, 131…).</p>
+  <table class="table table-sm"><thead><tr><th>TK</th><th class="text-end">Số dư NT</th><th class="text-end">Số dư VND sổ</th><th></th></tr></thead>
+  <tbody id="lines">
+    <tr><td><input class="form-control form-control-sm acc" value="1122"></td>
+      <td><input type="number" class="form-control form-control-sm text-end fc" step="any" value="0"></td>
+      <td><input type="number" class="form-control form-control-sm text-end vnd" step="any" value="0"></td>
+      <td><button class="btn btn-sm btn-outline-secondary" type="button" id="btnAdd">+</button></td></tr>
+  </tbody></table>
+</div></div>
+<div class="card shadow-sm border-0"><div class="card-header bg-white fw-bold">Lịch sử</div>
+<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Kỳ</th><th>NT</th><th>Tỷ giá</th><th class="text-end">Lãi</th><th class="text-end">Lỗ</th><th></th></tr></thead><tbody id="hist"></tbody></table></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+fYear.value=new Date().getFullYear(); fPeriod.value=new Date().getMonth()+1;
+btnAdd.onclick=()=>{const tr=document.createElement('tr'); tr.innerHTML=`<td><input class="form-control form-control-sm acc" value="131"></td>
+  <td><input type="number" class="form-control form-control-sm text-end fc" step="any" value="0"></td>
+  <td><input type="number" class="form-control form-control-sm text-end vnd" step="any" value="0"></td><td></td>`; lines.appendChild(tr);};
+async function load(){const res=await fetch('/api/sme/fx-revaluation?year='+fYear.value); const json=await res.json();
+  hist.innerHTML=(json.data||[]).map(r=>`<tr><td>${r.period}/${r.fiscal_year}</td><td>${r.currency}</td><td>${fmt(r.rate)}</td><td class="text-end text-success">${fmt(r.unrealized_gain)}</td><td class="text-end text-danger">${fmt(r.unrealized_loss)}</td>
+  <td><button class="btn btn-sm btn-outline-danger" onclick="voidFx(${r.id})">Hủy</button></td></tr>`).join('')||'<tr><td colspan="6" class="text-muted text-center">Chưa có</td></tr>';}
+async function voidFx(id){
+  if(!confirm('Hủy đánh giá tỷ giá (đảo bút toán)?')) return;
+  const res=await fetch('/api/sme/fx-revaluation/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+}
+btnSave.onclick=async()=>{
+  const L=[]; lines.querySelectorAll('tr').forEach(tr=>{
+    const acc=tr.querySelector('.acc').value.trim(); const fc=parseFloat(tr.querySelector('.fc').value)||0; const vnd=parseFloat(tr.querySelector('.vnd').value)||0;
+    if(acc&&(fc||vnd)) L.push({account_code:acc,balance_fc:fc,book_vnd:vnd});
+  });
+  const payload={year:+fYear.value,period:+fPeriod.value,currency:fCur.value,rate:parseFloat(fRate.value),lines:L,equity_mode:fEquity.checked,replace_existing:true};
+  const res=await fetch('/api/sme/fx-revaluation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); alert('Đã đánh giá lại'); load();
+};
+load();
+</script>
+{% endblock %}

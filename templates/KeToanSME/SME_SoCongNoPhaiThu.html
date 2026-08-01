@@ -201,7 +201,7 @@ function vnToISO(d){
 // ================== LOAD CUSTOMERS (chỉ còn nợ) ==================
 async function loadCustomerDropdown() {
     try {
-        const res = await fetch('/api/debt/customers');
+        const res = await fetch('/api/sme/debt/customers');
         if (!res.ok) throw new Error('Không tải được danh sách khách hàng');
         const customers = await res.json();
         
@@ -239,7 +239,7 @@ async function loadDebtData() {
     tbody.innerHTML = `<tr><td colspan="8" class="text-center p-5">Đang tải công nợ...</td></tr>`;
 
     try {
-        const res = await fetch(`/api/debt/customer-detail?customer=${encodeURIComponent(customer)}`);
+        const res = await fetch(`/api/sme/debt/customer-detail?customer=${encodeURIComponent(customer)}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Lỗi server');
 
@@ -430,7 +430,7 @@ document.getElementById('btnSavePayment').addEventListener('click', async functi
 function printLedger() {
     const customer = document.getElementById('customerFilter').value.trim();
     if (!customer) return alert("Vui lòng chọn khách hàng để in!");
-    window.open(`/customer_debt/print-ledger?customer=${encodeURIComponent(customer)}`, '_blank');
+    window.open(`/SME_SoCongNoPhaiThu/in?customer=${encodeURIComponent(customer)}`, '_blank');
 }
 
 // ================== INIT ==================

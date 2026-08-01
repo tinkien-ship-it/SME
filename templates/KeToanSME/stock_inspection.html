@@ -1,0 +1,86 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Kiểm nghiệm 03-VT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Biên bản kiểm nghiệm vật tư <span class="badge bg-warning text-dark">03-VT</span></h4>
+    <p class="text-muted small mb-0">Trước/khi nhập kho — không ghi GL (căn cứ chất lượng)</p>
+  </div>
+  <button class="btn btn-warning" id="btnNew">Lập biên bản</button>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table mb-0"><thead class="table-light"><tr>
+  <th>Số BB</th><th>Ngày</th><th>PN / NCC</th><th>Phương thức</th><th>KQ</th>
+</tr></thead><tbody id="tbody"></tbody></table>
+</div></div>
+
+<div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content">
+  <div class="modal-header bg-warning"><h5 class="modal-title">Kiểm nghiệm (03-VT)</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="row g-2 mb-2">
+      <div class="col-md-3"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label small">Số PN</label><input type="text" id="fImp" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label small">NCC</label><input type="text" id="fSup" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label small">Phương thức</label>
+        <select id="fMethod" class="form-select"><option>Toàn diện</option><option>Xác suất</option></select>
+      </div>
+    </div>
+    <div class="mb-2"><label class="form-label small">Ban kiểm nghiệm</label><input type="text" id="fCommittee" class="form-control"></div>
+    <div class="table-responsive" style="max-height:360px"><table class="table table-sm">
+      <thead><tr><th>Hàng</th><th>SL HĐ</th><th>SL thực</th><th>KQ</th></tr></thead>
+      <tbody id="lines"></tbody>
+    </table></div>
+    <div class="mb-2"><label class="form-label small">Ý kiến ban kiểm nghiệm</label><input type="text" id="fOpinion" class="form-control"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-warning" id="btnSave">Lưu</button></div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+fDate.value=new Date().toISOString().slice(0,10);
+let products=[];
+async function load(){
+  const res=await fetch('/api/sme/stock-inspection'); const json=await res.json();
+  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.doc_no}</td><td>${(r.inspect_date||'').slice(0,10)}</td>
+    <td>${r.import_no||''} ${r.supplier_name||''}</td><td>${r.method||''}</td>
+    <td class="text-nowrap">${r.status}
+      <a class="btn btn-sm btn-outline-primary ms-1" target="_blank" href="/SME_stock_inspection/in/${r.id}">In</a>
+      <button class="btn btn-sm btn-outline-danger ms-1" onclick="voidSi(${r.id})">Hủy</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="5" class="text-muted text-center">Chưa có</td></tr>';
+}
+async function voidSi(id){
+  if(!confirm('Hủy biên bản kiểm nghiệm?')) return;
+  const res=await fetch('/api/sme/stock-inspection/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+}
+btnNew.onclick=async()=>{
+  const res=await fetch('/api/sme/products/brief'); const json=await res.json();
+  products=json.data||[];
+  lines.innerHTML=products.slice(0,80).map(p=>`<tr data-id="${p.id}" data-name="${p.name.replace(/"/g,'&quot;')}">
+    <td>${p.name}</td>
+    <td><input type="number" class="form-control form-control-sm inv" value="0" step="any"></td>
+    <td><input type="number" class="form-control form-control-sm act" value="0" step="any"></td>
+    <td><select class="form-select form-select-sm res"><option>Đạt</option><option>Không đạt</option><option>Đạt có điều kiện</option></select></td>
+  </tr>`).join('');
+  new bootstrap.Modal(document.getElementById('modal')).show();
+};
+btnSave.onclick=async()=>{
+  const L=[];
+  lines.querySelectorAll('tr').forEach(tr=>{
+    const inv=parseFloat(tr.querySelector('.inv').value)||0;
+    const act=parseFloat(tr.querySelector('.act').value)||0;
+    if(inv===0 && act===0) return;
+    L.push({product_id:+tr.dataset.id, product_name:tr.dataset.name, invoice_qty:inv, actual_qty:act, result:tr.querySelector('.res').value});
+  });
+  if(!L.length) return alert('Nhập ít nhất 1 dòng SL');
+  const payload={date:fDate.value, import_no:fImp.value, supplier_name:fSup.value, method:fMethod.value, committee:fCommittee.value, opinion:fOpinion.value, lines:L};
+  const res=await fetch('/api/sme/stock-inspection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modal')).hide();
+  alert('Đã lập '+json.data.doc_no); load();
+};
+load();
+</script>
+{% endblock %}

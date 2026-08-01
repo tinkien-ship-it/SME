@@ -145,22 +145,33 @@ def resolve_postable_account(conn: sqlite3.Connection, code: str) -> str:
     return acc['code']
 
 
-def _next_entry_no(conn: sqlite3.Connection, posting_date: str, document_type: str) -> str:
-    year = (posting_date or '')[:4] or str(datetime.now().year)
-    prefix = f"BT{document_type}{year}"
+def _next_entry_no(
+    conn: sqlite3.Connection,
+    posting_date: str = '',
+    document_type: str = '',
+) -> str:
+    """Đánh số bút toán liên tục: BT0000001, BT0000002, …"""
+    # posting_date / document_type giữ để tương thích chữ ký cũ; không đưa vào số BT.
+    _ = (posting_date, document_type)
+    prefix = 'BT'
+    width = 7
     row = conn.execute(
         """
         SELECT entry_no FROM sme_journal_entries
-        WHERE entry_no LIKE ? ORDER BY id DESC LIMIT 1
+        WHERE entry_no GLOB 'BT[0-9]*'
+          AND length(entry_no) = ?
+          AND substr(entry_no, 3) GLOB '[0-9]*'
+        ORDER BY CAST(substr(entry_no, 3) AS INTEGER) DESC
+        LIMIT 1
         """,
-        (f"{prefix}%",),
+        (len(prefix) + width,),
     ).fetchone()
     seq = 1
     if row and row[0]:
-        tail = row[0][len(prefix):]
+        tail = str(row[0])[len(prefix):]
         if tail.isdigit():
             seq = int(tail) + 1
-    return f"{prefix}{seq:06d}"
+    return f"{prefix}{seq:0{width}d}"
 
 
 def _apply_balance_delta(
@@ -208,15 +219,20 @@ def post_journal_entry(
     reference_document: str | None = None,
     created_by: str | None = None,
     entry_uuid: str | None = None,
+    branch_code: str | None = None,
 ) -> dict:
     """
     Ghi một chứng từ kế toán (nhiều dòng Nợ/Có).
     lines[]: account_code, debit, credit, + optional partner/product/tax/description...
+    branch_code: chi nhánh (mặc định session / HQ) — không tách pháp nhân.
     """
     # Không được commit ngầm: caller có thể đang ghi kho/chứng từ cùng transaction.
     ensure_sme_journal_ready(conn, commit=False)
     if not lines:
         raise ValueError('Bút toán phải có ít nhất một dòng')
+
+    from Services.sme.branches import resolve_posting_branch
+    branch = resolve_posting_branch(conn, branch_code)
 
     prepared: list[dict] = []
     total_debit = Decimal('0.00')
@@ -281,23 +297,44 @@ def post_journal_entry(
     entry_no = _next_entry_no(conn, posting_date[:10], document_type or 'KT')
 
     c = conn.cursor()
-    c.execute(
-        """
-        INSERT INTO sme_journal_entries (
-            entry_uuid, entry_no, fiscal_year, period, posting_date, document_date,
-            document_type, document_no, document_id, business_type, currency, exchange_rate,
-            description, reference_document, status, total_debit, total_credit,
-            created_by, created_at, updated_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'posted',?,?,?,?,?)
-        """,
-        (
-            entry_uuid, entry_no, fiscal_year, period, posting_date[:10],
-            (document_date or posting_date)[:10] if document_date or posting_date else None,
-            document_type, document_no, document_id, business_type,
-            currency, float(rate), description, reference_document,
-            float(total_debit), float(total_credit), created_by, _now(), _now(),
-        ),
-    )
+    je_cols = {r[1] for r in c.execute('PRAGMA table_info(sme_journal_entries)').fetchall()}
+    if 'branch_code' in je_cols:
+        c.execute(
+            """
+            INSERT INTO sme_journal_entries (
+                entry_uuid, entry_no, fiscal_year, period, posting_date, document_date,
+                document_type, document_no, document_id, business_type, currency, exchange_rate,
+                description, reference_document, status, total_debit, total_credit,
+                created_by, created_at, updated_at, branch_code
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'posted',?,?,?,?,?,?)
+            """,
+            (
+                entry_uuid, entry_no, fiscal_year, period, posting_date[:10],
+                (document_date or posting_date)[:10] if document_date or posting_date else None,
+                document_type, document_no, document_id, business_type,
+                currency, float(rate), description, reference_document,
+                float(total_debit), float(total_credit), created_by, _now(), _now(),
+                branch,
+            ),
+        )
+    else:
+        c.execute(
+            """
+            INSERT INTO sme_journal_entries (
+                entry_uuid, entry_no, fiscal_year, period, posting_date, document_date,
+                document_type, document_no, document_id, business_type, currency, exchange_rate,
+                description, reference_document, status, total_debit, total_credit,
+                created_by, created_at, updated_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'posted',?,?,?,?,?)
+            """,
+            (
+                entry_uuid, entry_no, fiscal_year, period, posting_date[:10],
+                (document_date or posting_date)[:10] if document_date or posting_date else None,
+                document_type, document_no, document_id, business_type,
+                currency, float(rate), description, reference_document,
+                float(total_debit), float(total_credit), created_by, _now(), _now(),
+            ),
+        )
     entry_id = c.lastrowid
 
     for line in prepared:
@@ -340,6 +377,7 @@ def post_journal_entry(
         'line_count': len(prepared),
         'fiscal_year': fiscal_year,
         'period': period,
+        'branch_code': branch,
     }
 
 
@@ -405,6 +443,10 @@ def reverse_journal_entry(
         })
 
     date = (posting_date or entry['posting_date'])[:10]
+    try:
+        orig_branch = entry['branch_code']
+    except (KeyError, IndexError):
+        orig_branch = None
     rev = post_journal_entry(
         conn,
         posting_date=date,
@@ -418,6 +460,7 @@ def reverse_journal_entry(
         description=f"{reason} — {entry['entry_no']}",
         reference_document=entry['entry_no'],
         created_by=created_by,
+        branch_code=orig_branch,
         lines=rev_lines,
     )
     conn.execute(
@@ -666,38 +709,45 @@ def list_journal_entries(
     date_from: str | None = None,
     date_to: str | None = None,
     q: str | None = None,
+    branch_code: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[dict]:
+    from Services.sme.branches import branch_sql_filter
+
     ensure_sme_journal_ready(conn)
     conn.row_factory = sqlite3.Row
-    sql = "SELECT * FROM sme_journal_entries WHERE 1=1"
+    sql = "SELECT * FROM sme_journal_entries je WHERE 1=1"
     params: list[Any] = []
     if document_type:
-        sql += " AND document_type = ?"
+        sql += " AND je.document_type = ?"
         params.append(document_type)
     if document_id is not None:
-        sql += " AND document_id = ?"
+        sql += " AND je.document_id = ?"
         params.append(document_id)
     if status:
-        sql += " AND status = ?"
+        sql += " AND je.status = ?"
         params.append(status)
     if date_from:
-        sql += " AND posting_date >= ?"
+        sql += " AND je.posting_date >= ?"
         params.append(date_from[:10])
     if date_to:
-        sql += " AND posting_date <= ?"
+        sql += " AND je.posting_date <= ?"
         params.append(date_to[:10])
     if q:
         like = f"%{q.strip()}%"
         sql += """
             AND (
-                entry_no LIKE ? OR document_no LIKE ?
-                OR description LIKE ? OR reference_document LIKE ?
-                OR business_type LIKE ? OR document_type LIKE ?
+                je.entry_no LIKE ? OR je.document_no LIKE ?
+                OR je.description LIKE ? OR je.reference_document LIKE ?
+                OR je.business_type LIKE ? OR je.document_type LIKE ?
+                OR IFNULL(je.branch_code,'') LIKE ?
             )
         """
-        params.extend([like, like, like, like, like, like])
-    sql += " ORDER BY posting_date DESC, id DESC LIMIT ? OFFSET ?"
+        params.extend([like, like, like, like, like, like, like])
+    bf, bp = branch_sql_filter(branch_code, alias='je')
+    sql += bf
+    params.extend(bp)
+    sql += " ORDER BY je.posting_date DESC, je.id DESC LIMIT ? OFFSET ?"
     params.extend([limit, max(0, offset)])
     return [dict(r) for r in conn.execute(sql, params).fetchall()]

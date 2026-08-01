@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Sổ công nợ phải thu — {{ customer }}</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #333;padding:5px}
+  .num{text-align:right}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div>
+    <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+    <div>{{ info.address or '' }}</div>
+    <div>MST: {{ info.tax_code or '' }}</div>
+  </div>
+  <div style="text-align:right"><strong>Sổ chi tiết công nợ phải thu</strong><br><span class="muted">SME · TT99</span></div>
+</div>
+<div class="title">SỔ CHI TIẾT CÔNG NỢ PHẢI THU</div>
+<div style="text-align:center">TK 131 — Khách hàng: <strong>{{ customer }}</strong></div>
+{% if start or end %}<div style="text-align:center">Kỳ: {{ start or '…' }} → {{ end or '…' }}</div>{% endif %}
+<table>
+  <thead>
+    <tr><th>Số CT</th><th>Ngày</th><th>Diễn giải</th><th>Nợ</th><th>Có</th></tr>
+  </thead>
+  <tbody>
+    <tr><td></td><td></td><td><strong>Số dư đầu kỳ</strong></td><td></td><td class="num">{{ '{:,.0f}'.format(totals.opening|float).replace(',', '.') }}</td></tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.doc_no }}</td>
+      <td>{{ (r.date or '')[:10] }}</td>
+      <td>{{ r.dien_giai }}</td>
+      <td class="num">{{ '{:,.0f}'.format(r.no|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format(r.co|float).replace(',', '.') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th colspan="3">Cộng phát sinh</th>
+      <th class="num">{{ '{:,.0f}'.format(totals.no|float).replace(',', '.') }}</th>
+      <th class="num">{{ '{:,.0f}'.format(totals.co|float).replace(',', '.') }}</th>
+    </tr>
+    <tr>
+      <th colspan="3">Số dư cuối kỳ</th>
+      <th colspan="2" class="num">{{ '{:,.0f}'.format(totals.closing|float).replace(',', '.') }}</th>
+    </tr>
+  </tfoot>
+</table>
+</body>
+</html>

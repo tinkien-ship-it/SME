@@ -1,7 +1,6 @@
-{% extends "base.html" %}
+{% extends "KeToanSME/_layout.html" %}
 {% block title %}Phải thu nhân viên{% endblock %}
-{% block content %}
-<div class="container-fluid py-3" style="max-width:900px">
+{% block sme_content %}
   <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
     <div>
       <h4 class="fw-bold mb-1">Phải thu nhân viên (TK 141)</h4>
@@ -20,9 +19,8 @@
     <div class="fs-4 fw-bold mt-1" id="total">0 đ</div>
   </div></div>
   <div class="card border-0 shadow-sm"><div class="card-body" id="body">Đang tải…</div></div>
-</div>
 {% endblock %}
-{% block scripts %}
+{% block sme_scripts %}
 <script>
 (function(){
   const now=new Date(); const y=document.getElementById('y'); const p=document.getElementById('p');

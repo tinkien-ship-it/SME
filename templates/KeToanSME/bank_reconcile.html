@@ -1,0 +1,147 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Đối chiếu ngân hàng{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Đối chiếu ngân hàng</h4>
+    <p class="text-muted small mb-0">Khớp sao kê <code>bank_transactions</code> với phát sinh TK 112*</p>
+  </div>
+</div>
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-md-2"><label class="form-label small fw-bold">TK</label><input type="text" id="fAcc" class="form-control" value="1121"></div>
+    <div class="col-md-2"><label class="form-label small fw-bold">Từ ngày</label><input type="date" id="fromDate" class="form-control"></div>
+    <div class="col-md-2"><label class="form-label small fw-bold">Đến ngày</label><input type="date" id="toDate" class="form-control"></div>
+    <div class="col-md-2"><label class="form-label small fw-bold">Số dư sao kê</label><input type="number" id="fStmt" class="form-control" step="1000"></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" id="btnLoad">Tải workspace</button></div>
+    <div class="col-md-2"><button class="btn btn-success w-100" id="btnStart">Tạo phiên ĐC</button></div>
+  </div>
+  <div class="card-body border-top py-2 small" id="summary">Chọn khoảng ngày và tải.</div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-bold">Sổ cái 112 (chưa khớp)</div>
+      <div class="table-responsive" style="max-height:420px"><table class="table table-sm mb-0">
+        <thead><tr><th></th><th>Ngày</th><th>CT</th><th class="text-end">Số tiền</th><th>Diễn giải</th></tr></thead>
+        <tbody id="bookBody"></tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-bold">Sao kê ngân hàng (chưa khớp)</div>
+      <div class="table-responsive" style="max-height:420px"><table class="table table-sm mb-0">
+        <thead><tr><th></th><th>Ngày</th><th class="text-end">Số tiền</th><th>Nội dung</th></tr></thead>
+        <tbody id="bankBody"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+<div class="mt-3 d-flex gap-2 flex-wrap">
+  <button class="btn btn-outline-primary" id="btnMatch" disabled>Khớp cặp đã chọn</button>
+  <button class="btn btn-outline-success" id="btnClose" disabled>Đóng phiên đối chiếu</button>
+  <span class="align-self-center small text-muted" id="sessionInfo"></span>
+</div>
+<div class="card shadow-sm border-0 mt-3">
+  <div class="card-header bg-white fw-bold">Lịch sử phiên</div>
+  <div class="table-responsive"><table class="table table-sm mb-0">
+    <thead><tr><th>ID</th><th>Ngày</th><th>Kỳ</th><th class="text-end">Sổ</th><th class="text-end">Sao kê</th><th class="text-end">Lệch</th><th>TT</th></tr></thead>
+    <tbody id="histBody"></tbody>
+  </table></div>
+</div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+const today = () => new Date().toISOString().slice(0,10);
+toDate.value = today(); fromDate.value = today().slice(0,8)+'01';
+let reconcileId = null;
+let selectedBook = null, selectedBank = null;
+
+async function loadHist(){
+  const res = await fetch('/api/sme/bank-reconcile');
+  const json = await res.json();
+  histBody.innerHTML = (json.data||[]).map(r => `<tr>
+    <td>${r.id}</td><td>${(r.reconcile_date||'').slice(0,10)}</td>
+    <td class="small">${(r.date_from||'').slice(0,10)} → ${(r.date_to||'').slice(0,10)}</td>
+    <td class="text-end">${fmt(r.book_balance)}</td><td class="text-end">${fmt(r.statement_balance)}</td>
+    <td class="text-end">${fmt(r.difference)}</td>
+    <td>${r.status} <a class="btn btn-sm btn-outline-primary ms-1" target="_blank" href="/SME_bank_reconcile/in/${r.id}">In</a></td>
+  </tr>`).join('') || '<tr><td colspan="7" class="text-muted text-center">Chưa có phiên</td></tr>';
+}
+
+async function loadWorkspace(){
+  const q = new URLSearchParams({from: fromDate.value, to: toDate.value, account: fAcc.value});
+  if(fStmt.value!=='') q.set('statement_balance', fStmt.value);
+  const res = await fetch('/api/sme/bank-reconcile/workspace?'+q);
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  const d = json.data;
+  summary.innerHTML = `Số dư sổ <strong>${fmt(d.book_balance)}</strong>` +
+    (d.statement_balance!=null ? ` · Sao kê <strong>${fmt(d.statement_balance)}</strong> · Lệch <strong>${fmt(d.difference)}</strong>` : '') +
+    ` · Chưa khớp sổ: ${d.book_lines.length} · Sao kê: ${d.bank_lines.length}`;
+  selectedBook = selectedBank = null;
+  btnMatch.disabled = true;
+  bookBody.innerHTML = d.book_lines.map(r => `<tr>
+    <td><input type="radio" name="book" value="${r.line_id}" data-amt="${r.signed_amount}"></td>
+    <td>${r.posting_date}</td><td class="small">${r.document_no||r.entry_no}</td>
+    <td class="text-end">${fmt(r.signed_amount)}</td><td class="small">${r.description||''}</td>
+  </tr>`).join('') || '<tr><td colspan="5" class="text-muted text-center">Không còn dòng chưa khớp</td></tr>';
+  bankBody.innerHTML = d.bank_lines.map(r => `<tr>
+    <td><input type="radio" name="bank" value="${r.id}" data-amt="${r.signed_amount}"></td>
+    <td>${(r.transaction_date||'').slice(0,10)}</td>
+    <td class="text-end">${fmt(r.signed_amount)}</td><td class="small">${r.content||''}</td>
+  </tr>`).join('') || '<tr><td colspan="4" class="text-muted text-center">Không còn giao dịch chưa khớp (hoặc chưa đồng bộ sao kê)</td></tr>';
+  bookBody.querySelectorAll('input[name=book]').forEach(el => el.onchange = () => { selectedBook = +el.value; btnMatch.disabled = !(selectedBook&&selectedBank&&reconcileId); });
+  bankBody.querySelectorAll('input[name=bank]').forEach(el => el.onchange = () => { selectedBank = +el.value; btnMatch.disabled = !(selectedBook&&selectedBank&&reconcileId); });
+}
+
+document.getElementById('btnLoad').onclick = () => { loadWorkspace(); loadHist(); };
+document.getElementById('btnStart').onclick = async () => {
+  if(fStmt.value==='') return alert('Nhập số dư cuối kỳ trên sao kê');
+  const payload = {
+    date_from: fromDate.value, date_to: toDate.value,
+    reconcile_date: toDate.value, statement_balance: parseFloat(fStmt.value)||0,
+    account_code: fAcc.value
+  };
+  const res = await fetch('/api/sme/bank-reconcile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  reconcileId = json.data.id;
+  sessionInfo.textContent = 'Phiên #'+reconcileId+' (open)';
+  btnClose.disabled = false;
+  loadWorkspace(); loadHist();
+};
+document.getElementById('btnMatch').onclick = async () => {
+  if(!reconcileId||!selectedBook||!selectedBank) return;
+  const res = await fetch('/api/sme/bank-reconcile/'+reconcileId+'/match',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({journal_line_id: selectedBook, bank_txn_id: selectedBank})
+  });
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  loadWorkspace(); loadHist();
+};
+document.getElementById('btnClose').onclick = async () => {
+  if(!reconcileId) return;
+  const res = await fetch('/api/sme/bank-reconcile/'+reconcileId+'/close',{
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({force:false})
+  });
+  const json = await res.json();
+  if(!json.success){
+    if(confirm((json.error||'Lỗi')+'\nĐóng cưỡng bức (force)?')){
+      const r2 = await fetch('/api/sme/bank-reconcile/'+reconcileId+'/close',{
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({force:true})
+      });
+      const j2 = await r2.json();
+      if(!j2.success) return alert(j2.error||'Lỗi');
+    } else return;
+  }
+  alert('Đã đóng phiên #'+reconcileId);
+  btnClose.disabled = true;
+  loadHist();
+};
+loadHist(); loadWorkspace();
+</script>
+{% endblock %}

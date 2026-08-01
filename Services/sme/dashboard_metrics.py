@@ -11,18 +11,31 @@ from Services.sme.bctc_report import _closing_balances, _period_activity
 _EXCLUDE_CLOSE = ('KCKQ',)
 
 
-def _ytd_activity(conn, fiscal_year: int, period_to: int):
+def _ytd_activity(conn, fiscal_year: int, period_to: int, branch_code: str | None = None):
     return _period_activity(
         conn, fiscal_year, 1, period_to,
         exclude_document_types=_EXCLUDE_CLOSE,
+        branch_code=branch_code,
     )
 
 
-def _month_activity(conn, fiscal_year: int, period: int):
+def _month_activity(conn, fiscal_year: int, period: int, branch_code: str | None = None):
     return _period_activity(
         conn, fiscal_year, period, period,
         exclude_document_types=_EXCLUDE_CLOSE,
+        branch_code=branch_code,
     )
+
+
+def _branch_asset_sql(branch_code: str | None) -> tuple[str, list]:
+    """Điều kiện lọc TSCĐ/CCDC theo CN."""
+    from Services.sme.branches import DEFAULT_BRANCH_CODE
+    code = (branch_code or '').strip().upper()
+    if not code or code == 'ALL':
+        return '', []
+    if code == DEFAULT_BRANCH_CODE:
+        return " AND (branch_code IS NULL OR branch_code = '' OR branch_code = ?)", [DEFAULT_BRANCH_CODE]
+    return ' AND branch_code = ?', [code]
 from Services.sme.journal_engine import ensure_sme_journal_ready
 
 MONEY_Q = Decimal('0.01')
@@ -78,6 +91,7 @@ def dashboard_metrics(
     *,
     fiscal_year: int,
     period_to: int | None = None,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Doanh thu, LN gộp, phải thu/trả, cơ cấu thuế theo kỳ YTD."""
     ensure_sme_journal_ready(conn, commit=False)
@@ -86,8 +100,8 @@ def dashboard_metrics(
     if period_to < 1 or period_to > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
-    activity = _ytd_activity(conn, fiscal_year, period_to)
-    bals = _closing_balances(conn, fiscal_year, period_to)
+    activity = _ytd_activity(conn, fiscal_year, period_to, branch_code)
+    bals = _closing_balances(conn, fiscal_year, period_to, branch_code=branch_code)
 
     revenue = _sum_activity(activity, ('511', '515', '711'), side='credit')
     cogs = _sum_activity(activity, ('632',), side='debit')
@@ -114,7 +128,7 @@ def dashboard_metrics(
     # P&L theo tháng (1..period_to)
     monthly = []
     for m in range(1, period_to + 1):
-        act = _month_activity(conn, fiscal_year, m)
+        act = _month_activity(conn, fiscal_year, m, branch_code)
         rev_m = _sum_activity(act, ('511', '515', '711'), side='credit')
         cogs_m = _sum_activity(act, ('632',), side='debit')
         exp_m = _sum_activity(act, ('641', '642', '635', '811'), side='debit')
@@ -159,6 +173,7 @@ def debt_hub_metrics(
     *,
     fiscal_year: int,
     period_to: int | None = None,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Hub công nợ: phải thu 131, phải trả 331, tạm ứng 141, tiền."""
     from datetime import datetime
@@ -167,8 +182,8 @@ def debt_hub_metrics(
     if period_to < 1 or period_to > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
-    bals = _closing_balances(conn, fiscal_year, period_to)
-    activity = _ytd_activity(conn, fiscal_year, period_to)
+    bals = _closing_balances(conn, fiscal_year, period_to, branch_code=branch_code)
+    activity = _ytd_activity(conn, fiscal_year, period_to, branch_code)
 
     receivable = _sum_balance(bals, ('131',), normal='debit')
     payable = _sum_balance(bals, ('331',), normal='credit')
@@ -182,7 +197,7 @@ def debt_hub_metrics(
 
     monthly = []
     for m in range(1, period_to + 1):
-        act = _month_activity(conn, fiscal_year, m)
+        act = _month_activity(conn, fiscal_year, m, branch_code)
         monthly.append({
             'period': m,
             'label': f'T{m:02d}',
@@ -233,6 +248,7 @@ def warehouse_hub_metrics(
     *,
     fiscal_year: int,
     period_to: int | None = None,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Hub kho: số dư HTK, PS nhập/xuất (giá vốn), số mặt hàng."""
     from datetime import datetime
@@ -241,8 +257,8 @@ def warehouse_hub_metrics(
     if period_to < 1 or period_to > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
-    bals = _closing_balances(conn, fiscal_year, period_to)
-    activity = _ytd_activity(conn, fiscal_year, period_to)
+    bals = _closing_balances(conn, fiscal_year, period_to, branch_code=branch_code)
+    activity = _ytd_activity(conn, fiscal_year, period_to, branch_code)
 
     raw = _sum_balance(bals, ('152',), normal='debit')
     tools_inv = _sum_balance(bals, ('153',), normal='debit')
@@ -265,7 +281,7 @@ def warehouse_hub_metrics(
 
     monthly = []
     for m in range(1, period_to + 1):
-        act = _month_activity(conn, fiscal_year, m)
+        act = _month_activity(conn, fiscal_year, m, branch_code)
         monthly.append({
             'period': m,
             'label': f'T{m:02d}',
@@ -294,6 +310,7 @@ def fixed_asset_hub_metrics(
     *,
     fiscal_year: int,
     period_to: int | None = None,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Hub TSCĐ: nguyên giá 211, KH lũy kế 214, KH kỳ."""
     from datetime import datetime
@@ -308,8 +325,8 @@ def fixed_asset_hub_metrics(
     if period_to < 1 or period_to > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
-    bals = _closing_balances(conn, fiscal_year, period_to)
-    activity = _ytd_activity(conn, fiscal_year, period_to)
+    bals = _closing_balances(conn, fiscal_year, period_to, branch_code=branch_code)
+    activity = _ytd_activity(conn, fiscal_year, period_to, branch_code)
 
     cost = _sum_balance(bals, ('211',), normal='debit')
     accum = _sum_balance(bals, ('214',), normal='credit')
@@ -320,24 +337,26 @@ def fixed_asset_hub_metrics(
     instock_n = 0
     book_cost = 0.0
     if _table_exists(conn, FIXED_ASSETS_TABLE):
+        bf, bp = _branch_asset_sql(branch_code)
         active_n = _safe_count(
             conn,
-            f"SELECT COUNT(*) FROM {FIXED_ASSETS_TABLE} WHERE tinh_trang = ?",
-            (STATUS_ACTIVE,),
+            f"SELECT COUNT(*) FROM {FIXED_ASSETS_TABLE} WHERE tinh_trang = ?" + bf,
+            (STATUS_ACTIVE, *bp),
         )
         instock_n = _safe_count(
             conn,
-            f"SELECT COUNT(*) FROM {FIXED_ASSETS_TABLE} WHERE tinh_trang = 'InStock'",
+            f"SELECT COUNT(*) FROM {FIXED_ASSETS_TABLE} WHERE tinh_trang = 'InStock'" + bf,
+            tuple(bp),
         )
         book_cost = _safe_sum(
             conn,
-            f"SELECT COALESCE(SUM(nguyen_gia_tinh_khau_hao),0) FROM {FIXED_ASSETS_TABLE} WHERE tinh_trang = ?",
-            (STATUS_ACTIVE,),
+            f"SELECT COALESCE(SUM(nguyen_gia_tinh_khau_hao),0) FROM {FIXED_ASSETS_TABLE} WHERE tinh_trang = ?" + bf,
+            (STATUS_ACTIVE, *bp),
         )
 
     monthly = []
     for m in range(1, period_to + 1):
-        act = _month_activity(conn, fiscal_year, m)
+        act = _month_activity(conn, fiscal_year, m, branch_code)
         monthly.append({
             'period': m,
             'label': f'T{m:02d}',
@@ -364,6 +383,7 @@ def tools_hub_metrics(
     *,
     fiscal_year: int,
     period_to: int | None = None,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Hub CCDC: TK 153 + phân bổ (PS Có 153 / Nợ CP)."""
     from datetime import datetime
@@ -378,8 +398,8 @@ def tools_hub_metrics(
     if period_to < 1 or period_to > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
-    bals = _closing_balances(conn, fiscal_year, period_to)
-    activity = _ytd_activity(conn, fiscal_year, period_to)
+    bals = _closing_balances(conn, fiscal_year, period_to, branch_code=branch_code)
+    activity = _ytd_activity(conn, fiscal_year, period_to, branch_code)
 
     balance = _sum_balance(bals, ('153',), normal='debit')
     additions = _sum_activity(activity, ('153',), side='debit')
@@ -389,24 +409,26 @@ def tools_hub_metrics(
     instock_n = 0
     register_cost = 0.0
     if _table_exists(conn, TOOLS_TABLE):
+        bf, bp = _branch_asset_sql(branch_code)
         active_n = _safe_count(
             conn,
-            f"SELECT COUNT(*) FROM {TOOLS_TABLE} WHERE tinh_trang = ?",
-            (STATUS_ACTIVE,),
+            f"SELECT COUNT(*) FROM {TOOLS_TABLE} WHERE tinh_trang = ?" + bf,
+            (STATUS_ACTIVE, *bp),
         )
         instock_n = _safe_count(
             conn,
-            f"SELECT COUNT(*) FROM {TOOLS_TABLE} WHERE tinh_trang = 'InStock'",
+            f"SELECT COUNT(*) FROM {TOOLS_TABLE} WHERE tinh_trang = 'InStock'" + bf,
+            tuple(bp),
         )
         register_cost = _safe_sum(
             conn,
-            f"SELECT COALESCE(SUM(nguyen_gia),0) FROM {TOOLS_TABLE} WHERE tinh_trang = ?",
-            (STATUS_ACTIVE,),
+            f"SELECT COALESCE(SUM(nguyen_gia),0) FROM {TOOLS_TABLE} WHERE tinh_trang = ?" + bf,
+            (STATUS_ACTIVE, *bp),
         )
 
     monthly = []
     for m in range(1, period_to + 1):
-        act = _month_activity(conn, fiscal_year, m)
+        act = _month_activity(conn, fiscal_year, m, branch_code)
         monthly.append({
             'period': m,
             'label': f'T{m:02d}',
@@ -432,6 +454,7 @@ def hr_hub_metrics(
     *,
     fiscal_year: int,
     period_to: int | None = None,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Hub NS-TL: phải trả lương 334, BHXH 3383, tạm ứng 141, CP nhân công."""
     from datetime import datetime
@@ -440,8 +463,8 @@ def hr_hub_metrics(
     if period_to < 1 or period_to > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
-    bals = _closing_balances(conn, fiscal_year, period_to)
-    activity = _ytd_activity(conn, fiscal_year, period_to)
+    bals = _closing_balances(conn, fiscal_year, period_to, branch_code=branch_code)
+    activity = _ytd_activity(conn, fiscal_year, period_to, branch_code)
 
     salary_payable = _sum_balance(bals, ('334',), normal='credit')
     social_ins = _sum_balance(bals, ('3383', '338'), normal='credit')
@@ -465,7 +488,7 @@ def hr_hub_metrics(
 
     monthly = []
     for m in range(1, period_to + 1):
-        act = _month_activity(conn, fiscal_year, m)
+        act = _month_activity(conn, fiscal_year, m, branch_code)
         monthly.append({
             'period': m,
             'label': f'T{m:02d}',
@@ -491,6 +514,7 @@ def sales_hub_metrics(
     *,
     fiscal_year: int,
     period_to: int | None = None,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Hub bán hàng: DT 511, giá vốn 632, phải thu 131, tiền thu."""
     from datetime import datetime
@@ -499,8 +523,8 @@ def sales_hub_metrics(
     if period_to < 1 or period_to > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
-    activity = _ytd_activity(conn, fiscal_year, period_to)
-    bals = _closing_balances(conn, fiscal_year, period_to)
+    activity = _ytd_activity(conn, fiscal_year, period_to, branch_code)
+    bals = _closing_balances(conn, fiscal_year, period_to, branch_code=branch_code)
 
     revenue = _sum_activity(activity, ('511', '515', '711'), side='credit')
     cogs = _sum_activity(activity, ('632',), side='debit')
@@ -516,7 +540,7 @@ def sales_hub_metrics(
 
     monthly = []
     for m in range(1, period_to + 1):
-        act = _month_activity(conn, fiscal_year, m)
+        act = _month_activity(conn, fiscal_year, m, branch_code)
         rev = _sum_activity(act, ('511', '515', '711'), side='credit')
         cog = _sum_activity(act, ('632',), side='debit')
         monthly.append({
@@ -547,6 +571,7 @@ def books_hub_metrics(
     *,
     fiscal_year: int,
     period_to: int | None = None,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Hub sổ sách: số bút toán, khóa sổ, cân đối phát sinh."""
     from datetime import datetime
@@ -557,20 +582,24 @@ def books_hub_metrics(
     if period_to < 1 or period_to > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
-    activity = _period_activity(conn, fiscal_year, 1, period_to)
+    activity = _period_activity(conn, fiscal_year, 1, period_to, branch_code=branch_code)
     period_debit = sum((_money(v.get('debit')) for v in activity.values()), Decimal('0.00'))
     period_credit = sum((_money(v.get('credit')) for v in activity.values()), Decimal('0.00'))
 
     entry_count = 0
     try:
+        from Services.sme.branches import branch_sql_filter
+        bf, bp = branch_sql_filter(branch_code, alias='sme_journal_entries')
+        # branch_sql_filter uses alias.branch_code — table name as alias works in SQLite
         entry_count = _safe_count(
             conn,
-            """
+            f"""
             SELECT COUNT(*) FROM sme_journal_entries
             WHERE status IN ('posted','reversed')
               AND fiscal_year = ? AND period <= ?
+            {bf}
             """,
-            (fiscal_year, period_to),
+            (fiscal_year, period_to, *bp),
         )
     except Exception:
         entry_count = 0

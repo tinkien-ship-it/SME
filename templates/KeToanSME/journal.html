@@ -1,9 +1,8 @@
-{% extends "base.html" %}
+{% extends "KeToanSME/_layout.html" %}
 {% block title %}Nhật ký bút toán — SME{% endblock %}
 
-{% block extra_style %}
+{% block sme_head %}
 <style>
-    .jl-wrap { max-width: 1280px; margin: 0 auto; }
     .jl-toolbar { gap: .5rem; flex-wrap: wrap; }
     .jl-table td, .jl-table th { vertical-align: middle; font-size: .9rem; }
     .jl-mono { font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
@@ -17,101 +16,95 @@
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="jl-wrap">
-    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-        <div>
-            <h4 class="fw-bold mb-1"><i class="fas fa-book-open text-primary me-2"></i>Nhật ký bút toán SME</h4>
-            <p class="text-muted small mb-0">
-                Sổ chứng từ kế toán kép (TT99) — nhập kho, bán hàng, đảo bút toán.
-                Không dùng chung sổ HKD.
-            </p>
-        </div>
-        <div class="d-flex jl-toolbar">
-            <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Dashboard SME
-            </a>
-            <a href="{{ url_for('SME_general_ledger') }}" class="btn btn-outline-primary btn-sm">
-                <i class="fas fa-scale-balanced me-1"></i> Sổ cái
-            </a>
-            <a href="{{ url_for('SME_chart_of_accounts') }}" class="btn btn-outline-primary btn-sm">
-                <i class="fas fa-sitemap me-1"></i> Danh mục TK
-            </a>
-            <button type="button" class="btn btn-primary btn-sm" id="btnReload">
-                <i class="fas fa-rotate me-1"></i> Tải lại
-            </button>
-        </div>
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-book-open text-primary me-2"></i>Nhật ký bút toán SME</h4>
+        <p class="text-muted small mb-0">
+            Sổ chứng từ kế toán kép (TT99) — lọc theo chi nhánh đang chọn trên thanh trên.
+        </p>
     </div>
-
-    <div class="card shadow-sm border-0 mb-3">
-        <div class="card-body py-2">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Tìm kiếm</label>
-                    <input type="search" id="jlQ" class="form-control form-control-sm"
-                           placeholder="Số BT, chứng từ, mô tả…">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Loại chứng từ</label>
-                    <select id="jlDocType" class="form-select form-select-sm">
-                        <option value="">Tất cả</option>
-                        <option value="PNK">PNK — Nhập kho</option>
-                        <option value="SALE_REVENUE">Doanh thu bán hàng</option>
-                        <option value="SALE_COGS">Giá vốn bán hàng</option>
-                        <option value="REV_PNK">Đảo nhập kho</option>
-                        <option value="REV_SALE_REVENUE">Đảo doanh thu</option>
-                        <option value="REV_SALE_COGS">Đảo giá vốn</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Trạng thái</label>
-                    <select id="jlStatus" class="form-select form-select-sm">
-                        <option value="">Tất cả</option>
-                        <option value="posted" selected>Đã ghi sổ</option>
-                        <option value="reversed">Đã đảo</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Từ ngày</label>
-                    <input type="date" id="jlFrom" class="form-control form-control-sm">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small mb-1">Đến ngày</label>
-                    <input type="date" id="jlTo" class="form-control form-control-sm">
-                </div>
-                <div class="col-md-1">
-                    <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="btnFilter">Lọc</button>
-                </div>
-            </div>
-            <div class="mt-2 jl-muted" id="jlMeta">—</div>
-        </div>
-    </div>
-
-    <div class="card shadow-sm border-0">
-        <div class="table-responsive" style="max-height: 68vh;">
-            <table class="table table-sm table-hover mb-0 jl-table">
-                <thead class="table-light sticky-top">
-                    <tr>
-                        <th style="width:140px;">Số BT</th>
-                        <th style="width:100px;">Ngày</th>
-                        <th style="width:120px;">Loại</th>
-                        <th style="width:120px;">Chứng từ</th>
-                        <th>Diễn giải</th>
-                        <th class="text-end" style="width:120px;">Nợ</th>
-                        <th class="text-end" style="width:120px;">Có</th>
-                        <th style="width:90px;">TT</th>
-                        <th style="width:90px;"></th>
-                    </tr>
-                </thead>
-                <tbody id="jlBody">
-                    <tr><td colspan="9" class="text-center text-muted py-4">Đang tải…</td></tr>
-                </tbody>
-            </table>
-        </div>
+    <div class="d-flex jl-toolbar">
+        <a href="{{ url_for('SME_general_ledger') }}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-scale-balanced me-1"></i> Sổ cái
+        </a>
+        <a href="{{ url_for('SME_chart_of_accounts') }}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-sitemap me-1"></i> Danh mục TK
+        </a>
+        <button type="button" class="btn btn-primary btn-sm" id="btnReload">
+            <i class="fas fa-rotate me-1"></i> Tải lại
+        </button>
     </div>
 </div>
 
-<!-- Modal chi tiết -->
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Tìm kiếm</label>
+                <input type="search" id="jlQ" class="form-control form-control-sm"
+                       placeholder="Số BT, chứng từ, mô tả, CN…">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Loại chứng từ</label>
+                <select id="jlDocType" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    <option value="PNK">PNK — Nhập kho</option>
+                    <option value="SALE_REVENUE">Doanh thu bán hàng</option>
+                    <option value="SALE_COGS">Giá vốn bán hàng</option>
+                    <option value="REV_PNK">Đảo nhập kho</option>
+                    <option value="REV_SALE_REVENUE">Đảo doanh thu</option>
+                    <option value="REV_SALE_COGS">Đảo giá vốn</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Trạng thái</label>
+                <select id="jlStatus" class="form-select form-select-sm">
+                    <option value="">Tất cả</option>
+                    <option value="posted" selected>Đã ghi sổ</option>
+                    <option value="reversed">Đã đảo</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Từ ngày</label>
+                <input type="date" id="jlFrom" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Đến ngày</label>
+                <input type="date" id="jlTo" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="btnFilter">Lọc</button>
+            </div>
+        </div>
+        <div class="mt-2 jl-muted" id="jlMeta">—</div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive" style="max-height: 68vh;">
+        <table class="table table-sm table-hover mb-0 jl-table">
+            <thead class="table-light sticky-top">
+                <tr>
+                    <th style="width:140px;">Số BT</th>
+                    <th style="width:100px;">Ngày</th>
+                    <th style="width:70px;">CN</th>
+                    <th style="width:120px;">Loại</th>
+                    <th style="width:120px;">Chứng từ</th>
+                    <th>Diễn giải</th>
+                    <th class="text-end" style="width:120px;">Nợ</th>
+                    <th class="text-end" style="width:120px;">Có</th>
+                    <th style="width:90px;">TT</th>
+                    <th style="width:90px;"></th>
+                </tr>
+            </thead>
+            <tbody id="jlBody">
+                <tr><td colspan="10" class="text-center text-muted py-4">Đang tải…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <div class="modal fade" id="modalDetail" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -156,7 +149,7 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block sme_scripts %}
 <script>
 (function () {
     const body = document.getElementById('jlBody');
@@ -203,21 +196,23 @@
     }
 
     async function loadList() {
-        body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Đang tải…</td></tr>';
+        body.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Đang tải…</td></tr>';
         try {
             const res = await fetch('/api/sme/journal?' + qs());
             const json = await res.json();
             if (!json.success) throw new Error(json.error || 'Lỗi tải');
             const rows = json.data || [];
-            metaEl.textContent = rows.length + ' bút toán';
+            const br = json.branch_code || 'ALL';
+            metaEl.textContent = rows.length + ' bút toán · lọc CN: ' + br;
             if (!rows.length) {
-                body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Chưa có bút toán phù hợp bộ lọc.</td></tr>';
+                body.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Chưa có bút toán phù hợp bộ lọc.</td></tr>';
                 return;
             }
             body.innerHTML = rows.map(r => `
                 <tr class="jl-row" data-id="${r.id}">
                     <td class="jl-mono">${r.entry_no || ('#' + r.id)}</td>
                     <td>${(r.posting_date || '').slice(0, 10)}</td>
+                    <td class="jl-mono">${r.branch_code || 'HQ'}</td>
                     <td><span class="badge text-bg-light border">${docTypeLabel(r.document_type)}</span></td>
                     <td class="jl-mono">${r.document_no || '—'}</td>
                     <td>${(r.description || '').slice(0, 80) || '—'}</td>
@@ -232,7 +227,7 @@
                 </tr>
             `).join('');
         } catch (e) {
-            body.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">${e.message}</td></tr>`;
+            body.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">${e.message}</td></tr>`;
             metaEl.textContent = 'Lỗi';
         }
     }
@@ -253,9 +248,10 @@
                 (e.entry_no || ('#' + e.id)) + ' — ' + docTypeLabel(e.document_type);
             document.getElementById('detailMeta').innerHTML = `
                 <div class="col-md-3"><strong>Ngày ghi:</strong> ${(e.posting_date || '').slice(0, 10)}</div>
+                <div class="col-md-3"><strong>Chi nhánh:</strong> ${e.branch_code || 'HQ'}</div>
                 <div class="col-md-3"><strong>Chứng từ:</strong> ${e.document_no || '—'}</div>
-                <div class="col-md-3"><strong>Nghiệp vụ:</strong> ${e.business_type || '—'}</div>
                 <div class="col-md-3"><strong>Trạng thái:</strong> ${statusBadge(e.status)}</div>
+                <div class="col-md-3"><strong>Nghiệp vụ:</strong> ${e.business_type || '—'}</div>
                 <div class="col-12"><strong>Diễn giải:</strong> ${e.description || '—'}</div>
             `;
             const lines = e.lines || [];

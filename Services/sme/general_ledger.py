@@ -41,9 +41,12 @@ def _activity_before_period(
     conn: sqlite3.Connection,
     fiscal_year: int,
     period: int,
+    branch_code: str | None = None,
 ) -> dict[str, dict[str, Decimal]]:
+    from Services.sme.branches import branch_sql_filter
+    bf, bp = branch_sql_filter(branch_code, alias='je')
     rows = conn.execute(
-        """
+        f"""
         SELECT jl.account_code,
                SUM(jl.debit) AS debit,
                SUM(jl.credit) AS credit
@@ -54,9 +57,10 @@ def _activity_before_period(
               je.fiscal_year < ?
               OR (je.fiscal_year = ? AND je.period < ?)
           )
+          {bf}
         GROUP BY jl.account_code
         """,
-        (fiscal_year, fiscal_year, period),
+        (fiscal_year, fiscal_year, period, *bp),
     ).fetchall()
     return {
         r[0]: {'debit': _money(r[1]), 'credit': _money(r[2])}
@@ -69,9 +73,12 @@ def _activity_in_periods(
     fiscal_year: int,
     period_from: int,
     period_to: int,
+    branch_code: str | None = None,
 ) -> dict[str, dict[str, Decimal]]:
+    from Services.sme.branches import branch_sql_filter
+    bf, bp = branch_sql_filter(branch_code, alias='je')
     rows = conn.execute(
-        """
+        f"""
         SELECT jl.account_code,
                SUM(jl.debit) AS debit,
                SUM(jl.credit) AS credit
@@ -80,9 +87,10 @@ def _activity_in_periods(
         WHERE je.status IN ('posted', 'reversed')
           AND je.fiscal_year = ?
           AND je.period >= ? AND je.period <= ?
+          {bf}
         GROUP BY jl.account_code
         """,
-        (fiscal_year, period_from, period_to),
+        (fiscal_year, period_from, period_to, *bp),
     ).fetchall()
     return {
         r[0]: {'debit': _money(r[1]), 'credit': _money(r[2])}
@@ -103,12 +111,14 @@ def trial_balance(
     period_to: int | None = None,
     postable_only: bool = False,
     include_zero: bool = True,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Bảng cân đối phát sinh theo hệ thống TK pháp định.
 
     - Liệt kê toàn bộ tài khoản đang hiệu lực (cấp 1 và mọi TK con).
     - Số liệu TK cha = cộng dồn phát sinh/dư của toàn bộ cấp con (+ ghi trực tiếp nếu có).
     - Dòng Tổng chỉ cộng các TK cấp 1 để tránh đếm trùng.
+    - branch_code: lọc theo chi nhánh (None/ALL = hợp nhất pháp nhân).
     """
     ensure_sme_journal_ready(conn, commit=False)
     period_to = period_to or period_from
@@ -128,8 +138,12 @@ def trial_balance(
     accounts = [dict(r) for r in conn.execute(acc_sql).fetchall()]
     by_code = {a['code']: a for a in accounts}
 
-    opening_direct = _activity_before_period(conn, fiscal_year, period_from)
-    period_direct = _activity_in_periods(conn, fiscal_year, period_from, period_to)
+    opening_direct = _activity_before_period(
+        conn, fiscal_year, period_from, branch_code=branch_code,
+    )
+    period_direct = _activity_in_periods(
+        conn, fiscal_year, period_from, period_to, branch_code=branch_code,
+    )
 
     # TK có phát sinh nhưng chưa có trong COA (lệch danh mục) — vẫn liệt kê cuối bảng.
     orphan_codes = sorted(
@@ -253,6 +267,7 @@ def trial_balance(
         'date_to': date_to,
         'include_zero': include_zero,
         'postable_only': postable_only,
+        'branch_code': branch_code or 'ALL',
         'totals_basis': 'level1',
         'rows': rows_out,
         'totals': {
@@ -323,8 +338,11 @@ def account_ledger(
     *,
     date_from: str,
     date_to: str,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     """Sổ cái chi tiết theo tài khoản cấp 1 (gộp phát sinh mọi TK con)."""
+    from Services.sme.branches import branch_sql_filter
+
     ensure_sme_journal_ready(conn, commit=False)
     conn.row_factory = sqlite3.Row
     code_in = (account_code or '').strip()
@@ -340,6 +358,7 @@ def account_ledger(
     d_to = date_to[:10]
     normal = acc['normal_balance'] or 'debit'
     match_sql, match_params = _descendant_account_filter(code)
+    bf, bp = branch_sql_filter(branch_code, alias='je')
 
     op = conn.execute(
         f"""
@@ -349,8 +368,9 @@ def account_ledger(
         WHERE {match_sql}
           AND je.status IN ('posted', 'reversed')
           AND je.posting_date < ?
+          {bf}
         """,
-        (*match_params, d_from),
+        (*match_params, d_from, *bp),
     ).fetchone()
     open_d, open_c = _money(op[0]), _money(op[1])
     open_bal = _net_balance(open_d, open_c, normal)
@@ -362,15 +382,16 @@ def account_ledger(
                jl.partner_id, jl.partner_type, jl.product_id, jl.warehouse_code,
                je.id AS entry_id, je.entry_no, je.posting_date, je.document_type,
                je.document_no, je.document_id, je.business_type, je.status,
-               je.description AS entry_description
+               je.description AS entry_description, je.branch_code
         FROM sme_journal_lines jl
         JOIN sme_journal_entries je ON je.id = jl.entry_id
         WHERE {match_sql}
           AND je.status IN ('posted', 'reversed')
           AND je.posting_date >= ? AND je.posting_date <= ?
+          {bf}
         ORDER BY je.posting_date, je.id, jl.sequence, jl.id
         """,
-        (*match_params, d_from, d_to),
+        (*match_params, d_from, d_to, *bp),
     ).fetchall()
 
     run_d, run_c = open_d, open_c
@@ -421,6 +442,7 @@ def account_ledger(
         },
         'date_from': d_from,
         'date_to': d_to,
+        'branch_code': branch_code or 'ALL',
         'opening': open_bal,
         'period_debit': float(period_d),
         'period_credit': float(period_c),

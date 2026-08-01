@@ -1,0 +1,53 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Bảng kê chi 09-TT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Bảng kê chi tiền <span class="badge bg-danger">09-TT</span></h4>
+    <p class="text-muted small mb-0">Chốt danh sách phiếu chi 02-TT trong kỳ để đối chiếu quỹ</p>
+  </div>
+</div>
+<div class="card shadow-sm border-0 mb-3"><div class="card-body row g-2 align-items-end">
+  <div class="col-md-3"><label class="form-label small">Từ ngày</label><input type="date" id="fFrom" class="form-control"></div>
+  <div class="col-md-3"><label class="form-label small">Đến ngày</label><input type="date" id="fTo" class="form-control"></div>
+  <div class="col-md-4"><label class="form-label small">Ghi chú</label><input type="text" id="fNotes" class="form-control"></div>
+  <div class="col-md-2"><button class="btn btn-danger w-100" id="btnBuild">Lập bảng kê</button></div>
+</div></div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table mb-0"><thead class="table-light"><tr>
+  <th>Số BK</th><th>Ngày lập</th><th>Kỳ</th><th class="text-end">Tổng chi</th><th></th>
+</tr></thead><tbody id="tbody"></tbody></table>
+</div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+const t=new Date(); const y=t.getFullYear(), m=String(t.getMonth()+1).padStart(2,'0');
+fFrom.value=`${y}-${m}-01`; fTo.value=t.toISOString().slice(0,10);
+async function load(){
+  const res=await fetch('/api/sme/payment-listing'); const json=await res.json();
+  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.doc_no}</td><td>${(r.listing_date||'').slice(0,10)}</td>
+    <td>${(r.date_from||'').slice(0,10)} → ${(r.date_to||'').slice(0,10)}</td>
+    <td class="text-end">${fmt(r.total_amount)}</td>
+    <td class="text-nowrap">
+      <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_payment_listing/in/${r.id}">In</a>
+      <button class="btn btn-sm btn-outline-danger ms-1" onclick="voidL(${r.id})">Hủy</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="5" class="text-muted text-center">Chưa có</td></tr>';
+}
+async function voidL(id){
+  if(!confirm('Hủy bảng kê chi tiền?')) return;
+  const res=await fetch('/api/sme/payment-listing/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+}
+btnBuild.onclick=async()=>{
+  const res=await fetch('/api/sme/payment-listing',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({date_from:fFrom.value, date_to:fTo.value, notes:fNotes.value})});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  alert('Đã lập '+json.data.doc_no+' · '+fmt(json.data.total_amount)+' đ · '+(json.data.lines||[]).length+' dòng');
+  load();
+};
+load();
+</script>
+{% endblock %}

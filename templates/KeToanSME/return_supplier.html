@@ -29,6 +29,16 @@
 </h3>
 
 <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white fw-semibold">Phiếu trả gần đây</div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>ID</th><th>PN</th><th>SP</th><th class="text-end">SL</th><th>Ngày</th><th></th></tr></thead>
+        <tbody id="recentReturns"></tbody>
+      </table>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
     <div class="card-body">
         <div class="row g-3 align-items-end">
             <div class="col-md-3">
@@ -159,7 +169,7 @@ function loadImport() {
     const start = toISO($('#startDate').val(), false);
     const end = toISO($('#endDate').val(), true);
 
-    let url = `/api/import?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}`;
+    let url = `/api/sme/imports?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}`;
     if (q) url += `&q=${encodeURIComponent(q)}`;
 
     const select = $('#importId');
@@ -172,12 +182,13 @@ function loadImport() {
         })
         .then(data => {
             select.html('<option value="">-- Chọn phiếu nhập --</option>');
-            if (!Array.isArray(data) || data.length === 0) {
+            const rows = Array.isArray(data) ? data : (data.data || []);
+            if (!rows.length) {
                 select.append('<option disabled>Không có phiếu nào</option>');
                 return;
             }
-            data.forEach(imp => {
-                const label = imp.import_no || `PN${String(imp.id).padStart(6, '0')}`;
+            rows.forEach(imp => {
+                const label = imp.import_no || imp.voucher_no || `PN${String(imp.id).padStart(6, '0')}`;
                 select.append(`<option value="${imp.id}">${label} - ${imp.supplier_name || 'NCC'} - ${imp.date || ''}</option>`);
             });
             select.prop('disabled', false);
@@ -208,7 +219,7 @@ function loadImportDetails() {
 
     tbody.html('<tr><td colspan="11" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>');
 
-    fetch(`/api/import/${importId}`)
+    fetch(`/api/sme/import/${importId}`)
         .then(r => {
             if (!r.ok) {
                 return r.json().then(errData => {
@@ -347,7 +358,7 @@ function submitReturn() {
     const btn = $('#submitBtn');
     btn.prop('disabled', true).text('Đang xử lý...');
 
-    fetch('/api/return/import', {
+    fetch('/api/sme/returns/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -378,11 +389,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Ngày mặc định: 01/01/2026 - 12/01/2026 (theo ngày hiện tại là 12/01/2026)
-    flatpickr("#startDate", fpConfig).setDate(new Date(2026, 0, 1));
-    flatpickr("#endDate", fpConfig).setDate(new Date(2026, 0, 12));
+    // Ngày mặc định: đầu tháng → hôm nay
+    const today = new Date();
+    flatpickr("#startDate", fpConfig).setDate(new Date(today.getFullYear(), today.getMonth(), 1));
+    flatpickr("#endDate", fpConfig).setDate(today);
 
     loadImport();
+    loadRecentReturns();
 });
+async function loadRecentReturns(){
+  try{
+    const res=await fetch('/api/sme/returns/import');
+    const json=await res.json();
+    const rows=json.data||[];
+    const el=document.getElementById('recentReturns');
+    if(!el) return;
+    el.innerHTML=rows.slice(0,30).map(r=>`<tr>
+      <td>${r.id}</td><td>${r.import_no||r.import_id||''}</td>
+      <td>${r.product_name||r.product_id||''}</td>
+      <td class="text-end">${r.quantity||0}</td>
+      <td>${(r.date||'').toString().slice(0,10)}</td>
+      <td><button class="btn btn-sm btn-outline-danger" onclick="voidReturnImport(${r.id})">Hủy</button></td>
+    </tr>`).join('')||'<tr><td colspan="6" class="text-muted text-center">Chưa có phiếu trả</td></tr>';
+  }catch(e){ console.warn(e); }
+}
+async function voidReturnImport(id){
+  if(!confirm('Hủy phiếu trả NCC #'+id+' (đảo journal + kho)?')) return;
+  const res=await fetch('/api/sme/return-import/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:'Hủy từ UI'})});
+  const json=await res.json();
+  if(!json.success){ showToast(json.error||'Lỗi hủy', true); return; }
+  showToast('Đã hủy phiếu trả #'+id);
+  loadRecentReturns();
+}
 </script>
 {% endblock %}

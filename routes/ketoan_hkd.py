@@ -966,6 +966,14 @@ def register_ketoan_hkd_routes(app):
     # --- Route: API tạo Phiếu Chi ngoài (Other Expense) ---
     @app.route('/api/expense/create-other', methods=['POST'])
     def create_other_expense():
+        from Services.sme.hkd_side_effects import write_hkd_cash_vouchers
+        from Services.tenant_profile import get_current_tenant_profile
+        if not write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
+            return jsonify(
+                success=False,
+                error='Tenant SME: dùng /api/sme/vouchers/payments (02-TT) thay vì phiếu chi HKD',
+            ), 400
+
         db = get_db_connection()
         cursor = db.cursor()
 

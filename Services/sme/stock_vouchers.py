@@ -11,12 +11,15 @@ def list_stock_in(
     *,
     date_from: str | None = None,
     date_to: str | None = None,
+    branch_code: str | None = None,
+    q: str | None = None,
     limit: int = 500,
 ) -> list[dict[str, Any]]:
     sql = """
         SELECT
             i.id,
             COALESCE(i.import_no, 'PN' || printf('%06d', i.id)) AS voucher_no,
+            COALESCE(i.import_no, 'PN' || printf('%06d', i.id)) AS import_no,
             i.date,
             COALESCE(s.name, '') AS supplier_name,
             COALESCE(i.total_value, 0) AS total_amount,
@@ -33,6 +36,15 @@ def list_stock_in(
     if date_to:
         sql += ' AND date(i.date) <= date(?)'
         params.append(date_to[:10])
+    q_s = (q or '').strip()
+    if q_s:
+        like = f'%{q_s}%'
+        sql += ' AND (i.import_no LIKE ? OR i.bill_no LIKE ? OR s.name LIKE ?)'
+        params.extend([like, like, like])
+    from Services.sme.branches import import_branch_filter_sql
+    bf, bp = import_branch_filter_sql(conn, branch_code, alias='i')
+    sql += bf
+    params.extend(bp)
     sql += ' ORDER BY date(i.date) DESC, i.id DESC LIMIT ?'
     params.append(int(limit))
     try:
@@ -46,6 +58,7 @@ def list_stock_out(
     *,
     date_from: str | None = None,
     date_to: str | None = None,
+    branch_code: str | None = None,
     limit: int = 500,
 ) -> list[dict[str, Any]]:
     sql = """
@@ -59,7 +72,23 @@ def list_stock_out(
     if date_to:
         sql += ' AND date(date) <= date(?)'
         params.append(date_to[:10])
+    code = (branch_code or '').strip().upper()
+    if code and code != 'ALL':
+        from Services.sme.branches import sale_branch_filter_sql
+        # Lọc theo sale.warehouse → CN (đồng bộ /api/sme/sales)
+        try:
+            bf, bp = sale_branch_filter_sql(conn, code, alias='s')
+            if bf:
+                sql += f"""
+                    AND sale_id IN (
+                        SELECT s.id FROM sale s WHERE 1=1 {bf}
+                    )
+                """
+                params.extend(bp)
+        except Exception:
+            pass
     sql += ' ORDER BY date(date) DESC, id DESC LIMIT ?'
+
     params.append(int(limit))
     try:
         return [dict(r) for r in conn.execute(sql, params).fetchall()]
@@ -87,45 +116,24 @@ def get_stock_in_print_payload(
     if not imp_row:
         return None
     imp = dict(imp_row)
-    if not imp.get('import_no'):
-        imp['import_no'] = f"PN{import_id:06d}"
-    if imp.get('total_value') is None:
-        imp['total_value'] = 0
 
-    cols = {r[1] for r in conn.execute('PRAGMA table_info(import_details)').fetchall()}
-    select_fields = [
-        'id.*',
-        'p.name AS product_name',
-        'p.unit AS base_unit',
-        'p.unit1 AS wholesale_unit',
-        'p.barcode',
-        'p.product_code',
-    ]
-    if 'unit' in cols:
-        select_fields.append('id.unit AS import_unit')
-    if 'unit_type' in cols:
-        select_fields.append('id.unit_type')
-
-    raw_items = conn.execute(
-        f"""
-        SELECT {', '.join(select_fields)}
-        FROM import_details id
-        JOIN products p ON p.id = id.product_id
-        WHERE id.import_id = ?
-        """,
-        (import_id,),
-    ).fetchall()
-
-    items: list[dict[str, Any]] = []
-    for row in raw_items:
-        item = dict(row)
-        if item.get('import_unit'):
-            item['display_unit'] = str(item['import_unit']).strip() or item.get('base_unit') or '—'
-        elif item.get('unit_type') == 1 and item.get('wholesale_unit'):
-            item['display_unit'] = str(item['wholesale_unit']).strip() or '—'
-        else:
-            item['display_unit'] = item.get('base_unit') or '—'
-        items.append(item)
+    items = []
+    try:
+        detail_cols = {r[1] for r in conn.execute('PRAGMA table_info(import_details)').fetchall()}
+        wh_sel = ', warehouse_code' if 'warehouse_code' in detail_cols else ''
+        for r in conn.execute(
+            f"""
+            SELECT d.*, p.name AS product_name, p.unit
+            FROM import_details d
+            LEFT JOIN products p ON p.id = d.product_id
+            WHERE d.import_id = ?
+            ORDER BY d.id
+            """,
+            (import_id,),
+        ).fetchall():
+            items.append(dict(r))
+    except sqlite3.Error:
+        items = []
 
     return imp, items, info
 
@@ -134,61 +142,17 @@ def get_stock_out_print_payload(
     conn: sqlite3.Connection, voucher_id: int
 ) -> tuple[dict[str, Any], dict[str, Any]] | None:
     """Trả (px, info) cho mẫu in 02-VT từ phieu_xuat_kho."""
-    from helpers import so_thanh_chu
-
     info_row = conn.execute('SELECT * FROM business_info LIMIT 1').fetchone()
     info = dict(info_row) if info_row else {}
-
     row = conn.execute(
         'SELECT * FROM phieu_xuat_kho WHERE id = ?', (voucher_id,)
     ).fetchone()
     if not row:
         return None
-    raw = dict(row)
+    px = dict(row)
     try:
-        hang_hoa = json.loads(raw.get('items_json') or '[]')
+        items = json.loads(px.get('items_json') or '[]')
     except (TypeError, json.JSONDecodeError):
-        hang_hoa = []
-
-    # Chuẩn hoá key số lượng / đơn giá từ các nguồn khác nhau
-    normalized = []
-    for it in hang_hoa:
-        if not isinstance(it, dict):
-            continue
-        qty = float(it.get('quantity') or it.get('qty') or 0)
-        price = float(it.get('price') or it.get('cost_price') or 0)
-        amount = float(it.get('amount') or (qty * price))
-        normalized.append({
-            'product_name': it.get('product_name') or it.get('name') or '',
-            'product_code': it.get('product_code') or it.get('barcode') or '',
-            'unit': it.get('unit') or it.get('display_unit') or '—',
-            'qty': qty,
-            'price': price,
-            'amount': amount,
-        })
-
-    total = float(raw.get('total_amount') or sum(i['amount'] for i in normalized) or 0)
-    address = ''
-    sale_id = raw.get('sale_id')
-    if sale_id:
-        sale = conn.execute(
-            'SELECT address, company_name FROM sale WHERE id = ?', (sale_id,)
-        ).fetchone()
-        if sale:
-            address = sale['address'] or ''
-            if sale['company_name'] and not raw.get('customer_name'):
-                raw['customer_name'] = sale['company_name']
-
-    px = {
-        'id': raw['id'],
-        'voucher_no': raw.get('voucher_no') or f"PX{voucher_id:06d}",
-        'date': (raw.get('date') or '')[:10],
-        'customer_name': raw.get('customer_name') or 'Khách lẻ',
-        'address': address,
-        'note': raw.get('note') or 'Xuất kho bán hàng',
-        'hang_hoa': normalized,
-        'total_amount': total,
-        'total_str': so_thanh_chu(round(total)),
-        'warehouse_location': info.get('warehouse_location') or 'Kho tổng',
-    }
+        items = []
+    px['items'] = items
     return px, info

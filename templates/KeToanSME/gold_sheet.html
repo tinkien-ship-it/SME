@@ -1,0 +1,76 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Bảng kê vàng 07-TT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Bảng kê vàng tiền tệ <span class="badge bg-warning text-dark">07-TT</span></h4>
+    <p class="text-muted small mb-0">Theo dõi vàng / kim khí quý dùng như tiền tệ (không bắt buộc GL)</p>
+  </div>
+  <button class="btn btn-warning" id="btnNew">Lập bảng kê</button>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table mb-0"><thead class="table-light"><tr>
+  <th>Số</th><th>Ngày</th><th class="text-end">Tổng lượng</th><th class="text-end">Thành tiền</th><th></th>
+</tr></thead><tbody id="tbody"></tbody></table>
+</div></div>
+<div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header bg-warning"><h5 class="modal-title">07-TT Vàng tiền tệ</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
+      <div class="col-md-8"><label class="form-label small">Ghi chú</label><input type="text" id="fNotes" class="form-control"></div>
+    </div>
+    <table class="table table-sm"><thead><tr><th>Tên</th><th>Hàm lượng</th><th>Lượng</th><th>Đơn giá</th><th></th></tr></thead>
+    <tbody id="lines"></tbody></table>
+    <button class="btn btn-sm btn-outline-secondary" type="button" id="btnAdd">+ Dòng</button>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-warning" id="btnSave">Lưu</button></div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+fDate.value=new Date().toISOString().slice(0,10);
+function addLine(){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input class="form-control form-control-sm name" value="Vàng miếng"></td>
+    <td><input class="form-control form-control-sm purity" value="9999"></td>
+    <td><input type="number" class="form-control form-control-sm w" value="0" step="any"></td>
+    <td><input type="number" class="form-control form-control-sm p" value="0" step="any"></td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">×</button></td>`;
+  lines.appendChild(tr);
+}
+btnAdd.onclick=()=>addLine();
+async function load(){
+  const res=await fetch('/api/sme/gold-sheets'); const json=await res.json();
+  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.doc_no}</td><td>${(r.sheet_date||'').slice(0,10)}</td>
+    <td class="text-end">${r.total_weight}</td><td class="text-end">${fmt(r.total_amount)}</td>
+    <td class="text-nowrap">
+      <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_gold_sheet/in/${r.id}">In</a>
+      <button class="btn btn-sm btn-outline-danger ms-1" onclick="voidG(${r.id})">Hủy</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="5" class="text-muted text-center">Chưa có</td></tr>';
+}
+async function voidG(id){
+  if(!confirm('Hủy bảng kê vàng?')) return;
+  const res=await fetch('/api/sme/gold-sheets/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+}
+btnNew.onclick=()=>{ lines.innerHTML=''; addLine(); new bootstrap.Modal(document.getElementById('modal')).show(); };
+btnSave.onclick=async()=>{
+  const L=[]; lines.querySelectorAll('tr').forEach(tr=>{
+    const w=parseFloat(tr.querySelector('.w').value)||0; if(w<=0) return;
+    L.push({item_name:tr.querySelector('.name').value, purity:tr.querySelector('.purity').value,
+      weight:w, unit_price:parseFloat(tr.querySelector('.p').value)||0});
+  });
+  if(!L.length) return alert('Nhập ít nhất 1 dòng');
+  const res=await fetch('/api/sme/gold-sheets',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({date:fDate.value, notes:fNotes.value, lines:L})});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modal')).hide();
+  alert('Đã lập '+json.data.doc_no); load();
+};
+load();
+</script>
+{% endblock %}

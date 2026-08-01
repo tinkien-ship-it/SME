@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Kiểm nghiệm {{ doc.doc_no }} — 03-VT</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  .row{margin:6px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #333;padding:5px 6px}
+  th{background:#f5f5f5}
+  .num{text-align:right}
+  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
+  .sign div{width:24%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div>
+    <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+    <div>{{ info.address or '' }}</div>
+  </div>
+  <div style="text-align:right">
+    <div><strong>Mẫu số 03 - VT</strong></div>
+    <div class="muted">(TT 99/2025/TT-BTC)</div>
+  </div>
+</div>
+<div class="title">BIÊN BẢN KIỂM NGHIỆM<br>VẬT TƯ, CÔNG CỤ, SẢN PHẨM, HÀNG HÓA</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.inspect_date }}</div>
+<div class="row">Căn cứ phiếu nhập / hóa đơn: {{ doc.import_no or '' }}</div>
+<div class="row">Nhà cung cấp: {{ doc.supplier_name or '' }}</div>
+<div class="row">Phương thức kiểm nghiệm: {{ doc.method or '' }}</div>
+<div class="row">Ban kiểm nghiệm: {{ doc.committee or '' }}</div>
+<table>
+  <thead>
+    <tr>
+      <th>STT</th><th>Tên hàng</th><th>SL theo HĐ</th><th>SL thực nhận</th><th>Kết quả</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for ln in doc.lines %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ ln.product_name }}</td>
+      <td class="num">{{ '{:g}'.format(ln.invoice_qty|float) }}</td>
+      <td class="num">{{ '{:g}'.format(ln.actual_qty|float) }}</td>
+      <td>{{ ln.result or '' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div class="row">Ý kiến ban kiểm nghiệm: {{ doc.opinion or '' }}</div>
+<div class="sign">
+  <div>Thủ kho<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Người giao hàng<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Trưởng ban KN<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

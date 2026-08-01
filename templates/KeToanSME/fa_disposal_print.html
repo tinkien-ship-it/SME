@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thanh lý TSCĐ {{ doc.doc_no }} — 02-TSCĐ</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:16pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  .row{margin:6px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #333;padding:6px}
+  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
+  .sign div{width:24%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div>
+    <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+    <div>{{ info.address or '' }}</div>
+  </div>
+  <div style="text-align:right">
+    <div><strong>Mẫu số 02 - TSCĐ</strong></div>
+    <div class="muted">(TT 99/2025/TT-BTC)</div>
+  </div>
+</div>
+<div class="title">BIÊN BẢN THANH LÝ TÀI SẢN CỐ ĐỊNH</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.disposal_date }}</div>
+<table>
+  <tr><th>Mã TSCĐ</th><td>{{ doc.asset_code }}</td><th>Tên TSCĐ</th><td>{{ doc.asset_name }}</td></tr>
+  <tr><th>Nguyên giá</th><td style="text-align:right">{{ '{:,.0f}'.format(doc.original_cost|float).replace(',', '.') }}</td>
+      <th>Hao mòn lũy kế</th><td style="text-align:right">{{ '{:,.0f}'.format(doc.accum_dep|float).replace(',', '.') }}</td></tr>
+  <tr><th>Giá trị còn lại</th><td style="text-align:right">{{ '{:,.0f}'.format(doc.net_book|float).replace(',', '.') }}</td>
+      <th>Thu thanh lý</th><td style="text-align:right">{{ '{:,.0f}'.format(doc.proceeds|float).replace(',', '.') }}</td></tr>
+  <tr><th>Lãi / lỗ</th><td style="text-align:right" colspan="3">{{ '{:,.0f}'.format(doc.gain_loss|float).replace(',', '.') }}
+    ({{ 'nhượng bán' if doc.disposal_type=='sale' else 'thanh lý' }})</td></tr>
+</table>
+<div class="row">Lý do / bên nhận: {{ doc.reason or '' }} {{ doc.counterparty or '' }}</div>
+<div class="sign">
+  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Phụ trách TS<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Thành viên<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

@@ -17,6 +17,7 @@
             <h4 class="fw-bold mb-1"><i class="fas fa-robot text-primary me-2"></i>Tự động hóa kỳ kế toán</h4>
             <p class="text-muted small mb-0">
                 Một lần chạy kỳ: KH TSCĐ → PB CCDC → kết chuyển DT/CP → 911 → 4212 → quyết toán GTGT (133↔33311) → khóa sổ.
+                Cuối năm: kết chuyển 4212 → 4211.
                 Tài sản <code>InStock</code> được kích hoạt tự động. Lịch hệ thống: ngày 1 hàng tháng.
                 {% set feat = tenant_profile.features or {} %}
                 {% set filing = tenant_profile.vat_filing_period or feat.vat_filing_period or feat.filing_period or ('monthly' if feat.monthly_vat_filing else 'quarterly') %}
@@ -55,10 +56,11 @@
             </div>
             <div class="d-flex flex-wrap gap-2 mt-3">
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="btnVatOnly">Chỉ QT GTGT</button>
+                <button type="button" class="btn btn-outline-dark btn-sm" id="btnYearEnd" title="Chuyển 4212 → 4211 sau khi đã KC tháng 12">Kết chuyển cuối năm (4212→4211)</button>
                 <button type="button" class="btn btn-outline-warning btn-sm" id="btnUnlock">Mở khóa kỳ</button>
                 <button type="button" class="btn btn-outline-danger btn-sm" id="btnLock">Khóa sổ thủ công</button>
             </div>
-            <div class="auto-muted mt-2">Lịch hệ thống cũng chạy tự động ngày 1 hàng tháng (kỳ tháng trước) cho mọi tenant SME.</div>
+            <div class="auto-muted mt-2">Lịch hệ thống cũng chạy tự động ngày 1 hàng tháng (kỳ tháng trước) cho mọi tenant SME. Cuối năm: chạy KC tháng 12 rồi bấm <strong>Kết chuyển cuối năm</strong>.</div>
             <div id="lockStatus" class="small mt-2 text-muted">Đang kiểm tra khóa sổ…</div>
         </div>
     </div>
@@ -156,6 +158,17 @@
             if (vat.reason) html += ` · <span class="text-warning">${vat.reason}</span>`;
             html += `</div>`;
         }
+        const ye = d.year_end || {};
+        if (d.year_end && (ye.posted || ye.reason)) {
+            if (ye.posted) {
+                html += `<div class="mb-2 auto-ok">KC cuối năm: ${ye.direction === 'loss' ? 'Lỗ' : 'Lãi'} ${money(ye.amount)}`
+                    + ` · ${ye.account_4212 || '4212'} → ${ye.account_4211 || '4211'}`;
+                if (ye.entry_id) html += ` · BT#${ye.entry_id}`;
+                html += `</div>`;
+            } else {
+                html += `<div class="mb-2 text-muted">KC cuối năm: ${ye.reason || '—'}</div>`;
+            }
+        }
         if (lock) {
             html += `<div class="mb-2 text-danger">Đã khóa sổ · ${lock.locked_at || ''} · ${lock.reason || ''}</div>`;
         }
@@ -245,6 +258,42 @@
 
     document.getElementById('btnUnlock').addEventListener('click', () => setLock('unlock'));
     document.getElementById('btnLock').addEventListener('click', () => setLock('lock'));
+
+    document.getElementById('btnYearEnd').addEventListener('click', async () => {
+        const box = document.getElementById('autoResult');
+        const year = Number(yEl.value);
+        if (!confirm('Kết chuyển cuối năm ' + year + ': chuyển số dư 4212 → 4211 và khóa tháng 12?')) return;
+        box.innerHTML = '<div class="text-muted">Đang kết chuyển cuối năm…</div>';
+        try {
+            const res = await fetch('/api/sme/auto/year-end', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    year,
+                    replace_existing: document.getElementById('autoReplace').checked,
+                    lock_after: true,
+                }),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Lỗi');
+            const d = data.data || {};
+            if (!d.posted) {
+                box.innerHTML = `<div class="text-warning">Chưa ghi sổ: ${d.reason || '—'}`
+                    + (d.entry_id ? ` · BT#${d.entry_id}` : '') + `</div>`;
+            } else {
+                box.innerHTML = `<div class="auto-ok"><strong>Đã KC cuối năm ${year}</strong>`
+                    + ` · ${d.direction === 'loss' ? 'Lỗ' : 'Lãi'} ${money(d.amount)} đ`
+                    + ` · ${d.account_4212} → ${d.account_4211}`
+                    + (d.entry_id ? ` · BT#${d.entry_id}` : '')
+                    + (d.locked_period_12 ? ' · đã khóa T12' : '')
+                    + `</div>`;
+            }
+            refreshLockStatus();
+        } catch (e) {
+            box.innerHTML = `<div class="text-danger">${e.message}</div>`;
+        }
+    });
+
     yEl.addEventListener('change', refreshLockStatus);
     pEl.addEventListener('change', refreshLockStatus);
     refreshLockStatus();

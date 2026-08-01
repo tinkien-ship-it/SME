@@ -72,6 +72,7 @@ def ensure_fixed_assets_schema(conn):
         ('warehouse_code', "TEXT DEFAULT 'KHO_001'"),
         ('so_luong', 'REAL DEFAULT 1'),
         ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
+        ('branch_code', 'TEXT'),
     ):
         _add_col(c, FIXED_ASSETS_TABLE, col, typ)
 
@@ -98,6 +99,16 @@ def ensure_fixed_assets_schema(conn):
             )
         """)
 
+    for col, typ in (
+        ('product_id', 'INTEGER'),
+        ('import_id', 'INTEGER'),
+        ('import_detail_id', 'INTEGER'),
+        ('warehouse_code', "TEXT DEFAULT 'KHO_001'"),
+        ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
+        ('branch_code', 'TEXT'),
+    ):
+        _add_col(c, TOOLS_TABLE, col, typ)
+
 
 def register_fixed_asset_from_import(
     c,
@@ -122,14 +133,20 @@ def register_fixed_asset_from_import(
     ma_ts = (product_code or f'TSCD{product_id:04d}').strip()
     base_val = float(subtotal or 0) - float(discount_amount or 0)
     nguyen_gia = float(line_total or base_val + float(tax_amount or 0))
+    branch = 'HQ'
+    try:
+        from Services.sme.branches import get_warehouse_branch_code
+        branch = get_warehouse_branch_code(c.connection, warehouse_code or '')
+    except Exception:
+        pass
 
     c.execute(f"""
         INSERT INTO {FIXED_ASSETS_TABLE} (
             ma_tai_san, ten_tai_san, voucher_no, ngay_chung_tu,
             gia_mua_chua_thue, nguyen_gia_tinh_khau_hao, thue_gtgt,
             tinh_trang, product_id, import_id, import_detail_id,
-            warehouse_code, so_luong
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            warehouse_code, so_luong, branch_code
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         ma_ts,
         product_name,
@@ -144,6 +161,7 @@ def register_fixed_asset_from_import(
         import_detail_id,
         warehouse_code or 'KHO_001',
         float(qty or 1),
+        branch,
     ))
     return c.lastrowid
 
@@ -170,13 +188,20 @@ def register_tool_from_import(
     ensure_fixed_assets_schema(c.connection)
     ma = (product_code or f'CCDC{product_id:04d}').strip()
     nguyen_gia = float(line_total or 0)
+    branch = 'HQ'
+    try:
+        from Services.sme.branches import get_warehouse_branch_code
+        branch = get_warehouse_branch_code(c.connection, warehouse_code or '')
+    except Exception:
+        pass
 
     c.execute(f"""
         INSERT INTO {TOOLS_TABLE} (
             ma_ccdc, ten_ccdc, voucher_no, ngay_nhap,
             gia_mua_chua_thue, nguyen_gia, thue_gtgt,
-            so_luong, tinh_trang, product_id, import_id, import_detail_id, warehouse_code
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            so_luong, tinh_trang, product_id, import_id, import_detail_id,
+            warehouse_code, branch_code
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         ma,
         product_name,
@@ -191,6 +216,7 @@ def register_tool_from_import(
         import_id,
         import_detail_id,
         warehouse_code or 'KHO_001',
+        branch,
     ))
     return c.lastrowid
 

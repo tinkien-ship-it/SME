@@ -1,0 +1,409 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Khách trả hàng{% endblock %}
+
+{% block sme_head %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .form-control, .btn, .form-select { border-radius: 12px !important; }
+        .card { border-radius: 16px !important; overflow: hidden; }
+        .toast { border-radius: 16px !important; }
+        .table th { font-size: 0.9rem; background: #f8f9fa; }
+        .spinner-border-sm { width: 1rem; height: 1rem; }
+        .text-success.fw-bold { font-size: 1.1em; }
+        #maxQty { font-weight: 600; color: #4361ee; }
+        .flatpickr-calendar { z-index: 9999 !important; }
+    </style>
+{% endblock %}
+
+{% block sme_content %}
+<div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1080">
+    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body fw-bold" id="toastBody"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<h3 class="mb-4 text-primary fw-bold">
+    <i class="bi bi-arrow-repeat"></i> Khách Trả Lại Hàng
+</h3>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white fw-semibold">Phiếu trả gần đây</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead><tr><th>ID</th><th>ĐH</th><th>SP</th><th class="text-end">SL</th><th>Ngày</th><th></th></tr></thead>
+            <tbody id="recentReturns"></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted">Từ ngày</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="startDate" placeholder="dd/mm/yyyy">
+                    <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted">Đến ngày</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="endDate" placeholder="dd/mm/yyyy">
+                    <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted">Tìm kiếm</label>
+                <input type="text" id="searchSale" class="form-control" placeholder="Số hóa đơn, tên khách, điện thoại...">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" onclick="loadSales()">
+                    <i class="bi bi-search"></i> Tìm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4 border-primary">
+    <div class="card-header bg-primary text-white">
+        <h6 class="mb-0"><i class="bi bi-cart-check"></i> Form Hoàn Hàng</h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label fw-bold">Chọn đơn hàng</label>
+                <select class="form-select form-select-lg" id="saleId" onchange="loadSaleDetail()" disabled>
+                    <option value="">-- Đang tải đơn hàng... --</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Sản phẩm cần hoàn</label>
+                <select class="form-select" id="productId" onchange="updateQuantityField()" disabled>
+                    <option value="">-- Chọn sản phẩm --</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Số lượng hoàn</label>
+                <input type="number" class="form-control form-control-lg text-end fw-bold"
+                       id="quantity" min="0.001" step="0.001" placeholder="0" disabled>
+                <div id="maxQty" class="mt-1 fw-semibold text-primary"></div>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label fw-bold">Lý do hoàn hàng</label>
+                <textarea class="form-control" id="reason" rows="2" placeholder="Ví dụ: Hàng lỗi, khách không ưng, đổi size..."></textarea>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-danger btn-lg w-100 shadow" id="submitBtn" onclick="submitReturn()" disabled>
+                    <i class="bi bi-box-arrow-in-left"></i> HOÀN HÀNG
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0" id="saleHeader">Chọn đơn hàng để xem chi tiết</h6>
+        <small id="saleInfo"></small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0" id="itemsTable">
+                <thead class="table-light text-center sticky-top">
+                    <tr>
+                        <th>Mã SP</th><th>Tên hàng</th><th>Đơn vị</th><th>SL bán</th><th>Giá</th>
+                        <th>Thành tiền</th><th>CK %</th><th>Tiền CK</th><th>Tổng TT</th>
+                        <th class="text-danger">Đã hoàn</th><th class="text-success">Còn lại</th>
+                    </tr>
+                </thead>
+                <tbody class="text-end">
+                    <tr><td colspan="11" class="text-center py-5 text-muted">Chưa chọn đơn hàng</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer text-end fw-bold fs-5 text-primary" id="saleTotals">Chưa có dữ liệu</div>
+</div>
+{% endblock %}
+
+{% block sme_scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script>
+const toastEl = document.getElementById('liveToast');
+const toast = new bootstrap.Toast(toastEl);
+
+function showToast(msg, isError = false) {
+    toastEl.querySelector('.toast-body').textContent = msg;
+    toastEl.className = `toast align-items-center text-white border-0 ${isError ? 'bg-danger' : 'bg-success'}`;
+    toast.show();
+}
+
+const money = formatVND;
+let currentSaleItems = [];
+
+function toISO(dateStr) {
+    if (!dateStr) return "";
+    const [d, m, y] = dateStr.split('/');
+    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
+function formatSaleDate(dateStr) {
+    if (!dateStr) return '';
+    const raw = String(dateStr).replace('T', ' ');
+    const [datePart, timePart = ''] = raw.split(' ');
+    const [y, m, d] = (datePart || '').split('-');
+    if (!y || !m || !d) return raw;
+    return `${d}/${m}/${y}${timePart ? ' ' + timePart.substring(0, 5) : ''}`;
+}
+
+function canReturnSale(s) {
+    if (!s) return false;
+    if (s.status === 'draft' || s.status === 'cancelled') return false;
+    const invStatus = (s.inv_status || s.invoice_status || 'none').toLowerCase();
+    if (invStatus !== 'none') return false;
+    if (s.invoice_number && String(s.invoice_number).trim()) return false;
+    return true;
+}
+
+function getItemMetrics(it) {
+    const returned = parseFloat(it.returned_qty || 0);
+    const remain = Math.max(0, parseFloat(
+        it.remaining_qty != null ? it.remaining_qty : (it.quantity || 0)
+    ));
+    const soldQty = remain + returned;
+    const price = parseFloat(it.sold_price ?? it.price ?? 0);
+    const discPct = parseFloat(it.discount_pct || 0);
+    return { returned, remain, soldQty, price, discPct };
+}
+
+async function loadSales() {
+    const start = toISO($("#startDate").val());
+    const end = toISO($("#endDate").val());
+    const q = $("#searchSale").val().trim();
+    let url = `/api/sme/sales?page=1&limit=200&status=completed`;
+    if (start) url += `&start=${encodeURIComponent(start)}`;
+    if (end) url += `&end=${encodeURIComponent(end)}`;
+    if (q) url += `&q=${encodeURIComponent(q)}`;
+    const sel = $("#saleId");
+    sel.html("<option>-- Đang tải... --</option>").prop("disabled", true);
+    try {
+        const res = await fetch(url);
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Không tải được danh sách đơn hàng");
+        const orders = (json.orders || []).filter(canReturnSale);
+        sel.html('<option value="">-- Chọn đơn hàng --</option>');
+        if (!orders.length) {
+            sel.append('<option value="" disabled>Không có đơn hàng phù hợp trong khoảng thời gian này</option>');
+        }
+        orders.forEach(s => {
+            const saleNo = s.sale_no || `ĐH${String(s.id).padStart(6, '0')}`;
+            const customer = s.customer_name || s.customer || 'Bán cho người tiêu dùng';
+            const label = `${saleNo} • ${formatSaleDate(s.date)} • ${customer} • ${money(s.total_amount || s.total || 0)}đ`;
+            sel.append(`<option value="${s.id}">${label}</option>`);
+        });
+        $("#saleHeader").text("Chọn đơn hàng để xem chi tiết");
+        $("#saleInfo").text("");
+        $("#itemsTable tbody").html('<tr><td colspan="11" class="text-center py-5 text-muted">Chưa chọn đơn hàng</td></tr>');
+        $("#saleTotals").text("Chưa có dữ liệu");
+        $("#productId").html('<option value="">-- Chọn sản phẩm --</option>').prop("disabled", true);
+        $("#quantity").val("").prop("disabled", true);
+        $("#maxQty").text("");
+        $("#submitBtn").prop("disabled", true);
+        currentSaleItems = [];
+    } catch (e) {
+        sel.html('<option value="">-- Lỗi tải dữ liệu --</option>');
+        showToast(e.message || "Lỗi tải danh sách đơn hàng", true);
+    } finally {
+        sel.prop("disabled", false);
+    }
+}
+
+async function loadSaleDetail() {
+    const saleId = $("#saleId").val();
+    if (!saleId) return;
+    $("#itemsTable tbody").html(`<tr><td colspan="11" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>`);
+    $("#productId").html('<option value="">-- Đang tải... --</option>').prop("disabled", true);
+    $("#quantity").val("").prop("disabled", true);
+    $("#maxQty").text("");
+    $("#submitBtn").prop("disabled", true);
+    try {
+        const res = await fetch(`/api/sme/sales/${saleId}`);
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Không tải được chi tiết đơn");
+        const data = json.data || json;
+        currentSaleItems = data.items || [];
+        renderSaleTable(currentSaleItems);
+        populateProducts(currentSaleItems);
+        const saleNo = data.sale_no || `ĐH${String(data.id).padStart(6, '0')}`;
+        $("#saleHeader").text(`Đơn ${saleNo} - ${data.customer_name || 'Bán cho người tiêu dùng'}`);
+        $("#saleInfo").text(`${formatSaleDate(data.date)} • Tổng: ${money(data.total_amount)}đ`);
+    } catch (e) {
+        currentSaleItems = [];
+        $("#itemsTable tbody").html(`<tr><td colspan="11" class="text-center py-5 text-danger">${e.message || 'Không tải được chi tiết đơn'}</td></tr>`);
+        showToast(e.message || "Không tải được chi tiết đơn", true);
+    }
+}
+
+function renderSaleTable(items) {
+    const tbody = $("#itemsTable tbody");
+    tbody.empty();
+    if (!items.length) {
+        tbody.html('<tr><td colspan="11" class="text-center py-5 text-muted">Đơn hàng không có sản phẩm</td></tr>');
+        $("#saleTotals").text("Chưa có dữ liệu");
+        return;
+    }
+    let total = 0, totalDisc = 0, net = 0;
+    items.forEach(it => {
+        const { returned, remain, soldQty, price, discPct } = getItemMetrics(it);
+        const amount = soldQty * price;
+        const discAmt = amount * discPct / 100;
+        const lineNet = amount - discAmt;
+        total += amount; totalDisc += discAmt; net += lineNet;
+        tbody.append(`
+            <tr>
+                <td>${it.product_id ?? '—'}</td>
+                <td class="text-start">${it.name || it.product_name || '—'}</td>
+                <td class="text-center">${it.UseSaleUnit == 1 ? (it.unit1 || 'Lốc') : (it.unit || 'Cái')}</td>
+                <td>${money(soldQty)}</td><td>${money(price)}</td><td>${money(amount)}</td>
+                <td>${discPct}%</td><td>${money(discAmt)}</td><td>${money(lineNet)}</td>
+                <td class="text-danger fw-bold">${money(returned)}</td>
+                <td class="text-success fw-bold">${money(remain)}</td>
+            </tr>`);
+    });
+    $("#saleTotals").html(`Tiền hàng: ${money(total)}đ &nbsp; | &nbsp; Chiết khấu: ${money(totalDisc)}đ
+        <br><span class="text-primary fs-4">Tổng thanh toán: ${money(net)}đ</span>`);
+}
+
+function populateProducts(items) {
+    const sel = $("#productId");
+    sel.html('<option value="">-- Chọn sản phẩm để hoàn --</option>');
+    let hasOption = false;
+    items.forEach((it, index) => {
+        const { remain } = getItemMetrics(it);
+        if (remain <= 0.001) return;
+        hasOption = true;
+        const unitLabel = (it.UseSaleUnit == 1) ? (it.unit1 || 'Lốc/Thùng') : (it.unit || 'Đv');
+        const lineKey = `${it.product_id}-${it.UseSaleUnit || 0}-${index}`;
+        sel.append(`<option value="${lineKey}" data-product-id="${it.product_id}" data-max="${remain}"
+            data-unit="${unitLabel}" data-usesaleunit="${it.UseSaleUnit || 0}">
+            ${it.name || it.product_name || 'Sản phẩm'} - Còn: ${remain.toLocaleString('vi-VN')} ${unitLabel}
+        </option>`);
+    });
+    sel.prop("disabled", !hasOption);
+}
+
+function updateQuantityField() {
+    const option = $("#productId")[0].selectedOptions[0];
+    if (!option || !option.value) {
+        $("#quantity").prop("disabled", true).val("");
+        $("#maxQty").text("");
+        $("#submitBtn").prop("disabled", true);
+        return;
+    }
+    const max = parseFloat(option.dataset.max) || 0;
+    const unit = option.dataset.unit || "";
+    $("#quantity").prop("disabled", false).attr("max", max).val("").focus();
+    $("#maxQty").text(`Tối đa: ${max.toLocaleString('vi-VN')} ${unit}`);
+    $("#submitBtn").prop("disabled", false);
+}
+
+async function submitReturn() {
+    const saleId = $("#saleId").val();
+    const sel = $("#productId")[0].selectedOptions[0];
+    const qty = parseFloat($("#quantity").val());
+    const reason = $("#reason").val().trim();
+    if (!saleId || !sel || !sel.dataset.productId || isNaN(qty) || qty <= 0) {
+        showToast("Vui lòng nhập đầy đủ thông tin", true);
+        return;
+    }
+    if (qty > parseFloat(sel.dataset.max)) {
+        showToast("Số lượng hoàn vượt quá số lượng còn lại!", true);
+        return;
+    }
+    $("#submitBtn").prop("disabled", true).html('<span class="spinner-border spinner-border-sm"></span> Đang xử lý...');
+    try {
+        const res = await fetch("/api/sme/returns/sale", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                sale_id: parseInt(saleId, 10),
+                product_id: parseInt(sel.dataset.productId, 10),
+                quantity: qty,
+                UseSaleUnit: parseInt(sel.dataset.usesaleunit, 10) || 0,
+                reason: reason || "Khách trả hàng"
+            })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || "Lỗi không xác định");
+        showToast(`Đã hoàn thành công ${qty} ${sel.dataset.unit}!`, false);
+        await loadSaleDetail();
+        loadRecentReturns();
+        $("#productId").val("");
+        $("#quantity").val("").prop("disabled", true);
+        $("#reason").val("");
+        $("#maxQty").text("");
+        $("#submitBtn").html('<i class="bi bi-box-arrow-in-left"></i> HOÀN HÀNG').prop("disabled", true);
+    } catch (err) {
+        showToast(err.message || "Lỗi hệ thống", true);
+        $("#submitBtn").html('<i class="bi bi-box-arrow-in-left"></i> HOÀN HÀNG').prop("disabled", false);
+    }
+}
+
+async function loadRecentReturns() {
+    try {
+        const res = await fetch('/api/sme/returns/sale');
+        const json = await res.json();
+        const rows = json.data || [];
+        const el = document.getElementById('recentReturns');
+        if (!el) return;
+        el.innerHTML = rows.slice(0, 30).map(r => `<tr>
+            <td>${r.id}</td><td>${r.sale_no || r.sale_id || ''}</td>
+            <td>${r.product_name || r.product_id || ''}</td>
+            <td class="text-end">${r.quantity || 0}</td>
+            <td>${(r.date || '').toString().slice(0, 10)}</td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="voidReturnSale(${r.id})">Hủy</button></td>
+        </tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center">Chưa có phiếu trả</td></tr>';
+    } catch (e) { console.warn(e); }
+}
+
+async function voidReturnSale(id) {
+    if (!confirm('Hủy phiếu khách trả #' + id + '?')) return;
+    const res = await fetch('/api/sme/return-sale/' + id + '/void', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'Hủy từ UI' }),
+    });
+    const json = await res.json();
+    if (!json.success) { showToast(json.error || 'Lỗi hủy', true); return; }
+    showToast('Đã hủy phiếu trả #' + id);
+    loadRecentReturns();
+    loadSales();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const fpConfig = {
+        dateFormat: "d/m/Y", locale: "vn", allowInput: true, clickOpens: true,
+        onChange: function() {
+            if (document.getElementById('startDate').value && document.getElementById('endDate').value) loadSales();
+        }
+    };
+    flatpickr("#startDate", fpConfig).setDate(firstDayOfMonth);
+    flatpickr("#endDate", fpConfig).setDate(today);
+    loadSales();
+    loadRecentReturns();
+    $("#searchSale").on("keypress", e => { if (e.which === 13) loadSales(); });
+    $("#quantity").on("keyup", e => { if (e.key === "Enter") submitReturn(); });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Biên lai thu 06-TT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Biên lai thu tiền <span class="badge bg-success">06-TT</span></h4>
+    <p class="text-muted small mb-0">Thu tiền tạm thời · Nợ 111/112 · Có 131/511…</p>
+  </div>
+  <button class="btn btn-success" id="btnNew">Lập biên lai</button>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table mb-0"><thead class="table-light"><tr>
+  <th>Số BL</th><th>Ngày</th><th>Người nộp</th><th class="text-end">Số tiền</th><th></th>
+</tr></thead><tbody id="tbody"></tbody></table>
+</div></div>
+<div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header bg-success text-white"><h5 class="modal-title">Biên lai thu (06-TT)</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body row g-2">
+    <div class="col-md-6"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
+    <div class="col-md-6"><label class="form-label small">Hình thức</label>
+      <select id="fMethod" class="form-select"><option value="cash">Tiền mặt</option><option value="bank">Chuyển khoản</option></select>
+    </div>
+    <div class="col-12"><label class="form-label small">Người nộp *</label><input type="text" id="fParty" class="form-control"></div>
+    <div class="col-md-6"><label class="form-label small">Số tiền *</label><input type="number" id="fAmt" class="form-control" step="1000"></div>
+    <div class="col-md-6"><label class="form-label small">TK Có</label><input type="text" id="fCredit" class="form-control" value="131"></div>
+    <div class="col-12"><label class="form-label small">Lý do</label><input type="text" id="fReason" class="form-control"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-success" id="btnSave">Lưu &amp; ghi sổ</button></div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+fDate.value=new Date().toISOString().slice(0,10);
+async function load(){
+  const res=await fetch('/api/sme/temp-receipts'); const json=await res.json();
+  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.voucher_no}</td><td>${(r.voucher_date||'').slice(0,10)}</td>
+    <td>${r.party_name||''}</td><td class="text-end">${fmt(r.amount)}</td>
+    <td class="text-nowrap">
+      <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_temp_receipt/in/${r.id}">In</a>
+      <button class="btn btn-sm btn-outline-danger ms-1" onclick="voidV(${r.id})">Hủy</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="5" class="text-muted text-center">Chưa có</td></tr>';
+}
+async function voidV(id){
+  if(!confirm('Hủy biên lai (đảo bút toán)?')) return;
+  const res=await fetch('/api/sme/temp-receipts/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+}
+btnNew.onclick=()=>new bootstrap.Modal(document.getElementById('modal')).show();
+btnSave.onclick=async()=>{
+  const payload={date:fDate.value, party_name:fParty.value, amount:parseFloat(fAmt.value)||0,
+    payment_method:fMethod.value, credit_account:fCredit.value||'131', reason:fReason.value};
+  const res=await fetch('/api/sme/temp-receipts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modal')).hide();
+  alert('Đã lập '+json.data.voucher_no); load();
+};
+load();
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Bảng kê mua 06-VT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div><h4 class="fw-bold mb-1">Bảng kê mua hàng <span class="badge bg-warning text-dark">06-VT</span></h4></div>
+  <div class="d-flex gap-2">
+    <input type="date" id="fromDate" class="form-control"><input type="date" id="toDate" class="form-control">
+    <button class="btn btn-primary" id="btnLoad">Xem</button>
+    <a class="btn btn-outline-primary" id="btnPrint" target="_blank">In 06-VT</a>
+  </div>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table mb-0"><thead class="table-light"><tr><th>Ngày</th><th>Số PN</th><th>NCC</th><th class="text-end">GTGT</th><th class="text-end">Thành tiền</th></tr></thead>
+<tbody id="tbody"></tbody><tfoot id="tfoot"></tfoot></table>
+</div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+const t=()=>new Date().toISOString().slice(0,10); toDate.value=t(); fromDate.value=t().slice(0,8)+'01';
+async function load(){
+  const q=new URLSearchParams({from:fromDate.value,to:toDate.value});
+  const res=await fetch('/api/sme/purchase-listing?'+q); const json=await res.json();
+  if(!json.success) return alert(json.error);
+  const d=json.data;
+  tbody.innerHTML=(d.lines||[]).map(r=>`<tr><td>${r.doc_date}</td><td>${r.doc_no||''}</td><td>${r.supplier||''}</td><td class="text-end">${fmt(r.vat)}</td><td class="text-end">${fmt(r.amount)}</td></tr>`).join('')||'<tr><td colspan="5" class="text-center text-muted">Không có</td></tr>';
+  tfoot.innerHTML=`<tr class="fw-bold table-light"><td colspan="4">Tổng (${d.count})</td><td class="text-end">${fmt(d.total)}</td></tr>`;
+}
+function syncPrint(){ btnPrint.href='/SME_purchase_listing/in?from='+fromDate.value+'&to='+toDate.value; }
+btnLoad.onclick=async()=>{ await load(); syncPrint(); };
+syncPrint(); load();
+</script>
+{% endblock %}

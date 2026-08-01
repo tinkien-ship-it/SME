@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Biên lai {{ doc.voucher_no }} — 06-TT</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:16pt;font-weight:bold;margin:20px 0}
+  .muted{font-style:italic;font-size:10pt}
+  .row{margin:8px 0}
+  .box{border:1px solid #333;padding:12px;margin:16px 0}
+  .sign{display:flex;justify-content:space-between;margin-top:48px;text-align:center}
+  .sign div{width:45%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div><strong>{{ info.business_name or info.company_name or '' }}</strong><br>{{ info.address or '' }}</div>
+  <div style="text-align:right"><strong>Mẫu số 06 - TT</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+</div>
+<div class="title">BIÊN LAI THU TIỀN</div>
+<div style="text-align:center">Số: <strong>{{ doc.voucher_no }}</strong> — Ngày {{ doc.voucher_date }}</div>
+<div class="box">
+  <div class="row">Họ tên người nộp: <strong>{{ doc.party_name }}</strong></div>
+  <div class="row">Địa chỉ: {{ doc.party_address or '' }}</div>
+  <div class="row">Số tiền: <strong>{{ '{:,.0f}'.format(doc.amount|float).replace(',', '.') }} đ</strong></div>
+  <div class="row">Lý do: {{ doc.reason or '' }}</div>
+  <div class="row">Định khoản: Nợ {{ doc.debit_account }} / Có {{ doc.credit_account }}</div>
+</div>
+<div class="sign">
+  <div>Người nộp tiền<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Người thu tiền<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

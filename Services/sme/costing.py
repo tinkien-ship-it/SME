@@ -1,4 +1,4 @@
-"""Giá thành SME — tổng hợp 154/632 + liên kết lệnh sản xuất."""
+"""Giá thành SME — tổng hợp 621/622/627/154/155/632 + lệnh sản xuất."""
 from __future__ import annotations
 
 import sqlite3
@@ -21,56 +21,115 @@ def _f(val) -> float:
     return float(_money(val))
 
 
+def _prefix_net(bals: dict, prefix: str) -> Decimal:
+    total = Decimal('0.00')
+    for code, bal in bals.items():
+        if code == prefix or code.startswith(prefix):
+            total += _money(bal.get('debit')) - _money(bal.get('credit'))
+    return total
+
+
+def _prefix_debit(activity: dict, prefix: str) -> Decimal:
+    total = Decimal('0.00')
+    for code, bal in activity.items():
+        if code == prefix or code.startswith(prefix):
+            total += _money(bal.get('debit'))
+    return total
+
+
 def costing_summary(
     conn: sqlite3.Connection,
     *,
     fiscal_year: int,
     period: int,
+    branch_code: str | None = None,
 ) -> dict[str, Any]:
     ensure_sme_journal_ready(conn, commit=False)
-    bals = _closing_balances(conn, fiscal_year, period)
-    act = _period_activity(conn, fiscal_year, period, period)
-    ytd = _period_activity(conn, fiscal_year, 1, period)
+    bals = _closing_balances(conn, fiscal_year, period, branch_code=branch_code)
+    act = _period_activity(conn, fiscal_year, period, period, branch_code=branch_code)
+    ytd = _period_activity(conn, fiscal_year, 1, period, branch_code=branch_code)
 
-    def bal_prefix(prefix: str) -> float:
-        total = Decimal('0')
-        for code, bal in bals.items():
-            if code == prefix or code.startswith(prefix):
-                total += _money(bal.get('debit')) - _money(bal.get('credit'))
-        return _f(total)
+    cp621 = _f(_prefix_debit(act, '621'))
+    cp622 = _f(_prefix_debit(act, '622'))
+    cp627 = _f(_prefix_debit(act, '627'))
+    collected = cp621 + cp622 + cp627
 
-    def act_debit(activity, prefix: str) -> float:
-        total = Decimal('0')
-        for code, bal in activity.items():
-            if code == prefix or code.startswith(prefix):
-                total += _money(bal.get('debit')) - _money(bal.get('credit'))
-        return _f(total)
+    wip = _f(_prefix_net(bals, '154'))
+    fg = _f(_prefix_net(bals, '155'))
+    materials = _f(_prefix_net(bals, '152'))
+    goods = _f(_prefix_net(bals, '156'))
+    cogs_period = _f(_prefix_debit(act, '632'))
+    cogs_ytd = _f(_prefix_debit(ytd, '632'))
 
-    wip = bal_prefix('154')
-    inventory = sum(bal_prefix(p) for p in ('152', '155', '156'))
-    cogs_period = act_debit(act, '632')
-    cogs_ytd = act_debit(ytd, '632')
-    materials = act_debit(act, '152')  # xuất NVL gần đúng nếu có
+    # Phát sinh Nợ 155 trong kỳ ≈ nhập TP
+    fg_in = _f(_prefix_debit(act, '155'))
 
     prod_orders = 0
+    prod_cost = 0.0
+    prod_rows = []
     try:
         row = conn.execute(
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='production_orders'"
         ).fetchone()
         if row and row[0]:
             prod_orders = int(conn.execute(
-                "SELECT COUNT(*) FROM production_orders WHERE status != 'cancelled'"
+                "SELECT COUNT(*) FROM production_orders WHERE COALESCE(status,'') NOT IN ('cancelled','draft')"
             ).fetchone()[0] or 0)
+            cost_row = conn.execute(
+                """
+                SELECT COALESCE(SUM(COALESCE(total_cost, total_material_cost, 0)), 0)
+                FROM production_orders
+                WHERE COALESCE(status,'') NOT IN ('cancelled','draft')
+                  AND strftime('%Y', production_date) = ?
+                  AND CAST(strftime('%m', production_date) AS INTEGER) = ?
+                """,
+                (str(fiscal_year), int(period)),
+            ).fetchone()
+            prod_cost = float(cost_row[0] or 0)
+            try:
+                from Services.sme.production_journal import ensure_production_journal_column
+                ensure_production_journal_column(conn, commit=False)
+            except Exception:
+                pass
+            cols = {r[1] for r in conn.execute('PRAGMA table_info(production_orders)').fetchall()}
+            mode_expr = "COALESCE(costing_mode,'full')" if 'costing_mode' in cols else "'full'"
+            jid_expr = 'journal_entry_id' if 'journal_entry_id' in cols else 'NULL'
+            prod_rows = [dict(r) for r in conn.execute(
+                f"""
+                SELECT id, voucher_no, production_date, qty_completed,
+                       COALESCE(total_material_cost,0) AS material,
+                       COALESCE(labor_cost,0) AS labor,
+                       COALESCE(other_cost,0) AS other,
+                       COALESCE(total_cost,0) AS total_cost,
+                       {mode_expr} AS costing_mode,
+                       {jid_expr} AS journal_entry_id, status
+                FROM production_orders
+                WHERE COALESCE(status,'') NOT IN ('cancelled')
+                ORDER BY production_date DESC, id DESC
+                LIMIT 30
+                """
+            ).fetchall()]
     except sqlite3.Error:
-        prod_orders = 0
+        pass
 
     return {
         'fiscal_year': fiscal_year,
         'period': period,
         'wip_154': wip,
-        'inventory_raw_fg': inventory,
+        'finished_goods_155': fg,
+        'materials_152': materials,
+        'goods_156': goods,
+        'inventory_raw_fg': _f(_money(materials) + _money(fg) + _money(goods)),
+        'cp_621': cp621,
+        'cp_622': cp622,
+        'cp_627': cp627,
+        'collected_period': collected,
+        'fg_receipts_period': fg_in,
         'cogs_period': cogs_period,
         'cogs_ytd': cogs_ytd,
-        'materials_movement': materials,
+        'materials_movement': _f(_prefix_debit(act, '152')),
         'production_orders_active': prod_orders,
+        'production_cost_period': prod_cost,
+        'recent_orders': prod_rows,
+        'hint': 'Luồng full: 621/622/627 → 154 → 155 → (bán) 632/155',
     }

@@ -388,7 +388,7 @@ async function loadImport() {
     const start = toISO($('#startDate').val());
     const end = toISO($('#endDate').val());
 
-    let url = '/api/import?';
+    let url = '/api/sme/imports?';
     if (start) url += `start_date=${start}&`;
     if (end) url += `end_date=${end}&`;
     if (q) url += `q=${encodeURIComponent(q)}&`;
@@ -401,6 +401,7 @@ async function loadImport() {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
+        if (!data.success && !Array.isArray(data)) throw new Error(data.error || 'Lỗi tải');
         importCache = Array.isArray(data) ? data : (data.data || []);
         updateImportPivotUI();
         renderImportTable(getFilteredImports());
@@ -432,7 +433,11 @@ async function deleteImport(id, importNo) {
     if (!result.isConfirmed) return;
 
     try {
-        const res = await fetch(`/api/import/delete/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/sme/import/${id}/void`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: 'Hủy từ danh sách SME' }),
+        });
         const data = await res.json();
 
         if (res.ok && data.success) {

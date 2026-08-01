@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>07-LĐTL {{ doc.voucher_no }}</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  .row{margin:8px 0}
+  .box{border:1px solid #333;padding:12px;margin:16px 0}
+  .sign{display:flex;justify-content:space-between;margin-top:48px;text-align:center}
+  .sign div{width:30%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+  <div style="text-align:right"><strong>Mẫu số 07 - LĐTL</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+</div>
+<div class="title">BẢNG KÊ TRÍCH NỘP CÁC KHOẢN THEO LƯƠNG</div>
+<div style="text-align:center">(Kèm phiếu chi {{ doc.voucher_no }})</div>
+<div class="box">
+  <div class="row">Ngày nộp: <strong>{{ doc.voucher_date }}</strong></div>
+  <div class="row">Cơ quan nhận: <strong>{{ doc.party_name }}</strong></div>
+  <div class="row">Tài khoản Nợ: <strong>{{ doc.debit_account }}</strong> · Có: <strong>{{ doc.credit_account }}</strong></div>
+  <div class="row">Số tiền: <strong>{{ '{:,.0f}'.format(doc.amount|float).replace(',', '.') }} đ</strong></div>
+  <div class="row">Nội dung: {{ doc.reason or '' }}</div>
+  <div class="row">Tham chiếu: {{ doc.reference_document or '' }}</div>
+</div>
+<div class="sign">
+  <div>Người lập<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

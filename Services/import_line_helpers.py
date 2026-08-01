@@ -131,16 +131,39 @@ def ensure_warehouse_schema(conn):
             pass
 
 
-def list_active_warehouses(conn):
+def list_active_warehouses(conn, *, branch_code: str | None = None):
     ensure_warehouse_schema(conn)
+    from Services.sme.branches import ensure_sme_branches_schema
+    try:
+        ensure_sme_branches_schema(conn, commit=False)
+    except Exception:
+        pass
     c = conn.cursor()
-    c.execute("""
+    cols = {r[1] for r in c.execute('PRAGMA table_info(warehouses)').fetchall()}
+    has_br = 'branch_code' in cols
+    sql = """
         SELECT id, code, name, branch_name, address, is_default
-        FROM warehouses WHERE is_active = 1
-        ORDER BY is_default DESC, code ASC
-    """)
-    cols = ['id', 'code', 'name', 'branch_name', 'address', 'is_default']
-    return [dict(zip(cols, row)) for row in c.fetchall()]
+    """
+    if has_br:
+        sql = """
+        SELECT id, code, name, branch_name, address, is_default, branch_code
+        """
+    sql += " FROM warehouses WHERE is_active = 1"
+    params = []
+    code = (branch_code or '').strip().upper()
+    if has_br and code and code != 'ALL':
+        if code == 'HQ':
+            sql += " AND (branch_code IS NULL OR branch_code = '' OR branch_code = ?)"
+            params.append('HQ')
+        else:
+            sql += " AND branch_code = ?"
+            params.append(code)
+    sql += " ORDER BY is_default DESC, code ASC"
+    c.execute(sql, params)
+    out_cols = ['id', 'code', 'name', 'branch_name', 'address', 'is_default']
+    if has_br:
+        out_cols.append('branch_code')
+    return [dict(zip(out_cols, row)) for row in c.fetchall()]
 
 
 def insert_import_detail_row(c, import_id, fields):
@@ -561,3 +584,71 @@ def prepare_import_edit_json(imp):
             row['product_name'] = row['name']
         out['items'].append(row)
     return out
+
+
+def _normalize_db_date(value):
+    if value is None:
+        return None
+    if hasattr(value, 'strftime'):
+        return value.strftime('%Y-%m-%d')
+    text = str(value).strip()
+    if not text:
+        return None
+    if 'T' in text:
+        text = text.split('T', 1)[0]
+    elif ' ' in text:
+        text = text.split(' ', 1)[0]
+    return text[:10] if len(text) >= 10 else text
+
+
+def load_import_for_edit(conn, import_id):
+    """Chi tiết phiếu nhập + dòng — dùng chung API sửa (HKD/SME)."""
+    c = conn.cursor()
+    c.execute("SELECT * FROM import WHERE id = ?", (import_id,))
+    row = c.fetchone()
+    if not row:
+        return None
+
+    imp = dict(row)
+    imp_keys = row.keys()
+
+    if imp.get('supplier_id'):
+        c.execute(
+            "SELECT name, tax_code, address FROM suppliers WHERE id = ?",
+            (imp['supplier_id'],),
+        )
+        sup_row = c.fetchone()
+        if sup_row:
+            imp['supplier_name'] = sup_row['name']
+            imp['tax_code'] = sup_row['tax_code']
+            imp['address'] = sup_row['address']
+
+    if 'invoice_no' in imp_keys and not imp.get('bill_no'):
+        imp['bill_no'] = imp['invoice_no']
+    if 'bill_date' not in imp_keys:
+        imp['bill_date'] = imp.get('date')
+    if 'payment_method' not in imp_keys:
+        imp['payment_method'] = 'cash'
+
+    imp['date'] = _normalize_db_date(imp.get('date'))
+    imp['bill_date'] = _normalize_db_date(imp.get('bill_date'))
+
+    calculated_total = 0
+    items = []
+    raw_rows = fetch_import_details_raw(c, import_id)
+    is_service_import = detect_service_import(imp, raw_rows)
+
+    for detail_row in raw_rows:
+        if is_service_detail_row(detail_row):
+            item = map_service_detail_for_edit(detail_row)
+        else:
+            item = enrich_stock_detail_for_edit(c, detail_row)
+        calculated_total += float(item.get('payment_amount') or 0)
+        items.append(item)
+
+    imp['is_service_import'] = is_service_import
+    extra_cost = float(imp.get('extra_cost') or 0)
+    imp['total_payment'] = calculated_total
+    imp['total_value'] = calculated_total + extra_cost
+    imp['items'] = items
+    return imp

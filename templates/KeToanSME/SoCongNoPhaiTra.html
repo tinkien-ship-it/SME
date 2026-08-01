@@ -204,12 +204,12 @@ function printLedger() {
         Swal.fire('Cảnh báo', 'Vui lòng chọn nhà cung cấp trước khi in sổ', 'warning');
         return;
     }
-    window.open(`/KeToanHKD/SoCongNoPhaiTra_print.html?supplier=${encodeURIComponent(supplier)}`, '_blank');
+    window.open(`/SME_SoCongNoPhaiTra/in?supplier=${encodeURIComponent(supplier)}`, '_blank');
 }
 
 async function loadSupplierDropdown() {
     try {
-        const suppliers = await fetchJSON('/api/debt/suppliers');
+        const suppliers = await fetchJSON('/api/sme/debt/suppliers');
         const $select = $('#supplierFilter');
         $select.html('<option value="">-- Chọn nhà cung cấp cần xem nợ --</option>');
         suppliers.forEach(name => $select.append(new Option(name, name)));
@@ -224,7 +224,10 @@ async function loadDebtData() {
     $tbody.html('<tr><td colspan="6" class="text-center p-5"><div class="spinner-border text-primary"></div></td></tr>');
 
     try {
-        const data = await fetchJSON(`/api/debt/supplier-detail?supplier=${encodeURIComponent(supplier)}`);
+        const data = await fetchJSON(`/api/sme/debt/supplier-detail?supplier=${encodeURIComponent(supplier)}`);
+        if (data.success === false) {
+            throw new Error(data.error || data.message || 'Lỗi server');
+        }
 
         $('#totalReceivable').text(formatDebtMoney(data.summary.total));
         $('#totalPaid').text(formatDebtMoney(data.summary.paid));
@@ -257,7 +260,8 @@ async function loadDebtData() {
         });
         $tbody.html(rows.join(''));
     } catch (err) {
-        $tbody.html('<tr><td colspan="6" class="text-center text-danger p-5">Lỗi tải dữ liệu.</td></tr>');
+        $tbody.html(`<tr><td colspan="6" class="text-center text-danger p-5">Lỗi: ${escapeHtml(err.message || 'tải dữ liệu')}</td></tr>`);
+        console.error(err);
     }
 }
 
@@ -304,7 +308,7 @@ $('#btnSaveImportPayment').on('click', async function() {
         amount: amount,
         reference_document: $('#import_bill_no').val() || $('#display_import_no').text(),
         address: $('#import_address').val(),
-        payment_method: $('#import_payment_method').val() === '112' ? 'bank' : 'cash',
+        payment_method: $('#import_payment_method').val() === 'transfer' ? 'bank' : 'cash',
         debit_account: '331',
         date: paymentDatePicker && paymentDatePicker.selectedDates[0]
             ? flatpickr.formatDate(paymentDatePicker.selectedDates[0], 'Y-m-d')

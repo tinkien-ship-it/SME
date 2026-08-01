@@ -35,10 +35,11 @@
         <option value="641">641 — Bán hàng</option>
       </select>
     </div>
-    <div class="col-md-4 d-flex gap-2">
+    <div class="col-md-4 d-flex gap-2 flex-wrap">
       <button class="btn btn-dark" id="btnLoad">Tải NV</button>
       <button class="btn btn-danger" id="btnAccrue">Chốt &amp; ghi sổ</button>
       <button class="btn btn-success" id="btnPay">Trả lương</button>
+      <a class="btn btn-outline-primary" id="btnPrint" target="_blank">In 01-LĐTL</a>
     </div>
   </div>
 </div>
@@ -182,15 +183,27 @@ async function loadRuns(){
     <td class="text-end">${fmt(r.total_net)}</td>
     <td class="text-end">${fmt(r.employer_insurance)}</td>
     <td>${r.expense_account||''}</td>
-    <td class="small">#${r.journal_entry_id||'—'}</td>
+    <td class="text-nowrap small">#${r.journal_entry_id||'—'}
+      <button class="btn btn-sm btn-outline-danger ms-1" onclick="voidRun(${r.month},${r.year})">Hủy</button>
+    </td>
   </tr>`).join('');
+}
+async function voidRun(month, year){
+  if(!confirm(`Hủy bảng lương T${month}/${year} (đảo bút toán)?`)) return;
+  const res=await fetch('/api/sme/payroll/void',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({month, year})});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  alert(json.message||'Đã hủy'); loadRuns();
 }
 
 document.getElementById('btnLoad').onclick = async () => {
   const q = new URLSearchParams({month: m.value, year: y.value});
-  const res = await fetch('/api/get_salary?'+q);
+  const res = await fetch('/api/sme/payroll/preview?'+q);
   const json = await res.json();
-  if (json.message && !json.records) {
+  if (json.success === false) {
+    return alert(json.error || json.message || 'Không tải được');
+  }
+  if (json.message && !json.records && !json.data) {
     return alert(json.message || 'Không tải được');
   }
   rows = json.records || json.data || [];
@@ -230,6 +243,13 @@ document.getElementById('btnPay').onclick = async () => {
 {% if focus == 'payable' %}
 document.getElementById('btnPay').classList.add('btn-lg');
 {% endif %}
+function syncPrint(){
+  const m=document.getElementById('m').value, y=document.getElementById('y').value;
+  document.getElementById('btnPrint').href='/SME_salary/in?month='+m+'&year='+y;
+}
+document.getElementById('m').addEventListener('change', syncPrint);
+document.getElementById('y').addEventListener('change', syncPrint);
+syncPrint();
 loadRuns();
 document.getElementById('btnLoad').click();
 </script>

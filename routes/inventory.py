@@ -72,7 +72,7 @@ def _calc_import_line_amounts(quantity, unit_price, discount_amount, tax_amount,
     )
 
 
-def fetch_import_items_detail_report(cursor, start_date, end_date, search_query=None):
+def fetch_import_items_detail_report(cursor, start_date, end_date, search_query=None, branch_code=None):
     """Lấy chi tiết hàng mua từ import_details trong khoảng ngày."""
     cursor.execute("PRAGMA table_info(import_details)")
     detail_cols = {col[1] for col in cursor.fetchall()}
@@ -169,6 +169,15 @@ def fetch_import_items_detail_report(cursor, start_date, end_date, search_query=
         """
         like = f"%{search_query}%"
         params.extend([like, like, like, like, like, like])
+
+    if branch_code is not None:
+        try:
+            from Services.sme.branches import import_branch_filter_sql
+            bf, bp = import_branch_filter_sql(cursor.connection, branch_code, alias='i')
+            sql += bf
+            params.extend(bp)
+        except Exception:
+            pass
 
     sql += " ORDER BY i.date DESC, i.id DESC, ii.rowid"
     cursor.execute(sql, params)
@@ -3733,9 +3742,11 @@ def register_inventory_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
+            from Services.sme.branches import active_report_branch_filter
             cursor = conn.cursor()
             rows, summary = fetch_import_items_detail_report(
-                cursor, start_date, end_date, search_query
+                cursor, start_date, end_date, search_query,
+                branch_code=active_report_branch_filter(),
             )
             return jsonify({
                 "success": True,

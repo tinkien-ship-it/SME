@@ -1,0 +1,77 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Phân bổ NVL 07-VT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Phân bổ NVL / CCDC xuất dùng <span class="badge bg-secondary">07-VT</span></h4>
+    <p class="text-muted small mb-0">Nợ TK chi phí (621/627/642…) · Có 152/153/156 · theo kho / chi nhánh</p>
+  </div>
+</div>
+<div class="card shadow-sm border-0 mb-3"><div class="card-body">
+  <div class="row g-2 mb-3">
+    <div class="col-md-2"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
+    <div class="col-md-3"><label class="form-label small">Kho xuất</label><select id="fWh" class="form-select"></select></div>
+    <div class="col-md-2"><label class="form-label small">TK chi phí</label><input type="text" id="fAcc" class="form-control" value="621"></div>
+    <div class="col-md-3"><label class="form-label small">Ghi chú</label><input type="text" id="fNotes" class="form-control"></div>
+    <div class="col-md-2 d-flex align-items-end"><button class="btn btn-secondary w-100" id="btnSave">Ghi sổ</button></div>
+  </div>
+  <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Hàng</th><th>Loại</th><th class="text-end">Tồn kho</th><th class="text-end">SL xuất</th></tr></thead><tbody id="lines"></tbody></table></div>
+</div></div>
+<div class="card shadow-sm border-0"><div class="card-header bg-white fw-bold">Lịch sử 07-VT</div>
+<div class="table-responsive"><table class="table table-sm mb-0">
+  <thead class="table-light"><tr><th>Số</th><th>Ngày</th><th>CN</th><th>Kho</th><th>TK CP</th><th>TT</th><th></th></tr></thead>
+  <tbody id="hist"></tbody>
+</table></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+fDate.value=new Date().toISOString().slice(0,10);
+async function loadWh(){
+  const res=await fetch('/api/sme/warehouses'); const json=await res.json();
+  const rows=json.data||[{code:'KHO_001',name:'Kho',branch_code:'HQ'}];
+  fWh.innerHTML=rows.map(w=>`<option value="${w.code}">${w.code} — ${w.name||''} [${w.branch_code||'HQ'}]</option>`).join('');
+}
+async function loadProducts(){
+  const wh=fWh.value||'';
+  const res=await fetch('/api/sme/products/brief'+(wh?('?warehouse='+encodeURIComponent(wh)):''));
+  const json=await res.json();
+  lines.innerHTML=(json.data||[]).map(p=>`<tr data-id="${p.id}"><td>${p.name}</td><td>${p.product_type}</td><td class="text-end">${p.quantity}</td>
+    <td><input type="number" class="form-control form-control-sm text-end qty" min="0" step="any" value="0"></td></tr>`).join('');
+}
+async function loadHist(){
+  const res=await fetch('/api/sme/material-alloc'); const json=await res.json();
+  hist.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.doc_no}</td><td>${(r.alloc_date||'').slice(0,10)}</td>
+    <td class="small">${r.branch_code||'HQ'}</td><td class="small">${r.warehouse_code||''}</td>
+    <td>${r.expense_account||''}</td><td>${r.status}</td>
+    <td class="text-nowrap">
+      <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_material_alloc/in/${r.id}">In</a>
+      ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger" onclick="voidDoc(${r.id})">Hủy</button>`:''}
+    </td>
+  </tr>`).join('')||'<tr><td colspan="7" class="text-muted text-center">Chưa có</td></tr>';
+}
+async function voidDoc(id){
+  if(!confirm('Hủy bảng phân bổ này?')) return;
+  const res=await fetch('/api/sme/material-alloc/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  loadHist(); loadProducts();
+}
+(async()=>{
+  await loadWh();
+  await loadProducts();
+  loadHist();
+})();
+fWh.onchange=loadProducts;
+btnSave.onclick=async()=>{
+  const items=[];
+  lines.querySelectorAll('tr').forEach(tr=>{const q=parseFloat(tr.querySelector('.qty').value)||0; if(q>0) items.push({product_id:+tr.dataset.id,quantity:q});});
+  if(!items.length) return alert('Chọn SL');
+  const res=await fetch('/api/sme/material-alloc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:fDate.value,expense_account:fAcc.value,notes:fNotes.value,warehouse_code:fWh.value,items})});
+  const json=await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  alert('Đã lập '+json.data.doc_no);
+  if(json.data.id) window.open('/SME_material_alloc/in/'+json.data.id,'_blank');
+  loadHist(); loadProducts();
+};
+</script>
+{% endblock %}

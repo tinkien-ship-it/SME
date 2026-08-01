@@ -1,0 +1,71 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Góp vốn / cổ tức{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Góp vốn &amp; cổ tức</h4>
+    <p class="text-muted small mb-0">4111 vốn góp · 4212 LNST · 3388 phải trả cổ tức</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" id="btnGV">Góp vốn</button>
+    <button class="btn btn-warning" id="btnCT">Công bố cổ tức</button>
+    <button class="btn btn-success" id="btnPay">Chi trả cổ tức</button>
+  </div>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table mb-0"><thead class="table-light"><tr>
+  <th>Số</th><th>Loại</th><th>Ngày</th><th>Đối tượng</th><th class="text-end">Số tiền</th><th>TK</th>
+</tr></thead><tbody id="tbody"></tbody></table>
+</div></div>
+
+<div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="mTitle">Chứng từ</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="fType">
+    <div class="mb-2"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Đối tượng</label><input type="text" id="fParty" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Số tiền</label><input type="number" id="fAmt" class="form-control" step="1000"></div>
+    <div class="mb-2"><label class="form-label small">Ghi chú</label><input type="text" id="fNotes" class="form-control"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary" id="btnSave">Ghi sổ</button></div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+const labels={contribute:'Góp vốn',dividend:'Công bố CT',dividend_pay:'Chi trả CT'};
+fDate.value=new Date().toISOString().slice(0,10);
+async function load(){
+  const res=await fetch('/api/sme/capital'); const json=await res.json();
+  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.doc_no}</td><td>${labels[r.doc_type]||r.doc_type}</td>
+    <td>${(r.doc_date||'').slice(0,10)}</td><td>${r.party_name||''}</td>
+    <td class="text-end">${fmt(r.amount)}</td>
+    <td class="small text-nowrap">${r.equity_account}/${r.cash_account}
+      ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger ms-1" onclick="voidCap(${r.id})">Hủy</button>`:''}
+    </td>
+  </tr>`).join('')||'<tr><td colspan="6" class="text-muted text-center">Chưa có</td></tr>';
+}
+async function voidCap(id){
+  if(!confirm('Hủy chứng từ vốn này?')) return;
+  const res=await fetch('/api/sme/capital/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  load();
+}
+function openModal(type, title){
+  fType.value=type; mTitle.textContent=title;
+  new bootstrap.Modal(document.getElementById('modal')).show();
+}
+btnGV.onclick=()=>openModal('contribute','Góp vốn (Nợ tiền / Có 4111)');
+btnCT.onclick=()=>openModal('dividend','Công bố cổ tức (Nợ 4212 / Có 3388)');
+btnPay.onclick=()=>openModal('dividend_pay','Chi trả cổ tức (Nợ 3388 / Có tiền)');
+btnSave.onclick=async()=>{
+  const payload={doc_type:fType.value, date:fDate.value, party_name:fParty.value, amount:parseFloat(fAmt.value)||0, notes:fNotes.value};
+  const res=await fetch('/api/sme/capital',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modal')).hide();
+  alert('Đã lập '+json.data.doc_no); load();
+};
+load();
+</script>
+{% endblock %}

@@ -1,9 +1,8 @@
-{% extends "base.html" %}
+{% extends "KeToanSME/_layout.html" %}
 {% block title %}Báo cáo tài chính — SME{% endblock %}
 
-{% block extra_style %}
+{% block sme_head %}
 <style>
-    .bctc-wrap { max-width: 1100px; margin: 0 auto; }
     .bctc-mono { font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
     .bctc-amount { text-align: right; white-space: nowrap; }
     .bctc-table td, .bctc-table th { vertical-align: middle; font-size: .9rem; }
@@ -21,19 +20,18 @@
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="bctc-wrap">
+{% block sme_content %}
     <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
         <div>
             <h4 class="fw-bold mb-1"><i class="fas fa-chart-line text-primary me-2"></i>Báo cáo tài chính SME</h4>
-            <p class="text-muted small mb-0">
-                B01 / B02 / B03 / B09 lập từ nhật ký bút toán và <code>bctc_line_code</code> trên danh mục TK (TT99).
+            <p class="text-muted small mb-0" id="regimeHint">
+                B01 / B02 / B03 / B09 lập từ nhật ký bút toán và <code>bctc_line_code</code> trên danh mục TK.
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Dashboard
-            </a>
+            <button type="button" class="btn btn-success btn-sm" id="btnExport">
+                <i class="fas fa-file-excel me-1"></i> Xuất Excel
+            </button>
             <a href="{{ url_for('SME_general_ledger') }}" class="btn btn-outline-primary btn-sm">
                 <i class="fas fa-scale-balanced me-1"></i> Sổ cái
             </a>
@@ -151,15 +149,20 @@
             <div class="text-center text-muted py-4">Nhấn Lập báo cáo</div>
         </div>
     </div>
-</div>
 {% endblock %}
 
-{% block scripts %}
+{% block sme_scripts %}
 <script>
 (function () {
     const now = new Date();
     const yearEl = document.getElementById('rpYear');
     yearEl.value = now.getFullYear();
+    fetch('/api/sme/regime-profile').then(r=>r.json()).then(j=>{
+        if(j.success && j.data){
+            const el=document.getElementById('regimeHint');
+            if(el) el.innerHTML = (j.data.label||'') + ' — ' + (j.data.bctc_hint||el.textContent);
+        }
+    }).catch(()=>{});
     const fromSel = document.getElementById('rpFrom');
     const toSel = document.getElementById('rpTo');
     for (let m = 1; m <= 12; m++) {
@@ -363,6 +366,14 @@
     }
 
     document.getElementById('btnLoad').addEventListener('click', loadAll);
+    document.getElementById('btnExport').addEventListener('click', () => {
+        const y = yearEl.value;
+        const pf = fromSel.value;
+        const pt = toSel.value;
+        const profit = document.getElementById('rpProfit').checked ? '1' : '0';
+        window.location.href =
+            `/api/sme/bctc/export.xlsx?year=${y}&period_from=${pf}&period_to=${pt}&include_current_profit=${profit}`;
+    });
     loadAll();
 })();
 </script>

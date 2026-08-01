@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>HĐ giao khoán {{ doc.contract_no }} — 05-LĐTL</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0 8px}
+  .muted{font-style:italic;font-size:10pt}
+  .row{margin:6px 0}
+  .sign{display:flex;justify-content:space-between;margin-top:48px;text-align:center}
+  .sign div{width:45%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div>
+    <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+    <div>{{ info.address or '' }}</div>
+  </div>
+  <div style="text-align:right">
+    <div><strong>Mẫu số 05 - LĐTL</strong></div>
+    <div class="muted">(TT 99/2025/TT-BTC)</div>
+  </div>
+</div>
+<div class="title">HỢP ĐỒNG GIAO KHOÁN</div>
+<div style="text-align:center">Số: <strong>{{ doc.contract_no }}</strong> — Ngày {{ doc.contract_date }}</div>
+<div class="row"><strong>Bên giao khoán:</strong> {{ doc.employer_rep_name or info.business_name or '' }}
+  — {{ doc.employer_rep_title or '' }}</div>
+<div class="row"><strong>Bên nhận khoán:</strong> {{ doc.contractor_name }}
+  {% if doc.contractor_title %} ({{ doc.contractor_title }}){% endif %}</div>
+<div class="row">Địa chỉ / CCCD: {{ doc.contractor_address or '' }} {{ doc.contractor_id_no or '' }}</div>
+<p><strong>Phần I. Điều khoản chung</strong></p>
+<div class="row">Phương thức giao khoán: {{ doc.method or '' }}</div>
+<div class="row">Điều kiện thực hiện: {{ doc.conditions or '' }}</div>
+<div class="row">Thời gian: từ {{ doc.start_date or '' }} đến {{ doc.end_date or '' }}</div>
+<div class="row">Điều kiện khác: {{ doc.other_terms or '' }}</div>
+<p><strong>Phần II. Điều khoản cụ thể</strong></p>
+<div class="row">Nội dung công việc: {{ doc.work_content or '' }}</div>
+<div class="row">Giá trị hợp đồng: <strong>{{ '{:,.0f}'.format(doc.contract_amount|float).replace(',', '.') }} đ</strong></div>
+<div class="sign">
+  <div>ĐẠI DIỆN BÊN GIAO KHOÁN<br><span class="muted">(Ký, họ tên)</span><br><br>{{ doc.employer_rep_name or '' }}</div>
+  <div>ĐẠI DIỆN BÊN NHẬN KHOÁN<br><span class="muted">(Ký, họ tên)</span><br><br>{{ doc.contractor_name }}</div>
+</div>
+</body>
+</html>

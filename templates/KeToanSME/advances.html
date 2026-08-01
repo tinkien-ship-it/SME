@@ -1,0 +1,220 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Tạm ứng / Thanh toán 03–05 TT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Tạm ứng &amp; đề nghị thanh toán</h4>
+    <p class="text-muted small mb-0">Mẫu 03-TT · 04-TT · 05-TT — TK 141 · ghi sổ kép</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-primary" id="btnTU"><i class="fas fa-hand-holding-usd me-1"></i>Đề nghị tạm ứng (03-TT)</button>
+    <button class="btn btn-warning" id="btnQT"><i class="fas fa-file-invoice me-1"></i>Quyết toán (04-TT)</button>
+    <button class="btn btn-success" id="btnDN"><i class="fas fa-file-signature me-1"></i>Đề nghị TT (05-TT)</button>
+  </div>
+</div>
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-md-2"><label class="form-label small fw-bold">Loại</label>
+      <select id="fType" class="form-select">
+        <option value="">Tất cả</option>
+        <option value="advance_request">03-TT Tạm ứng</option>
+        <option value="advance_settlement">04-TT Quyết toán</option>
+        <option value="payment_request">05-TT Đề nghị TT</option>
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label small fw-bold">Từ ngày</label><input type="date" id="fromDate" class="form-control"></div>
+    <div class="col-md-3"><label class="form-label small fw-bold">Đến ngày</label><input type="date" id="toDate" class="form-control"></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100" id="btnLoad">Tải</button></div>
+  </div>
+</div>
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Số CT</th><th>Mẫu</th><th>Ngày</th><th>Nhân viên</th><th class="text-end">Số tiền</th><th>TT</th><th>Diễn giải</th><th></th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="8" class="text-center text-muted py-4">Đang tải…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal 03-TT -->
+<div class="modal fade" id="modalTU" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header bg-primary text-white"><h5 class="modal-title">Giấy đề nghị tạm ứng (03-TT)</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Ngày</label><input type="date" id="tuDate" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Nhân viên</label>
+      <select id="tuEmp" class="form-select"><option value="">— Chọn —</option></select>
+      <input type="text" id="tuName" class="form-control mt-1" placeholder="Hoặc nhập họ tên">
+    </div>
+    <div class="mb-2"><label class="form-label small">Số tiền tạm ứng</label><input type="number" id="tuAmount" class="form-control" min="0" step="1000"></div>
+    <div class="mb-2"><label class="form-label small">Hình thức chi</label>
+      <select id="tuPay" class="form-select"><option value="cash">Tiền mặt</option><option value="bank">Chuyển khoản</option></select>
+    </div>
+    <div class="mb-2"><label class="form-label small">Lý do / mục đích</label><input type="text" id="tuPurpose" class="form-control"></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" id="tuDisburse" checked><label class="form-check-label small" for="tuDisburse">Chi ngay (lập phiếu chi Nợ 141)</label></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary" id="btnSaveTU">Lưu</button></div>
+</div></div></div>
+
+<!-- Modal 04-TT -->
+<div class="modal fade" id="modalQT" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header bg-warning"><h5 class="modal-title">Giấy thanh toán tạm ứng (04-TT)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Tạm ứng đã chi</label>
+      <select id="qtAdvance" class="form-select"></select>
+    </div>
+    <div class="mb-2"><label class="form-label small">Ngày quyết toán</label><input type="date" id="qtDate" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Chi phí thực tế</label><input type="number" id="qtExpense" class="form-control" min="0" step="1000"></div>
+    <div class="mb-2"><label class="form-label small">TK chi phí</label><input type="text" id="qtAcc" class="form-control" value="642"></div>
+    <div class="mb-2"><label class="form-label small">Hoàn tiền mặt</label><input type="number" id="qtReturn" class="form-control" min="0" step="1000" value="0"></div>
+    <div class="mb-2"><label class="form-label small">Chi thêm (nếu vượt tạm ứng)</label><input type="number" id="qtAdd" class="form-control" min="0" step="1000" value="0"></div>
+    <div class="mb-2"><label class="form-label small">Nội dung</label><input type="text" id="qtPurpose" class="form-control"></div>
+    <p class="small text-muted mb-0">Điều kiện cân: Chi phí + Hoàn − Chi thêm = Số tiền tạm ứng.</p>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-warning" id="btnSaveQT">Quyết toán</button></div>
+</div></div></div>
+
+<!-- Modal 05-TT -->
+<div class="modal fade" id="modalDN" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header bg-success text-white"><h5 class="modal-title">Giấy đề nghị thanh toán (05-TT)</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Ngày</label><input type="date" id="dnDate" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Người đề nghị</label><input type="text" id="dnName" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Số tiền</label><input type="number" id="dnAmount" class="form-control" min="0" step="1000"></div>
+    <div class="mb-2"><label class="form-label small">TK Nợ (chi phí)</label><input type="text" id="dnAcc" class="form-control" value="642"></div>
+    <div class="mb-2"><label class="form-label small">Hình thức</label>
+      <select id="dnPay" class="form-select"><option value="cash">Tiền mặt</option><option value="bank">Chuyển khoản</option></select>
+    </div>
+    <div class="mb-2"><label class="form-label small">Nội dung</label><input type="text" id="dnPurpose" class="form-control"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-success" id="btnSaveDN">Lưu &amp; chi</button></div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+const today = () => new Date().toISOString().slice(0,10);
+['tuDate','qtDate','dnDate','toDate'].forEach(id => { const el=document.getElementById(id); if(el) el.value=today(); });
+document.getElementById('fromDate').value = today().slice(0,8)+'01';
+
+async function loadEmployees(){
+  const res = await fetch('/api/sme/advances/employees');
+  const json = await res.json();
+  const sel = document.getElementById('tuEmp');
+  (json.data||[]).forEach(e => {
+    const o = document.createElement('option');
+    o.value = e.id; o.textContent = e.fullname; o.dataset.name = e.fullname;
+    sel.appendChild(o);
+  });
+  sel.onchange = () => {
+    const o = sel.selectedOptions[0];
+    if(o && o.dataset.name) document.getElementById('tuName').value = o.dataset.name;
+  };
+}
+
+async function loadOpenAdvances(){
+  const q = new URLSearchParams({doc_type:'advance_request', status:'disbursed'});
+  const res = await fetch('/api/sme/advances?'+q);
+  const json = await res.json();
+  const sel = document.getElementById('qtAdvance');
+  sel.innerHTML = '';
+  (json.data||[]).forEach(r => {
+    const o = document.createElement('option');
+    o.value = r.id;
+    o.textContent = `${r.doc_no} — ${r.employee_name} — ${fmt(r.amount)}`;
+    o.dataset.amount = r.amount;
+    sel.appendChild(o);
+  });
+  if(!sel.options.length) sel.innerHTML = '<option value="">Không có tạm ứng chờ quyết toán</option>';
+}
+
+async function loadList(){
+  const q = new URLSearchParams({from: fromDate.value, to: toDate.value});
+  if(fType.value) q.set('doc_type', fType.value);
+  const res = await fetch('/api/sme/advances?'+q);
+  const json = await res.json();
+  const tbody = document.getElementById('tbody');
+  if(!json.success){ tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center">${json.error||'Lỗi'}</td></tr>`; return; }
+  if(!json.data.length){ tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không có chứng từ</td></tr>'; return; }
+  tbody.innerHTML = json.data.map(r => `<tr>
+    <td class="fw-bold">${r.doc_no}</td>
+    <td><span class="badge bg-secondary">${r.form_code}</span></td>
+    <td>${(r.doc_date||'').slice(0,10)}</td>
+    <td>${r.employee_name||''}</td>
+    <td class="text-end fw-bold">${fmt(r.amount)}</td>
+    <td><span class="badge bg-light text-dark border">${r.status}</span></td>
+    <td class="small">${r.purpose||''}</td>
+    <td class="text-nowrap">
+      <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_advance/in/${r.id}">In</a>
+      ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger" onclick="voidDoc(${r.id})">Hủy</button>`:''}
+    </td>
+  </tr>`).join('');
+}
+
+async function voidDoc(id){
+  if(!confirm('Hủy chứng từ và đảo bút toán liên quan?')) return;
+  const res = await fetch('/api/sme/advances/'+id+'/void', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  loadList(); loadOpenAdvances();
+}
+
+document.getElementById('btnLoad').onclick = loadList;
+document.getElementById('btnTU').onclick = () => new bootstrap.Modal(document.getElementById('modalTU')).show();
+document.getElementById('btnQT').onclick = async () => { await loadOpenAdvances(); new bootstrap.Modal(document.getElementById('modalQT')).show(); };
+document.getElementById('btnDN').onclick = () => new bootstrap.Modal(document.getElementById('modalDN')).show();
+
+document.getElementById('btnSaveTU').onclick = async () => {
+  const payload = {
+    date: tuDate.value,
+    employee_id: tuEmp.value ? parseInt(tuEmp.value,10) : null,
+    employee_name: tuName.value,
+    amount: parseFloat(tuAmount.value)||0,
+    payment_method: tuPay.value,
+    purpose: tuPurpose.value,
+    disburse: tuDisburse.checked
+  };
+  const res = await fetch('/api/sme/advances/request', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modalTU')).hide();
+  alert('Đã lập '+json.data.doc_no);
+  loadList();
+};
+
+document.getElementById('btnSaveQT').onclick = async () => {
+  const payload = {
+    advance_doc_id: parseInt(qtAdvance.value,10),
+    date: qtDate.value,
+    expense_amount: parseFloat(qtExpense.value)||0,
+    cash_return_amount: parseFloat(qtReturn.value)||0,
+    additional_payment: parseFloat(qtAdd.value)||0,
+    expense_account: qtAcc.value||'642',
+    purpose: qtPurpose.value
+  };
+  const res = await fetch('/api/sme/advances/settle', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modalQT')).hide();
+  alert('Đã quyết toán '+json.data.doc_no);
+  loadList(); loadOpenAdvances();
+};
+
+document.getElementById('btnSaveDN').onclick = async () => {
+  const payload = {
+    date: dnDate.value, employee_name: dnName.value,
+    amount: parseFloat(dnAmount.value)||0, expense_account: dnAcc.value||'642',
+    payment_method: dnPay.value, purpose: dnPurpose.value, pay: true
+  };
+  const res = await fetch('/api/sme/advances/payment-request', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modalDN')).hide();
+  alert('Đã lập '+json.data.doc_no);
+  loadList();
+};
+
+loadEmployees(); loadList();
+</script>
+{% endblock %}

@@ -336,6 +336,9 @@ def sync_import_journals(
             import_type=resolved_import_type,
             description=f"{desc_text} HĐ {bill_no or import_no}",
         )
+        from Services.sme.branch_filter import warehouse_branch_or_session
+        wh0 = (inventory_lines[0].get('warehouse_code') if inventory_lines else None) or None
+        branch = warehouse_branch_or_session(conn, wh0)
         posted.append(post_journal_entry(
             conn,
             posting_date=posting_date or '',
@@ -347,6 +350,7 @@ def sync_import_journals(
             description=f"{desc_text} theo phiếu {import_no or ('#' + str(import_id))}",
             reference_document=bill_no or import_no,
             created_by=created_by,
+            branch_code=branch,
             lines=journal_lines,
         ))
 

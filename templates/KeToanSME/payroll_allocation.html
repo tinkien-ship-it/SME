@@ -1,0 +1,62 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Phân bổ lương 08-LĐTL{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div><h4 class="fw-bold mb-1">Bảng phân bổ tiền lương <span class="badge bg-secondary">08-LĐTL</span></h4>
+  <p class="text-muted small mb-0">Xem bảng · ghi sổ phân bổ Nợ 622/627/641 Có 642 theo vị trí NV</p></div>
+  <div class="d-flex gap-2">
+    <input type="number" id="fMonth" class="form-control" style="width:90px" min="1" max="12">
+    <input type="number" id="fYear" class="form-control" style="width:110px">
+    <button class="btn btn-primary" id="btnLoad">Xem</button>
+    <button class="btn btn-success" id="btnPost">Ghi sổ phân bổ</button>
+    <a class="btn btn-outline-primary" id="btnPrint" target="_blank">In 08-LĐTL</a>
+  </div>
+</div>
+<div id="allocHint" class="alert alert-light border small d-none"></div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table table-sm mb-0"><thead class="table-light"><tr>
+  <th>Nhân viên</th><th>Vị trí</th><th class="text-end">Lương CB</th><th class="text-end">PC</th><th class="text-end">Thưởng</th>
+  <th class="text-end">Thực lĩnh</th><th class="text-end">BHXH</th><th class="text-end">BHYT</th><th class="text-end">BHTN</th>
+</tr></thead><tbody id="tbody"></tbody><tfoot id="tfoot"></tfoot></table>
+</div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+fMonth.value=new Date().getMonth()+1; fYear.value=new Date().getFullYear();
+async function load(){
+  const q=new URLSearchParams({month:fMonth.value,year:fYear.value});
+  const res=await fetch('/api/sme/payroll/allocation?'+q); const json=await res.json();
+  if(!json.success) return alert(json.error);
+  const d=json.data;
+  tbody.innerHTML=(d.lines||[]).map(r=>`<tr>
+    <td>${r.fullname||''}</td><td>${r.position||''}</td>
+    <td class="text-end">${fmt(r.base_salary)}</td><td class="text-end">${fmt(r.allowance)}</td><td class="text-end">${fmt(r.bonus)}</td>
+    <td class="text-end fw-bold">${fmt(r.net_pay)}</td>
+    <td class="text-end">${fmt(r.bhxh)}</td><td class="text-end">${fmt(r.bhyt)}</td><td class="text-end">${fmt(r.bhtn)}</td>
+  </tr>`).join('')||'<tr><td colspan="9" class="text-muted text-center">Chưa có bảng lương kỳ này</td></tr>';
+  tfoot.innerHTML=`<tr class="table-light fw-bold"><td colspan="5">Tổng · BH chủ: ${fmt(d.employer_insurance)}</td><td class="text-end">${fmt(d.total_net)}</td><td colspan="3"></td></tr>`;
+  const run=d.run||{};
+  if(run.allocation_journal_id){
+    allocHint.classList.remove('d-none');
+    allocHint.textContent='Đã ghi sổ phân bổ · journal #'+run.allocation_journal_id;
+  } else {
+    allocHint.classList.add('d-none');
+  }
+}
+function syncPrint(){ btnPrint.href='/SME_payroll_allocation/in?month='+fMonth.value+'&year='+fYear.value; }
+btnLoad.onclick=async()=>{ await load(); syncPrint(); };
+btnPost.onclick=async()=>{
+  if(!confirm('Ghi sổ phân bổ lương 08-LĐTL kỳ '+fMonth.value+'/'+fYear.value+'?')) return;
+  const res=await fetch('/api/sme/payroll/allocation',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({month:+fMonth.value,year:+fYear.value,replace_existing:true})
+  });
+  const json=await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  alert('Đã phân bổ: chuyển '+fmt(json.data.moved_amount)+' từ '+json.data.moved_from);
+  load();
+};
+syncPrint(); load();
+</script>
+{% endblock %}

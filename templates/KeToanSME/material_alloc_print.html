@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>07-VT {{ doc.doc_no }}</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #333;padding:5px}
+  .num{text-align:right}
+  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
+  .sign div{width:30%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+  <div style="text-align:right"><strong>Mẫu số 07 - VT</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+</div>
+<div class="title">BẢNG PHÂN BỔ NGUYÊN LIỆU, VẬT LIỆU,<br>CÔNG CỤ, DỤNG CỤ</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.alloc_date }} — TK CP: {{ doc.expense_account }}</div>
+<table>
+  <thead><tr><th>STT</th><th>Tên hàng</th><th>TK kho</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+  <tbody>
+  {% set ns = namespace(total=0) %}
+  {% for ln in doc.lines %}
+    {% set ns.total = ns.total + (ln.amount|float) %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ ln.product_name or ln.product_id }}</td>
+      <td>{{ ln.inv_account or '' }}</td>
+      <td class="num">{{ '{:g}'.format(ln.quantity|float) }}</td>
+      <td class="num">{{ '{:,.0f}'.format(ln.unit_cost|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format(ln.amount|float).replace(',', '.') }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr><th colspan="5" style="text-align:right">Cộng</th>
+      <th class="num">{{ '{:,.0f}'.format(ns.total).replace(',', '.') }}</th></tr>
+  </tfoot>
+</table>
+{% if doc.notes %}<p>Ghi chú: {{ doc.notes }}</p>{% endif %}
+<div class="sign">
+  <div>Người lập<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

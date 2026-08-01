@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>{{ doc.form_code }} — {{ doc.doc_no }}</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:16pt;font-weight:bold;margin:16px 0 4px}
+  .muted{font-style:italic;font-size:10pt}
+  .row{margin:6px 0}
+  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
+  .sign div{width:24%}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{border:1px solid #333;padding:4px 6px}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div>
+    <div><strong>DOANH NGHIỆP:</strong> {{ info.business_name or info.company_name or '' }}</div>
+    <div>Địa chỉ: {{ info.address or '' }}</div>
+    <div>MST: {{ info.tax_code or '' }}</div>
+  </div>
+  <div style="text-align:right">
+    <div><strong>Mẫu số {{ doc.form_code }}</strong></div>
+    <div class="muted">(Ban hành kèm theo Thông tư số 99/2025/TT-BTC)</div>
+  </div>
+</div>
+{% set titles = {
+  '03-TT': 'GIẤY ĐỀ NGHỊ TẠM ỨNG',
+  '04-TT': 'GIẤY THANH TOÁN TIỀN TẠM ỨNG',
+  '05-TT': 'GIẤY ĐỀ NGHỊ THANH TOÁN'
+} %}
+<div class="title">{{ titles.get(doc.form_code, 'CHỨNG TỪ TẠM ỨNG') }}</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.doc_date }}</div>
+<div class="row">Họ tên: <strong>{{ doc.employee_name }}</strong></div>
+<div class="row">Nội dung: {{ doc.purpose or '' }}</div>
+<div class="row">Số tiền: <strong>{{ '{:,.0f}'.format(doc.amount|float).replace(',', '.') }} đ</strong></div>
+{% if doc.form_code == '04-TT' %}
+<div class="row">Chi phí: {{ '{:,.0f}'.format((doc.expense_amount or 0)|float).replace(',', '.') }} —
+  Hoàn: {{ '{:,.0f}'.format((doc.cash_return_amount or 0)|float).replace(',', '.') }} —
+  Chi thêm: {{ '{:,.0f}'.format((doc.additional_payment or 0)|float).replace(',', '.') }}</div>
+{% endif %}
+{% if doc.lines %}
+<table>
+  <thead><tr><th>STT</th><th>Diễn giải</th><th>TK</th><th>Số tiền</th><th>Hóa đơn</th></tr></thead>
+  <tbody>
+  {% for ln in doc.lines %}
+  <tr>
+    <td>{{ ln.line_no }}</td><td>{{ ln.description }}</td><td>{{ ln.account_code }}</td>
+    <td style="text-align:right">{{ '{:,.0f}'.format(ln.amount|float).replace(',', '.') }}</td>
+    <td>{{ ln.invoice_ref or '' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+<div class="sign">
+  <div>Giám đốc<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Người đề nghị<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Thủ quỹ<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>09-TT {{ doc.doc_no }}</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #333;padding:5px 6px}
+  th{background:#f5f5f5}
+  .num{text-align:right}
+  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
+  .sign div{width:30%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+  <div style="text-align:right"><strong>Mẫu số 09 - TT</strong><br><span class="muted">TT 99/2025/TT-BTC</span></div>
+</div>
+<div class="title">BẢNG KÊ CHI TIỀN</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.listing_date }}</div>
+<div style="text-align:center">Kỳ: {{ doc.date_from }} → {{ doc.date_to }}</div>
+<table>
+  <thead><tr><th>STT</th><th>Số PC</th><th>Ngày</th><th>Người nhận</th><th>Lý do</th><th>TK Nợ</th><th>Số tiền</th></tr></thead>
+  <tbody>
+  {% for ln in doc.lines %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ ln.voucher_no }}</td>
+      <td>{{ ln.voucher_date }}</td>
+      <td>{{ ln.party_name or '' }}</td>
+      <td>{{ ln.reason or '' }}</td>
+      <td>{{ ln.debit_account or '' }}</td>
+      <td class="num">{{ '{:,.0f}'.format((ln.amount or 0)|float).replace(',', '.') }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr><th colspan="6" style="text-align:right">Cộng</th>
+      <th class="num">{{ '{:,.0f}'.format(doc.total_amount|float).replace(',', '.') }}</th></tr>
+  </tfoot>
+</table>
+<div class="sign">
+  <div>Người lập<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Thủ quỹ<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán trưởng<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

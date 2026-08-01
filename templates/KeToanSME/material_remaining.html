@@ -1,0 +1,92 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Vật tư còn lại 04-VT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Bảng kê VT còn lại cuối kỳ <span class="badge bg-info text-dark">04-VT</span></h4>
+    <p class="text-muted small mb-0">Theo dõi vật tư đã lĩnh còn tồn tại bộ phận sử dụng (TT99)</p>
+  </div>
+  <button class="btn btn-info" id="btnNew">Lập bảng kê</button>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table mb-0"><thead class="table-light"><tr>
+  <th>Số</th><th>Ngày CK</th><th>CN</th><th>Bộ phận</th><th class="text-end">Tổng tiền</th><th></th>
+</tr></thead><tbody id="tbody"></tbody></table>
+</div></div>
+
+<div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content">
+  <div class="modal-header bg-info"><h5 class="modal-title">04-VT — VT còn lại cuối kỳ</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="row g-2 mb-2">
+      <div class="col-md-3"><label class="form-label small">Ngày cuối kỳ</label><input type="date" id="fDate" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label small">Kho / CN</label><select id="fWh" class="form-select"></select></div>
+      <div class="col-md-3"><label class="form-label small">Bộ phận sử dụng</label><input type="text" id="fDept" class="form-control" placeholder="VD: Phân xưởng A"></div>
+      <div class="col-md-3"><label class="form-label small">Ghi chú</label><input type="text" id="fNotes" class="form-control"></div>
+    </div>
+    <div class="table-responsive" style="max-height:380px"><table class="table table-sm">
+      <thead><tr><th>Hàng</th><th>SL còn</th><th>Đơn giá</th><th>Xử lý</th></tr></thead>
+      <tbody id="lines"></tbody>
+    </table></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-info" id="btnSave">Lưu</button></div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+fDate.value=new Date().toISOString().slice(0,10);
+async function loadWh(){
+  const res=await fetch('/api/sme/warehouses'); const json=await res.json();
+  const rows=json.data||[{code:'KHO_001',name:'Kho',branch_code:'HQ'}];
+  fWh.innerHTML=rows.map(w=>`<option value="${w.code}">${w.code} [${w.branch_code||'HQ'}]</option>`).join('');
+}
+async function load(){
+  const res=await fetch('/api/sme/material-remaining'); const json=await res.json();
+  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.doc_no}</td><td>${(r.as_of_date||'').slice(0,10)}</td>
+    <td class="small">${r.branch_code||'HQ'}</td>
+    <td>${r.department||''}</td><td class="text-end">${fmt(r.total_amount)}</td>
+    <td class="text-nowrap">
+      <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_material_remaining/in/${r.id}">In</a>
+      <button class="btn btn-sm btn-outline-danger ms-1" onclick="voidMr(${r.id})">Hủy</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="6" class="text-muted text-center">Chưa có</td></tr>';
+}
+async function voidMr(id){
+  if(!confirm('Hủy bảng VT còn lại?')) return;
+  const res=await fetch('/api/sme/material-remaining/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+}
+btnNew.onclick=async()=>{
+  if(!fWh.options.length) await loadWh();
+  const wh=fWh.value||'';
+  const res=await fetch('/api/sme/products/brief'+(wh?('?warehouse='+encodeURIComponent(wh)):'')); const json=await res.json();
+  lines.innerHTML=(json.data||[]).slice(0,100).map(p=>`<tr data-id="${p.id}" data-name="${(p.name||'').replace(/"/g,'&quot;')}" data-code="${p.code||''}" data-cost="${p.avg_cost||p.cost||0}">
+    <td>${p.name}</td>
+    <td><input type="number" class="form-control form-control-sm qty" value="0" step="any"></td>
+    <td><input type="number" class="form-control form-control-sm cost" value="${p.avg_cost||p.cost||0}" step="any"></td>
+    <td><select class="form-select form-select-sm disp"><option value="continue">Tiếp tục sử dụng</option><option value="return">Nhập lại kho</option></select></td>
+  </tr>`).join('');
+  new bootstrap.Modal(document.getElementById('modal')).show();
+};
+btnSave.onclick=async()=>{
+  const L=[];
+  lines.querySelectorAll('tr').forEach(tr=>{
+    const qty=parseFloat(tr.querySelector('.qty').value)||0;
+    if(qty<=0) return;
+    L.push({
+      product_id:+tr.dataset.id, product_name:tr.dataset.name, product_code:tr.dataset.code,
+      quantity:qty, unit_cost:parseFloat(tr.querySelector('.cost').value)||0,
+      disposition:tr.querySelector('.disp').value
+    });
+  });
+  if(!L.length) return alert('Nhập ít nhất 1 dòng SL > 0');
+  const res=await fetch('/api/sme/material-remaining',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({date:fDate.value, department:fDept.value, notes:fNotes.value, warehouse_code:fWh.value, lines:L})});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modal')).hide();
+  alert('Đã lập '+json.data.doc_no); load();
+};
+loadWh(); load();
+</script>
+{% endblock %}

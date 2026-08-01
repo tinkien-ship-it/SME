@@ -1,0 +1,92 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Bảng LĐTL 02/03/04{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Thưởng · Làm thêm · Thuê ngoài</h4>
+    <p class="text-muted small mb-0">Mẫu 02 / 03 / 04 - LĐTL — ghi sổ + phiếu chi</p>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-outline-primary" onclick="openNew('bonus')">02 Thưởng</button>
+    <button class="btn btn-outline-warning" onclick="openNew('overtime')">03 Làm thêm</button>
+    <button class="btn btn-outline-secondary" onclick="openNew('external')">04 Thuê ngoài</button>
+  </div>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table mb-0"><thead class="table-light"><tr>
+  <th>Số</th><th>Mẫu</th><th>Ngày</th><th class="text-end">Tổng</th><th class="text-end">TNCN</th><th class="text-end">Thực lĩnh</th><th>TT</th>
+</tr></thead><tbody id="tbody"></tbody></table>
+</div></div>
+
+<div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="mTitle">Bảng thanh toán</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="fType">
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
+      <div class="col-md-4"><label class="form-label small">Bộ phận</label><input type="text" id="fDept" class="form-control"></div>
+      <div class="col-md-4 form-check mt-4"><input class="form-check-input" type="checkbox" id="fPay" checked><label class="form-check-label small" for="fPay">Chi ngay</label></div>
+    </div>
+    <table class="table table-sm"><thead><tr><th>Họ tên</th><th>Công việc</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th><th>TNCN</th><th></th></tr></thead>
+    <tbody id="lines"></tbody></table>
+    <button class="btn btn-sm btn-outline-secondary" type="button" id="btnAdd">+ Dòng</button>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary" id="btnSave">Lưu &amp; ghi sổ</button></div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+const titles={bonus:'02-LĐTL Thưởng',overtime:'03-LĐTL Làm thêm giờ',external:'04-LĐTL Thuê ngoài'};
+fDate.value=new Date().toISOString().slice(0,10);
+function addLine(name='', work='', qty=1, price=0, tax=0){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input class="form-control form-control-sm name" value="${name}"></td>
+    <td><input class="form-control form-control-sm work" value="${work}"></td>
+    <td><input type="number" class="form-control form-control-sm qty" value="${qty}" step="any"></td>
+    <td><input type="number" class="form-control form-control-sm price" value="${price}" step="any"></td>
+    <td><input type="number" class="form-control form-control-sm amt" value="${qty*price}" step="any"></td>
+    <td><input type="number" class="form-control form-control-sm tax" value="${tax}" step="any"></td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">×</button></td>`;
+  lines.appendChild(tr);
+}
+btnAdd.onclick=()=>addLine();
+function openNew(type){
+  fType.value=type; mTitle.textContent=titles[type]; lines.innerHTML=''; addLine();
+  new bootstrap.Modal(document.getElementById('modal')).show();
+}
+async function load(){
+  const res=await fetch('/api/sme/labor-sheets'); const json=await res.json();
+  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.sheet_no}</td><td>${r.form_code}</td><td>${(r.sheet_date||'').slice(0,10)}</td>
+    <td class="text-end">${fmt(r.total_amount)}</td><td class="text-end">${fmt(r.tax_withheld)}</td>
+    <td class="text-end fw-bold">${fmt(r.net_amount)}</td>
+    <td class="text-nowrap">${r.status}
+      <a class="btn btn-sm btn-outline-primary ms-1" target="_blank" href="/SME_labor_sheet/in/${r.id}">In</a>
+      ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger" onclick="voidSheet(${r.id})">Hủy</button>`:''}
+    </td>
+  </tr>`).join('')||'<tr><td colspan="7" class="text-muted text-center">Chưa có</td></tr>';
+}
+async function voidSheet(id){
+  if(!confirm('Hủy bảng LĐTL này?')) return;
+  const res=await fetch('/api/sme/labor-sheets/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  load();
+}
+btnSave.onclick=async()=>{
+  const L=[]; lines.querySelectorAll('tr').forEach(tr=>{
+    const name=tr.querySelector('.name').value.trim(); if(!name) return;
+    const qty=parseFloat(tr.querySelector('.qty').value)||0;
+    const price=parseFloat(tr.querySelector('.price').value)||0;
+    let amt=parseFloat(tr.querySelector('.amt').value); if(!amt) amt=qty*price;
+    L.push({person_name:name, work_content:tr.querySelector('.work').value, quantity:qty, unit_price:price, amount:amt, tax_amount:parseFloat(tr.querySelector('.tax').value)||0});
+  });
+  const payload={sheet_type:fType.value, date:fDate.value, department:fDept.value, lines:L, pay_now:fPay.checked};
+  const res=await fetch('/api/sme/labor-sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modal')).hide();
+  alert('Đã lập '+json.data.sheet_no); load();
+};
+load();
+</script>
+{% endblock %}

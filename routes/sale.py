@@ -204,7 +204,7 @@ def _format_sale_date_display(raw_date):
             return text[:10]
 
 
-def fetch_sale_items_detail_report(cursor, start_date, end_date, search_query=None):
+def fetch_sale_items_detail_report(cursor, start_date, end_date, search_query=None, branch_code=None):
     """Lấy chi tiết hàng bán từ sale_items trong khoảng ngày."""
     sql = """
         SELECT
@@ -242,6 +242,15 @@ def fetch_sale_items_detail_report(cursor, start_date, end_date, search_query=No
         """
         like = f"%{search_query}%"
         params.extend([like, like, like, like])
+
+    if branch_code is not None:
+        try:
+            from Services.sme.branches import sale_branch_filter_sql
+            bf, bp = sale_branch_filter_sql(cursor.connection, branch_code, alias='s')
+            sql += bf
+            params.extend(bp)
+        except Exception:
+            pass
 
     sql += " ORDER BY s.date DESC, s.id DESC, si.rowid"
     cursor.execute(sql, params)
@@ -755,6 +764,13 @@ def register_sale_routes(app):
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
+            try:
+                from Services.sme.branches import active_report_branch_filter, assert_sale_in_branch
+                if active_report_branch_filter() is not None:
+                    assert_sale_in_branch(conn, sale_id)
+            except ValueError as ve:
+                return jsonify({'success': False, 'error': str(ve)}), 403
+
             print(f"[DEBUG] Đang xóa pending sale_id = {sale_id}")
 
             # Kiểm tra đơn hàng có tồn tại và đang pending không
@@ -813,6 +829,16 @@ def register_sale_routes(app):
         data = request.get_json()
         if not data:
             return jsonify({"success": False, "error": "Dữ liệu không hợp lệ."}), 400
+        try:
+            from Services.sme.branches import active_report_branch_filter, assert_sale_in_branch
+            if active_report_branch_filter() is not None:
+                _conn = get_db_connection()
+                try:
+                    assert_sale_in_branch(_conn, sale_id)
+                finally:
+                    _conn.close()
+        except ValueError as ve:
+            return jsonify({"success": False, "error": str(ve)}), 403
         items = data.get('items', [])
         if not items:
             return jsonify({"success": False, "error": "Giỏ hàng trống."}), 400
@@ -1071,6 +1097,13 @@ def register_sale_routes(app):
         conn = get_db_connection()
         c = conn.cursor()
 
+        try:
+            from Services.sme.branches import active_report_branch_filter, assert_sale_in_branch
+            if active_report_branch_filter() is not None:
+                assert_sale_in_branch(conn, sale_id)
+        except ValueError:
+            abort(403)
+
         # 1. ĐỌC GIÁ TRỊ CẤU HÌNH TRỰC TIẾP TỪ BẢNG SETTINGS
         c.execute("SELECT value FROM settings WHERE key = 'auto_print' LIMIT 1")
         setting_row = c.fetchone()
@@ -1153,6 +1186,12 @@ def register_sale_routes(app):
         conn = get_db_connection()
         c = conn.cursor()
         try:
+            try:
+                from Services.sme.branches import active_report_branch_filter, assert_sale_in_branch
+                if active_report_branch_filter() is not None:
+                    assert_sale_in_branch(conn, sale_id)
+            except ValueError:
+                abort(403)
             # 1. LẤY THÔNG TIN ĐƠN HÀNG
             c.execute("SELECT * FROM sale WHERE id = ?", (sale_id,))
             sale_row = c.fetchone()
@@ -1239,6 +1278,12 @@ def register_sale_routes(app):
         conn = get_db_connection()
         c = conn.cursor()
         try:
+            try:
+                from Services.sme.branches import active_report_branch_filter, assert_sale_in_branch
+                if active_report_branch_filter() is not None:
+                    assert_sale_in_branch(conn, sale_id)
+            except ValueError as ve:
+                return jsonify({"error": str(ve)}), 403
             c.execute("""
                 SELECT s.*
                 FROM sale s
@@ -1595,9 +1640,21 @@ def register_sale_routes(app):
             where.append("s.status = 'completed'")
 
         where_sql = " AND ".join(where)
+        params_list = list(params)
+
+        # SME multi-branch: lọc theo CN đang chọn
+        try:
+            from Services.sme.branches import active_report_branch_filter, sale_branch_filter_sql
+            br = active_report_branch_filter()
+            if br is not None:
+                bf, bp = sale_branch_filter_sql(conn, br, alias='s')
+                where_sql = where_sql + bf
+                params_list.extend(bp)
+        except Exception:
+            pass
 
         # 3. LẤY TỔNG SỐ BẢN GHI (Cho phân trang)
-        c.execute(f"SELECT COUNT(*) FROM sale s WHERE {where_sql}", params)
+        c.execute(f"SELECT COUNT(*) FROM sale s WHERE {where_sql}", params_list)
         total_records = c.fetchone()[0]
 
         # 4. LẤY DANH SÁCH DỮ LIỆU (Giữ nguyên cấu trúc trả về)
@@ -1607,7 +1664,7 @@ def register_sale_routes(app):
             ORDER BY s.date DESC, s.id DESC
             LIMIT ? OFFSET ?
         """
-        c.execute(sql_list, params + [limit, offset])
+        c.execute(sql_list, params_list + [limit, offset])
         rows = c.fetchall()
 
         orders = []
@@ -1623,24 +1680,33 @@ def register_sale_routes(app):
         stats_where = ["1=1"]
         stats_params = []
         if start:
-            stats_where.append("date >= ?")
+            stats_where.append("s.date >= ?")
             stats_params.append(start if len(start) > 10 else f"{start} 00:00:00")
         if end:
-            stats_where.append("date <= ?")
+            stats_where.append("s.date <= ?")
             stats_params.append(end if len(end) > 10 else f"{end} 23:59:59")
-    
+
         stats_sql = " AND ".join(stats_where)
+        try:
+            from Services.sme.branches import active_report_branch_filter, sale_branch_filter_sql
+            br = active_report_branch_filter()
+            if br is not None:
+                bf, bp = sale_branch_filter_sql(conn, br, alias='s')
+                stats_sql = stats_sql + bf
+                stats_params = stats_params + list(bp)
+        except Exception:
+            pass
 
         # Doanh thu (Chỉ tính đơn đã xong)
-        c.execute(f"SELECT SUM(total_amount) FROM sale WHERE status = 'completed' AND {stats_sql}", stats_params)
+        c.execute(f"SELECT SUM(s.total_amount) FROM sale s WHERE s.status = 'completed' AND {stats_sql}", stats_params)
         revenue = c.fetchone()[0] or 0
 
         # TỔNG CHỜ XUẤT (Đã xong nhưng invoice_number trống)
-        c.execute(f"SELECT COUNT(*) FROM sale WHERE status = 'completed' AND (invoice_number IS NULL OR invoice_number = '') AND {stats_sql}", stats_params)
+        c.execute(f"SELECT COUNT(*) FROM sale s WHERE s.status = 'completed' AND (s.invoice_number IS NULL OR s.invoice_number = '') AND {stats_sql}", stats_params)
         pending_invoice = c.fetchone()[0]
 
         # TỔNG ĐÃ XUẤT
-        c.execute(f"SELECT COUNT(*) FROM sale WHERE (invoice_number IS NOT NULL AND invoice_number != '') AND {stats_sql}", stats_params)
+        c.execute(f"SELECT COUNT(*) FROM sale s WHERE (s.invoice_number IS NOT NULL AND s.invoice_number != '') AND {stats_sql}", stats_params)
         issued_invoice = c.fetchone()[0]
 
         conn.close()
@@ -1691,6 +1757,14 @@ def register_sale_routes(app):
         c = conn.cursor()
     
         try:
+            try:
+                from Services.sme.branches import active_report_branch_filter, assert_sale_in_branch
+                if active_report_branch_filter() is not None:
+                    assert_sale_in_branch(conn, sale_id)
+            except ValueError as ve:
+                conn.rollback()
+                return jsonify({"success": False, "error": str(ve)}), 403
+
             # 1. Kiểm tra đơn hàng tồn tại và chưa xuất hóa đơn
             c.execute("""
                 SELECT id, invoice_number, status 
@@ -1901,6 +1975,7 @@ def register_sale_routes(app):
                 "INSERT INTO return_sales (date, sale_id, product_id, quantity, UseSaleUnit, reason) VALUES (?, ?, ?, ?, ?, ?)",
                 (return_date, sale_id, product_id, qty_return, use_unit, reason),
             )
+            return_sales_id = c.lastrowid
 
             # === 7. Tạo Chứng từ Nhập Kho ===
             c.execute("SELECT import_no FROM phieu_nhap_kho WHERE import_no LIKE 'PN%' ORDER BY id DESC LIMIT 1")
@@ -1960,8 +2035,32 @@ def register_sale_routes(app):
                 created_by=session.get('user_name'),
                 replace_existing=True,
             )
+            try:
+                from Services.sme.return_sale_journal import sync_return_sale_journals
+                sync_return_sale_journals(
+                    conn,
+                    int(return_sales_id),
+                    sale_id=sale_id,
+                    product_id=product_id,
+                    quantity=qty_return,
+                    unit_price=float(item['price']) * (1 - float(item['discount_pct'] or 0) / 100.0),
+                    tax_pct=float(item['tax_pct'] or 0),
+                    cost_price=cost_price_base,
+                    posting_date=str(return_date)[:10],
+                    sale_no=sale_master['sale_no'],
+                    customer_name=sale_master['customer_name'],
+                    created_by=session.get('user_name'),
+                )
+            except Exception:
+                pass
             conn.commit()
-            return jsonify({"success": True, "import_no": import_no, "is_full_return": is_full_return, "new_status": new_status})
+            return jsonify({
+                "success": True,
+                "import_no": import_no,
+                "return_id": return_sales_id,
+                "is_full_return": is_full_return,
+                "new_status": new_status,
+            })
 
         except Exception as e:
             conn.rollback()
@@ -2037,9 +2136,11 @@ def register_sale_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
+            from Services.sme.branches import active_report_branch_filter
             cursor = conn.cursor()
             rows, summary = fetch_sale_items_detail_report(
-                cursor, start_date, end_date, search_query
+                cursor, start_date, end_date, search_query,
+                branch_code=active_report_branch_filter(),
             )
             return jsonify({
                 "success": True,

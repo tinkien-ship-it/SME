@@ -1,7 +1,7 @@
-{% extends "base.html" %}
+{% extends "KeToanSME/_layout.html" %}
 {% block title %}Sổ cái / Cân đối phát sinh — SME{% endblock %}
 
-{% block extra_style %}
+{% block sme_head %}
 <style>
     .gl-wrap { max-width: 1400px; margin: 0 auto; }
     .gl-mono { font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
@@ -21,20 +21,16 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block sme_content %}
 <div class="gl-wrap">
     <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
         <div>
             <h4 class="fw-bold mb-1"><i class="fas fa-scale-balanced text-primary me-2"></i>Sổ cái &amp; Cân đối phát sinh</h4>
             <p class="text-muted small mb-0">
-                Liệt kê đủ hệ thống tài khoản TT99 (cấp 1 và mọi TK con). Tổng cộng theo TK cấp 1.
-                Click mã tài khoản để xem sổ cái chi tiết.
+                Liệt kê đủ hệ thống tài khoản TT99. Lọc theo chi nhánh trên thanh trên (Tất cả = hợp nhất pháp nhân).
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Dashboard
-            </a>
             <a href="{{ url_for('SME_journal') }}" class="btn btn-outline-primary btn-sm">
                 <i class="fas fa-book-open me-1"></i> Nhật ký
             </a>
@@ -165,7 +161,7 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block sme_scripts %}
 <script>
 (function () {
     const now = new Date();
@@ -270,7 +266,7 @@
             const t = d.totals || {};
             const balOk = t.period_balanced && t.closing_balanced;
             document.getElementById('tbMeta').innerHTML =
-                `${d.date_from} → ${d.date_to} · ${d.rows.length} TK · tổng theo cấp 1 · ` +
+                `${d.date_from} → ${d.date_to} · CN: ${d.branch_code || json.branch_code || 'ALL'} · ${d.rows.length} TK · tổng theo cấp 1 · ` +
                 `<span class="${balOk ? 'gl-ok' : 'gl-bad'}">${balOk ? 'Cân đối Nợ/Có' : 'Lệch cân đối — kiểm tra nhật ký'}</span>`;
             if (!d.rows.length) {
                 body.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không có tài khoản trong danh mục</td></tr>';

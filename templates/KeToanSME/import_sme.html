@@ -133,7 +133,7 @@
                     <input type="text" class="form-control form-control-sm text-end format-input fw-bold text-success" id="ExchangeRate" value="1">
                 </div>
                 <div class="col-md-2 d-none" id="extraCostWrapper" title="SME: dùng Phân bổ chi phí trên HĐ mua">
-                    <label class="form-label small fw-bold">CP Khác (HKD only)</label>
+                    <label class="form-label small fw-bold">CP mua (dùng Phân bổ)</label>
                     <input type="text" class="form-control form-control-sm text-end format-input fw-bold text-success" id="extraCost" value="0" readonly>
                 </div>
                 <div class="col-md-4">
@@ -637,7 +637,7 @@ function calcTotal() {
 
 async function loadQuySoDu() {
     try {
-        const res = await fetch('/api/quy-so-du');
+        const res = await fetch('/api/sme/cash-balances');
         const data = await res.json();
         if (data.success) {
             currentCashBalance = Number(data.so_du_tien_mat || 0);
@@ -706,7 +706,7 @@ async function fetchNextImportNo() {
     // Giữ số đã render từ server nếu API lỗi
     const current = (document.getElementById('import_no')?.value || '').trim();
     try {
-        const res = await fetch('/api/import/next_sequence', {
+        const res = await fetch('/api/sme/import/next_sequence', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ mode: IS_SERVICE_MODE ? 'service' : 'stock' }),
@@ -804,7 +804,7 @@ function setFpDate(inputId, isoOrDisplay) {
 
 async function loadImportForEdit(importId) {
     try {
-        const res = await fetch('/api/import/' + encodeURIComponent(importId) + '/edit');
+        const res = await fetch('/api/sme/import/' + encodeURIComponent(importId) + '/edit');
         const json = await res.json();
         if (!json.success) throw new Error(json.error || 'Không tải được phiếu nhập');
         const d = json.data || {};

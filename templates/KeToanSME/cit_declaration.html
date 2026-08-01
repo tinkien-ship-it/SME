@@ -1,0 +1,55 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Quyết toán TNDN{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Tờ khai quyết toán TNDN (rút gọn)</h4>
+    <p class="text-muted small mb-0">03/TNDN đối chiếu sổ kép · xuất XML khung HTKK</p>
+  </div>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_cit') }}">Tạm nộp TNDN</a>
+</div>
+<div class="card shadow-sm border-0 mb-3"><div class="card-body row g-2 align-items-end">
+  <div class="col-md-2"><label class="form-label small">Năm</label><input type="number" id="fYear" class="form-control"></div>
+  <div class="col-md-2"><label class="form-label small">Đến tháng</label><input type="number" id="fPeriod" class="form-control" min="1" max="12" value="12"></div>
+  <div class="col-md-2"><label class="form-label small">Thuế suất</label><input type="number" id="fRate" class="form-control" step="0.01" value="0.2"></div>
+  <div class="col-md-2"><label class="form-label small">CP không được trừ</label><input type="number" id="fNon" class="form-control" value="0"></div>
+  <div class="col-md-2"><label class="form-label small">TN miễn thuế</label><input type="number" id="fExempt" class="form-control" value="0"></div>
+  <div class="col-md-2"><label class="form-label small">Lỗ chuyển kỳ trước</label><input type="number" id="fLoss" class="form-control" value="0" min="0"></div>
+  <div class="col-md-2"><button class="btn btn-primary w-100" id="btnLoad">Tính toán</button></div>
+</div></div>
+<div class="d-flex gap-2 mb-3">
+  <button class="btn btn-success" id="btnXml">Tải XML</button>
+  <span class="small text-muted align-self-center" id="hint"></span>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table mb-0"><thead class="table-light"><tr><th>Mã</th><th>Chỉ tiêu</th><th class="text-end">Số tiền</th></tr></thead>
+<tbody id="tbody"></tbody></table>
+</div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+fYear.value=new Date().getFullYear();
+function q(){
+  return new URLSearchParams({
+    year:fYear.value, period_to:fPeriod.value, tax_rate:fRate.value,
+    non_deductible:fNon.value, exempt_income:fExempt.value,
+    loss_carry_forward:fLoss.value
+  });
+}
+async function load(){
+  const res=await fetch('/api/sme/cit/declaration?'+q());
+  const json=await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  const d=json.data;
+  hint.textContent=d.form_hint||'';
+  tbody.innerHTML=(d.lines||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.code}</td><td>${r.name}</td>
+    <td class="text-end ${r.code==='F'?'fw-bold':''}">${fmt(r.amount)}</td>
+  </tr>`).join('');
+}
+btnLoad.onclick=load;
+btnXml.onclick=()=>{ window.location='/api/sme/cit/xml?'+q(); };
+load();
+</script>
+{% endblock %}

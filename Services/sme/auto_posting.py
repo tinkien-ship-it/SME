@@ -418,6 +418,7 @@ def run_period_automation(
                 business_type='KHAU_HAO_TSCD',
                 description=f'Khấu hao TSCĐ tự động {period:02d}/{fiscal_year} ({len(fa_items)} tài sản)',
                 created_by=created_by,
+                branch_code='HQ',
                 lines=lines,
             )
             for item in fa_items:
@@ -473,6 +474,7 @@ def run_period_automation(
                 business_type='PHAN_BO_CCDC',
                 description=f'Phân bổ CCDC tự động {period:02d}/{fiscal_year} ({len(tool_items)} món)',
                 created_by=created_by,
+                branch_code='HQ',
                 lines=lines,
             )
             for item in tool_items:
@@ -539,18 +541,41 @@ def run_period_automation(
     if vat.get('posted'):
         result['posted'] = True
 
+    # --- Cuối năm (T12): 4212 → 4211 trước khi khóa sổ ---
+    result['year_end'] = {}
+    if int(period) == 12:
+        from Services.sme.period_close import run_year_end_close
+        ye = run_year_end_close(
+            conn,
+            fiscal_year=fiscal_year,
+            created_by=created_by,
+            replace_existing=replace_existing,
+            lock_after=False,
+        )
+        result['year_end'] = ye
+        if ye.get('entry_ids'):
+            result['entry_ids'].extend(ye['entry_ids'])
+        if ye.get('reversed_entry_ids'):
+            result['reversed_entry_ids'].extend(ye['reversed_entry_ids'])
+        if ye.get('posted'):
+            result['posted'] = True
+
     # --- Khóa sổ kỳ ---
     lock_info = None
     do_lock = True
     if features is not None and features.get('auto_lock_period') is False:
         do_lock = False
     if do_lock:
+        reason = 'Chốt kỳ tự động (KH/PB/KQKD/GTGT'
+        if int(period) == 12:
+            reason += '/KCN'
+        reason += ')'
         lock_info = lock_period(
             conn,
             fiscal_year=fiscal_year,
             period=period,
             locked_by=created_by,
-            reason='Chốt kỳ tự động (KH/PB/KQKD/GTGT)',
+            reason=reason,
         )
     result['period_lock'] = lock_info
 
@@ -560,6 +585,7 @@ def run_period_automation(
         and not result['tools'].get('reason')
         and not (result.get('period_close') or {}).get('reason')
         and not (result.get('vat_settlement') or {}).get('reason')
+        and not (result.get('year_end') or {}).get('reason')
     ):
         result['reason'] = 'nothing_to_post'
     return result

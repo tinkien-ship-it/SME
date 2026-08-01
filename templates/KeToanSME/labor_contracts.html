@@ -1,0 +1,108 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Hợp đồng giao khoán 05/06-LĐTL{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Hợp đồng giao khoán</h4>
+    <p class="text-muted small mb-0">Mẫu <strong>05-LĐTL</strong> · Thanh lý <strong>06-LĐTL</strong> + ghi sổ CP / thanh toán</p>
+  </div>
+  <button class="btn btn-primary" id="btnNew"><i class="fas fa-file-signature me-1"></i>Lập HĐ 05-LĐTL</button>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table table-hover mb-0"><thead class="table-light"><tr>
+  <th>Số HĐ</th><th>Ngày</th><th>Bên nhận khoán</th><th class="text-end">Giá trị</th><th>TT</th><th></th>
+</tr></thead><tbody id="tbody"></tbody></table>
+</div></div>
+
+<div class="modal fade" id="modalHD" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header bg-primary text-white"><h5 class="modal-title">Hợp đồng giao khoán (05-LĐTL)</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body row g-2">
+    <div class="col-md-4"><label class="form-label small">Ngày HĐ</label><input type="date" id="fDate" class="form-control"></div>
+    <div class="col-md-4"><label class="form-label small">Từ ngày</label><input type="date" id="fStart" class="form-control"></div>
+    <div class="col-md-4"><label class="form-label small">Đến ngày</label><input type="date" id="fEnd" class="form-control"></div>
+    <div class="col-md-6"><label class="form-label small">Đại diện bên giao khoán</label><input type="text" id="fEmpRep" class="form-control"></div>
+    <div class="col-md-6"><label class="form-label small">Chức vụ</label><input type="text" id="fEmpTitle" class="form-control" value="Đại diện bên giao khoán"></div>
+    <div class="col-md-6"><label class="form-label small">Bên nhận khoán *</label><input type="text" id="fContractor" class="form-control"></div>
+    <div class="col-md-6"><label class="form-label small">CCCD / địa chỉ</label><input type="text" id="fIdNo" class="form-control" placeholder="CCCD"><input type="text" id="fAddr" class="form-control mt-1" placeholder="Địa chỉ"></div>
+    <div class="col-md-12"><label class="form-label small">Nội dung công việc khoán</label><textarea id="fWork" class="form-control" rows="2"></textarea></div>
+    <div class="col-md-6"><label class="form-label small">Phương thức giao khoán</label><input type="text" id="fMethod" class="form-control" value="Giao khoán khối lượng công việc"></div>
+    <div class="col-md-3"><label class="form-label small">Giá trị HĐ *</label><input type="number" id="fAmt" class="form-control" step="1000"></div>
+    <div class="col-md-3"><label class="form-label small">TK chi phí</label><input type="text" id="fExp" class="form-control" value="622"></div>
+    <div class="col-md-12"><label class="form-label small">Điều kiện thực hiện</label><input type="text" id="fCond" class="form-control"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary" id="btnSaveHD">Lưu HĐ</button></div>
+</div></div></div>
+
+<div class="modal fade" id="modalTL" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header bg-warning"><h5 class="modal-title">Thanh lý HĐ (06-LĐTL)</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="tlId">
+    <div class="mb-2 small text-muted" id="tlInfo"></div>
+    <div class="mb-2"><label class="form-label small">Ngày thanh lý</label><input type="date" id="tlDate" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small">Giá trị nghiệm thu</label><input type="number" id="tlAccepted" class="form-control" step="1000"></div>
+    <div class="mb-2"><label class="form-label small">Đã thanh toán trước</label><input type="number" id="tlPaid" class="form-control" step="1000" value="0"></div>
+    <div class="mb-2"><label class="form-label small">Phạt vi phạm</label><input type="number" id="tlPenalty" class="form-control" step="1000" value="0"></div>
+    <div class="mb-2"><label class="form-label small">Đánh giá chất lượng</label><input type="text" id="tlQuality" class="form-control"></div>
+    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="tlPay" checked><label class="form-check-label small" for="tlPay">Chi ngay phần còn lại (phiếu chi)</label></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-warning" id="btnSaveTL">Thanh lý &amp; ghi sổ</button></div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+const today=()=>new Date().toISOString().slice(0,10);
+fDate.value=fStart.value=tlDate.value=today();
+async function load(){
+  const res=await fetch('/api/sme/labor-contracts'); const json=await res.json();
+  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.contract_no}</td><td>${(r.contract_date||'').slice(0,10)}</td>
+    <td>${r.contractor_name}</td><td class="text-end">${fmt(r.contract_amount)}</td>
+    <td><span class="badge bg-light text-dark border">${r.status}</span></td>
+    <td class="text-nowrap">
+      <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_labor_contract/in/${r.id}">In 05</a>
+      ${r.status==='active'?`<button class="btn btn-sm btn-warning" onclick="openTL(${r.id},'${r.contract_no}',${r.contract_amount},'${(r.contractor_name||'').replace(/'/g,'')}')">Thanh lý 06</button>`:''}
+      ${(r.settlements&&r.settlements[0])?`<a class="btn btn-sm btn-outline-secondary" target="_blank" href="/SME_labor_settlement/in/${r.settlements[0].id}">In 06</a>`:''}
+      ${r.status!=='void'?`<button class="btn btn-sm btn-outline-danger" onclick="voidHD(${r.id})">Hủy</button>`:''}
+    </td>
+  </tr>`).join('')||'<tr><td colspan="6" class="text-muted text-center py-4">Chưa có hợp đồng</td></tr>';
+}
+btnNew.onclick=()=>new bootstrap.Modal(document.getElementById('modalHD')).show();
+btnSaveHD.onclick=async()=>{
+  const payload={
+    date:fDate.value, start_date:fStart.value, end_date:fEnd.value,
+    employer_rep_name:fEmpRep.value, employer_rep_title:fEmpTitle.value,
+    contractor_name:fContractor.value, contractor_id_no:fIdNo.value, contractor_address:fAddr.value,
+    work_content:fWork.value, method:fMethod.value, conditions:fCond.value,
+    contract_amount:parseFloat(fAmt.value)||0, expense_account:fExp.value||'622'
+  };
+  const res=await fetch('/api/sme/labor-contracts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modalHD')).hide();
+  alert('Đã lập '+json.data.contract_no); load();
+};
+function openTL(id, no, amt, name){
+  tlId.value=id; tlAccepted.value=amt; tlInfo.textContent=`${no} — ${name} — HĐ ${fmt(amt)}`;
+  new bootstrap.Modal(document.getElementById('modalTL')).show();
+}
+btnSaveTL.onclick=async()=>{
+  const payload={
+    date:tlDate.value, accepted_amount:parseFloat(tlAccepted.value)||0,
+    paid_amount:parseFloat(tlPaid.value)||0, penalty_amount:parseFloat(tlPenalty.value)||0,
+    quality_note:tlQuality.value, pay_now:tlPay.checked
+  };
+  const res=await fetch('/api/sme/labor-contracts/'+tlId.value+'/settle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modalTL')).hide();
+  alert('Đã thanh lý '+json.data.settlement_no+' · Còn trả '+fmt(json.data.payable_amount));
+  load();
+};
+async function voidHD(id){
+  if(!confirm('Hủy hợp đồng giao khoán này?')) return;
+  const res=await fetch('/api/sme/labor-contracts/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+  load();
+}
+load();
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Kiểm kê quỹ ngoại tệ 08b-TT{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Kiểm kê quỹ ngoại tệ <span class="badge bg-info text-dark">08b-TT</span></h4>
+    <p class="text-muted small mb-0">Đếm ngoại tệ × tỷ giá → đối chiếu TK 1112/1122 · chênh lệch 515/635</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('SME_cash_count') }}">08a Tiền VND</a>
+</div>
+<div class="card shadow-sm border-0 mb-3" style="max-width:560px"><div class="card-body">
+  <div class="mb-2"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
+  <div class="mb-2"><label class="form-label small">Loại NT</label><input type="text" id="fCur" class="form-control" value="USD"></div>
+  <div class="mb-2"><label class="form-label small">TK quỹ NT</label><input type="text" id="fAcc" class="form-control" value="1112"></div>
+  <div class="mb-2"><label class="form-label small">Số lượng NT thực tế</label><input type="number" id="fFc" class="form-control" step="any" value="0"></div>
+  <div class="mb-2"><label class="form-label small">Tỷ giá quy đổi</label><input type="number" id="fRate" class="form-control" step="1" value="25000"></div>
+  <div class="mb-2"><label class="form-label small">Ban kiểm kê</label><input type="text" id="fCommittee" class="form-control"></div>
+  <div class="mb-3"><label class="form-label small">Ghi chú</label><input type="text" id="fNotes" class="form-control"></div>
+  <button class="btn btn-info" id="btnSave">Lập biên bản 08b</button>
+</div></div>
+<div class="card shadow-sm border-0"><div class="card-header bg-white fw-bold">Lịch sử 08b</div>
+<div class="table-responsive"><table class="table table-sm mb-0">
+  <thead class="table-light"><tr><th>Số</th><th>Ngày</th><th>TK</th><th class="text-end">VND kiểm kê</th><th class="text-end">Chênh</th><th></th></tr></thead>
+  <tbody id="hist"></tbody>
+</table></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+fDate.value=new Date().toISOString().slice(0,10);
+async function loadHist(){
+  const res=await fetch('/api/sme/cash-count-fx'); const json=await res.json();
+  hist.innerHTML=(json.data||[]).map(r=>`<tr>
+    <td class="fw-bold">${r.doc_no}</td><td>${(r.count_date||'').slice(0,10)}</td>
+    <td>${r.account_code}</td><td class="text-end">${fmt(r.counted_amount)}</td>
+    <td class="text-end">${fmt(r.difference)}</td>
+    <td class="text-nowrap">
+      <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_cash_count/in/${r.id}">In</a>
+      <button class="btn btn-sm btn-outline-danger ms-1" onclick="voidFx(${r.id})">Hủy</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="6" class="text-muted text-center">Chưa có</td></tr>';
+}
+async function voidFx(id){
+  if(!confirm('Hủy biên bản 08b (đảo chênh lệch nếu có)?')) return;
+  const res=await fetch('/api/sme/cash-count/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); loadHist();
+}
+btnSave.onclick=async()=>{
+  const payload={
+    date:fDate.value, currency:fCur.value, account_code:fAcc.value,
+    counted_fc:parseFloat(fFc.value)||0, rate:parseFloat(fRate.value)||0,
+    committee:fCommittee.value, notes:fNotes.value, post_difference:true
+  };
+  const res=await fetch('/api/sme/cash-count-fx',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const json=await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  alert('Đã lập '+json.data.doc_no+' (08b) · Chênh VND: '+fmt(json.data.difference||0));
+  if(json.data.id) window.open('/SME_cash_count/in/'+json.data.id,'_blank');
+  loadHist();
+};
+loadHist();
+</script>
+{% endblock %}

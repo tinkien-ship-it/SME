@@ -1,0 +1,67 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}SME — Bảng KH TSCĐ 06-TSCĐ{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Bảng tính &amp; phân bổ khấu hao TSCĐ <span class="badge bg-secondary">06-TSCĐ</span></h4>
+    <p class="text-muted small mb-0">Theo lịch đường thẳng · đối chiếu với bút toán KHTS đã ghi</p>
+  </div>
+  <a class="btn btn-outline-secondary" id="btnPrint" target="_blank"><i class="fas fa-print me-1"></i>In</a>
+</div>
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-md-2"><label class="form-label small fw-bold">Năm</label><input type="number" id="fYear" class="form-control"></div>
+    <div class="col-md-3"><label class="form-label small fw-bold">Kỳ</label>
+      <select id="fPeriod" class="form-select">
+        <option value="">Cả năm</option>
+        <option value="1">T1</option><option value="2">T2</option><option value="3">T3</option>
+        <option value="4">T4</option><option value="5">T5</option><option value="6">T6</option>
+        <option value="7">T7</option><option value="8">T8</option><option value="9">T9</option>
+        <option value="10">T10</option><option value="11">T11</option><option value="12">T12</option>
+      </select>
+    </div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" id="btnLoad">Xem</button></div>
+  </div>
+</div>
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0 align-middle" id="tbl">
+      <thead class="table-light" id="thead"></thead>
+      <tbody id="tbody"></tbody>
+      <tfoot id="tfoot"></tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+fYear.value = new Date().getFullYear();
+fPeriod.value = String(new Date().getMonth()+1);
+
+async function load(){
+  const q = new URLSearchParams({year: fYear.value});
+  if(fPeriod.value) q.set('period', fPeriod.value);
+  const res = await fetch('/api/sme/fa-depreciation-table?'+q);
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  const d = json.data;
+  btnPrint.href = '/SME_fa_depreciation_table/in?'+q.toString();
+  const periods = d.periods||[];
+  thead.innerHTML = `<tr><th>Mã</th><th>Tên TSCĐ</th><th class="text-end">Nguyên giá</th><th class="text-end">Số tháng</th>` +
+    periods.map(p => `<th class="text-end">T${p}</th>`).join('') +
+    `<th class="text-end">Cộng</th></tr>`;
+  tbody.innerHTML = (d.lines||[]).map(r => `<tr>
+    <td>${r.code}</td><td>${r.name}</td>
+    <td class="text-end">${fmt(r.original_cost)}</td><td class="text-end">${r.months}</td>
+    ${periods.map(p => `<td class="text-end">${fmt((r.periods||{})[p]||0)}</td>`).join('')}
+    <td class="text-end fw-bold">${fmt(r.total)}</td>
+  </tr>`).join('') || '<tr><td colspan="20" class="text-center text-muted">Không có dữ liệu</td></tr>';
+  tfoot.innerHTML = `<tr class="table-light fw-bold"><td colspan="4">Tổng</td>
+    ${periods.map(p => `<td class="text-end">${fmt((d.totals_by_period||{})[p]||0)}</td>`).join('')}
+    <td class="text-end">${fmt(d.grand_total)}</td></tr>`;
+}
+btnLoad.onclick = load;
+load();
+</script>
+{% endblock %}

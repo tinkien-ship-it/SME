@@ -69,9 +69,12 @@ def _closing_balances(
     conn: sqlite3.Connection,
     fiscal_year: int,
     period_to: int,
+    *,
+    branch_code: str | None = None,
 ) -> dict[str, dict[str, Decimal]]:
-    rows = conn.execute(
-        """
+    from Services.sme.branches import branch_sql_filter
+
+    sql = """
         SELECT jl.account_code,
                SUM(jl.debit) AS debit,
                SUM(jl.credit) AS credit
@@ -82,10 +85,13 @@ def _closing_balances(
               je.fiscal_year < ?
               OR (je.fiscal_year = ? AND je.period <= ?)
           )
-        GROUP BY jl.account_code
-        """,
-        (fiscal_year, fiscal_year, period_to),
-    ).fetchall()
+    """
+    params: list[Any] = [fiscal_year, fiscal_year, period_to]
+    bf, bp = branch_sql_filter(branch_code, alias='je')
+    sql += bf
+    params.extend(bp)
+    sql += ' GROUP BY jl.account_code'
+    rows = conn.execute(sql, params).fetchall()
     return {
         r[0]: {'debit': _money(r[1]), 'credit': _money(r[2])}
         for r in rows
@@ -99,7 +105,10 @@ def _period_activity(
     period_to: int,
     *,
     exclude_document_types: tuple[str, ...] = (),
+    branch_code: str | None = None,
 ) -> dict[str, dict[str, Decimal]]:
+    from Services.sme.branches import branch_sql_filter
+
     sql = """
         SELECT jl.account_code,
                SUM(jl.debit) AS debit,
@@ -115,6 +124,9 @@ def _period_activity(
         placeholders = ','.join('?' for _ in exclude_document_types)
         sql += f' AND je.document_type NOT IN ({placeholders})'
         params.extend(exclude_document_types)
+    bf, bp = branch_sql_filter(branch_code, alias='je')
+    sql += bf
+    params.extend(bp)
     sql += ' GROUP BY jl.account_code'
     rows = conn.execute(sql, params).fetchall()
     return {

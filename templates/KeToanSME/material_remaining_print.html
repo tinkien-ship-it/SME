@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>04-VT {{ doc.doc_no }}</title>
+<style>
+  body{font-family:'Times New Roman',serif;font-size:12pt;margin:24px}
+  .header{display:flex;justify-content:space-between}
+  .title{text-align:center;font-size:15pt;font-weight:bold;margin:16px 0}
+  .muted{font-style:italic;font-size:10pt}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid #333;padding:5px 6px}
+  th{background:#f5f5f5}
+  .num{text-align:right}
+  .sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}
+  .sign div{width:45%}
+  @media print{.no-print{display:none}}
+</style>
+</head>
+<body>
+<button class="no-print" onclick="window.print()">In</button>
+<div class="header">
+  <div>
+    <div><strong>{{ info.business_name or info.company_name or '' }}</strong></div>
+    <div>{{ info.address or '' }}</div>
+    <div>Bộ phận: <strong>{{ doc.department or '' }}</strong></div>
+  </div>
+  <div style="text-align:right">
+    <div><strong>Mẫu số 04 - VT</strong></div>
+    <div class="muted">(TT 99/2025/TT-BTC)</div>
+  </div>
+</div>
+<div class="title">BẢNG KÊ CHI TIẾT VẬT TƯ CÒN LẠI CUỐI KỲ</div>
+<div style="text-align:center">Số: <strong>{{ doc.doc_no }}</strong> — Ngày {{ doc.as_of_date }}</div>
+<table>
+  <thead>
+    <tr>
+      <th>STT</th><th>Mã</th><th>Tên vật tư</th><th>ĐVT</th>
+      <th>SL</th><th>Đơn giá</th><th>Thành tiền</th><th>Ghi chú xử lý</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for ln in doc.lines %}
+    <tr>
+      <td class="num">{{ loop.index }}</td>
+      <td>{{ ln.product_code or '' }}</td>
+      <td>{{ ln.product_name }}</td>
+      <td>{{ ln.unit or '' }}</td>
+      <td class="num">{{ '{:g}'.format(ln.quantity|float) }}</td>
+      <td class="num">{{ '{:,.0f}'.format(ln.unit_cost|float).replace(',', '.') }}</td>
+      <td class="num">{{ '{:,.0f}'.format(ln.amount|float).replace(',', '.') }}</td>
+      <td>{{ 'Tiếp tục sử dụng' if ln.disposition=='continue' else 'Nhập lại kho (01-VT)' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th colspan="6" style="text-align:right">Cộng</th>
+      <th class="num">{{ '{:,.0f}'.format(doc.total_amount|float).replace(',', '.') }}</th>
+      <th></th>
+    </tr>
+  </tfoot>
+</table>
+{% if doc.notes %}<p>Ghi chú: {{ doc.notes }}</p>{% endif %}
+<div class="sign">
+  <div>Phụ trách bộ phận<br><span class="muted">(Ký, họ tên)</span></div>
+  <div>Kế toán<br><span class="muted">(Ký, họ tên)</span></div>
+</div>
+</body>
+</html>

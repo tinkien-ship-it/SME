@@ -19,7 +19,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light"><tr>
-        <th>Số PC</th><th>Ngày</th><th>Người nhận</th><th class="text-end">Số tiền</th><th>Nợ</th><th>Có</th><th>Diễn giải</th><th></th>
+        <th>Số PC</th><th>Ngày</th><th>CN</th><th>Người nhận</th><th class="text-end">Số tiền</th><th>Nợ</th><th>Có</th><th>Diễn giải</th><th></th>
       </tr></thead>
       <tbody id="tbody"><tr><td colspan="8" class="text-center text-muted py-4">Chọn khoảng ngày và tải</td></tr></tbody>
     </table>
@@ -41,7 +41,7 @@
   <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-danger" id="btnSave">Lưu & ghi sổ</button></div>
 </div></div></div>
 {% endblock %}
-{% block scripts %}
+{% block sme_scripts %}
 <script>
 const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
 function todayISO(){ return new Date().toISOString().slice(0,10); }
@@ -54,17 +54,28 @@ async function loadList(){
   const res = await fetch('/api/sme/vouchers/payments?'+q);
   const json = await res.json();
   const tbody = document.getElementById('tbody');
-  if(!json.success){ tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center">${json.error||'Lỗi'}</td></tr>`; return; }
-  if(!json.data.length){ tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không có phiếu</td></tr>'; return; }
+  if(!json.success){ tbody.innerHTML = `<tr><td colspan="9" class="text-danger text-center">${json.error||'Lỗi'}</td></tr>`; return; }
+  if(!json.data.length){ tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Không có phiếu</td></tr>'; return; }
   tbody.innerHTML = json.data.map(r => `<tr>
     <td class="fw-bold">${r.voucher_no}</td>
     <td>${(r.voucher_date||'').slice(0,10)}</td>
+    <td class="small">${r.branch_code||'HQ'}</td>
     <td>${r.party_name||''}</td>
     <td class="text-end text-danger fw-bold">${fmt(r.amount)}</td>
     <td>${r.debit_account}</td><td>${r.credit_account}</td>
     <td class="small">${r.reason||''}</td>
-    <td><a class="btn btn-sm btn-outline-danger" target="_blank" href="/SME_PhieuChi/in/${r.id}">In</a></td>
+    <td class="text-nowrap">
+      <a class="btn btn-sm btn-outline-danger" target="_blank" href="/SME_PhieuChi/in/${r.id}">In</a>
+      <button class="btn btn-sm btn-outline-secondary" onclick="voidVoucher(${r.id})">Hủy</button>
+    </td>
   </tr>`).join('');
+}
+async function voidVoucher(id){
+  if(!confirm('Hủy phiếu chi và đảo bút toán?')) return;
+  const res = await fetch('/api/sme/vouchers/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:'Hủy phiếu chi'})});
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  loadList();
 }
 document.getElementById('btnLoad').onclick = loadList;
 document.getElementById('btnNew').onclick = () => new bootstrap.Modal(document.getElementById('modalNew')).show();

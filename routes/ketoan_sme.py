@@ -43,6 +43,191 @@ def round_money(val):
     return Decimal(str(val)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
+def _insert_sme_import_stock_move(
+    c,
+    sm_cols,
+    *,
+    product_id,
+    import_date,
+    import_id,
+    qty,
+    cost_per_retail,
+    move_note,
+    import_no,
+    retail_unit,
+    wholesale_unit,
+    ratio,
+    warehouse_code,
+):
+    """Ghi stock_moves khi nhập mua SME; bổ sung in/out nếu schema có."""
+    fields = [
+        'product_id', 'date', 'type', 'ref_id', 'quantity', 'cost_price', 'note',
+        'ref_document', 'ref_type', 'type1', 'unit', 'unit1', 'unit_ratio',
+    ]
+    values = [
+        product_id, import_date, 'import', import_id, float(qty), float(cost_per_retail),
+        move_note, import_no, 'import', 'Nhập', retail_unit, wholesale_unit, float(ratio),
+    ]
+    if 'in_quantity' in sm_cols and 'out_quantity' in sm_cols:
+        fields.extend(['in_quantity', 'out_quantity'])
+        values.extend([float(qty), 0.0])
+    if 'warehouse_code' in sm_cols:
+        fields.append('warehouse_code')
+        values.append(warehouse_code)
+    placeholders = ', '.join(['?'] * len(values))
+    c.execute(
+        f"INSERT INTO stock_moves ({', '.join(fields)}) VALUES ({placeholders})",
+        values,
+    )
+
+
+def _sme_assert_sale_branch_access(conn, sale_id, sale, branch):
+    from Services.sme.branch_filter import assert_warehouse_in_session_branch
+    from Services.sme.branches import sale_branch_filter_sql
+
+    code = (branch or '').strip().upper()
+    if not code or code == 'ALL':
+        return None
+    sale_cols = {r[1] for r in conn.execute('PRAGMA table_info(sale)').fetchall()}
+    wh = (sale.get('warehouse_code') or '').strip()
+    if 'warehouse_code' in sale_cols and wh:
+        try:
+            assert_warehouse_in_session_branch(conn, wh, allow_all=False)
+        except ValueError as exc:
+            return str(exc)
+        return None
+    bf, bp = sale_branch_filter_sql(conn, branch, alias='s')
+    ok = conn.execute(
+        f'SELECT 1 FROM sale s WHERE s.id = ? {bf}',
+        (sale_id, *bp),
+    ).fetchone()
+    if not ok:
+        return 'Đơn hàng không thuộc chi nhánh đang chọn'
+    return None
+
+
+def _sme_build_sale_detail_payload(conn, sale_id):
+    from Services.invoice_buyer import DEFAULT_RETAIL_BUYER_NAME
+
+    c = conn.cursor()
+    c.execute('SELECT s.* FROM sale s WHERE s.id = ?', (sale_id,))
+    sale_row = c.fetchone()
+    if not sale_row:
+        return None
+
+    sale = dict(sale_row)
+    customer_name = (sale.get('customer_name') or '').strip() or DEFAULT_RETAIL_BUYER_NAME
+    customer_phone = (sale.get('customer_phone') or sale.get('phone') or '').strip()
+    total_amount = float(sale.get('total_amount') or 0)
+    discount_amount = float(sale.get('discount_amount') or 0)
+    tax_pct = float(sale.get('tax_pct') or 0)
+    sale_no = (sale.get('sale_no') or '').strip() or f"ĐH{str(sale_id).zfill(6)}"
+    sale_date = sale.get('date')
+    created_at = sale.get('created_at') or sale_date
+
+    c.execute(
+        """
+        SELECT
+            si.product_id,
+            si.product_name AS si_name,
+            si.quantity,
+            si.price AS sold_price,
+            si.discount_pct,
+            si.cost_price,
+            COALESCE(si.UseSaleUnit, 0) AS UseSaleUnit,
+            si.unit AS si_unit,
+            p.name AS product_name,
+            p.product_code,
+            p.barcode,
+            p.barcode1,
+            p.unit AS p_unit,
+            p.unit1 AS p_unit1,
+            COALESCE(p.unit_ratio, 1) AS unit_ratio
+        FROM sale_items si
+        LEFT JOIN products p ON p.id = si.product_id
+        WHERE si.sale_id = ?
+        ORDER BY si.rowid
+        """,
+        (sale_id,),
+    )
+
+    items = []
+    for row in c.fetchall():
+        row = dict(row)
+        use_sale_unit = int(row.get('UseSaleUnit') or 0)
+        product_id = row.get('product_id')
+        name = (row.get('si_name') or row.get('product_name') or '').strip()
+        sold_price = float(row.get('sold_price') or 0)
+        quantity = float(row.get('quantity') or 0)
+        discount_pct = float(row.get('discount_pct') or 0)
+        unit1 = row.get('p_unit1') or 'Lốc/Thùng'
+        unit = (
+            unit1 if use_sale_unit == 1
+            else (row.get('si_unit') or row.get('p_unit') or 'Cái')
+        )
+
+        c.execute(
+            """
+            SELECT COALESCE(SUM(quantity), 0)
+            FROM return_sales
+            WHERE sale_id = ? AND product_id = ? AND COALESCE(UseSaleUnit, 0) = ?
+            """,
+            (sale_id, product_id, use_sale_unit),
+        )
+        returned_qty = float(c.fetchone()[0])
+        # sale_items.quantity đã trừ trả (legacy) → remaining = quantity hiện tại
+        remaining_qty = max(0.0, quantity)
+        product_code = row.get('product_code') or (str(product_id) if product_id is not None else '')
+        items.append({
+            'product_id': product_id,
+            'name': name,
+            'product_name': name,
+            'product_code': product_code,
+            'quantity': quantity,
+            'sold_price': sold_price,
+            'price': sold_price,
+            'discount_pct': discount_pct,
+            'discount': discount_pct,
+            'tax_pct': tax_pct,
+            'cost_price': float(row.get('cost_price') or 0),
+            'UseSaleUnit': use_sale_unit,
+            'unit': unit,
+            'unit1': unit1,
+            'unit_ratio': float(row.get('unit_ratio') or 1),
+            'barcode': row.get('barcode') or '',
+            'barcode1': row.get('barcode1') or '',
+            'returned_qty': returned_qty,
+            'remaining_qty': remaining_qty,
+            'line_total': quantity * sold_price,
+        })
+
+    return {
+        'id': sale['id'],
+        'sale_no': sale_no,
+        'date': sale_date,
+        'created_at': created_at,
+        'status': sale.get('status') or '',
+        'customer_name': customer_name,
+        'company_name': sale.get('company_name') or '',
+        'tax_code': sale.get('tax_code') or '',
+        'budget_unit_code': sale.get('budget_unit_code') or '',
+        'passport_no': sale.get('passport_no') or '',
+        'address': sale.get('address') or '',
+        'customer_phone': customer_phone,
+        'phone': customer_phone,
+        'email': sale.get('email') or '',
+        'tax_pct': tax_pct,
+        'total_amount': total_amount,
+        'discount_amount': discount_amount,
+        'note': sale.get('note') or '',
+        'invoice_number': sale.get('invoice_number') or '',
+        'invoice_status': sale.get('invoice_status') or 'none',
+        'inv_status': sale.get('invoice_status') or 'none',
+        'items': items,
+        '_sale_row': sale,
+    }
+
+
 def register_ketoan_sme_routes(app):
     """Đăng ký route KeToan SME (giữ nguyên URL/endpoint)."""
     from auth import login_required
@@ -64,6 +249,28 @@ def register_ketoan_sme_routes(app):
             current_group = (request.view_args or {}).get('group_id')
         else:
             current_group = resolve_sme_current_group(request.endpoint)
+        sme_branch = {
+            'multi_branch': False,
+            'branches': [],
+            'current_branch_code': session.get('sme_branch_code') or 'HQ',
+            'filter': session.get('sme_branch_filter') or 'ALL',
+        }
+        if is_sme_endpoint(request.endpoint) or (request.endpoint or '').startswith('SME_'):
+            try:
+                from Services.sme.branches import branch_context
+                conn = get_db_connection()
+                conn.row_factory = sqlite3.Row
+                try:
+                    sme_branch = branch_context(conn)
+                    sme_branch['filter'] = (
+                        session.get('sme_branch_filter')
+                        or sme_branch.get('current_branch_code')
+                        or 'ALL'
+                    )
+                finally:
+                    conn.close()
+            except Exception:
+                pass
         return {
             'sme_hub_title': SME_HUB_TITLE,
             'sme_menu_groups': get_sme_menu_groups(),
@@ -71,6 +278,7 @@ def register_ketoan_sme_routes(app):
             'sme_dashboard_featured': get_sme_featured_links(),
             'sme_hub_active': is_sme_endpoint(request.endpoint),
             'sme_current_group': current_group,
+            'sme_branch': sme_branch,
         }
 
     def _bootstrap_sme_db():
@@ -87,6 +295,11 @@ def register_ketoan_sme_routes(app):
             conn.close()
 
     #============================================================================== Start of SME Accounting=========================================================================#
+    def _sme_branch_arg():
+        from Services.sme.branches import request_branch_filter
+        return request_branch_filter()
+
+
     @app.route('/SME_dashboard')
     @login_required
     @require_sme_regime
@@ -115,21 +328,35 @@ def register_ketoan_sme_routes(app):
 
     @app.route('/SME_order')
     @login_required
+    @require_sme_regime
     def SME_order():
-        return redirect(url_for('order'))
+        return render_template('order.html')
+
+    @app.route('/SME_outward_invoice')
+    @login_required
+    @require_sme_regime
+    def SME_outward_invoice():
+        """HĐ bán (e-invoice) — pháp nhân toàn DN; shell SME + regime."""
+        view = app.view_functions.get('outward_invoice')
+        if view:
+            return view()
+        return redirect(url_for('outward_invoice'))
 
     @app.route('/SME_purchasing')
     @login_required
+    @require_sme_regime
     def SME_purchasing():
         return render_template('KeToanSME/dashboard_purchasing.html')
 
     @app.route('/SME_dashboard_sale')
     @login_required
+    @require_sme_regime
     def SME_dashboard_sale():
         return render_template('KeToanSME/dashboard_sale.html')
 
     @app.route('/SME_sale_details')
     @login_required
+    @require_sme_regime
     def SME_sale_details():
         return render_template('sale_details.html')
 
@@ -155,6 +382,7 @@ def register_ketoan_sme_routes(app):
 
     @app.route('/SME_inward_invoice')
     @login_required
+    @require_sme_regime
     def SME_inward_invoice():
         return render_template('KeToanSME/inward_invoice.html')
 
@@ -173,7 +401,14 @@ def register_ketoan_sme_routes(app):
         try:
             conn = get_db_connection()
             try:
-                warehouses = list_active_warehouses(conn) or warehouses
+                branch = (
+                    session.get('sme_branch_filter')
+                    or session.get('sme_branch_code')
+                    or 'ALL'
+                )
+                warehouses = list_active_warehouses(
+                    conn, branch_code=branch,
+                ) or warehouses
             finally:
                 conn.close()
         except Exception:
@@ -201,24 +436,488 @@ def register_ketoan_sme_routes(app):
 
     @app.route('/SME_import_list')
     @login_required
+    @require_sme_regime
     def SME_DanhSachPhieuNhapKho():
         return render_template('KeToanSME/import_list.html')
 
     @app.route('/SME_return_supplier')
     @login_required
+    @require_sme_regime
     def SME_return_supplier():
         return render_template('KeToanSME/return_supplier.html')
 
+    @app.route('/SME_return_sale')
+    @login_required
+    @require_sme_regime
+    def SME_return_sale():
+        return render_template('KeToanSME/return_sale.html')
+
     @app.route('/SME_SoCongNoPhaiTra')
     @login_required
+    @require_sme_regime
     def SME_SoCongNoPhaiTra():
         return render_template('KeToanSME/SoCongNoPhaiTra.html')
 
+    @app.route('/SME_SoCongNoPhaiTra/in')
+    @login_required
+    @require_sme_regime
+    def SME_SoCongNoPhaiTra_in():
+        """In sổ công nợ phải trả SME (không dùng template HKD)."""
+        supplier_name = request.args.get('supplier')
+        start = request.args.get('start')
+        end = request.args.get('end')
+        if not supplier_name:
+            return 'Lỗi: Phải chọn nhà cung cấp để in sổ!', 400
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            from Services.sme.branches import import_branch_filter_sql, request_branch_filter
+            branch = request_branch_filter()
+            ibf, ibp = import_branch_filter_sql(conn, branch, alias='i')
+            supplier_data = conn.execute(
+                'SELECT id, name, address FROM suppliers WHERE name = ?', (supplier_name,)
+            ).fetchone()
+            if not supplier_data:
+                return 'Lỗi: Nhà cung cấp không tồn tại!', 404
+            s_id = supplier_data['id']
+            opening_balance = 0
+            if start:
+                res_opening = conn.execute(
+                    f"""
+                    SELECT (COALESCE(SUM(COALESCE(total_value,0)),0)
+                            - COALESCE(SUM(COALESCE(paid_amount,0)),0)) AS balance
+                    FROM import i WHERE supplier_id = ? AND date(date) < date(?)
+                    {ibf}
+                    """,
+                    (s_id, start, *ibp),
+                ).fetchone()
+                opening_balance = round(float(res_opening['balance'] or 0), 0)
+                if opening_balance < 1:
+                    opening_balance = 0
+            sql_main = f"""
+                SELECT id, COALESCE(import_no, 'PN'||id) AS purchase_no,
+                       date AS date,
+                       'Nợ tiền mua hàng' AS dien_giai,
+                       COALESCE(total_value, 0) AS no,
+                       COALESCE(paid_amount, 0) AS co
+                FROM import i WHERE supplier_id = ?
+                {ibf}
+            """
+            params: list = [s_id, *ibp]
+            if start:
+                sql_main += ' AND date(date) >= date(?)'
+                params.append(start)
+            if end:
+                sql_main += ' AND date(date) <= date(?)'
+                params.append(end)
+            sql_main += ' ORDER BY date ASC, id ASC'
+            rows = []
+            for r in conn.execute(sql_main, params).fetchall():
+                item = dict(r)
+                item['no'] = round(float(item['no'] or 0), 0)
+                item['co'] = round(float(item['co'] or 0), 0)
+                rows.append(item)
+            total_no = sum(r['no'] for r in rows)
+            total_co = sum(r['co'] for r in rows)
+            closing = opening_balance + total_no - total_co
+            if closing < 1:
+                closing = 0
+            info = conn.execute('SELECT * FROM business_info LIMIT 1').fetchone()
+            return render_template(
+                'KeToanSME/SoCongNoPhaiTra_print.html',
+                rows=rows,
+                totals={'opening': opening_balance, 'no': total_no, 'co': total_co, 'closing': closing},
+                start=start, end=end, supplier=supplier_name,
+                info=dict(info) if info else {},
+            )
+        finally:
+            conn.close()
+
     @app.route('/SME_SoCongNoPhaiThu')
     @login_required
+    @require_sme_regime
     def SME_SoCongNoPhaiThu():
-        """Công nợ phải thu SME — fork UI, API dùng chung /api/debt/* (không đụng HKD)."""
+        """Công nợ phải thu SME — lọc theo chi nhánh qua /api/sme/debt/customers."""
         return render_template('KeToanSME/SME_SoCongNoPhaiThu.html')
+
+    @app.route('/api/sme/debt/customers')
+    @login_required
+    @require_sme_regime
+    def api_sme_debt_customers():
+        from Services.sme.branches import request_branch_filter, sale_branch_filter_sql
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            branch = request_branch_filter()
+            sql = """
+                SELECT DISTINCT cn.customer_name, s.company_name
+                FROM cong_no cn
+                LEFT JOIN sale s ON cn.sale_id = s.id
+                WHERE cn.remaining_amount <> 0
+            """
+            params: list = []
+            bf, bp = sale_branch_filter_sql(conn, branch, alias='s')
+            sql += bf
+            params.extend(bp)
+            sql += ' ORDER BY s.company_name COLLATE NOCASE, cn.customer_name COLLATE NOCASE'
+            rows = conn.execute(sql, params).fetchall()
+            return jsonify([
+                {
+                    'customer_name': r['customer_name'],
+                    'company_name': r['company_name'] or '',
+                }
+                for r in rows
+            ])
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/debt/customer-detail')
+    @login_required
+    @require_sme_regime
+    def api_sme_debt_customer_detail():
+        customer_name = request.args.get('customer')
+        if not customer_name:
+            return jsonify(success=False, error='Thiếu tên khách hàng'), 400
+        from Services.sme.branches import request_branch_filter, sale_branch_filter_sql
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            branch = request_branch_filter()
+            bf, bp = sale_branch_filter_sql(conn, branch, alias='s')
+            sql_records = f"""
+                SELECT
+                    cn.debt_id,
+                    cn.sale_no,
+                    cn.date_of_debt,
+                    cn.customer_name,
+                    cn.sale_id,
+                    s.company_name,
+                    cn.unpaid_amount     AS total_debt,
+                    cn.paid_amount       AS paid_amount,
+                    cn.remaining_amount  AS remaining
+                FROM cong_no cn
+                LEFT JOIN sale s ON cn.sale_id = s.id
+                WHERE cn.customer_name = ?
+                  AND cn.remaining_amount > 0
+                  {bf}
+                ORDER BY cn.date_of_debt ASC, cn.debt_id ASC
+            """
+            records = [dict(r) for r in conn.execute(sql_records, [customer_name, *bp]).fetchall()]
+            sql_summary = f"""
+                SELECT
+                    COALESCE(SUM(cn.unpaid_amount), 0)    AS total_debt_all,
+                    COALESCE(SUM(cn.paid_amount), 0)      AS total_paid_all,
+                    COALESCE(SUM(cn.remaining_amount), 0)  AS current_remaining
+                FROM cong_no cn
+                LEFT JOIN sale s ON cn.sale_id = s.id
+                WHERE cn.customer_name = ?
+                  {bf}
+            """
+            summary_row = conn.execute(sql_summary, [customer_name, *bp]).fetchone()
+            summary = {
+                'total': float(summary_row['total_debt_all']),
+                'paid': float(summary_row['total_paid_all']),
+                'remaining': float(summary_row['current_remaining']),
+            }
+            return jsonify(success=True, summary=summary, records=records)
+        except Exception as e:
+            return jsonify(success=False, error=str(e)), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/sales', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_sales_list():
+        from Services.sme.branches import request_branch_filter, sale_branch_filter_sql
+
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 20))
+        q = request.args.get('q', '').strip()
+        start = request.args.get('start')
+        end = request.args.get('end')
+        status = request.args.get('status')
+        offset = (page - 1) * limit
+
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            branch = request_branch_filter()
+            where = ['1=1']
+            params: list = []
+
+            if start:
+                start_dt = start if len(start) > 10 else f'{start} 00:00:00'
+                where.append('s.date >= ?')
+                params.append(start_dt)
+            if end:
+                end_dt = end if len(end) > 10 else f'{end} 23:59:59'
+                where.append('s.date <= ?')
+                params.append(end_dt)
+            if q:
+                like_pattern = f'%{q}%'
+                where.append(
+                    '(CAST(s.id AS TEXT) LIKE ? OR COALESCE(s.customer_name,\'\') LIKE ? '
+                    'OR COALESCE(s.customer_phone,\'\') LIKE ? OR COALESCE(s.invoice_number,\'\') LIKE ?)'
+                )
+                params.extend([like_pattern, like_pattern, like_pattern, like_pattern])
+            if status == 'draft':
+                where.append("s.status = 'draft'")
+            elif status == 'pending':
+                where.append(
+                    "s.status = 'completed' AND (s.invoice_number IS NULL OR s.invoice_number = '')"
+                )
+            elif status == 'completed':
+                where.append("s.status = 'completed'")
+
+            bf, bp = sale_branch_filter_sql(conn, branch, alias='s')
+            where_sql = ' AND '.join(where) + bf
+            params_count = list(params) + list(bp)
+
+            total_records = conn.execute(
+                f'SELECT COUNT(*) FROM sale s WHERE {where_sql}',
+                params_count,
+            ).fetchone()[0]
+
+            rows = conn.execute(
+                f"""
+                SELECT s.*, COALESCE(s.invoice_status, 'none') AS inv_status, tax_authority_status
+                FROM sale s
+                WHERE {where_sql}
+                ORDER BY s.date DESC, s.id DESC
+                LIMIT ? OFFSET ?
+                """,
+                params_count + [limit, offset],
+            ).fetchall()
+
+            orders = []
+            for r in rows:
+                d = dict(r)
+                d['sale_no'] = d.get('sale_no') or f"ĐH{str(d['id']).zfill(6)}"
+                d['has_invoice'] = bool(
+                    d.get('invoice_number') and str(d['invoice_number']).strip()
+                )
+                orders.append(d)
+
+            stats_where = ['1=1']
+            stats_params: list = []
+            if start:
+                stats_where.append('s.date >= ?')
+                stats_params.append(start if len(start) > 10 else f'{start} 00:00:00')
+            if end:
+                stats_where.append('s.date <= ?')
+                stats_params.append(end if len(end) > 10 else f'{end} 23:59:59')
+            stats_where_sql = ' AND '.join(stats_where) + bf
+            stats_params = stats_params + list(bp)
+
+            revenue = conn.execute(
+                f"SELECT SUM(s.total_amount) FROM sale s WHERE s.status = 'completed' AND {stats_where_sql}",
+                stats_params,
+            ).fetchone()[0] or 0
+            pending_invoice = conn.execute(
+                f"SELECT COUNT(*) FROM sale s WHERE s.status = 'completed' "
+                f"AND (s.invoice_number IS NULL OR s.invoice_number = '') AND {stats_where_sql}",
+                stats_params,
+            ).fetchone()[0]
+            issued_invoice = conn.execute(
+                f"SELECT COUNT(*) FROM sale s WHERE (s.invoice_number IS NOT NULL AND s.invoice_number != '') "
+                f"AND {stats_where_sql}",
+                stats_params,
+            ).fetchone()[0]
+
+            return jsonify({
+                'orders': orders,
+                'total': total_records,
+                'stats': {
+                    'revenue': float(revenue),
+                    'pending_invoice': int(pending_invoice),
+                    'issued_invoice': int(issued_invoice),
+                },
+            }), 200
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/sales/<int:sale_id>', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_sale_detail(sale_id):
+        from Services.sme.branches import request_branch_filter
+
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            payload = _sme_build_sale_detail_payload(conn, sale_id)
+            if not payload:
+                return jsonify({'error': 'Không tìm thấy đơn hàng'}), 404
+
+            sale_row = payload.pop('_sale_row', {})
+            branch = request_branch_filter()
+            branch_err = _sme_assert_sale_branch_access(conn, sale_id, sale_row, branch)
+            if branch_err:
+                return jsonify({'error': branch_err}), 403
+
+            return jsonify({'success': True, **payload, 'data': payload}), 200
+        except Exception as exc:
+            logger.exception('api_sme_sale_detail(%s)', sale_id)
+            return jsonify({'error': str(exc)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/debt/suppliers')
+    @login_required
+    @require_sme_regime
+    def api_sme_debt_suppliers():
+        from Services.sme.branches import import_branch_filter_sql, request_branch_filter
+        conn = get_db_connection()
+        try:
+            branch = request_branch_filter()
+            bf, bp = import_branch_filter_sql(conn, branch, alias='i')
+            sql = f"""
+                SELECT DISTINCT s.name
+                FROM suppliers s
+                JOIN import i ON s.id = i.supplier_id
+                WHERE (COALESCE(i.total_value, 0) - COALESCE(i.paid_amount, 0)) > 0
+                {bf}
+                ORDER BY s.name
+            """
+            rows = conn.execute(sql, bp).fetchall()
+            return jsonify([r[0] for r in rows])
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/debt/supplier-detail')
+    @login_required
+    @require_sme_regime
+    def api_sme_debt_supplier_detail():
+        supplier_name = request.args.get('supplier')
+        if not supplier_name:
+            return jsonify({'success': False, 'error': 'Thiếu tên nhà cung cấp'}), 400
+        from Services.sme.branches import import_branch_filter_sql, request_branch_filter
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            branch = request_branch_filter()
+            bf, bp = import_branch_filter_sql(conn, branch, alias='i')
+            summary = conn.execute(
+                f"""
+                SELECT
+                    COALESCE(SUM(COALESCE(i.total_value, 0)), 0) AS total,
+                    COALESCE(SUM(COALESCE(i.paid_amount, 0)), 0) AS paid,
+                    COALESCE(SUM(
+                        COALESCE(i.total_value, 0) - COALESCE(i.paid_amount, 0)
+                    ), 0) AS remaining
+                FROM import i
+                JOIN suppliers s ON i.supplier_id = s.id
+                WHERE s.name = ?
+                {bf}
+                """,
+                (supplier_name, *bp),
+            ).fetchone()
+            records = conn.execute(
+                f"""
+                SELECT
+                    i.id,
+                    i.import_no,
+                    i.bill_no,
+                    i.date,
+                    i.total_value,
+                    i.paid_amount,
+                    (COALESCE(i.total_value, 0) - COALESCE(i.paid_amount, 0))
+                        AS remaining_amount,
+                    s.address AS supplier_address,
+                    s.name AS supplier_name
+                FROM import i
+                JOIN suppliers s ON i.supplier_id = s.id
+                WHERE s.name = ?
+                  AND (COALESCE(i.total_value, 0) - COALESCE(i.paid_amount, 0)) > 0
+                {bf}
+                ORDER BY i.date DESC
+                """,
+                (supplier_name, *bp),
+            ).fetchall()
+            return jsonify({
+                'success': True,
+                'summary': {
+                    'total': summary['total'],
+                    'paid': summary['paid'],
+                    'remaining': summary['remaining'],
+                },
+                'records': [dict(row) for row in records],
+            })
+        finally:
+            conn.close()
+
+    @app.route('/SME_SoCongNoPhaiThu/in')
+    @login_required
+    @require_sme_regime
+    def SME_SoCongNoPhaiThu_in():
+        """In sổ công nợ phải thu SME."""
+        customer = request.args.get('customer')
+        start = request.args.get('start')
+        end = request.args.get('end')
+        if not customer:
+            return 'Lỗi: Phải chọn khách hàng!', 400
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            from Services.sme.branches import request_branch_filter, sale_branch_filter_sql
+            branch = request_branch_filter()
+            sbf, sbp = sale_branch_filter_sql(conn, branch, alias='s')
+            opening = 0.0
+            if start:
+                row = conn.execute(
+                    f"""
+                    SELECT COALESCE(SUM(cn.unpaid_amount),0) - COALESCE(SUM(cn.paid_amount),0) AS bal
+                    FROM cong_no cn
+                    LEFT JOIN sale s ON cn.sale_id = s.id
+                    WHERE cn.customer_name = ? AND date(cn.date_of_debt) < date(?)
+                    {sbf}
+                    """,
+                    (customer, start, *sbp),
+                ).fetchone()
+                opening = round(float(row['bal'] or 0), 0)
+                if opening < 1:
+                    opening = 0
+            sql = f"""
+                SELECT cn.sale_no AS doc_no, cn.date_of_debt AS date,
+                       'Phải thu bán hàng' AS dien_giai,
+                       COALESCE(cn.unpaid_amount,0) AS no,
+                       COALESCE(cn.paid_amount,0) AS co,
+                       (COALESCE(cn.unpaid_amount,0) - COALESCE(cn.paid_amount,0)) AS remaining
+                FROM cong_no cn
+                LEFT JOIN sale s ON cn.sale_id = s.id
+                WHERE cn.customer_name = ?
+                {sbf}
+            """
+            params: list = [customer, *sbp]
+            if start:
+                sql += ' AND date(cn.date_of_debt) >= date(?)'
+                params.append(start)
+            if end:
+                sql += ' AND date(cn.date_of_debt) <= date(?)'
+                params.append(end)
+            sql += ' ORDER BY cn.date_of_debt ASC, cn.debt_id ASC'
+            rows = []
+            for r in conn.execute(sql, params).fetchall():
+                item = dict(r)
+                item['no'] = round(float(item['no'] or 0), 0)
+                item['co'] = round(float(item['co'] or 0), 0)
+                rows.append(item)
+            total_no = sum(r['no'] for r in rows)
+            total_co = sum(r['co'] for r in rows)
+            closing = opening + total_no - total_co
+            if closing < 1:
+                closing = 0
+            info = conn.execute('SELECT * FROM business_info LIMIT 1').fetchone()
+            return render_template(
+                'KeToanSME/SoCongNoPhaiThu_print.html',
+                rows=rows,
+                totals={'opening': opening, 'no': total_no, 'co': total_co, 'closing': closing},
+                start=start, end=end, customer=customer,
+                info=dict(info) if info else {},
+            )
+        finally:
+            conn.close()
 
     @app.route('/SME_DanhSachPhieuThu')
     @login_required
@@ -251,10 +950,16 @@ def register_ketoan_sme_routes(app):
     @require_sme_regime
     def SME_PhieuNhapKho_in(import_id):
         """In phiếu nhập kho mẫu 01-VT (DN) — không dùng 02-VT HKD."""
+        from Services.sme.branches import assert_import_in_branch
         from Services.sme.stock_vouchers import get_stock_in_print_payload
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
+            try:
+                assert_import_in_branch(conn, import_id)
+            except ValueError as exc:
+                flash(str(exc), 'danger')
+                return redirect(url_for('SME_DanhSachPhieuNhapKho_VT'))
             payload = get_stock_in_print_payload(conn, import_id)
             if not payload:
                 flash('Không tìm thấy phiếu nhập', 'danger')
@@ -274,6 +979,7 @@ def register_ketoan_sme_routes(app):
     @require_sme_regime
     def SME_PhieuXuatKho_in(voucher_id):
         """In phiếu xuất kho mẫu 02-VT (DN) — không dùng 04-VT HKD."""
+        from Services.sme.branches import assert_sale_in_branch, request_branch_filter
         from Services.sme.stock_vouchers import get_stock_out_print_payload
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
@@ -283,6 +989,17 @@ def register_ketoan_sme_routes(app):
                 flash('Không tìm thấy phiếu xuất', 'danger')
                 return redirect(url_for('SME_DanhSachPhieuXuatKho_VT'))
             px, info = payload
+            branch = request_branch_filter()
+            if branch and str(branch).upper() not in ('', 'ALL'):
+                sale_id = px.get('sale_id') if isinstance(px, dict) else None
+                if not sale_id:
+                    flash('Phiếu xuất thủ công chỉ in khi lọc Tất cả chi nhánh', 'danger')
+                    return redirect(url_for('SME_DanhSachPhieuXuatKho_VT'))
+                try:
+                    assert_sale_in_branch(conn, int(sale_id))
+                except ValueError as exc:
+                    flash(str(exc), 'danger')
+                    return redirect(url_for('SME_DanhSachPhieuXuatKho_VT'))
             return render_template(
                 'KeToanSME/SME_PhieuXuatKho_02VT_print.html',
                 px=px,
@@ -295,11 +1012,19 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_PhieuThu_in(voucher_id):
+        from Services.sme.branch_filter import assert_row_in_branch
         from Services.sme.vouchers import get_voucher
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
             _bootstrap_sme_db()
+            try:
+                assert_row_in_branch(
+                    conn, 'sme_vouchers', voucher_id, label='Phiếu thu',
+                )
+            except ValueError as exc:
+                flash(str(exc), 'danger')
+                return redirect(url_for('SME_DanhSachPhieuThu'))
             voucher = get_voucher(conn, voucher_id)
             if not voucher or voucher.get('voucher_type') != 'receipt':
                 flash('Không tìm thấy phiếu thu SME', 'danger')
@@ -318,11 +1043,19 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_PhieuChi_in(voucher_id):
+        from Services.sme.branch_filter import assert_row_in_branch
         from Services.sme.vouchers import get_voucher
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
             _bootstrap_sme_db()
+            try:
+                assert_row_in_branch(
+                    conn, 'sme_vouchers', voucher_id, label='Phiếu chi',
+                )
+            except ValueError as exc:
+                flash(str(exc), 'danger')
+                return redirect(url_for('SME_DanhSachPhieuChi'))
             voucher = get_voucher(conn, voucher_id)
             if not voucher or voucher.get('voucher_type') != 'payment':
                 flash('Không tìm thấy phiếu chi SME', 'danger')
@@ -347,13 +1080,19 @@ def register_ketoan_sme_routes(app):
         try:
             _bootstrap_sme_db()
             if request.method == 'GET':
+                branch = (
+                    request.args.get('branch')
+                    or session.get('sme_branch_filter')
+                    or 'ALL'
+                )
                 rows = list_vouchers(
                     conn,
                     voucher_type='receipt',
                     date_from=request.args.get('from') or request.args.get('date_from'),
                     date_to=request.args.get('to') or request.args.get('date_to'),
+                    branch_code=branch,
                 )
-                return jsonify({'success': True, 'data': rows})
+                return jsonify({'success': True, 'data': rows, 'branch_code': branch})
             data = request.get_json(silent=True) or {}
             result = create_receipt(
                 conn,
@@ -393,13 +1132,19 @@ def register_ketoan_sme_routes(app):
         try:
             _bootstrap_sme_db()
             if request.method == 'GET':
+                branch = (
+                    request.args.get('branch')
+                    or session.get('sme_branch_filter')
+                    or 'ALL'
+                )
                 rows = list_vouchers(
                     conn,
                     voucher_type='payment',
                     date_from=request.args.get('from') or request.args.get('date_from'),
                     date_to=request.args.get('to') or request.args.get('date_to'),
+                    branch_code=branch,
                 )
-                return jsonify({'success': True, 'data': rows})
+                return jsonify({'success': True, 'data': rows, 'branch_code': branch})
             data = request.get_json(silent=True) or {}
             result = create_payment(
                 conn,
@@ -429,6 +1174,43 @@ def register_ketoan_sme_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/sme/imports', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_imports():
+        from Services.sme.stock_vouchers import list_stock_in
+        from Services.sme.branches import request_branch_filter
+        conn = get_db_connection()
+        try:
+            rows = list_stock_in(
+                conn,
+                date_from=request.args.get('start_date') or request.args.get('start'),
+                date_to=request.args.get('end_date') or request.args.get('end'),
+                branch_code=request_branch_filter(),
+                q=request.args.get('q'),
+            )
+            data = []
+            for r in rows:
+                amt = float(r.get('total_amount') or 0)
+                date_s = r.get('date') or ''
+                if date_s and ' ' in str(date_s):
+                    date_s = str(date_s).split(' ')[0]
+                data.append({
+                    'id': r['id'],
+                    'import_no': r.get('import_no') or r.get('voucher_no'),
+                    'date': date_s,
+                    'supplier_name': r.get('supplier_name') or '',
+                    'bill_no': r.get('bill_no') or '',
+                    'payment_amt': amt,
+                    'total_value': amt,
+                    'payment_status': r.get('payment_status') or '',
+                })
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/api/sme/stock-in-vouchers', methods=['GET'])
     @login_required
     @require_sme_regime
@@ -438,10 +1220,12 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
+            from Services.sme.branches import request_branch_filter
             rows = list_stock_in(
                 conn,
                 date_from=request.args.get('from') or request.args.get('date_from'),
                 date_to=request.args.get('to') or request.args.get('date_to'),
+                branch_code=request_branch_filter(),
             )
             return jsonify({'success': True, 'data': rows})
         except Exception as e:
@@ -458,10 +1242,12 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
+            from Services.sme.branches import request_branch_filter
             rows = list_stock_out(
                 conn,
                 date_from=request.args.get('from') or request.args.get('date_from'),
                 date_to=request.args.get('to') or request.args.get('date_to'),
+                branch_code=request_branch_filter(),
             )
             return jsonify({'success': True, 'data': rows})
         except Exception as e:
@@ -472,36 +1258,44 @@ def register_ketoan_sme_routes(app):
     # --- Lối tắt nghiệp vụ POS dùng chung (endpoint SME_* để menu/bảo trì tách HKD) ---
     @app.route('/SME_bank_transactions')
     @login_required
+    @require_sme_regime
     def SME_bank_transactions():
-        return redirect(url_for('bank_transactions_page'))
+        return render_template('bank_transactions.html')
 
     @app.route('/SME_inventory_check')
     @login_required
+    @require_sme_regime
     def SME_inventory_check():
-        return redirect(url_for('inventory_check'))
+        """Legacy HKD → chuyển sang kiểm kê kho 05-VT SME."""
+        return redirect(url_for('SME_stock_count'))
 
     @app.route('/SME_import_details')
     @login_required
+    @require_sme_regime
     def SME_import_details():
-        return redirect(url_for('import_details_page'))
+        return render_template('import_details.html')
 
     @app.route('/SME_revenue_report')
     @login_required
+    @require_sme_regime
     def SME_revenue_report():
         return redirect(url_for('reports'))
 
     @app.route('/SME_profit_report')
     @login_required
+    @require_sme_regime
     def SME_profit_report():
         return redirect(url_for('profit'))
 
     @app.route('/SME_employees')
     @login_required
+    @require_sme_regime
     def SME_employees():
         return redirect(url_for('employees_page'))
 
     @app.route('/SME_attendance')
     @login_required
+    @require_sme_regime
     def SME_attendance():
         return redirect(url_for('attendance_page'))
 
@@ -523,7 +1317,11 @@ def register_ketoan_sme_routes(app):
         conn.row_factory = sqlite3.Row
         try:
             _bootstrap_sme_db()
-            return jsonify({'success': True, 'data': list_payroll_runs(conn)})
+            return jsonify({
+                'success': True,
+                'data': list_payroll_runs(conn, branch_code=_sme_branch_arg()),
+                'branch_code': _sme_branch_arg(),
+            })
         except Exception as e:
             logger.exception('api_sme_payroll_runs')
             return jsonify({'success': False, 'error': str(e)}), 500
@@ -547,6 +1345,7 @@ def register_ketoan_sme_routes(app):
                 records=data.get('records') or [],
                 posting_date=data.get('date') or data.get('posting_date'),
                 expense_account=data.get('expense_account') or '642',
+                branch_code=_sme_branch_arg(),
                 created_by=session.get('user_name') or session.get('username'),
                 commit=True,
             )
@@ -604,6 +1403,32 @@ def register_ketoan_sme_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/sme/payroll/preview', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_payroll_preview():
+        try:
+            month = int(request.args.get('month', datetime.now().month))
+            year = int(request.args.get('year', datetime.now().year))
+        except (TypeError, ValueError):
+            return jsonify(success=False, message='Tháng hoặc năm không hợp lệ'), 400
+
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            from Services.sme.payroll import preview_payroll_grid
+            result = preview_payroll_grid(conn, month, year)
+            return jsonify({
+                'success': True,
+                'data': result['data'],
+                'standard_days': result['standard_days'],
+            })
+        except Exception as e:
+            logger.exception('api_sme_payroll_preview')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/SME_production')
     @login_required
     @require_sme_regime
@@ -636,16 +1461,19 @@ def register_ketoan_sme_routes(app):
 
     @app.route('/SME_audit_log')
     @login_required
+    @require_sme_regime
     def SME_audit_log():
         return redirect(url_for('audit_log_page'))
 
     @app.route('/SME_dashboard_warehouse')
     @login_required
+    @require_sme_regime
     def SME_dashboard_warehouse():
         return render_template('KeToanSME/dashboard_warehouse.html')
 
     @app.route('/SME_dashboard_debt')
     @login_required
+    @require_sme_regime
     def SME_dashboard_debt():
         return render_template('KeToanSME/dashboard_debt.html')
 
@@ -663,11 +1491,16 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_PhaiTraCongNhanVien():
-        """Phải trả NV SME — không redirect sổ HKD."""
-        return render_template('KeToanSME/SME_salary.html', focus='payable')
+        """Phải trả NV SME — số dư TK 334 trên sổ kép."""
+        try:
+            _bootstrap_sme_db()
+        except Exception:
+            pass
+        return render_template('KeToanSME/employee_payable.html')
 
     @app.route('/SME_dashboard_HRSalary')
     @login_required
+    @require_sme_regime
     def SME_dashboard_HRSalary():
         return render_template('KeToanSME/dashboard_HRSalary.html')
 
@@ -679,11 +1512,13 @@ def register_ketoan_sme_routes(app):
 
     @app.route('/SME_TSCD')
     @login_required
+    @require_sme_regime
     def SME_TSCD():
         return render_template('KeToanSME/dashboard_TSCD.html')
 
     @app.route('/SME_CCDC')
     @login_required
+    @require_sme_regime
     def SME_CCDC():
         return render_template('KeToanSME/dashboard_CCDC.html')
 
@@ -735,12 +1570,18 @@ def register_ketoan_sme_routes(app):
                 info = dict(info_row) if info_row else {}
             except sqlite3.Error:
                 info = {}
+            branch = (
+                request.args.get('branch')
+                or session.get('sme_branch_filter')
+                or 'ALL'
+            )
             try:
                 book = cash_account_book(
                     conn,
                     fiscal_year=selected_year,
                     account_prefix=account_prefix,
                     account_code=selected_account,
+                    branch_code=branch,
                 )
             except ValueError as exc:
                 abort(400, description=str(exc))
@@ -770,6 +1611,129 @@ def register_ketoan_sme_routes(app):
         return _render_sme_cash_book(
             '112', 'KeToanSME/SME_SoTienGuiNganHang.html',
         )
+
+    @app.route('/api/sme/import/next_sequence', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_import_next_sequence():
+        from routes.inventory import _next_import_no_from_db
+
+        payload = request.get_json(silent=True) or {}
+        mode = (payload.get('mode') or request.args.get('mode') or 'stock').strip().lower()
+
+        conn = get_db_connection()
+        conn.execute('BEGIN IMMEDIATE')
+        c = conn.cursor()
+        try:
+            next_no = _next_import_no_from_db(c, mode)
+            conn.commit()
+            return jsonify({'success': True, 'next_no': next_no})
+        except Exception as e:
+            conn.rollback()
+            fallback = 'HT000001' if mode == 'service' else 'PN000001'
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'next_no': fallback,
+            }), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/import/<int:import_id>', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_import_detail(import_id):
+        from Services.import_line_helpers import load_import_for_edit
+        from Services.sme.branches import assert_import_in_branch
+
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            imp = load_import_for_edit(conn, import_id)
+            if not imp:
+                return jsonify({'error': 'Không tìm thấy phiếu nhập'}), 404
+
+            try:
+                assert_import_in_branch(conn, import_id)
+            except ValueError as exc:
+                return jsonify({'error': str(exc)}), 403
+
+            items_out = []
+            for it in imp.get('items') or []:
+                pid = it.get('product_id')
+                if pid in (None, '', 0, '0'):
+                    continue
+                qty = float(it.get('qty') or it.get('quantity') or 0)
+                returned = float(
+                    conn.execute(
+                        """
+                        SELECT COALESCE(SUM(quantity), 0)
+                        FROM return_import
+                        WHERE import_id = ? AND product_id = ?
+                        """,
+                        (import_id, pid),
+                    ).fetchone()[0]
+                )
+                name = (
+                    it.get('name')
+                    or it.get('product_name')
+                    or ''
+                ).strip()
+                items_out.append({
+                    'product_id': pid,
+                    'name': name,
+                    'product_name': name,
+                    'unit': it.get('unit') or 'Cái',
+                    'quantity': qty,
+                    'buyprice': float(it.get('buyprice') or 0),
+                    'discount': float(it.get('discount') or 0),
+                    'tax': float(it.get('tax') or 0),
+                    'remaining_qty': qty - returned,
+                })
+
+            return jsonify({
+                'id': imp.get('id'),
+                'import_no': imp.get('import_no'),
+                'date': imp.get('date'),
+                'items': items_out,
+            }), 200
+        except Exception as exc:
+            logger.exception('api_sme_import_detail(%s)', import_id)
+            return jsonify({'error': f'Lỗi tải chi tiết phiếu nhập: {exc}'}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/import/<int:import_id>/edit', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_import_edit_detail(import_id):
+        from Services.import_line_helpers import load_import_for_edit, prepare_import_edit_json
+        from Services.sme.branches import assert_import_in_branch
+
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            imp = load_import_for_edit(conn, import_id)
+            if not imp:
+                return jsonify({'success': False, 'error': 'Không tìm thấy phiếu nhập'}), 404
+
+            try:
+                assert_import_in_branch(conn, import_id)
+            except ValueError as e:
+                return jsonify({'success': False, 'error': str(e)}), 403
+
+            return jsonify({
+                'success': True,
+                'data': prepare_import_edit_json(imp),
+            })
+        except Exception as exc:
+            logger.exception('api_sme_import_edit_detail(%s)', import_id)
+            return jsonify({
+                'success': False,
+                'error': f'Lỗi tải chi tiết phiếu nhập: {exc}',
+            }), 500
+        finally:
+            conn.close()
 
     @app.route('/api/import_sme', methods=['POST'])
     @app.route('/api/import_sme/<int:edit_import_id>', methods=['PUT'])
@@ -823,6 +1787,13 @@ def register_ketoan_sme_routes(app):
                 edit_id = int(raw_edit) if raw_edit not in (None, '', 0, '0') else None
             except (TypeError, ValueError):
                 edit_id = None
+
+            if edit_id:
+                from Services.sme.branches import assert_import_in_branch
+                try:
+                    assert_import_in_branch(conn, edit_id)
+                except ValueError as exc:
+                    return jsonify({'error': str(exc), 'success': False}), 403
 
             def _normalize_line_type(raw):
                 t = str(raw or 'goods').strip().lower()
@@ -893,7 +1864,13 @@ def register_ketoan_sme_routes(app):
             sup_row = c.fetchone()
             supplier_name = sup_row['name'] if sup_row else f"NCC ID {supplier_id}"
 
-            # Validate warehouse for HH/VT
+            # Validate warehouse for HH/VT + khớp chi nhánh session
+            from Services.sme.branch_filter import assert_warehouse_in_session_branch
+            try:
+                if default_warehouse:
+                    assert_warehouse_in_session_branch(conn, default_warehouse)
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
             for item in items:
                 lt = _normalize_line_type(
                     item.get('line_type') or item.get('invoice_product_type') or item.get('product_type')
@@ -905,6 +1882,10 @@ def register_ketoan_sme_routes(app):
                         return jsonify({
                             "error": f'Dòng "{name}" (Hàng hóa/Vật tư) bắt buộc chọn kho.',
                         }), 400
+                    try:
+                        assert_warehouse_in_session_branch(conn, wh)
+                    except ValueError as e:
+                        return jsonify({"error": str(e)}), 400
 
             total_base_vnd = Decimal('0.00')
             for i in items:
@@ -1077,7 +2058,7 @@ def register_ketoan_sme_routes(app):
                 import_id = c.lastrowid
 
             c.execute('PRAGMA table_info(stock_moves)')
-            sm_has_wh = 'warehouse_code' in {col[1] for col in c.fetchall()}
+            sm_cols = {col[1] for col in c.fetchall()}
 
             p_ids = [i.get('product_id') for i in items if i.get('product_id')]
             p_map = {}
@@ -1311,34 +2292,21 @@ def register_ketoan_sme_routes(app):
                     move_note = (
                         f"Nhập kho từ {supplier_name} ({desc_label}: {product_name}) — {warehouse_code}"
                     )
-                    if sm_has_wh:
-                        c.execute(
-                            """
-                            INSERT INTO stock_moves (
-                                product_id, date, type, ref_id, quantity, cost_price, note,
-                                ref_document, ref_type, type1, unit, unit1, unit_ratio, warehouse_code
-                            ) VALUES (?, ?, 'import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """,
-                            (
-                                pid, import_date, import_id, float(qty_retail), float(cost_per_retail),
-                                move_note, import_no, 'import', 'Nhập', retail_unit, wholesale_unit,
-                                float(ratio), warehouse_code,
-                            ),
-                        )
-                    else:
-                        c.execute(
-                            """
-                            INSERT INTO stock_moves (
-                                product_id, date, type, ref_id, quantity, cost_price, note,
-                                ref_document, ref_type, type1, unit, unit1, unit_ratio
-                            ) VALUES (?, ?, 'import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """,
-                            (
-                                pid, import_date, import_id, float(qty_retail), float(cost_per_retail),
-                                move_note, import_no, 'import', 'Nhập', retail_unit, wholesale_unit,
-                                float(ratio),
-                            ),
-                        )
+                    _insert_sme_import_stock_move(
+                        c,
+                        sm_cols,
+                        product_id=pid,
+                        import_date=import_date,
+                        import_id=import_id,
+                        qty=qty_retail,
+                        cost_per_retail=cost_per_retail,
+                        move_note=move_note,
+                        import_no=import_no,
+                        retail_unit=retail_unit,
+                        wholesale_unit=wholesale_unit,
+                        ratio=ratio,
+                        warehouse_code=warehouse_code,
+                    )
                     try:
                         c.execute(
                             """
@@ -1502,11 +2470,13 @@ def register_ketoan_sme_routes(app):
         conn.row_factory = sqlite3.Row
         try:
             from Services.sme.landed_cost import list_eligible_target_imports
+            from Services.sme.branches import request_branch_filter
             rows = list_eligible_target_imports(
                 conn,
                 scope=request.args.get('scope') or 'all',
                 keyword=request.args.get('q') or request.args.get('keyword'),
                 limit=int(request.args.get('limit') or 50),
+                branch_code=request_branch_filter(),
             )
             return jsonify({'success': True, 'data': rows})
         except Exception as e:
@@ -1521,6 +2491,7 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
+            from Services.sme.branches import request_branch_filter
             from Services.sme.landed_cost import preview_allocation
             data = request.get_json() or {}
             result = preview_allocation(
@@ -1530,6 +2501,7 @@ def register_ketoan_sme_routes(app):
                 scope=data.get('scope'),
                 cost_category=data.get('cost_category'),
                 target_detail_ids=data.get('target_detail_ids'),
+                branch_code=request_branch_filter(),
             )
             return jsonify({'success': True, 'data': result})
         except Exception as e:
@@ -1544,6 +2516,7 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
+            from Services.sme.branches import request_branch_filter
             from Services.sme.landed_cost import allocate_landed_cost
             data = request.get_json() or {}
             invoice_id = int(data.get('invoice_id') or data.get('cost_invoice_id') or 0)
@@ -1563,6 +2536,7 @@ def register_ketoan_sme_routes(app):
                 or session.get('user_name')
                 or session.get('username'),
                 commit=True,
+                branch_code=request_branch_filter(),
             )
             return jsonify(result)
         except Exception as e:
@@ -1622,6 +2596,16 @@ def register_ketoan_sme_routes(app):
             return jsonify({'success': False, 'error': str(e)}), 400
         finally:
             conn.close()
+
+    @app.route('/api/sme/invoices/inward', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_invoices_inward_list():
+        """Danh sách HĐ mua — lọc CN (ủy quyền logic /api/invoices/inward)."""
+        view = app.view_functions.get('get_inward_invoices')
+        if not view:
+            return jsonify({'success': False, 'error': 'API HĐ mua chưa sẵn sàng'}), 500
+        return view()
 
     # --------------------------------------------------------------------------
     # Danh mục tài khoản SME (TT99) — tách biệt HKD
@@ -1837,6 +2821,11 @@ def register_ketoan_sme_routes(app):
             q = (request.args.get('q') or '').strip() or None
             limit = request.args.get('limit', default=50, type=int) or 50
             offset = request.args.get('offset', default=0, type=int) or 0
+            branch = (
+                request.args.get('branch')
+                or session.get('sme_branch_filter')
+                or 'ALL'
+            )
             rows = list_journal_entries(
                 conn,
                 document_type=doc_type,
@@ -1845,10 +2834,14 @@ def register_ketoan_sme_routes(app):
                 date_from=date_from,
                 date_to=date_to,
                 q=q,
+                branch_code=branch,
                 limit=min(max(limit, 1), 200),
                 offset=max(offset, 0),
             )
-            return jsonify({'success': True, 'data': rows, 'count': len(rows)})
+            return jsonify({
+                'success': True, 'data': rows, 'count': len(rows),
+                'branch_code': branch,
+            })
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
@@ -1877,7 +2870,11 @@ def register_ketoan_sme_routes(app):
         payload = request.get_json(silent=True) or {}
         conn = get_db_connection()
         try:
+            from Services.sme.branch_filter import assert_row_in_branch
             from Services.sme.journal_engine import reverse_journal_entry
+            assert_row_in_branch(
+                conn, 'sme_journal_entries', entry_id, label='Bút toán',
+            )
             rev = reverse_journal_entry(
                 conn,
                 entry_id,
@@ -1929,6 +2926,11 @@ def register_ketoan_sme_routes(app):
             period_to = request.args.get('period_to', type=int) or period_from
             include_zero = request.args.get('include_zero', '1') in ('1', 'true', 'True')
             postable_only = request.args.get('postable_only', '0') in ('1', 'true', 'True')
+            branch = (
+                request.args.get('branch')
+                or session.get('sme_branch_filter')
+                or 'ALL'
+            )
             data = trial_balance(
                 conn,
                 fiscal_year=year,
@@ -1936,6 +2938,7 @@ def register_ketoan_sme_routes(app):
                 period_to=period_to,
                 postable_only=postable_only,
                 include_zero=include_zero,
+                branch_code=branch,
             )
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
@@ -1980,7 +2983,16 @@ def register_ketoan_sme_routes(app):
                     date_from, date_to = period_bounds(year, period)
                 else:
                     date_from, date_to = f'{year}-01-01', f'{year}-12-31'
-            data = account_ledger(conn, account_code, date_from=date_from, date_to=date_to)
+            branch = (
+                request.args.get('branch')
+                or session.get('sme_branch_filter')
+                or 'ALL'
+            )
+            data = account_ledger(
+                conn, account_code,
+                date_from=date_from, date_to=date_to,
+                branch_code=branch,
+            )
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2141,7 +3153,7 @@ def register_ketoan_sme_routes(app):
             from Services.sme.dashboard_metrics import dashboard_metrics
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month
-            data = dashboard_metrics(conn, fiscal_year=year, period_to=period_to)
+            data = dashboard_metrics(conn, fiscal_year=year, period_to=period_to, branch_code=_sme_branch_arg())
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2266,11 +3278,16 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         try:
             from Services.sme.mgmt_report import management_report
+            from Services.sme.branches import request_branch_filter
             year = request.args.get('year', type=int) or datetime.now().year
             period_from = request.args.get('period_from', type=int) or 1
             period_to = request.args.get('period_to', type=int) or datetime.now().month
             data = management_report(
-                conn, fiscal_year=year, period_from=period_from, period_to=period_to,
+                conn,
+                fiscal_year=year,
+                period_from=period_from,
+                period_to=period_to,
+                branch_code=request_branch_filter(),
             )
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
@@ -2287,9 +3304,13 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         try:
             from Services.sme.costing import costing_summary
+            from Services.sme.branches import request_branch_filter
             year = request.args.get('year', type=int) or datetime.now().year
             period = request.args.get('period', type=int) or datetime.now().month
-            data = costing_summary(conn, fiscal_year=year, period=period)
+            data = costing_summary(
+                conn, fiscal_year=year, period=period,
+                branch_code=request_branch_filter(),
+            )
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2327,12 +3348,14 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         try:
             from Services.sme.purchase_order import list_purchase_orders
+            from Services.sme.branches import request_branch_filter
             rows = list_purchase_orders(
                 conn,
                 status=request.args.get('status') or None,
                 keyword=request.args.get('keyword') or None,
                 date_from=request.args.get('date_from') or None,
                 date_to=request.args.get('date_to') or None,
+                branch_code=request_branch_filter(),
             )
             return jsonify({'success': True, 'data': rows})
         except Exception as e:
@@ -2377,11 +3400,15 @@ def register_ketoan_sme_routes(app):
     def api_sme_po_get(po_id):
         conn = get_db_connection()
         try:
+            from Services.sme.branch_filter import assert_row_in_branch
             from Services.sme.purchase_order import get_purchase_order
+            assert_row_in_branch(conn, 'sme_purchase_orders', po_id, label='Đơn mua hàng')
             data = get_purchase_order(conn, po_id)
             if not data:
                 return jsonify({'success': False, 'error': 'Không tìm thấy đơn'}), 404
             return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 403
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
@@ -2393,7 +3420,9 @@ def register_ketoan_sme_routes(app):
     def api_sme_po_update(po_id):
         conn = get_db_connection()
         try:
+            from Services.sme.branch_filter import assert_row_in_branch
             from Services.sme.purchase_order import update_purchase_order
+            assert_row_in_branch(conn, 'sme_purchase_orders', po_id, label='Đơn mua hàng')
             payload = request.get_json(silent=True) or {}
             data = update_purchase_order(
                 conn,
@@ -2425,7 +3454,9 @@ def register_ketoan_sme_routes(app):
     def api_sme_po_status(po_id):
         conn = get_db_connection()
         try:
+            from Services.sme.branch_filter import assert_row_in_branch
             from Services.sme.purchase_order import set_purchase_order_status
+            assert_row_in_branch(conn, 'sme_purchase_orders', po_id, label='Đơn mua hàng')
             payload = request.get_json(silent=True) or {}
             data = set_purchase_order_status(conn, po_id, payload.get('status') or '')
             conn.commit()
@@ -2445,7 +3476,9 @@ def register_ketoan_sme_routes(app):
     def api_sme_po_import_draft(po_id):
         conn = get_db_connection()
         try:
+            from Services.sme.branch_filter import assert_row_in_branch
             from Services.sme.purchase_order import build_import_draft_from_po
+            assert_row_in_branch(conn, 'sme_purchase_orders', po_id, label='Đơn mua hàng')
             data = build_import_draft_from_po(conn, po_id)
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
@@ -2464,7 +3497,10 @@ def register_ketoan_sme_routes(app):
             from Services.sme.purchase_order import purchasing_hub_metrics
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month
-            data = purchasing_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            data = purchasing_hub_metrics(
+                conn, fiscal_year=year, period_to=period_to,
+                branch_code=_sme_branch_arg(),
+            )
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2482,7 +3518,7 @@ def register_ketoan_sme_routes(app):
             from Services.sme.dashboard_metrics import debt_hub_metrics
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month
-            data = debt_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            data = debt_hub_metrics(conn, fiscal_year=year, period_to=period_to, branch_code=_sme_branch_arg())
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2500,7 +3536,7 @@ def register_ketoan_sme_routes(app):
             from Services.sme.dashboard_metrics import warehouse_hub_metrics
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month
-            data = warehouse_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            data = warehouse_hub_metrics(conn, fiscal_year=year, period_to=period_to, branch_code=_sme_branch_arg())
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2518,7 +3554,7 @@ def register_ketoan_sme_routes(app):
             from Services.sme.dashboard_metrics import fixed_asset_hub_metrics
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month
-            data = fixed_asset_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            data = fixed_asset_hub_metrics(conn, fiscal_year=year, period_to=period_to, branch_code=_sme_branch_arg())
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2536,7 +3572,7 @@ def register_ketoan_sme_routes(app):
             from Services.sme.dashboard_metrics import tools_hub_metrics
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month
-            data = tools_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            data = tools_hub_metrics(conn, fiscal_year=year, period_to=period_to, branch_code=_sme_branch_arg())
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2554,7 +3590,7 @@ def register_ketoan_sme_routes(app):
             from Services.sme.dashboard_metrics import hr_hub_metrics
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month
-            data = hr_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            data = hr_hub_metrics(conn, fiscal_year=year, period_to=period_to, branch_code=_sme_branch_arg())
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2572,7 +3608,7 @@ def register_ketoan_sme_routes(app):
             from Services.sme.dashboard_metrics import sales_hub_metrics
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month
-            data = sales_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            data = sales_hub_metrics(conn, fiscal_year=year, period_to=period_to, branch_code=_sme_branch_arg())
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2590,7 +3626,7 @@ def register_ketoan_sme_routes(app):
             from Services.sme.dashboard_metrics import books_hub_metrics
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month
-            data = books_hub_metrics(conn, fiscal_year=year, period_to=period_to)
+            data = books_hub_metrics(conn, fiscal_year=year, period_to=period_to, branch_code=_sme_branch_arg())
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2725,7 +3761,11 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         try:
             from Services.sme.sale_forms import list_products_brief
-            return jsonify({'success': True, 'data': list_products_brief(conn)})
+            from Services.sme.branches import request_branch_filter
+            return jsonify({
+                'success': True,
+                'data': list_products_brief(conn, branch_code=request_branch_filter()),
+            })
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
@@ -2767,11 +3807,13 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         try:
             from Services.sme.sale_forms import form_02_bh
+            from Services.sme.branches import request_branch_filter
             data = form_02_bh(
                 conn,
                 product_id=request.args.get('product_id', type=int) or 0,
                 date_from=request.args.get('date_from') or '',
                 date_to=request.args.get('date_to') or '',
+                branch_code=request_branch_filter(),
             )
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
@@ -2788,9 +3830,35 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         try:
             from Services.sme.employee_receivable import employee_receivable_summary
+            from Services.sme.branches import request_branch_filter
             year = request.args.get('year', type=int) or datetime.now().year
             period = request.args.get('period', type=int) or datetime.now().month
-            data = employee_receivable_summary(conn, fiscal_year=year, period=period)
+            data = employee_receivable_summary(
+                conn, fiscal_year=year, period=period,
+                branch_code=request_branch_filter(),
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/employee-payable', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_employee_payable():
+        conn = get_db_connection()
+        try:
+            from Services.sme.employee_payable import employee_payable_summary
+            from Services.sme.branches import request_branch_filter
+            year = request.args.get('year', type=int) or datetime.now().year
+            period = request.args.get('period', type=int) or datetime.now().month
+            data = employee_payable_summary(
+                conn, fiscal_year=year, period=period,
+                branch_code=request_branch_filter(),
+            )
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
@@ -2949,3 +4017,74 @@ def register_ketoan_sme_routes(app):
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
+
+    # Phase P0: tạm ứng 03–05 TT, kiểm kê quỹ, đối chiếu NH, thanh lý TSCĐ, hủy CT
+    from routes.ketoan_sme_phase0 import register_sme_phase0_routes
+    register_sme_phase0_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+    )
+    # Phase P1: kho VT, TNDN, FX, BHXH/LĐTL
+    from routes.ketoan_sme_phase1 import register_sme_phase1_routes
+    register_sme_phase1_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+    )
+    # Phase P2: vay nợ, ký quỹ
+    from routes.ketoan_sme_phase2 import register_sme_phase2_routes
+    register_sme_phase2_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+    )
+    # Tiếp theo: TNDN XML, góp vốn, 08b
+    from routes.ketoan_sme_phase3 import register_sme_phase3_routes
+    register_sme_phase3_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+    )
+    # Phase P4: giao khoán LĐTL, 02/03/04 LĐTL, 03-VT, biên bản TSCĐ
+    from routes.ketoan_sme_phase4 import register_sme_phase4_routes
+    register_sme_phase4_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+    )
+    # Phase P5: 06/07/09-TT + in 05-VT
+    from routes.ketoan_sme_phase5 import register_sme_phase5_routes
+    register_sme_phase5_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+    )
+    # Phase P6: in còn thiếu, year-end, void
+    from routes.ketoan_sme_phase6 import register_sme_phase6_routes
+    register_sme_phase6_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+    )
+    # Phase P7: bịt lỗ hổng (void, CCDC, số dư quỹ SME)
+    from routes.ketoan_sme_phase7 import register_sme_phase7_routes
+    register_sme_phase7_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+    )
+    # Phase P8: tối ưu BCTC Excel, 01-BH giao đại lý, TT58, TNCN, void lương
+    from routes.ketoan_sme_phase8 import register_sme_phase8_routes
+    register_sme_phase8_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+    )
+    # Phase P9: multi-branch
+    from routes.ketoan_sme_phase9 import register_sme_phase9_routes
+    register_sme_phase9_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+    )
