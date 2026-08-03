@@ -2236,9 +2236,20 @@ Trân trọng,
         if not tenant_id or tenant_id.lower() in ['main', '']:
             return jsonify({"success": False, "error": "Không thể xóa tenant chính"}), 400
 
-        conn = get_db_connection()
+        from db_utils import (
+            get_main_db_connection,
+            remove_sqlite_files,
+            force_close_request_db_if_path,
+            _normalize_db_path,
+        )
+
+        # Luôn dùng MAIN registry — không dùng get_db_connection() (có thể đang
+        # giữ tenant DB / trùng connection với write_audit → database is locked).
+        conn = get_main_db_connection()
+        db_path = None
+        tenant_label = tenant_id
         try:
-            conn.row_factory = sqlite3.Row  # Đảm bảo truy cập được row['db_path']
+            conn.row_factory = sqlite3.Row
             c = conn.cursor()
 
             # 2. Lấy thông tin đường dẫn DB trước khi xóa
@@ -2247,58 +2258,103 @@ Trân trọng,
             if not row:
                 return jsonify({"success": False, "error": "Không tìm thấy tenant"}), 404
 
-            db_path = row['db_path']
-            tenant_label = row['business_name']
+            db_path = _normalize_db_path(row['db_path'])
+            tenant_label = row['business_name'] or tenant_id
 
-            # 3. THỰC HIỆN XÓA (Nên dùng Transaction)
-            # Bước A: Xóa thiết bị tin cậy của các user thuộc tenant này
-            # Sử dụng subquery để tìm tất cả username liên quan đến tenant_id trong bảng mapping
+            # Đóng connection request đang mở file tenant (nếu master đang xem tenant này)
+            force_close_request_db_if_path(db_path)
+
+            # 3. Xóa metadata trên MAIN trong một transaction
             c.execute("""
-                DELETE FROM user_trusted_devices 
+                DELETE FROM user_trusted_devices
                 WHERE username IN (
                     SELECT username FROM user_tenant_mapping WHERE tenant_id = ?
                 )
             """, (tenant_id,))
-
-            # Bước B: Xóa mapping giữa user và tenant
             c.execute("DELETE FROM user_tenant_mapping WHERE tenant_id = ?", (tenant_id,))
-
-            # Bước C: Xóa tenant khỏi bảng quản lý
             c.execute("DELETE FROM tenants WHERE tenant_id = ?", (tenant_id,))
-
-            # Bước D: Reset sqlite_sequence (Không bắt buộc, nhưng bạn đã thêm vào)
             try:
-                c.execute("DELETE FROM sqlite_sequence WHERE name IN ('tenants', 'user_tenant_mapping', 'user_trusted_devices')")
-            except Exception as seq_err:
-                print(f"--- [INFO] sqlite_sequence reset skipped: {seq_err} ---")
+                c.execute(
+                    "DELETE FROM sqlite_sequence WHERE name IN "
+                    "('tenants', 'user_tenant_mapping', 'user_trusted_devices')"
+                )
+            except Exception:
+                pass
+
+            # Ghi audit trên CÙNG connection MAIN (tránh mở connection thứ 2 → locked)
+            try:
+                from Services.audit_log import ensure_audit_table
+                ensure_audit_table(conn)
+                now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                user = session.get('user') or {}
+                conn.execute(
+                    """
+                    INSERT INTO audit_log (
+                        created_at, tenant_id, user_id, username, user_role,
+                        action, module, entity_type, entity_id, entity_label,
+                        summary, old_data, new_data, ip_address, request_path,
+                        user_agent, status
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        now, tenant_id,
+                        user.get('id') or session.get('user_id'),
+                        user.get('username') or session.get('username') or 'master',
+                        user.get('role') or session.get('role') or 'master',
+                        'delete', 'tenant', 'tenant', tenant_id, tenant_label,
+                        f'Xóa tenant {tenant_id}',
+                        json.dumps({'tenant_id': tenant_id, 'db_path': db_path}, ensure_ascii=False),
+                        None,
+                        request.remote_addr,
+                        request.path,
+                        (request.headers.get('User-Agent') or '')[:300],
+                        'success',
+                    ),
+                )
+            except Exception as audit_err:
+                print(f'--- [WARN] audit delete_tenant skipped: {audit_err} ---')
 
             conn.commit()
 
-            from Services.audit_log import write_audit
-            write_audit(
-                'delete', 'tenant',
-                f"Xóa tenant {tenant_id}",
-                entity_type='tenant', entity_id=tenant_id, entity_label=tenant_label,
-                old_data={'tenant_id': tenant_id, 'db_path': db_path},
-                tenant_id=tenant_id,
-                use_main=True,
-            )
-
-            # 4. Xóa file vật lý sau khi DB chính đã cập nhật thành công
-            if db_path and os.path.exists(db_path):
-                try:
-                    # Đảm bảo file không bị lock trước khi xóa
-                    os.remove(db_path)
-                except Exception as e:
-                    print(f"Lỗi xóa file vật lý ({db_path}): {e}")
-
-            return jsonify({"success": True, "message": f"Đã xóa thành công tenant {tenant_id} và các dữ liệu liên quan."})
+            # Nếu master đang xem tenant vừa xóa — thoát về MAIN
+            if session.get('master_viewing_tenant') == tenant_id:
+                home = session.get('master_home_db_path')
+                session.pop('master_viewing_tenant', None)
+                session.pop('master_home_db_path', None)
+                if home:
+                    session['db_path'] = home
+                session.modified = True
 
         except Exception as e:
-            conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             return jsonify({"success": False, "error": f"Lỗi hệ thống: {str(e)}"}), 500
         finally:
-            conn.close()
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        # 4. Xóa file vật lý sau khi đã đóng hết connection MAIN
+        file_note = ''
+        if db_path:
+            removed = remove_sqlite_files(db_path)
+            if removed.get('errors'):
+                file_note = (
+                    f" Metadata đã xóa; file DB còn giữ do đang bị khóa: "
+                    f"{'; '.join(removed['errors'])}"
+                )
+                print(f'Lỗi xóa file vật lý ({db_path}): {removed["errors"]}')
+
+        return jsonify({
+            "success": True,
+            "message": (
+                f"Đã xóa thành công tenant {tenant_id} và các dữ liệu liên quan."
+                + file_note
+            ),
+        })
     @app.route('/thiet-lap')
     @admin_or_master_required
     def store_setup_page():

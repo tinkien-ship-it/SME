@@ -176,6 +176,54 @@ def get_main_db_connection():
     return open_sqlite(MAIN_DB_PATH)
 
 
+def force_close_request_db_if_path(db_path: str | None) -> None:
+    """Đóng ngay connection request-scoped nếu đang mở đúng ``db_path`` (trước khi xóa file)."""
+    if not db_path or not has_request_context():
+        return
+    cached_path = getattr(g, '_sme_db_path', None)
+    if not cached_path:
+        return
+    try:
+        if os.path.abspath(cached_path) != os.path.abspath(db_path):
+            return
+    except OSError:
+        return
+    close_request_db()
+    # WAL cache: cho phép process khác / lần mở sau cấu hình lại
+    try:
+        _wal_ready_paths.discard(os.path.abspath(db_path))
+    except OSError:
+        pass
+
+
+def remove_sqlite_files(db_path: str | None, *, retries: int = 5, delay_sec: float = 0.15) -> dict:
+    """Xóa file SQLite kèm ``-wal`` / ``-shm`` (Windows hay giữ lock ngắn)."""
+    import time
+
+    result = {'removed': [], 'errors': []}
+    path = _normalize_db_path(db_path)
+    if not path:
+        return result
+    force_close_request_db_if_path(path)
+    candidates = [path, f'{path}-wal', f'{path}-shm', f'{path}-journal']
+    for candidate in candidates:
+        if not os.path.exists(candidate):
+            continue
+        last_err = None
+        for _ in range(max(1, retries)):
+            try:
+                os.remove(candidate)
+                result['removed'].append(candidate)
+                last_err = None
+                break
+            except OSError as exc:
+                last_err = exc
+                time.sleep(delay_sec)
+        if last_err is not None:
+            result['errors'].append(f'{candidate}: {last_err}')
+    return result
+
+
 def get_tenant_db_connection(tenant_id):
     """Mở DB của một tenant cụ thể (dùng khi master truy vấn nhật ký)."""
     if not tenant_id:
