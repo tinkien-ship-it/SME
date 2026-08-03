@@ -1,5 +1,26 @@
-{% extends "KeToanHKD/_layout.html" %}
-{% block title %}Thiết Lập - KETO POS{% endblock %}
+{% extends base_layout %}
+{% block title %}Thiết lập hệ thống{% endblock %}
+
+{% block sme_head %}
+<style>
+    .setup-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+    .setup-section-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0d6efd;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e7f1ff;
+    }
+    .form-label { font-weight: 600; font-size: 0.9rem; color: #444; }
+    .required::after { content: " *"; color: #dc3545; }
+    #qrPreviewBox img { max-height: 140px; }
+</style>
+{% endblock %}
 
 {% block hkd_head %}
 <style>
@@ -22,249 +43,18 @@
 </style>
 {% endblock %}
 
+{% block sme_content %}
+{% include '_store_setup_form.html' %}
+{% endblock %}
+
 {% block hkd_content %}
-<div class="mb-4">
-    <h4 class="fw-bold text-dark mb-1">
-        <i class="fas fa-sliders-h text-primary me-2"></i>Thiết Lập
-    </h4>
-    <p class="text-muted mb-0">Thông tin hộ kinh doanh và tài khoản VietQR dùng trên hóa đơn, tờ khai thuế và mã QR khi bán hàng.</p>
-</div>
+{% include '_store_setup_form.html' %}
+{% endblock %}
 
-<form id="storeSetupForm">
-    <!-- Thông tin hộ kinh doanh -->
-    <div class="card setup-card mb-4">
-        <div class="card-body p-4">
-            <h5 class="setup-section-title">
-                <i class="fas fa-store me-2"></i>Thông Tin Hộ Kinh Doanh
-            </h5>
-            <div class="row g-3">
-                <div class="col-md-8">
-                    <label class="form-label required">Tên hộ kinh doanh / cửa hàng</label>
-                    <input type="text" name="business_name" class="form-control" value="{{ info.business_name or '' }}" required
-                           placeholder="VD: Hộ kinh doanh Nguyễn Văn A">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Mã số thuế</label>
-                    <input type="text" name="tax_code" class="form-control" value="{{ info.tax_code or '' }}" placeholder="0123456789">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label required">Số điện thoại</label>
-                    <input type="tel" name="phone" class="form-control" value="{{ info.phone or '' }}"
-                           placeholder="0912345678" pattern="[0-9+\-\s()]{8,15}">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Email liên hệ / tờ khai</label>
-                    <input type="email" name="email" class="form-control" value="{{ info.email or '' }}" placeholder="example@domain.com">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Chủ hộ / Người đại diện</label>
-                    <input type="text" name="representative_name" class="form-control" value="{{ info.representative_name or '' }}"
-                           placeholder="Họ và tên chủ hộ">
-                    <div class="form-text">Dùng nhận diện Chủ hộ trên bảng lương khi trùng tên nhân viên.</div>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Địa chỉ kinh doanh</label>
-                    <input type="text" name="address" class="form-control" value="{{ info.address or '' }}" placeholder="Số nhà, phường, quận, tỉnh/thành">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tài khoản VietQR -->
-    <div class="card setup-card mb-4">
-        <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <h5 class="setup-section-title mb-0 border-0 pb-0">
-                    <i class="fas fa-qrcode me-2"></i>Tài Khoản VietQR
-                </h5>
-                <span id="vietqrStatusBadge" class="badge bg-secondary">Đang kiểm tra...</span>
-            </div>
-            <div class="alert alert-info py-2 small">
-                <i class="fas fa-info-circle me-1"></i>
-                Số tài khoản và mã BIN dùng tạo mã QR cho khách chuyển khoản khi bán hàng và trên phụ lục tờ khai thuế.
-                Có thể bổ sung sau nếu chưa có tài khoản ngân hàng.
-            </div>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Chọn ngân hàng</label>
-                    <select id="bank_code_select" class="form-select" onchange="onBankBinChange(this)">
-                        <option value="">-- Chọn ngân hàng --</option>
-                        <option value="970436" data-name="Vietcombank">Vietcombank (970436)</option>
-                        <option value="970407" data-name="Techcombank">Techcombank (970407)</option>
-                        <option value="970418" data-name="BIDV">BIDV (970418)</option>
-                        <option value="970415" data-name="VietinBank">VietinBank (970415)</option>
-                        <option value="970405" data-name="Agribank">Agribank (970405)</option>
-                        <option value="970422" data-name="MB Bank">MB Bank (970422)</option>
-                        <option value="970416" data-name="ACB">ACB (970416)</option>
-                        <option value="970403" data-name="Sacombank">Sacombank (970403)</option>
-                        <option value="970432" data-name="VPBank">VPBank (970432)</option>
-                        <option value="970423" data-name="TPBank">TPBank (970423)</option>
-                        <option value="970437" data-name="HDBank">HDBank (970437)</option>
-                        <option value="970441" data-name="VIB">VIB (970441)</option>
-                        <option value="970448" data-name="OCB">OCB (970448)</option>
-                        <option value="custom" data-name="">Khác — nhập tay bên dưới</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Tên ngân hàng</label>
-                    <input type="text" name="bank_name" id="bank_name_input" class="form-control" value="{{ info.bank_name or '' }}"
-                           placeholder="VD: Ngân hàng TMCP Sacombank">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Số tài khoản</label>
-                    <input type="text" name="bank_account" id="bank_account_input" class="form-control" value="{{ info.bank_account or '' }}"
-                           placeholder="Nhập STK ngân hàng">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Mã BIN (VietQR)</label>
-                    <input type="text" name="bank_code" id="bank_code_input" class="form-control" value="{{ info.bank_code or '' }}"
-                           placeholder="970403">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Chủ tài khoản (IN HOA)</label>
-                    <input type="text" name="account_holder" class="form-control" value="{{ info.account_holder or '' }}"
-                           placeholder="NGUYEN VAN A">
-                </div>
-                <div class="col-12">
-                    <label class="form-label">Xem trước mã VietQR</label>
-                    <div id="qrPreviewBox" class="border rounded p-3 bg-light text-center small text-muted">
-                        Nhập STK và mã BIN để xem mẫu VietQR
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="d-flex justify-content-end gap-2">
-        <a href="{{ url_for('HKD_dashboard') }}" class="btn btn-outline-secondary">Quay lại</a>
-        <button type="submit" class="btn btn-primary px-4">
-            <i class="fas fa-save me-1"></i>Lưu thiết lập
-        </button>
-    </div>
-</form>
+{% block sme_scripts %}
+{% include '_store_setup_scripts.html' %}
 {% endblock %}
 
 {% block hkd_scripts %}
-<script>
-function onBankBinChange(selectEl) {
-    const opt = selectEl.options[selectEl.selectedIndex];
-    const bin = opt.value;
-    const bankNameInput = document.getElementById('bank_name_input');
-    const bankCodeInput = document.getElementById('bank_code_input');
-    if (!bankCodeInput) return;
-    if (bin && bin !== 'custom') {
-        bankCodeInput.value = bin;
-        if (bankNameInput && opt.dataset.name) {
-            bankNameInput.value = opt.dataset.name;
-        }
-    }
-    updateQrPreview();
-}
-
-function syncBankSelectFromInputs() {
-    const bankCodeInput = document.getElementById('bank_code_input');
-    const bankSelect = document.getElementById('bank_code_select');
-    if (!bankCodeInput || !bankSelect) return;
-    const code = (bankCodeInput.value || '').trim();
-    let matched = false;
-    for (const opt of bankSelect.options) {
-        if (opt.value && opt.value === code) {
-            bankSelect.value = code;
-            matched = true;
-            break;
-        }
-    }
-    if (!matched && code) bankSelect.value = 'custom';
-}
-
-function updateQrPreview() {
-    const box = document.getElementById('qrPreviewBox');
-    const bin = document.getElementById('bank_code_input')?.value?.trim();
-    const acc = document.getElementById('bank_account_input')?.value?.trim();
-    if (!box) return;
-    if (!bin || !acc) {
-        box.innerHTML = 'Nhập STK và mã BIN để xem mẫu VietQR';
-        return;
-    }
-    const holder = document.querySelector('[name="account_holder"]')?.value?.trim() || '';
-    const url = `https://img.vietqr.io/image/${bin}-${acc}-compact2.jpg?amount=100000&addInfo=DH000001&accountName=${encodeURIComponent(holder)}`;
-    box.innerHTML = `<img src="${url}" alt="Mẫu VietQR" onerror="this.parentElement.innerHTML='Không tạo được QR — kiểm tra BIN/STK'">`;
-}
-
-function updateVietqrBadge(data) {
-    const badge = document.getElementById('vietqrStatusBadge');
-    if (!badge || !data?.vietqr) return;
-    if (data.vietqr.ready) {
-        badge.className = 'badge bg-success';
-        badge.textContent = 'VietQR: Sẵn sàng';
-    } else {
-        badge.className = 'badge bg-warning text-dark';
-        const missing = (data.vietqr.missing || []).join(', ');
-        badge.textContent = missing ? ('VietQR: Thiếu ' + missing) : 'VietQR: Chưa đủ thông tin';
-    }
-}
-
-async function loadVietqrStatus() {
-    try {
-        const res = await fetch('/api/settings/payment-bank');
-        const data = await res.json();
-        if (data.success) updateVietqrBadge(data);
-    } catch (e) { /* ignore */ }
-}
-
-function collectFormData(form) {
-    const data = {};
-    new FormData(form).forEach((value, key) => { data[key] = value; });
-    return data;
-}
-
-document.getElementById('storeSetupForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    if (!form.checkValidity()) {
-        form.reportValidity();
-        return;
-    }
-    const payload = collectFormData(form);
-    const btn = form.querySelector('[type="submit"]');
-    btn.disabled = true;
-    try {
-        const res = await fetch('/api/settings/business', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (data.success) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({ icon: 'success', title: 'Đã lưu', text: data.message || 'Cập nhật thiết lập thành công', timer: 2200, showConfirmButton: false });
-            } else {
-                alert(data.message || 'Đã lưu thiết lập');
-            }
-            updateQrPreview();
-            loadVietqrStatus();
-        } else {
-            const msg = data.error || 'Không lưu được';
-            if (typeof Swal !== 'undefined') Swal.fire('Lỗi', msg, 'error');
-            else alert(msg);
-        }
-    } catch (err) {
-        const msg = err.message || 'Lỗi kết nối';
-        if (typeof Swal !== 'undefined') Swal.fire('Lỗi', msg, 'error');
-        else alert(msg);
-    } finally {
-        btn.disabled = false;
-    }
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    syncBankSelectFromInputs();
-    updateQrPreview();
-    loadVietqrStatus();
-    ['bank_code_input', 'bank_account_input'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', updateQrPreview);
-    });
-    document.querySelector('[name="account_holder"]')?.addEventListener('input', updateQrPreview);
-});
-</script>
+{% include '_store_setup_scripts.html' %}
 {% endblock %}

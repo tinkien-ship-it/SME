@@ -121,7 +121,12 @@
     const crReason = document.getElementById('crReason');
     const crAmount = document.getElementById('crAmount');
     const crParty = document.getElementById('crParty');
-    crDate.value = isoToday();
+    if (window.KetoDatePicker) {
+      KetoDatePicker.scan();
+      KetoDatePicker.setDate(crDate, new Date(), false);
+    } else {
+      crDate.value = isoToday();
+    }
     crPay.value = defaultPay;
     crCredit.value = defaultCredit;
     crReason.placeholder = defaultReason;
@@ -146,7 +151,10 @@
       const credit = (document.getElementById('crCredit').value || '').trim() || defaultCredit;
       const crDate = document.getElementById('crDate');
       const crPay = document.getElementById('crPay');
-      if (!crDate.value) return alert('Chọn ngày phiếu thu');
+      const dateIso = window.KetoDatePicker
+        ? (KetoDatePicker.getIsoValue(crDate) || '')
+        : (crDate.value || '');
+      if (!dateIso) return alert('Chọn ngày phiếu thu');
       if (!party) return alert('Nhập người nộp');
       if (amount <= 0) return alert('Số tiền phải lớn hơn 0');
       if (!credit) return alert('Nhập tài khoản Có');
@@ -158,7 +166,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            date: crDate.value,
+            date: dateIso,
             payer_name: party,
             amount,
             payment_method: crPay.value,

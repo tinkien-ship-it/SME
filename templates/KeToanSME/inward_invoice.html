@@ -357,25 +357,23 @@ function formatMoneyInput(inputSelector, hiddenSelector) {
 }
 
 async function loadQuySoDu() {
-    try {
-        const res = await fetch('/api/sme/cash-balances');
-        const data = await res.json();
-        if (data.success) {
-            currentCashBalance = parseFloat(data.so_du_tien_mat || 0);
-            currentBankBalance = parseFloat(data.so_du_ngan_hang || 0);
-            $('#htCashBalance').text(currentCashBalance.toLocaleString('vi-VN') + ' ₫');
-            $('#htBankBalance').text(currentBankBalance.toLocaleString('vi-VN') + ' ₫');
-        }
-    } catch (e) { console.error(e); }
+    const bal = await (window.loadSmeCashBalances ? window.loadSmeCashBalances() : null);
+    if (bal) {
+        currentCashBalance = Number(bal.cash || 0);
+        currentBankBalance = Number(bal.bank || 0);
+        $('#htCashBalance').text(currentCashBalance.toLocaleString('vi-VN') + ' ₫');
+        $('#htBankBalance').text(currentBankBalance.toLocaleString('vi-VN') + ' ₫');
+    }
 }
 
 function checkSoDu(amount, paymentMethod) {
-    const isCash = paymentMethod === 'cash' || paymentMethod.includes('111');
+    if (window.checkSmeCashBalance) return window.checkSmeCashBalance(amount, paymentMethod);
+    const isCash = paymentMethod === 'cash' || String(paymentMethod).includes('111');
     const available = isCash ? currentCashBalance : currentBankBalance;
     if (amount > available) {
-        return { 
-            ok: false, 
-            message: `Số tiền chi (${amount.toLocaleString('vi-VN')} ₫) vượt quá số dư ${isCash ? 'tiền mặt' : 'ngân hàng'} (${available.toLocaleString('vi-VN')} ₫).` 
+        return {
+            ok: false,
+            message: `Số tiền chi (${amount.toLocaleString('vi-VN')} ₫) vượt quá số dư ${isCash ? 'tiền mặt' : 'ngân hàng'} (${available.toLocaleString('vi-VN')} ₫). Không cho phép quỹ âm.`,
         };
     }
     return { ok: true };

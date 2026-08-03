@@ -2,6 +2,7 @@ from flask import g, request, current_app, redirect, url_for, session, flash, js
 import sqlite3
 import os
 import shutil
+import time
 from datetime import datetime
 from flask_bcrypt import generate_password_hash
 import pyotp
@@ -11,6 +12,9 @@ import uuid
 from db_utils import BASE_DIR, MAIN_DB_PATH, REGISTRY_PATH, get_db_connection
 
 _tenant_schema_migrated = set()
+# Cache kiểm tra single-session — tránh mở SQLite users mỗi request HTML/API
+_session_token_cache: dict[tuple, tuple[float, str | None]] = {}
+_SESSION_TOKEN_CACHE_TTL_SEC = 20.0
 
 
 def _maybe_migrate_tenant_db(db_path):
@@ -560,17 +564,32 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
                 if not os.path.isabs(validate_db_path):
                     validate_db_path = os.path.join(BASE_DIR, validate_db_path)
 
-            conn = sqlite3.connect(validate_db_path)
-            conn.row_factory = sqlite3.Row
-
-            current_db_token = conn.execute(
-                "SELECT last_session_id FROM users WHERE id = ?", 
-                (user_data['id'],)
-            ).fetchone()
-            conn.close()
+            user_id = user_data['id']
+            cache_key = (os.path.abspath(validate_db_path), user_id, session_token)
+            now_ts = time.time()
+            cached = _session_token_cache.get(cache_key)
+            if cached and (now_ts - cached[0]) < _SESSION_TOKEN_CACHE_TTL_SEC:
+                db_token = cached[1]
+            else:
+                conn = sqlite3.connect(validate_db_path, timeout=5.0)
+                try:
+                    row = conn.execute(
+                        "SELECT last_session_id FROM users WHERE id = ?",
+                        (user_id,),
+                    ).fetchone()
+                finally:
+                    conn.close()
+                db_token = row[0] if row else None
+                _session_token_cache[cache_key] = (now_ts, db_token)
+                # Giữ cache nhỏ — tránh phình khi nhiều user
+                if len(_session_token_cache) > 256:
+                    cutoff = now_ts - _SESSION_TOKEN_CACHE_TTL_SEC
+                    for k, (ts, _) in list(_session_token_cache.items()):
+                        if ts < cutoff:
+                            _session_token_cache.pop(k, None)
 
             # Nếu Token trong DB đã đổi (do một thiết bị khác đăng nhập sau và chiếm quyền sở hữu)
-            if current_db_token and current_db_token['last_session_id'] != session_token:
+            if db_token is not None and db_token != session_token:
                 session.clear()  # Xóa sạch dữ liệu phiên làm việc hiện tại của trình duyệt này
                 if request.path.startswith('/api/'):
                     return jsonify({

@@ -21,6 +21,9 @@ SME_MENU_GROUPS = (
         'description': 'Điểm bán hàng, đơn hàng, hóa đơn bán, trả hàng',
         'items': (
             {'endpoint': 'sale', 'label': 'Điểm bán hàng', 'icon': 'fas fa-cash-register'},
+            {'endpoint': 'SME_sale_export', 'label': 'Bán hàng xuất khẩu', 'icon': 'fas fa-plane-departure'},
+            {'endpoint': 'SME_sale_export_list', 'label': 'Danh sách xuất khẩu', 'icon': 'fas fa-list'},
+            {'endpoint': 'SME_customs_declarations', 'label': 'Tờ khai hải quan điện tử', 'icon': 'fas fa-passport'},
             {'endpoint': 'SME_order', 'label': 'Danh sách đơn hàng', 'icon': 'fas fa-list'},
             {'endpoint': 'SME_sale_details', 'label': 'Chi tiết hàng bán', 'icon': 'fas fa-receipt'},
             {'endpoint': 'SME_bank_transactions', 'label': 'Giao dịch ngân hàng', 'icon': 'fas fa-university'},
@@ -38,6 +41,8 @@ SME_MENU_GROUPS = (
             {'endpoint': 'SME_inward_invoice', 'label': 'Hóa đơn mua hàng', 'icon': 'fas fa-file-import'},
             {'endpoint': 'SME_landed_cost', 'label': 'Phân bổ chi phí mua hàng', 'icon': 'fas fa-share-alt'},
             {'endpoint': 'SME_import', 'label': 'Lập phiếu nhập kho', 'icon': 'fas fa-box-open'},
+            {'endpoint': 'SME_customs_declarations', 'label': 'Tờ khai hải quan điện tử', 'icon': 'fas fa-passport'},
+            {'endpoint': 'SME_letter_of_credit', 'label': 'Mở L/C nhập khẩu', 'icon': 'fas fa-file-signature'},
             {'endpoint': 'SME_DanhSachPhieuNhapKho', 'label': 'Danh sách phiếu nhập', 'icon': 'fas fa-list-check'},
             {'endpoint': 'SME_import_details', 'label': 'Chi tiết mua hàng', 'icon': 'fas fa-list'},
             {'endpoint': 'SME_return_supplier', 'label': 'Trả nhà cung cấp', 'icon': 'fas fa-rotate-left'},
@@ -70,6 +75,7 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'SME_DanhSachPhieuThu', 'label': 'Phiếu thu — mẫu 01-TT', 'icon': 'fas fa-receipt'},
             {'endpoint': 'SME_DanhSachPhieuChi', 'label': 'Phiếu chi — mẫu 02-TT', 'icon': 'fas fa-money-bill-wave'},
+            {'endpoint': 'SME_fx_cash', 'label': 'Ngoại tệ — nhật ký và số dư', 'icon': 'fas fa-coins'},
             {'endpoint': 'SME_advances', 'label': 'Tạm ứng và thanh toán — mẫu 03 đến 05-TT', 'icon': 'fas fa-hand-holding-dollar'},
             {'endpoint': 'SME_temp_receipts', 'label': 'Biên lai thu tiền — mẫu 06-TT', 'icon': 'fas fa-file-invoice'},
             {'endpoint': 'SME_gold_sheet', 'label': 'Bảng kê vàng — mẫu 07-TT', 'icon': 'fas fa-coins'},
@@ -90,6 +96,7 @@ SME_MENU_GROUPS = (
             {'endpoint': 'SME_bank_reconcile', 'label': 'Đối chiếu ngân hàng', 'icon': 'fas fa-scale-balanced'},
             {'endpoint': 'SME_loans', 'label': 'Vay và trả nợ', 'icon': 'fas fa-landmark'},
             {'endpoint': 'SME_deposits', 'label': 'Ký quỹ và ký cược', 'icon': 'fas fa-file-contract'},
+            {'endpoint': 'SME_letter_of_credit', 'label': 'Thư tín dụng (L/C)', 'icon': 'fas fa-file-signature'},
         ),
     },
     {
@@ -103,10 +110,11 @@ SME_MENU_GROUPS = (
             {'endpoint': 'SME_general_ledger', 'label': 'Sổ cái và cân đối phát sinh', 'icon': 'fas fa-scale-balanced'},
             {'endpoint': 'SME_SoQuyTienMat', 'label': 'Sổ Quỹ Tiền Mặt', 'icon': 'fas fa-money-bill-wave'},
             {'endpoint': 'SME_SoTienGuiNganHang', 'label': 'Sổ Tiền Gửi Ngân Hàng', 'icon': 'fas fa-building-columns'},
+            {'endpoint': 'SME_fx_cash', 'label': 'Sổ ngoại tệ (1112 / 1122)', 'icon': 'fas fa-coins'},
             {'endpoint': 'SME_SoCongNoPhaiThu', 'label': 'Sổ Công Nợ Phải Thu', 'icon': 'fas fa-user-clock'},
             {'endpoint': 'SME_SoCongNoPhaiTra', 'label': 'Sổ Công Nợ Phải Trả', 'icon': 'fas fa-file-invoice-dollar'},
             {'endpoint': 'SME_PhaiThuCongNhanVien', 'label': 'Sổ Phải Thu Nhân Viên', 'icon': 'fas fa-user-plus'},
-            {'endpoint': 'SME_PhaiTraCongNhanVien', 'label': 'Sổ Phải Trả Nhân Viên', 'icon': 'fas fa-user-minus'},
+            {'endpoint': 'SME_PhaiTraCongNhanVien', 'label': 'Công nợ phải trả nhân viên', 'icon': 'fas fa-user-minus'},
             {'endpoint': 'SME_auto_posting', 'label': 'Kết chuyển, khóa sổ và cuối năm', 'icon': 'fas fa-robot'},
         ),
     },
@@ -128,10 +136,11 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'SME_SoQuyTienMat', 'label': 'Sổ Quỹ Tiền Mặt', 'icon': 'fas fa-money-bill-wave'},
             {'endpoint': 'SME_SoTienGuiNganHang', 'label': 'Sổ Tiền Gửi Ngân Hàng', 'icon': 'fas fa-building-columns'},
+            {'endpoint': 'SME_fx_cash', 'label': 'Sổ ngoại tệ (1112 / 1122)', 'icon': 'fas fa-coins'},
             {'endpoint': 'SME_SoCongNoPhaiThu', 'label': 'Sổ Công Nợ Phải Thu', 'icon': 'fas fa-user-clock'},
             {'endpoint': 'SME_SoCongNoPhaiTra', 'label': 'Sổ Công Nợ Phải Trả', 'icon': 'fas fa-file-invoice-dollar'},
             {'endpoint': 'SME_PhaiThuCongNhanVien', 'label': 'Sổ Phải Thu Nhân Viên', 'icon': 'fas fa-user-plus'},
-            {'endpoint': 'SME_PhaiTraCongNhanVien', 'label': 'Sổ Phải Trả Nhân Viên', 'icon': 'fas fa-user-minus'},
+            {'endpoint': 'SME_PhaiTraCongNhanVien', 'label': 'Công nợ phải trả nhân viên', 'icon': 'fas fa-user-minus'},
         ),
     },
     {
@@ -153,6 +162,7 @@ SME_MENU_GROUPS = (
             {'endpoint': 'SME_employees', 'label': 'Danh sách nhân viên', 'icon': 'fas fa-users'},
             {'endpoint': 'SME_attendance', 'label': 'Bảng chấm công', 'icon': 'fas fa-fingerprint'},
             {'endpoint': 'SME_salary_create', 'label': 'Lập bảng lương — mẫu 01-LĐTL', 'icon': 'fas fa-calculator'},
+            {'endpoint': 'SME_PhaiTraCongNhanVien', 'label': 'Công nợ phải trả nhân viên', 'icon': 'fas fa-hand-holding-usd'},
             {'endpoint': 'SME_labor_sheets', 'label': 'Thưởng, ngoài giờ và thuê ngoài — mẫu 02 đến 04', 'icon': 'fas fa-gift'},
             {'endpoint': 'SME_labor_contracts', 'label': 'Hợp đồng giao khoán — mẫu 05 và 06-LĐTL', 'icon': 'fas fa-file-contract'},
             {'endpoint': 'SME_insurance_pay', 'label': 'Nộp bảo hiểm xã hội — mẫu 07-LĐTL', 'icon': 'fas fa-shield-alt'},
@@ -184,7 +194,7 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'huong_dan_su_dung', 'label': 'Hướng dẫn sử dụng', 'icon': 'fas fa-circle-question'},
             {'endpoint': 'SME_audit_log', 'label': 'Nhật ký truy cập', 'icon': 'fas fa-clock-rotate-left'},
-            {'endpoint': 'settings_page', 'label': 'Thiết lập hệ thống', 'icon': 'fas fa-sliders'},
+            {'endpoint': 'store_setup_page', 'label': 'Thiết lập hệ thống', 'icon': 'fas fa-sliders'},
         ),
     },
 )

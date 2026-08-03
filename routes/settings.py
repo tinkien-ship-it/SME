@@ -36,7 +36,14 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, get_db_connection, get_main_db_connection, resolve_db_path
+from db_utils import (
+    BASE_DIR,
+    MAIN_DB_PATH,
+    get_db_connection,
+    get_main_db_connection,
+    open_sqlite,
+    resolve_db_path,
+)
 from Services.email_service import get_smtp_config, send_email
 from Services.subscription_service import get_subscription_plans
 from Services.einvoice_registry import get_provider_meta, list_providers_for_ui
@@ -120,12 +127,12 @@ def log_login_attempt(user_id, username, tenant_id, status='Thành công'):
     loc = get_location(ip)
     ua = request.headers.get('User-Agent')
     try:
-        from db_utils import MAIN_DB_PATH
-        with sqlite3.connect(MAIN_DB_PATH) as conn:
+        with get_main_db_connection() as conn:
             conn.execute("""
                 INSERT INTO login_history (tenant_id, user_id, username, ip_address, location, device_info, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (tenant_id, user_id, username, ip, loc, ua, status))
+            conn.commit()
     except Exception as e:
         print(f"Lỗi ghi log lịch sử: {e}")
 
@@ -273,8 +280,7 @@ def register_settings_routes(app):
 
             # ==================== 2. Lấy thông tin User từ DB tương ứng ====================
             try:
-                conn = sqlite3.connect(db_to_open)
-                conn.row_factory = sqlite3.Row
+                conn = open_sqlite(db_to_open)
                 user_row = conn.execute(
                     "SELECT * FROM users WHERE username = ?",
                     (username,)
@@ -318,10 +324,8 @@ def register_settings_routes(app):
             # ==================== 5. Xử lý 2FA ====================
             if is_2fa_enabled:
                 fingerprint = get_device_fingerprint()
-                main_db_path = os.path.join(BASE_DIR, 'database.db')
                 try:
-                    conn_m = sqlite3.connect(main_db_path)
-                    conn_m.row_factory = sqlite3.Row
+                    conn_m = get_main_db_connection()
                     device_record = conn_m.execute(
                         "SELECT last_login FROM user_trusted_devices WHERE username=? AND device_fingerprint=?",
                         (username, fingerprint)
@@ -378,7 +382,7 @@ def register_settings_routes(app):
                 now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
                 # Cập nhật Session ID mới vào bảng users của Database tương ứng (Single Session)
-                with sqlite3.connect(db_to_open) as conn_target:
+                with open_sqlite(db_to_open) as conn_target:
                     conn_target.execute(
                         "UPDATE users SET last_session_id = ? WHERE id = ?",
                         (new_session_id, user['id'])
@@ -386,8 +390,7 @@ def register_settings_routes(app):
                     conn_target.commit()
 
                 # Cập nhật thông tin thiết bị tin cậy vào Main Database
-                main_db_path = os.path.join(BASE_DIR, 'database.db')
-                with sqlite3.connect(main_db_path) as conn_m:
+                with get_main_db_connection() as conn_m:
                     conn_m.execute(
                         """INSERT OR REPLACE INTO user_trusted_devices (username, device_fingerprint, last_login)
                            VALUES (?, ?, ?)""",
@@ -880,11 +883,9 @@ def register_settings_routes(app):
 
             if is_2fa_enabled:
                 fingerprint = get_device_fingerprint()
-                main_db_path = os.path.join(BASE_DIR, 'database.db')
                 device_record = None
                 try:
-                    with sqlite3.connect(main_db_path) as conn_m:
-                        conn_m.row_factory = sqlite3.Row
+                    with get_main_db_connection() as conn_m:
                         device_record = conn_m.execute(
                             "SELECT last_login FROM user_trusted_devices WHERE username=? AND device_fingerprint=?",
                             (username, fingerprint),
@@ -1019,15 +1020,14 @@ def register_settings_routes(app):
         username = user['username']
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        with sqlite3.connect(db_to_open, timeout=10) as conn_target:
+        with open_sqlite(db_to_open) as conn_target:
             conn_target.execute(
                 "UPDATE users SET last_session_id = ? WHERE id = ?",
                 (new_session_id, user['id']),
             )
             conn_target.commit()
 
-        main_db_path = os.path.join(BASE_DIR, 'database.db')
-        with sqlite3.connect(main_db_path, timeout=10) as conn_m:
+        with get_main_db_connection() as conn_m:
             conn_m.execute(
                 """INSERT OR REPLACE INTO user_trusted_devices (username, device_fingerprint, last_login)
                    VALUES (?, ?, ?)""",
@@ -1970,6 +1970,16 @@ Trân trọng,
                 if accounting_regime:
                     settings_patch['accounting_regime'] = accounting_regime
 
+            old_settings = {}
+            try:
+                from Services.subscription_service import parse_tenant_settings
+                old_settings = parse_tenant_settings(
+                    old_row['settings'] if hasattr(old_row, 'keys') else old_row[6]
+                ) or {}
+            except Exception:
+                old_settings = {}
+            old_regime = old_settings.get('accounting_regime')
+
             if settings_patch:
                 from Services.tenant_profile import update_registry_settings
                 if not update_registry_settings(tenant_id, settings_patch, conn=conn):
@@ -1978,6 +1988,24 @@ Trân trọng,
 
             conn.commit()
             conn.close()
+            conn = None
+
+            # TT58 → TT99: đồng bộ COA/quy tắc/schema + kiểm tra toàn vẹn số liệu
+            tt99_sync = None
+            new_regime = (settings_patch or {}).get('accounting_regime') or accounting_regime
+            if new_regime:
+                try:
+                    from Services.sme.migrate_tt58_to_tt99 import migrate_tt58_to_tt99_if_needed
+                    from flask import session
+                    tt99_sync = migrate_tt58_to_tt99_if_needed(
+                        tenant_id=tenant_id,
+                        old_regime=old_regime,
+                        new_regime=new_regime,
+                        settings=old_settings,
+                        migrated_by=session.get('username') or session.get('user'),
+                    )
+                except Exception as sync_exc:
+                    tt99_sync = {'ok': False, 'error': str(sync_exc)}
 
             from Services.audit_log import write_audit
             write_audit(
@@ -1989,11 +2017,61 @@ Trân trọng,
                 tenant_id=tenant_id,
                 use_main=True,
             )
-            return jsonify({"success": True, "message": f"Đã cập nhật thông tin cho {tenant_id}"})
+            payload = {
+                "success": True,
+                "message": f"Đã cập nhật thông tin cho {tenant_id}",
+            }
+            if tt99_sync is not None:
+                payload['tt99_sync'] = tt99_sync
+                if tt99_sync.get('error'):
+                    payload['message'] += f" — đồng bộ TT99 lỗi: {tt99_sync.get('error')}"
+                elif tt99_sync.get('integrity_ok'):
+                    payload['message'] += ' — đã đồng bộ TT99; kiểm tra toàn vẹn đạt.'
+                elif tt99_sync.get('synced') or tt99_sync.get('ok'):
+                    payload['message'] += (
+                        ' — đã đồng bộ TT99; kiểm tra toàn vẹn có cảnh báo '
+                        '(xem tt99_sync.checks — cần rà soát số liệu trước khi khóa sổ).'
+                    )
+            return jsonify(payload)
         
         except Exception as e:
             if conn: conn.close()
             return jsonify({"success": False, "error": str(e)}), 500
+
+    @app.route('/api/master/tenants/<tenant_id>/sync-tt99', methods=['POST'])
+    @login_required
+    @master_required
+    def api_master_sync_tenant_tt99(tenant_id):
+        """Master: đồng bộ lại tenant sang TT99 + kiểm tra toàn vẹn số liệu."""
+        from Services.sme.migrate_tt58_to_tt99 import migrate_tenant_to_tt99
+        from Services.tenant_profile import load_tenant_profile
+        from db_utils import get_tenant_db_connection
+        from flask import session
+
+        profile = load_tenant_profile(tenant_id)
+        if not profile:
+            return jsonify({'success': False, 'error': 'Không tìm thấy tenant'}), 404
+        settings = dict(profile.get('settings') or {})
+        data = request.get_json(silent=True) or {}
+        conn = get_tenant_db_connection(tenant_id)
+        if not conn:
+            return jsonify({'success': False, 'error': 'Không mở được DB tenant'}), 500
+        try:
+            result = migrate_tenant_to_tt99(
+                conn,
+                tenant_id=tenant_id,
+                settings=settings,
+                update_registry=True,
+                migrated_by=session.get('username') or session.get('user'),
+                force_coa_refresh=bool(data.get('force_coa_refresh')),
+            )
+            conn.commit()
+            return jsonify({'success': True, 'data': result})
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
 
     @app.route('/api/master/trial_settings', methods=['GET'])
     @login_required
@@ -2224,10 +2302,22 @@ Trân trọng,
     @app.route('/thiet-lap')
     @admin_or_master_required
     def store_setup_page():
+        from flask import g
+        from Services.tenant_profile import is_sme_regime
+
         db = get_db_connection()
         info_row = db.execute("SELECT * FROM business_info LIMIT 1").fetchone()
         info = dict(info_row) if info_row else {}
-        return render_template('store_setup.html', info=info)
+        profile = getattr(g, 'tenant_profile', None) or {}
+        setup_is_sme = is_sme_regime(profile.get('accounting_regime'))
+        return render_template(
+            'store_setup.html',
+            info=info,
+            setup_is_sme=setup_is_sme,
+            base_layout=(
+                'KeToanSME/_layout.html' if setup_is_sme else 'KeToanHKD/_layout.html'
+            ),
+        )
 
     @app.route('/settings')
     @admin_or_master_required
@@ -2341,6 +2431,17 @@ Trân trọng,
 
             conn.commit()
 
+            # SME: STK VietQR = TK ngân hàng mặc định trên chứng từ
+            try:
+                from Services.tenant_profile import is_sme_regime
+                from Services.sme.bank_accounts import sync_default_bank_from_qr
+                from flask import g
+                profile = getattr(g, 'tenant_profile', None) or {}
+                if is_sme_regime(profile.get('accounting_regime')):
+                    sync_default_bank_from_qr(conn, commit=True)
+            except Exception:
+                pass
+
             from Services.chu_ho_helpers import sync_chu_ho_from_business_info
             matched, rep_name = sync_chu_ho_from_business_info(conn)
             sync_msg = ''
@@ -2445,6 +2546,16 @@ Trân trọng,
 
             conn.commit()
             save_payment_settings(data)
+
+            try:
+                from Services.tenant_profile import is_sme_regime
+                from Services.sme.bank_accounts import sync_default_bank_from_qr
+                from flask import g
+                profile = getattr(g, 'tenant_profile', None) or {}
+                if is_sme_regime(profile.get('accounting_regime')):
+                    sync_default_bank_from_qr(conn, commit=True)
+            except Exception:
+                pass
 
             from Services.chu_ho_helpers import sync_chu_ho_from_business_info
             sync_chu_ho_from_business_info(conn)

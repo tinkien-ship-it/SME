@@ -1,12 +1,26 @@
 {% extends "KeToanSME/_layout.html" %}
 {% block title %}Phiếu thu 01-TT{% endblock %}
 {% block sme_content %}
+<style>
+  #fCredit { font-family: ui-monospace, Consolas, monospace; }
+  #fCredit option[disabled] { color: #94a3b8; font-style: italic; }
+  .acct-filter-hint { font-size: .78rem; }
+</style>
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h4 class="fw-bold mb-1">Danh sách phiếu thu <span class="badge bg-primary">01-TT</span></h4>
     <p class="text-muted small mb-0">Doanh nghiệp TT99/TT58 — ghi sổ kép (không dùng phiếu HKD)</p>
   </div>
-  <button class="btn btn-success" id="btnNew"><i class="fas fa-plus me-1"></i>Lập phiếu thu</button>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-warning" href="/SME_fx_cash" title="Số dư & nhật ký ngoại tệ">
+      <i class="fas fa-coins me-1"></i>Ngoại tệ
+    </a>
+    <button class="btn btn-outline-warning" id="btnRenumber"
+            title="Đánh lại số PT liên tục theo ngày thu">
+      <i class="fas fa-sort-numeric-down me-1"></i>Đánh lại số
+    </button>
+    <button class="btn btn-success" id="btnNew"><i class="fas fa-plus me-1"></i>Lập phiếu thu</button>
+  </div>
 </div>
 <div class="card shadow-sm border-0 mb-3">
   <div class="card-body row g-2 align-items-end">
@@ -26,17 +40,76 @@
   </div>
 </div>
 
-<div class="modal fade" id="modalNew" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+<div class="modal fade" id="modalNew" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
   <div class="modal-header"><h5 class="modal-title">Lập phiếu thu (01-TT)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
-    <div class="mb-2"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
-    <div class="mb-2"><label class="form-label small">Người nộp</label><input type="text" id="fParty" class="form-control"></div>
-    <div class="mb-2"><label class="form-label small">Số tiền</label><input type="number" id="fAmount" class="form-control" min="0" step="1"></div>
-    <div class="mb-2"><label class="form-label small">Hình thức</label>
-      <select id="fPay" class="form-select"><option value="cash">Tiền mặt (1111)</option><option value="bank">Chuyển khoản (1121)</option></select>
+    <div class="mb-2"><label class="form-label small fw-semibold">Ngày thu <span class="text-muted">(ngày áp dụng tỷ giá)</span></label><input type="date" id="fDate" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small fw-semibold">Người nộp / Đối tượng</label><input type="text" id="fParty" class="form-control"></div>
+    <div class="mb-2">
+      <label class="form-label small fw-semibold">Loại nghiệp vụ</label>
+      <select id="fPurpose" class="form-select">
+        <option value="">Thu tiền thông thường</option>
+        <option value="fx_receipt">Thu ngoại tệ vào 1112/1122</option>
+        <option value="customer_advance">Tạm ứng khách hàng XK (Nợ 1122 / Có 131)</option>
+        <option value="supplier_advance">Tạm ứng NCC ngoại tệ → lập Phiếu chi (Nợ 331)</option>
+      </select>
     </div>
-    <div class="mb-2"><label class="form-label small">TK Có</label><input type="text" id="fCredit" class="form-control" value="131"></div>
-    <div class="mb-2"><label class="form-label small">Lý do</label><input type="text" id="fReason" class="form-control"></div>
+    <div class="form-check mb-2" id="wrapFxToggle">
+      <input class="form-check-input" type="checkbox" id="fUseFx">
+      <label class="form-check-label small fw-semibold" for="fUseFx">Giao dịch ngoại tệ (nhập tỷ giá)</label>
+    </div>
+    <div class="row g-2 mb-2" id="fxFields" style="display:none">
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">Ngoại tệ</label>
+        <select id="fCur" class="form-select">
+          <option value="USD" selected>USD</option>
+          <option value="EUR">EUR</option>
+          <option value="JPY">JPY</option>
+          <option value="CNY">CNY</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">Số tiền ngoại tệ</label>
+        <input type="number" id="fAmountFc" class="form-control" min="0" step="0.01">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">Tỷ giá</label>
+        <input type="number" id="fRate" class="form-control" min="0" step="0.0001" value="25000"
+               title="Tỷ giá quy đổi VND / 1 đơn vị ngoại tệ ngày thu">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">Quy đổi VND</label>
+        <input type="text" id="fAmountVndPreview" class="form-control bg-light" readonly>
+      </div>
+    </div>
+    <div class="mb-2" id="wrapAmountVnd">
+      <label class="form-label small fw-semibold">Số tiền (VND)</label>
+      <input type="number" id="fAmount" class="form-control" min="0" step="1">
+    </div>
+    <div class="mb-2"><label class="form-label small fw-semibold" id="lblPay">Hình thức (TK Nợ)</label>
+      <div id="bankPayWarn" class="alert alert-warning py-2 small mb-2" style="display:none"></div>
+      <select id="fPay" class="form-select">
+        <option value="cash">Tiền mặt VND — 1111</option>
+        <option value="bank">TGNH VND — 1121</option>
+        <option value="bank_fx">TGNH ngoại tệ — 1122</option>
+        <option value="cash_fx">Quỹ ngoại tệ — 1112</option>
+      </select>
+      <div class="text-muted small mt-1" id="hintPay"></div>
+      <div class="small mt-1 p-2 rounded border bg-light" id="cashBalHint" style="display:none"></div>
+    </div>
+    <div class="mb-2">
+      <label class="form-label small fw-semibold">TK đối ứng (Có) <span class="text-danger">*</span></label>
+      <input type="search" id="fCreditFilter" class="form-control form-control-sm mb-1"
+             placeholder="Lọc theo mã hoặc tên tài khoản…">
+      <select id="fCredit" class="form-select" size="10" required>
+        <option value="">Đang tải danh mục…</option>
+      </select>
+      <div class="text-muted acct-filter-hint mt-1" id="hintCredit">
+        Hiển thị TK cấp 2 · 3 · 4 và cấp 1 không có TK con (kèm tên).
+        TK tổng hợp không chọn được — hãy chọn TK chi tiết.
+      </div>
+    </div>
+    <div class="mb-2"><label class="form-label small fw-semibold">Lý do</label><input type="text" id="fReason" class="form-control" placeholder="VD: Thu USD vào TK 1122…"></div>
   </div>
   <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-success" id="btnSave">Lưu & ghi sổ</button></div>
 </div></div></div>
@@ -48,6 +121,54 @@ function todayISO(){ return new Date().toISOString().slice(0,10); }
 document.getElementById('fDate').value = todayISO();
 document.getElementById('fromDate').value = todayISO().slice(0,8)+'01';
 document.getElementById('toDate').value = todayISO();
+
+let counterpartAccounts = [];
+const DEFAULT_CREDIT = '131';
+
+function padLabel(level) {
+  const lv = Number(level || 1);
+  return lv <= 2 ? '' : ('\u00A0\u00A0'.repeat(lv - 2));
+}
+
+function renderCounterpartOptions(filterText, preferred) {
+  const sel = document.getElementById('fCredit');
+  const q = (filterText || '').trim().toLowerCase();
+  const rows = counterpartAccounts.filter(a => {
+    if (!q) return true;
+    return String(a.code).toLowerCase().includes(q)
+      || String(a.name || '').toLowerCase().includes(q);
+  });
+  const prev = preferred || sel.value || DEFAULT_CREDIT;
+  if (!rows.length) {
+    sel.innerHTML = '<option value="">Không có tài khoản phù hợp</option>';
+    return;
+  }
+  sel.innerHTML = rows.map(a => {
+    const postable = Number(a.is_postable) === 1;
+    const disabled = postable ? '' : ' disabled';
+    const suffix = postable ? '' : ' — (tổng hợp)';
+    const label = `${padLabel(a.level)}${a.code} — ${a.name || ''}${suffix}`;
+    return `<option value="${a.code}"${disabled}>${label}</option>`;
+  }).join('');
+  if (prev && [...sel.options].some(o => o.value === prev && !o.disabled)) {
+    sel.value = prev;
+  } else {
+    const first = [...sel.options].find(o => o.value && !o.disabled);
+    if (first) sel.value = first.value;
+  }
+}
+
+async function loadCounterpartAccounts() {
+  const res = await fetch('/api/sme/coa?counterpart=1&active=1');
+  const json = await res.json();
+  if (!json.success) {
+    document.getElementById('fCredit').innerHTML =
+      `<option value="">${json.error || 'Không tải được danh mục TK'}</option>`;
+    return;
+  }
+  counterpartAccounts = json.data || [];
+  renderCounterpartOptions('', DEFAULT_CREDIT);
+}
 
 async function loadList(){
   const q = new URLSearchParams({from: fromDate.value, to: toDate.value});
@@ -61,7 +182,7 @@ async function loadList(){
     <td>${fmtDateVi(r.voucher_date)}</td>
     <td class="small">${r.branch_code||'HQ'}</td>
     <td>${r.party_name||''}</td>
-    <td class="text-end text-success fw-bold">${fmt(r.amount)}</td>
+    <td class="text-end text-success fw-bold">${fmt(r.amount)}${(r.currency && r.currency!=='VND' && r.amount_fc) ? `<div class="small text-muted">${Number(r.amount_fc).toLocaleString('en-US')} ${r.currency} × ${Number(r.exchange_rate||1).toLocaleString('en-US')}</div>` : ''}</td>
     <td>${r.debit_account}</td><td>${r.credit_account}</td>
     <td class="small">${r.reason||''}</td>
     <td class="text-nowrap">
@@ -78,19 +199,243 @@ async function voidVoucher(id){
   loadList();
 }
 document.getElementById('btnLoad').onclick = loadList;
-document.getElementById('btnNew').onclick = () => new bootstrap.Modal(document.getElementById('modalNew')).show();
+document.getElementById('btnRenumber').onclick = async () => {
+  if (!confirm(
+    'Đánh lại số phiếu thu?\n\n'
+    + 'Sắp xếp theo ngày thu và đánh số liên tục từ PT000001.\n'
+    + 'Số phiếu cũ sẽ bị thay đổi vĩnh viễn.'
+  )) return;
+  const res = await fetch('/api/sme/vouchers/receipts/renumber', { method: 'POST' });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || json.message || 'Lỗi');
+  alert(json.message || ('Đã đánh lại số cho ' + (json.count || '') + ' phiếu'));
+  loadList();
+};
+document.getElementById('fCreditFilter').addEventListener('input', (e) => {
+  renderCounterpartOptions(e.target.value);
+});
+
+function isFxPayMethod(v){
+  const s = String(v || '');
+  return s === 'bank_fx' || s === 'cash_fx' || s.startsWith('1122') || s.startsWith('1112');
+}
+function needsFx(){
+  const purpose = fPurpose.value;
+  if (purpose === 'fx_receipt' || purpose === 'supplier_advance' || purpose === 'customer_advance') return true;
+  if (fUseFx.checked) return true;
+  return isFxPayMethod(fPay.value);
+}
+async function refreshCashBalHint(){
+  const el = document.getElementById('cashBalHint');
+  if (!el || !window.loadSmeCashBalances) return;
+  await window.loadSmeCashBalances({ as_of: fDate.value });
+  const b = window.smeCashBalances || {};
+  const fmtN = (n) => (Number(n) || 0).toLocaleString('vi-VN');
+  const purpose = fPurpose.value;
+  const isFxIn = purpose === 'fx_receipt' || purpose === 'customer_advance'
+    || isFxPayMethod(fPay.value);
+  if (isFxIn || fPay.value === 'cash_fx' || fPay.value === 'cash' || fPay.value === '1111' || String(fPay.value).startsWith('1112')) {
+    el.style.display = '';
+    el.innerHTML = `Số dư quỹ —
+      <b>1111</b> (VND): <b class="text-success">${fmtN(b.a1111)}</b> ₫ ·
+      <b>1112</b> (NT): <b class="text-primary">${fmtN(b.a1112)}</b> ₫`;
+  } else {
+    el.style.display = '';
+    el.innerHTML = `Số dư TGNH —
+      <b>1121</b> (VND): <b class="text-success">${fmtN(b.a1121)}</b> ₫ ·
+      <b>1122</b> (NT): <b class="text-primary">${fmtN(b.a1122)}</b> ₫`;
+  }
+}
+function syncFxUi(){
+  const purpose = fPurpose.value;
+  const isAdv = purpose === 'supplier_advance';
+  const isCustAdv = purpose === 'customer_advance';
+  const isFxIn = purpose === 'fx_receipt' || isCustAdv;
+  const payFx = isFxPayMethod(fPay.value);
+  const defFx = (window.smeBankPayAccounts && window.smeBankPayAccounts.default_fx_bank_account) || '1122';
+
+  if (isAdv || isFxIn) {
+    fUseFx.checked = true;
+    fUseFx.disabled = true;
+    wrapFxToggle.style.display = 'none';
+  } else if (payFx) {
+    fUseFx.checked = true;
+    fUseFx.disabled = true;
+    wrapFxToggle.style.display = '';
+  } else {
+    fUseFx.disabled = false;
+    wrapFxToggle.style.display = '';
+  }
+
+  const fx = needsFx();
+  fxFields.style.display = fx ? '' : 'none';
+  wrapAmountVnd.style.display = fx ? 'none' : '';
+
+  if (isFxIn) {
+    if (!payFx) fPay.value = defFx;
+    [...fPay.options].forEach(o => {
+      const v = o.value;
+      o.disabled = (v === 'cash' || v === 'bank' || v === '1111' || v.startsWith('1121'));
+    });
+    lblPay.textContent = 'Thu vào TK ngoại tệ (Nợ)';
+    hintPay.textContent = 'Nợ 1122/1112 (có FC) · Có đối ứng (131/511/…).';
+    if (!fReason.value || fReason.dataset.auto === '1') {
+      fReason.value = 'Thu ngoại tệ vào tài khoản tiền';
+      fReason.dataset.auto = '1';
+    }
+    hintCredit.innerHTML = 'Thu NT: chọn đối ứng phù hợp (vd. <b>131</b> phải thu, <b>711</b> thu nhập…).';
+  } else if (isAdv) {
+    [...fPay.options].forEach(o => { o.disabled = false; });
+    if (!payFx) fPay.value = defFx;
+    lblPay.textContent = 'Chi từ TK ngoại tệ (sẽ lập phiếu chi)';
+    hintPay.textContent = 'Tạm ứng NCC: hệ thống lập phiếu chi Nợ 331 / Có TK ngoại tệ.';
+    if (!fReason.value || fReason.dataset.auto === '1') {
+      fReason.value = 'Tạm ứng nhà cung cấp nước ngoài';
+      fReason.dataset.auto = '1';
+    }
+    renderCounterpartOptions(fCreditFilter.value, '331');
+    hintCredit.innerHTML = 'Tạm ứng NCC sẽ ghi phiếu chi — đối ứng mặc định <b>331</b>.';
+  } else {
+    [...fPay.options].forEach(o => { o.disabled = false; });
+    lblPay.textContent = 'Hình thức (TK Nợ)';
+    hintPay.textContent = fx ? 'Thu vào quỹ/TGNH ngoại tệ — nhập FC và tỷ giá.' : '';
+    if (fReason.dataset.auto === '1') {
+      fReason.value = '';
+      delete fReason.dataset.auto;
+    }
+    hintCredit.textContent = 'Hiển thị TK cấp 2 · 3 · 4 và cấp 1 không có TK con. TK tổng hợp không chọn được.';
+  }
+  if (fx) updateFxPreview();
+  refreshCashBalHint();
+}
+function updateFxPreview(){
+  const fc = parseFloat(fAmountFc.value) || 0;
+  const rate = parseFloat(fRate.value) || 0;
+  const vnd = fc * rate;
+  fAmountVndPreview.value = fmt(vnd);
+  fAmount.value = Math.round(vnd);
+}
+document.getElementById('fPurpose').addEventListener('change', syncFxUi);
+document.getElementById('fPay').addEventListener('change', syncFxUi);
+document.getElementById('fUseFx').addEventListener('change', syncFxUi);
+document.getElementById('fDate').addEventListener('change', refreshCashBalHint);
+['fAmountFc','fRate','fCur'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateFxPreview);
+  document.getElementById(id).addEventListener('change', updateFxPreview);
+});
+
+document.getElementById('btnNew').onclick = async () => {
+  document.getElementById('fCreditFilter').value = '';
+  document.getElementById('fPurpose').value = '';
+  fUseFx.checked = false;
+  fUseFx.disabled = false;
+  fAmountFc.value = '';
+  fAmount.value = '';
+  fReason.value = '';
+  delete fReason.dataset.auto;
+  if (window.fillSmePayMethodSelect) {
+    await window.fillSmePayMethodSelect(fPay, {
+      value: 'bank',
+      preferBank: true,
+      warnEl: '#bankPayWarn',
+      force: true,
+    });
+  } else {
+    fPay.value = 'bank';
+  }
+  syncFxUi();
+  if (!counterpartAccounts.length) await loadCounterpartAccounts();
+  else renderCounterpartOptions('', DEFAULT_CREDIT);
+  new bootstrap.Modal(document.getElementById('modalNew')).show();
+};
 document.getElementById('btnSave').onclick = async () => {
+  const credit = document.getElementById('fCredit').value;
+  const purpose = fPurpose.value;
+  const isAdv = purpose === 'supplier_advance';
+  const isCustAdv = purpose === 'customer_advance';
+  const isFxIn = purpose === 'fx_receipt' || isCustAdv;
+  const fx = needsFx();
+  if (window.smeBankPayAccounts && window.smeBankPayAccounts.needs_choice) {
+    const okPick = await window.warnSmeBankAccountChoiceIfNeeded();
+    if (!okPick) return;
+  }
+  if (isAdv) {
+    const payload = {
+      date: fDate.value,
+      receiver_name: fParty.value,
+      payment_method: fPay.value || ((window.smeBankPayAccounts && window.smeBankPayAccounts.default_fx_bank_account) || '1122'),
+      debit_account: '331',
+      reason: fReason.value || 'Tạm ứng nhà cung cấp nước ngoài',
+      currency: fCur.value || 'USD',
+      exchange_rate: parseFloat(fRate.value) || 0,
+      amount_fc: parseFloat(fAmountFc.value) || 0,
+      purpose: 'supplier_advance'
+    };
+    if (!(payload.amount_fc > 0)) return alert('Nhập số tiền ngoại tệ tạm ứng');
+    if (!(payload.exchange_rate > 0)) return alert('Nhập tỷ giá ngày tạm ứng');
+    const payAmt = Math.round(payload.amount_fc * payload.exchange_rate);
+    if (window.assertSmeCashBalanceOrAlert) {
+      const okBal = await window.assertSmeCashBalanceOrAlert(payAmt, payload.payment_method, { as_of: fDate.value });
+      if (!okBal) return;
+    }
+    const res = await fetch('/api/sme/vouchers/payments', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if(!json.success) return alert(json.error||'Lỗi');
+    bootstrap.Modal.getInstance(document.getElementById('modalNew')).hide();
+    alert('Đã lập phiếu chi '+json.voucher_no+' (tạm ứng NCC · Nợ 331)');
+    return;
+  }
+  if (isCustAdv) {
+    const payload = {
+      date: fDate.value,
+      payer_name: fParty.value,
+      payment_method: fPay.value || ((window.smeBankPayAccounts && window.smeBankPayAccounts.default_fx_bank_account) || '1122'),
+      credit_account: '131',
+      reason: fReason.value || 'Tạm ứng khách hàng xuất khẩu',
+      currency: fCur.value || 'USD',
+      exchange_rate: parseFloat(fRate.value) || 0,
+      amount_fc: parseFloat(fAmountFc.value) || 0,
+      purpose: 'customer_advance'
+    };
+    if (!(payload.amount_fc > 0)) return alert('Nhập số tiền ngoại tệ tạm ứng KH');
+    if (!(payload.exchange_rate > 0)) return alert('Nhập tỷ giá ngày nhận ứng');
+    const res = await fetch('/api/sme/vouchers/receipts', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if(!json.success) return alert(json.error||'Lỗi');
+    bootstrap.Modal.getInstance(document.getElementById('modalNew')).hide();
+    alert('Đã lập phiếu thu '+json.voucher_no+' (tạm ứng KH · Có 131)');
+    loadList();
+    return;
+  }
+  if (!credit) return alert('Vui lòng chọn tài khoản đối ứng (Có)');
   const payload = {
-    date: fDate.value, payer_name: fParty.value, amount: parseFloat(fAmount.value)||0,
-    payment_method: fPay.value, credit_account: fCredit.value, reason: fReason.value
+    date: fDate.value,
+    payer_name: fParty.value,
+    payment_method: fPay.value,
+    credit_account: credit,
+    reason: fReason.value,
+    currency: fx ? fCur.value : 'VND',
+    exchange_rate: fx ? (parseFloat(fRate.value) || 0) : 1,
+    amount_fc: fx ? (parseFloat(fAmountFc.value) || 0) : 0,
+    amount: fx ? undefined : (parseFloat(fAmount.value) || 0),
+    purpose: isFxIn ? 'fx_receipt' : (fx && isFxPayMethod(fPay.value) ? 'fx_receipt' : null)
   };
+  if (fx && !(payload.amount_fc > 0)) return alert('Nhập số tiền ngoại tệ');
+  if (fx && !(payload.exchange_rate > 0)) return alert('Nhập tỷ giá ngoại tệ');
+  if (!fx && !(payload.amount > 0)) return alert('Nhập số tiền');
   const res = await fetch('/api/sme/vouchers/receipts', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
   const json = await res.json();
   if(!json.success) return alert(json.error||'Lỗi');
   bootstrap.Modal.getInstance(document.getElementById('modalNew')).hide();
-  alert('Đã lập '+json.voucher_no);
+  const tag = payload.purpose === 'fx_receipt' ? ' (thu ngoại tệ)' : '';
+  alert('Đã lập '+json.voucher_no + tag);
   loadList();
 };
+loadCounterpartAccounts();
 loadList();
 </script>
 {% endblock %}

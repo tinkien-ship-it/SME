@@ -67,37 +67,207 @@ def ensure_sme_voucher_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         """
     )
     cols = {r[1] for r in c.execute('PRAGMA table_info(sme_vouchers)').fetchall()}
-    if 'branch_code' not in cols:
-        try:
-            c.execute('ALTER TABLE sme_vouchers ADD COLUMN branch_code TEXT')
-        except sqlite3.OperationalError:
-            pass
+    alters = {
+        'branch_code': 'TEXT',
+        'currency': "TEXT DEFAULT 'VND'",
+        'exchange_rate': 'REAL DEFAULT 1',
+        'amount_fc': 'REAL DEFAULT 0',
+        'purpose': 'TEXT',
+    }
+    for col, decl in alters.items():
+        if col not in cols:
+            try:
+                c.execute(f'ALTER TABLE sme_vouchers ADD COLUMN {col} {decl}')
+            except sqlite3.OperationalError:
+                pass
     if commit:
         conn.commit()
 
 
+def _voucher_prefix(voucher_type: str) -> str:
+    return 'PT' if voucher_type == 'receipt' else 'PC'
+
+
 def _next_voucher_no(conn: sqlite3.Connection, voucher_type: str) -> str:
-    prefix = 'PT' if voucher_type == 'receipt' else 'PC'
+    """Số liên tục PT/PC000001… theo max số hiện có (không theo id)."""
+    prefix = _voucher_prefix(voucher_type)
+    width = 6
     row = conn.execute(
         """
         SELECT voucher_no FROM sme_vouchers
-        WHERE voucher_type = ? AND voucher_no LIKE ?
-        ORDER BY id DESC LIMIT 1
+        WHERE voucher_type = ?
+          AND voucher_no GLOB ?
+          AND length(voucher_no) = ?
+          AND substr(voucher_no, ?) GLOB '[0-9]*'
+        ORDER BY CAST(substr(voucher_no, ?) AS INTEGER) DESC
+        LIMIT 1
         """,
-        (voucher_type, f'{prefix}%'),
+        (
+            voucher_type,
+            f'{prefix}[0-9]*',
+            len(prefix) + width,
+            len(prefix) + 1,
+            len(prefix) + 1,
+        ),
     ).fetchone()
-    if not row:
-        return f'{prefix}000001'
-    raw = row[0] if not isinstance(row, sqlite3.Row) else row['voucher_no']
-    digits = ''.join(ch for ch in str(raw) if ch.isdigit()) or '0'
-    return f'{prefix}{int(digits) + 1:06d}'
+    seq = 1
+    if row and row[0]:
+        tail = str(row[0])[len(prefix):]
+        if tail.isdigit():
+            seq = int(tail) + 1
+    return f'{prefix}{seq:0{width}d}'
 
 
-def _cash_account(payment_method: str) -> str:
+def renumber_vouchers(
+    conn: sqlite3.Connection,
+    voucher_type: str,
+    *,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Đánh lại số phiếu thu/chi liên tục theo ngày + id (giống HKD).
+
+    Đồng bộ ``document_no`` trên bút toán liên kết.
+    """
+    ensure_sme_voucher_schema(conn, commit=False)
+    vtype = (voucher_type or '').strip().lower()
+    if vtype not in ('receipt', 'payment'):
+        raise ValueError('Loại chứng từ không hợp lệ (receipt|payment)')
+
+    prefix = _voucher_prefix(vtype)
+    width = 6
+    label = 'phiếu thu' if vtype == 'receipt' else 'phiếu chi'
+
+    rows = conn.execute(
+        """
+        SELECT id, voucher_no, journal_entry_id
+        FROM sme_vouchers
+        WHERE voucher_type = ?
+        ORDER BY date(voucher_date) ASC, id ASC
+        """,
+        (vtype,),
+    ).fetchall()
+    if not rows:
+        raise ValueError(f'Không có {label} nào để đánh lại số')
+
+    # Tránh UNIQUE(voucher_type, voucher_no) khi đổi số chéo
+    for row in rows:
+        vid = int(row['id'] if hasattr(row, 'keys') else row[0])
+        conn.execute(
+            "UPDATE sme_vouchers SET voucher_no = ?, updated_at = ? WHERE id = ?",
+            (f'__TMP_{prefix}_{vid}', _now(), vid),
+        )
+
+    count = 0
+    for index, row in enumerate(rows, start=1):
+        vid = int(row['id'] if hasattr(row, 'keys') else row[0])
+        journal_id = row['journal_entry_id'] if hasattr(row, 'keys') else row[2]
+        new_no = f'{prefix}{index:0{width}d}'
+        conn.execute(
+            "UPDATE sme_vouchers SET voucher_no = ?, updated_at = ? WHERE id = ?",
+            (new_no, _now(), vid),
+        )
+        if journal_id:
+            conn.execute(
+                """
+                UPDATE sme_journal_entries
+                SET document_no = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (new_no, _now(), int(journal_id)),
+            )
+        count += 1
+
+    if commit:
+        conn.commit()
+    return {
+        'voucher_type': vtype,
+        'count': count,
+        'prefix': prefix,
+        'message': (
+            f'Đã đánh lại số {count} {label} từ {prefix}000001 '
+            f'theo thứ tự ngày lập.'
+        ),
+    }
+
+
+def _cash_account(payment_method: str, *, currency: str = 'VND') -> str:
     method = (payment_method or 'cash').strip().lower()
-    if method in ('112', 'bank', 'bank_transfer', 'ck', 'transfer'):
-        return '1121'
-    return '1111'
+    cur = (currency or 'VND').strip().upper() or 'VND'
+    fx = cur != 'VND'
+    if method in ('1122', 'bank_fx', 'fx_bank'):
+        return '1122'
+    if method in ('1112', 'cash_fx', 'fx_cash'):
+        return '1112'
+    if method in ('112', 'bank', 'bank_transfer', 'ck', 'transfer', '1121'):
+        return '1122' if fx else '1121'
+    if method in ('111', 'cash', '1111'):
+        return '1112' if fx else '1111'
+    # Cho phép truyền thẳng mã TK (kể cả TK con 112101…)
+    if method[0:1].isdigit() and (method.startswith('111') or method.startswith('112')):
+        return method if all(ch.isdigit() for ch in method) else method
+    return '1122' if fx else '1111'
+
+
+def _resolve_cash_gl(
+    conn: sqlite3.Connection,
+    payment_method: str,
+    *,
+    currency: str = 'VND',
+) -> str:
+    """TK tiền ghi sổ — ưu tiên STK VietQR làm mặc định 1121*."""
+    from Services.sme.bank_accounts import resolve_cash_gl_account
+    return resolve_cash_gl_account(conn, payment_method, currency=currency)
+
+
+def _vnd_funding_account(payment_method: str, conn: sqlite3.Connection | None = None) -> str:
+    """TK nguồn VND khi mua ngoại tệ (luôn 1111 hoặc 1121*, không bao giờ 1112/1122)."""
+    method = (payment_method or 'bank').strip().lower()
+    if method in (
+        'cash', '111', '1111', 'cash_fx', 'fx_cash', '1112',
+    ) or (method[:1].isdigit() and method.startswith('111')):
+        if conn is not None:
+            return _resolve_cash_gl(conn, 'cash', currency='VND')
+        return '1111'
+    if conn is not None:
+        # Mã TK 1121* cụ thể hoặc bank → mặc định QR
+        if method[:1].isdigit() and method.startswith('1121'):
+            return _resolve_cash_gl(conn, method, currency='VND')
+        return _resolve_cash_gl(conn, 'bank', currency='VND')
+    return '1121'
+
+
+def _is_fx_cash_account(code: str) -> bool:
+    c = (code or '').strip()
+    return c.startswith('1122') or c.startswith('1112')
+
+
+def _resolve_voucher_amounts(
+    *,
+    amount=None,
+    amount_fc=None,
+    currency: str = 'VND',
+    exchange_rate=1,
+) -> tuple[Decimal, Decimal, str, Decimal]:
+    """Trả (amount_vnd, amount_fc, currency, exchange_rate)."""
+    cur = (currency or 'VND').strip().upper() or 'VND'
+    rate = Decimal(str(exchange_rate or 1))
+    if rate <= 0:
+        rate = Decimal('1')
+    if cur == 'VND':
+        amt = _money(amount if amount is not None else amount_fc)
+        return amt, Decimal('0.00'), 'VND', Decimal('1')
+    fc = _money(amount_fc if amount_fc is not None else 0)
+    if fc <= 0 and amount is not None:
+        # Cho phép nhập VND rồi suy ra FC khi có tỷ giá
+        vnd = _money(amount)
+        if vnd > 0 and rate > 0:
+            fc = (vnd / rate).quantize(MONEY_Q, rounding=ROUND_HALF_UP)
+        else:
+            raise ValueError('Số tiền ngoại tệ phải > 0')
+    if fc <= 0:
+        raise ValueError('Số tiền ngoại tệ phải > 0')
+    vnd = _money(fc * rate)
+    return vnd, fc, cur, rate.quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
 
 
 def create_receipt(
@@ -105,7 +275,7 @@ def create_receipt(
     *,
     voucher_date: str,
     party_name: str,
-    amount,
+    amount=None,
     payment_method: str = 'cash',
     credit_account: str = '131',
     reason: str = '',
@@ -115,28 +285,123 @@ def create_receipt(
     source_type: str | None = None,
     source_id: int | None = None,
     sale_id: int | None = None,
+    currency: str = 'VND',
+    exchange_rate=1,
+    amount_fc=None,
+    purpose: str | None = None,
     created_by: str | None = None,
     branch_code: str | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
-    """Lập phiếu thu 01-TT + bút toán Nợ 1111/1121 · Có credit_account."""
+    """Lập phiếu thu 01-TT + bút toán Nợ 1111/1121/1112/1122 · Có credit_account.
+
+    Hỗ trợ ngoại tệ: ``amount_fc`` × ``exchange_rate`` (tỷ giá ngày thu) → VND.
+    Thu ngoại tệ vào 1112/1122: Nợ TK NT (có FC) · Có đối ứng.
+    """
     from Services.sme.branches import resolve_posting_branch
 
     ensure_sme_journal_ready(conn, commit=False)
     ensure_sme_voucher_schema(conn, commit=False)
     branch = resolve_posting_branch(conn, branch_code)
 
-    amt = _money(amount)
+    purpose_s = (purpose or '').strip() or None
+    if purpose_s in ('fx_receipt', 'thu_ngoai_te', 'receive_fx'):
+        purpose_s = 'fx_receipt'
+    if purpose_s in (
+        'customer_advance', 'tam_ung_kh', 'ung_truoc_kh', 'advance_customer',
+        'kh_advance', 'thu_tam_ung_kh',
+    ):
+        purpose_s = 'customer_advance'
+
+    amt, fc_amt, cur, rate = _resolve_voucher_amounts(
+        amount=amount, amount_fc=amount_fc, currency=currency, exchange_rate=exchange_rate,
+    )
     if amt <= 0:
         raise ValueError('Số tiền phiếu thu phải > 0')
     date_s = str(voucher_date or '')[:10]
     if not date_s:
         raise ValueError('Thiếu ngày phiếu thu')
 
-    debit = _cash_account(payment_method)
+    debit = _resolve_cash_gl(conn, payment_method, currency=cur)
     credit = str(credit_account or '131').strip() or '131'
+
+    # Tạm ứng KH XK: Nợ 1122|1112 / Có 131 (bắt buộc NT)
+    if purpose_s == 'customer_advance':
+        if cur == 'VND':
+            raise ValueError('Tạm ứng khách hàng XK cần ngoại tệ (USD/EUR/…)')
+        credit = '131' if not credit.startswith('131') else credit
+        if not _is_fx_cash_account(debit):
+            pm = str(payment_method or '').lower()
+            debit = _resolve_cash_gl(
+                conn,
+                'bank_fx' if pm in (
+                    'bank', 'bank_fx', '112', '1121', '1122', 'transfer', 'ck',
+                ) or pm.startswith('112') else 'cash_fx',
+                currency=cur,
+            )
+
+    # Thu ngoại tệ: buộc Nợ 1112/1122 khi purpose fx_receipt
+    if purpose_s == 'fx_receipt':
+        if cur == 'VND':
+            raise ValueError('Thu ngoại tệ cần chọn loại ngoại tệ (USD/EUR/…)')
+        if not _is_fx_cash_account(debit):
+            pm = str(payment_method or '').lower()
+            debit = _resolve_cash_gl(
+                conn,
+                'bank_fx' if pm in (
+                    'bank', 'bank_fx', '112', '1121', '1122', 'transfer', 'ck',
+                ) or pm.startswith('112') else 'cash_fx',
+                currency=cur,
+            )
+        if debit == credit:
+            raise ValueError(f'Hạch toán không hợp lệ: Nợ và Có cùng TK {debit}')
+
+    if debit == credit:
+        raise ValueError(f'Hạch toán không hợp lệ: Nợ và Có cùng TK {debit}')
+
     vno = _next_voucher_no(conn, 'receipt')
     desc = reason or f'Thu tiền {party_name or ""}'.strip()
+    if purpose_s == 'customer_advance' and not reason:
+        desc = f'Tạm ứng khách hàng XK — Có 131 / Nợ {debit}'
+    if purpose_s == 'fx_receipt' and not reason:
+        desc = f'Thu ngoại tệ {cur} vào TK {debit}'.strip()
+    if cur != 'VND':
+        desc = (
+            f'{desc} ({float(fc_amt):g} {cur} × {float(rate):g})'
+        ).strip()
+
+    use_debit_fc = cur != 'VND' and _is_fx_cash_account(debit)
+    # FC phía Có chỉ khi đối ứng công nợ NT (131*/331*)
+    use_credit_fc = (
+        cur != 'VND'
+        and (
+            credit.startswith('131')
+            or credit.startswith('331')
+            or _is_fx_cash_account(credit)
+            or purpose_s == 'customer_advance'
+        )
+    )
+
+    lines = [
+        {
+            'sequence': 1,
+            'account_code': debit,
+            'debit': float(amt),
+            'credit': 0,
+            'debit_fc': float(fc_amt) if use_debit_fc else 0,
+            'credit_fc': 0,
+            'description': desc,
+        },
+        {
+            'sequence': 2,
+            'account_code': credit,
+            'debit': 0,
+            'credit': float(amt),
+            'debit_fc': 0,
+            'credit_fc': float(fc_amt) if use_credit_fc else 0,
+            'description': desc,
+        },
+    ]
 
     entry = post_journal_entry(
         conn,
@@ -145,55 +410,58 @@ def create_receipt(
         document_type='PT',
         document_no=vno,
         document_id=source_id or sale_id,
-        business_type='THU_TIEN',
+        business_type=(
+            'TAM_UNG_KH' if purpose_s == 'customer_advance'
+            else ('THU_NGOAI_TE' if purpose_s == 'fx_receipt' else 'THU_TIEN')
+        ),
+        currency=cur,
+        exchange_rate=float(rate),
         description=desc,
         reference_document=reference_document or None,
         created_by=created_by,
         branch_code=branch,
-        lines=[
-            {
-                'sequence': 1,
-                'account_code': debit,
-                'debit': float(amt),
-                'credit': 0,
-                'description': desc,
-            },
-            {
-                'sequence': 2,
-                'account_code': credit,
-                'debit': 0,
-                'credit': float(amt),
-                'description': desc,
-            },
-        ],
+        lines=lines,
     )
 
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO sme_vouchers (
-            voucher_type, form_code, voucher_no, voucher_date,
-            party_name, party_address, party_tax_code, amount,
-            debit_account, credit_account, reason, reference_document,
-            source_type, source_id, journal_entry_id, status, created_by, created_at, updated_at,
-            branch_code
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'posted',?,?,?,?)
-        """,
-        (
-            'receipt', VOUCHER_FORM_RECEIPT, vno, date_s,
-            party_name, party_address, party_tax_code, float(amt),
-            debit, credit, desc, reference_document or None,
-            source_type or ('sale' if sale_id else None),
-            source_id or sale_id,
-            entry['id'], created_by, _now(), _now(), branch,
+    cur_db = conn.cursor()
+    cols = {r[1] for r in cur_db.execute('PRAGMA table_info(sme_vouchers)').fetchall()}
+    base_cols = [
+        'voucher_type', 'form_code', 'voucher_no', 'voucher_date',
+        'party_name', 'party_address', 'party_tax_code', 'amount',
+        'debit_account', 'credit_account', 'reason', 'reference_document',
+        'source_type', 'source_id', 'journal_entry_id', 'status', 'created_by',
+        'created_at', 'updated_at', 'branch_code',
+    ]
+    base_vals: list[Any] = [
+        'receipt', VOUCHER_FORM_RECEIPT, vno, date_s,
+        party_name, party_address, party_tax_code, float(amt),
+        debit, credit, desc, reference_document or None,
+        source_type or (
+            'customer_advance' if purpose_s == 'customer_advance'
+            else ('fx_receipt' if purpose_s == 'fx_receipt'
+                  else ('sale' if sale_id else None))
         ),
+        source_id or sale_id,
+        entry['id'], 'posted', created_by, _now(), _now(), branch,
+    ]
+    if 'currency' in cols:
+        base_cols.extend(['currency', 'exchange_rate', 'amount_fc'])
+        base_vals.extend([cur, float(rate), float(fc_amt)])
+    if 'purpose' in cols:
+        base_cols.append('purpose')
+        base_vals.append(purpose_s)
+    placeholders = ','.join('?' * len(base_cols))
+    cur_db.execute(
+        f"INSERT INTO sme_vouchers ({', '.join(base_cols)}) VALUES ({placeholders})",
+        base_vals,
     )
-    voucher_id = cur.lastrowid
+    voucher_id = cur_db.lastrowid
 
     # Cập nhật công nợ bán (bảng cong_no dùng chung vận hành) nếu thu theo đơn
-    if sale_id and credit.startswith('131'):
+    # Tạm ứng KH (customer_advance): chưa gắn sale — không trừ cong_no
+    if sale_id and credit.startswith('131') and purpose_s != 'customer_advance':
         try:
-            cur.execute(
+            cur_db.execute(
                 """
                 UPDATE cong_no
                 SET unpaid_amount = CASE
@@ -216,8 +484,12 @@ def create_receipt(
         'form_code': VOUCHER_FORM_RECEIPT,
         'journal_entry_id': entry['id'],
         'amount': float(amt),
+        'amount_fc': float(fc_amt),
+        'currency': cur,
+        'exchange_rate': float(rate),
         'debit_account': debit,
         'credit_account': credit,
+        'purpose': purpose_s,
         'branch_code': branch,
     }
 
@@ -227,7 +499,7 @@ def create_payment(
     *,
     voucher_date: str,
     party_name: str,
-    amount,
+    amount=None,
     payment_method: str = 'cash',
     debit_account: str = '331',
     reason: str = '',
@@ -237,28 +509,175 @@ def create_payment(
     source_type: str | None = None,
     source_id: int | None = None,
     import_id: int | None = None,
+    currency: str = 'VND',
+    exchange_rate=1,
+    amount_fc=None,
+    purpose: str | None = None,
     created_by: str | None = None,
     branch_code: str | None = None,
+    debit_lines: list[dict[str, Any]] | None = None,
+    form_code: str | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
-    """Lập phiếu chi 02-TT + bút toán Nợ debit_account · Có 1111/1121."""
+    """Lập phiếu chi 02-TT + bút toán Nợ debit · Có 1111/1121/1112/1122.
+
+    ``purpose=supplier_advance``: tạm ứng NCC (Nợ 331), hỗ trợ ngoại tệ + tỷ giá ngày ứng.
+    ``purpose=buy_fx``: mua ngoại tệ bằng VND — Nợ 1122|1112 (FC) / Có 1111|1121 (VND).
+    ``debit_lines`` (tuỳ chọn): nhiều dòng Nợ ``[{account_code, amount, description?}, ...]``.
+    """
     from Services.sme.branches import resolve_posting_branch
 
     ensure_sme_journal_ready(conn, commit=False)
     ensure_sme_voucher_schema(conn, commit=False)
     branch = resolve_posting_branch(conn, branch_code)
 
-    amt = _money(amount)
-    if amt <= 0:
-        raise ValueError('Số tiền phiếu chi phải > 0')
     date_s = str(voucher_date or '')[:10]
     if not date_s:
         raise ValueError('Thiếu ngày phiếu chi')
 
-    credit = _cash_account(payment_method)
-    debit = str(debit_account or '331').strip() or '331'
+    purpose_s = (purpose or '').strip() or None
+    if purpose_s in ('advance', 'tam_ung_ncc', 'ung_truoc_ncc', 'ncc_advance'):
+        purpose_s = 'supplier_advance'
+    if purpose_s in ('buy_fx', 'mua_ngoai_te', 'mua_nt', 'fx_purchase'):
+        purpose_s = 'buy_fx'
+
+    amt, fc_amt, cur, rate = _resolve_voucher_amounts(
+        amount=amount, amount_fc=amount_fc, currency=currency, exchange_rate=exchange_rate,
+    )
+
+    # Xác định TK Nợ trước (cần để nhận diện mua ngoại tệ)
+    if debit_lines:
+        debit = None  # gán sau khi duyệt dòng
+    else:
+        debit = str(debit_account or '331').strip() or '331'
+
+    pm = str(payment_method or '').strip().lower()
+    pm_is_vnd_source = pm in (
+        'cash', 'bank', 'bank_transfer', 'ck', 'transfer',
+        '111', '1111', '112', '1121',
+    ) or (pm[:1].isdigit() and (pm.startswith('1111') or pm.startswith('1121')))
+
+    # Mua ngoại tệ: Nợ 1122|1112 (FC) / Có 1111|1121 (VND). Không bao giờ Có 1122.
+    auto_buy_fx = (
+        purpose_s != 'supplier_advance'
+        and cur != 'VND'
+        and not debit_lines
+        and _is_fx_cash_account(debit)
+        and pm_is_vnd_source
+    )
+    if purpose_s == 'buy_fx' or auto_buy_fx:
+        purpose_s = 'buy_fx'
+        if cur == 'VND':
+            raise ValueError('Mua ngoại tệ cần chọn loại ngoại tệ (USD/EUR/…)')
+        if rate <= 0:
+            raise ValueError('Nhập tỷ giá ngoại tệ khi mua ngoại tệ')
+        if not _is_fx_cash_account(debit):
+            debit = _resolve_cash_gl(conn, 'bank_fx', currency=cur)
+        credit = _vnd_funding_account(payment_method, conn)
+    else:
+        credit = _resolve_cash_gl(conn, payment_method, currency=cur)
+
     vno = _next_voucher_no(conn, 'payment')
     desc = reason or f'Chi tiền {party_name or ""}'.strip()
+    if purpose_s == 'supplier_advance' and not reason:
+        desc = f'Tạm ứng NCC {party_name or ""}'.strip()
+    if purpose_s == 'buy_fx' and not reason:
+        desc = f'Mua ngoại tệ {cur} vào TK {debit}'.strip()
+    if cur != 'VND':
+        desc = f'{desc} ({float(fc_amt):g} {cur} × {float(rate):g})'.strip()
+
+    lines: list[dict[str, Any]] = []
+    if debit_lines:
+        total = Decimal('0.00')
+        seq = 1
+        primary_debit = None
+        for ln in debit_lines:
+            ln_amt = _money(ln.get('amount'))
+            if ln_amt <= 0:
+                continue
+            acct = str(ln.get('account_code') or '').strip()
+            if not acct:
+                raise ValueError('Thiếu tài khoản Nợ trên dòng phiếu chi')
+            if primary_debit is None:
+                primary_debit = acct
+            lines.append({
+                'sequence': seq,
+                'account_code': acct,
+                'debit': float(ln_amt),
+                'credit': 0,
+                'debit_fc': float(_money(ln.get('amount_fc') or 0)),
+                'credit_fc': 0,
+                'description': (ln.get('description') or desc),
+            })
+            total += ln_amt
+            seq += 1
+        if total <= 0:
+            raise ValueError('Số tiền phiếu chi phải > 0')
+        amt = total
+        debit = primary_debit or str(debit_account or '331').strip() or '331'
+        accts = {str(x.get('account_code') or '') for x in debit_lines if _money(x.get('amount')) > 0}
+        if len(accts) > 1 and all(a.startswith('338') for a in accts):
+            debit = '338'
+    else:
+        if amt <= 0:
+            raise ValueError('Số tiền phiếu chi phải > 0')
+        if purpose_s == 'supplier_advance' and not debit.startswith('331'):
+            debit = '331'
+        # FC gắn đúng phía ngoại tệ: TK 1112/1122, hoặc tạm ứng 331*
+        use_debit_fc = (
+            cur != 'VND' and (
+                _is_fx_cash_account(debit)
+                or purpose_s == 'supplier_advance'
+                or debit.startswith('331')
+            )
+        )
+        lines.append({
+            'sequence': 1,
+            'account_code': debit,
+            'debit': float(amt),
+            'credit': 0,
+            'debit_fc': float(fc_amt) if use_debit_fc else 0,
+            'credit_fc': 0,
+            'description': desc,
+            'partner_type': (
+                'supplier' if purpose_s == 'supplier_advance' or debit.startswith('331') else None
+            ),
+        })
+
+    # Không cho Nợ/Có trùng một TK tiền (lỗi cũ: bank+USD → Có 1122 khi Nợ cũng 1122)
+    if _is_fx_cash_account(debit) and _is_fx_cash_account(credit) and debit[:4] == credit[:4]:
+        if purpose_s == 'buy_fx' or pm_is_vnd_source:
+            credit = _vnd_funding_account(payment_method, conn)
+        else:
+            raise ValueError(
+                f'Hạch toán không hợp lệ: Nợ {debit} và Có {credit} trùng nhóm ngoại tệ. '
+                f'Mua ngoại tệ phải Có {_vnd_funding_account(payment_method, conn)} (VND).'
+            )
+    if debit == credit:
+        raise ValueError(f'Hạch toán không hợp lệ: Nợ và Có cùng TK {debit}')
+
+    # Có VND khi mua NT: không ghi credit_fc; Có 1122/1112 mới gắn FC
+    use_credit_fc = (
+        cur != 'VND'
+        and _is_fx_cash_account(credit)
+        and purpose_s != 'buy_fx'
+    )
+    lines.append({
+        'sequence': (lines[-1]['sequence'] + 1) if lines else 1,
+        'account_code': credit,
+        'debit': 0,
+        'credit': float(amt),
+        'debit_fc': 0,
+        'credit_fc': float(fc_amt) if use_credit_fc else 0,
+        'description': desc,
+    })
+
+    if purpose_s == 'buy_fx':
+        biz = 'MUA_NGOAI_TE'
+    elif purpose_s == 'supplier_advance':
+        biz = 'TAM_UNG_NCC'
+    else:
+        biz = 'CHI_TIEN'
 
     entry = post_journal_entry(
         conn,
@@ -267,54 +686,55 @@ def create_payment(
         document_type='PC',
         document_no=vno,
         document_id=source_id or import_id,
-        business_type='CHI_TIEN',
+        business_type=biz,
+        currency=cur,
+        exchange_rate=float(rate),
         description=desc,
         reference_document=reference_document or None,
         created_by=created_by,
         branch_code=branch,
-        lines=[
-            {
-                'sequence': 1,
-                'account_code': debit,
-                'debit': float(amt),
-                'credit': 0,
-                'description': desc,
-            },
-            {
-                'sequence': 2,
-                'account_code': credit,
-                'debit': 0,
-                'credit': float(amt),
-                'description': desc,
-            },
-        ],
+        lines=lines,
     )
 
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO sme_vouchers (
-            voucher_type, form_code, voucher_no, voucher_date,
-            party_name, party_address, party_tax_code, amount,
-            debit_account, credit_account, reason, reference_document,
-            source_type, source_id, journal_entry_id, status, created_by, created_at, updated_at,
-            branch_code
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'posted',?,?,?,?)
-        """,
-        (
-            'payment', VOUCHER_FORM_PAYMENT, vno, date_s,
-            party_name, party_address, party_tax_code, float(amt),
-            debit, credit, desc, reference_document or None,
-            source_type or ('import' if import_id else None),
-            source_id or import_id,
-            entry['id'], created_by, _now(), _now(), branch,
-        ),
+    form = (form_code or VOUCHER_FORM_PAYMENT).strip() or VOUCHER_FORM_PAYMENT
+    cur_db = conn.cursor()
+    cols = {r[1] for r in cur_db.execute('PRAGMA table_info(sme_vouchers)').fetchall()}
+    base_cols = [
+        'voucher_type', 'form_code', 'voucher_no', 'voucher_date',
+        'party_name', 'party_address', 'party_tax_code', 'amount',
+        'debit_account', 'credit_account', 'reason', 'reference_document',
+        'source_type', 'source_id', 'journal_entry_id', 'status', 'created_by',
+        'created_at', 'updated_at', 'branch_code',
+    ]
+    src_type = source_type or (
+        'supplier_advance' if purpose_s == 'supplier_advance'
+        else ('buy_fx' if purpose_s == 'buy_fx'
+              else ('import' if import_id else None))
     )
-    voucher_id = cur.lastrowid
+    base_vals: list[Any] = [
+        'payment', form, vno, date_s,
+        party_name, party_address, party_tax_code, float(amt),
+        debit, credit, desc, reference_document or None,
+        src_type,
+        source_id or import_id,
+        entry['id'], 'posted', created_by, _now(), _now(), branch,
+    ]
+    if 'currency' in cols:
+        base_cols.extend(['currency', 'exchange_rate', 'amount_fc'])
+        base_vals.extend([cur, float(rate), float(fc_amt)])
+    if 'purpose' in cols:
+        base_cols.append('purpose')
+        base_vals.append(purpose_s)
+    placeholders = ','.join('?' * len(base_cols))
+    cur_db.execute(
+        f"INSERT INTO sme_vouchers ({', '.join(base_cols)}) VALUES ({placeholders})",
+        base_vals,
+    )
+    voucher_id = cur_db.lastrowid
 
-    if import_id and debit.startswith('331'):
+    if import_id and str(debit).startswith('331'):
         try:
-            cur.execute(
+            cur_db.execute(
                 """
                 UPDATE import
                 SET paid_amount = COALESCE(paid_amount, 0) + ?
@@ -331,12 +751,17 @@ def create_payment(
     return {
         'id': voucher_id,
         'voucher_no': vno,
-        'form_code': VOUCHER_FORM_PAYMENT,
+        'form_code': form,
         'journal_entry_id': entry['id'],
         'amount': float(amt),
+        'amount_fc': float(fc_amt),
+        'currency': cur,
+        'exchange_rate': float(rate),
         'debit_account': debit,
         'credit_account': credit,
+        'purpose': purpose_s,
         'branch_code': branch,
+        'journal_lines': lines,
     }
 
 
@@ -389,8 +814,14 @@ def void_voucher(
     posting_date: str | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
-    """Hủy phiếu thu/chi — đảo bút toán, giữ lịch sử (status=void)."""
+    """Hủy phiếu thu/chi.
+
+    - Kỳ **chưa** chốt kê khai / **chưa** khóa sổ năm: **xóa** bút toán (+ chứng từ)
+      để ghi lại — không tạo chứng từ đảo.
+    - Kỳ đã chốt kê khai hoặc khóa năm: ghi bút toán đảo, giữ phiếu ``status=void``.
+    """
     from Services.sme.journal_engine import reverse_journal_entry
+    from Services.sme.period_lock import is_period_sealed
 
     ensure_sme_voucher_schema(conn, commit=False)
     voucher = get_voucher(conn, voucher_id)
@@ -402,15 +833,36 @@ def void_voucher(
     from Services.sme.branch_filter import assert_row_in_branch
     assert_row_in_branch(conn, 'sme_vouchers', voucher_id, label='Chứng từ thu/chi')
 
+    date_s = (posting_date or voucher.get('voucher_date') or '')[:10]
+    try:
+        fy = int(date_s[:4])
+        per = int(date_s[5:7])
+    except (TypeError, ValueError):
+        fy, per = 0, 0
+    sealed = bool(fy and per and is_period_sealed(conn, fy, per))
+
     rev = None
+    mode = 'hard_delete'
     if voucher.get('journal_entry_id'):
-        rev = reverse_journal_entry(
-            conn,
-            int(voucher['journal_entry_id']),
-            posting_date=posting_date,
-            created_by=created_by,
-            reason=reason,
-        )
+        try:
+            rev = reverse_journal_entry(
+                conn,
+                int(voucher['journal_entry_id']),
+                posting_date=posting_date,
+                created_by=created_by,
+                reason=reason,
+            )
+            mode = rev.get('mode') or ('reverse' if sealed else 'hard_delete')
+        except ValueError as exc:
+            # Bút toán đã bị xóa cứng trước đó — vẫn hủy chứng từ
+            if 'Không tìm thấy bút toán' not in str(exc):
+                raise
+            rev = {'deleted': True, 'mode': 'hard_delete', 'voided_entry_id': voucher.get('journal_entry_id')}
+            mode = 'hard_delete' if not sealed else 'void_only'
+    elif not sealed:
+        mode = 'hard_delete'
+    else:
+        mode = 'void_only'
 
     # Hoàn tác side-effect công nợ nếu có
     if voucher.get('voucher_type') == 'receipt' and voucher.get('source_id'):
@@ -443,6 +895,35 @@ def void_voucher(
         except sqlite3.OperationalError:
             pass
 
+    # Phân bổ nộp BH cả kỳ (nếu có)
+    try:
+        conn.execute(
+            'DELETE FROM sme_insurance_pay_alloc WHERE voucher_id = ?',
+            (voucher_id,),
+        )
+    except sqlite3.Error:
+        pass
+
+    if mode == 'hard_delete':
+        # Xóa chứng từ — cho phép lập phiếu / bút toán mới trong kỳ mở
+        conn.execute('DELETE FROM sme_vouchers WHERE id = ?', (voucher_id,))
+        if commit:
+            conn.commit()
+        return {
+            'id': voucher_id,
+            'voucher_no': voucher.get('voucher_no'),
+            'voucher_type': voucher.get('voucher_type'),
+            'deleted': True,
+            'mode': 'hard_delete',
+            'journal_mode': (rev or {}).get('mode') or 'hard_delete',
+            'reversal': rev,
+            'message': (
+                f"Đã xóa bút toán và chứng từ {voucher.get('voucher_no')} "
+                f"(kỳ chưa kê khai / chưa khóa sổ) — có thể ghi lại."
+            ),
+        }
+
+    # Kỳ đã chốt kê khai / khóa năm: giữ lịch sử + đảo (nếu có)
     conn.execute(
         """
         UPDATE sme_vouchers
@@ -457,6 +938,14 @@ def void_voucher(
     )
     if commit:
         conn.commit()
-    out = get_voucher(conn, voucher_id)
+    out = get_voucher(conn, voucher_id) or dict(voucher)
     out['reversal'] = rev
+    out['mode'] = mode
+    out['deleted'] = False
+    out['message'] = (
+        f"Đã hủy {voucher.get('voucher_no')} và ghi bút toán đảo "
+        f"(kỳ đã chốt kê khai / khóa sổ)."
+        if mode == 'reverse'
+        else f"Đã đánh dấu hủy {voucher.get('voucher_no')}."
+    )
     return out

@@ -4,9 +4,24 @@
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
   <div>
     <h4 class="fw-bold mb-1">Bảng lương <span class="badge bg-primary">Thông tư 99 / Thông tư 58</span></h4>
-    <p class="text-muted small mb-0">Chốt → Nợ 642/622 · Có 3341/338 ·</p>
+    <p class="text-muted small mb-0">
+      Chốt → Nợ 622/627/641/642 theo bộ phận NV · Có 3341 / 3383 / 3384 / 3385 ·
+      <span class="ms-1">BH NLĐ:
+        <span class="badge bg-info">BHXH {{ info.rate_bhxh|default(8) }}%</span>
+        <span class="badge bg-info">BHYT {{ info.rate_bhyt|default(1.5) }}%</span>
+        <span class="badge bg-info">BHTN {{ info.rate_bhtn|default(1) }}%</span>
+      </span>
+      <span class="ms-1">BH DN:
+        <span class="badge bg-danger">BHXH {{ info.rate_bhxh_chu|default(17.5) }}%</span>
+        <span class="badge bg-danger">BHYT {{ info.rate_bhyt_chu|default(3) }}%</span>
+        <span class="badge bg-danger">BHTN {{ info.rate_bhtn_chu|default(1) }}%</span>
+      </span>
+    </p>
   </div>
   <div class="d-flex gap-2 flex-wrap">
+    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#configModal">
+      <i class="fas fa-cog me-1"></i>CẤU HÌNH LƯƠNG &amp; TỶ LỆ BẢO HIỂM
+    </button>
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_employees') }}">Nhân viên</a>
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_attendance') }}">Chấm công</a>
     <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_DanhSachPhieuChi') }}">Phiếu chi 02-TT</a>
@@ -28,19 +43,25 @@
       <input type="date" id="postDate" class="form-control">
     </div>
     <div class="col-md-2">
-      <label class="form-label small fw-bold">TK chi phí</label>
-      <select id="expAcct" class="form-select">
-        <option value="642">642 — QLDN</option>
-        <option value="622">622 — NC trực tiếp</option>
-        <option value="641">641 — Bán hàng</option>
-      </select>
+      <label class="form-label small fw-bold">Hạch toán CP</label>
+      <input type="text" class="form-control form-control-sm bg-light" readonly
+             value="Theo bộ phận NV" title="Map: Văn phòng→642 · Bán hàng→641 · Phân xưởng→627 · SX→622">
     </div>
     <div class="col-md-4 d-flex gap-2 flex-wrap">
       <button class="btn btn-dark" id="btnLoad">Tải NV</button>
       <button class="btn btn-danger" id="btnAccrue">Chốt &amp; ghi sổ</button>
-      <button class="btn btn-success" id="btnPay">Trả lương</button>
+      <a class="btn btn-success" id="btnPay"
+         href="{{ url_for('SME_PhaiTraCongNhanVien') }}">Trả lương</a>
       <a class="btn btn-outline-primary" id="btnPrint" target="_blank">In 01-LĐTL</a>
     </div>
+  </div>
+  <div class="card-footer bg-white small text-muted">
+    Công thức: Lương TG = Lương CB ÷ công chuẩn × ngày công ·
+    BH NLĐ = Lương TG × tỷ lệ ·
+    TNCN = biểu lũy tiến (TN − BH − GT bản thân − NPT) ·
+    Chủ hộ: không tính BHTN.
+    Bộ phận NV gắn trên hồ sơ nhân sự → TK chi phí khi chốt.
+    <span id="stdDaysHint"></span>
   </div>
 </div>
 
@@ -50,21 +71,22 @@
       <thead class="table-light">
         <tr>
           <th>Nhân viên</th>
+          <th>Bộ phận</th>
           <th class="text-end">Công</th>
           <th class="text-end">Lương TG</th>
           <th class="text-end">PC quỹ</th>
           <th class="text-end">PC khác</th>
           <th class="text-end">Thưởng</th>
-          <th class="text-end">Bảo hiểm xã hội</th>
-          <th class="text-end">BHYT</th>
-          <th class="text-end">BHTN</th>
+          <th class="text-end">BHXH <span class="text-muted fw-normal" id="hdrBhxh">{{ info.rate_bhxh|default(8) }}%</span></th>
+          <th class="text-end">BHYT <span class="text-muted fw-normal" id="hdrBhyt">{{ info.rate_bhyt|default(1.5) }}%</span></th>
+          <th class="text-end">BHTN <span class="text-muted fw-normal" id="hdrBhtn">{{ info.rate_bhtn|default(1) }}%</span></th>
           <th class="text-end">TNCN</th>
           <th class="text-end">Thực lĩnh</th>
         </tr>
       </thead>
-      <tbody id="tbody"><tr><td colspan="11" class="text-center text-muted py-4">Chọn kỳ và tải</td></tr></tbody>
+      <tbody id="tbody"><tr><td colspan="12" class="text-center text-muted py-4">Chọn kỳ và tải</td></tr></tbody>
       <tfoot><tr class="fw-bold table-secondary">
-        <td colspan="10" class="text-end">Tổng thực lĩnh</td>
+        <td colspan="11" class="text-end">Tổng thực lĩnh</td>
         <td class="text-end" id="sumNet">0</td>
       </tr></tfoot>
     </table>
@@ -77,10 +99,94 @@
     <table class="table table-sm mb-0">
       <thead class="table-light"><tr>
         <th>Kỳ</th><th>Ngày</th><th class="text-end">Thu nhập</th><th class="text-end">Thực lĩnh</th>
-        <th class="text-end">BH chủ</th><th>Tài khoản chi phí</th><th>Journal</th>
+        <th class="text-end">BH chủ</th><th>TK CP (theo BP)</th><th>Journal</th>
       </tr></thead>
       <tbody id="runsBody"><tr><td colspan="7" class="text-muted text-center py-3">…</td></tr></tbody>
     </table>
+  </div>
+</div>
+
+{# Modal cấu hình — cùng form HKD #}
+<div class="modal fade" id="configModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form class="modal-content" action="{{ url_for('SME_salary_update_config') }}" method="POST">
+      <input type="hidden" name="month" id="cfgMonth" value="{{ month or '' }}">
+      <input type="hidden" name="year" id="cfgYear" value="{{ year or '' }}">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold"><i class="fas fa-tools me-2"></i>CẤU HÌNH LƯƠNG &amp; TỶ LỆ BẢO HIỂM</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <h6 class="fw-bold mb-3" style="font-size:0.9rem;color:#495057;background:#f8f9fa;padding:5px 10px;border-radius:4px;">1. Địa bàn &amp; Mức lương vùng</h6>
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Vùng kinh doanh</label>
+              <select name="region" class="form-select" id="regionSelect">
+                <option value="">-- Chọn vùng --</option>
+                {% for v in vung_data %}
+                <option value="{{ v.region_name }}"
+                        data-val="{{ v.min_salary }}"
+                        {% if info and info.salary_region == v.region_name %}selected{% endif %}>
+                  {{ v.region_name }} - [{{ "{:,.0f}".format(v.min_salary|float).replace(',', '.') }} đ]
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Mức lương làm căn cứ đóng BH</label>
+              <div class="input-group">
+                <input type="number" name="base_salary" id="baseSalaryInput"
+                       class="form-control fw-bold text-danger"
+                       value="{{ info.base_salary_insurance|default(5210000) }}">
+                <span class="input-group-text">đ</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 border-start">
+            <h6 class="fw-bold mb-3" style="font-size:0.9rem;color:#495057;background:#f8f9fa;padding:5px 10px;border-radius:4px;">2. Tỷ lệ đóng BH của NLĐ (%)</h6>
+            <div class="row g-2 mb-3">
+              <div class="col-4">
+                <label class="small fw-bold">BHXH</label>
+                <input type="number" step="0.1" name="rate_bhxh" class="form-control" value="{{ info.rate_bhxh|default(8.0) }}">
+              </div>
+              <div class="col-4">
+                <label class="small fw-bold">BHYT</label>
+                <input type="number" step="0.1" name="rate_bhyt" class="form-control" value="{{ info.rate_bhyt|default(1.5) }}">
+              </div>
+              <div class="col-4">
+                <label class="small fw-bold">BHTN</label>
+                <input type="number" step="0.1" name="rate_bhtn" class="form-control" value="{{ info.rate_bhtn|default(1.0) }}">
+              </div>
+            </div>
+            <h6 class="fw-bold mb-3" style="font-size:0.9rem;color:#495057;background:#f8f9fa;padding:5px 10px;border-radius:4px;">3. Tỷ lệ đóng BH của DN / Chủ SDLĐ (%)</h6>
+            <div class="row g-2">
+              <div class="col-4">
+                <label class="small fw-bold text-danger">BHXH</label>
+                <input type="number" step="0.1" name="rate_bhxh_chu" class="form-control border-danger-subtle" value="{{ info.rate_bhxh_chu|default(17.5) }}">
+              </div>
+              <div class="col-4">
+                <label class="small fw-bold text-danger">BHYT</label>
+                <input type="number" step="0.1" name="rate_bhyt_chu" class="form-control border-danger-subtle" value="{{ info.rate_bhyt_chu|default(3.0) }}">
+              </div>
+              <div class="col-4">
+                <label class="small fw-bold text-danger">BHTN</label>
+                <input type="number" step="0.1" name="rate_bhtn_chu" class="form-control border-danger-subtle" value="{{ info.rate_bhtn_chu|default(1.0) }}">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="alert alert-warning small mb-0">
+          <i class="fas fa-info-circle me-1"></i>
+          Tỷ lệ nhập dạng số thực (VD: 8 hoặc 17.5). Hệ thống tự chia 100 khi tính.
+          Sau khi lưu, bấm <strong>Tải NV</strong> để áp dụng công thức mới.
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        <button type="submit" class="btn btn-primary px-5 shadow-sm">LƯU CẤU HÌNH TỔNG THỂ</button>
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}
@@ -93,61 +199,169 @@ if (!document.getElementById('m').value) document.getElementById('m').value = no
 if (!document.getElementById('y').value) document.getElementById('y').value = now.getFullYear();
 document.getElementById('postDate').value = today();
 
+// Tỷ lệ BH từ cấu hình (cùng nguồn HKD / business_info)
+let RATES = {
+  bhxh: parseFloat("{{ info.rate_bhxh|default(8) }}") / 100,
+  bhyt: parseFloat("{{ info.rate_bhyt|default(1.5) }}") / 100,
+  bhtn: parseFloat("{{ info.rate_bhtn|default(1) }}") / 100,
+};
+let RATES_CHU = {
+  bhxh: parseFloat("{{ info.rate_bhxh_chu|default(17.5) }}") / 100,
+  bhyt: parseFloat("{{ info.rate_bhyt_chu|default(3) }}") / 100,
+  bhtn: parseFloat("{{ info.rate_bhtn_chu|default(1) }}") / 100,
+};
+let standardDays = 0;
 let rows = [];
 
-function num(el){ return parseFloat(String(el.value||'0').replace(/,/g,''))||0; }
-function recalcRow(tr){
-  const time = num(tr.querySelector('[data-f=time_salary]'));
+document.getElementById('regionSelect')?.addEventListener('change', function() {
+  const minSalary = this.options[this.selectedIndex]?.getAttribute('data-val');
+  if (minSalary) document.getElementById('baseSalaryInput').value = minSalary;
+});
+
+function applyConfig(cfg) {
+  if (!cfg) return;
+  RATES = {
+    bhxh: (parseFloat(cfg.rate_bhxh) || 8) / 100,
+    bhyt: (parseFloat(cfg.rate_bhyt) || 1.5) / 100,
+    bhtn: (parseFloat(cfg.rate_bhtn) || 1) / 100,
+  };
+  RATES_CHU = {
+    bhxh: (parseFloat(cfg.rate_bhxh_chu) || 17.5) / 100,
+    bhyt: (parseFloat(cfg.rate_bhyt_chu) || 3) / 100,
+    bhtn: (parseFloat(cfg.rate_bhtn_chu) || 1) / 100,
+  };
+  const pct = r => {
+    const v = r * 100;
+    return Number.isInteger(v) ? String(v) : v.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+  };
+  const set = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+  set('hdrBhxh', pct(RATES.bhxh) + '%');
+  set('hdrBhyt', pct(RATES.bhyt) + '%');
+  set('hdrBhtn', pct(RATES.bhtn) + '%');
+}
+
+function getStandardWorkingDays(month, year) {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let sundays = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (new Date(year, month - 1, d).getDay() === 0) sundays++;
+  }
+  return daysInMonth - sundays;
+}
+
+function calculateTNCN(income) {
+  if (income <= 0) return 0;
+  if (income <= 5000000) return income * 0.05;
+  if (income <= 10000000) return income * 0.1 - 250000;
+  if (income <= 18000000) return income * 0.15 - 750000;
+  if (income <= 32000000) return income * 0.2 - 1650000;
+  if (income <= 52000000) return income * 0.25 - 3250000;
+  if (income <= 80000000) return income * 0.3 - 5850000;
+  return income * 0.35 - 9850000;
+}
+
+function num(el){ return parseFloat(String(el?.value||'0').replace(/,/g,''))||0; }
+
+function calcFromInputs(tr, {recomputeTime=false} = {}) {
+  const days = num(tr.querySelector('[data-f=actual_working_days]'));
+  const base = parseFloat(tr.dataset.base || 0) || 0;
+  const std = standardDays || getStandardWorkingDays(
+    parseInt(document.getElementById('m').value, 10),
+    parseInt(document.getElementById('y').value, 10)
+  );
+  let time;
+  if (recomputeTime && std > 0) {
+    time = Math.round((base / std) * days);
+    const timeEl = tr.querySelector('[data-f=time_salary]');
+    if (timeEl) timeEl.value = time;
+  } else {
+    time = num(tr.querySelector('[data-f=time_salary]'));
+  }
   const af = num(tr.querySelector('[data-f=allowance_fund]'));
   const ao = num(tr.querySelector('[data-f=allowance_other]'));
   const bonus = num(tr.querySelector('[data-f=bonus]'));
-  const bhxh = num(tr.querySelector('[data-f=bhxh]'));
-  const bhyt = num(tr.querySelector('[data-f=bhyt]'));
-  const bhtn = num(tr.querySelector('[data-f=bhtn]'));
-  const tncn = num(tr.querySelector('[data-f=tncn_tax]'));
+  const chuHo = tr.dataset.chuho === '1';
+  const bhxh = Math.round(time * RATES.bhxh);
+  const bhyt = Math.round(time * RATES.bhyt);
+  const bhtn = chuHo ? 0 : Math.round(time * RATES.bhtn);
   const income = time + af + ao + bonus;
+  const selfDed = parseFloat(tr.dataset.selfded || 11000000) || 11000000;
+  const deps = parseInt(tr.dataset.deps || 0, 10) || 0;
+  const depDed = parseFloat(tr.dataset.depded || 4400000) || 4400000;
+  const taxable = income - (bhxh + bhyt + bhtn) - (selfDed + deps * depDed);
+  const tncn = Math.max(0, Math.round(calculateTNCN(taxable)));
+
+  tr.querySelector('[data-f=bhxh]').value = bhxh;
+  tr.querySelector('[data-f=bhyt]').value = bhyt;
+  tr.querySelector('[data-f=bhtn]').value = bhtn;
+  tr.querySelector('[data-f=tncn_tax]').value = tncn;
+
   const deduct = bhxh + bhyt + bhtn + tncn;
   const net = income - deduct;
   tr.querySelector('[data-f=final_amount]').textContent = fmt(net);
   tr.dataset.net = String(net);
   tr.dataset.income = String(income);
   tr.dataset.deduct = String(deduct);
+  // BH DN tham chiếu
+  const empBh = Math.round(time * RATES_CHU.bhxh)
+    + Math.round(time * RATES_CHU.bhyt)
+    + (chuHo ? 0 : Math.round(time * RATES_CHU.bhtn));
+  tr.dataset.employer = String(empBh);
   sumAll();
 }
+
+function recalcRow(tr, src){
+  const f = src?.getAttribute?.('data-f');
+  // Đổi công → tính lại lương TG theo công thức; đổi lương TG/PC → tính BH & TNCN
+  const recomputeTime = f === 'actual_working_days';
+  calcFromInputs(tr, { recomputeTime });
+}
+
 function sumAll(){
   let t = 0;
   document.querySelectorAll('#tbody tr[data-eid]').forEach(tr => t += parseFloat(tr.dataset.net||0));
   document.getElementById('sumNet').textContent = fmt(t);
 }
+
 function render(){
   const tbody = document.getElementById('tbody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">Không có nhân viên đang làm việc</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">Không có nhân viên đang làm việc</td></tr>';
     sumAll(); return;
   }
   tbody.innerHTML = rows.map(r => {
     const income = Number(r.total_income)||0;
     const deduct = Number(r.total_deduct)||0;
     const net = Number(r.final_amount)|| (income-deduct);
-    return `<tr data-eid="${r.employee_id}" data-name="${(r.fullname||'').replace(/"/g,'&quot;')}" data-net="${net}" data-income="${income}" data-deduct="${deduct}">
-      <td class="fw-semibold">${r.fullname||''}</td>
+    const chu = (r.is_chu_ho == 1 || r.is_chu_ho === true) ? '1' : '0';
+    const name = (r.fullname||'').replace(/"/g,'&quot;');
+    const badge = chu === '1' ? ' <span class="badge bg-warning text-dark" style="font-size:9px">Chủ hộ</span>' : '';
+    const dept = r.department || 'ADMIN';
+    const deptLbl = (r.department_label || dept) + (r.expense_account ? ` · ${r.expense_account}` : '');
+    return `<tr data-eid="${r.employee_id}" data-name="${name}" data-net="${net}" data-income="${income}" data-deduct="${deduct}"
+      data-base="${r.base_salary||0}" data-chuho="${chu}" data-dept="${dept}"
+      data-selfded="${r.self_deduction||11000000}" data-deps="${r.dependents||0}" data-depded="${r.dependent_deduction||4400000}"
+      data-employer="${r.employer_insurance||0}">
+      <td class="fw-semibold">${r.fullname||''}${badge}</td>
+      <td class="small text-nowrap">${deptLbl}</td>
       <td><input class="form-control form-control-sm text-end" data-f="actual_working_days" value="${r.actual_working_days||0}"></td>
       <td><input class="form-control form-control-sm text-end money-input" data-f="time_salary" value="${r.time_salary||0}"></td>
       <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_fund" value="${r.allowance_fund||0}"></td>
       <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_other" value="${r.allowance_other||0}"></td>
       <td><input class="form-control form-control-sm text-end money-input" data-f="bonus" value="${r.bonus||0}"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="bhxh" value="${r.bhxh||0}"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="bhyt" value="${r.bhyt||0}"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="bhtn" value="${r.bhtn||0}"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="tncn_tax" value="${r.tncn_tax||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="bhxh" value="${r.bhxh||0}" readonly title="Tự tính theo tỷ lệ"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="bhyt" value="${r.bhyt||0}" readonly title="Tự tính theo tỷ lệ"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="bhtn" value="${r.bhtn||0}" readonly title="Tự tính theo tỷ lệ"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="tncn_tax" value="${r.tncn_tax||0}" readonly title="Tự tính theo biểu lũy tiến"></td>
       <td class="text-end fw-bold text-primary" data-f="final_amount">${fmt(net)}</td>
     </tr>`;
   }).join('');
-  tbody.querySelectorAll('input').forEach(inp => {
-    inp.addEventListener('input', () => recalcRow(inp.closest('tr')));
+  tbody.querySelectorAll('input:not([readonly])').forEach(inp => {
+    inp.addEventListener('input', () => recalcRow(inp.closest('tr'), inp));
   });
   sumAll();
 }
+
 function collectRecords(){
   return [...document.querySelectorAll('#tbody tr[data-eid]')].map(tr => {
     const g = f => num(tr.querySelector(`[data-f=${f}]`));
@@ -158,12 +372,15 @@ function collectRecords(){
     return {
       employee_id: parseInt(tr.dataset.eid,10),
       fullname: tr.dataset.name,
-      base_salary: time,
+      base_salary: parseFloat(tr.dataset.base||0)||time,
+      is_chu_ho: tr.dataset.chuho === '1' ? 1 : 0,
+      department: tr.dataset.dept || 'ADMIN',
       actual_working_days: g('actual_working_days'),
       time_salary: time,
       allowance_fund: af, allowance_other: ao, bonus,
       bhxh, bhyt, bhtn, tncn_tax: tncn,
-      total_income: income, total_deduct: deduct, final_amount: income-deduct
+      total_income: income, total_deduct: deduct, final_amount: income-deduct,
+      employer_insurance: parseFloat(tr.dataset.employer||0)||0,
     };
   });
 }
@@ -189,11 +406,11 @@ async function loadRuns(){
   </tr>`).join('');
 }
 async function voidRun(month, year){
-  if(!confirm(`Hủy bảng lương T${month}/${year} (đảo bút toán)?`)) return;
+  if(!confirm(`Hủy bảng lương T${month}/${year}?\n(Kỳ chưa kê khai/khóa sổ: xóa bút toán để chốt lại — không tạo chứng từ đảo.)`)) return;
   const res=await fetch('/api/sme/payroll/void',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({month, year})});
   const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
-  alert(json.message||'Đã hủy'); loadRuns();
+  alert(json.message||json.data?.message||'Đã hủy'); loadRuns();
 }
 
 document.getElementById('btnLoad').onclick = async () => {
@@ -203,9 +420,11 @@ document.getElementById('btnLoad').onclick = async () => {
   if (json.success === false) {
     return alert(json.error || json.message || 'Không tải được');
   }
-  if (json.message && !json.records && !json.data) {
-    return alert(json.message || 'Không tải được');
-  }
+  if (json.config) applyConfig(json.config);
+  standardDays = json.standard_days || getStandardWorkingDays(parseInt(m.value,10), parseInt(y.value,10));
+  document.getElementById('stdDaysHint').textContent = ` Công chuẩn kỳ: ${standardDays} ngày (trừ CN).`;
+  document.getElementById('cfgMonth').value = m.value;
+  document.getElementById('cfgYear').value = y.value;
   rows = json.records || json.data || [];
   render();
 };
@@ -217,7 +436,7 @@ document.getElementById('btnAccrue').onclick = async () => {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
       month: parseInt(m.value,10), year: parseInt(y.value,10),
-      date: postDate.value, expense_account: expAcct.value, records
+      date: postDate.value, records
     })
   });
   const json = await res.json();
@@ -225,27 +444,20 @@ document.getElementById('btnAccrue').onclick = async () => {
   alert(json.message||'Đã chốt');
   loadRuns();
 };
-document.getElementById('btnPay').onclick = async () => {
-  const payDate = prompt('Ngày trả lương (YYYY-MM-DD)', today());
-  if (!payDate) return;
-  const method = confirm('OK = chuyển khoản (1121), Cancel = tiền mặt (1111)') ? 'bank' : 'cash';
-  const res = await fetch('/api/sme/payroll/pay', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      month: parseInt(m.value,10), year: parseInt(y.value,10),
-      pay_date: payDate, payment_method: method
-    })
-  });
-  const json = await res.json();
-  if (!json.success) return alert(json.error||'Lỗi');
-  alert(json.message||'Đã trả lương');
-};
+function syncPayLink(){
+  const mm=document.getElementById('m').value, yy=document.getElementById('y').value;
+  const pay=document.getElementById('btnPay');
+  if(pay) pay.href='{{ url_for("SME_PhaiTraCongNhanVien") }}?month='+mm+'&year='+yy;
+}
 {% if focus == 'payable' %}
 document.getElementById('btnPay').classList.add('btn-lg');
 {% endif %}
 function syncPrint(){
   const m=document.getElementById('m').value, y=document.getElementById('y').value;
   document.getElementById('btnPrint').href='/SME_salary/in?month='+m+'&year='+y;
+  document.getElementById('cfgMonth').value = m;
+  document.getElementById('cfgYear').value = y;
+  syncPayLink();
 }
 document.getElementById('m').addEventListener('change', syncPrint);
 document.getElementById('y').addEventListener('change', syncPrint);

@@ -35,7 +35,8 @@ async function loadProducts(){
   const wh=fWh.value||'';
   const res=await fetch('/api/sme/products/brief'+(wh?('?warehouse='+encodeURIComponent(wh)):''));
   const json=await res.json();
-  lines.innerHTML=(json.data||[]).map(p=>`<tr data-id="${p.id}"><td>${p.name}</td><td>${p.product_type}</td><td class="text-end">${p.quantity}</td>
+  const typeVi = (typeof productTypeLabelVi === 'function') ? productTypeLabelVi : (t => t || '—');
+  lines.innerHTML=(json.data||[]).map(p=>`<tr data-id="${p.id}"><td>${p.name}</td><td>${typeVi(p.product_type)}</td><td class="text-end">${p.quantity}</td>
     <td><input type="number" class="form-control form-control-sm text-end qty" min="0" step="any" value="0"></td></tr>`).join('');
 }
 async function loadHist(){

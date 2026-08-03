@@ -99,23 +99,28 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <div id="bankSplitGuide" class="alert alert-warning small mb-3" style="display:none"></div>
                 <div class="mb-2">
                     <label class="form-label small fw-bold">Tài khoản cha *</label>
                     <input list="parentOptions" id="parent_code" class="form-control form-control-sm" required
-                           placeholder="Ví dụ: 112 hoặc 1121">
+                           placeholder="Ví dụ: 1121 (TGNH VND) hoặc 1122 (ngoại tệ)">
                     <datalist id="parentOptions"></datalist>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label small fw-bold">Mã tài khoản con</label>
+                    <label class="form-label small fw-bold">Mã tài khoản con (tài khoản mới)</label>
                     <div class="input-group input-group-sm">
                         <input type="text" id="child_code" class="form-control" placeholder="Để trống = tự gợi ý">
                         <button type="button" class="btn btn-outline-secondary" id="btnSuggest">Gợi ý</button>
                     </div>
+                    <div class="form-text" id="childCodeHint">
+                        Với <strong>1121</strong>: mã <strong>112101</strong> dành cho TK mặc định (QR);
+                        tài khoản mới thường là <strong>112102</strong>.
+                    </div>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label small fw-bold">Tên tài khoản *</label>
+                    <label class="form-label small fw-bold">Tên tài khoản mới *</label>
                     <input type="text" id="child_name" class="form-control form-control-sm" required
-                           placeholder="Ví dụ: VND — Vietcombank CN HCM">
+                           placeholder="Ví dụ: VND — Techcombank CN HCM (STK mới)">
                 </div>
                 <div class="mb-2">
                     <label class="form-label small fw-bold">Lý do mở (Quy chế hạch toán)</label>
@@ -222,18 +227,53 @@
         document.getElementById('child_code').value = '';
         document.getElementById('child_name').value = '';
         document.getElementById('custom_reason').value = '';
+        const guide = document.getElementById('bankSplitGuide');
+        if (guide) { guide.style.display = 'none'; guide.innerHTML = ''; }
         const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCreateChild'));
         modal.show();
         if (parent) suggest();
+        else updateBankGuide(null);
+    }
+
+    function updateBankGuide(preview) {
+        const guide = document.getElementById('bankSplitGuide');
+        const hint = document.getElementById('childCodeHint');
+        if (!guide) return;
+        if (preview && preview.message) {
+            guide.style.display = '';
+            guide.innerHTML = '<i class="fas fa-info-circle me-1"></i>' + preview.message;
+            if (hint && preview.will_auto_split) {
+                hint.innerHTML =
+                    `Hệ thống sẽ tạo <b>${preview.default_code}</b> (mặc định + chuyển số liệu cũ) `
+                    + `và tài khoản mới <b>${preview.new_account_code || '…'}</b>.`;
+            } else if (hint && preview.default_code) {
+                hint.innerHTML =
+                    `TK mặc định: <b>${preview.default_code}</b>. `
+                    + 'Nhập tên STK mới bên dưới; mã con tự gợi ý hoặc chỉnh tay.';
+            }
+        } else {
+            guide.style.display = 'none';
+            guide.innerHTML = '';
+            if (hint) {
+                hint.innerHTML =
+                    'Với <strong>1121</strong>: mã <strong>112101</strong> dành cho TK mặc định (QR); '
+                    + 'tài khoản mới thường là <strong>112102</strong>.';
+            }
+        }
     }
 
     async function suggest() {
         const parent = document.getElementById('parent_code').value.trim();
-        if (!parent) return;
+        if (!parent) { updateBankGuide(null); return; }
         const res = await fetch('/api/sme/coa/' + encodeURIComponent(parent) + '/suggest-child');
         const json = await res.json();
-        if (json.success) document.getElementById('child_code').value = json.next_code;
-        else if (json.error) alert(json.error);
+        if (json.success) {
+            document.getElementById('child_code').value = json.next_code;
+            updateBankGuide(json.bank_split_preview || null);
+        } else if (json.error) {
+            alert(json.error);
+            updateBankGuide(null);
+        }
     }
 
     async function deactivate(code) {
@@ -246,6 +286,8 @@
 
     document.getElementById('btnOpenCreate').addEventListener('click', () => openCreate(''));
     document.getElementById('btnSuggest').addEventListener('click', suggest);
+    document.getElementById('parent_code').addEventListener('change', suggest);
+    document.getElementById('parent_code').addEventListener('blur', suggest);
     document.getElementById('coaSearch').addEventListener('input', render);
     document.getElementById('coaFilterSrc').addEventListener('change', render);
     document.getElementById('coaFilterPost').addEventListener('change', render);
@@ -266,6 +308,14 @@
         const json = await res.json();
         if (!json.success) return alert(json.error || 'Lỗi tạo tài khoản');
         bootstrap.Modal.getInstance(document.getElementById('modalCreateChild'))?.hide();
+        const msg = json.automation_message
+            || (json.data && json.data.automation_message)
+            || ('Đã tạo tài khoản ' + (json.data && json.data.code));
+        if (window.Swal) {
+            await Swal.fire({ icon: 'success', title: 'Đã tạo tài khoản', html: msg });
+        } else {
+            alert(msg);
+        }
         load();
     });
 

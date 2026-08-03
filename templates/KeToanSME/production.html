@@ -2,7 +2,6 @@
 {% block title %}Sản xuất & tính giá thành{% endblock %}
 
 {% block sme_head %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
     .prod-money { font-variant-numeric: tabular-nums; font-weight: 700; }
     .prod-short { color: #dc2626; }
@@ -114,7 +113,7 @@
                             <i class="fas fa-calculator me-1"></i>Tính vật tư &amp; giá thành
                         </button>
                         <button type="button" class="btn btn-success" id="btnCreateSx" onclick="createProduction()" disabled>
-                            <i class="fas fa-check me-1"></i>Hoàn thành phiếu SX
+                            <i class="fas fa-industry me-1"></i>Lập lệnh sản xuất
                         </button>
                         <div class="ms-auto text-end">
                             <div class="small text-muted">Vật tư: <span class="prod-money" id="sxMaterialCost">0 ₫</span>
@@ -152,8 +151,10 @@
                         <input type="text" id="orderFrom" class="form-control form-control-sm" style="width:120px" placeholder="Từ ngày">
                         <input type="text" id="orderTo" class="form-control form-control-sm" style="width:120px" placeholder="Đến ngày">
                         <input type="text" id="orderQ" class="form-control form-control-sm" style="width:160px" placeholder="Số phiếu / tên TP">
-                        <select id="orderStatus" class="form-select form-select-sm" style="width:140px">
+                        <select id="orderStatus" class="form-select form-select-sm" style="width:160px">
                             <option value="">Tất cả tình trạng</option>
+                            <option value="in_progress">Đang sản xuất</option>
+                            <option value="partial_received">Nhập một phần</option>
                             <option value="completed">Hoàn thành</option>
                             <option value="cancelled">Đã hủy</option>
                         </select>
@@ -167,7 +168,8 @@
                                 <th>Số phiếu</th>
                                 <th>Ngày</th>
                                 <th>Thành phẩm</th>
-                                <th class="text-end">SL</th>
+                                <th class="text-end">SL lệnh</th>
+                                <th class="text-end">Đã nhập kho</th>
                                 <th class="text-end">Giá thành ĐV</th>
                                 <th class="text-end">Tổng giá thành</th>
                                 <th>Tình trạng</th>
@@ -176,7 +178,7 @@
                             </tr>
                         </thead>
                         <tbody id="orderTableBody">
-                            <tr><td colspan="9" class="text-center text-muted py-4">Đang tải...</td></tr>
+                            <tr><td colspan="10" class="text-center text-muted py-4">Đang tải...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -277,9 +279,10 @@
 
 {% block sme_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script>
+if (window.KetoDatePicker && typeof KetoDatePicker.ensureHooks === 'function') {
+    KetoDatePicker.ensureHooks();
+}
 const PROD_PRINT_BASE = '/SME_production';
 const PROD_MODE = 'sme';
 const money = (n) => Number(n || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' ₫';
@@ -292,24 +295,29 @@ let previewLines = [];
 let bomMaterialCache = [];
 
 function isoFromPicker(id) {
+    if (window.KetoDatePicker && typeof KetoDatePicker.getIsoValue === 'function') {
+        return KetoDatePicker.getIsoValue(id) || '';
+    }
     const el = document.getElementById(id);
-    if (!el || !el._flatpickr) return (el?.value || '').trim();
-    const d = el._flatpickr.selectedDates[0];
-    if (!d) return '';
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    if (!el) return '';
+    if (el._flatpickr && el._flatpickr.selectedDates[0]) {
+        const d = el._flatpickr.selectedDates[0];
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    return (el.value || '').trim();
 }
 
 function initPickers() {
-    const opts = { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true };
     ['sxDate', 'orderFrom', 'orderTo'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) flatpickr(el, opts);
+        if (!el) return;
+        el.classList.add('keto-date-input');
+        if (id === 'sxDate') el.setAttribute('data-default-date', 'today');
     });
-    const sx = document.getElementById('sxDate');
-    if (sx && sx._flatpickr) sx._flatpickr.setDate(new Date(), true);
+    if (window.KetoDatePicker) {
+        KetoDatePicker.scan();
+        KetoDatePicker.setDate('sxDate', new Date(), true);
+    }
 }
 
 async function api(url, opts) {
@@ -483,16 +491,27 @@ function renderPreview(data) {
     }).join('');
 }
 
+function statusBadge(o) {
+    const s = o.status || '';
+    const label = (typeof statusLabelVi === 'function') ? statusLabelVi(s) : s;
+    if (s === 'cancelled') return `<span class="badge bg-secondary">${escapeHtml(label)}</span>`;
+    if (s === 'in_progress') return `<span class="badge bg-warning text-dark">${escapeHtml(label)}</span>`;
+    if (s === 'partial_received') return `<span class="badge bg-primary">${escapeHtml(label)}</span>`;
+    if (s === 'completed') return `<span class="badge bg-success">${escapeHtml(label)}</span>`;
+    return `<span class="badge bg-light text-dark">${escapeHtml(label)}</span>`;
+}
+
 async function createProduction() {
     const fg = Number(document.getElementById('sxFinished').value || 0);
     const qty = Number(document.getElementById('sxQty').value || 0);
     if (!fg || qty <= 0) return;
     const confirm = await Swal.fire({
-        title: 'Hoàn thành phiếu SX?',
-        html: 'Xuất nguyên vật liệu và nhập thành phẩm (bình quân gia quyền) và <strong>ghi sổ kép</strong> Nợ 155 / Có 152 (+3341/1111 nếu có).',
+        title: 'Lập lệnh sản xuất?',
+        html: 'Xuất nguyên vật liệu và ghi sổ <strong>CPSX dở dang (154)</strong>. '
+            + 'Thành phẩm nhập kho sau bằng nút <strong>Nhập kho thành phẩm</strong> trên từng lệnh (theo đợt hoặc đủ lệnh).',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Xác nhận & ghi sổ',
+        confirmButtonText: 'Xác nhận lập lệnh',
         cancelButtonText: 'Hủy',
     });
     if (!confirm.isConfirmed) return;
@@ -508,12 +527,13 @@ async function createProduction() {
                 materials: collectOverrides(),
                 labor_cost: Number(document.getElementById('sxLabor').value || 0),
                 other_cost: Number(document.getElementById('sxOther').value || 0),
+                defer_fg_receipt: true,
             }),
         });
         const j = res.journal || {};
-        let html = escapeHtml(res.message || 'Đã tạo phiếu');
+        let html = escapeHtml(res.message || 'Đã tạo lệnh');
         if (j.entry_no) {
-            html += `<br><span class="text-success">Bút toán: <strong>${escapeHtml(j.entry_no)}</strong> (Nợ 155 · Có 152…)</span>`;
+            html += `<br><span class="text-success">Bút toán: <strong>${escapeHtml(j.entry_no)}</strong> (CPSX → 154)</span>`;
         } else if (j.error) {
             html += `<br><span class="text-danger">Kho đã cập nhật nhưng ghi sổ lỗi: ${escapeHtml(j.error)}</span>`;
         } else if (j.skipped) {
@@ -539,6 +559,93 @@ async function createProduction() {
     }
 }
 
+async function receiveFg(orderId) {
+    try {
+        const detail = await api('/api/production/orders/' + orderId);
+        const o = detail.data;
+        const remain = Number(o.qty_remaining != null ? o.qty_remaining
+            : (Number(o.qty_planned || o.qty_completed || 0) - Number(o.qty_received || 0)));
+        if (remain <= 0) {
+            Swal.fire('Thông báo', 'Lệnh đã nhập kho đủ thành phẩm.', 'info');
+            return;
+        }
+        const unit = o.finished_unit || '';
+        const { value: formValues } = await Swal.fire({
+            title: 'Nhập kho thành phẩm',
+            html: `
+                <div class="text-start small mb-2">
+                    <div><strong>${escapeHtml(o.voucher_no)}</strong> · ${escapeHtml(o.finished_name || '')}</div>
+                    <div>SL lệnh: <strong>${num(o.qty_planned || o.qty_completed)}</strong> ${escapeHtml(unit)}
+                        · Đã nhập: <strong>${num(o.qty_received || 0)}</strong>
+                        · Còn lại: <strong class="text-primary">${num(remain)}</strong></div>
+                    <div>Giá thành ĐV: <strong>${money4(o.unit_cost)}</strong></div>
+                </div>
+                <label class="form-label small fw-bold text-start d-block">Số lượng nhập kho kỳ này</label>
+                <input id="swalFgQty" type="number" class="form-control text-end" min="0.000001" step="any" value="${remain}">
+                <label class="form-label small fw-bold text-start d-block mt-2">Ngày nhập kho</label>
+                <input id="swalFgDate" type="text" class="form-control keto-date-input" data-default-date="today" placeholder="dd/mm/yyyy" autocomplete="off">
+                <label class="form-label small fw-bold text-start d-block mt-2">Ghi chú</label>
+                <input id="swalFgNote" type="text" class="form-control" placeholder="Tùy chọn">
+                <div class="d-flex gap-2 mt-3">
+                    <button type="button" class="btn btn-outline-primary btn-sm flex-fill" id="swalFgHalf">Nhập 50% còn lại</button>
+                    <button type="button" class="btn btn-outline-success btn-sm flex-fill" id="swalFgAll">Nhập đủ còn lại</button>
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Nhập kho & ghi sổ 155',
+            cancelButtonText: 'Đóng',
+            didOpen: () => {
+                const qtyEl = document.getElementById('swalFgQty');
+                document.getElementById('swalFgAll').onclick = () => { qtyEl.value = remain; };
+                document.getElementById('swalFgHalf').onclick = () => {
+                    qtyEl.value = Math.round(remain * 500000) / 1000000;
+                };
+                if (window.KetoDatePicker) {
+                    KetoDatePicker.scan(Swal.getHtmlContainer && Swal.getHtmlContainer());
+                    KetoDatePicker.setDate('swalFgDate', new Date(), false);
+                }
+            },
+            preConfirm: () => {
+                const qty = Number(document.getElementById('swalFgQty').value || 0);
+                const receipt_date = isoFromPicker('swalFgDate');
+                const note = document.getElementById('swalFgNote').value.trim();
+                if (!(qty > 0)) {
+                    Swal.showValidationMessage('Nhập số lượng > 0');
+                    return false;
+                }
+                if (qty > remain + 1e-9) {
+                    Swal.showValidationMessage(`Không vượt quá còn lại (${num(remain)})`);
+                    return false;
+                }
+                if (!receipt_date) {
+                    Swal.showValidationMessage('Chọn ngày nhập kho');
+                    return false;
+                }
+                return { qty, receipt_date, note };
+            },
+        });
+        if (!formValues) return;
+        Swal.fire({ title: 'Đang nhập kho...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        const res = await api('/api/production/orders/' + orderId + '/receive-fg', {
+            method: 'POST',
+            body: JSON.stringify(formValues),
+        });
+        const j = res.journal || {};
+        let html = escapeHtml(res.message || 'Đã nhập kho');
+        if (j.entry_no) {
+            html += `<br><span class="text-success">Bút toán: <strong>${escapeHtml(j.entry_no)}</strong> (Nợ 155 / Có 154)</span>`;
+        } else if (j.error) {
+            html += `<br><span class="text-danger">${escapeHtml(j.error)}</span>`;
+        }
+        await Swal.fire({ icon: j.error ? 'warning' : 'success', title: 'Nhập kho thành công', html });
+        loadOrders();
+        loadProductPickers();
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
 async function loadOrders() {
     const params = new URLSearchParams();
     const f = isoFromPicker('orderFrom');
@@ -554,19 +661,25 @@ async function loadOrders() {
         const res = await api('/api/production/orders?' + params.toString());
         const rows = res.data || [];
         if (!rows.length) {
-            body.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">Chưa có phiếu</td></tr>`;
+            body.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">Chưa có phiếu</td></tr>`;
             return;
         }
         body.innerHTML = rows.map(o => {
-            const badge = o.status === 'cancelled'
-                ? '<span class="badge bg-secondary">Đã hủy</span>'
-                : '<span class="badge bg-success">Hoàn thành</span>';
-            const cancelBtn = o.status === 'completed'
-                ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelOrder(${o.id})" title="Hủy phiếu"><i class="fas fa-ban"></i></button>`
+            const badge = statusBadge(o);
+            const canReceive = Number(o.defer_fg_receipt) && o.status !== 'cancelled'
+                && Number(o.qty_remaining != null ? o.qty_remaining : 0) > 0;
+            const canCancel = o.status !== 'cancelled';
+            const receiveBtn = canReceive
+                ? `<button class="btn btn-sm btn-success me-1" onclick="receiveFg(${o.id})" title="Nhập kho thành phẩm"><i class="fas fa-box-open"></i></button>`
+                : '';
+            const cancelBtn = canCancel
+                ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelOrder(${o.id})" title="Hủy lệnh"><i class="fas fa-ban"></i></button>`
                 : '';
             const journalBadge = o.journal_entry_id
-                ? `<span class="badge bg-info text-dark" title="Đã ghi sổ kép">#${o.journal_entry_id}</span>`
+                ? `<span class="badge bg-info text-dark" title="Đã ghi sổ CPSX/154">#${o.journal_entry_id}</span>`
                 : '<span class="badge bg-warning text-dark">Chưa sổ</span>';
+            const planned = o.qty_planned != null ? o.qty_planned : o.qty_completed;
+            const received = o.qty_received != null ? o.qty_received : 0;
             return `<tr>
                 <td><code class="fw-bold text-danger">${escapeHtml(o.voucher_no)}</code></td>
                 <td>${formatDateVN(o.production_date)}</td>
@@ -574,12 +687,14 @@ async function loadOrders() {
                     <div class="fw-semibold">${escapeHtml(o.finished_name)}</div>
                     <div class="small text-muted">${escapeHtml(o.product_code || '')}</div>
                 </td>
-                <td class="text-end">${num(o.qty_completed)} ${escapeHtml(o.finished_unit || '')}</td>
+                <td class="text-end">${num(planned)} ${escapeHtml(o.finished_unit || '')}</td>
+                <td class="text-end">${num(received)} <span class="small text-muted">/ còn ${num(o.qty_remaining != null ? o.qty_remaining : Math.max(0, planned - received))}</span></td>
                 <td class="text-end prod-money">${money4(o.unit_cost)}</td>
                 <td class="text-end prod-money">${money(o.total_cost != null ? o.total_cost : o.total_material_cost)}</td>
                 <td>${badge}</td>
                 <td>${journalBadge}</td>
-                <td class="text-end no-print">
+                <td class="text-end no-print text-nowrap">
+                    ${receiveBtn}
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="viewOrder(${o.id})" title="Chi tiết"><i class="fas fa-eye"></i></button>
                     <a class="btn btn-sm btn-outline-secondary me-1" href="${PROD_PRINT_BASE}/${o.id}/print" target="_blank" title="In"><i class="fas fa-print"></i></a>
                     ${cancelBtn}
@@ -587,7 +702,7 @@ async function loadOrders() {
             </tr>`;
         }).join('');
     } catch (err) {
-        body.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">${escapeHtml(err.message)}</td></tr>`;
+        body.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">${escapeHtml(err.message)}</td></tr>`;
     }
 }
 
@@ -616,16 +731,35 @@ async function viewOrder(id) {
                 <div class="col-md-6"><strong>Số phiếu:</strong> <code>${escapeHtml(o.voucher_no)}</code></div>
                 <div class="col-md-6"><strong>Ngày SX:</strong> ${formatDateVN(o.production_date)}</div>
                 <div class="col-md-6"><strong>Thành phẩm:</strong> ${escapeHtml(o.finished_name)}</div>
-                <div class="col-md-6"><strong>Số lượng:</strong> ${num(o.qty_completed)} ${escapeHtml(o.finished_unit || '')}</div>
+                <div class="col-md-6"><strong>SL lệnh:</strong> ${num(o.qty_planned || o.qty_completed)} ${escapeHtml(o.finished_unit || '')}</div>
+                <div class="col-md-6"><strong>Đã nhập kho:</strong> ${num(o.qty_received || 0)} · còn ${num(o.qty_remaining != null ? o.qty_remaining : 0)}</div>
                 <div class="col-md-6"><strong>Giá thành ĐV:</strong> <span class="prod-money text-primary">${money4(o.unit_cost)}</span></div>
                 <div class="col-md-6"><strong>Vật tư:</strong> <span class="prod-money">${money(o.total_material_cost)}</span></div>
                 <div class="col-md-6"><strong>Nhân công:</strong> <span class="prod-money">${money(o.labor_cost)}</span></div>
                 <div class="col-md-6"><strong>Chi phí khác:</strong> <span class="prod-money">${money(o.other_cost)}</span></div>
                 <div class="col-md-6"><strong>Tổng giá thành:</strong> <span class="prod-money">${money(o.total_cost != null ? o.total_cost : o.total_material_cost)}</span></div>
-                <div class="col-md-6"><strong>Sổ kép:</strong> ${o.journal_entry_id ? ('#' + o.journal_entry_id + ' · Nợ 155 / Có 152…') : '<span class="text-warning">Chưa ghi</span>'}</div>
+                <div class="col-md-6"><strong>Sổ kép (CPSX/154):</strong> ${o.journal_entry_id ? ('#' + o.journal_entry_id) : '<span class="text-warning">Chưa ghi</span>'}</div>
+                <div class="col-md-6"><strong>Tình trạng:</strong> ${statusBadge(o)}</div>
                 <div class="col-12"><strong>Ghi chú:</strong> ${escapeHtml(o.note || '—')}</div>
                 ${o.status === 'cancelled' ? `<div class="col-12 text-danger"><strong>Đã hủy:</strong> ${escapeHtml(o.cancelled_at || '')} — ${escapeHtml(o.cancel_note || '')}</div>` : ''}
             </div>
+            <h6 class="fw-bold mt-3">Phiếu nhập kho thành phẩm</h6>
+            <table class="table table-sm table-bordered mb-3">
+                <thead class="table-light">
+                    <tr><th>Số phiếu</th><th>Ngày</th><th class="text-end">SL</th><th class="text-end">Thành tiền</th><th>Sổ</th></tr>
+                </thead>
+                <tbody>${
+                    (o.fg_receipts || []).length
+                        ? (o.fg_receipts || []).map(r => `<tr>
+                            <td><code>${escapeHtml(r.receipt_no)}</code></td>
+                            <td>${formatDateVN(r.receipt_date)}</td>
+                            <td class="text-end">${num(r.qty)}</td>
+                            <td class="text-end prod-money">${money(r.amount)}</td>
+                            <td>${r.journal_entry_id ? '#' + r.journal_entry_id : '—'}</td>
+                        </tr>`).join('')
+                        : '<tr><td colspan="5" class="text-center text-muted">Chưa nhập kho thành phẩm</td></tr>'
+                }</tbody>
+            </table>
             <table class="table table-sm table-bordered">
                 <thead class="table-light">
                     <tr><th>Vật tư</th><th class="text-end">Định mức</th><th class="text-end">Thực tế</th><th class="text-end">Đơn giá</th><th class="text-end">Thành tiền</th></tr>
@@ -642,12 +776,12 @@ async function viewOrder(id) {
 
 async function cancelOrder(id) {
     const confirm = await Swal.fire({
-        title: 'Hủy phiếu sản xuất?',
-        text: 'Hệ thống sẽ xuất lại TP và nhập lại vật tư theo giá lúc SX. (Đảo bút toán sổ kép sẽ bổ sung sau.)',
+        title: 'Hủy lệnh sản xuất?',
+        text: 'Đảo các phiếu nhập TP (nếu có), đảo sổ CPSX/154, xuất lại TP đã nhập và nhập lại vật tư.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',
-        confirmButtonText: 'Hủy phiếu',
+        confirmButtonText: 'Hủy lệnh',
         cancelButtonText: 'Đóng',
         input: 'text',
         inputPlaceholder: 'Lý do hủy (tùy chọn)',

@@ -8,7 +8,7 @@ legal_source:
 """
 from __future__ import annotations
 
-SEED_VERSION = 'tt99_v1_2026-07e'
+SEED_VERSION = 'tt99_v1_2026-08b'
 
 # account_class: asset | liability | equity | revenue | expense | off_balance | result
 # normal_balance: debit | credit
@@ -190,6 +190,9 @@ SEED_ACCOUNTS: list[dict] = [
     _a('2295', 'Dự phòng tổn thất tài sản khác', parent='229', source='recommended', recommended=1),
 
     _a('241', 'Xây dựng cơ bản dở dang', cls='asset', bal='debit', bctc='242', tracks=('project',)),
+    _a('2411', 'Mua sắm TSCĐ', parent='241', source='recommended', recommended=1, tracks=('project',)),
+    _a('2412', 'Xây dựng cơ bản', parent='241', source='recommended', recommended=1, tracks=('project',)),
+    _a('2413', 'Sửa chữa lớn TSCĐ', parent='241', source='recommended', recommended=1, tracks=('project',)),
     _a('242', 'Chi phí trả trước', cls='asset', bal='debit', bctc='242'),
     _a('243', 'Tài sản thuế thu nhập hoãn lại', cls='asset', bal='debit', bctc='262'),
     _a('244', 'Cầm cố, thế chấp, ký quỹ, ký cược', cls='asset', bal='debit', bctc='155'),

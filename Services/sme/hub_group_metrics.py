@@ -11,6 +11,7 @@ from Services.sme.cash_books import cash_fund_balances
 from Services.sme.dashboard_metrics import (
     debt_hub_metrics,
     fixed_asset_hub_metrics,
+    physical_inventory_value,
     tools_hub_metrics,
     warehouse_hub_metrics,
 )
@@ -40,15 +41,29 @@ def _endpoint_metric(
     fiscal_year: int,
     period_to: int,
     branch_code: str | None,
+    cache: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Công thức số dư / giá trị — trả None nếu mục không có số liệu."""
-    cash = None
+    store = cache if cache is not None else {}
+
+    def _cached(key: str, factory):
+        if key not in store:
+            store[key] = factory()
+        return store[key]
 
     def _cash():
-        nonlocal cash
-        if cash is None:
-            cash = cash_fund_balances(conn, fiscal_year=fiscal_year, branch_code=branch_code)
-        return cash
+        return _cached(
+            'cash',
+            lambda: cash_fund_balances(conn, fiscal_year=fiscal_year, branch_code=branch_code),
+        )
+
+    def _debt():
+        return _cached(
+            'debt',
+            lambda: debt_hub_metrics(
+                conn, fiscal_year=fiscal_year, period_to=period_to, branch_code=branch_code,
+            ),
+        )
 
     if endpoint == 'SME_SoQuyTienMat':
         bal = _cash().get('so_du_tien_mat') or 0
@@ -65,9 +80,7 @@ def _endpoint_metric(
         'SME_PhaiTraCongNhanVien',
         'SME_dashboard_debt',
     ):
-        d = debt_hub_metrics(
-            conn, fiscal_year=fiscal_year, period_to=period_to, branch_code=branch_code,
-        )
+        d = _debt()
         if endpoint == 'SME_SoCongNoPhaiThu':
             return _metric(d.get('receivable'), detail='Số dư tài khoản 131')
         if endpoint == 'SME_SoCongNoPhaiTra':
@@ -75,24 +88,28 @@ def _endpoint_metric(
         if endpoint == 'SME_PhaiThuCongNhanVien':
             return _metric(d.get('employee_advance'), detail='Số dư tài khoản 141')
         if endpoint == 'SME_PhaiTraCongNhanVien':
-            # Dùng số phải trả lương nếu có trong HR; fallback 0 từ debt hub
             from Services.sme.dashboard_metrics import hr_hub_metrics
-            hr = hr_hub_metrics(
-                conn, fiscal_year=fiscal_year, period_to=period_to, branch_code=branch_code,
+            hr = _cached(
+                'hr',
+                lambda: hr_hub_metrics(
+                    conn, fiscal_year=fiscal_year, period_to=period_to, branch_code=branch_code,
+                ),
             )
             return _metric(hr.get('salary_payable'), detail='Số dư tài khoản 334')
         return None
 
     if endpoint in ('SME_fixed_assets', 'SME_TSCD'):
-        fa = fixed_asset_hub_metrics(
-            conn, fiscal_year=fiscal_year, period_to=period_to, branch_code=branch_code,
+        fa = _cached(
+            'fa',
+            lambda: fixed_asset_hub_metrics(
+                conn, fiscal_year=fiscal_year, period_to=period_to, branch_code=branch_code,
+            ),
         )
         if endpoint == 'SME_fixed_assets':
             return _metric(
                 fa.get('register_cost') or fa.get('gross_cost') or fa.get('original_cost'),
                 detail='Nguyên giá đăng ký',
             )
-        # Tổng quan: giá trị còn lại / nguyên giá
         net = fa.get('net_book') or fa.get('net_value')
         gross = fa.get('gross_cost') or fa.get('original_cost') or fa.get('register_cost')
         if net is not None:
@@ -100,23 +117,33 @@ def _endpoint_metric(
         return _metric(gross, detail='Nguyên giá')
 
     if endpoint in ('SME_tools', 'SME_CCDC'):
-        tools = tools_hub_metrics(
-            conn, fiscal_year=fiscal_year, period_to=period_to, branch_code=branch_code,
+        tools = _cached(
+            'tools',
+            lambda: tools_hub_metrics(
+                conn, fiscal_year=fiscal_year, period_to=period_to, branch_code=branch_code,
+            ),
         )
         if endpoint == 'SME_tools':
             return _metric(tools.get('register_cost') or tools.get('balance'), detail='Nguyên giá đăng ký')
         return _metric(tools.get('balance'), detail='Số dư tài khoản 153')
 
-    if endpoint in ('inventory', 'inventory_detail', 'SME_dashboard_warehouse'):
-        wh = warehouse_hub_metrics(
-            conn, fiscal_year=fiscal_year, period_to=period_to, branch_code=branch_code,
+    if endpoint in ('inventory', 'inventory_detail'):
+        return _metric(
+            _cached('inv_phys', lambda: physical_inventory_value(conn)),
+            detail='Giá trị tồn kho (SL × giá vốn bình quân)',
         )
-        total = wh.get('inventory_total')
-        if endpoint == 'inventory_detail':
-            return None
-        if endpoint == 'SME_dashboard_warehouse':
-            return _metric(total, detail='Tổng hàng tồn kho (152+155+156+154)')
-        return _metric(total, detail='Giá trị tồn kho')
+
+    if endpoint == 'SME_dashboard_warehouse':
+        wh = _cached(
+            'wh',
+            lambda: warehouse_hub_metrics(
+                conn, fiscal_year=fiscal_year, period_to=period_to, branch_code=branch_code,
+            ),
+        )
+        return _metric(
+            wh.get('inventory_total'),
+            detail='Tổng hàng tồn kho (152+153+154+155+156)',
+        )
 
     return None
 
@@ -132,6 +159,7 @@ def fetch_hub_group_metrics(
     year = int(fiscal_year or date.today().year)
     period = int(period_to or datetime.now().month)
     items_out: dict[str, Any] = {}
+    shared: dict[str, Any] = {}
     for item in group.get('items') or ():
         ep = item.get('endpoint')
         if not ep:
@@ -140,6 +168,7 @@ def fetch_hub_group_metrics(
             m = _endpoint_metric(
                 conn, ep,
                 fiscal_year=year, period_to=period, branch_code=branch_code,
+                cache=shared,
             )
         except Exception:
             m = None

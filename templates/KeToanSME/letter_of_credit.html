@@ -1,0 +1,361 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Thư tín dụng L/C{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Thư tín dụng (L/C) <span class="badge bg-primary">TT99</span></h4>
+    <p class="text-muted small mb-0">
+      Ký quỹ mở L/C: Nợ <b>244</b> · Có <b>1122</b> (vốn tự có) · Có <b>3411</b> (phần vay NH nếu có)
+    </p>
+  </div>
+  <button class="btn btn-primary" id="btnNew"><i class="fas fa-plus me-1"></i>Khởi tạo L/C</button>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Số L/C</th><th>Ngày</th><th>Ngân hàng</th><th>NCC hưởng</th>
+          <th>Loại NT</th>
+          <th class="text-end">Mở NT</th>
+          <th class="text-end">Đã dùng</th>
+          <th class="text-end">Còn lại</th>
+          <th class="text-end">Còn 244</th>
+          <th>Ký quỹ</th><th>Trạng thái</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="modalLc" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Khởi tạo thư tín dụng (L/C)</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Ngày mở</label>
+            <input type="date" id="fDate" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Số L/C <span class="text-danger">*</span>
+              <span class="text-muted fw-normal">(do ngân hàng cấp)</span>
+            </label>
+            <input type="text" id="fLcNo" class="form-control" required
+                   placeholder="Nhập đúng số L/C trên giấy báo NH" autocomplete="off">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Ngân hàng phát hành</label>
+            <input type="text" id="fBank" class="form-control" placeholder="VD: Vietcombank">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Người hưởng (NCC nước ngoài)</label>
+            <input type="text" id="fBeneficiary" class="form-control">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Ngoại tệ</label>
+            <select id="fCur" class="form-select">
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="JPY">JPY</option>
+              <option value="CNY">CNY</option>
+              <option value="VND">VND</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Số tiền ngoại tệ (mệnh giá L/C)</label>
+            <input type="number" id="fAmtFc" class="form-control" min="0" step="0.01">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Tỷ giá ngày mở</label>
+            <input type="number" id="fRate" class="form-control" min="0" step="0.0001" value="25000">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Quy đổi VND</label>
+            <input type="text" id="fAmtVnd" class="form-control bg-light" readonly>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">TK tiền ký quỹ</label>
+            <select id="fCash" class="form-select">
+              <option value="1122">1122 — TGNH ngoại tệ</option>
+              <option value="1121">1121 — TGNH VND</option>
+              <option value="1112">1112 — Quỹ ngoại tệ</option>
+            </select>
+          </div>
+
+          <div class="col-12"><hr class="my-2"></div>
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Nguồn ký quỹ</label>
+            <div class="d-flex flex-wrap gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="funding" id="modeFull" value="full_margin" checked>
+                <label class="form-check-label" for="modeFull">Ký quỹ <b>100%</b> vốn tự có</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="funding" id="modeLoan" value="margin_and_loan">
+                <label class="form-check-label" for="modeLoan">Ký quỹ một phần + <b>vốn vay NH</b></label>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3" id="wrapMarginPct" style="display:none">
+            <label class="form-label small fw-semibold">% ký quỹ vốn tự có</label>
+            <input type="number" id="fMarginPct" class="form-control" min="1" max="99" step="1" value="20">
+          </div>
+          <div class="col-md-3" id="wrapInterest" style="display:none">
+            <label class="form-label small fw-semibold text-danger">% lãi suất vốn vay NH / năm</label>
+            <div class="input-group input-group-sm">
+              <input type="number" id="fInterestRate" class="form-control fw-bold" min="0.01" max="100" step="0.01" value="12" title="Ví dụ 12 = 12%/năm">
+              <span class="input-group-text">%/năm</span>
+            </div>
+          </div>
+          <div class="col-md-3" id="wrapLoanTerm" style="display:none">
+            <label class="form-label small fw-semibold text-danger">Thời hạn vay (kỳ hạn)</label>
+            <div class="input-group input-group-sm">
+              <input type="number" id="fLoanTerm" class="form-control fw-bold" min="1" max="600" step="1" value="6" title="Số tháng vay">
+              <span class="input-group-text">tháng</span>
+            </div>
+            <div class="form-text small" id="fLoanDueHint">Hạn trả ≈ ngày mở + kỳ hạn</div>
+          </div>
+          <div class="col-md-3" id="wrapLender" style="display:none">
+            <label class="form-label small fw-semibold">Bên cho vay</label>
+            <input type="text" id="fLender" class="form-control" placeholder="Mặc định = NH phát hành">
+          </div>
+          <div class="col-md-3" id="wrapLiab" style="display:none">
+            <label class="form-label small fw-semibold">TK vay</label>
+            <select id="fLiab" class="form-select">
+              <option value="3411">3411 — Các khoản đi vay</option>
+              <option value="341">341 — Vay và nợ thuê TC</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <div class="alert alert-light border small mb-0" id="fxPreview">
+              Chọn nguồn ký quỹ để xem bút toán dự kiến.
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Ghi chú</label>
+            <input type="text" id="fNotes" class="form-control">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button class="btn btn-primary" id="btnSave">Ghi sổ mở L/C</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n || 0));
+const fmtFc = n => new Intl.NumberFormat('en-US', {maximumFractionDigits: 2}).format(Number(n || 0));
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+fDate.value = todayISO();
+
+function fundingMode(){
+  return document.querySelector('input[name="funding"]:checked')?.value || 'full_margin';
+}
+function addMonthsISO(iso, months){
+  if (!iso || !(months > 0)) return '';
+  const p = String(iso).slice(0,10).split('-').map(Number);
+  if (p.length < 3 || !p[0]) return '';
+  let y = p[0], m = p[1] - 1 + Number(months), d = p[2];
+  y += Math.floor(m / 12);
+  m = ((m % 12) + 12) % 12;
+  const last = new Date(y, m + 1, 0).getDate();
+  d = Math.min(d, last);
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function syncFundingUi(){
+  const loan = fundingMode() === 'margin_and_loan';
+  wrapMarginPct.style.display = loan ? '' : 'none';
+  wrapInterest.style.display = loan ? '' : 'none';
+  wrapLoanTerm.style.display = loan ? '' : 'none';
+  wrapLender.style.display = loan ? '' : 'none';
+  wrapLiab.style.display = loan ? '' : 'none';
+  updatePreview();
+}
+function updatePreview(){
+  const fc = parseFloat(fAmtFc.value) || 0;
+  const rate = parseFloat(fRate.value) || 0;
+  const cur = fCur.value || 'USD';
+  const vnd = cur === 'VND' ? fc : fc * rate;
+  fAmtVnd.value = fmt(vnd);
+  const mode = fundingMode();
+  let pct = mode === 'full_margin' ? 100 : (parseFloat(fMarginPct.value) || 0);
+  if (pct <= 0 || pct > 100) pct = mode === 'full_margin' ? 100 : 20;
+  const own = vnd * pct / 100;
+  const loan = vnd - own;
+  const ls = parseFloat(fInterestRate.value) || 0;
+  const term = parseInt(fLoanTerm.value, 10) || 0;
+  const due = addMonthsISO(fDate.value, term);
+  if (fLoanDueHint) {
+    fLoanDueHint.textContent = due
+      ? `Hạn trả dự kiến: ${fmtDateVi(due)} (${term} tháng)`
+      : 'Hạn trả ≈ ngày mở + kỳ hạn';
+  }
+  fxPreview.innerHTML = mode === 'full_margin'
+    ? `Nợ <b>244</b> ${fmt(vnd)} · Có <b>${fCash.value}</b> ${fmt(vnd)} <span class="text-muted">(ký quỹ 100%)</span>`
+    : `Nợ <b>244</b> ${fmt(vnd)} · Có <b>${fCash.value}</b> ${fmt(own)} (${pct}%) · Có <b>${fLiab.value}</b> ${fmt(loan)} (${(100-pct).toFixed(0)}%)`
+      + ` · <span class="text-danger">LS <b>${ls}%</b>/năm · kỳ hạn <b>${term}</b> tháng`
+      + (due ? ` · hạn ${fmtDateVi(due)}` : '')
+      + `</span>`;
+}
+['fAmtFc','fRate','fCur','fCash','fMarginPct','fInterestRate','fLoanTerm','fLiab','fDate'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updatePreview);
+  document.getElementById(id).addEventListener('change', updatePreview);
+});
+document.querySelectorAll('input[name="funding"]').forEach(el => el.addEventListener('change', syncFundingUi));
+fCur.addEventListener('change', () => {
+  if (fCur.value === 'VND') { fRate.value = 1; fCash.value = '1121'; }
+  else if (Number(fRate.value) === 1) fRate.value = 25000;
+  updatePreview();
+});
+syncFundingUi();
+
+async function load(){
+  const res = await fetch('/api/sme/lc');
+  const json = await res.json();
+  if (!json.success) {
+    tbody.innerHTML = `<tr><td colspan="12" class="text-danger text-center">${json.error||'Lỗi'}</td></tr>`;
+    return;
+  }
+  const rows = json.data || [];
+  tbody.innerHTML = rows.map(r => {
+    const lsPct = Number(r.interest_rate || 0) > 0
+      ? (Number(r.interest_rate) <= 1 ? Number(r.interest_rate) * 100 : Number(r.interest_rate))
+      : 0;
+    const term = Number(r.loan_term_months || 0);
+    const mode = r.funding_mode === 'margin_and_loan'
+      ? `KQ ${Number(r.margin_pct||0)}% + vay`
+        + (lsPct ? ` · LS ${lsPct.toFixed(1)}%` : '')
+        + (term ? ` · ${term}T` : '')
+      : 'KQ 100%';
+    const st = r.status || '';
+    const remFc = Number(r.remaining_fc != null ? r.remaining_fc : r.amount_fc || 0);
+    const usedFc = Number(r.used_fc || 0);
+    const rem244 = Number(r.remaining_244 != null ? r.remaining_244 : r.amount_vnd || 0);
+    const badge = st === 'settled' ? 'bg-success' : (st === 'void' ? 'bg-dark' : 'bg-primary');
+    const actions = [];
+    if (st === 'open' && remFc > 0) {
+      actions.push(`<button class="btn btn-sm btn-outline-secondary me-1" onclick="settleLc(${r.id})" title="Tất toán đợt chứng từ tiếp theo">Tất toán đợt</button>`);
+      if (!(Number(r.settle_count || 0) > 0)) {
+        actions.push(`<button class="btn btn-sm btn-outline-danger" onclick="voidLc(${r.id})">Hủy</button>`);
+      }
+    }
+    const shipN = Number(r.settle_count || 0);
+    return `<tr>
+      <td class="fw-bold">${r.lc_no||''}${shipN ? `<div class="small text-muted">${shipN} đợt CT</div>` : ''}</td>
+      <td>${fmtDateVi(r.open_date)}</td>
+      <td>${r.bank_name||''}</td>
+      <td>${r.beneficiary_name||''}</td>
+      <td>${r.currency||''}</td>
+      <td class="text-end">${fmtFc(r.amount_fc)}</td>
+      <td class="text-end text-muted">${fmtFc(usedFc)}</td>
+      <td class="text-end fw-bold text-primary">${fmtFc(remFc)}</td>
+      <td class="text-end small">${fmt(rem244)}</td>
+      <td class="small">${mode}</td>
+      <td><span class="badge ${badge}">${st}</span></td>
+      <td class="text-nowrap">${actions.join('')}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="12" class="text-muted text-center py-4">Chưa có L/C</td></tr>';
+}
+
+async function settleLc(id){
+  if (!confirm('Tất toán đợt chứng từ tiếp theo trên L/C này?\n(Nợ 331 / Có 244 theo số dư L/C còn lại)')) return;
+  const res = await fetch('/api/sme/lc/'+id+'/settle', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({})
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error||'Lỗi');
+  alert(
+    `Đã tất toán · PN #${json.import_id} · giải toả 244: ${fmt(json.released_244)}\n`
+    + `Còn lại L/C: ${fmtFc(json.lc_remaining_fc)} NT / ${fmt(json.lc_remaining_244)}₫`
+  );
+  load();
+}
+
+async function voidLc(id){
+  if (!confirm('Hủy L/C và đảo bút toán ký quỹ?')) return;
+  const res = await fetch('/api/sme/lc/'+id+'/void', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({reason:'Hủy mở L/C'})
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error||'Lỗi');
+  load();
+}
+
+btnNew.onclick = () => {
+  fDate.value = todayISO();
+  fLcNo.value = '';
+  fBank.value = '';
+  fBeneficiary.value = '';
+  fAmtFc.value = '';
+  fNotes.value = '';
+  fInterestRate.value = '12';
+  fLoanTerm.value = '6';
+  modeFull.checked = true;
+  syncFundingUi();
+  new bootstrap.Modal(document.getElementById('modalLc')).show();
+};
+
+btnSave.onclick = async () => {
+  const mode = fundingMode();
+  const interestPct = parseFloat(fInterestRate.value) || 0;
+  const termMonths = parseInt(fLoanTerm.value, 10) || 0;
+  if (mode === 'margin_and_loan' && interestPct <= 0) {
+    return alert('Nhập % lãi suất vốn vay NH / năm');
+  }
+  if (mode === 'margin_and_loan' && termMonths <= 0) {
+    return alert('Nhập thời hạn vay (kỳ hạn) theo tháng');
+  }
+  const payload = {
+    date: fDate.value,
+    lc_no: (fLcNo.value || '').trim(),
+    bank_name: fBank.value,
+    beneficiary_name: fBeneficiary.value,
+    currency: fCur.value,
+    amount_fc: parseFloat(fAmtFc.value) || 0,
+    exchange_rate: parseFloat(fRate.value) || 1,
+    funding_mode: mode,
+    margin_pct: mode === 'full_margin' ? 100 : (parseFloat(fMarginPct.value) || 20),
+    interest_rate: mode === 'margin_and_loan' ? interestPct : 0,
+    loan_term_months: mode === 'margin_and_loan' ? termMonths : 0,
+    cash_account: fCash.value,
+    liability_account: fLiab.value,
+    lender_name: fLender.value,
+    notes: fNotes.value
+  };
+  if (!payload.lc_no) return alert('Nhập số L/C do ngân hàng cấp');
+  if (!payload.bank_name) return alert('Nhập ngân hàng phát hành');
+  if (payload.amount_fc <= 0) return alert('Nhập số tiền L/C');
+  // Phần vốn tự có ký quỹ (Có TK tiền) — phần vay NH không trừ quỹ
+  const pct = payload.funding_mode === 'full_margin' ? 100 : (payload.margin_pct || 20);
+  const ownVnd = Math.round((payload.amount_fc * payload.exchange_rate) * pct / 100);
+  if (ownVnd > 0 && window.assertSmeCashBalanceOrAlert) {
+    const okBal = await window.assertSmeCashBalanceOrAlert(ownVnd, payload.cash_account || '1122', { as_of: payload.date });
+    if (!okBal) return;
+  }
+  const res = await fetch('/api/sme/lc', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modalLc')).hide();
+  alert('Đã mở ' + (json.data?.lc_no || 'L/C') + ' — ký quỹ 244');
+  load();
+};
+
+load();
+</script>
+{% endblock %}

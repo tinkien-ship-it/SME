@@ -1,53 +1,533 @@
 {% extends "KeToanSME/_layout.html" %}
 {% block title %}Nộp bảo hiểm xã hội — mẫu 07-LĐTL{% endblock %}
 {% block sme_content %}
-<div class="mb-3"><h4 class="fw-bold mb-1">Nộp bảo hiểm xã hội / bảo hiểm y tế / bảo hiểm thất nghiệp <span class="badge bg-secondary">07-LĐTL</span></h4>
-<p class="text-muted small mb-0">Phiếu chi Nợ 338x · Có 111/112</p></div>
-<div class="card shadow-sm border-0 mb-3" style="max-width:520px"><div class="card-body">
-  <div class="mb-2"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
-  <div class="mb-2"><label class="form-label small">TK</label>
-    <select id="fAcc" class="form-select"><option value="3383">3383 bảo hiểm xã hội</option><option value="3384">3384 bảo hiểm y tế</option><option value="3385">3385 bảo hiểm thất nghiệp</option><option value="338">338 Tổng hợp</option></select>
+<style>
+  .money-lg { font-family: ui-monospace, monospace; font-weight: 800; font-size: 1.2rem; }
+  .money-cell { font-family: ui-monospace, monospace; font-weight: 700; text-align: right; white-space: nowrap; min-width: 95px; }
+  .debt { color: #dc3545; }
+  .ins-bhxh { border-left: 4px solid #0d6efd; }
+  .ins-bhyt { border-left: 4px solid #198754; }
+  .ins-bhtn { border-left: 4px solid #fd7e14; }
+  .payer-nld { background: #f0f7ff; }
+  .payer-dn { background: #fff8f0; }
+</style>
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Nộp bảo hiểm xã hội / BHYT / BHTN <span class="badge bg-secondary">07-LĐTL</span></h4>
+    <p class="text-muted small mb-0">
+      Công nợ theo kỳ lương · NLĐ (khấu trừ) + DN (người SDLĐ).
+      Thanh toán → phiếu chi + hạch toán <strong>Nợ 3383/3384/3385 · Có 1111/1121</strong>.
+    </p>
   </div>
-  <div class="mb-2"><label class="form-label small">Số tiền</label><input type="number" id="fAmt" class="form-control" min="0" step="1000"></div>
-  <div class="mb-2"><label class="form-label small">Hình thức</label><select id="fPay" class="form-select"><option value="bank">Chuyển khoản</option><option value="cash">Tiền mặt</option></select></div>
-  <div class="mb-3"><label class="form-label small">Tham chiếu kỳ</label><input type="text" id="fRef" class="form-control" placeholder="VD: BH T07/2026"></div>
-  <button class="btn btn-primary" id="btnSave">Lập phiếu chi nộp BH</button>
-</div></div>
-<div class="card shadow-sm border-0"><div class="card-header bg-white fw-bold">Lịch sử nộp BH</div>
-<div class="table-responsive"><table class="table table-sm mb-0">
-  <thead class="table-light"><tr><th>Số phiếu chi</th><th>Ngày</th><th>Tài khoản</th><th class="text-end">Số tiền</th><th>Lý do</th><th></th></tr></thead>
-  <tbody id="hist"></tbody>
-</table></div></div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_salary_create') }}">Bảng lương</a>
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_DanhSachPhieuChi') }}">Phiếu chi 02-TT</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3 align-items-end">
+  <div class="col-md-2">
+    <label class="form-label small fw-bold text-muted">Năm</label>
+    <select id="yearFilter" class="form-select"></select>
+  </div>
+  <div class="col-md-10">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3">
+          <div class="small text-muted text-uppercase fw-bold">Kỳ chưa nộp đủ</div>
+          <div id="periodCount" class="money-lg debt mt-1">0</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3 payer-nld">
+          <div class="small text-primary text-uppercase fw-bold">NLĐ chưa nộp</div>
+          <div id="nldUnpaid" class="money-lg debt mt-1">0 ₫</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3 payer-dn">
+          <div class="small text-danger text-uppercase fw-bold">DN chưa nộp</div>
+          <div id="dnUnpaid" class="money-lg debt mt-1">0 ₫</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3 bg-primary text-white">
+          <div class="small text-white-50 text-uppercase fw-bold">Tổng còn nộp</div>
+          <div id="totalUnpaid" class="money-lg fw-bold mt-1">0 ₫</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm overflow-hidden mb-4">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Kỳ lương</th>
+          <th class="text-center">NV</th>
+          <th class="money-cell">BHXH còn</th>
+          <th class="money-cell">BHYT còn</th>
+          <th class="money-cell">BHTN còn</th>
+          <th class="money-cell">NLĐ còn</th>
+          <th class="money-cell">DN còn</th>
+          <th class="money-cell">Tổng còn</th>
+          <th class="text-center">Trạng thái</th>
+          <th class="text-center" style="width:220px">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="periodBody">
+        <tr><td colspan="10" class="text-center text-muted py-4">Đang tải...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm overflow-hidden mb-4" id="detailCard" style="display:none">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <span class="fw-bold" id="detailTitle">Chi tiết kỳ</span>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="hideDetail()">Đóng</button>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Loại BH</th>
+            <th>TK</th>
+            <th class="money-cell">NLĐ phải nộp</th>
+            <th class="money-cell">NLĐ đã nộp</th>
+            <th class="money-cell">NLĐ còn</th>
+            <th class="money-cell">DN phải nộp</th>
+            <th class="money-cell">DN đã nộp</th>
+            <th class="money-cell">DN còn</th>
+            <th class="text-center">TT</th>
+            <th class="text-center" style="min-width:130px">Thanh toán</th>
+          </tr>
+        </thead>
+        <tbody id="typeDetailBody"></tbody>
+      </table>
+    </div>
+    <div class="p-3 border-top">
+      <h6 class="fw-bold small text-uppercase text-muted mb-2">Phân bổ theo nhân viên</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Nhân viên</th>
+              <th class="money-cell">BHXH NLĐ</th>
+              <th class="money-cell">BHYT NLĐ</th>
+              <th class="money-cell">BHTN NLĐ</th>
+              <th class="money-cell">BHXH DN</th>
+              <th class="money-cell">BHYT DN</th>
+              <th class="money-cell">BHTN DN</th>
+              <th class="money-cell">Tổng</th>
+            </tr>
+          </thead>
+          <tbody id="empDetailBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white fw-bold">Lịch sử phiếu chi nộp BH (07-LĐTL)</div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead class="table-light">
+        <tr><th>Số PC</th><th>Ngày</th><th>TK Nợ</th><th class="text-end">Số tiền</th><th>Lý do</th><th></th></tr>
+      </thead>
+      <tbody id="hist"></tbody>
+    </table>
+  </div>
+</div>
+
+{# Modal nộp 1 khoản #}
+<div class="modal fade" id="payModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-success shadow">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title fw-bold"><i class="fas fa-shield-alt me-2"></i>Thanh toán bảo hiểm</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="pay_month">
+        <input type="hidden" id="pay_year">
+        <input type="hidden" id="pay_ins_type">
+        <input type="hidden" id="pay_payer" value="NLD">
+        <input type="hidden" id="pay_amount_raw" value="0">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Khoản nộp</label>
+          <input type="text" class="form-control bg-light fw-bold" id="pay_label" readonly>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Ngày nộp</label>
+          <input type="date" class="form-control" id="pay_date">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Số tiền</label>
+          <input type="text" class="form-control fw-bold text-danger bg-light" id="pay_amount_display" readonly>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Đơn vị thu</label>
+          <input type="text" class="form-control" id="pay_receiver" value="Cơ quan BHXH">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Lý do</label>
+          <textarea class="form-control" id="pay_reason" rows="2"></textarea>
+        </div>
+        <div class="mb-0">
+          <label class="form-label fw-semibold">Phương thức</label>
+          <select class="form-select" id="pay_method">
+            <option value="bank" selected>Chuyển khoản (1121)</option>
+            <option value="cash">Tiền mặt (1111)</option>
+          </select>
+        </div>
+        <div class="alert alert-info small mt-3 mb-0">
+          Hệ thống lập phiếu chi và hạch toán: <strong>Nợ TK 338x · Có tiền</strong> cho đúng loại BH.
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-success px-4" onclick="confirmPay()">Xác nhận thanh toán</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Modal nộp cả kỳ #}
+<div class="modal fade" id="payAllModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-primary shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold"><i class="fas fa-layer-group me-2"></i>Nộp toàn bộ BH còn nợ kỳ</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="pa_month">
+        <input type="hidden" id="pa_year">
+        <div class="alert alert-primary py-2 small mb-3">
+          Lập <strong>1 phiếu chi chung</strong> cho cả kỳ; trong nhật ký hạch toán tách
+          <strong>Nợ 3383 / 3384 / 3385</strong> · Có tiền theo từng loại BH.
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Kỳ lương</label>
+          <input type="text" class="form-control bg-light" id="pa_label" readonly>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">BHXH còn</label>
+            <input type="text" class="form-control bg-light fw-bold" id="pa_bhxh" readonly>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">BHYT còn</label>
+            <input type="text" class="form-control bg-light fw-bold" id="pa_bhyt" readonly>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">BHTN còn</label>
+            <input type="text" class="form-control bg-light fw-bold" id="pa_bhtn" readonly>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Tổng còn</label>
+            <input type="text" class="form-control fw-bold text-danger bg-light" id="pa_amount_display" readonly>
+          </div>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">NLĐ còn</label>
+            <input type="text" class="form-control bg-light payer-nld fw-bold" id="pa_nld_display" readonly>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">DN còn</label>
+            <input type="text" class="form-control bg-light payer-dn fw-bold" id="pa_dn_display" readonly>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Ngày nộp</label>
+          <input type="date" class="form-control" id="pa_pay_date">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Đơn vị thu</label>
+          <input type="text" class="form-control" id="pa_receiver" value="Cơ quan BHXH">
+        </div>
+        <div class="mb-0">
+          <label class="form-label fw-semibold">Phương thức</label>
+          <select class="form-select" id="pa_pay_method">
+            <option value="bank" selected>Chuyển khoản (1121)</option>
+            <option value="cash">Tiền mặt (1111)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-primary px-4" onclick="confirmPayAll()">Xác nhận nộp cả kỳ</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
+
 {% block sme_scripts %}
 <script>
-const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
-fDate.value=new Date().toISOString().slice(0,10);
-async function loadHist(){
-  const res=await fetch('/api/sme/insurance/payments'); const json=await res.json();
-  hist.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.voucher_no||''}</td><td>${fmtDateVi(r.voucher_date)}</td>
-    <td>${r.debit_account||''}</td><td class="text-end">${fmt(r.amount)}</td>
-    <td class="small">${r.reason||''}</td>
+const fmt = n => (Number(n) || 0).toLocaleString('vi-VN') + ' ₫';
+const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const today = () => new Date().toISOString().slice(0,10);
+let periods = [];
+let activePeriod = null;
+
+function initYearFilter() {
+  const sel = document.getElementById('yearFilter');
+  const y = new Date().getFullYear();
+  for (let i = y + 1; i >= y - 4; i--) {
+    sel.innerHTML += `<option value="${i}" ${i === y ? 'selected' : ''}>Năm ${i}</option>`;
+  }
+  sel.addEventListener('change', () => { loadPeriods(); loadHist(); });
+}
+
+async function loadPeriods() {
+  const year = document.getElementById('yearFilter').value;
+  const res = await fetch(`/api/sme/insurance/periods?year=${year}&include_paid=1`);
+  const data = await res.json();
+  if (!data.success) {
+    periodBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">${esc(data.error||'Lỗi')}</td></tr>`;
+    return;
+  }
+  periods = data.periods || [];
+  const s = data.summary || {};
+  periodCount.textContent = s.unpaid_periods || 0;
+  nldUnpaid.textContent = fmt(s.nld_unpaid || 0);
+  dnUnpaid.textContent = fmt(s.dn_unpaid || s.chu_unpaid || 0);
+  totalUnpaid.textContent = fmt(s.total_unpaid || 0);
+  renderPeriods();
+}
+
+function renderPeriods() {
+  if (!periods.length) {
+    periodBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Chưa có kỳ lương đã chốt.</td></tr>';
+    return;
+  }
+  periodBody.innerHTML = periods.map(p => `
+    <tr>
+      <td class="fw-bold text-primary">${esc(p.period_label)}</td>
+      <td class="text-center">${p.employee_count}${p.chu_ho_count ? ` <span class="badge bg-warning text-dark">${p.chu_ho_count} CH</span>` : ''}</td>
+      <td class="money-cell ${p.bhxh_con_lai > 0 ? 'debt fw-bold' : 'text-muted'}">${fmt(p.bhxh_con_lai)}</td>
+      <td class="money-cell ${p.bhyt_con_lai > 0 ? 'debt fw-bold' : 'text-muted'}">${fmt(p.bhyt_con_lai)}</td>
+      <td class="money-cell ${p.bhtn_con_lai > 0 ? 'debt fw-bold' : 'text-muted'}">${fmt(p.bhtn_con_lai)}</td>
+      <td class="money-cell ${p.nld_con_lai > 0 ? 'debt fw-bold' : 'text-muted'}">${fmt(p.nld_con_lai)}</td>
+      <td class="money-cell ${(p.dn_con_lai||p.chu_con_lai) > 0 ? 'debt fw-bold' : 'text-muted'}">${fmt(p.dn_con_lai||p.chu_con_lai)}</td>
+      <td class="money-cell fw-bold ${p.total_con_lai > 0 ? 'debt' : 'text-success'}">${fmt(p.total_con_lai)}</td>
+      <td class="text-center"><span class="badge ${p.status_class}">${esc(p.status)}</span></td>
+      <td class="text-center text-nowrap">
+        ${p.total_con_lai > 0
+          ? `<button class="btn btn-sm btn-primary btn-pay-all" data-month="${p.month}" data-year="${p.year}"><i class="fas fa-coins me-1"></i>Nộp cả kỳ</button>`
+          : ''}
+        <button class="btn btn-sm btn-outline-primary btn-view" data-month="${p.month}" data-year="${p.year}" title="Chi tiết BHXH/BHYT/BHTN">
+          <i class="fas fa-list"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+function payButtons(month, year, t) {
+  const btns = [];
+  if (t.nld_con_lai > 0) {
+    btns.push(`<button class="btn btn-sm btn-outline-primary btn-pay-one py-0 me-1"
+      data-month="${month}" data-year="${year}" data-type="${t.ins_type}" data-payer="NLD"
+      data-amount="${t.nld_con_lai}" data-acct="${t.account_code}"
+      data-label="${esc(t.label)} NLĐ — ${esc(activePeriod?.period_label || '')}">NLĐ</button>`);
+  }
+  const dnCon = t.dn_con_lai || t.chu_con_lai || 0;
+  if (dnCon > 0) {
+    btns.push(`<button class="btn btn-sm btn-outline-danger btn-pay-one py-0"
+      data-month="${month}" data-year="${year}" data-type="${t.ins_type}" data-payer="DN"
+      data-amount="${dnCon}" data-acct="${t.account_code}"
+      data-label="${esc(t.label)} DN — ${esc(activePeriod?.period_label || '')}">DN</button>`);
+  }
+  return btns.length ? btns.join('') : '<span class="text-muted small">—</span>';
+}
+
+async function showDetail(month, year) {
+  const res = await fetch(`/api/sme/insurance/period-detail?month=${month}&year=${year}`);
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    return alert(data.error || 'Không tải được chi tiết');
+  }
+  activePeriod = data;
+  detailCard.style.display = 'block';
+  const s = data.summary || {};
+  detailTitle.textContent =
+    `${data.period_label} — ${data.employee_count} NV · NLĐ còn ${fmt(s.nld_con_lai)} · DN còn ${fmt(s.dn_con_lai||s.chu_con_lai)}`;
+
+  typeDetailBody.innerHTML = (data.types || []).map(t => `
+    <tr class="ins-${String(t.ins_type).toLowerCase()}">
+      <td class="fw-bold">${esc(t.label)}</td>
+      <td><code>${esc(t.account_code)}</code></td>
+      <td class="money-cell">${fmt(t.nld_phai_nop)}</td>
+      <td class="money-cell text-success">${fmt(t.nld_da_nop)}</td>
+      <td class="money-cell ${t.nld_con_lai > 0 ? 'debt fw-bold' : ''}">${fmt(t.nld_con_lai)}</td>
+      <td class="money-cell">${fmt(t.dn_phai_nop||t.chu_phai_nop)}</td>
+      <td class="money-cell text-success">${fmt(t.dn_da_nop||t.chu_da_nop)}</td>
+      <td class="money-cell ${(t.dn_con_lai||t.chu_con_lai) > 0 ? 'debt fw-bold' : ''}">${fmt(t.dn_con_lai||t.chu_con_lai)}</td>
+      <td class="text-center"><span class="badge ${t.status_class}">${esc(t.status)}</span></td>
+      <td class="text-center">${payButtons(month, year, t)}</td>
+    </tr>`).join('');
+
+  empDetailBody.innerHTML = (data.employees || []).map(e => {
+    const n = e.nld || {};
+    const c = e.dn || e.chu || {};
+    return `<tr>
+      <td>${esc(e.fullname)}${e.is_chu_ho ? ' <span class="badge bg-warning text-dark">Chủ hộ</span>' : ''}</td>
+      <td class="money-cell">${fmt(n.BHXH)}</td>
+      <td class="money-cell">${fmt(n.BHYT)}</td>
+      <td class="money-cell">${e.is_chu_ho ? '—' : fmt(n.BHTN)}</td>
+      <td class="money-cell">${fmt(c.BHXH)}</td>
+      <td class="money-cell">${fmt(c.BHYT)}</td>
+      <td class="money-cell">${e.is_chu_ho ? '—' : fmt(c.BHTN)}</td>
+      <td class="money-cell fw-bold">${fmt(e.total)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="text-muted text-center">Không có NV</td></tr>';
+
+  detailCard.scrollIntoView({ behavior: 'smooth' });
+}
+
+function hideDetail() {
+  detailCard.style.display = 'none';
+  activePeriod = null;
+}
+
+function openPayModal(month, year, insType, payer, amount, label) {
+  pay_month.value = month;
+  pay_year.value = year;
+  pay_ins_type.value = insType;
+  pay_payer.value = payer;
+  pay_amount_raw.value = amount;
+  pay_label.value = label;
+  pay_amount_display.value = fmt(amount);
+  pay_date.value = today();
+  pay_reason.value = `Nộp ${insType} (${payer === 'DN' ? 'DN' : 'NLĐ'}) ${label}`;
+  new bootstrap.Modal('#payModal').show();
+}
+
+function openPayAllModal(month, year) {
+  const p = periods.find(x => x.month == month && x.year == year);
+  if (!p) return;
+  pa_month.value = month;
+  pa_year.value = year;
+  pa_label.value = p.period_label;
+  pa_bhxh.value = fmt(p.bhxh_con_lai);
+  pa_bhyt.value = fmt(p.bhyt_con_lai);
+  pa_bhtn.value = fmt(p.bhtn_con_lai);
+  pa_nld_display.value = fmt(p.nld_con_lai);
+  pa_dn_display.value = fmt(p.dn_con_lai || p.chu_con_lai);
+  pa_amount_display.value = fmt(p.total_con_lai);
+  pa_pay_date.value = today();
+  new bootstrap.Modal('#payAllModal').show();
+}
+
+async function confirmPay() {
+  const payload = {
+    month: pay_month.value,
+    year: pay_year.value,
+    ins_type: pay_ins_type.value,
+    payer: pay_payer.value,
+    pay_date: pay_date.value,
+    amount: parseFloat(pay_amount_raw.value) || 0,
+    receiver: pay_receiver.value.trim(),
+    reason: pay_reason.value.trim(),
+    payment_method: pay_method.value,
+  };
+  if (window.assertSmeCashBalanceOrAlert) {
+    const okBal = await window.assertSmeCashBalanceOrAlert(
+      payload.amount, payload.payment_method, { as_of: payload.pay_date },
+    );
+    if (!okBal) return;
+  }
+  const res = await fetch('/api/sme/insurance/pay', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!data.success) return alert(data.error || 'Lỗi');
+  bootstrap.Modal.getInstance('#payModal').hide();
+  alert(data.message || ('Đã lập ' + (data.voucher || data.data?.voucher_no)));
+  if (data.data?.id) window.open('/SME_insurance_pay/in/' + data.data.id, '_blank');
+  await loadPeriods();
+  await loadHist();
+  if (activePeriod) showDetail(payload.month, payload.year);
+}
+
+async function confirmPayAll() {
+  const payload = {
+    month: pa_month.value,
+    year: pa_year.value,
+    pay_date: pa_pay_date.value,
+    receiver: pa_receiver.value.trim(),
+    payment_method: pa_pay_method.value,
+    scope: 'ALL',
+  };
+  const res = await fetch('/api/sme/insurance/pay-all', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!data.success) return alert(data.error || 'Lỗi');
+  bootstrap.Modal.getInstance('#payAllModal').hide();
+  alert(data.message || ('Đã lập phiếu ' + (data.voucher || (data.vouchers||[])[0] || '')));
+  const vid = data.data?.id;
+  if (vid) window.open('/SME_insurance_pay/in/' + vid, '_blank');
+  await loadPeriods();
+  await loadHist();
+  if (activePeriod) showDetail(payload.month, payload.year);
+}
+
+async function loadHist() {
+  const res = await fetch('/api/sme/insurance/payments');
+  const json = await res.json();
+  hist.innerHTML = (json.data || []).map(r => `<tr>
+    <td class="fw-bold">${esc(r.voucher_no)}</td>
+    <td>${typeof fmtDateVi==='function'?fmtDateVi(r.voucher_date):(r.voucher_date||'')}</td>
+    <td><code>${esc(r.debit_account)}</code></td>
+    <td class="text-end">${fmt(r.amount).replace(' ₫','')}</td>
+    <td class="small">${esc(r.reason)}</td>
     <td class="text-nowrap">
       <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_PhieuChi/in/${r.id}">In</a>
       <button class="btn btn-sm btn-outline-danger ms-1" onclick="voidPay(${r.id})">Hủy</button>
     </td>
-  </tr>`).join('')||'<tr><td colspan="6" class="text-muted text-center">Chưa có</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center py-3">Chưa có</td></tr>';
 }
-btnSave.onclick=async()=>{
-  const payload={date:fDate.value,account_code:fAcc.value,amount:parseFloat(fAmt.value)||0,payment_method:fPay.value,reference:fRef.value};
-  const res=await fetch('/api/sme/insurance/pay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
-  alert('Đã lập '+json.data.voucher_no+' (07-LĐTL)');
-  if(json.data.id) window.open('/SME_insurance_pay/in/'+json.data.id,'_blank');
+
+async function voidPay(id) {
+  if (!confirm('Hủy phiếu chi nộp BH?\n(Kỳ chưa kê khai/khóa sổ: xóa bút toán để ghi lại — không tạo chứng từ đảo.)')) return;
+  const res = await fetch('/api/sme/vouchers/' + id + '/void', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}',
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Lỗi');
+  alert(json.message || json.data?.message || 'Đã hủy');
+  await loadPeriods();
+  await loadHist();
+  if (activePeriod) showDetail(activePeriod.month, activePeriod.year);
+}
+
+periodBody.addEventListener('click', e => {
+  const all = e.target.closest('.btn-pay-all');
+  if (all) return openPayAllModal(all.dataset.month, all.dataset.year);
+  const view = e.target.closest('.btn-view');
+  if (view) return showDetail(view.dataset.month, view.dataset.year);
+});
+typeDetailBody.addEventListener('click', e => {
+  const btn = e.target.closest('.btn-pay-one');
+  if (!btn) return;
+  openPayModal(btn.dataset.month, btn.dataset.year, btn.dataset.type, btn.dataset.payer, btn.dataset.amount, btn.dataset.label);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  initYearFilter();
+  loadPeriods();
   loadHist();
-};
-async function voidPay(id){
-  if(!confirm('Hủy phiếu chi nộp BH?')) return;
-  const res=await fetch('/api/sme/vouchers/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); loadHist();
-}
-loadHist();
+  const q = new URLSearchParams(location.search);
+  if (q.get('month') && q.get('year')) showDetail(q.get('month'), q.get('year'));
+});
 </script>
 {% endblock %}

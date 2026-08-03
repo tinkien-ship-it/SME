@@ -115,23 +115,51 @@ def init_schedulers(app, backup_root):
         minute=15,
         id='sme_auto_posting_monthly',
     )
+    backup_scheduler.add_job(
+        func=_scheduled_sme_vat_filing_alert,
+        trigger="cron",
+        day=1,
+        month=1,
+        hour=2,
+        minute=0,
+        id='sme_vat_filing_alert_yearly',
+    )
     backup_scheduler.start()
 
     return expiry_scheduler, backup_scheduler
 
 
 def _scheduled_sme_auto_posting():
-    """Ngày 1 hàng tháng: khấu hao/phân bổ kỳ tháng trước cho tenant SME."""
+    """Ngày 1 hàng tháng: chạy KH/PB kỳ tháng trước.
+
+    Ngày ghi sổ bút toán = ngày cuối tháng trước (VD chạy 01/09 → ghi 31/08),
+    không dùng ngày chạy lịch.
+    """
     try:
         from Services.sme.auto_posting import run_sme_automation_for_all_tenants
         result = run_sme_automation_for_all_tenants()
         posted = sum(1 for r in result.get('results') or [] if r.get('posted'))
         print(
-            f"[{datetime.now()}] SME auto posting {result.get('period')}/{result.get('fiscal_year')}: "
+            f"[{datetime.now()}] SME auto posting {result.get('period')}/{result.get('fiscal_year')} "
+            f"posting_date={result.get('posting_date')}: "
             f"{posted}/{result.get('tenants', 0)} tenants posted"
         )
     except Exception as e:
         print(f"[{datetime.now()}] SME auto posting failed: {e}")
+
+
+def _scheduled_sme_vat_filing_alert():
+    """Ngày 1/1: tự chuyển kỳ kê khai GTGT sang tháng nếu DT năm trước > 50 tỷ mà user chưa đổi."""
+    try:
+        from Services.sme.vat_filing_alert import run_vat_filing_alerts_for_all_tenants
+        result = run_vat_filing_alerts_for_all_tenants()
+        applied = sum(1 for r in result.get('results') or [] if r.get('applied'))
+        print(
+            f"[{datetime.now()}] SME VAT filing alerts: "
+            f"{applied} auto-applied / {result.get('tenants', 0)} tenants"
+        )
+    except Exception as e:
+        print(f"[{datetime.now()}] SME VAT filing alerts failed: {e}")
 
 
 def _scheduled_knowledge_rss_sync():

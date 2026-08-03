@@ -310,8 +310,23 @@ def migrate_import_for_service(conn):
         ('import', 'currency', "TEXT DEFAULT 'VND'"),
         ('import', 'exchange_rate', 'REAL DEFAULT 1'),
         ('import', 'import_tax_amount', 'REAL DEFAULT 0'),
+        ('import', 'excise_tax_amount', 'REAL DEFAULT 0'),
         ('import', 'payment_method', 'TEXT'),
         ('import', 'warehouse_code', 'TEXT'),
+        ('import', 'receipt_stage', "TEXT DEFAULT 'RECEIVED'"),
+        ('import', 'customs_decl_no', 'TEXT'),
+        ('import', 'customs_decl_date', 'TEXT'),
+        ('import', 'customs_fx_rate', 'REAL'),
+        ('import', 'tax_payment_voucher_id', 'INTEGER'),
+        ('import', 'tax_payment_journal_id', 'INTEGER'),
+        ('import', 'receive_journal_id', 'INTEGER'),
+        ('import', 'transit_posted_at', 'TEXT'),
+        ('import', 'received_at', 'TEXT'),
+        # Dòng nhập khẩu: thuế NK / TTĐB phân bổ vào giá vốn HH·NVL·TSCĐ·CCDC
+        ('import_details', 'import_tax_pct', 'REAL DEFAULT 0'),
+        ('import_details', 'import_tax_amount', 'REAL DEFAULT 0'),
+        ('import_details', 'excise_tax_pct', 'REAL DEFAULT 0'),
+        ('import_details', 'excise_tax_amount', 'REAL DEFAULT 0'),
     ]
     for table, col, col_type in extras:
         c.execute(f'PRAGMA table_info({table})')

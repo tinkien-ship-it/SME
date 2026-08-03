@@ -16,13 +16,16 @@
         <div>
             <h4 class="fw-bold mb-1"><i class="fas fa-robot text-primary me-2"></i>Tự động hóa kỳ kế toán</h4>
             <p class="text-muted small mb-0">
-                Một lần chạy kỳ: khấu hao tài sản cố định → phân bổ công cụ dụng cụ → kết chuyển doanh thu/chi phí → tài khoản 911 → 4212 → quyết toán thuế giá trị gia tăng (133↔33311) → khóa sổ.
+                Một lần chạy kỳ: khấu hao TSCĐ → phân bổ CCDC (chi phí) → kết chuyển KQKD →
+                quyết toán GTGT (bù trừ 133 đầu vào ↔ 33311 đầu ra, <em>không phân bổ VAT</em>) → khóa sổ.
                 Cuối năm: kết chuyển 4212 → 4211.
-                Tài sản đang ở trạng thái «Trong kho» được kích hoạt tự động. Lịch hệ thống: ngày 1 hàng tháng.
+                Lịch: chạy ngày 1 tháng sau; ngày ghi KH/PB = cuối tháng kỳ.
                 {% set feat = tenant_profile.features or {} %}
                 {% set filing = tenant_profile.vat_filing_period or feat.vat_filing_period or feat.filing_period or ('monthly' if feat.monthly_vat_filing else 'quarterly') %}
-                <br><span class="text-primary">Kê khai thuế giá trị gia tăng đang cấu hình theo <strong>{{ 'tháng' if filing == 'monthly' else 'quý' }}</strong>
-                — đổi tại <a href="{{ url_for('SME_tax_nsnn') }}">Thuế và ngân sách nhà nước</a>. Quyết toán sổ kép vẫn theo tháng.</span>
+                <br><span class="text-primary">Kê khai GTGT theo <strong>{{ 'tháng' if filing == 'monthly' else 'quý' }}</strong>
+                (mặc định <strong>quý</strong> khi DT năm trước ≤ 50 tỷ; &gt; 50 tỷ mới theo tháng)
+                — QTGT ghi <strong>ngày cuối {{ 'tháng' if filing == 'monthly' else 'quý' }}</strong>.
+                Đổi tại <a href="{{ url_for('SME_tax_nsnn') }}">Thuế và NSNN</a>.</span>
             </p>
         </div>
         <div class="d-flex gap-2">
@@ -55,12 +58,23 @@
                 </div>
             </div>
             <div class="d-flex flex-wrap gap-2 mt-3">
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnVatOnly">Chỉ quyết toán thuế giá trị gia tăng</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnVatOnly">Chỉ quyết toán GTGT (cuối kỳ kê khai)</button>
                 <button type="button" class="btn btn-outline-dark btn-sm" id="btnYearEnd" title="Chuyển 4212 → 4211 sau khi đã kết chuyển tháng 12">Kết chuyển cuối năm (4212→4211)</button>
-                <button type="button" class="btn btn-outline-warning btn-sm" id="btnUnlock">Mở khóa kỳ</button>
-                <button type="button" class="btn btn-outline-danger btn-sm" id="btnLock">Khóa sổ thủ công</button>
+                <button type="button" class="btn btn-outline-warning btn-sm" id="btnUnlockFiling">Mở lại kỳ kê khai</button>
+                <button type="button" class="btn btn-outline-warning btn-sm" id="btnUnlockYear">Mở lại sổ năm</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="btnLockYear">Khóa sổ năm</button>
             </div>
-            <div class="auto-muted mt-2">Lịch hệ thống cũng chạy tự động ngày 1 hàng tháng (kỳ tháng trước) cho mọi đơn vị kế toán doanh nghiệp. Cuối năm: chạy kết chuyển tháng 12 rồi bấm <strong>Kết chuyển cuối năm</strong>.</div>
+            <div class="auto-muted mt-2">
+                <strong>Chốt kỳ kê khai</strong> (tháng/quý): không cho giữa kỳ — chỉ từ ngày cuối tháng hoặc cuối quý.
+                <strong>Khóa sổ kế toán</strong>: chỉ sau <strong>31/12</strong> (cả năm).
+                <strong>Mở sổ trở lại</strong> (bắt buộc lý do + nhật ký):
+                «Mở lại kỳ kê khai» gỡ chốt cửa sổ GTGT;
+                «Mở lại sổ năm» gỡ khóa 12 tháng <em>và</em> mọi chốt kê khai trong năm.
+                Khi đã mở: được <em>sửa/xóa bút toán sai tại chỗ</em> (không bắt buộc đảo),
+                rồi <em>kê khai bổ sung</em> / cập nhật BCTC theo quy định CQT, sau đó chốt/khóa lại.
+                KH/PB ghi ngày cuối tháng; lịch chạy ngày 1 tháng sau vẫn backdate đúng ngày cuối kỳ.
+            </div>
+            <div id="postingDateHint" class="small mt-2 fw-semibold text-primary"></div>
             <div id="lockStatus" class="small mt-2 text-muted">Đang kiểm tra khóa sổ…</div>
         </div>
     </div>
@@ -79,12 +93,43 @@
     const now = new Date();
     const yEl = document.getElementById('autoYear');
     const pEl = document.getElementById('autoPeriod');
-    yEl.value = now.getFullYear();
+    // Ngày 1: mặc định kỳ tháng trước (đúng với lịch auto). Các ngày khác: tháng hiện tại.
+    let defY = now.getFullYear();
+    let defM = now.getMonth() + 1;
+    if (now.getDate() === 1) {
+        const prev = new Date(defY, defM - 1, 0); // ngày cuối tháng trước
+        defY = prev.getFullYear();
+        defM = prev.getMonth() + 1;
+    }
+    yEl.value = defY;
     for (let m = 1; m <= 12; m++) pEl.add(new Option('Tháng ' + m, m));
-    pEl.value = String(now.getMonth() + 1);
+    pEl.value = String(defM);
 
     function money(v) {
         return Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+    }
+
+    function lastDayOfMonth(year, month) {
+        return new Date(year, month, 0).getDate(); // month 1-12 → day 0 of next = last of month
+    }
+
+    function fmtIsoVi(iso) {
+        if (!iso) return '—';
+        const p = String(iso).slice(0, 10).split('-');
+        if (p.length !== 3) return iso;
+        return p[2] + '/' + p[1] + '/' + p[0];
+    }
+
+    function refreshPostingDateHint() {
+        const y = Number(yEl.value);
+        const m = Number(pEl.value);
+        const d = lastDayOfMonth(y, m);
+        const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const el = document.getElementById('postingDateHint');
+        if (el) {
+            el.innerHTML = `Ngày ghi sổ KH / PB CCDC của kỳ này: <strong>${fmtIsoVi(iso)}</strong>`
+                + ` <span class="text-muted fw-normal">(không dùng ngày chạy lịch)</span>`;
+        }
     }
 
     function periodPayload(extra) {
@@ -97,19 +142,32 @@
 
     async function refreshLockStatus() {
         const box = document.getElementById('lockStatus');
+        refreshPostingDateHint();
         try {
-            const res = await fetch('/api/sme/period-lock?year=' + encodeURIComponent(yEl.value));
+            const period = Number(pEl.value);
+            const res = await fetch(
+                '/api/sme/period-lock?year=' + encodeURIComponent(yEl.value)
+                + '&period=' + encodeURIComponent(period)
+            );
             const data = await res.json();
             if (!data.success) throw new Error(data.error || 'Lỗi');
-            const period = Number(pEl.value);
-            const hit = (data.data || []).find(x => Number(x.period) === period);
-            if (hit) {
-                box.innerHTML = `<span class="text-danger">Kỳ ${period}/${yEl.value} đã khóa</span>`
-                    + ` · ${hit.locked_at || ''}`
-                    + (hit.reason ? ` · ${hit.reason}` : '');
+            const parts = [];
+            if (data.year_locked) {
+                parts.push(`<span class="text-danger">Năm ${yEl.value} đã khóa sổ</span>`);
             } else {
-                box.innerHTML = `<span class="auto-ok">Kỳ ${period}/${yEl.value} đang mở</span>`;
+                parts.push(`<span class="auto-ok">Năm ${yEl.value} chưa khóa sổ</span>`);
             }
+            const fc = data.filing_close_for_period;
+            if (fc) {
+                parts.push(
+                    `<span class="text-warning">Kỳ kê khai đã chốt`
+                    + ` (T${fc.period_from}–T${fc.period_to}, ${fc.filing_mode})`
+                    + ` · ${fc.closed_at || ''}</span>`
+                );
+            } else {
+                parts.push(`<span class="auto-ok">Kỳ kê khai tháng ${period} chưa chốt</span>`);
+            }
+            box.innerHTML = parts.join(' · ');
         } catch (e) {
             box.textContent = e.message;
         }
@@ -122,7 +180,8 @@
         const vat = d.vat_settlement || {};
         const act = d.activated || {};
         const lock = d.period_lock || null;
-        let html = `<div class="mb-2"><strong>Kỳ ${d.period}/${d.fiscal_year}</strong> · ngày ghi ${d.posting_date || '—'}</div>`;
+        let html = `<div class="mb-2"><strong>Kỳ ${d.period}/${d.fiscal_year}</strong>`
+            + ` · ngày ghi sổ <strong>${fmtIsoVi(d.posting_date)}</strong></div>`;
         if (d.reason === 'period_locked') {
             html += `<div class="text-warning mb-2">Kỳ đã khóa — bật “Ghi đè” để mở khóa và chạy lại.</div>`;
         }
@@ -152,11 +211,21 @@
             html += `</div>`;
         }
         if (d.vat_settlement || vat.reason || vat.offset_amount != null) {
-            html += `<div class="mb-2">Quyết toán thuế giá trị gia tăng: đầu vào ${money(vat.input_total)} · đầu ra ${money(vat.output_total)} · bù trừ ${money(vat.offset_amount)}`;
-            html += ` · phải nộp <strong>${money(vat.vat_payable)}</strong> · còn khấu trừ ${money(vat.vat_credit_carry)}`;
-            if (vat.entry_id) html += ` · bút toán #${vat.entry_id}`;
-            if (vat.reason) html += ` · <span class="text-warning">${vat.reason}</span>`;
-            html += `</div>`;
+            if (vat.reason === 'not_filing_period_end') {
+                html += `<div class="mb-2 text-muted">Quyết toán GTGT: bỏ qua — ${vat.message || 'chưa đến cuối kỳ kê khai'}`
+                    + (vat.filing_label ? ` (${vat.filing_label})` : '')
+                    + `</div>`;
+            } else {
+                html += `<div class="mb-2">Quyết toán GTGT${vat.filing_label ? ' · ' + vat.filing_label : ''}`
+                    + (vat.posting_date ? ` · ngày ghi ${fmtIsoVi(vat.posting_date)}` : '')
+                    + `: đầu vào ${money(vat.input_total)} − đầu ra ${money(vat.output_total)}`
+                    + ` · bù trừ ${money(vat.offset_amount)}`
+                    + ` · phải nộp <strong>${money(vat.vat_payable)}</strong>`
+                    + ` · còn khấu trừ ${money(vat.vat_credit_carry)}`;
+                if (vat.entry_id) html += ` · bút toán #${vat.entry_id}`;
+                if (vat.reason) html += ` · <span class="text-warning">${vat.reason}</span>`;
+                html += `</div>`;
+            }
         }
         const ye = d.year_end || {};
         if (d.year_end && (ye.posted || ye.reason)) {
@@ -169,8 +238,20 @@
                 html += `<div class="mb-2 text-muted">KC cuối năm: ${ye.reason || '—'}</div>`;
             }
         }
-        if (lock) {
+        if (lock && !lock.skipped) {
             html += `<div class="mb-2 text-danger">Đã khóa sổ · ${lock.locked_at || ''} · ${lock.reason || ''}</div>`;
+        } else if (lock && lock.message) {
+            html += `<div class="mb-2 text-muted">${lock.message}</div>`;
+        }
+        const vfa = d.vat_filing_alert || {};
+        if (vfa.over_threshold || (vfa.alert && vfa.alert.active)) {
+            html += `<div class="mb-2 text-warning"><strong>Cảnh báo GTGT:</strong> ${vfa.message || (vfa.alert && vfa.alert.message) || ''}</div>`;
+        } else if (vfa.message && vfa.over_threshold === false) {
+            html += `<div class="mb-2 text-muted">${vfa.message}</div>`;
+        }
+        const mea = d.micro_enterprise_alert || {};
+        if (mea.needs_tt99 || (mea.alert && mea.alert.active)) {
+            html += `<div class="mb-2 text-danger"><strong>Cảnh báo TT58→TT99:</strong> ${mea.message || (mea.alert && mea.alert.message) || ''}</div>`;
         }
         if (d.reason && d.reason !== 'period_locked') html += `<div class="text-muted">${d.reason}</div>`;
         if ((dep.details || []).length) {
@@ -232,8 +313,22 @@
         }
     });
 
-    async function setLock(action) {
+    async function setLock(action, needReason) {
         const box = document.getElementById('autoResult');
+        let reason;
+        if (needReason) {
+            reason = prompt(
+                action === 'unlock_filing'
+                    ? 'Lý do mở lại kỳ kê khai (bắt buộc):'
+                    : action === 'unlock_year' || action === 'unlock'
+                        ? 'Lý do mở lại sổ năm (bắt buộc):'
+                        : 'Lý do khóa sổ năm:'
+            );
+            if (needReason && action !== 'lock' && action !== 'lock_year' && !reason) {
+                alert('Bắt buộc nhập lý do để truy vết.');
+                return;
+            }
+        }
         try {
             const res = await fetch('/api/sme/period-lock', {
                 method: 'POST',
@@ -242,22 +337,34 @@
                     year: Number(yEl.value),
                     period: Number(pEl.value),
                     action,
-                    reason: action === 'lock' ? 'Khóa sổ thủ công' : undefined,
+                    reason: reason || (action === 'lock' || action === 'lock_year'
+                        ? 'Khóa sổ năm thủ công' : undefined),
                 }),
             });
             const data = await res.json();
             if (!data.success) throw new Error(data.error || 'Lỗi');
-            box.innerHTML = action === 'unlock'
-                ? `<div class="auto-ok">Đã mở khóa kỳ ${pEl.value}/${yEl.value}</div>`
-                : `<div class="text-danger">Đã khóa kỳ ${pEl.value}/${yEl.value}</div>`;
+            if (action === 'unlock_filing') {
+                box.innerHTML = `<div class="auto-ok">${data.message || data.data?.hint || ('Đã mở lại kỳ kê khai (tháng ' + pEl.value + '/' + yEl.value + '). Được sửa/xóa bút toán tại chỗ → kê khai bổ sung nếu đã nộp.')}</div>`;
+            } else if (action === 'unlock' || action === 'unlock_year') {
+                const n = data.data?.filing_closes_cleared;
+                box.innerHTML = `<div class="auto-ok">${data.message || data.data?.hint || ('Đã mở lại sổ năm ' + yEl.value + '.')}`
+                    + (n != null ? ` (đã gỡ ${n} chốt kỳ kê khai).` : '')
+                    + ` Được sửa/xóa bút toán sai tại chỗ; sau đó kê khai bổ sung / cập nhật BCTC và khóa lại khi xong.</div>`;
+            } else {
+                box.innerHTML = `<div class="text-danger">Đã khóa sổ năm ${yEl.value} (cả 12 tháng).</div>`;
+            }
             refreshLockStatus();
         } catch (e) {
             box.innerHTML = `<div class="text-danger">${e.message}</div>`;
         }
     }
 
-    document.getElementById('btnUnlock').addEventListener('click', () => setLock('unlock'));
-    document.getElementById('btnLock').addEventListener('click', () => setLock('lock'));
+    document.getElementById('btnUnlockFiling').addEventListener('click', () => setLock('unlock_filing', true));
+    document.getElementById('btnUnlockYear').addEventListener('click', () => setLock('unlock_year', true));
+    document.getElementById('btnLockYear').addEventListener('click', () => {
+        if (!confirm('Khóa sổ cả năm ' + yEl.value + '? Chỉ được phép từ ngày 31/12 trở đi.')) return;
+        setLock('lock_year', false);
+    });
 
     document.getElementById('btnYearEnd').addEventListener('click', async () => {
         const box = document.getElementById('autoResult');

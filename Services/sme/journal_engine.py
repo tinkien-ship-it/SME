@@ -174,6 +174,82 @@ def _next_entry_no(
     return f"{prefix}{seq:0{width}d}"
 
 
+def renumber_journal_entries(
+    conn: sqlite3.Connection,
+    *,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Đánh lại số BT liên tục theo ngày ghi sổ + id.
+
+    Cập nhật ``reference_document`` nếu đang trỏ đúng số BT cũ (bút toán đảo).
+    """
+    ensure_sme_journal_ready(conn, commit=False)
+    prefix = 'BT'
+    width = 7
+    rows = conn.execute(
+        """
+        SELECT id, entry_no
+        FROM sme_journal_entries
+        ORDER BY date(posting_date) ASC, id ASC
+        """
+    ).fetchall()
+    if not rows:
+        raise ValueError('Không có bút toán nào để đánh lại số')
+
+    mapping: dict[str, str] = {}
+    for index, row in enumerate(rows, start=1):
+        eid = int(row['id'] if hasattr(row, 'keys') else row[0])
+        old_no = row['entry_no'] if hasattr(row, 'keys') else row[1]
+        new_no = f'{prefix}{index:0{width}d}'
+        if old_no:
+            mapping[str(old_no)] = new_no
+        conn.execute(
+            "UPDATE sme_journal_entries SET entry_no = ?, updated_at = ? WHERE id = ?",
+            (f'__TMP_BT_{eid}', _now(), eid),
+        )
+
+    for index, row in enumerate(rows, start=1):
+        eid = int(row['id'] if hasattr(row, 'keys') else row[0])
+        new_no = f'{prefix}{index:0{width}d}'
+        conn.execute(
+            "UPDATE sme_journal_entries SET entry_no = ?, updated_at = ? WHERE id = ?",
+            (new_no, _now(), eid),
+        )
+
+    for old_no, new_no in mapping.items():
+        if old_no == new_no:
+            continue
+        conn.execute(
+            """
+            UPDATE sme_journal_entries
+            SET reference_document = ?, updated_at = ?
+            WHERE reference_document = ?
+            """,
+            (new_no, _now(), old_no),
+        )
+        # Diễn giải đảo thường dạng: "… — BT0000123"
+        conn.execute(
+            """
+            UPDATE sme_journal_entries
+            SET description = REPLACE(description, ?, ?), updated_at = ?
+            WHERE description LIKE ?
+            """,
+            (f'— {old_no}', f'— {new_no}', _now(), f'%— {old_no}%'),
+        )
+
+    if commit:
+        conn.commit()
+    count = len(rows)
+    return {
+        'count': count,
+        'prefix': prefix,
+        'message': (
+            f'Đã đánh lại số {count} bút toán từ {prefix}0000001 '
+            f'theo thứ tự ngày ghi sổ.'
+        ),
+    }
+
+
 def _apply_balance_delta(
     c: sqlite3.Cursor,
     *,
@@ -220,11 +296,15 @@ def post_journal_entry(
     created_by: str | None = None,
     entry_uuid: str | None = None,
     branch_code: str | None = None,
+    allow_locked_period: bool = False,
+    skip_cash_balance_check: bool = False,
 ) -> dict:
     """
     Ghi một chứng từ kế toán (nhiều dòng Nợ/Có).
     lines[]: account_code, debit, credit, + optional partner/product/tax/description...
     branch_code: chi nhánh (mặc định session / HQ) — không tách pháp nhân.
+    allow_locked_period: chỉ dùng khi điều chỉnh kỳ đã khóa (bút toán đảo / điều chỉnh).
+    skip_cash_balance_check: bỏ kiểm tra quỹ âm (chỉ đầu kỳ / seed nội bộ).
     """
     # Không được commit ngầm: caller có thể đang ghi kho/chứng từ cùng transaction.
     ensure_sme_journal_ready(conn, commit=False)
@@ -253,8 +333,15 @@ def post_journal_entry(
             continue
         total_debit += debit
         total_credit += credit
-        debit_fc = _money(raw.get('debit_fc', debit if currency != 'VND' else 0))
-        credit_fc = _money(raw.get('credit_fc', credit if currency != 'VND' else 0))
+        # Không mặc định lấy số VND làm FC (tránh ghi nhầm trăm triệu vào debit_fc)
+        if 'debit_fc' in raw and raw.get('debit_fc') is not None:
+            debit_fc = _money(raw.get('debit_fc'))
+        else:
+            debit_fc = Decimal('0.00')
+        if 'credit_fc' in raw and raw.get('credit_fc') is not None:
+            credit_fc = _money(raw.get('credit_fc'))
+        else:
+            credit_fc = Decimal('0.00')
         prepared.append({
             'sequence': int(raw.get('sequence') or i),
             'account_code': code,
@@ -290,8 +377,26 @@ def post_journal_entry(
         raise ValueError('posting_date phải dạng YYYY-MM-DD') from exc
 
     fiscal_year, period = dt.year, dt.month
-    from Services.sme.period_lock import assert_period_open
-    assert_period_open(conn, fiscal_year, period, action='ghi bút toán')
+    if not allow_locked_period:
+        from Services.sme.period_lock import assert_period_open
+        assert_period_open(conn, fiscal_year, period, action='ghi bút toán')
+
+    # Chặn mọi thanh toán / chi tiền làm quỹ TM hoặc TGNH âm
+    doc_t = str(document_type or '').strip().upper()
+    biz_t = str(business_type or '').strip().upper()
+    skip_cash = skip_cash_balance_check or doc_t in (
+        'DK', 'OPENING', 'OPENING_BALANCE', 'SDDK',
+    ) or biz_t in (
+        'DAU_KY', 'OPENING', 'OPENING_BALANCE', 'SO_DU_DAU_KY',
+    )
+    if not skip_cash:
+        from Services.sme.cash_books import assert_cash_credits_covered
+        assert_cash_credits_covered(
+            conn,
+            lines=prepared,
+            posting_date=posting_date[:10],
+            branch_code=branch,
+        )
 
     entry_uuid = entry_uuid or str(uuid.uuid4())
     entry_no = _next_entry_no(conn, posting_date[:10], document_type or 'KT')
@@ -388,8 +493,16 @@ def reverse_journal_entry(
     posting_date: str | None = None,
     created_by: str | None = None,
     reason: str = 'Đảo bút toán',
+    require_locked: bool = False,
 ) -> dict:
-    """Đảo bút toán đã ghi (tạo chứng từ đảo, không xóa lịch sử)."""
+    """
+    Hủy hiệu lực bút toán:
+    - Kỳ chưa khóa: xóa hoàn toàn (không tạo chứng từ đảo) — trừ khi require_locked=True
+      (API nhật ký thủ công bắt buộc dùng Sửa/Xóa riêng).
+    - Kỳ đã khóa: ghi bút toán đảo (điều chỉnh sau kê khai / khóa sổ).
+
+    Caller hệ thống (đồng bộ chứng từ) dùng mặc định require_locked=False.
+    """
     ensure_sme_journal_ready(conn, commit=False)
     conn.row_factory = sqlite3.Row
     entry = conn.execute(
@@ -402,18 +515,35 @@ def reverse_journal_entry(
     if entry['reversed_by_id']:
         raise ValueError('Bút toán đã có chứng từ đảo')
 
-    from Services.sme.period_lock import assert_period_open
-    assert_period_open(
-        conn, int(entry['fiscal_year']), int(entry['period']),
-        action='đảo bút toán',
-    )
-    rev_date = (posting_date or entry['posting_date'] or '')[:10]
-    if rev_date:
-        try:
-            rdt = datetime.strptime(rev_date, '%Y-%m-%d')
-            assert_period_open(conn, rdt.year, rdt.month, action='ghi bút toán đảo')
-        except ValueError:
-            pass
+    from Services.sme.period_lock import is_period_locked, is_period_sealed
+    fy, per = int(entry['fiscal_year']), int(entry['period'])
+    sealed = is_period_sealed(conn, fy, per)  # đã chốt kê khai hoặc khóa năm
+    year_locked = is_period_locked(conn, fy, per)
+
+    if not sealed:
+        if require_locked:
+            raise ValueError(
+                f'Kỳ {per:02d}/{fy} chưa chốt kê khai / chưa khóa sổ năm — không ghi bút toán đảo. '
+                f'Dùng «Sửa» (cập nhật tại chỗ) hoặc «Xóa hoàn toàn» để hạch toán lại; '
+                f'hệ thống chỉ ghi nhật ký truy vết, không tạo chứng từ đảo.'
+            )
+        deleted = delete_journal_entry(
+            conn, entry_id, reason=reason, deleted_by=created_by,
+        )
+        snap = deleted.get('snapshot') or {}
+        return {
+            'id': 0,
+            'deleted': True,
+            'mode': 'hard_delete',
+            'voided_entry_id': entry_id,
+            'entry_no': snap.get('entry_no'),
+            'total_debit': 0.0,
+            'total_credit': 0.0,
+            'line_count': 0,
+            'fiscal_year': fy,
+            'period': per,
+            'snapshot': snap,
+        }
 
     lines = conn.execute(
         "SELECT * FROM sme_journal_lines WHERE entry_id = ? ORDER BY sequence",
@@ -447,6 +577,7 @@ def reverse_journal_entry(
         orig_branch = entry['branch_code']
     except (KeyError, IndexError):
         orig_branch = None
+    # Sau chốt kê khai / khóa năm: ghi đảo (nếu năm khóa thì bypass assert_period_open)
     rev = post_journal_entry(
         conn,
         posting_date=date,
@@ -462,6 +593,7 @@ def reverse_journal_entry(
         created_by=created_by,
         branch_code=orig_branch,
         lines=rev_lines,
+        allow_locked_period=year_locked,
     )
     conn.execute(
         """
@@ -475,7 +607,436 @@ def reverse_journal_entry(
         "UPDATE sme_journal_entries SET reverses_id = ?, updated_at = ? WHERE id = ?",
         (entry_id, _now(), rev['id']),
     )
+    rev['mode'] = 'reverse'
+    rev['deleted'] = False
     return rev
+
+
+def _prepare_journal_lines(
+    conn: sqlite3.Connection,
+    lines: list[dict],
+    *,
+    currency: str = 'VND',
+    exchange_rate: float | Decimal = 1,
+    description: str = '',
+) -> tuple[list[dict], Decimal, Decimal]:
+    prepared: list[dict] = []
+    total_debit = Decimal('0.00')
+    total_credit = Decimal('0.00')
+    rate = _money(exchange_rate) if exchange_rate else Decimal('1.00')
+    if rate <= 0:
+        rate = Decimal('1.00')
+
+    for i, raw in enumerate(lines, start=1):
+        code = resolve_postable_account(conn, str(raw.get('account_code') or '').strip())
+        debit = _money(raw.get('debit', 0))
+        credit = _money(raw.get('credit', 0))
+        if debit < 0 or credit < 0:
+            raise ValueError('Số tiền Nợ/Có không được âm')
+        if debit > 0 and credit > 0:
+            raise ValueError(f'Dòng {i} ({code}): không được vừa Nợ vừa Có')
+        if debit == 0 and credit == 0:
+            continue
+        total_debit += debit
+        total_credit += credit
+        # Không mặc định lấy số VND làm FC (tránh ghi nhầm trăm triệu vào debit_fc)
+        if 'debit_fc' in raw and raw.get('debit_fc') is not None:
+            debit_fc = _money(raw.get('debit_fc'))
+        else:
+            debit_fc = Decimal('0.00')
+        if 'credit_fc' in raw and raw.get('credit_fc') is not None:
+            credit_fc = _money(raw.get('credit_fc'))
+        else:
+            credit_fc = Decimal('0.00')
+        prepared.append({
+            'sequence': int(raw.get('sequence') or i),
+            'account_code': code,
+            'debit': debit,
+            'credit': credit,
+            'currency': raw.get('currency') or currency,
+            'exchange_rate': float(raw.get('exchange_rate') or rate),
+            'debit_fc': debit_fc,
+            'credit_fc': credit_fc,
+            'partner_id': raw.get('partner_id'),
+            'partner_type': raw.get('partner_type'),
+            'warehouse_code': raw.get('warehouse_code'),
+            'product_id': raw.get('product_id'),
+            'employee_id': raw.get('employee_id'),
+            'project_code': raw.get('project_code'),
+            'department_code': raw.get('department_code'),
+            'tax_code': raw.get('tax_code'),
+            'tax_rate': raw.get('tax_rate'),
+            'vat_invoice_no': raw.get('vat_invoice_no'),
+            'description': raw.get('description') or description,
+        })
+
+    if not prepared:
+        raise ValueError('Không có dòng bút toán hợp lệ (số tiền > 0)')
+    if total_debit != total_credit:
+        raise ValueError(f'Bút toán không cân: Nợ {total_debit} ≠ Có {total_credit}')
+    return prepared, total_debit, total_credit
+
+
+def _hard_delete_journal_row(
+    conn: sqlite3.Connection,
+    entry: sqlite3.Row | dict,
+    *,
+    reason: str,
+    deleted_by: str | None,
+) -> dict:
+    """Xóa một dòng nhật ký + hoàn số dư (caller đã kiểm tra kỳ mở)."""
+    entry_id = int(entry['id'] if hasattr(entry, 'keys') else entry[0])
+    fy, per = int(entry['fiscal_year']), int(entry['period'])
+    lines = conn.execute(
+        "SELECT * FROM sme_journal_lines WHERE entry_id = ? ORDER BY sequence",
+        (entry_id,),
+    ).fetchall()
+    c = conn.cursor()
+    for ln in lines:
+        _apply_balance_delta(
+            c,
+            account_code=ln['account_code'],
+            fiscal_year=fy,
+            period=per,
+            debit=_money(ln['debit']),
+            credit=_money(ln['credit']),
+            sign=-1,
+        )
+    try:
+        c.execute("DELETE FROM sme_auto_asset_postings WHERE entry_id = ?", (entry_id,))
+    except sqlite3.OperationalError:
+        pass
+    c.execute(
+        "UPDATE sme_journal_entries SET reverses_id = NULL WHERE reverses_id = ?",
+        (entry_id,),
+    )
+    c.execute("DELETE FROM sme_journal_lines WHERE entry_id = ?", (entry_id,))
+    c.execute("DELETE FROM sme_journal_entries WHERE id = ?", (entry_id,))
+    return {
+        'deleted': True,
+        'entry_id': entry_id,
+        'snapshot': {
+            'id': entry_id,
+            'entry_no': entry['entry_no'],
+            'posting_date': entry['posting_date'],
+            'document_type': entry['document_type'],
+            'document_no': entry['document_no'],
+            'business_type': entry['business_type'],
+            'description': entry['description'],
+            'total_debit': entry['total_debit'],
+            'total_credit': entry['total_credit'],
+            'fiscal_year': fy,
+            'period': per,
+            'lines': [dict(x) for x in lines],
+            'reason': reason,
+            'deleted_by': deleted_by,
+        },
+    }
+
+
+def delete_journal_entry(
+    conn: sqlite3.Connection,
+    entry_id: int,
+    *,
+    reason: str = 'Xóa bút toán',
+    deleted_by: str | None = None,
+) -> dict:
+    """
+    Xóa hoàn toàn bút toán khi kỳ đang mở (kể cả sau «Mở lại sổ/kỳ kê khai»).
+    Kỳ đã chốt/khóa: bắt buộc dùng reverse_journal_entry.
+    Khi kỳ mở: được xóa cả chứng từ đảo / bút toán đã đảo để hạch toán lại cho đúng
+    (phục vụ kê khai bổ sung / sửa BCTC).
+    """
+    ensure_sme_journal_ready(conn, commit=False)
+    conn.row_factory = sqlite3.Row
+    entry = conn.execute(
+        "SELECT * FROM sme_journal_entries WHERE id = ?", (entry_id,)
+    ).fetchone()
+    if not entry:
+        raise ValueError(f'Không tìm thấy bút toán #{entry_id}')
+
+    from Services.sme.period_lock import assert_period_open, is_period_sealed
+    fy, per = int(entry['fiscal_year']), int(entry['period'])
+    sealed = is_period_sealed(conn, fy, per)
+
+    if sealed:
+        if entry['status'] == 'reversed' or entry['reversed_by_id']:
+            raise ValueError(
+                'Bút toán đã bị đảo — kỳ đang khóa/chốt: giữ lịch sử. '
+                'Dùng «Mở lại kỳ kê khai» hoặc «Mở lại sổ năm» để xóa/sửa tại chỗ.'
+            )
+        if str(entry['document_type'] or '').startswith('REV_'):
+            raise ValueError(
+                'Không xóa chứng từ đảo khi kỳ đang khóa/chốt. '
+                'Mở lại sổ/kỳ kê khai nếu cần gỡ cặp đảo và hạch toán lại.'
+            )
+        raise ValueError(
+            f'Kỳ {per:02d}/{fy} đã chốt kê khai hoặc khóa sổ năm — không xóa cứng. '
+            f'Dùng «Đảo bút toán» rồi ghi mới, hoặc «Mở lại sổ / mở lại kỳ kê khai» '
+            f'để sửa/xóa tại chỗ (kê khai bổ sung / sửa BCTC).'
+        )
+
+    assert_period_open(conn, fy, per, action='xóa bút toán')
+
+    # Kỳ mở (sau mở sổ): gỡ cặp đảo trước khi xóa gốc
+    if str(entry['document_type'] or '').startswith('REV_'):
+        orig_id = entry['reverses_id']
+        result = _hard_delete_journal_row(
+            conn, entry, reason=reason, deleted_by=deleted_by,
+        )
+        if orig_id:
+            conn.execute(
+                """
+                UPDATE sme_journal_entries
+                SET status = 'posted', reversed_by_id = NULL, updated_at = ?
+                WHERE id = ?
+                """,
+                (_now(), int(orig_id)),
+            )
+        result['restored_original_id'] = orig_id
+        result['mode'] = 'delete_reverse_restore_original'
+        return result
+
+    if entry['reversed_by_id']:
+        rev_id = int(entry['reversed_by_id'])
+        rev = conn.execute(
+            "SELECT * FROM sme_journal_entries WHERE id = ?", (rev_id,)
+        ).fetchone()
+        if rev:
+            _hard_delete_journal_row(
+                conn, rev,
+                reason=f'{reason} (gỡ chứng từ đảo #{rev_id})',
+                deleted_by=deleted_by,
+            )
+        conn.execute(
+            """
+            UPDATE sme_journal_entries
+            SET status = 'posted', reversed_by_id = NULL, updated_at = ?
+            WHERE id = ?
+            """,
+            (_now(), entry_id),
+        )
+        entry = conn.execute(
+            "SELECT * FROM sme_journal_entries WHERE id = ?", (entry_id,)
+        ).fetchone()
+
+    result = _hard_delete_journal_row(
+        conn, entry, reason=reason, deleted_by=deleted_by,
+    )
+    result['mode'] = 'hard_delete'
+    return result
+
+
+def update_journal_entry(
+    conn: sqlite3.Connection,
+    entry_id: int,
+    *,
+    lines: list[dict] | None = None,
+    description: str | None = None,
+    document_no: str | None = None,
+    document_date: str | None = None,
+    reference_document: str | None = None,
+    posting_date: str | None = None,
+    updated_by: str | None = None,
+    reason: str = 'Sửa bút toán',
+) -> dict:
+    """
+    Cập nhật tại chỗ khi kỳ chưa khóa — không xóa nghiệp vụ nguồn, không ghi đảo.
+    Kỳ đã khóa: dùng đảo + ghi mới.
+    """
+    ensure_sme_journal_ready(conn, commit=False)
+    conn.row_factory = sqlite3.Row
+    entry = conn.execute(
+        "SELECT * FROM sme_journal_entries WHERE id = ?", (entry_id,)
+    ).fetchone()
+    if not entry:
+        raise ValueError(f'Không tìm thấy bút toán #{entry_id}')
+    from Services.sme.period_lock import assert_period_open, is_period_sealed
+    old_fy, old_per = int(entry['fiscal_year']), int(entry['period'])
+    sealed = is_period_sealed(conn, old_fy, old_per)
+
+    if sealed:
+        if entry['status'] != 'posted':
+            raise ValueError('Chỉ sửa được bút toán đang ghi sổ (posted)')
+        if entry['reversed_by_id']:
+            raise ValueError(
+                'Bút toán đã có chứng từ đảo — kỳ đang khóa/chốt. '
+                'Mở lại sổ/kỳ kê khai để gỡ đảo và sửa tại chỗ.'
+            )
+        if str(entry['document_type'] or '').startswith('REV_'):
+            raise ValueError('Không sửa chứng từ đảo khi kỳ đang khóa/chốt')
+        raise ValueError(
+            f'Kỳ {old_per:02d}/{old_fy} đã chốt kê khai hoặc khóa sổ năm — không sửa tại chỗ. '
+            f'Dùng «Đảo bút toán» rồi ghi mới, hoặc «Mở lại sổ / mở lại kỳ kê khai» '
+            f'để sửa tại chỗ (kê khai bổ sung / sửa BCTC).'
+        )
+
+    # Kỳ mở (kể cả sau mở sổ trở lại)
+    if str(entry['document_type'] or '').startswith('REV_'):
+        raise ValueError(
+            'Không sửa chứng từ đảo — hãy xóa chứng từ đảo (khôi phục bút toán gốc) '
+            'rồi sửa bút toán gốc, hoặc xóa cả cặp và ghi lại.'
+        )
+    if entry['reversed_by_id']:
+        # Gỡ chứng từ đảo tự động rồi cho sửa gốc
+        rev_id = int(entry['reversed_by_id'])
+        rev = conn.execute(
+            "SELECT * FROM sme_journal_entries WHERE id = ?", (rev_id,)
+        ).fetchone()
+        if rev:
+            _hard_delete_journal_row(
+                conn, rev,
+                reason='Gỡ chứng từ đảo trước khi sửa bút toán gốc (kỳ đã mở lại)',
+                deleted_by=updated_by,
+            )
+        conn.execute(
+            """
+            UPDATE sme_journal_entries
+            SET status = 'posted', reversed_by_id = NULL, updated_at = ?
+            WHERE id = ?
+            """,
+            (_now(), entry_id),
+        )
+        entry = conn.execute(
+            "SELECT * FROM sme_journal_entries WHERE id = ?", (entry_id,)
+        ).fetchone()
+    if entry['status'] != 'posted':
+        raise ValueError('Chỉ sửa được bút toán đang ghi sổ (posted)')
+
+    assert_period_open(conn, old_fy, old_per, action='sửa bút toán')
+
+    old_lines = conn.execute(
+        "SELECT * FROM sme_journal_lines WHERE entry_id = ? ORDER BY sequence",
+        (entry_id,),
+    ).fetchall()
+    old_snapshot = {
+        'id': entry_id,
+        'entry_no': entry['entry_no'],
+        'posting_date': entry['posting_date'],
+        'document_no': entry['document_no'],
+        'document_date': entry['document_date'],
+        'description': entry['description'],
+        'reference_document': entry['reference_document'],
+        'total_debit': entry['total_debit'],
+        'total_credit': entry['total_credit'],
+        'lines': [dict(x) for x in old_lines],
+    }
+
+    new_posting = (posting_date or entry['posting_date'] or '')[:10]
+    try:
+        dt = datetime.strptime(new_posting, '%Y-%m-%d')
+    except ValueError as exc:
+        raise ValueError('posting_date phải dạng YYYY-MM-DD') from exc
+    new_fy, new_per = dt.year, dt.month
+    if new_fy != old_fy or new_per != old_per:
+        assert_period_open(conn, new_fy, new_per, action='chuyển ngày ghi bút toán')
+
+    currency = entry['currency'] or 'VND'
+    rate = entry['exchange_rate'] or 1
+    new_desc = description if description is not None else (entry['description'] or '')
+    if lines is not None:
+        prepared, total_debit, total_credit = _prepare_journal_lines(
+            conn, lines, currency=currency, exchange_rate=rate, description=new_desc,
+        )
+    else:
+        prepared = None
+        total_debit = _money(entry['total_debit'])
+        total_credit = _money(entry['total_credit'])
+
+    c = conn.cursor()
+    # Hoàn số dư cũ
+    for ln in old_lines:
+        _apply_balance_delta(
+            c,
+            account_code=ln['account_code'],
+            fiscal_year=old_fy,
+            period=old_per,
+            debit=_money(ln['debit']),
+            credit=_money(ln['credit']),
+            sign=-1,
+        )
+
+    if prepared is not None:
+        c.execute("DELETE FROM sme_journal_lines WHERE entry_id = ?", (entry_id,))
+        for line in prepared:
+            c.execute(
+                """
+                INSERT INTO sme_journal_lines (
+                    entry_id, sequence, account_code, debit, credit, currency, exchange_rate,
+                    debit_fc, credit_fc, partner_id, partner_type, warehouse_code, product_id,
+                    employee_id, project_code, department_code, tax_code, tax_rate,
+                    vat_invoice_no, description
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    entry_id, line['sequence'], line['account_code'],
+                    float(line['debit']), float(line['credit']),
+                    line['currency'], line['exchange_rate'],
+                    float(line['debit_fc']), float(line['credit_fc']),
+                    line['partner_id'], line['partner_type'], line['warehouse_code'],
+                    line['product_id'], line['employee_id'], line['project_code'],
+                    line['department_code'], line['tax_code'], line['tax_rate'],
+                    line['vat_invoice_no'], line['description'],
+                ),
+            )
+            _apply_balance_delta(
+                c,
+                account_code=line['account_code'],
+                fiscal_year=new_fy,
+                period=new_per,
+                debit=line['debit'],
+                credit=line['credit'],
+                sign=1,
+            )
+    else:
+        for ln in old_lines:
+            _apply_balance_delta(
+                c,
+                account_code=ln['account_code'],
+                fiscal_year=new_fy,
+                period=new_per,
+                debit=_money(ln['debit']),
+                credit=_money(ln['credit']),
+                sign=1,
+            )
+
+    new_doc_no = document_no if document_no is not None else entry['document_no']
+    new_doc_date = (document_date[:10] if document_date else None)
+    if document_date is None:
+        new_doc_date = entry['document_date']
+    new_ref = reference_document if reference_document is not None else entry['reference_document']
+
+    c.execute(
+        """
+        UPDATE sme_journal_entries SET
+            fiscal_year = ?, period = ?, posting_date = ?,
+            document_date = ?, document_no = ?, description = ?,
+            reference_document = ?,
+            total_debit = ?, total_credit = ?,
+            updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            new_fy, new_per, new_posting,
+            new_doc_date, new_doc_no, new_desc, new_ref,
+            float(total_debit), float(total_credit),
+            _now(), entry_id,
+        ),
+    )
+
+    new_data = get_journal_entry(conn, entry_id) or {}
+    new_data.pop('period_locked', None)
+    new_data.pop('can_edit', None)
+    new_data.pop('can_delete', None)
+    new_data.pop('can_reverse', None)
+    return {
+        'id': entry_id,
+        'entry_no': entry['entry_no'],
+        'reason': reason,
+        'updated_by': updated_by,
+        'old': old_snapshot,
+        'new': new_data,
+    }
 
 
 def build_import_stock_lines(
@@ -486,17 +1047,24 @@ def build_import_stock_lines(
     inventory_lines: list[dict],
     vat_amount: Decimal | float = 0,
     import_tax_amount: Decimal | float = 0,
+    excise_tax_amount: Decimal | float = 0,
     payable_amount: Decimal | float | None = None,
     supplier_id: int | None = None,
     bill_no: str | None = None,
     tax_code: str | None = None,
     import_type: str = 'DOMESTIC',
     description: str = '',
+    in_transit: bool = False,
 ) -> tuple[dict, list[dict]]:
     """
     Dựng dòng bút toán nhập kho từ quy tắc + COA.
     inventory_lines: [{product_id, amount, product_name, tax_pct, warehouse_code?}, ...]
-    amount = nguyên giá nhập kho (không VAT).
+    amount = nguyên giá (gồm thuế NK + TTĐB nếu có, không gồm VAT).
+
+    ``in_transit=True`` (nhập khẩu G1):
+      - HH/NVL/CCDC → Nợ **151**
+      - TSCĐ → Nợ **2411** (mua sắm TSCĐ / đang đi đường)
+    IMPORT: VAT → Nợ 13312 / Có **33312** (không gộp vào 331).
     """
     rule = get_posting_rule(conn, business_type, payment_method, commit=False)
     if not rule:
@@ -506,6 +1074,11 @@ def build_import_stock_lines(
         )
 
     debit_inv = resolve_postable_account(conn, rule['debit_account_code'])
+    if in_transit and import_type == 'IMPORT':
+        if business_type == 'MUA_TSCD':
+            debit_inv = resolve_postable_account(conn, '2411')
+        elif business_type in ('NHAP_KHO_HANG_HOA', 'NHAP_KHO_NVL', 'MUA_CCDC'):
+            debit_inv = resolve_postable_account(conn, '151')
     credit_pay = resolve_postable_account(conn, rule['credit_account_code'])
 
     lines: list[dict] = []
@@ -516,6 +1089,15 @@ def build_import_stock_lines(
         if amt <= 0:
             continue
         inv_total += amt
+        if in_transit and business_type == 'MUA_TSCD':
+            prefix = 'TSCĐ đang đi đường (2411)'
+        elif in_transit:
+            prefix = 'Hàng đi đường'
+        else:
+            prefix = 'Nhập kho'
+        line_desc = item.get('description') or (
+            f"{prefix}: {item.get('product_name') or item.get('product_id')}"
+        )
         lines.append({
             'sequence': seq,
             'account_code': debit_inv,
@@ -528,9 +1110,7 @@ def build_import_stock_lines(
             'tax_rate': item.get('tax_pct'),
             'vat_invoice_no': bill_no,
             'tax_code': tax_code,
-            'description': item.get('description') or (
-                f"Nhập kho: {item.get('product_name') or item.get('product_id')}"
-            ),
+            'description': line_desc,
         })
         seq += 1
 
@@ -538,7 +1118,6 @@ def build_import_stock_lines(
     if rule.get('is_vat_applicable') and vat_amt > 0:
         vat_code = rule.get('vat_account_code') or '13311'
         if import_type == 'IMPORT':
-            # Ưu tiên 13312 nếu có trong COA
             prefer = '13312'
             preferred_account = get_account(conn, prefer, commit=False)
             if preferred_account and preferred_account.get('is_postable'):
@@ -556,14 +1135,23 @@ def build_import_stock_lines(
             'description': f"Thuế GTGT đầu vào — {description or business_type}",
         })
         seq += 1
+        # GTGT hàng NK phải nộp HQ — không gộp vào công nợ NCC
+        if import_type == 'IMPORT':
+            vat_credit = resolve_postable_account(conn, '33312')
+            lines.append({
+                'sequence': seq,
+                'account_code': vat_credit,
+                'debit': 0,
+                'credit': vat_amt,
+                'partner_type': 'tax',
+                'description': 'Thuế GTGT hàng nhập khẩu phải nộp NSNN',
+            })
+            seq += 1
 
     import_tax = _money(import_tax_amount)
     if import_type == 'IMPORT' and import_tax > 0:
         tax_credit = rule.get('import_tax_credit_account') or '3333'
         tax_credit = resolve_postable_account(conn, tax_credit)
-        # Thuế NK tăng nguyên giá kho (đã nằm trong inventory amount) và Có 3333
-        # Phần Có 3333 sẽ được gộp vào tổng thanh toán/đối ứng bên dưới nếu cần tách.
-        # Ở đây: Có 3333 = import_tax; phần thanh toán NCC = payable - không gồm thuế NK phải nộp NSNN ngay.
         lines.append({
             'sequence': seq,
             'account_code': tax_credit,
@@ -574,7 +1162,19 @@ def build_import_stock_lines(
         })
         seq += 1
 
-    # Bên Có đối ứng (tiền / công nợ) = tổng Nợ kho + VAT (không gồm dòng Có thuế NK)
+    excise_tax = _money(excise_tax_amount)
+    if import_type == 'IMPORT' and excise_tax > 0:
+        lines.append({
+            'sequence': seq,
+            'account_code': resolve_postable_account(conn, '3332'),
+            'debit': 0,
+            'credit': excise_tax,
+            'partner_type': 'tax',
+            'description': 'Thuế tiêu thụ đặc biệt (hàng nhập khẩu) phải nộp NSNN',
+        })
+        seq += 1
+
+    # Đối ứng NCC/tiền: nếu caller truyền payable_amount thì dùng; không thì cân Nợ−Có
     debit_sum = sum((_money(x['debit']) for x in lines), Decimal('0.00'))
     credit_sum = sum((_money(x['credit']) for x in lines), Decimal('0.00'))
     payable = _money(payable_amount) if payable_amount is not None else (debit_sum - credit_sum)
@@ -697,6 +1297,21 @@ def get_journal_entry(conn: sqlite3.Connection, entry_id: int) -> dict | None:
     ).fetchall()
     data = dict(entry)
     data['lines'] = [dict(x) for x in lines]
+    from Services.sme.period_lock import is_filing_closed, is_period_locked, is_period_sealed
+    fy = int(data.get('fiscal_year') or 0)
+    per = int(data.get('period') or 0)
+    year_locked = bool(fy and per and is_period_locked(conn, fy, per))
+    filing_closed = bool(fy and per and is_filing_closed(conn, fy, per))
+    sealed = bool(fy and per and is_period_sealed(conn, fy, per))
+    is_rev = str(data.get('document_type') or '').startswith('REV_')
+    posted = (data.get('status') == 'posted') and not data.get('reversed_by_id')
+    data['period_locked'] = year_locked
+    data['year_locked'] = year_locked
+    data['filing_closed'] = filing_closed
+    data['period_sealed'] = sealed
+    data['can_edit'] = bool(posted and not sealed and not is_rev)
+    data['can_delete'] = bool(posted and not sealed and not is_rev)
+    data['can_reverse'] = bool(posted and sealed and not is_rev)
     return data
 
 

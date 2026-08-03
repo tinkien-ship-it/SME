@@ -18,11 +18,141 @@ def _user():
 
 def register_sme_phase7_routes(app, *, login_required, require_sme_regime):
 
+    @app.route('/SME_fx_cash')
+    @login_required
+    @require_sme_regime
+    def SME_fx_cash():
+        return render_template('KeToanSME/fx_cash.html')
+
+    @app.route('/api/sme/fx-cash/positions')
+    @login_required
+    @require_sme_regime
+    def api_sme_fx_cash_positions():
+        from Services.sme.fx_cash import fx_cash_positions
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            branch = (
+                request.args.get('branch')
+                or session.get('sme_branch_filter')
+                or 'ALL'
+            )
+            as_of = (request.args.get('as_of') or request.args.get('date') or '').strip()[:10]
+            data = fx_cash_positions(conn, as_of=as_of or None, branch_code=branch)
+            return jsonify({'success': True, **data})
+        except Exception as e:
+            logger.exception('api_sme_fx_cash_positions')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/fx-cash/ledger')
+    @login_required
+    @require_sme_regime
+    def api_sme_fx_cash_ledger():
+        from Services.sme.fx_cash import fx_cash_ledger
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            branch = (
+                request.args.get('branch')
+                or session.get('sme_branch_filter')
+                or 'ALL'
+            )
+            data = fx_cash_ledger(
+                conn,
+                account_code=request.args.get('account') or request.args.get('account_code') or '1122',
+                date_from=request.args.get('from') or request.args.get('date_from'),
+                date_to=request.args.get('to') or request.args.get('date_to'),
+                branch_code=branch,
+            )
+            return jsonify({'success': True, **data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            logger.exception('api_sme_fx_cash_ledger')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/fx-cash/sell/preview')
+    @login_required
+    @require_sme_regime
+    def api_sme_fx_cash_sell_preview():
+        from Services.sme.fx_cash import preview_sell_fx
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            branch = (
+                request.args.get('branch')
+                or session.get('sme_branch_filter')
+                or 'ALL'
+            )
+            data = preview_sell_fx(
+                conn,
+                fx_account=request.args.get('fx_account') or '1122',
+                amount_fc=request.args.get('amount_fc'),
+                sell_rate=request.args.get('sell_rate'),
+                as_of=request.args.get('as_of') or request.args.get('date'),
+                branch_code=branch,
+            )
+            return jsonify({'success': True, 'data': data, **data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            logger.exception('api_sme_fx_cash_sell_preview')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/fx-cash/sell', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_fx_cash_sell():
+        from Services.sme.fx_cash import sell_foreign_currency
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            branch = (
+                data.get('branch_code')
+                or session.get('sme_branch_filter')
+                or 'ALL'
+            )
+            result = sell_foreign_currency(
+                conn,
+                voucher_date=data.get('date') or data.get('voucher_date'),
+                amount_fc=data.get('amount_fc'),
+                sell_rate=data.get('sell_rate') or data.get('exchange_rate') or data.get('fx_rate'),
+                fx_account=data.get('fx_account') or '1122',
+                vnd_account=data.get('vnd_account'),
+                payment_method=data.get('payment_method'),
+                currency=data.get('currency') or 'USD',
+                party_name=data.get('party_name') or data.get('receiver_name') or '',
+                reason=data.get('reason') or '',
+                created_by=_user(),
+                branch_code=branch,
+                commit=True,
+            )
+            return jsonify({'success': True, **result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_fx_cash_sell')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/api/sme/cash-balances')
     @login_required
     @require_sme_regime
     def api_sme_cash_balances():
-        from Services.sme.cash_books import cash_fund_balances
+        from Services.sme.cash_books import (
+            cash_account_balance_as_of,
+            cash_fund_balances,
+        )
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
@@ -32,12 +162,39 @@ def register_sme_phase7_routes(app, *, login_required, require_sme_regime):
                 or session.get('sme_branch_filter')
                 or 'ALL'
             )
-            return jsonify({
-                'success': True,
-                **cash_fund_balances(conn, fiscal_year=year, branch_code=branch),
-            })
+            as_of = (request.args.get('as_of') or request.args.get('date') or '').strip()[:10]
+            account = (request.args.get('account') or request.args.get('account_code') or '').strip()
+            data = cash_fund_balances(
+                conn, fiscal_year=year, branch_code=branch, as_of=as_of or None,
+            )
+            if account and as_of:
+                data['account_code'] = account
+                data['account_balance'] = float(
+                    cash_account_balance_as_of(
+                        conn, account_code=account, as_of=as_of, branch_code=branch,
+                    )
+                )
+            return jsonify({'success': True, **data})
         except Exception as e:
             logger.exception('api_sme_cash_balances')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/bank-payment-accounts')
+    @login_required
+    @require_sme_regime
+    def api_sme_bank_payment_accounts():
+        """Danh sách TK NH ghi sổ + mặc định (= VietQR); needs_choice khi có nhiều TK."""
+        from Services.sme.bank_accounts import list_bank_payment_accounts
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = list_bank_payment_accounts(conn)
+            conn.commit()
+            return jsonify({'success': True, **data})
+        except Exception as e:
+            logger.exception('api_sme_bank_payment_accounts')
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
@@ -251,7 +408,9 @@ def register_sme_phase7_routes(app, *, login_required, require_sme_regime):
                 or 'BHXH' in (r.get('reason') or '').upper()
                 or 'BHYT' in (r.get('reason') or '').upper()
                 or 'BHTN' in (r.get('reason') or '').upper()
-                or (r.get('form_code') or '') == '07-LDTL'
+                or '07-L' in (r.get('form_code') or '').upper()
+                or str(r.get('source_type') or '') == 'insurance'
+                or str(r.get('reference_document') or '').startswith('INSURANCE|')
             ]
             return jsonify({'success': True, 'data': out})
         except Exception as e:

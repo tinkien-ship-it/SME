@@ -113,4 +113,21 @@ window.KETO_SUPPORT = {
     modeLabel: {{ (assistant_mode_label or 'Miễn phí (FAQ + hướng dẫn)') | tojson }}
 };
 </script>
-<script src="{{ url_for('static', filename='js/keto-assistant.js') }}?v=20260729c"></script>
+<script>
+(function () {
+  var src = {{ url_for('static', filename='js/keto-assistant.js') | tojson }} + '?v=20260729c';
+  function loadAssistant() {
+    if (document.querySelector('script[data-keto-assistant]')) return;
+    var s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    s.dataset.ketoAssistant = '1';
+    document.body.appendChild(s);
+  }
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(loadAssistant, { timeout: 2500 });
+  } else {
+    setTimeout(loadAssistant, 800);
+  }
+})();
+</script>

@@ -1,0 +1,277 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Tờ khai hải quan điện tử{% endblock %}
+
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1"><i class="fas fa-passport text-primary me-2"></i>Tờ khai hải quan điện tử</h4>
+    <p class="text-muted small mb-0">
+      Sổ tờ khai XK/NK trong SME — đồng bộ số TK, tỷ giá tờ khai, thuế sang phiếu xuất khẩu / nhập kho.
+      Khai báo lên hệ thống Hải quan qua phần mềm đầu cuối được TCHQ chứng nhận (không thay thế VNACCS).
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-primary btn-sm" href="{{ edeclaration_url }}" target="_blank" rel="noopener">
+      <i class="fas fa-external-link-alt me-1"></i> CCS4EO (TCHQ miễn phí)
+    </a>
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalImportJson">
+      <i class="fas fa-file-import me-1"></i> Nhập JSON/CSV
+    </button>
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalDecl">
+      <i class="fas fa-plus me-1"></i> Thêm tờ khai
+    </button>
+  </div>
+</div>
+
+<div class="alert alert-info small border-0 shadow-sm">
+  <strong>Phạm vi tích hợp:</strong> SME lưu &amp; liên kết tờ khai với chứng từ kế toán.
+  Kết nối truyền tờ khai lên VNACCS/VCIS phải dùng
+  <a href="{{ edeclaration_url }}" target="_blank" rel="noopener">CCS4EO</a>
+  hoặc ECUS / FPT.VNACCS / CDS (đã chứng nhận) + chữ ký số.
+  Xuất dữ liệu từ phần mềm HQ → dán JSON/CSV vào đây để đồng bộ sổ sách.
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2 d-flex flex-wrap gap-2 align-items-center">
+    <select id="fltDir" class="form-select form-select-sm" style="width:auto">
+      <option value="">Tất cả chiều</option>
+      <option value="export">Xuất khẩu</option>
+      <option value="import">Nhập khẩu</option>
+    </select>
+    <input type="search" id="q" class="form-control form-control-sm" style="max-width:280px" placeholder="Số TK, đối tác, B/L…">
+    <button class="btn btn-sm btn-outline-secondary" id="btnSearch">Tìm</button>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Số tờ khai</th><th>Chiều</th><th>Ngày</th><th>Đối tác</th>
+          <th>NT</th><th class="text-end">Trị giá NT</th><th class="text-end">Thuế</th>
+          <th>TT</th><th>Liên kết</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="body"><tr><td colspan="10" class="text-center text-muted py-4">Đang tải…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="modalDecl" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Tờ khai hải quan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-md-4"><label class="form-label small fw-bold">Số tờ khai *</label>
+            <input class="form-control form-control-sm" id="fNo"></div>
+          <div class="col-md-2"><label class="form-label small fw-bold">Chiều</label>
+            <select class="form-select form-select-sm" id="fDir"><option value="export">Xuất</option><option value="import">Nhập</option></select></div>
+          <div class="col-md-3"><label class="form-label small fw-bold">Ngày TK</label>
+            <input type="date" class="form-control form-control-sm" id="fDate"></div>
+          <div class="col-md-3"><label class="form-label small fw-bold">Trạng thái</label>
+            <select class="form-select form-select-sm" id="fStatus">
+              <option value="draft">Nháp</option><option value="declared">Đã khai</option>
+              <option value="cleared">Thông quan</option><option value="cancelled">Hủy</option>
+            </select></div>
+          <div class="col-md-6"><label class="form-label small fw-bold">Đối tác (KH/NCC)</label>
+            <input class="form-control form-control-sm" id="fPartner"></div>
+          <div class="col-md-3"><label class="form-label small fw-bold">Quốc gia</label>
+            <input class="form-control form-control-sm" id="fCountry"></div>
+          <div class="col-md-3"><label class="form-label small fw-bold">Chi cục HQ</label>
+            <input class="form-control form-control-sm" id="fOffice"></div>
+          <div class="col-md-2"><label class="form-label small fw-bold">NT</label>
+            <input class="form-control form-control-sm" id="fCur" value="USD"></div>
+          <div class="col-md-2"><label class="form-label small fw-bold">TG tờ khai</label>
+            <input class="form-control form-control-sm text-end" id="fFx" value="25000"></div>
+          <div class="col-md-2"><label class="form-label small fw-bold">Trị giá NT</label>
+            <input class="form-control form-control-sm text-end" id="fAmtFc" value="0"></div>
+          <div class="col-md-3"><label class="form-label small fw-bold">Thuế XK (NT)</label>
+            <input class="form-control form-control-sm text-end" id="fExpTaxFc" value="0"></div>
+          <div class="col-md-3"><label class="form-label small fw-bold">Thuế NK (VND)</label>
+            <input class="form-control form-control-sm text-end" id="fImpDuty" value="0"></div>
+          <div class="col-md-3"><label class="form-label small fw-bold">GTGT NK (VND)</label>
+            <input class="form-control form-control-sm text-end" id="fImpVat" value="0"></div>
+          <div class="col-md-2"><label class="form-label small fw-bold">Incoterms</label>
+            <input class="form-control form-control-sm" id="fInco" value="FOB"></div>
+          <div class="col-md-3"><label class="form-label small fw-bold">B/L</label>
+            <input class="form-control form-control-sm" id="fBl"></div>
+          <div class="col-md-3"><label class="form-label small fw-bold">Hóa đơn</label>
+            <input class="form-control form-control-sm" id="fInv"></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">Mã HS (phẩy)</label>
+            <input class="form-control form-control-sm" id="fHs" placeholder="8471.30.00, …"></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">Gắn phiếu XK (sale_id)</label>
+            <input class="form-control form-control-sm" id="fSaleId" placeholder="ID phiếu bán XK"></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">Gắn phiếu NK (import_id)</label>
+            <input class="form-control form-control-sm" id="fImportId" placeholder="ID phiếu nhập"></div>
+          <div class="col-12"><label class="form-label small fw-bold">Ghi chú</label>
+            <input class="form-control form-control-sm" id="fNote"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-sm" id="btnSaveDecl">Lưu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalImportJson" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Nhập tờ khai từ JSON / CSV</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p class="small text-muted">Dán mảng JSON hoặc CSV có header. Ví dụ JSON:</p>
+        <pre class="small bg-light p-2 rounded">{
+  "declaration_no": "305012345678",
+  "direction": "export",
+  "declaration_date": "2026-08-01",
+  "partner_name": "ABC Co Ltd",
+  "currency": "USD",
+  "customs_fx_rate": 25000,
+  "amount_fc": 10000,
+  "export_tax_fc": 0,
+  "incoterms": "FOB",
+  "status": "cleared"
+}</pre>
+        <textarea id="importRaw" class="form-control font-monospace small" rows="10" placeholder="JSON hoặc CSV…"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-sm" id="btnDoImport">Nhập vào sổ</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block sme_scripts %}
+<script>
+const money = v => Number(v||0).toLocaleString('vi-VN');
+const DIR = {export:'Xuất', import:'Nhập'};
+const ST = {draft:'Nháp', declared:'Đã khai', cleared:'Thông quan', cancelled:'Hủy'};
+
+async function load() {
+  const qs = new URLSearchParams();
+  const d = document.getElementById('fltDir').value;
+  const q = document.getElementById('q').value.trim();
+  if (d) qs.set('direction', d);
+  if (q) qs.set('q', q);
+  const res = await fetch('/api/sme/customs-declarations?' + qs);
+  const json = await res.json();
+  const body = document.getElementById('body');
+  if (!json.success) {
+    body.innerHTML = `<tr><td colspan="10" class="text-danger text-center">${json.error||'Lỗi'}</td></tr>`;
+    return;
+  }
+  const rows = json.items || [];
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Chưa có tờ khai</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(r => {
+    const tax = r.direction === 'export'
+      ? (Number(r.export_tax_fc||0) ? money(r.export_tax_fc)+' NT' : '—')
+      : money((r.import_duty_vnd||0)+(r.import_vat_vnd||0))+' đ';
+    const link = r.sale_id
+      ? `<a href="/SME_sale_export?sale_id=${r.sale_id}">XK #${r.sale_id}</a>`
+      : (r.import_id ? `NK #${r.import_id}` : '—');
+    const applyBtn = r.direction === 'export' && r.sale_id
+      ? `<button class="btn btn-link btn-sm p-0" onclick="applySale(${r.id},${r.sale_id})">Đồng bộ XK</button>`
+      : (r.direction === 'import' && r.import_id
+        ? `<button class="btn btn-link btn-sm p-0" onclick="applyImport(${r.id},${r.import_id})">Đồng bộ NK</button>`
+        : '');
+    return `<tr>
+      <td class="fw-semibold">${r.declaration_no||''}</td>
+      <td>${DIR[r.direction]||r.direction}</td>
+      <td>${(r.declaration_date||'').slice(0,10)}</td>
+      <td>${r.partner_name||''}</td>
+      <td>${r.currency||''}</td>
+      <td class="text-end">${money(r.amount_fc)}</td>
+      <td class="text-end">${tax}</td>
+      <td>${ST[r.status]||r.status}</td>
+      <td>${link}</td>
+      <td class="text-nowrap">${applyBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function payloadFromForm() {
+  return {
+    declaration_no: document.getElementById('fNo').value.trim(),
+    direction: document.getElementById('fDir').value,
+    declaration_date: document.getElementById('fDate').value,
+    status: document.getElementById('fStatus').value,
+    partner_name: document.getElementById('fPartner').value.trim(),
+    partner_country: document.getElementById('fCountry').value.trim(),
+    customs_office: document.getElementById('fOffice').value.trim(),
+    currency: document.getElementById('fCur').value.trim() || 'USD',
+    customs_fx_rate: parseFloat(document.getElementById('fFx').value)||1,
+    amount_fc: parseFloat(document.getElementById('fAmtFc').value)||0,
+    export_tax_fc: parseFloat(document.getElementById('fExpTaxFc').value)||0,
+    import_duty_vnd: parseFloat(document.getElementById('fImpDuty').value)||0,
+    import_vat_vnd: parseFloat(document.getElementById('fImpVat').value)||0,
+    incoterms: document.getElementById('fInco').value.trim(),
+    bl_no: document.getElementById('fBl').value.trim(),
+    invoice_no: document.getElementById('fInv').value.trim(),
+    hs_codes: document.getElementById('fHs').value.trim(),
+    sale_id: document.getElementById('fSaleId').value.trim() || null,
+    import_id: document.getElementById('fImportId').value.trim() || null,
+    note: document.getElementById('fNote').value.trim(),
+    source: 'manual',
+  };
+}
+
+document.getElementById('btnSaveDecl')?.addEventListener('click', async () => {
+  try {
+    const res = await fetch('/api/sme/customs-declarations', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payloadFromForm()),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error||'Lỗi');
+    bootstrap.Modal.getInstance(document.getElementById('modalDecl'))?.hide();
+    load();
+  } catch (e) { alert(e.message); }
+});
+
+document.getElementById('btnDoImport')?.addEventListener('click', async () => {
+  try {
+    const res = await fetch('/api/sme/customs-declarations/import', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ raw: document.getElementById('importRaw').value }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error||'Lỗi');
+    alert(`Đã nhập ${json.imported||0} tờ khai` + ((json.errors||[]).length ? ` · lỗi ${json.errors.length}` : ''));
+    bootstrap.Modal.getInstance(document.getElementById('modalImportJson'))?.hide();
+    load();
+  } catch (e) { alert(e.message); }
+});
+
+async function applySale(declId, saleId) {
+  try {
+    const res = await fetch(`/api/sme/customs-declarations/${declId}/apply-export-sale`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ sale_id: saleId }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error||'Lỗi');
+    alert('Đã đồng bộ sang phiếu XK #' + saleId);
+  } catch (e) { alert(e.message); }
+}
+async function applyImport(declId, importId) {
+  try {
+    const res = await fetch(`/api/sme/customs-declarations/${declId}/apply-import`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ import_id: importId }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error||'Lỗi');
+    alert('Đã đồng bộ sang phiếu NK #' + importId);
+  } catch (e) { alert(e.message); }
+}
+
+document.getElementById('btnSearch')?.addEventListener('click', load);
+document.getElementById('fltDir')?.addEventListener('change', load);
+document.addEventListener('DOMContentLoaded', load);
+</script>
+{% endblock %}

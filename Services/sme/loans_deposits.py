@@ -26,6 +26,18 @@ def _now() -> str:
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
+def _normalize_interest_rate(raw) -> float:
+    """Lãi suất năm dạng thập phân (0.12 = 12%). Chấp nhận nhập 12 hoặc 0.12."""
+    rate = Decimal(str(raw if raw is not None else 0))
+    if rate < 0:
+        raise ValueError('Lãi suất không được âm')
+    if rate > 1:
+        rate = rate / Decimal('100')
+    if rate > Decimal('1'):
+        raise ValueError('Lãi suất không hợp lệ')
+    return float(rate.quantize(Decimal('0.0001')))
+
+
 def ensure_sme_loans_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
     conn.execute(
         """
@@ -128,6 +140,7 @@ def disburse_loan(
     name = (lender_name or '').strip()
     if not date_s or not name:
         raise ValueError('Thiếu ngày / bên cho vay')
+    rate_dec = _normalize_interest_rate(interest_rate)
     loan_no = _next_loan_no(conn)
     liab = (liability_account or '3411').strip() or '3411'
     cash = (cash_account or '1121').strip() or '1121'
@@ -159,7 +172,7 @@ def disburse_loan(
         """,
         (
             loan_no, name, contract_no or '', date_s, (due_date or '')[:10] or None,
-            float(amt), float(interest_rate or 0), liab, entry['id'], notes or '', created_by, _now(), branch,
+            float(amt), rate_dec, liab, entry['id'], notes or '', created_by, _now(), branch,
         ),
     )
     if commit:
@@ -405,6 +418,183 @@ def get_loan(conn: sqlite3.Connection, loan_id: int) -> dict[str, Any] | None:
     ensure_sme_loans_schema(conn, commit=False)
     row = conn.execute('SELECT * FROM sme_loans WHERE id = ?', (loan_id,)).fetchone()
     return dict(row) if row else None
+
+
+def _loan_has_follow_on(conn: sqlite3.Connection, loan_id: int) -> bool:
+    """Đã trích lãi hoặc đã trả nợ → không cho sửa gốc/ngày/TK hạch toán."""
+    n_int = conn.execute(
+        """
+        SELECT COUNT(*) FROM sme_loan_interest
+        WHERE loan_id = ? AND COALESCE(status, 'accrued') != 'void'
+        """,
+        (loan_id,),
+    ).fetchone()[0]
+    if int(n_int or 0) > 0:
+        return True
+    n_pay = conn.execute(
+        """
+        SELECT COUNT(*) FROM sme_journal_entries
+        WHERE document_type = 'TRAV' AND document_id = ?
+          AND status = 'posted' AND reverses_id IS NULL
+        """,
+        (loan_id,),
+    ).fetchone()[0]
+    return int(n_pay or 0) > 0
+
+
+def update_loan(
+    conn: sqlite3.Connection,
+    loan_id: int,
+    *,
+    lender_name: str | None = None,
+    contract_no: str | None = None,
+    due_date: str | None = None,
+    interest_rate=None,
+    notes: str | None = None,
+    principal=None,
+    start_date: str | None = None,
+    liability_account: str | None = None,
+    cash_account: str | None = None,
+    created_by: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Sửa thông tin chi tiết khoản vay (active).
+
+    Luôn cho sửa: bên cho vay, số HĐ, hạn trả, lãi suất, ghi chú.
+    Sửa gốc / ngày giải ngân / TK: chỉ khi chưa trích lãi và chưa trả nợ
+    (đảo bút toán giải ngân rồi ghi lại).
+    """
+    from Services.sme.branch_filter import assert_row_in_branch
+
+    ensure_sme_journal_ready(conn, commit=False)
+    ensure_sme_loans_schema(conn, commit=False)
+    assert_row_in_branch(conn, 'sme_loans', loan_id, label='Khoản vay')
+
+    loan = get_loan(conn, loan_id)
+    if not loan:
+        raise ValueError('Không tìm thấy khoản vay')
+    if loan.get('status') == 'void':
+        raise ValueError('Khoản vay đã hủy — không thể sửa')
+    if loan.get('status') == 'closed':
+        raise ValueError('Khoản vay đã tất toán — chỉ được xem, không sửa')
+
+    name = (lender_name if lender_name is not None else loan.get('lender_name') or '').strip()
+    if not name:
+        raise ValueError('Thiếu bên cho vay')
+
+    new_rate = (
+        _normalize_interest_rate(interest_rate)
+        if interest_rate is not None
+        else float(loan.get('interest_rate') or 0)
+    )
+    new_contract = (
+        (contract_no if contract_no is not None else loan.get('contract_no') or '')
+    ).strip()
+    new_due = (
+        str(due_date if due_date is not None else loan.get('due_date') or '')[:10] or None
+    )
+    new_notes = notes if notes is not None else (loan.get('notes') or '')
+
+    new_principal = _money(principal if principal is not None else loan.get('principal'))
+    if new_principal <= 0:
+        raise ValueError('Số tiền gốc phải > 0')
+    new_start = str(
+        start_date if start_date is not None else loan.get('start_date') or ''
+    )[:10]
+    if not new_start:
+        raise ValueError('Thiếu ngày giải ngân')
+    new_liab = (
+        liability_account if liability_account is not None else loan.get('liability_account') or '3411'
+    ).strip() or '3411'
+    new_cash = (
+        cash_account if cash_account is not None else '1121'
+    ).strip() or '1121'
+
+    old_principal = _money(loan.get('principal'))
+    old_start = str(loan.get('start_date') or '')[:10]
+    old_liab = str(loan.get('liability_account') or '3411')
+    money_changed = (
+        new_principal != old_principal
+        or new_start != old_start
+        or new_liab != old_liab
+    )
+
+    journal_id = loan.get('disbursement_journal_id')
+    if money_changed:
+        if _loan_has_follow_on(conn, loan_id):
+            raise ValueError(
+                'Đã trích lãi hoặc trả nợ — không thể sửa gốc / ngày / TK. '
+                'Chỉ sửa bên cho vay, số HĐ, hạn trả, lãi suất, ghi chú.'
+            )
+        if journal_id:
+            reverse_journal_entry(
+                conn,
+                int(journal_id),
+                posting_date=new_start,
+                created_by=created_by,
+                reason=f'Sửa khoản vay {loan.get("loan_no")}',
+            )
+        desc = (new_notes or '').strip() or f'Giải ngân vay {loan["loan_no"]} — {name}'
+        entry = post_journal_entry(
+            conn,
+            posting_date=new_start,
+            document_date=new_start,
+            document_type='VAY',
+            document_no=loan['loan_no'],
+            document_id=loan_id,
+            business_type='GIAI_NGAN_VAY',
+            description=desc,
+            created_by=created_by,
+            branch_code=loan.get('branch_code'),
+            lines=[
+                {
+                    'sequence': 1,
+                    'account_code': new_cash,
+                    'debit': float(new_principal),
+                    'credit': 0,
+                    'description': desc,
+                },
+                {
+                    'sequence': 2,
+                    'account_code': new_liab,
+                    'debit': 0,
+                    'credit': float(new_principal),
+                    'description': desc,
+                },
+            ],
+        )
+        journal_id = entry['id']
+
+    conn.execute(
+        """
+        UPDATE sme_loans SET
+            lender_name = ?,
+            contract_no = ?,
+            start_date = ?,
+            due_date = ?,
+            principal = ?,
+            interest_rate = ?,
+            liability_account = ?,
+            notes = ?,
+            disbursement_journal_id = COALESCE(?, disbursement_journal_id)
+        WHERE id = ?
+        """,
+        (
+            name,
+            new_contract or None,
+            new_start,
+            new_due,
+            float(new_principal),
+            new_rate,
+            new_liab,
+            new_notes or '',
+            int(journal_id) if journal_id else None,
+            loan_id,
+        ),
+    )
+    if commit:
+        conn.commit()
+    return get_loan(conn, loan_id)
 
 
 def list_loans(

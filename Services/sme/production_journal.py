@@ -1,4 +1,4 @@
-"""Hạch toán sản xuất SME — giá thành TT99: 621/622/627 → 154 → 155."""
+"""Hạch toán sản xuất SME — giá thành TT99: 621/622/627 → 154; nhập TP 155 khi nhập kho."""
 from __future__ import annotations
 
 import sqlite3
@@ -53,12 +53,14 @@ def post_production_journal(
     commit: bool = False,
 ) -> dict[str, Any] | None:
     """
-    Mặc định ``full`` (TT99):
+    Khi lập lệnh SX (chưa nhập kho TP):
+
+    ``full`` (TT99):
       1) Tập hợp CP: Nợ 621/Có 152 · Nợ 622/Có 3341 · Nợ 627/Có 1111
       2) Kết chuyển dở dang: Nợ 154 / Có 621+622+627
-      3) Nhập thành phẩm: Nợ 155 / Có 154
+      (Bước Nợ 155 chỉ khi nhập kho thành phẩm — ``post_fg_receipt_journal``)
 
-    ``simple`` (siêu nhỏ): Nợ 155 / Có 152(+3341/+1111) — giữ tương thích cũ.
+    ``simple`` (siêu nhỏ): Nợ 154 / Có 152(+3341/+1111) — chờ nhập kho mới chuyển 155.
     """
     ensure_sme_journal_ready(conn, commit=False)
     ensure_production_journal_column(conn, commit=False)
@@ -96,14 +98,14 @@ def post_production_journal(
         mode = 'full'
 
     if mode == 'simple':
-        result = _post_simple(
+        result = _post_simple_wip(
             conn, order_id=order_id, voucher_no=voucher_no, date_s=date_s,
             total=total, credit_mat=credit_mat, credit_labor=credit_labor,
             credit_other=credit_other, finished_product_id=order.get('finished_product_id'),
             created_by=created_by,
         )
     else:
-        result = _post_full(
+        result = _post_full_to_wip(
             conn, order_id=order_id, voucher_no=voucher_no, date_s=date_s,
             total=total, credit_mat=credit_mat, credit_labor=credit_labor,
             credit_other=credit_other, finished_product_id=order.get('finished_product_id'),
@@ -122,13 +124,96 @@ def post_production_journal(
     return result
 
 
-def _post_simple(
+def post_fg_receipt_journal(
+    conn: sqlite3.Connection,
+    order: dict[str, Any],
+    receipt: dict[str, Any],
+    *,
+    created_by: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any] | None:
+    """Nhập kho TP theo đợt: Nợ 155 / Có 154 = amount (ngày nhập kho)."""
+    ensure_sme_journal_ready(conn, commit=False)
+    ensure_production_journal_column(conn, commit=False)
+
+    receipt_id = int(receipt['id'])
+    step = f'fg:{receipt_id}'
+    existing = conn.execute(
+        """
+        SELECT journal_entry_id FROM sme_production_cost_entries
+        WHERE order_id = ? AND step = ?
+        """,
+        (int(order['id']), step),
+    ).fetchone()
+    if existing:
+        jid = existing[0] if not isinstance(existing, sqlite3.Row) else existing['journal_entry_id']
+        return {'skipped': True, 'journal_entry_id': jid, 'reason': 'already_posted'}
+
+    amount = float(receipt.get('amount') or 0)
+    if amount <= 0:
+        return None
+
+    voucher_no = order.get('voucher_no') or f"SX{order['id']}"
+    receipt_no = receipt.get('receipt_no') or f'NTP{receipt_id}'
+    date_s = str(receipt.get('receipt_date') or '')[:10]
+    if not date_s:
+        raise ValueError('Thiếu ngày nhập kho thành phẩm')
+
+    qty = float(receipt.get('qty') or 0)
+    desc = f"Nhập TP {voucher_no}/{receipt_no} — SL {qty:g}"
+    entry = post_journal_entry(
+        conn,
+        posting_date=date_s,
+        document_date=date_s,
+        document_type='SX',
+        document_no=receipt_no,
+        document_id=receipt_id,
+        business_type='NHAP_TP_SX',
+        description=desc,
+        reference_document=voucher_no,
+        created_by=created_by,
+        lines=[
+            {
+                'sequence': 1,
+                'account_code': '155',
+                'debit': amount,
+                'credit': 0,
+                'product_id': order.get('finished_product_id'),
+                'description': desc,
+            },
+            {
+                'sequence': 2,
+                'account_code': '154',
+                'debit': 0,
+                'credit': amount,
+                'product_id': order.get('finished_product_id'),
+                'description': f'Xuất 154 → 155 {receipt_no}',
+            },
+        ],
+    )
+    _link_step(conn, int(order['id']), step, entry['id'])
+    conn.execute(
+        'UPDATE production_fg_receipts SET journal_entry_id = ? WHERE id = ?',
+        (entry['id'], receipt_id),
+    )
+    if commit:
+        conn.commit()
+    return {
+        'journal_entry_id': entry['id'],
+        'entry_no': entry.get('entry_no'),
+        'amount': amount,
+        'step': step,
+    }
+
+
+def _post_simple_wip(
     conn, *, order_id, voucher_no, date_s, total, credit_mat, credit_labor, credit_other,
     finished_product_id, created_by,
 ) -> dict[str, Any]:
-    desc = f"Sản xuất {voucher_no} — nhập thành phẩm (đơn giản)"
+    """Siêu nhỏ: tập hợp thẳng vào 154 (chờ nhập kho mới sang 155)."""
+    desc = f"Sản xuất {voucher_no} — CPSX dở dang (154)"
     lines: list[dict] = [{
-        'sequence': 1, 'account_code': '155', 'debit': total, 'credit': 0,
+        'sequence': 1, 'account_code': '154', 'debit': total, 'credit': 0,
         'product_id': finished_product_id, 'description': desc,
     }]
     seq = 2
@@ -151,22 +236,21 @@ def _post_simple(
         })
     entry = post_journal_entry(
         conn, posting_date=date_s, document_date=date_s,
-        document_type='SX', document_no=voucher_no, document_id=order_id,
-        business_type='SAN_XUAT_TP', description=desc,
+        document_type='SX154', document_no=f'{voucher_no}-154', document_id=order_id,
+        business_type='KET_CHUYEN_154', description=desc,
         reference_document=voucher_no, created_by=created_by, lines=lines,
     )
-    _link_step(conn, order_id, 'fg', entry['id'])
-    return {'journal_entry_id': entry['id'], 'entry_no': entry.get('entry_no'), 'steps': ['fg']}
+    _link_step(conn, order_id, 'wip', entry['id'])
+    return {'journal_entry_id': entry['id'], 'entry_no': entry.get('entry_no'), 'steps': ['wip']}
 
 
-def _post_full(
+def _post_full_to_wip(
     conn, *, order_id, voucher_no, date_s, total, credit_mat, credit_labor, credit_other,
     finished_product_id, created_by,
 ) -> dict[str, Any]:
-    """Ba bước: tập hợp CP → 154 → 155."""
+    """Hai bước khi lập lệnh: tập hợp CP → 154. Chưa ghi 155."""
     steps = []
 
-    # 1) Tập hợp chi phí sản xuất
     collect_lines: list[dict] = []
     seq = 1
     if credit_mat > 0:
@@ -206,7 +290,6 @@ def _post_full(
     _link_step(conn, order_id, 'collect', collect['id'])
     steps.append('collect')
 
-    # 2) Kết chuyển sang 154
     wip_lines: list[dict] = [{
         'sequence': 1, 'account_code': '154', 'debit': total, 'credit': 0,
         'description': f'Kết chuyển CPSX dở dang {voucher_no}',
@@ -240,31 +323,9 @@ def _post_full(
     _link_step(conn, order_id, 'wip', wip['id'])
     steps.append('wip')
 
-    # 3) Nhập thành phẩm
-    fg = post_journal_entry(
-        conn, posting_date=date_s, document_date=date_s,
-        document_type='SX', document_no=voucher_no, document_id=order_id,
-        business_type='SAN_XUAT_TP', description=f'Nhập thành phẩm {voucher_no}',
-        reference_document=voucher_no, created_by=created_by,
-        lines=[
-            {
-                'sequence': 1, 'account_code': '155', 'debit': total, 'credit': 0,
-                'product_id': finished_product_id,
-                'description': f'Nhập TP {voucher_no}',
-            },
-            {
-                'sequence': 2, 'account_code': '154', 'debit': 0, 'credit': total,
-                'product_id': finished_product_id,
-                'description': f'Xuất 154 → 155 {voucher_no}',
-            },
-        ],
-    )
-    _link_step(conn, order_id, 'fg', fg['id'])
-    steps.append('fg')
-
     return {
-        'journal_entry_id': fg['id'],
-        'entry_no': fg.get('entry_no'),
+        'journal_entry_id': wip['id'],
+        'entry_no': wip.get('entry_no'),
         'collect_journal_entry_id': collect['id'],
         'wip_journal_entry_id': wip['id'],
         'steps': steps,
@@ -278,7 +339,7 @@ def reverse_production_journals(
     reason: str = 'Hủy sản xuất',
     created_by: str | None = None,
 ) -> list[int]:
-    """Đảo toàn bộ bút toán giá thành gắn lệnh SX (collect/wip/fg)."""
+    """Đảo toàn bộ bút toán giá thành gắn lệnh SX (collect/wip/fg:…)."""
     ensure_production_journal_column(conn, commit=False)
     rows = conn.execute(
         """
@@ -300,7 +361,6 @@ def reverse_production_journals(
                 pass
         conn.execute('DELETE FROM sme_production_cost_entries WHERE order_id = ?', (order_id,))
     else:
-        # Legacy: chỉ có journal_entry_id trên order
         row = conn.execute(
             'SELECT journal_entry_id FROM production_orders WHERE id = ?', (order_id,)
         ).fetchone()

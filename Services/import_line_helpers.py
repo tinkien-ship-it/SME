@@ -154,7 +154,28 @@ def _migrate_legacy_warehouse_codes(c):
         c.execute('DELETE FROM warehouses WHERE UPPER(code) = ?', (old.upper(),))
 
 
+_WAREHOUSE_SCHEMA_VERSION = '2026-08-03g'
+_warehouse_schema_ready: dict[str, str] = {}
+
+
+def _warehouse_db_key(conn) -> str:
+    try:
+        row = conn.execute('PRAGMA database_list').fetchone()
+        if row:
+            path = row[2] if not hasattr(row, 'keys') else row['file']
+            if path:
+                return str(path)
+    except Exception:
+        pass
+    return f'conn:{id(conn)}'
+
+
 def ensure_warehouse_schema(conn):
+    """Idempotent — một lần / process / DB. Commit ngay để không giữ write-lock khi render trang."""
+    db_key = _warehouse_db_key(conn)
+    if _warehouse_schema_ready.get(db_key) == _WAREHOUSE_SCHEMA_VERSION:
+        return
+
     c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS warehouses (
@@ -242,6 +263,12 @@ def ensure_warehouse_schema(conn):
             c.execute("ALTER TABLE stock_moves ADD COLUMN warehouse_code TEXT DEFAULT 'KHO_001'")
         except sqlite3.OperationalError:
             pass
+
+    try:
+        conn.commit()
+    except Exception:
+        pass
+    _warehouse_schema_ready[db_key] = _WAREHOUSE_SCHEMA_VERSION
 
 
 def create_warehouse(
@@ -409,6 +436,14 @@ def fetch_import_details_raw(c, import_id):
         select_parts.append("COALESCE(line_type, 'goods') AS line_type")
     if 'warehouse_code' in detail_cols:
         select_parts.append('warehouse_code')
+    if 'import_tax_pct' in detail_cols:
+        select_parts.append('COALESCE(import_tax_pct, 0) AS import_tax_pct')
+    if 'import_tax_amount' in detail_cols:
+        select_parts.append('COALESCE(import_tax_amount, 0) AS import_tax_amount')
+    if 'excise_tax_pct' in detail_cols:
+        select_parts.append('COALESCE(excise_tax_pct, 0) AS excise_tax_pct')
+    if 'excise_tax_amount' in detail_cols:
+        select_parts.append('COALESCE(excise_tax_amount, 0) AS excise_tax_amount')
 
     sql = f"""
         SELECT {', '.join(select_parts)}
@@ -498,7 +533,7 @@ def enrich_stock_detail_for_edit(c, row):
         c.execute('PRAGMA table_info(products)')
         product_cols = {col[1] for col in c.fetchall()}
         p_select = ['name']
-        for col in ('unit', 'unit1', 'base_price', 'price', 'unit_ratio', 'barcode'):
+        for col in ('unit', 'unit1', 'base_price', 'price', 'unit_ratio', 'barcode', 'product_code'):
             if col in product_cols:
                 p_select.append(col)
         c.execute(
@@ -516,6 +551,8 @@ def enrich_stock_detail_for_edit(c, row):
             detail_unit = b_unit
         if not str(item.get('product_name') or '').strip():
             item['product_name'] = p.get('name') or ''
+        if p.get('product_code') and not item.get('product_code'):
+            item['product_code'] = p.get('product_code')
     else:
         b_unit = detail_unit or 'Cái'
         w_unit = ''
@@ -538,6 +575,7 @@ def enrich_stock_detail_for_edit(c, row):
         'sale_price': float(p_data.get('price') or 0),
         'unit_ratio': float(p_data.get('unit_ratio') or 1),
         'line_type': (item.get('line_type') or 'goods').strip().lower(),
+        'product_code': item.get('product_code') or p_data.get('product_code') or '',
     })
     if p_data.get('barcode') is not None:
         item['barcode'] = p_data['barcode']
@@ -748,6 +786,10 @@ def _json_safe(value):
             return float(value)
     except ImportError:
         pass
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
     return str(value)
 
 
@@ -770,6 +812,11 @@ def prepare_import_edit_json(imp):
         if not row.get('product_name') and row.get('name'):
             row['product_name'] = row['name']
         out['items'].append(row)
+
+    # Bảo đảm luôn là list (tránh FE .map lỗi)
+    adv = out.get('linked_advances')
+    if not isinstance(adv, list):
+        out['linked_advances'] = []
     return out
 
 
@@ -832,6 +879,14 @@ def load_import_for_edit(conn, import_id):
             item = enrich_stock_detail_for_edit(c, detail_row)
         calculated_total += float(item.get('payment_amount') or 0)
         items.append(item)
+
+    # Liên kết thanh toán NK (tạm ứng / L/C) — nếu schema đã có
+    try:
+        from Services.sme.import_payment import list_import_advances, ensure_import_payment_schema
+        ensure_import_payment_schema(conn, commit=False)
+        imp['linked_advances'] = list_import_advances(conn, int(import_id))
+    except Exception:
+        imp['linked_advances'] = []
 
     imp['is_service_import'] = is_service_import
     extra_cost = float(imp.get('extra_cost') or 0)

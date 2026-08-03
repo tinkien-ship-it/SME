@@ -15,6 +15,22 @@ def list_stock_in(
     q: str | None = None,
     limit: int = 500,
 ) -> list[dict[str, Any]]:
+    try:
+        from Services.sme.import_settle import ensure_import_settle_schema
+        ensure_import_settle_schema(conn, commit=False)
+    except Exception:
+        pass
+    try:
+        from Services.sme.import_transit import ensure_import_transit_schema
+        ensure_import_transit_schema(conn, commit=False)
+    except Exception:
+        pass
+    try:
+        from Services.sme.import_payment import ensure_import_payment_schema
+        ensure_import_payment_schema(conn, commit=False)
+    except Exception:
+        pass
+
     sql = """
         SELECT
             i.id,
@@ -24,7 +40,19 @@ def list_stock_in(
             COALESCE(s.name, '') AS supplier_name,
             COALESCE(i.total_value, 0) AS total_amount,
             COALESCE(i.bill_no, '') AS bill_no,
-            COALESCE(i.payment_status, '') AS payment_status
+            COALESCE(i.payment_status, '') AS payment_status,
+            COALESCE(i.payment_mode, '') AS payment_mode,
+            i.linked_lc_id,
+            i.settle_journal_id,
+            COALESCE(i.settle_amount_fc, 0) AS settle_amount_fc,
+            COALESCE(i.import_type, 'DOMESTIC') AS import_type,
+            COALESCE(i.receipt_stage, 'RECEIVED') AS receipt_stage,
+            i.tax_payment_voucher_id,
+            i.receive_journal_id,
+            COALESCE(i.import_tax_amount, 0) AS import_tax_amount,
+            COALESCE(i.excise_tax_amount, 0) AS excise_tax_amount,
+            COALESCE(i.amount_fc, 0) AS amount_fc,
+            COALESCE(i.advance_fc, 0) AS advance_fc
         FROM import i
         LEFT JOIN suppliers s ON s.id = i.supplier_id
         WHERE 1=1
@@ -50,7 +78,44 @@ def list_stock_in(
     try:
         return [dict(r) for r in conn.execute(sql, params).fetchall()]
     except sqlite3.OperationalError:
-        return []
+        # DB chưa migrate cột stage — fallback cột cơ bản
+        sql_basic = """
+            SELECT
+                i.id,
+                COALESCE(i.import_no, 'PN' || printf('%06d', i.id)) AS voucher_no,
+                COALESCE(i.import_no, 'PN' || printf('%06d', i.id)) AS import_no,
+                i.date,
+                COALESCE(s.name, '') AS supplier_name,
+                COALESCE(i.total_value, 0) AS total_amount,
+                COALESCE(i.bill_no, '') AS bill_no,
+                COALESCE(i.payment_status, '') AS payment_status
+            FROM import i
+            LEFT JOIN suppliers s ON s.id = i.supplier_id
+            WHERE 1=1
+        """
+        params2: list[Any] = []
+        if date_from:
+            sql_basic += ' AND date(i.date) >= date(?)'
+            params2.append(date_from[:10])
+        if date_to:
+            sql_basic += ' AND date(i.date) <= date(?)'
+            params2.append(date_to[:10])
+        if q_s:
+            like = f'%{q_s}%'
+            sql_basic += ' AND (i.import_no LIKE ? OR i.bill_no LIKE ? OR s.name LIKE ?)'
+            params2.extend([like, like, like])
+        sql_basic += bf
+        params2.extend(bp)
+        sql_basic += ' ORDER BY date(i.date) DESC, i.id DESC LIMIT ?'
+        params2.append(int(limit))
+        try:
+            rows = [dict(r) for r in conn.execute(sql_basic, params2).fetchall()]
+            for r in rows:
+                r.setdefault('import_type', 'DOMESTIC')
+                r.setdefault('receipt_stage', 'RECEIVED')
+            return rows
+        except sqlite3.OperationalError:
+            return []
 
 
 def list_stock_out(

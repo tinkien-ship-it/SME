@@ -288,11 +288,16 @@ def support_role_for_business_line(business_line, accounting_regime=None):
 
 
 def _ensure_subscription_columns(conn):
+    """Thêm cột subscription nếu thiếu. Trả True nếu đã ALTER (cần commit)."""
     cols = {r[1] for r in conn.execute("PRAGMA table_info(products)")}
+    changed = False
     if 'is_subscription_plan' not in cols:
         conn.execute("ALTER TABLE products ADD COLUMN is_subscription_plan INTEGER DEFAULT 0")
+        changed = True
     if 'has_einvoice' not in cols:
         conn.execute("ALTER TABLE products ADD COLUMN has_einvoice INTEGER DEFAULT 0")
+        changed = True
+    return changed
 
 
 def _subscription_plan_price(row):
@@ -309,13 +314,21 @@ def _subscription_plan_price(row):
 
 
 def get_subscription_plans(conn=None):
-    """Danh sách gói subscription từ bảng products (main DB)."""
+    """Danh sách gói subscription từ bảng products (main DB).
+
+    Seed chạy trên kết nối riêng + commit ngay, rồi mới SELECT — tránh giữ
+    khóa ghi trên main DB khi render trang login (gây database is locked).
+    """
     own_conn = conn is None
     if own_conn:
+        try:
+            ensure_subscription_products()
+        except sqlite3.Error as exc:
+            logger.warning('ensure_subscription_products skipped: %s', exc)
         conn = get_main_db_connection()
     try:
-        _ensure_subscription_columns(conn)
-        ensure_subscription_products(conn)
+        if not own_conn:
+            ensure_subscription_products(conn)
         rows = conn.execute(
             """
             SELECT id, product_code AS code, name,
@@ -358,33 +371,56 @@ def get_subscription_plan_by_code(plan_code, conn=None):
 
 
 def ensure_subscription_products(conn=None):
-    """Seed 4 gói subscription nếu thiếu — không ghi đè dữ liệu đã sửa trên products."""
+    """Seed 4 gói subscription nếu thiếu — không ghi đè dữ liệu đã sửa trên products.
+
+    Chỉ ghi DB khi thực sự thiếu cột/gói/cờ — tránh UPDATE mỗi lần mở trang login.
+    """
     own_conn = conn is None
     if own_conn:
         conn = get_main_db_connection()
     try:
-        _ensure_subscription_columns(conn)
+        changed = _ensure_subscription_columns(conn)
 
-        # Gắn cờ cho bản ghi legacy theo mã mặc định.
-        for code, plan in DEFAULT_SUBSCRIPTION_PLANS.items():
-            conn.execute(
-                """
-                UPDATE products
-                SET is_subscription_plan = 1,
-                    has_einvoice = COALESCE(has_einvoice, ?),
-                    product_type = COALESCE(product_type, 'service'),
-                    hkd_sector_code = COALESCE(hkd_sector_code, 'G2')
-                WHERE product_code = ? AND COALESCE(is_subscription_plan, 0) = 0
-                """,
-                (1 if plan['has_einvoice'] else 0, code),
-            )
-
-        sub_count = conn.execute(
+        codes = tuple(DEFAULT_SUBSCRIPTION_PLANS.keys())
+        placeholders = ','.join('?' for _ in codes)
+        sub_count = int(conn.execute(
             "SELECT COUNT(*) FROM products WHERE COALESCE(is_subscription_plan, 0) = 1"
-        ).fetchone()[0]
+        ).fetchone()[0] or 0)
+        legacy_unflagged = int(conn.execute(
+            f"""
+            SELECT COUNT(*) FROM products
+            WHERE product_code IN ({placeholders})
+              AND COALESCE(is_subscription_plan, 0) = 0
+            """,
+            codes,
+        ).fetchone()[0] or 0)
+
+        # Đã đủ gói và không còn mã mặc định chưa gắn cờ → không ghi gì thêm
+        if sub_count >= len(DEFAULT_SUBSCRIPTION_PLANS) and legacy_unflagged == 0:
+            if changed and own_conn:
+                conn.commit()
+            return
+
+        if legacy_unflagged:
+            for code, plan in DEFAULT_SUBSCRIPTION_PLANS.items():
+                conn.execute(
+                    """
+                    UPDATE products
+                    SET is_subscription_plan = 1,
+                        has_einvoice = COALESCE(has_einvoice, ?),
+                        product_type = COALESCE(product_type, 'service'),
+                        hkd_sector_code = COALESCE(hkd_sector_code, 'G2')
+                    WHERE product_code = ? AND COALESCE(is_subscription_plan, 0) = 0
+                    """,
+                    (1 if plan['has_einvoice'] else 0, code),
+                )
+            changed = True
+            sub_count = int(conn.execute(
+                "SELECT COUNT(*) FROM products WHERE COALESCE(is_subscription_plan, 0) = 1"
+            ).fetchone()[0] or 0)
 
         for code, plan in DEFAULT_SUBSCRIPTION_PLANS.items():
-            if sub_count >= 4:
+            if sub_count >= len(DEFAULT_SUBSCRIPTION_PLANS):
                 break
             row = conn.execute(
                 "SELECT id FROM products WHERE product_code = ?",
@@ -402,9 +438,10 @@ def ensure_subscription_products(conn=None):
                     """,
                     (1 if plan['has_einvoice'] else 0, row['id']),
                 )
-                sub_count = conn.execute(
+                changed = True
+                sub_count = int(conn.execute(
                     "SELECT COUNT(*) FROM products WHERE COALESCE(is_subscription_plan, 0) = 1"
-                ).fetchone()[0]
+                ).fetchone()[0] or 0)
                 continue
 
             conn.execute(
@@ -419,10 +456,14 @@ def ensure_subscription_products(conn=None):
                     1 if plan['has_einvoice'] else 0,
                 ),
             )
+            changed = True
             sub_count += 1
 
-        if own_conn:
+        if own_conn and changed:
             conn.commit()
+        elif own_conn:
+            # Không có thay đổi — đảm bảo không để transaction treo
+            conn.rollback()
     finally:
         if own_conn:
             conn.close()

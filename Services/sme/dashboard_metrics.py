@@ -243,6 +243,49 @@ def _safe_sum(conn: sqlite3.Connection, sql: str, params: tuple = ()) -> float:
         return 0.0
 
 
+def physical_inventory_value(conn: sqlite3.Connection) -> float:
+    """Giá trị tồn kho vật lý = Σ (số lượng × giá vốn bình quân), loại dịch vụ.
+
+    Khớp trang Tồn kho / Báo cáo tồn kho (không dùng số dư sổ cái 152–156).
+    Số lượng ưu tiên tổng stock_moves; fallback cột inventory.quantity.
+    """
+    if not _table_exists(conn, 'inventory') or not _table_exists(conn, 'products'):
+        return 0.0
+    has_moves = _table_exists(conn, 'stock_moves')
+    try:
+        if has_moves:
+            row = conn.execute(
+                """
+                SELECT COALESCE(SUM(
+                    COALESCE(
+                        (SELECT SUM(sm.quantity) FROM stock_moves sm WHERE sm.product_id = i.product_id),
+                        i.quantity,
+                        0
+                    ) * COALESCE(i.avg_cost, 0)
+                ), 0)
+                FROM inventory i
+                JOIN products p ON p.id = i.product_id
+                WHERE COALESCE(p.product_type, 'goods') != 'service'
+                  AND UPPER(COALESCE(p.product_code, '')) NOT LIKE 'DV%'
+                """
+            ).fetchone()
+        else:
+            row = conn.execute(
+                """
+                SELECT COALESCE(SUM(
+                    COALESCE(i.quantity, 0) * COALESCE(i.avg_cost, 0)
+                ), 0)
+                FROM inventory i
+                JOIN products p ON p.id = i.product_id
+                WHERE COALESCE(p.product_type, 'goods') != 'service'
+                  AND UPPER(COALESCE(p.product_code, '')) NOT LIKE 'DV%'
+                """
+            ).fetchone()
+        return float(row[0] if row else 0)
+    except sqlite3.Error:
+        return 0.0
+
+
 def warehouse_hub_metrics(
     conn: sqlite3.Connection,
     *,

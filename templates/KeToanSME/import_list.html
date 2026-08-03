@@ -39,17 +39,18 @@
         }
 
         .action-column {
-            width: 180px;
-            min-width: 175px;
+            width: 280px;
+            min-width: 260px;
             white-space: nowrap;
             text-align: center;
         }
 
         .action-btn-group {
             display: inline-flex;
-            gap: 6px;
+            gap: 4px;
             justify-content: center;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
+            max-width: 280px;
         }
 
         .action-btn-group .btn {
@@ -160,7 +161,7 @@
     </div>
 
     <!-- Bảng -->
-    <div class="card shadow-sm overflow-hidden">
+    <div class="card shadow-sm">
         <div class="table-responsive table-desktop-only">
             <table class="table table-hover mb-0" id="importTable">
                 <thead><tr></tr></thead>
@@ -206,11 +207,35 @@ function renderImportRows(data, tbody) {
         return;
     }
     el.innerHTML = data.map(item => {
-        const statusClass = item.payment_status === 'Đã thanh toán' ? 'bg-success' : 'bg-warning text-dark';
+        const statusClass = (() => {
+            const s = item.payment_status || '';
+            const m = (item.payment_mode || '').toLowerCase();
+            if (m === 'prepaid_full' || s.includes('trước đủ')) return 'bg-success';
+            if (m === 'prepaid_partial' || s.includes('một phần')) return 'bg-info text-dark';
+            if (m === 'lc' || s.includes('L/C')) return 'bg-primary';
+            if (s === 'Đã thanh toán') return 'bg-success';
+            return 'bg-warning text-dark';
+        })();
         const importNo = item.import_no || item.id;
+        const isImport = String(item.import_type || '').toUpperCase() === 'IMPORT';
+        const stage = String(item.receipt_stage || 'RECEIVED').toUpperCase();
+        let stageBadge = '';
+        if (isImport) {
+            if (stage === 'IN_TRANSIT') stageBadge = '<span class="badge bg-info text-dark ms-1">Đi đường 151</span>';
+            else if (stage === 'TAX_PAID') stageBadge = '<span class="badge bg-primary ms-1">Đã nộp thuế</span>';
+            else stageBadge = '<span class="badge bg-success ms-1">Đã nhập kho</span>';
+        }
+        const canPayTax = isImport && !item.tax_payment_voucher_id && stage !== 'RECEIVED';
+        const canReceive = isImport && stage !== 'RECEIVED' && !item.receive_journal_id;
+        const mode = String(item.payment_mode || '').toLowerCase();
+        const remainFc = Math.max(0, (parseFloat(item.amount_fc) || 0) - (parseFloat(item.advance_fc) || 0) - (parseFloat(item.settle_amount_fc) || 0));
+        const canSettleAp = isImport && !item.settle_journal_id
+            && (mode === 'unpaid' || mode === 'prepaid_partial' || (!mode && item.payment_status === 'Chưa thanh toán'))
+            && remainFc > 0.0001;
+        const canSettleLc = isImport && !item.settle_journal_id && mode === 'lc' && item.linked_lc_id;
         return `
         <tr data-id="${item.id}">
-            <td class="text-center"><strong>${escapeHtml(String(importNo))}</strong></td>
+            <td class="text-center"><strong>${escapeHtml(String(importNo))}</strong>${stageBadge}</td>
             <td class="text-center">${formatDate(item.date)}</td>
             <td class="text-start" title="${escapeHtml(item.supplier_name || '')}">${escapeHtml(item.supplier_name || '—')}</td>
             <td class="text-center">${escapeHtml(item.bill_no || '—')}</td>
@@ -219,10 +244,14 @@ function renderImportRows(data, tbody) {
             <td class="text-center"><span class="badge ${statusClass}">${escapeHtml(item.payment_status || '—')}</span></td>
             <td class="text-center action-column">
                 <div class="action-btn-group">
-                    <button class="btn btn-sm btn-outline-primary" title="Xem" onclick="viewImport(${item.id})"><i class="bi bi-eye"></i></button>
-                    <button class="btn btn-sm btn-outline-success" title="In mã vạch Tommy 40 tem" onclick="openBarcodePrint(${item.id})"><i class="bi bi-upc-scan"></i></button>
-                    <button class="btn btn-sm btn-outline-info" title="Sửa" onclick="editImport(${item.id})"><i class="bi bi-pencil"></i></button>
-                    <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteImport(${item.id}, '${escapeHtml(String(importNo))}')"><i class="bi bi-trash"></i></button>
+                    <a class="btn btn-sm btn-outline-primary" title="Xem" href="/SME_import/view/${item.id}"><i class="bi bi-eye"></i></a>
+                    <a class="btn btn-sm btn-outline-info" title="Sửa phiếu nhập" href="/SME_import?import_id=${item.id}"><i class="bi bi-pencil"></i></a>
+                    ${canPayTax ? `<button type="button" class="btn btn-sm btn-outline-warning" title="Nộp thuế HQ" onclick="payCustomsTax(${item.id})"><i class="bi bi-cash-coin"></i></button>` : ''}
+                    ${canReceive ? `<button type="button" class="btn btn-sm btn-outline-dark" title="Nhập kho thực tế" onclick="receiveWarehouse(${item.id})"><i class="bi bi-box-seam"></i></button>` : ''}
+                    ${canSettleAp ? `<button type="button" class="btn btn-sm btn-outline-danger" title="Thanh toán NCC (CLTG)" onclick="settleImportAp(${item.id})"><i class="bi bi-currency-exchange"></i></button>` : ''}
+                    ${canSettleLc ? `<button type="button" class="btn btn-sm btn-outline-secondary" title="Tất toán L/C" onclick="settleImportLc(${item.id})"><i class="bi bi-bank"></i></button>` : ''}
+                    <button type="button" class="btn btn-sm btn-outline-success" title="In mã vạch Tommy 40 tem" onclick="openBarcodePrint(${item.id})"><i class="bi bi-upc-scan"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteImport(${item.id})"><i class="bi bi-trash"></i></button>
                 </div>
             </td>
         </tr>`;
@@ -251,7 +280,7 @@ function initImportTable() {
             { key: 'payment_status', label: 'Tình trạng', filterType: 'select', width: '140px', align: 'center',
               getValue: i => i.payment_status || '',
               filterOptions: ['Đã thanh toán', 'Chưa thanh toán'] },
-            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '190px', align: 'center' },
+            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '280px', align: 'center' },
         ],
         renderRows: (rows, tbody) => {
             renderImportRows(rows, tbody);
@@ -301,9 +330,29 @@ function updateImportPivotUI() {
     if (el) el.textContent = `${filtered.length}/${importCache.length} phiếu · Tổng GT nhập: ${formatNumber(total)} đ`;
 }
 
+function paymentStatusBadgeClass(item) {
+    const s = item.payment_status || '';
+    const m = (item.payment_mode || '').toLowerCase();
+    if (m === 'prepaid_full' || s.includes('trước đủ')) return 'bg-success';
+    if (m === 'prepaid_partial' || s.includes('một phần')) return 'bg-info text-dark';
+    if (m === 'lc' || s.includes('L/C')) return 'bg-primary';
+    if (s === 'Đã thanh toán') return 'bg-success';
+    return 'bg-warning text-dark';
+}
+
 function renderImportRow(item) {
-    const statusClass = item.payment_status === 'Đã thanh toán' ? 'bg-success' : 'bg-warning text-dark';
+    const statusClass = paymentStatusBadgeClass(item);
     const importNo = item.import_no || item.id;
+    const isImport = String(item.import_type || '').toUpperCase() === 'IMPORT';
+    const stage = String(item.receipt_stage || 'RECEIVED').toUpperCase();
+    const canPayTax = isImport && !item.tax_payment_voucher_id && stage !== 'RECEIVED';
+    const canReceive = isImport && stage !== 'RECEIVED' && !item.receive_journal_id;
+    const mode = String(item.payment_mode || '').toLowerCase();
+    const remainFc = Math.max(0, (parseFloat(item.amount_fc) || 0) - (parseFloat(item.advance_fc) || 0) - (parseFloat(item.settle_amount_fc) || 0));
+    const canSettleAp = isImport && !item.settle_journal_id
+        && (mode === 'unpaid' || mode === 'prepaid_partial' || (!mode && item.payment_status === 'Chưa thanh toán'))
+        && remainFc > 0.0001;
+    const canSettleLc = isImport && !item.settle_journal_id && mode === 'lc' && item.linked_lc_id;
     return `
         <tr data-id="${item.id}">
             <td class="text-center"><strong>${escapeHtml(String(importNo))}</strong></td>
@@ -315,17 +364,21 @@ function renderImportRow(item) {
             <td class="text-center"><span class="badge ${statusClass}">${escapeHtml(item.payment_status || '—')}</span></td>
             <td class="text-center action-column">
                 <div class="action-btn-group">
-                    <button class="btn btn-sm btn-outline-primary" title="Xem" onclick="viewImport(${item.id})"><i class="bi bi-eye"></i></button>
-                    <button class="btn btn-sm btn-outline-success" title="In mã vạch Tommy 40 tem" onclick="openBarcodePrint(${item.id})"><i class="bi bi-upc-scan"></i></button>
-                    <button class="btn btn-sm btn-outline-info" title="Sửa" onclick="editImport(${item.id})"><i class="bi bi-pencil"></i></button>
-                    <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteImport(${item.id}, '${escapeHtml(String(importNo))}')"><i class="bi bi-trash"></i></button>
+                    <a class="btn btn-sm btn-outline-primary" title="Xem" href="/SME_import/view/${item.id}"><i class="bi bi-eye"></i></a>
+                    <a class="btn btn-sm btn-outline-info" title="Sửa phiếu nhập" href="/SME_import?import_id=${item.id}"><i class="bi bi-pencil"></i></a>
+                    ${canPayTax ? `<button type="button" class="btn btn-sm btn-outline-warning" title="Nộp thuế HQ" onclick="payCustomsTax(${item.id})"><i class="bi bi-cash-coin"></i></button>` : ''}
+                    ${canReceive ? `<button type="button" class="btn btn-sm btn-outline-dark" title="Nhập kho thực tế" onclick="receiveWarehouse(${item.id})"><i class="bi bi-box-seam"></i></button>` : ''}
+                    ${canSettleAp ? `<button type="button" class="btn btn-sm btn-outline-danger" title="Thanh toán NCC (CLTG)" onclick="settleImportAp(${item.id})"><i class="bi bi-currency-exchange"></i></button>` : ''}
+                    ${canSettleLc ? `<button type="button" class="btn btn-sm btn-outline-secondary" title="Tất toán L/C" onclick="settleImportLc(${item.id})"><i class="bi bi-bank"></i></button>` : ''}
+                    <button type="button" class="btn btn-sm btn-outline-success" title="In mã vạch" onclick="openBarcodePrint(${item.id})"><i class="bi bi-upc-scan"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteImport(${item.id})"><i class="bi bi-trash"></i></button>
                 </div>
             </td>
         </tr>`;
 }
 
 function renderImportMobile(item) {
-    const statusClass = item.payment_status === 'Đã thanh toán' ? 'bg-success' : 'bg-warning text-dark';
+    const statusClass = paymentStatusBadgeClass(item);
     const importNo = item.import_no || item.id;
     return `
         <div class="mobile-card" data-id="${item.id}">
@@ -337,10 +390,10 @@ function renderImportMobile(item) {
             <div class="card-row"><span class="label">NCC</span><span class="value">${escapeHtml(item.supplier_name || '—')}</span></div>
             <div class="card-row"><span class="label">Tổng GT</span><span class="value text-primary fw-bold">${formatNumber(item.total_value)}</span></div>
             <div class="card-actions">
-                <button class="btn btn-sm btn-outline-primary" onclick="viewImport(${item.id})"><i class="bi bi-eye"></i> Xem</button>
-                <button class="btn btn-sm btn-outline-success" onclick="openBarcodePrint(${item.id})"><i class="bi bi-upc-scan"></i> In tem</button>
-                <button class="btn btn-sm btn-outline-info" onclick="editImport(${item.id})"><i class="bi bi-pencil"></i> Sửa</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteImport(${item.id}, '${escapeHtml(String(importNo))}')"><i class="bi bi-trash"></i></button>
+                <a class="btn btn-sm btn-outline-primary" href="/SME_import/view/${item.id}"><i class="bi bi-eye"></i> Xem</a>
+                <a class="btn btn-sm btn-outline-info" href="/SME_import?import_id=${item.id}"><i class="bi bi-pencil"></i> Sửa</a>
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="openBarcodePrint(${item.id})"><i class="bi bi-upc-scan"></i> In tem</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteImport(${item.id})"><i class="bi bi-trash"></i></button>
             </div>
         </div>`;
 }
@@ -414,11 +467,12 @@ async function loadImport() {
     }
 }
 
-function viewImport(id) { location.href = `/SME_import?import_id=${id}`; }
+function viewImport(id) { location.href = `/SME_import/view/${id}`; }
 function editImport(id) { location.href = `/SME_import?import_id=${id}`; }
 
 async function deleteImport(id, importNo) {
-    const displayNo = importNo || id;
+    const cached = (importCache || []).find(i => Number(i.id) === Number(id));
+    const displayNo = importNo || cached?.import_no || id;
     const result = await Swal.fire({
         title: 'Xác nhận xóa?',
         html: `Xóa phiếu nhập <strong>#${displayNo}</strong><br>Không thể khôi phục sau khi xóa!`,
@@ -446,12 +500,191 @@ async function deleteImport(id, importNo) {
             $(`.mobile-card[data-id="${id}"]`).fadeOut(400, function() { $(this).remove(); });
             updateImportPivotUI();
             applyImportPivot();
-            showToast(data.message || `Đã xóa phiếu nhập #${displayNo}`);
+            const msg = (data.data && data.data.message) || data.message
+                || `Đã xóa phiếu nhập #${displayNo} và dữ liệu liên quan`;
+            showToast(msg);
         } else {
             throw new Error(data.error || 'Xóa thất bại');
         }
     } catch (err) {
         showToast(err.message || 'Xóa phiếu nhập thất bại!', true);
+    }
+}
+
+async function payCustomsTax(id) {
+    const cached = (importCache || []).find(i => Number(i.id) === Number(id));
+    const taxHint = Number(cached?.import_tax_amount || 0) + Number(cached?.excise_tax_amount || 0)
+        + Number(cached?.vat_amount || cached?.tax_amount || 0);
+    if (window.assertSmeCashBalanceOrAlert && taxHint > 0) {
+        const okBal = await window.assertSmeCashBalanceOrAlert(taxHint, 'bank');
+        if (!okBal) return;
+    }
+    const ok = await Swal.fire({
+        title: 'Nộp thuế hải quan?',
+        html: 'Ghi sổ: Nợ 3333 / 3332 / 33312 · Có 112 (UNC nộp thuế HQ).',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Nộp thuế',
+        cancelButtonText: 'Hủy'
+    });
+    if (!ok.isConfirmed) return;
+    try {
+        const res = await fetch(`/api/sme/import/${id}/pay-customs-tax`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payment_method: 'bank' })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Lỗi');
+        const amt = data.amounts?.total;
+        showToast(`Đã nộp thuế HQ${amt != null ? ': ' + formatNumber(amt) + '₫' : ''} · ${data.voucher?.voucher_no || ''}`);
+        document.getElementById('btnFilter')?.click();
+    } catch (err) {
+        showToast(err.message || 'Nộp thuế thất bại', true);
+    }
+}
+
+async function receiveWarehouse(id) {
+    const ok = await Swal.fire({
+        title: 'Nhập kho thực tế?',
+        html: 'Chuyển TK 151 → 156/152 và tăng tồn kho vật lý (thủ kho đã kiểm đếm).',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Nhập kho',
+        cancelButtonText: 'Hủy'
+    });
+    if (!ok.isConfirmed) return;
+    try {
+        const res = await fetch(`/api/sme/import/${id}/receive-warehouse`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Lỗi');
+        showToast(`Đã nhập kho thực tế · ${formatNumber(data.transit_amount)}₫`);
+        document.getElementById('btnFilter')?.click();
+    } catch (err) {
+        showToast(err.message || 'Nhập kho thất bại', true);
+    }
+}
+
+async function settleImportAp(id) {
+    let summary;
+    try {
+        const r = await fetch(`/api/sme/import/${id}/ap-summary`);
+        summary = await r.json();
+        if (!summary.success) throw new Error(summary.error || 'Không tải được công nợ');
+    } catch (err) {
+        showToast(err.message || 'Lỗi', true);
+        return;
+    }
+    if (!summary.can_settle_ap) {
+        showToast('Không còn phần công nợ NCC cần trả', true);
+        return;
+    }
+    const cur = summary.currency || 'USD';
+    const ok = await Swal.fire({
+        title: 'Thanh toán NCC (CLTG)',
+        html: `
+            <div class="text-start small mb-2">
+                Còn lại: <b>${Number(summary.remain_fc).toLocaleString('en-US')} ${cur}</b>
+                ≈ <b>${formatNumber(summary.remain_vnd)}₫</b> (TG tờ khai ${Number(summary.customs_rate).toLocaleString('en-US')})
+            </div>
+            <label class="form-label small">Số ${cur} thanh toán</label>
+            <input id="swalPayFc" class="swal2-input" type="number" step="any" value="${summary.remain_fc}">
+            <label class="form-label small">Tỷ giá ngày thanh toán (VND)</label>
+            <input id="swalPayRate" class="swal2-input" type="number" step="any" value="${summary.customs_rate}">
+            <div class="form-text">Nợ 331 (sổ) · Nợ 635 / Có 515 (CLTG) · Có 1122</div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Thanh toán',
+        cancelButtonText: 'Hủy',
+        preConfirm: () => {
+            const fc = parseFloat(document.getElementById('swalPayFc').value);
+            const rate = parseFloat(document.getElementById('swalPayRate').value);
+            if (!(fc > 0)) { Swal.showValidationMessage('Nhập số ngoại tệ'); return false; }
+            if (!(rate > 0)) { Swal.showValidationMessage('Nhập tỷ giá'); return false; }
+            return { amount_fc: fc, exchange_rate: rate };
+        }
+    });
+    if (!ok.isConfirmed) return;
+    const payVnd = Math.round((ok.value.amount_fc || 0) * (ok.value.exchange_rate || 0));
+    if (window.assertSmeCashBalanceOrAlert) {
+        const okBal = await window.assertSmeCashBalanceOrAlert(payVnd, 'bank_fx');
+        if (!okBal) return;
+    }
+    try {
+        const res = await fetch(`/api/sme/import/${id}/settle-ap`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...ok.value, payment_method: 'bank_fx' })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Lỗi');
+        let msg = `Đã TT ${Number(data.amount_fc).toLocaleString('en-US')} ${data.currency} · ${formatNumber(data.cash_vnd)}₫`;
+        if (data.fx_loss > 0) msg += ` · Lỗ CLTG ${formatNumber(data.fx_loss)}₫`;
+        if (data.fx_gain > 0) msg += ` · Lãi CLTG ${formatNumber(data.fx_gain)}₫`;
+        showToast(msg);
+        document.getElementById('btnFilter')?.click();
+    } catch (err) {
+        showToast(err.message || 'Thanh toán thất bại', true);
+    }
+}
+
+async function settleImportLc(id) {
+    let summary;
+    try {
+        const r = await fetch(`/api/sme/import/${id}/ap-summary`);
+        summary = await r.json();
+        if (!summary.success) throw new Error(summary.error || 'Không tải được công nợ');
+    } catch (err) {
+        showToast(err.message || 'Lỗi', true);
+        return;
+    }
+    if (!summary.can_settle_lc) {
+        showToast('Không thể tất toán L/C cho phiếu này', true);
+        return;
+    }
+    const lb = summary.lc_balance || {};
+    const ok = await Swal.fire({
+        title: 'Tất toán L/C (đợt CT)?',
+        html: `
+            <div class="text-start small">
+                Công nợ 331 đợt này: <b>${formatNumber(summary.remain_vnd)}₫</b>
+                (${Number(summary.remain_fc).toLocaleString('en-US')} ${summary.currency || 'USD'})<br>
+                Số dư L/C còn lại: <b>${Number(lb.remaining_fc || 0).toLocaleString('en-US')} NT</b>
+                / ${formatNumber(lb.remaining_244 || 0)}₫ (244)<br>
+                Đã dùng: ${Number(lb.used_fc || 0).toLocaleString('en-US')} / ${Number(lb.face_fc || 0).toLocaleString('en-US')} NT<br>
+                Ghi sổ: <b>Nợ 331 / Có 244</b> (bù 1122 nếu ký quỹ đợt này thiếu).
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Tất toán đợt',
+        cancelButtonText: 'Hủy'
+    });
+    if (!ok.isConfirmed) return;
+    try {
+        const res = await fetch(`/api/sme/import/${id}/settle-lc`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Lỗi');
+        let msg = `Đã tất toán L/C ${data.lc_no || ''} · giải toả 244: ${formatNumber(data.released_244)}₫`;
+        if (data.cash_vnd > 0) msg += ` · bù ${formatNumber(data.cash_vnd)}₫`;
+        if (data.lc_remaining_fc != null) {
+            msg += ` · còn lại ${Number(data.lc_remaining_fc).toLocaleString('en-US')} NT`;
+        }
+        if (data.fx_loss > 0) msg += ` · lỗ CLTG ${formatNumber(data.fx_loss)}₫`;
+        if (data.fx_gain > 0) msg += ` · lãi CLTG ${formatNumber(data.fx_gain)}₫`;
+        showToast(msg);
+        document.getElementById('btnFilter')?.click();
+    } catch (err) {
+        showToast(err.message || 'Tất toán L/C thất bại', true);
     }
 }
 

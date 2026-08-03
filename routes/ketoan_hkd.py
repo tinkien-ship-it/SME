@@ -2159,21 +2159,25 @@ def register_ketoan_hkd_routes(app):
         conn = get_db_connection()
         try:
             from Services.chu_ho_helpers import sync_chu_ho_from_business_info, ensure_is_chu_ho_column
-            from Services.employee_payroll_helpers import ensure_employee_allowance_columns
+            from Services.employee_payroll_helpers import (
+                ensure_employee_allowance_columns,
+                normalize_department,
+            )
             ensure_is_chu_ho_column(conn)
             ensure_employee_allowance_columns(conn)
+            department = normalize_department(data.get('department'))
             conn.execute("""
                 INSERT INTO employees (
                     fullname, position, id_card, base_salary, salary_rate,
                     phone, join_date, address, dependents,
                     self_deduction, dependent_deduction, attendance_code,
-                    allowance_fund, allowance_other, default_bonus,
+                    allowance_fund, allowance_other, default_bonus, department,
                     status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
             """, (fullname, position, id_card, base_salary, salary_rate_val,
                   phone, join_date, address, dependents,
                   self_deduction, dependent_deduction, attendance_code,
-                  allowance_fund, allowance_other, default_bonus))
+                  allowance_fund, allowance_other, default_bonus, department))
             matched_ids, owner_name = sync_chu_ho_from_business_info(conn)
             new_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
             conn.commit()
@@ -2211,29 +2215,39 @@ def register_ketoan_hkd_routes(app):
         allowance_other = float(data.get('allowance_other') or 0)
         default_bonus = float(data.get('default_bonus') or data.get('bonus') or 0)
 
-        # Chuẩn bị dữ liệu cập nhật
-        fields = (
-            data.get('fullname'),
-            data.get('position'),
-            data.get('id_card'),
-            new_base_salary,
-            salary_rate_val,
-            data.get('phone'),
-            data.get('join_date'),
-            data.get('address'),
-            int(data.get('dependents') or 0),
-            float(data.get('self_deduction') or 11000000),
-            float(data.get('dependent_deduction') or 4400000),
-            (data.get('attendance_code') or '').strip() or None,
-            allowance_fund,
-            allowance_other,
-            default_bonus,
-            int(status),
-            emp_id
-        )
-
         conn = get_db_connection()
         try:
+            from Services.chu_ho_helpers import sync_chu_ho_from_business_info, ensure_is_chu_ho_column
+            from Services.employee_payroll_helpers import (
+                ensure_employee_allowance_columns,
+                normalize_department,
+            )
+            ensure_is_chu_ho_column(conn)
+            ensure_employee_allowance_columns(conn)
+            department = normalize_department(data.get('department'))
+
+            # Chuẩn bị dữ liệu cập nhật
+            fields = (
+                data.get('fullname'),
+                data.get('position'),
+                data.get('id_card'),
+                new_base_salary,
+                salary_rate_val,
+                data.get('phone'),
+                data.get('join_date'),
+                data.get('address'),
+                int(data.get('dependents') or 0),
+                float(data.get('self_deduction') or 11000000),
+                float(data.get('dependent_deduction') or 4400000),
+                (data.get('attendance_code') or '').strip() or None,
+                allowance_fund,
+                allowance_other,
+                default_bonus,
+                department,
+                int(status),
+                emp_id
+            )
+
             # 1. Kiểm tra biến động lương để ghi lịch sử
             old_data = conn.execute("SELECT base_salary FROM employees WHERE id = ?", (emp_id,)).fetchone()
 
@@ -2245,17 +2259,13 @@ def register_ketoan_hkd_routes(app):
                       data.get('reason_change', "Cập nhật hồ sơ")))
 
             # 2. Cập nhật bảng employees (đã thêm cột status)
-            from Services.chu_ho_helpers import sync_chu_ho_from_business_info, ensure_is_chu_ho_column
-            from Services.employee_payroll_helpers import ensure_employee_allowance_columns
-            ensure_is_chu_ho_column(conn)
-            ensure_employee_allowance_columns(conn)
             conn.execute("""
                 UPDATE employees
                 SET fullname = ?, position = ?, id_card = ?, base_salary = ?,
                     salary_rate = ?, phone = ?, join_date = ?, address = ?, dependents = ?,
                     self_deduction = ?, dependent_deduction = ?, attendance_code = ?,
                     allowance_fund = ?, allowance_other = ?, default_bonus = ?,
-                    status = ?
+                    department = ?, status = ?
                 WHERE id = ?
             """, fields)
             matched_ids, owner_name = sync_chu_ho_from_business_info(conn)
@@ -2300,10 +2310,18 @@ def register_ketoan_hkd_routes(app):
         year = request.args.get('year', type=int)
         conn = get_db_connection()
         try:
+            from Services.employee_payroll_helpers import (
+                department_label,
+                ensure_employee_allowance_columns,
+                expense_account_for_department,
+                normalize_department,
+            )
+            ensure_employee_allowance_columns(conn, commit=False)
             query = """
                 SELECT 
                     id, fullname, id_card, phone, address, position, join_date,
-                    base_salary, self_deduction, dependents, dependent_deduction
+                    base_salary, self_deduction, dependents, dependent_deduction,
+                    COALESCE(department, 'ADMIN') AS department
                 FROM employees 
                 WHERE status = 1
                 ORDER BY fullname COLLATE NOCASE ASC
@@ -2317,6 +2335,10 @@ def register_ketoan_hkd_routes(app):
             result = []
             for row in employees:
                 item = dict(row)
+                dept = normalize_department(item.get('department'))
+                item['department'] = dept
+                item['department_label'] = department_label(dept)
+                item['expense_account'] = expense_account_for_department(dept)
                 item['attendance_work_days'] = attendance_days.get(item['id'], 0)
                 result.append(item)
             return jsonify(result)
@@ -4394,7 +4416,7 @@ def register_ketoan_hkd_routes(app):
         if not write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
             return jsonify({
                 'success': False,
-                'error': 'Tenant SME: dùng /api/sme/payroll/pay (phiếu chi 02-TT), không lập phieu_chi HKD',
+                'error': 'Tenant SME: dùng /api/sme/payroll/pay hoặc trang Công nợ phải trả nhân viên',
             }), 400
 
         data = request.get_json() or {}
@@ -4478,7 +4500,7 @@ def register_ketoan_hkd_routes(app):
         if not write_hkd_cash_vouchers(profile=get_current_tenant_profile()):
             return jsonify({
                 'success': False,
-                'error': 'Tenant SME: dùng /api/sme/payroll/pay, không lập phieu_chi HKD',
+                'error': 'Tenant SME: dùng /api/sme/payroll/pay-employee hoặc trang Công nợ phải trả nhân viên',
             }), 400
 
         data = request.get_json() or {}

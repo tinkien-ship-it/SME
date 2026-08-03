@@ -18,11 +18,11 @@
 <div class="row g-3 mb-3" id="cards2"></div>
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body">
-    <p class="mb-2 fw-semibold">Khi hoàn thành lệnh SX (chế độ full):</p>
+    <p class="mb-2 fw-semibold">Luồng sản xuất (chế độ đầy đủ):</p>
     <ol class="small text-muted mb-0">
-      <li>Tập hợp: Nợ 621/Có 152 · Nợ 622/Có 3341 · Nợ 627/Có 1111</li>
-      <li>Kết chuyển dở dang: Nợ 154 / Có 621+622+627</li>
-      <li>Nhập thành phẩm: Nợ 155 / Có 154 · khi bán: Nợ 632 / Có 155</li>
+      <li>Lập lệnh: tập hợp Nợ 621/Có 152 · Nợ 622/Có 3341 · Nợ 627/Có 1111</li>
+      <li>Kết chuyển dở dang: Nợ 154 / Có 621+622+627 (trạng thái <strong>Đang sản xuất</strong>)</li>
+      <li>Nhập kho thành phẩm theo đợt: Nợ 155 / Có 154 · khi bán: Nợ 632 / Có 155</li>
     </ol>
   </div>
 </div>
@@ -63,8 +63,8 @@
         <td class="fw-bold">${r.voucher_no||''}</td><td>${fmtDateVi(r.production_date)}</td>
         <td class="text-end">${money(r.material)}</td><td class="text-end">${money(r.labor)}</td>
         <td class="text-end">${money(r.other)}</td><td class="text-end fw-bold">${money(r.total_cost)}</td>
-        <td><span class="badge bg-light text-dark border">${(r.costing_mode==='full'||!r.costing_mode)?'Đầy đủ':(r.costing_mode==='material'?'Nguyên vật liệu':r.costing_mode)}</span></td>
-        <td>${statusLabelVi(r.status)}</td>
+        <td><span class="badge bg-light text-dark border">${statusLabelVi(r.costing_mode||'full')}</span></td>
+        <td><span class="badge bg-light text-dark border">${statusLabelVi(r.status)}</span></td>
       </tr>`).join('')||'<tr><td colspan="8" class="text-muted text-center">Chưa có lệnh</td></tr>';    }catch(e){ document.getElementById('cards').innerHTML=`<div class="col-12 text-danger">${e.message}</div>`; }
   }
   function syncPrint(){ document.getElementById('btnPrint').href='/SME_costing/in?year='+yEl.value+'&period='+pEl.value; }

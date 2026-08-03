@@ -9,10 +9,10 @@ from typing import Any
 
 from Services.profit_report_helpers import depreciation_for_month
 from Services.sme.journal_engine import (
+    delete_journal_entry,
     get_posting_rule,
     post_journal_entry,
     resolve_postable_account,
-    reverse_journal_entry,
 )
 
 DOC_DEP = 'KHTS'
@@ -70,29 +70,60 @@ def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
 
 
 def _depreciable_cost(row: sqlite3.Row) -> float:
+    """Nguyên giá tính KH = giá chưa thuế (không gồm VAT đầu vào khấu trừ)."""
     keys = set(row.keys())
-    gross = float(row['nguyen_gia_tinh_khau_hao'] or 0) if 'nguyen_gia_tinh_khau_hao' in keys else 0.0
-    vat = float(row['thue_gtgt'] or 0) if 'thue_gtgt' in keys else 0.0
-    if vat > 0 and gross >= vat:
-        return max(0.0, gross - vat)
     qty = float(row['so_luong'] or 1) if 'so_luong' in keys else 1.0
     unit = float(row['gia_mua_chua_thue'] or 0) if 'gia_mua_chua_thue' in keys else 0.0
     if unit > 0:
         return max(0.0, unit * (qty or 1.0))
+    gross = float(row['nguyen_gia_tinh_khau_hao'] or 0) if 'nguyen_gia_tinh_khau_hao' in keys else 0.0
+    vat = float(row['thue_gtgt'] or 0) if 'thue_gtgt' in keys else 0.0
+    # Dữ liệu cũ có thể lưu nguyên giá gồm VAT — trừ lại nếu phát hiện
+    if vat > 0 and gross >= vat - 0.01:
+        return max(0.0, gross - vat)
     return max(0.0, gross)
 
 
 def _tool_cost(row: sqlite3.Row) -> float:
+    """Nguyên giá PB CCDC = giá chưa thuế (không gồm VAT đầu vào khấu trừ)."""
     keys = set(row.keys())
-    gross = float(row['nguyen_gia'] or 0) if 'nguyen_gia' in keys else 0.0
-    vat = float(row['thue_gtgt'] or 0) if 'thue_gtgt' in keys else 0.0
-    if vat > 0 and gross >= vat:
-        return max(0.0, gross - vat)
     qty = float(row['so_luong'] or 1) if 'so_luong' in keys else 1.0
     unit = float(row['gia_mua_chua_thue'] or 0) if 'gia_mua_chua_thue' in keys else 0.0
     if unit > 0:
         return max(0.0, unit * (qty or 1.0))
+    gross = float(row['nguyen_gia'] or 0) if 'nguyen_gia' in keys else 0.0
+    vat = float(row['thue_gtgt'] or 0) if 'thue_gtgt' in keys else 0.0
+    if vat > 0 and gross >= vat - 0.01:
+        return max(0.0, gross - vat)
     return max(0.0, gross)
+
+
+def period_end_date(fiscal_year: int, period: int):
+    """Ngày cuối tháng của kỳ — ngày ghi sổ KH/PB hợp lệ."""
+    from datetime import date
+    last = calendar.monthrange(fiscal_year, period)[1]
+    return date(fiscal_year, period, last)
+
+
+def assert_period_run_allowed(
+    fiscal_year: int,
+    period: int,
+    *,
+    today=None,
+    allow_before_month_end: bool = False,
+) -> None:
+    """Chỉ cho chạy thủ công từ ngày cuối tháng của kỳ trở đi (theo quy định)."""
+    from datetime import date
+    if allow_before_month_end:
+        return
+    today = today or date.today()
+    end = period_end_date(fiscal_year, period)
+    if today < end:
+        raise ValueError(
+            f'Chưa đến ngày cuối tháng {period:02d}/{fiscal_year} ({end.strftime("%d/%m/%Y")}). '
+            f'Theo quy định, bút toán khấu hao / phân bổ CCDC chỉ được lập vào ngày cuối tháng. '
+            f'Hệ thống sẽ tự chạy sau ngày này (lịch ngày 1 tháng sau).'
+        )
 
 
 def _posted_to_date(
@@ -308,9 +339,12 @@ def run_period_automation(
     created_by: str | None = None,
     replace_existing: bool = False,
     auto_activate: bool = True,
+    allow_before_month_end: bool = False,
 ) -> dict[str, Any]:
     """
-    Chạy tự động 1 kỳ: KH TSCĐ + PB CCDC + kết chuyển KQKD + quyết toán GTGT + khóa sổ.
+    Chạy tự động 1 kỳ: KH TSCĐ + PB CCDC + kết chuyển KQKD + quyết toán GTGT (cuối kỳ kê khai).
+    Bút toán KH/PB ghi ngày cuối tháng. Thủ công chỉ chạy từ ngày cuối tháng trở đi.
+    Không khóa sổ theo tháng — khóa sổ kế toán chỉ cuối năm (lock_year).
     Không commit.
     """
     regime = str(accounting_regime or '').upper()
@@ -325,9 +359,13 @@ def run_period_automation(
     if period < 1 or period > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
+    assert_period_run_allowed(
+        fiscal_year, period, allow_before_month_end=allow_before_month_end,
+    )
+
     from Services.fixed_assets_helpers import FIXED_ASSETS_TABLE, TOOLS_TABLE
     from Services.sme.bootstrap import ensure_sme_accounting_ready
-    from Services.sme.period_lock import get_period_lock, is_period_locked, lock_period, unlock_period
+    from Services.sme.period_lock import get_period_lock, is_period_locked, unlock_period
 
     ensure_sme_accounting_ready(conn, commit=False)
     ensure_auto_posting_schema(conn, commit=False)
@@ -343,7 +381,12 @@ def run_period_automation(
                 'period_close': {},
                 'vat_settlement': {},
                 'period_lock': get_period_lock(conn, fiscal_year, period),
+                'message': (
+                    f'Năm {fiscal_year} đã khóa sổ — mở lại sổ năm để chạy lại kỳ, '
+                    f'rồi khóa lại cuối năm nếu cần.'
+                ),
             }
+        # Mở từng tháng khi ghi đè trong năm đã khóa (sau khi user đã mở khóa năm thì không vào nhánh này)
         unlock_period(conn, fiscal_year=fiscal_year, period=period)
 
     activated = {'fixed_assets_activated': 0, 'tools_activated': 0}
@@ -351,21 +394,23 @@ def run_period_automation(
         activated = auto_activate_idle_assets(conn)
 
     doc_id = fiscal_year * 100 + period
-    last_day = calendar.monthrange(fiscal_year, period)[1]
-    posting_date = f'{fiscal_year:04d}-{period:02d}-{last_day:02d}'
-    reversed_ids: list[int] = []
+    # Ngày ghi sổ = ngày cuối tháng của kỳ (VD tháng 8 → 31/08, không phải 01/09).
+    # Lịch có thể chạy ngày 1 tháng sau; posting_date vẫn backdate về cuối kỳ.
+    end = period_end_date(fiscal_year, period)
+    posting_date = end.isoformat()
+    deleted_ids: list[int] = []
 
     def _clear_kind(kind: str, doc_type: str, asset_table: str):
         entry_id = _active_period_entry(conn, doc_type, doc_id)
         if entry_id and replace_existing:
-            rev = reverse_journal_entry(
+            # Kỳ đã mở khóa → xóa cứng, không đảo (người dùng chạy lại kỳ)
+            delete_journal_entry(
                 conn,
                 entry_id,
-                posting_date=posting_date,
-                created_by=created_by,
                 reason=f'Thay thế bút toán tự động {doc_type} {fiscal_year}/{period:02d}',
+                deleted_by=created_by,
             )
-            reversed_ids.append(int(rev['id']))
+            deleted_ids.append(int(entry_id))
             conn.execute(
                 """
                 DELETE FROM sme_auto_asset_postings
@@ -385,7 +430,8 @@ def run_period_automation(
         'depreciation': {'entry_id': None, 'amount': 0.0, 'assets': 0},
         'tools': {'entry_id': None, 'amount': 0.0, 'assets': 0},
         'period_close': {},
-        'reversed_entry_ids': reversed_ids,
+        'deleted_entry_ids': deleted_ids,
+        'reversed_entry_ids': [],
         'entry_ids': [],
     }
 
@@ -521,7 +567,7 @@ def run_period_automation(
     if close.get('posted'):
         result['posted'] = True
 
-    # --- Quyết toán GTGT ---
+    # --- Quyết toán GTGT (chỉ cuối tháng/quý kê khai; VAT không phân bổ như CCDC) ---
     from Services.sme.vat_settlement import run_vat_settlement
 
     vat = run_vat_settlement(
@@ -560,24 +606,59 @@ def run_period_automation(
         if ye.get('posted'):
             result['posted'] = True
 
-    # --- Khóa sổ kỳ ---
+    # --- Khóa sổ năm: chỉ tự động khi chạy kỳ T12 và đã đến/ qua 31/12 ---
     lock_info = None
-    do_lock = True
+    do_year_lock = int(period) == 12
     if features is not None and features.get('auto_lock_period') is False:
-        do_lock = False
-    if do_lock:
-        reason = 'Chốt kỳ tự động (KH/PB/KQKD/GTGT'
-        if int(period) == 12:
-            reason += '/KCN'
-        reason += ')'
-        lock_info = lock_period(
-            conn,
-            fiscal_year=fiscal_year,
-            period=period,
-            locked_by=created_by,
-            reason=reason,
-        )
+        do_year_lock = False
+    if do_year_lock:
+        from Services.sme.period_lock import assert_year_lock_allowed, lock_year
+        try:
+            assert_year_lock_allowed(fiscal_year, action='khóa sổ năm tự động')
+            lock_info = lock_year(
+                conn,
+                fiscal_year=fiscal_year,
+                locked_by=created_by,
+                reason='Khóa sổ năm tự động sau kết chuyển T12 / QTGT',
+            )
+        except ValueError:
+            # Chạy T12 trước 31/12 (hiếm) — không khóa; user khóa thủ công sau cuối năm
+            lock_info = {
+                'skipped': True,
+                'reason': 'year_lock_before_year_end',
+                'message': 'Chưa đến 31/12 — chưa khóa sổ năm. Khóa thủ công sau ngày cuối năm.',
+            }
     result['period_lock'] = lock_info
+    result['year_lock'] = lock_info
+
+    # Cuối năm: cảnh báo GTGT (>50 tỷ) + cảnh báo TT58→TT99 (hết diện siêu nhỏ)
+    result['vat_filing_alert'] = None
+    result['micro_enterprise_alert'] = None
+    if int(period) == 12:
+        try:
+            from flask import g
+            from Services.sme.vat_filing_alert import evaluate_year_end_vat_filing
+            from Services.sme.micro_enterprise import evaluate_tt58_to_tt99_alert
+            from Services.tenant_profile import get_current_tenant_profile
+            tid = getattr(g, 'tenant_id', None)
+            if tid and tid != 'scheduler':
+                settings = (get_current_tenant_profile() or {}).get('settings') or {}
+                result['vat_filing_alert'] = evaluate_year_end_vat_filing(
+                    conn,
+                    tenant_id=str(tid),
+                    fiscal_year=fiscal_year,
+                    settings=settings,
+                    persist=True,
+                )
+                result['micro_enterprise_alert'] = evaluate_tt58_to_tt99_alert(
+                    conn,
+                    tenant_id=str(tid),
+                    fiscal_year=fiscal_year,
+                    settings=settings,
+                    persist=True,
+                )
+        except Exception:
+            result['vat_filing_alert'] = {'error': 'evaluate_failed'}
 
     if (
         not result['posted']
@@ -641,20 +722,45 @@ def run_sme_automation_for_all_tenants(
                 replace_existing=False,
                 auto_activate=True,
             )
+            from Services.sme.vat_filing_alert import (
+                evaluate_year_end_vat_filing,
+                auto_apply_monthly_filing_if_due,
+            )
+            from Services.sme.micro_enterprise import evaluate_tt58_to_tt99_alert
+            vat_alert = auto_apply_monthly_filing_if_due(
+                tenant_id=tid, settings=settings,
+            )
+            micro_alert = None
+            if int(period) == 12:
+                vat_alert = evaluate_year_end_vat_filing(
+                    conn, tenant_id=tid, fiscal_year=fiscal_year,
+                    settings=settings, persist=True,
+                )
+                micro_alert = evaluate_tt58_to_tt99_alert(
+                    conn, tenant_id=tid, fiscal_year=fiscal_year,
+                    settings=settings, persist=True,
+                )
             conn.commit()
-            results.append({'tenant_id': tid, **{k: out[k] for k in out if k != 'depreciation' and k != 'tools'},
-                            'depreciation_amount': (out.get('depreciation') or {}).get('amount'),
-                            'tools_amount': (out.get('tools') or {}).get('amount'),
-                            'entry_ids': out.get('entry_ids')})
+            results.append({
+                'tenant_id': tid,
+                **{k: out[k] for k in out if k != 'depreciation' and k != 'tools'},
+                'depreciation_amount': (out.get('depreciation') or {}).get('amount'),
+                'tools_amount': (out.get('tools') or {}).get('amount'),
+                'entry_ids': out.get('entry_ids'),
+                'vat_filing_alert': vat_alert,
+                'micro_enterprise_alert': micro_alert,
+            })
         except Exception as exc:
             conn.rollback()
             results.append({'tenant_id': tid, 'posted': False, 'error': str(exc)})
         finally:
             conn.close()
 
+    end = period_end_date(fiscal_year, period)
     return {
         'fiscal_year': fiscal_year,
         'period': period,
+        'posting_date': end.isoformat(),  # luôn ngày cuối tháng kỳ (không phải ngày chạy lịch)
         'tenants': len(results),
         'results': results,
     }

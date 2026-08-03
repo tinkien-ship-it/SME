@@ -360,7 +360,7 @@ def run_year_end_close(
     Nên chạy sau khi đã kết chuyển KQKD tháng 12.
     """
     from Services.sme.bootstrap import ensure_sme_accounting_ready
-    from Services.sme.period_lock import lock_period
+    from Services.sme.period_lock import assert_year_lock_allowed, lock_year
 
     ensure_sme_accounting_ready(conn, commit=False)
     conn.row_factory = sqlite3.Row
@@ -435,17 +435,48 @@ def run_year_end_close(
         lines=lines,
     )
 
+    year_lock = None
     locked = False
     if lock_after:
         try:
-            lock_period(
-                conn, fiscal_year=year, period=12,
-                reason=f'Khóa sau kết chuyển cuối năm {year}',
+            assert_year_lock_allowed(year, action='khóa sổ năm sau KC cuối năm')
+            year_lock = lock_year(
+                conn,
+                fiscal_year=year,
                 locked_by=created_by,
+                reason=f'Khóa sổ năm sau kết chuyển cuối năm {year}',
             )
             locked = True
-        except Exception:
+        except ValueError as exc:
+            year_lock = {'skipped': True, 'message': str(exc)}
             locked = False
+
+    vat_filing_alert = None
+    micro_enterprise_alert = None
+    try:
+        from flask import g
+        from Services.sme.vat_filing_alert import evaluate_year_end_vat_filing
+        from Services.sme.micro_enterprise import evaluate_tt58_to_tt99_alert
+        from Services.tenant_profile import get_current_tenant_profile
+        tid = getattr(g, 'tenant_id', None)
+        if tid:
+            settings = (get_current_tenant_profile() or {}).get('settings') or {}
+            vat_filing_alert = evaluate_year_end_vat_filing(
+                conn,
+                tenant_id=str(tid),
+                fiscal_year=year,
+                settings=settings,
+                persist=True,
+            )
+            micro_enterprise_alert = evaluate_tt58_to_tt99_alert(
+                conn,
+                tenant_id=str(tid),
+                fiscal_year=year,
+                settings=settings,
+                persist=True,
+            )
+    except Exception:
+        pass
 
     return {
         'posted': True,
@@ -458,4 +489,7 @@ def run_year_end_close(
         'account_4211': acct_4211,
         'account_4212': acct_4212,
         'locked_period_12': locked,
+        'year_lock': year_lock,
+        'vat_filing_alert': vat_filing_alert,
+        'micro_enterprise_alert': micro_enterprise_alert,
     }

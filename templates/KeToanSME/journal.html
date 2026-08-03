@@ -22,6 +22,10 @@
         <h4 class="fw-bold mb-1"><i class="fas fa-book-open text-primary me-2"></i>Nhật ký bút toán</h4>
         <p class="text-muted small mb-0">
             Sổ chứng từ kế toán kép (Thông tư 99) — lọc theo chi nhánh đang chọn trên thanh trên.
+            Kỳ mở (hoặc đã «Mở lại kỳ kê khai / sổ năm»): <strong>sửa / xóa tại chỗ</strong> bút toán sai
+            để kê khai bổ sung / cập nhật BCTC — không bắt buộc đảo.
+            Kỳ đang chốt/khóa: chỉ đảo rồi ghi mới, hoặc mở sổ trở lại tại
+            <a href="{{ url_for('SME_auto_posting') }}">Kết chuyển &amp; khóa sổ</a>.
         </p>
     </div>
     <div class="d-flex jl-toolbar">
@@ -31,6 +35,10 @@
         <a href="{{ url_for('SME_chart_of_accounts') }}" class="btn btn-outline-primary btn-sm">
             <i class="fas fa-sitemap me-1"></i> Danh mục tài khoản
         </a>
+        <button type="button" class="btn btn-outline-warning btn-sm" id="btnRenumber"
+                title="Đánh lại số BT liên tục theo ngày ghi sổ">
+            <i class="fas fa-sort-numeric-down me-1"></i> Đánh lại số
+        </button>
         <button type="button" class="btn btn-primary btn-sm" id="btnReload">
             <i class="fas fa-rotate me-1"></i> Tải lại
         </button>
@@ -89,7 +97,6 @@
                     <th style="width:140px;">Số bút toán</th>
                     <th style="width:100px;">Ngày</th>
                     <th style="width:70px;">Chi nhánh</th>
-                    <th style="width:120px;">Loại</th>
                     <th style="width:120px;">Chứng từ</th>
                     <th>Diễn giải</th>
                     <th class="text-end" style="width:120px;">Nợ</th>
@@ -99,7 +106,7 @@
                 </tr>
             </thead>
             <tbody id="jlBody">
-                <tr><td colspan="10" class="text-center text-muted py-4">Đang tải…</td></tr>
+                <tr><td colspan="9" class="text-center text-muted py-4">Đang tải…</td></tr>
             </tbody>
         </table>
     </div>
@@ -138,8 +145,20 @@
                     </table>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-danger btn-sm d-none" id="btnReverse">
+            <div class="modal-footer flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm d-none" id="btnEdit">
+                    <i class="fas fa-pen me-1"></i> Sửa
+                </button>
+                <button type="button" class="btn btn-primary btn-sm d-none" id="btnSaveEdit">
+                    <i class="fas fa-save me-1"></i> Lưu sửa
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btnCancelEdit">
+                    Hủy sửa
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm d-none" id="btnDelete">
+                    <i class="fas fa-trash me-1"></i> Xóa hoàn toàn
+                </button>
+                <button type="button" class="btn btn-outline-warning btn-sm d-none" id="btnReverse">
                     <i class="fas fa-rotate-left me-1"></i> Đảo bút toán
                 </button>
                 <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Đóng</button>
@@ -155,6 +174,8 @@
     const body = document.getElementById('jlBody');
     const metaEl = document.getElementById('jlMeta');
     let currentId = null;
+    let currentEntry = null;
+    let editing = false;
     let detailModal = null;
 
     function money(v) {
@@ -179,6 +200,12 @@
         return map[t] || t || '—';
     }
 
+    function hideActionBtns() {
+        ['btnEdit', 'btnSaveEdit', 'btnCancelEdit', 'btnDelete', 'btnReverse'].forEach((id) => {
+            document.getElementById(id).classList.add('d-none');
+        });
+    }
+
     function qs() {
         const p = new URLSearchParams();
         const q = document.getElementById('jlQ').value.trim();
@@ -196,7 +223,7 @@
     }
 
     async function loadList() {
-        body.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Đang tải…</td></tr>';
+        body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Đang tải…</td></tr>';
         try {
             const res = await fetch('/api/sme/journal?' + qs());
             const json = await res.json();
@@ -205,7 +232,7 @@
             const br = json.branch_code || 'ALL';
             metaEl.textContent = rows.length + ' bút toán · lọc chi nhánh: ' + (typeof branchLabelVi === 'function' ? branchLabelVi(br) : br);
             if (!rows.length) {
-                body.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Chưa có bút toán phù hợp bộ lọc.</td></tr>';
+                body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Chưa có bút toán phù hợp bộ lọc.</td></tr>';
                 return;
             }
             body.innerHTML = rows.map(r => `
@@ -213,7 +240,6 @@
                     <td class="jl-mono">${r.entry_no || ('#' + r.id)}</td>
                     <td>${fmtDateVi(r.posting_date)}</td>
                     <td class="jl-mono">${typeof branchLabelVi === 'function' ? branchLabelVi(r.branch_code || 'HQ') : (r.branch_code || 'HQ')}</td>
-                    <td><span class="badge text-bg-light border">${docTypeLabel(r.document_type)}</span></td>
                     <td class="jl-mono">${r.document_no || '—'}</td>
                     <td>${(r.description || '').slice(0, 80) || '—'}</td>
                     <td class="jl-amount">${money(r.total_debit)}</td>
@@ -227,49 +253,105 @@
                 </tr>
             `).join('');
         } catch (e) {
-            body.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">${e.message}</td></tr>`;
+            body.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">${e.message}</td></tr>`;
             metaEl.textContent = 'Lỗi';
         }
     }
 
+    function renderDetailView(e) {
+        let lockHint = '<span class="text-success">Kỳ mở — được sửa tại chỗ / xóa hoàn toàn</span>';
+        if (e.period_sealed || e.period_locked || e.filing_closed) {
+            const bits = [];
+            if (e.year_locked || e.period_locked) bits.push('đã khóa sổ năm');
+            if (e.filing_closed) bits.push('đã chốt kỳ kê khai');
+            lockHint = `<span class="text-warning">${bits.join(' · ') || 'đã chốt'} — chỉ đảo; hoặc mở lại sổ/kỳ kê khai để sửa·xóa tại chỗ (kê khai bổ sung)</span>`;
+        }
+        document.getElementById('detailMeta').innerHTML = `
+            <div class="col-md-3"><strong>Ngày ghi:</strong> ${fmtDateVi(e.posting_date)}</div>
+            <div class="col-md-3"><strong>Chi nhánh:</strong> ${e.branch_code || 'HQ'}</div>
+            <div class="col-md-3"><strong>Chứng từ:</strong> ${e.document_no || '—'}</div>
+            <div class="col-md-3"><strong>Trạng thái:</strong> ${statusBadge(e.status)}</div>
+            <div class="col-md-3"><strong>Nghiệp vụ:</strong> ${e.business_type || '—'}</div>
+            <div class="col-md-9"><strong>Kỳ sổ:</strong> ${lockHint}</div>
+            <div class="col-12"><strong>Diễn giải:</strong> ${e.description || '—'}</div>
+        `;
+        const lines = e.lines || [];
+        document.getElementById('detailLines').innerHTML = lines.map(ln => `
+            <tr>
+                <td>${ln.sequence || ''}</td>
+                <td class="jl-mono">${ln.account_code}</td>
+                <td>${ln.description || ''}</td>
+                <td class="jl-amount">${Number(ln.debit) ? money(ln.debit) : ''}</td>
+                <td class="jl-amount">${Number(ln.credit) ? money(ln.credit) : ''}</td>
+                <td class="small">${ln.partner_type || ''}${ln.partner_id ? (' #' + ln.partner_id) : ''}</td>
+            </tr>
+        `).join('') || '<tr><td colspan="6" class="text-muted text-center">Không có dòng</td></tr>';
+        document.getElementById('detailTotalDebit').textContent = money(e.total_debit);
+        document.getElementById('detailTotalCredit').textContent = money(e.total_credit);
+    }
+
+    function renderDetailEdit(e) {
+        document.getElementById('detailMeta').innerHTML = `
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Ngày ghi</label>
+                <input type="date" id="editPostingDate" class="form-control form-control-sm" value="${(e.posting_date || '').slice(0, 10)}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Số chứng từ</label>
+                <input type="text" id="editDocNo" class="form-control form-control-sm" value="${e.document_no || ''}">
+            </div>
+            <div class="col-12">
+                <label class="form-label small mb-1">Diễn giải</label>
+                <input type="text" id="editDesc" class="form-control form-control-sm" value="${(e.description || '').replace(/"/g, '&quot;')}">
+            </div>
+            <div class="col-12 small text-muted">Sửa tại chỗ — không tạo bút toán đảo. Cân Nợ = Có.</div>
+        `;
+        const lines = e.lines || [];
+        document.getElementById('detailLines').innerHTML = lines.map((ln, idx) => `
+            <tr class="edit-line" data-idx="${idx}">
+                <td>${ln.sequence || (idx + 1)}</td>
+                <td><input class="form-control form-control-sm jl-mono edit-account" value="${ln.account_code || ''}"></td>
+                <td><input class="form-control form-control-sm edit-desc" value="${(ln.description || '').replace(/"/g, '&quot;')}"></td>
+                <td><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end edit-debit" value="${Number(ln.debit) || ''}"></td>
+                <td><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end edit-credit" value="${Number(ln.credit) || ''}"></td>
+                <td class="small">${ln.partner_type || ''}${ln.partner_id ? (' #' + ln.partner_id) : ''}</td>
+            </tr>
+        `).join('');
+        document.getElementById('detailTotalDebit').textContent = money(e.total_debit);
+        document.getElementById('detailTotalCredit').textContent = money(e.total_credit);
+    }
+
+    function setActionButtons(e) {
+        hideActionBtns();
+        if (editing) {
+            document.getElementById('btnSaveEdit').classList.remove('d-none');
+            document.getElementById('btnCancelEdit').classList.remove('d-none');
+            return;
+        }
+        if (e.can_edit) document.getElementById('btnEdit').classList.remove('d-none');
+        if (e.can_delete) document.getElementById('btnDelete').classList.remove('d-none');
+        if (e.can_reverse) document.getElementById('btnReverse').classList.remove('d-none');
+    }
+
     async function openDetail(id) {
         currentId = id;
+        currentEntry = null;
+        editing = false;
         if (!detailModal) detailModal = new bootstrap.Modal(document.getElementById('modalDetail'));
         document.getElementById('detailTitle').textContent = 'Đang tải…';
         document.getElementById('detailLines').innerHTML = '';
-        document.getElementById('btnReverse').classList.add('d-none');
+        hideActionBtns();
         detailModal.show();
         try {
             const res = await fetch('/api/sme/journal/' + id);
             const json = await res.json();
             if (!json.success) throw new Error(json.error || 'Không tải được');
             const e = json.data;
+            currentEntry = e;
             document.getElementById('detailTitle').textContent =
                 (e.entry_no || ('#' + e.id)) + ' — ' + docTypeLabel(e.document_type);
-            document.getElementById('detailMeta').innerHTML = `
-                <div class="col-md-3"><strong>Ngày ghi:</strong> ${fmtDateVi(e.posting_date)}</div>
-                <div class="col-md-3"><strong>Chi nhánh:</strong> ${e.branch_code || 'HQ'}</div>
-                <div class="col-md-3"><strong>Chứng từ:</strong> ${e.document_no || '—'}</div>
-                <div class="col-md-3"><strong>Trạng thái:</strong> ${statusBadge(e.status)}</div>
-                <div class="col-md-3"><strong>Nghiệp vụ:</strong> ${e.business_type || '—'}</div>
-                <div class="col-12"><strong>Diễn giải:</strong> ${e.description || '—'}</div>
-            `;
-            const lines = e.lines || [];
-            document.getElementById('detailLines').innerHTML = lines.map(ln => `
-                <tr>
-                    <td>${ln.sequence || ''}</td>
-                    <td class="jl-mono">${ln.account_code}</td>
-                    <td>${ln.description || ''}</td>
-                    <td class="jl-amount">${Number(ln.debit) ? money(ln.debit) : ''}</td>
-                    <td class="jl-amount">${Number(ln.credit) ? money(ln.credit) : ''}</td>
-                    <td class="small">${ln.partner_type || ''}${ln.partner_id ? (' #' + ln.partner_id) : ''}</td>
-                </tr>
-            `).join('') || '<tr><td colspan="6" class="text-muted text-center">Không có dòng</td></tr>';
-            document.getElementById('detailTotalDebit').textContent = money(e.total_debit);
-            document.getElementById('detailTotalCredit').textContent = money(e.total_credit);
-            if (e.status === 'posted' && !e.reversed_by_id && !(e.document_type || '').startsWith('REV_')) {
-                document.getElementById('btnReverse').classList.remove('d-none');
-            }
+            renderDetailView(e);
+            setActionButtons(e);
         } catch (err) {
             document.getElementById('detailTitle').textContent = 'Lỗi';
             document.getElementById('detailMeta').innerHTML =
@@ -277,10 +359,97 @@
         }
     }
 
+    function startEdit() {
+        if (!currentEntry || !currentEntry.can_edit) return;
+        editing = true;
+        renderDetailEdit(currentEntry);
+        setActionButtons(currentEntry);
+    }
+
+    function cancelEdit() {
+        if (!currentEntry) return;
+        editing = false;
+        renderDetailView(currentEntry);
+        setActionButtons(currentEntry);
+    }
+
+    function collectEditPayload() {
+        const lines = [];
+        document.querySelectorAll('#detailLines tr.edit-line').forEach((tr, i) => {
+            const account = (tr.querySelector('.edit-account')?.value || '').trim();
+            const debit = Number(tr.querySelector('.edit-debit')?.value || 0);
+            const credit = Number(tr.querySelector('.edit-credit')?.value || 0);
+            const description = tr.querySelector('.edit-desc')?.value || '';
+            if (!account && !debit && !credit) return;
+            const old = (currentEntry.lines || [])[i] || {};
+            lines.push({
+                sequence: i + 1,
+                account_code: account,
+                debit,
+                credit,
+                description,
+                partner_id: old.partner_id,
+                partner_type: old.partner_type,
+                warehouse_code: old.warehouse_code,
+                product_id: old.product_id,
+                tax_code: old.tax_code,
+                tax_rate: old.tax_rate,
+                vat_invoice_no: old.vat_invoice_no,
+            });
+        });
+        return {
+            posting_date: document.getElementById('editPostingDate')?.value || undefined,
+            document_no: document.getElementById('editDocNo')?.value,
+            description: document.getElementById('editDesc')?.value,
+            lines,
+            reason: 'Sửa bút toán từ nhật ký',
+        };
+    }
+
+    async function saveEdit() {
+        if (!currentId) return;
+        const payload = collectEditPayload();
+        try {
+            const res = await fetch('/api/sme/journal/' + currentId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Không lưu được');
+            alert('Đã cập nhật bút toán (không tạo chứng từ đảo).');
+            editing = false;
+            await openDetail(currentId);
+            loadList();
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    async function deleteCurrent() {
+        if (!currentId) return;
+        if (!confirm('Xóa hoàn toàn bút toán này? Không tạo bút toán đảo — bạn sẽ hạch toán lại nếu cần. Thao tác được ghi nhật ký truy vết.')) return;
+        const reason = prompt('Lý do xóa:', 'Xóa bút toán từ nhật ký') || 'Xóa bút toán từ nhật ký';
+        try {
+            const res = await fetch('/api/sme/journal/' + currentId, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || 'Không xóa được');
+            alert('Đã xóa hoàn toàn bút toán.');
+            detailModal.hide();
+            loadList();
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
     async function reverseCurrent() {
         if (!currentId) return;
-        if (!confirm('Đảo bút toán này? Hệ thống sẽ tạo chứng từ đảo (không xóa lịch sử).')) return;
-        const reason = prompt('Lý do đảo bút toán:', 'Đảo bút toán từ nhật ký') || 'Đảo bút toán';
+        if (!confirm('Kỳ đã khóa: đảo bút toán này rồi ghi bút toán mới để điều chỉnh? Hệ thống sẽ tạo chứng từ đảo (giữ lịch sử).')) return;
+        const reason = prompt('Lý do đảo bút toán:', 'Điều chỉnh sau khóa sổ / kê khai') || 'Đảo bút toán';
         try {
             const res = await fetch('/api/sme/journal/' + currentId + '/reverse', {
                 method: 'POST',
@@ -303,11 +472,31 @@
         const id = btn.dataset.id || btn.closest('tr')?.dataset.id;
         if (id) openDetail(id);
     });
+    document.getElementById('btnRenumber').addEventListener('click', async () => {
+        if (!confirm(
+            'Đánh lại số bút toán?\n\n'
+            + 'Hệ thống sắp xếp theo ngày ghi sổ và đánh số liên tục từ BT0000001.\n'
+            + 'Số BT cũ sẽ bị thay đổi vĩnh viễn.'
+        )) return;
+        try {
+            const res = await fetch('/api/sme/journal/renumber', { method: 'POST' });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || json.message || 'Lỗi');
+            alert(json.message || ('Đã đánh lại số cho ' + (json.count || '') + ' bút toán'));
+            loadList();
+        } catch (e) {
+            alert(e.message || 'Không thể đánh lại số');
+        }
+    });
     document.getElementById('btnReload').addEventListener('click', loadList);
     document.getElementById('btnFilter').addEventListener('click', loadList);
     document.getElementById('jlQ').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') loadList();
     });
+    document.getElementById('btnEdit').addEventListener('click', startEdit);
+    document.getElementById('btnCancelEdit').addEventListener('click', cancelEdit);
+    document.getElementById('btnSaveEdit').addEventListener('click', saveEdit);
+    document.getElementById('btnDelete').addEventListener('click', deleteCurrent);
     document.getElementById('btnReverse').addEventListener('click', reverseCurrent);
 
     loadList();

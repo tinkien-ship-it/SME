@@ -1,0 +1,693 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Bán hàng xuất khẩu{% endblock %}
+
+{% block sme_head %}
+<style>
+.xk-card { border: 0; box-shadow: 0 1px 3px rgba(15,23,42,.08); }
+.xk-table td, .xk-table th { font-size: .875rem; vertical-align: middle; }
+.hidden-field { display: none !important; }
+.format-input { font-variant-numeric: tabular-nums; }
+</style>
+{% endblock %}
+
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1"><i class="fas fa-plane-departure text-primary me-2"></i>Bán hàng xuất khẩu</h4>
+    <p class="text-muted small mb-0">
+      Ghi nhận DT (Nợ 131 / Có 5111, VAT 0%) tại ngày chuyển giao rủi ro · GV 632 · thuế XK 3333 (nếu có).
+      Thanh toán: ứng trước / trả sau / L/C / chiết khấu bộ CT.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('SME_sale_export_list') }}" class="btn btn-outline-secondary btn-sm">Danh sách XK</a>
+    <a href="{{ url_for('SME_customs_declarations') }}" class="btn btn-outline-secondary btn-sm">Tờ khai HQ</a>
+    <a href="{{ url_for('SME_DanhSachPhieuThu') }}" class="btn btn-outline-primary btn-sm" target="_blank">Lập PT tạm ứng KH</a>
+    <button type="button" class="btn btn-primary btn-sm" id="btnSaveExport"><i class="fas fa-save me-1"></i> Lưu phiếu</button>
+  </div>
+</div>
+
+<input type="hidden" id="editSaleId" value="">
+
+<div class="card xk-card mb-3">
+  <div class="card-body">
+    <div class="row g-2">
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Số phiếu</label>
+        <input type="text" class="form-control form-control-sm" id="saleNo" placeholder="Tự sinh">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Ngày chứng từ</label>
+        <input type="date" class="form-control form-control-sm" id="saleDate">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold text-primary">Ngày chuyển giao rủi ro</label>
+        <input type="date" class="form-control form-control-sm" id="riskDate" title="Incoterms / B/L / thông quan">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Incoterms</label>
+        <select class="form-select form-select-sm" id="incoterms">
+          <option value="FOB">FOB</option>
+          <option value="CIF">CIF</option>
+          <option value="CFR">CFR</option>
+          <option value="EXW">EXW</option>
+          <option value="DAP">DAP</option>
+          <option value="DDP">DDP</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Số B/L</label>
+        <input type="text" class="form-control form-control-sm" id="blNo">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Tờ khai HQ</label>
+        <input type="text" class="form-control form-control-sm" id="customsDeclNo">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-primary">Khách hàng nước ngoài</label>
+        <input type="text" class="form-control form-control-sm" id="customerName" required>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Địa chỉ</label>
+        <input type="text" class="form-control form-control-sm" id="address">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Kho xuất</label>
+        <select class="form-select form-select-sm" id="warehouseCode">
+          {% for wh in warehouses or [] %}
+          <option value="{{ wh.code }}">{{ wh.code }} — {{ wh.name }}</option>
+          {% else %}
+          <option value="KHO_001">KHO_001</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-1">
+        <label class="form-label small fw-bold">NT</label>
+        <select class="form-select form-select-sm" id="currency">
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+          <option value="JPY">JPY</option>
+          <option value="CNY">CNY</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold text-success">TG mua NH (ghi DT)</label>
+        <input type="text" class="form-control form-control-sm text-end format-input" id="revenueFx" value="25000">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">TG tờ khai (thuế XK)</label>
+        <input type="text" class="form-control form-control-sm text-end format-input" id="customsFx" value="25000">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-primary">Phương thức thanh toán</label>
+        <select class="form-select form-select-sm fw-bold" id="paymentMode" onchange="togglePayMode()">
+          <option value="unpaid">Thanh toán sau (T/T) — không L/C</option>
+          <option value="prepaid_full">Khách thanh toán trước đủ</option>
+          <option value="prepaid_partial">Khách tạm ứng một phần</option>
+          <option value="lc">L/C trả ngay (sight) — gắn thư tín dụng</option>
+          <option value="lc_usance">L/C trả chậm / nhờ thu (Usance · D/A · D/P)</option>
+          <option value="doc_discount">Chiết khấu bộ CT (sau khi xuất)</option>
+        </select>
+        <div class="form-text small" id="payModeHint">
+          T/T: xuất hàng → Nợ 131, thu tiền sau (CLTG khi tiền về). L/C sight: cùng ghi 131 nhưng bắt buộc chọn L/C để trừ hạn mức.
+        </div>
+      </div>
+      <div class="col-md-4 hidden-field" id="advanceWrap">
+        <label class="form-label small fw-bold">PT tạm ứng KH (Có 131)</label>
+        <select class="form-select form-select-sm" id="advanceIds" multiple size="3" onchange="syncAdvance()"></select>
+        <div class="row g-1 mt-1">
+          <div class="col-4"><input type="text" class="form-control form-control-sm text-end format-input" id="advanceFc" value="0" onchange="onAdvanceEdited()"></div>
+          <div class="col-4"><input type="text" class="form-control form-control-sm text-end format-input" id="advanceRate" value="1" readonly></div>
+          <div class="col-4"><input type="text" class="form-control form-control-sm text-end format-input" id="advanceVnd" value="0" readonly></div>
+        </div>
+        <div class="form-text small">NT · TG ngày ứng · VND — phần thừa PC dùng đợt sau</div>
+      </div>
+      <div class="col-md-3 hidden-field" id="lcWrap">
+        <label class="form-label small fw-bold">L/C xuất</label>
+        <select class="form-select form-select-sm" id="lcId">
+          <option value="">— Chọn L/C xuất còn dư —</option>
+        </select>
+        <button type="button" class="btn btn-link btn-sm px-0" data-bs-toggle="modal" data-bs-target="#modalNewLc">+ Đăng ký L/C xuất</button>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Thuế XK (NT)</label>
+        <input type="text" class="form-control form-control-sm text-end format-input" id="exportTaxFc" value="0">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-bold">Ghi chú</label>
+        <input type="text" class="form-control form-control-sm" id="note">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card xk-card mb-3">
+  <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+    <strong>Chi tiết hàng xuất</strong>
+    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addRow()"><i class="fas fa-plus"></i> Thêm dòng</button>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0 xk-table">
+      <thead class="table-light">
+        <tr>
+          <th style="min-width:220px">Hàng hóa</th>
+          <th style="width:90px">ĐVT</th>
+          <th style="width:90px">SL</th>
+          <th style="width:110px">Đơn giá (NT)</th>
+          <th style="width:80px">CK%</th>
+          <th style="width:120px">Thành tiền NT</th>
+          <th style="width:40px"></th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+      <tfoot>
+        <tr class="fw-bold">
+          <td colspan="5" class="text-end">Tổng NT</td>
+          <td class="text-end" id="totalFc">0</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td colspan="5" class="text-end text-muted">Doanh thu VND (ước tính)</td>
+          <td class="text-end text-success" id="totalVnd">0</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="card xk-card mb-3 {% if not edit_id %}d-none{% endif %}" id="postActions">
+  <div class="card-header bg-white py-2"><strong>Nghiệp vụ sau xuất</strong></div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <h6 class="small fw-bold">Thu hồi công nợ (CLTG 515/635)</h6>
+        <div class="input-group input-group-sm mb-1">
+          <input type="date" class="form-control" id="settleDate">
+          <input type="text" class="form-control format-input" id="settleFx" placeholder="TG ngày thu" value="25000">
+        </div>
+        <button type="button" class="btn btn-sm btn-success" id="btnSettleAr">Thu tiền về 1122</button>
+      </div>
+      <div class="col-md-4">
+        <h6 class="small fw-bold">Chiết khấu bộ CT → 341</h6>
+        <div class="input-group input-group-sm mb-1">
+          <input type="date" class="form-control" id="discDate">
+          <input type="text" class="form-control format-input" id="discFx" placeholder="TG" value="25000">
+          <input type="text" class="form-control format-input" id="discFee" placeholder="Phí VND" value="0">
+        </div>
+        <button type="button" class="btn btn-sm btn-warning" id="btnDocDiscount">Giải ngân chiết khấu</button>
+      </div>
+      <div class="col-md-4">
+        <h6 class="small fw-bold">Chi phí XK (641)</h6>
+        <div class="input-group input-group-sm mb-1">
+          <input type="text" class="form-control" id="costDesc" placeholder="Vận tải / bảo hiểm…">
+          <input type="text" class="form-control format-input" id="costAmt" placeholder="VND" value="0">
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="btnExportCost">Ghi CP bán hàng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalNewLc" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Đăng ký L/C xuất</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-2"><label class="form-label small">Số L/C</label>
+          <input type="text" class="form-control form-control-sm" id="newLcNo"></div>
+        <div class="mb-2"><label class="form-label small">Ngày</label>
+          <input type="date" class="form-control form-control-sm" id="newLcDate"></div>
+        <div class="mb-2"><label class="form-label small">Ngân hàng</label>
+          <input type="text" class="form-control form-control-sm" id="newLcBank"></div>
+        <div class="mb-2"><label class="form-label small">Applicant (người mở)</label>
+          <input type="text" class="form-control form-control-sm" id="newLcApplicant"></div>
+        <div class="row g-2">
+          <div class="col-4"><label class="form-label small">NT</label>
+            <input type="text" class="form-control form-control-sm format-input" id="newLcFc" value="0"></div>
+          <div class="col-4"><label class="form-label small">TG</label>
+            <input type="text" class="form-control form-control-sm format-input" id="newLcRate" value="25000"></div>
+          <div class="col-4"><label class="form-label small">Loại</label>
+            <select class="form-select form-select-sm" id="newLcCur"><option>USD</option><option>EUR</option></select></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-sm" id="btnCreateLc">Lưu L/C</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block sme_scripts %}
+<script>
+const PRODUCTS = {{ products_json|safe }};
+window._advanceDetails = [];
+let _prodOptsHtml = null;
+let _productsLoading = null;
+
+function parseNumber(v) {
+  if (v == null) return 0;
+  return Number(String(v).replace(/[^\d.-]/g, '')) || 0;
+}
+function formatN(n, d=2) {
+  return (Number(n)||0).toLocaleString('vi-VN', { maximumFractionDigits: d });
+}
+function toast(msg, icon='info') {
+  if (window.Swal) Swal.fire({ toast:true, position:'top-end', timer:2800, showConfirmButton:false, icon, title:msg });
+  else alert(msg);
+}
+function todayIso() {
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+function productOptionsHtml() {
+  if (_prodOptsHtml != null) return _prodOptsHtml;
+  const list = Array.isArray(PRODUCTS) ? PRODUCTS : [];
+  _prodOptsHtml = list.map(p =>
+    `<option value="${p.id}" data-unit="${p.unit||'Cái'}" data-price="${p.price||0}">${p.product_code||p.code||''} — ${p.name}</option>`
+  ).join('') || '<option value=\"\">— Chưa có hàng —</option>';
+  return _prodOptsHtml;
+}
+
+async function ensureProductsLoaded() {
+  if (Array.isArray(PRODUCTS) && PRODUCTS.length) return PRODUCTS;
+  if (_productsLoading) return _productsLoading;
+  _productsLoading = (async () => {
+    try {
+      const res = await fetch('/api/sme/products/brief');
+      const json = await res.json();
+      const rows = json.data || json.items || [];
+      PRODUCTS.length = 0;
+      rows.forEach(r => PRODUCTS.push({
+        id: r.id,
+        product_code: r.code || r.product_code || '',
+        name: r.name,
+        unit: r.unit || 'Cái',
+        price: r.price || r.avg_cost || 0,
+      }));
+      _prodOptsHtml = null;
+    } catch (e) {
+      console.warn('load products', e);
+    }
+    return PRODUCTS;
+  })();
+  return _productsLoading;
+}
+
+function addRow(data={}) {
+  const tr = document.createElement('tr');
+  const opts = productOptionsHtml();
+  tr.innerHTML = `
+    <td><select class="form-select form-select-sm prod">${opts}</select></td>
+    <td><input class="form-control form-control-sm unit" value="${data.unit||'Cái'}"></td>
+    <td><input class="form-control form-control-sm text-end qty format-input" value="${data.qty||1}"></td>
+    <td><input class="form-control form-control-sm text-end price format-input" value="${data.price||0}"></td>
+    <td><input class="form-control form-control-sm text-end disc" value="${data.discount_pct||0}"></td>
+    <td class="text-end line-fc">0</td>
+    <td><button type="button" class="btn btn-sm text-danger" onclick="this.closest('tr').remove(); calcTotal()">&times;</button></td>`;
+  document.getElementById('itemsBody').appendChild(tr);
+  const sel = tr.querySelector('.prod');
+  if (data.product_id) sel.value = String(data.product_id);
+  sel.addEventListener('change', () => {
+    const o = sel.selectedOptions[0];
+    if (o) {
+      tr.querySelector('.unit').value = o.dataset.unit || 'Cái';
+      if (!parseNumber(tr.querySelector('.price').value))
+        tr.querySelector('.price').value = o.dataset.price || 0;
+    }
+    calcTotal();
+  });
+  tr.querySelectorAll('input').forEach(el => el.addEventListener('input', calcTotal));
+  if (!data.product_id && sel.options.length && sel.options[0].value) sel.dispatchEvent(new Event('change'));
+  calcTotal();
+}
+
+function calcTotal() {
+  let total = 0;
+  document.querySelectorAll('#itemsBody tr').forEach(tr => {
+    const qty = parseNumber(tr.querySelector('.qty')?.value);
+    const price = parseNumber(tr.querySelector('.price')?.value);
+    const disc = parseFloat(tr.querySelector('.disc')?.value) || 0;
+    let line = qty * price;
+    line -= line * (disc/100);
+    tr.querySelector('.line-fc').textContent = formatN(line, 4);
+    total += line;
+  });
+  document.getElementById('totalFc').textContent = formatN(total, 4);
+  const rate = parseNumber(document.getElementById('revenueFx').value) || 1;
+  document.getElementById('totalVnd').textContent = formatN(Math.round(total * rate));
+  const mode = document.getElementById('paymentMode').value;
+  if (mode === 'prepaid_full' && document.getElementById('advanceIds').selectedOptions.length)
+    syncAdvance();
+}
+
+function goodsFc() {
+  let t = 0;
+  document.querySelectorAll('#itemsBody tr').forEach(tr => {
+    t += parseNumber(tr.querySelector('.line-fc')?.textContent);
+  });
+  return Math.round(t * 10000) / 10000;
+}
+
+function togglePayMode() {
+  const mode = document.getElementById('paymentMode').value;
+  const needAdv = mode === 'prepaid_full' || mode === 'prepaid_partial';
+  const needLc = mode === 'lc' || mode === 'lc_usance';
+  document.getElementById('advanceWrap').classList.toggle('hidden-field', !needAdv);
+  document.getElementById('lcWrap').classList.toggle('hidden-field', !needLc);
+  const hint = document.getElementById('payModeHint');
+  if (hint) {
+    const hints = {
+      unpaid: 'T/T: không gắn L/C. Xuất hàng ghi Nợ 131 / Có 511; khi tiền về NH → thu 1122 + CLTG 515/635.',
+      prepaid_full: 'Đã nhận PT tạm ứng đủ → DT cố định theo TG ngày ứng; 131 tự cân, không CLTG.',
+      prepaid_partial: 'Một phần theo TG ngày ứng; phần còn lại 131 thu sau + CLTG.',
+      lc: 'L/C sight: bắt buộc chọn L/C xuất. Cùng hạch toán 131 như T/T nhưng trừ hạn mức L/C (nhiều đợt chứng từ).',
+      lc_usance: 'Usance / D/A·D/P: gắn L/C, CN chờ đến hạn; khi tiền về xử lý như thu sau + CLTG.',
+      doc_discount: 'Sau xuất có thể chiết khấu bộ CT (vay 341); tất toán khi KH/NH trả.',
+    };
+    hint.textContent = hints[mode] || '';
+  }
+  if (needAdv && !window._xkSkipPayFetch) loadAdvances();
+  if (needLc && !window._xkSkipPayFetch) loadLcs();
+}
+
+function syncAdvance() {
+  const opts = [...document.getElementById('advanceIds').selectedOptions].filter(o => o.value);
+  let totalFc = 0, totalVnd = 0;
+  const details = [];
+  opts.forEach(o => {
+    const fc = parseFloat(o.dataset.amountFc||0)||0;
+    const rate = parseFloat(o.dataset.exchangeRate||1)||1;
+    const vnd = fc * rate;
+    totalFc += fc; totalVnd += vnd;
+    details.push({ voucher_id: +o.value, amount_fc: fc, exchange_rate: rate, amount_vnd: vnd, max_fc: fc });
+  });
+  const mode = document.getElementById('paymentMode').value;
+  const g = goodsFc();
+  if (mode === 'prepaid_full' && g > 0 && totalFc > g) {
+    const scale = g / totalFc;
+    totalFc = 0; totalVnd = 0;
+    details.forEach(d => {
+      d.amount_fc = d.max_fc * scale;
+      d.amount_vnd = d.amount_fc * d.exchange_rate;
+      totalFc += d.amount_fc; totalVnd += d.amount_vnd;
+    });
+  }
+  window._advanceDetails = details;
+  const avg = totalFc > 0 ? totalVnd / totalFc : 1;
+  document.getElementById('advanceFc').value = formatN(totalFc, 4);
+  document.getElementById('advanceRate').value = formatN(avg, 4);
+  document.getElementById('advanceVnd').value = formatN(Math.round(totalVnd));
+}
+
+function onAdvanceEdited() {
+  const details = window._advanceDetails || [];
+  if (!details.length) return syncAdvance();
+  const maxFc = details.reduce((s,d)=>s+(d.max_fc||0),0);
+  let want = parseNumber(document.getElementById('advanceFc').value);
+  if (want > maxFc) want = maxFc;
+  const scale = maxFc > 0 ? want / maxFc : 0;
+  let vnd = 0;
+  details.forEach(d => { d.amount_fc = (d.max_fc||0)*scale; d.amount_vnd = d.amount_fc*d.exchange_rate; vnd += d.amount_vnd; });
+  document.getElementById('advanceFc').value = formatN(want, 4);
+  document.getElementById('advanceRate').value = formatN(want>0?vnd/want:1, 4);
+  document.getElementById('advanceVnd').value = formatN(Math.round(vnd));
+}
+
+async function loadAdvances() {
+  const qs = new URLSearchParams({ unused_only: '1' });
+  const name = document.getElementById('customerName').value.trim();
+  if (name) qs.set('customer_name', name);
+  const editId = document.getElementById('editSaleId').value;
+  if (editId) qs.set('include_sale_id', editId);
+  const res = await fetch('/api/sme/export-sale/customer-advances?' + qs);
+  const json = await res.json();
+  const sel = document.getElementById('advanceIds');
+  const prev = [...sel.selectedOptions].map(o => o.value);
+  sel.innerHTML = '';
+  (json.items || []).forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.id;
+    const rem = Number(v.remaining_fc != null ? v.remaining_fc : v.amount_fc || 0);
+    const face = Number(v.face_fc != null ? v.face_fc : rem);
+    opt.dataset.amountFc = String(rem);
+    opt.dataset.exchangeRate = String(v.exchange_rate || 1);
+    opt.textContent = `${v.voucher_no} · còn ${rem.toLocaleString('vi-VN')}/${face.toLocaleString('vi-VN')} ${v.currency||'USD'} @${v.exchange_rate||1}`;
+    if (prev.includes(String(v.id))) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  if (!(json.items||[]).length) {
+    const o = document.createElement('option'); o.disabled = true; o.textContent = 'Không có PT tạm ứng còn dư'; sel.appendChild(o);
+  }
+  syncAdvance();
+}
+
+async function loadLcs() {
+  const res = await fetch('/api/sme/export-sale/open-lcs');
+  const json = await res.json();
+  const sel = document.getElementById('lcId');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Chọn L/C xuất còn dư —</option>';
+  (json.items || []).forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.id;
+    const rem = Number(v.remaining_fc != null ? v.remaining_fc : v.amount_fc || 0);
+    opt.dataset.remainingFc = String(rem);
+    opt.textContent = `${v.lc_no} · còn ${rem.toLocaleString('vi-VN')} ${v.currency||'USD'}`;
+    if (String(v.id) === prev) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function collectItems() {
+  return [...document.querySelectorAll('#itemsBody tr')].map(tr => ({
+    product_id: parseInt(tr.querySelector('.prod').value, 10),
+    name: tr.querySelector('.prod').selectedOptions[0]?.textContent || '',
+    unit: tr.querySelector('.unit').value,
+    qty: parseNumber(tr.querySelector('.qty').value),
+    price: parseNumber(tr.querySelector('.price').value),
+    discount_pct: parseFloat(tr.querySelector('.disc').value) || 0,
+    line_type: 'goods',
+    warehouse_code: document.getElementById('warehouseCode').value,
+  })).filter(x => x.product_id && x.qty > 0);
+}
+
+document.getElementById('btnSaveExport').addEventListener('click', async () => {
+  const items = collectItems();
+  if (!items.length) return toast('Nhập ít nhất một mặt hàng', 'error');
+  const customer = document.getElementById('customerName').value.trim();
+  if (!customer) return toast('Nhập khách hàng nước ngoài', 'error');
+  const mode = document.getElementById('paymentMode').value;
+  const advDetails = (window._advanceDetails || []).filter(d => d.amount_fc > 0);
+  if ((mode === 'prepaid_full' || mode === 'prepaid_partial') && !advDetails.length)
+    return toast('Chọn PT tạm ứng KH', 'error');
+  if ((mode === 'lc' || mode === 'lc_usance') && !document.getElementById('lcId').value)
+    return toast('Chọn L/C xuất', 'error');
+
+  const payload = {
+    sale_id: document.getElementById('editSaleId').value || null,
+    sale_no: document.getElementById('saleNo').value || null,
+    date: document.getElementById('saleDate').value,
+    risk_transfer_date: document.getElementById('riskDate').value,
+    customer_name: customer,
+    address: document.getElementById('address').value,
+    warehouse_code: document.getElementById('warehouseCode').value,
+    currency: document.getElementById('currency').value,
+    exchange_rate: parseNumber(document.getElementById('revenueFx').value),
+    customs_fx_rate: parseNumber(document.getElementById('customsFx').value),
+    payment_mode: mode,
+    advances: advDetails,
+    linked_lc_id: document.getElementById('lcId').value || null,
+    export_tax_fc: parseNumber(document.getElementById('exportTaxFc').value),
+    incoterms: document.getElementById('incoterms').value,
+    bl_no: document.getElementById('blNo').value,
+    customs_decl_no: document.getElementById('customsDeclNo').value,
+    note: document.getElementById('note').value,
+    items,
+  };
+  try {
+    const res = await fetch('/api/sme/export-sale', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Lỗi lưu');
+    toast('Đã lưu ' + (json.sale_no || ''), 'success');
+    // Không reload cả trang — giữ form, chỉ cập nhật id/URL
+    if (json.sale_id) {
+      document.getElementById('editSaleId').value = String(json.sale_id);
+      if (json.sale_no) document.getElementById('saleNo').value = json.sale_no;
+      try {
+        history.replaceState(null, '', '/SME_sale_export?sale_id=' + json.sale_id);
+      } catch (_e) {}
+      document.getElementById('postActions')?.classList.remove('d-none');
+    }
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+});
+
+document.getElementById('btnCreateLc')?.addEventListener('click', async () => {
+  try {
+    const res = await fetch('/api/sme/export-sale/open-lc', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        lc_no: document.getElementById('newLcNo').value,
+        open_date: document.getElementById('newLcDate').value || todayIso(),
+        bank_name: document.getElementById('newLcBank').value,
+        applicant_name: document.getElementById('newLcApplicant').value,
+        amount_fc: parseNumber(document.getElementById('newLcFc').value),
+        exchange_rate: parseNumber(document.getElementById('newLcRate').value),
+        currency: document.getElementById('newLcCur').value,
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Lỗi');
+    bootstrap.Modal.getInstance(document.getElementById('modalNewLc'))?.hide();
+    await loadLcs();
+    if (json.data?.id) document.getElementById('lcId').value = String(json.data.id);
+    toast('Đã đăng ký L/C xuất', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+});
+
+document.getElementById('btnSettleAr')?.addEventListener('click', async () => {
+  const id = document.getElementById('editSaleId').value;
+  try {
+    const res = await fetch('/api/sme/export-sale/' + id + '/settle-ar', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        settle_date: document.getElementById('settleDate').value || todayIso(),
+        exchange_rate: parseNumber(document.getElementById('settleFx').value),
+        payment_method: 'bank',
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Lỗi');
+    toast('Đã thu hồi CN — CLTG: ' + formatN(json.fx_diff), 'success');
+  } catch (e) { toast(e.message, 'error'); }
+});
+
+document.getElementById('btnDocDiscount')?.addEventListener('click', async () => {
+  const id = document.getElementById('editSaleId').value;
+  try {
+    const res = await fetch('/api/sme/export-sale/' + id + '/doc-discount', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        discount_date: document.getElementById('discDate').value || todayIso(),
+        exchange_rate: parseNumber(document.getElementById('discFx').value),
+        fee_vnd: parseNumber(document.getElementById('discFee').value),
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Lỗi');
+    toast('Đã giải ngân chiết khấu', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+});
+
+document.getElementById('btnExportCost')?.addEventListener('click', async () => {
+  const id = document.getElementById('editSaleId').value;
+  try {
+    const res = await fetch('/api/sme/export-sale/' + id + '/costs', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        cost_date: todayIso(),
+        description: document.getElementById('costDesc').value,
+        amount_vnd: parseNumber(document.getElementById('costAmt').value),
+        payment_method: 'bank',
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Lỗi');
+    toast('Đã ghi chi phí 641', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+});
+
+document.getElementById('customerName')?.addEventListener('change', () => {
+  if (['prepaid_full','prepaid_partial'].includes(document.getElementById('paymentMode').value))
+    loadAdvances();
+});
+document.getElementById('revenueFx')?.addEventListener('input', calcTotal);
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('saleDate').value = todayIso();
+  document.getElementById('riskDate').value = todayIso();
+  document.getElementById('settleDate') && (document.getElementById('settleDate').value = todayIso());
+  document.getElementById('discDate') && (document.getElementById('discDate').value = todayIso());
+  document.getElementById('newLcDate') && (document.getElementById('newLcDate').value = todayIso());
+
+  const params = new URLSearchParams(location.search);
+  const editId = params.get('sale_id') || params.get('id');
+
+  // Chỉ hiện/ẩn field — không gọi API advances/LC khi mặc định T/T
+  const modeEl = document.getElementById('paymentMode');
+  const mode = modeEl ? modeEl.value : 'unpaid';
+  document.getElementById('advanceWrap')?.classList.toggle('hidden-field', !(mode === 'prepaid_full' || mode === 'prepaid_partial'));
+  document.getElementById('lcWrap')?.classList.toggle('hidden-field', !(mode === 'lc' || mode === 'lc_usance'));
+
+  const productsReady = ensureProductsLoaded().then(() => {
+    document.querySelectorAll('#itemsBody select.prod').forEach(sel => {
+      const cur = sel.value;
+      sel.innerHTML = productOptionsHtml();
+      if (cur) sel.value = cur;
+    });
+  });
+
+  if (!editId) {
+    addRow();
+    productsReady.catch(() => {});
+    return;
+  }
+
+  document.getElementById('editSaleId').value = editId;
+  document.getElementById('postActions')?.classList.remove('d-none');
+  try {
+    const [json] = await Promise.all([
+      fetch('/api/sme/export-sale/' + editId).then(r => r.json()),
+      productsReady,
+    ]);
+    if (!json.success) throw new Error(json.error || 'Không tải được');
+    const d = json.data;
+    document.getElementById('saleNo').value = d.sale_no || '';
+    document.getElementById('saleDate').value = (d.date||'').slice(0,10);
+    document.getElementById('riskDate').value = (d.risk_transfer_date || d.date || '').slice(0,10);
+    document.getElementById('customerName').value = d.customer_name || '';
+    document.getElementById('address').value = d.address || '';
+    document.getElementById('currency').value = d.currency || 'USD';
+    document.getElementById('revenueFx').value = d.exchange_rate || 1;
+    document.getElementById('customsFx').value = d.customs_fx_rate || d.exchange_rate || 1;
+    document.getElementById('paymentMode').value = d.payment_mode || 'unpaid';
+    document.getElementById('exportTaxFc').value = d.export_tax_fc || 0;
+    document.getElementById('incoterms').value = d.incoterms || 'FOB';
+    document.getElementById('blNo').value = d.bl_no || '';
+    document.getElementById('customsDeclNo').value = d.customs_decl_no || '';
+    document.getElementById('note').value = d.note || '';
+    if (d.warehouse_code) document.getElementById('warehouseCode').value = d.warehouse_code;
+    document.getElementById('itemsBody').innerHTML = '';
+    (d.items || []).forEach(it => addRow({
+      product_id: it.product_id, unit: it.unit, qty: it.quantity || it.qty,
+      price: it.price, discount_pct: it.discount_pct,
+    }));
+    if (!(d.items || []).length) addRow();
+    const pm = d.payment_mode || 'unpaid';
+    window._xkSkipPayFetch = true;
+    togglePayMode();
+    window._xkSkipPayFetch = false;
+    const tasks = [];
+    if (pm === 'prepaid_full' || pm === 'prepaid_partial') tasks.push(loadAdvances());
+    if (pm === 'lc' || pm === 'lc_usance') tasks.push(loadLcs());
+    if (tasks.length) await Promise.all(tasks);
+    if (d.linked_lc_id) document.getElementById('lcId').value = String(d.linked_lc_id);
+    const pending = (d.linked_advances || []).map(a => a.voucher_id);
+    [...document.getElementById('advanceIds').options].forEach(o => {
+      if (pending.includes(+o.value)) o.selected = true;
+    });
+    syncAdvance();
+  } catch (e) { toast(e.message, 'error'); }
+});
+</script>
+{% endblock %}

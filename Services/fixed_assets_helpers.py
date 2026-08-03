@@ -131,12 +131,30 @@ def register_fixed_asset_from_import(
     subtotal,
     so_thang_khau_hao: int | None = None,
     ngay_bat_dau_su_dung: str | None = None,
+    capitalized_cost=None,
 ):
-    """Ghi nhận TSCĐ khi nhập kho — không qua tồn POS."""
+    """Ghi nhận TSCĐ khi nhập kho — không qua tồn POS.
+
+    Nguyên giá tính khấu hao = giá vốn hóa (CIF − CK + thuế NK + TTĐB),
+    không gồm VAT đầu vào khấu trừ.
+    """
     ensure_fixed_assets_schema(c.connection)
     ma_ts = (product_code or f'TSCD{product_id:04d}').strip()
+    qty_f = float(qty or 1) or 1.0
+    unit_ex_vat = float(buyprice or 0)
     base_val = float(subtotal or 0) - float(discount_amount or 0)
-    nguyen_gia = float(line_total or base_val + float(tax_amount or 0))
+    # Ưu tiên giá vốn hóa từ phiếu nhập (đã gồm thuế NK / TTĐB)
+    if capitalized_cost is not None and float(capitalized_cost or 0) > 0:
+        nguyen_gia = round(float(capitalized_cost), 2)
+    elif unit_ex_vat > 0:
+        nguyen_gia = round(unit_ex_vat * qty_f, 2)
+    elif base_val > 0:
+        nguyen_gia = round(base_val, 2)
+    else:
+        # line_total đôi khi gồm VAT — trừ đi nếu có
+        lt = float(line_total or 0)
+        vat = float(tax_amount or 0)
+        nguyen_gia = round(max(0.0, lt - vat) if vat > 0 and lt >= vat else lt, 2)
     start_date = (ngay_bat_dau_su_dung or import_date or '')[:10]
     if not start_date:
         from datetime import date as _date
@@ -200,11 +218,24 @@ def register_tool_from_import(
     line_total,
     subtotal,
     discount_amount,
+    capitalized_cost=None,
 ):
-    """Ghi nhận CCDC khi nhập kho."""
+    """Ghi nhận CCDC khi nhập kho — nguyên giá = giá vốn hóa (gồm NK/TTĐB, không VAT)."""
     ensure_fixed_assets_schema(c.connection)
     ma = (product_code or f'CCDC{product_id:04d}').strip()
-    nguyen_gia = float(line_total or 0)
+    qty_f = float(qty or 1) or 1.0
+    unit_ex_vat = float(buyprice or 0)
+    base_val = float(subtotal or 0) - float(discount_amount or 0)
+    if capitalized_cost is not None and float(capitalized_cost or 0) > 0:
+        nguyen_gia = round(float(capitalized_cost), 2)
+    elif unit_ex_vat > 0:
+        nguyen_gia = round(unit_ex_vat * qty_f, 2)
+    elif base_val > 0:
+        nguyen_gia = round(base_val, 2)
+    else:
+        lt = float(line_total or 0)
+        vat = float(tax_amount or 0)
+        nguyen_gia = round(max(0.0, lt - vat) if vat > 0 and lt >= vat else lt, 2)
     branch = 'HQ'
     try:
         from Services.sme.branches import get_warehouse_branch_code

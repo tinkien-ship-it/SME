@@ -17,6 +17,7 @@ from Services.production_costing import (
     list_material_products,
     list_production_orders,
     preview_materials,
+    receive_finished_goods,
     save_bom,
 )
 
@@ -280,6 +281,18 @@ def register_production_routes(app):
         conn = get_db_connection()
         try:
             ensure_production_schema(conn)
+            sme = False
+            try:
+                from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
+                profile = get_current_tenant_profile()
+                sme = is_sme_regime(profile.get('accounting_regime'))
+            except Exception:
+                profile = {}
+                sme = False
+
+            # SME: trì hoãn nhập kho TP / bút toán 155 — dùng nút Nhập kho thành phẩm
+            defer_fg = bool(data.get('defer_fg_receipt')) if 'defer_fg_receipt' in data else sme
+
             order = create_production_order(
                 conn,
                 finished_product_id=fg_id,
@@ -291,12 +304,11 @@ def register_production_routes(app):
                 other_cost=float(data.get('other_cost') or 0),
                 created_by=username,
                 allow_negative_stock=bool(data.get('allow_negative_stock')),
+                defer_fg_receipt=defer_fg,
             )
             journal_info = None
             try:
-                from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
-                profile = get_current_tenant_profile()
-                if is_sme_regime(profile.get('accounting_regime')):
+                if sme:
                     from Services.sme.bootstrap import ensure_sme_accounting_ready
                     from Services.sme.production_journal import post_production_journal
                     ensure_sme_accounting_ready(
@@ -314,10 +326,17 @@ def register_production_routes(app):
                 logger.exception('SME production journal: %s', jexc)
                 journal_info = {'error': str(jexc)}
 
-            msg = (
-                f"Đã sản xuất {order['voucher_no']}: "
-                f"giá thành {order['unit_cost']:,.0f} đ/{order.get('finished_unit') or 'ĐV'}"
-            )
+            if defer_fg:
+                msg = (
+                    f"Đã lập lệnh {order['voucher_no']}: xuất NVL, CPSX vào 154. "
+                    f"Giá thành dự kiến {order['unit_cost']:,.0f} đ/{order.get('finished_unit') or 'ĐV'}. "
+                    f"Dùng nút Nhập kho thành phẩm để nhập theo đợt."
+                )
+            else:
+                msg = (
+                    f"Đã sản xuất {order['voucher_no']}: "
+                    f"giá thành {order['unit_cost']:,.0f} đ/{order.get('finished_unit') or 'ĐV'}"
+                )
             if journal_info and journal_info.get('entry_no'):
                 msg += f" · sổ {journal_info['entry_no']}"
             return jsonify({
@@ -330,6 +349,85 @@ def register_production_routes(app):
             return jsonify({'success': False, 'error': str(exc)}), 400
         except Exception as exc:
             logger.exception('order create: %s', exc)
+            return jsonify({'success': False, 'error': str(exc)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/production/orders/<int:order_id>/receive-fg', methods=['POST'])
+    @login_required
+    def api_production_receive_fg(order_id):
+        """Nhập kho thành phẩm theo đợt (toàn bộ phần còn lại hoặc một phần)."""
+        data = request.get_json(silent=True) or {}
+        username = ''
+        try:
+            username = getattr(current_user, 'username', '') or ''
+        except Exception:
+            pass
+        conn = get_db_connection()
+        try:
+            ensure_production_schema(conn)
+            qty = float(data.get('qty') or data.get('qty_received') or 0)
+            result = receive_finished_goods(
+                conn,
+                order_id,
+                qty=qty,
+                receipt_date=data.get('receipt_date') or data.get('date'),
+                note=data.get('note') or '',
+                created_by=username,
+            )
+            journal_info = None
+            receipt = result['receipt']
+            try:
+                from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
+                profile = get_current_tenant_profile()
+                if is_sme_regime(profile.get('accounting_regime')):
+                    from Services.sme.bootstrap import ensure_sme_accounting_ready
+                    from Services.sme.production_journal import post_fg_receipt_journal
+                    ensure_sme_accounting_ready(
+                        conn,
+                        accounting_regime=profile.get('accounting_regime'),
+                        commit=False,
+                    )
+                    journal_info = post_fg_receipt_journal(
+                        conn,
+                        result['order'],
+                        receipt,
+                        created_by=username,
+                        commit=True,
+                    )
+            except Exception as jexc:
+                logger.exception('SME FG receipt journal: %s', jexc)
+                journal_info = {'error': str(jexc)}
+
+            order = get_production_order(conn, order_id) or result['order']
+            # Lấy lại phiếu nhập (có journal_entry_id nếu vừa ghi sổ)
+            rid = int(receipt['id'])
+            for r in order.get('fg_receipts') or []:
+                if int(r['id']) == rid:
+                    receipt = r
+                    break
+            msg = (
+                f"Đã nhập kho {float(receipt.get('qty') or 0):g} "
+                f"{order.get('finished_unit') or ''} ({receipt.get('receipt_no')}). "
+                f"Đã nhập {float(order.get('qty_received') or 0):g}/"
+                f"{float(order.get('qty_planned') or order.get('qty_completed') or 0):g}; "
+                f"còn {float(order.get('qty_remaining') or 0):g}."
+            )
+            if journal_info and journal_info.get('entry_no'):
+                msg += f" · sổ {journal_info['entry_no']} (Nợ 155 / Có 154)"
+            elif journal_info and journal_info.get('error'):
+                msg += f" · kho đã cập nhật nhưng ghi sổ lỗi: {journal_info['error']}"
+            return jsonify({
+                'success': True,
+                'data': order,
+                'receipt': receipt,
+                'journal': journal_info,
+                'message': msg,
+            })
+        except ValueError as exc:
+            return jsonify({'success': False, 'error': str(exc)}), 400
+        except Exception as exc:
+            logger.exception('receive fg: %s', exc)
             return jsonify({'success': False, 'error': str(exc)}), 500
         finally:
             conn.close()

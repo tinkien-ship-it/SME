@@ -801,7 +801,13 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
                 posting_date=data.get('date'),
                 commit=True,
             )
-            return jsonify({'success': True, 'data': doc})
+            return jsonify({
+                'success': True,
+                'data': doc,
+                'message': doc.get('message') or (
+                    'Đã xóa bút toán' if doc.get('mode') == 'hard_delete' else 'Đã hủy chứng từ'
+                ),
+            })
         except ValueError as e:
             conn.rollback()
             return jsonify({'success': False, 'error': str(e)}), 400

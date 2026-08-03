@@ -107,7 +107,7 @@
                     <label class="form-label small fw-bold">Ngày nhập</label>
                     <input type="text" class="form-control form-control-sm text-center" id="importDate" required>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-2" id="domesticPayStatusWrap">
                     <label class="form-label small fw-bold text-primary">Trạng thái thanh toán</label>
                     <select class="form-select form-select-sm fw-bold" id="paymentStatus" onchange="togglePaymentMethod()">
                         <option value="Chưa thanh toán">Chưa thanh toán</option>
@@ -121,6 +121,15 @@
                         <option value="bank">Chuyển khoản (112)</option>
                     </select>
                 </div>
+                <div class="col-md-3 nk-only hidden-field" id="importPayModeWrap">
+                    <label class="form-label small fw-bold text-primary">Thanh toán hàng NK</label>
+                    <select class="form-select form-select-sm fw-bold text-primary" id="importPaymentMode" onchange="toggleImportPaymentMode()">
+                        <option value="unpaid">Chưa thanh toán (công nợ 331)</option>
+                        <option value="prepaid_full">Đã thanh toán trước đủ (tạm ứng)</option>
+                        <option value="prepaid_partial">Đã ứng một phần</option>
+                        <option value="lc">Thanh toán bằng L/C</option>
+                    </select>
+                </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-primary">Nguồn hàng</label>
                     <select class="form-select form-select-sm fw-bold text-primary" id="source_of_goods" onchange="toggleImportSource()">
@@ -132,20 +141,76 @@
                     <label class="form-label small fw-bold text-primary">Tỷ giá (VND)</label>
                     <input type="text" class="form-control form-control-sm text-end format-input fw-bold text-success" id="ExchangeRate" value="1">
                 </div>
-                <div class="col-md-2 d-none" id="extraCostWrapper" title="SME: dùng Phân bổ chi phí trên HĐ mua">
-                    <label class="form-label small fw-bold">CP mua (dùng Phân bổ)</label>
-                    <input type="text" class="form-control form-control-sm text-end format-input fw-bold text-success" id="extraCost" value="0" readonly>
+                <div class="col-md-2 nk-only hidden-field">
+                    <label class="form-label small fw-bold text-primary">Số tờ khai HQ</label>
+                    <input type="text" class="form-control form-control-sm" id="customs_decl_no" placeholder="Số TK…">
+                </div>
+                <div class="col-md-2 nk-only hidden-field">
+                    <label class="form-label small fw-bold text-primary">Ngày mở tờ khai</label>
+                    <input type="date" class="form-control form-control-sm" id="customs_decl_date">
+                </div>
+                <div class="col-md-4 nk-only hidden-field" id="importAdvanceWrap">
+                    <label class="form-label small fw-bold text-primary">
+                        Phiếu chi tạm ứng NCC
+                        <a href="/SME_DanhSachPhieuChi" target="_blank" class="small fw-normal ms-1">(lập PC)</a>
+                    </label>
+                    <select class="form-select form-select-sm" id="importAdvanceIds" multiple size="3"
+                            title="Giữ Ctrl/Cmd để chọn nhiều"
+                            onchange="syncImportAdvanceAmounts()"></select>
+                    <div class="row g-1 mt-1">
+                        <div class="col-4">
+                            <label class="form-label small mb-0">Tạm ứng (NT)</label>
+                            <input type="text" class="form-control form-control-sm text-end format-input fw-bold"
+                                   id="importAdvanceFc" value="0" onchange="onImportAdvanceFcEdited()">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small mb-0">TG ngày ứng</label>
+                            <input type="text" class="form-control form-control-sm text-end format-input"
+                                   id="importAdvanceRate" value="1" readonly tabindex="-1">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small mb-0">Tạm ứng (VND)</label>
+                            <input type="text" class="form-control form-control-sm text-end format-input text-success fw-bold"
+                                   id="importAdvanceVnd" value="0" readonly tabindex="-1">
+                        </div>
+                    </div>
+                    <div class="form-text small" id="importAdvanceHint">Chọn PC đã ứng (Nợ 331 / Có 1122) — hệ thống lấy số tiền để tách tỷ giá hạch toán.</div>
+                </div>
+                <div class="col-md-3 nk-only hidden-field" id="importLcWrap">
+                    <label class="form-label small fw-bold text-primary">
+                        Thư tín dụng (L/C)
+                        <a href="/SME_letter_of_credit" target="_blank" class="small fw-normal ms-1">(mở L/C)</a>
+                    </label>
+                    <select class="form-select form-select-sm" id="importLcId">
+                        <option value="">— Chọn L/C đã mở —</option>
+                    </select>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small fw-bold text-primary">Ghi chú phiếu nhập</label>
                     <input type="text" class="form-control form-control-sm" id="note" placeholder="Nhập ghi chú...">
                 </div>
             </div>
+            <div class="row g-2 mt-1 nk-only hidden-field">
+                <div class="col-12">
+                    <div class="alert alert-info py-2 small mb-0">
+                        <strong>Nhập khẩu:</strong> HH/NVL → <b>151</b>; TSCĐ → <b>2411</b> (chưa tăng tồn).
+                        G1 luôn <b>Có 331</b> — chọn thanh toán: chưa TT / ứng đủ / ứng một phần / L/C (không ghi 111/112 trên phiếu này).
+                        Sau đó: <b>Nộp thuế HQ</b> → <b>Nhập kho</b> (151→156 · 2411→2112).
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="card shadow-sm border-0 mb-5">
-            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
-                <span class="small fw-bold text-primary uppercase"><i class="bi bi-list-ul"></i> Chi tiết mặt hàng</span>
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom flex-wrap gap-2">
+                <div>
+                    <span class="small fw-bold text-primary uppercase"><i class="bi bi-list-ul"></i> Chi tiết mặt hàng</span>
+                    <div id="importTaxHint" class="small text-muted mt-1 hidden-field">
+                        Hàng nhập khẩu: thuế NK + TTĐB nhập theo % hoặc số tuyệt đối (tờ khai) —
+                        được vốn hóa vào giá vốn HH / NVL / TSCĐ / CCDC (không gồm VAT).
+                        Bút toán: Có 3333 (NK), Có 3332 (TTĐB).
+                    </div>
+                </div>
                 <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="addRow()">
                     <i class="bi bi-plus-lg"></i> THÊM DÒNG
                 </button>
@@ -157,8 +222,8 @@
                             <tr>
                                 <th style="width:55px;">ID</th>
                                 <th style="width:110px;">Kho</th>
-                                <th style="width:140px; color:#b30000;">Loại hàng</th>
-                                <th style="width:90px;">Định khoản</th>
+                                <th style="width:200px; color:#b30000;" id="thLineType">Loại hàng</th>
+                                <th style="width:110px;" id="thAcctHint">Định khoản</th>
                                 <th style="width:280px;">Tên hàng</th>
                                 <th style="width:90px;">ĐVT</th>
                                 <th style="width:80px;">SL</th>
@@ -167,9 +232,11 @@
                                 <th style="width:60px;">% CK</th>
                                 <th style="width:90px;">Tiền CK</th>
                                 <th style="width:70px;">% VAT</th>
-                                <th style="width:70px;" class="nk-col">% NK</th>
-                                <th style="width:90px;">Thuế giá trị gia tăng</th>
-                                <th style="width:90px;" class="nk-col">Thuế NK</th>
+                                <th style="width:70px;" class="nk-col" title="Thuế nhập khẩu">% NK</th>
+                                <th style="width:70px;" class="nk-col" title="Thuế tiêu thụ đặc biệt">% TTĐB</th>
+                                <th style="width:90px;">Thuế GTGT</th>
+                                <th style="width:95px;" class="nk-col">Thuế NK</th>
+                                <th style="width:95px;" class="nk-col">Thuế TTĐB</th>
                                 <th style="width:120px; background:#fff7ed;">Thanh toán</th>
                                 <th style="width:90px;">Mã SP</th>
                                 <th style="width:90px;" class="stock-col">ĐV CB</th>
@@ -227,23 +294,29 @@ const WAREHOUSES = {{ warehouses|default([])|tojson }};
 const IMPORT_MODE = {{ (import_mode|default('stock'))|tojson }};
 const IS_SERVICE_MODE = IMPORT_MODE === 'service';
 const LINE_TYPE_OPTIONS = [
-    { value: 'goods', label: 'Hàng hóa', debit: '156', needsWarehouse: true },
-    { value: 'materials', label: 'Nguyên vật liệu', debit: '152', needsWarehouse: true },
-    { value: 'fixed_asset', label: 'Tài sản cố định', debit: '2112', needsWarehouse: false },
-    { value: 'tools', label: 'Công cụ dụng cụ', debit: '153', needsWarehouse: false },
-    { value: 'service', label: 'Dịch vụ', debit: '642', needsWarehouse: false },
+    { value: 'goods', label: 'Hàng hóa', transitLabel: 'Hàng đang đi đường (HH)', debit: '156', transitDebit: '151', needsWarehouse: true },
+    { value: 'materials', label: 'Nguyên vật liệu', transitLabel: 'Hàng đang đi đường (NVL)', debit: '152', transitDebit: '151', needsWarehouse: true },
+    { value: 'fixed_asset', label: 'Tài sản cố định', transitLabel: 'TSCĐ đang đi đường', debit: '2112', transitDebit: '2411', needsWarehouse: false },
+    { value: 'tools', label: 'Công cụ dụng cụ', transitLabel: 'Hàng đang đi đường (CCDC)', debit: '153', transitDebit: '151', needsWarehouse: false },
+    { value: 'service', label: 'Dịch vụ', transitLabel: 'Dịch vụ', debit: '642', transitDebit: '642', needsWarehouse: false },
 ];
 const DEFAULT_LINE_TYPE = IS_SERVICE_MODE ? 'service' : 'goods';
 const LINE_TYPE_LABEL = Object.fromEntries(LINE_TYPE_OPTIONS.map(o => [o.value, o.label]));
 const NEXT_CODE_API = '/api/products/next-code';
 let currentCashBalance = 0;
 let currentBankBalance = 0;
+/** Snapshot khi sửa phiếu trong nước đã TT — để không trừ trùng số dư đã chi. */
+window._editDomesticPaidSnapshot = null;
 let suppliersCache = [];
 
 function getImportType() {
     const v = (document.getElementById('source_of_goods')?.value || 'DOMESTIC').trim().toUpperCase();
     if (v === 'IMPORT' || v === 'IMPORTED_GOODS' || v === 'IMPORTED') return 'IMPORT';
     return 'DOMESTIC';
+}
+
+function isImportTransitMode() {
+    return getImportType() === 'IMPORT' && !IS_SERVICE_MODE;
 }
 
 function getExchangeRate() {
@@ -256,16 +329,53 @@ function toggleImportSource() {
     const isImport = getImportType() === 'IMPORT';
     const wrap = document.getElementById('exchangeRateWrapper');
     if (wrap) wrap.classList.toggle('hidden-field', !isImport);
-    document.querySelectorAll('.nk-col, .nk-cell').forEach(el => {
+    document.querySelectorAll('.nk-col, .nk-cell, .nk-only').forEach(el => {
         el.classList.toggle('hidden-field', !isImport);
     });
+    const hint = document.getElementById('importTaxHint');
+    if (hint) {
+        hint.classList.toggle('hidden-field', !isImport);
+        if (isImport) {
+            hint.innerHTML = 'Hàng nhập khẩu: HH/NVL/CCDC → <b>Nợ 151</b>; TSCĐ → <b>Nợ 2411</b>. '
+                + 'Có 3333/3332/33312 · Nợ 13312. Chưa tăng tồn — nộp thuế HQ rồi nhập kho / đưa vào SD.';
+        }
+    }
+    // Trong nước: TT + hình thức 111/112. NK: phương thức unpaid/advance/L/C (luôn Có 331).
+    const domPay = document.getElementById('domesticPayStatusWrap');
+    const methodWrap = document.getElementById('methodWrapper');
+    if (domPay) domPay.classList.toggle('hidden-field', isImport);
+    if (methodWrap && isImport) methodWrap.classList.add('hidden-field');
     if (!isImport) {
         const rateEl = document.getElementById('ExchangeRate');
         if (rateEl) rateEl.value = '1';
-        document.querySelectorAll('.import-tax-pct').forEach(el => { el.value = '0'; });
+        document.querySelectorAll('.import-tax-pct, .excise-tax-pct').forEach(el => { el.value = '0'; });
+        document.querySelectorAll('.import-tax-amt, .excise-tax-amt').forEach(el => { el.value = '0'; });
+        try { togglePaymentMethod(); } catch (e) {}
+    } else {
+        try { toggleImportPaymentMode(); } catch (e) {}
+        loadImportPaymentPickers();
     }
-    document.querySelectorAll('#itemsTable tbody tr').forEach(row => calcRow(row));
+    refreshLineTypeHeaders();
+    document.querySelectorAll('#itemsTable tbody tr').forEach(row => {
+        refreshLineTypeSelect(row);
+        applyLineTypeUI(row);
+        calcRow(row);
+    });
     calcTotal();
+}
+
+function refreshLineTypeHeaders() {
+    const transit = isImportTransitMode();
+    const thType = document.getElementById('thLineType');
+    const thAcct = document.getElementById('thAcctHint');
+    if (thType) {
+        thType.textContent = transit ? 'Loại (đi đường)' : 'Loại hàng';
+        thType.style.color = transit ? '#0d6efd' : '#b30000';
+    }
+    if (thAcct) {
+        thAcct.textContent = transit ? 'Nợ 151/2411' : 'Định khoản';
+        thAcct.classList.toggle('text-primary', transit);
+    }
 }
 
 function normalizeLineType(raw) {
@@ -278,7 +388,15 @@ function normalizeLineType(raw) {
 
 function lineTypeMeta(type) {
     const t = normalizeLineType(type);
-    return LINE_TYPE_OPTIONS.find(o => o.value === t) || LINE_TYPE_OPTIONS[0];
+    const base = LINE_TYPE_OPTIONS.find(o => o.value === t) || LINE_TYPE_OPTIONS[0];
+    const transit = isImportTransitMode() && t !== 'service';
+    return {
+        ...base,
+        label: transit ? (base.transitLabel || base.label) : base.label,
+        debit: transit ? (base.transitDebit || '151') : base.debit,
+        finalDebit: base.debit,
+        inTransit: transit,
+    };
 }
 
 function buildWarehouseOptions(selected) {
@@ -292,9 +410,17 @@ function buildWarehouseOptions(selected) {
 
 function buildLineTypeOptions(selected) {
     const sel = normalizeLineType(selected);
-    return LINE_TYPE_OPTIONS.map(o =>
-        `<option value="${o.value}" ${o.value === sel ? 'selected' : ''}>${o.label}</option>`
-    ).join('');
+    return LINE_TYPE_OPTIONS.map(o => {
+        const meta = lineTypeMeta(o.value);
+        return `<option value="${o.value}" ${o.value === sel ? 'selected' : ''}>${meta.label}</option>`;
+    }).join('');
+}
+
+function refreshLineTypeSelect(row) {
+    const sel = row.querySelector('.line-type-select');
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = buildLineTypeOptions(cur);
 }
 
 function isServiceLineType(type) {
@@ -332,10 +458,22 @@ function applyLineTypeUI(row) {
         el.classList.toggle('hidden-field', isSvc || type === 'fixed_asset' || type === 'tools');
     });
     const hint = row.querySelector('.acct-hint');
-    if (hint) hint.textContent = `Nợ ${meta.debit}`;
+    if (hint) {
+        if (meta.inTransit) {
+            const debitShow = meta.debit; // 151 hoặc 2411
+            hint.innerHTML = `<span class="text-primary fw-bold">Nợ ${debitShow}</span>`
+                + `<div class="small text-muted" style="font-size:.7rem;line-height:1.1">→ ${meta.finalDebit} khi về / đưa SD</div>`;
+        } else {
+            hint.textContent = `Nợ ${meta.debit}`;
+        }
+    }
     const typeSelect = row.querySelector('.line-type-select');
     if (typeSelect) {
-        typeSelect.className = `line-type-select form-select form-select-sm border-0 type-${type}`;
+        typeSelect.className = `line-type-select form-select form-select-sm border-0 type-${type}`
+            + (meta.inTransit ? ' text-primary fw-semibold' : '');
+        typeSelect.title = meta.inTransit
+            ? `${meta.label} — hạch toán Nợ ${meta.debit}`
+            : `${meta.label} — Nợ ${meta.debit}`;
     }
     const nameInput = row.querySelector('.product-name');
     if (nameInput) {
@@ -529,9 +667,12 @@ function addRow(data = {}) {
     tr.className = 'import-row';
     const lineType = normalizeLineType(data.line_type || data.type || data.invoice_product_type || DEFAULT_LINE_TYPE);
     const whCode = data.warehouse_code || '';
+    const taxPctNum = Number(data.tax_pct);
+    const taxPct = Number.isFinite(taxPctNum) ? taxPctNum : 10;
+    const hasPid = data.product_id != null && data.product_id !== '' && Number(data.product_id) > 0;
 
     tr.innerHTML = `
-        <td><input type="text" class="p-id form-control form-control-sm bg-light text-center border-0" readonly value="${data.product_id || ''}"></td>
+        <td><input type="text" class="p-id form-control form-control-sm bg-light text-center border-0" readonly value="${hasPid ? data.product_id : ''}"></td>
         <td class="warehouse-cell">
             <select class="warehouse-select form-select form-select-sm border-0">${buildWarehouseOptions(whCode)}</select>
         </td>
@@ -540,31 +681,33 @@ function addRow(data = {}) {
         </td>
         <td class="text-center"><span class="acct-hint">Nợ ${lineTypeMeta(lineType).debit}</span></td>
         <td>
-            <input type="text" class="product-name form-control form-control-sm border-0" value="${data.invoice_name || ''}" placeholder="Gõ tên sản phẩm...">
-            <input type="hidden" class="invoice-name-hidden" value="${data.invoice_name || ''}">
+            <input type="text" class="product-name form-control form-control-sm border-0" value="${(data.invoice_name || '').replace(/"/g, '&quot;')}" placeholder="Gõ tên sản phẩm...">
+            <input type="hidden" class="invoice-name-hidden" value="${(data.invoice_name || '').replace(/"/g, '&quot;')}">
         </td>
         <td><input type="text" class="invoice-unit form-control form-control-sm text-center border-0" value="${data.unit || ''}"></td>
-        <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty || 1}"></td>
+        <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty != null && data.qty !== '' ? data.qty : 1}"></td>
         <td><input type="text" class="buy-price form-control form-control-sm text-end border-0" value="${formatVNDCustom(data.price || 0)}"></td>
         <td class="line-total text-end fw-bold pe-2">0</td>
         <td><input type="number" class="disc-pct form-control form-control-sm text-center border-0" value="${data.discount_pct || 0}" step="0.01"></td>
         <td class="disc-amt text-end pe-2">0</td>
         <td><select class="tax-pct form-select form-select-sm border-0">
-            <option value="0" ${String(data.tax_pct) === '0' ? 'selected' : ''}>0%</option>
-            <option value="5" ${String(data.tax_pct) === '5' ? 'selected' : ''}>5%</option>
-            <option value="8" ${String(data.tax_pct) === '8' ? 'selected' : ''}>8%</option>
-            <option value="10" ${!data.tax_pct || String(data.tax_pct) === '10' ? 'selected' : ''}>10%</option>
+            <option value="0" ${taxPct === 0 ? 'selected' : ''}>0%</option>
+            <option value="5" ${taxPct === 5 ? 'selected' : ''}>5%</option>
+            <option value="8" ${taxPct === 8 ? 'selected' : ''}>8%</option>
+            <option value="10" ${taxPct !== 0 && taxPct !== 5 && taxPct !== 8 ? 'selected' : ''}>10%</option>
         </select></td>
-        <td class="nk-cell"><input type="number" class="import-tax-pct form-control form-control-sm text-center border-0" value="${data.import_tax_pct || 0}" step="0.01" min="0" title="% thuế nhập khẩu"></td>
+        <td class="nk-cell"><input type="number" class="import-tax-pct form-control form-control-sm text-center border-0" value="${data.import_tax_pct || 0}" step="0.01" min="0" title="% thuế nhập khẩu — tính vào giá vốn"></td>
+        <td class="nk-cell"><input type="number" class="excise-tax-pct form-control form-control-sm text-center border-0" value="${data.excise_tax_pct || 0}" step="0.01" min="0" title="% thuế TTĐB trên (CIF + thuế NK) — tính vào giá vốn"></td>
         <td class="tax-amt text-end pe-2">0</td>
-        <td class="nk-cell import-tax-amt text-end pe-2 text-warning">0</td>
+        <td class="nk-cell"><input type="text" class="import-tax-amt form-control form-control-sm text-end border-0 text-warning" value="${formatVNDCustom(data.import_tax_amount || 0)}" title="Thuế NK (VND) — có thể sửa số tuyệt đối từ tờ khai"></td>
+        <td class="nk-cell"><input type="text" class="excise-tax-amt form-control form-control-sm text-end border-0 text-warning" value="${formatVNDCustom(data.excise_tax_amount || 0)}" title="Thuế TTĐB (VND) — có thể sửa số tuyệt đối từ tờ khai"></td>
         <td class="pay-amt text-end fw-bold text-danger pe-2">0</td>
-        <td><input type="text" class="product-code-preview form-control form-control-sm bg-light text-center border-0" readonly placeholder="Mã..."></td>
-        <td class="stock-only-cell"><input type="text" class="base-unit form-control form-control-sm text-center border-0"></td>
-        <td class="stock-only-cell"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0"></td>
-        <td class="stock-only-cell"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="1"></td>
-        <td class="stock-only-cell"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="0"></td>
-        <td class="stock-only-cell"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="0"></td>
+        <td><input type="text" class="product-code-preview form-control form-control-sm bg-light text-center border-0" readonly placeholder="Mã..." value="${data.product_code || ''}"></td>
+        <td class="stock-only-cell"><input type="text" class="base-unit form-control form-control-sm text-center border-0" value="${data.base_unit || data.unit || ''}"></td>
+        <td class="stock-only-cell"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0" value="${(data.wholesale_unit && data.wholesale_unit !== '—') ? data.wholesale_unit : ''}"></td>
+        <td class="stock-only-cell"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="${data.unit_ratio || 1}"></td>
+        <td class="stock-only-cell"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="${formatVNDCustom(data.base_sale_price || 0)}"></td>
+        <td class="stock-only-cell"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="${formatVNDCustom(data.sale_price || 0)}"></td>
         <td class="text-center">
             <button type="button" class="btn btn-sm text-danger" onclick="this.closest('tr').remove(); calcTotal()">
                 <i class="bi bi-trash"></i>
@@ -588,18 +731,43 @@ function addRow(data = {}) {
 
     attachRowEvents(tr);
     applyLineTypeUI(tr);
-    // Ẩn/hiện cột % NK theo nguồn hàng (không gọi full toggleImportSource mỗi dòng)
     const isImport = getImportType() === 'IMPORT';
     tr.querySelectorAll('.nk-cell').forEach(el => el.classList.toggle('hidden-field', !isImport));
-    if (data.invoice_name) performInitialMatch(tr, data.invoice_name, data.unit);
-    calcRow(tr);
+
+    // Sửa phiếu: đã có product_id — KHÔNG gọi performInitialMatch (tránh xóa pid / ghi đè loại hàng)
+    if (hasPid) {
+        tr.classList.add('row-exact-match');
+        calcRow(tr, data.preserve_tax_amounts ? { preserveTaxAmounts: true } : {});
+    } else if (data.invoice_name && !data.skip_match) {
+        performInitialMatch(tr, data.invoice_name, data.unit);
+        calcRow(tr);
+    } else {
+        calcRow(tr);
+    }
 }
 
 function attachRowEvents(row) {
-    row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', () => calcRow(row)));
+    row.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('input', () => {
+            if (el.classList.contains('import-tax-amt')) {
+                // Sửa tiền NK tuyệt đối → bỏ % để không ghi đè
+                const pct = row.querySelector('.import-tax-pct');
+                if (pct) pct.value = '0';
+                calcRow(row, { fromAmountField: 'import' });
+                return;
+            }
+            if (el.classList.contains('excise-tax-amt')) {
+                const pct = row.querySelector('.excise-tax-pct');
+                if (pct) pct.value = '0';
+                calcRow(row, { fromAmountField: 'excise' });
+                return;
+            }
+            calcRow(row);
+        });
+    });
 }
 
-function calcRow(row) {
+function calcRow(row, opts = {}) {
     const qty = parseNumber(row.querySelector('.qty').value);
     const price = parseNumber(row.querySelector('.buy-price').value);
     const rate = getExchangeRate();
@@ -610,20 +778,56 @@ function calcRow(row) {
     const afterDisc = rawTotal - discAmt;
     const isImport = getImportType() === 'IMPORT';
     const lineType = normalizeLineType(row.querySelector('.line-type-select')?.value);
-    const importTaxPct = (isImport && lineType !== 'service')
+    const canCapitalize = isImport && lineType !== 'service';
+    const importTaxPct = canCapitalize
         ? (parseFloat(row.querySelector('.import-tax-pct')?.value) || 0)
         : 0;
-    const importTaxAmt = Math.round(afterDisc * (importTaxPct / 100));
+    const exciseTaxPct = canCapitalize
+        ? (parseFloat(row.querySelector('.excise-tax-pct')?.value) || 0)
+        : 0;
+
+    const nkAmtEl = row.querySelector('.import-tax-amt');
+    const exciseAmtEl = row.querySelector('.excise-tax-amt');
+    // % thay đổi → tính lại tiền; sửa tiền tuyệt đối → giữ số người dùng nhập
+    let importTaxAmt = 0;
+    let exciseTaxAmt = 0;
+    if (canCapitalize) {
+        if (opts.preserveTaxAmounts) {
+            importTaxAmt = Math.round(parseNumber(nkAmtEl?.value));
+            exciseTaxAmt = Math.round(parseNumber(exciseAmtEl?.value));
+        } else if (opts.fromAmountField === 'import') {
+            importTaxAmt = Math.round(parseNumber(nkAmtEl?.value));
+        } else if (importTaxPct > 0) {
+            importTaxAmt = Math.round(afterDisc * (importTaxPct / 100));
+            if (nkAmtEl) nkAmtEl.value = formatVNDCustom(importTaxAmt);
+        } else if (opts.fromAmountField !== 'import') {
+            importTaxAmt = Math.round(parseNumber(nkAmtEl?.value));
+        }
+
+        if (!opts.preserveTaxAmounts) {
+            const exciseBase = afterDisc + importTaxAmt;
+            if (opts.fromAmountField === 'excise') {
+                exciseTaxAmt = Math.round(parseNumber(exciseAmtEl?.value));
+            } else if (exciseTaxPct > 0) {
+                exciseTaxAmt = Math.round(exciseBase * (exciseTaxPct / 100));
+                if (exciseAmtEl) exciseAmtEl.value = formatVNDCustom(exciseTaxAmt);
+            } else if (opts.fromAmountField !== 'excise') {
+                exciseTaxAmt = Math.round(parseNumber(exciseAmtEl?.value));
+            }
+        }
+    } else {
+        if (nkAmtEl) nkAmtEl.value = '0';
+        if (exciseAmtEl) exciseAmtEl.value = '0';
+    }
+
     const vatPct = parseFloat(row.querySelector('.tax-pct').value) || 0;
-    const vatBase = afterDisc + importTaxAmt;
+    const vatBase = afterDisc + importTaxAmt + exciseTaxAmt;
     const vatAmt = Math.round(vatBase * (vatPct / 100));
-    const finalPay = afterDisc + importTaxAmt + vatAmt;
+    const finalPay = afterDisc + importTaxAmt + exciseTaxAmt + vatAmt;
 
     row.querySelector('.line-total').textContent = formatVNDCustom(rawTotal);
     row.querySelector('.disc-amt').textContent = formatVNDCustom(discAmt);
     row.querySelector('.tax-amt').textContent = formatVNDCustom(vatAmt);
-    const nkAmtEl = row.querySelector('.import-tax-amt');
-    if (nkAmtEl) nkAmtEl.textContent = formatVNDCustom(importTaxAmt);
     row.querySelector('.pay-amt').textContent = formatVNDCustom(finalPay);
     calcTotal();
 }
@@ -633,35 +837,133 @@ function calcTotal() {
     document.querySelectorAll('.pay-amt').forEach(el => totalItemsPay += parseNumber(el.textContent));
     document.getElementById('totalPayment').textContent = formatVNDCustom(totalItemsPay);
     document.getElementById('totalImport').textContent = formatVNDCustom(totalItemsPay);
+    // prepaid_full: cắt tạm ứng theo giá trị hàng khi đổi qty/giá
+    const mode = document.getElementById('importPaymentMode')?.value || '';
+    if (mode === 'prepaid_full' && _selectedAdvanceOptions().length) {
+        syncImportAdvanceAmounts();
+    }
 }
 
-async function loadQuySoDu() {
-    try {
-        const res = await fetch('/api/sme/cash-balances');
-        const data = await res.json();
-        if (data.success) {
-            currentCashBalance = Number(data.so_du_tien_mat || 0);
-            currentBankBalance = Number(data.so_du_ngan_hang || 0);
-        }
-    } catch (e) { console.warn("Lỗi tải số dư quỹ:", e); }
+async function loadQuySoDu(opts) {
+    const asOf = (opts && opts.as_of) || getImportDateIso() || '';
+    const bal = await (window.loadSmeCashBalances
+        ? window.loadSmeCashBalances({ as_of: asOf })
+        : Promise.resolve(null));
+    if (bal) {
+        currentCashBalance = Number(bal.cash || 0);
+        currentBankBalance = Number(bal.bank || 0);
+    }
+    return bal;
+}
+
+function getImportDateIso() {
+    const raw = (document.getElementById('importDate')?.value || '').trim();
+    if (!raw) return '';
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+    // dd/mm/yyyy
+    const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) {
+        return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    }
+    return raw;
+}
+
+/**
+ * Kiểm tra số dư theo từng trường hợp phiếu nhập:
+ * - Trong nước + chưa TT → không kiểm quỹ (Có 331)
+ * - Trong nước + đã TT TM/NH → kiểm đúng TK 1111 / 1121 theo số phải trả (hàng+VAT)
+ * - Nhập khẩu (unpaid / tạm ứng / L/C) → không kiểm 111/112 trên phiếu này
+ *   (tiền đã chi qua PC tạm ứng / ký quỹ L/C / nộp thuế HQ riêng)
+ */
+function shouldCheckCashOnImport() {
+    if (getImportType() === 'IMPORT') return false;
+    return document.getElementById('paymentStatus')?.value === 'Đã thanh toán';
+}
+
+function cashCheckAmountForSave(totalAmount) {
+    let amt = Number(totalAmount) || 0;
+    if (amt <= 0) return 0;
+    const method = document.getElementById('paymentMethod')?.value || 'cash';
+    const snap = window._editDomesticPaidSnapshot;
+    // Sửa phiếu đã TT cùng hình thức: backend đảo bút toán cũ rồi ghi mới →
+    // số dư hiện tại đã trừ lần chi cũ → chỉ cần kiểm phần tăng thêm.
+    if (snap && snap.paid && snap.method === method) {
+        amt = Math.max(0, amt - (Number(snap.amount) || 0));
+    }
+    return amt;
 }
 
 function checkSoDu(amount, paymentMethod) {
+    if (window.checkSmeCashBalance) {
+        return window.checkSmeCashBalance(amount, paymentMethod);
+    }
     if (!paymentMethod) return { ok: true };
     const isCash = paymentMethod.includes('Tiền mặt') || paymentMethod.includes('111') || paymentMethod === 'cash';
     const isBank = paymentMethod.includes('Chuyển khoản') || paymentMethod.includes('112') || paymentMethod === 'bank';
-    let available = 0, methodText = "";
-    if (isCash) { available = currentCashBalance; methodText = "tiền mặt (111)"; }
-    else if (isBank) { available = currentBankBalance; methodText = "ngân hàng (112)"; }
+    let available = 0, methodText = '';
+    if (isCash) { available = currentCashBalance; methodText = 'tiền mặt (1111)'; }
+    else if (isBank) { available = currentBankBalance; methodText = 'ngân hàng (1121)'; }
     else return { ok: true };
-    // SME: số dư quỹ HKD có thể chưa đồng bộ — chỉ cảnh báo, không chặn cứng nếu API lỗi/0
-    if (available <= 0) return { ok: true, soft: true };
     if (amount > available) {
         return {
             ok: false,
-            soft: true,
-            message: `Số dư ${methodText} (${formatVNDCustom(available)} ₫) có thể không đủ so với ${formatVNDCustom(amount)} ₫.`,
+            message: `Số dư ${methodText} (${formatVNDCustom(available)} ₫) không đủ để thanh toán ${formatVNDCustom(amount)} ₫. Không cho phép quỹ âm.`,
         };
+    }
+    return { ok: true };
+}
+
+/** Kiểm tra số dư tạm ứng / L/C phía client trước khi lưu NK. */
+function validateImportPaymentBalances() {
+    const mode = document.getElementById('importPaymentMode')?.value || 'unpaid';
+    if (mode === 'unpaid') return { ok: true };
+
+    const goodsFc = typeof getImportGoodsFcTotal === 'function' ? getImportGoodsFcTotal() : 0;
+
+    if (mode === 'prepaid_full' || mode === 'prepaid_partial') {
+        const pay = getImportAdvancePayload();
+        const advFc = Number(pay.advance_fc) || 0;
+        if (!(pay.advance_voucher_ids || []).length || advFc <= 0) {
+            return { ok: false, message: 'Chọn phiếu chi tạm ứng NCC còn số dư và nhập số tạm ứng (NT) > 0.' };
+        }
+        const maxRem = _selectedAdvanceOptions().reduce(
+            (s, o) => s + (parseFloat(o.dataset.amountFc || '0') || 0), 0,
+        );
+        if (advFc > maxRem + 1e-6) {
+            return {
+                ok: false,
+                message: `Tạm ứng (${advFc.toLocaleString('vi-VN')} NT) vượt số dư PC còn lại (${maxRem.toLocaleString('vi-VN')} NT).`,
+            };
+        }
+        if (mode === 'prepaid_full' && goodsFc > 0 && advFc + 1e-6 < goodsFc) {
+            return {
+                ok: false,
+                message: `Thanh toán trước đủ: tạm ứng (${advFc.toLocaleString('vi-VN')} NT) chưa đủ giá trị hàng đợt này (${goodsFc.toLocaleString('vi-VN')} NT).`,
+            };
+        }
+        if (mode === 'prepaid_partial' && goodsFc > 0 && advFc >= goodsFc) {
+            return {
+                ok: false,
+                message: 'Ứng đủ 100% đợt này — hãy chọn «Đã thanh toán trước đủ».',
+            };
+        }
+        return { ok: true };
+    }
+
+    if (mode === 'lc') {
+        const lcSel = document.getElementById('importLcId');
+        const opt = lcSel?.selectedOptions?.[0];
+        if (!opt || !opt.value) {
+            return { ok: false, message: 'Chọn thư tín dụng (L/C) còn số dư.' };
+        }
+        const rem = parseFloat(opt.dataset.remainingFc || opt.dataset.amountFc || '0') || 0;
+        if (goodsFc > 0 && rem + 1e-6 < goodsFc) {
+            return {
+                ok: false,
+                message: `L/C còn ${rem.toLocaleString('vi-VN')} NT — không đủ cho đợt này (${goodsFc.toLocaleString('vi-VN')} NT).`,
+            };
+        }
+        return { ok: true };
     }
     return { ok: true };
 }
@@ -827,7 +1129,7 @@ async function loadImportForEdit(importId) {
         document.getElementById('supplierAddress').value = d.address || '';
         document.getElementById('bill_no').value = d.bill_no || '';
         document.getElementById('note').value = d.note || '';
-        document.getElementById('extraCost').value = formatVNDCustom(d.extra_cost || 0);
+        document.getElementById('extraCost') && (document.getElementById('extraCost').value = formatVNDCustom(d.extra_cost || 0));
         if (d.from_invoice_id) document.getElementById('fromInvoiceId').value = d.from_invoice_id;
 
         setFpDate('importDate', d.date);
@@ -844,13 +1146,75 @@ async function loadImportForEdit(importId) {
 
         const payStatus = d.payment_status || 'Chưa thanh toán';
         const ps = document.getElementById('paymentStatus');
-        if (ps) ps.value = payStatus;
+        if (ps) {
+            // Chỉ gán nếu option tồn tại (trong nước); NK dùng importPaymentMode
+            const hasOpt = [...ps.options].some(o => o.value === payStatus);
+            if (hasOpt) ps.value = payStatus;
+            else if (payStatus === 'Đã thanh toán' || String(d.payment_mode || '') === 'paid') ps.value = 'Đã thanh toán';
+            else ps.value = 'Chưa thanh toán';
+        }
         const pm = document.getElementById('paymentMethod');
         if (pm) {
             const raw = String(d.payment_method || 'cash').toLowerCase();
             pm.value = (raw === 'bank' || raw === 'bank_transfer' || raw.includes('112')) ? 'bank' : 'cash';
         }
+        // Snapshot quỹ đã chi (trong nước) để kiểm số dư khi sửa không trừ trùng
+        {
+            const it = String(d.import_type || 'DOMESTIC').toUpperCase();
+            const isDom = !(it === 'IMPORT' || it === 'IMPORTED');
+            const wasPaid = isDom && (
+                (d.payment_status || '') === 'Đã thanh toán'
+                || String(d.payment_mode || '').toLowerCase() === 'paid'
+            );
+            window._editDomesticPaidSnapshot = wasPaid ? {
+                paid: true,
+                method: document.getElementById('paymentMethod')?.value || 'cash',
+                amount: Number(d.paid_amount != null ? d.paid_amount : (d.total_value || 0)) || 0,
+            } : null;
+        }
+        const modeEl = document.getElementById('importPaymentMode');
+        if (modeEl) {
+            const mode = String(d.payment_mode || '').toLowerCase();
+            if (['unpaid', 'prepaid_full', 'prepaid_partial', 'lc'].includes(mode)) {
+                modeEl.value = mode;
+            } else if (String(payStatus).includes('L/C') || String(payStatus).includes('tín dụng')) {
+                modeEl.value = 'lc';
+            } else if (String(payStatus).includes('ứng một phần') || String(payStatus).includes('một phần')) {
+                modeEl.value = 'prepaid_partial';
+            } else if (String(payStatus).includes('trước đủ') || String(payStatus).includes('thanh toán trước')) {
+                modeEl.value = 'prepaid_full';
+            } else {
+                modeEl.value = 'unpaid';
+            }
+        }
+        if (d.customs_decl_no != null && document.getElementById('customs_decl_no')) {
+            document.getElementById('customs_decl_no').value = d.customs_decl_no || '';
+        }
+        if (d.customs_decl_date && document.getElementById('customs_decl_date')) {
+            document.getElementById('customs_decl_date').value = String(d.customs_decl_date).slice(0, 10);
+        }
+        const advList = Array.isArray(d.linked_advances)
+            ? d.linked_advances
+            : [];
+        window._pendingImportAdvances = advList.map(a => a.voucher_id || a.id).filter(Boolean);
+        window._pendingImportLcId = d.linked_lc_id || null;
+        window._pendingAdvanceFc = (d.advance_fc != null && Number(d.advance_fc) > 0)
+            ? Number(d.advance_fc)
+            : (advList.reduce((s, a) => s + Number(a.amount_fc || 0), 0) || null);
         try { togglePaymentMethod(); } catch (e) {}
+        try { toggleImportPaymentMode(); } catch (e) {}
+        loadImportPaymentPickers().then(() => {
+            const advSel = document.getElementById('importAdvanceIds');
+            if (advSel && window._pendingImportAdvances?.length) {
+                [...advSel.options].forEach(o => {
+                    o.selected = window._pendingImportAdvances.includes(parseInt(o.value, 10));
+                });
+            }
+            const lcSel = document.getElementById('importLcId');
+            if (lcSel && window._pendingImportLcId) {
+                lcSel.value = String(window._pendingImportLcId);
+            }
+        });
 
         const tbody = document.querySelector('#itemsTable tbody');
         tbody.innerHTML = '';
@@ -867,28 +1231,18 @@ async function loadImportForEdit(importId) {
                 tax_pct: item.tax_pct,
                 discount_pct: item.discount_pct,
                 import_tax_pct: item.import_tax_pct || 0,
+                import_tax_amount: item.import_tax_amount || 0,
+                excise_tax_pct: item.excise_tax_pct || item.ttdb_pct || 0,
+                excise_tax_amount: item.excise_tax_amount || item.ttdb_amount || 0,
+                product_code: item.product_code || '',
+                base_unit: item.base_unit || item.unit || '',
+                wholesale_unit: item.wholesale_unit || '',
+                unit_ratio: item.unit_ratio || 1,
+                base_sale_price: item.base_sale_price || 0,
+                sale_price: item.sale_price || 0,
+                skip_match: true,
+                preserve_tax_amounts: true,
             });
-            const row = tbody.lastElementChild;
-            if (row && item.product_id) {
-                row.querySelector('.p-id').value = item.product_id;
-                if (item.product_code) {
-                    const codeEl = row.querySelector('.product-code-preview');
-                    if (codeEl) codeEl.value = item.product_code;
-                }
-                if (item.base_unit) {
-                    const bu = row.querySelector('.base-unit');
-                    if (bu) bu.value = item.base_unit;
-                }
-                if (item.wholesale_unit && item.wholesale_unit !== '—') {
-                    const wu = row.querySelector('.wholesale-unit');
-                    if (wu) wu.value = item.wholesale_unit;
-                }
-                if (item.unit_ratio) {
-                    const r = row.querySelector('.ratio');
-                    if (r) r.value = item.unit_ratio;
-                }
-            }
-            if (row) calcRow(row);
         }
         if (!items.length) addRow();
         calcTotal();
@@ -1090,6 +1444,9 @@ function getConsolidatedItems() {
             tax_pct: parseFloat(tr.querySelector('.tax-pct').value) || 0,
             discount_pct: parseFloat(tr.querySelector('.disc-pct').value) || 0,
             import_tax_pct: parseFloat(tr.querySelector('.import-tax-pct')?.value) || 0,
+            import_tax_amount: parseNumber(tr.querySelector('.import-tax-amt')?.value),
+            excise_tax_pct: parseFloat(tr.querySelector('.excise-tax-pct')?.value) || 0,
+            excise_tax_amount: parseNumber(tr.querySelector('.excise-tax-amt')?.value),
             base_unit: tr.querySelector('.base-unit').value.trim(),
             wholesale_unit: tr.querySelector('.wholesale-unit').value.trim(),
             ratio: parseFloat(tr.querySelector('.ratio').value) || 1,
@@ -1116,24 +1473,37 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
     const paymentStatus = document.getElementById('paymentStatus').value;
     const paymentMethod = document.getElementById('paymentMethod').value;
     const totalAmount = parseNumber(document.getElementById('totalImport').textContent);
+    const importType = getImportType();
 
-    if (paymentStatus === 'Đã thanh toán') {
-        await loadQuySoDu();
-        const check = checkSoDu(totalAmount, paymentMethod);
+    // 1) Trong nước đã TT → kiểm quỹ đúng TK nguồn (1111/1121)
+    if (shouldCheckCashOnImport()) {
+        await loadQuySoDu({ as_of: getImportDateIso() });
+        const checkAmt = cashCheckAmountForSave(totalAmount);
+        const check = checkSoDu(checkAmt, paymentMethod);
         if (!check.ok) {
-            const cont = await Swal.fire({
-                title: 'Cảnh báo số dư',
-                html: (check.message || '') + '<br><small>SME ghi sổ nhật ký 111/112 — bạn vẫn có thể tiếp tục nếu đã xác nhận.</small>',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Vẫn lưu',
-                cancelButtonText: 'Hủy',
+            await Swal.fire({
+                title: 'Không đủ số dư',
+                html: check.messageHtml || check.message
+                    || 'Số dư tiền mặt / ngân hàng không đủ. Không cho phép quỹ âm.',
+                icon: 'error',
             });
-            if (!cont.isConfirmed) return;
+            return;
         }
     }
 
-    const importType = getImportType();
+    // 2) Nhập khẩu: kiểm số dư tạm ứng / L/C (không kiểm 111/112 trên PN)
+    if (importType === 'IMPORT') {
+        const balChk = validateImportPaymentBalances();
+        if (!balChk.ok) {
+            await Swal.fire({
+                title: 'Không đủ số dư thanh toán',
+                html: balChk.message,
+                icon: 'error',
+            });
+            return;
+        }
+    }
+
     const editId = (document.getElementById('editImportId')?.value || '').trim();
     const confirmResult = await Swal.fire({
         title: editId ? 'Xác nhận cập nhật phiếu nhập' : 'Xác nhận lưu phiếu nhập mua',
@@ -1190,6 +1560,27 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
 
         const defaultWh = document.querySelector('#itemsTable tbody tr .warehouse-select')?.value || 'KHO_001';
         const rate = getExchangeRate();
+        const isImportPay = importType === 'IMPORT';
+        const paymentMode = isImportPay
+            ? (document.getElementById('importPaymentMode')?.value || 'unpaid')
+            : (paymentStatus === 'Chưa thanh toán' ? 'unpaid' : 'paid');
+        const advancePay = isImportPay ? getImportAdvancePayload() : {
+            advance_voucher_ids: [], advances: [], advance_fc: 0, advance_vnd: 0,
+        };
+        const advanceIds = advancePay.advance_voucher_ids;
+        const linkedLcId = isImportPay
+            ? (parseInt(document.getElementById('importLcId')?.value, 10) || null)
+            : null;
+        if (isImportPay && (paymentMode === 'prepaid_full' || paymentMode === 'prepaid_partial') && !advanceIds.length) {
+            throw new Error('Chọn phiếu chi tạm ứng NCC đã lập trước khi lưu.');
+        }
+        if (isImportPay && (paymentMode === 'prepaid_full' || paymentMode === 'prepaid_partial')
+            && !(advancePay.advance_fc > 0)) {
+            throw new Error('Số tạm ứng (NT) phải > 0 — chọn PC để hệ thống lấy giá trị.');
+        }
+        if (isImportPay && paymentMode === 'lc' && !linkedLcId) {
+            throw new Error('Chọn thư tín dụng (L/C) đã mở trước khi lưu.');
+        }
         const payload = {
             import_id: editId ? parseInt(editId, 10) : null,
             import_no: document.getElementById('import_no').value,
@@ -1207,14 +1598,33 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
             from_invoice_id: parseInt(document.getElementById('fromInvoiceId')?.value) || null,
             po_id: parseInt(document.getElementById('fromPoId')?.value) || null,
             po_no: document.getElementById('fromPoNo')?.value || null,
-            payment_status: paymentStatus,
-            payment_method: (paymentStatus === 'Đã thanh toán')
-                ? (paymentMethod === 'cash' ? 'cash' : 'bank')
-                : null,
+            payment_status: isImportPay
+                ? ({
+                    unpaid: 'Chưa thanh toán',
+                    prepaid_full: 'Đã thanh toán trước đủ',
+                    prepaid_partial: 'Đã ứng một phần',
+                    lc: 'Thanh toán bằng L/C',
+                }[paymentMode] || 'Chưa thanh toán')
+                : paymentStatus,
+            payment_mode: paymentMode,
+            payment_method: isImportPay
+                ? 'credit'
+                : ((paymentStatus === 'Đã thanh toán')
+                    ? (paymentMethod === 'cash' ? 'cash' : 'bank')
+                    : null),
+            advance_voucher_ids: advanceIds,
+            advances: advancePay.advances,
+            advance_fc: advancePay.advance_fc,
+            advance_vnd: advancePay.advance_vnd,
+            advance_exchange_rate: advancePay.advance_exchange_rate,
+            linked_lc_id: linkedLcId,
             import_type: importType,
             source_of_goods: importType,
             currency: importType === 'IMPORT' ? 'USD' : 'VND',
             exchange_rate: rate,
+            customs_decl_no: document.getElementById('customs_decl_no')?.value || null,
+            customs_decl_date: document.getElementById('customs_decl_date')?.value || null,
+            customs_fx_rate: rate,
             warehouse_code: defaultWh,
             items: items
         };
@@ -1230,6 +1640,8 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
 
         if (result.success) {
             const parts = [];
+            if (result.message) parts.push(result.message);
+            if (result.receipt_stage) parts.push('TT: ' + result.receipt_stage);
             if (result.purchase_order) {
                 parts.push(`ĐĐH ${result.purchase_order.po_no || ''} → ${result.purchase_order.status}`);
             }
@@ -1237,7 +1649,7 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
             if (result.tools_created) parts.push(`Công cụ dụng cụ: ${result.tools_created}`);
             if (result.journal_entry_ids?.length) parts.push(`NK: ${result.journal_entry_ids.length} bút toán`);
             toast(
-                (editId ? 'Cập nhật phiếu nhập thành công!' : 'Lưu phiếu nhập mua thành công!')
+                (editId ? 'Cập nhật thành công!' : 'Lưu thành công!')
                 + (parts.length ? ' · ' + parts.join(' · ') : ''),
                 'success'
             );
@@ -1262,10 +1674,261 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
 });
 
 function togglePaymentMethod() {
+    if (getImportType() === 'IMPORT') return;
     const status = document.getElementById('paymentStatus').value;
     document.getElementById('methodWrapper').classList.toggle('hidden-field', status === 'Chưa thanh toán');
     if (status !== 'Chưa thanh toán') loadQuySoDu();
 }
+
+function toggleImportPaymentMode() {
+    const isImport = getImportType() === 'IMPORT';
+    const mode = document.getElementById('importPaymentMode')?.value || 'unpaid';
+    const adv = document.getElementById('importAdvanceWrap');
+    const lc = document.getElementById('importLcWrap');
+    const needAdv = isImport && (mode === 'prepaid_full' || mode === 'prepaid_partial');
+    const needLc = isImport && mode === 'lc';
+    if (adv) adv.classList.toggle('hidden-field', !needAdv);
+    if (lc) lc.classList.toggle('hidden-field', !needLc);
+    const hint = document.getElementById('importAdvanceHint');
+    if (hint) {
+        hint.textContent = mode === 'prepaid_full'
+            ? 'Chọn PC còn số dư → dùng cho đợt này (có thể tách nhiều phiếu nhập). Thừa sau đợt 1 vẫn chọn lại cho đợt sau. G1 Có 331.'
+            : 'Ứng một phần — chỉnh «Tạm ứng (NT)» ≤ số dư PC còn lại. Nguyên giá = ứng×TG ứng + còn lại×TG tờ khai.';
+    }
+    if (needAdv) syncImportAdvanceAmounts();
+    else clearImportAdvanceAmountFields();
+}
+
+function clearImportAdvanceAmountFields() {
+    const fc = document.getElementById('importAdvanceFc');
+    const rate = document.getElementById('importAdvanceRate');
+    const vnd = document.getElementById('importAdvanceVnd');
+    if (fc) fc.value = '0';
+    if (rate) rate.value = '1';
+    if (vnd) vnd.value = '0';
+    window._importAdvanceDetails = [];
+}
+
+function _selectedAdvanceOptions() {
+    const sel = document.getElementById('importAdvanceIds');
+    if (!sel) return [];
+    return [...sel.selectedOptions].filter(o => o.value && !o.disabled);
+}
+
+function getImportGoodsFcTotal() {
+    let total = 0;
+    document.querySelectorAll('#importTableBody tr').forEach(tr => {
+        const qty = parseNumber(tr.querySelector('.qty')?.value);
+        const price = parseNumber(tr.querySelector('.buy-price')?.value);
+        const discPct = parseFloat(tr.querySelector('.disc-pct')?.value) || 0;
+        const line = qty * price;
+        total += line - (line * (discPct / 100));
+    });
+    return Math.round(total * 10000) / 10000;
+}
+
+function syncImportAdvanceAmounts() {
+    const opts = _selectedAdvanceOptions();
+    const details = [];
+    let totalFc = 0;
+    let totalVnd = 0;
+    opts.forEach(o => {
+        const fc = parseFloat(o.dataset.amountFc || '0') || 0;
+        const rate = parseFloat(o.dataset.exchangeRate || '1') || 1;
+        let vnd = parseFloat(o.dataset.amountVnd || '0') || 0;
+        if (vnd <= 0 && fc > 0) vnd = fc * rate;
+        const useFc = fc > 0 ? fc : (rate > 0 ? (vnd / rate) : 0);
+        const useVnd = useFc * rate;
+        totalFc += useFc;
+        totalVnd += useVnd;
+        details.push({
+            voucher_id: parseInt(o.value, 10),
+            voucher_no: o.dataset.voucherNo || o.textContent,
+            amount_fc: useFc,
+            exchange_rate: rate,
+            amount_vnd: useVnd,
+            max_fc: useFc,
+        });
+    });
+    // Thanh toán trước đủ: nếu PC còn dư > giá trị đợt này → chỉ dùng đúng số hàng
+    // (phần thừa giữ cho đợt chứng từ sau — giống L/C).
+    const mode = document.getElementById('importPaymentMode')?.value || '';
+    const goodsFc = getImportGoodsFcTotal();
+    if (mode === 'prepaid_full' && goodsFc > 0 && totalFc > goodsFc + 1e-9) {
+        const scale = goodsFc / totalFc;
+        totalFc = 0;
+        totalVnd = 0;
+        details.forEach(d => {
+            d.amount_fc = (d.max_fc || 0) * scale;
+            d.amount_vnd = d.amount_fc * (d.exchange_rate || 1);
+            totalFc += d.amount_fc;
+            totalVnd += d.amount_vnd;
+        });
+    }
+    const avgRate = totalFc > 0 ? (totalVnd / totalFc) : 1;
+    window._importAdvanceDetails = details;
+    const fcEl = document.getElementById('importAdvanceFc');
+    const rateEl = document.getElementById('importAdvanceRate');
+    const vndEl = document.getElementById('importAdvanceVnd');
+    if (fcEl) fcEl.value = formatVNDCustom(Math.round(totalFc * 10000) / 10000);
+    if (rateEl) rateEl.value = formatVNDCustom(Math.round(avgRate * 10000) / 10000);
+    if (vndEl) vndEl.value = formatVNDCustom(Math.round(totalVnd));
+}
+
+function onImportAdvanceFcEdited() {
+    const details = window._importAdvanceDetails || [];
+    if (!details.length) {
+        syncImportAdvanceAmounts();
+        return;
+    }
+    const maxFc = details.reduce((s, d) => s + (d.max_fc || d.amount_fc || 0), 0);
+    let wantFc = parseNumber(document.getElementById('importAdvanceFc')?.value);
+    if (wantFc < 0) wantFc = 0;
+    if (maxFc > 0 && wantFc > maxFc + 1e-9) {
+        wantFc = maxFc;
+        toast('Tạm ứng (NT) không vượt quá số dư PC còn lại', 'error');
+    }
+    const scale = maxFc > 0 ? (wantFc / maxFc) : 0;
+    let totalVnd = 0;
+    details.forEach(d => {
+        d.amount_fc = (d.max_fc || 0) * scale;
+        d.amount_vnd = d.amount_fc * (d.exchange_rate || 1);
+        totalVnd += d.amount_vnd;
+    });
+    const avgRate = wantFc > 0 ? (totalVnd / wantFc) : 1;
+    const fcEl = document.getElementById('importAdvanceFc');
+    const rateEl = document.getElementById('importAdvanceRate');
+    const vndEl = document.getElementById('importAdvanceVnd');
+    if (fcEl) fcEl.value = formatVNDCustom(Math.round(wantFc * 10000) / 10000);
+    if (rateEl) rateEl.value = formatVNDCustom(Math.round(avgRate * 10000) / 10000);
+    if (vndEl) vndEl.value = formatVNDCustom(Math.round(totalVnd));
+}
+
+function getImportAdvancePayload() {
+    const ids = _selectedAdvanceOptions().map(o => parseInt(o.value, 10)).filter(Boolean);
+    let details = (window._importAdvanceDetails || []).filter(d => ids.includes(d.voucher_id));
+    if (!details.length && ids.length) {
+        syncImportAdvanceAmounts();
+        details = (window._importAdvanceDetails || []).filter(d => ids.includes(d.voucher_id));
+    }
+    const advanceFc = parseNumber(document.getElementById('importAdvanceFc')?.value);
+    const advanceVnd = parseNumber(document.getElementById('importAdvanceVnd')?.value);
+    const advanceRate = parseNumber(document.getElementById('importAdvanceRate')?.value) || 1;
+    return {
+        advance_voucher_ids: ids,
+        advances: details.map(d => ({
+            voucher_id: d.voucher_id,
+            amount_fc: d.amount_fc,
+            exchange_rate: d.exchange_rate,
+            amount_vnd: d.amount_vnd,
+        })),
+        advance_fc: advanceFc,
+        advance_vnd: advanceVnd,
+        advance_exchange_rate: advanceRate,
+    };
+}
+
+async function loadImportPaymentPickers() {
+    if (getImportType() !== 'IMPORT') return;
+    const supplierName = (document.getElementById('supplierName')?.value || '').trim();
+    const advSel = document.getElementById('importAdvanceIds');
+    const lcSel = document.getElementById('importLcId');
+    const prevAdv = advSel ? [...advSel.selectedOptions].map(o => o.value) : [];
+    const prevLc = lcSel?.value || '';
+    try {
+        const qs = new URLSearchParams({ unused_only: '1' });
+        if (supplierName) qs.set('supplier_name', supplierName);
+        const editIdForAdv = new URLSearchParams(location.search).get('import_id')
+            || new URLSearchParams(location.search).get('id')
+            || document.getElementById('editImportId')?.value;
+        if (editIdForAdv) qs.set('include_import_id', editIdForAdv);
+        const [advRes, lcRes] = await Promise.all([
+            fetch('/api/sme/import-payment/supplier-advances?' + qs.toString()),
+            fetch('/api/sme/import-payment/open-lcs?' + new URLSearchParams({
+                include_lc_id: editIdForAdv || window._pendingImportLcId || '',
+            }).toString()),
+        ]);
+        const advData = await advRes.json();
+        const lcData = await lcRes.json();
+        if (advSel && advData.success) {
+            advSel.innerHTML = '';
+            (advData.items || []).forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.id;
+                const face = Number(v.face_fc != null ? v.face_fc : v.amount_fc || 0);
+                const rem = Number(v.remaining_fc != null ? v.remaining_fc : v.amount_fc || 0);
+                const used = Number(v.used_fc || 0);
+                const rate = Number(v.exchange_rate || 1) || 1;
+                let vnd = Number(v.remaining_vnd != null ? v.remaining_vnd : (v.amount_vnd || v.amount || 0));
+                if (vnd <= 0 && rem > 0) vnd = rem * rate;
+                // dataset = số còn dùng được cho đợt này
+                opt.dataset.amountFc = String(rem);
+                opt.dataset.faceFc = String(face);
+                opt.dataset.usedFc = String(used);
+                opt.dataset.exchangeRate = String(rate);
+                opt.dataset.amountVnd = String(vnd);
+                opt.dataset.voucherNo = v.voucher_no || '';
+                opt.textContent = `${v.voucher_no} · còn ${rem.toLocaleString('vi-VN')}/${face.toLocaleString('vi-VN')} ${(v.currency || 'USD')}`
+                    + (used > 0 ? ` (đã dùng ${used.toLocaleString('vi-VN')})` : '')
+                    + ` @${rate}`;
+                const pending = window._pendingImportAdvances || [];
+                if (prevAdv.includes(String(v.id)) || pending.includes(v.id) || pending.includes(Number(v.id))) {
+                    opt.selected = true;
+                }
+                advSel.appendChild(opt);
+            });
+            if (!(advData.items || []).length) {
+                const opt = document.createElement('option');
+                opt.disabled = true;
+                opt.textContent = 'Không có PC tạm ứng còn số dư';
+                advSel.appendChild(opt);
+            }
+            syncImportAdvanceAmounts();
+            // Edit: nếu đã lưu số tạm ứng khác (ứng một phần) → ưu tiên số trên phiếu
+            if (window._pendingAdvanceFc != null && Number(window._pendingAdvanceFc) > 0) {
+                const fcEl = document.getElementById('importAdvanceFc');
+                if (fcEl) {
+                    fcEl.value = formatVNDCustom(window._pendingAdvanceFc);
+                    onImportAdvanceFcEdited();
+                }
+                window._pendingAdvanceFc = null;
+            }
+        }
+        if (lcSel && lcData.success) {
+            lcSel.innerHTML = '<option value="">— Chọn L/C còn số dư —</option>';
+            (lcData.items || []).forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.id;
+                const rem = Number(v.remaining_fc != null ? v.remaining_fc : v.amount_fc || 0);
+                const face = Number(v.amount_fc || 0);
+                const used = Number(v.used_fc || 0);
+                opt.dataset.remainingFc = String(rem);
+                opt.dataset.amountFc = String(rem);
+                opt.dataset.faceFc = String(face);
+                opt.textContent = `${v.lc_no} · còn ${rem.toLocaleString('vi-VN')}/${face.toLocaleString('vi-VN')} ${v.currency || 'USD'}`
+                    + (used > 0 ? ` (đã dùng ${used.toLocaleString('vi-VN')})` : '')
+                    + (v.beneficiary_name ? ` · ${v.beneficiary_name}` : '');
+                if (String(v.id) === prevLc || v.id === window._pendingImportLcId
+                    || String(v.id) === String(window._pendingImportLcId || '')) {
+                    opt.selected = true;
+                }
+                lcSel.appendChild(opt);
+            });
+            if (!(lcData.items || []).length) {
+                const opt = document.createElement('option');
+                opt.disabled = true;
+                opt.textContent = 'Không có L/C còn số dư';
+                lcSel.appendChild(opt);
+            }
+        }
+    } catch (e) {
+        console.warn('loadImportPaymentPickers', e);
+    }
+}
+
+document.getElementById('supplierName')?.addEventListener('change', () => {
+    if (getImportType() === 'IMPORT') loadImportPaymentPickers();
+});
 
 </script>
 {% endblock %}

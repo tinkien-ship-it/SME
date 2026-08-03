@@ -34,6 +34,29 @@
                 </a>
             </div>
         </div>
+        <div id="smeVatFilingAlert" class="alert alert-warning border-warning shadow-sm mb-3{% if not (sme_vat_filing_alert and sme_vat_filing_alert.active) %} d-none{% endif %}" role="alert">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                <div class="small">
+                    <strong><i class="fas fa-exclamation-triangle me-1"></i>Cảnh báo kỳ kê khai GTGT</strong>
+                    <div id="smeVatFilingAlertMsg" class="mt-1">{{ (sme_vat_filing_alert.message if sme_vat_filing_alert else '') or 'Doanh thu năm trước > 50 tỷ — vui lòng chọn kê khai GTGT theo tháng.' }}</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('SME_tax_nsnn') }}" class="btn btn-sm btn-warning">Thiết lập kê khai tháng</a>
+                    <button type="button" class="btn btn-sm btn-outline-dark" id="smeVatFilingConfirmBtn">Đã chọn tháng — tắt cảnh báo</button>
+                </div>
+            </div>
+        </div>
+        <div id="smeMicroTt99Alert" class="alert alert-danger border-danger shadow-sm mb-3{% if not (sme_micro_tt99_alert and sme_micro_tt99_alert.active) %} d-none{% endif %}" role="alert">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                <div class="small">
+                    <strong><i class="fas fa-building me-1"></i>Cảnh báo quy mô DN — chuyển TT99</strong>
+                    <div id="smeMicroTt99AlertMsg" class="mt-1">{{ (sme_micro_tt99_alert.message if sme_micro_tt99_alert else '') or 'Không còn đủ tiêu chí doanh nghiệp siêu nhỏ — cần chuyển sang kế toán TT99.' }}</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('SME_tax_nsnn') }}" class="btn btn-sm btn-danger">Xem tiêu chí / lĩnh vực</a>
+                </div>
+            </div>
+        </div>
         {% block sme_content %}{% endblock %}
     </main>
 </div>
@@ -45,6 +68,30 @@
     const search = document.getElementById('smeMenuSearch');
     const sidebar = document.getElementById('smeSidebar');
     const toggle = document.getElementById('smeSidebarToggle');
+
+    // Cảnh báo đã render từ server (tenant_profile) — không gọi API nặng trên mọi trang.
+    // Chỉ còn POST khi user bấm xác nhận kỳ kê khai tháng.
+    const vatBox = document.getElementById('smeVatFilingAlert');
+    const vatBtn = document.getElementById('smeVatFilingConfirmBtn');
+    if (vatBox && vatBtn && !vatBox.classList.contains('d-none')) {
+        vatBtn.onclick = async () => {
+            try {
+                const r = await fetch('/api/sme/vat-filing-alert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'confirm' }),
+                });
+                const d = await r.json();
+                if (!d.success) throw new Error(d.error || 'Lỗi');
+                vatBox.classList.add('d-none');
+                if (window.Swal) {
+                    Swal.fire({ icon: 'success', title: 'Đã xác nhận kê khai theo tháng', timer: 1600, showConfirmButton: false });
+                }
+            } catch (e) {
+                alert(e.message || String(e));
+            }
+        };
+    }
 
     if (toggle && sidebar) {
         toggle.addEventListener('click', () => sidebar.classList.toggle('show-mobile'));
@@ -103,6 +150,253 @@
         });
     }
 })();
+</script>
+<script>
+/** Kiểm tra số dư TM/NH trước khi thanh toán — tách 1111/1112 và 1121/1122. */
+window.smeCashBalances = {
+  cash: 0, bank: 0,
+  a1111: 0, a1112: 0, a1121: 0, a1122: 0,
+  loaded: false, as_of: null,
+};
+window.loadSmeCashBalances = async function (opts) {
+    const asOf = (opts && opts.as_of) || '';
+    const qs = new URLSearchParams();
+    if (asOf) qs.set('as_of', asOf);
+    try {
+        const res = await fetch('/api/sme/cash-balances' + (qs.toString() ? ('?' + qs) : ''));
+        const data = await res.json();
+        if (data && data.success) {
+            const b = window.smeCashBalances;
+            b.cash = Number(data.so_du_tien_mat || 0);
+            b.bank = Number(data.so_du_ngan_hang || 0);
+            b.a1111 = Number(data.so_du_1111 || (data.accounts && data.accounts['1111']) || 0);
+            b.a1112 = Number(data.so_du_1112 || (data.accounts && data.accounts['1112']) || 0);
+            b.a1121 = Number(data.so_du_1121 || (data.accounts && data.accounts['1121']) || 0);
+            b.a1122 = Number(data.so_du_1122 || (data.accounts && data.accounts['1122']) || 0);
+            b.accounts = data.accounts || {};
+            b.loaded = true;
+            b.as_of = data.as_of || asOf || null;
+        }
+        return window.smeCashBalances;
+    } catch (e) {
+        console.warn('loadSmeCashBalances', e);
+        return window.smeCashBalances;
+    }
+};
+/** Map hình thức chi → mã TK Có cần đủ số dư (không gộp VND + ngoại tệ). */
+window.resolveSmePayAccount = function (paymentMethod) {
+    const raw = String(paymentMethod || '').trim().toLowerCase();
+    if (!raw) return null;
+    // Mã TK cụ thể (kể cả TK con 112101…)
+    if (/^\d+$/.test(raw) && (raw.startsWith('111') || raw.startsWith('112'))) {
+        return raw;
+    }
+    if (raw.includes('1112') || raw === 'cash_fx' || raw === 'fx_cash') return '1112';
+    if (raw.includes('1122') || raw === 'bank_fx' || raw === 'fx_bank') {
+        return (window.smeBankPayAccounts && window.smeBankPayAccounts.default_fx_bank_account)
+            || '1122';
+    }
+    if (raw.includes('1111') || raw === 'cash' || raw === '111') return '1111';
+    if (raw.includes('1121') || raw === 'bank' || raw === 'bank_transfer' || raw === 'ck' || raw === 'transfer' || raw === '112') {
+        return (window.smeBankPayAccounts && window.smeBankPayAccounts.default_bank_account)
+            || '1121';
+    }
+    if (raw.includes('tiền mặt') || raw.includes('tien mat')) return '1111';
+    if (raw.includes('chuyển') || raw.includes('ngân hàng') || raw.includes('ngan hang')) {
+        return (window.smeBankPayAccounts && window.smeBankPayAccounts.default_bank_account)
+            || '1121';
+    }
+    if (raw.startsWith('111')) return '1111';
+    if (raw.startsWith('112')) return '1121';
+    return null;
+};
+window.resolveSmePayKind = function (paymentMethod) {
+    const acct = window.resolveSmePayAccount(paymentMethod);
+    if (!acct) return null;
+    return acct.startsWith('111') ? 'cash' : 'bank';
+};
+window.smeCashAccountBalance = function (accountCode) {
+    const b = window.smeCashBalances;
+    const code = String(accountCode || '');
+    if (b.accounts && b.accounts[code] != null) return Number(b.accounts[code] || 0);
+    if (code === '1111') return Number(b.a1111 || 0);
+    if (code === '1112') return Number(b.a1112 || 0);
+    if (code === '1121') return Number(b.a1121 || 0);
+    if (code === '1122') return Number(b.a1122 || 0);
+    if (code.startsWith('1111')) return Number(b.a1111 || 0);
+    if (code.startsWith('1112')) return Number(b.a1112 || 0);
+    if (code.startsWith('1121')) return Number(b.a1121 || 0);
+    if (code.startsWith('1122')) return Number(b.a1122 || 0);
+    if (code.startsWith('111')) return Number(b.cash || 0);
+    if (code.startsWith('112')) return Number(b.bank || 0);
+    return 0;
+};
+window.formatSmeCashBalanceDetail = function (accountCode) {
+    const b = window.smeCashBalances;
+    const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN');
+    const code = String(accountCode || '');
+    if (code.startsWith('111')) {
+        return `TK 1111 (VND): <b>${fmt(b.a1111)}</b> ₫<br>TK 1112 (ngoại tệ): <b>${fmt(b.a1112)}</b> ₫`;
+    }
+    return `TK 1121 (VND): <b>${fmt(b.a1121)}</b> ₫<br>TK 1122 (ngoại tệ): <b>${fmt(b.a1122)}</b> ₫`;
+};
+window.checkSmeCashBalance = function (amount, paymentMethod) {
+    const amt = Number(amount) || 0;
+    if (amt <= 0) return { ok: true };
+    const account = window.resolveSmePayAccount(paymentMethod);
+    if (!account) return { ok: true };
+    const available = window.smeCashAccountBalance(account);
+    const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN');
+    const labels = {
+        '1111': 'tiền mặt VND (1111)',
+        '1112': 'quỹ ngoại tệ (1112)',
+        '1121': 'TGNH VND (1121)',
+        '1122': 'TGNH ngoại tệ (1122)',
+    };
+    const label = labels[account] || account;
+    const detailHtml = window.formatSmeCashBalanceDetail(account);
+    const detailText = detailHtml.replace(/<br>/g, ' | ').replace(/<\/?b>/g, '');
+    if (amt > available + 0.009) {
+        return {
+            ok: false,
+            account,
+            available,
+            message:
+                `Số dư ${label} (${fmt(available)} ₫) không đủ để thanh toán ${fmt(amt)} ₫.\n`
+                + `Chi tiết: ${detailText}. Không cho phép quỹ âm.`,
+            messageHtml:
+                `Số dư <b>${label}</b> (<b>${fmt(available)}</b> ₫) không đủ để thanh toán <b>${fmt(amt)}</b> ₫.`
+                + `<hr class="my-2">${detailHtml}`
+                + `<div class="small text-muted mt-2">Chỉ kiểm tra TK nguồn chi. Mua ngoại tệ (Có 1121 / Nợ 1122) không trừ số dư 1122.</div>`,
+        };
+    }
+    return { ok: true, account, available, detailHtml };
+};
+window.assertSmeCashBalanceOrAlert = async function (amount, paymentMethod, opts) {
+    await window.loadSmeCashBalances(opts || {});
+    const check = window.checkSmeCashBalance(amount, paymentMethod);
+    if (!check.ok) {
+        if (window.Swal) {
+            await Swal.fire({
+                icon: 'error',
+                title: 'Không đủ số dư',
+                html: check.messageHtml || check.message,
+            });
+        } else {
+            alert(check.message);
+        }
+        return false;
+    }
+    return true;
+};
+
+/** Danh sách TK NH (1121*/1122*) — mặc định = STK VietQR. */
+window.smeBankPayAccounts = null;
+window.loadSmeBankPayAccounts = async function (force) {
+    if (window.smeBankPayAccounts && !force) return window.smeBankPayAccounts;
+    try {
+        const res = await fetch('/api/sme/bank-payment-accounts');
+        const data = await res.json();
+        if (data && data.success) {
+            window.smeBankPayAccounts = data;
+            return data;
+        }
+    } catch (e) {
+        console.warn('loadSmeBankPayAccounts', e);
+    }
+    return window.smeBankPayAccounts || {
+        accounts: [], vnd_accounts: [], fx_accounts: [],
+        default_bank_account: '1121', default_fx_bank_account: '1122',
+        needs_choice: false, warning: '',
+    };
+};
+
+/**
+ * Đổ option hình thức TT vào &lt;select&gt;:
+ * - 1 TK VND → chọn sẵn mã TK mặc định (QR), không cảnh báo
+ * - Nhiều TK VND hoặc nhiều TK NT → liệt kê mã cụ thể + cảnh báo chọn đúng
+ */
+window.fillSmePayMethodSelect = async function (selectEl, opts) {
+    if (!selectEl) return null;
+    const data = await window.loadSmeBankPayAccounts(opts && opts.force);
+    const prev = (opts && opts.value != null) ? opts.value : selectEl.value;
+    const preferBank = !!(opts && opts.preferBank);
+    const vnd = (data && data.vnd_accounts) || [];
+    const fx = (data && data.fx_accounts) || [];
+    const defVnd = (data && data.default_bank_account) || '1121';
+    const defFx = (data && data.default_fx_bank_account) || '1122';
+
+    const optsHtml = [];
+    optsHtml.push('<option value="cash">Tiền mặt VND — 1111</option>');
+    optsHtml.push('<option value="cash_fx">Quỹ ngoại tệ — 1112</option>');
+    if (vnd.length) {
+        vnd.forEach(a => {
+            optsHtml.push(`<option value="${a.code}">TGNH VND — ${a.label}</option>`);
+        });
+    } else {
+        optsHtml.push(`<option value="${defVnd}">TGNH VND — ${defVnd}</option>`);
+    }
+    if (fx.length) {
+        fx.forEach(a => {
+            optsHtml.push(`<option value="${a.code}">TGNH ngoại tệ — ${a.label}</option>`);
+        });
+    } else {
+        optsHtml.push(`<option value="${defFx}">TGNH ngoại tệ — ${defFx}</option>`);
+    }
+    selectEl.innerHTML = optsHtml.join('');
+
+    let pick = prev;
+    if (!pick || ![...selectEl.options].some(o => o.value === pick)) {
+        if (preferBank || pick === 'bank' || pick === '1121') pick = defVnd;
+        else if (pick === 'bank_fx' || pick === '1122') pick = defFx;
+        else if (pick === 'cash_fx' || pick === '1112') pick = 'cash_fx';
+        else pick = 'cash';
+    }
+    // Map legacy keywords → mã mặc định
+    if (pick === 'bank') pick = defVnd;
+    if (pick === 'bank_fx') pick = defFx;
+    if ([...selectEl.options].some(o => o.value === pick)) selectEl.value = pick;
+    else selectEl.value = preferBank ? defVnd : 'cash';
+
+    const warnEl = opts && opts.warnEl
+        ? (typeof opts.warnEl === 'string' ? document.querySelector(opts.warnEl) : opts.warnEl)
+        : null;
+    if (warnEl) {
+        if (data && data.needs_choice && data.warning) {
+            warnEl.style.display = '';
+            warnEl.className = (warnEl.className || '').replace(/\bd-none\b/g, '')
+                || 'alert alert-warning py-2 small mb-0';
+            if (!warnEl.className.includes('alert')) {
+                warnEl.className = 'alert alert-warning py-2 small mb-2';
+            }
+            warnEl.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>${data.warning}`;
+        } else {
+            warnEl.style.display = 'none';
+            warnEl.innerHTML = '';
+        }
+    }
+    return data;
+};
+
+/** Cảnh báo chọn TK khi có nhiều tài khoản (chỉ hiện 1 lần / lần lập chứng từ nếu chưa chọn mã cụ thể). */
+window.warnSmeBankAccountChoiceIfNeeded = async function () {
+    const data = await window.loadSmeBankPayAccounts();
+    if (!(data && data.needs_choice && data.warning)) return true;
+    if (!window.Swal) {
+        return confirm(data.warning + '\n\nTiếp tục?');
+    }
+    const r = await Swal.fire({
+        icon: 'warning',
+        title: 'Chọn đúng tài khoản ngân hàng',
+        html: data.warning
+            + '<div class="small text-muted mt-2">Mặc định chứng từ dùng STK VietQR (tiền Việt). '
+            + 'Nếu giao dịch ngoại tệ hoặc STK khác, hãy đổi hình thức / mã TK trên form.</div>',
+        showCancelButton: true,
+        confirmButtonText: 'Đã chọn đúng',
+        cancelButtonText: 'Quay lại',
+    });
+    return r.isConfirmed;
+};
 </script>
 {% block sme_scripts %}{% endblock %}
 {% endblock %}

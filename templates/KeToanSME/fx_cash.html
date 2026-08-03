@@ -1,0 +1,277 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Ngoại tệ — quỹ & TGNH{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1"><i class="fas fa-coins text-warning me-2"></i>Nhật ký &amp; số dư ngoại tệ</h4>
+    <p class="text-muted small mb-0">Theo dõi TK <b>1112</b> (quỹ NT) và <b>1122</b> (TGNH NT) · bán ngoại tệ có lãi/lỗ CLTG (515/635)</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-danger" id="btnSellFx"><i class="fas fa-right-left me-1"></i>Bán ngoại tệ (phiếu chi)</button>
+    <a class="btn btn-outline-success" href="/SME_DanhSachPhieuThu"><i class="fas fa-receipt me-1"></i>Phiếu thu</a>
+    <a class="btn btn-outline-danger" href="/SME_DanhSachPhieuChi"><i class="fas fa-money-bill-wave me-1"></i>Phiếu chi</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3" id="posCards">
+  <div class="col-md-6"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small">1112 — Quỹ ngoại tệ</div>
+    <div class="fs-5 fw-bold" id="p1112fc">—</div>
+    <div class="small" id="p1112vnd">VND: —</div>
+    <div class="small text-muted" id="p1112rate">Tỷ giá sổ: —</div>
+  </div></div></div>
+  <div class="col-md-6"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+    <div class="text-muted small">1122 — TGNH ngoại tệ</div>
+    <div class="fs-5 fw-bold" id="p1122fc">—</div>
+    <div class="small" id="p1122vnd">VND: —</div>
+    <div class="small text-muted" id="p1122rate">Tỷ giá sổ: —</div>
+  </div></div></div>
+</div>
+
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body row g-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label small fw-bold">Tài khoản</label>
+      <select id="fAcct" class="form-select">
+        <option value="1122">1122 — TGNH NT</option>
+        <option value="1112">1112 — Quỹ NT</option>
+      </select>
+    </div>
+    <div class="col-md-2"><label class="form-label small fw-bold">Từ ngày</label><input type="date" id="fromDate" class="form-control"></div>
+    <div class="col-md-2"><label class="form-label small fw-bold">Đến ngày</label><input type="date" id="toDate" class="form-control"></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" id="btnLoad">Tải nhật ký</button></div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Ngày</th><th>Chứng từ</th><th>Loại NT</th><th>Diễn giải</th><th>Đối ứng</th>
+          <th class="text-end">Thu NT</th><th class="text-end">Chi NT</th>
+          <th class="text-end">Thu VND</th><th class="text-end">Chi VND</th>
+          <th class="text-end">Tỷ giá</th>
+          <th class="text-end">SD NT</th><th class="text-end">SD VND</th><th class="text-end">TG sổ</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="13" class="text-center text-muted py-4">Chọn khoảng ngày và tải</td></tr></tbody>
+    </table>
+  </div>
+  <div class="card-footer small text-muted" id="footerSum"></div>
+</div>
+
+<div class="modal fade" id="modalSell" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header bg-danger text-white">
+    <h5 class="modal-title">Bán ngoại tệ — phiếu chi (CLTG 515/635)</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+  </div>
+  <div class="modal-body">
+    <p class="small text-muted">Nợ TK VND (theo <b>tỷ giá bán</b>) · Có TK NT (theo <b>tỷ giá sổ</b>) · Chênh lệch → lãi <b>515</b> / lỗ <b>635</b>.</p>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small fw-semibold">Ngày bán</label><input type="date" id="sDate" class="form-control"></div>
+      <div class="col-md-4"><label class="form-label small fw-semibold">TK ngoại tệ (Có)</label>
+        <select id="sFxAcct" class="form-select">
+          <option value="1122">1122 — TGNH ngoại tệ</option>
+          <option value="1112">1112 — Quỹ ngoại tệ</option>
+        </select>
+      </div>
+      <div class="col-md-4"><label class="form-label small fw-semibold">Thu VND vào (Nợ)</label>
+        <select id="sVndPay" class="form-select">
+          <option value="bank">1121 — TGNH VND</option>
+          <option value="cash">1111 — Tiền mặt VND</option>
+        </select>
+      </div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-3"><label class="form-label small fw-semibold">Loại ngoại tệ</label>
+        <select id="sCur" class="form-select"><option>USD</option><option>EUR</option><option>JPY</option><option>CNY</option></select>
+      </div>
+      <div class="col-md-3"><label class="form-label small fw-semibold">Số lượng NT bán</label>
+        <input type="number" id="sFc" class="form-control" min="0" step="0.01">
+      </div>
+      <div class="col-md-3"><label class="form-label small fw-semibold">Tỷ giá bán</label>
+        <input type="number" id="sSellRate" class="form-control" min="0" step="0.0001" value="25000">
+      </div>
+      <div class="col-md-3"><label class="form-label small fw-semibold">Tỷ giá sổ (BQ)</label>
+        <input type="text" id="sBookRate" class="form-control bg-light" readonly>
+      </div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small fw-semibold">VND theo sổ (xuất NT)</label>
+        <input type="text" id="sBookVnd" class="form-control bg-light" readonly>
+      </div>
+      <div class="col-md-4"><label class="form-label small fw-semibold">VND thu được</label>
+        <input type="text" id="sSellVnd" class="form-control bg-light" readonly>
+      </div>
+      <div class="col-md-4"><label class="form-label small fw-semibold">Lãi / lỗ CLTG</label>
+        <input type="text" id="sDiff" class="form-control bg-light fw-bold" readonly>
+      </div>
+    </div>
+    <div class="mb-2 small" id="sPosHint"></div>
+    <div class="mb-2"><label class="form-label small fw-semibold">Người nhận / ngân hàng</label><input type="text" id="sParty" class="form-control"></div>
+    <div class="mb-2"><label class="form-label small fw-semibold">Diễn giải</label><input type="text" id="sReason" class="form-control" placeholder="Bán USD lấy VND…"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+    <button class="btn btn-danger" id="btnSaveSell">Ghi sổ bán NT</button>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
+const fmtFc = n => new Intl.NumberFormat('en-US', {maximumFractionDigits: 4}).format(Number(n||0));
+const fmtRate = n => new Intl.NumberFormat('en-US', {maximumFractionDigits: 4}).format(Number(n||0));
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+fromDate.value = todayISO().slice(0,8)+'01';
+toDate.value = todayISO();
+sDate.value = todayISO();
+
+function fillPos(p) {
+  const a1112 = (p.accounts && p.accounts['1112']) || {};
+  const a1122 = (p.accounts && p.accounts['1122']) || {};
+  p1112fc.textContent = fmtFc(a1112.balance_fc) + ' NT';
+  p1112vnd.textContent = 'VND: ' + fmt(a1112.balance_vnd) + ' ₫';
+  p1112rate.textContent = 'Tỷ giá sổ: ' + fmtRate(a1112.avg_book_rate);
+  p1122fc.textContent = fmtFc(a1122.balance_fc) + ' NT';
+  p1122vnd.textContent = 'VND: ' + fmt(a1122.balance_vnd) + ' ₫';
+  p1122rate.textContent = 'Tỷ giá sổ: ' + fmtRate(a1122.avg_book_rate);
+  return p;
+}
+
+async function loadPositions() {
+  const qs = new URLSearchParams({ as_of: toDate.value || todayISO() });
+  const res = await fetch('/api/sme/fx-cash/positions?' + qs);
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Lỗi tải số dư');
+  fillPos(json);
+  return json;
+}
+
+async function loadLedger() {
+  const qs = new URLSearchParams({
+    account: fAcct.value,
+    from: fromDate.value,
+    to: toDate.value,
+  });
+  const res = await fetch('/api/sme/fx-cash/ledger?' + qs);
+  const json = await res.json();
+  const tbody = document.getElementById('tbody');
+  if (!json.success) {
+    tbody.innerHTML = `<tr><td colspan="13" class="text-danger text-center">${json.error||'Lỗi'}</td></tr>`;
+    return;
+  }
+  const rows = json.rows || [];
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted py-4">Không có phát sinh</td></tr>';
+  } else {
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${fmtDateVi(r.posting_date)}</td>
+      <td class="small">${r.document_no||''}</td>
+      <td class="small fw-semibold">${(r.currency && r.currency !== 'VND') ? r.currency : ''}</td>
+      <td class="small">${r.description||''}</td>
+      <td class="small">${r.counterpart_accounts||''}</td>
+      <td class="text-end text-success">${r.debit_fc ? fmtFc(r.debit_fc) : ''}</td>
+      <td class="text-end text-danger">${r.credit_fc ? fmtFc(r.credit_fc) : ''}</td>
+      <td class="text-end text-success">${r.debit_vnd ? fmt(r.debit_vnd) : ''}</td>
+      <td class="text-end text-danger">${r.credit_vnd ? fmt(r.credit_vnd) : ''}</td>
+      <td class="text-end small">${fmtRate(r.line_rate)}</td>
+      <td class="text-end fw-semibold">${fmtFc(r.balance_fc)}</td>
+      <td class="text-end">${fmt(r.balance_vnd)}</td>
+      <td class="text-end small">${fmtRate(r.avg_book_rate)}</td>
+    </tr>`).join('');
+  }
+  const op = json.opening || {}, cl = json.closing || {};
+  footerSum.textContent =
+    `Đầu kỳ: ${fmtFc(op.balance_fc)} NT / ${fmt(op.balance_vnd)} ₫ (TG sổ ${fmtRate(op.avg_book_rate)}) · `
+    + `Cuối kỳ: ${fmtFc(cl.balance_fc)} NT / ${fmt(cl.balance_vnd)} ₫ (TG sổ ${fmtRate(cl.avg_book_rate)})`;
+}
+
+async function refreshSellPreview() {
+  const fc = parseFloat(sFc.value) || 0;
+  const rate = parseFloat(sSellRate.value) || 0;
+  if (!(fc > 0) || !(rate > 0)) {
+    sBookRate.value = ''; sBookVnd.value = ''; sSellVnd.value = ''; sDiff.value = '';
+    return;
+  }
+  const qs = new URLSearchParams({
+    fx_account: sFxAcct.value,
+    amount_fc: fc,
+    sell_rate: rate,
+    as_of: sDate.value || todayISO(),
+  });
+  const res = await fetch('/api/sme/fx-cash/sell/preview?' + qs);
+  const json = await res.json();
+  if (!json.success) {
+    sPosHint.innerHTML = `<span class="text-danger">${json.error||'Không xem trước được'}</span>`;
+    sBookRate.value = ''; sBookVnd.value = ''; sSellVnd.value = ''; sDiff.value = '';
+    return;
+  }
+  const d = json.data || json;
+  sBookRate.value = fmtRate(d.book_rate);
+  sBookVnd.value = fmt(d.book_vnd) + ' ₫';
+  sSellVnd.value = fmt(d.sell_vnd) + ' ₫';
+  const diff = Number(d.fx_difference) || 0;
+  sDiff.value = (diff >= 0 ? 'Lãi 515: +' : 'Lỗ 635: ') + fmt(Math.abs(diff)) + ' ₫';
+  sDiff.className = 'form-control bg-light fw-bold ' + (diff >= 0 ? 'text-success' : 'text-danger');
+  const pos = d.position || {};
+  sPosHint.innerHTML = `Số dư ${sFxAcct.value}: <b>${fmtFc(pos.balance_fc)}</b> NT · <b>${fmt(pos.balance_vnd)}</b> ₫ · TG sổ <b>${fmtRate(pos.avg_book_rate)}</b>`;
+}
+
+document.getElementById('btnLoad').onclick = async () => { await loadPositions(); await loadLedger(); };
+document.getElementById('fAcct').onchange = loadLedger;
+['sFc','sSellRate','sFxAcct','sDate'].forEach(id => {
+  document.getElementById(id).addEventListener('input', refreshSellPreview);
+  document.getElementById(id).addEventListener('change', refreshSellPreview);
+});
+sFxAcct.addEventListener('change', () => {
+  sVndPay.value = sFxAcct.value.startsWith('1112') ? 'cash' : 'bank';
+});
+
+document.getElementById('btnSellFx').onclick = async () => {
+  await loadPositions();
+  sDate.value = todayISO();
+  sFxAcct.value = fAcct.value || '1122';
+  sVndPay.value = sFxAcct.value.startsWith('1112') ? 'cash' : 'bank';
+  sFc.value = '';
+  sReason.value = '';
+  await refreshSellPreview();
+  new bootstrap.Modal(document.getElementById('modalSell')).show();
+};
+
+document.getElementById('btnSaveSell').onclick = async () => {
+  const payload = {
+    date: sDate.value,
+    fx_account: sFxAcct.value,
+    payment_method: sVndPay.value,
+    currency: sCur.value,
+    amount_fc: parseFloat(sFc.value) || 0,
+    sell_rate: parseFloat(sSellRate.value) || 0,
+    party_name: sParty.value,
+    reason: sReason.value,
+  };
+  if (!(payload.amount_fc > 0)) return alert('Nhập số ngoại tệ bán');
+  if (!(payload.sell_rate > 0)) return alert('Nhập tỷ giá bán');
+  // Kiểm tra đủ NT đã làm ở backend; kiểm tra không âm VND đích không cần (đang thu vào)
+  const res = await fetch('/api/sme/fx-cash/sell', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modalSell')).hide();
+  const diff = Number(json.fx_difference) || 0;
+  alert(
+    'Đã lập ' + json.voucher_no
+    + '\nThu VND: ' + fmt(json.sell_vnd)
+    + '\nXuất NT theo sổ: ' + fmt(json.book_vnd)
+    + '\nCLTG: ' + (diff >= 0 ? 'lãi 515 +' : 'lỗ 635 ') + fmt(Math.abs(diff)) + ' ₫'
+  );
+  await loadPositions();
+  await loadLedger();
+};
+
+loadPositions();
+loadLedger();
+</script>
+{% endblock %}

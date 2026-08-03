@@ -18,10 +18,15 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="row g-2 mb-3 align-items-end">
-                <div class="col-md-5">
-                    <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo tên, CCCD, SĐT, chức vụ...">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Tìm theo tên, CCCD, SĐT, chức vụ, bộ phận...">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
+                    <select class="form-select" id="deptFilter">
+                        <option value="">Tất cả bộ phận</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <select class="form-select" id="statusFilter">
                         <option value="">Tất cả trạng thái</option>
                         <option value="1">Đang làm việc</option>
@@ -83,6 +88,16 @@
                             <div class="col-md-6">
                                 <label class="form-label">Chức vụ</label>
                                 <input type="text" class="form-control" id="position">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Bộ phận <span class="text-danger">*</span></label>
+                                <select class="form-select" id="department" required>
+                                    <option value="ADMIN">Văn phòng / Quản lý → TK 642</option>
+                                    <option value="SALES">Bán hàng → TK 641</option>
+                                    <option value="WORKSHOP">Quản lý phân xưởng → TK 627</option>
+                                    <option value="PRODUCTION">Sản xuất trực tiếp → TK 622</option>
+                                </select>
+                                <div class="form-text">Dùng để hạch toán lương + BH DN theo bộ phận khi chốt lương.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Điện thoại</label>
@@ -166,7 +181,23 @@
 let employees = [];
 let employeeTableCtrl = null;
 let joinDatePicker = null;
+let departmentOptions = [];
 const empModal = new bootstrap.Modal(document.getElementById('employeeModal'));
+
+const DEFAULT_DEPARTMENTS = [
+    { code: 'ADMIN', label: 'Văn phòng / Quản lý', expense_account: '642' },
+    { code: 'SALES', label: 'Bán hàng', expense_account: '641' },
+    { code: 'WORKSHOP', label: 'Quản lý phân xưởng', expense_account: '627' },
+    { code: 'PRODUCTION', label: 'Sản xuất trực tiếp', expense_account: '622' },
+];
+
+function deptLabel(code) {
+    const c = String(code || 'ADMIN').toUpperCase();
+    const hit = (departmentOptions.length ? departmentOptions : DEFAULT_DEPARTMENTS)
+        .find(d => d.code === c);
+    if (!hit) return c;
+    return `${hit.label} (${hit.expense_account})`;
+}
 
 function escHtml(s) {
     return String(s ?? '')
@@ -201,13 +232,14 @@ function renderEmployeeRows(data, tbody) {
     const el = tbody || document.querySelector('#employeesTable tbody');
     if (!el) return;
     if (!data.length) {
-        el.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">Không có nhân viên.</td></tr>';
+        el.innerHTML = '<tr><td colspan="15" class="text-center text-muted py-4">Không có nhân viên.</td></tr>';
         return;
     }
     el.innerHTML = data.map(e => `
         <tr data-id="${e.id}">
             <td class="text-center small">${e.id}</td>
             <td><strong>${escHtml(e.fullname)}</strong></td>
+            <td class="small">${escHtml(e.department_label || deptLabel(e.department))}</td>
             <td class="small">${escHtml(e.position || '—')}</td>
             <td class="text-center small">${escHtml(e.id_card || '—')}</td>
             <td class="text-center small">${escHtml(e.phone || '—')}</td>
@@ -236,6 +268,10 @@ function initEmployeeTable() {
               getValue: e => e.id, sortValue: e => Number(e.id) || 0 },
             { key: 'fullname', label: 'Họ tên', sortable: true, filterType: 'text', width: '160px',
               getValue: e => e.fullname || '' },
+            { key: 'department', label: 'Bộ phận', sortable: true, filterType: 'select', width: '150px',
+              getValue: e => e.department || 'ADMIN',
+              filterOptions: (departmentOptions.length ? departmentOptions : DEFAULT_DEPARTMENTS)
+                .map(d => ({ value: d.code, label: `${d.label} (${d.expense_account})` })) },
             { key: 'position', label: 'Chức vụ', filterType: 'text', width: '120px',
               getValue: e => e.position || '' },
             { key: 'id_card', label: 'CCCD', filterType: 'text', width: '120px', align: 'center',
@@ -272,12 +308,37 @@ function toIsoDate(val) {
     return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
 }
 
+async function loadDepartmentOptions() {
+    try {
+        const res = await fetch('/api/employees/departments');
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) departmentOptions = json.data;
+    } catch (_) {
+        departmentOptions = DEFAULT_DEPARTMENTS;
+    }
+    const sel = document.getElementById('department');
+    const filter = document.getElementById('deptFilter');
+    const opts = departmentOptions.length ? departmentOptions : DEFAULT_DEPARTMENTS;
+    if (sel) {
+        sel.innerHTML = opts.map(d =>
+            `<option value="${d.code}">${escHtml(d.label)} → TK ${d.expense_account}</option>`
+        ).join('');
+    }
+    if (filter) {
+        filter.innerHTML = '<option value="">Tất cả bộ phận</option>' + opts.map(d =>
+            `<option value="${d.code}">${escHtml(d.label)}</option>`
+        ).join('');
+    }
+}
+
 async function loadEmployees() {
     const q = document.getElementById('searchInput').value.trim();
     const status = document.getElementById('statusFilter').value;
+    const dept = document.getElementById('deptFilter')?.value || '';
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (status) params.set('status', status);
+    if (dept) params.set('department', dept);
     try {
         const res = await fetch(`/api/employees/manage?${params}`);
         const data = await res.json();
@@ -292,6 +353,8 @@ async function loadEmployees() {
 function resetFilters() {
     document.getElementById('searchInput').value = '';
     document.getElementById('statusFilter').value = '';
+    const df = document.getElementById('deptFilter');
+    if (df) df.value = '';
     loadEmployees();
 }
 
@@ -303,6 +366,7 @@ function addEmployee() {
     document.getElementById('dependentDeduction').value = '4400000';
     document.getElementById('dependents').value = '0';
     document.getElementById('status').value = '1';
+    document.getElementById('department').value = 'ADMIN';
     document.getElementById('tabHistoryWrap').style.display = 'none';
     joinDatePicker?.setDate(new Date());
     empModal.show();
@@ -316,6 +380,7 @@ function editEmployee(id) {
     document.getElementById('fullname').value = e.fullname || '';
     document.getElementById('idCard').value = e.id_card || '';
     document.getElementById('position').value = e.position || '';
+    document.getElementById('department').value = e.department || 'ADMIN';
     document.getElementById('phone').value = e.phone || '';
     document.getElementById('address').value = e.address || '';
     document.getElementById('attendanceCode').value = e.attendance_code || '';
@@ -368,6 +433,7 @@ async function saveEmployee() {
         fullname,
         id_card: idCard,
         position: document.getElementById('position').value.trim(),
+        department: document.getElementById('department').value || 'ADMIN',
         phone: document.getElementById('phone').value.trim(),
         address: document.getElementById('address').value.trim(),
         attendance_code: document.getElementById('attendanceCode').value.trim(),
@@ -402,12 +468,14 @@ async function saveEmployee() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     joinDatePicker = flatpickr('#joinDate', { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true });
+    await loadDepartmentOptions();
     initEmployeeTable();
     document.getElementById('btnClearEmployeeColFilters')?.addEventListener('click', () => employeeTableCtrl?.clearColumnFilters());
     document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadEmployees(); });
     document.getElementById('statusFilter').addEventListener('change', loadEmployees);
+    document.getElementById('deptFilter')?.addEventListener('change', loadEmployees);
     loadEmployees();
 });
 </script>

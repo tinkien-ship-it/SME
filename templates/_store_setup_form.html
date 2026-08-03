@@ -1,0 +1,131 @@
+{# Nội dung form thiết lập — dùng chung SME / HKD #}
+<div class="mb-4">
+    <h4 class="fw-bold text-dark mb-1">
+        <i class="fas fa-sliders-h text-primary me-2"></i>Thiết lập hệ thống
+    </h4>
+    <p class="text-muted mb-0">
+        Thông tin doanh nghiệp hoặc hộ kinh doanh và tài khoản VietQR dùng trên hóa đơn, tờ khai thuế và mã QR khi bán hàng.
+    </p>
+</div>
+
+<form id="storeSetupForm">
+    <div class="card setup-card mb-4">
+        <div class="card-body p-4">
+            <h5 class="setup-section-title">
+                <i class="fas fa-store me-2"></i>Thông Tin Doanh Nghiệp hoặc Hộ Kinh Doanh
+            </h5>
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label required">Tên doanh nghiệp / hộ kinh doanh</label>
+                    <input type="text" name="business_name" class="form-control" value="{{ info.business_name or '' }}" required
+                           placeholder="VD: Công ty TNHH ABC / Hộ kinh doanh Nguyễn Văn A">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Mã số thuế</label>
+                    <input type="text" name="tax_code" class="form-control" value="{{ info.tax_code or '' }}" placeholder="0123456789">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required">Số điện thoại</label>
+                    <input type="tel" name="phone" class="form-control" value="{{ info.phone or '' }}"
+                           placeholder="0912345678" pattern="[0-9+\-\s()]{8,15}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email liên hệ / tờ khai</label>
+                    <input type="email" name="email" class="form-control" value="{{ info.email or '' }}" placeholder="example@domain.com">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Người đại diện / Chủ hộ kinh doanh</label>
+                    <input type="text" name="representative_name" class="form-control" value="{{ info.representative_name or '' }}"
+                           placeholder="Họ và tên">
+                    <div class="form-text">Dùng nhận diện người đại diện / chủ hộ trên bảng lương khi trùng tên nhân viên.</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Địa chỉ trụ sở / địa chỉ kinh doanh</label>
+                    <input type="text" name="address" class="form-control" value="{{ info.address or '' }}" placeholder="Số nhà, phường, quận, tỉnh/thành">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card setup-card mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h5 class="setup-section-title mb-0 border-0 pb-0">
+                    <i class="fas fa-qrcode me-2"></i>Tài khoản VietQR (nhận tiền bán hàng)
+                </h5>
+                <span id="vietqrStatusBadge" class="badge bg-secondary">Đang kiểm tra...</span>
+            </div>
+            <div class="alert alert-info py-2 small">
+                <i class="fas fa-info-circle me-1"></i>
+                Đây là <strong>tài khoản chính</strong> dùng tạo mã QR / đồng bộ SePay–Casso
+                và cũng là <strong>tài khoản ngân hàng mặc định</strong> trên chứng từ kế toán (1121).
+                {% if setup_is_sme %}
+                Khi mở thêm tài khoản (nhiều STK VND hoặc ngoại tệ 1122) tại
+                <a href="{{ url_for('SME_chart_of_accounts') }}">Hệ thống tài khoản</a>,
+                hệ thống sẽ cảnh báo chọn đúng TK trên phiếu thu/chi.
+                {% else %}
+                Số tài khoản và mã BIN dùng tạo mã QR khi bán hàng và trên phụ lục tờ khai thuế.
+                {% endif %}
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Chọn ngân hàng</label>
+                    <select id="bank_code_select" class="form-select" onchange="onBankBinChange(this)">
+                        <option value="">-- Chọn ngân hàng --</option>
+                        <option value="970436" data-name="Vietcombank">Vietcombank (970436)</option>
+                        <option value="970407" data-name="Techcombank">Techcombank (970407)</option>
+                        <option value="970418" data-name="BIDV">BIDV (970418)</option>
+                        <option value="970415" data-name="VietinBank">VietinBank (970415)</option>
+                        <option value="970405" data-name="Agribank">Agribank (970405)</option>
+                        <option value="970422" data-name="MB Bank">MB Bank (970422)</option>
+                        <option value="970416" data-name="ACB">ACB (970416)</option>
+                        <option value="970403" data-name="Sacombank">Sacombank (970403)</option>
+                        <option value="970432" data-name="VPBank">VPBank (970432)</option>
+                        <option value="970423" data-name="TPBank">TPBank (970423)</option>
+                        <option value="970437" data-name="HDBank">HDBank (970437)</option>
+                        <option value="970441" data-name="VIB">VIB (970441)</option>
+                        <option value="970448" data-name="OCB">OCB (970448)</option>
+                        <option value="custom" data-name="">Khác — nhập tay bên dưới</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Tên ngân hàng</label>
+                    <input type="text" name="bank_name" id="bank_name_input" class="form-control" value="{{ info.bank_name or '' }}"
+                           placeholder="VD: Ngân hàng TMCP Sacombank">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Số tài khoản</label>
+                    <input type="text" name="bank_account" id="bank_account_input" class="form-control" value="{{ info.bank_account or '' }}"
+                           placeholder="Nhập STK ngân hàng">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Mã BIN (VietQR)</label>
+                    <input type="text" name="bank_code" id="bank_code_input" class="form-control" value="{{ info.bank_code or '' }}"
+                           placeholder="970403">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Chủ tài khoản (IN HOA)</label>
+                    <input type="text" name="account_holder" class="form-control" value="{{ info.account_holder or '' }}"
+                           placeholder="NGUYEN VAN A">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Xem trước mã VietQR</label>
+                    <div id="qrPreviewBox" class="border rounded p-3 bg-light text-center small text-muted">
+                        Nhập STK và mã BIN để xem mẫu VietQR
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+        {% if setup_is_sme %}
+        <a href="{{ url_for('SME_dashboard') }}" class="btn btn-outline-secondary">Quay lại</a>
+        {% else %}
+        <a href="{{ url_for('HKD_dashboard') }}" class="btn btn-outline-secondary">Quay lại</a>
+        {% endif %}
+        <button type="submit" class="btn btn-primary px-4">
+            <i class="fas fa-save me-1"></i>Lưu thiết lập
+        </button>
+    </div>
+</form>

@@ -1,0 +1,71 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Danh sách xuất khẩu{% endblock %}
+
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Danh sách phiếu xuất khẩu</h4>
+    <p class="text-muted small mb-0">Doanh thu XK · công nợ 131 · tạm ứng / L/C</p>
+  </div>
+  <a href="{{ url_for('SME_sale_export') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus me-1"></i> Lập phiếu XK</a>
+</div>
+<div class="card border-0 shadow-sm">
+  <div class="card-body py-2">
+    <div class="input-group input-group-sm" style="max-width:360px">
+      <input type="search" id="q" class="form-control" placeholder="Số phiếu, khách, B/L…">
+      <button class="btn btn-outline-secondary" id="btnSearch">Tìm</button>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Số phiếu</th><th>Ngày</th><th>Chuyển giao</th><th>Khách hàng</th>
+          <th>NT</th><th class="text-end">Số NT</th><th>Thanh toán</th><th>CN</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="body"><tr><td colspan="9" class="text-center text-muted py-4">Đang tải…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block sme_scripts %}
+<script>
+const LABELS = {
+  unpaid: 'T/T trả sau', prepaid_full: 'Ứng đủ', prepaid_partial: 'Ứng một phần',
+  lc: 'L/C sight', lc_usance: 'L/C usance', doc_discount: 'Chiết khấu CT',
+};
+async function load() {
+  const q = document.getElementById('q').value.trim();
+  const res = await fetch('/api/sme/export-sale?' + new URLSearchParams({ q, limit: 100 }));
+  const json = await res.json();
+  const body = document.getElementById('body');
+  if (!json.success) {
+    body.innerHTML = `<tr><td colspan="9" class="text-danger text-center">${json.error||'Lỗi'}</td></tr>`;
+    return;
+  }
+  const rows = json.items || [];
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Chưa có phiếu xuất khẩu</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(r => `
+    <tr>
+      <td class="fw-semibold">${r.sale_no || ('#'+r.id)}</td>
+      <td>${(r.date||'').slice(0,10)}</td>
+      <td>${(r.risk_transfer_date||'').slice(0,10) || '—'}</td>
+      <td>${r.customer_name || '—'}</td>
+      <td>${r.currency || 'USD'}</td>
+      <td class="text-end">${Number(r.amount_fc||0).toLocaleString('vi-VN')}</td>
+      <td><span class="badge text-bg-light border">${LABELS[r.payment_mode]||r.payment_mode||'—'}</span></td>
+      <td>${r.ar_status || '—'}</td>
+      <td><a class="btn btn-sm btn-outline-primary" href="/SME_sale_export?sale_id=${r.id}">Mở</a></td>
+    </tr>
+  `).join('');
+}
+document.getElementById('btnSearch').addEventListener('click', load);
+document.getElementById('q').addEventListener('keydown', e => { if (e.key==='Enter') load(); });
+load();
+</script>
+{% endblock %}

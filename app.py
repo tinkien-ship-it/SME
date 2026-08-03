@@ -102,6 +102,8 @@ load_dotenv()
 # ÉP FLASK TÌM ĐÚNG THƯ MỤC templates – FIX LỖI VĨNH VIỄN!
 template_dir = os.path.abspath('templates')
 app = Flask(__name__, template_folder=template_dir)
+# Static local (CSS/JS) — cache trình duyệt 1 ngày (304 vẫn ok khi đổi ?v=)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 86400
 
 register_sqlite_converters()
 
@@ -229,7 +231,51 @@ def close_db(error):
     """Đóng connection sau khi request kết thúc"""
     db = g.pop('db', None)
     if db is not None:
-        db.close()
+        try:
+            db.close()
+        except Exception:
+            pass
+    try:
+        from db_utils import close_request_db
+        close_request_db()
+    except Exception:
+        pass
+
+
+@app.after_request
+def _gzip_text_responses(response):
+    """Chỉ gzip HTML/JSON — không nén static CSS/JS (đã minify; gzip mỗi request làm chậm trang)."""
+    if request.endpoint == 'static':
+        return response
+    if response.status_code < 200 or response.status_code >= 300:
+        return response
+    if response.direct_passthrough or 'Content-Encoding' in response.headers:
+        return response
+    accept = request.headers.get('Accept-Encoding', '')
+    if 'gzip' not in accept.lower():
+        return response
+    mime = (response.mimetype or '').split(';')[0].strip().lower()
+    # Chỉ nén HTML/JSON động — CSS/JS vendor để trình duyệt cache raw
+    if mime not in ('text/html', 'application/json'):
+        return response
+    try:
+        data = response.get_data()
+    except Exception:
+        return response
+    if not data or len(data) < 1500:
+        return response
+    import gzip
+    compressed = gzip.compress(data, compresslevel=4)
+    if len(compressed) >= len(data) * 0.95:
+        return response
+    response.set_data(compressed)
+    response.headers['Content-Encoding'] = 'gzip'
+    response.headers['Content-Length'] = str(len(compressed))
+    vary = response.headers.get('Vary')
+    response.headers['Vary'] = 'Accept-Encoding' if not vary else f'{vary}, Accept-Encoding'
+    return response
+
+
 # Kéo vào runtime khi cần: xmlsec, lxml, win32crypt — ký số USB token là môi trường đặc thù
 try:
     import xmlsec

@@ -14,25 +14,61 @@
         <h4 class="fw-bold mb-1">Thuế và ngân sách nhà nước</h4>
         <p class="text-muted small mb-0">Số dư tài khoản 133 / 333 từ sổ kép · quyết toán thuế giá trị gia tăng tại <a href="{{ url_for('SME_auto_posting') }}">Tự động kỳ</a>
           · <a href="{{ url_for('SME_vat_declaration') }}">Tờ khai thuế giá trị gia tăng</a>
-          · Kỳ kê khai mặc định: <strong id="filingHint">{{ 'tháng' if filing == 'monthly' else 'quý' }}</strong>
+          · Kỳ kê khai: <strong id="filingHint">{{ 'tháng' if filing == 'monthly' else 'quý' }}</strong>
+          <span class="d-block mt-1" id="filingPolicyHint">TT99/TT58: mặc định <strong>quý</strong> khi doanh thu năm trước ≤ 50 tỷ; chỉ khi &gt; 50 tỷ mới kê khai <strong>tháng</strong>.</span>
         </p>
       </div>
       <div class="d-flex gap-2 align-items-end flex-wrap">
         <div>
+          <label class="form-label small mb-1">Doanh thu năm trước</label>
+          <select id="revBand" class="form-select form-select-sm" style="width:170px">
+            <option value="under">≤ 50 tỷ (theo quý)</option>
+            <option value="over">&gt; 50 tỷ (theo tháng)</option>
+          </select>
+        </div>
+        <div>
           <label class="form-label small mb-1">Kê khai theo</label>
           <select id="mode" class="form-select form-select-sm" style="width:130px">
-            <option value="monthly" {% if filing == 'monthly' %}selected{% endif %}>Tháng</option>
             <option value="quarterly" {% if filing != 'monthly' %}selected{% endif %}>Quý</option>
+            <option value="monthly" {% if filing == 'monthly' %}selected{% endif %}>Tháng</option>
           </select>
         </div>
         <div><label class="form-label small mb-1">Năm</label><input type="number" id="y" class="form-control form-control-sm" style="width:100px"></div>
         <div id="monthWrap"><label class="form-label small mb-1">Tháng</label><select id="p" class="form-select form-select-sm" style="width:110px"></select></div>
         <div id="quarterWrap" style="display:none"><label class="form-label small mb-1">Quý</label><select id="q" class="form-select form-select-sm" style="width:110px"></select></div>
         <button class="btn btn-primary btn-sm" id="btnLoad">Xem</button>
-        <button class="btn btn-outline-secondary btn-sm" id="btnSaveMode" title="Lưu làm mặc định tenant">Lưu mặc định</button>
+        <button class="btn btn-outline-secondary btn-sm" id="btnSaveMode" title="Lưu kỳ kê khai + ngưỡng doanh thu">Lưu mặc định</button>
       </div>
     </div>
     <div class="row g-3 mb-3" id="sumCards"></div>
+    <div class="card border-0 shadow-sm mb-3" id="microCard">
+      <div class="card-body py-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+          <div>
+            <h6 class="fw-bold mb-1">Tiêu chí doanh nghiệp siêu nhỏ (TT58 · NĐ 80/2021)</h6>
+            <p class="small text-muted mb-0" id="microHint">LĐ BHXH BQ năm ≤ 10 và (DT ≤ trần lĩnh vực HOẶC vốn ≤ 3 tỷ). Hết diện → chuyển TT99.</p>
+          </div>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="btnMicroEval">Đánh giá lại</button>
+        </div>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label small mb-1">Lĩnh vực hoạt động</label>
+            <select id="enterpriseSector" class="form-select form-select-sm">
+              <option value="trade_service">Thương mại–Dịch vụ (DT ≤ 10 tỷ hoặc vốn ≤ 3 tỷ)</option>
+              <option value="agri_industry">Nông–lâm–thủy / CN–Xây dựng (DT ≤ 3 tỷ hoặc vốn ≤ 3 tỷ)</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">LĐ BHXH BQ năm (tuỳ chọn)</label>
+            <input type="number" id="avgBhxh" class="form-control form-control-sm" min="0" step="0.1" placeholder="Tự tính từ lương">
+          </div>
+          <div class="col-md-2">
+            <button type="button" class="btn btn-primary btn-sm w-100" id="btnSaveSector">Lưu lĩnh vực</button>
+          </div>
+        </div>
+        <div id="microResult" class="small mt-2 text-muted">—</div>
+      </div>
+    </div>
     <div class="card border-0 shadow-sm"><div class="card-body" id="taxBody"><div class="text-muted">Đang tải…</div></div></div>
 {% endblock %}
 {% block sme_scripts %}
@@ -43,6 +79,7 @@
   const pEl=document.getElementById('p');
   const qEl=document.getElementById('q');
   const modeEl=document.getElementById('mode');
+  const revBandEl=document.getElementById('revBand');
   const monthWrap=document.getElementById('monthWrap');
   const quarterWrap=document.getElementById('quarterWrap');
   yEl.value=now.getFullYear();
@@ -51,13 +88,43 @@
   for(let q=1;q<=4;q++) qEl.add(new Option('Quý '+q,q));
   qEl.value=String(Math.floor(now.getMonth()/3)+1);
 
+  let filingPolicy={can_select_monthly:false,must_monthly:false};
+
   function syncModeUi(){
     const q=modeEl.value==='quarterly';
     monthWrap.style.display=q?'none':'';
     quarterWrap.style.display=q?'':'none';
   }
+
+  function applyPolicyToSelects(){
+    const over=revBandEl.value==='over';
+    const optM=[...modeEl.options].find(o=>o.value==='monthly');
+    const optQ=[...modeEl.options].find(o=>o.value==='quarterly');
+    if(optM) optM.disabled=!over;
+    if(optQ) optQ.disabled=!!over;
+    if(over) modeEl.value='monthly';
+    else modeEl.value='quarterly';
+    syncModeUi();
+  }
+
   modeEl.addEventListener('change', syncModeUi);
-  syncModeUi();
+  revBandEl.addEventListener('change', applyPolicyToSelects);
+
+  async function loadFilingPolicy(){
+    try{
+      const res=await fetch('/api/sme/settings/vat-filing-period');
+      const data=await res.json();
+      if(!data.success) return;
+      const d=data.data||{};
+      filingPolicy=d;
+      revBandEl.value=d.revenue_over_50b?'over':'under';
+      modeEl.value=d.vat_filing_period==='monthly'?'monthly':'quarterly';
+      applyPolicyToSelects();
+      document.getElementById('filingHint').textContent=modeEl.value==='monthly'?'tháng':'quý';
+      const hint=document.getElementById('filingPolicyHint');
+      if(hint && d.hint) hint.textContent=d.hint;
+    }catch(_e){ syncModeUi(); }
+  }
 
   const money=v=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:0});
 
@@ -95,15 +162,22 @@
   document.getElementById('btnLoad').addEventListener('click', load);
   document.getElementById('btnSaveMode').addEventListener('click', async ()=>{
     try{
+      const over=revBandEl.value==='over';
       const res=await fetch('/api/sme/settings/vat-filing-period',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({vat_filing_period:modeEl.value}),
+        body:JSON.stringify({
+          vat_filing_period: over ? 'monthly' : 'quarterly',
+          vat_revenue_over_50b: over,
+          prior_year_revenue: over ? 50000000001 : 0,
+        }),
       });
       const data=await res.json();
       if(!data.success) throw new Error(data.error||'Lỗi lưu');
-      document.getElementById('filingHint').textContent=modeEl.value==='monthly'?'tháng':'quý';
-      if(window.Swal) Swal.fire({icon:'success',title:'Đã lưu',text:'Kỳ kê khai thuế giá trị gia tăng mặc định đã cập nhật',timer:1600,showConfirmButton:false});
+      document.getElementById('filingHint').textContent=over?'tháng':'quý';
+      const hint=document.getElementById('filingPolicyHint');
+      if(hint && data.data && data.data.hint) hint.textContent=data.data.hint;
+      if(window.Swal) Swal.fire({icon:'success',title:'Đã lưu',text:'Đã cập nhật kỳ kê khai theo ngưỡng doanh thu 50 tỷ',timer:1800,showConfirmButton:false});
       else alert('Đã lưu kỳ kê khai');
       load();
     }catch(e){
@@ -111,7 +185,57 @@
       else alert(e.message);
     }
   });
-  load();
+  async function loadMicro(){
+    const box=document.getElementById('microResult');
+    try{
+      const res=await fetch('/api/sme/micro-enterprise?persist=1&year='+encodeURIComponent(yEl.value));
+      const data=await res.json();
+      if(!data.success) throw new Error(data.error||'Lỗi');
+      const d=data.data||{};
+      const c=d.criteria||{};
+      const sec=document.getElementById('enterpriseSector');
+      if(sec && d.enterprise_sector) sec.value=d.enterprise_sector;
+      const hint=document.getElementById('microHint');
+      if(hint && d.hint) hint.textContent=d.hint;
+      const ok=!!c.is_micro_enterprise;
+      const lim=c.limits||{};
+      box.innerHTML=`<div class="${ok?'text-success':'text-danger'} fw-semibold">${ok?'Đủ tiêu chí DN siêu nhỏ (TT58)':'Không còn siêu nhỏ — cần chuyển TT99'}</div>`
+        +`<div class="mt-1">Lĩnh vực: ${c.sector_label||'—'} · LĐ BHXH BQ: <strong>${money(c.avg_bhxh_headcount)}</strong> (nguồn: ${c.headcount_source||'—'})`
+        +` · DT: <strong>${money(c.revenue)}</strong> đ (trần ${money(lim.revenue_limit)})`
+        +` · Vốn: <strong>${money(c.capital)}</strong> đ (trần ${money(lim.capital_limit)})</div>`;
+      if((c.fail_reasons||[]).length){
+        box.innerHTML+=`<ul class="mb-0 mt-1">${c.fail_reasons.map(r=>`<li>${r}</li>`).join('')}</ul>`;
+      }
+      if(d.alert && d.alert.active){
+        box.innerHTML+=`<div class="text-danger mt-2">${d.alert.message||''}</div>`;
+      }
+    }catch(e){ box.innerHTML=`<span class="text-danger">${e.message}</span>`; }
+  }
+
+  document.getElementById('btnMicroEval').addEventListener('click', loadMicro);
+  document.getElementById('btnSaveSector').addEventListener('click', async ()=>{
+    try{
+      const body={
+        action:'save_sector',
+        enterprise_sector:document.getElementById('enterpriseSector').value,
+      };
+      const avg=document.getElementById('avgBhxh').value;
+      if(avg!=='') body.avg_bhxh_headcount=avg;
+      const res=await fetch('/api/sme/micro-enterprise',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body),
+      });
+      const data=await res.json();
+      if(!data.success) throw new Error(data.error||'Lỗi lưu');
+      if(window.Swal) Swal.fire({icon:'success',title:'Đã lưu lĩnh vực',timer:1400,showConfirmButton:false});
+      loadMicro();
+    }catch(e){
+      if(window.Swal) Swal.fire('Lỗi', e.message, 'error');
+      else alert(e.message);
+    }
+  });
+
+  loadFilingPolicy().then(()=>{ load(); loadMicro(); });
 })();
 </script>
 {% endblock %}

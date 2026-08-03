@@ -108,7 +108,12 @@
             console.warn('Không tải được chỉ số nhóm menu', e);
         }
     }
-    document.addEventListener('DOMContentLoaded', loadMetrics);
+    // Chỉ số hub không chặn paint — tải sau khi trình duyệt rảnh
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(function () { loadMetrics(); }, { timeout: 2000 });
+    } else {
+        setTimeout(loadMetrics, 200);
+    }
 })();
 </script>
 {% endblock %}

@@ -59,9 +59,17 @@ def _business_type_for_line(line_type: str | None) -> str | None:
 def _resolve_payment_method(
     payment_status: str | None,
     payment_method: str | None,
+    *,
+    import_type: str | None = None,
 ) -> str:
+    # Nhập khẩu: tiền đã qua tạm ứng/L/C — phiếu mở tờ khai luôn Có 331.
+    if (import_type or '').strip().upper() == 'IMPORT':
+        return 'CREDIT'
     status = (payment_status or '').strip()
-    if status in ('Chưa thanh toán', 'Unpaid', ''):
+    if status in (
+        'Chưa thanh toán', 'Unpaid', '',
+        'Đã thanh toán trước đủ', 'Đã ứng một phần', 'Thanh toán bằng L/C',
+    ):
         return 'CREDIT'
     raw = str(payment_method or 'cash').strip().upper()
     if raw in ('CASH', '111', 'TIỀN MẶT', 'TIEN MAT'):
@@ -72,10 +80,12 @@ def _resolve_payment_method(
 
 
 def _active_import_entries(conn: sqlite3.Connection, import_id: int) -> list[int]:
+    """Bút toán G1 (PNK hoặc HMDD) — không gồm nộp thuế / nhập kho thực tế."""
     rows = conn.execute(
         """
         SELECT id FROM sme_journal_entries
-        WHERE document_id = ? AND document_type = ?
+        WHERE document_id = ?
+          AND document_type IN (?, 'HMDD')
           AND status = 'posted' AND reverses_id IS NULL
         ORDER BY id
         """,
@@ -120,15 +130,25 @@ def sync_import_journals(
     payment_method: str | None = None,
     import_type: str | None = None,
     import_tax_amount: Decimal | float | None = None,
+    excise_tax_amount: Decimal | float | None = None,
     exchange_rate: Decimal | float | None = None,
 ) -> dict:
     """
     Ghi bút toán mua hàng từ phiếu import:
-    hàng hóa/NVL (156/152), dịch vụ (642), TSCĐ (2112), CCDC (153) + VAT + đối ứng.
-    Hỗ trợ DOMESTIC / IMPORT (thuế NK → Nợ kho + Có 3333, VAT ưu tiên 13312).
+    hàng hóa/NVL (156/152 hoặc 151 nếu đang đi đường), dịch vụ (642), TSCĐ (2112), CCDC (153)
+    + VAT + đối ứng.
+    Hỗ trợ DOMESTIC / IMPORT:
+    thuế NK → Nợ kho/151 + Có 3333; TTĐB → Có 3332; VAT → Nợ 13312 / Có 33312.
 
     Không commit — caller commit cùng giao dịch nhập kho.
     """
+    from Services.sme.import_transit import (
+        STAGE_IN_TRANSIT,
+        STAGE_TAX_PAID,
+        ensure_import_transit_schema,
+        is_in_transit_stage,
+    )
+
     regime = str(accounting_regime or '').upper()
     if features is not None:
         if not features.get('journal_posting'):
@@ -139,6 +159,7 @@ def sync_import_journals(
     from Services.sme.bootstrap import ensure_sme_accounting_ready
 
     ensure_sme_accounting_ready(conn, commit=False)
+    ensure_import_transit_schema(conn, commit=False)
     conn.row_factory = sqlite3.Row
 
     imp = conn.execute('SELECT * FROM "import" WHERE id = ?', (import_id,)).fetchone()
@@ -173,10 +194,27 @@ def sync_import_journals(
     )
     if resolved_import_type not in ('DOMESTIC', 'IMPORT'):
         resolved_import_type = 'DOMESTIC'
+
+    stage = ''
+    if 'receipt_stage' in imp_keys and imp['receipt_stage']:
+        stage = str(imp['receipt_stage']).strip().upper()
+    in_transit = (
+        resolved_import_type == 'IMPORT'
+        and (is_in_transit_stage(stage) or stage in (STAGE_IN_TRANSIT, STAGE_TAX_PAID, ''))
+        and stage != 'RECEIVED'
+    )
+    # Phiếu IMPORT mới mặc định đi đường nếu stage trống
+    if resolved_import_type == 'IMPORT' and not stage:
+        in_transit = True
     total_import_tax = _money(
         import_tax_amount
         if import_tax_amount is not None
         else (imp['import_tax_amount'] if 'import_tax_amount' in imp_keys else 0)
+    )
+    total_excise_tax = _money(
+        excise_tax_amount
+        if excise_tax_amount is not None
+        else (imp['excise_tax_amount'] if 'excise_tax_amount' in imp_keys else 0)
     )
 
     detail_cols = _table_columns(conn, 'import_details')
@@ -192,6 +230,14 @@ def sync_import_journals(
         select_parts.append('COALESCE(d.tax_pct, 0) AS tax_pct')
     else:
         select_parts.append('0 AS tax_pct')
+    if 'import_tax_amount' in detail_cols:
+        select_parts.append('COALESCE(d.import_tax_amount, 0) AS import_tax_amount')
+    else:
+        select_parts.append('0 AS import_tax_amount')
+    if 'excise_tax_amount' in detail_cols:
+        select_parts.append('COALESCE(d.excise_tax_amount, 0) AS excise_tax_amount')
+    else:
+        select_parts.append('0 AS excise_tax_amount')
     if 'line_type' in detail_cols:
         select_parts.append("COALESCE(d.line_type, 'goods') AS line_type")
     else:
@@ -245,6 +291,8 @@ def sync_import_journals(
             'net': net,
             'tax': _money(row['tax']),
             'tax_pct': float(row['tax_pct'] or 0),
+            'import_tax_amount': _money(row['import_tax_amount']),
+            'excise_tax_amount': _money(row['excise_tax_amount']),
             'warehouse_code': row['warehouse_code'],
         })
 
@@ -262,10 +310,16 @@ def sync_import_journals(
         Decimal('0.00'),
     )
     nk_base_safe = nk_base_total if nk_base_total > 0 else Decimal('1.00')
+    imp_type_for_pay = (
+        import_type
+        or (imp['import_type'] if 'import_type' in imp.keys() else None)
+        or ''
+    )
     pay_method = _resolve_payment_method(
         imp['payment_status'] if 'payment_status' in imp.keys() else None,
         payment_method
         or (imp['payment_method'] if 'payment_method' in imp.keys() else None),
+        import_type=imp_type_for_pay,
     )
 
     supplier_id = imp['supplier_id'] if 'supplier_id' in imp.keys() else None
@@ -293,26 +347,59 @@ def sync_import_journals(
         vat_total = Decimal('0.00')
         payable_total = Decimal('0.00')
         group_import_tax = Decimal('0.00')
+        group_excise_tax = Decimal('0.00')
         desc_text = BUSINESS_TYPE_LABELS.get(b_type, b_type)
         group_base = sum((item['subtotal'] for item in items), Decimal('0.00'))
         group_base_safe = group_base if group_base > 0 else Decimal('1.00')
-        # Phân bổ thuế NK theo tỷ trọng subtotal nhóm đủ điều kiện (không vào dịch vụ)
+        # Ưu tiên thuế NK/TTĐB đã lưu trên dòng; thiếu thì phân bổ theo tỷ trọng header
+        line_nk_sum = sum((item['import_tax_amount'] for item in items), Decimal('0.00'))
+        line_excise_sum = sum((item['excise_tax_amount'] for item in items), Decimal('0.00'))
+        use_line_nk = line_nk_sum > 0
+        use_line_excise = line_excise_sum > 0
         if (
             resolved_import_type == 'IMPORT'
+            and not use_line_nk
             and total_import_tax > 0
             and b_type in IMPORT_TAX_BUSINESS_TYPES
         ):
             group_import_tax_budget = _money(total_import_tax * (group_base / nk_base_safe))
         else:
             group_import_tax_budget = Decimal('0.00')
+        if (
+            resolved_import_type == 'IMPORT'
+            and not use_line_excise
+            and total_excise_tax > 0
+            and b_type in IMPORT_TAX_BUSINESS_TYPES
+        ):
+            group_excise_tax_budget = _money(total_excise_tax * (group_base / nk_base_safe))
+        else:
+            group_excise_tax_budget = Decimal('0.00')
 
         for item in items:
             allocated_extra = _money((item['subtotal'] / base_safe) * extra_cost)
-            allocated_nk = _money((item['subtotal'] / group_base_safe) * group_import_tax_budget)
-            inv_amount = item['net'] + allocated_extra + allocated_nk
+            if use_line_nk:
+                allocated_nk = item['import_tax_amount']
+            elif b_type in IMPORT_TAX_BUSINESS_TYPES:
+                allocated_nk = _money((item['subtotal'] / group_base_safe) * group_import_tax_budget)
+            else:
+                allocated_nk = Decimal('0.00')
+            if use_line_excise:
+                allocated_excise = item['excise_tax_amount']
+            elif b_type in IMPORT_TAX_BUSINESS_TYPES:
+                allocated_excise = _money(
+                    (item['subtotal'] / group_base_safe) * group_excise_tax_budget
+                )
+            else:
+                allocated_excise = Decimal('0.00')
+            inv_amount = item['net'] + allocated_extra + allocated_nk + allocated_excise
             vat_total += item['tax']
-            payable_total += item['net'] + item['tax'] + allocated_extra
+            # IMPORT: VAT nộp HQ (33312) — 331 chỉ gồm giá mua (+ extra)
+            if resolved_import_type == 'IMPORT':
+                payable_total += item['net'] + allocated_extra
+            else:
+                payable_total += item['net'] + item['tax'] + allocated_extra
             group_import_tax += allocated_nk
+            group_excise_tax += allocated_excise
             inventory_lines.append({
                 'product_id': item['product_id'],
                 'product_name': item['product_name'],
@@ -329,25 +416,31 @@ def sync_import_journals(
             inventory_lines=inventory_lines,
             vat_amount=vat_total,
             import_tax_amount=group_import_tax,
+            excise_tax_amount=group_excise_tax,
             payable_amount=payable_total,
             supplier_id=int(supplier_id) if supplier_id else None,
             bill_no=bill_no,
             tax_code=tax_code,
             import_type=resolved_import_type,
             description=f"{desc_text} HĐ {bill_no or import_no}",
+            in_transit=in_transit,
         )
         from Services.sme.branch_filter import warehouse_branch_or_session
         wh0 = (inventory_lines[0].get('warehouse_code') if inventory_lines else None) or None
         branch = warehouse_branch_or_session(conn, wh0)
+        doc_type = 'HMDD' if in_transit else IMPORT_DOCUMENT_TYPE
         posted.append(post_journal_entry(
             conn,
             posting_date=posting_date or '',
             document_date=bill_date or posting_date,
-            document_type=IMPORT_DOCUMENT_TYPE,
+            document_type=doc_type,
             document_no=import_no,
             document_id=import_id,
             business_type=b_type,
-            description=f"{desc_text} theo phiếu {import_no or ('#' + str(import_id))}",
+            description=(
+                f"{'Hàng đi đường' if in_transit else desc_text} "
+                f"theo phiếu {import_no or ('#' + str(import_id))}"
+            ),
             reference_document=bill_no or import_no,
             created_by=created_by,
             branch_code=branch,
@@ -359,4 +452,6 @@ def sync_import_journals(
         'entry_ids': [item['id'] for item in posted],
         'reversed_entry_ids': reversed_ids,
         'import_type': resolved_import_type,
+        'in_transit': in_transit,
+        'receipt_stage': stage or (STAGE_IN_TRANSIT if in_transit else 'RECEIVED'),
     }

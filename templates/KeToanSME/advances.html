@@ -175,6 +175,12 @@ document.getElementById('btnSaveTU').onclick = async () => {
     purpose: tuPurpose.value,
     disburse: tuDisburse.checked
   };
+  if (payload.disburse && window.assertSmeCashBalanceOrAlert) {
+    const okBal = await window.assertSmeCashBalanceOrAlert(
+      payload.amount, payload.payment_method, { as_of: payload.date },
+    );
+    if (!okBal) return;
+  }
   const res = await fetch('/api/sme/advances/request', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
   const json = await res.json();
   if(!json.success) return alert(json.error||'Lỗi');
@@ -193,6 +199,12 @@ document.getElementById('btnSaveQT').onclick = async () => {
     expense_account: qtAcc.value||'642',
     purpose: qtPurpose.value
   };
+  if (payload.additional_payment > 0 && window.assertSmeCashBalanceOrAlert) {
+    const okBal = await window.assertSmeCashBalanceOrAlert(
+      payload.additional_payment, 'cash', { as_of: payload.date },
+    );
+    if (!okBal) return;
+  }
   const res = await fetch('/api/sme/advances/settle', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
   const json = await res.json();
   if(!json.success) return alert(json.error||'Lỗi');
@@ -207,6 +219,12 @@ document.getElementById('btnSaveDN').onclick = async () => {
     amount: parseFloat(dnAmount.value)||0, expense_account: dnAcc.value||'642',
     payment_method: dnPay.value, purpose: dnPurpose.value, pay: true
   };
+  if (window.assertSmeCashBalanceOrAlert) {
+    const okBal = await window.assertSmeCashBalanceOrAlert(
+      payload.amount, payload.payment_method, { as_of: payload.date },
+    );
+    if (!okBal) return;
+  }
   const res = await fetch('/api/sme/advances/payment-request', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
   const json = await res.json();
   if(!json.success) return alert(json.error||'Lỗi');

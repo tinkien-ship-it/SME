@@ -147,7 +147,11 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
                 created_by=_user(), commit=True,
                 branch_code=request_branch_filter(),
             )
-            return jsonify({'success': True, 'data': doc, 'message': f'Đã hủy lương T{month}/{year}'})
+            return jsonify({
+                'success': True,
+                'data': doc,
+                'message': doc.get('message') or f'Đã hủy lương T{month}/{year}',
+            })
         except ValueError as e:
             conn.rollback()
             return jsonify({'success': False, 'error': str(e)}), 400

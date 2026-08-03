@@ -35,9 +35,14 @@ from Services.sme.period_close import run_period_close
 from Services.sme.vat_settlement import run_vat_settlement
 from Services.sme.period_lock import (
     is_period_locked,
+    is_period_sealed,
+    is_year_locked,
     list_locked_periods,
     lock_period,
+    lock_year,
+    period_amendment_status,
     unlock_period,
+    unlock_year,
 )
 from Services.sme.dashboard_metrics import dashboard_metrics
 from Services.sme.tax_nsnn import tax_nsnn_summary
@@ -88,9 +93,14 @@ __all__ = [
     'run_period_close',
     'run_vat_settlement',
     'is_period_locked',
+    'is_period_sealed',
+    'is_year_locked',
     'list_locked_periods',
     'lock_period',
+    'lock_year',
+    'period_amendment_status',
     'unlock_period',
+    'unlock_year',
     'dashboard_metrics',
     'tax_nsnn_summary',
     'management_report',

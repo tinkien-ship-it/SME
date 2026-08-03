@@ -1,11 +1,11 @@
 """Tính giá thành thành phẩm — định mức BOM + phiếu sản xuất.
 
-Luồng hoàn thành phiếu:
-1. Xuất NVL (stock_moves type=export, ref_type=PRODUCTION) theo WAC hiện tại
-2. Nhập TP (type=import, ref_type=PRODUCTION) với giá thành = Σ(NVL) / SL_TP
-3. Cập nhật inventory.avg_cost qua apply_wac_*
+Luồng SME (defer_fg_receipt=True):
+1. Lập lệnh: xuất NVL theo WAC, tập hợp CP → 154 (WIP). Chưa nhập kho TP / chưa Nợ 155.
+2. Nhập kho thành phẩm theo đợt (nút trên từng lệnh) đến đủ SL lệnh → Nợ 155 / Có 154.
+3. Hủy: đảo phiếu nhập TP (nếu có) → đảo WIP → nhập lại NVL.
 
-Hủy phiếu: đảo chiều (nhập lại NVL, xuất lại TP) — giữ chứng từ gốc để audit.
+Luồng HKD (defer_fg_receipt=False, mặc định): xuất NVL + nhập TP ngay khi hoàn thành phiếu.
 """
 from __future__ import annotations
 
@@ -21,7 +21,10 @@ from Services.inventory_stock_helpers import (
 )
 
 REF_TYPE = 'PRODUCTION'
+REF_TYPE_FG = 'PRODUCTION_FG'
 VOUCHER_PREFIX = 'SX'
+STATUS_IN_PROGRESS = 'in_progress'
+STATUS_PARTIAL = 'partial_received'
 STATUS_COMPLETED = 'completed'
 STATUS_CANCELLED = 'cancelled'
 
@@ -100,13 +103,72 @@ def ensure_production_schema(conn: sqlite3.Connection) -> None:
         ('labor_cost', 'REAL DEFAULT 0'),
         ('other_cost', 'REAL DEFAULT 0'),
         ('total_cost', 'REAL DEFAULT 0'),
+        ('qty_received', 'REAL DEFAULT 0'),
+        ('defer_fg_receipt', 'INTEGER DEFAULT 0'),
     ):
         if col not in cols:
             try:
                 c.execute(f"ALTER TABLE production_orders ADD COLUMN {col} {decl}")
             except sqlite3.OperationalError:
                 pass
+
+    c.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS production_fg_receipts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER NOT NULL,
+            receipt_no TEXT NOT NULL UNIQUE,
+            receipt_date TEXT NOT NULL,
+            qty REAL NOT NULL DEFAULT 0,
+            unit_cost REAL NOT NULL DEFAULT 0,
+            amount REAL NOT NULL DEFAULT 0,
+            stock_move_id INTEGER,
+            journal_entry_id INTEGER,
+            note TEXT,
+            created_by TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            cancelled_at TEXT,
+            FOREIGN KEY (order_id) REFERENCES production_orders(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_prod_fg_receipts_order
+            ON production_fg_receipts(order_id);
+        """
+    )
     conn.commit()
+
+
+def _qty_f(val) -> float:
+    return float(val or 0)
+
+
+def _order_qty_target(order: dict) -> float:
+    """SL theo lệnh — ưu tiên qty_planned, fallback qty_completed."""
+    planned = _qty_f(order.get('qty_planned'))
+    completed = _qty_f(order.get('qty_completed'))
+    return planned if planned > 0 else completed
+
+
+def _qty_remaining(order: dict) -> float:
+    return max(0.0, round(_order_qty_target(order) - _qty_f(order.get('qty_received')), 6))
+
+
+def _status_from_receipt(order: dict, qty_received: float) -> str:
+    target = _order_qty_target(order)
+    if qty_received <= 1e-9:
+        return STATUS_IN_PROGRESS
+    if qty_received + 1e-9 >= target:
+        return STATUS_COMPLETED
+    return STATUS_PARTIAL
+
+
+def next_fg_receipt_voucher(cursor) -> str:
+    cursor.execute(
+        "INSERT INTO voucher_seq (type, seq) VALUES ('PRODUCTION_FG', 1) "
+        "ON CONFLICT(type) DO UPDATE SET seq = seq + 1"
+    )
+    cursor.execute("SELECT seq FROM voucher_seq WHERE type = 'PRODUCTION_FG'")
+    seq = int(cursor.fetchone()[0] or 1)
+    return f'NTP{seq:06d}'
 
 
 def _row_dict(row):
@@ -462,6 +524,7 @@ def create_production_order(
     other_cost: float = 0,
     created_by: str = '',
     allow_negative_stock: bool = False,
+    defer_fg_receipt: bool = False,
 ) -> dict:
     ensure_production_schema(conn)
     c = conn.cursor()
@@ -471,7 +534,7 @@ def create_production_order(
 
         qty = float(qty_completed or 0)
         if qty <= 0:
-            raise ValueError('Số lượng hoàn thành phải > 0')
+            raise ValueError('Số lượng theo lệnh sản xuất phải > 0')
 
         labor = max(0.0, float(labor_cost or 0))
         other = max(0.0, float(other_cost or 0))
@@ -516,20 +579,23 @@ def create_production_order(
         total_cost = round(material_cost + labor + other, 2)
         unit_cost = round(total_cost / qty, 4) if qty else 0.0
 
+        status = STATUS_IN_PROGRESS if defer_fg_receipt else STATUS_COMPLETED
+        qty_received = 0.0 if defer_fg_receipt else qty
+
         c.execute(
             """
             INSERT INTO production_orders (
                 voucher_no, production_date, finished_product_id,
-                qty_planned, qty_completed,
+                qty_planned, qty_completed, qty_received, defer_fg_receipt,
                 total_material_cost, labor_cost, other_cost, total_cost, unit_cost,
                 status, note, created_by, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 voucher_no, date_str, finished_product_id,
-                qty, qty,
+                qty, qty, qty_received, 1 if defer_fg_receipt else 0,
                 material_cost, labor, other, total_cost, unit_cost,
-                STATUS_COMPLETED, (note or '').strip(), (created_by or '').strip(),
+                status, (note or '').strip(), (created_by or '').strip(),
                 datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             ),
         )
@@ -575,34 +641,36 @@ def create_production_order(
                 pass
             sync_inventory_quantity_from_moves(c, m['material_product_id'])
 
-        apply_wac_inbound(c, finished_product_id, qty, total_cost)
-        fg_move = _insert_stock_move(
-            c,
-            product_id=finished_product_id,
-            when=when,
-            move_type='import',
-            type1='Nhập thành phẩm SX',
-            ref_id=order_id,
-            voucher_no=voucher_no,
-            quantity=qty,
-            cost_price=unit_cost,
-            note=f"SX {voucher_no}: nhập TP giá thành {unit_cost:,.0f}",
-        )
-        try:
-            c.execute(
-                """
-                INSERT INTO inventory_transactions
-                    (product_id, type, type1, quantity, cost_price, reference_id, reference_type, note, created_at)
-                VALUES (?, 'import', 'Nhập thành phẩm SX', ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    finished_product_id, qty, unit_cost, fg_move, REF_TYPE,
-                    f"SX {voucher_no}", when,
-                ),
+        # HKD / không trì hoãn: nhập TP ngay. SME: chờ nút Nhập kho thành phẩm.
+        if not defer_fg_receipt:
+            apply_wac_inbound(c, finished_product_id, qty, total_cost)
+            fg_move = _insert_stock_move(
+                c,
+                product_id=finished_product_id,
+                when=when,
+                move_type='import',
+                type1='Nhập thành phẩm SX',
+                ref_id=order_id,
+                voucher_no=voucher_no,
+                quantity=qty,
+                cost_price=unit_cost,
+                note=f"SX {voucher_no}: nhập TP giá thành {unit_cost:,.0f}",
             )
-        except sqlite3.Error:
-            pass
-        sync_inventory_quantity_from_moves(c, finished_product_id)
+            try:
+                c.execute(
+                    """
+                    INSERT INTO inventory_transactions
+                        (product_id, type, type1, quantity, cost_price, reference_id, reference_type, note, created_at)
+                    VALUES (?, 'import', 'Nhập thành phẩm SX', ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        finished_product_id, qty, unit_cost, fg_move, REF_TYPE,
+                        f"SX {voucher_no}", when,
+                    ),
+                )
+            except sqlite3.Error:
+                pass
+            sync_inventory_quantity_from_moves(c, finished_product_id)
 
         conn.commit()
         return get_production_order(conn, order_id)
@@ -645,8 +713,29 @@ def get_production_order(conn: sqlite3.Connection, order_id: int) -> dict | None
         data['total_cost'] = round(mat + data['labor_cost'] + data['other_cost'], 2)
     else:
         data['total_cost'] = float(data['total_cost'] or 0)
+    data['qty_planned'] = _qty_f(data.get('qty_planned') or data.get('qty_completed'))
+    data['qty_completed'] = _qty_f(data.get('qty_completed'))
+    data['qty_received'] = _qty_f(data.get('qty_received'))
+    data['qty_remaining'] = _qty_remaining(data)
+    data['defer_fg_receipt'] = int(data.get('defer_fg_receipt') or 0)
+    data['unit_cost'] = float(data.get('unit_cost') or 0)
     data['materials'] = [dict(x) for x in mats]
+    data['fg_receipts'] = list_fg_receipts(conn, order_id)
     return data
+
+
+def list_fg_receipts(conn: sqlite3.Connection, order_id: int) -> list[dict]:
+    ensure_production_schema(conn)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT * FROM production_fg_receipts
+        WHERE order_id = ? AND cancelled_at IS NULL
+        ORDER BY receipt_date ASC, id ASC
+        """,
+        (order_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def list_production_orders(
@@ -658,27 +747,29 @@ def list_production_orders(
     q: str = '',
     limit: int = 200,
 ) -> list[dict]:
+    ensure_production_schema(conn)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    sql = """
+    cols = {r[1] for r in c.execute('PRAGMA table_info(production_orders)').fetchall()}
+    qty_recv_sql = 'COALESCE(o.qty_received, 0)' if 'qty_received' in cols else '0'
+    defer_sql = 'COALESCE(o.defer_fg_receipt, 0)' if 'defer_fg_receipt' in cols else '0'
+    jid_sql = 'o.journal_entry_id,' if 'journal_entry_id' in cols else ''
+    sql = f"""
         SELECT o.id, o.voucher_no, o.production_date, o.finished_product_id,
-               o.qty_completed, o.total_material_cost,
+               COALESCE(o.qty_planned, o.qty_completed) AS qty_planned,
+               o.qty_completed, {qty_recv_sql} AS qty_received,
+               {defer_sql} AS defer_fg_receipt,
+               o.total_material_cost,
                COALESCE(o.labor_cost, 0) AS labor_cost,
                COALESCE(o.other_cost, 0) AS other_cost,
                COALESCE(o.total_cost, o.total_material_cost) AS total_cost,
                o.unit_cost, o.status,
-               o.note, o.created_at, o.cancelled_at,
+               o.note, o.created_at, o.cancelled_at, {jid_sql}
                p.name AS finished_name, p.product_code, p.unit AS finished_unit
         FROM production_orders o
         JOIN products p ON p.id = o.finished_product_id
         WHERE 1=1
     """
-    cols = {r[1] for r in c.execute('PRAGMA table_info(production_orders)').fetchall()}
-    if 'journal_entry_id' in cols:
-        sql = sql.replace(
-            'o.note, o.created_at, o.cancelled_at,',
-            'o.note, o.created_at, o.cancelled_at, o.journal_entry_id,',
-        )
     params: list = []
     if date_from:
         sql += " AND o.production_date >= ?"
@@ -695,7 +786,132 @@ def list_production_orders(
         params.extend([like, like, like])
     sql += " ORDER BY o.production_date DESC, o.id DESC LIMIT ?"
     params.append(int(limit or 200))
-    return [dict(r) for r in c.execute(sql, params).fetchall()]
+    out = []
+    for r in c.execute(sql, params).fetchall():
+        d = dict(r)
+        d['qty_remaining'] = _qty_remaining(d)
+        out.append(d)
+    return out
+
+
+def receive_finished_goods(
+    conn: sqlite3.Connection,
+    order_id: int,
+    *,
+    qty: float,
+    receipt_date: str | None = None,
+    note: str = '',
+    created_by: str = '',
+) -> dict:
+    """Nhập kho thành phẩm theo đợt (toàn bộ hoặc một phần còn lại của lệnh)."""
+    ensure_production_schema(conn)
+    order = get_production_order(conn, order_id)
+    if not order:
+        raise ValueError('Không tìm thấy lệnh sản xuất')
+    if order['status'] == STATUS_CANCELLED:
+        raise ValueError('Lệnh đã hủy — không nhập kho được')
+    if not int(order.get('defer_fg_receipt') or 0):
+        raise ValueError('Lệnh này đã nhập thành phẩm ngay khi lập — không dùng nhập theo đợt')
+
+    qty = round(float(qty or 0), 6)
+    if qty <= 0:
+        raise ValueError('Số lượng nhập kho phải > 0')
+    remaining = _qty_remaining(order)
+    if qty > remaining + 1e-9:
+        raise ValueError(
+            f'SL nhập ({qty}) vượt phần còn lại ({remaining}). '
+            f'Đã nhập {order["qty_received"]} / lệnh { _order_qty_target(order) }.'
+        )
+
+    unit_cost = float(order.get('unit_cost') or 0)
+    if unit_cost <= 0:
+        target = _order_qty_target(order)
+        total = float(order.get('total_cost') or 0)
+        unit_cost = round(total / target, 4) if target else 0.0
+    amount = round(qty * unit_cost, 2)
+    # Đợt cuối: làm tròn phần tiền còn lại trên lệnh để khớp total_cost
+    new_received = round(_qty_f(order.get('qty_received')) + qty, 6)
+    if new_received + 1e-9 >= _order_qty_target(order):
+        already_amt = round(
+            sum(float(r.get('amount') or 0) for r in (order.get('fg_receipts') or [])),
+            2,
+        )
+        amount = round(float(order.get('total_cost') or 0) - already_amt, 2)
+        if amount < 0:
+            amount = round(qty * unit_cost, 2)
+
+    date_str = (receipt_date or datetime.now().strftime('%Y-%m-%d')).strip()[:10]
+    when = f"{date_str} {datetime.now().strftime('%H:%M:%S')}"
+    fg_id = int(order['finished_product_id'])
+    voucher_no = order['voucher_no']
+
+    c = conn.cursor()
+    try:
+        receipt_no = next_fg_receipt_voucher(c)
+        apply_wac_inbound(c, fg_id, qty, amount)
+        move_id = _insert_stock_move(
+            c,
+            product_id=fg_id,
+            when=when,
+            move_type='import',
+            type1='Nhập thành phẩm SX (đợt)',
+            ref_id=order_id,
+            voucher_no=receipt_no,
+            quantity=qty,
+            cost_price=unit_cost,
+            note=f"{voucher_no}/{receipt_no}: nhập TP {qty} × {unit_cost:,.0f}",
+        )
+        try:
+            c.execute(
+                """
+                INSERT INTO inventory_transactions
+                    (product_id, type, type1, quantity, cost_price, reference_id, reference_type, note, created_at)
+                VALUES (?, 'import', 'Nhập thành phẩm SX (đợt)', ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    fg_id, qty, unit_cost, move_id, REF_TYPE_FG,
+                    f"{voucher_no}/{receipt_no}", when,
+                ),
+            )
+        except sqlite3.Error:
+            pass
+        sync_inventory_quantity_from_moves(c, fg_id)
+
+        c.execute(
+            """
+            INSERT INTO production_fg_receipts (
+                order_id, receipt_no, receipt_date, qty, unit_cost, amount,
+                stock_move_id, note, created_by, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                order_id, receipt_no, date_str, qty, unit_cost, amount,
+                move_id, (note or '').strip(), (created_by or '').strip(),
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            ),
+        )
+        receipt_id = c.lastrowid
+        new_status = _status_from_receipt(order, new_received)
+        c.execute(
+            """
+            UPDATE production_orders
+            SET qty_received = ?, status = ?
+            WHERE id = ?
+            """,
+            (new_received, new_status, order_id),
+        )
+        conn.commit()
+
+        conn.row_factory = sqlite3.Row
+        receipt_row = conn.execute(
+            'SELECT * FROM production_fg_receipts WHERE id = ?', (receipt_id,)
+        ).fetchone()
+        receipt = dict(receipt_row) if receipt_row else {'id': receipt_id}
+        order_after = get_production_order(conn, order_id)
+        return {'receipt': receipt, 'order': order_after}
+    except Exception:
+        conn.rollback()
+        raise
 
 
 def cancel_production_order(
@@ -715,32 +931,65 @@ def cancel_production_order(
     c = conn.cursor()
     try:
         fg_id = int(order['finished_product_id'])
-        qty = float(order['qty_completed'] or 0)
         unit_cost = float(order['unit_cost'] or 0)
         voucher_no = order['voucher_no']
         when = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        defer = bool(int(order.get('defer_fg_receipt') or 0))
 
-        fg_stock = ledger_quantity(c, fg_id)
-        if not allow_negative_stock and fg_stock + 1e-9 < qty:
-            raise ValueError(
-                f"Không hủy được: tồn thành phẩm còn {fg_stock}, cần xuất lại {qty}. "
-                "Hãy nhập lại / điều chỉnh tồn TP trước."
-            )
+        # Đảo kho TP đã nhập (đợt hoặc nhập ngay)
+        if defer:
+            receipts = list_fg_receipts(conn, order_id)
+            qty_to_reverse = sum(float(r.get('qty') or 0) for r in receipts)
+        else:
+            receipts = []
+            qty_to_reverse = float(order['qty_completed'] or 0)
 
-        apply_wac_outbound(c, fg_id, qty, unit_cost)
-        _insert_stock_move(
-            c,
-            product_id=fg_id,
-            when=when,
-            move_type='export',
-            type1='Hủy SX — xuất lại TP',
-            ref_id=order_id,
-            voucher_no=voucher_no,
-            quantity=-qty,
-            cost_price=unit_cost,
-            note=f"Hủy {voucher_no}: xuất lại TP",
-        )
-        sync_inventory_quantity_from_moves(c, fg_id)
+        if qty_to_reverse > 1e-9:
+            fg_stock = ledger_quantity(c, fg_id)
+            if not allow_negative_stock and fg_stock + 1e-9 < qty_to_reverse:
+                raise ValueError(
+                    f"Không hủy được: tồn thành phẩm còn {fg_stock}, cần xuất lại {qty_to_reverse}. "
+                    "Hãy điều chỉnh tồn TP trước."
+                )
+            if defer:
+                for r in reversed(receipts):
+                    rq = float(r.get('qty') or 0)
+                    rcost = float(r.get('unit_cost') or unit_cost)
+                    if rq <= 0:
+                        continue
+                    apply_wac_outbound(c, fg_id, rq, rcost)
+                    _insert_stock_move(
+                        c,
+                        product_id=fg_id,
+                        when=when,
+                        move_type='export',
+                        type1='Hủy nhập TP SX',
+                        ref_id=order_id,
+                        voucher_no=r.get('receipt_no') or voucher_no,
+                        quantity=-rq,
+                        cost_price=rcost,
+                        note=f"Hủy nhập {r.get('receipt_no')}: xuất lại TP",
+                    )
+                    c.execute(
+                        "UPDATE production_fg_receipts SET cancelled_at = ? WHERE id = ?",
+                        (when, r['id']),
+                    )
+                sync_inventory_quantity_from_moves(c, fg_id)
+            else:
+                apply_wac_outbound(c, fg_id, qty_to_reverse, unit_cost)
+                _insert_stock_move(
+                    c,
+                    product_id=fg_id,
+                    when=when,
+                    move_type='export',
+                    type1='Hủy SX — xuất lại TP',
+                    ref_id=order_id,
+                    voucher_no=voucher_no,
+                    quantity=-qty_to_reverse,
+                    cost_price=unit_cost,
+                    note=f"Hủy {voucher_no}: xuất lại TP",
+                )
+                sync_inventory_quantity_from_moves(c, fg_id)
 
         for m in order['materials']:
             mid = int(m['material_product_id'])
@@ -755,16 +1004,15 @@ def cancel_production_order(
                 product_id=mid,
                 when=when,
                 move_type='import',
-            type1='Hủy SX — nhập lại vật tư',
-            ref_id=order_id,
-            voucher_no=voucher_no,
-            quantity=q_act,
-            cost_price=cost,
-            note=f"Hủy {voucher_no}: nhập lại vật tư",
-        )
+                type1='Hủy SX — nhập lại vật tư',
+                ref_id=order_id,
+                voucher_no=voucher_no,
+                quantity=q_act,
+                cost_price=cost,
+                note=f"Hủy {voucher_no}: nhập lại vật tư",
+            )
             sync_inventory_quantity_from_moves(c, mid)
 
-        # Đảo bút toán SME (full: collect/wip/fg hoặc simple)
         try:
             from Services.sme.production_journal import reverse_production_journals
             reverse_production_journals(
@@ -776,7 +1024,7 @@ def cancel_production_order(
         c.execute(
             """
             UPDATE production_orders
-            SET status = ?, cancelled_at = ?, cancel_note = ?
+            SET status = ?, cancelled_at = ?, cancel_note = ?, qty_received = 0
             WHERE id = ?
             """,
             (STATUS_CANCELLED, when, (cancel_note or '').strip(), order_id),

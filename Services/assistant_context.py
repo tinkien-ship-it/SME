@@ -174,8 +174,8 @@ PAGE_CONTEXT: dict[str, dict[str, Any]] = {
         'hint': 'Tạm ứng / phải thu nhân viên (141).',
     },
     'SME_PhaiTraCongNhanVien': {
-        'label': 'Sổ Phải Trả Nhân Viên (SME)',
-        'hint': 'Lương và khoản phải trả nhân viên (334).',
+        'label': 'Công nợ phải trả nhân viên (SME)',
+        'hint': 'Trả lương cả kỳ (1 phiếu chi) hoặc trả lẻ NV — Nợ 3341 / Có 1111|1121.',
     },
     'SME_dashboard_debt': {
         'label': 'Tiền Và Công Nợ (SME)',
@@ -223,7 +223,10 @@ PAGE_CONTEXT: dict[str, dict[str, Any]] = {
     },
     'SME_production': {
         'label': 'Sản xuất (SME)',
-        'hint': 'Định mức → phiếu sản xuất → xuất NVL → nhập thành phẩm (giá vốn bình quân).',
+        'hint': (
+            'Lập lệnh: xuất NVL + CPSX vào 154. '
+            'Trên mỗi lệnh: nút Nhập kho thành phẩm (theo đợt hoặc đủ) → mới Nợ 155 / Có 154.'
+        ),
     },
     'SME_costing': {
         'label': 'Kế toán giá thành (SME)',

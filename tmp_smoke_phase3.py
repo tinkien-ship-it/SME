@@ -39,11 +39,13 @@ conn.execute(
 conn.commit()
 order = dict(conn.execute('SELECT * FROM production_orders WHERE id=1').fetchone())
 r = post_production_journal(conn, order, created_by='test', costing_mode='full', commit=True)
-print('prod_steps', r.get('steps'), 'fg', r.get('journal_entry_id'))
+print('prod_steps', r.get('steps'), 'wip_jid', r.get('journal_entry_id'))
+assert r.get('steps') == ['collect', 'wip'], r.get('steps')
 n = conn.execute(
     "SELECT COUNT(*) FROM sme_journal_entries WHERE document_no LIKE 'SX000001%'"
 ).fetchone()[0]
 print('journal_count', n)
+assert n == 2, n  # chỉ CP + 154; 155 khi nhập kho TP
 
 ws = cit_declaration_worksheet(conn, fiscal_year=2026, period_to=12)
 print('cit_due', ws['cit_due'], 'profit', ws['accounting_profit'])

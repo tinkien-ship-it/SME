@@ -252,7 +252,9 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
                     for row in data:
                         row['quantity'] = qty_map.get(int(row['id']), 0.0)
                         row['warehouse_code'] = warehouse
-            return jsonify({'success': True, 'data': data})
+            resp = jsonify({'success': True, 'data': data})
+            resp.headers['Cache-Control'] = 'private, max-age=60'
+            return resp
         except Exception as e:
             # barcode column may be missing on older DBs
             try:
@@ -266,7 +268,9 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
                     ORDER BY p.name LIMIT 800
                     """
                 ).fetchall()
-                return jsonify({'success': True, 'data': [dict(r) for r in rows]})
+                resp = jsonify({'success': True, 'data': [dict(r) for r in rows]})
+                resp.headers['Cache-Control'] = 'private, max-age=60'
+                return resp
             except Exception:
                 return jsonify({'success': False, 'error': str(e)}), 500
         finally:
@@ -386,23 +390,94 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
             conn.close()
 
     # ── Insurance / LĐTL ───────────────────────────────────
+    @app.route('/api/sme/insurance/periods', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_insurance_periods():
+        """Danh sách kỳ công nợ BHXH/BHYT/BHTN (giống HKD, chuẩn SME)."""
+        from Services.sme.insurance_debt import get_insurance_debt_list
+        year = request.args.get('year', type=int)
+        include_paid = request.args.get('include_paid', '1') == '1'
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = get_insurance_debt_list(conn, year=year, include_paid=include_paid)
+            return jsonify({'success': True, **data})
+        except Exception as e:
+            logger.exception('api_sme_insurance_periods')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/insurance/period-detail', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_insurance_period_detail():
+        from Services.sme.insurance_debt import compute_period_insurance
+        month = request.args.get('month', type=int)
+        year = request.args.get('year', type=int)
+        if not month or not year:
+            return jsonify({'success': False, 'error': 'Thiếu tháng/năm'}), 400
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = compute_period_insurance(conn, month, year)
+            if not data:
+                return jsonify({'success': False, 'error': 'Không có bảng lương kỳ này'}), 404
+            return jsonify({'success': True, **data})
+        except Exception as e:
+            logger.exception('api_sme_insurance_period_detail')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/api/sme/insurance/pay', methods=['POST'])
     @login_required
     @require_sme_regime
     def api_sme_insurance_pay():
+        """Nộp 1 khoản BH (BHXH/BHYT/BHTN × NLĐ|DN) hoặc lập phiếu thủ công (legacy)."""
+        from Services.sme.insurance_debt import pay_insurance_item
         from Services.sme.payroll import pay_insurance
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
             data = request.get_json(silent=True) or {}
+            # Luồng công nợ theo kỳ (giống HKD)
+            if data.get('ins_type') and data.get('month') and data.get('year'):
+                method = data.get('payment_method') or data.get('pay_method') or 'bank'
+                if str(method) in ('111', '112'):
+                    method = 'cash' if str(method) == '111' else 'bank'
+                doc = pay_insurance_item(
+                    conn,
+                    month=int(data['month']),
+                    year=int(data['year']),
+                    ins_type=data.get('ins_type'),
+                    payer=data.get('payer') or 'NLD',
+                    amount=data.get('amount'),
+                    pay_date=data.get('pay_date') or data.get('date'),
+                    payment_method=method,
+                    receiver_name=data.get('receiver') or data.get('receiver_name') or 'Cơ quan BHXH',
+                    reason=data.get('reason') or '',
+                    created_by=_user(),
+                    commit=True,
+                )
+                return jsonify({
+                    'success': True,
+                    'data': doc,
+                    'voucher': doc.get('voucher_no'),
+                    'message': doc.get('message'),
+                })
+
+            # Legacy: nhập tay TK + số tiền
             doc = pay_insurance(
                 conn,
                 amount=data.get('amount'),
-                pay_date=data.get('date'),
+                pay_date=data.get('date') or data.get('pay_date'),
                 payment_method=data.get('payment_method') or 'bank',
                 account_code=data.get('account_code') or '3383',
                 receiver_name=data.get('receiver_name') or 'Cơ quan BHXH',
                 reference=data.get('reference') or '',
+                reason=data.get('reason'),
                 created_by=_user(),
                 commit=True,
             )
@@ -413,6 +488,46 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
         except Exception as e:
             conn.rollback()
             logger.exception('api_sme_insurance_pay')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/insurance/pay-all', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_insurance_pay_all():
+        """Nộp tất cả khoản còn nợ kỳ — mỗi mục BH một phiếu + bút toán 338x."""
+        from Services.sme.insurance_debt import pay_insurance_period
+        data = request.get_json(silent=True) or {}
+        try:
+            month = int(data.get('month'))
+            year = int(data.get('year'))
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'Tháng/năm không hợp lệ'}), 400
+        method = data.get('payment_method') or data.get('pay_method') or 'bank'
+        if str(method) in ('111', '112'):
+            method = 'cash' if str(method) == '111' else 'bank'
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            result = pay_insurance_period(
+                conn,
+                month=month,
+                year=year,
+                pay_date=data.get('pay_date') or data.get('date'),
+                payment_method=method,
+                receiver_name=data.get('receiver') or data.get('receiver_name') or 'Cơ quan BHXH',
+                scope=data.get('scope') or 'ALL',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, **result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_insurance_pay_all')
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()

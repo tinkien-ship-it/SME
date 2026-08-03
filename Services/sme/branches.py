@@ -7,9 +7,24 @@ from typing import Any
 
 DEFAULT_BRANCH_CODE = 'HQ'
 
+_BRANCH_SCHEMA_VERSION = '2026-08-03g'
+_branches_schema_ready: dict[str, str] = {}
+
 
 def _now() -> str:
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+
+def _db_file_key(conn: sqlite3.Connection) -> str:
+    try:
+        row = conn.execute('PRAGMA database_list').fetchone()
+        if row:
+            path = row[2] if not isinstance(row, sqlite3.Row) else row['file']
+            if path:
+                return str(path)
+    except sqlite3.Error:
+        pass
+    return f'conn:{id(conn)}'
 
 
 def _table_cols(conn: sqlite3.Connection, table: str) -> set[str]:
@@ -17,6 +32,11 @@ def _table_cols(conn: sqlite3.Connection, table: str) -> set[str]:
 
 
 def ensure_sme_branches_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+    """Idempotent — chỉ chạy DDL/seed một lần / process / DB (tránh khóa SQLite mỗi request)."""
+    db_key = _db_file_key(conn)
+    if _branches_schema_ready.get(db_key) == _BRANCH_SCHEMA_VERSION:
+        return
+
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS sme_branches (
@@ -68,9 +88,12 @@ def ensure_sme_branches_schema(conn: sqlite3.Connection, *, commit: bool = True)
         except sqlite3.Error:
             pass
 
-    if commit:
+    # Luôn commit schema để nhả write-lock — không giữ transaction xuyên suốt render HTML
+    try:
         conn.commit()
-
+    except sqlite3.Error:
+        pass
+    _branches_schema_ready[db_key] = _BRANCH_SCHEMA_VERSION
 
 def list_branches(
     conn: sqlite3.Connection,
@@ -107,14 +130,21 @@ def resolve_posting_branch(
     conn: sqlite3.Connection,
     branch_code: str | None = None,
 ) -> str:
-    """Mã CN ghi sổ: tham số > session > mặc định HQ."""
+    """Mã CN ghi sổ: tham số > session posting > mặc định HQ.
+
+    ``ALL`` / rỗng là bộ lọc báo cáo, không phải mã chi nhánh — map về CN mặc định.
+    """
     ensure_sme_branches_schema(conn, commit=False)
     code = (branch_code or '').strip().upper() or None
+    if code in ('ALL', '*', '-'):
+        code = None
     if not code:
         try:
             from flask import has_request_context, session
             if has_request_context():
                 code = (session.get('sme_branch_code') or '').strip().upper() or None
+                if code in ('ALL', '*', '-'):
+                    code = None
         except Exception:
             code = None
     if not code:
@@ -474,6 +504,7 @@ def assert_import_in_branch(
 def branch_context(conn: sqlite3.Connection) -> dict[str, Any]:
     """Payload cho UI / context processor."""
     ensure_sme_branches_schema(conn, commit=False)
+    # list_branches cũng gọi ensure — đã cache nên no-op
     branches = list_branches(conn, active_only=True)
     current = None
     try:

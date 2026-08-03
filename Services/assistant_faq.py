@@ -16,7 +16,7 @@ STATIC_FAQ: list[dict[str, Any]] = [
         'pages': ['store_setup', 'settings_page', 'thiet_lap'],
         'title': 'Thiết lập cửa hàng & ngân hàng',
         'answer': (
-            'Vào **Hệ Thống → Thiết Lập** (`/thiet-lap`): điền thông tin cửa hàng, MST, địa chỉ và '
+            'Vào **Hệ Thống → Thiết Lập** (`/thiet-lap`): điền thông tin doanh nghiệp hoặc hộ kinh doanh, MST, địa chỉ và '
             'tài khoản ngân hàng (phục vụ VietQR khi bán hàng). Lưu xong mới nên nhập quỹ tiền mặt và số dư ngân hàng.'
         ),
     },
@@ -643,7 +643,8 @@ STATIC_FAQ: list[dict[str, Any]] = [
         'pages': ['SME_production', 'SME_costing'],
         'title': 'Sản xuất và giá thành SME',
         'answer': (
-            '**Sản xuất và giá thành → Sản xuất**: định mức, phiếu sản xuất, xuất NVL, nhập thành phẩm (giá vốn bình quân). '
+            '**Sản xuất và giá thành → Sản xuất**: lập lệnh (xuất NVL, CPSX vào 154) → trên mỗi lệnh bấm '
+            '**Nhập kho thành phẩm** để nhập theo đợt hoặc đủ lệnh (lúc này mới Nợ 155 / Có 154). '
             '**Kế toán giá thành** tập hợp 621/622/627.'
         ),
     },

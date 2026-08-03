@@ -21,17 +21,47 @@
     paid: 'Đã nộp',
     confirmed: 'Đã xác nhận',
     partial: 'Giao một phần',
+    // Lệnh sản xuất / giá thành
+    in_progress: 'Đang sản xuất',
+    partial_received: 'Nhập một phần',
     completed: 'Hoàn thành',
     closed: 'Đã đóng',
     open: 'Đang mở',
     Off: 'Ngừng dùng',
     ON: 'Đang dùng',
     On: 'Đang dùng',
+    // Chế độ giá thành (costing_mode)
+    full: 'Đầy đủ',
+    simple: 'Đơn giản',
+    material: 'Nguyên vật liệu',
   };
 
   var BRANCH_VI = {
     HQ: 'Trụ sở chính',
     ALL: 'Tất cả chi nhánh',
+  };
+
+  /** Loại hàng / product_type → tiếng Việt (không lộ mã English ra UI). */
+  var PRODUCT_TYPE_VI = {
+    goods: 'Hàng hóa',
+    merchandise: 'Hàng hóa',
+    materials: 'Nguyên vật liệu',
+    material: 'Nguyên vật liệu',
+    raw_materials: 'Nguyên vật liệu',
+    raw_material: 'Nguyên vật liệu',
+    finished_goods: 'Thành phẩm',
+    finished: 'Thành phẩm',
+    thanh_pham: 'Thành phẩm',
+    service: 'Dịch vụ',
+    services: 'Dịch vụ',
+    tools: 'Công cụ dụng cụ',
+    tool: 'Công cụ dụng cụ',
+    ccdc: 'Công cụ dụng cụ',
+    fixed_asset: 'Tài sản cố định',
+    fixed_assets: 'Tài sản cố định',
+    tscd: 'Tài sản cố định',
+    recipe: 'Thành phẩm',
+    ready_made: 'Thành phẩm',
   };
 
   function pad2(n) {
@@ -65,13 +95,29 @@
   function statusLabelVi(code) {
     if (code == null || code === '') return '—';
     var key = String(code).trim();
-    return STATUS_VI[key] || key;
+    if (STATUS_VI[key] != null) return STATUS_VI[key];
+    // Không để mã tiếng Anh lộ ra giao diện nếu chưa map
+    if (/^[A-Za-z][A-Za-z0-9_]*$/.test(key)) {
+      return key.replace(/_/g, ' ');
+    }
+    return key;
   }
 
   function branchLabelVi(code) {
     if (code == null || code === '') return BRANCH_VI.HQ;
     var key = String(code).trim().toUpperCase();
     return BRANCH_VI[key] || key;
+  }
+
+  function productTypeLabelVi(code) {
+    if (code == null || code === '') return '—';
+    var key = String(code).trim().toLowerCase();
+    if (PRODUCT_TYPE_VI[key] != null) return PRODUCT_TYPE_VI[key];
+    // Không để mã tiếng Anh lộ ra giao diện
+    if (/^[a-z][a-z0-9_]*$/.test(key)) {
+      return 'Khác';
+    }
+    return String(code);
   }
 
   function moneyVi(v, withSuffix) {
@@ -85,13 +131,17 @@
     todayISO: todayISO,
     statusLabelVi: statusLabelVi,
     branchLabelVi: branchLabelVi,
+    productTypeLabelVi: productTypeLabelVi,
     moneyVi: moneyVi,
     STATUS_VI: STATUS_VI,
+    PRODUCT_TYPE_VI: PRODUCT_TYPE_VI,
   };
   // Lối tắt toàn cục cho template cũ
   global.fmtDateVi = fmtDateVi;
+  global.formatDate = global.formatDate || fmtDateVi;
   global.todayISO = global.todayISO || todayISO;
   global.statusLabelVi = statusLabelVi;
   global.branchLabelVi = branchLabelVi;
+  global.productTypeLabelVi = productTypeLabelVi;
   global.moneyVi = moneyVi;
 })(typeof window !== 'undefined' ? window : this);

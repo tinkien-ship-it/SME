@@ -49,7 +49,7 @@
       <td class="num">{{ '{:,.0f}'.format((o.labor or 0)|float).replace(',', '.') }}</td>
       <td class="num">{{ '{:,.0f}'.format((o.other or 0)|float).replace(',', '.') }}</td>
       <td class="num">{{ '{:,.0f}'.format((o.total_cost or 0)|float).replace(',', '.') }}</td>
-      <td>{{ o.costing_mode or '' }}</td>
+      <td>{% set cm = (o.costing_mode or 'full')|string %}{% if cm == 'full' %}Đầy đủ{% elif cm == 'simple' %}Đơn giản{% elif cm == 'material' %}Nguyên vật liệu{% else %}{{ cm }}{% endif %}</td>
     </tr>
   {% endfor %}
   </tbody>

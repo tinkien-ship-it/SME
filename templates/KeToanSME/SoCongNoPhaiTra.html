@@ -299,6 +299,15 @@ $('#btnSaveImportPayment').on('click', async function() {
     const amount = parseVND($('#import_amount_input').val());
     if (amount <= 0) return Swal.fire('Cảnh báo', 'Vui lòng nhập số tiền thanh toán', 'warning');
 
+    const payMethod = $('#import_payment_method').val() === 'transfer' ? 'bank' : 'cash';
+    const payDate = paymentDatePicker && paymentDatePicker.selectedDates[0]
+        ? flatpickr.formatDate(paymentDatePicker.selectedDates[0], 'Y-m-d')
+        : new Date().toISOString().slice(0, 10);
+    if (window.assertSmeCashBalanceOrAlert) {
+        const okBal = await window.assertSmeCashBalanceOrAlert(amount, payMethod, { as_of: payDate });
+        if (!okBal) return;
+    }
+
     const btn = $(this);
     btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Đang lưu...');
 
@@ -308,11 +317,9 @@ $('#btnSaveImportPayment').on('click', async function() {
         amount: amount,
         reference_document: $('#import_bill_no').val() || $('#display_import_no').text(),
         address: $('#import_address').val(),
-        payment_method: $('#import_payment_method').val() === 'transfer' ? 'bank' : 'cash',
+        payment_method: payMethod,
         debit_account: '331',
-        date: paymentDatePicker && paymentDatePicker.selectedDates[0]
-            ? flatpickr.formatDate(paymentDatePicker.selectedDates[0], 'Y-m-d')
-            : new Date().toISOString().slice(0, 10),
+        date: payDate,
         reason: $('#import_reason').val()
     };
 

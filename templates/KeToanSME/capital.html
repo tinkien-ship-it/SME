@@ -61,6 +61,10 @@ btnCT.onclick=()=>openModal('dividend','Công bố cổ tức (Nợ 4212 / Có 3
 btnPay.onclick=()=>openModal('dividend_pay','Chi trả cổ tức (Nợ 3388 / Có tiền)');
 btnSave.onclick=async()=>{
   const payload={doc_type:fType.value, date:fDate.value, party_name:fParty.value, amount:parseFloat(fAmt.value)||0, notes:fNotes.value};
+  if (payload.doc_type === 'dividend_pay' && window.assertSmeCashBalanceOrAlert) {
+    const okBal = await window.assertSmeCashBalanceOrAlert(payload.amount, 'bank', { as_of: payload.date });
+    if (!okBal) return;
+  }
   const res=await fetch('/api/sme/capital',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
   bootstrap.Modal.getInstance(document.getElementById('modal')).hide();

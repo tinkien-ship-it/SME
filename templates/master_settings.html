@@ -666,7 +666,7 @@ async function showTenantModal(mode, data = {}) {
                         <option value="monthly" ${(data.vat_filing_period || data.filing_period) === 'monthly' ? 'selected' : ''}>Theo tháng</option>
                         <option value="quarterly" ${(data.vat_filing_period || data.filing_period || 'quarterly') !== 'monthly' ? 'selected' : ''}>Theo quý</option>
                     </select>
-                    <div class="form-text">TT58 mặc định quý · TT99 mặc định tháng — có thể đổi</div>
+                    <div class="form-text">Mặc định quý (DT năm trước ≤ 50 tỷ). Chọn tháng chỉ khi DT &gt; 50 tỷ.</div>
                 </div>
                 <div class="mb-2">
                     <label class="form-label small fw-bold">Ngành nghiệp vụ</label>

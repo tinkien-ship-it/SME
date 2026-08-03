@@ -67,19 +67,21 @@ SME_BASE_FEATURES = {
         'auto_vat_settlement': True,
         'auto_lock_period': True,
         'bctc_enabled': True,
-        # Mặc định kê khai GTGT theo tháng; tenant có thể đổi sang quý
-        'filing_period': 'monthly',
-        'vat_filing_period': 'monthly',
+        # Mặc định quý (DT năm trước ≤ 50 tỷ). > 50 tỷ → bắt buộc tháng.
+        'filing_period': 'quarterly',
+        'vat_filing_period': 'quarterly',
         'nsnn_s4': False,
         'tax_debt_summary': True,
         'profit_report_s2c': False,
-        'monthly_vat_filing': True,
+        'monthly_vat_filing': False,
         'einvoice_required': True,
         'einvoice_enabled': True,
     },
 }
 
 VAT_FILING_PERIODS = ('monthly', 'quarterly')
+# Ngưỡng doanh thu năm trước liền kề (NĐ 126/2020): > 50 tỷ → kê khai GTGT theo tháng
+VAT_MONTHLY_REVENUE_THRESHOLD = 50_000_000_000
 
 
 def normalize_vat_filing_period(value, default='quarterly'):
@@ -93,30 +95,94 @@ def normalize_vat_filing_period(value, default='quarterly'):
     return fallback if fallback in VAT_FILING_PERIODS else 'quarterly'
 
 
+def parse_prior_year_revenue(settings=None) -> float | None:
+    """Doanh thu bán hàng/cung cấp DV năm trước liền kề (để xác định kỳ GTGT)."""
+    settings = settings or {}
+    raw = (
+        settings.get('prior_year_revenue')
+        or settings.get('vat_prior_year_revenue')
+        or settings.get('annual_revenue_prior_year')
+    )
+    if raw is None or raw == '':
+        # Cờ tường minh từ form
+        flag = settings.get('vat_revenue_over_50b')
+        if flag is True or str(flag).lower() in ('1', 'true', 'yes', 'over'):
+            return float(VAT_MONTHLY_REVENUE_THRESHOLD) + 1.0
+        if flag is False or str(flag).lower() in ('0', 'false', 'no', 'under'):
+            return 0.0
+        return None
+    try:
+        return float(str(raw).replace(',', '').replace(' ', ''))
+    except (TypeError, ValueError):
+        return None
+
+
+def is_vat_revenue_over_50b(settings=None) -> bool:
+    """True khi doanh thu năm trước > 50 tỷ (bắt buộc kê khai tháng)."""
+    rev = parse_prior_year_revenue(settings)
+    if rev is None:
+        return False
+    return rev > float(VAT_MONTHLY_REVENUE_THRESHOLD)
+
+
+def resolve_vat_filing_policy(accounting_regime=None, settings=None) -> dict:
+    """
+    Chính sách kỳ kê khai GTGT theo regime + doanh thu năm trước.
+
+    - TT58 / TT99 với DT ≤ 50 tỷ (hoặc chưa khai DT): mặc định quý; không chọn tháng.
+    - DT > 50 tỷ: bắt buộc tháng.
+    """
+    settings = settings or {}
+    regime = normalize_accounting_regime(accounting_regime)
+    over = is_vat_revenue_over_50b(settings)
+    rev = parse_prior_year_revenue(settings)
+    if over:
+        default = 'monthly'
+        allowed = ('monthly',)
+        can_monthly = True
+        must_monthly = True
+        hint = (
+            'Doanh thu năm trước > 50 tỷ đồng — bắt buộc kê khai GTGT theo tháng '
+            '(NĐ 126/2020/NĐ-CP).'
+        )
+    else:
+        default = default_vat_filing_period_for_regime(regime)
+        allowed = ('quarterly',)
+        can_monthly = False
+        must_monthly = False
+        hint = (
+            'Doanh thu năm trước ≤ 50 tỷ (hoặc chưa khai) — kê khai GTGT theo quý. '
+            'Chỉ khi doanh thu năm trước > 50 tỷ mới được/ phải chọn kê khai theo tháng.'
+        )
+    return {
+        'accounting_regime': regime,
+        'prior_year_revenue': rev,
+        'revenue_threshold': VAT_MONTHLY_REVENUE_THRESHOLD,
+        'revenue_over_50b': over,
+        'default_period': default,
+        'allowed_periods': list(allowed),
+        'can_select_monthly': can_monthly,
+        'must_monthly': must_monthly,
+        'hint': hint,
+    }
+
+
 def default_vat_filing_period_for_regime(accounting_regime):
+    """Mặc định theo regime khi chưa xét ngưỡng 50 tỷ — cả TT99 và TT58 đều quý."""
     regime = normalize_accounting_regime(accounting_regime)
     base = SME_BASE_FEATURES.get(regime) or SME_BASE_FEATURES['SME_TT99']
     return normalize_vat_filing_period(
         base.get('vat_filing_period') or base.get('filing_period'),
-        default='monthly' if base.get('monthly_vat_filing') else 'quarterly',
+        default='quarterly',
     )
 
 
 def apply_vat_filing_period_to_features(features, settings=None, accounting_regime=None):
-    """Ghi đè filing_period / monthly_vat_filing theo lựa chọn tenant."""
+    """Ghi đè filing_period / monthly_vat_filing theo lựa chọn tenant + ngưỡng 50 tỷ."""
     features = dict(features or {})
     settings = settings or {}
-    if accounting_regime:
-        default = default_vat_filing_period_for_regime(accounting_regime)
-    elif features.get('vat_filing_period') or features.get('filing_period'):
-        default = normalize_vat_filing_period(
-            features.get('vat_filing_period') or features.get('filing_period'),
-            default='quarterly',
-        )
-    elif features.get('monthly_vat_filing') is True:
-        default = 'monthly'
-    else:
-        default = 'quarterly'
+    policy = resolve_vat_filing_policy(accounting_regime, settings)
+    default = policy['default_period']
 
     raw = (
         settings.get('vat_filing_period')
@@ -127,9 +193,21 @@ def apply_vat_filing_period_to_features(features, settings=None, accounting_regi
         or features.get('filing_period')
     )
     period = normalize_vat_filing_period(raw, default=default)
+    # Ép theo ngưỡng doanh thu
+    if policy['must_monthly']:
+        period = 'monthly'
+    elif period == 'monthly' and not policy['can_select_monthly']:
+        period = 'quarterly'
     features['vat_filing_period'] = period
     features['filing_period'] = period
     features['monthly_vat_filing'] = period == 'monthly'
+    features['vat_filing_policy'] = {
+        'revenue_over_50b': policy['revenue_over_50b'],
+        'can_select_monthly': policy['can_select_monthly'],
+        'must_monthly': policy['must_monthly'],
+        'prior_year_revenue': policy['prior_year_revenue'],
+        'hint': policy['hint'],
+    }
     return features, period
 
 # ---------------------------------------------------------------------------
@@ -568,9 +646,37 @@ def _empty_profile():
 def load_tenant_profile(tenant_id):
     if not tenant_id:
         return _empty_profile()
+    import time
+    key = str(tenant_id).strip()
+    cache = getattr(load_tenant_profile, '_cache', None)
+    if cache is None:
+        load_tenant_profile._cache = {}
+        cache = load_tenant_profile._cache
+    hit = cache.get(key)
+    now = time.time()
+    if hit and (now - hit[0]) < 30:
+        return hit[1]
     from Services.subscription_service import get_tenant_record
     rec = get_tenant_record(tenant_id, include_inactive=True)
-    return build_profile_from_registry(rec or {})
+    profile = build_profile_from_registry(rec or {})
+    cache[key] = (now, profile)
+    if len(cache) > 128:
+        cutoff = now - 30
+        for k, (ts, _) in list(cache.items()):
+            if ts < cutoff:
+                cache.pop(k, None)
+    return profile
+
+
+def invalidate_tenant_profile_cache(tenant_id=None):
+    """Xóa cache profile sau khi cập nhật settings tenant."""
+    cache = getattr(load_tenant_profile, '_cache', None)
+    if not cache:
+        return
+    if tenant_id is None:
+        cache.clear()
+        return
+    cache.pop(str(tenant_id).strip(), None)
 
 
 def is_master_session():
@@ -692,8 +798,21 @@ def update_registry_settings(tenant_id, settings_patch, conn=None):
         if not row:
             return False
         current = parse_tenant_settings(row[0] if not hasattr(row, 'keys') else row['settings'])
+        prev_regime = normalize_accounting_regime(current.get('accounting_regime'))
         current.update(settings_patch)
         regime = normalize_accounting_regime(current.get('accounting_regime'))
+        # Đổi khỏi TT58 → tắt cảnh báo chuyển TT99
+        if (
+            prev_regime == 'SME_MICRO_TT58'
+            and regime != 'SME_MICRO_TT58'
+            and isinstance(current.get('micro_enterprise_tt99_alert'), dict)
+        ):
+            alert = dict(current['micro_enterprise_tt99_alert'])
+            alert['active'] = False
+            alert['status'] = 'resolved_switched_tt99'
+            from datetime import datetime as _dt
+            alert['cleared_at'] = _dt.now().strftime('%Y-%m-%d %H:%M:%S')
+            current['micro_enterprise_tt99_alert'] = alert
         if is_sme_regime(regime):
             current['accounting_regime'] = regime
             current['revenue_tier'] = None
@@ -725,6 +844,10 @@ def update_registry_settings(tenant_id, settings_patch, conn=None):
         )
         if own_conn:
             conn.commit()
+        try:
+            invalidate_tenant_profile_cache(tenant_id)
+        except Exception:
+            pass
         return True
     finally:
         if own_conn:

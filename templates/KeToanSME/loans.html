@@ -2,68 +2,261 @@
 {% block title %}Vay nợ{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
-  <div><h4 class="fw-bold mb-1">Vay &amp; trả nợ</h4><p class="text-muted small mb-0">Giải ngân 341/311 · trích lãi 635/335 · trả gốc/lãi</p></div>
-  <button class="btn btn-primary" id="btnNew">Giải ngân vay</button>
+  <div>
+    <h4 class="fw-bold mb-1">Vay &amp; trả nợ</h4>
+    <p class="text-muted small mb-0">Giải ngân 341/311 · trích lãi 635/335 · trả gốc/lãi</p>
+  </div>
+  <button class="btn btn-primary" id="btnNew"><i class="fas fa-plus me-1"></i>Giải ngân vay</button>
 </div>
 <div class="card shadow-sm border-0"><div class="table-responsive">
-<table class="table mb-0"><thead class="table-light"><tr>
-  <th>Số</th><th>Bên cho vay</th><th>Ngày</th><th class="text-end">Gốc</th><th>LSãi suất</th><th>Tài khoản</th><th>Tình trạng</th><th></th>
+<table class="table mb-0 align-middle"><thead class="table-light"><tr>
+  <th>Số</th><th>Bên cho vay</th><th>Số HĐ</th><th>Ngày</th><th>Hạn trả</th>
+  <th class="text-end">Gốc</th><th>Lãi suất</th><th>Tài khoản</th><th>Tình trạng</th><th></th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
-<div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
-  <div class="modal-header"><h5 class="modal-title">Giải ngân khoản vay</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
-  <div class="modal-body">
-    <div class="mb-2"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
-    <div class="mb-2"><label class="form-label small">Bên cho vay</label><input type="text" id="fLender" class="form-control"></div>
-    <div class="mb-2"><label class="form-label small">Số tiền</label><input type="number" id="fAmt" class="form-control" step="1000"></div>
-    <div class="mb-2"><label class="form-label small">Lãi suất năm (vd 0.12 = 12%)</label><input type="number" id="fRate" class="form-control" step="0.01" value="0.12"></div>
-    <div class="mb-2"><label class="form-label small">TK nợ vay</label><input type="text" id="fLiab" class="form-control" value="3411"></div>
-    <div class="mb-2"><label class="form-label small">TK nhận tiền</label><input type="text" id="fCash" class="form-control" value="1121"></div>
+
+<div class="modal fade" id="modal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Giải ngân khoản vay</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="fLoanId" value="">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Ngày giải ngân</label>
+            <input type="date" id="fDate" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Hạn trả</label>
+            <input type="date" id="fDue" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Số hợp đồng</label>
+            <input type="text" id="fContract" class="form-control" placeholder="HĐ vay…">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Bên cho vay</label>
+            <input type="text" id="fLender" class="form-control">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Số tiền gốc</label>
+            <input type="number" id="fAmt" class="form-control" step="1000" min="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Lãi suất năm</label>
+            <div class="input-group">
+              <input type="number" id="fRate" class="form-control" step="0.01" min="0" max="100" value="12" title="Ví dụ 12 = 12%/năm">
+              <span class="input-group-text">%/năm</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">TK nợ vay</label>
+            <input type="text" id="fLiab" class="form-control" value="3411">
+          </div>
+          <div class="col-md-4" id="wrapCash">
+            <label class="form-label small fw-semibold">TK nhận tiền</label>
+            <input type="text" id="fCash" class="form-control" value="1121">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Ghi chú</label>
+            <input type="text" id="fNotes" class="form-control">
+          </div>
+          <div class="col-12">
+            <div class="form-text small text-muted" id="editHint" style="display:none">
+              Đã có trích lãi / trả nợ: chỉ sửa bên cho vay, số HĐ, hạn trả, lãi suất, ghi chú.
+              Sửa gốc / ngày / TK sẽ bị chặn.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button class="btn btn-primary" id="btnSave">Ghi sổ</button>
+      </div>
+    </div>
   </div>
-  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary" id="btnSave">Ghi sổ</button></div>
-</div></div></div>
+</div>
 {% endblock %}
 {% block sme_scripts %}
 <script>
-const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
-fDate.value=new Date().toISOString().slice(0,10);
-async function load(){
-  const res=await fetch('/api/sme/loans'); const json=await res.json();
-  tbody.innerHTML=(json.data||[]).map(r=>`<tr>
-    <td class="fw-bold">${r.loan_no}</td><td>${r.lender_name}</td><td>${fmtDateVi(r.start_date)}</td>
-    <td class="text-end">${fmt(r.principal)}</td><td>${((r.interest_rate||0)*100).toFixed(1)}%</td>
-    <td>${r.liability_account}</td><td>${statusLabelVi(r.status)}</td>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n || 0));
+let loanCache = [];
+let editMode = false;
+
+function rateToPct(r) {
+  const n = Number(r || 0);
+  if (!n) return 0;
+  return n <= 1 ? n * 100 : n;
+}
+function pctToRate(pct) {
+  const n = Number(pct || 0);
+  if (n > 1) return n / 100;
+  return n;
+}
+
+function resetForm() {
+  fLoanId.value = '';
+  fDate.value = new Date().toISOString().slice(0, 10);
+  fDue.value = '';
+  fContract.value = '';
+  fLender.value = '';
+  fAmt.value = '';
+  fRate.value = '12';
+  fLiab.value = '3411';
+  fCash.value = '1121';
+  fNotes.value = '';
+  editHint.style.display = 'none';
+  wrapCash.style.display = '';
+  fAmt.disabled = false;
+  fDate.disabled = false;
+  fLiab.disabled = false;
+  fCash.disabled = false;
+}
+
+async function load() {
+  const res = await fetch('/api/sme/loans');
+  const json = await res.json();
+  loanCache = json.data || [];
+  tbody.innerHTML = loanCache.map(r => `<tr>
+    <td class="fw-bold">${r.loan_no || ''}</td>
+    <td>${r.lender_name || ''}</td>
+    <td class="small">${r.contract_no || '—'}</td>
+    <td>${fmtDateVi(r.start_date)}</td>
+    <td>${r.due_date ? fmtDateVi(r.due_date) : '—'}</td>
+    <td class="text-end">${fmt(r.principal)}</td>
+    <td>${rateToPct(r.interest_rate).toFixed(1)}%</td>
+    <td>${r.liability_account || ''}</td>
+    <td>${statusLabelVi(r.status)}</td>
     <td class="text-nowrap">
-      ${r.status==='active'?`<button class="btn btn-sm btn-outline-warning" onclick="interest(${r.id})">Trích lãi</button>
-      <button class="btn btn-sm btn-outline-success" onclick="repay(${r.id},${r.principal})">Trả nợ</button>
-      <button class="btn btn-sm btn-outline-danger" onclick="voidLoan(${r.id})">Hủy</button>`:''}
+      ${r.status === 'active' ? `
+        <button class="btn btn-sm btn-outline-primary" onclick="editLoan(${r.id})" title="Sửa thông tin">Sửa</button>
+        <button class="btn btn-sm btn-outline-warning" onclick="interest(${r.id})">Trích lãi</button>
+        <button class="btn btn-sm btn-outline-success" onclick="repay(${r.id},${r.principal})">Trả nợ</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="voidLoan(${r.id})">Hủy</button>
+      ` : (r.status === 'closed' ? `
+        <button class="btn btn-sm btn-outline-secondary" onclick="editLoan(${r.id}, true)" title="Xem chi tiết">Xem</button>
+      ` : '')}
     </td>
-  </tr>`).join('')||'<tr><td colspan="8" class="text-muted text-center">Chưa có</td></tr>';
+  </tr>`).join('') || '<tr><td colspan="10" class="text-muted text-center py-4">Chưa có khoản vay</td></tr>';
 }
-btnNew.onclick=()=>new bootstrap.Modal(document.getElementById('modal')).show();
-btnSave.onclick=async()=>{
-  const payload={date:fDate.value,lender_name:fLender.value,principal:parseFloat(fAmt.value)||0,interest_rate:parseFloat(fRate.value)||0,liability_account:fLiab.value,cash_account:fCash.value};
-  const res=await fetch('/api/sme/loans',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
-  bootstrap.Modal.getInstance(document.getElementById('modal')).hide(); alert('Đã giải ngân '+json.data.loan_no); load();
+
+btnNew.onclick = () => {
+  editMode = false;
+  resetForm();
+  modalTitle.textContent = 'Giải ngân khoản vay';
+  btnSave.style.display = '';
+  btnSave.textContent = 'Ghi sổ';
+  new bootstrap.Modal(document.getElementById('modal')).show();
 };
-async function interest(id){
-  const res=await fetch('/api/sme/loans/'+id+'/interest',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
-  alert('Đã trích lãi '+fmt(json.data.amount));
+
+async function editLoan(id, readOnly = false) {
+  const res = await fetch('/api/sme/loans/' + id);
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Không tải được khoản vay');
+  const r = json.data;
+  editMode = !readOnly && r.status === 'active';
+  resetForm();
+  fLoanId.value = r.id;
+  fDate.value = (r.start_date || '').slice(0, 10);
+  fDue.value = (r.due_date || '').slice(0, 10);
+  fContract.value = r.contract_no || '';
+  fLender.value = r.lender_name || '';
+  fAmt.value = r.principal || 0;
+  fRate.value = String(rateToPct(r.interest_rate) || 0);
+  fLiab.value = r.liability_account || '3411';
+  fNotes.value = r.notes || '';
+  modalTitle.textContent = readOnly || r.status !== 'active'
+    ? `Chi tiết ${r.loan_no || ''}`
+    : `Sửa khoản vay ${r.loan_no || ''}`;
+  editHint.style.display = editMode ? '' : 'none';
+  wrapCash.style.display = editMode ? '' : 'none';
+  btnSave.style.display = editMode ? '' : 'none';
+  btnSave.textContent = 'Lưu thay đổi';
+  if (!editMode) {
+    [fDate, fDue, fContract, fLender, fAmt, fRate, fLiab, fCash, fNotes].forEach(el => { el.disabled = true; });
+  } else {
+    [fDate, fDue, fContract, fLender, fAmt, fRate, fLiab, fCash, fNotes].forEach(el => { el.disabled = false; });
+  }
+  new bootstrap.Modal(document.getElementById('modal')).show();
 }
-async function repay(id, principal){
-  const amt=prompt('Số gốc trả', String(principal)); if(amt===null) return;
-  const interest=prompt('Số lãi trả (nếu có)', '0');
-  const res=await fetch('/api/sme/loans/'+id+'/repay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:parseFloat(amt)||0,interest:parseFloat(interest)||0})});
-  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
-  alert('Đã trả nợ'); load();
+
+btnSave.onclick = async () => {
+  const interestPct = parseFloat(fRate.value) || 0;
+  const payload = {
+    date: fDate.value,
+    start_date: fDate.value,
+    due_date: fDue.value || null,
+    contract_no: fContract.value,
+    lender_name: fLender.value,
+    principal: parseFloat(fAmt.value) || 0,
+    interest_rate: interestPct,
+    liability_account: fLiab.value || '3411',
+    cash_account: fCash.value || '1121',
+    notes: fNotes.value || '',
+  };
+  if (!payload.lender_name) return alert('Nhập bên cho vay');
+  if (!(payload.principal > 0)) return alert('Nhập số tiền gốc');
+  const loanId = fLoanId.value;
+  const url = loanId ? '/api/sme/loans/' + loanId : '/api/sme/loans';
+  const method = loanId ? 'PUT' : 'POST';
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modal')).hide();
+  alert(loanId ? 'Đã cập nhật khoản vay ' + (json.data?.loan_no || '') : 'Đã giải ngân ' + (json.data?.loan_no || ''));
+  load();
+};
+
+async function interest(id) {
+  const res = await fetch('/api/sme/loans/' + id + '/interest', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Lỗi');
+  alert('Đã trích lãi ' + fmt(json.data.amount));
+  load();
 }
-async function voidLoan(id){
-  if(!confirm('Hủy khoản vay (đảo giải ngân + lãi đã trích)?')) return;
-  const res=await fetch('/api/sme/loans/'+id+'/void',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-  const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
+async function repay(id, principal) {
+  const amt = prompt('Số gốc trả', String(principal));
+  if (amt === null) return;
+  const interestAmt = prompt('Số lãi trả (nếu có)', '0');
+  const totalPay = (parseFloat(amt) || 0) + (parseFloat(interestAmt) || 0);
+  if (window.assertSmeCashBalanceOrAlert) {
+    const okBal = await window.assertSmeCashBalanceOrAlert(totalPay, 'bank');
+    if (!okBal) return;
+  }
+  const res = await fetch('/api/sme/loans/' + id + '/repay', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: parseFloat(amt) || 0, interest: parseFloat(interestAmt) || 0 }),
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Lỗi');
+  alert('Đã trả nợ');
+  load();
 }
+async function voidLoan(id) {
+  if (!confirm('Hủy khoản vay (đảo giải ngân + lãi đã trích)?')) return;
+  const res = await fetch('/api/sme/loans/' + id + '/void', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Lỗi');
+  load();
+}
+
+// Khi đóng modal — bật lại input (tránh state disabled từ chế độ xem)
+document.getElementById('modal').addEventListener('hidden.bs.modal', () => {
+  [fDate, fDue, fContract, fLender, fAmt, fRate, fLiab, fCash, fNotes].forEach(el => { el.disabled = false; });
+});
+
 load();
 </script>
 {% endblock %}
