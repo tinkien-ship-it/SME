@@ -176,8 +176,10 @@
         const nnBox = opts.nnContainerId || 'swal-nn-box';
         const helpId = opts.helpId || 'swal-nn-help';
         const wrap = document.getElementById(nnBox + '-wrap');
+        const dtWrap = document.getElementById(opts.dtWrapId || 'swal-dt-wrap');
         const vatWrap = document.getElementById(opts.vatFilingWrapId || 'swal-vat-filing-wrap');
         const vatEl = document.getElementById(opts.vatFilingSelectId || 'swal-vat-filing');
+        const bizNameLabel = document.getElementById(opts.bizNameLabelId || 'swal-biz-name-label');
         const sectors = opts.sectors || [];
         const legalIntro = opts.legalIntro || '';
         if (!regimeEl) return;
@@ -199,15 +201,23 @@
                     if (sme) el.checked = false;
                 });
             }
+            // SME: ẩn hẳn NN + DT (chỉ dùng cho HKD)
             if (wrap) {
-                wrap.style.opacity = sme ? '0.55' : '1';
-                wrap.style.pointerEvents = sme ? 'none' : '';
+                wrap.style.display = sme ? 'none' : '';
+                wrap.style.opacity = '1';
+                wrap.style.pointerEvents = '';
+            }
+            if (dtWrap) {
+                dtWrap.style.display = sme ? 'none' : '';
+            }
+            if (bizNameLabel) {
+                bizNameLabel.textContent = sme
+                    ? 'Tên doanh nghiệp *'
+                    : 'Tên hộ kinh doanh *';
             }
             const hint = wrap && wrap.querySelector('.nn-hkd-hint');
             if (hint) {
-                hint.textContent = sme
-                    ? 'Doanh nghiệp (TT58/TT99) không dùng nhóm doanh thu DT hay ngành nghề NN của HKD.'
-                    : 'HKD đa ngành: ví dụ DT1 có thể kinh doanh NN1 + NN2 + NN3 cùng lúc.';
+                hint.textContent = 'HKD đa ngành: ví dụ DT1 có thể kinh doanh NN1 + NN2 + NN3 cùng lúc.';
             }
             if (vatWrap) {
                 vatWrap.style.display = sme ? '' : 'none';
@@ -224,7 +234,9 @@
                 const bl = document.getElementById(opts.businessLineId || 'swal-business-line');
                 setNnSectors(nnBox, suggestNnForBusinessLine(bl ? bl.value : 'pos', sectors));
             }
-            bindNnSectorHelp(nnBox, helpId, sectors, legalIntro);
+            if (!sme) {
+                bindNnSectorHelp(nnBox, helpId, sectors, legalIntro);
+            }
         };
 
         if (vatEl && !vatEl._vatBound) {

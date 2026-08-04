@@ -1035,6 +1035,7 @@ def provision_trial_tenant(
     revenue_tier='DT1',
     accounting_regime='HKD',
     enabled_nn_sectors=None,
+    extra_settings=None,
 ):
     """Tạo tenant dùng thử — bọc provision_tenant."""
     result = provision_tenant(
@@ -1052,6 +1053,7 @@ def provision_trial_tenant(
         google_email=google_email,
         representative_name=representative_name,
         subscription_plan='trial',
+        extra_settings=extra_settings,
         send_emails=True,
         email_context={'business_line': business_line},
         empty_business_data=True,

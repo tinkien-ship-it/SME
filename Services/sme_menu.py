@@ -5,6 +5,7 @@ SME_HUB_TITLE = 'Kế toán doanh nghiệp'
 SME_MENU_SECTIONS = (
     {'id': 'operations', 'label': 'NGHIỆP VỤ KINH DOANH'},
     {'id': 'accounting', 'label': 'KẾ TOÁN & TÀI CHÍNH'},
+    {'id': 'tax', 'label': 'THUẾ & NSNN'},
     {'id': 'reports', 'label': 'BÁO CÁO & HỆ THỐNG'},
 )
 
@@ -165,24 +166,31 @@ SME_MENU_GROUPS = (
             {'endpoint': 'SME_PhaiTraCongNhanVien', 'label': 'Công nợ phải trả nhân viên', 'icon': 'fas fa-hand-holding-usd'},
             {'endpoint': 'SME_labor_sheets', 'label': 'Thưởng, ngoài giờ và thuê ngoài — mẫu 02 đến 04', 'icon': 'fas fa-gift'},
             {'endpoint': 'SME_labor_contracts', 'label': 'Hợp đồng giao khoán — mẫu 05 và 06-LĐTL', 'icon': 'fas fa-file-contract'},
-            {'endpoint': 'SME_insurance_pay', 'label': 'Nộp bảo hiểm xã hội — mẫu 07-LĐTL', 'icon': 'fas fa-shield-alt'},
             {'endpoint': 'SME_payroll_allocation', 'label': 'Phân bổ lương — mẫu 08-LĐTL', 'icon': 'fas fa-table'},
+        ),
+    },
+    {
+        'id': 'tax_nsnn', 'section': 'tax', 'label': 'Thuế & NSNN',
+        'icon': 'fas fa-landmark', 'color': 'danger', 'endpoint': 'SME_tax_nsnn',
+        'description': 'Thuế phải nộp, tờ khai và các khoản nộp ngân sách nhà nước (bảo hiểm…)',
+        'items': (
+            {'endpoint': 'SME_tax_nsnn', 'label': 'Theo dõi thuế và NSNN (133 / 333)', 'icon': 'fas fa-landmark'},
+            {'endpoint': 'SME_vat_declaration', 'label': 'Tờ khai thuế giá trị gia tăng', 'icon': 'fas fa-file-invoice'},
+            {'endpoint': 'SME_cit', 'label': 'Thuế thu nhập doanh nghiệp tạm nộp', 'icon': 'fas fa-percent'},
+            {'endpoint': 'SME_cit_declaration', 'label': 'Quyết toán thuế thu nhập doanh nghiệp', 'icon': 'fas fa-file-code'},
+            {'endpoint': 'SME_pit_declaration', 'label': 'Thuế thu nhập cá nhân khấu trừ từ lương', 'icon': 'fas fa-user-shield'},
+            {'endpoint': 'SME_insurance_pay', 'label': 'Nộp bảo hiểm xã hội — mẫu 07-LĐTL', 'icon': 'fas fa-shield-alt'},
         ),
     },
     {
         'id': 'reports', 'section': 'reports', 'label': 'Báo cáo tài chính',
         'icon': 'fas fa-chart-line', 'color': 'primary', 'endpoint': 'SME_BCTC',
-        'description': 'Báo cáo tài chính, báo cáo quản trị, doanh thu lợi nhuận và thuế',
+        'description': 'Báo cáo tài chính, báo cáo quản trị, doanh thu và lợi nhuận',
         'items': (
             {'endpoint': 'SME_BCTC_reports', 'label': 'Bộ báo cáo tài chính', 'icon': 'fas fa-file-excel'},
             {'endpoint': 'SME_mgmt_report', 'label': 'Báo cáo quản trị', 'icon': 'fas fa-chart-column'},
             {'endpoint': 'SME_revenue_report', 'label': 'Báo cáo doanh thu điểm bán hàng', 'icon': 'fas fa-chart-bar'},
             {'endpoint': 'SME_profit_report', 'label': 'Báo cáo lợi nhuận điểm bán hàng', 'icon': 'fas fa-coins'},
-            {'endpoint': 'SME_tax_nsnn', 'label': 'Thuế và ngân sách nhà nước', 'icon': 'fas fa-landmark'},
-            {'endpoint': 'SME_vat_declaration', 'label': 'Tờ khai thuế giá trị gia tăng', 'icon': 'fas fa-file-invoice'},
-            {'endpoint': 'SME_cit', 'label': 'Thuế thu nhập doanh nghiệp tạm nộp', 'icon': 'fas fa-percent'},
-            {'endpoint': 'SME_cit_declaration', 'label': 'Quyết toán thuế thu nhập doanh nghiệp', 'icon': 'fas fa-file-code'},
-            {'endpoint': 'SME_pit_declaration', 'label': 'Thuế thu nhập cá nhân khấu trừ từ lương', 'icon': 'fas fa-user-shield'},
             {'endpoint': 'SME_fx_revaluation', 'label': 'Đánh giá lại tỷ giá', 'icon': 'fas fa-dollar-sign'},
             {'endpoint': 'SME_capital', 'label': 'Góp vốn và cổ tức', 'icon': 'fas fa-piggy-bank'},
         ),

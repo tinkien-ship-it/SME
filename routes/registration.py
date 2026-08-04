@@ -188,7 +188,30 @@ def register_registration_routes(app):
 
         business_name = (payload.get('business_name') or '').strip()
         if not business_name:
-            return jsonify({'success': False, 'error': 'Vui lòng nhập tên hộ kinh doanh'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'Vui lòng nhập tên doanh nghiệp hoặc hộ kinh doanh',
+            }), 400
+
+        from Services.tenant_profile import (
+            default_vat_filing_period_for_regime,
+            is_sme_regime,
+            normalize_accounting_regime,
+            normalize_vat_filing_period,
+        )
+
+        regime = normalize_accounting_regime(payload.get('accounting_regime') or 'HKD')
+        sme = is_sme_regime(regime)
+        extra_settings = None
+        if sme:
+            fp = normalize_vat_filing_period(
+                payload.get('vat_filing_period') or payload.get('filing_period'),
+                default=default_vat_filing_period_for_regime(regime),
+            )
+            extra_settings = {
+                'vat_filing_period': fp,
+                'filing_period': fp,
+            }
 
         result = provision_trial_tenant(
             tenant_id=tenant_id,
@@ -198,12 +221,15 @@ def register_registration_routes(app):
             address=(payload.get('address') or '').strip(),
             tax_code=(payload.get('tax_code') or '').strip(),
             business_line=(payload.get('business_line') or 'pos').strip(),
-            hkd_sector=(payload.get('hkd_sector') or payload.get('primary_nn_sector') or 'NN1').strip(),
+            hkd_sector='' if sme else (
+                payload.get('hkd_sector') or payload.get('primary_nn_sector') or 'NN1'
+            ).strip(),
             google_email=google_email,
             representative_name=(payload.get('representative_name') or '').strip(),
-            revenue_tier=(payload.get('revenue_tier') or 'DT1').strip(),
-            accounting_regime='HKD',
-            enabled_nn_sectors=payload.get('enabled_nn_sectors'),
+            revenue_tier=None if sme else (payload.get('revenue_tier') or 'DT1').strip(),
+            accounting_regime=regime,
+            enabled_nn_sectors=[] if sme else payload.get('enabled_nn_sectors'),
+            extra_settings=extra_settings,
         )
         if not result.get('success'):
             return jsonify(result), 400
