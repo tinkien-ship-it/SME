@@ -161,23 +161,28 @@ def write_audit(
     )
 
     try:
-        conn = get_main_db_connection() if use_main else get_db_connection()
-        try:
-            ensure_audit_table(conn)
-            conn.execute(
-                """
-                INSERT INTO audit_log (
-                    created_at, tenant_id, user_id, username, user_role,
-                    action, module, entity_type, entity_id, entity_label,
-                    summary, old_data, new_data, ip_address, request_path,
-                    user_agent, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                row,
-            )
-            conn.commit()
-        finally:
-            conn.close()
+        from db_utils import sqlite_write_retry
+
+        def _write():
+            conn = get_main_db_connection() if use_main else get_db_connection()
+            try:
+                ensure_audit_table(conn)
+                conn.execute(
+                    """
+                    INSERT INTO audit_log (
+                        created_at, tenant_id, user_id, username, user_role,
+                        action, module, entity_type, entity_id, entity_label,
+                        summary, old_data, new_data, ip_address, request_path,
+                        user_agent, status
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    row,
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+        sqlite_write_retry(_write, label='write_audit')
         return True
     except Exception as exc:
         logger.warning('write_audit failed: %s', exc)

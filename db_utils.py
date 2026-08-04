@@ -1,7 +1,9 @@
 """Kết nối SQLite dùng chung — nguồn duy nhất cho tenant DB và main/registry DB."""
 import logging
 import os
+import random
 import sqlite3
+import time
 
 from flask import g, has_request_context, session
 
@@ -12,12 +14,72 @@ MAIN_DB_PATH = os.path.join(BASE_DIR, "database.db")
 # Alias tương thích code cũ (registry / master DB)
 REGISTRY_PATH = MAIN_DB_PATH
 
-# Chờ khi DB đang bị process/thread khác giữ khóa ghi.
-# 5s đủ cho contention ngắn; 30s khiến trang "treo" rồi user hủy request (Network: đã hủy).
-SQLITE_TIMEOUT_SEC = 5.0
+# Gunicorn nhiều worker ghi cùng 1 file SQLite → cần chờ lâu hơn khi locked.
+# Có thể ghi đè: export SME_SQLITE_TIMEOUT=30
+try:
+    SQLITE_TIMEOUT_SEC = float(os.environ.get('SME_SQLITE_TIMEOUT', '20') or 20)
+except ValueError:
+    SQLITE_TIMEOUT_SEC = 20.0
 
 # Đã bật WAL theo đường dẫn — tránh PRAGMA journal_mode lặp lại mỗi lần mở
 _wal_ready_paths: set[str] = set()
+
+
+def _is_locked_error(exc: BaseException) -> bool:
+    msg = str(exc).lower()
+    return 'database is locked' in msg or 'database table is locked' in msg
+
+
+class _AutoCloseConnection:
+    """Proxy: ``with open_sqlite(...)`` / ``close()`` luôn đóng file thật.
+
+    ``sqlite3.Connection`` dùng làm context manager chỉ commit/rollback, **không**
+    đóng connection — với Gunicorn nhiều worker sẽ giữ khóa → database is locked.
+    """
+
+    __slots__ = ('_conn', '_closed')
+
+    def __init__(self, conn: sqlite3.Connection):
+        object.__setattr__(self, '_conn', conn)
+        object.__setattr__(self, '_closed', False)
+
+    def close(self):
+        if object.__getattribute__(self, '_closed'):
+            return
+        object.__setattr__(self, '_closed', True)
+        try:
+            sqlite3.Connection.close(object.__getattribute__(self, '_conn'))
+        except Exception:
+            pass
+
+    def _raw(self) -> sqlite3.Connection:
+        return object.__getattribute__(self, '_conn')
+
+    def __getattr__(self, name):
+        return getattr(object.__getattribute__(self, '_conn'), name)
+
+    def __setattr__(self, name, value):
+        if name in ('_conn', '_closed'):
+            object.__setattr__(self, name, value)
+            return
+        setattr(object.__getattribute__(self, '_conn'), name, value)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        try:
+            if exc_type is not None:
+                try:
+                    self._raw().rollback()
+                except Exception:
+                    pass
+        finally:
+            self.close()
+        return False
+
+    def __iter__(self):
+        return iter(self._raw())
 
 
 class _RequestScopedConnection:
@@ -28,23 +90,30 @@ class _RequestScopedConnection:
 
     __slots__ = ('_conn',)
 
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn):
         object.__setattr__(self, '_conn', conn)
 
     def close(self):
         return None
 
     def _real_close(self):
-        sqlite3.Connection.close(self._conn)
+        inner = object.__getattribute__(self, '_conn')
+        try:
+            if isinstance(inner, _AutoCloseConnection):
+                inner.close()
+            else:
+                sqlite3.Connection.close(inner)
+        except Exception:
+            pass
 
     def __getattr__(self, name):
-        return getattr(self._conn, name)
+        return getattr(object.__getattribute__(self, '_conn'), name)
 
     def __setattr__(self, name, value):
         if name == '_conn':
             object.__setattr__(self, name, value)
             return
-        setattr(self._conn, name, value)
+        setattr(object.__getattribute__(self, '_conn'), name, value)
 
     def __enter__(self):
         return self
@@ -54,7 +123,7 @@ class _RequestScopedConnection:
         return False
 
     def __iter__(self):
-        return iter(self._conn)
+        return iter(object.__getattribute__(self, '_conn'))
 
 
 def _normalize_db_path(db_path):
@@ -83,12 +152,12 @@ def _configure_sqlite_connection(conn: sqlite3.Connection, db_path: str | None =
             if mode and str(mode[0]).lower() == 'wal':
                 _wal_ready_paths.add(key)
             elif mode:
-                logger.debug(
-                    'SQLite journal_mode=%s (WAL chưa bật — có thể DB đang bị process khác giữ)',
+                logger.warning(
+                    'SQLite journal_mode=%s (WAL chưa bật — dễ database is locked với Gunicorn multi-worker)',
                     mode[0],
                 )
         except sqlite3.Error as exc:
-            logger.debug('SQLite WAL chưa bật: %s', exc)
+            logger.warning('SQLite WAL chưa bật: %s', exc)
     try:
         conn.execute('PRAGMA synchronous = NORMAL')
         conn.execute('PRAGMA temp_store = MEMORY')
@@ -98,15 +167,36 @@ def _configure_sqlite_connection(conn: sqlite3.Connection, db_path: str | None =
     return conn
 
 
-def open_sqlite(db_path, *, timeout: float | None = None) -> sqlite3.Connection:
-    """Mở file SQLite với timeout/WAL chuẩn dự án."""
-    conn = sqlite3.connect(
+def open_sqlite(db_path, *, timeout: float | None = None):
+    """Mở file SQLite với timeout/WAL; trả proxy tự đóng khi dùng ``with`` / ``close()``."""
+    raw = sqlite3.connect(
         db_path,
         timeout=SQLITE_TIMEOUT_SEC if timeout is None else timeout,
         detect_types=sqlite3.PARSE_DECLTYPES,
         check_same_thread=False,
     )
-    return _configure_sqlite_connection(conn, db_path)
+    return _AutoCloseConnection(_configure_sqlite_connection(raw, db_path))
+
+
+def sqlite_write_retry(fn, *, retries: int = 8, label: str = 'sqlite_write'):
+    """Chạy ``fn()``; nếu database is locked thì chờ rồi thử lại (Gunicorn multi-worker)."""
+    last_exc = None
+    for attempt in range(max(1, retries)):
+        try:
+            return fn()
+        except sqlite3.OperationalError as exc:
+            last_exc = exc
+            if not _is_locked_error(exc) or attempt >= retries - 1:
+                raise
+            sleep_s = min(0.05 * (2 ** attempt) + random.uniform(0, 0.05), 1.5)
+            logger.warning(
+                '%s locked (lần %s/%s), chờ %.2fs: %s',
+                label, attempt + 1, retries, sleep_s, exc,
+            )
+            time.sleep(sleep_s)
+    if last_exc:
+        raise last_exc
+    return None
 
 
 def resolve_db_path():

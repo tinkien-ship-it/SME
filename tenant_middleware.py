@@ -9,7 +9,7 @@ import pyotp
 import hashlib
 import uuid
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, REGISTRY_PATH, get_db_connection
+from db_utils import BASE_DIR, MAIN_DB_PATH, REGISTRY_PATH, get_db_connection, open_sqlite
 
 _tenant_schema_migrated = set()
 # Cache kiểm tra single-session — tránh mở SQLite users mỗi request HTML/API
@@ -28,10 +28,9 @@ def _maybe_migrate_tenant_db(db_path):
         _tenant_schema_migrated.add(normalized)
         return
     try:
-        conn = sqlite3.connect(normalized)
-        from db.init import ensure_tenant_db_schema
-        ensure_tenant_db_schema(conn)
-        conn.close()
+        with open_sqlite(normalized) as conn:
+            from db.init import ensure_tenant_db_schema
+            ensure_tenant_db_schema(conn)
         _tenant_schema_migrated.add(normalized)
     except Exception as e:
         try:
@@ -571,7 +570,7 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             if cached and (now_ts - cached[0]) < _SESSION_TOKEN_CACHE_TTL_SEC:
                 db_token = cached[1]
             else:
-                conn = sqlite3.connect(validate_db_path, timeout=5.0)
+                conn = open_sqlite(validate_db_path)
                 try:
                     row = conn.execute(
                         "SELECT last_session_id FROM users WHERE id = ?",

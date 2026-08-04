@@ -351,7 +351,13 @@ def preview_payroll_grid(
     conn: sqlite3.Connection, month: int, year: int
 ) -> dict[str, Any]:
     """Lưới lương tháng — công thức theo tỷ lệ BH cấu hình (giống HKD)."""
-    ensure_payroll_schema(conn)
+    from Services.employee_payroll_helpers import (
+        department_label,
+        expense_account_for_department,
+        normalize_department,
+    )
+
+    ensure_payroll_schema(conn, commit=False)
     standard_days = _working_days_exclude_sunday(month, year)
     config = get_salary_insurance_config(conn)
     rates_frac = config['rates_frac']
@@ -370,14 +376,6 @@ def preview_payroll_grid(
         pass
 
     attendance_days = get_monthly_work_days_map(conn, month, year)
-
-    from Services.employee_payroll_helpers import (
-        department_label,
-        ensure_payroll_schema,
-        expense_account_for_department,
-        normalize_department,
-    )
-    ensure_payroll_schema(conn, commit=False)
 
     query = """
         SELECT
@@ -660,7 +658,6 @@ def accrue_payroll(
     """
     from Services.employee_payroll_helpers import (
         department_label,
-        ensure_payroll_schema,
         expense_account_for_department,
     )
     from Services.insurance_debt_helpers import _load_rates

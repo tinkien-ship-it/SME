@@ -57,25 +57,38 @@ RECEIVER_EMAIL = os.getenv('RECEIVER_EMAIL', 'sales@ketoshop.pro.vn')
 # --- UTILS: NHẬN DIỆN THIẾT BỊ ĐÃ THỰC XÁC THỰC KHI ĐĂNG NHẬP ---#
 # Kiểm tra thiết bị trong quá trình đăng nhập
 def is_device_trusted(username, fingerprint):
-    g.db_path = None # Luôn check ở Master DB
-    conn = get_db_connection()
-    row = conn.execute("""
-        SELECT 1 FROM user_trusted_devices 
-        WHERE username = ? AND device_fingerprint = ?
-    """, (username, fingerprint)).fetchone()
-    conn.close()
-    return True if row else False
+    from db_utils import get_main_db_connection, sqlite_write_retry
+
+    def _read():
+        with get_main_db_connection() as conn:
+            row = conn.execute("""
+                SELECT 1 FROM user_trusted_devices
+                WHERE username = ? AND device_fingerprint = ?
+            """, (username, fingerprint)).fetchone()
+            return True if row else False
+
+    try:
+        return bool(sqlite_write_retry(_read, label='is_device_trusted'))
+    except Exception as exc:
+        try:
+            current_app.logger.error('is_device_trusted: %s', exc)
+        except Exception:
+            pass
+        return False
 
 # Sau khi User nhập OTP thành công, lưu thiết bị này vào danh sách "Quen"
 def add_trusted_device(username, fingerprint):
-    g.db_path = None
-    conn = get_db_connection()
-    conn.execute("""
-        INSERT OR IGNORE INTO user_trusted_devices (username, device_fingerprint, last_login)
-        VALUES (?, ?, ?)
-    """, (username, fingerprint, datetime.now()))
-    conn.commit()
-    conn.close()
+    from db_utils import get_main_db_connection, sqlite_write_retry
+
+    def _write():
+        with get_main_db_connection() as conn:
+            conn.execute("""
+                INSERT OR IGNORE INTO user_trusted_devices (username, device_fingerprint, last_login)
+                VALUES (?, ?, ?)
+            """, (username, fingerprint, datetime.now()))
+            conn.commit()
+
+    sqlite_write_retry(_write, label='add_trusted_device')
 
 def get_device_fingerprint():
     """Tạo dấu vân tay thiết bị từ User-Agent và IP"""
@@ -123,16 +136,20 @@ def get_location(ip):
 
 def log_login_attempt(user_id, username, tenant_id, status='Thành công'):
     """Ghi lịch sử vào Main Database"""
+    from db_utils import sqlite_write_retry
+
     ip = get_client_ip()
     loc = get_location(ip)
     ua = request.headers.get('User-Agent')
     try:
-        with get_main_db_connection() as conn:
-            conn.execute("""
-                INSERT INTO login_history (tenant_id, user_id, username, ip_address, location, device_info, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (tenant_id, user_id, username, ip, loc, ua, status))
-            conn.commit()
+        def _write():
+            with get_main_db_connection() as conn:
+                conn.execute("""
+                    INSERT INTO login_history (tenant_id, user_id, username, ip_address, location, device_info, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (tenant_id, user_id, username, ip, loc, ua, status))
+                conn.commit()
+        sqlite_write_retry(_write, label='log_login_attempt')
     except Exception as e:
         print(f"Lỗi ghi log lịch sử: {e}")
 
@@ -380,24 +397,28 @@ def register_settings_routes(app):
 
             try:
                 now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            
-                # Cập nhật Session ID mới vào bảng users của Database tương ứng (Single Session)
-                with open_sqlite(db_to_open) as conn_target:
-                    conn_target.execute(
-                        "UPDATE users SET last_session_id = ? WHERE id = ?",
-                        (new_session_id, user['id'])
-                    )
-                    conn_target.commit()
+                from db_utils import sqlite_write_retry
 
-                # Cập nhật thông tin thiết bị tin cậy vào Main Database
-                with get_main_db_connection() as conn_m:
-                    conn_m.execute(
-                        """INSERT OR REPLACE INTO user_trusted_devices (username, device_fingerprint, last_login)
-                           VALUES (?, ?, ?)""",
-                        (username, get_device_fingerprint(), now_str)
-                    )
-                    conn_m.commit()
-                
+                def _upd_session():
+                    with open_sqlite(db_to_open) as conn_target:
+                        conn_target.execute(
+                            "UPDATE users SET last_session_id = ? WHERE id = ?",
+                            (new_session_id, user['id'])
+                        )
+                        conn_target.commit()
+
+                def _upd_device():
+                    with get_main_db_connection() as conn_m:
+                        conn_m.execute(
+                            """INSERT OR REPLACE INTO user_trusted_devices (username, device_fingerprint, last_login)
+                               VALUES (?, ?, ?)""",
+                            (username, get_device_fingerprint(), now_str)
+                        )
+                        conn_m.commit()
+
+                sqlite_write_retry(_upd_session, label='login_session')
+                sqlite_write_retry(_upd_device, label='login_trusted_device')
+
             except Exception as e:
                 current_app.logger.error(f"Lỗi cập nhật phiên làm việc hoặc thiết bị tin cậy: {e}")
 
@@ -1015,25 +1036,32 @@ def register_settings_routes(app):
 
     def _finalize_login_from_dict(user, db_to_open, current_tenant_id, fingerprint):
         """Hoàn tất đăng nhập sau OTP/Google — dùng chung logic redirect."""
+        from db_utils import sqlite_write_retry
+
         user_role = str(user.get('role', '')).strip()
         new_session_id = str(uuid.uuid4())
         username = user['username']
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        with open_sqlite(db_to_open) as conn_target:
-            conn_target.execute(
-                "UPDATE users SET last_session_id = ? WHERE id = ?",
-                (new_session_id, user['id']),
-            )
-            conn_target.commit()
+        def _upd_session():
+            with open_sqlite(db_to_open) as conn_target:
+                conn_target.execute(
+                    "UPDATE users SET last_session_id = ? WHERE id = ?",
+                    (new_session_id, user['id']),
+                )
+                conn_target.commit()
 
-        with get_main_db_connection() as conn_m:
-            conn_m.execute(
-                """INSERT OR REPLACE INTO user_trusted_devices (username, device_fingerprint, last_login)
-                   VALUES (?, ?, ?)""",
-                (username, fingerprint, now_str),
-            )
-            conn_m.commit()
+        def _upd_device():
+            with get_main_db_connection() as conn_m:
+                conn_m.execute(
+                    """INSERT OR REPLACE INTO user_trusted_devices (username, device_fingerprint, last_login)
+                       VALUES (?, ?, ?)""",
+                    (username, fingerprint, now_str),
+                )
+                conn_m.commit()
+
+        sqlite_write_retry(_upd_session, label='otp_login_session')
+        sqlite_write_retry(_upd_device, label='otp_login_trusted_device')
 
         log_login_attempt(user['id'], username, current_tenant_id, status='Thành công (Google/OTP)')
 
