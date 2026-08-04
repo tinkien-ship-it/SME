@@ -438,7 +438,17 @@
             });
             const json = await res.json();
             if (!json.success) throw new Error(json.error || 'Không xóa được');
-            alert('Đã xóa hoàn toàn bút toán.');
+            const cas = json.data && json.data.cascade;
+            let msg = 'Đã xóa hoàn toàn bút toán.';
+            if (cas) {
+                const parts = [];
+                if ((cas.vouchers_deleted || []).length)
+                    parts.push((cas.vouchers_deleted.length) + ' chứng từ thu/chi');
+                if ((cas.stock_out_deleted || []).length)
+                    parts.push((cas.stock_out_deleted.length) + ' phiếu xuất kho 02-VT');
+                if (parts.length) msg += ' Đã xóa kèm: ' + parts.join(', ') + '.';
+            }
+            alert(msg);
             detailModal.hide();
             loadList();
         } catch (e) {

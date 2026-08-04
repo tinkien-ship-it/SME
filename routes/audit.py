@@ -1,7 +1,7 @@
 """API và trang Nhật ký truy vết."""
-from flask import g, jsonify, render_template, request, session
+from flask import flash, g, jsonify, redirect, render_template, request, session, url_for
 
-from auth import admin_or_master_required, login_required, master_required
+from auth import login_required, master_required
 from Services.audit_log import (
     ACTION_LABELS,
     MODULE_LABELS,
@@ -10,13 +10,67 @@ from Services.audit_log import (
     query_login_history,
 )
 
+_AUDIT_VIEW_ROLES = frozenset({
+    'master', 'admin', 'admin*', 'adminFB', 'adminSME',
+    'manager', 'manager*', 'managerFB', 'managerSME',
+    'accountant', 'accountantSME',
+})
+
 
 def _can_view_audit():
-    role = session.get('role') or ''
-    if role in ('master', 'admin', 'admin*', 'adminFB'):
+    role = str(
+        session.get('role') or (session.get('user') or {}).get('role') or ''
+    ).strip()
+    if role in _AUDIT_VIEW_ROLES:
         return True
     perms = (session.get('user') or {}).get('permissions') or ''
     return 'view_audit_log' in str(perms)
+
+
+def _audit_page_context():
+    tenant_id = getattr(g, 'tenant_id', None) or session.get('last_tenant_id')
+    is_master = session.get('role') == 'master'
+    return {
+        'tenant_id': tenant_id,
+        'is_master': is_master,
+        'action_labels': ACTION_LABELS,
+        'module_labels': MODULE_LABELS,
+    }
+
+
+def _audit_layout_template(*, prefer_sme: bool = False) -> str:
+    if prefer_sme:
+        return 'KeToanSME/_layout.html'
+    try:
+        from Services.knowledge_service import is_hkd_regime
+        from Services.tenant_profile import get_current_tenant_profile
+        profile = get_current_tenant_profile() or {}
+        regime = profile.get('accounting_regime')
+        if is_hkd_regime(regime):
+            return 'KeToanHKD/_layout.html'
+        regime_u = str(regime or '').upper()
+        if 'TT99' in regime_u or 'TT58' in regime_u or regime_u.startswith('SME'):
+            return 'KeToanSME/_layout.html'
+    except Exception:
+        pass
+    return 'base.html'
+
+
+def _deny_audit_redirect():
+    flash('Bạn không có quyền xem nhật ký truy cập.', 'warning')
+    try:
+        from Services.tenant_profile import get_current_tenant_profile
+        regime = str(
+            (get_current_tenant_profile() or {}).get('accounting_regime') or ''
+        ).upper()
+        if 'TT99' in regime or 'TT58' in regime or regime.startswith('SME'):
+            return redirect(url_for('SME_utilities'))
+    except Exception:
+        pass
+    try:
+        return redirect(url_for('hkd_accounting'))
+    except Exception:
+        return redirect(url_for('sale'))
 
 
 def register_audit_routes(app):
@@ -25,16 +79,11 @@ def register_audit_routes(app):
     @login_required
     def audit_log_page():
         if not _can_view_audit():
-            from flask import redirect, url_for
-            return redirect(url_for('sale'))
-        tenant_id = getattr(g, 'tenant_id', None) or session.get('last_tenant_id')
-        is_master = session.get('role') == 'master'
+            return _deny_audit_redirect()
         return render_template(
             'audit_log.html',
-            tenant_id=tenant_id,
-            is_master=is_master,
-            action_labels=ACTION_LABELS,
-            module_labels=MODULE_LABELS,
+            layout_template=_audit_layout_template(),
+            **_audit_page_context(),
         )
 
     @app.route('/api/audit-log', methods=['GET'])

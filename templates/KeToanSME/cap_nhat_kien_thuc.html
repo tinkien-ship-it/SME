@@ -1,10 +1,7 @@
-{% extends layout_template|default('KeToanHKD/_layout.html') %}
-{% block title %}Cập Nhật Kiến Thức - KETO POS{% endblock %}
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Cập Nhật Kiến Thức DN — Kế toán SME{% endblock %}
 
-{% block hkd_head %}{{ self.knowledge_styles() }}{% endblock %}
-{% block sme_head %}{{ self.knowledge_styles() }}{% endblock %}
-
-{% block knowledge_styles %}
+{% block sme_head %}
 <style>
     .knowledge-card { border: none; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); transition: transform 0.2s; }
     .knowledge-card:hover { transform: translateY(-2px); }
@@ -15,7 +12,6 @@
     .article-item.draft { border-left-color: #ffc107; background: #fffdf5; padding: 0.75rem 0.75rem 0.75rem 1rem; border-radius: 8px; }
     .article-title-link { color: #0d6efd; text-decoration: none; font-weight: 600; }
     .article-title-link:hover { text-decoration: underline; }
-    /* Nút lọc trên nền header xanh — chữ trắng, dễ đọc */
     .knowledge-card .card-header .cat-filter .cat-btn {
         font-size: 0.85rem;
         color: #ffffff !important;
@@ -63,22 +59,16 @@
 </style>
 {% endblock %}
 
-{% block hkd_content %}{{ self.knowledge_body() }}{% endblock %}
-{% block sme_content %}{{ self.knowledge_body() }}{% endblock %}
-
-{% block knowledge_body %}
+{% block sme_content %}
 
 <div class="mb-4 d-flex flex-wrap justify-content-between align-items-start gap-3">
     <div>
         <h4 class="fw-bold text-dark mb-1">
-            <i class="fas fa-newspaper text-primary me-2"></i>Cập Nhật Kiến Thức
+            <i class="fas fa-newspaper text-primary me-2"></i>Cập Nhật Kiến Thức — Doanh nghiệp
         </h4>
-        <p class="text-muted mb-0" id="pageSubtitle">
-            {% if is_hkd %}
-            Tổng hợp chính sách pháp luật, thuế và hướng dẫn nghiệp vụ dành cho <strong>hộ kinh doanh</strong>.
-            {% else %}
-            Tổng hợp chính sách pháp luật, thuế và hướng dẫn nghiệp vụ dành cho <strong>doanh nghiệp</strong>.
-            {% endif %}
+        <p class="text-muted mb-0">
+            Thông tư, nghị định, chính sách thuế và hướng dẫn nghiệp vụ dành riêng cho
+            <strong>doanh nghiệp</strong> (TT99 / TT58 / VAS). Không hiển thị tin hộ kinh doanh.
         </p>
     </div>
     {% if can_manage %}
@@ -92,39 +82,19 @@
             <i class="fas fa-sync-alt me-1"></i>Đồng bộ TCT &amp; BTC
         </button>
         <button type="button" class="btn btn-primary btn-sm" id="btnAddArticle">
-            <i class="fas fa-plus me-1"></i>Đăng tin
+            <i class="fas fa-plus me-1"></i>Đăng tin DN
         </button>
     </div>
     {% endif %}
 </div>
 
 <div class="row g-3 mb-4">
-    {% if is_hkd %}
-    <div class="col-md-4">
-        <div class="card knowledge-card h-100 border-start border-4 border-primary">
-            <div class="card-body">
-                <span class="badge bg-primary bg-opacity-10 text-primary knowledge-tag mb-2">Thuế HKD</span>
-                <h6 class="fw-bold">Kê khai thuế theo từng kỳ</h6>
-                <p class="text-muted small mb-0">Theo dõi hạn nộp tờ khai thuế GTGT, TNCN và các loại thuế khác theo quy định hiện hành cho hộ kinh doanh.</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card knowledge-card h-100 border-start border-4 border-info">
-            <div class="card-body">
-                <span class="badge bg-info bg-opacity-10 text-info knowledge-tag mb-2">Sổ kế toán</span>
-                <h6 class="fw-bold">Thông tư 88/2021/TT-BTC</h6>
-                <p class="text-muted small mb-0">Mẫu sổ S1a, S2a–S2e, S3, S3a, S4, S5 và sổ phụ SP1–SP4 cho hộ kinh doanh.</p>
-            </div>
-        </div>
-    </div>
-    {% else %}
     <div class="col-md-4">
         <div class="card knowledge-card h-100 border-start border-4 border-primary">
             <div class="card-body">
                 <span class="badge bg-primary bg-opacity-10 text-primary knowledge-tag mb-2">Thuế DN</span>
-                <h6 class="fw-bold">Nghĩa vụ thuế doanh nghiệp</h6>
-                <p class="text-muted small mb-0">Tờ khai GTGT, TNDN, báo cáo tài chính và các nghĩa vụ thuế theo chế độ kế toán doanh nghiệp.</p>
+                <h6 class="fw-bold">GTGT · TNDN · TNCN DN</h6>
+                <p class="text-muted small mb-0">Tờ khai, tạm nộp, quyết toán và nghĩa vụ thuế theo chế độ kế toán doanh nghiệp.</p>
             </div>
         </div>
     </div>
@@ -133,17 +103,16 @@
             <div class="card-body">
                 <span class="badge bg-info bg-opacity-10 text-info knowledge-tag mb-2">Chế độ KT</span>
                 <h6 class="fw-bold">TT99 &amp; TT58 / VAS</h6>
-                <p class="text-muted small mb-0">Hướng dẫn kế toán doanh nghiệp siêu nhỏ và doanh nghiệp theo chuẩn mực kế toán Việt Nam.</p>
+                <p class="text-muted small mb-0">Sổ kép, báo cáo tài chính B01–B09 và chuẩn mực kế toán Việt Nam.</p>
             </div>
         </div>
     </div>
-    {% endif %}
     <div class="col-md-4">
         <div class="card knowledge-card h-100 border-start border-4 border-success">
             <div class="card-body">
-                <span class="badge bg-success bg-opacity-10 text-success knowledge-tag mb-2">Hóa đơn</span>
-                <h6 class="fw-bold">Hóa đơn điện tử &amp; chứng từ</h6>
-                <p class="text-muted small mb-0">Quy trình lập, ký và lưu trữ hóa đơn điện tử; đối chiếu hóa đơn mua — bán trong phần mềm.</p>
+                <span class="badge bg-success bg-opacity-10 text-success knowledge-tag mb-2">Văn bản</span>
+                <h6 class="fw-bold">Thông tư · Nghị định · Pháp luật</h6>
+                <p class="text-muted small mb-0">Lọc chuyên mục văn bản quy phạm liên quan trực tiếp đến doanh nghiệp.</p>
             </div>
         </div>
     </div>
@@ -152,10 +121,10 @@
 <div class="card knowledge-card">
     <div class="card-header py-3">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h5 class="mb-0 fw-bold text-white"><i class="fas fa-bullhorn me-2"></i>Bản tin cập nhật</h5>
+            <h5 class="mb-0 fw-bold text-white"><i class="fas fa-bullhorn me-2"></i>Bản tin doanh nghiệp</h5>
             <div class="input-group input-group-sm" style="max-width: 280px;">
                 <span class="input-group-text"><i class="fas fa-search"></i></span>
-                <input type="text" id="searchKeyword" class="form-control" placeholder="Tìm tiêu đề, nội dung...">
+                <input type="text" id="searchKeyword" class="form-control" placeholder="Tìm thông tư, nghị định...">
             </div>
         </div>
         {% if can_manage %}
@@ -166,16 +135,14 @@
         </ul>
         {% endif %}
         <p class="small mb-0 mt-2 rss-note">
-            <i class="fas fa-rss me-1"></i>
-            Tin từ <strong>Tổng cục Thuế</strong> (gdt.gov.vn) và <strong>Bộ Tài Chính</strong> (mof.gov.vn) được tự cập nhật mỗi ngày.
-            Nhấn tiêu đề có biểu tượng <i class="fas fa-external-link-alt"></i> để mở văn bản gốc.
+            <i class="fas fa-filter me-1"></i>
+            Chỉ hiển thị tin <strong>doanh nghiệp</strong> (audience DN) và tin chung không thuộc HKD.
+            Nguồn TCT / BTC có luồng RSS riêng cho DN.
         </p>
         <div class="cat-filter d-flex flex-wrap gap-1 mt-3">
             <button type="button" class="btn btn-sm btn-primary cat-btn active" data-cat="">Tất cả</button>
             {% for key, label in categories.items() %}
-            {% if can_manage or (is_hkd and key != 'thue_dn') or (not is_hkd and key != 'thue_hkd') %}
             <button type="button" class="btn btn-sm btn-outline-primary cat-btn" data-cat="{{ key }}">{{ label }}</button>
-            {% endif %}
             {% endfor %}
         </div>
     </div>
@@ -188,8 +155,8 @@
         <a href="{{ url_for('huong_dan_su_dung') }}" class="btn btn-outline-primary btn-sm me-2">
             <i class="fas fa-question-circle me-1"></i>Hướng Dẫn Sử Dụng
         </a>
-        <a href="{{ url_for('HKD_dashboard') }}" class="btn btn-primary btn-sm">
-            <i class="fas fa-chart-pie me-1"></i>Về Dashboard
+        <a href="{{ url_for('SME_dashboard') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-chart-pie me-1"></i>Về Dashboard SME
         </a>
     </div>
 </div>
@@ -216,7 +183,7 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="articleModalTitle">Đăng bản tin</h5>
+                <h5 class="modal-title fw-bold" id="articleModalTitle">Đăng bản tin DN</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -280,15 +247,13 @@
 {% endif %}
 {% endblock %}
 
-{% block hkd_scripts %}{{ self.knowledge_scripts() }}{% endblock %}
-{% block sme_scripts %}{{ self.knowledge_scripts() }}{% endblock %}
-
-{% block knowledge_scripts %}
+{% block sme_scripts %}
 <script>
 (function () {
     const CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
     const CATEGORIES = {{ categories | tojson }};
     const AUDIENCES = {{ audiences | tojson }};
+    const API_LIST = '/api/sme/knowledge/articles';
     let currentCategory = '';
     let currentStatus = 'all';
     let searchTimer = null;
@@ -390,7 +355,7 @@
             if (currentStatus && currentStatus !== 'all') params.set('status', currentStatus);
         }
         try {
-            const res = await fetch('/api/knowledge/articles?' + params.toString());
+            const res = await fetch(API_LIST + '?' + params.toString());
             const json = await res.json();
             if (!json.success) throw new Error(json.error || 'Lỗi tải dữ liệu');
             renderArticles(json.data || []);
@@ -446,8 +411,8 @@
         ['articleId','articleTitle','articleUrl','articleSummary','articleContent'].forEach(id => {
             document.getElementById(id).value = '';
         });
-        document.getElementById('articleCategory').value = 'tin_tuc';
-        document.getElementById('articleAudience').value = 'all';
+        document.getElementById('articleCategory').value = 'thong_tu';
+        document.getElementById('articleAudience').value = 'dn';
         document.getElementById('articleStatus').value = 'published';
         document.getElementById('articlePinned').checked = false;
     }
@@ -461,8 +426,8 @@
         document.getElementById('articleId').value = a.id;
         document.getElementById('articleTitle').value = a.title || '';
         document.getElementById('articleUrl').value = a.external_url || '';
-        document.getElementById('articleCategory').value = a.category || 'tin_tuc';
-        document.getElementById('articleAudience').value = a.audience || 'all';
+        document.getElementById('articleCategory').value = a.category || 'thong_tu';
+        document.getElementById('articleAudience').value = (a.audience === 'hkd' ? 'dn' : (a.audience || 'dn'));
         document.getElementById('articleStatus').value = a.status || 'published';
         document.getElementById('articleSummary').value = a.summary || '';
         document.getElementById('articleContent').value = a.content || '';
@@ -543,7 +508,7 @@
     if (CAN_MANAGE) {
         document.getElementById('btnAddArticle').addEventListener('click', () => {
             resetForm();
-            document.getElementById('articleModalTitle').textContent = 'Đăng bản tin';
+            document.getElementById('articleModalTitle').textContent = 'Đăng bản tin DN';
             bootstrap.Modal.getOrCreateInstance(document.getElementById('articleModal')).show();
         });
         document.getElementById('btnSaveArticle').addEventListener('click', saveArticle);

@@ -55,7 +55,7 @@ def _cols(conn: sqlite3.Connection, table: str) -> set[str]:
 
 
 # Cache schema XK theo đường dẫn DB — tránh PRAGMA/CREATE INDEX mỗi API call
-_EXPORT_SCHEMA_VERSION = '2026-08-03f'
+_EXPORT_SCHEMA_VERSION = '2026-08-04a'
 _export_schema_ready: dict[str, str] = {}
 
 
@@ -107,6 +107,8 @@ def ensure_export_sale_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         ('discount_loan_id', 'INTEGER'),
         ('warehouse_code', 'TEXT'),
         ('branch_code', 'TEXT'),
+        ('export_status', "TEXT DEFAULT 'shipped'"),
+        ('internal_transfer_doc_no', 'TEXT'),
     ]
     names = _cols(conn, 'sale')
     for col, decl in extras:
@@ -115,6 +117,33 @@ def ensure_export_sale_schema(conn: sqlite3.Connection, *, commit: bool = True) 
                 conn.execute(f'ALTER TABLE sale ADD COLUMN {col} {decl}')
             except sqlite3.OperationalError:
                 pass
+
+    # Backfill trạng thái XK: đã có bút toán DT → cleared; còn lại shipped
+    try:
+        names = _cols(conn, 'sale')
+        if 'export_status' in names and 'sale_type' in names:
+            conn.execute(
+                """
+                UPDATE sale SET export_status = 'cleared'
+                WHERE UPPER(COALESCE(sale_type,'')) = 'EXPORT'
+                  AND COALESCE(export_status, '') NOT IN ('shipped', 'cleared')
+                  AND id IN (
+                      SELECT document_id FROM sme_journal_entries
+                      WHERE document_type = 'EXPORT_REVENUE'
+                        AND status = 'posted' AND reverses_id IS NULL
+                        AND document_id IS NOT NULL
+                  )
+                """
+            )
+            conn.execute(
+                """
+                UPDATE sale SET export_status = 'shipped'
+                WHERE UPPER(COALESCE(sale_type,'')) = 'EXPORT'
+                  AND (export_status IS NULL OR TRIM(export_status) = '')
+                """
+            )
+    except sqlite3.OperationalError:
+        pass
 
     item_extras = [
         ('warehouse_code', 'TEXT'),

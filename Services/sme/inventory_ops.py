@@ -280,8 +280,10 @@ def post_stock_count(
             journal_agg[f'd:{inv_acc}'] = journal_agg.get(f'd:{inv_acc}', Decimal('0')) + amount
             journal_agg['c:711'] = journal_agg.get('c:711', Decimal('0')) + amount
         else:
-            # Thiếu: Nợ 632 / Có kho
-            journal_agg['d:632'] = journal_agg.get('d:632', Decimal('0')) + amount
+            # Thiếu: Nợ role cogs.spoilage (mặc định 6328) / Có kho
+            from Services.sme.cogs_accounts import cogs_spoilage_account
+            spoil = cogs_spoilage_account()
+            journal_agg[f'd:{spoil}'] = journal_agg.get(f'd:{spoil}', Decimal('0')) + amount
             journal_agg[f'c:{inv_acc}'] = journal_agg.get(f'c:{inv_acc}', Decimal('0')) + amount
 
     if line_count == 0:

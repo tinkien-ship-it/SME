@@ -187,7 +187,7 @@ window.loadSmeCashBalances = async function (opts) {
 window.resolveSmePayAccount = function (paymentMethod) {
     const raw = String(paymentMethod || '').trim().toLowerCase();
     if (!raw) return null;
-    // Mã TK cụ thể (kể cả TK con 112101…)
+    // Mã TK cụ thể (kể cả TK con 11211, 112111…)
     if (/^\d+$/.test(raw) && (raw.startsWith('111') || raw.startsWith('112'))) {
         return raw;
     }

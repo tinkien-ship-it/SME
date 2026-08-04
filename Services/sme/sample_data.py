@@ -779,7 +779,7 @@ def seed_sample_journals(
         {'account_code': '33311', 'debit': 0, 'credit': jan_vat_out},
     ])
     P(f'{year}-01-22', 'GV', 'GV-01', 'Giá vốn tháng 1', [
-        {'account_code': '6321', 'debit': jan_cogs, 'credit': 0},
+        {'account_code': '63211', 'debit': jan_cogs, 'credit': 0},
         {'account_code': '156', 'debit': 0, 'credit': jan_cogs},
     ])
 
@@ -824,7 +824,7 @@ def seed_sample_journals(
         P(d_sale, 'BAN', f'BAN-{m:02d}', f'Ghi nhận doanh thu T{m}', lines)
 
         P(d_sale, 'GV', f'GV-{m:02d}', f'Xuất giá vốn T{m}', [
-            {'account_code': '6321', 'debit': mp['cogs'], 'credit': 0},
+            {'account_code': '63211', 'debit': mp['cogs'], 'credit': 0},
             {'account_code': '156', 'debit': 0, 'credit': mp['cogs']},
         ])
 

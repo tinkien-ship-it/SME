@@ -581,6 +581,8 @@ def login_redirect_target(user_role, tenant_id):
         return 'rental_service'
     if user_role in ('adminFB', 'managerFB') and tenant_id is not None:
         return 'F_and_B_service'
+    if user_role in ('adminSME', 'managerSME', 'accountantSME') and tenant_id is not None:
+        return 'SME_dashboard'
     if user_role == 'master' and tenant_id is None:
         return 'master_settings'
     return 'sale'

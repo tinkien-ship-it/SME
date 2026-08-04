@@ -678,7 +678,8 @@ def register_invoice_routes(app):
                 loai, replace_unpublished, sale_data.get('sale_no'), khms, khh,
             )
 
-            payload = [{
+            from Services.einvoice_export import apply_currency_to_matbao_payload
+            payload = apply_currency_to_matbao_payload({
                 "KHMSHDon": khms,
                 "KHHDon": khh,
                 "LoaiHDon": loai,
@@ -702,9 +703,9 @@ def register_invoice_routes(app):
                 "TgTTTBChu": "",
                 "KTraMTChieuTrung": 2 if replace_unpublished else 1,
                 "MTChieu": str(sale_data.get('sale_no') or "").strip()
-            }]
+            }, sale_data)
 
-            result = self._send_request(url_create, payload)
+            result = self._send_request(url_create, [payload])
             if result.get('success'):
                 result['is_draft'] = (loai == 0)
             return result
@@ -789,7 +790,8 @@ def register_invoice_routes(app):
                 else f"{prefix}{datetime.now().strftime('%Y%m%d%H%M%S')}"
             )
 
-            payload = [{
+            from Services.einvoice_export import apply_currency_to_matbao_payload
+            payload = apply_currency_to_matbao_payload({
                 "KHMSHDon": khms,
                 "KHHDon": khh,
                 "MaTraCuu": datetime.now().strftime('%Y%m%d_%H%M%S'),
@@ -823,9 +825,9 @@ def register_invoice_routes(app):
                 "TgTTTBChu": "",
                 "KTraMTChieuTrung": 0,
                 "MTChieu": mt_chieu,
-            }]
+            }, sale_data)
 
-            return self._send_request(url_create, payload)
+            return self._send_request(url_create, [payload])
 
         def _send_request(self, url, payload):
             """Gửi request chính thức đến Mắt Bão và xử lý kết quả trả về"""
@@ -1208,6 +1210,17 @@ def register_invoice_routes(app):
 
             sale = _enrich_sale_buyer_identity(cursor, sale)
 
+            from Services.einvoice_export import (
+                enrich_sale_for_einvoice,
+                prepare_invoice_items_for_sale,
+                validate_export_for_einvoice,
+            )
+            err_xk = validate_export_for_einvoice(sale)
+            if err_xk:
+                return {"success": False, "error": err_xk}
+            sale = enrich_sale_for_einvoice(sale)
+            items = prepare_invoice_items_for_sale(sale, items)
+
             service = create_einvoice_service(config, matbao_cls=MatbaoProvider)
             result = service.issue(sale, items, loai_hdon=loai, replace_unpublished=replace_unpublished)
             if not result.get('success'):
@@ -1290,6 +1303,16 @@ def register_invoice_routes(app):
                 if not items:
                     return {"success": False, "error": "Đơn hàng không có sản phẩm."}
                 sale = _enrich_sale_buyer_identity(cursor, sale)
+                from Services.einvoice_export import (
+                    enrich_sale_for_einvoice,
+                    prepare_invoice_items_for_sale,
+                    validate_export_for_einvoice,
+                )
+                err_xk = validate_export_for_einvoice(sale)
+                if err_xk:
+                    return {"success": False, "error": err_xk}
+                sale = enrich_sale_for_einvoice(sale)
+                items = prepare_invoice_items_for_sale(sale, items)
                 if hasattr(service, 'publish_draft'):
                     result = service.publish_draft(sale, items)
                 else:
@@ -1835,21 +1858,31 @@ def register_invoice_routes(app):
 
             # Luôn dùng factory theo provider đang active ở Settings (không hardcode Matbao)
             sale = _enrich_sale_buyer_identity(cursor, sale)
+            from Services.einvoice_export import (
+                enrich_sale_for_einvoice,
+                prepare_invoice_items_for_sale,
+                validate_export_for_einvoice,
+            )
+            err_xk = validate_export_for_einvoice(sale)
+            if err_xk:
+                return jsonify({"success": False, "error": err_xk}), 400
+            sale = enrich_sale_for_einvoice(sale)
+            items = prepare_invoice_items_for_sale(sale, items)
+
             service = create_einvoice_service(config, matbao_cls=MatbaoProvider)
-            sale_data = {
+            # Giữ đủ field XK (currency, tỷ giá, TKHQ…) — form chỉ override thông tin người mua
+            sale_data = dict(sale)
+            sale_data.update({
                 "id": sale_id,
-                "sale_no": sale.get('sale_no'),
-                "total_amount": sale.get('total_amount'),
                 "customer_name": form_data.get('customer_name') or sale.get('customer_name'),
                 "company_name": form_data.get('company_name') or sale.get('company_name'),
-                "tax_code": form_data.get('tax_code') or sale.get('tax_code'),
+                "tax_code": form_data.get('tax_code') if form_data.get('tax_code') is not None else sale.get('tax_code'),
                 "address": form_data.get('address') or sale.get('address'),
                 "email": form_data.get('email') or sale.get('email'),
                 "phone": form_data.get('phone') or sale.get('customer_phone'),
                 "customer_phone": form_data.get('phone') or sale.get('customer_phone'),
-                "budget_unit_code": sale.get('budget_unit_code'),
-                "passport_no": sale.get('passport_no'),
-            }
+            })
+            sale_data = enrich_sale_for_einvoice(sale_data)
             old_fkey = (
                 old_inv.get('invoice_id')
                 or old_inv.get('fkey')

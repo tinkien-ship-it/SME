@@ -7,16 +7,17 @@ from typing import Any
 DEFAULT_BANK_SETTING_KEY = 'sme_default_bank_account'
 DEFAULT_FX_BANK_SETTING_KEY = 'sme_default_fx_bank_account'
 
-# Khi mở TK con đầu tiên dưới 1121/1122: giữ XX01 cho TK mặc định + chuyển số liệu cũ.
+# Khi mở TK con đầu tiên dưới 1121/1122: giữ …1 cho TK mặc định + chuyển số liệu cũ.
+# Quy định: cấp 2 (4 số) → cấp 3 (5 số), ví dụ 1121 → 11211, 11212.
 BANK_DETAIL_SPLIT = {
     '1121': {
-        'default_code': '112101',
+        'default_code': '11211',
         'setting_key': DEFAULT_BANK_SETTING_KEY,
         'kind': 'vnd',
         'label_vi': 'tiền Việt (VietQR / giao dịch chính)',
     },
     '1122': {
-        'default_code': '112201',
+        'default_code': '11221',
         'setting_key': DEFAULT_FX_BANK_SETTING_KEY,
         'kind': 'fx',
         'label_vi': 'ngoại tệ mặc định',
@@ -332,7 +333,7 @@ def preview_bank_split(conn: sqlite3.Connection, parent_code: str) -> dict[str, 
         return None
     kids = count_active_children(conn, parent)
     default_code = cfg['default_code']
-    next_new = f'{parent}02'
+    next_new = f'{parent}2'
     if kids == 0:
         return {
             'parent_code': parent,
@@ -370,7 +371,7 @@ def ensure_bank_default_child_on_first_split(
     *,
     insert_child_fn,
 ) -> dict[str, Any] | None:
-    """Khi mở TK con đầu tiên dưới 1121/1122: tạo XX01, chuyển số liệu, set mặc định.
+    """Khi mở TK con đầu tiên dưới 1121/1122: tạo …1 (cấp 3), chuyển số liệu, set mặc định.
 
     ``insert_child_fn(code, name, ...)`` — hàm nội bộ tạo dòng COA (không commit).
     Trả None nếu không cần tách; ngược lại dict thống kê.
@@ -384,7 +385,7 @@ def ensure_bank_default_child_on_first_split(
 
     default_code = cfg['default_code']
     if get_account_safe(conn, default_code):
-        # Đã có mã XX01 (hiếm) — chỉ set mặc định + migrate nếu còn dòng đúng parent
+        # Đã có mã mặc định (…1) — chỉ set mặc định + migrate nếu còn dòng đúng parent
         stats = _migrate_exact_account_refs(conn, parent, default_code)
         _setting_set(conn, cfg['setting_key'], default_code)
         return {

@@ -1,6 +1,11 @@
-{% extends "base.html" %}
+{% extends layout_template|default('base.html') %}
 {% block title %}Nhật ký hệ thống{% endblock %}
-{% block content %}
+
+{% block content %}{{ self.audit_body() }}{% endblock %}
+{% block sme_content %}{{ self.audit_body() }}{% endblock %}
+{% block hkd_content %}{{ self.audit_body() }}{% endblock %}
+
+{% block audit_body %}
 <style>
     .audit-filter { background: #f8f9fa; border-radius: 10px; padding: 16px; border: 1px solid #e9ecef; }
     .audit-table td { vertical-align: middle; font-size: 0.92rem; }
@@ -8,7 +13,7 @@
     pre.audit-json { max-height: 320px; overflow: auto; font-size: 0.8rem; background: #f8f9fa; padding: 10px; border-radius: 6px; }
 </style>
 
-<div class="container-fluid py-3">
+<div class="container-fluid px-0 py-1">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div>
             <h4 class="fw-bold text-primary mb-1"><i class="fas fa-clipboard-list me-2"></i>Nhật ký hệ thống</h4>
@@ -53,7 +58,7 @@
             </select>
         </div>
         <div class="col-md-2" id="wrapModule">
-            <label class="form-label small mb-0">Phân hệ</label>
+            <label class="form-label small mb-0">Module</label>
             <select id="fModule" class="form-select form-select-sm">
                 <option value="">Tất cả</option>
                 {% for k, v in module_labels.items() %}
@@ -62,12 +67,12 @@
             </select>
         </div>
         <div class="col-md-2">
-            <label class="form-label small mb-0">Tài khoản</label>
+            <label class="form-label small mb-0">Người dùng</label>
             <input type="text" id="fUser" class="form-control form-control-sm" placeholder="username">
         </div>
         <div class="col-md-2">
-            <label class="form-label small mb-0">Tìm kiếm</label>
-            <input type="text" id="fKeyword" class="form-control form-control-sm" placeholder="Nội dung...">
+            <label class="form-label small mb-0">Từ khóa</label>
+            <input type="text" id="fKeyword" class="form-control form-control-sm" placeholder="mô tả / đối tượng">
         </div>
         <div class="col-md-2 d-flex align-items-end">
             <button type="button" class="btn btn-primary btn-sm w-100" onclick="loadAuditLogs()">
@@ -76,26 +81,24 @@
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="table-responsive">
-            <table class="table table-hover audit-table mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width:150px">Thời gian</th>
-                        {% if is_master %}<th>Tenant</th>{% endif %}
-                        <th>Người dùng</th>
-                        <th>Loại</th>
-                        <th>Phân hệ</th>
-                        <th>Mô tả</th>
-                        <th>IP</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="auditBody">
-                    <tr><td colspan="8" class="text-center py-4 text-muted">Đang tải...</td></tr>
-                </tbody>
-            </table>
-        </div>
+    <div class="table-responsive card shadow-sm border-0">
+        <table class="table table-hover audit-table mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Thời gian</th>
+                    {% if is_master %}<th>Tenant</th>{% endif %}
+                    <th>Người dùng</th>
+                    <th>Thao tác</th>
+                    <th>Module</th>
+                    <th>Mô tả</th>
+                    <th>IP</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="auditBody">
+                <tr><td colspan="8" class="text-center py-4 text-muted">Đang tải...</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 

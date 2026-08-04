@@ -168,13 +168,34 @@ def admin_or_master_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         role = _session_role()
-        # Cho phép nếu là admin HOẶC là master
+        # Cho phép nếu là admin HOẶC là master (không gồm manager)
         if role not in ['admin', 'admin*', 'adminFB', 'adminSME', 'master']:
             if request.path.startswith('/api/'):
                 return jsonify({"success": False, "error": "Forbidden"}), 403
             return redirect(url_for('sale'))
         return f(*args, **kwargs)
     return decorated_function
+
+
+# Owner SME (managerSME) được vào /thiet-lap + API lưu thông tin DN / VietQR
+STORE_SETUP_ALLOWED_ROLES = frozenset({
+    'admin', 'admin*', 'adminFB', 'adminSME', 'master',
+    'managerSME',
+})
+
+
+def admin_or_store_setup_required(f):
+    """Admin/master hoặc Quản lý SME — trang Thiết lập (/thiet-lap)."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        role = _session_role()
+        if role not in STORE_SETUP_ALLOWED_ROLES:
+            if request.path.startswith('/api/'):
+                return jsonify({"success": False, "error": "Forbidden"}), 403
+            return redirect(url_for('sale'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 def admin_required(f):
     @wraps(f)

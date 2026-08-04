@@ -131,18 +131,15 @@ def get_posting_rule(
 
 def resolve_postable_account(conn: sqlite3.Connection, code: str) -> str:
     """
-    Trả về mã TK được phép ghi sổ.
-    Nếu TK là tổng hợp (có con), lỗi — bắt buộc chọn TK chi tiết.
+    Trả về mã TK leaf được phép ghi sổ.
+
+    Chấp nhận mã TK hoặc role_key (vd cogs.goods.domestic).
+    Nếu là TK tổng hợp → soft-resolve sang default leaf / leaf đầu tiên
+    (xem Services.sme.account_roles.resolve_posting_account).
     """
-    acc = get_account(conn, code, commit=False)
-    if not acc or not acc.get('is_active'):
-        raise ValueError(f'Tài khoản {code} không tồn tại hoặc đã ngừng sử dụng')
-    if not acc.get('is_postable'):
-        raise ValueError(
-            f'Tài khoản {code} là tài khoản tổng hợp — hãy chọn tài khoản con để ghi sổ '
-            f'(ví dụ mở chi tiết dưới {code})'
-        )
-    return acc['code']
+    from Services.sme.account_roles import resolve_posting_account
+
+    return resolve_posting_account(conn, code)
 
 
 def _next_entry_no(
@@ -778,8 +775,11 @@ def delete_journal_entry(
 
     assert_period_open(conn, fy, per, action='xóa bút toán')
 
+    from Services.sme.journal_cascade import cleanup_documents_for_deleted_journal
+
     # Kỳ mở (sau mở sổ): gỡ cặp đảo trước khi xóa gốc
     if str(entry['document_type'] or '').startswith('REV_'):
+        cascade = cleanup_documents_for_deleted_journal(conn, entry)
         orig_id = entry['reverses_id']
         result = _hard_delete_journal_row(
             conn, entry, reason=reason, deleted_by=deleted_by,
@@ -795,6 +795,7 @@ def delete_journal_entry(
             )
         result['restored_original_id'] = orig_id
         result['mode'] = 'delete_reverse_restore_original'
+        result['cascade'] = cascade
         return result
 
     if entry['reversed_by_id']:
@@ -803,6 +804,7 @@ def delete_journal_entry(
             "SELECT * FROM sme_journal_entries WHERE id = ?", (rev_id,)
         ).fetchone()
         if rev:
+            cleanup_documents_for_deleted_journal(conn, rev)
             _hard_delete_journal_row(
                 conn, rev,
                 reason=f'{reason} (gỡ chứng từ đảo #{rev_id})',
@@ -820,12 +822,13 @@ def delete_journal_entry(
             "SELECT * FROM sme_journal_entries WHERE id = ?", (entry_id,)
         ).fetchone()
 
+    cascade = cleanup_documents_for_deleted_journal(conn, entry)
     result = _hard_delete_journal_row(
         conn, entry, reason=reason, deleted_by=deleted_by,
     )
     result['mode'] = 'hard_delete'
+    result['cascade'] = cascade
     return result
-
 
 def update_journal_entry(
     conn: sqlite3.Connection,

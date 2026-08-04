@@ -592,6 +592,33 @@ def register_ketoan_sme_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/sme/export-sale/<int:sale_id>/clearance', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_export_sale_clearance(sale_id):
+        """Bước 2: thông quan — Nợ 632/Có 157 + Nợ 131/Có 511·3333."""
+        from Services.sme.export_sale import confirm_export_clearance
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            _bootstrap_sme_db()
+            data = request.get_json(silent=True) or {}
+            result = confirm_export_clearance(
+                conn, sale_id, data,
+                created_by=session.get('user_name') or session.get('username'),
+                commit=True,
+            )
+            return jsonify(result)
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_export_sale_clearance')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/api/sme/export-sale/<int:sale_id>', methods=['GET'])
     @login_required
     @require_sme_regime
@@ -1819,6 +1846,61 @@ def register_ketoan_sme_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/sme/stock-out-vouchers/<int:voucher_id>', methods=['DELETE'])
+    @login_required
+    @require_sme_regime
+    def api_sme_stock_out_voucher_delete(voucher_id):
+        """Xóa phiếu xuất kho 02-VT + bút toán / kho liên quan (kỳ mở)."""
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        try:
+            from Services.audit_log import write_audit
+            from Services.sme.branches import assert_sale_in_branch, request_branch_filter
+            from Services.sme.journal_cascade import delete_stock_out_voucher
+
+            row = conn.execute(
+                'SELECT id, sale_id, voucher_no FROM phieu_xuat_kho WHERE id = ?',
+                (voucher_id,),
+            ).fetchone()
+            if not row:
+                return jsonify({'success': False, 'error': 'Không tìm thấy phiếu xuất kho'}), 404
+            sale_id = row['sale_id'] if hasattr(row, 'keys') else row[1]
+            branch = request_branch_filter()
+            if sale_id and branch and str(branch).upper() not in ('', 'ALL'):
+                assert_sale_in_branch(conn, int(sale_id))
+
+            actor = (
+                (session.get('user') or {}).get('username')
+                or session.get('user_name')
+                or session.get('username')
+            )
+            result = delete_stock_out_voucher(
+                conn,
+                voucher_id,
+                reason=(payload.get('reason') or 'Xóa phiếu xuất kho 02-VT'),
+                deleted_by=actor,
+                commit=True,
+            )
+            write_audit(
+                'delete',
+                'phieu_xuat_kho',
+                result.get('message') or f'Xóa phiếu xuất #{voucher_id}',
+                entity_type='phieu_xuat_kho',
+                entity_id=voucher_id,
+                entity_label=result.get('voucher_no'),
+                old_data={'voucher_id': voucher_id, 'sale_id': sale_id},
+                new_data=None,
+            )
+            return jsonify({'success': True, 'data': result, 'message': result.get('message')})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     # --- Lối tắt nghiệp vụ POS dùng chung (endpoint SME_* để menu/bảo trì tách HKD) ---
     @app.route('/SME_bank_transactions')
     @login_required
@@ -2213,7 +2295,19 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_audit_log():
-        return redirect(url_for('audit_log_page'))
+        """Nhật ký truy cập — layout SME (không redirect sang POS sale)."""
+        from routes.audit import (
+            _audit_page_context,
+            _can_view_audit,
+            _deny_audit_redirect,
+        )
+        if not _can_view_audit():
+            return _deny_audit_redirect()
+        return render_template(
+            'audit_log.html',
+            layout_template='KeToanSME/_layout.html',
+            **_audit_page_context(),
+        )
 
     @app.route('/SME_dashboard_warehouse')
     @login_required
@@ -4107,6 +4201,7 @@ def register_ketoan_sme_routes(app):
                 tracks=payload.get('tracks') or None,
                 bctc_line_code=payload.get('bctc_line_code'),
                 description=(payload.get('description') or '').strip(),
+                set_as_default=bool(payload.get('set_as_default')),
             )
             return jsonify({
                 'success': True,
@@ -4159,6 +4254,53 @@ def register_ketoan_sme_routes(app):
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/coa/<code>/set-default', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_coa_set_default(code):
+        """Đặt TK leaf làm mặc định ghi sổ cho các vai trò thuộc nhóm đó."""
+        conn = get_db_connection()
+        try:
+            from Services.sme.account_roles import set_default_posting_flag
+            from Services.sme.coa_service import ensure_sme_coa_ready
+            ensure_sme_coa_ready(conn)
+            payload = request.get_json(silent=True) or {}
+            is_default = payload.get('is_default', True)
+            if isinstance(is_default, str):
+                is_default = is_default.strip().lower() not in ('0', 'false', 'no')
+            data = set_default_posting_flag(conn, code, is_default=bool(is_default), commit=True)
+            roles = []
+            try:
+                from Services.sme.account_roles import roles_for_account
+                roles = roles_for_account(conn, code)
+            except Exception:
+                pass
+            return jsonify({'success': True, 'data': data, 'roles': roles})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            logger.exception('api_sme_coa_set_default')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/coa/roles', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_coa_roles():
+        conn = get_db_connection()
+        try:
+            from Services.sme.account_roles import list_roles
+            from Services.sme.coa_service import ensure_sme_coa_ready
+            ensure_sme_coa_ready(conn)
+            category = (request.args.get('category') or '').strip() or None
+            return jsonify({'success': True, 'data': list_roles(conn, category=category)})
+        except Exception as e:
+            logger.exception('api_sme_coa_roles')
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
@@ -4658,6 +4800,54 @@ def register_ketoan_sme_routes(app):
     @require_sme_regime
     def SME_utilities():
         return render_template('KeToanSME/utilities.html')
+
+    @app.route('/SME_cap-nhat-kien-thuc')
+    @login_required
+    @require_sme_regime
+    def SME_cap_nhat_kien_thuc():
+        """Cập nhật kiến thức riêng SME — chỉ tin/pháp luật doanh nghiệp."""
+        from Services.knowledge_service import (
+            KNOWLEDGE_AUDIENCES,
+            SME_KNOWLEDGE_CATEGORIES,
+            count_drafts,
+            seed_default_articles,
+        )
+        seed_default_articles()
+        can_manage = session.get('role') == 'master'
+        return render_template(
+            'KeToanSME/cap_nhat_kien_thuc.html',
+            categories=SME_KNOWLEDGE_CATEGORIES,
+            audiences={
+                k: v for k, v in KNOWLEDGE_AUDIENCES.items() if k in ('all', 'dn')
+            },
+            can_manage=can_manage,
+            tenant_audience='dn',
+            draft_count=count_drafts() if can_manage else 0,
+        )
+
+    @app.route('/api/sme/knowledge/articles', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_knowledge_articles():
+        """API bản tin chỉ lọc audience DN / chung phù hợp doanh nghiệp."""
+        from Services.knowledge_service import list_sme_articles
+        category = (request.args.get('category') or '').strip() or None
+        keyword = (request.args.get('keyword') or '').strip() or None
+        for_mgmt = session.get('role') == 'master'
+        status_filter = (request.args.get('status') or '').strip() or None
+        if for_mgmt and request.args.get('all_status') == '1':
+            status_filter = status_filter or 'all'
+        data = list_sme_articles(
+            category=category,
+            keyword=keyword,
+            for_management=for_mgmt,
+            status_filter=status_filter,
+        )
+        return jsonify({
+            'success': True,
+            'data': data,
+            'tenant_audience': 'dn',
+        })
 
     @app.route('/api/sme/dashboard-metrics', methods=['GET'])
     @login_required

@@ -201,12 +201,12 @@ SME_MENU_GROUPS = (
         'description': 'Công cụ hỗ trợ và thiết lập hệ thống',
         'items': (
             {'endpoint': 'huong_dan_su_dung', 'label': 'Hướng dẫn sử dụng', 'icon': 'fas fa-circle-question'},
+            {'endpoint': 'SME_cap_nhat_kien_thuc', 'label': 'Cập nhật kiến thức', 'icon': 'fas fa-newspaper'},
             {'endpoint': 'SME_audit_log', 'label': 'Nhật ký truy cập', 'icon': 'fas fa-clock-rotate-left'},
             {'endpoint': 'store_setup_page', 'label': 'Thiết lập hệ thống', 'icon': 'fas fa-sliders'},
         ),
     },
 )
-
 
 def get_sme_menu_groups():
     """Trả menu đã xen tiêu đề phân khu để render sidebar."""

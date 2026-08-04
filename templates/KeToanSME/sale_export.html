@@ -15,15 +15,50 @@
   <div>
     <h4 class="fw-bold mb-1"><i class="fas fa-plane-departure text-primary me-2"></i>Bán hàng xuất khẩu</h4>
     <p class="text-muted small mb-0">
-      Ghi nhận DT (Nợ 131 / Có 5111, VAT 0%) tại ngày chuyển giao rủi ro · GV 632 · thuế XK 3333 (nếu có).
-      Thanh toán: ứng trước / trả sau / L/C / chiết khấu bộ CT.
+      <strong>Bước 1</strong> — Xuất kho ra cảng: Nợ <b>157</b> / Có <b>155·156</b> (chờ thông quan).
+      <strong>Bước 2</strong> — Thông quan (TKHQ + B/L): Nợ <b>632</b>/Có <b>157</b> + Nợ <b>131</b>/Có <b>511</b>·<b>3333</b> → rồi xuất HĐĐT (trong 01 ngày làm việc).
     </p>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap">
     <a href="{{ url_for('SME_sale_export_list') }}" class="btn btn-outline-secondary btn-sm">Danh sách XK</a>
     <a href="{{ url_for('SME_customs_declarations') }}" class="btn btn-outline-secondary btn-sm">Tờ khai HQ</a>
     <a href="{{ url_for('SME_DanhSachPhieuThu') }}" class="btn btn-outline-primary btn-sm" target="_blank">Lập PT tạm ứng KH</a>
-    <button type="button" class="btn btn-primary btn-sm" id="btnSaveExport"><i class="fas fa-save me-1"></i> Lưu phiếu</button>
+    <button type="button" class="btn btn-primary btn-sm" id="btnSaveExport"><i class="fas fa-warehouse me-1"></i> Lưu xuất kho ra cảng</button>
+    <button type="button" class="btn btn-success btn-sm" id="btnClearance" disabled><i class="fas fa-ship me-1"></i> Xác nhận thông quan</button>
+  </div>
+</div>
+
+<div class="alert alert-info py-2 small" id="exportPhaseBanner">
+  <strong>Giai đoạn:</strong> <span id="exportPhaseLabel">Chưa lưu</span>
+  <span id="stockOutVoucherLink" class="ms-2"></span>
+  <span class="text-muted ms-2">Số lượng trên phiếu xuất kho vận chuyển nội bộ phải khớp tờ khai HQ.</span>
+</div>
+
+<div class="alert alert-warning py-2 small d-none" id="officialInvoiceLock">
+  Phiếu đã xuất <strong>HĐĐT chính thức</strong>. Không sửa trực tiếp —
+  dùng <a href="#" id="linkReplaceInvoice" class="alert-link">hóa đơn thay thế / điều chỉnh</a>
+  (cùng rule POS; payload tự theo dữ liệu xuất khẩu).
+</div>
+
+<div class="card xk-card mb-3" id="invoiceActionsCard">
+  <div class="card-body py-2">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <div>
+        <strong class="small">Hóa đơn điện tử xuất khẩu</strong>
+        <div class="text-muted small" id="invoiceStatusText">Sau thông quan (có TKHQ + B/L) mới xuất nháp / chính thức.</div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnIssueDraft" disabled>
+          <i class="fas fa-file-alt me-1"></i> Xuất nháp
+        </button>
+        <button type="button" class="btn btn-success btn-sm" id="btnIssueOfficial" disabled>
+          <i class="fas fa-file-invoice me-1"></i> Xuất chính thức
+        </button>
+        <a class="btn btn-outline-warning btn-sm d-none" id="btnGoReplace" href="#">
+          <i class="fas fa-exchange-alt me-1"></i> Thay thế / Điều chỉnh
+        </a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -41,8 +76,8 @@
         <input type="date" class="form-control form-control-sm" id="saleDate">
       </div>
       <div class="col-md-2">
-        <label class="form-label small fw-bold text-primary">Ngày chuyển giao rủi ro</label>
-        <input type="date" class="form-control form-control-sm" id="riskDate" title="Incoterms / B/L / thông quan">
+        <label class="form-label small fw-bold text-primary">Ngày thông quan</label>
+        <input type="date" class="form-control form-control-sm" id="riskDate" title="Ngày TKHQ thông quan / B/L">
       </div>
       <div class="col-md-2">
         <label class="form-label small fw-bold">Incoterms</label>
@@ -56,12 +91,17 @@
         </select>
       </div>
       <div class="col-md-2">
-        <label class="form-label small fw-bold">Số B/L</label>
-        <input type="text" class="form-control form-control-sm" id="blNo">
+        <label class="form-label small fw-bold text-primary">Số B/L *</label>
+        <input type="text" class="form-control form-control-sm" id="blNo" placeholder="Bắt buộc khi thông quan">
       </div>
       <div class="col-md-2">
-        <label class="form-label small fw-bold">Tờ khai HQ</label>
-        <input type="text" class="form-control form-control-sm" id="customsDeclNo">
+        <label class="form-label small fw-bold text-primary">Tờ khai HQ *</label>
+        <input type="text" class="form-control form-control-sm" id="customsDeclNo" placeholder="Bắt buộc khi thông quan">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Mã PXK nội bộ (CQT)</label>
+        <input type="text" class="form-control form-control-sm" id="internalTransferDocNo"
+               placeholder="PXK kiêm VC nội bộ điện tử" title="Phiếu xuất kho kiêm vận chuyển nội bộ điện tử có mã CQT">
       </div>
 
       <div class="col-md-3">
@@ -478,16 +518,100 @@ function collectItems() {
 }
 
 document.getElementById('btnSaveExport').addEventListener('click', async () => {
+  try {
+    const json = await saveExportSale();
+    toast(json.message || ('Đã xuất kho ra cảng ' + (document.getElementById('saleNo').value || '')), 'success');
+    refreshPhaseUi(json.export_status || 'shipped', json);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+});
+
+document.getElementById('btnClearance')?.addEventListener('click', async () => {
+  try {
+    await confirmClearance();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+});
+
+function setStockOutVoucherLink(d) {
+  const el = document.getElementById('stockOutVoucherLink');
+  if (!el) return;
+  const id = d && (d.stock_out_voucher_id || d.px_id);
+  const no = d && (d.stock_out_voucher_no || d.px_voucher_no);
+  if (id && no) {
+    el.innerHTML = `· Phiếu xuất kho <a href="/SME_PhieuXuatKho/in/${id}" target="_blank" class="fw-bold">02-VT ${no}</a>`;
+  } else if (no) {
+    el.innerHTML = `· Phiếu xuất kho <strong>02-VT ${no}</strong>`;
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+function refreshPhaseUi(status, d) {
+  d = d || {};
+  const st = String(status || d.export_status || '').toLowerCase();
+  const label = document.getElementById('exportPhaseLabel');
+  const btnSave = document.getElementById('btnSaveExport');
+  const btnClear = document.getElementById('btnClearance');
+  const hasSale = !!document.getElementById('editSaleId').value;
+  setStockOutVoucherLink(d);
+  if (st === 'cleared') {
+    if (label) label.innerHTML = '<span class="text-success">Đã thông quan</span> — có thể xuất HĐĐT';
+    if (btnSave) btnSave.disabled = true;
+    if (btnClear) btnClear.disabled = true;
+  } else if (hasSale || st === 'shipped') {
+    if (label) label.innerHTML = '<span class="text-warning">Chờ thông quan</span> — hàng đang ở TK 157';
+    if (btnSave) btnSave.disabled = false;
+    if (btnClear) btnClear.disabled = !hasSale;
+  } else {
+    if (label) label.textContent = 'Chưa lưu — lập phiếu xuất kho ra cảng';
+    if (btnSave) btnSave.disabled = false;
+    if (btnClear) btnClear.disabled = true;
+  }
+}
+
+async function confirmClearance() {
+  const saleId = document.getElementById('editSaleId').value;
+  if (!saleId) throw new Error('Hãy lưu xuất kho ra cảng trước');
+  const customs = document.getElementById('customsDeclNo').value.trim();
+  const bl = document.getElementById('blNo').value.trim();
+  if (!customs) throw new Error('Nhập số tờ khai hải quan đã thông quan');
+  if (!bl) throw new Error('Nhập số Bill of Lading (B/L)');
+  const payload = {
+    customs_decl_no: customs,
+    bl_no: bl,
+    risk_transfer_date: document.getElementById('riskDate').value || document.getElementById('saleDate').value,
+    customs_fx_rate: parseNumber(document.getElementById('customsFx').value),
+    exchange_rate: parseNumber(document.getElementById('customsFx').value)
+      || parseNumber(document.getElementById('revenueFx').value),
+    export_tax_fc: parseNumber(document.getElementById('exportTaxFc').value),
+    incoterms: document.getElementById('incoterms').value,
+  };
+  const res = await fetch('/api/sme/export-sale/' + saleId + '/clearance', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'Thông quan thất bại');
+  toast(json.message || 'Đã thông quan', 'success');
+  refreshPhaseUi('cleared', json.data);
+  refreshInvoiceUi(json.data || { customs_decl_no: customs, export_status: 'cleared' });
+  return json;
+}
+
+async function saveExportSale() {
   const items = collectItems();
-  if (!items.length) return toast('Nhập ít nhất một mặt hàng', 'error');
+  if (!items.length) throw new Error('Nhập ít nhất một mặt hàng');
   const customer = document.getElementById('customerName').value.trim();
-  if (!customer) return toast('Nhập khách hàng nước ngoài', 'error');
+  if (!customer) throw new Error('Nhập khách hàng nước ngoài');
   const mode = document.getElementById('paymentMode').value;
   const advDetails = (window._advanceDetails || []).filter(d => d.amount_fc > 0);
   if ((mode === 'prepaid_full' || mode === 'prepaid_partial') && !advDetails.length)
-    return toast('Chọn PT tạm ứng KH', 'error');
+    throw new Error('Chọn PT tạm ứng KH');
   if ((mode === 'lc' || mode === 'lc_usance') && !document.getElementById('lcId').value)
-    return toast('Chọn L/C xuất', 'error');
+    throw new Error('Chọn L/C xuất');
 
   const payload = {
     sale_id: document.getElementById('editSaleId').value || null,
@@ -507,30 +631,153 @@ document.getElementById('btnSaveExport').addEventListener('click', async () => {
     incoterms: document.getElementById('incoterms').value,
     bl_no: document.getElementById('blNo').value,
     customs_decl_no: document.getElementById('customsDeclNo').value,
+    internal_transfer_doc_no: document.getElementById('internalTransferDocNo')?.value || '',
     note: document.getElementById('note').value,
     items,
   };
+  const res = await fetch('/api/sme/export-sale', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'Lỗi lưu');
+  if (json.sale_id) {
+    document.getElementById('editSaleId').value = String(json.sale_id);
+    if (json.sale_no) document.getElementById('saleNo').value = json.sale_no;
+    try {
+      history.replaceState(null, '', '/SME_sale_export?sale_id=' + json.sale_id);
+    } catch (_e) {}
+    document.getElementById('postActions')?.classList.remove('d-none');
+  }
+  refreshPhaseUi(json.export_status || 'shipped', json);
+  refreshInvoiceUi({
+    invoice_number: json.invoice_number,
+    invoice_status: json.invoice_status,
+    invoice_id: json.invoice_id,
+    customs_decl_no: payload.customs_decl_no,
+    export_status: json.export_status || 'shipped',
+  });
+  return json;
+}
+function refreshInvoiceUi(d) {
+  d = d || {};
+  const status = String(d.invoice_status || '').toLowerCase();
+  const invNo = String(d.invoice_number || '').trim();
+  const invId = d.invoice_id;
+  const isDraft = status === 'draft' || (invNo === '0' && invId);
+  const isOfficial = !isDraft && invNo && invNo !== '0' && status === 'issued';
+  const hasSale = !!document.getElementById('editSaleId').value;
+  const customs = (document.getElementById('customsDeclNo').value || d.customs_decl_no || '').trim();
+  const cleared = String(d.export_status || '').toLowerCase() === 'cleared'
+    || document.getElementById('btnClearance')?.disabled === true
+      && document.getElementById('btnSaveExport')?.disabled === true;
+  // Prefer explicit status from detail
+  const exportStatus = String(d.export_status || '').toLowerCase();
+  const canInvoice = hasSale && exportStatus === 'cleared' && !!customs;
+
+  const statusEl = document.getElementById('invoiceStatusText');
+  const btnDraft = document.getElementById('btnIssueDraft');
+  const btnOfficial = document.getElementById('btnIssueOfficial');
+  const btnReplace = document.getElementById('btnGoReplace');
+  const lock = document.getElementById('officialInvoiceLock');
+  const linkReplace = document.getElementById('linkReplaceInvoice');
+  const btnSave = document.getElementById('btnSaveExport');
+
+  if (isOfficial) {
+    statusEl.innerHTML = `Đã xuất chính thức: <strong>${invNo}</strong>`;
+    btnDraft.disabled = true;
+    btnOfficial.disabled = true;
+    btnOfficial.dataset.mode = 'issue';
+    btnReplace.classList.remove('d-none');
+    const url = `/sale/edit-reissue?invoice_no=${encodeURIComponent(invNo)}&sale_id=${encodeURIComponent(document.getElementById('editSaleId').value)}`;
+    btnReplace.href = url;
+    if (linkReplace) linkReplace.href = url;
+    lock?.classList.remove('d-none');
+    if (btnSave) btnSave.disabled = true;
+  } else if (isDraft) {
+    statusEl.innerHTML = `Đã có hóa đơn <strong>nháp</strong> — có thể sửa phiếu rồi xuất lại nháp, hoặc phát hành chính thức tại đây.`;
+    btnDraft.disabled = !canInvoice;
+    btnOfficial.disabled = !canInvoice;
+    btnReplace.classList.add('d-none');
+    lock?.classList.add('d-none');
+    if (btnSave && exportStatus !== 'cleared') btnSave.disabled = false;
+    btnOfficial.dataset.mode = 'publish-draft';
+  } else {
+    statusEl.textContent = hasSale
+      ? (exportStatus !== 'cleared'
+        ? 'Chưa thông quan — xác nhận TKHQ + B/L trước khi xuất HĐĐT.'
+        : (customs
+          ? 'Đã thông quan — sẵn sàng xuất HĐĐT (VAT 0%, NT, tỷ giá).'
+          : 'Nhập số tờ khai hải quan trước khi xuất HĐ.'))
+      : 'Lưu xuất kho ra cảng → thông quan → xuất HĐĐT.';
+    btnDraft.disabled = !canInvoice;
+    btnOfficial.disabled = !canInvoice;
+    btnReplace.classList.add('d-none');
+    lock?.classList.add('d-none');
+    if (btnSave && exportStatus !== 'cleared') btnSave.disabled = false;
+    btnOfficial.dataset.mode = 'issue';
+  }
+}
+
+document.getElementById('customsDeclNo')?.addEventListener('input', () => refreshInvoiceUi());
+
+async function issueExportInvoice(loaiHdon) {
+  const customs = document.getElementById('customsDeclNo').value.trim();
+  const btnOfficial = document.getElementById('btnIssueOfficial');
+  const publishDraft = loaiHdon === 1 && btnOfficial?.dataset.mode === 'publish-draft';
+  if (!customs) {
+    toast('Xuất HĐ XK bắt buộc có số tờ khai hải quan (TKHQ)', 'error');
+    return;
+  }
   try {
-    const res = await fetch('/api/sme/export-sale', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload),
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || 'Lỗi lưu');
-    toast('Đã lưu ' + (json.sale_no || ''), 'success');
-    // Không reload cả trang — giữ form, chỉ cập nhật id/URL
-    if (json.sale_id) {
-      document.getElementById('editSaleId').value = String(json.sale_id);
-      if (json.sale_no) document.getElementById('saleNo').value = json.sale_no;
-      try {
-        history.replaceState(null, '', '/SME_sale_export?sale_id=' + json.sale_id);
-      } catch (_e) {}
-      document.getElementById('postActions')?.classList.remove('d-none');
+    const saved = await saveExportSale();
+    const saleId = saved.sale_id || document.getElementById('editSaleId').value;
+    if (!saleId) throw new Error('Thiếu mã phiếu sau khi lưu');
+    let inv;
+    if (publishDraft) {
+      // Đồng bộ nháp với dữ liệu phiếu mới nhất rồi phát hành chính thức
+      toast('Đang cập nhật nháp & phát hành chính thức…', 'info');
+      const draftRes = await fetch('/api/invoice/issue/' + saleId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loai_hdon: 0 }),
+      });
+      const draftInv = await draftRes.json();
+      if (!draftInv.success) throw new Error(draftInv.error || 'Không cập nhật được hóa đơn nháp');
+      const res = await fetch('/api/invoice/publish-draft/' + saleId, { method: 'POST' });
+      inv = await res.json();
+    } else {
+      toast(loaiHdon === 0 ? 'Đang tạo hóa đơn nháp…' : 'Đang phát hành HĐ chính thức…', 'info');
+      const res = await fetch('/api/invoice/issue/' + saleId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loai_hdon: loaiHdon }),
+      });
+      inv = await res.json();
     }
+    if (!inv.success && !inv.already_issued) throw new Error(inv.error || 'Xuất HĐ thất bại');
+    if (inv.already_issued) {
+      toast('Đơn đã có HĐ chính thức: ' + (inv.invoice_no || ''), 'warning');
+    } else if (inv.is_draft) {
+      toast('Đã tạo hóa đơn nháp' + (inv.pdf_url ? ' — mở PDF từ Hóa đơn đầu ra' : ''), 'success');
+    } else {
+      toast('Đã phát hành HĐ ' + (inv.invoice_no || ''), 'success');
+    }
+    const detail = await fetch('/api/sme/export-sale/' + saleId).then(r => r.json());
+    if (detail.success) refreshInvoiceUi(detail.data);
+    else refreshInvoiceUi({
+      invoice_number: inv.invoice_no,
+      invoice_status: inv.is_draft ? 'draft' : 'issued',
+      invoice_id: inv.invoice_id,
+      customs_decl_no: customs,
+    });
   } catch (e) {
     toast(e.message, 'error');
   }
-});
+}
+
+document.getElementById('btnIssueDraft')?.addEventListener('click', () => issueExportInvoice(0));
+document.getElementById('btnIssueOfficial')?.addEventListener('click', () => issueExportInvoice(1));
 
 document.getElementById('btnCreateLc')?.addEventListener('click', async () => {
   try {
@@ -557,6 +804,7 @@ document.getElementById('btnCreateLc')?.addEventListener('click', async () => {
 
 document.getElementById('btnSettleAr')?.addEventListener('click', async () => {
   const id = document.getElementById('editSaleId').value;
+  if (!id) return toast('Lưu phiếu trước', 'error');
   try {
     const res = await fetch('/api/sme/export-sale/' + id + '/settle-ar', {
       method: 'POST', headers: {'Content-Type':'application/json'},
@@ -568,7 +816,7 @@ document.getElementById('btnSettleAr')?.addEventListener('click', async () => {
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.error || 'Lỗi');
-    toast('Đã thu hồi CN — CLTG: ' + formatN(json.fx_diff), 'success');
+    toast(json.message || ('Đã lập phiếu thu ' + (json.voucher_no || '')), 'success');
   } catch (e) { toast(e.message, 'error'); }
 });
 
@@ -665,7 +913,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('incoterms').value = d.incoterms || 'FOB';
     document.getElementById('blNo').value = d.bl_no || '';
     document.getElementById('customsDeclNo').value = d.customs_decl_no || '';
+    const itd = document.getElementById('internalTransferDocNo');
+    if (itd) itd.value = d.internal_transfer_doc_no || '';
     document.getElementById('note').value = d.note || '';
+    refreshPhaseUi(d.export_status || 'shipped', d);
     if (d.warehouse_code) document.getElementById('warehouseCode').value = d.warehouse_code;
     document.getElementById('itemsBody').innerHTML = '';
     (d.items || []).forEach(it => addRow({
@@ -687,7 +938,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (pending.includes(+o.value)) o.selected = true;
     });
     syncAdvance();
+    refreshInvoiceUi(d);
   } catch (e) { toast(e.message, 'error'); }
 });
+
+refreshInvoiceUi();
 </script>
 {% endblock %}

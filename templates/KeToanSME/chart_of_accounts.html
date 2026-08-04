@@ -79,7 +79,7 @@
                         <th style="width:110px;">Nguồn</th>
                         <th style="width:100px;">Ghi sổ</th>
                         <th style="width:160px;">Theo dõi</th>
-                        <th style="width:120px;"></th>
+                        <th style="width:150px;"></th>
                     </tr>
                 </thead>
                 <tbody id="coaBody">
@@ -113,8 +113,8 @@
                         <button type="button" class="btn btn-outline-secondary" id="btnSuggest">Gợi ý</button>
                     </div>
                     <div class="form-text" id="childCodeHint">
-                        Với <strong>1121</strong>: mã <strong>112101</strong> dành cho TK mặc định (QR);
-                        tài khoản mới thường là <strong>112102</strong>.
+                        Quy định: cấp 1 = 3 số, cấp 2 = 4, cấp 3 = 5, cấp 4 = 6 (mỗi lần mở con thêm 1 chữ số).
+                        Với <strong>1121</strong>: <strong>11211</strong> = TK mặc định (QR); tài khoản mới thường là <strong>11212</strong>.
                     </div>
                 </div>
                 <div class="mb-2">
@@ -127,8 +127,15 @@
                     <input type="text" id="custom_reason" class="form-control form-control-sm"
                            placeholder="Theo dõi từng ngân hàng / bộ phận…">
                 </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="set_as_default">
+                    <label class="form-check-label small" for="set_as_default">
+                        Đặt làm <strong>TK mặc định ghi sổ</strong> cho nghiệp vụ thuộc nhóm này
+                    </label>
+                </div>
                 <p class="small text-muted mb-0">
                     Tài khoản cha sẽ chuyển thành <em>tổng hợp</em> (không ghi sổ trực tiếp). Bút toán phải chọn TK con.
+                    Nếu không chọn mặc định, hệ thống tự chuyển mặc định sang con khi cha không còn ghi sổ được.
                 </p>
             </div>
             <div class="modal-footer">
@@ -188,11 +195,18 @@
                 </td>
                 <td>Cấp ${r.level}</td>
                 <td>${srcBadge(r.legal_source)}</td>
-                <td>${r.is_postable ? '<span class="text-success">Ghi sổ</span>' : '<span class="text-muted">Tổng hợp</span>'}</td>
+                <td>${r.is_postable
+                    ? (r.is_default_posting
+                        ? '<span class="text-success">Ghi sổ</span> <span class="badge bg-primary" title="TK mặc định ghi sổ">Mặc định</span>'
+                        : '<span class="text-success">Ghi sổ</span>')
+                    : '<span class="text-muted">Tổng hợp</span>'}</td>
                 <td class="small">${trackLabels(r)}</td>
-                <td class="text-end">
+                <td class="text-end text-nowrap">
                     <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 btn-add-child"
                             data-parent="${r.code}" title="Tạo tài khoản con">+</button>
+                    ${r.is_postable && !r.is_default_posting
+                        ? `<button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 btn-set-default"
+                            data-code="${r.code}" title="Đặt làm TK mặc định ghi sổ">★</button>` : ''}
                     ${r.is_custom || r.is_recommended ? `<button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 btn-off"
                             data-code="${r.code}" title="Ngừng sử dụng">×</button>` : ''}
                 </td>
@@ -201,6 +215,9 @@
 
         body.querySelectorAll('.btn-add-child').forEach(btn => {
             btn.addEventListener('click', () => openCreate(btn.dataset.parent));
+        });
+        body.querySelectorAll('.btn-set-default').forEach(btn => {
+            btn.addEventListener('click', () => setDefault(btn.dataset.code));
         });
         body.querySelectorAll('.btn-off').forEach(btn => {
             btn.addEventListener('click', () => deactivate(btn.dataset.code));
@@ -227,6 +244,8 @@
         document.getElementById('child_code').value = '';
         document.getElementById('child_name').value = '';
         document.getElementById('custom_reason').value = '';
+        const setDef = document.getElementById('set_as_default');
+        if (setDef) setDef.checked = false;
         const guide = document.getElementById('bankSplitGuide');
         if (guide) { guide.style.display = 'none'; guide.innerHTML = ''; }
         const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCreateChild'));
@@ -256,8 +275,9 @@
             guide.innerHTML = '';
             if (hint) {
                 hint.innerHTML =
-                    'Với <strong>1121</strong>: mã <strong>112101</strong> dành cho TK mặc định (QR); '
-                    + 'tài khoản mới thường là <strong>112102</strong>.';
+                    'Quy định: cấp 1 = 3 số → cấp 2 = 4 → cấp 3 = 5 → cấp 4 = 6. '
+                    + 'Với <strong>1121</strong>: <strong>11211</strong> = TK mặc định (QR); '
+                    + 'tài khoản mới thường là <strong>11212</strong>.';
             }
         }
     }
@@ -277,10 +297,22 @@
     }
 
     async function deactivate(code) {
-        if (!confirm('Ngừng sử dụng tài khoản ' + code + '? (không xóa lịch sử)')) return;
+        if (!confirm('Ngừng sử dụng tài khoản ' + code + '?\n(Không xóa lịch sử; có thể tạo lại cùng mã để mở lại.)')) return;
         const res = await fetch('/api/sme/coa/' + encodeURIComponent(code) + '/deactivate', { method: 'POST' });
         const json = await res.json();
         if (!json.success) return alert(json.error || 'Không thể ngừng');
+        load();
+    }
+
+    async function setDefault(code) {
+        if (!confirm('Đặt ' + code + ' làm tài khoản mặc định ghi sổ cho nghiệp vụ thuộc nhóm này?')) return;
+        const res = await fetch('/api/sme/coa/' + encodeURIComponent(code) + '/set-default', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_default: true }),
+        });
+        const json = await res.json();
+        if (!json.success) return alert(json.error || 'Không đặt được mặc định');
         load();
     }
 
@@ -299,6 +331,7 @@
             code: document.getElementById('child_code').value.trim() || null,
             name: document.getElementById('child_name').value.trim(),
             custom_reason: document.getElementById('custom_reason').value.trim(),
+            set_as_default: !!(document.getElementById('set_as_default') && document.getElementById('set_as_default').checked),
         };
         const res = await fetch('/api/sme/coa/children', {
             method: 'POST',

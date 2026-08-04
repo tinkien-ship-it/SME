@@ -473,11 +473,13 @@ STATIC_FAQ: list[dict[str, Any]] = [
     {
         'id': 'knowledge',
         'keywords': ['pháp luật', 'thuế', 'cập nhật kiến thức', 'bản tin', 'tct', 'bộ tài chính'],
-        'pages': ['cap_nhat_kien_thuc_page'],
+        'pages': ['cap_nhat_kien_thuc_page', 'SME_cap_nhat_kien_thuc'],
         'title': 'Cập nhật pháp luật & thuế',
         'answer': (
-            'Menu **Cập Nhật Kiến Thức** (`/cap-nhat-kien-thuc`): tin từ Tổng cục Thuế và Bộ Tài Chính '
-            'tự cập nhật hàng ngày. Nhấn tiêu đề có biểu tượng ↗ để xem văn bản gốc.'
+            'HKD: **Cập Nhật Kiến Thức** (`/cap-nhat-kien-thuc`) — tin hộ kinh doanh. '
+            'SME: **Tiện ích → Cập nhật kiến thức** (`/SME_cap-nhat-kien-thuc`) — chỉ thông tư, '
+            'nghị định, thuế DN. Tin từ Tổng cục Thuế và Bộ Tài Chính tự cập nhật. '
+            'Nhấn tiêu đề có biểu tượng ↗ để xem văn bản gốc.'
         ),
     },
     {
@@ -509,12 +511,14 @@ STATIC_FAQ: list[dict[str, Any]] = [
             'kế toán sme', 'kế toán doanh nghiệp', 'tt99', 'tt58', 'sổ kép',
             'menu sme', 'hub sme',
         ],
-        'pages': ['SME_dashboard', 'huong_dan_su_dung'],
+        'pages': ['SME_dashboard', 'huong_dan_su_dung', 'SME_cap_nhat_kien_thuc'],
         'title': 'Kế toán doanh nghiệp (SME) là gì?',
         'answer': (
             'Menu **Kế toán doanh nghiệp** dùng sổ kép theo **Thông tư 99** hoặc **Thông tư 58**. '
             'Chọn **chi nhánh** trên thanh trên (Tất cả = hợp nhất). '
-            'Hướng dẫn chi tiết: tab **Kế Toán SME** trong **Hướng Dẫn Sử Dụng**.'
+            'Hướng dẫn: tab **Kế Toán SME** trong **Hướng Dẫn Sử Dụng**. '
+            'Cập nhật pháp luật / thuế DN: **Tiện ích → Cập nhật kiến thức** '
+            '(`/SME_cap-nhat-kien-thuc`).'
         ),
     },
     {
@@ -711,7 +715,16 @@ PAGE_SUGGESTIONS: dict[str, list[str]] = {
         'Hàng dùng ngay và nguyên vật liệu khác nhau?',
         'Sửa phiếu nhập kho sai?',
     ],
-    'cap_nhat_kien_thuc_page': ['Tin pháp luật HKD mới?', 'Tra cứu thông tư thuế?'],
+    'cap_nhat_kien_thuc_page': [
+        'Tin pháp luật hộ kinh doanh mới?',
+        'Tra cứu thông tư thuế HKD?',
+        'Đồng bộ tin Tổng cục Thuế?',
+    ],
+    'SME_cap_nhat_kien_thuc': [
+        'Tin pháp luật doanh nghiệp mới?',
+        'Tra cứu thông tư thuế TT99?',
+        'Đồng bộ tin Tổng cục Thuế?',
+    ],
     'SME_dashboard': [
         'Kế toán doanh nghiệp SME bắt đầu thế nào?',
         'Chọn chi nhánh ra sao?',

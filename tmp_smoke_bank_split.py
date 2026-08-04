@@ -20,19 +20,30 @@ conn.execute("INSERT INTO sme_vouchers(debit_account,credit_account) VALUES ('11
 conn.commit()
 
 prev = preview_bank_split(conn, '1121')
-assert prev and prev['will_auto_split'] and prev['default_code']=='112101'
-assert suggest_next_child_code(conn,'1121')=='112102'
+assert prev and prev['will_auto_split'] and prev['default_code']=='11211'
+assert suggest_next_child_code(conn,'1121')=='11212'
 
 created = create_child_account(conn, parent_code='1121', name='TCB STK moi', code=None)
-assert created['code']=='112102', created
-assert get_account(conn,'112101',commit=False)
+assert created['code']=='11212', created
+assert get_account(conn,'11211',commit=False)
+assert get_account(conn,'11211',commit=False)['level']==3
 assert get_account(conn,'1121',commit=False)['is_postable']==0
 jl = conn.execute("SELECT account_code FROM sme_journal_lines").fetchone()[0]
-assert jl=='112101', jl
+assert jl=='11211', jl
 vv = conn.execute("SELECT debit_account FROM sme_vouchers").fetchone()[0]
-assert vv=='112101', vv
-assert get_default_bank_account(conn)=='112101'
+assert vv=='11211', vv
+assert get_default_bank_account(conn)=='11211'
 assert created.get('automation_message')
-print('PASS', created['code'], created.get('automation_message'))
+
+# Cấp 3 → cấp 4 (6 số)
+c4 = create_child_account(conn, parent_code='11211', name='Chi tiet 1', code=None)
+assert c4['code']=='112111', c4
+assert c4['level']==4
+
+# Từ cấp 1: 3 → 4 số
+assert suggest_next_child_code(conn, '111').startswith('111')
+assert len(suggest_next_child_code(conn, '111')) == 4
+
+print('PASS', created['code'], c4['code'], created.get('automation_message'))
 conn.close()
 os.remove(path)

@@ -25,7 +25,7 @@ from flask import (
 )
 from flask_login import login_required
 
-from db_utils import get_db_connection
+from db_utils import begin_immediate, get_db_connection, rollback_quietly, _is_locked_error
 from Services.customer_utils import normalize_tax_code_digits, tax_code_validation_message
 from Services.invoice_buyer import DEFAULT_RETAIL_BUYER_NAME, is_retail_buyer_name, normalize_retail_buyer_name
 from Services.hkd_sector import requires_stock_check
@@ -302,12 +302,70 @@ def fetch_sale_items_detail_report(cursor, start_date, end_date, search_query=No
     return rows, summary
 
 
+def _delete_sale_child_rows(cursor, sale_id: int) -> None:
+    """Xóa bảng con trước khi DELETE sale (tránh FOREIGN KEY constraint failed)."""
+    sid = int(sale_id)
+    # Thứ tự: chứng từ / journal → kho → dòng hàng → audit
+    for sql, params in (
+        ("DELETE FROM phieu_xuat_kho WHERE sale_id = ?", (sid,)),
+        ("DELETE FROM phieu_thu WHERE sale_id = ?", (sid,)),
+        ("DELETE FROM cong_no WHERE sale_id = ?", (sid,)),
+        (
+            """
+            DELETE FROM sme_vouchers
+            WHERE source_id = ? AND COALESCE(source_type,'') IN (
+                'sale', 'export_ar_settle', 'pos', 'pos_sale', ''
+            )
+            """,
+            (sid,),
+        ),
+        (
+            """
+            DELETE FROM sme_journal_lines WHERE entry_id IN (
+                SELECT id FROM sme_journal_entries
+                WHERE document_id = ? AND UPPER(COALESCE(document_type,'')) IN (
+                    'SALE', 'SALE_REVENUE', 'SALE_COGS', 'EXPORT_SHIP',
+                    'EXPORT_REVENUE', 'EXPORT_COGS', 'EXPORT_TAX', 'PT', 'EXPORT_SETTLE'
+                )
+            )
+            """,
+            (sid,),
+        ),
+        (
+            """
+            DELETE FROM sme_journal_entries
+            WHERE document_id = ? AND UPPER(COALESCE(document_type,'')) IN (
+                'SALE', 'SALE_REVENUE', 'SALE_COGS', 'EXPORT_SHIP',
+                'EXPORT_REVENUE', 'EXPORT_COGS', 'EXPORT_TAX', 'PT', 'EXPORT_SETTLE'
+            )
+            """,
+            (sid,),
+        ),
+        (
+            """
+            DELETE FROM stock_moves
+            WHERE ref_id = ? AND UPPER(COALESCE(type,'')) IN ('SALE', 'EXPORT_SHIP', 'EXPORT')
+            """,
+            (sid,),
+        ),
+        ("DELETE FROM inventory_transactions WHERE sale_id = ?", (sid,)),
+        ("DELETE FROM sale_items WHERE sale_id = ?", (sid,)),
+        ("DELETE FROM sale_audit_log WHERE sale_id = ?", (sid,)),
+        ("DELETE FROM return_sales WHERE sale_id = ?", (sid,)),
+    ):
+        try:
+            cursor.execute(sql, params)
+        except sqlite3.OperationalError:
+            # Bảng/cột chưa có trên DB cũ
+            pass
+
+
 def complete_pos_bank_payment(sale_id):
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     try:
-        cursor.execute("BEGIN IMMEDIATE")
+        begin_immediate(conn, label='complete_pos_bank_payment')
         sale = cursor.execute("SELECT * FROM sale WHERE id = ?", (sale_id,)).fetchone()
         if not sale:
             return {"success": False, "error": "Không tìm thấy hóa đơn"}
@@ -430,7 +488,7 @@ def complete_pos_bank_payment(sale_id):
         return {"success": True, "sale_id": sale_id}
     except Exception as e:
         if conn:
-            conn.rollback()
+            rollback_quietly(conn)
         logging.error("complete_pos_bank_payment: %s", e, exc_info=True)
         return {"success": False, "error": str(e)}
     finally:
@@ -562,7 +620,7 @@ def register_sale_routes(app):
         cursor = conn.cursor()
 
         try:
-            cursor.execute("BEGIN IMMEDIATE")
+            begin_immediate(conn, label='api_checkout')
             sale_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             old_status = 'draft'
             if sale_id:
@@ -749,7 +807,8 @@ def register_sale_routes(app):
             return jsonify({"success": True, "sale_id": sale_id, "status": status}), 200
 
         except Exception as e:
-            if conn: conn.rollback()
+            if conn:
+                rollback_quietly(conn)
             logging.error(f"Lỗi api_checkout: {str(e)}", exc_info=True)
             return jsonify({"success": False, "error": str(e)}), 500
         finally:
@@ -771,29 +830,32 @@ def register_sale_routes(app):
             except ValueError as ve:
                 return jsonify({'success': False, 'error': str(ve)}), 403
 
-            print(f"[DEBUG] Đang xóa pending sale_id = {sale_id}")
+            begin_immediate(conn, label='delete_pending_sale')
 
             # Kiểm tra đơn hàng có tồn tại và đang pending không
             cursor.execute("SELECT id, status FROM sale WHERE id = ?", (sale_id,))
             sale = cursor.fetchone()
 
             if not sale:
+                rollback_quietly(conn)
                 return jsonify({'success': False, 'error': f'Không tìm thấy đơn hàng #{sale_id}'}), 404
 
             if sale['status'] != 'pending':
+                rollback_quietly(conn)
                 return jsonify({'success': False, 'error': 'Chỉ được xóa đơn đang ở trạng thái pending'}), 400
 
-            # ===== XÓA TRONG BẢNG sale =====
+            # Xóa bảng con trước — tránh FOREIGN KEY constraint failed
+            _delete_sale_child_rows(cursor, sale_id)
             cursor.execute("DELETE FROM sale WHERE id = ?", (sale_id,))
-            print(f"[DEBUG] Đã xóa thành công đơn #{sale_id} trong bảng sale")
 
-            # ===== RESET SQLITE_SEQUENCE =====
-            cursor.execute("""
-                UPDATE sqlite_sequence
-                SET seq = (SELECT IFNULL(MAX(id),0) FROM sale)
-                WHERE name = 'sale'
-            """)
-            print("[DEBUG] Đã cập nhật lại sqlite_sequence cho bảng sale")
+            try:
+                cursor.execute("""
+                    UPDATE sqlite_sequence
+                    SET seq = (SELECT IFNULL(MAX(id),0) FROM sale)
+                    WHERE name = 'sale'
+                """)
+            except sqlite3.OperationalError:
+                pass
 
             conn.commit()
 
@@ -802,20 +864,35 @@ def register_sale_routes(app):
                 'message': f'Đã xóa đơn pending #{sale_id}'
             })
 
+        except sqlite3.IntegrityError as e:
+            if conn:
+                rollback_quietly(conn)
+            logging.error("delete_pending IntegrityError: %s", e, exc_info=True)
+            return jsonify({
+                'success': False,
+                'error': f'Không xóa được do ràng buộc dữ liệu: {e}',
+            }), 500
+
         except sqlite3.OperationalError as e:
+            if conn:
+                rollback_quietly(conn)
             error_str = str(e).lower()
             if "no such table" in error_str:
                 msg = f"LỖI: Bảng 'sale' không tồn tại! {e}"
             elif "no such column" in error_str:
                 msg = f"LỖI: Bảng sale không có cột 'status'! {e}"
+            elif _is_locked_error(e):
+                msg = 'Database đang bận (locked). Thử lại sau vài giây.'
             else:
                 msg = str(e)
 
-            print("[ERROR]", msg)
+            logging.error("delete_pending OperationalError: %s", msg)
             return jsonify({'success': False, 'error': msg}), 500
 
         except Exception as e:
-            print("[ERROR]", str(e))
+            if conn:
+                rollback_quietly(conn)
+            logging.error("delete_pending: %s", e, exc_info=True)
             return jsonify({'success': False, 'error': str(e)}), 500
 
         finally:
@@ -872,7 +949,7 @@ def register_sale_routes(app):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         try:
-            cursor.execute("BEGIN IMMEDIATE")
+            begin_immediate(conn, label='api_update_sale_item')
             sale_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             ref_doc = f"ĐH{str(sale_id).zfill(6)}"
             # Kiểm tra đơn hàng
@@ -1753,16 +1830,16 @@ def register_sale_routes(app):
     @app.route('/api/sale/delete/<int:sale_id>', methods=['DELETE'])
     def delete_sale(sale_id):
         conn = get_db_connection()
-        conn.execute("BEGIN TRANSACTION")  # Bắt đầu transaction rõ ràng
         c = conn.cursor()
     
         try:
+            begin_immediate(conn, label='delete_sale')
             try:
                 from Services.sme.branches import active_report_branch_filter, assert_sale_in_branch
                 if active_report_branch_filter() is not None:
                     assert_sale_in_branch(conn, sale_id)
             except ValueError as ve:
-                conn.rollback()
+                rollback_quietly(conn)
                 return jsonify({"success": False, "error": str(ve)}), 403
 
             # 1. Kiểm tra đơn hàng tồn tại và chưa xuất hóa đơn
@@ -1774,9 +1851,11 @@ def register_sale_routes(app):
             sale_row = c.fetchone()
         
             if not sale_row:
+                rollback_quietly(conn)
                 return jsonify({"success": False, "error": "Đơn hàng không tồn tại"}), 404
         
             if sale_row["invoice_number"]:
+                rollback_quietly(conn)
                 return jsonify({"success": False, "error": "Không thể xóa đơn hàng đã xuất hóa đơn"}), 403
         
             # (Tùy chọn) Kiểm tra thêm trạng thái nếu bạn có cột status
@@ -1802,18 +1881,9 @@ def register_sale_routes(app):
             # 3. Hoàn sổ cái + sync inventory từ stock_moves (không cộng tay inventory)
             revert_sale_stock(c, sale_id_db, product_ids)
 
-            # 4. Xóa dữ liệu liên quan (thứ tự quan trọng)
-            c.execute("DELETE FROM sale_items WHERE sale_id = ?", (sale_id_db,))
-            c.execute("DELETE FROM phieu_thu WHERE sale_id = ?", (sale_id_db,))
-            c.execute("DELETE FROM phieu_xuat_kho WHERE sale_id = ?", (sale_id_db,))
-            c.execute("DELETE FROM cong_no WHERE sale_id = ?", (sale_id_db,))
+            # 4. Xóa dữ liệu liên quan (bảng con trước — tránh FK)
+            _delete_sale_child_rows(c, sale_id_db)
             c.execute("DELETE FROM sale WHERE id = ?", (sale_id_db,))
-
-            # **KHÔNG NÊN** reset AUTOINCREMENT trong production
-            # Nếu bạn thật sự muốn reset (chỉ nên dùng trong dev/test):
-            # tables_to_reset = ['sale', 'sale_items', 'inventory_transactions', 'stock_moves']
-            # for table in tables_to_reset:
-            #     c.execute("DELETE FROM sqlite_sequence WHERE name = ?", (table,))
 
             conn.commit()
         
@@ -1831,7 +1901,7 @@ def register_sale_routes(app):
             })
 
         except Exception as e:
-            conn.rollback()
+            rollback_quietly(conn)
             print(f"Lỗi khi xóa đơn hàng {sale_id}: {str(e)}")
             import traceback
             traceback.print_exc()
@@ -1869,7 +1939,7 @@ def register_sale_routes(app):
         conn = get_db_connection()
         c = conn.cursor()
         try:
-            c.execute("BEGIN IMMEDIATE")
+            begin_immediate(conn, label='api_return_sale')
 
             # === 1. Kiểm tra bảng sale (Dùng id) ===
             c.execute("""

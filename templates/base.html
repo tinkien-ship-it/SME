@@ -327,7 +327,7 @@
                     {% endif %}
 
                     <!-- Cài đặt -->
-                    {% if current_user.role in ['admin', 'adminFB', 'adminSME', 'master'] or 'settings_page' in current_user.permissions %}
+                    {% if current_user.role in ['admin', 'admin*', 'adminFB', 'adminSME', 'master'] %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'settings_page' %}active{% endif %}" href="{{ url_for('settings_page') }}">
                             <i class="fas fa-cog"></i> Cài Đặt

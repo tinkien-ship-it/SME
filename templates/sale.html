@@ -498,7 +498,8 @@
     }
 
     function defaultIssueLoaiHdon() {
-        return einvoiceProvider === 'vnpt' ? 0 : 1;
+        // Mặc định luôn xuất chính thức; chỉ chọn Nháp khi khách cần xem trước.
+        return 1;
     }
 
     function resolveIssueLoaiHdon() {

@@ -274,7 +274,7 @@
 
                 <!-- Tab 2: Nhân viên & Phân quyền -->
                 <div class="tab-pane fade" id="tab-users">
-                    {% if current_user.role in ['admin', 'admin*', 'adminFB', 'master'] %}
+                    {% if current_user.role in ['admin', 'admin*', 'adminFB', 'adminSME', 'master'] %}
                     <div class="row g-4">
                         <div class="col-lg-7">
                             <div class="card setting-card shadow-sm">
@@ -400,7 +400,7 @@
                     <div class="alert alert-warning text-center py-5 my-4">
                         <i class="fas fa-lock fa-3x mb-3 d-block text-warning"></i>
                         <h5 class="mb-2">Bạn không có quyền truy cập phần này</h5>
-                        <p class="mb-0">Chỉ <strong>Quản trị viên (admin & master)</strong> mới có thể quản lý nhân viên & phân quyền.</p>
+                        <p class="mb-0">Chỉ <strong>Quản trị viên (admin / adminSME / master)</strong> mới có thể quản lý nhân viên & phân quyền. Quản lý (manager) không được phân quyền tại đây.</p>
                     </div>
                     {% endif %}
                 </div>

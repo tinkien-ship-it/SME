@@ -30,6 +30,64 @@ def _is_locked_error(exc: BaseException) -> bool:
     return 'database is locked' in msg or 'database table is locked' in msg
 
 
+def _raw_sqlite_conn(conn):
+    """Lấy sqlite3.Connection thật từ proxy request-scoped / auto-close."""
+    cur = conn
+    for _ in range(4):
+        if isinstance(cur, sqlite3.Connection):
+            return cur
+        if isinstance(cur, _RequestScopedConnection):
+            cur = object.__getattribute__(cur, '_conn')
+            continue
+        if isinstance(cur, _AutoCloseConnection):
+            cur = cur._raw()
+            continue
+        break
+    return cur
+
+
+def begin_immediate(conn, *, label: str = 'begin_immediate') -> None:
+    """``BEGIN IMMEDIATE`` có retry khi database locked; bỏ qua nếu đã trong transaction.
+
+    Sau lỗi FK / constraint trên cùng connection request-scoped, gọi ``rollback``
+    rồi mới BEGIN lại để tránh giữ khóa và làm checkout bị ``database is locked``.
+    """
+    def _do():
+        raw = _raw_sqlite_conn(conn)
+        try:
+            if getattr(raw, 'in_transaction', False):
+                return
+        except Exception:
+            pass
+        try:
+            raw.execute('BEGIN IMMEDIATE')
+        except sqlite3.OperationalError as exc:
+            msg = str(exc).lower()
+            # Transaction aborted / cannot start — gỡ rồi thử lại trong retry loop
+            if 'within a transaction' in msg or 'transaction' in msg:
+                try:
+                    raw.rollback()
+                except Exception:
+                    pass
+                raw.execute('BEGIN IMMEDIATE')
+                return
+            raise
+
+    sqlite_write_retry(_do, label=label)
+
+
+def rollback_quietly(conn) -> None:
+    """Rollback an toàn (request-scoped / đã commit)."""
+    try:
+        raw = _raw_sqlite_conn(conn)
+        raw.rollback()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+
 class _AutoCloseConnection:
     """Proxy: ``with open_sqlite(...)`` / ``close()`` luôn đóng file thật.
 
@@ -252,6 +310,11 @@ def close_request_db():
         return
     g._sme_db = None
     g._sme_db_path = None
+    try:
+        # Gỡ transaction dở (lỗi FK không rollback) — tránh giữ khóa WAL
+        rollback_quietly(conn)
+    except Exception:
+        pass
     try:
         if isinstance(conn, _RequestScopedConnection):
             conn._real_close()

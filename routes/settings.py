@@ -173,6 +173,7 @@ def register_settings_routes(app):
     from auth import (
         User,
         admin_or_master_required,
+        admin_or_store_setup_required,
         login_required,
         master_required,
         require_permission,
@@ -1337,17 +1338,18 @@ Trân trọng,
 
         return render_template('reset_password.html')
 
-    # API: Lấy danh sách users
+    # API: Lấy danh sách users — chỉ admin / master (không cho manager)
     @app.route('/api/settings/list_users', methods=['GET'])
+    @admin_or_master_required
     def list_users():
         db = get_db_connection()
         cursor = db.execute("SELECT id, username, full_name, role, email, phone, permissions FROM users")
         users = [dict(row) for row in cursor.fetchall()]
         return jsonify(users)
 
-    # API: Lưu hoặc Cập nhật User
+    # API: Lưu hoặc Cập nhật User — chỉ admin / master (không cho manager dù có edit_data)
     @app.route('/api/settings/save_user', methods=['POST'])
-    @require_permission('edit_data')
+    @admin_or_master_required
     def save_user():
         data = request.json
    
@@ -1438,9 +1440,9 @@ Trân trọng,
             if conn:
                 conn.close()
 
-    # --- API XÓA USER ---
+    # --- API XÓA USER — chỉ admin / master (không cho manager dù có delete_data) ---
     @app.route('/api/settings/delete_user/<int:user_id>', methods=['DELETE'])
-    @require_permission('delete_data')
+    @admin_or_master_required
     def delete_user_api(user_id):
         # Ngăn việc Admin tự xóa chính mình
         if session.get('user', {}).get('id') == user_id:
@@ -2384,7 +2386,7 @@ Trân trọng,
             ),
         })
     @app.route('/thiet-lap')
-    @admin_or_master_required
+    @admin_or_store_setup_required
     def store_setup_page():
         from flask import g
         from Services.tenant_profile import is_sme_regime
@@ -2441,7 +2443,7 @@ Trân trọng,
                                has_casso_key=bool(_get_setting('casso_api_key', '')))
 
     @app.route('/api/settings/business', methods=['POST'])
-    @admin_or_master_required
+    @admin_or_store_setup_required
     def api_save_business():
         data = request.get_json(silent=True)  # An toàn hơn, tránh exception nếu không phải JSON
 
@@ -2565,7 +2567,7 @@ Trân trọng,
                 conn.close()
 
     @app.route('/api/settings/payment-bank', methods=['GET'])
-    @admin_or_master_required
+    @admin_or_store_setup_required
     def api_get_payment_bank():
         from Services.payment_bank import get_full_payment_setup
         from flask import url_for
@@ -2579,7 +2581,7 @@ Trân trọng,
         return jsonify(data)
 
     @app.route('/api/settings/payment-bank', methods=['POST'])
-    @admin_or_master_required
+    @admin_or_store_setup_required
     def api_save_payment_bank():
         """Lưu đồng bộ: thông tin cửa hàng + VietQR + SePay/Casso."""
         from Services.payment_bank import save_payment_settings, validate_payment_provider_setup, get_payment_config, get_full_payment_setup

@@ -125,6 +125,8 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
     support_password = kwargs.get('support_password') or customer_password
     owner_role = role_for_business_line(business_line, accounting_regime)
     support_role = support_role_for_business_line(business_line, accounting_regime)
+    # Chủ tenant SME (managerSME): thiết lập + xem nhật ký; không có quyền admin/settings
+    owner_permissions = 'view_audit_log' if owner_role == 'managerSME' else ''
 
     # 1. Copy Database mẫu
     if os.path.exists(os.path.join(BASE_DIR, 'database.db')):
@@ -160,9 +162,9 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
         support_hash = generate_password_hash(support_password).decode('utf-8')
 
         cursor_tenant.execute("""
-            INSERT INTO users (username, password, full_name, role, email, must_change_password, is_support_account)
-            VALUES (?, ?, ?, ?, ?, 1, 0)
-        """, (phone, owner_hash, business_name, owner_role, contact_email))
+            INSERT INTO users (username, password, full_name, role, email, permissions, must_change_password, is_support_account)
+            VALUES (?, ?, ?, ?, ?, ?, 1, 0)
+        """, (phone, owner_hash, business_name, owner_role, contact_email, owner_permissions))
 
         cursor_tenant.execute("""
             INSERT INTO users (username, password, full_name, role, email, must_change_password, is_support_account)

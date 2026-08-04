@@ -133,15 +133,27 @@ def sync_return_sale_journals(
     refund = net + vat
 
     inv_acc = '156'
+    product_type = 'goods'
     try:
         pt = conn.execute(
             'SELECT COALESCE(product_type, ?) FROM products WHERE id = ?',
             ('goods', pid),
         ).fetchone()
-        if pt and str(pt[0]).lower() == 'materials':
-            inv_acc = '152'
+        if pt:
+            product_type = str(pt[0] or 'goods')
+            if product_type.lower() in ('materials', 'material', 'nvl', 'raw_materials'):
+                inv_acc = '152'
+            elif product_type.lower() in ('finished_goods', 'finished', 'thanh_pham', 'ready_made'):
+                inv_acc = '155'
     except sqlite3.Error:
         pass
+
+    from Services.sme.cogs_accounts import cogs_accounts_for_line
+    cogs_acc, inv_from_map, _ = cogs_accounts_for_line(
+        product_type, channel='domestic',
+    )
+    if inv_from_map:
+        inv_acc = inv_from_map
 
     desc = f'Khách trả hàng {sno or ("#" + str(sid))} — {cust}'.strip()
     lines: list[dict] = []
@@ -171,7 +183,7 @@ def sync_return_sale_journals(
         })
         seq += 1
         lines.append({
-            'sequence': seq, 'account_code': '632',
+            'sequence': seq, 'account_code': cogs_acc,
             'debit': 0, 'credit': float(cogs), 'description': f'Nhập lại GV — {desc}',
         })
 

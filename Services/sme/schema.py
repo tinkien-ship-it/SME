@@ -61,5 +61,43 @@ def ensure_sme_coa_schema(conn: sqlite3.Connection, *, commit: bool = True) -> N
         )
         """
     )
+
+    # Cột default leaf cho resolve nghiệp vụ khi DN mở thêm TK con
+    coa_cols = {r[1] for r in c.execute('PRAGMA table_info(sme_chart_of_accounts)').fetchall()}
+    if 'is_default_posting' not in coa_cols:
+        try:
+            c.execute(
+                'ALTER TABLE sme_chart_of_accounts '
+                'ADD COLUMN is_default_posting INTEGER NOT NULL DEFAULT 0'
+            )
+        except sqlite3.OperationalError:
+            pass
+
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS sme_account_roles (
+            role_key TEXT PRIMARY KEY,
+            root_hint TEXT NOT NULL,
+            default_account TEXT NOT NULL,
+            label TEXT NOT NULL,
+            description TEXT,
+            category TEXT,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    c.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_sme_account_roles_root
+        ON sme_account_roles(root_hint)
+        """
+    )
+    c.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_sme_coa_default_posting
+        ON sme_chart_of_accounts(is_default_posting, is_active)
+        """
+    )
+
     if commit:
         conn.commit()

@@ -337,6 +337,31 @@ def cash_account_book(
             'balance': float(running),
         })
 
+    # Ưu tiên số phiếu thu/chi (PT/PC) nếu bút toán gắn sme_vouchers
+    try:
+        entry_ids = [r['entry_id'] for r in rows]
+        if entry_ids:
+            ph = ','.join('?' * len(entry_ids))
+            vmap = {
+                int(r[0]): r[1]
+                for r in conn.execute(
+                    f"""
+                    SELECT journal_entry_id, voucher_no
+                    FROM sme_vouchers
+                    WHERE journal_entry_id IN ({ph})
+                      AND status = 'posted'
+                      AND voucher_no IS NOT NULL
+                    """,
+                    entry_ids,
+                ).fetchall()
+            }
+            for item in rows:
+                vno = vmap.get(int(item['entry_id']))
+                if vno:
+                    item['document_no'] = vno
+    except sqlite3.OperationalError:
+        pass
+
     selected_meta = next(row for row in accounts if row['code'] == selected)
     return {
         'fiscal_year': fiscal_year,

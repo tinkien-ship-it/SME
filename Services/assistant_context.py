@@ -87,8 +87,12 @@ PAGE_CONTEXT: dict[str, dict[str, Any]] = {
         'hint': 'Thu tiền trước Trả Phòng; cập nhật chỉ số điện cuối tháng.',
     },
     'cap_nhat_kien_thuc_page': {
-        'label': 'Cập Nhật Kiến Thức',
-        'hint': 'Tin pháp luật TCT/BTC tự đồng bộ; lọc theo HKD/DN.',
+        'label': 'Cập Nhật Kiến Thức (HKD)',
+        'hint': 'Tin pháp luật HKD từ TCT/BTC; lọc theo hộ kinh doanh.',
+    },
+    'SME_cap_nhat_kien_thuc': {
+        'label': 'Cập Nhật Kiến Thức DN',
+        'hint': 'Chỉ thông tư, nghị định, thuế doanh nghiệp (TT99/TT58).',
     },
     'huong_dan_su_dung': {
         'label': 'Hướng Dẫn Sử Dụng',

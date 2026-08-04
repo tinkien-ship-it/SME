@@ -314,14 +314,22 @@ class MisaInvoiceAdapter(BaseEInvoiceAdapter):
         total_amount = round(total_without_vat + total_vat, 2)
         now_iso = datetime.now().astimezone().isoformat()
 
+        from Services.einvoice_export import enrich_sale_for_einvoice, invoice_currency_fields
+        sale_enriched = enrich_sale_for_einvoice(sale_data)
+        currency_code, exchange_rate = invoice_currency_fields(sale_enriched)
+        notes = sale_enriched.get('_einvoice_notes') or ''
+        pay_name = sale_enriched.get('_einvoice_payment_method') or str(
+            sale_data.get('payment_method') or 'TM/CK'
+        )
+
         return {
             'RefID': ref_id,
             'InvSeries': self.inv_series,
             'InvoiceName': self.invoice_name,
             'InvDate': now_iso,
-            'CurrencyCode': 'VND',
-            'ExchangeRate': 1.0,
-            'PaymentMethodName': str(sale_data.get('payment_method') or 'TM/CK'),
+            'CurrencyCode': currency_code,
+            'ExchangeRate': exchange_rate,
+            'PaymentMethodName': pay_name,
             'BuyerLegalName': str(sale_data.get('company_name') or sale_data.get('customer_name') or DEFAULT_RETAIL_BUYER_NAME),
             'BuyerTaxCode': str(sale_data.get('tax_code') or ''),
             'BuyerAddress': str(sale_data.get('address') or ''),
@@ -340,11 +348,11 @@ class MisaInvoiceAdapter(BaseEInvoiceAdapter):
             'TotalVATAmountOC': round(total_vat, 2),
             'TotalDiscountAmountOC': round(total_discount, 2),
             'TotalAmountOC': total_amount,
-            'TotalSaleAmount': round(total_sale, 2),
-            'TotalAmountWithoutVAT': round(total_without_vat, 2),
-            'TotalVATAmount': round(total_vat, 2),
-            'TotalDiscountAmount': round(total_discount, 2),
-            'TotalAmount': total_amount,
+            'TotalSaleAmount': round(total_sale * exchange_rate, 2) if currency_code != 'VND' else round(total_sale, 2),
+            'TotalAmountWithoutVAT': round(total_without_vat * exchange_rate, 2) if currency_code != 'VND' else round(total_without_vat, 2),
+            'TotalVATAmount': round(total_vat * exchange_rate, 2) if currency_code != 'VND' else round(total_vat, 2),
+            'TotalDiscountAmount': round(total_discount * exchange_rate, 2) if currency_code != 'VND' else round(total_discount, 2),
+            'TotalAmount': round(total_amount * exchange_rate, 2) if currency_code != 'VND' else total_amount,
             'TotalAmountInWords': self._amount_in_words(total_amount),
             'OriginalInvoiceDetail': details,
             'TaxRateInfo': [
@@ -356,15 +364,16 @@ class MisaInvoiceAdapter(BaseEInvoiceAdapter):
                 for name, vals in tax_groups.items()
             ],
             'OptionUserDefined': {
-                'MainCurrency': 'VND',
-                'AmountDecimalDigits': '0',
+                'MainCurrency': currency_code,
+                'AmountDecimalDigits': '0' if currency_code == 'VND' else '2',
                 'AmountOCDecimalDigits': '2',
-                'UnitPriceOCDecimalDigits': '0',
+                'UnitPriceOCDecimalDigits': '2' if currency_code != 'VND' else '0',
                 'UnitPriceDecimalDigits': '0',
                 'QuantityDecimalDigits': '2',
                 'CoefficientDecimalDigits': '2',
                 'ExchangRateDecimalDigits': '0',
             },
+            'CustomField1': notes[:255] if notes else None,
         }
 
     def _create_invoice(self, sale_data, items, ref_id):
@@ -564,7 +573,9 @@ class ViettelInvoiceAdapter(BaseEInvoiceAdapter):
         ET.SubElement(gen, 'invoiceSeries').text = self.invoice_series
         ET.SubElement(gen, 'invoiceNo').text = str(invoice_no)
         ET.SubElement(gen, 'invoiceIssuedDate').text = str(int(time.time() * 1000))
-        ET.SubElement(gen, 'currencyCode').text = 'VND'
+        from Services.einvoice_export import invoice_currency_fields
+        currency_code, _rate = invoice_currency_fields(sale_data)
+        ET.SubElement(gen, 'currencyCode').text = currency_code
         ET.SubElement(gen, 'paymentStatus').text = 'true'
 
         buyer = ET.SubElement(root, 'buyerInfo')
@@ -1481,16 +1492,22 @@ class VNPTInvoiceAdapter(BaseEInvoiceAdapter):
             text = text.split('T', 1)[0]
         return text[:10]
 
-    def _build_ttchung(self, ttchung, replacement_info=None):
+    def _build_ttchung(self, ttchung, replacement_info=None, sale_data=None):
         """
         TTChung theo schema VNPT ImportInvByPattern (DSHDon).
         Pattern/serial truyền qua tham số SOAP — không đặt KHMSHDon/KHHDon trong TTChung.
         """
-        ET.SubElement(ttchung, 'HTTToan').text = 'TM/CK'
+        from Services.einvoice_export import enrich_sale_for_einvoice, invoice_currency_fields
+        sale_enriched = enrich_sale_for_einvoice(sale_data)
+        currency_code, exchange_rate = invoice_currency_fields(sale_enriched)
+        pay = sale_enriched.get('_einvoice_payment_method') or 'TM/CK'
+        ET.SubElement(ttchung, 'HTTToan').text = str(pay)
         if replacement_info:
             ET.SubElement(ttchung, 'TCHDon').text = '1'
-        ET.SubElement(ttchung, 'DVTTe').text = 'VND'
-        ET.SubElement(ttchung, 'TGia').text = '1'
+        ET.SubElement(ttchung, 'DVTTe').text = currency_code
+        ET.SubElement(ttchung, 'TGia').text = (
+            '1' if currency_code == 'VND' else self._fmt_tt78_number(exchange_rate, 4)
+        )
 
     def _build_tt78_xml(self, sale_data, items, fkey, seller, replacement_info=None):
         dshdon = ET.Element('DSHDon')
@@ -1499,7 +1516,7 @@ class VNPTInvoiceAdapter(BaseEInvoiceAdapter):
 
         dlhdon = ET.SubElement(hdon, 'DLHDon')
         ttchung = ET.SubElement(dlhdon, 'TTChung')
-        self._build_ttchung(ttchung, replacement_info=replacement_info)
+        self._build_ttchung(ttchung, replacement_info=replacement_info, sale_data=sale_data)
 
         ndhdon = ET.SubElement(dlhdon, 'NDHDon')
 
@@ -1585,6 +1602,15 @@ class VNPTInvoiceAdapter(BaseEInvoiceAdapter):
         ET.SubElement(ttoan, 'TTCKTMai').text = '0'
         ET.SubElement(ttoan, 'TgTTTBSo').text = self._fmt_tt78_number(grand, 2)
         ET.SubElement(ttoan, 'TgTTTBChu').text = self._amount_in_words(grand)
+
+        from Services.einvoice_export import enrich_sale_for_einvoice
+        notes = enrich_sale_for_einvoice(sale_data).get('_einvoice_notes') or ''
+        if notes:
+            ttkhac = ET.SubElement(dlhdon, 'TTKhac')
+            ttin = ET.SubElement(ttkhac, 'TTin')
+            ET.SubElement(ttin, 'TTruong').text = 'GhiChu'
+            ET.SubElement(ttin, 'KDLieu').text = 'string'
+            ET.SubElement(ttin, 'DLieu').text = notes[:500]
 
         return ET.tostring(dshdon, encoding='unicode')
 

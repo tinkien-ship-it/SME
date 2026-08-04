@@ -202,7 +202,7 @@ def _cash_account(payment_method: str, *, currency: str = 'VND') -> str:
         return '1122' if fx else '1121'
     if method in ('111', 'cash', '1111'):
         return '1112' if fx else '1111'
-    # Cho phép truyền thẳng mã TK (kể cả TK con 112101…)
+    # Cho phép truyền thẳng mã TK (kể cả TK con 11211, 112111…)
     if method[0:1].isdigit() and (method.startswith('111') or method.startswith('112')):
         return method if all(ch.isdigit() for ch in method) else method
     return '1122' if fx else '1111'
@@ -864,6 +864,26 @@ def void_voucher(
     else:
         mode = 'void_only'
 
+    # delete_journal cascade có thể đã xóa sme_vouchers + hoàn công nợ
+    still = get_voucher(conn, voucher_id)
+    if not still and mode == 'hard_delete':
+        if commit:
+            conn.commit()
+        return {
+            'id': voucher_id,
+            'voucher_no': voucher.get('voucher_no'),
+            'voucher_type': voucher.get('voucher_type'),
+            'deleted': True,
+            'mode': 'hard_delete',
+            'journal_mode': (rev or {}).get('mode') or 'hard_delete',
+            'reversal': rev,
+            'cascade_via_journal': True,
+            'message': (
+                f"Đã xóa bút toán và chứng từ {voucher.get('voucher_no')} "
+                f"(kỳ chưa kê khai / chưa khóa sổ) — có thể ghi lại."
+            ),
+        }
+
     # Hoàn tác side-effect công nợ nếu có
     if voucher.get('voucher_type') == 'receipt' and voucher.get('source_id'):
         try:
@@ -922,7 +942,6 @@ def void_voucher(
                 f"(kỳ chưa kê khai / chưa khóa sổ) — có thể ghi lại."
             ),
         }
-
     # Kỳ đã chốt kê khai / khóa năm: giữ lịch sử + đảo (nếu có)
     conn.execute(
         """

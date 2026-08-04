@@ -6,6 +6,130 @@ import sqlite3
 from typing import Any
 
 
+def ensure_phieu_xuat_kho_schema(conn: sqlite3.Connection, *, commit: bool = False) -> None:
+    """Đảm bảo bảng phiếu xuất kho 02-VT có đủ cột dùng cho in mẫu."""
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS phieu_xuat_kho (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            voucher_no TEXT UNIQUE,
+            date TEXT,
+            customer_name TEXT,
+            items_json TEXT,
+            total_amount REAL,
+            sale_id INTEGER
+        )
+        """
+    )
+    cols = {r[1] for r in conn.execute('PRAGMA table_info(phieu_xuat_kho)').fetchall()}
+    for col, decl in (
+        ('note', 'TEXT'),
+        ('address', 'TEXT'),
+        ('form_code', "TEXT DEFAULT '02-VT'"),
+    ):
+        if col not in cols:
+            try:
+                conn.execute(f'ALTER TABLE phieu_xuat_kho ADD COLUMN {col} {decl}')
+            except sqlite3.OperationalError:
+                pass
+    if commit:
+        conn.commit()
+
+
+def _next_px_voucher_no(conn: sqlite3.Connection) -> str:
+    row = conn.execute(
+        """
+        SELECT voucher_no FROM phieu_xuat_kho
+        WHERE voucher_no LIKE 'PX%'
+        ORDER BY id DESC LIMIT 1
+        """
+    ).fetchone()
+    n = 1
+    if row:
+        raw = row[0] if not isinstance(row, sqlite3.Row) else row['voucher_no']
+        try:
+            n = int(str(raw)[2:]) + 1
+        except (TypeError, ValueError):
+            n = 1
+    return f'PX{n:06d}'
+
+
+def upsert_stock_out_voucher_for_sale(
+    conn: sqlite3.Connection,
+    *,
+    sale_id: int,
+    sale_date: str,
+    customer_name: str,
+    items: list[dict[str, Any]],
+    total_amount: float,
+    note: str = '',
+    address: str = '',
+    reuse_voucher_no: bool = True,
+) -> dict[str, Any]:
+    """Tạo/cập nhật phiếu xuất kho mẫu 02-VT gắn sale_id (số PX000001…)."""
+    ensure_phieu_xuat_kho_schema(conn, commit=False)
+    if not items:
+        raise ValueError('Phiếu xuất kho 02-VT cần ít nhất một dòng hàng')
+    date_s = str(sale_date or '')[:10]
+    if not date_s:
+        raise ValueError('Thiếu ngày phiếu xuất kho')
+    cols = {r[1] for r in conn.execute('PRAGMA table_info(phieu_xuat_kho)').fetchall()}
+    existing = conn.execute(
+        'SELECT id, voucher_no FROM phieu_xuat_kho WHERE sale_id = ? ORDER BY id DESC LIMIT 1',
+        (sale_id,),
+    ).fetchone()
+    voucher_no = None
+    if existing and reuse_voucher_no:
+        voucher_no = existing[1] if not isinstance(existing, sqlite3.Row) else existing['voucher_no']
+        eid = existing[0] if not isinstance(existing, sqlite3.Row) else existing['id']
+        conn.execute('DELETE FROM phieu_xuat_kho WHERE sale_id = ? AND id != ?', (sale_id, eid))
+    else:
+        conn.execute('DELETE FROM phieu_xuat_kho WHERE sale_id = ?', (sale_id,))
+        eid = None
+    if not voucher_no:
+        voucher_no = _next_px_voucher_no(conn)
+
+    items_json = json.dumps(items, ensure_ascii=False)
+    fields = [
+        'voucher_no', 'date', 'customer_name', 'items_json', 'total_amount', 'sale_id',
+    ]
+    vals: list[Any] = [
+        voucher_no, date_s, customer_name or '', items_json, float(total_amount or 0), sale_id,
+    ]
+    if 'note' in cols:
+        fields.append('note')
+        vals.append(note or 'Xuất kho')
+    if 'address' in cols:
+        fields.append('address')
+        vals.append(address or '')
+    if 'form_code' in cols:
+        fields.append('form_code')
+        vals.append('02-VT')
+
+    if eid:
+        sets = ', '.join(f'{f} = ?' for f in fields)
+        conn.execute(
+            f'UPDATE phieu_xuat_kho SET {sets} WHERE id = ?',
+            vals + [eid],
+        )
+        voucher_id = int(eid)
+    else:
+        placeholders = ', '.join(['?'] * len(fields))
+        conn.execute(
+            f"INSERT INTO phieu_xuat_kho ({', '.join(fields)}) VALUES ({placeholders})",
+            vals,
+        )
+        voucher_id = int(conn.execute('SELECT last_insert_rowid()').fetchone()[0])
+
+    return {
+        'id': voucher_id,
+        'voucher_no': voucher_no,
+        'form_code': '02-VT',
+        'sale_id': sale_id,
+        'total_amount': float(total_amount or 0),
+    }
+
+
 def list_stock_in(
     conn: sqlite3.Connection,
     *,
@@ -207,6 +331,7 @@ def get_stock_out_print_payload(
     conn: sqlite3.Connection, voucher_id: int
 ) -> tuple[dict[str, Any], dict[str, Any]] | None:
     """Trả (px, info) cho mẫu in 02-VT từ phieu_xuat_kho."""
+    ensure_phieu_xuat_kho_schema(conn, commit=False)
     info_row = conn.execute('SELECT * FROM business_info LIMIT 1').fetchone()
     info = dict(info_row) if info_row else {}
     row = conn.execute(
@@ -214,10 +339,45 @@ def get_stock_out_print_payload(
     ).fetchone()
     if not row:
         return None
-    px = dict(row)
+    px_raw = dict(row)
     try:
-        items = json.loads(px.get('items_json') or '[]')
+        items = json.loads(px_raw.get('items_json') or '[]')
     except (TypeError, json.JSONDecodeError):
         items = []
-    px['items'] = items
+    hang_hoa = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        qty = float(it.get('qty') if it.get('qty') is not None else (it.get('quantity') or 0))
+        price = float(it.get('price') or 0)
+        amount = float(it.get('amount') if it.get('amount') is not None else qty * price)
+        hang_hoa.append({
+            'product_id': it.get('product_id'),
+            'product_name': it.get('product_name') or it.get('name') or '',
+            'product_code': it.get('product_code') or it.get('barcode') or '',
+            'unit': it.get('unit') or '',
+            'qty': qty,
+            'quantity': qty,
+            'price': price,
+            'amount': amount,
+        })
+    total = float(px_raw.get('total_amount') or 0)
+    if total <= 0 and hang_hoa:
+        total = sum(float(h['amount']) for h in hang_hoa)
+    try:
+        from helpers import so_thanh_chu
+        total_str = so_thanh_chu(total).capitalize()
+    except Exception:
+        total_str = ''
+    px = {
+        **px_raw,
+        'customer_name': px_raw.get('customer_name') or '',
+        'address': px_raw.get('address') or '',
+        'note': px_raw.get('note') or 'Xuất kho',
+        'warehouse_location': info.get('warehouse_location') or 'Kho tổng',
+        'total_amount': total,
+        'total_str': total_str,
+        'items': hang_hoa,
+        'hang_hoa': hang_hoa,
+    }
     return px, info

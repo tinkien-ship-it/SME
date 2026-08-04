@@ -18,6 +18,23 @@ def _now() -> str:
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
+def _journal_posted(conn: sqlite3.Connection, entry_id) -> bool:
+    try:
+        eid = int(entry_id)
+    except (TypeError, ValueError):
+        return False
+    if eid <= 0:
+        return False
+    row = conn.execute(
+        """
+        SELECT id FROM sme_journal_entries
+        WHERE id = ? AND status = 'posted' AND reverses_id IS NULL
+        """,
+        (eid,),
+    ).fetchone()
+    return bool(row)
+
+
 def settle_export_ar(
     conn: sqlite3.Connection,
     sale_id: int,
@@ -29,13 +46,22 @@ def settle_export_ar(
     created_by: str | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
-    """Thu tiền XK sau khi xuất (TH2/TH3): Nợ 1122 / Có 131 + CLTG 515/635.
+    """Thu tiền XK: tự lập phiếu thu 01-TT (PTxxxxxx) + Nợ 1122/Có 131 + CLTG.
 
     ``exchange_rate`` = tỷ giá mua NH ngày tiền về.
     ``amount_fc`` mặc định = phần còn phải thu (amount_fc − advance_fc − settled).
+    Sổ tiền gửi NH lấy số chứng từ = số phiếu thu (PT000001…).
     """
+    from Services.sme.vouchers import (
+        VOUCHER_FORM_RECEIPT,
+        _next_voucher_no,
+        _resolve_cash_gl,
+        ensure_sme_voucher_schema,
+    )
+
     ensure_sme_journal_ready(conn, commit=False)
     ensure_export_sale_schema(conn, commit=False)
+    ensure_sme_voucher_schema(conn, commit=False)
 
     sale = conn.execute('SELECT * FROM sale WHERE id = ?', (sale_id,)).fetchone()
     if not sale:
@@ -43,12 +69,64 @@ def settle_export_ar(
     s = dict(sale)
     if str(s.get('sale_type') or '').upper() != 'EXPORT':
         raise ValueError('Chỉ áp dụng phiếu xuất khẩu')
-    if s.get('settle_journal_id') and str(s.get('ar_status') or '') == 'settled':
+
+    # Stale: đã gắn settle_journal_id nhưng bút toán không còn → cho thu lại
+    settle_jid = s.get('settle_journal_id')
+    if str(s.get('ar_status') or '') == 'settled' and _journal_posted(conn, settle_jid):
         raise ValueError('Phiếu đã tất toán công nợ')
+    if settle_jid and not _journal_posted(conn, settle_jid):
+        conn.execute(
+            """
+            UPDATE sale
+            SET settle_journal_id = NULL,
+                settle_amount_fc = 0,
+                ar_status = CASE
+                    WHEN COALESCE(ar_status,'') = 'settled' THEN 'open'
+                    ELSE ar_status
+                END
+            WHERE id = ?
+            """,
+            (sale_id,),
+        )
+        s = dict(conn.execute('SELECT * FROM sale WHERE id = ?', (sale_id,)).fetchone())
+
+    # Phải có bút toán DT (Nợ 131) trước khi thu
+    has_ar = conn.execute(
+        """
+        SELECT 1 FROM sme_journal_entries
+        WHERE document_id = ? AND document_type = 'EXPORT_REVENUE'
+          AND status = 'posted' AND reverses_id IS NULL
+        LIMIT 1
+        """,
+        (sale_id,),
+    ).fetchone()
+    if not has_ar:
+        # Tự bổ sung DT nếu thiếu (trường hợp thông quan chỉ ghi GV)
+        from Services.sme.export_clearance import sync_export_clearance_journals
+        try:
+            sync_export_clearance_journals(conn, sale_id, created_by=created_by)
+        except ValueError as exc:
+            raise ValueError(
+                'Chưa có bút toán doanh thu (Nợ 131). '
+                'Hãy xác nhận thông quan trước khi thu tiền. '
+                f'({exc})'
+            ) from exc
+        has_ar = conn.execute(
+            """
+            SELECT 1 FROM sme_journal_entries
+            WHERE document_id = ? AND document_type = 'EXPORT_REVENUE'
+              AND status = 'posted' AND reverses_id IS NULL
+            LIMIT 1
+            """,
+            (sale_id,),
+        ).fetchone()
+        if not has_ar:
+            raise ValueError(
+                'Chưa có bút toán doanh thu (Nợ 131). Hãy xác nhận thông quan trước khi thu tiền.'
+            )
 
     currency = (s.get('currency') or 'USD').upper()
     book_rate = _fx(s.get('exchange_rate') or 1)
-    # Tỷ giá ghi sổ phần còn lại: nếu có tạm ứng một phần, phần remain dùng TG DT
     total_fc = _money(s.get('amount_fc') or 0)
     adv_fc = _money(s.get('advance_fc') or 0)
     settled_fc = _money(s.get('settle_amount_fc') or 0)
@@ -63,30 +141,47 @@ def settle_export_ar(
         raise ValueError(f'Số thu ({float(use_fc):g}) vượt số còn phải thu ({float(remain_fc):g})')
 
     bank_rate = _fx(exchange_rate)
-    # VND theo sổ 131 (phần còn) ≈ remain × book_rate (đã tách ứng)
-    # Chính xác hơn: remain_vnd từ advance split
+    if bank_rate <= 0:
+        raise ValueError('Tỷ giá ngày thu phải > 0')
+
     from Services.sme.export_payment import compute_split_fx_revenue_vnd, list_sale_advances
     advances = list_sale_advances(conn, sale_id)
     split = compute_split_fx_revenue_vnd(
         total_fc=total_fc, revenue_rate=book_rate, advances=advances,
     )
     book_remain_vnd_full = _money(split['remain_vnd'])
-    # tỷ lệ phần thu lần này
     ratio = (use_fc / remain_fc) if remain_fc else Decimal('1')
     book_vnd = _money(book_remain_vnd_full * ratio)
     bank_vnd = _money(use_fc * bank_rate)
+    if bank_vnd <= 0 or book_vnd <= 0:
+        raise ValueError(
+            f'Số tiền thu không hợp lệ (NH={float(bank_vnd)}, sổ={float(book_vnd)}). '
+            'Kiểm tra tỷ giá và số NT.'
+        )
     diff = _money(bank_vnd - book_vnd)
 
     pm = str(payment_method or 'bank').lower()
-    cash_acct = '1122' if currency != 'VND' else ('1121' if 'bank' in pm or '112' in pm else '1111')
-    if currency != 'VND' and ('cash' in pm or pm == '111'):
-        cash_acct = '1112'
+    if currency != 'VND':
+        cash_pm = 'bank_fx' if ('cash' not in pm and pm != '111') else 'cash_fx'
+    else:
+        cash_pm = 'bank' if ('bank' in pm or '112' in pm or 'ck' in pm or 'transfer' in pm) else 'cash'
+    cash_acct = _resolve_cash_gl(conn, cash_pm, currency=currency)
     cash_acct = resolve_postable_account(conn, cash_acct)
     ar_acct = resolve_postable_account(conn, '131')
+    # Buộc nhóm 1122 khi thu NT qua NH
+    if currency != 'VND' and cash_pm == 'bank_fx' and not str(cash_acct).startswith('1122'):
+        cash_acct = resolve_postable_account(conn, '1122')
 
     date_s = str(settle_date or '')[:10]
+    if not date_s:
+        raise ValueError('Thiếu ngày thu tiền')
     sale_no = s.get('sale_no') or f'#{sale_id}'
-    desc = f'Thu hồi công nợ XK {sale_no}'
+    customer = (s.get('customer_name') or '').strip()
+    desc = f'Thu công nợ {sale_no}'
+    if currency != 'VND':
+        desc = f'{desc} ({float(use_fc):g} {currency} × {float(bank_rate):g})'
+
+    voucher_no = _next_voucher_no(conn, 'receipt')
 
     lines = [
         {
@@ -115,7 +210,7 @@ def settle_export_ar(
             'account_code': resolve_postable_account(conn, '515'),
             'debit': 0,
             'credit': float(diff),
-            'description': f'Lãi CLTG thu XK {sale_no}',
+            'description': f'Lãi CLTG {sale_no}',
         })
     elif diff < Decimal('-0.009'):
         lines.append({
@@ -123,7 +218,7 @@ def settle_export_ar(
             'account_code': resolve_postable_account(conn, '635'),
             'debit': float(abs(diff)),
             'credit': 0,
-            'description': f'Lỗ CLTG thu XK {sale_no}',
+            'description': f'Lỗ CLTG {sale_no}',
         })
 
     from Services.sme.branch_filter import warehouse_branch_or_session
@@ -133,17 +228,50 @@ def settle_export_ar(
         conn,
         posting_date=date_s,
         document_date=date_s,
-        document_type='EXPORT_AR_SETTLE',
-        document_no=sale_no,
+        document_type='PT',
+        document_no=voucher_no,
         document_id=sale_id,
-        business_type='THU_XK',
+        business_type='THU_TIEN',
         currency=currency,
         exchange_rate=float(bank_rate),
         description=desc,
+        reference_document=sale_no,
         created_by=created_by,
         branch_code=branch,
         lines=lines,
     )
+    if not entry or not entry.get('id'):
+        raise ValueError('Không ghi được bút toán Nợ 1122 / Có 131')
+
+    # Lưu chứng từ phiếu thu 01-TT — sổ quỹ/NH đọc document_no = PTxxxxxx
+    cur_db = conn.cursor()
+    vcols = {r[1] for r in cur_db.execute('PRAGMA table_info(sme_vouchers)').fetchall()}
+    base_cols = [
+        'voucher_type', 'form_code', 'voucher_no', 'voucher_date',
+        'party_name', 'party_address', 'party_tax_code', 'amount',
+        'debit_account', 'credit_account', 'reason', 'reference_document',
+        'source_type', 'source_id', 'journal_entry_id', 'status', 'created_by',
+        'created_at', 'updated_at', 'branch_code',
+    ]
+    base_vals: list[Any] = [
+        'receipt', VOUCHER_FORM_RECEIPT, voucher_no, date_s,
+        customer, s.get('address') or '', s.get('tax_code') or '', float(bank_vnd),
+        cash_acct, ar_acct, desc, sale_no,
+        'export_ar_settle', sale_id, entry['id'], 'posted', created_by,
+        _now(), _now(), branch,
+    ]
+    if 'currency' in vcols:
+        base_cols.extend(['currency', 'exchange_rate', 'amount_fc'])
+        base_vals.extend([currency, float(bank_rate), float(use_fc)])
+    if 'purpose' in vcols:
+        base_cols.append('purpose')
+        base_vals.append('export_ar_settle')
+    placeholders = ','.join('?' * len(base_cols))
+    cur_db.execute(
+        f"INSERT INTO sme_vouchers ({', '.join(base_cols)}) VALUES ({placeholders})",
+        base_vals,
+    )
+    voucher_id = cur_db.lastrowid
 
     new_settled = settled_fc + use_fc
     still = _money(total_fc - adv_fc - new_settled)
@@ -154,7 +282,7 @@ def settle_export_ar(
     if 'settle_amount_fc' in cols:
         sets.append('settle_amount_fc = ?')
         vals.append(float(new_settled))
-    if still <= 0 and 'settle_journal_id' in cols:
+    if 'settle_journal_id' in cols:
         sets.append('settle_journal_id = ?')
         vals.append(entry['id'])
     if 'ar_status' in cols:
@@ -177,16 +305,42 @@ def settle_export_ar(
     except sqlite3.OperationalError:
         pass
 
+    # Xác nhận dòng Nợ 1122 / Có 131 đã có trong DB trước khi commit
+    chk = conn.execute(
+        """
+        SELECT
+            SUM(CASE WHEN account_code LIKE '1122%' AND debit > 0 THEN debit ELSE 0 END) AS d1122,
+            SUM(CASE WHEN account_code LIKE '131%' AND credit > 0 THEN credit ELSE 0 END) AS c131
+        FROM sme_journal_lines WHERE entry_id = ?
+        """,
+        (entry['id'],),
+    ).fetchone()
+    if not chk or float(chk[0] or 0) <= 0 or float(chk[1] or 0) <= 0:
+        raise ValueError(
+            f'Bút toán {entry.get("entry_no")} thiếu Nợ 1122 / Có 131 — hủy giao dịch'
+        )
+
     if commit:
         conn.commit()
     return {
         'success': True,
         'journal_entry_id': entry['id'],
+        'entry_no': entry.get('entry_no'),
+        'voucher_id': voucher_id,
+        'voucher_no': voucher_no,
+        'form_code': VOUCHER_FORM_RECEIPT,
+        'document_no': voucher_no,
+        'debit_account': cash_acct,
+        'credit_account': ar_acct,
         'amount_fc': float(use_fc),
         'bank_vnd': float(bank_vnd),
         'book_vnd': float(book_vnd),
         'fx_diff': float(diff),
         'ar_status': ar_status,
+        'message': (
+            f'Đã lập phiếu thu {voucher_no}: Nợ {cash_acct} / Có {ar_acct} '
+            f'{float(bank_vnd):,.0f}₫ — {desc}'
+        ),
     }
 
 

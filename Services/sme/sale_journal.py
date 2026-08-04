@@ -119,14 +119,9 @@ def _build_revenue_lines(
 
 
 def _cogs_accounts_for_product_type(product_type: str | None, move_type: str) -> tuple[str, str, str]:
-    """Trả (TK GV, TK kho, nhãn) theo loại hàng / loại move."""
-    pt = (product_type or 'goods').strip().lower()
-    mt = (move_type or '').upper()
-    if mt == 'SALE_RECIPE' or pt in ('recipe', 'raw_materials', 'materials', 'material', 'nvl'):
-        return '6322', '152', 'nguyên liệu chế biến'
-    if pt in ('finished_goods', 'finished', 'thanh_pham', 'ready_made'):
-        return '6322', '155', 'thành phẩm'
-    return '6321', '156', 'hàng hóa'
+    """Trả (TK GV, TK kho, nhãn) — bán nội địa."""
+    from Services.sme.cogs_accounts import cogs_accounts_for_line
+    return cogs_accounts_for_line(product_type, move_type, channel='domestic')
 
 
 def _build_cogs_lines(conn: sqlite3.Connection, sale_id: int) -> list[dict]:

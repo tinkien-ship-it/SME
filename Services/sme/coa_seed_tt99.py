@@ -8,7 +8,7 @@ legal_source:
 """
 from __future__ import annotations
 
-SEED_VERSION = 'tt99_v1_2026-08b'
+SEED_VERSION = 'tt99_v1_2026-08d'
 
 # account_class: asset | liability | equity | revenue | expense | off_balance | result
 # normal_balance: debit | credit
@@ -280,10 +280,14 @@ SEED_ACCOUNTS: list[dict] = [
     _a('627', 'Chi phí sản xuất chung', cls='expense', bal='debit', tracks=('department',)),
     _a('631', 'Giá thành sản xuất', cls='expense', bal='debit', tracks=('product',)),
     _a('632', 'Giá vốn hàng bán', cls='expense', bal='debit', bctc='11'),
+    # Mặc định ghi sổ ở cấp 4 số (6321/6322/6323). DN tự mở 63211/63212… khi cần tách ND/XK.
     _a('6321', 'Giá vốn hàng hóa', parent='632', cls='expense', bal='debit', source='recommended', recommended=1),
     _a('6322', 'Giá vốn thành phẩm', parent='632', cls='expense', bal='debit', source='recommended', recommended=1),
     _a('6323', 'Giá vốn dịch vụ', parent='632', cls='expense', bal='debit', source='recommended', recommended=1),
     _a('6327', 'Giá vốn kinh doanh BĐSĐT', parent='632', cls='expense', bal='debit', source='recommended', recommended=1),
+    _a('6328', 'Hao hụt, mất mát, hàng hỏng quá hạn', parent='632', cls='expense', bal='debit',
+       source='recommended', recommended=1,
+       desc='Hao hụt / mất mát / hàng hỏng ghi nhận vào giá vốn (không tách bán lẻ–bán buôn)'),
 
     _a('635', 'Chi phí tài chính', cls='expense', bal='debit', bctc='22'),
     _a('641', 'Chi phí bán hàng', cls='expense', bal='debit', bctc='25', tracks=('department',)),

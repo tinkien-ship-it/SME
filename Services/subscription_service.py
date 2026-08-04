@@ -270,10 +270,10 @@ def parse_tenant_settings(raw):
 
 
 def role_for_business_line(business_line, accounting_regime=None):
-    """Role chủ tenant. SME → adminSME; HKD theo ngành vụ."""
+    """Role chủ tenant. SME → managerSME; HKD theo ngành vụ (manager)."""
     from Services.tenant_profile import is_sme_regime
     if is_sme_regime(accounting_regime):
-        return 'adminSME'
+        return 'managerSME'
     bl = (business_line or 'pos').strip()
     return BUSINESS_LINE_OPTIONS.get(bl, BUSINESS_LINE_OPTIONS['pos'])['role']
 

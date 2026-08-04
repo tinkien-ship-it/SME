@@ -26,6 +26,18 @@ KNOWLEDGE_CATEGORIES = {
     'tin_tuc': 'Tin tức',
 }
 
+# Chuyên trang SME: chỉ chính sách / văn bản liên quan doanh nghiệp
+SME_KNOWLEDGE_CATEGORIES = {
+    'thue_dn': 'Thuế doanh nghiệp',
+    'thong_tu': 'Thông tư',
+    'nghi_dinh': 'Nghị định',
+    'phap_luat': 'Pháp luật',
+    'hoa_don': 'Hóa đơn điện tử',
+    'luong_bhxh': 'Lương & BHXH',
+    'huong_dan': 'Hướng dẫn nghiệp vụ',
+    'tin_tuc': 'Tin tức DN',
+}
+
 KNOWLEDGE_AUDIENCES = {
     'all': 'Chung (HKD & DN)',
     'hkd': 'Hộ kinh doanh',
@@ -40,8 +52,8 @@ HKD_RSS_KEYWORDS = [
 
 DN_RSS_KEYWORDS = [
     'doanh nghiệp', 'tt99', 'tt 99', 'tt58', 'tt 58', 'vas', 'báo cáo tài chính',
-    'thuế', 'tt-btc', 'nghị định', 'hóa đơn', 'gtgt', 'tncn', 'kế toán',
-    'lương', 'bhxh', 'niêm yết',
+    'thuế', 'tt-btc', 'nghị định', 'thông tư', 'hóa đơn', 'gtgt', 'tndn',
+    'kế toán', 'lương', 'bhxh', 'niêm yết', 'kiểm toán', 'tt200',
 ]
 
 DEFAULT_RSS_FEEDS = [
@@ -64,6 +76,30 @@ DEFAULT_RSS_FEEDS = [
         ),
         'keywords': HKD_RSS_KEYWORDS,
         'audience_default': 'hkd',
+        'auto_publish': True,
+        'filter_keywords': False,
+    },
+    {
+        'name': 'Tổng cục Thuế — Doanh nghiệp',
+        'url': (
+            'https://news.google.com/rss/search?q=site:gdt.gov.vn+'
+            '(doanh+nghiệp+OR+TNDN+OR+TT99+OR+TT58+OR+thông+tư+OR+nghị+định'
+            '+OR+hóa+đơn+điện+tử)&hl=vi&gl=VN&ceid=VN:vi'
+        ),
+        'keywords': DN_RSS_KEYWORDS,
+        'audience_default': 'dn',
+        'auto_publish': True,
+        'filter_keywords': False,
+    },
+    {
+        'name': 'Bộ Tài Chính — Doanh nghiệp',
+        'url': (
+            'https://news.google.com/rss/search?q=site:mof.gov.vn+'
+            '(doanh+nghiệp+OR+chế+độ+kế+toán+OR+TT99+OR+TT58+OR+thông+tư'
+            '+OR+nghị+định+OR+báo+cáo+tài+chính)&hl=vi&gl=VN&ceid=VN:vi'
+        ),
+        'keywords': DN_RSS_KEYWORDS,
+        'audience_default': 'dn',
         'auto_publish': True,
         'filter_keywords': False,
     },
@@ -144,6 +180,61 @@ def article_matches_regime(article_audience: str, regime: str) -> bool:
     if aud == 'all':
         return True
     return aud == audience_for_regime(regime)
+
+
+def _text_blob(*parts: str) -> str:
+    return ' '.join(str(p or '') for p in parts).lower()
+
+
+def _looks_hkd_only(title: str = '', summary: str = '', content: str = '') -> bool:
+    """Tin chung nhưng nội dung nghiêng HKD (không có tín hiệu DN)."""
+    blob = _text_blob(title, summary, content)
+    has_hkd = any(h in blob for h in _HKD_HINTS)
+    has_dn = any(h in blob for h in _DN_HINTS)
+    return has_hkd and not has_dn
+
+
+def article_relevant_for_sme(article: dict[str, Any]) -> bool:
+    """Lọc chặt cho trang SME: DN + chung (không phải tin HKD-only)."""
+    aud = str(article.get('audience') or 'all').strip().lower()
+    if aud == 'hkd':
+        return False
+    cat = str(article.get('category') or '').strip().lower()
+    if cat == 'thue_hkd':
+        return False
+    # Ưu tiên nhóm chuyên mục DN; vẫn giữ tin gắn audience=dn
+    if cat and cat not in SME_KNOWLEDGE_CATEGORIES and aud != 'dn':
+        return False
+    if aud == 'all' and _looks_hkd_only(
+        article.get('title') or '',
+        article.get('summary') or '',
+        article.get('content') or '',
+    ):
+        return False
+    return True
+
+
+def list_sme_articles(
+    *,
+    category=None,
+    keyword=None,
+    limit=100,
+    for_management=False,
+    status_filter=None,
+) -> list[dict[str, Any]]:
+    """Danh sách bản tin dành riêng doanh nghiệp (SME)."""
+    if category and category not in SME_KNOWLEDGE_CATEGORIES and not for_management:
+        return []
+    rows = list_articles(
+        category=category,
+        keyword=keyword,
+        limit=min(int(limit or 100) * 3, 500),
+        tenant_regime='SME_TT99',
+        for_management=for_management,
+        status_filter=status_filter,
+    )
+    filtered = [r for r in rows if article_relevant_for_sme(r)]
+    return filtered[: min(int(limit or 100), 500)]
 
 
 def _has_column(conn, table: str, column: str) -> bool:

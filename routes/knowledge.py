@@ -49,17 +49,23 @@ def register_knowledge_routes(app):
     @app.route('/cap-nhat-kien-thuc')
     @login_required
     def cap_nhat_kien_thuc_page():
+        """Trang HKD — tin hộ kinh doanh (TT88…). Tenant SME dùng /SME_cap-nhat-kien-thuc."""
         seed_default_articles()
         regime = _tenant_regime()
         is_hkd = is_hkd_regime(regime)
+        # Tenant DN/SME: chuyển sang trang chuyên doanh nghiệp
+        if not is_hkd:
+            from flask import redirect, url_for
+            return redirect(url_for('SME_cap_nhat_kien_thuc'))
         draft_count = count_drafts() if _can_manage_knowledge() else 0
         return render_template(
             'cap_nhat_kien_thuc.html',
+            layout_template='KeToanHKD/_layout.html',
             categories=KNOWLEDGE_CATEGORIES,
             audiences=KNOWLEDGE_AUDIENCES,
             can_manage=_can_manage_knowledge(),
-            is_hkd=is_hkd,
-            tenant_audience=audience_for_regime(regime),
+            is_hkd=True,
+            tenant_audience='hkd',
             draft_count=draft_count,
         )
 

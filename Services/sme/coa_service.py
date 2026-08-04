@@ -9,7 +9,53 @@ from typing import Any
 from Services.sme.coa_seed_tt99 import SEED_VERSION, iter_seed_accounts
 from Services.sme.schema import ensure_sme_coa_schema
 
-_CODE_RE = re.compile(r'^\d{3,12}$')
+_CODE_RE = re.compile(r'^\d{3,6}$')
+
+# Quy định độ dài mã theo cấp tài khoản (TT99 / thông lệ VN)
+LEVEL_CODE_LENGTH = {1: 3, 2: 4, 3: 5, 4: 6}
+CODE_LENGTH_LEVEL = {3: 1, 4: 2, 5: 3, 6: 4}
+
+
+def level_from_code(code: str) -> int:
+    """Cấp TK suy từ độ dài mã: 3→1, 4→2, 5→3, 6→4."""
+    n = len(str(code or '').strip())
+    if n not in CODE_LENGTH_LEVEL:
+        raise ValueError(
+            f'Mã tài khoản phải dài 3–6 chữ số (cấp 1–4). Nhận được {n} số.'
+        )
+    return CODE_LENGTH_LEVEL[n]
+
+
+def expected_child_code_length(parent_code: str) -> int:
+    """Con = cha + đúng 1 chữ số (cấp 1→2→3→4). Cấp 4 (6 số) không mở thêm con."""
+    pl = len(str(parent_code or '').strip())
+    if pl not in (3, 4, 5):
+        raise ValueError(
+            'Chỉ mở tài khoản con từ cấp 1–3 (mã 3–5 số). '
+            'Cấp 4 (6 số) là cấp chi tiết cuối — không mở thêm cấp dưới.'
+        )
+    return pl + 1
+
+
+def validate_child_code(parent_code: str, code: str) -> None:
+    """Kiểm tra mã con đúng quy định độ dài / tiền tố."""
+    parent_code = str(parent_code or '').strip()
+    code = str(code or '').strip()
+    if not _CODE_RE.match(code):
+        raise ValueError('Mã tài khoản chỉ gồm chữ số, độ dài 3–6 (cấp 1–4)')
+    if not code.startswith(parent_code):
+        raise ValueError(f'Mã con phải bắt đầu bằng mã cha ({parent_code})')
+    if code == parent_code:
+        raise ValueError('Mã con phải khác mã cha')
+    expected = expected_child_code_length(parent_code)
+    if len(code) != expected:
+        parent_lv = CODE_LENGTH_LEVEL.get(len(parent_code), '?')
+        child_lv = CODE_LENGTH_LEVEL.get(expected, '?')
+        raise ValueError(
+            f'Tài khoản cấp {parent_lv} ({len(parent_code)} số) chỉ được mở con cấp {child_lv} '
+            f'({expected} số). Ví dụ: {parent_code}1, {parent_code}2… '
+            f'(mã nhập: {code} — {len(code)} số).'
+        )
 
 
 def _now() -> str:
@@ -32,6 +78,8 @@ def ensure_sme_coa_ready(
     count = c.execute("SELECT COUNT(*) FROM sme_chart_of_accounts").fetchone()[0]
 
     if not force_reseed and current == SEED_VERSION and count > 0:
+        from Services.sme.account_roles import ensure_account_roles_ready
+        ensure_account_roles_ready(conn, commit=commit)
         return {'seeded': False, 'seed_version': current, 'count': count}
 
     if force_reseed:
@@ -115,6 +163,8 @@ def ensure_sme_coa_ready(
         """,
         (SEED_VERSION, _now()),
     )
+    from Services.sme.account_roles import ensure_account_roles_ready
+    ensure_account_roles_ready(conn, commit=False)
     if commit:
         conn.commit()
     count = c.execute("SELECT COUNT(*) FROM sme_chart_of_accounts").fetchone()[0]
@@ -230,55 +280,61 @@ def get_account(
 
 
 def suggest_next_child_code(conn: sqlite3.Connection, parent_code: str) -> str:
-    """Gợi ý mã con tiếp theo: 112 → 1121/1124…; 1121 → 112101, 112102…
+    """Gợi ý mã con: mỗi cấp thêm đúng 1 chữ số (3→4→5→6).
 
-    Với 1121/1122 lần đầu (chưa có con): gợi ý XX02 vì XX01 dành cho TK mặc định
-    (tự tạo khi mở thêm tài khoản + chuyển số liệu cũ).
+    Ví dụ: 112 → 1121; 1121 → 11211; 11211 → 112111.
+    Với 1121/1122 lần đầu (chưa có con): gợi ý …2 vì …1 dành cho TK mặc định.
     """
     from Services.sme.bank_accounts import BANK_DETAIL_SPLIT, count_active_children
 
     ensure_sme_coa_ready(conn)
+    parent_code = str(parent_code or '').strip()
     parent = get_account(conn, parent_code)
     if not parent:
         raise ValueError(f'Không tìm thấy tài khoản cha {parent_code}')
 
+    expected_len = expected_child_code_length(parent_code)
+
     children = conn.execute(
-        "SELECT code FROM sme_chart_of_accounts WHERE parent_code = ? ORDER BY code",
+        """
+        SELECT code, is_active FROM sme_chart_of_accounts
+        WHERE parent_code = ? ORDER BY code
+        """,
         (parent_code,),
     ).fetchall()
-    existing = {r[0] for r in children}
+    active_codes = {r[0] for r in children if int(r[1] or 0) == 1}
+    inactive_codes = {r[0] for r in children if int(r[1] or 0) != 1}
 
-    # Lần đầu tách NH: dành XX01 cho mặc định → gợi ý tài khoản mới = XX02
+    # Lần đầu tách NH: dành …1 cho mặc định → gợi ý tài khoản mới = …2
     if parent_code in BANK_DETAIL_SPLIT and count_active_children(conn, parent_code) == 0:
         reserved = BANK_DETAIL_SPLIT[parent_code]['default_code']
-        cand = f'{parent_code}02'
-        if cand not in existing and cand != reserved:
+        cand = f'{parent_code}2'
+        if len(cand) == expected_len and cand not in active_codes and cand != reserved:
             return cand
 
-    # Quy ước:
-    # - Cha 3 số → con 4 số (thêm 1 chữ số 1..9 rồi 0..)
-    # - Cha 4 số → con 6 số (thêm 01, 02…)
-    # - Cha >=5 → thêm 2 chữ số
-    if len(parent_code) == 3:
-        for i in range(1, 100):
-            if i <= 9:
-                cand = f"{parent_code}{i}"
-            else:
-                cand = f"{parent_code}{i}"
-            if cand not in existing and _CODE_RE.match(cand):
-                return cand
-    elif len(parent_code) == 4:
-        for i in range(1, 100):
-            cand = f"{parent_code}{i:02d}"
-            if cand not in existing:
-                return cand
-    else:
-        for i in range(1, 1000):
-            width = 2 if len(parent_code) <= 6 else 2
-            cand = f"{parent_code}{i:0{width}d}"
-            if cand not in existing:
-                return cand
-    raise ValueError('Đã hết khoảng mã con khả dụng cho tài khoản này')
+    # Ưu tiên tái sử dụng mã đã ngừng (người dùng hay tạo lại cùng mã sau khi tắt)
+    for i in range(1, 10):
+        cand = f'{parent_code}{i}'
+        if len(cand) != expected_len:
+            break
+        if cand in inactive_codes and _CODE_RE.match(cand):
+            return cand
+    for i in range(1, 10):
+        cand = f'{parent_code}{i}'
+        if len(cand) != expected_len:
+            break
+        if cand not in active_codes and _CODE_RE.match(cand):
+            return cand
+    # Hết 1–9: thử 0
+    cand = f'{parent_code}0'
+    if len(cand) == expected_len and cand in inactive_codes and _CODE_RE.match(cand):
+        return cand
+    if len(cand) == expected_len and cand not in active_codes and _CODE_RE.match(cand):
+        return cand
+    raise ValueError(
+        f'Đã hết khoảng mã con 1 chữ số dưới {parent_code} '
+        f'(cần đúng {expected_len} số theo quy định cấp tài khoản).'
+    )
 
 
 def _insert_child_account_row(
@@ -294,14 +350,7 @@ def _insert_child_account_row(
 ) -> dict:
     """Chèn một TK con; đánh dấu cha không postable. Không commit."""
     parent_code = parent['code']
-    if len(code) <= 3:
-        level = 1
-    elif len(code) == 4:
-        level = 2
-    elif len(code) == 5:
-        level = 3
-    else:
-        level = max(4, parent['level'] + 1)
+    level = level_from_code(code)
 
     track_fields = {
         'track_customer': int(parent.get('track_customer') or 0),
@@ -360,6 +409,119 @@ def _insert_child_account_row(
     return created
 
 
+def _reactivate_child_account_row(
+    conn: sqlite3.Connection,
+    *,
+    parent: dict,
+    existing: dict,
+    name: str,
+    custom_reason: str = '',
+    tracks: dict[str, int] | None = None,
+    bctc_line_code: str | None = None,
+    description: str = '',
+) -> dict:
+    """Bật lại TK đã ngừng; cập nhật tên/meta; đánh dấu cha không postable. Không commit."""
+    code = existing['code']
+    parent_code = parent['code']
+    if str(existing.get('parent_code') or '') != str(parent_code):
+        raise ValueError(
+            f'Mã {code} từng thuộc cha {existing.get("parent_code")} — '
+            f'không thể mở lại dưới {parent_code}'
+        )
+
+    track_fields = {
+        'track_customer': int(existing.get('track_customer') or parent.get('track_customer') or 0),
+        'track_supplier': int(existing.get('track_supplier') or parent.get('track_supplier') or 0),
+        'track_employee': int(existing.get('track_employee') or parent.get('track_employee') or 0),
+        'track_bank': int(existing.get('track_bank') or parent.get('track_bank') or 0),
+        'track_currency': int(existing.get('track_currency') or parent.get('track_currency') or 0),
+        'track_warehouse': int(existing.get('track_warehouse') or parent.get('track_warehouse') or 0),
+        'track_product': int(existing.get('track_product') or parent.get('track_product') or 0),
+        'track_project': int(existing.get('track_project') or parent.get('track_project') or 0),
+        'track_department': int(existing.get('track_department') or parent.get('track_department') or 0),
+    }
+    if tracks:
+        for k, v in tracks.items():
+            key = k if k.startswith('track_') else f'track_{k}'
+            if key in track_fields:
+                track_fields[key] = 1 if v else 0
+
+    reason = (custom_reason or '').strip() or existing.get('custom_reason') or (
+        'Mở lại tài khoản đã ngừng (Điều 11 TT99)'
+    )
+    desc = description or existing.get('description') or f'Tài khoản con của {parent_code}'
+    line_code = bctc_line_code if bctc_line_code is not None else existing.get('bctc_line_code')
+
+    c = conn.cursor()
+    c.execute(
+        "UPDATE sme_chart_of_accounts SET is_postable = 0, updated_at = ? WHERE code = ?",
+        (_now(), parent_code),
+    )
+    params = (
+        name, parent_code, level_from_code(code),
+        parent['account_class'], parent['normal_balance'],
+        line_code or parent.get('bctc_line_code'),
+        track_fields['track_customer'], track_fields['track_supplier'],
+        track_fields['track_employee'], track_fields['track_bank'],
+        track_fields['track_currency'], track_fields['track_warehouse'],
+        track_fields['track_product'], track_fields['track_project'],
+        track_fields['track_department'],
+        desc, reason, _now(), code,
+    )
+    try:
+        c.execute(
+            """
+            UPDATE sme_chart_of_accounts SET
+                name = ?,
+                parent_code = ?,
+                level = ?,
+                account_class = ?,
+                normal_balance = ?,
+                is_postable = 1,
+                is_active = 1,
+                is_custom = 1,
+                legal_source = CASE WHEN legal_source = 'custom' THEN legal_source ELSE 'custom' END,
+                bctc_line_code = ?,
+                track_customer = ?, track_supplier = ?, track_employee = ?, track_bank = ?,
+                track_currency = ?, track_warehouse = ?, track_product = ?, track_project = ?,
+                track_department = ?,
+                description = ?,
+                custom_reason = ?,
+                is_default_posting = 0,
+                updated_at = ?
+            WHERE code = ?
+            """,
+            params,
+        )
+    except sqlite3.OperationalError:
+        c.execute(
+            """
+            UPDATE sme_chart_of_accounts SET
+                name = ?,
+                parent_code = ?,
+                level = ?,
+                account_class = ?,
+                normal_balance = ?,
+                is_postable = 1,
+                is_active = 1,
+                is_custom = 1,
+                legal_source = CASE WHEN legal_source = 'custom' THEN legal_source ELSE 'custom' END,
+                bctc_line_code = ?,
+                track_customer = ?, track_supplier = ?, track_employee = ?, track_bank = ?,
+                track_currency = ?, track_warehouse = ?, track_product = ?, track_project = ?,
+                track_department = ?,
+                description = ?,
+                custom_reason = ?,
+                updated_at = ?
+            WHERE code = ?
+            """,
+            params,
+        )
+    created = get_account(conn, code, commit=False)
+    assert created
+    return created
+
+
 def create_child_account(
     conn: sqlite3.Connection,
     *,
@@ -370,12 +532,14 @@ def create_child_account(
     tracks: dict[str, int] | None = None,
     bctc_line_code: str | None = None,
     description: str = '',
+    set_as_default: bool = False,
 ) -> dict:
     """
     Tạo tài khoản con linh hoạt (Điều 11 TT99).
+    - Độ dài mã: cấp 1 = 3 số, cấp 2 = 4, cấp 3 = 5, cấp 4 = 6 (mỗi lần mở con +1 chữ số).
     - Kế thừa account_class, normal_balance, tracking từ cha (có thể override tracks).
     - Cha sẽ chuyển thành không postable.
-    - Với 1121/1122 lần đầu: tự tạo XX01 (mặc định), chuyển số liệu cũ, TK mới = XX02.
+    - Với 1121/1122 lần đầu: tự tạo …1 (mặc định), chuyển số liệu cũ, TK mới = …2.
     """
     from Services.sme.bank_accounts import (
         BANK_DETAIL_SPLIT,
@@ -392,6 +556,9 @@ def create_child_account(
         raise ValueError(f'Không tìm thấy tài khoản cha {parent_code}')
     if not parent.get('is_active'):
         raise ValueError('Tài khoản cha đã ngừng sử dụng')
+
+    # Chặn sớm nếu cha đã là cấp 4
+    expected_child_code_length(parent_code)
 
     automation = None
     split_cfg = BANK_DETAIL_SPLIT.get(parent_code)
@@ -414,12 +581,7 @@ def create_child_account(
     if not code:
         code = suggest_next_child_code(conn, parent_code)
     code = str(code).strip()
-    if not _CODE_RE.match(code):
-        raise ValueError('Mã tài khoản chỉ gồm chữ số, độ dài 3–12')
-    if not code.startswith(parent_code):
-        raise ValueError(f'Mã con phải bắt đầu bằng mã cha ({parent_code})')
-    if code == parent_code:
-        raise ValueError('Mã con phải khác mã cha')
+    validate_child_code(parent_code, code)
 
     # Không cho ghi đè mã mặc định vừa tạo / dành riêng
     if split_cfg and code == split_cfg['default_code']:
@@ -427,21 +589,44 @@ def create_child_account(
         if code == split_cfg['default_code']:
             raise ValueError(
                 f'Mã {split_cfg["default_code"]} dành cho tài khoản mặc định. '
-                f'Hãy dùng mã khác (ví dụ {parent_code}02).'
+                f'Hãy dùng mã khác (ví dụ {parent_code}2).'
             )
+        validate_child_code(parent_code, code)
 
-    if get_account(conn, code, commit=False):
-        raise ValueError(f'Mã {code} đã tồn tại')
-
-    created = _insert_child_account_row(
+    existing = get_account(conn, code, commit=False)
+    reactivated = False
+    if existing:
+        if existing.get('is_active'):
+            raise ValueError(f'Mã {code} đã tồn tại')
+        created = _reactivate_child_account_row(
+            conn,
+            parent=parent,
+            existing=existing,
+            name=name,
+            custom_reason=custom_reason,
+            tracks=tracks,
+            bctc_line_code=bctc_line_code,
+            description=description,
+        )
+        reactivated = True
+    else:
+        created = _insert_child_account_row(
+            conn,
+            parent=parent,
+            code=code,
+            name=name,
+            custom_reason=custom_reason,
+            tracks=tracks,
+            bctc_line_code=bctc_line_code,
+            description=description,
+        )
+    from Services.sme.account_roles import on_child_account_created
+    role_updates = on_child_account_created(
         conn,
-        parent=parent,
-        code=code,
-        name=name,
-        custom_reason=custom_reason,
-        tracks=tracks,
-        bctc_line_code=bctc_line_code,
-        description=description,
+        parent_code=parent_code,
+        child_code=code,
+        set_as_default=bool(set_as_default),
+        commit=False,
     )
     conn.commit()
     created = get_account(conn, code, commit=False) or created
@@ -454,6 +639,23 @@ def create_child_account(
                 f"Đã tự tạo {automation['default_code']} làm TK mặc định, "
                 f"chuyển số liệu từ {parent_code} → {automation['default_code']}. "
                 f"Tài khoản mới của bạn: {code}."
+            )
+    if reactivated:
+        created = dict(created)
+        created['reactivated'] = True
+        if not created.get('automation_message'):
+            created['automation_message'] = (
+                f'Đã mở lại tài khoản {code} (trước đó đã ngừng sử dụng).'
+            )
+    if role_updates:
+        created = dict(created)
+        created['role_updates'] = role_updates
+        if set_as_default and not created.get('automation_message'):
+            keys = ', '.join(r.get('role_key', '') for r in role_updates if r.get('role_key'))
+            created['automation_message'] = (
+                f'Đã tạo {code} và đặt làm TK mặc định ghi sổ'
+                + (f' ({keys})' if keys else '')
+                + '.'
             )
     return created
 
@@ -486,6 +688,8 @@ def deactivate_account(conn: sqlite3.Connection, code: str) -> dict:
                 "UPDATE sme_chart_of_accounts SET is_postable = 1, updated_at = ? WHERE code = ?",
                 (_now(), parent),
             )
+    from Services.sme.account_roles import on_account_deactivated
+    on_account_deactivated(conn, code, commit=False)
     conn.commit()
     return get_account(conn, code) or acc
 

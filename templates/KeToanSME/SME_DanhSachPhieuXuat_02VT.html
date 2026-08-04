@@ -45,8 +45,32 @@ async function loadList(){
     <td>${r.customer_name||''}</td>
     <td class="text-end fw-bold">${fmt(r.total_amount)}</td>
     <td class="small">${r.note||''}</td>
-    <td><a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_PhieuXuatKho/in/${r.id}">In 02-VT</a></td>
+    <td class="text-nowrap">
+      <a class="btn btn-sm btn-outline-primary" target="_blank" href="/SME_PhieuXuatKho/in/${r.id}">In 02-VT</a>
+      <button type="button" class="btn btn-sm btn-outline-danger ms-1" data-del="${r.id}" data-no="${r.voucher_no||''}">Xóa</button>
+    </td>
   </tr>`).join('');
+  tbody.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-del');
+      const no = btn.getAttribute('data-no') || id;
+      if (!confirm(`Xóa phiếu xuất kho 02-VT ${no}?\nCác bút toán liên quan (Nợ 157 / GV bán…) cũng sẽ bị xóa nếu kỳ đang mở.`)) return;
+      const reason = prompt('Lý do xóa:', 'Xóa phiếu xuất kho 02-VT') || 'Xóa phiếu xuất kho 02-VT';
+      try {
+        const res = await fetch('/api/sme/stock-out-vouchers/' + id, {
+          method: 'DELETE',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ reason }),
+        });
+        const j = await res.json();
+        if (!j.success) throw new Error(j.error || 'Không xóa được');
+        alert(j.message || j.data?.message || 'Đã xóa');
+        loadList();
+      } catch (e) {
+        alert(e.message || e);
+      }
+    });
+  });
 }
 document.getElementById('btnLoad').onclick = loadList;
 loadList();
