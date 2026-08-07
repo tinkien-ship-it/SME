@@ -2812,6 +2812,19 @@ def register_ketoan_sme_routes(app):
             c.execute("SELECT name, address FROM suppliers WHERE id = ?", (supplier_id,))
             sup_row = c.fetchone()
             supplier_name = sup_row['name'] if sup_row else f"NCC ID {supplier_id}"
+            form_address = (data.get('address') or '').strip()
+            supplier_address = form_address or (
+                (sup_row['address'] or '') if (sup_row and sup_row['address']) else ''
+            )
+            if supplier_id and (form_address or (tax_code or '').strip()):
+                # Đồng bộ địa chỉ/MST nhập tay vào master NCC
+                c.execute(
+                    """UPDATE suppliers
+                       SET address = COALESCE(NULLIF(?, ''), address),
+                           tax_code = COALESCE(NULLIF(?, ''), tax_code)
+                       WHERE id = ?""",
+                    (form_address, (tax_code or '').strip(), supplier_id),
+                )
 
             # Validate warehouse for HH/VT + khớp chi nhánh session
             from Services.sme.branch_filter import assert_warehouse_in_session_branch

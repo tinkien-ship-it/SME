@@ -142,11 +142,11 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small fw-bold">Địa chỉ</label>
-                    <input type="text" class="form-control form-control-sm bg-light" id="supplierAddress" readonly>
+                    <input type="text" class="form-control form-control-sm" id="supplierAddress" placeholder="Nhập địa chỉ NCC..." autocomplete="off">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-bold">Mã số thuế</label>
-                    <input type="text" class="form-control form-control-sm bg-light" id="taxCode" readonly>
+                    <input type="text" class="form-control form-control-sm" id="taxCode" placeholder="Nhập MST..." autocomplete="off">
                 </div>
                 <div class="col-md-1">
                     <label class="form-label small fw-bold">Số hóa đơn</label>
@@ -766,6 +766,14 @@ function bindImportFormSubmit() {
         try {
             const finalItems = getConsolidatedItems();
             if (finalItems.length === 0) throw new Error(IS_SERVICE_MODE ? "Vui lòng nhập ít nhất một dòng dịch vụ!" : "Vui lòng nhập ít nhất một mặt hàng!");
+            const supplierName = (document.getElementById('supplierSearch').value || '').trim();
+            if (!supplierName) throw new Error('Vui lòng nhập nhà cung cấp!');
+            const upsertedId = await updateSupplierFromXML({
+                name: supplierName,
+                tax_code: document.getElementById('taxCode').value,
+                address: document.getElementById('supplierAddress').value,
+            });
+            if (upsertedId) document.getElementById('supplierId').value = upsertedId;
             // Chế độ F&B: sản phẩm được tạo/cập nhật ngay trong API nhập kho F&B
             // (kèm mã món M.../NVL... và đồng bộ thực đơn), nên không gọi upsert riêng.
             if (!IS_SERVICE_MODE && !IS_FB_MODE) {
@@ -782,6 +790,7 @@ function bindImportFormSubmit() {
                 bill_date: document.getElementById('bill_date').value ? document.getElementById('bill_date').value.split('/').reverse().join('-') : null,
                 bill_no: document.getElementById('bill_no').value,
                 tax_code: document.getElementById('taxCode').value,
+                address: document.getElementById('supplierAddress').value,
                 items: finalItems,
                 note: document.getElementById('note').value,
                 payment_status: paymentStatus,

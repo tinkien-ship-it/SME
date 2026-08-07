@@ -1830,12 +1830,22 @@ def register_fb_routes(app):
             payment_status_input = data.get('payment_status', 'Chưa thanh toán')
             payment_method = data.get('payment_method', 'cash')
 
-            # Lấy thông tin nhà cung cấp
+            # Lấy thông tin nhà cung cấp (ưu tiên địa chỉ/MST nhập tay từ form)
             c.execute("SELECT name, address, tax_code FROM suppliers WHERE id = ?", (supplier_id,))
             sup_row = c.fetchone()
             supplier_name = sup_row['name'] if sup_row else f"NCC ID {supplier_id}"
-            supplier_address = sup_row['address'] if sup_row and sup_row['address'] else ""
-            tax_code = sup_row['tax_code'] if sup_row else None
+            form_address = (data.get('address') or '').strip()
+            form_tax = (data.get('tax_code') or '').strip()
+            supplier_address = form_address or (sup_row['address'] if sup_row and sup_row['address'] else "")
+            tax_code = form_tax or (sup_row['tax_code'] if sup_row else None)
+            if supplier_id and (form_address or form_tax):
+                c.execute(
+                    """UPDATE suppliers
+                       SET address = COALESCE(NULLIF(?, ''), address),
+                           tax_code = COALESCE(NULLIF(?, ''), tax_code)
+                       WHERE id = ?""",
+                    (form_address, form_tax, supplier_id),
+                )
 
             # --- 2. TÍNH TỔNG GIÁ TRỊ SAU CHIẾT KHẤU ĐỂ PHÂN BỔ EXTRA_COST ---
             total_base_for_allocation = Decimal('0')

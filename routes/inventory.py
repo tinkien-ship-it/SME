@@ -777,11 +777,12 @@ def register_inventory_routes(app):
             payment_method = data.get('payment_method', 'cash')
             default_warehouse = (data.get('warehouse_code') or 'KHO_001').strip()
 
-            # Lấy thông tin nhà cung cấp
+            # Lấy thông tin nhà cung cấp (ưu tiên địa chỉ nhập tay từ form)
             c.execute("SELECT name, address FROM suppliers WHERE id = ?", (supplier_id,))
             sup_row = c.fetchone()
             supplier_name = sup_row['name'] if sup_row else f"NCC ID {supplier_id}"
-            supplier_address = sup_row['address'] if sup_row and sup_row['address'] else ""
+            form_address = (data.get('address') or '').strip()
+            supplier_address = form_address or (sup_row['address'] if sup_row and sup_row['address'] else "")
 
             # --- 2. TÍNH TỔNG GIÁ TRỊ GỐC ĐỂ PHÂN BỔ CHI PHÍ ---
             total_base = sum(

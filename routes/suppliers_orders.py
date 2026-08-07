@@ -182,13 +182,15 @@ def register_suppliers_orders_routes(app):
                 if res: supplier_id = res['id']
 
             if supplier_id:
-                # Update thông tin mới nhất từ XML
+                # Cập nhật theo dữ liệu form/XML (cho phép sửa tay Địa chỉ, MST)
                 c.execute("""
-                    UPDATE suppliers 
-                    SET tax_code = COALESCE(NULLIF(tax_code, ''), ?), 
-                        address = ?, phone = ? 
+                    UPDATE suppliers
+                    SET name = COALESCE(NULLIF(?, ''), name),
+                        tax_code = ?,
+                        address = ?,
+                        phone = COALESCE(NULLIF(?, ''), phone)
                     WHERE id = ?
-                """, (tax_code, address, phone, supplier_id))
+                """, (name, tax_code, address, phone, supplier_id))
             else:
                 # Tạo mới nếu hoàn toàn chưa có
                 c.execute("SELECT COUNT(*) FROM suppliers")
