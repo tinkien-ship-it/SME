@@ -290,7 +290,7 @@ window.assertSmeCashBalanceOrAlert = async function (amount, paymentMethod, opts
     return true;
 };
 
-/** Danh sách TK NH (1121*/1122*) — mặc định = STK VietQR. */
+// Danh sách TK NH 1121* / 1122* — mặc định = STK VietQR.
 window.smeBankPayAccounts = null;
 window.loadSmeBankPayAccounts = async function (force) {
     if (window.smeBankPayAccounts && !force) return window.smeBankPayAccounts;
