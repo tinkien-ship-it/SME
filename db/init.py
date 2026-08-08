@@ -319,9 +319,32 @@ def _migrate_main_system_tables():
         if created:
             print('[MIGRATE] Tao lai bang registry: %s' % ', '.join(created))
             print('[MIGRATE] Bang moi dang RONG — chay: '
-                  'python scripts/rebuild_registry_db.py --apply')
+                  'python scripts/repair_vps_main_db.py --apply')
     except Exception as e:
         print(f'[MIGRATE] registry tables: {e}')
+    try:
+        from Services.master_account import (
+            count_masters,
+            ensure_master_from_env,
+            ensure_users_table,
+        )
+        conn_u = get_main_db_connection()
+        try:
+            changes = ensure_users_table(conn_u)
+            if changes:
+                print('[MIGRATE] users schema: %s' % ', '.join(changes))
+            conn_u.commit()
+            if count_masters(conn_u) == 0:
+                action = ensure_master_from_env(conn_u)
+                if action:
+                    print('[MIGRATE] Da tao master tu .env (%s)' % action)
+                else:
+                    print('[MIGRATE] CHUA CO user master — them MASTER_PASSWORD vao .env '
+                          'hoac: python scripts/ensure_master_user.py --apply --password ...')
+        finally:
+            conn_u.close()
+    except Exception as e:
+        print(f'[MIGRATE] ensure users/master: {e}')
     try:
         from Services.audit_log import ensure_audit_table
         conn2 = get_main_db_connection()

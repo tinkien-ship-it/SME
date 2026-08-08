@@ -323,11 +323,31 @@ with app.app_context():
         if created:
             app.logger.warning(
                 'Da tao lai bang registry rong: %s — chay '
-                'python scripts/rebuild_registry_db.py --apply de dung lai du lieu',
+                'python scripts/repair_vps_main_db.py --apply de dung lai du lieu',
                 ', '.join(created),
             )
     except Exception as exc:
         app.logger.error('ensure_registry_tables: %s', exc)
+    try:
+        from Services.master_account import count_masters, ensure_master_from_env, ensure_users_table
+        from db_utils import get_main_db_connection
+        _mc = get_main_db_connection()
+        try:
+            ensure_users_table(_mc)
+            _mc.commit()
+            if count_masters(_mc) == 0:
+                action = ensure_master_from_env(_mc)
+                if action:
+                    app.logger.warning('Da tao lai user master tu .env (%s)', action)
+                else:
+                    app.logger.error(
+                        'Khong co user master — them MASTER_PASSWORD vao .env '
+                        'hoac chay scripts/ensure_master_user.py --apply'
+                    )
+        finally:
+            _mc.close()
+    except Exception as exc:
+        app.logger.error('ensure master user: %s', exc)
 
 # Config Viettel từ .env
 VIETTEL_CONFIG = {
