@@ -80,6 +80,27 @@ _TABLES_EXTRA_COLS = (
     ('current_sale_id', 'INTEGER'),
 )
 
+# Cột đơn F&B trên sale / sale_items — tenant cũ thường thiếu → /api/fb/active-orders 500.
+_SALE_EXTRA_COLS = (
+    ('table_id', 'INTEGER'),
+    ('sale_no', 'TEXT'),
+    ('status', 'TEXT'),
+    ('created_at', 'TEXT'),
+    ('total_amount', 'REAL DEFAULT 0'),
+)
+
+_SALE_ITEMS_EXTRA_COLS = (
+    ('menu_id', 'INTEGER'),
+    ('UseSaleUnit', 'INTEGER DEFAULT 0'),
+    ('product_name', 'TEXT'),
+    ('item_name', 'TEXT'),
+    ('unit', 'TEXT'),
+    ('line_total', 'REAL'),
+    ('created_at', 'TEXT'),
+    ('quantity_served', 'REAL DEFAULT 0'),
+    ('served_at', 'TEXT'),
+)
+
 
 def _cols(conn: sqlite3.Connection, table: str) -> set[str]:
     try:
@@ -88,10 +109,31 @@ def _cols(conn: sqlite3.Connection, table: str) -> set[str]:
         return set()
 
 
+def _has_col(have: set[str], name: str) -> bool:
+    want = (name or '').lower()
+    return any((c or '').lower() == want for c in have)
+
+
 def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
     return conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
     ).fetchone() is not None
+
+
+def _ensure_extra_cols(conn: sqlite3.Connection, table: str, extras, changed: list[str]) -> None:
+    if not _table_exists(conn, table):
+        return
+    have = _cols(conn, table)
+    c = conn.cursor()
+    for col, decl in extras:
+        if _has_col(have, col):
+            continue
+        try:
+            c.execute('ALTER TABLE %s ADD COLUMN %s %s' % (table, col, decl))
+            have.add(col)
+            changed.append('alter:%s.%s' % (table, col))
+        except sqlite3.OperationalError as exc:
+            print('[MIGRATE] %s.%s: %s' % (table, col, exc))
 
 
 def ensure_fb_schema(conn: sqlite3.Connection, *, commit: bool = True) -> list[str]:
@@ -104,25 +146,10 @@ def ensure_fb_schema(conn: sqlite3.Connection, *, commit: bool = True) -> list[s
         if not existed:
             changed.append('create:%s' % name)
 
-    if _table_exists(conn, 'tables'):
-        have = _cols(conn, 'tables')
-        for col, decl in _TABLES_EXTRA_COLS:
-            if col not in have:
-                try:
-                    c.execute('ALTER TABLE tables ADD COLUMN %s %s' % (col, decl))
-                    changed.append('alter:tables.%s' % col)
-                except sqlite3.OperationalError as exc:
-                    print('[MIGRATE] tables.%s: %s' % (col, exc))
-
-    if _table_exists(conn, 'menu'):
-        have = _cols(conn, 'menu')
-        for col, decl in _MENU_EXTRA_COLS:
-            if col not in have:
-                try:
-                    c.execute('ALTER TABLE menu ADD COLUMN %s %s' % (col, decl))
-                    changed.append('alter:menu.%s' % col)
-                except sqlite3.OperationalError as exc:
-                    print('[MIGRATE] menu.%s: %s' % (col, exc))
+    _ensure_extra_cols(conn, 'tables', _TABLES_EXTRA_COLS, changed)
+    _ensure_extra_cols(conn, 'menu', _MENU_EXTRA_COLS, changed)
+    _ensure_extra_cols(conn, 'sale', _SALE_EXTRA_COLS, changed)
+    _ensure_extra_cols(conn, 'sale_items', _SALE_ITEMS_EXTRA_COLS, changed)
 
     if commit:
         conn.commit()

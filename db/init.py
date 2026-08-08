@@ -172,7 +172,13 @@ _TENANT_TABLE_EXTRAS = [
     ('sale_items', 'menu_id', 'INTEGER'),
     ('sale_items', 'use_sale_unit', 'INTEGER DEFAULT 0'),
     ('sale_items', 'item_name', 'TEXT'),
+    ('sale_items', 'product_name', 'TEXT'),
+    ('sale_items', 'unit', 'TEXT'),
     ('sale_items', 'line_total', 'REAL'),
+    ('sale_items', 'created_at', 'TEXT'),
+    ('sale_items', 'quantity_served', 'REAL DEFAULT 0'),
+    ('sale_items', 'served_at', 'TEXT'),
+    ('sale', 'created_at', 'TEXT'),
     ('customers', 'company_name', 'TEXT'),
     ('customers', 'phone', 'TEXT'),
     ('customers', 'address', 'TEXT'),
@@ -202,7 +208,8 @@ _TENANT_TABLE_EXTRAS = [
 def _table_has_column(cursor, table, column):
     try:
         cursor.execute(f'PRAGMA table_info({table})')
-        return column in {r[1] for r in cursor.fetchall()}
+        want = (column or '').lower()
+        return want in {(r[1] or '').lower() for r in cursor.fetchall()}
     except Exception:
         return False
 

@@ -498,26 +498,36 @@ def register_fb_routes(app):
     @app.route('/api/fb/active-orders', methods=['GET'])
     @login_required
     def api_active_orders():
+        from Services.fb_schema import ensure_fb_schema
+
         db = get_db_connection()
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
         try:
-            cursor.execute("""
+            ensure_fb_schema(db)
+            sale_cols = {
+                (r[1] or '').lower()
+                for r in db.execute('PRAGMA table_info(sale)')
+            }
+            sale_created = 's.created_at' if 'created_at' in sale_cols else 'NULL'
+            if 'date' in sale_cols:
+                sale_created = f'COALESCE({sale_created}, s.date)'
+            cursor.execute(f"""
                 SELECT 
                     s.id AS sale_id,
                     s.sale_no,
                     s.table_id,
                     t.name AS table_name,
-                    s.created_at,
+                    {sale_created} AS created_at,
                     si.menu_id,
                     si.UseSaleUnit,
                     si.unit,
-                    si.product_name,
+                    COALESCE(NULLIF(si.product_name, ''), si.item_name) AS product_name,
                     si.quantity,
                     COALESCE(si.quantity_served, 0) AS quantity_served,
                     si.price AS unit_price,
                     si.line_total,
-                    si.created_at AS item_created_at,
+                    COALESCE(si.created_at, {sale_created}) AS item_created_at,
                     si.served_at,
                     m.item_code,
                     m.unit1
@@ -525,7 +535,7 @@ def register_fb_routes(app):
                 LEFT JOIN tables t ON t.id = s.table_id
                 LEFT JOIN sale_items si ON si.sale_id = s.id
                 LEFT JOIN menu m ON m.id = si.menu_id
-                WHERE s.status = 'Draft'
+                WHERE LOWER(COALESCE(s.status, '')) = 'draft'
                   AND s.table_id IS NOT NULL
                 ORDER BY t.name, si.created_at ASC
             """)
@@ -579,19 +589,25 @@ def register_fb_routes(app):
                         'minutes_waiting': minutes_waiting
                     })
             return jsonify({"success": True, "orders": list(orders.values())})
+        except sqlite3.Error as e:
+            logger.exception("ERROR active-orders: %s", e)
+            return jsonify({"success": True, "orders": [], "message": str(e)})
         except Exception as e:
-            print("ERROR active-orders:", str(e))
-            return jsonify({"success": False, "message": str(e)}), 500
+            logger.exception("ERROR active-orders: %s", e)
+            return jsonify({"success": True, "orders": [], "message": str(e)})
         finally:
             db.close()
 
     @app.route('/api/fb/mark-served/<int:sale_id>/<int:menu_id>', methods=['POST'])
     @login_required
     def api_mark_item_served(sale_id, menu_id):
+        from Services.fb_schema import ensure_fb_schema
+
         db = get_db_connection()
         cursor = db.cursor()
 
         try:
+            ensure_fb_schema(db)
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
             cursor.execute("""
