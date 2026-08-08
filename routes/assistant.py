@@ -48,7 +48,11 @@ def _build_context(payload: dict) -> dict:
 
 
 def register_assistant_routes(app):
-    ensure_assistant_schema()
+    # Không để lỗi DB (vd. main DB hỏng) làm sập cả app khi khởi động
+    try:
+        ensure_assistant_schema()
+    except Exception as exc:
+        app.logger.error("ensure_assistant_schema khi khởi động: %s", exc)
 
     @app.route('/api/assistant/chat', methods=['POST'])
     @login_required
