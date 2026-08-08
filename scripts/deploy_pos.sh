@@ -73,6 +73,27 @@ PY
 # Migrate khong duoc lam dung deploy (1 DB loi khong the chan restart)
 python scripts/migrate_all_dbs.py || echo "  ! Migrate co DB loi — xem log phia tren"
 
+# Registry rong (mat bang tenants sau khi thay database.db) => moi request 500
+python - <<'PY'
+import glob
+import sqlite3
+
+files = [p for p in glob.glob('tenants/*.db') if not p.endswith('registry.db')]
+try:
+    with sqlite3.connect('file:database.db?mode=ro', uri=True) as conn:
+        rows = conn.execute('SELECT COUNT(*) FROM tenants').fetchone()[0]
+except Exception as exc:
+    rows = None
+    print('  ! Doc bang tenants that bai: %s' % exc)
+
+if rows is not None:
+    print('  -> registry: %d tenant / %d file tenants/*.db' % (rows, len(files)))
+if files and not rows:
+    print('  ! REGISTRY RONG nhung van con file tenant — dung lai bang:')
+    print('    python scripts/rebuild_registry_db.py            # xem truoc')
+    print('    python scripts/rebuild_registry_db.py --apply')
+PY
+
 echo "=== [5/5] Restart $SERVICE ==="
 systemctl restart "$SERVICE" || true
 sleep 3

@@ -3,6 +3,75 @@ import sqlite3
 
 from db_utils import get_db_connection, get_main_db_connection
 
+# Bang chi ton tai tren database he thong (registry). Neu thieu thi moi request
+# deu 500 vi "no such table: tenants" — tao lai ngay khi migrate de app van boot.
+REGISTRY_TABLES_DDL = {
+    'tenants': """
+        CREATE TABLE IF NOT EXISTS tenants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tenant_id TEXT UNIQUE NOT NULL,
+            db_path TEXT NOT NULL,
+            business_name TEXT,
+            phone TEXT,
+            address TEXT,
+            email TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            settings TEXT DEFAULT '{}',
+            master_settings TEXT DEFAULT '{}',
+            expiry_date TEXT,
+            is_2fa_enabled INTEGER DEFAULT 1,
+            google_login_allowed INTEGER DEFAULT 1,
+            business_type TEXT
+        )
+    """,
+    'user_tenant_mapping': """
+        CREATE TABLE IF NOT EXISTS user_tenant_mapping (
+            username TEXT PRIMARY KEY,
+            email TEXT,
+            tenant_id TEXT,
+            otp_secret TEXT,
+            twofa_type TEXT DEFAULT 'email',
+            last_2fa_at DATETIME,
+            trust_device_token TEXT,
+            is_active INTEGER DEFAULT 1,
+            google_login_allowed INTEGER DEFAULT 1,
+            is_2fa_enabled INTEGER DEFAULT 1,
+            business_type TEXT
+        )
+    """,
+    'user_trusted_devices': """
+        CREATE TABLE IF NOT EXISTS user_trusted_devices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            device_fingerprint TEXT,
+            last_login DATETIME,
+            UNIQUE(username, device_fingerprint)
+        )
+    """,
+}
+
+
+def ensure_registry_tables(conn=None):
+    """Tao bang registry con thieu tren main DB. Tra ve list ten bang da tao."""
+    own = conn is None
+    conn = conn or get_main_db_connection()
+    created = []
+    try:
+        for name, ddl in REGISTRY_TABLES_DDL.items():
+            existed = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
+            ).fetchone()
+            conn.execute(ddl)
+            if not existed:
+                created.append(name)
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_tenant_id ON tenants(tenant_id)')
+        conn.commit()
+    finally:
+        if own:
+            conn.close()
+    return created
+
 _INVOICE_SETTINGS_DDL = """
     CREATE TABLE IF NOT EXISTS invoice_settings (
         provider_name TEXT PRIMARY KEY,
@@ -245,6 +314,14 @@ def _discover_database_paths():
 
 def _migrate_main_system_tables():
     """Bảng chỉ trên database hệ thống (registry / master)."""
+    try:
+        created = ensure_registry_tables()
+        if created:
+            print('[MIGRATE] Tao lai bang registry: %s' % ', '.join(created))
+            print('[MIGRATE] Bang moi dang RONG — chay: '
+                  'python scripts/rebuild_registry_db.py --apply')
+    except Exception as e:
+        print(f'[MIGRATE] registry tables: {e}')
     try:
         from Services.audit_log import ensure_audit_table
         conn2 = get_main_db_connection()

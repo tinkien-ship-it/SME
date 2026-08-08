@@ -316,6 +316,18 @@ with app.app_context():
 with app.app_context():
     init_db_columns()
     migrate_database()
+    # Registry (tenants / user_tenant_mapping): thieu bang thi moi request deu 500
+    try:
+        from db.init import ensure_registry_tables
+        created = ensure_registry_tables()
+        if created:
+            app.logger.warning(
+                'Da tao lai bang registry rong: %s — chay '
+                'python scripts/rebuild_registry_db.py --apply de dung lai du lieu',
+                ', '.join(created),
+            )
+    except Exception as exc:
+        app.logger.error('ensure_registry_tables: %s', exc)
 
 # Config Viettel từ .env
 VIETTEL_CONFIG = {
