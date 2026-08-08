@@ -1516,28 +1516,29 @@ Trân trọng,
     @master_required
     def master_settings():
         """Trang Master Settings - Quản trị toàn hệ thống"""
-        conn = get_db_connection()
-        try:
+        with get_main_db_connection() as conn:
             c = conn.cursor()
             c.execute("""
-                SELECT id, tenant_id, db_path, business_name, phone, 
-                       address, email, is_active, created_at 
-                FROM tenants 
+                SELECT id, tenant_id, db_path, business_name, phone,
+                       address, email, is_active, created_at
+                FROM tenants
                 ORDER BY created_at DESC
             """)
             tenants = [dict(row) for row in c.fetchall()]
 
-            # Đếm số file database trong thư mục tenants
-            tenant_files = len([
-                f for f in os.listdir('tenants') 
-                if f.endswith('.db') and f != 'registry.db'
-            ])
+            tenants_dir = os.path.join(BASE_DIR, 'tenants')
+            tenant_files = 0
+            if os.path.isdir(tenants_dir):
+                tenant_files = len([
+                    f for f in os.listdir(tenants_dir)
+                    if f.endswith('.db') and f != 'registry.db'
+                ])
 
-            return render_template('master_settings.html',
-                                   tenants=tenants,
-                                   tenant_count=tenant_files)
-        finally:
-            conn.close()
+            return render_template(
+                'master_settings.html',
+                tenants=tenants,
+                tenant_count=tenant_files,
+            )
 
 
     # API lấy danh sách tenant (dùng cho AJAX)
@@ -1547,39 +1548,30 @@ Trân trọng,
     def api_master_tenants():
         """Lấy danh sách tất cả các tenants cho giao diện quản trị Master"""
         try:
-            # 1. Sử dụng context manager để quản lý kết nối
-            # Giả định get_db_connection() trả về đối tượng kết nối sqlite3
-            with get_db_connection() as conn:
-                conn.row_factory = sqlite3.Row
+            # Luôn đọc registry trên MAIN DB — không dùng get_db_connection()
+            # (có thể đang trỏ tenant DB khi session còn last_tenant_id).
+            with get_main_db_connection() as conn:
                 c = conn.cursor()
-            
-                # 2. Truy vấn dữ liệu (Bổ sung is_2fa_enabled nếu cần hiển thị ở danh sách)
                 c.execute("""
-                    SELECT id, tenant_id, db_path, business_name, phone, email, address, 
+                    SELECT id, tenant_id, db_path, business_name, phone, email, address,
                            expiry_date, is_active, is_2fa_enabled, created_at, settings, business_type
-                    FROM tenants 
+                    FROM tenants
                     ORDER BY created_at DESC
                 """)
-            
                 rows = c.fetchall()
                 from Services.tenant_profile import build_profile_from_registry
-            
-                # 3. Chuyển đổi và chuẩn hóa dữ liệu
+
                 tenants = []
                 for row in rows:
                     tenant_dict = dict(row)
-                    # Đảm bảo các trường boolean trả về 0/1 hoặc True/False nhất quán
                     tenant_dict['is_active'] = 1 if tenant_dict.get('is_active') else 0
-                    if 'is_2fa_enabled' in tenant_dict:
-                        tenant_dict['is_2fa_enabled'] = 1 if tenant_dict.get('is_2fa_enabled') else 0
+                    tenant_dict['is_2fa_enabled'] = 1 if tenant_dict.get('is_2fa_enabled') else 0
                     profile = build_profile_from_registry(tenant_dict)
                     tenant_dict['revenue_tier'] = profile.get('revenue_tier')
                     tenant_dict['enabled_nn_sectors'] = profile.get('enabled_nn_sectors') or []
                     tenant_dict['business_line'] = profile.get('business_line')
-                
                     tenants.append(tenant_dict)
 
-            # 4. Trả về kết quả bọc trong một object (Best Practice cho API)
             return jsonify({
                 "success": True,
                 "data": tenants,

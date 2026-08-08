@@ -293,6 +293,16 @@ def load_tenant():
         'F&B_service', 'sale', 'login', 'hkd_accounting', 'onboarding',
     ]
 
+    # Trang / API Master luôn dùng database.db (registry). Không lấy
+    # last_tenant_id từ session — nếu không, get_db_connection() trỏ nhầm
+    # sang DB tenant (không có bảng tenants) → list/toggle 2FA hỏng.
+    if first_part == 'master' or path.startswith('api/master'):
+        g.tenant_id = None
+        g.db_path = MAIN_DB_PATH
+        g.tenant_info = None
+        g.is_main_tenant = True
+        return
+
     tenant_data = None
 
     # Bước 1: Kiểm tra trên URL
