@@ -143,9 +143,11 @@ _PRODUCTS_COLS = [
     ('sell_by_weight', 'INTEGER DEFAULT 0'),
     ('weight_plu', 'TEXT'),
     ('product_type', "TEXT DEFAULT 'goods'"),
+    ('business_line', 'TEXT'),
     ('hkd_sector_code', 'TEXT'),
     ('is_subscription_plan', 'INTEGER DEFAULT 0'),
     ('has_einvoice', 'INTEGER DEFAULT 0'),
+    ('updated_at', 'TEXT'),
 ]
 
 _TENANT_TABLE_EXTRAS = [
@@ -158,6 +160,7 @@ _TENANT_TABLE_EXTRAS = [
     ('users', 'permissions', 'TEXT'),
     ('sale_items', 'hkd_sector_code', 'TEXT'),
     ('sale', 'business_line', 'TEXT'),
+    ('sale', 'table_id', 'INTEGER'),
     ('sale', 'email', 'TEXT'),
     ('sale', 'company_name', 'TEXT'),
     ('sale', 'sale_no', 'TEXT'),
@@ -166,6 +169,10 @@ _TENANT_TABLE_EXTRAS = [
     ('sale', 'tax_code', 'TEXT'),
     ('sale', 'budget_unit_code', 'TEXT'),
     ('sale', 'passport_no', 'TEXT'),
+    ('sale_items', 'menu_id', 'INTEGER'),
+    ('sale_items', 'use_sale_unit', 'INTEGER DEFAULT 0'),
+    ('sale_items', 'item_name', 'TEXT'),
+    ('sale_items', 'line_total', 'REAL'),
     ('customers', 'company_name', 'TEXT'),
     ('customers', 'phone', 'TEXT'),
     ('customers', 'address', 'TEXT'),
@@ -230,6 +237,11 @@ def apply_schema_migrations(conn):
     c = conn.cursor()
     ensure_products_schema(conn)
     ensure_invoice_settings_schema(conn)
+    try:
+        from Services.fb_schema import ensure_fb_schema
+        ensure_fb_schema(conn, commit=False)
+    except Exception as e:
+        print(f'[MIGRATE] fb schema: {e}')
     for table, col, col_type in _TENANT_TABLE_EXTRAS:
         if _table_has_column(c, table, col):
             continue

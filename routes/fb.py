@@ -416,21 +416,28 @@ def register_fb_routes(app):
     @app.route('/api/fb/tables', methods=['GET'])
     @login_required
     def get_fb_tables():
+        from Services.fb_schema import ensure_fb_schema
+
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        # Query kết hợp lấy tên khu vực và trạng thái từ current_sale_id
-        query = """
-        SELECT t.id, t.name, a.name as area_name, t.current_sale_id,
-        CASE WHEN t.current_sale_id IS NOT NULL THEN 'Busy' ELSE 'Available' END as status
-        FROM tables t
-        LEFT JOIN areas a ON t.area_id = a.id
-        ORDER BY a.name, t.name
-        """
-        cursor.execute(query)
-        tables = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return jsonify(tables)
+        try:
+            ensure_fb_schema(conn)
+            query = """
+            SELECT t.id, t.name, a.name as area_name, t.current_sale_id,
+            CASE WHEN t.current_sale_id IS NOT NULL THEN 'Busy' ELSE 'Available' END as status
+            FROM tables t
+            LEFT JOIN areas a ON t.area_id = a.id
+            ORDER BY a.name, t.name
+            """
+            cursor.execute(query)
+            tables = [dict(row) for row in cursor.fetchall()]
+            return jsonify(tables)
+        except Exception as e:
+            logger.error('get_fb_tables: %s', e)
+            return jsonify([])
+        finally:
+            conn.close()
 
     @app.route('/api/menu', methods=['GET'])
     @login_required
@@ -2300,12 +2307,15 @@ def register_fb_routes(app):
     @app.route('/api/inventory/ingredients', methods=['GET'])
     @login_required
     def get_inventory_ingredients():
+        from db.init import ensure_products_schema
+
         conn = None
         try:
             conn = get_db_connection()
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-        
+            ensure_products_schema(conn)
+
             query = """
                 SELECT 
                     p.id,
@@ -2353,10 +2363,15 @@ def register_fb_routes(app):
     @login_required
     def fb_stocktake_sheet():
         """Danh sách NVL + tồn sổ để kiểm kê cuối ngày."""
+        from Services.fb_schema import ensure_fb_schema
+        from db.init import ensure_products_schema
+
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         try:
+            ensure_fb_schema(conn, commit=False)
+            ensure_products_schema(conn)
             _ensure_draft_inventory_table(cursor)
             conn.commit()
 
