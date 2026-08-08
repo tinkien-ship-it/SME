@@ -156,19 +156,6 @@
         margin-top: 10px;
     }
 
-    .google-setup-hint {
-        background: #fff8e6;
-        border: 1px solid #ffc107;
-        border-radius: 8px;
-        padding: 12px 14px;
-        font-size: 0.82rem;
-        text-align: left;
-    }
-    .google-setup-hint code {
-        font-size: 0.78rem;
-        word-break: break-all;
-    }
-
 
     .pricing-section {
         background: #f8f9fa;
@@ -300,9 +287,8 @@
                         </div>
                     </form>
 
-                    {% if google_visible %}
+                    {% if google_visible and google_client_id %}
                     <div class="text-center text-muted small my-3">hoặc đăng nhập nhanh bằng Google</div>
-                    {% if google_client_id %}
                     <div id="googleSignInWrap" class="d-flex justify-content-center mb-2"></div>
                     <p class="text-muted small text-center mb-3">
                         Có thể chọn email Google khác mỗi lần đăng nhập / đăng ký.
@@ -318,52 +304,6 @@
                         <div id="googleTrialRegisterWrap" class="d-flex justify-content-center"></div>
                         {% endif %}
                     </div>
-                    {% if google_oauth_hints and google_oauth_hints.javascript_origins %}
-                    <div class="google-setup-hint mb-3 {% if not request.args.get('google_setup') %}d-none{% endif %}" id="googleSetupHint">
-                        <strong><i class="fas fa-exclamation-triangle text-warning me-1"></i>Lỗi Google «origin_mismatch» hoặc «redirect_uri_mismatch»?</strong>
-                        <p class="mb-1 mt-2">Vào <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console → Credentials</a>,
-                        chọn OAuth Client ID loại <strong>Web application</strong>, thêm các mục sau (không có dấu / cuối):</p>
-                        {% if google_redirect_ready and google_oauth_hints.current_redirect_uris %}
-                        <p class="mb-1 fw-semibold text-danger">Redirect URI bắt buộc (đang dùng trên trình duyệt này):</p>
-                        <ul class="mb-2 ps-3">
-                            {% for uri in google_oauth_hints.current_redirect_uris %}
-                            <li><code>{{ uri }}</code></li>
-                            {% endfor %}
-                        </ul>
-                        {% if google_oauth_hints.is_localhost %}
-                        <p class="mb-2 small text-muted">Test localhost: thêm <strong>cả</strong> <code>http://127.0.0.1:PORT/...</code> và <code>http://localhost:PORT/...</code> nếu bạn hay đổi URL. PORT = cổng bạn đang mở (vd. 5000).</p>
-                        {% endif %}
-                        {% endif %}
-                        <p class="mb-1 fw-semibold">Authorized JavaScript origins:</p>
-                        <ul class="mb-2 ps-3">
-                            {% for origin in google_oauth_hints.javascript_origins %}
-                            <li><code>{{ origin }}</code></li>
-                            {% endfor %}
-                        </ul>
-                        {% if google_redirect_ready and google_oauth_hints.redirect_uris %}
-                        <p class="mb-1 fw-semibold">Authorized redirect URIs (đăng ký redirect — thêm tất cả nếu test cả local + production):</p>
-                        <ul class="mb-0 ps-3">
-                            {% for uri in google_oauth_hints.redirect_uris %}
-                            <li><code>{{ uri }}</code></li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <p class="mb-0 text-muted">Để dùng link đăng ký redirect (ổn định hơn), thêm <strong>Client Secret</strong> trong Master Settings → Đăng nhập &amp; OTP.</p>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    {% elif google_config_error %}
-                    <div class="alert alert-warning border small text-center mb-0 py-2">
-                        <i class="fab fa-google text-danger me-1"></i>
-                        {{ google_config_error }}
-                    </div>
-                    {% else %}
-                    <div class="alert alert-light border small text-center mb-0 py-2">
-                        <i class="fab fa-google text-danger me-1"></i>
-                        Quản trị viên cần cấu hình <strong>Google Client ID</strong> một lần
-                        (Master Settings → Đăng nhập &amp; OTP) để bật đăng nhập Google.
-                    </div>
-                    {% endif %}
                     {% endif %}
                 </div>
 
@@ -478,13 +418,11 @@ let pendingGoogleMode = 'login';
 let googleInitialized = false;
 
 function showGoogleLoginError(msg) {
-    const hint = document.getElementById('googleSetupHint');
-    if (hint) hint.classList.remove('d-none');
     if (typeof Swal !== 'undefined') {
         Swal.fire({
             icon: 'error',
             title: 'Không đăng nhập được',
-            html: escHtml(msg) + (hint ? '<p class="small text-muted mt-2 mb-0">Xem hộp vàng «Lỗi Google origin_mismatch» bên dưới để cấu hình Google Cloud Console.</p>' : ''),
+            html: escHtml(msg),
             confirmButtonText: 'Đóng',
         });
     } else {

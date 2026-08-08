@@ -438,6 +438,72 @@ from routes.scale import register_scale_routes
 register_scale_routes(app)
 
 init_schedulers(app, BACKUP_DIR)
+
+
+# === LOG LỖI RA FILE + TRANG LỖI THÂN THIỆN (không lộ nội dung cảnh báo kỹ thuật) ===
+def _init_error_logging(flask_app):
+    from logging.handlers import RotatingFileHandler
+
+    log_dir = os.path.join(BASE_DIR, 'logs')
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+        handler = RotatingFileHandler(
+            os.path.join(log_dir, 'app_error.log'),
+            maxBytes=2 * 1024 * 1024,
+            backupCount=5,
+            encoding='utf-8',
+        )
+        handler.setLevel(logging.WARNING)
+        handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s %(name)s: %(message)s'
+        ))
+        flask_app.logger.addHandler(handler)
+        logging.getLogger().addHandler(handler)
+    except Exception as exc:
+        print(f"Không tạo được file log: {exc}")
+
+
+_init_error_logging(app)
+
+
+@app.errorhandler(500)
+@app.errorhandler(Exception)
+def _handle_internal_error(error):
+    from werkzeug.exceptions import HTTPException
+
+    if isinstance(error, HTTPException) and error.code != 500:
+        return error
+
+    app.logger.error(
+        "Lỗi 500 tại %s %s", request.method, request.path, exc_info=error,
+    )
+
+    # Local/debug: giữ traceback của Werkzeug để lập trình viên vẫn debug được
+    if app.debug or app.testing:
+        raise error
+
+    if request.path.startswith('/api/'):
+        return jsonify({
+            'success': False,
+            'error': 'Hệ thống đang gặp sự cố. Vui lòng thử lại.',
+        }), 500
+
+    html = (
+        '<!doctype html><html lang="vi"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        '<title>KETO ALL IN ONE</title>'
+        '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">'
+        '</head><body class="bg-light"><div class="container" style="max-width:520px">'
+        '<div class="card shadow-sm mt-5"><div class="card-body p-4 text-center">'
+        '<h5 class="fw-bold mb-3">Hệ thống đang tạm thời gián đoạn</h5>'
+        '<p class="text-muted mb-4">Vui lòng thử lại sau ít phút. '
+        'Nếu vẫn chưa được, hãy liên hệ bộ phận hỗ trợ.</p>'
+        '<a href="/login" class="btn btn-primary px-4">Về trang đăng nhập</a>'
+        '</div></div></div></body></html>'
+    )
+    return html, 500, {'Content-Type': 'text/html; charset=utf-8'}
+
+
 if __name__ == '__main__':
     print("POS System & Scheduler đã sẵn sàng.")
     print("Server running: http://127.0.0.1:5000")

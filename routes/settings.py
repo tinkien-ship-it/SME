@@ -216,40 +216,64 @@ def register_settings_routes(app):
     from flask import render_template, request, flash, redirect, url_for, session, current_app
 
     def _login_page_context():
-        base = get_public_base_url(request.url_root)
-        try:
-            hints = google_oauth_setup_hints(base)
-        except Exception as exc:
-            current_app.logger.exception("google_oauth_setup_hints: %s", exc)
-            hints = {
-                "javascript_origins": [],
-                "redirect_uris": [],
-                "current_redirect_uris": [],
-                "redirect_ready": google_oauth_redirect_ready(),
-                "is_localhost": False,
-            }
-        try:
-            subscription_plans = get_subscription_plans()
-        except Exception as exc:
-            current_app.logger.exception("get_subscription_plans: %s", exc)
-            subscription_plans = []
+        """Context trang login — mọi phần phụ đều fail-safe, không được làm sập trang."""
+        def _safe(fn, default=None, label=''):
+            try:
+                return fn()
+            except Exception as exc:
+                current_app.logger.warning("login context %s: %s", label or fn, exc)
+                return default
+
         trial_google = None
         if request.args.get('trial_google') == '1':
             # Giữ lại trong session để /api/trial/register xác thực được email Google
             trial_google = session.get('trial_google')
         return dict(
-            google_visible=google_login_visible(),
-            google_ready=google_login_enabled(),
-            google_client_id=get_google_client_id(),
-            google_config_error=google_client_id_error(),
-            google_oauth_hints=hints,
-            google_redirect_ready=google_oauth_redirect_ready(),
+            google_visible=_safe(google_login_visible, False, 'google_login_visible'),
+            google_ready=_safe(google_login_enabled, False, 'google_login_enabled'),
+            google_client_id=_safe(get_google_client_id, '', 'get_google_client_id'),
+            google_redirect_ready=_safe(
+                google_oauth_redirect_ready, False, 'google_oauth_redirect_ready',
+            ),
             trial_google_pending=trial_google,
-            subscription_plans=subscription_plans,
+            subscription_plans=_safe(get_subscription_plans, [], 'get_subscription_plans'),
         )
 
+    # Form dự phòng — HTML thuần, không qua Jinja/context processor nên không thể lỗi
+    _LOGIN_FALLBACK_HTML = """<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đăng nhập — KETO ALL IN ONE</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head><body class="bg-light">
+<div class="container" style="max-width:420px">
+  <div class="card shadow-sm mt-5">
+    <div class="card-body p-4">
+      <h4 class="fw-bold text-primary text-center mb-4">ĐĂNG NHẬP</h4>
+      <form method="POST" action="/login">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Tên đăng nhập</label>
+          <input type="text" name="username" class="form-control form-control-lg" required autofocus>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Mật khẩu</label>
+          <input type="password" name="password" class="form-control form-control-lg" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold">ĐĂNG NHẬP</button>
+      </form>
+      <div class="text-end mt-3"><a href="/forgot-password" class="small">Quên mật khẩu?</a></div>
+    </div>
+  </div>
+</div>
+</body></html>"""
+
     def _render_login_page():
-        return render_template('login.html', **_login_page_context())
+        try:
+            return render_template('login.html', **_login_page_context())
+        except Exception as exc:
+            # Không để trang đăng nhập trả 500 — hiển thị form tối giản để user vẫn vào được
+            current_app.logger.exception("render login.html: %s", exc)
+            return _LOGIN_FALLBACK_HTML, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():
