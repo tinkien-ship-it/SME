@@ -364,9 +364,13 @@ window.fillSmePayMethodSelect = async function (selectEl, opts) {
     if (warnEl) {
         if (data && data.needs_choice && data.warning) {
             warnEl.style.display = '';
-            warnEl.className = (warnEl.className || '').replace(/\bd-none\b/g, '')
-                || 'alert alert-warning py-2 small mb-0';
-            if (!warnEl.className.includes('alert')) {
+            // Tránh regex \b trong template Jinja (dễ vỡ JS trên một số bản render).
+            const cleaned = String(warnEl.className || '')
+                .split(/\s+/)
+                .filter(function (c) { return c && c !== 'd-none'; })
+                .join(' ');
+            warnEl.className = cleaned || 'alert alert-warning py-2 small mb-0';
+            if (warnEl.className.indexOf('alert') === -1) {
                 warnEl.className = 'alert alert-warning py-2 small mb-2';
             }
             warnEl.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>${data.warning}`;
