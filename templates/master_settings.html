@@ -798,6 +798,8 @@ async function toggle2FA(tenantId, currentState) {
             if (res.success) {
                 loadTenants();
                 Swal.fire('Đã cập nhật', res.message || '', 'success');
+            } else {
+                Swal.fire('Lỗi', res.error || 'Không cập nhật được 2FA', 'error');
             }
         } catch (e) { Swal.fire('Lỗi', 'Thao tác thất bại', 'error'); }
     }
@@ -871,6 +873,8 @@ async function toggleMain2FA() {
             if (res.success) {
                 loadMain2FAStatus();
                 Swal.fire('Thành công', res.message, 'success');
+            } else {
+                Swal.fire('Lỗi', res.error || 'Không thể thay đổi 2FA Main', 'error');
             }
         } catch (e) { Swal.fire('Lỗi', 'Không thể thay đổi', 'error'); }
     }

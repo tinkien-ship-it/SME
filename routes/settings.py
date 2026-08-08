@@ -1636,21 +1636,28 @@ Trân trọng,
 
         # 2. Xử lý dữ liệu đầu vào
         data = request.get_json(silent=True) or {}
-        new_value = data.get('is_2fa_enabled')
-
-        # Kiểm tra giá trị hợp lệ (chấp nhận 0, 1, True, False, "1", "0", "true", "false")
-        truthy_values = [1, True, '1', 'true', 'on', 'yes']
-        falsy_values = [0, False, '0', 'false', 'off', 'no']
-
-        if str(new_value).lower() in truthy_values:
-            is_2fa_enabled = 1
-        elif str(new_value).lower() in falsy_values:
-            is_2fa_enabled = 0
-        else:
+        if 'is_2fa_enabled' not in data:
             return jsonify({
-                "success": False, 
-                "error": "Giá trị is_2fa_enabled không hợp lệ."
+                "success": False,
+                "error": "Thiếu tham số is_2fa_enabled",
             }), 400
+
+        new_value = data.get('is_2fa_enabled')
+        if isinstance(new_value, bool):
+            is_2fa_enabled = 1 if new_value else 0
+        elif isinstance(new_value, (int, float)):
+            is_2fa_enabled = 1 if int(new_value) else 0
+        else:
+            s = str(new_value or '').strip().lower()
+            if s in ('1', 'true', 'on', 'yes'):
+                is_2fa_enabled = 1
+            elif s in ('0', 'false', 'off', 'no'):
+                is_2fa_enabled = 0
+            else:
+                return jsonify({
+                    "success": False,
+                    "error": "Giá trị is_2fa_enabled không hợp lệ.",
+                }), 400
 
         action = "bật" if is_2fa_enabled == 1 else "tắt"
 
