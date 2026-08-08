@@ -334,6 +334,12 @@ with app.app_context():
         _mc = get_main_db_connection()
         try:
             ensure_users_table(_mc)
+            try:
+                mode = _mc.execute('PRAGMA journal_mode').fetchone()[0]
+                if str(mode).lower() != 'wal':
+                    app.logger.warning('Main DB journal_mode=%s (mong doi WAL)', mode)
+            except Exception:
+                pass
             _mc.commit()
             if count_masters(_mc) == 0:
                 action = ensure_master_from_env(_mc)

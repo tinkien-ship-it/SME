@@ -8,7 +8,7 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-from db_utils import BASE_DIR, MAIN_DB_PATH
+from db_utils import BASE_DIR, MAIN_DB_PATH, get_main_db_connection, open_sqlite, sqlite_write_retry
 
 REGISTRY_PATH = MAIN_DB_PATH
 _BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,7 +30,7 @@ AUTH_SETTING_KEYS = (
 
 def _get_main_setting(key, default=""):
     try:
-        with sqlite3.connect(MAIN_DB_PATH) as conn:
+        with get_main_db_connection() as conn:
             row = conn.execute(
                 "SELECT value FROM settings WHERE key = ?",
                 (key,),
@@ -41,12 +41,15 @@ def _get_main_setting(key, default=""):
 
 
 def _set_main_setting(key, value):
-    with sqlite3.connect(MAIN_DB_PATH) as conn:
-        conn.execute(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-            (key, str(value)),
-        )
-        conn.commit()
+    def _write():
+        with get_main_db_connection() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                (key, str(value)),
+            )
+            conn.commit()
+
+    sqlite_write_retry(_write, label='set_main_setting')
 
 
 def _load_auth_file():
@@ -453,9 +456,7 @@ def find_user_by_email(email):
     if not email:
         return None
 
-    conn = sqlite3.connect(REGISTRY_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
+    with get_main_db_connection() as conn:
         rows = conn.execute(
             """
             SELECT m.username, m.tenant_id, t.db_path, t.is_2fa_enabled, m.email
@@ -467,15 +468,12 @@ def find_user_by_email(email):
             """,
             (email,),
         ).fetchall()
-    finally:
-        conn.close()
 
     for row in rows:
         db_path = _abs_db_path(row["db_path"])
         if not os.path.exists(db_path):
             continue
-        with sqlite3.connect(db_path) as conn_u:
-            conn_u.row_factory = sqlite3.Row
+        with open_sqlite(db_path) as conn_u:
             user = conn_u.execute(
                 """
                 SELECT * FROM users
@@ -496,8 +494,7 @@ def find_user_by_email(email):
 
     main_db = os.path.join(BASE_DIR, "database.db")
     if os.path.exists(main_db):
-        with sqlite3.connect(main_db) as conn:
-            conn.row_factory = sqlite3.Row
+        with open_sqlite(main_db) as conn:
             user = conn.execute(
                 "SELECT * FROM users WHERE LOWER(COALESCE(email, '')) = ?",
                 (email,),
@@ -520,8 +517,7 @@ def resolve_user_phone(user, db_path, username):
         return normalize_vn_phone(phone) or phone.strip()
 
     try:
-        with sqlite3.connect(db_path) as conn:
-            conn.row_factory = sqlite3.Row
+        with open_sqlite(db_path) as conn:
             row = conn.execute(
                 "SELECT phone FROM users WHERE username = ?",
                 (username,),

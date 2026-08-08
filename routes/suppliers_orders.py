@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import jsonify, render_template, request
 
 from auth import admin_or_master_required, login_required
-from db_utils import MAIN_DB_PATH, get_db_connection
+from db_utils import MAIN_DB_PATH, get_db_connection, open_sqlite, sqlite_write_retry
 
 
 def register_suppliers_orders_routes(app):
@@ -446,9 +446,7 @@ def register_suppliers_orders_routes(app):
 
         try:
             # 1. Sử dụng 'with' để quản lý kết nối an toàn
-            with sqlite3.connect(MAIN_DB_PATH) as conn:
-                # Thiết lập để trả về kết quả dưới dạng dictionary
-                conn.row_factory = sqlite3.Row
+            with open_sqlite(MAIN_DB_PATH) as conn:
                 c = conn.cursor()
 
                 sql = """
@@ -496,25 +494,19 @@ def register_suppliers_orders_routes(app):
     def delete_order(id):
         try:
             # Sử dụng 'with' để đảm bảo kết nối được đóng (conn.close()) dù có lỗi hay không.
-            with sqlite3.connect(MAIN_DB_PATH) as conn:
-                # Tự động bật chế độ commit
-                # (Trong khối 'with' mặc định, commit sẽ được gọi khi khối kết thúc thành công, 
-                # nhưng tốt hơn là nên gọi tường minh hoặc kiểm soát)
+            deleted = {'n': 0}
 
-                c = conn.cursor()
+            def _write():
+                with open_sqlite(MAIN_DB_PATH) as conn:
+                    c = conn.cursor()
+                    c.execute("DELETE FROM sale WHERE id = ?", (id,))
+                    deleted['n'] = c.rowcount
+                    conn.commit()
 
-                # Kiểm tra xem có bản ghi nào bị xóa không
-                c.execute("DELETE FROM sale WHERE id = ?", (id,))
-
-                # Lưu các thay đổi (commit transaction)
-                conn.commit()
-
-                # Kiểm tra số lượng hàng bị ảnh hưởng
-                if c.rowcount == 0:
-                    # Nếu không có hàng nào bị xóa (ID không tồn tại)
-                    return jsonify({"success": False, "message": f"Không tìm thấy đơn hàng có ID: {id}"}), 404
-
-                return jsonify({"success": True, "message": f"Đã xóa đơn hàng ID: {id}"})
+            sqlite_write_retry(_write, label='delete_order')
+            if deleted['n'] == 0:
+                return jsonify({"success": False, "message": f"Không tìm thấy đơn hàng có ID: {id}"}), 404
+            return jsonify({"success": True, "message": f"Đã xóa đơn hàng ID: {id}"})
 
         except sqlite3.Error as e:
             # Bắt lỗi database (ví dụ: database bị khóa, lỗi I/O, v.v.)
@@ -535,21 +527,20 @@ def register_suppliers_orders_routes(app):
             return jsonify({"success": False, "message": "Tên khách hàng là bắt buộc."}), 400 # Bad Request
 
         try:
-            # 2. Sử dụng 'with' và quản lý giao dịch
-            with sqlite3.connect(MAIN_DB_PATH) as conn:
-                c = conn.cursor()
+            new_id = {'v': None}
 
-                # Ghi chú: Nếu invoice_number không phải là Autoincrement, 
-                # bạn nên tạo logic đánh số hóa đơn ở đây thay vì dùng None.
-                c.execute("""
-                    INSERT INTO sale (invoice_number, customer_name, date, total_amount, status)
-                    VALUES (?, ?, DATE('now'), 0, 'Nháp')
-                """, (None, customer_name))
+            def _write():
+                with open_sqlite(MAIN_DB_PATH) as conn:
+                    c = conn.cursor()
+                    c.execute("""
+                        INSERT INTO sale (invoice_number, customer_name, date, total_amount, status)
+                        VALUES (?, ?, DATE('now'), 0, 'Nháp')
+                    """, (None, customer_name))
+                    new_id['v'] = c.lastrowid
+                    conn.commit()
 
-                conn.commit()
-                new_id = c.lastrowid
-
-                return jsonify({"success": True, "id": new_id})
+            sqlite_write_retry(_write, label='upsert_order')
+            return jsonify({"success": True, "id": new_id['v']})
 
         except sqlite3.Error as e:
             # Lỗi xảy ra, transaction sẽ tự động được rollback (trong hầu hết các trường hợp SQLite)

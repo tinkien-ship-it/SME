@@ -99,10 +99,11 @@ def init_auth(app):
                 current_app.logger.error(f"Database path không tồn tại: {db_path}")
                 return None
 
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            user_row = conn.execute("SELECT * FROM users WHERE id = ?", (int(user_id),)).fetchone()
-            conn.close()
+            from db_utils import open_sqlite
+            with open_sqlite(db_path) as conn:
+                user_row = conn.execute(
+                    "SELECT * FROM users WHERE id = ?", (int(user_id),)
+                ).fetchone()
 
             if user_row:
                 u = dict(user_row)

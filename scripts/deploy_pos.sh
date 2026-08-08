@@ -2,12 +2,13 @@
 # Chay tren VPS Ubuntu sau khi git push tu local:
 #   /root/deploy_pos.sh
 #
-# Bien moi truong huu ich (trong /root/pos/.env hoac shell):
+# Bien moi truong (trong /root/pos/.env — KHONG source bang bash):
 #   DEPLOY_BRANCH=main
 #   MASTER_USERNAME=master
-#   MASTER_PASSWORD=...          # neu thieu user master, deploy tu tao/reset
+#   MASTER_PASSWORD=...
 #   MASTER_EMAIL=...
-#   AUTO_REPAIR_REGISTRY=1       # mac dinh 1: registry rong thi rebuild tu tenants/*.db
+#   AUTO_REPAIR_REGISTRY=1
+#   SME_SQLITE_TIMEOUT=60
 
 set -uo pipefail
 
@@ -21,20 +22,51 @@ DB_BACKUP_DIR="/root/pos_db_backups"
 fail() { echo "LOI: $*" >&2; exit 1; }
 
 cd "$APP_DIR" || fail "khong vao duoc $APP_DIR"
-
-# Nap .env neu co (MASTER_PASSWORD, ...)
-if [ -f "$APP_DIR/.env" ]; then
-  set -a
-  # shellcheck disable=SC1091
-  . "$APP_DIR/.env"
-  set +a
-fi
-
-echo "=== [1/6] Backup SQLite online (an toan hon cp khi app dang chay) ==="
-mkdir -p "$DB_BACKUP_DIR"
-STAMP=$(date +%Y%m%d_%H%M%S)
 # shellcheck disable=SC1090
 source "$VENV" || fail "khong activate duoc venv: $VENV"
+
+# Nap .env bang Python (tranh loi bash khi value co khoang trang: KIEN TRUNG TIN)
+eval "$(python - <<'PY'
+import os, shlex
+from pathlib import Path
+p = Path('.env')
+if not p.exists():
+    raise SystemExit(0)
+try:
+    from dotenv import dotenv_values
+    vals = dotenv_values(p)
+except Exception:
+    vals = {}
+    for line in p.read_text(encoding='utf-8', errors='replace').splitlines():
+        s = line.strip()
+        if not s or s.startswith('#') or '=' not in s:
+            continue
+        k, _, v = s.partition('=')
+        vals[k.strip()] = v.strip().strip('"').strip("'")
+keys = (
+    'DEPLOY_BRANCH', 'MASTER_USERNAME', 'MASTER_PASSWORD', 'MASTER_EMAIL',
+    'MASTER_FULL_NAME', 'AUTO_REPAIR_REGISTRY', 'SME_SQLITE_TIMEOUT',
+    'SME_SQLITE_WRITE_RETRIES',
+)
+for k in keys:
+    v = vals.get(k)
+    if v is not None and str(v) != '':
+        print('export %s=%s' % (k, shlex.quote(str(v))))
+PY
+)"
+
+BRANCH="${DEPLOY_BRANCH:-$BRANCH}"
+
+echo "=== [0/6] Stop $SERVICE (tranh database is locked khi migrate/backup) ==="
+systemctl stop "$SERVICE" || true
+sleep 2
+# Gỡ worker treo (neu co)
+pkill -f 'gunicorn.*app:app' 2>/dev/null || true
+sleep 1
+
+echo "=== [1/6] Backup SQLite online ==="
+mkdir -p "$DB_BACKUP_DIR"
+STAMP=$(date +%Y%m%d_%H%M%S)
 STAMP="$STAMP" DB_BACKUP_DIR="$DB_BACKUP_DIR" python - <<'PY'
 import glob, os, sqlite3
 stamp = os.environ['STAMP']
@@ -52,15 +84,13 @@ for src in targets:
         s = sqlite3.connect('file:%s?mode=ro' % src.replace('?', '%3f'), uri=True)
         d = sqlite3.connect(dst)
         s.backup(d)
-        d.close()
-        s.close()
+        d.close(); s.close()
         print('  +', src, '->', dst)
         ok += 1
     except Exception as exc:
         print('  !', src, exc)
         fail += 1
 print('  -> backup %d file, loi %d' % (ok, fail))
-# Giu 14 moc backup gan nhat
 stamps = sorted({
     '_'.join(fn.split('_')[:2])
     for fn in os.listdir(out_dir)
@@ -69,10 +99,8 @@ stamps = sorted({
 for old in stamps[14:]:
     for fn in os.listdir(out_dir):
         if fn.startswith(old):
-            try:
-                os.remove(os.path.join(out_dir, fn))
-            except OSError:
-                pass
+            try: os.remove(os.path.join(out_dir, fn))
+            except OSError: pass
 PY
 
 echo "=== [2/6] Backup thu muc (khong gom venv) ==="
@@ -90,9 +118,6 @@ echo "=== [3/6] Dong bo code tu origin/$BRANCH ==="
 git fetch --prune origin "$BRANCH" || fail "git fetch that bai (kiem tra mang / credential)"
 git rev-parse --verify --quiet "origin/$BRANCH" >/dev/null \
   || fail "khong thay origin/$BRANCH. Kiem tra ten branch: git branch -r"
-
-# VPS chi la ban trien khai: bo moi thay doi/commit cuc bo.
-# File .env, database.db, tenants/ nam trong .gitignore nen KHONG bi anh huong.
 git reset --hard "origin/$BRANCH" || fail "git reset --hard that bai"
 find . -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null
 echo "  -> $(git rev-parse --short HEAD) $(git log -1 --pretty=%s)"
@@ -103,7 +128,7 @@ echo "=== [4/6] Cai dependency (bo pywin32 tren Linux) ==="
 grep -v pywin32 requirements.txt | pip install -r /dev/stdin -q \
   || fail "pip install that bai"
 
-echo "=== [5/6] Kiem tra + migrate + tu sua registry/master ==="
+echo "=== [5/6] Kiem tra + migrate + tu sua registry/master (service DANG TAT) ==="
 python - <<'PY'
 import glob, os, sqlite3
 bad = []
@@ -121,15 +146,12 @@ if bad:
     print('  ! DATABASE CO VAN DE:')
     for path, why in bad:
         print('    - %s: %s' % (path, why))
-    print('  ! Cuu: python scripts/recover_main_db.py <file.db> <file_new.db>')
-    print('  ! Roi: python scripts/repair_vps_main_db.py --apply --password ...')
 else:
     print('  -> Tat ca database: ok')
 PY
 
 python scripts/migrate_all_dbs.py || echo "  ! Migrate co DB loi — xem log phia tren"
 
-# Registry rong + con file tenant => tu dung lai (tranh 500 no such table / login fail)
 python - <<'PY'
 import glob, os, sqlite3, subprocess, sys
 files = [p for p in glob.glob('tenants/*.db') if not p.endswith('registry.db')]
@@ -150,25 +172,19 @@ else:
 auto = os.environ.get('AUTO_REPAIR_REGISTRY', '1') == '1'
 need = bool(files) and (rows in (0, None) or masters in (0, None))
 if need and auto:
-    print('  -> Tu sua registry/master (AUTO_REPAIR_REGISTRY=1)...')
-    cmd = [sys.executable, 'scripts/repair_vps_main_db.py', '--apply']
-    if os.environ.get('MASTER_PASSWORD'):
-        # password lay tu env trong script con
-        pass
-    else:
-        print('  ! Chua co MASTER_PASSWORD trong .env — se rebuild registry,')
-        print('    nhung KHONG tao master. Sau do chay:')
-        print('    python scripts/ensure_master_user.py --apply --password \"...\"')
-    rc = subprocess.call(cmd)
+    print('  -> Tu sua registry/master...')
+    if not os.environ.get('MASTER_PASSWORD') and (masters in (0, None)):
+        print('  ! Chua co MASTER_PASSWORD trong .env — rebuild registry, khong tao master.')
+        print('    Them MASTER_PASSWORD=... vao .env roi: python scripts/ensure_master_user.py --apply')
+    rc = subprocess.call([sys.executable, 'scripts/repair_vps_main_db.py', '--apply'])
     if rc != 0:
         print('  ! repair_vps_main_db thoat ma', rc)
 elif need:
-    print('  ! REGISTRY/MASTER thieu — bat AUTO_REPAIR_REGISTRY=1 hoac chay:')
-    print('    python scripts/repair_vps_main_db.py --apply --password \"...\"')
+    print('  ! REGISTRY/MASTER thieu — chay: python scripts/repair_vps_main_db.py --apply')
 PY
 
-echo "=== [6/6] Restart $SERVICE ==="
-systemctl restart "$SERVICE" || true
+echo "=== [6/6] Start $SERVICE ==="
+systemctl start "$SERVICE" || true
 sleep 3
 
 if systemctl is-active --quiet "$SERVICE"; then
@@ -176,7 +192,6 @@ if systemctl is-active --quiet "$SERVICE"; then
 else
   echo "  ! $SERVICE KHONG chay — traceback gan nhat:"
   journalctl -u "$SERVICE" -n 40 --no-pager -o cat
-  echo "  ! Thu: cd $APP_DIR && venv/bin/python -c 'import app'"
   exit 1
 fi
 
@@ -184,20 +199,22 @@ HTTP=$(curl -s -m 15 -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/login 
 echo "HTTP /login => $HTTP"
 [ "$HTTP" = "200" ] || echo "  ! /login chua tra ve 200 — xem logs/app_error.log"
 
-# Canh bao cuoi neu van thieu master
 python - <<'PY'
-import sqlite3, os
+import sqlite3
 try:
     with sqlite3.connect('file:database.db?mode=ro', uri=True) as c:
+        mode = c.execute('PRAGMA journal_mode').fetchone()[0]
         n = c.execute("SELECT COUNT(*) FROM users WHERE role='master'").fetchone()[0]
         t = c.execute("SELECT COUNT(*) FROM tenants").fetchone()[0]
 except Exception as exc:
-    print('  ! Khong kiem tra duoc master/tenants:', exc)
+    print('  ! Khong kiem tra duoc:', exc)
 else:
-    print('  -> sau deploy: tenants=%d master=%d' % (t, n))
+    print('  -> journal_mode=%s tenants=%d master=%d' % (mode, t, n))
+    if str(mode).lower() != 'wal':
+        print('  ! Canh bao: journal_mode khong phai WAL')
     if n == 0:
-        print('  ! CHUA CO MASTER — them vao .env roi chay:')
-        print('    MASTER_PASSWORD=... python scripts/ensure_master_user.py --apply')
+        print('  ! CHUA CO MASTER — them MASTER_PASSWORD vao .env roi:')
+        print('    python scripts/ensure_master_user.py --apply')
 PY
 
 echo "=== Deploy xong ==="

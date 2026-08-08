@@ -9,7 +9,15 @@ import pyotp
 import hashlib
 import uuid
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, REGISTRY_PATH, get_db_connection, open_sqlite
+from db_utils import (
+    BASE_DIR,
+    MAIN_DB_PATH,
+    REGISTRY_PATH,
+    get_db_connection,
+    get_main_db_connection,
+    open_sqlite,
+    sqlite_write_retry,
+)
 
 _tenant_schema_migrated = set()
 # Cache kiểm tra single-session — tránh mở SQLite users mỗi request HTML/API
@@ -138,7 +146,7 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
             raise Exception("Không tìm thấy file database.db mẫu")
 
     # 2. Xử lý Database con của Tenant
-    conn_tenant = sqlite3.connect(tenant_db_path)
+    conn_tenant = open_sqlite(tenant_db_path)
     try:
         cursor_tenant = conn_tenant.cursor()
 
@@ -219,67 +227,62 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
 
     # 3. Cập nhật Registry (Main Database)
     import json
-    conn_registry = sqlite3.connect(REGISTRY_PATH)
+    rel_db_path = os.path.join('tenants', f"{tenant_id}.db")
+    settings_payload = dict(settings_json)
+    settings_payload.setdefault('business_line', business_line)
+    settings_payload.setdefault('default_hkd_sector', storage_sector)
+    if settings_json.get('enabled_nn_sectors'):
+        settings_payload.setdefault('enabled_nn_sectors', settings_json['enabled_nn_sectors'])
+    created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    def _write_registry():
+        with get_main_db_connection() as conn_registry:
+            c_reg = conn_registry.cursor()
+            c_reg.execute("""
+                INSERT OR REPLACE INTO tenants
+                (tenant_id, db_path, business_name, phone, address, email, expiry_date, created_at, is_active, settings, business_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            """, (
+                tenant_id,
+                rel_db_path,
+                business_name,
+                phone,
+                kwargs.get('address', ''),
+                contact_email,
+                kwargs.get('expiry_date'),
+                created_at,
+                json.dumps(settings_payload, ensure_ascii=False),
+                business_line,
+            ))
+            c_reg.execute("""
+                INSERT OR REPLACE INTO user_tenant_mapping
+                (username, email, tenant_id, twofa_type, is_active, business_type)
+                VALUES (?, ?, ?, 1, 1, ?)
+            """, (phone, email or contact_email, tenant_id, business_line))
+            c_reg.execute("""
+                INSERT OR REPLACE INTO user_tenant_mapping
+                (username, email, tenant_id, twofa_type, is_active, business_type)
+                VALUES (?, ?, ?, 1, 1, ?)
+            """, (support_username, '', tenant_id, business_line))
+            conn_registry.commit()
+
     try:
-        c_reg = conn_registry.cursor()
-
-        rel_db_path = os.path.join('tenants', f"{tenant_id}.db")
-        settings_payload = dict(settings_json)
-        settings_payload.setdefault('business_line', business_line)
-        settings_payload.setdefault('default_hkd_sector', storage_sector)
-        if settings_json.get('enabled_nn_sectors'):
-            settings_payload.setdefault('enabled_nn_sectors', settings_json['enabled_nn_sectors'])
-
-        c_reg.execute("""
-            INSERT OR REPLACE INTO tenants
-            (tenant_id, db_path, business_name, phone, address, email, expiry_date, created_at, is_active, settings, business_type)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-        """, (
-            tenant_id,
-            rel_db_path,
-            business_name,
-            phone,
-            kwargs.get('address', ''),
-            contact_email,
-            kwargs.get('expiry_date'),
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            json.dumps(settings_payload, ensure_ascii=False),
-            business_line,
-        ))
-
-        c_reg.execute("""
-            INSERT OR REPLACE INTO user_tenant_mapping
-            (username, email, tenant_id, twofa_type, is_active, business_type)
-            VALUES (?, ?, ?, 1, 1, ?)
-        """, (phone, email or contact_email, tenant_id, business_line))
-
-        c_reg.execute("""
-            INSERT OR REPLACE INTO user_tenant_mapping
-            (username, email, tenant_id, twofa_type, is_active, business_type)
-            VALUES (?, ?, ?, 1, 1, ?)
-        """, (support_username, '', tenant_id, business_line))
-
-        conn_registry.commit()
+        sqlite_write_retry(_write_registry, label='init_tenant_registry')
     except Exception as e:
         if os.path.exists(tenant_db_path):
             os.remove(tenant_db_path)
         raise Exception(f"Lỗi Registry: {str(e)}")
-    finally:
-        conn_registry.close()
 
     return tenant_db_path
 
 def get_tenant_db_path(tenant_id: str):
     if not tenant_id: return None
-    conn = sqlite3.connect(REGISTRY_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        c = conn.cursor()
-        c.execute("SELECT db_path, business_name, phone FROM tenants WHERE tenant_id = ? AND is_active = 1", (tenant_id,))
-        row = c.fetchone()
+    with get_main_db_connection() as conn:
+        row = conn.execute(
+            "SELECT db_path, business_name, phone FROM tenants WHERE tenant_id = ? AND is_active = 1",
+            (tenant_id,),
+        ).fetchone()
         return dict(row) if row else None
-    finally:
-        conn.close()
 
 def load_tenant():
     path = request.path.strip('/')
@@ -336,27 +339,22 @@ def add_user_to_mapping(username: str, email: str, tenant_id: str):
         print(f"WARNING: add_user_to_mapping - username hoặc tenant_id bị thiếu")
         return False
 
-    conn = None
     try:
-        conn = sqlite3.connect(REGISTRY_PATH)
-        conn.execute("""
-            INSERT OR REPLACE INTO user_tenant_mapping 
-            (username, email, tenant_id) 
-            VALUES (?, ?, ?)
-        """, (username.strip(), email.strip() if email else None, tenant_id))
-        
-        conn.commit()
+        def _write():
+            with get_main_db_connection() as conn:
+                conn.execute("""
+                    INSERT OR REPLACE INTO user_tenant_mapping
+                    (username, email, tenant_id)
+                    VALUES (?, ?, ?)
+                """, (username.strip(), email.strip() if email else None, tenant_id))
+                conn.commit()
+
+        sqlite_write_retry(_write, label='add_user_to_mapping')
         print(f"DEBUG: Đã thêm/cập nhật mapping → username='{username}' | email='{email}' | tenant='{tenant_id}'")
         return True
-
     except Exception as e:
         print(f"ERROR: add_user_to_mapping thất bại: {e}")
-        if conn:
-            conn.rollback()
         return False
-    finally:
-        if conn:
-            conn.close()
 
 def update_user_email_in_mapping(old_email: str, new_email: str, username: str, tenant_id: str):
     """
@@ -371,45 +369,33 @@ def update_user_email_in_mapping(old_email: str, new_email: str, username: str, 
     if old_email and old_email.strip().lower() == new_email.strip().lower():
         return True  # Email không thay đổi
 
-    conn = None
     try:
-        conn = sqlite3.connect(REGISTRY_PATH)
-        c = conn.cursor()
+        def _write():
+            with get_main_db_connection() as conn:
+                c = conn.cursor()
+                c.execute("""
+                    UPDATE user_tenant_mapping
+                    SET email = ?
+                    WHERE username = ? AND tenant_id = ?
+                """, (new_email.strip(), username.strip(), tenant_id))
+                if c.rowcount == 0:
+                    c.execute("""
+                        INSERT INTO user_tenant_mapping (username, email, tenant_id)
+                        VALUES (?, ?, ?)
+                    """, (username.strip(), new_email.strip(), tenant_id))
+                conn.commit()
 
-        # Cách an toàn và rõ ràng: 
-        # 1. Thử UPDATE trước (nếu trùng username + tenant_id)
-        c.execute("""
-            UPDATE user_tenant_mapping 
-            SET email = ? 
-            WHERE username = ? AND tenant_id = ?
-        """, (new_email.strip(), username.strip(), tenant_id))
-
-        # 2. Nếu không có dòng nào bị update (rowcount == 0) → tiến hành INSERT
-        if c.rowcount == 0:
-            c.execute("""
-                INSERT INTO user_tenant_mapping (username, email, tenant_id) 
-                VALUES (?, ?, ?)
-            """, (username.strip(), new_email.strip(), tenant_id))
-
-        conn.commit()
+        sqlite_write_retry(_write, label='update_user_email_in_mapping')
         print(f"DEBUG: Cập nhật email mapping thành công → username='{username}' | email='{new_email}' | tenant={tenant_id}")
         return True
-
     except Exception as e:
         print(f"ERROR: update_user_email_in_mapping thất bại: {e}")
-        if conn:
-            conn.rollback()
         return False
-    finally:
-        if conn:
-            conn.close()
 
 def get_tenant_by_username(username: str, active_only=True):
     if not username:
         return None
-    conn = sqlite3.connect(REGISTRY_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
+    with get_main_db_connection() as conn:
         active_clause = " AND t.is_active = 1" if active_only else ""
         query = f"""
             SELECT t.db_path, t.tenant_id, t.is_2fa_enabled,
@@ -422,8 +408,6 @@ def get_tenant_by_username(username: str, active_only=True):
         """
         row = conn.execute(query, (username,)).fetchone()
         return dict(row) if row else None
-    finally:
-        conn.close()
 
 def init_tenant(app):
     @app.before_request

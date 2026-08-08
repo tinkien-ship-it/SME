@@ -7,20 +7,28 @@ from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask_apscheduler import APScheduler
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, get_db_connection
+from db_utils import (
+    BASE_DIR,
+    MAIN_DB_PATH,
+    get_main_db_connection,
+    open_sqlite,
+    sqlite_write_retry,
+)
 
 
 def check_tenant_expirations():
     today = datetime.now().strftime('%Y-%m-%d')
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("""
-        UPDATE tenants
-        SET is_active = 0
-        WHERE expiry_date < ? AND is_active = 1
-    """, (today,))
-    conn.commit()
-    conn.close()
+
+    def _write():
+        with get_main_db_connection() as conn:
+            conn.execute("""
+                UPDATE tenants
+                SET is_active = 0
+                WHERE expiry_date < ? AND is_active = 1
+            """, (today,))
+            conn.commit()
+
+    sqlite_write_retry(_write, label='check_tenant_expirations')
     print(f"--- Đã kiểm tra và khóa các Tenant hết hạn ngày {today} ---")
 
 
@@ -33,11 +41,10 @@ def backup_database(backup_root):
         tasks = [('main', MAIN_DB_PATH)]
 
         try:
-            conn_main = sqlite3.connect(MAIN_DB_PATH)
-            tenants = conn_main.execute(
-                "SELECT tenant_id, db_path FROM tenants WHERE is_active=1"
-            ).fetchall()
-            conn_main.close()
+            with get_main_db_connection() as conn_main:
+                tenants = conn_main.execute(
+                    "SELECT tenant_id, db_path FROM tenants WHERE is_active=1"
+                ).fetchall()
         except Exception as db_err:
             print(f"Lỗi truy cập Registry: {db_err}")
             return
@@ -62,7 +69,14 @@ def backup_database(backup_root):
 
                 filename = f"{tenant_id}_auto_{timestamp}.db"
                 dest = os.path.join(tenant_backup_dir, filename)
-                shutil.copy2(db_path, dest)
+                # sqlite3.backup an toàn khi app đang chạy — shutil.copy2 có thể
+                # copy dở WAL → database disk image is malformed
+                with open_sqlite(db_path) as src:
+                    dst = sqlite3.connect(dest)
+                    try:
+                        src.backup(dst)
+                    finally:
+                        dst.close()
 
                 cutoff = (datetime.now() - timedelta(days=10)).timestamp()
                 for f in os.listdir(tenant_backup_dir):

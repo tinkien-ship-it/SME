@@ -296,12 +296,11 @@ def _discover_database_paths():
 
     try:
         if os.path.isfile(REGISTRY_PATH):
-            reg = sqlite3.connect(REGISTRY_PATH)
-            reg.row_factory = sqlite3.Row
-            rows = reg.execute(
-                "SELECT db_path FROM tenants WHERE db_path IS NOT NULL AND TRIM(db_path) != ''"
-            ).fetchall()
-            reg.close()
+            from db_utils import open_sqlite
+            with open_sqlite(REGISTRY_PATH) as reg:
+                rows = reg.execute(
+                    "SELECT db_path FROM tenants WHERE db_path IS NOT NULL AND TRIM(db_path) != ''"
+                ).fetchall()
             for row in rows:
                 p = _normalize_db_path(row['db_path'])
                 if p and os.path.isfile(p):
@@ -393,15 +392,26 @@ def migrate_all_databases(verbose=True):
     """
     Migrate schema TẤT CẢ database (main + mọi tenant).
     Chạy sau git pull trên VPS hoặc: python scripts/migrate_all_dbs.py
+
+    Nên dừng Gunicorn (systemctl stop pos) trước khi chạy — tránh database is locked.
     """
     import os
+    from db_utils import open_sqlite, sqlite_write_retry
+
     paths = _discover_database_paths()
     ok, fail = 0, 0
     for path in paths:
         try:
-            conn = sqlite3.connect(path)
-            apply_schema_migrations(conn)
-            conn.close()
+            def _migrate_one(p=path):
+                with open_sqlite(p) as conn:
+                    apply_schema_migrations(conn)
+                    try:
+                        conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+                    except Exception:
+                        pass
+                    conn.commit()
+
+            sqlite_write_retry(_migrate_one, label='migrate:%s' % os.path.basename(path))
             ok += 1
             if verbose:
                 print(f'[MIGRATE] OK {path}')

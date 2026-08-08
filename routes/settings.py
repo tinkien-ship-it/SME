@@ -135,7 +135,7 @@ def get_location(ip):
     return "Không xác định"
 
 def log_login_attempt(user_id, username, tenant_id, status='Thành công'):
-    """Ghi lịch sử vào Main Database"""
+    """Ghi lịch sử vào Main Database (best-effort — không chặn đăng nhập)."""
     from db_utils import sqlite_write_retry
 
     ip = get_client_ip()
@@ -149,9 +149,73 @@ def log_login_attempt(user_id, username, tenant_id, status='Thành công'):
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 """, (tenant_id, user_id, username, ip, loc, ua, status))
                 conn.commit()
-        sqlite_write_retry(_write, label='log_login_attempt')
+        sqlite_write_retry(_write, label='log_login_attempt', retries=6)
     except Exception as e:
         print(f"Lỗi ghi log lịch sử: {e}")
+
+
+def _persist_successful_login(user_id, username, tenant_id, db_to_open, new_session_id, fingerprint, status='Thành công'):
+    """Ghi session + trusted device + login_history.
+
+    Khi đăng nhập master (db_to_open == main DB), gộp mọi ghi vào MỘT transaction
+    để tránh 3 lần mở/ghi database.db liên tiếp → database is locked.
+    """
+    from db_utils import MAIN_DB_PATH, paths_same_db, sqlite_write_retry
+
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    ip = get_client_ip()
+    loc = get_location(ip)
+    ua = request.headers.get('User-Agent')
+    same_main = paths_same_db(db_to_open, MAIN_DB_PATH)
+
+    def _write_session_only():
+        with open_sqlite(db_to_open) as conn_target:
+            conn_target.execute(
+                "UPDATE users SET last_session_id = ? WHERE id = ?",
+                (new_session_id, user_id),
+            )
+            conn_target.commit()
+
+    def _write_main_side_effects(include_session=False):
+        with get_main_db_connection() as conn_m:
+            if include_session:
+                conn_m.execute(
+                    "UPDATE users SET last_session_id = ? WHERE id = ?",
+                    (new_session_id, user_id),
+                )
+            conn_m.execute(
+                """INSERT OR REPLACE INTO user_trusted_devices
+                   (username, device_fingerprint, last_login) VALUES (?, ?, ?)""",
+                (username, fingerprint, now_str),
+            )
+            try:
+                conn_m.execute(
+                    """INSERT INTO login_history
+                       (tenant_id, user_id, username, ip_address, location, device_info, status)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (tenant_id, user_id, username, ip, loc, ua, status),
+                )
+            except Exception:
+                pass
+            conn_m.commit()
+
+    try:
+        if same_main:
+            sqlite_write_retry(
+                lambda: _write_main_side_effects(include_session=True),
+                label='login_main_all',
+            )
+        else:
+            sqlite_write_retry(_write_session_only, label='login_session')
+            sqlite_write_retry(
+                lambda: _write_main_side_effects(include_session=False),
+                label='login_main_writes',
+            )
+    except Exception as e:
+        try:
+            current_app.logger.error('persist login side-effects: %s', e)
+        except Exception:
+            print(f'persist login side-effects: {e}')
 
     try:
         from Services.audit_log import write_audit
@@ -420,35 +484,10 @@ def register_settings_routes(app):
             user_role = str(user.get('role', '')).strip()
             new_session_id = str(uuid.uuid4())
 
-            try:
-                now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                from db_utils import sqlite_write_retry
-
-                def _upd_session():
-                    with open_sqlite(db_to_open) as conn_target:
-                        conn_target.execute(
-                            "UPDATE users SET last_session_id = ? WHERE id = ?",
-                            (new_session_id, user['id'])
-                        )
-                        conn_target.commit()
-
-                def _upd_device():
-                    with get_main_db_connection() as conn_m:
-                        conn_m.execute(
-                            """INSERT OR REPLACE INTO user_trusted_devices (username, device_fingerprint, last_login)
-                               VALUES (?, ?, ?)""",
-                            (username, get_device_fingerprint(), now_str)
-                        )
-                        conn_m.commit()
-
-                sqlite_write_retry(_upd_session, label='login_session')
-                sqlite_write_retry(_upd_device, label='login_trusted_device')
-
-            except Exception as e:
-                current_app.logger.error(f"Lỗi cập nhật phiên làm việc hoặc thiết bị tin cậy: {e}")
-
-            # Ghi nhận lịch sử đăng nhập thành công vào hệ thống nhật ký
-            log_login_attempt(user['id'], username, current_tenant_id, status='Thành công')
+            _persist_successful_login(
+                user['id'], username, current_tenant_id, db_to_open,
+                new_session_id, get_device_fingerprint(), status='Thành công',
+            )
 
             # Khởi tạo và thiết lập Flask Session thuần sạch sẽ
             session.clear()
@@ -534,10 +573,8 @@ def register_settings_routes(app):
         query += " ORDER BY login_at DESC LIMIT 500"
 
         try:
-            conn = sqlite3.connect('database.db')
-            conn.row_factory = sqlite3.Row
-            rows = conn.execute(query, params).fetchall()
-            conn.close()
+            with get_main_db_connection() as conn:
+                rows = conn.execute(query, params).fetchall()
             return jsonify({'success': True, 'data': [dict(r) for r in rows]})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)})
@@ -554,18 +591,14 @@ def register_settings_routes(app):
             }), 403
 
         try:
-            conn = sqlite3.connect('database.db')
-            conn.row_factory = sqlite3.Row
-        
-            tenant = conn.execute("""
-                SELECT tenant_id, business_name, phone, email, address, 
-                       expiry_date, is_active, is_2fa_enabled, 
-                       created_at, settings, business_type
-                FROM tenants 
-                WHERE tenant_id = ?
-            """, (tenant_id,)).fetchone()
-        
-            conn.close()
+            with get_main_db_connection() as conn:
+                tenant = conn.execute("""
+                    SELECT tenant_id, business_name, phone, email, address,
+                           expiry_date, is_active, is_2fa_enabled,
+                           created_at, settings, business_type
+                    FROM tenants
+                    WHERE tenant_id = ?
+                """, (tenant_id,)).fetchone()
 
             if not tenant:
                 return jsonify({
@@ -1061,34 +1094,14 @@ def register_settings_routes(app):
 
     def _finalize_login_from_dict(user, db_to_open, current_tenant_id, fingerprint):
         """Hoàn tất đăng nhập sau OTP/Google — dùng chung logic redirect."""
-        from db_utils import sqlite_write_retry
-
         user_role = str(user.get('role', '')).strip()
         new_session_id = str(uuid.uuid4())
         username = user['username']
-        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        def _upd_session():
-            with open_sqlite(db_to_open) as conn_target:
-                conn_target.execute(
-                    "UPDATE users SET last_session_id = ? WHERE id = ?",
-                    (new_session_id, user['id']),
-                )
-                conn_target.commit()
-
-        def _upd_device():
-            with get_main_db_connection() as conn_m:
-                conn_m.execute(
-                    """INSERT OR REPLACE INTO user_trusted_devices (username, device_fingerprint, last_login)
-                       VALUES (?, ?, ?)""",
-                    (username, fingerprint, now_str),
-                )
-                conn_m.commit()
-
-        sqlite_write_retry(_upd_session, label='otp_login_session')
-        sqlite_write_retry(_upd_device, label='otp_login_trusted_device')
-
-        log_login_attempt(user['id'], username, current_tenant_id, status='Thành công (Google/OTP)')
+        _persist_successful_login(
+            user['id'], username, current_tenant_id, db_to_open,
+            new_session_id, fingerprint, status='Thành công (Google/OTP)',
+        )
 
         session.clear()
         session.permanent = True
@@ -1594,18 +1607,13 @@ Trân trọng,
             return jsonify({"success": False, "error": "Chỉ Master mới có quyền"}), 403
 
         try:
-            conn = sqlite3.connect('database.db')
-            conn.row_factory = sqlite3.Row
-        
-            # Đếm tổng users và users có 2FA bật
-            result = conn.execute("""
-                SELECT 
-                    COUNT(*) as total_users,
-                    SUM(CASE WHEN is_2fa_enabled = 1 THEN 1 ELSE 0 END) as enabled_users
-                FROM users
-            """).fetchone()
-        
-            conn.close()
+            with get_main_db_connection() as conn:
+                result = conn.execute("""
+                    SELECT
+                        COUNT(*) as total_users,
+                        SUM(CASE WHEN is_2fa_enabled = 1 THEN 1 ELSE 0 END) as enabled_users
+                    FROM users
+                """).fetchone()
 
             total = result['total_users'] or 0
             enabled = result['enabled_users'] or 0
@@ -1656,20 +1664,17 @@ Trân trọng,
 
         # 3. Thực thi cập nhật Database
         try:
-            # Sử dụng 'with' để tự động commit/rollback và đóng kết nối an toàn
-            with sqlite3.connect('database.db') as conn:
-                cursor = conn.cursor()
-            
-                # Cập nhật đồng thời tất cả users
-                # Sửa lỗi Syntax SQL ở đây:
-                cursor.execute(
-                    "UPDATE users SET is_2fa_enabled = ?", 
-                    (is_2fa_enabled,)
-                )
-            
-                # Commit được thực hiện tự động bởi context manager khi thoát block 'with' 
-                # hoặc gọi thủ công để chắc chắn:
-                conn.commit()
+            from db_utils import sqlite_write_retry
+
+            def _write():
+                with get_main_db_connection() as conn:
+                    conn.execute(
+                        "UPDATE users SET is_2fa_enabled = ?",
+                        (is_2fa_enabled,),
+                    )
+                    conn.commit()
+
+            sqlite_write_retry(_write, label='toggle_main_2fa')
 
             return jsonify({
                 "success": True,
@@ -1793,31 +1798,31 @@ Trân trọng,
             is_2fa_enabled = 1 if str(new_value).lower() in ['1', 'true', 'on', 'yes'] else 0
 
         try:
-            # Sử dụng 'with' để tự động đóng kết nối ngay cả khi có lỗi
-            with sqlite3.connect('database.db') as conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
+            from db_utils import sqlite_write_retry
+            missing = {'v': False}
 
-                # 4. Kiểm tra tenant có tồn tại không
-                tenant_check = cursor.execute(
-                    "SELECT tenant_id FROM tenants WHERE tenant_id = ?", 
-                    (tenant_id,)
-                ).fetchone()
+            def _write():
+                with get_main_db_connection() as conn:
+                    tenant_check = conn.execute(
+                        "SELECT tenant_id FROM tenants WHERE tenant_id = ?",
+                        (tenant_id,),
+                    ).fetchone()
+                    if not tenant_check:
+                        missing['v'] = True
+                        return
+                    conn.execute("""
+                        UPDATE tenants
+                        SET is_2fa_enabled = ?
+                        WHERE tenant_id = ?
+                    """, (is_2fa_enabled, tenant_id))
+                    conn.commit()
 
-                if not tenant_check:
-                    return jsonify({
-                        "success": False,
-                        "error": f"Tenant '{tenant_id}' không tồn tại."
-                    }), 404
-
-                # 5. Cập nhật trạng thái
-                cursor.execute("""
-                    UPDATE tenants 
-                    SET is_2fa_enabled = ? 
-                    WHERE tenant_id = ?
-                """, (is_2fa_enabled, tenant_id))
-            
-                conn.commit() 
+            sqlite_write_retry(_write, label='toggle_tenant_2fa')
+            if missing['v']:
+                return jsonify({
+                    "success": False,
+                    "error": f"Tenant '{tenant_id}' không tồn tại."
+                }), 404
 
             status_text = "bật" if is_2fa_enabled == 1 else "tắt"
             return jsonify({
