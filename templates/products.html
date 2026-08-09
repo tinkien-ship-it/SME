@@ -371,7 +371,7 @@
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ url_for('static', filename='js/import-barcode.js') }}"></script>
+<script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=2"></script>
 <script>
 let products = [];
 let productId = null;
@@ -1081,9 +1081,11 @@ document.addEventListener('DOMContentLoaded', () => {
             holder.style.left = '-9999px';
             document.body.appendChild(holder);
             KetoImportBarcode.openCamera(holder, {
+                preferScanned: true,
                 setProductToRow: (_row, product) => {
                     document.getElementById('barcode').value =
-                        (product && product.barcode) || holder.querySelector('.line-barcode')?.value || '';
+                        holder.querySelector('.line-barcode')?.value
+                        || (product && product.barcode) || '';
                     holder.remove();
                 },
                 onUnmatched: (code) => {

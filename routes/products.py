@@ -178,6 +178,55 @@ def register_products_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/products/<int:product_id>/attach-barcode', methods=['POST'])
+    @login_required
+    def api_attach_product_barcode(product_id):
+        """Gắn tem NSX vào SP đã có — không đụng tên/giá (luồng sửa phiếu + camera)."""
+        data = request.get_json(silent=True) or {}
+        barcode = (data.get('barcode') or '').strip()
+        barcode1 = (data.get('barcode1') or '').strip() or None
+        if not barcode and not barcode1:
+            return jsonify({"success": False, "error": "Thiếu mã vạch"}), 400
+        conn = get_db_connection()
+        c = conn.cursor()
+        try:
+            c.execute(
+                "SELECT id, product_type, unit1, name FROM products WHERE id = ?",
+                (product_id,),
+            )
+            row = c.fetchone()
+            if not row:
+                return jsonify({"success": False, "error": "Không tìm thấy sản phẩm"}), 404
+            p = dict(row)
+            ptype = (p.get('product_type') or 'goods').strip() or 'goods'
+            if ptype in ('ready_made', 'raw_materials'):
+                ptype = 'goods'
+            from Services.import_line_helpers import assign_product_codes
+            code, bc, b1 = assign_product_codes(
+                c, product_id, ptype, p.get('unit1'),
+                external_barcode=barcode or None,
+                external_barcode1=barcode1,
+            )
+            conn.commit()
+            return jsonify({
+                "success": True,
+                "product_id": product_id,
+                "product_code": code,
+                "barcode": bc,
+                "barcode1": b1,
+            })
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({"success": False, "error": str(e)}), 400
+        except sqlite3.IntegrityError as e:
+            conn.rollback()
+            return jsonify({"success": False, "error": f"Mã vạch trùng: {e}"}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({"success": False, "error": str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/api/products/lookup-scan', methods=['POST', 'GET'])
     @login_required
     def api_lookup_scan():
