@@ -43,8 +43,8 @@ def assign_product_codes(c, product_id, product_type, unit1=None,
     """
     from Services.product_barcode import (
         barcode_owned_by_other,
+        canonical_scan_code,
         is_internal_barcode,
-        normalize_scan_code,
     )
 
     pt = (product_type or 'goods').strip().lower()
@@ -82,7 +82,7 @@ def assign_product_codes(c, product_id, product_type, unit1=None,
     gen_b1 = f"{code}02" if unit1 and pt not in ('fixed_asset', 'tools', 'service') else None
 
     conn = getattr(c, 'connection', c)
-    ext = normalize_scan_code(external_barcode)
+    ext = canonical_scan_code(external_barcode)
     if ext:
         other = barcode_owned_by_other(conn, ext, exclude_id=product_id)
         if other:
@@ -97,7 +97,7 @@ def assign_product_codes(c, product_id, product_type, unit1=None,
     else:
         barcode = gen_bc
 
-    ext1 = normalize_scan_code(external_barcode1)
+    ext1 = canonical_scan_code(external_barcode1)
     if ext1:
         if ext1 == barcode:
             raise ValueError("Mã vạch sỉ không được trùng mã vạch lẻ.")
@@ -583,7 +583,7 @@ def enrich_stock_detail_for_edit(c, row):
         c.execute('PRAGMA table_info(products)')
         product_cols = {col[1] for col in c.fetchall()}
         p_select = ['name']
-        for col in ('unit', 'unit1', 'base_price', 'price', 'unit_ratio', 'barcode', 'product_code'):
+        for col in ('unit', 'unit1', 'base_price', 'price', 'unit_ratio', 'barcode', 'barcode1', 'product_code'):
             if col in product_cols:
                 p_select.append(col)
         c.execute(
@@ -629,6 +629,8 @@ def enrich_stock_detail_for_edit(c, row):
     })
     if p_data.get('barcode') is not None:
         item['barcode'] = p_data['barcode']
+    if p_data.get('barcode1') is not None:
+        item['barcode1'] = p_data['barcode1']
     return item
 
 

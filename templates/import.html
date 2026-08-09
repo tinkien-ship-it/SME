@@ -14,7 +14,7 @@
     .form-label.small { margin-bottom: 2px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
     
     /* Table styling */
-    #itemsTable { font-size: 13px; table-layout: fixed; width: 3000px; min-width: 100%; }
+    #itemsTable { font-size: 13px; table-layout: fixed; width: 3300px; min-width: 100%; }
     .line-barcode { font-size: 12px; letter-spacing: 0.02em; }
     #itemsTable th { background: #f1f5f9; color: #475569; font-weight: 600; padding: 10px 5px; text-align: center; border-bottom: 2px solid #cbd5e1; }
     #itemsTable td { padding: 3px !important; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -193,7 +193,7 @@
                     {% if import_mode == 'service' %}Chi tiết dịch vụ / chi phí{% elif import_mode == 'fb' %}Chi tiết hàng dùng ngay / nguyên vật liệu{% else %}Chi tiết mặt hàng{% endif %}
                 </span>
                 {% if import_mode != 'service' %}
-                <span class="small text-muted fw-normal ms-2">Quét tem in sẵn trên hàng (Enter / camera). Để trống → hệ thống tự sinh mã khi lưu.</span>
+                <span class="small text-muted fw-normal ms-2">Sửa ĐV cơ bản / ĐV sỉ / giá bán trên dòng. Quét tem lẻ hoặc tem thùng (sỉ). Để trống → tự sinh mã khi lưu.</span>
                 {% endif %}
                 <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="addRow()">
                     <i class="bi bi-plus-lg"></i> THÊM DÒNG
@@ -208,7 +208,13 @@
                                 <th style="width:110px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Kho<div class="resizer"></div></th>
                                 <th style="width:130px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Loại Hàng<div class="resizer"></div></th>
                                 <th style="width:280px;">Tên {% if import_mode == 'service' %}dịch vụ{% else %}hàng{% endif %}<div class="resizer"></div></th>
-                                <th style="width:170px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã vạch<div class="resizer"></div></th>
+                                <th style="width:160px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã vạch lẻ<div class="resizer"></div></th>
+                                <th style="width:160px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã vạch sỉ<div class="resizer"></div></th>
+                                <th style="width:90px;" class="service-mode-hide">ĐV CB<div class="resizer"></div></th>
+                                <th style="width:90px;" class="service-mode-hide">ĐV sỉ<div class="resizer"></div></th>
+                                <th style="width:60px;" class="service-mode-hide">TL<div class="resizer"></div></th>
+                                <th style="width:110px; background:#f0fdf4;" class="service-mode-hide">Giá lẻ<div class="resizer"></div></th>
+                                <th style="width:110px; background:#eff6ff;" class="service-mode-hide">Giá sỉ<div class="resizer"></div></th>
                                 <th style="width:100px;">ĐVT Phiếu<div class="resizer"></div></th>
                                 <th style="width:90px;">Số Lượng<div class="resizer"></div></th>
                                 <th style="width:120px;">Đơn giá<div class="resizer"></div></th>
@@ -219,11 +225,6 @@
                                 <th style="width:110px;">Tiền VAT<div class="resizer"></div></th>
                                 <th style="width:140px; background:#fff7ed;">Tiền TT<div class="resizer"></div></th>
                                 <th style="width:100px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã SP<div class="resizer"></div></th>
-                                <th style="width:100px;" class="service-mode-hide">ĐV Cơ bản<div class="resizer"></div></th>
-                                <th style="width:100px;" class="service-mode-hide">ĐV Sỉ<div class="resizer"></div></th>
-                                <th style="width:80px;" class="service-mode-hide">Tỷ lệ<div class="resizer"></div></th>
-                                <th style="width:130px; background:#f0fdf4;" class="service-mode-hide">Giá lẻ mới<div class="resizer"></div></th>
-                                <th style="width:130px; background:#eff6ff;" class="service-mode-hide">Giá sỉ mới<div class="resizer"></div></th>
                                 <th style="width:60px;">Xóa<div class="resizer"></div></th>
                             </tr>
                         </thead>
@@ -259,7 +260,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=4"></script>
 
 <style>
     .suggest-box {
@@ -567,6 +568,8 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         if (codeEl) codeEl.value = product.product_code || '';
         const bcEl = row.querySelector('.line-barcode');
         if (bcEl) bcEl.value = product.barcode || '';
+        const bc1El = row.querySelector('.line-barcode1');
+        if (bc1El) bc1El.value = product.barcode1 || '';
         const typeSelect = row.querySelector('.line-type-select');
         if (product.product_type && typeSelect && LINE_TYPE_OPTIONS.some(o => o.value === product.product_type)) {
             typeSelect.value = product.product_type;
@@ -603,7 +606,13 @@ function addRow(data = {}) {
             <input type="text" class="product-name form-control form-control-sm border-0" value="${data.invoice_name || ''}" placeholder="Gõ tên sản phẩm...">
             <input type="hidden" class="invoice-name-hidden" value="${data.invoice_name || ''}">
         </td>
-        <td class="${svcHide}">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
+        <td class="stock-only-cell ${svcHide}">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
+        <td class="stock-only-cell ${svcHide}">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode1 || '', 'wholesale')) || ''}</td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="base-unit form-control form-control-sm text-center border-0" value="${data.base_unit || data.unit || ''}"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0" value="${(data.wholesale_unit && data.wholesale_unit !== '—') ? data.wholesale_unit : ''}"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="${data.unit_ratio || data.ratio || 1}" min="1"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="${formatVNDCustom(data.base_sale_price || 0)}"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="${formatVNDCustom(data.sale_price || 0)}"></td>
         <td><input type="text" class="invoice-unit form-control form-control-sm text-center border-0" value="${data.unit || ''}"></td>
         <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty || 1}"></td>
         <td><input type="text" class="buy-price form-control form-control-sm text-end border-0" value="${formatVNDCustom(data.price || 0)}"></td>
@@ -619,11 +628,6 @@ function addRow(data = {}) {
         <td class="tax-amt text-end pe-2">0</td>
         <td class="pay-amt text-end fw-bold text-danger pe-2">0</td>
         <td class="${svcHide}"><input type="text" class="product-code-preview form-control form-control-sm bg-light text-center border-0" readonly placeholder="Mã..."></td>
-        <td class="stock-only-cell ${svcHide}"><input type="text" class="base-unit form-control form-control-sm text-center border-0"></td>
-        <td class="stock-only-cell ${svcHide}"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0"></td>
-        <td class="stock-only-cell ${svcHide}"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="1"></td>
-        <td class="stock-only-cell ${svcHide}"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="0"></td>
-        <td class="stock-only-cell ${svcHide}"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="0"></td>
         <td class="text-center"><button type="button" class="btn btn-sm text-danger" onclick="this.closest('tr').remove(); calcTotal()"><i class="bi bi-trash"></i></button></td>
     `;
     tbody.appendChild(tr);
@@ -1033,11 +1037,12 @@ function getConsolidatedItems() {
                 type: line_type,
                 warehouse_code: warehouse_code,
                 base_unit: (tr.querySelector('.base-unit')?.value || '').trim() || unit,
-                wholesale_unit: (tr.querySelector('.wholesale-unit')?.value || '').trim(),
+                wholesale_unit: (tr.querySelector('.wholesale-unit')?.value || '').trim().replace(/^—$/, ''),
                 ratio: parseFloat(tr.querySelector('.ratio')?.value) || 1,
                 base_sale_price: parseNumber(tr.querySelector('.base-sale-price')?.value),
                 sale_price: parseNumber(tr.querySelector('.sale-price')?.value),
-                barcode: (tr.querySelector('.line-barcode')?.value || '').trim()
+                barcode: (tr.querySelector('.line-barcode')?.value || '').trim(),
+                barcode1: (tr.querySelector('.line-barcode1')?.value || '').trim()
             });
         }
     });
@@ -1060,7 +1065,8 @@ async function upsertProduct(item) {
             unit_ratio: item.ratio,
             price: item.sale_price,
             product_type: item.line_type || 'goods',
-            barcode: item.barcode || ''
+            barcode: item.barcode || '',
+            barcode1: item.barcode1 || ''
         })
     });
     const data = await res.json();

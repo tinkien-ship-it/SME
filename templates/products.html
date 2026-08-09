@@ -203,7 +203,12 @@
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label mb-0"><small>Mã vạch (ĐV Sỉ / thùng)</small></label>
-                                <input type="text" id="barcode1" name="barcode1" class="form-control form-control-sm" placeholder="Tem lốc/thùng">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" id="barcode1" name="barcode1" class="form-control form-control-sm" placeholder="Tem lốc/thùng">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnScanBarcode1" title="Camera tem thùng">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="col-md-2 d-flex justify-content-end">
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="resetForm()">Hủy</button>
@@ -229,8 +234,13 @@
                                 <input type="text" class="form-control form-control-sm bg-light" id="fgProductCode" readonly>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label mb-0"><small>Mã vạch</small></label>
-                                <input type="text" class="form-control form-control-sm" id="fgBarcode" placeholder="Tem trên hàng">
+                                <label class="form-label mb-0"><small>Mã vạch lẻ</small></label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control form-control-sm" id="fgBarcode" placeholder="Tem trên hàng">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnScanFgBarcode" title="Camera">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label mb-0"><small>Tên thành phẩm <span class="text-danger">*</span></small></label>
@@ -284,7 +294,12 @@
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label mb-0"><small>Mã vạch (ĐV Sỉ)</small></label>
-                                <input type="text" id="fgBarcode1" class="form-control form-control-sm" placeholder="Tem lốc/thùng">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" id="fgBarcode1" class="form-control form-control-sm" placeholder="Tem lốc/thùng">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnScanFgBarcode1" title="Camera tem thùng">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="col-md-2 d-flex justify-content-end">
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="resetFinishedForm()">Hủy</button>
@@ -371,7 +386,7 @@
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=4"></script>
 <script>
 let products = [];
 let productId = null;
@@ -1063,38 +1078,42 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fgPriceEl) fgPriceEl.value = formatVND(parseNumberVN(fgPriceEl.value));
     if (servicePriceEl) servicePriceEl.value = formatVND(parseNumberVN(servicePriceEl.value));
 
-    const bcInput = document.getElementById('barcode');
-    const bcBtn = document.getElementById('btnScanBarcode');
-    if (bcInput) {
-        bcInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
+    function bindCatalogBarcodeScan(inputId, btnId, kind) {
+        const bcInput = document.getElementById(inputId);
+        const bcBtn = document.getElementById(btnId);
+        if (bcInput) {
+            bcInput.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter') return;
                 e.preventDefault();
-                document.getElementById('name')?.focus();
-            }
-        });
-    }
-    if (bcBtn && window.KetoImportBarcode) {
+                bcInput.blur();
+            });
+        }
+        if (!bcBtn || !bcInput || !window.KetoImportBarcode) return;
         bcBtn.addEventListener('click', () => {
             const holder = document.createElement('div');
-            holder.innerHTML = KetoImportBarcode.barcodeCellHtml(bcInput.value || '');
+            holder.innerHTML = KetoImportBarcode.barcodeCellHtml(bcInput.value || '', kind);
             holder.style.position = 'fixed';
             holder.style.left = '-9999px';
             document.body.appendChild(holder);
+            const sel = kind === 'wholesale' ? '.line-barcode1' : '.line-barcode';
             KetoImportBarcode.openCamera(holder, {
                 preferScanned: true,
-                setProductToRow: (_row, product) => {
-                    document.getElementById('barcode').value =
-                        holder.querySelector('.line-barcode')?.value
-                        || (product && product.barcode) || '';
+                barcodeRole: kind === 'wholesale' ? 'wholesale' : 'retail',
+                setProductToRow: () => {
+                    bcInput.value = holder.querySelector(sel)?.value || '';
                     holder.remove();
                 },
                 onUnmatched: (code) => {
-                    document.getElementById('barcode').value = code || '';
+                    bcInput.value = code || '';
                     holder.remove();
                 },
             });
         });
     }
+    bindCatalogBarcodeScan('barcode', 'btnScanBarcode', 'retail');
+    bindCatalogBarcodeScan('barcode1', 'btnScanBarcode1', 'wholesale');
+    bindCatalogBarcodeScan('fgBarcode', 'btnScanFgBarcode', 'retail');
+    bindCatalogBarcodeScan('fgBarcode1', 'btnScanFgBarcode1', 'wholesale');
 });
 
 function openBarcodePrintProduct(productId) {

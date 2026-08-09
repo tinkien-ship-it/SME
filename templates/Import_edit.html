@@ -15,7 +15,7 @@
     .form-label.small { margin-bottom: 2px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
     
     /* Table styling */
-    #itemsTable { font-size: 13px; table-layout: fixed; width: 2400px; min-width: 100%; }
+    #itemsTable { font-size: 13px; table-layout: fixed; width: 2800px; min-width: 100%; }
     #itemsTable th { background: #f1f5f9; color: #475569; font-weight: 600; padding: 10px 5px; text-align: center; border-bottom: 2px solid #cbd5e1; }
     #itemsTable td { padding: 3px !important; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     
@@ -182,8 +182,14 @@
                         <thead>
                             <tr>
                                 <th style="width:60px;">ID</th>
-                                <th style="width:280px;">Tên hàng</th>
-                                <th style="width:180px;">Mã vạch</th>
+                                <th style="width:240px;">Tên hàng</th>
+                                <th style="width:160px;" class="stock-col">Mã vạch lẻ</th>
+                                <th style="width:160px;" class="stock-col">Mã vạch sỉ</th>
+                                <th style="width:90px;" class="stock-col">ĐV Cơ bản</th>
+                                <th style="width:90px;" class="stock-col">ĐV Sỉ</th>
+                                <th style="width:70px;" class="stock-col">Tỷ lệ</th>
+                                <th style="width:120px; background:#f0fdf4;" class="stock-col">Giá lẻ</th>
+                                <th style="width:120px; background:#eff6ff;" class="stock-col">Giá sỉ</th>
                                 <th style="width:100px;">ĐVT Phiếu</th>
                                 <th style="width:90px;">Số Lượng</th>
                                 <th style="width:120px;">Đơn giá</th>
@@ -193,11 +199,6 @@
                                 <th style="width:80px;">% VAT</th>
                                 <th style="width:110px;">Tiền VAT</th>
                                 <th style="width:140px; background:#fff7ed;">Tiền TT</th>
-                                <th style="width:100px;">ĐV Cơ bản</th>
-                                <th style="width:100px;">ĐV Sỉ</th>
-                                <th style="width:80px;">Tỷ lệ</th>
-                                <th style="width:130px; background:#f0fdf4;">Giá lẻ mới</th>
-                                <th style="width:130px; background:#eff6ff;">Giá sỉ mới</th>
                                 <th style="width:60px;">Xóa</th>
                             </tr>
                         </thead>
@@ -232,7 +233,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=4"></script>
 
 <script>
 // ====================== 1. BIẾN TOÀN CỤC & DỮ LIỆU GỐC ======================
@@ -298,6 +299,7 @@ function buildItemsFromImp(rawItems) {
             sale_price: it.sale_price || it.price || 0,
             line_type: it.line_type || (it.product_id ? 'goods' : 'service'),
             barcode: it.barcode || '',
+            barcode1: it.barcode1 || '',
             is_deleted: false
         };
     });
@@ -379,6 +381,7 @@ function mapLegacyImportResponse(data) {
         base_sale_price: it.base_sale_price || it.base_price || 0,
         sale_price: it.sale_price || it.price || 0,
         barcode: it.barcode || '',
+        barcode1: it.barcode1 || '',
     }));
     const isAllService = items.length > 0 && items.every(
         it => (it.line_type || '').toLowerCase() === 'service' || !it.product_id
@@ -397,7 +400,7 @@ function mapLegacyImportResponse(data) {
 
 async function loadImportData() {
     const tbody = document.querySelector('#itemsTable tbody');
-        tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-muted">Đang tải dữ liệu phiếu nhập...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="18" class="text-center py-4 text-muted">Đang tải dữ liệu phiếu nhập...</td></tr>';
 
     try {
         const res = await fetch(`/api/import/${IMPORT_ID}/edit`, { credentials: 'same-origin' });
@@ -448,7 +451,7 @@ async function loadImportData() {
         }
     } catch (err) {
         console.error('loadImportData:', err);
-        tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-danger">Không tải được dữ liệu phiếu nhập</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="18" class="text-center py-4 text-danger">Không tải được dữ liệu phiếu nhập</td></tr>';
         Swal.fire('Lỗi', err.message || 'Không tải được dữ liệu phiếu nhập', 'error');
     }
 }
@@ -608,8 +611,8 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         row.querySelector('.product-name').value = product.name || '';
         
         // Nhận dữ liệu và map chính xác các trường đơn vị
-        row.querySelector('.base-unit').value = product.base_unit || '';
-        row.querySelector('.wholesale-unit').value = product.wholesale_unit || '';
+        row.querySelector('.base-unit').value = product.base_unit || product.unit || '';
+        row.querySelector('.wholesale-unit').value = (product.wholesale_unit || product.unit1 || '').replace(/^—$/, '');
         row.querySelector('.ratio').value = product.unit_ratio || product.ratio || 1;
         
         // Gán chính xác giá bán lẻ (base-sale-price) và bán sỉ (sale-price)
@@ -620,6 +623,8 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         row.querySelector('.sale-price').value = formatVNDCustom(salePriceVal);
         const bcEl = row.querySelector('.line-barcode');
         if (bcEl) bcEl.value = product.barcode || '';
+        const bc1El = row.querySelector('.line-barcode1');
+        if (bc1El) bc1El.value = product.barcode1 || '';
         
         if (matchType === 'exact') {
             row.classList.add('row-exact-match');
@@ -653,7 +658,13 @@ function addRow(data = {}) {
             <input type="text" class="product-name form-control form-control-sm border-0" value="${escapeAttr(data.invoice_name || '')}" placeholder="Gõ tên sản phẩm...">
             <input type="hidden" class="invoice-name-hidden" value="${escapeAttr(data.invoice_name || '')}">
         </td>
-        <td>${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
+        <td class="stock-col">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
+        <td class="stock-col">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode1 || '', 'wholesale')) || ''}</td>
+        <td class="stock-col"><input type="text" class="base-unit form-control form-control-sm text-center border-0" value="${escapeAttr((data.base_unit && data.base_unit !== '—') ? data.base_unit : '')}"></td>
+        <td class="stock-col"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0" value="${escapeAttr((data.wholesale_unit && data.wholesale_unit !== '—') ? data.wholesale_unit : '')}"></td>
+        <td class="stock-col"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="${data.ratio || data.unit_ratio || 1}" min="1"></td>
+        <td class="stock-col"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="${formatVNDCustom(data.base_sale_price || 0)}"></td>
+        <td class="stock-col"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="${formatVNDCustom(data.sale_price || 0)}"></td>
         <td><input type="text" class="invoice-unit form-control form-control-sm text-center border-0" value="${escapeAttr(data.unit || '')}"></td>
         <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty || 1}"></td>
         <td><input type="text" class="buy-price form-control form-control-sm text-end border-0" value="${formatVND(data.price || 0)}"></td>
@@ -668,11 +679,6 @@ function addRow(data = {}) {
         </select></td>
         <td class="tax-amt text-end pe-2">0</td>
         <td class="pay-amt text-end fw-bold text-danger pe-2">0</td>
-        <td><input type="text" class="base-unit form-control form-control-sm text-center border-0" value="${data.base_unit || ''}"></td>
-        <td><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0" value="${data.wholesale_unit || ''}"></td>
-        <td><input type="number" class="ratio form-control form-control-sm text-center border-0" value="${data.ratio || 1}"></td>
-        <td><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="${formatVNDCustom(data.base_sale_price || 0)}"></td>
-        <td><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="${formatVNDCustom(data.sale_price || 0)}"></td>
         <td class="text-center"><button type="button" class="btn btn-sm text-danger btn-delete" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
     `;
     tbody.appendChild(tr);
@@ -769,10 +775,7 @@ function applyEditMode() {
     isEditMode = true;
     const fromInvoiceId = (document.getElementById('fromInvoiceId')?.value || '').trim();
 
-    document.querySelectorAll('#itemsTable thead th:nth-child(n+13), #itemsTable tbody td:nth-child(n+13)').forEach(el => {
-        el.classList.toggle('hidden-field', isServiceImport);
-    });
-    document.querySelectorAll('#itemsTable thead th:nth-child(3), #itemsTable tbody td:nth-child(3)').forEach(el => {
+    document.querySelectorAll('#itemsTable .stock-col').forEach(el => {
         el.classList.toggle('hidden-field', isServiceImport);
     });
     document.querySelectorAll('#itemsTable .p-id').forEach(el => {
@@ -791,7 +794,11 @@ function applyEditMode() {
         el.readOnly = false;
     });
 
-    document.querySelectorAll('#itemsTable tbody input:not(.p-id), #itemsTable tbody select, #itemsTable tbody .btn-delete').forEach(el => {
+    document.querySelectorAll('#itemsTable tbody input:not(.p-id), #itemsTable tbody select, #itemsTable tbody .btn-delete, #itemsTable tbody .btn-scan-line, #itemsTable tbody .btn-scan-line1').forEach(el => {
+        el.disabled = false;
+    });
+    document.querySelectorAll('#itemsTable .p-id').forEach(el => {
+        el.readOnly = true;
         el.disabled = false;
     });
 
@@ -885,11 +892,12 @@ function getConsolidatedItems() {
                 tax_amount: vatAmt,
                 
                 base_unit: tr.querySelector('.base-unit').value.trim(),
-                wholesale_unit: tr.querySelector('.wholesale-unit').value.trim(),
+                wholesale_unit: (tr.querySelector('.wholesale-unit').value || '').trim().replace(/^—$/, ''),
                 ratio: parseFloat(tr.querySelector('.ratio').value) || 1,
                 base_sale_price: parseNumber(tr.querySelector('.base-sale-price').value),
                 sale_price: parseNumber(tr.querySelector('.sale-price').value),
                 barcode: (tr.querySelector('.line-barcode')?.value || '').trim(),
+                barcode1: (tr.querySelector('.line-barcode1')?.value || '').trim(),
                 is_deleted: false}
             });
         }
@@ -913,7 +921,8 @@ async function upsertProduct(item) {
             unit_ratio: item.ratio,
             price: item.sale_price,
             product_type: 'goods',
-            barcode: item.barcode || ''
+            barcode: item.barcode || '',
+            barcode1: item.barcode1 || ''
         })
     });
     const data = await res.json();

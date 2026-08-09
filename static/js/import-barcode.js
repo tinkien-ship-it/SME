@@ -1,10 +1,18 @@
-/** Quét / gõ mã vạch NSX trên dòng phiếu nhập. */
+/** Quét / gõ mã vạch NSX — lẻ (tem hàng) và sỉ (tem thùng). */
 (function (global) {
     function toastMsg(msg, type) {
         if (typeof toast === 'function') return toast(msg, type === 'error' ? 'error' : 'success');
         if (global.Swal) {
             Swal.fire({ toast: true, icon: type === 'error' ? 'error' : 'success', title: msg, timer: 2600, showConfirmButton: false });
         }
+    }
+
+    function isWholesale(opts) {
+        return (opts || {}).barcodeRole === 'wholesale';
+    }
+
+    function barcodeInput(row, opts) {
+        return row.querySelector(isWholesale(opts) ? '.line-barcode1' : '.line-barcode');
     }
 
     async function lookup(code) {
@@ -16,11 +24,17 @@
         return res.json();
     }
 
-    function fillBarcodeInput(row, product, scanned, preferScanned) {
-        const el = row.querySelector('.line-barcode');
+    function fillBarcodeInput(row, product, scanned, opts) {
+        opts = opts || {};
+        const wholesale = isWholesale(opts);
+        const el = barcodeInput(row, opts);
         if (!el) return;
-        if (preferScanned && scanned) {
+        if (opts.preferScanned && scanned) {
             el.value = scanned;
+            return;
+        }
+        if (wholesale) {
+            el.value = (product && (product.barcode1 || scanned)) || scanned || '';
             return;
         }
         if (product && product.matched_wholesale && product.barcode1) {
@@ -32,11 +46,12 @@
         }
     }
 
-    async function attachBarcode(productId, scanned) {
+    async function attachBarcode(productId, payload) {
+        const body = typeof payload === 'string' ? { barcode: payload } : (payload || {});
         const res = await fetch('/api/products/' + encodeURIComponent(productId) + '/attach-barcode', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ barcode: scanned }),
+            body: JSON.stringify(body),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) {
@@ -49,12 +64,12 @@
         opts = opts || {};
         const scanned = String(code || '').trim();
         if (!scanned) return;
+        const wholesale = isWholesale(opts);
         const pid = parseInt(row.querySelector('.p-id')?.value, 10) || 0;
         try {
             const data = await lookup(scanned);
             if (!data.success) throw new Error(data.error || 'Không tra cứu được mã');
 
-            // Sửa phiếu: dòng đã có SP — gắn tem vào đúng SP đó, không đổi sang SP khác.
             if (pid) {
                 if (data.found && data.product && Number(data.product.id) !== pid) {
                     toastMsg(
@@ -63,27 +78,46 @@
                     );
                     return;
                 }
-                fillBarcodeInput(row, null, scanned, true);
-                await attachBarcode(pid, scanned);
-                toastMsg('Đã gắn mã vạch vào sản phẩm', 'success');
+                fillBarcodeInput(row, null, scanned, Object.assign({}, opts, { preferScanned: true }));
+                const saved = await attachBarcode(pid, wholesale ? { barcode1: scanned } : { barcode: scanned });
+                const stored = wholesale
+                    ? ((saved && saved.barcode1) || scanned)
+                    : ((saved && saved.barcode) || scanned);
+                fillBarcodeInput(row, null, stored, Object.assign({}, opts, { preferScanned: true }));
+                toastMsg(
+                    wholesale
+                        ? ('Đã gắn mã vạch sỉ (thùng): ' + stored)
+                        : (stored && stored !== scanned
+                            ? ('Đã gắn mã ' + stored + ' (rút từ QR)')
+                            : 'Đã gắn mã vạch / QR vào sản phẩm'),
+                    'success'
+                );
                 return;
             }
 
-            fillBarcodeInput(row, data.found ? Object.assign({}, data.product, {
-                matched_wholesale: data.product && data.product.matched_wholesale,
-            }) : null, scanned, !!opts.preferScanned || !data.found);
+            fillBarcodeInput(row, data.found ? data.product : null, scanned, Object.assign({}, opts, {
+                preferScanned: !!opts.preferScanned || !data.found,
+            }));
 
             if (data.found && data.product && typeof opts.setProductToRow === 'function') {
                 opts.setProductToRow(row, data.product, 'exact', opts.invoiceUnit || '');
-                fillBarcodeInput(row, Object.assign({}, data.product, {
-                    matched_wholesale: data.product.matched_wholesale,
-                }), scanned, !!opts.preferScanned);
-                toastMsg('Đã khớp sản phẩm theo mã vạch', 'success');
+                fillBarcodeInput(row, data.product, scanned, Object.assign({}, opts, {
+                    preferScanned: !!opts.preferScanned || wholesale,
+                }));
+                toastMsg(
+                    wholesale ? 'Đã khớp sản phẩm theo mã vạch sỉ (thùng)' : 'Đã khớp sản phẩm theo mã vạch',
+                    'success'
+                );
                 const qty = row.querySelector('.qty');
                 if (qty) qty.focus();
             } else {
                 if (typeof opts.onUnmatched === 'function') opts.onUnmatched(scanned);
-                toastMsg('Đã ghi mã — lưu phiếu để gắn vào sản phẩm mới', 'success');
+                toastMsg(
+                    wholesale
+                        ? 'Đã ghi mã sỉ — lưu phiếu để gắn tem thùng'
+                        : 'Đã ghi mã — lưu phiếu để gắn vào sản phẩm mới',
+                    'success'
+                );
                 const nameEl = row.querySelector('.product-name');
                 if (nameEl && !nameEl.value.trim()) nameEl.focus();
             }
@@ -102,12 +136,12 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header py-2">
-                        <h6 class="modal-title mb-0">Quét mã vạch trên hàng</h6>
+                        <h6 class="modal-title mb-0" id="importBarcodeScannerTitle">Quét mã vạch trên hàng</h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div id="importBarcodeReader" style="min-height:240px"></div>
-                        <p class="small text-muted mt-2 mb-0">Đưa tem EAN / UPC / Code128 vào khung ngang. Giữ máy cách tem ~10–20 cm.</p>
+                        <p class="small text-muted mt-2 mb-0">Đưa tem QR hoặc mã vạch vào khung vuông. Giữ máy cách tem ~10–20 cm.</p>
                     </div>
                 </div>
             </div>`;
@@ -134,8 +168,9 @@
         const F = global.Html5QrcodeSupportedFormats;
         if (!F) return null;
         return [
+            F.QR_CODE, F.DATA_MATRIX,
             F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E,
-            F.CODE_128, F.CODE_39, F.ITF, F.CODABAR, F.QR_CODE,
+            F.CODE_128, F.CODE_39, F.ITF, F.CODABAR,
         ];
     }
 
@@ -150,10 +185,10 @@
     async function startScanner(bsModal) {
         if (startingCamera) return;
         startingCamera = true;
-        const qrbox = (viewW, viewH) => ({
-            width: Math.max(220, Math.floor(Math.min(viewW * 0.92, 400))),
-            height: Math.max(90, Math.floor(Math.min(viewH * 0.36, 150))),
-        });
+        const qrbox = (viewW, viewH) => {
+            const size = Math.max(200, Math.floor(Math.min(viewW, viewH) * 0.72));
+            return { width: size, height: size };
+        };
         const onDecoded = async (decoded) => {
             const target = scanTarget;
             await stopCamera();
@@ -204,6 +239,12 @@
             return;
         }
         const modalEl = ensureScannerModal();
+        const title = modalEl.querySelector('#importBarcodeScannerTitle');
+        if (title) {
+            title.textContent = isWholesale(opts)
+                ? 'Quét mã vạch sỉ (tem thùng)'
+                : 'Quét mã vạch lẻ trên hàng';
+        }
         const reader = modalEl.querySelector('#importBarcodeReader');
         if (reader) reader.innerHTML = '';
         const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -212,30 +253,40 @@
         bsModal.show();
     }
 
-    function bindLine(row, opts) {
-        const input = row.querySelector('.line-barcode');
+    function bindOne(row, selector, btnSelector, role, opts) {
+        const input = row.querySelector(selector);
         if (!input || input.dataset.ketoBcBound) return;
         input.dataset.ketoBcBound = '1';
+        const lineOpts = () => Object.assign({}, opts || {}, { barcodeRole: role });
         input.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter') return;
             e.preventDefault();
-            applyToRow(row, input.value, opts || {});
+            applyToRow(row, input.value, lineOpts());
         });
-        const btn = row.querySelector('.btn-scan-line');
+        const btn = row.querySelector(btnSelector);
         if (btn) {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                openCamera(row, opts || {});
+                openCamera(row, lineOpts());
             });
         }
     }
 
-    function barcodeCellHtml(value) {
+    function bindLine(row, opts) {
+        bindOne(row, '.line-barcode', '.btn-scan-line', 'retail', opts);
+        bindOne(row, '.line-barcode1', '.btn-scan-line1', 'wholesale', opts);
+    }
+
+    function barcodeCellHtml(value, kind) {
+        const wholesale = kind === 'wholesale' || kind === 'barcode1';
         const v = String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        const cls = wholesale ? 'line-barcode1' : 'line-barcode';
+        const btn = wholesale ? 'btn-scan-line1' : 'btn-scan-line';
+        const ph = wholesale ? 'Tem thùng / sỉ...' : 'Tem lẻ NSX...';
         return `<div class="input-group input-group-sm">
-            <input type="text" class="line-barcode form-control form-control-sm border-0"
-                   placeholder="Quét tem NSX..." value="${v}" autocomplete="off" inputmode="numeric">
-            <button type="button" class="btn btn-outline-secondary btn-scan-line px-2" title="Camera quét mã">
+            <input type="text" class="${cls} form-control form-control-sm border-0"
+                   placeholder="${ph}" value="${v}" autocomplete="off">
+            <button type="button" class="btn btn-outline-secondary ${btn} px-2" title="${wholesale ? 'Camera quét tem thùng' : 'Camera quét mã lẻ'}">
                 <i class="bi bi-upc-scan"></i>
             </button>
         </div>`;
