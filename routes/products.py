@@ -9,13 +9,12 @@ from db_utils import get_db_connection
 from Services.hkd_sector import HKD_SECTORS, normalize_nn_code, resolve_hkd_sector
 
 
-def _assign_goods_codes(c, product_id, unit1=None):
-    code = f"SP{product_id:04d}"
-    barcode = code + "01"
-    barcode1 = code + "02" if unit1 else None
-    c.execute(
-        "UPDATE products SET product_code=?, barcode=?, barcode1=? WHERE id=?",
-        (code, barcode, barcode1, product_id),
+def _assign_goods_codes(c, product_id, unit1=None, external_barcode=None, external_barcode1=None):
+    from Services.import_line_helpers import assign_product_codes
+    code, barcode, _b1 = assign_product_codes(
+        c, product_id, 'goods', unit1,
+        external_barcode=external_barcode,
+        external_barcode1=external_barcode1,
     )
     return code, barcode
 
@@ -40,12 +39,10 @@ def _assign_finished_goods_codes(c, product_id, unit1=None):
     return code, barcode
 
 
-def _assign_service_codes(c, product_id):
-    code = _next_seq_product_code(c, 'DV')
-    barcode = f"{code}01"
-    c.execute(
-        "UPDATE products SET product_code=?, barcode=?, barcode1=NULL WHERE id=?",
-        (code, barcode, product_id),
+def _assign_service_codes(c, product_id, external_barcode=None):
+    from Services.import_line_helpers import assign_product_codes
+    code, barcode, _b1 = assign_product_codes(
+        c, product_id, 'service', None, external_barcode=external_barcode,
     )
     return code, barcode
 
@@ -137,42 +134,23 @@ def get_product_list_with_stock(query=None):
 def register_products_routes(app):
     @app.route('/api/scan', methods=['POST'])
     def scan_barcode():
-        barcode = request.json.get('barcode', '').strip()
+        barcode = (request.json.get('barcode') or '').strip()
         conn = get_db_connection()
-        db_type = os.getenv('DB_TYPE', 'sqlite').lower()
-
         try:
             from Services.scale_service import resolve_weight_scan
+            from Services.product_barcode import find_product_by_scan, scan_matches_barcode1
+
             weight_scan = resolve_weight_scan(barcode)
             if weight_scan.get('success'):
                 return jsonify(weight_scan)
 
-            # Sử dụng placeholder phù hợp (symbol) cho từng DB 
-            symbol = '?' if db_type == 'sqlite' else '%s'
-            query = f"""
-                SELECT id, barcode, barcode1, name, unit, unit1, base_price, price, unit_ratio,
-                       sell_by_weight, weight_plu, COALESCE(product_type, 'goods') AS product_type
-                FROM products 
-                WHERE barcode = {symbol} OR barcode1 = {symbol}
-            """
-
-            if db_type == 'sqlite':
-                product = conn.execute(query, (barcode, barcode)).fetchone()
-            else:
-                with conn.cursor() as cursor:
-                    cursor.execute(query, (barcode, barcode))
-                    product = cursor.fetchone()
-
+            product = find_product_by_scan(conn, barcode)
             if product:
-                is_unit1 = (barcode == product['barcode1'])
-                sell_by_weight = int(product['sell_by_weight'] or 0) == 1
-                product_type = (product['product_type'] or 'goods').lower()
+                is_unit1 = scan_matches_barcode1(barcode, product['barcode1'])
+                sell_by_weight = int((product['sell_by_weight'] if 'sell_by_weight' in product.keys() else 0) or 0) == 1
+                product_type = ((product['product_type'] if 'product_type' in product.keys() else None) or 'goods').lower()
                 is_service = product_type == 'service'
-                stock_row = conn.execute(
-                    "SELECT COALESCE(quantity, 0) AS quantity FROM inventory WHERE product_id = ?",
-                    (product['id'],),
-                ).fetchone()
-                stock = float(stock_row['quantity'] if stock_row else 0)
+                stock = float(product['quantity'] if 'quantity' in product.keys() else 0)
                 if is_unit1 and not is_service:
                     ratio = float(product['unit_ratio'] or 1) or 1.0
                     max_qty = int(stock / ratio) if ratio else int(stock)
@@ -191,9 +169,45 @@ def register_products_routes(app):
                         "weightPlu": product['weight_plu'],
                         "product_type": product_type,
                         "maxQty": max_qty,
+                        "barcode": product['barcode'],
+                        "barcode1": product['barcode1'],
+                        "product_code": product['product_code'],
                     }
                 })
             return jsonify({"success": False, "message": "Không tìm thấy sản phẩm"}), 404
+        finally:
+            conn.close()
+
+    @app.route('/api/products/lookup-scan', methods=['POST', 'GET'])
+    @login_required
+    def api_lookup_scan():
+        """Tra cứu SP theo tem NSX / mã nội bộ — dùng phiếu nhập kho."""
+        if request.method == 'GET':
+            barcode = (request.args.get('barcode') or request.args.get('q') or '').strip()
+        else:
+            data = request.get_json(silent=True) or {}
+            barcode = (data.get('barcode') or data.get('q') or '').strip()
+        if not barcode:
+            return jsonify({"success": False, "error": "Thiếu mã vạch"}), 400
+        conn = get_db_connection()
+        try:
+            from Services.product_barcode import find_product_by_scan, scan_matches_barcode1
+            row = find_product_by_scan(conn, barcode)
+            if not row:
+                return jsonify({
+                    "success": True,
+                    "found": False,
+                    "barcode": barcode,
+                    "product": None,
+                })
+            product = dict(row)
+            product['matched_wholesale'] = scan_matches_barcode1(barcode, product.get('barcode1'))
+            return jsonify({
+                "success": True,
+                "found": True,
+                "barcode": barcode,
+                "product": product,
+            })
         finally:
             conn.close()
 
@@ -250,7 +264,9 @@ def register_products_routes(app):
                     """, (name, unit, base_price, hkd_sector))
                     new_id = c.lastrowid
                     c.execute("INSERT OR IGNORE INTO inventory (product_id, quantity, avg_cost) VALUES (?, 0, 0)", (new_id,))
-                    code, barcode = _assign_service_codes(c, new_id)
+                    code, barcode = _assign_service_codes(
+                        c, new_id, external_barcode=(data.get('barcode') or '').strip() or None,
+                    )
                     conn.commit()
                     return jsonify({"success": True, "id": new_id, "product_code": code, "barcode": barcode})
 
@@ -271,7 +287,12 @@ def register_products_routes(app):
                     ))
                     new_id = c.lastrowid
                     c.execute("INSERT INTO inventory (product_id, quantity, avg_cost) VALUES (?, 0, 0)", (new_id,))
-                    code, barcode = _assign_finished_goods_codes(c, new_id, unit1)
+                    from Services.import_line_helpers import assign_product_codes
+                    code, barcode, _b1 = assign_product_codes(
+                        c, new_id, 'finished_goods', unit1,
+                        external_barcode=(data.get('barcode') or '').strip() or None,
+                        external_barcode1=(data.get('barcode1') or '').strip() or None,
+                    )
                     conn.commit()
                     return jsonify({"success": True, "id": new_id, "product_code": code, "barcode": barcode})
 
@@ -286,7 +307,11 @@ def register_products_routes(app):
                 ))
                 new_id = c.lastrowid
                 c.execute("INSERT INTO inventory (product_id, quantity, avg_cost) VALUES (?, 0, 0)", (new_id,))
-                code, barcode = _assign_goods_codes(c, new_id, unit1)
+                code, barcode = _assign_goods_codes(
+                    c, new_id, unit1,
+                    external_barcode=(data.get('barcode') or '').strip() or None,
+                    external_barcode1=(data.get('barcode1') or '').strip() or None,
+                )
                 conn.commit()
                 return jsonify({"success": True, "id": new_id, "product_code": code, "barcode": barcode})
 
@@ -364,9 +389,13 @@ def register_products_routes(app):
                     )
                     prow = c.fetchone()
                     existing_code = (prow[0] if prow else '') or ''
-                    if not str(existing_code).strip():
-                        _assign_finished_goods_codes(
-                            c, product_id, (prow[1] if prow else None) or data.get('unit1'),
+                    if not str(existing_code).strip() or ('barcode' in data) or ('barcode1' in data):
+                        from Services.import_line_helpers import assign_product_codes
+                        assign_product_codes(
+                            c, product_id, 'finished_goods',
+                            (prow[1] if prow else None) or data.get('unit1'),
+                            external_barcode=(data.get('barcode') or '').strip() or None,
+                            external_barcode1=(data.get('barcode1') or '').strip() or None,
                         )
                 else:
                     c.execute("""UPDATE products SET 
@@ -378,6 +407,13 @@ def register_products_routes(app):
                                1 if str(data.get('sell_by_weight', 0)) in ('1', 'true', True) else 0,
                                (data.get('weight_plu') or '').strip() or None,
                                product_id))
+                    if 'barcode' in data or 'barcode1' in data:
+                        from Services.import_line_helpers import assign_product_codes
+                        assign_product_codes(
+                            c, product_id, 'goods', data.get('unit1'),
+                            external_barcode=(data.get('barcode') or '').strip() or None,
+                            external_barcode1=(data.get('barcode1') or '').strip() or None,
+                        )
                 conn.commit()
                 return jsonify({"success": True, "id": product_id})
 
@@ -435,6 +471,9 @@ def register_products_routes(app):
 
                 return jsonify({"success": True, "message": "Đã xóa sản phẩm thành công"})
 
+        except ValueError as e:
+            if conn: conn.rollback()
+            return jsonify({"success": False, "error": str(e)}), 400
         except sqlite3.Error as e:
             if conn: conn.rollback()
             return jsonify({"success": False, "error": f"Lỗi DB: {str(e)}"}), 500
@@ -536,21 +575,15 @@ def register_products_routes(app):
 
     @app.route('/api/products/barcode/<barcode>', methods=['GET'])
     def api_get_product_by_barcode(barcode):
-        #"""Route xử lý tìm kiếm sản phẩm bằng mã vạch (dùng Enter)"""
-        # Lấy danh sách sản phẩm theo mã vạch
-        response, status_code = get_product_list_with_stock(query=barcode)
-
-        if status_code != 200:
-            return response, status_code
-
-        products = response.get_json()
-
-        # Trả về sản phẩm đầu tiên tìm được (vì barcode là UNIQUE)
-        if products and products[0]:
-            return jsonify(products[0])
-        else:
-            # Trả về 404/None nếu không tìm thấy
-            return jsonify(None), 404
+        conn = get_db_connection()
+        try:
+            from Services.product_barcode import find_product_by_scan
+            row = find_product_by_scan(conn, barcode)
+            if not row:
+                return jsonify(None), 404
+            return jsonify(dict(row))
+        finally:
+            conn.close()
 
     @app.route('/api/products/next-code', methods=['GET'])
     def api_products_next_code():
@@ -630,6 +663,18 @@ def register_products_routes(app):
                         "UPDATE products SET product_type=?, hkd_sector_code=? WHERE id=?",
                         (requested_type, sector, product_id),
                     )
+                ext_bc = (data.get('barcode') or '').strip() or None
+                ext_b1 = (data.get('barcode1') or '').strip() or None
+                if ext_bc or ext_b1:
+                    from Services.import_line_helpers import assign_product_codes
+                    ptype = requested_type if requested_type not in ('', 'ready_made') else (current_type or 'goods')
+                    if ptype in ('ready_made', 'raw_materials'):
+                        ptype = 'goods'
+                    assign_product_codes(
+                        c, product_id, ptype or 'goods', unit1,
+                        external_barcode=ext_bc,
+                        external_barcode1=ext_b1,
+                    )
             else:
                 product_type = requested_type
                 hkd_sector = resolve_hkd_sector(product_type)
@@ -651,14 +696,17 @@ def register_products_routes(app):
                     assign_raw_material_product_codes(c, product_id, bool(unit1))
                 elif product_type in ('materials', 'fixed_asset', 'tools', 'service', 'goods'):
                     from Services.import_line_helpers import assign_product_codes
-                    assign_product_codes(c, product_id, product_type, unit1)
+                    assign_product_codes(
+                        c, product_id, product_type, unit1,
+                        external_barcode=(data.get('barcode') or '').strip() or None,
+                        external_barcode1=(data.get('barcode1') or '').strip() or None,
+                    )
                 else:
-                    formatted_code = f"SP{product_id:04d}"
-                    barcode = data.get('barcode') or (formatted_code + "01")
-                    barcode1 = data.get('barcode1') or ((formatted_code + "02") if unit1 else None)
-                    c.execute(
-                        "UPDATE products SET product_code=?, barcode=?, barcode1=? WHERE id=?",
-                        (formatted_code, barcode, barcode1, product_id),
+                    from Services.import_line_helpers import assign_product_codes
+                    assign_product_codes(
+                        c, product_id, 'goods', unit1,
+                        external_barcode=(data.get('barcode') or '').strip() or None,
+                        external_barcode1=(data.get('barcode1') or '').strip() or None,
                     )
 
                 if product_type not in ('service', 'fixed_asset', 'tools'):
@@ -674,6 +722,12 @@ def register_products_routes(app):
                 "success": True,
                 "product": dict(p)
             })
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({"success": False, "error": str(e)}), 400
+        except sqlite3.IntegrityError as e:
+            conn.rollback()
+            return jsonify({"success": False, "error": f"Mã vạch trùng: {e}"}), 400
         except Exception as e:
             conn.rollback()
             return jsonify({"success": False, "error": str(e)}), 500

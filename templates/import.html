@@ -14,7 +14,8 @@
     .form-label.small { margin-bottom: 2px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
     
     /* Table styling */
-    #itemsTable { font-size: 13px; table-layout: fixed; width: 2800px; min-width: 100%; }
+    #itemsTable { font-size: 13px; table-layout: fixed; width: 3000px; min-width: 100%; }
+    .line-barcode { font-size: 12px; letter-spacing: 0.02em; }
     #itemsTable th { background: #f1f5f9; color: #475569; font-weight: 600; padding: 10px 5px; text-align: center; border-bottom: 2px solid #cbd5e1; }
     #itemsTable td { padding: 3px !important; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     
@@ -191,6 +192,9 @@
                 <span class="small fw-bold text-primary uppercase"><i class="bi bi-list-ul"></i>
                     {% if import_mode == 'service' %}Chi tiết dịch vụ / chi phí{% elif import_mode == 'fb' %}Chi tiết hàng dùng ngay / nguyên vật liệu{% else %}Chi tiết mặt hàng{% endif %}
                 </span>
+                {% if import_mode != 'service' %}
+                <span class="small text-muted fw-normal ms-2">Quét tem in sẵn trên hàng (Enter / camera). Để trống → hệ thống tự sinh mã khi lưu.</span>
+                {% endif %}
                 <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="addRow()">
                     <i class="bi bi-plus-lg"></i> THÊM DÒNG
                 </button>
@@ -204,6 +208,7 @@
                                 <th style="width:110px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Kho<div class="resizer"></div></th>
                                 <th style="width:130px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Loại Hàng<div class="resizer"></div></th>
                                 <th style="width:280px;">Tên {% if import_mode == 'service' %}dịch vụ{% else %}hàng{% endif %}<div class="resizer"></div></th>
+                                <th style="width:170px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã vạch<div class="resizer"></div></th>
                                 <th style="width:100px;">ĐVT Phiếu<div class="resizer"></div></th>
                                 <th style="width:90px;">Số Lượng<div class="resizer"></div></th>
                                 <th style="width:120px;">Đơn giá<div class="resizer"></div></th>
@@ -254,6 +259,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ url_for('static', filename='js/import-barcode.js') }}"></script>
 
 <style>
     .suggest-box {
@@ -559,6 +565,8 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         row.querySelector('.base-sale-price').value = formatVNDCustom(product.base_price);
         row.querySelector('.sale-price').value = formatVNDCustom(product.price);
         if (codeEl) codeEl.value = product.product_code || '';
+        const bcEl = row.querySelector('.line-barcode');
+        if (bcEl) bcEl.value = product.barcode || '';
         const typeSelect = row.querySelector('.line-type-select');
         if (product.product_type && typeSelect && LINE_TYPE_OPTIONS.some(o => o.value === product.product_type)) {
             typeSelect.value = product.product_type;
@@ -595,6 +603,7 @@ function addRow(data = {}) {
             <input type="text" class="product-name form-control form-control-sm border-0" value="${data.invoice_name || ''}" placeholder="Gõ tên sản phẩm...">
             <input type="hidden" class="invoice-name-hidden" value="${data.invoice_name || ''}">
         </td>
+        <td class="${svcHide}">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
         <td><input type="text" class="invoice-unit form-control form-control-sm text-center border-0" value="${data.unit || ''}"></td>
         <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty || 1}"></td>
         <td><input type="text" class="buy-price form-control form-control-sm text-end border-0" value="${formatVNDCustom(data.price || 0)}"></td>
@@ -638,6 +647,9 @@ function addRow(data = {}) {
     }
     applyLineTypeUI(tr);
     attachRowEvents(tr);
+    if (!IS_SERVICE_MODE && window.KetoImportBarcode) {
+        KetoImportBarcode.bindLine(tr, { setProductToRow });
+    }
     calcRow(tr);
 }
 
@@ -1024,7 +1036,8 @@ function getConsolidatedItems() {
                 wholesale_unit: (tr.querySelector('.wholesale-unit')?.value || '').trim(),
                 ratio: parseFloat(tr.querySelector('.ratio')?.value) || 1,
                 base_sale_price: parseNumber(tr.querySelector('.base-sale-price')?.value),
-                sale_price: parseNumber(tr.querySelector('.sale-price')?.value)
+                sale_price: parseNumber(tr.querySelector('.sale-price')?.value),
+                barcode: (tr.querySelector('.line-barcode')?.value || '').trim()
             });
         }
     });
@@ -1046,7 +1059,8 @@ async function upsertProduct(item) {
             unit1: item.wholesale_unit || null,
             unit_ratio: item.ratio,
             price: item.sale_price,
-            product_type: item.line_type || 'goods'
+            product_type: item.line_type || 'goods',
+            barcode: item.barcode || ''
         })
     });
     const data = await res.json();

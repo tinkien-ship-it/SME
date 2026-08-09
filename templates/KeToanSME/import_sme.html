@@ -12,7 +12,8 @@
     .info-header { background: var(--header-bg); border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
     .form-label.small { margin-bottom: 2px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
    
-    #itemsTable { font-size: 13px; table-layout: fixed; width: 2750px; min-width: 100%; }
+    #itemsTable { font-size: 13px; table-layout: fixed; width: 2950px; min-width: 100%; }
+    .line-barcode { font-size: 12px; }
     #itemsTable th { background: #f1f5f9; color: #475569; font-weight: 600; padding: 10px 5px; text-align: center; border-bottom: 2px solid #cbd5e1; }
     #itemsTable td { padding: 3px !important; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
    
@@ -211,6 +212,7 @@
                         Bút toán: Có 3333 (NK), Có 3332 (TTĐB).
                     </div>
                 </div>
+                <span class="small text-muted me-2">Quét tem in sẵn trên hàng (Enter / camera). Để trống → tự sinh mã khi lưu.</span>
                 <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="addRow()">
                     <i class="bi bi-plus-lg"></i> THÊM DÒNG
                 </button>
@@ -225,6 +227,7 @@
                                 <th style="width:200px; color:#b30000;" id="thLineType">Loại hàng</th>
                                 <th style="width:110px;" id="thAcctHint">Định khoản</th>
                                 <th style="width:280px;">Tên hàng</th>
+                                <th style="width:170px;">Mã vạch</th>
                                 <th style="width:90px;">ĐVT</th>
                                 <th style="width:80px;">SL</th>
                                 <th style="width:110px;">Đơn giá</th>
@@ -278,6 +281,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ url_for('static', filename='js/import-barcode.js') }}"></script>
 
 <style>
     .suggest-box { position: fixed !important; z-index: 99999 !important; background: white; border: 1px solid #86b7fe;
@@ -641,6 +645,8 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         row.querySelector('.base-sale-price').value = formatVNDCustom(product.base_price);
         row.querySelector('.sale-price').value = formatVNDCustom(product.price);
         if (codeEl) codeEl.value = product.product_code || '';
+        const bcEl = row.querySelector('.line-barcode');
+        if (bcEl) bcEl.value = product.barcode || '';
         const typeSelect = row.querySelector('.line-type-select');
         if (product.product_type && typeSelect) {
             const nt = normalizeLineType(product.product_type);
@@ -684,6 +690,7 @@ function addRow(data = {}) {
             <input type="text" class="product-name form-control form-control-sm border-0" value="${(data.invoice_name || '').replace(/"/g, '&quot;')}" placeholder="Gõ tên sản phẩm...">
             <input type="hidden" class="invoice-name-hidden" value="${(data.invoice_name || '').replace(/"/g, '&quot;')}">
         </td>
+        <td>${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
         <td><input type="text" class="invoice-unit form-control form-control-sm text-center border-0" value="${data.unit || ''}"></td>
         <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty != null && data.qty !== '' ? data.qty : 1}"></td>
         <td><input type="text" class="buy-price form-control form-control-sm text-end border-0" value="${formatVNDCustom(data.price || 0)}"></td>
@@ -731,6 +738,9 @@ function addRow(data = {}) {
 
     attachRowEvents(tr);
     applyLineTypeUI(tr);
+    if (window.KetoImportBarcode) {
+        KetoImportBarcode.bindLine(tr, { setProductToRow });
+    }
     const isImport = getImportType() === 'IMPORT';
     tr.querySelectorAll('.nk-cell').forEach(el => el.classList.toggle('hidden-field', !isImport));
 
@@ -1235,6 +1245,7 @@ async function loadImportForEdit(importId) {
                 excise_tax_pct: item.excise_tax_pct || item.ttdb_pct || 0,
                 excise_tax_amount: item.excise_tax_amount || item.ttdb_amount || 0,
                 product_code: item.product_code || '',
+                barcode: item.barcode || '',
                 base_unit: item.base_unit || item.unit || '',
                 wholesale_unit: item.wholesale_unit || '',
                 unit_ratio: item.unit_ratio || 1,
@@ -1451,7 +1462,8 @@ function getConsolidatedItems() {
             wholesale_unit: tr.querySelector('.wholesale-unit').value.trim(),
             ratio: parseFloat(tr.querySelector('.ratio').value) || 1,
             base_sale_price: parseNumber(tr.querySelector('.base-sale-price').value),
-            sale_price: parseNumber(tr.querySelector('.sale-price').value)
+            sale_price: parseNumber(tr.querySelector('.sale-price').value),
+            barcode: (tr.querySelector('.line-barcode')?.value || '').trim()
         };
 
         if (consolidatedMap.has(key)) {
@@ -1555,7 +1567,8 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
                     unit1: it.wholesale_unit || null,
                     unit_ratio: it.ratio || 1,
                     price: it.sale_price || 0,
-                    product_type: it.line_type || 'goods'
+                    product_type: it.line_type || 'goods',
+                    barcode: it.barcode || ''
                 })
             });
             const upsertData = await upsertRes.json();

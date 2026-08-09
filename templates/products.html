@@ -140,7 +140,16 @@
                                 <label class="form-label mb-0"><small>Mã hàng</small></label>
                                 <input type="text" class="form-control form-control-sm" id="productCode" readonly>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Mã vạch (tem trên hàng)</small></label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control form-control-sm" id="barcode" placeholder="Quét hoặc gõ EAN...">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnScanBarcode" title="Camera">
+                                        <i class="fas fa-camera"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
                                 <label class="form-label mb-0"><small>Tên sản phẩm <span class="text-danger">*</span></small></label>
                                 <input type="text" class="form-control form-control-sm" id="name" required>
                             </div>
@@ -193,8 +202,8 @@
                                 <input type="text" class="form-control form-control-sm format-input" id="price" value="0">
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label mb-0"><small>Mã vạch (ĐV Sỉ)</small></label>
-                                <input type="text" id="barcode1" name="barcode1" class="form-control form-control-sm" readonly>
+                                <label class="form-label mb-0"><small>Mã vạch (ĐV Sỉ / thùng)</small></label>
+                                <input type="text" id="barcode1" name="barcode1" class="form-control form-control-sm" placeholder="Tem lốc/thùng">
                             </div>
                             <div class="col-md-2 d-flex justify-content-end">
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="resetForm()">Hủy</button>
@@ -219,7 +228,11 @@
                                 <label class="form-label mb-0"><small>Mã thành phẩm</small></label>
                                 <input type="text" class="form-control form-control-sm bg-light" id="fgProductCode" readonly>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Mã vạch</small></label>
+                                <input type="text" class="form-control form-control-sm" id="fgBarcode" placeholder="Tem trên hàng">
+                            </div>
+                            <div class="col-md-2">
                                 <label class="form-label mb-0"><small>Tên thành phẩm <span class="text-danger">*</span></small></label>
                                 <input type="text" class="form-control form-control-sm" id="fgName" required>
                             </div>
@@ -271,7 +284,7 @@
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label mb-0"><small>Mã vạch (ĐV Sỉ)</small></label>
-                                <input type="text" id="fgBarcode1" class="form-control form-control-sm" readonly>
+                                <input type="text" id="fgBarcode1" class="form-control form-control-sm" placeholder="Tem lốc/thùng">
                             </div>
                             <div class="col-md-2 d-flex justify-content-end">
                                 <button type="button" class="btn btn-sm btn-secondary" onclick="resetFinishedForm()">Hủy</button>
@@ -358,6 +371,7 @@
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ url_for('static', filename='js/import-barcode.js') }}"></script>
 <script>
 let products = [];
 let productId = null;
@@ -803,6 +817,7 @@ function editProduct(id) {
         document.getElementById('fgPrice').value = formatVND(p.price);
         document.getElementById('fgUnit1').value = p.unit1 || '';
         document.getElementById('fgUnitRatio').value = p.unit_ratio || 1;
+        document.getElementById('fgBarcode').value = p.barcode || '';
         document.getElementById('fgBarcode1').value = p.barcode1 || '';
         document.getElementById('fgSellByWeight').checked = parseInt(p.sell_by_weight) === 1;
         document.getElementById('fgWeightPlu').value = p.weight_plu || '';
@@ -817,6 +832,7 @@ function editProduct(id) {
     document.getElementById('formTitle').textContent = 'Sửa Sản Phẩm';
     document.getElementById('productId').value = id;
     document.getElementById('productCode').value = p.product_code || '';
+    document.getElementById('barcode').value = p.barcode || '';
     document.getElementById('name').value = p.name;
     document.getElementById('unit').value = p.unit || 'Cái';
     document.getElementById('quantity').value = parseFloat(p.quantity || 0);
@@ -841,6 +857,7 @@ function resetForm() {
     document.getElementById('unitRatio').value = '1';
     document.getElementById('quantity').value = '0';
     document.getElementById('productCode').value = '';
+    document.getElementById('barcode').value = '';
     document.getElementById('barcode1').value = '';
     document.getElementById('sellByWeight').checked = false;
     document.getElementById('weightPlu').value = '';
@@ -869,6 +886,7 @@ function resetFinishedForm() {
     document.getElementById('fgUnitRatio').value = '1';
     document.getElementById('fgQuantity').value = '0';
     document.getElementById('fgProductCode').value = '';
+    document.getElementById('fgBarcode').value = '';
     document.getElementById('fgBarcode1').value = '';
     document.getElementById('fgSellByWeight').checked = false;
     document.getElementById('fgWeightPlu').value = '';
@@ -887,7 +905,9 @@ document.getElementById('finishedGoodsForm').addEventListener('submit', async fu
         unit1: document.getElementById('fgUnit1').value.trim() || '',
         unit_ratio: parseFloat(document.getElementById('fgUnitRatio').value) || 1,
         sell_by_weight: document.getElementById('fgSellByWeight').checked ? 1 : 0,
-        weight_plu: document.getElementById('fgWeightPlu').value.trim() || ''
+        weight_plu: document.getElementById('fgWeightPlu').value.trim() || '',
+        barcode: document.getElementById('fgBarcode').value.trim(),
+        barcode1: document.getElementById('fgBarcode1').value.trim()
     };
     if (!data.name) {
         showProductMsg('Tên thành phẩm không được để trống.', true);
@@ -924,7 +944,9 @@ document.getElementById('productForm').addEventListener('submit', async function
         unit1: document.getElementById('unit1').value.trim() || '',
         unit_ratio: parseFloat(document.getElementById('unitRatio').value) || 1,
         sell_by_weight: document.getElementById('sellByWeight').checked ? 1 : 0,
-        weight_plu: document.getElementById('weightPlu').value.trim() || ''
+        weight_plu: document.getElementById('weightPlu').value.trim() || '',
+        barcode: document.getElementById('barcode').value.trim(),
+        barcode1: document.getElementById('barcode1').value.trim()
     };
     if (!data.name) {
         showProductMsg('Tên sản phẩm không được để trống.', true);
@@ -1040,6 +1062,37 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fgBasePriceEl) fgBasePriceEl.value = formatVND(parseNumberVN(fgBasePriceEl.value));
     if (fgPriceEl) fgPriceEl.value = formatVND(parseNumberVN(fgPriceEl.value));
     if (servicePriceEl) servicePriceEl.value = formatVND(parseNumberVN(servicePriceEl.value));
+
+    const bcInput = document.getElementById('barcode');
+    const bcBtn = document.getElementById('btnScanBarcode');
+    if (bcInput) {
+        bcInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('name')?.focus();
+            }
+        });
+    }
+    if (bcBtn && window.KetoImportBarcode) {
+        bcBtn.addEventListener('click', () => {
+            const holder = document.createElement('div');
+            holder.innerHTML = KetoImportBarcode.barcodeCellHtml(bcInput.value || '');
+            holder.style.position = 'fixed';
+            holder.style.left = '-9999px';
+            document.body.appendChild(holder);
+            KetoImportBarcode.openCamera(holder, {
+                setProductToRow: (_row, product) => {
+                    document.getElementById('barcode').value =
+                        (product && product.barcode) || holder.querySelector('.line-barcode')?.value || '';
+                    holder.remove();
+                },
+                onUnmatched: (code) => {
+                    document.getElementById('barcode').value = code || '';
+                    holder.remove();
+                },
+            });
+        });
+    }
 });
 
 function openBarcodePrintProduct(productId) {

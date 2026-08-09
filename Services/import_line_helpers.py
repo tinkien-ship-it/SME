@@ -34,38 +34,88 @@ def peek_next_product_code(c, product_type):
     return None
 
 
-def assign_product_codes(c, product_id, product_type, unit1=None):
-    """Gán product_code + barcode sau INSERT. Trả về (code, barcode, barcode1)."""
+def assign_product_codes(c, product_id, product_type, unit1=None,
+                         external_barcode=None, external_barcode1=None):
+    """Gán product_code + barcode sau INSERT/upsert.
+
+    Tem NSX (external_barcode) được ưu tiên; không ghi đè mã NSX đã lưu.
+    Không có tem → sinh mã nội bộ SPxxxx01 như cũ.
+    """
+    from Services.product_barcode import (
+        barcode_owned_by_other,
+        is_internal_barcode,
+        normalize_scan_code,
+    )
+
     pt = (product_type or 'goods').strip().lower()
-    if pt == 'materials':
+    row = c.execute(
+        "SELECT product_code, barcode, barcode1 FROM products WHERE id = ?",
+        (product_id,),
+    ).fetchone()
+    existing_code = ''
+    existing_bc = ''
+    existing_b1 = ''
+    if row:
+        existing_code = (row['product_code'] if hasattr(row, 'keys') else row[0]) or ''
+        existing_bc = (row['barcode'] if hasattr(row, 'keys') else row[1]) or ''
+        existing_b1 = (row['barcode1'] if hasattr(row, 'keys') else row[2]) or ''
+    existing_code = str(existing_code).strip()
+    existing_bc = str(existing_bc).strip()
+    existing_b1 = str(existing_b1).strip()
+
+    if existing_code:
+        code = existing_code
+    elif pt == 'materials':
         code = _max_seq_with_prefix(c, 'VT', 4)
-        barcode = f"{code}01"
-        barcode1 = f"{code}02" if unit1 else None
     elif pt == 'finished_goods':
-        # Giống products.html: TP001, barcode TP00101 / TP00102
         code = _max_seq_with_prefix(c, 'TP', 3)
-        barcode = f"{code}01"
-        barcode1 = f"{code}02" if unit1 else None
     elif pt == 'fixed_asset':
         code = _max_seq_with_prefix(c, 'TSCD', 4)
-        barcode = code
-        barcode1 = None
     elif pt == 'tools':
         code = _max_seq_with_prefix(c, 'CCDC', 4)
-        barcode = code
-        barcode1 = None
     elif pt == 'service':
         code = _max_seq_with_prefix(c, 'DV', 3)
-        barcode = code
-        barcode1 = None
-    elif pt == 'goods':
-        code = f"SP{product_id:04d}"
-        barcode = f"{code}01"
-        barcode1 = f"{code}02" if unit1 else None
     else:
         code = f"SP{product_id:04d}"
-        barcode = f"{code}01"
-        barcode1 = f"{code}02" if unit1 else None
+
+    gen_bc = code if pt in ('fixed_asset', 'tools', 'service') else f"{code}01"
+    gen_b1 = f"{code}02" if unit1 and pt not in ('fixed_asset', 'tools', 'service') else None
+
+    conn = getattr(c, 'connection', c)
+    ext = normalize_scan_code(external_barcode)
+    if ext:
+        other = barcode_owned_by_other(conn, ext, exclude_id=product_id)
+        if other:
+            other_name = other['name'] if hasattr(other, 'keys') else other[1]
+            other_code = (other['product_code'] if hasattr(other, 'keys') else other[4]) or other[0]
+            raise ValueError(
+                f"Mã vạch '{ext}' đã gắn sản phẩm {other_code} — {other_name}"
+            )
+        barcode = ext
+    elif existing_bc:
+        barcode = existing_bc
+    else:
+        barcode = gen_bc
+
+    ext1 = normalize_scan_code(external_barcode1)
+    if ext1:
+        if ext1 == barcode:
+            raise ValueError("Mã vạch sỉ không được trùng mã vạch lẻ.")
+        other = barcode_owned_by_other(conn, ext1, exclude_id=product_id)
+        if other:
+            other_name = other['name'] if hasattr(other, 'keys') else other[1]
+            other_code = (other['product_code'] if hasattr(other, 'keys') else other[4]) or other[0]
+            raise ValueError(
+                f"Mã vạch sỉ '{ext1}' đã gắn sản phẩm {other_code} — {other_name}"
+            )
+        barcode1 = ext1
+    elif existing_b1:
+        barcode1 = existing_b1
+    elif unit1 and not is_internal_barcode(barcode, code):
+        # Có tem NSX ở ĐV lẻ — không tự bịa barcode1; để trống đến khi quét tem thùng
+        barcode1 = None
+    else:
+        barcode1 = gen_b1
 
     c.execute(
         "UPDATE products SET product_code=?, barcode=?, barcode1=? WHERE id=?",
