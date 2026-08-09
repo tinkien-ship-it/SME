@@ -19,6 +19,34 @@ def _assign_goods_codes(c, product_id, unit1=None, external_barcode=None, extern
     return code, barcode
 
 
+def _maybe_assign_product_codes(c, product_id, product_type, unit1=None,
+                                external_barcode=None, external_barcode1=None):
+    """Chỉ gán lại mã khi tem lẻ/sỉ thực sự đổi — sửa giá/ĐV sỉ không đụng barcode."""
+    from Services.import_line_helpers import assign_product_codes
+    from Services.product_barcode import barcodes_need_reassign
+
+    row = c.execute(
+        "SELECT barcode, barcode1, product_code FROM products WHERE id = ?",
+        (product_id,),
+    ).fetchone()
+    existing_bc = ''
+    existing_b1 = ''
+    existing_code = ''
+    if row:
+        existing_bc = (row['barcode'] if hasattr(row, 'keys') else row[0]) or ''
+        existing_b1 = (row['barcode1'] if hasattr(row, 'keys') else row[1]) or ''
+        existing_code = (row['product_code'] if hasattr(row, 'keys') else row[2]) or ''
+    ext_bc = (external_barcode or '').strip() or None
+    ext_b1 = (external_barcode1 or '').strip() or None
+    if str(existing_code).strip() and not barcodes_need_reassign(existing_bc, existing_b1, ext_bc, ext_b1):
+        return
+    assign_product_codes(
+        c, product_id, product_type, unit1,
+        external_barcode=ext_bc,
+        external_barcode1=ext_b1,
+    )
+
+
 def _next_seq_product_code(c, prefix):
     """Sinh mã DV001, TP001… theo max hiện có với prefix cho trước."""
     from Services.import_line_helpers import _max_seq_with_prefix
@@ -437,15 +465,12 @@ def register_products_routes(app):
                         (product_id,),
                     )
                     prow = c.fetchone()
-                    existing_code = (prow[0] if prow else '') or ''
-                    if not str(existing_code).strip() or ('barcode' in data) or ('barcode1' in data):
-                        from Services.import_line_helpers import assign_product_codes
-                        assign_product_codes(
-                            c, product_id, 'finished_goods',
-                            (prow[1] if prow else None) or data.get('unit1'),
-                            external_barcode=(data.get('barcode') or '').strip() or None,
-                            external_barcode1=(data.get('barcode1') or '').strip() or None,
-                        )
+                    _maybe_assign_product_codes(
+                        c, product_id, 'finished_goods',
+                        (prow[1] if prow else None) or data.get('unit1'),
+                        external_barcode=(data.get('barcode') or '').strip() or None,
+                        external_barcode1=(data.get('barcode1') or '').strip() or None,
+                    )
                 else:
                     c.execute("""UPDATE products SET 
                                  name=?, unit=?, base_price=?, price=?, unit1=?, unit_ratio=?,
@@ -457,8 +482,7 @@ def register_products_routes(app):
                                (data.get('weight_plu') or '').strip() or None,
                                product_id))
                     if 'barcode' in data or 'barcode1' in data:
-                        from Services.import_line_helpers import assign_product_codes
-                        assign_product_codes(
+                        _maybe_assign_product_codes(
                             c, product_id, 'goods', data.get('unit1'),
                             external_barcode=(data.get('barcode') or '').strip() or None,
                             external_barcode1=(data.get('barcode1') or '').strip() or None,
@@ -715,11 +739,10 @@ def register_products_routes(app):
                 ext_bc = (data.get('barcode') or '').strip() or None
                 ext_b1 = (data.get('barcode1') or '').strip() or None
                 if ext_bc or ext_b1:
-                    from Services.import_line_helpers import assign_product_codes
                     ptype = requested_type if requested_type not in ('', 'ready_made') else (current_type or 'goods')
                     if ptype in ('ready_made', 'raw_materials'):
                         ptype = 'goods'
-                    assign_product_codes(
+                    _maybe_assign_product_codes(
                         c, product_id, ptype or 'goods', unit1,
                         external_barcode=ext_bc,
                         external_barcode1=ext_b1,

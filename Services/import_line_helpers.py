@@ -45,6 +45,7 @@ def assign_product_codes(c, product_id, product_type, unit1=None,
         barcode_owned_by_other,
         canonical_scan_code,
         is_internal_barcode,
+        same_scan_code,
     )
 
     pt = (product_type or 'goods').strip().lower()
@@ -81,34 +82,48 @@ def assign_product_codes(c, product_id, product_type, unit1=None,
     gen_bc = code if pt in ('fixed_asset', 'tools', 'service') else f"{code}01"
     gen_b1 = f"{code}02" if unit1 and pt not in ('fixed_asset', 'tools', 'service') else None
 
-    conn = getattr(c, 'connection', c)
+    conn = getattr(c, 'connection', None) or c
     ext = canonical_scan_code(external_barcode)
-    if ext:
+    if ext and same_scan_code(ext, existing_bc):
+        barcode = existing_bc or ext
+    elif ext and same_scan_code(ext, existing_b1):
+        barcode = existing_bc or ext
+    elif ext:
         other = barcode_owned_by_other(conn, ext, exclude_id=product_id)
         if other:
-            other_name = other['name'] if hasattr(other, 'keys') else other[1]
-            other_code = (other['product_code'] if hasattr(other, 'keys') else other[4]) or other[0]
-            raise ValueError(
-                f"Mã vạch '{ext}' đã gắn sản phẩm {other_code} — {other_name}"
-            )
-        barcode = ext
+            if existing_bc:
+                barcode = existing_bc
+            else:
+                other_name = other['name'] if hasattr(other, 'keys') else other[1]
+                other_code = (other['product_code'] if hasattr(other, 'keys') else other[4]) or other[0]
+                raise ValueError(
+                    f"Mã vạch '{ext}' đã gắn sản phẩm {other_code} — {other_name}"
+                )
+        else:
+            barcode = ext
     elif existing_bc:
         barcode = existing_bc
     else:
         barcode = gen_bc
 
     ext1 = canonical_scan_code(external_barcode1)
-    if ext1:
-        if ext1 == barcode:
-            raise ValueError("Mã vạch sỉ không được trùng mã vạch lẻ.")
+    if ext1 and (same_scan_code(ext1, barcode) or ext1 == barcode):
+        barcode1 = existing_b1 or None
+    elif ext1 and same_scan_code(ext1, existing_b1):
+        barcode1 = existing_b1 or ext1
+    elif ext1:
         other = barcode_owned_by_other(conn, ext1, exclude_id=product_id)
         if other:
-            other_name = other['name'] if hasattr(other, 'keys') else other[1]
-            other_code = (other['product_code'] if hasattr(other, 'keys') else other[4]) or other[0]
-            raise ValueError(
-                f"Mã vạch sỉ '{ext1}' đã gắn sản phẩm {other_code} — {other_name}"
-            )
-        barcode1 = ext1
+            if existing_b1:
+                barcode1 = existing_b1
+            else:
+                other_name = other['name'] if hasattr(other, 'keys') else other[1]
+                other_code = (other['product_code'] if hasattr(other, 'keys') else other[4]) or other[0]
+                raise ValueError(
+                    f"Mã vạch sỉ '{ext1}' đã gắn sản phẩm {other_code} — {other_name}"
+                )
+        else:
+            barcode1 = ext1
     elif existing_b1:
         barcode1 = existing_b1
     elif unit1 and not is_internal_barcode(barcode, code):

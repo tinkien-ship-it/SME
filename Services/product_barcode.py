@@ -121,6 +121,34 @@ def is_internal_barcode(code, product_code=None) -> bool:
     return False
 
 
+def same_scan_code(a, b) -> bool:
+    """Hai chuỗi là cùng một tem (kể cả biến thể UPC/EAN/QR)."""
+    ca, cb = scan_candidates(a), scan_candidates(b)
+    if not ca or not cb:
+        return False
+    return bool(set(ca) & set(cb))
+
+
+def _as_int_id(value):
+    try:
+        if value is None or str(value).strip() == '':
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def barcodes_need_reassign(existing_bc, existing_b1, ext_bc, ext_b1) -> bool:
+    """True khi payload thực sự đổi mã lẻ/sỉ — không chạy lại khi chỉ sửa giá/ĐV."""
+    new_bc = canonical_scan_code(ext_bc) if ext_bc else ''
+    new_b1 = canonical_scan_code(ext_b1) if ext_b1 else ''
+    if new_bc and not same_scan_code(new_bc, existing_bc):
+        return True
+    if new_b1 and not same_scan_code(new_b1, existing_b1):
+        return True
+    return False
+
+
 def barcode_owned_by_other(conn, raw, exclude_id=None):
     """SP khác đã dùng mã này ở barcode / barcode1. Không khớp product_code."""
     candidates = scan_candidates(raw)
@@ -132,10 +160,17 @@ def barcode_owned_by_other(conn, raw, exclude_id=None):
         f"WHERE barcode IN ({ph}) OR barcode1 IN ({ph})"
     )
     params = list(candidates) + list(candidates)
-    if exclude_id:
-        sql += " AND id != ?"
-        params.append(exclude_id)
-    return conn.execute(sql, params).fetchone()
+    rows = conn.execute(sql, params).fetchall()
+    ex = _as_int_id(exclude_id)
+    for row in rows:
+        rid = row['id'] if hasattr(row, 'keys') else row[0]
+        try:
+            if ex is not None and int(rid) == ex:
+                continue
+        except (TypeError, ValueError):
+            pass
+        return row
+    return None
 
 
 def find_product_by_scan(conn, raw, exclude_id=None):
