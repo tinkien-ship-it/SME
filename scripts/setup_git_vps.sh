@@ -37,6 +37,8 @@ else
 venv/
 pos_env/
 logs/
+config/auth.local.json
+config/google_oauth.persist.json
 EOF
 fi
 

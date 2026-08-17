@@ -171,7 +171,7 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'root_hint': '157',
         'default_account': '157',
         'label': 'Hàng gửi đi bán',
-        'description': 'Hàng xuất kho ra cảng / chờ thông quan XK',
+        'description': 'Gửi đại lý / ký gửi nội địa; xuất kho ra cảng chờ thông quan XK',
         'category': 'inventory',
     },
     {

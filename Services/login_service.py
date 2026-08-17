@@ -64,10 +64,58 @@ def _load_auth_file():
         return {}
 
 
+_GOOGLE_PERSIST_FILE = _BASE_DIR / "config" / "google_oauth.persist.json"
+_GOOGLE_PERSIST_KEYS = (
+    "google_client_id",
+    "google_client_secret",
+    "auth_google_enabled",
+)
+
+
 def _pick(*values):
     for value in values:
         if value is not None and str(value).strip():
             return str(value).strip()
+    return ""
+
+
+def _is_placeholder_client_id(cid: str) -> bool:
+    c = (cid or "").strip()
+    if not c:
+        return True
+    upper = c.upper()
+    if upper.startswith("YOUR_") or "YOUR_CLIENT_ID" in upper:
+        return True
+    if c.startswith("GOCSPX-"):
+        return True
+    return False
+
+
+def _looks_like_client_id(cid: str) -> bool:
+    c = (cid or "").strip()
+    if _is_placeholder_client_id(c):
+        return False
+    return ".apps.googleusercontent.com" in c
+
+
+def _pick_client_id(*values) -> str:
+    """Chỉ nhận Client ID hợp lệ — bỏ qua chuỗi rỗng / placeholder."""
+    for value in values:
+        s = str(value or "").strip()
+        if _looks_like_client_id(s):
+            return s
+    return ""
+
+
+def _pick_secret(*values) -> str:
+    for value in values:
+        s = str(value or "").strip()
+        if not s:
+            continue
+        upper = s.upper()
+        if upper.startswith("YOUR_") or "YOUR_SECRET" in upper:
+            continue
+        return s
     return ""
 
 
@@ -81,6 +129,63 @@ def repair_swapped_google_credentials():
         _set_main_setting("google_client_secret", cid)
     _set_main_setting("google_client_id", "")
     return True
+
+
+def export_google_oauth_persist(path: Path | None = None) -> dict:
+    """Sao lưu Google OAuth đã lưu (DB) ra file local — dùng khi deploy/repair."""
+    out_path = path or _GOOGLE_PERSIST_FILE
+    data = {k: (_get_main_setting(k, "") or "").strip() for k in _GOOGLE_PERSIST_KEYS}
+    if not _looks_like_client_id(data.get("google_client_id", "")):
+        # Giữ file cũ nếu DB tạm thiếu ID (tránh ghi đè bản persist tốt bằng rỗng)
+        if out_path.exists():
+            try:
+                with open(out_path, encoding="utf-8") as fh:
+                    old = json.load(fh)
+                if isinstance(old, dict) and _looks_like_client_id(old.get("google_client_id", "")):
+                    return old
+            except Exception:
+                pass
+        return data
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False, indent=2)
+    return data
+
+
+def restore_google_oauth_persist(path: Path | None = None) -> dict:
+    """Khôi phục Google OAuth vào DB nếu đang thiếu — không ghi đè giá trị đang có."""
+    src = path or _GOOGLE_PERSIST_FILE
+    if not src.exists():
+        return {"restored": False, "reason": "no_persist_file"}
+    try:
+        with open(src, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except Exception as exc:
+        return {"restored": False, "reason": str(exc)}
+    if not isinstance(data, dict):
+        return {"restored": False, "reason": "invalid_persist"}
+
+    changed = []
+    db_cid = (_get_main_setting("google_client_id", "") or "").strip()
+    file_cid = (data.get("google_client_id") or "").strip()
+    if not _looks_like_client_id(db_cid) and _looks_like_client_id(file_cid):
+        _set_main_setting("google_client_id", file_cid)
+        changed.append("google_client_id")
+
+    db_secret = (_get_main_setting("google_client_secret", "") or "").strip()
+    file_secret = (data.get("google_client_secret") or "").strip()
+    if not db_secret and file_secret:
+        _set_main_setting("google_client_secret", file_secret)
+        changed.append("google_client_secret")
+
+    if "auth_google_enabled" in data and data.get("auth_google_enabled") is not None:
+        db_flag = (_get_main_setting("auth_google_enabled", "") or "").strip()
+        if not db_flag:
+            flag = "1" if str(data.get("auth_google_enabled")).strip() in ("1", "true", "True") else "0"
+            _set_main_setting("auth_google_enabled", flag)
+            changed.append("auth_google_enabled")
+
+    return {"restored": bool(changed), "changed": changed}
 
 
 def get_auth_settings_db():
@@ -100,21 +205,25 @@ def get_auth_settings_db():
 
 
 def get_auth_settings():
-    """Đọc cấu hình: .env → config/auth.local.json → DB Master Settings."""
+    """Đọc cấu hình đăng nhập.
+
+    Google Client ID/Secret: ưu tiên DB (Master Settings đã lưu trên VPS)
+    → config/auth.local.json → .env. Không để .env rỗng / placeholder ghi đè DB.
+    """
     file_cfg = _load_auth_file()
     db = {k: _get_main_setting(k, "") for k in AUTH_SETTING_KEYS}
     return {
         "auth_google_enabled": _pick(db.get("auth_google_enabled"), "1"),
         "auth_sms_enabled": _pick(db.get("auth_sms_enabled"), "1"),
-        "google_client_id": _pick(
-            os.getenv("GOOGLE_CLIENT_ID"),
-            file_cfg.get("google_client_id"),
+        "google_client_id": _pick_client_id(
             db.get("google_client_id"),
+            file_cfg.get("google_client_id"),
+            os.getenv("GOOGLE_CLIENT_ID"),
         ),
-        "google_client_secret": _pick(
-            os.getenv("GOOGLE_CLIENT_SECRET"),
-            file_cfg.get("google_client_secret"),
+        "google_client_secret": _pick_secret(
             db.get("google_client_secret"),
+            file_cfg.get("google_client_secret"),
+            os.getenv("GOOGLE_CLIENT_SECRET"),
         ),
         "sms_provider": _pick(os.getenv("SMS_PROVIDER"), file_cfg.get("sms_provider"), db.get("sms_provider"), "generic"),
         "sms_api_url": _pick(os.getenv("SMS_API_URL"), file_cfg.get("sms_api_url"), db.get("sms_api_url")),
@@ -125,17 +234,22 @@ def get_auth_settings():
 
 
 def save_auth_settings(data):
-    """Lưu cấu hình vào DB chính (Master Settings)."""
+    """Lưu cấu hình vào DB chính (Master Settings).
+
+    Không bao giờ xóa google_client_id / google_client_secret đã lưu khi form gửi trống
+    (ô Secret thường để trống khi không đổi).
+    """
+    existing = get_auth_settings_db()
     cid = (data.get("google_client_id") or "").strip()
     secret = (data.get("google_client_secret") or "").strip()
     if not cid:
-        cid = (_get_main_setting("google_client_id", "") or "").strip()
+        cid = (existing.get("google_client_id") or "").strip()
     if cid.startswith("GOCSPX-"):
         raise ValueError(
             "Nhầm Client Secret vào ô Client ID. "
             "Client ID có dạng 123456789-xxxx.apps.googleusercontent.com"
         )
-    if cid and ".apps.googleusercontent.com" not in cid:
+    if cid and not _looks_like_client_id(cid):
         raise ValueError(
             "Google Client ID không hợp lệ. "
             "Phải copy từ Google Cloud → Credentials → OAuth 2.0 Client IDs (Web)."
@@ -153,13 +267,23 @@ def save_auth_settings(data):
         "sms_brandname": (data.get("sms_brandname") or "KETO POS").strip(),
     }
     for key, value in mapping.items():
+        # Secret / API key: chỉ ghi khi user nhập mới — không xóa giá trị cũ
         if key in ("google_client_secret", "sms_api_key", "sms_api_secret"):
             if value:
                 _set_main_setting(key, value)
             continue
-        if key == "google_client_id" and not (data.get("google_client_id") or "").strip() and not value:
+        # Client ID: không bao giờ ghi chuỗi rỗng / placeholder lên DB
+        if key == "google_client_id":
+            if _looks_like_client_id(value):
+                _set_main_setting(key, value)
             continue
         _set_main_setting(key, value)
+
+    # Sao lưu ra file persist (gitignored) để deploy/repair không mất
+    try:
+        export_google_oauth_persist()
+    except Exception:
+        pass
     return get_auth_settings_db()
 
 
@@ -180,11 +304,7 @@ def google_login_enabled():
 
 def get_google_client_id():
     cid = (get_auth_settings().get("google_client_id") or "").strip()
-    if not cid:
-        return ""
-    if cid.startswith("GOCSPX-"):
-        return ""
-    if ".apps.googleusercontent.com" not in cid:
+    if not _looks_like_client_id(cid):
         return ""
     return cid
 
@@ -345,6 +465,8 @@ def google_client_id_error(client_id=None):
             "Bạn đã nhập nhầm Client Secret (GOCSPX-...) vào ô Client ID. "
             "Client ID phải có dạng 123456789-xxxx.apps.googleusercontent.com"
         )
+    if _is_placeholder_client_id(raw):
+        return "Google Client ID đang là giá trị mẫu (YOUR_CLIENT_ID) — hãy thay bằng Client ID thật."
     if ".apps.googleusercontent.com" not in raw:
         return "Google Client ID không đúng định dạng (phải kết thúc bằng .apps.googleusercontent.com)"
     return ""

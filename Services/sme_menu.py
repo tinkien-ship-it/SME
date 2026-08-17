@@ -19,9 +19,10 @@ SME_MENU_GROUPS = (
     {
         'id': 'sales', 'section': 'operations', 'label': 'Bán hàng',
         'icon': 'fas fa-cart-shopping', 'color': 'success', 'endpoint': 'SME_dashboard_sale',
-        'description': 'Điểm bán hàng, đơn hàng, hóa đơn bán, trả hàng',
+        'description': 'Điểm bán hàng, gửi đại lý, đơn hàng, hóa đơn bán, trả hàng',
         'items': (
             {'endpoint': 'sale', 'label': 'Điểm bán hàng', 'icon': 'fas fa-cash-register'},
+            {'endpoint': 'SME_consignment', 'label': 'Hàng gửi đi bán (TK 157)', 'icon': 'fas fa-truck'},
             {'endpoint': 'SME_sale_export', 'label': 'Bán hàng xuất khẩu', 'icon': 'fas fa-plane-departure'},
             {'endpoint': 'SME_sale_export_list', 'label': 'Danh sách xuất khẩu', 'icon': 'fas fa-list'},
             {'endpoint': 'SME_customs_declarations', 'label': 'Tờ khai hải quan điện tử', 'icon': 'fas fa-passport'},
@@ -89,6 +90,7 @@ SME_MENU_GROUPS = (
             {'endpoint': 'SME_stock_count', 'label': 'Kiểm kê kho — mẫu 05-VT', 'icon': 'fas fa-clipboard-check'},
             {'endpoint': 'SME_purchase_listing', 'label': 'Bảng kê mua hàng — mẫu 06-VT', 'icon': 'fas fa-list-ol'},
             {'endpoint': 'SME_stock_transfer', 'label': 'Chuyển kho liên chi nhánh', 'icon': 'fas fa-right-left'},
+            {'endpoint': 'SME_consignment', 'label': 'Hàng gửi đi bán (TK 157)', 'icon': 'fas fa-truck'},
             {'endpoint': 'SME_form_01_bh', 'label': 'Đại lý và ký gửi — mẫu 01-BH', 'icon': 'fas fa-file-signature'},
             {'endpoint': 'SME_form_02_bh', 'label': 'Thẻ quầy hàng — mẫu 02-BH', 'icon': 'fas fa-id-card'},
             {'endpoint': 'SME_fa_docs', 'label': 'Biên bản tài sản cố định — mẫu 01/03/04/05', 'icon': 'fas fa-file-signature'},

@@ -122,8 +122,18 @@ from Services.login_service import (
     get_auth_settings,
     get_google_client_id,
     repair_swapped_google_credentials,
+    restore_google_oauth_persist,
+    export_google_oauth_persist,
 )
 repair_swapped_google_credentials()
+try:
+    restore_google_oauth_persist()
+except Exception:
+    pass
+try:
+    export_google_oauth_persist()
+except Exception:
+    pass
 _google_cfg = get_auth_settings()
 
 # Khởi tạo OAuth (Google) — đọc từ DB Master Settings hoặc .env

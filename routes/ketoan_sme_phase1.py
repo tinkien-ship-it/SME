@@ -223,12 +223,18 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         warehouse = (request.args.get('warehouse') or request.args.get('warehouse_code') or '').strip()
+        stock_only = (request.args.get('stock_only') or '').strip().lower() in ('1', 'true', 'yes')
+        prefixes_raw = (request.args.get('prefixes') or '').strip().upper()
+        prefixes = [p.strip() for p in prefixes_raw.split(',') if p.strip()] if prefixes_raw else []
         try:
             rows = conn.execute(
                 """
                 SELECT p.id, p.name, p.unit, COALESCE(p.product_type,'goods') AS product_type,
-                       COALESCE(p.barcode, '') AS code,
-                       COALESCE(i.quantity,0) AS quantity, COALESCE(i.avg_cost,0) AS avg_cost
+                       COALESCE(p.product_code, '') AS product_code,
+                       COALESCE(NULLIF(TRIM(p.product_code), ''), p.barcode, '') AS code,
+                       COALESCE(i.quantity,0) AS quantity, COALESCE(i.avg_cost,0) AS avg_cost,
+                       COALESCE(p.price, 0) AS wholesale_price,
+                       COALESCE(p.base_price, 0) AS base_price
                 FROM products p
                 LEFT JOIN inventory i ON i.product_id = p.id
                 ORDER BY p.name LIMIT 800
@@ -252,23 +258,36 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
                     for row in data:
                         row['quantity'] = qty_map.get(int(row['id']), 0.0)
                         row['warehouse_code'] = warehouse
+            if stock_only:
+                data = [r for r in data if float(r.get('quantity') or 0) > 1e-9]
+            if prefixes:
+                filtered = []
+                for r in data:
+                    code = str(r.get('product_code') or r.get('code') or '').strip().upper()
+                    if any(code.startswith(px) for px in prefixes):
+                        filtered.append(r)
+                data = filtered
             resp = jsonify({'success': True, 'data': data})
             resp.headers['Cache-Control'] = 'private, max-age=60'
             return resp
         except Exception as e:
-            # barcode column may be missing on older DBs
+            # barcode / product_code column may be missing on older DBs
             try:
                 rows = conn.execute(
                     """
                     SELECT p.id, p.name, p.unit, COALESCE(p.product_type,'goods') AS product_type,
-                           '' AS code,
-                           COALESCE(i.quantity,0) AS quantity, COALESCE(i.avg_cost,0) AS avg_cost
+                           '' AS product_code, '' AS code,
+                           COALESCE(i.quantity,0) AS quantity, COALESCE(i.avg_cost,0) AS avg_cost,
+                           0 AS wholesale_price, 0 AS base_price
                     FROM products p
                     LEFT JOIN inventory i ON i.product_id = p.id
                     ORDER BY p.name LIMIT 800
                     """
                 ).fetchall()
-                resp = jsonify({'success': True, 'data': [dict(r) for r in rows]})
+                data = [dict(r) for r in rows]
+                if stock_only:
+                    data = [r for r in data if float(r.get('quantity') or 0) > 1e-9]
+                resp = jsonify({'success': True, 'data': data})
                 resp.headers['Cache-Control'] = 'private, max-age=60'
                 return resp
             except Exception:

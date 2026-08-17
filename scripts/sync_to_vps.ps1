@@ -10,11 +10,11 @@ $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $Paths = @(
     "app.py", "auth.py", "db_utils.py", "helpers.py", "tenant_middleware.py",
     "tenant.py", "scheduler.py", "requirements.txt",
-    "routes", "Services", "templates", "db", "static", "config", "scripts"
+    "routes", "Services", "templates", "db", "static", "scripts"
 )
 
 Write-Host "Dong bo code len $VpsHost:/root/pos/ ..."
-Write-Host "KHONG copy .env, *.db, venv" -ForegroundColor Yellow
+Write-Host "KHONG copy .env, *.db, venv, config/auth.local.json, config/google_oauth.persist.json" -ForegroundColor Yellow
 
 foreach ($p in $Paths) {
     $full = Join-Path $Root $p
@@ -23,6 +23,16 @@ foreach ($p in $Paths) {
         scp -r $full "${VpsHost}:/root/pos/"
     } else {
         scp $full "${VpsHost}:/root/pos/"
+    }
+}
+
+# Dong bo config (tru file secret local / Google OAuth persist tren VPS)
+$configDir = Join-Path $Root "config"
+if (Test-Path $configDir) {
+    Get-ChildItem $configDir -File | Where-Object {
+        $_.Name -notin @("auth.local.json", "google_oauth.persist.json")
+    } | ForEach-Object {
+        scp $_.FullName "${VpsHost}:/root/pos/config/"
     }
 }
 

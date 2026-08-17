@@ -1,0 +1,416 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Hàng gửi đi bán (TK 157){% endblock %}
+{% block sme_content %}
+<div class="mb-3 d-flex justify-content-between flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Xuất hàng / thành phẩm gửi đại lý</h4>
+    <p class="text-muted small mb-0">
+      Nợ <b>157</b> / Có <b>155·156</b> khi gửi ·
+      khi bán: Nợ <b>632</b>/Có <b>157</b> + Nợ <b>111·112·131</b>/Có <b>511·3331</b> ·
+      trả lại: Nợ <b>155·156</b> (còn tốt) hoặc Nợ <b>632</b> (hỏng) / Có <b>157</b>.
+      <a href="{{ url_for('SME_form_01_bh') }}">01-BH đối soát</a>
+    </p>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header bg-white fw-bold">1. Lập phiếu xuất gửi</div>
+  <div class="card-body">
+    <p class="small text-muted mb-2">
+      Thông tin đại lý bắt buộc (Tên, địa chỉ, MST, ĐT, email) để hệ thống tự gửi phiếu xuất kho qua email.
+    </p>
+    <div class="row g-2 mb-2">
+      <div class="col-md-2"><label class="form-label small">Ngày gửi *</label><input type="date" id="fDate" class="form-control form-control-sm"></div>
+      <div class="col-md-4"><label class="form-label small">Tên đại lý *</label>
+        <input id="fAgent" class="form-control form-control-sm" list="agentList" placeholder="Chọn hoặc nhập tên" autocomplete="off">
+        <datalist id="agentList"></datalist>
+        <input type="hidden" id="fCustomerId">
+      </div>
+      <div class="col-md-3"><label class="form-label small">Mã số thuế *</label><input id="fTax" class="form-control form-control-sm" placeholder="MST"></div>
+      <div class="col-md-3"><label class="form-label small">Số điện thoại *</label><input id="fPhone" class="form-control form-control-sm" placeholder="ĐT"></div>
+      <div class="col-md-6"><label class="form-label small">Địa chỉ *</label><input id="fAddress" class="form-control form-control-sm" placeholder="Địa chỉ đại lý"></div>
+      <div class="col-md-4"><label class="form-label small">Email *</label><input id="fEmail" type="email" class="form-control form-control-sm" placeholder="email@domain.com"></div>
+      <div class="col-md-2"><label class="form-label small">Kho xuất *</label><select id="fWh" class="form-select form-select-sm"></select></div>
+      <div class="col-md-8"><label class="form-label small">Ghi chú</label><input id="fNotes" class="form-control form-control-sm"></div>
+      <div class="col-md-2 d-flex align-items-end">
+        <div class="form-check mb-1">
+          <input class="form-check-input" type="checkbox" id="fSendEmail" checked>
+          <label class="form-check-label small" for="fSendEmail">Gửi email phiếu XK</label>
+        </div>
+      </div>
+      <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary btn-sm w-100" id="btnShip">Xuất gửi (Nợ 157)</button></div>
+    </div>
+    <div class="table-responsive" style="max-height:42vh">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light"><tr>
+          <th>Hàng / thành phẩm</th><th>Loại</th><th class="text-end">Tồn kho</th>
+          <th class="text-end">Giá vốn</th><th class="text-end">SL gửi</th><th class="text-end">Giá đại lý (gợi ý)</th>
+        </tr></thead>
+        <tbody id="shipLines"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+    <span>Phiếu gửi đang theo dõi trên TK 157</span>
+    <button class="btn btn-sm btn-outline-secondary" id="btnReload">Tải lại</button>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead class="table-light"><tr>
+        <th>Số</th><th>Ngày</th><th>Đại lý</th><th>Liên hệ</th><th>Kho</th>
+        <th class="text-end">Giá vốn 157</th><th>TT / Email</th><th></th>
+      </tr></thead>
+      <tbody id="hist"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Confirm sale -->
+<div class="modal fade" id="saleModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Xác nhận đại lý đã bán</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <p class="small text-muted" id="saleHint"></p>
+    <div class="row g-2 mb-2">
+      <div class="col-md-3"><label class="form-label small">Ngày bán</label><input type="date" id="sDate" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">Thu tiền</label>
+        <select id="sPay" class="form-select form-select-sm">
+          <option value="131">Công nợ (131)</option>
+          <option value="111">Tiền mặt (111)</option>
+          <option value="112">Ngân hàng (112)</option>
+        </select>
+      </div>
+      <div class="col-md-2"><label class="form-label small">% VAT</label><input type="number" id="sVat" class="form-control form-control-sm" value="10" min="0" step="1"></div>
+    </div>
+    <div class="table-responsive"><table class="table table-sm"><thead><tr>
+      <th>Hàng</th><th class="text-end">Còn 157</th><th class="text-end">SL bán</th><th class="text-end">Đơn giá bán</th>
+    </tr></thead><tbody id="saleLines"></tbody></table></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+    <button class="btn btn-success btn-sm" id="btnConfirmSale">Ghi DT + GV</button>
+  </div>
+</div></div></div>
+
+<!-- Return -->
+<div class="modal fade" id="retModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Đại lý trả lại hàng gửi</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <p class="small text-muted" id="retHint"></p>
+    <div class="row g-2 mb-2">
+      <div class="col-md-3"><label class="form-label small">Ngày trả</label><input type="date" id="rDate" class="form-control form-control-sm"></div>
+    </div>
+    <div class="table-responsive"><table class="table table-sm"><thead><tr>
+      <th>Hàng</th><th class="text-end">Còn 157</th><th class="text-end">SL trả</th><th>Hỏng (không nhập kho)</th>
+    </tr></thead><tbody id="retLines"></tbody></table></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+    <button class="btn btn-warning btn-sm" id="btnConfirmRet">Ghi trả lại</button>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+(function(){
+  const today=()=>new Date().toISOString().slice(0,10);
+  const money=v=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:0});
+  const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const typeLabel=t=>{
+    t=(t||'goods').toLowerCase();
+    if(['finished_goods','finished','ready_made'].includes(t)) return 'TP (155)';
+    if(['materials','raw_materials','material'].includes(t)) return 'NVL';
+    return 'HH (156)';
+  };
+  const productCode=p=>String(p.product_code||p.code||'').trim().toUpperCase();
+  const productKind=p=>{
+    const code=productCode(p);
+    if(code.startsWith('TP')) return 'TP';
+    if(code.startsWith('SP')) return 'SP';
+    return '';
+  };
+  const kindLabel=kind=>kind==='TP'?'TP (155)':(kind==='SP'?'HH (156)':'');
+  const emailOk=e=>{
+    e=(e||'').trim();
+    const i=e.indexOf('@');
+    return i>0 && e.includes('.', i+1);
+  };
+  fDate.value=today(); sDate.value=today(); rDate.value=today();
+  let products=[], activeDoc=null, customers=[];
+
+  function fillAgent(c){
+    if(!c) return;
+    fCustomerId.value=c.id||'';
+    fAgent.value=c.name||c.company_name||'';
+    fAddress.value=c.address||'';
+    fTax.value=c.tax_code||'';
+    fPhone.value=c.phone||'';
+    fEmail.value=c.email||'';
+  }
+  function clearAgentId(){ fCustomerId.value=''; }
+
+  async function loadAgents(){
+    try{
+      const res=await fetch('/api/customers');
+      const data=await res.json();
+      const list=Array.isArray(data)?data:(data.data||data.customers||[]);
+      customers=list.filter(c=>(c.name||c.company_name||'').trim());
+    }catch(e){ customers=[]; }
+    agentList.innerHTML=customers.map(c=>{
+      const n=c.name||c.company_name||'';
+      return `<option value="${esc(n)}" label="${esc([c.tax_code,c.phone,c.email].filter(Boolean).join(' · '))}"></option>`;
+    }).join('');
+  }
+  function matchAgentByName(name){
+    const n=(name||'').trim().toLowerCase();
+    if(!n) return null;
+    return customers.find(c=>(c.name||'').trim().toLowerCase()===n)
+      || customers.find(c=>(c.company_name||'').trim().toLowerCase()===n)
+      || null;
+  }
+  fAgent.addEventListener('change', ()=>{
+    const c=matchAgentByName(fAgent.value);
+    if(c) fillAgent(c); else clearAgentId();
+  });
+  fAgent.addEventListener('blur', ()=>{
+    const c=matchAgentByName(fAgent.value);
+    if(c) fillAgent(c);
+  });
+
+  async function loadWh(){
+    const res=await fetch('/api/sme/warehouses?all=1');
+    const json=await res.json();
+    const list=json.data||[{code:'KHO_001',name:'Kho trung tâm'}];
+    fWh.innerHTML=list.map(w=>`<option value="${w.code}">${w.code} — ${w.name||''}</option>`).join('');
+  }
+  async function loadProducts(){
+    const wh=fWh.value||'';
+    const qs=new URLSearchParams({stock_only:'1', prefixes:'SP,TP'});
+    if(wh) qs.set('warehouse', wh);
+    const res=await fetch('/api/sme/products/brief?'+qs.toString());
+    const json=await res.json();
+    products=(json.data||[]).filter(p=>{
+      if(!(Number(p.quantity||0) > 0)) return false;
+      const kind=productKind(p);
+      return kind==='SP' || kind==='TP';
+    });
+    shipLines.innerHTML=products.map(p=>{
+      const kind=productKind(p);
+      const code=p.product_code||p.code||'';
+      const agentPrice=Number(p.wholesale_price ?? p.price ?? 0)||0;
+      return `<tr data-id="${p.id}" data-kind="${kind}">
+      <td>${esc(p.name)}<div class="small text-muted">${esc(code)}</div></td>
+      <td class="small">${kindLabel(kind)||typeLabel(p.product_type)}</td>
+      <td class="text-end">${Number(p.quantity||0)}</td>
+      <td class="text-end">${money(p.avg_cost)}</td>
+      <td><input type="number" class="form-control form-control-sm text-end qty" min="0" step="any" value="0"></td>
+      <td><input type="number" class="form-control form-control-sm text-end price" min="0" step="any" value="${agentPrice}"></td>
+    </tr>`;
+    }).join('')||'<tr><td colspan="6" class="text-muted text-center">Không có hàng tồn kho SP/TP</td></tr>';
+  }
+  function emailBadge(r){
+    if(r.email_sent_at) return `<span class="badge text-bg-success" title="${esc(r.agent_email||'')}">Đã gửi mail</span>`;
+    if(r.email_error) return `<span class="badge text-bg-warning" title="${esc(r.email_error)}">Lỗi mail</span>`;
+    if(r.agent_email) return `<span class="badge text-bg-secondary">Chưa gửi</span>`;
+    return '';
+  }
+  async function loadHist(){
+    const res=await fetch('/api/sme/consignments');
+    const json=await res.json();
+    hist.innerHTML=(json.data||[]).map(r=>{
+      const open=(r.lines||[]).reduce((s,l)=>s+Math.max(0,(+l.quantity||0)-(+l.qty_sold||0)-(+l.qty_returned||0)-(+l.qty_damaged||0)),0);
+      const contact=[r.agent_tax_code,r.agent_phone,r.agent_email].filter(Boolean).join('<br>');
+      return `<tr>
+        <td class="fw-bold">${esc(r.doc_no)}</td>
+        <td>${fmtDateVi?fmtDateVi(r.delivery_date):esc(r.delivery_date)}</td>
+        <td>${esc(r.agent_name||'')}<div class="small text-muted">${esc(r.agent_address||'')}</div></td>
+        <td class="small">${contact||'—'}</td>
+        <td>${esc(r.warehouse_code||'—')}</td>
+        <td class="text-end">${money(r.total_cost)}</td>
+        <td><span class="badge text-bg-light">${esc(r.status||'')}</span>
+          ${open>0?`<span class="badge text-bg-info">còn ${open}</span>`:''}
+          ${emailBadge(r)}</td>
+        <td class="text-nowrap">
+          <button class="btn btn-sm btn-outline-success" onclick="openSale(${r.id})">Đã bán</button>
+          <button class="btn btn-sm btn-outline-warning" onclick="openRet(${r.id})">Trả lại</button>
+          <button class="btn btn-sm btn-outline-primary" onclick="resendEmail(${r.id})" title="Gửi lại email phiếu XK">Mail</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="voidDoc(${r.id})">Hủy</button>
+        </td>
+      </tr>`;
+    }).join('')||'<tr><td colspan="8" class="text-muted text-center">Chưa có phiếu gửi</td></tr>';
+  }
+
+  function validateAgent(){
+    const missing=[];
+    if(!fAgent.value.trim()) missing.push('Tên đại lý');
+    if(!fAddress.value.trim()) missing.push('Địa chỉ');
+    if(!fTax.value.trim()) missing.push('Mã số thuế');
+    if(!fPhone.value.trim()) missing.push('Số điện thoại');
+    if(!fEmail.value.trim()) missing.push('Email');
+    else if(!emailOk(fEmail.value)) return 'Email đại lý không hợp lệ';
+    if(missing.length) return 'Thiếu thông tin đại lý: '+missing.join(', ');
+    return '';
+  }
+
+  btnShip.addEventListener('click', async ()=>{
+    const err=validateAgent();
+    if(err) return alert(err);
+    const items=[];
+    shipLines.querySelectorAll('tr[data-id]').forEach(tr=>{
+      const qty=parseFloat(tr.querySelector('.qty').value)||0;
+      if(qty<=0) return;
+      items.push({
+        product_id: parseInt(tr.dataset.id,10),
+        quantity: qty,
+        unit_price: parseFloat(tr.querySelector('.price').value)||0,
+      });
+    });
+    if(!items.length) return alert('Nhập SL gửi');
+    const sendMail=!!fSendEmail.checked;
+    if(!confirm(`Xuất gửi ${items.length} dòng cho «${fAgent.value.trim()}»?\nNợ 157 / Có 155·156`+(sendMail?'\nĐồng thời gửi email phiếu xuất kho.':''))) return;
+    const payload={
+      agent_name: fAgent.value.trim(),
+      agent_address: fAddress.value.trim(),
+      agent_tax_code: fTax.value.trim(),
+      agent_phone: fPhone.value.trim(),
+      agent_email: fEmail.value.trim(),
+      date: fDate.value,
+      warehouse_code: fWh.value,
+      notes: fNotes.value,
+      send_email: sendMail,
+      items,
+    };
+    if(fCustomerId.value) payload.customer_id=parseInt(fCustomerId.value,10);
+    const res=await fetch('/api/sme/consignments',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const json=await res.json();
+    if(!json.success) return alert(json.error||'Lỗi');
+    let msg='Đã xuất gửi '+(json.data&&json.data.doc_no||'');
+    if(sendMail){
+      if(json.email_sent) msg+='\nĐã gửi email tới '+(json.data.email_to||fEmail.value.trim());
+      else msg+='\nPhiếu đã lập nhưng gửi email thất bại: '+(json.email_error||'không rõ');
+    }
+    alert(msg);
+    loadProducts(); loadHist(); loadAgents();
+  });
+
+  window.resendEmail=async (id)=>{
+    if(!confirm('Gửi lại phiếu xuất kho qua email đại lý?')) return;
+    const res=await fetch(`/api/sme/consignments/${id}/send-email`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const json=await res.json();
+    if(!json.success) return alert(json.error||'Lỗi gửi email');
+    alert('Đã gửi tới '+(json.data&&json.data.email||''));
+    loadHist();
+  };
+
+  window.openSale=async (id)=>{
+    const res=await fetch('/api/sme/consignments/'+id);
+    const json=await res.json();
+    if(!json.success) return alert(json.error||'Lỗi');
+    activeDoc=json.data;
+    saleHint.textContent=`${activeDoc.doc_no} · ${activeDoc.agent_name} · kho ${activeDoc.warehouse_code||''}`;
+    saleLines.innerHTML=(activeDoc.lines||[]).map(l=>{
+      const open=Math.max(0,(+l.quantity||0)-(+l.qty_sold||0)-(+l.qty_returned||0)-(+l.qty_damaged||0));
+      if(open<=0) return '';
+      return `<tr data-lid="${l.id}">
+        <td>${esc(l.product_name)}</td>
+        <td class="text-end">${open}</td>
+        <td><input type="number" class="form-control form-control-sm text-end qty" min="0" max="${open}" step="any" value="${open}"></td>
+        <td><input type="number" class="form-control form-control-sm text-end price" min="0" step="any" value="${l.unit_price||0}"></td>
+      </tr>`;
+    }).join('')||'<tr><td colspan="4" class="text-muted">Không còn hàng trên 157</td></tr>';
+    bootstrap.Modal.getOrCreateInstance(saleModal).show();
+  };
+
+  btnConfirmSale.addEventListener('click', async ()=>{
+    if(!activeDoc) return;
+    const lines=[];
+    saleLines.querySelectorAll('tr[data-lid]').forEach(tr=>{
+      const qty=parseFloat(tr.querySelector('.qty').value)||0;
+      if(qty<=0) return;
+      lines.push({
+        delivery_line_id: parseInt(tr.dataset.lid,10),
+        quantity: qty,
+        unit_price: parseFloat(tr.querySelector('.price').value)||0,
+      });
+    });
+    if(!lines.length) return alert('Nhập SL bán');
+    const res=await fetch(`/api/sme/consignments/${activeDoc.id}/confirm-sale`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        date: sDate.value,
+        payment_method: sPay.value,
+        tax_pct: parseFloat(sVat.value)||0,
+        lines,
+      }),
+    });
+    const json=await res.json();
+    if(!json.success) return alert(json.error||'Lỗi');
+    bootstrap.Modal.getInstance(saleModal)?.hide();
+    alert('Đã ghi DT + GV (tất toán 157)');
+    loadHist();
+  });
+
+  window.openRet=async (id)=>{
+    const res=await fetch('/api/sme/consignments/'+id);
+    const json=await res.json();
+    if(!json.success) return alert(json.error||'Lỗi');
+    activeDoc=json.data;
+    retHint.textContent=`${activeDoc.doc_no} · ${activeDoc.agent_name}`;
+    retLines.innerHTML=(activeDoc.lines||[]).map(l=>{
+      const open=Math.max(0,(+l.quantity||0)-(+l.qty_sold||0)-(+l.qty_returned||0)-(+l.qty_damaged||0));
+      if(open<=0) return '';
+      return `<tr data-lid="${l.id}">
+        <td>${esc(l.product_name)}</td>
+        <td class="text-end">${open}</td>
+        <td><input type="number" class="form-control form-control-sm text-end qty" min="0" max="${open}" step="any" value="0"></td>
+        <td class="text-center"><input type="checkbox" class="form-check-input dmg"></td>
+      </tr>`;
+    }).join('')||'<tr><td colspan="4" class="text-muted">Không còn hàng trên 157</td></tr>';
+    bootstrap.Modal.getOrCreateInstance(retModal).show();
+  };
+
+  btnConfirmRet.addEventListener('click', async ()=>{
+    if(!activeDoc) return;
+    const lines=[];
+    retLines.querySelectorAll('tr[data-lid]').forEach(tr=>{
+      const qty=parseFloat(tr.querySelector('.qty').value)||0;
+      if(qty<=0) return;
+      lines.push({
+        delivery_line_id: parseInt(tr.dataset.lid,10),
+        quantity: qty,
+        is_damaged: tr.querySelector('.dmg').checked?1:0,
+      });
+    });
+    if(!lines.length) return alert('Nhập SL trả');
+    const res=await fetch(`/api/sme/consignments/${activeDoc.id}/return`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ date: rDate.value, lines }),
+    });
+    const json=await res.json();
+    if(!json.success) return alert(json.error||'Lỗi');
+    bootstrap.Modal.getInstance(retModal)?.hide();
+    alert('Đã ghi trả lại');
+    loadProducts(); loadHist();
+  });
+
+  window.voidDoc=async (id)=>{
+    if(!confirm('Hủy phiếu gửi (đảo 157 và nhập lại kho)? Chỉ khi chưa bán/trả.')) return;
+    const res=await fetch(`/api/sme/consignments/${id}/void`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const json=await res.json();
+    if(!json.success) return alert(json.error||'Lỗi');
+    loadProducts(); loadHist();
+  };
+
+  fWh.addEventListener('change', loadProducts);
+  btnReload.addEventListener('click', ()=>{ loadProducts(); loadHist(); });
+  (async()=>{
+    await loadWh(); await loadAgents(); await loadProducts(); await loadHist();
+  })();
+})();
+</script>
+{% endblock %}

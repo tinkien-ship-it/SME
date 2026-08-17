@@ -62,12 +62,18 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
         finally:
             conn.close()
 
-    # ── 01-BH agent deliveries ─────────────────────────────
-    @app.route('/api/sme/agent-deliveries', methods=['GET', 'POST'])
+    # ── Hàng gửi đi bán (TK 157) + 01-BH deliveries ─────────
+    @app.route('/SME_consignment')
     @login_required
     @require_sme_regime
-    def api_sme_agent_deliveries():
-        from Services.sme.sale_forms import create_agent_delivery, list_agent_deliveries
+    def SME_consignment():
+        return render_template('KeToanSME/consignment.html')
+
+    @app.route('/api/sme/consignments', methods=['GET', 'POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_consignments():
+        from Services.sme.consignment import list_consignments, ship_consignment
         from Services.sme.branches import request_branch_filter
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
@@ -76,22 +82,222 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
             if request.method == 'GET':
                 return jsonify({
                     'success': True,
-                    'data': list_agent_deliveries(
+                    'data': list_consignments(
+                        conn,
+                        agent_name=request.args.get('agent'),
+                        status=request.args.get('status'),
+                        branch_code=branch,
+                    ),
+                })
+            data = request.get_json(silent=True) or {}
+            doc = ship_consignment(
+                conn,
+                agent_name=data.get('agent_name') or data.get('agent') or '',
+                delivery_date=data.get('date') or data.get('delivery_date'),
+                warehouse_code=data.get('warehouse_code') or data.get('warehouse') or '',
+                items=data.get('items') or data.get('lines') or [],
+                notes=data.get('notes') or '',
+                created_by=_user(),
+                branch_code=branch,
+                customer_id=data.get('customer_id'),
+                agent_address=data.get('agent_address') or data.get('address') or '',
+                agent_tax_code=data.get('agent_tax_code') or data.get('tax_code') or '',
+                agent_phone=data.get('agent_phone') or data.get('phone') or '',
+                agent_email=data.get('agent_email') or data.get('email') or '',
+                send_email_to_agent=data.get('send_email', True) not in (False, 0, '0', 'false'),
+                commit=True,
+            )
+            return jsonify({
+                'success': True,
+                'data': doc,
+                'email_sent': bool(doc.get('email_sent')),
+                'email_error': doc.get('email_error'),
+            })
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_consignments')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/consignments/<int:doc_id>', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_consignment_detail(doc_id):
+        from Services.sme.consignment import get_consignment
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            doc = get_consignment(conn, doc_id)
+            if not doc:
+                return jsonify({'success': False, 'error': 'Không tìm thấy'}), 404
+            return jsonify({'success': True, 'data': doc})
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/consignments/<int:doc_id>/confirm-sale', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_consignment_confirm_sale(doc_id):
+        from Services.sme.consignment import confirm_consignment_sale
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            doc = confirm_consignment_sale(
+                conn, doc_id,
+                event_date=data.get('date') or data.get('event_date'),
+                lines=data.get('lines') or data.get('items') or [],
+                payment_method=data.get('payment_method') or '131',
+                tax_pct=float(data.get('tax_pct') if data.get('tax_pct') is not None else 10),
+                notes=data.get('notes') or '',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': doc})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_consignment_confirm_sale')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/consignments/<int:doc_id>/return', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_consignment_return(doc_id):
+        from Services.sme.consignment import return_consignment
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            doc = return_consignment(
+                conn, doc_id,
+                event_date=data.get('date') or data.get('event_date'),
+                lines=data.get('lines') or data.get('items') or [],
+                notes=data.get('notes') or '',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': doc})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_consignment_return')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/consignments/<int:doc_id>/send-email', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_consignment_send_email(doc_id):
+        from Services.sme.consignment import send_consignment_voucher_email
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            info = send_consignment_voucher_email(conn, doc_id, commit=True)
+            return jsonify({'success': True, 'data': info})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_consignment_send_email')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/consignments/<int:doc_id>/void', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_consignment_void(doc_id):
+        from Services.sme.consignment import void_consignment
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            doc = void_consignment(
+                conn, doc_id,
+                reason=data.get('reason') or 'Hủy phiếu gửi đại lý',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': doc})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_consignment_void')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/agent-deliveries', methods=['GET', 'POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_agent_deliveries():
+        from Services.sme.sale_forms import create_agent_delivery
+        from Services.sme.consignment import list_consignments, ship_consignment
+        from Services.sme.branches import request_branch_filter
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            branch = request_branch_filter()
+            if request.method == 'GET':
+                return jsonify({
+                    'success': True,
+                    'data': list_consignments(
                         conn, agent_name=request.args.get('agent'),
                         branch_code=branch,
                     ),
                 })
             data = request.get_json(silent=True) or {}
-            doc = create_agent_delivery(
-                conn,
-                agent_name=data.get('agent_name') or data.get('agent') or '',
-                delivery_date=data.get('date') or data.get('delivery_date'),
-                items=data.get('items') or data.get('lines') or [],
-                notes=data.get('notes') or '',
-                created_by=_user(),
-                branch_code=branch,
-                commit=True,
-            )
+            wh = (data.get('warehouse_code') or data.get('warehouse') or '').strip()
+            if wh:
+                doc = ship_consignment(
+                    conn,
+                    agent_name=data.get('agent_name') or data.get('agent') or '',
+                    delivery_date=data.get('date') or data.get('delivery_date'),
+                    warehouse_code=wh,
+                    items=data.get('items') or data.get('lines') or [],
+                    notes=data.get('notes') or '',
+                    created_by=_user(),
+                    branch_code=branch,
+                    customer_id=data.get('customer_id'),
+                    agent_address=data.get('agent_address') or data.get('address') or '',
+                    agent_tax_code=data.get('agent_tax_code') or data.get('tax_code') or '',
+                    agent_phone=data.get('agent_phone') or data.get('phone') or '',
+                    agent_email=data.get('agent_email') or data.get('email') or '',
+                    send_email_to_agent=data.get('send_email', True) not in (False, 0, '0', 'false'),
+                    commit=True,
+                )
+                return jsonify({
+                    'success': True,
+                    'data': doc,
+                    'email_sent': bool(doc.get('email_sent')),
+                    'email_error': doc.get('email_error'),
+                })
+            else:
+                doc = create_agent_delivery(
+                    conn,
+                    agent_name=data.get('agent_name') or data.get('agent') or '',
+                    delivery_date=data.get('date') or data.get('delivery_date'),
+                    items=data.get('items') or data.get('lines') or [],
+                    notes=data.get('notes') or '',
+                    created_by=_user(),
+                    branch_code=branch,
+                    commit=True,
+                )
             return jsonify({'success': True, 'data': doc})
         except ValueError as e:
             conn.rollback()
@@ -107,17 +313,27 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
     @login_required
     @require_sme_regime
     def api_sme_agent_delivery_void(doc_id):
+        from Services.sme.consignment import void_consignment, get_consignment
         from Services.sme.sale_forms import void_agent_delivery
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
             data = request.get_json(silent=True) or {}
-            doc = void_agent_delivery(
-                conn, doc_id,
-                reason=data.get('reason') or 'Hủy phiếu giao đại lý',
-                commit=True,
-            )
-            return jsonify({'success': True, 'data': doc})
+            doc = get_consignment(conn, doc_id)
+            if doc and doc.get('journal_ship_id'):
+                out = void_consignment(
+                    conn, doc_id,
+                    reason=data.get('reason') or 'Hủy phiếu giao đại lý',
+                    created_by=_user(),
+                    commit=True,
+                )
+            else:
+                out = void_agent_delivery(
+                    conn, doc_id,
+                    reason=data.get('reason') or 'Hủy phiếu giao đại lý',
+                    commit=True,
+                )
+            return jsonify({'success': True, 'data': out})
         except ValueError as e:
             conn.rollback()
             return jsonify({'success': False, 'error': str(e)}), 400

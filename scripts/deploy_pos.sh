@@ -130,6 +130,17 @@ grep -v pywin32 requirements.txt | pip install -r /dev/stdin -q \
 
 echo "=== [5/6] Kiem tra + migrate + tu sua registry/master (service DANG TAT) ==="
 python - <<'PY'
+# Sao luu Google OAuth da luu (tranh mat khi repair registry/main DB)
+try:
+    from Services.login_service import export_google_oauth_persist
+    data = export_google_oauth_persist()
+    cid = (data or {}).get('google_client_id') or ''
+    print('  -> Google OAuth persist: %s' % ('OK (' + cid[:24] + '...)' if cid else 'chua co Client ID trong DB'))
+except Exception as exc:
+    print('  ! Khong export duoc Google OAuth:', exc)
+PY
+
+python - <<'PY'
 import glob, os, sqlite3
 bad = []
 for path in ['database.db'] + sorted(glob.glob('tenants/*.db')):
@@ -181,6 +192,20 @@ if need and auto:
         print('  ! repair_vps_main_db thoat ma', rc)
 elif need:
     print('  ! REGISTRY/MASTER thieu — chay: python scripts/repair_vps_main_db.py --apply')
+PY
+
+python - <<'PY'
+# Khoi phuc Google Client ID/Secret neu DB bi mat sau repair
+try:
+    from Services.login_service import restore_google_oauth_persist, export_google_oauth_persist
+    info = restore_google_oauth_persist()
+    if info.get('restored'):
+        print('  -> Da khoi phuc Google OAuth:', ', '.join(info.get('changed') or []))
+    else:
+        print('  -> Google OAuth DB OK (khong can restore)')
+    export_google_oauth_persist()
+except Exception as exc:
+    print('  ! Khong restore duoc Google OAuth:', exc)
 PY
 
 echo "=== [6/6] Start $SERVICE ==="

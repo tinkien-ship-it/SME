@@ -158,6 +158,15 @@ def main():
             print('Master: %s (%s)' % (action, args.username))
             print('Đăng nhập /login — username=%s (2FA tạm TẮT)' % args.username)
         conn.close()
+
+        try:
+            from Services.login_service import restore_google_oauth_persist, export_google_oauth_persist
+            info = restore_google_oauth_persist()
+            if info.get('restored'):
+                print('Khôi phục Google OAuth:', ', '.join(info.get('changed') or []))
+            export_google_oauth_persist()
+        except Exception as exc:
+            print('Cảnh báo: không khôi phục Google OAuth:', exc)
     else:
         print('Dry-run: sẽ gọi ensure_master với username=%r' % args.username)
         if not args.password:
