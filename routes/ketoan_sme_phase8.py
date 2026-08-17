@@ -147,6 +147,11 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
         conn.row_factory = sqlite3.Row
         try:
             data = request.get_json(silent=True) or {}
+            loai = data.get('loai_hdon', 1)
+            try:
+                loai = int(loai)
+            except (TypeError, ValueError):
+                loai = 1
             doc = confirm_consignment_sale(
                 conn, doc_id,
                 event_date=data.get('date') or data.get('event_date'),
@@ -155,9 +160,18 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
                 tax_pct=float(data.get('tax_pct') if data.get('tax_pct') is not None else 10),
                 notes=data.get('notes') or '',
                 created_by=_user(),
+                issue_einvoice=data.get('issue_einvoice', True) not in (False, 0, '0', 'false'),
+                loai_hdon=loai,
                 commit=True,
             )
-            return jsonify({'success': True, 'data': doc})
+            last = (doc or {}).get('last_event') or {}
+            return jsonify({
+                'success': True,
+                'data': doc,
+                'invoice_number': last.get('invoice_number'),
+                'sale_id': last.get('sale_id'),
+                'invoice': last.get('invoice'),
+            })
         except ValueError as e:
             conn.rollback()
             return jsonify({'success': False, 'error': str(e)}), 400

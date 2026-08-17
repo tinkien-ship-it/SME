@@ -6,7 +6,7 @@
     <h4 class="fw-bold mb-1">Xuất hàng / thành phẩm gửi đại lý</h4>
     <p class="text-muted small mb-0">
       Nợ <b>157</b> / Có <b>155·156</b> khi gửi ·
-      khi bán: Nợ <b>632</b>/Có <b>157</b> + Nợ <b>111·112·131</b>/Có <b>511·3331</b> ·
+      khi bán: <b>xuất HĐĐT</b> → Nợ <b>632</b>/Có <b>157</b> + Nợ <b>111·112·131</b>/Có <b>511·3331</b> ·
       trả lại: Nợ <b>155·156</b> (còn tốt) hoặc Nợ <b>632</b> (hỏng) / Có <b>157</b>.
       <a href="{{ url_for('SME_form_01_bh') }}">01-BH đối soát</a>
     </p>
@@ -73,6 +73,9 @@
   <div class="modal-header"><h5 class="modal-title">Xác nhận đại lý đã bán</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
     <p class="small text-muted" id="saleHint"></p>
+    <div class="alert alert-info py-2 small mb-2">
+      Hệ thống sẽ <b>xuất hóa đơn điện tử</b> cho đại lý trước, chỉ khi thành công mới ghi Doanh thu + Giá vốn (tất toán TK 157).
+    </div>
     <div class="row g-2 mb-2">
       <div class="col-md-3"><label class="form-label small">Ngày bán</label><input type="date" id="sDate" class="form-control form-control-sm"></div>
       <div class="col-md-3"><label class="form-label small">Thu tiền</label>
@@ -83,6 +86,12 @@
         </select>
       </div>
       <div class="col-md-2"><label class="form-label small">% VAT</label><input type="number" id="sVat" class="form-control form-control-sm" value="10" min="0" step="1"></div>
+      <div class="col-md-4"><label class="form-label small">Loại HĐĐT</label>
+        <select id="sLoaiHd" class="form-select form-select-sm">
+          <option value="1" selected>Hóa đơn chính thức</option>
+          <option value="0">Hóa đơn nháp</option>
+        </select>
+      </div>
     </div>
     <div class="table-responsive"><table class="table table-sm"><thead><tr>
       <th>Hàng</th><th class="text-end">Còn 157</th><th class="text-end">SL bán</th><th class="text-end">Đơn giá bán</th>
@@ -90,7 +99,7 @@
   </div>
   <div class="modal-footer">
     <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
-    <button class="btn btn-success btn-sm" id="btnConfirmSale">Ghi DT + GV</button>
+    <button class="btn btn-success btn-sm" id="btnConfirmSale">Xuất HĐĐT → Ghi DT + GV</button>
   </div>
 </div></div></div>
 
@@ -339,19 +348,26 @@
       });
     });
     if(!lines.length) return alert('Nhập SL bán');
+    if(!activeDoc.agent_tax_code || !activeDoc.agent_address || !activeDoc.agent_name){
+      return alert('Phiếu gửi thiếu thông tin đại lý (Tên / MST / địa chỉ) — không xuất được HĐĐT.');
+    }
+    if(!confirm('Xuất hóa đơn điện tử cho đại lý, sau đó ghi Doanh thu + Giá vốn?')) return;
     const res=await fetch(`/api/sme/consignments/${activeDoc.id}/confirm-sale`,{
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         date: sDate.value,
         payment_method: sPay.value,
         tax_pct: parseFloat(sVat.value)||0,
+        loai_hdon: parseInt(sLoaiHd.value,10)||1,
+        issue_einvoice: true,
         lines,
       }),
     });
     const json=await res.json();
     if(!json.success) return alert(json.error||'Lỗi');
     bootstrap.Modal.getInstance(saleModal)?.hide();
-    alert('Đã ghi DT + GV (tất toán 157)');
+    const inv=json.invoice_number || (json.data&&json.data.last_event&&json.data.last_event.invoice_number) || '';
+    alert('Đã xuất HĐĐT'+(inv?(' số '+inv):'')+' và ghi DT + GV (tất toán 157)');
     loadHist();
   });
 

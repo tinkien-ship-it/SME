@@ -2,7 +2,7 @@
 
 Luồng TT99:
   1) Xuất gửi: Nợ 157 / Có 155|156 + trừ tồn kho
-  2) Xác nhận bán: Nợ 632 / Có 157 + Nợ 111|112|131 / Có 511|3331
+  2) Xác nhận bán: xuất HĐĐT trước → Nợ 632 / Có 157 + Nợ 111|112|131 / Có 511|3331
   3) Trả lại: Nợ 155|156 (còn tốt) hoặc Nợ 632 (hỏng) / Có 157
 """
 from __future__ import annotations
@@ -99,6 +99,12 @@ def ensure_consignment_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         )
         """
     )
+    for col, decl in (
+        ('sale_id', 'INTEGER'),
+        ('invoice_number', 'TEXT'),
+        ('invoice_id', 'TEXT'),
+    ):
+        _ensure_col(conn, 'sme_consign_events', col, decl)
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS sme_consign_event_lines (
@@ -765,6 +771,146 @@ def ship_consignment(
     return out
 
 
+def _next_consign_sale_no(conn: sqlite3.Connection) -> str:
+    row = conn.execute(
+        "SELECT sale_no FROM sale WHERE sale_no LIKE 'XG%' ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    next_no = 1
+    if row:
+        raw = row[0] if not hasattr(row, 'keys') else row['sale_no']
+        digits = ''.join(ch for ch in str(raw or '') if ch.isdigit())
+        if digits:
+            next_no = int(digits) + 1
+    return f'XG{next_no:06d}'
+
+
+def _pay_method_label(method: str) -> str:
+    m = (method or '131').strip()
+    if m in ('111', 'cash', 'tm'):
+        return '111'
+    if m in ('112', 'bank', 'ck', '1121'):
+        return '112'
+    return '131'
+
+
+def _create_sale_for_consignment_einvoice(
+    conn: sqlite3.Connection,
+    *,
+    doc: dict[str, Any],
+    prepared: list[dict],
+    event_date: str,
+    payment_method: str,
+    gross_total: Decimal,
+    vat_total: Decimal,
+    notes: str = '',
+) -> int:
+    """Tạo đơn bán (không trừ tồn — đã xuất gửi TK 157) để xuất HĐĐT."""
+    cur = conn.cursor()
+    sale_cols = _cols(conn, 'sale')
+    pay = _pay_method_label(payment_method)
+    agent = (doc.get('agent_name') or '').strip()
+    tax = (doc.get('agent_tax_code') or '').strip()
+    address = (doc.get('agent_address') or '').strip()
+    phone = (doc.get('agent_phone') or '').strip()
+    email = (doc.get('agent_email') or '').strip()
+    if not agent or not tax or not address:
+        raise ValueError(
+            'Thiếu thông tin đại lý để xuất HĐĐT (cần Tên, MST, địa chỉ trên phiếu gửi)'
+        )
+
+    sale_no = _next_consign_sale_no(conn) if 'sale_no' in sale_cols else ''
+    note = (notes or '').strip() or f"Hàng gửi đi bán {doc.get('doc_no') or ''}"
+    when = f"{event_date} {datetime.now().strftime('%H:%M:%S')}"
+
+    fields = {
+        'date': when,
+        'total_amount': float(gross_total),
+        'payment_method': pay,
+        'customer_name': agent,
+        'company_name': agent,
+        'tax_code': tax,
+        'customer_phone': phone,
+        'address': address,
+        'email': email,
+        'status': 'completed',
+        'tax_amount': float(vat_total),
+        'tax_pct': float(prepared[0]['tax_pct']) if prepared else 0,
+        'note': note,
+        'sale_no': sale_no,
+        'business_line': 'consignment',
+        'customer_id': doc.get('customer_id'),
+    }
+    insert_cols = [k for k, v in fields.items() if k in sale_cols and v is not None and v != '']
+    # status/total luôn cần
+    for req in ('date', 'total_amount', 'payment_method', 'customer_name', 'status'):
+        if req in sale_cols and req not in insert_cols:
+            insert_cols.append(req)
+    cur.execute(
+        f"INSERT INTO sale ({', '.join(insert_cols)}) VALUES ({', '.join('?' * len(insert_cols))})",
+        [fields[k] for k in insert_cols],
+    )
+    sale_id = int(cur.lastrowid)
+
+    item_cols = _cols(conn, 'sale_items')
+    for p in prepared:
+        ln = p['line']
+        item = {
+            'sale_id': sale_id,
+            'product_id': ln.get('product_id'),
+            'product_name': ln.get('product_name') or '',
+            'quantity': float(p['quantity']),
+            'price': float(p['unit_price']),
+            'cost_price': float(p['unit_cost']),
+            'unit': ln.get('unit') or 'Cái',
+            'tax_pct': float(p['tax_pct']),
+            'discount_pct': 0,
+            'UseSaleUnit': 0,
+            'use_sale_unit': 0,
+            'line_total': float(p['revenue_gross']),
+        }
+        icols = [k for k in item if k in item_cols]
+        cur.execute(
+            f"INSERT INTO sale_items ({', '.join(icols)}) VALUES ({', '.join('?' * len(icols))})",
+            [item[k] for k in icols],
+        )
+    return sale_id
+
+
+def _cancel_orphan_consign_sale(conn: sqlite3.Connection, sale_id: int, reason: str) -> None:
+    cols = _cols(conn, 'sale')
+    if 'status' in cols:
+        if 'note' in cols:
+            conn.execute(
+                """
+                UPDATE sale
+                SET status = ?,
+                    note = TRIM(COALESCE(note, '') || ?)
+                WHERE id = ?
+                """,
+                ('cancelled', f' | Hủy vì HĐĐT: {str(reason)[:180]}', sale_id),
+            )
+        else:
+            conn.execute("UPDATE sale SET status = ? WHERE id = ?", ('cancelled', sale_id))
+    else:
+        conn.execute('DELETE FROM sale_items WHERE sale_id = ?', (sale_id,))
+        conn.execute('DELETE FROM sale WHERE id = ?', (sale_id,))
+
+
+def _issue_einvoice_for_sale(sale_id: int, *, loai_hdon: int = 1) -> dict[str, Any]:
+    """Gọi provider HĐĐT — bắt buộc thành công trước khi ghi DT/GV."""
+    from flask import current_app, has_app_context
+
+    if not has_app_context():
+        raise ValueError('Không gọi được xuất HĐĐT (thiếu app context)')
+    issue_fn = current_app.config.get('issue_invoice_for_sale')
+    if not issue_fn:
+        raise ValueError('Chưa cấu hình xuất hóa đơn điện tử (invoice_settings)')
+    result = issue_fn(sale_id, loai_hdon=loai_hdon) or {}
+    if not result.get('success'):
+        raise ValueError(result.get('error') or 'Xuất hóa đơn điện tử thất bại')
+    return result
+
+
 def confirm_consignment_sale(
     conn: sqlite3.Connection,
     delivery_id: int,
@@ -775,9 +921,11 @@ def confirm_consignment_sale(
     tax_pct: float = 10,
     notes: str = '',
     created_by: str | None = None,
+    issue_einvoice: bool = True,
+    loai_hdon: int = 1,
     commit: bool = False,
 ) -> dict[str, Any]:
-    """Bước 2: GV Nợ 632/Có 157 + DT Nợ 111|112|131 / Có 511|3331."""
+    """Bước 2: xuất HĐĐT trước → rồi GV Nợ 632/Có 157 + DT Nợ 111|112|131 / Có 511|3331."""
     ensure_consignment_schema(conn, commit=False)
     ensure_sme_journal_ready(conn, commit=False)
     doc = get_consignment(conn, delivery_id)
@@ -865,6 +1013,34 @@ def confirm_consignment_sale(
     if gross_total <= 0:
         raise ValueError('Tổng giá bán phải > 0 khi xác nhận đã bán')
 
+    # --- 1) Tạo đơn bán + xuất HĐĐT (bắt buộc trước DT/GV) ---
+    sale_id = None
+    invoice_info: dict[str, Any] = {}
+    if issue_einvoice:
+        sale_id = _create_sale_for_consignment_einvoice(
+            conn,
+            doc=doc,
+            prepared=prepared,
+            event_date=date_s,
+            payment_method=payment_method,
+            gross_total=gross_total,
+            vat_total=vat_total,
+            notes=notes,
+        )
+        # Commit đơn bán để provider HĐĐT đọc được (mở connection riêng)
+        conn.commit()
+        try:
+            invoice_info = _issue_einvoice_for_sale(sale_id, loai_hdon=loai_hdon)
+        except Exception as exc:
+            try:
+                _cancel_orphan_consign_sale(conn, sale_id, str(exc))
+                conn.commit()
+            except Exception:
+                conn.rollback()
+            raise ValueError(
+                f'Xuất hóa đơn điện tử thất bại — chưa ghi Doanh thu / Giá vốn. Chi tiết: {exc}'
+            ) from exc
+
     rev_lines: list[dict] = [{
         'sequence': 1,
         'account_code': pay_acct,
@@ -893,6 +1069,7 @@ def confirm_consignment_sale(
             'description': f'VAT đầu ra — {doc["doc_no"]}',
         })
 
+    inv_no = (invoice_info.get('invoice_no') or '').strip()
     branch = doc.get('branch_code')
     cogs_je = post_journal_entry(
         conn,
@@ -904,8 +1081,8 @@ def confirm_consignment_sale(
         business_type='HANG_GUI_BAN_GV',
         currency='VND',
         exchange_rate=1,
-        description=f'Giá vốn hàng gửi đã bán — {doc["doc_no"]}',
-        reference_document=doc['doc_no'],
+        description=f'Giá vốn hàng gửi đã bán — {doc["doc_no"]}' + (f' · HĐ {inv_no}' if inv_no else ''),
+        reference_document=inv_no or doc['doc_no'],
         created_by=created_by,
         branch_code=branch,
         lines=cogs_lines,
@@ -920,25 +1097,36 @@ def confirm_consignment_sale(
         business_type='HANG_GUI_BAN_DT',
         currency='VND',
         exchange_rate=1,
-        description=f'Doanh thu hàng gửi đã bán — {doc["doc_no"]}',
-        reference_document=doc['doc_no'],
+        description=f'Doanh thu hàng gửi đã bán — {doc["doc_no"]}' + (f' · HĐ {inv_no}' if inv_no else ''),
+        reference_document=inv_no or doc['doc_no'],
         created_by=created_by,
         branch_code=branch,
         lines=rev_lines,
     )
 
     cur = conn.cursor()
+    event_cols = _cols(conn, 'sme_consign_events')
+    base_fields = [
+        'delivery_id', 'event_type', 'event_date', 'payment_method',
+        'journal_cogs_id', 'journal_rev_id', 'notes', 'created_by', 'created_at',
+    ]
+    base_vals: list[Any] = [
+        delivery_id, 'sale', date_s, payment_method,
+        cogs_je['id'], rev_je['id'], notes or '', created_by, _now(),
+    ]
+    if 'sale_id' in event_cols:
+        base_fields.append('sale_id')
+        base_vals.append(sale_id)
+    if 'invoice_number' in event_cols:
+        base_fields.append('invoice_number')
+        base_vals.append(inv_no or None)
+    if 'invoice_id' in event_cols:
+        base_fields.append('invoice_id')
+        base_vals.append(str(invoice_info.get('invoice_id') or '') or None)
     cur.execute(
-        """
-        INSERT INTO sme_consign_events
-            (delivery_id, event_type, event_date, payment_method,
-             journal_cogs_id, journal_rev_id, notes, created_by, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?)
-        """,
-        (
-            delivery_id, 'sale', date_s, payment_method,
-            cogs_je['id'], rev_je['id'], notes or '', created_by, _now(),
-        ),
+        f"INSERT INTO sme_consign_events ({', '.join(base_fields)}) "
+        f"VALUES ({', '.join('?' * len(base_fields))})",
+        base_vals,
     )
     eid = int(cur.lastrowid)
     for p in prepared:
@@ -972,6 +1160,9 @@ def confirm_consignment_sale(
         'cogs_vnd': float(total_cogs),
         'revenue_vnd': float(gross_total),
         'vat_vnd': float(vat_total),
+        'sale_id': sale_id,
+        'invoice_number': inv_no or None,
+        'invoice': invoice_info or None,
     }
     return out
 
