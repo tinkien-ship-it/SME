@@ -62,6 +62,92 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
         finally:
             conn.close()
 
+    @app.route('/api/sme/tt58-tax-method', methods=['GET', 'POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_tt58_tax_method():
+        from Services.sme.regime_profile import get_ledger_profile, set_tt58_tax_method
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            profile = get_ledger_profile(conn)
+            if not profile.get('is_tt58_micro'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Chỉ áp dụng cho doanh nghiệp siêu nhỏ (TT58).',
+                }), 400
+            if request.method == 'GET':
+                return jsonify({'success': True, 'data': profile})
+            data = request.get_json(silent=True) or {}
+            method = data.get('method') or data.get('tt58_tax_method') or request.form.get('method')
+            if not method:
+                return jsonify({'success': False, 'error': 'Thiếu phương pháp thuế'}), 400
+            tax_def = set_tt58_tax_method(conn, method, commit=True)
+            profile = get_ledger_profile(conn)
+            return jsonify({
+                'success': True,
+                'data': profile,
+                'tax_method': tax_def,
+                'message': f"Đã chọn {tax_def.get('short_label')}",
+            })
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/tt58-tax-rates', methods=['GET', 'POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_tt58_tax_rates():
+        from Services.sme.regime_profile import get_ledger_profile
+        from Services.sme.tt58_tax_rates import (
+            get_tt58_tax_rates,
+            list_tt58_tax_rate_history,
+            rates_ui_context_for_method,
+            save_tt58_tax_rates,
+        )
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            profile = get_ledger_profile(conn)
+            if not profile.get('is_tt58_micro'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Chỉ áp dụng cho doanh nghiệp siêu nhỏ (TT58).',
+                }), 400
+            as_of = request.args.get('as_of') or (request.get_json(silent=True) or {}).get('as_of')
+            if request.method == 'GET':
+                rates = get_tt58_tax_rates(conn, as_of=as_of)
+                return jsonify({
+                    'success': True,
+                    'data': rates,
+                    'ui': rates_ui_context_for_method(profile.get('tt58_tax_method')),
+                    'history': list_tt58_tax_rate_history(conn, limit=30),
+                    'tax_method': profile.get('tt58_tax_method'),
+                })
+            data = request.get_json(silent=True) or {}
+            saved = save_tt58_tax_rates(
+                conn,
+                sectors=data.get('sectors') or [],
+                cit_pct_income=data.get('cit_pct_income'),
+                effective_from=data.get('effective_from'),
+                note=data.get('note'),
+                created_by=session.get('username') or session.get('user') or 'user',
+                commit=True,
+            )
+            return jsonify({
+                'success': True,
+                'data': saved,
+                'ui': rates_ui_context_for_method(profile.get('tt58_tax_method')),
+                'message': 'Đã lưu thuế suất (có hiệu lực từ ngày đã chọn).',
+            })
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     # ── Hàng gửi đi bán (TK 157) + 01-BH deliveries ─────────
     @app.route('/SME_consignment')
     @login_required

@@ -30,10 +30,11 @@ def ensure_sme_accounting_ready(
     commit: bool = True,
     force: bool = False,
 ) -> dict[str, Any]:
-    """Đảm bảo COA TT99 + quy tắc định khoản + schema nhật ký sẵn sàng.
+    """Đảm bảo COA + quy tắc định khoản + schema nhật ký sẵn sàng.
 
-    TT58 siêu nhỏ hiện dùng cùng hệ thống TK kép TT99 (thực tế phần mềm);
-    ``ledger_profile`` được ghi vào meta để UI/filing phân biệt kỳ kê khai.
+    COA seed hiện dùng bộ TT99 (sổ kép chung). Tenant TT58 ghi
+    ``ledger_profile=sme_tt58`` — BCTC/biểu mẫu DNSN chọn theo profile,
+    không dùng bộ B01–B09-DN của TT99.
 
     Sau lần đầu trong process, các lần gọi sau (cùng DB) trả về ngay — trừ ``force=True``.
     """
@@ -75,6 +76,7 @@ def ensure_sme_accounting_ready(
     from Services.sme.material_remaining import ensure_sme_material_remaining_schema
     from Services.sme.cash_extras import ensure_sme_cash_extras_schema
     from Services.sme.branches import ensure_sme_branches_schema, backfill_asset_branches_from_warehouse
+    from Services.sme.tt58_tax_rates import ensure_tt58_tax_rates_schema
     from Services.tenant_profile import is_sme_regime, normalize_accounting_regime
 
     coa = ensure_sme_coa_ready(conn, commit=False)
@@ -92,6 +94,7 @@ def ensure_sme_accounting_ready(
     ensure_sme_fa_docs_schema(conn, commit=False)
     ensure_sme_inventory_ops_schema(conn, commit=False)
     ensure_sme_cit_schema(conn, commit=False)
+    ensure_tt58_tax_rates_schema(conn, commit=False)
     ensure_sme_fx_schema(conn, commit=False)
     ensure_sme_loans_schema(conn, commit=False)
     ensure_sme_lc_schema(conn, commit=False)
@@ -139,6 +142,20 @@ def ensure_sme_accounting_ready(
                 """,
                 (key, value, now),
             )
+        # Mặc định PP1 (Điều 5) cho tenant TT58 nếu chưa chọn
+        if profile == 'sme_tt58':
+            row = conn.execute(
+                "SELECT value FROM sme_coa_seed_meta WHERE key = 'tt58_tax_method'"
+            ).fetchone()
+            if not row or not (row[0] if not isinstance(row, sqlite3.Row) else row['value']):
+                from Services.sme.tt58_tax_methods import DEFAULT_TT58_TAX_METHOD
+                conn.execute(
+                    """
+                    INSERT INTO sme_coa_seed_meta(key, value, updated_at) VALUES (?, ?, ?)
+                    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+                    """,
+                    ('tt58_tax_method', DEFAULT_TT58_TAX_METHOD, now),
+                )
     except sqlite3.Error:
         pass
 

@@ -187,14 +187,27 @@ SME_MENU_GROUPS = (
     {
         'id': 'reports', 'section': 'reports', 'label': 'Báo cáo tài chính',
         'icon': 'fas fa-chart-line', 'color': 'primary', 'endpoint': 'SME_BCTC',
-        'description': 'Báo cáo tài chính, báo cáo quản trị, doanh thu và lợi nhuận',
+        'description': 'BCTC theo chế độ kế toán (TT58 DNSN / TT99 DN)',
         'items': (
-            {'endpoint': 'SME_BCTC_reports', 'label': 'Bộ báo cáo tài chính', 'icon': 'fas fa-file-excel'},
+            {
+                'endpoint': 'SME_BCTC_reports', 'label': 'Bộ báo cáo tài chính',
+                'icon': 'fas fa-file-excel', 'requires_bctc': True,
+            },
+            {
+                'endpoint': 'SME_dnsn_books', 'label': 'Sổ & biểu mẫu DNSN (TT58)',
+                'icon': 'fas fa-book', 'regimes': ('SME_MICRO_TT58',),
+            },
             {'endpoint': 'SME_mgmt_report', 'label': 'Báo cáo quản trị', 'icon': 'fas fa-chart-column'},
             {'endpoint': 'SME_revenue_report', 'label': 'Báo cáo doanh thu điểm bán hàng', 'icon': 'fas fa-chart-bar'},
             {'endpoint': 'SME_profit_report', 'label': 'Báo cáo lợi nhuận điểm bán hàng', 'icon': 'fas fa-coins'},
-            {'endpoint': 'SME_fx_revaluation', 'label': 'Đánh giá lại tỷ giá', 'icon': 'fas fa-dollar-sign'},
-            {'endpoint': 'SME_capital', 'label': 'Góp vốn và cổ tức', 'icon': 'fas fa-piggy-bank'},
+            {
+                'endpoint': 'SME_fx_revaluation', 'label': 'Đánh giá lại tỷ giá',
+                'icon': 'fas fa-dollar-sign', 'regimes': ('SME_TT99',),
+            },
+            {
+                'endpoint': 'SME_capital', 'label': 'Góp vốn và cổ tức',
+                'icon': 'fas fa-piggy-bank', 'regimes': ('SME_TT99',),
+            },
         ),
     },
     {
@@ -210,11 +223,70 @@ SME_MENU_GROUPS = (
     },
 )
 
-def get_sme_menu_groups():
-    """Trả menu đã xen tiêu đề phân khu để render sidebar."""
+def _normalize_menu_regime(regime: str | None) -> str:
+    r = (regime or '').strip().upper()
+    if 'TT58' in r or 'MICRO' in r:
+        return 'SME_MICRO_TT58'
+    if 'TT99' in r or r.startswith('SME'):
+        return 'SME_TT99'
+    return r or 'SME_TT99'
+
+
+def _item_allowed(item: dict, regime: str, *, show_bctc: bool = True) -> bool:
+    allowed = item.get('regimes')
+    if allowed and regime not in allowed:
+        return False
+    if item.get('requires_bctc') and not show_bctc:
+        return False
+    return True
+
+
+def get_sme_menu_groups(accounting_regime: str | None = None):
+    """Trả menu đã xen tiêu đề phân khu; lọc item theo chế độ TT58/TT99 + PP thuế."""
+    regime = _normalize_menu_regime(accounting_regime)
+    if accounting_regime is None:
+        try:
+            from flask import has_request_context
+            if has_request_context():
+                from Services.tenant_profile import get_current_tenant_profile
+                regime = _normalize_menu_regime(
+                    (get_current_tenant_profile() or {}).get('accounting_regime')
+                )
+        except Exception:
+            pass
+
+    show_bctc = True
+    if regime == 'SME_MICRO_TT58':
+        try:
+            from db_utils import get_db_connection
+            from Services.sme.regime_profile import get_ledger_profile
+            conn = get_db_connection()
+            try:
+                show_bctc = bool(get_ledger_profile(conn).get('show_bctc', True))
+            finally:
+                conn.close()
+        except Exception:
+            show_bctc = True
+
     result = []
     for section in SME_MENU_SECTIONS:
-        groups = [dict(group) for group in SME_MENU_GROUPS if group['section'] == section['id']]
+        groups = []
+        for group in SME_MENU_GROUPS:
+            if group['section'] != section['id']:
+                continue
+            g = dict(group)
+            items = tuple(
+                i for i in (g.get('items') or ())
+                if _item_allowed(i, regime, show_bctc=show_bctc)
+            )
+            g['items'] = items
+            g_regimes = g.get('regimes')
+            if g_regimes and regime not in g_regimes:
+                continue
+            # Ẩn cả nhóm BCTC nếu không còn item nào (TT58 PP1/PP3)
+            if g.get('id') == 'reports' and not items:
+                continue
+            groups.append(g)
         if groups:
             result.append({**section, '_type': 'section_header'})
             result.extend(groups)

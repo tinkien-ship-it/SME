@@ -194,12 +194,23 @@ def _aggregate_leaf_amounts(
     *,
     line_defs: list[dict],
 ) -> dict[str, Decimal]:
+    """Gom số dư/phát sinh theo mã chỉ tiêu báo cáo.
+
+    Hỗ trợ ``coa_line`` (TT99) hoặc ``coa_lines`` / ``coa_contra_lines`` (TT58 DNSN).
+    """
     leaf_meta = {}
     for line in line_defs:
         if line.get('kind') != 'leaf':
             continue
+        codes = line.get('coa_lines')
+        if not codes:
+            codes = [line.get('coa_line') or line['code']]
         leaf_meta[line['code']] = {
-            'coa_line': line.get('coa_line') or line['code'],
+            'coa_lines': list(codes),
+            'coa_contra_lines': list(line.get('coa_contra_lines') or []),
+            'coa_contra_role': line.get('coa_contra_role') or (
+                'contra_asset' if (line.get('sign_role') or 'asset') == 'asset' else 'expense'
+            ),
             'sign_role': line.get('sign_role') or 'asset',
         }
 
@@ -217,27 +228,49 @@ def _aggregate_leaf_amounts(
         bucket['debit'] += bal['debit']
         bucket['credit'] += bal['credit']
 
+    empty = {'debit': Decimal('0.00'), 'credit': Decimal('0.00')}
     out: dict[str, Decimal] = {}
     for report_code, meta in leaf_meta.items():
-        bucket = raw.get(meta['coa_line'], {'debit': Decimal('0.00'), 'credit': Decimal('0.00')})
-        out[report_code] = _signed_amount(bucket['debit'], bucket['credit'], meta['sign_role'])
+        amt = Decimal('0.00')
+        role = meta['sign_role']
+        for coa_line in meta['coa_lines']:
+            bucket = raw.get(coa_line, empty)
+            amt += _signed_amount(bucket['debit'], bucket['credit'], role)
+        contra_role = meta['coa_contra_role']
+        for coa_line in meta['coa_contra_lines']:
+            bucket = raw.get(coa_line, empty)
+            amt -= _signed_amount(bucket['debit'], bucket['credit'], contra_role)
+        out[report_code] = _money(amt)
     return out
 
 
-def _build_rows(line_defs: list[dict], leaf_values: dict[str, Decimal]) -> list[dict]:
+def _build_rows(
+    line_defs: list[dict],
+    leaf_values: dict[str, Decimal],
+    *,
+    opening_values: dict[str, Decimal] | None = None,
+) -> list[dict]:
     values: dict[str, Decimal] = dict(leaf_values)
+    open_vals: dict[str, Decimal] = dict(opening_values or {})
     rows = []
     for line in line_defs:
         code = line['code']
         kind = line['kind']
         amount = None
+        amount_opening = None
         if kind == 'leaf':
             amount = _money(values.get(code, 0))
             values[code] = amount
+            if opening_values is not None:
+                amount_opening = _money(open_vals.get(code, 0))
+                open_vals[code] = amount_opening
         elif kind == 'calc':
             amount = _eval_formula(line.get('formula') or '0', values)
             values[code] = amount
-        rows.append({
+            if opening_values is not None:
+                amount_opening = _eval_formula(line.get('formula') or '0', open_vals)
+                open_vals[code] = amount_opening
+        row = {
             'code': code,
             'name': line['name'],
             'kind': kind,
@@ -246,8 +279,26 @@ def _build_rows(line_defs: list[dict], leaf_values: dict[str, Decimal]) -> list[
             'highlight': bool(line.get('highlight')),
             'amount': None if amount is None else float(amount),
             'formula': line.get('formula'),
-        })
+        }
+        if opening_values is not None:
+            row['amount_opening'] = None if amount_opening is None else float(amount_opening)
+        rows.append(row)
     return rows
+
+
+def _is_tt58_forms(conn: sqlite3.Connection) -> bool:
+    try:
+        from Services.sme.regime_profile import get_ledger_profile
+        return bool(get_ledger_profile(conn).get('is_tt58_micro'))
+    except Exception:
+        return False
+
+
+def _year_opening_balances(conn: sqlite3.Connection, fiscal_year: int) -> dict[str, dict[str, Decimal]]:
+    """Số dư đầu năm = số dư cuối năm trước."""
+    if fiscal_year <= 1:
+        return {}
+    return _closing_balances(conn, fiscal_year - 1, 12)
 
 
 def balance_sheet(
@@ -257,18 +308,39 @@ def balance_sheet(
     period_to: int,
     include_current_profit: bool = True,
 ) -> dict[str, Any]:
-    """Bảng cân đối kế toán (B01-DN) tại thời điểm cuối kỳ."""
+    """Bảng CĐKT / Báo cáo tình hình TC — B01-DN (TT99) hoặc B01-DNSN (TT58)."""
     ensure_sme_journal_ready(conn, commit=False)
     if period_to < 1 or period_to > 12:
         raise ValueError('Kỳ phải từ 1 đến 12')
 
+    tt58 = _is_tt58_forms(conn)
+    if tt58:
+        from Services.sme.bctc_lines_tt58 import B01_DNSN_BALANCE_SHEET as line_defs
+        report_code = 'B01-DNSN'
+        title = 'Báo cáo tình hình tài chính'
+        profit_line = '420'
+        total_asset_code = '200'
+        total_source_code = '500'
+    else:
+        line_defs = B01_BALANCE_SHEET
+        report_code = 'B01-DN'
+        title = 'Bảng cân đối kế toán'
+        profit_line = '421'
+        total_asset_code = '270'
+        total_source_code = '440'
+
     accounts = _coa_line_map(conn)
     bal_map = _closing_balances(conn, fiscal_year, period_to)
-    leaf_vals = _aggregate_leaf_amounts(accounts, bal_map, line_defs=B01_BALANCE_SHEET)
+    leaf_vals = _aggregate_leaf_amounts(accounts, bal_map, line_defs=line_defs)
+
+    opening_leaf = None
+    if tt58:
+        open_map = _year_opening_balances(conn, fiscal_year)
+        opening_leaf = _aggregate_leaf_amounts(accounts, open_map, line_defs=line_defs)
 
     current_profit = Decimal('0.00')
     if include_current_profit:
-        # Chỉ cộng LN các kỳ chưa kết chuyển KCKQ (tránh cộng trùng vào 421)
+        # Chỉ cộng LN các kỳ chưa kết chuyển KCKQ (tránh cộng trùng vào 421/420)
         closed_rows = conn.execute(
             """
             SELECT DISTINCT period FROM sme_journal_entries
@@ -288,22 +360,24 @@ def balance_sheet(
                 period_to=max(open_periods),
             )
             current_profit = _money(is_rep['totals']['profit_after_tax'])
-            leaf_vals['421'] = _money(leaf_vals.get('421', 0)) + current_profit
+            leaf_vals[profit_line] = _money(leaf_vals.get(profit_line, 0)) + current_profit
 
-    rows = _build_rows(B01_BALANCE_SHEET, leaf_vals)
+    rows = _build_rows(line_defs, leaf_vals, opening_values=opening_leaf)
     by_code = {r['code']: r['amount'] for r in rows if r['amount'] is not None}
-    total_assets = _money(by_code.get('270', 0))
-    total_equity_liab = _money(by_code.get('440', 0))
+    total_assets = _money(by_code.get(total_asset_code, 0))
+    total_equity_liab = _money(by_code.get(total_source_code, 0))
     _, as_of = period_bounds(fiscal_year, period_to)
 
     return {
-        'report': 'B01-DN',
-        'title': 'Bảng cân đối kế toán',
+        'report': report_code,
+        'form_set': 'tt58_dnsn' if tt58 else 'tt99_dn',
+        'title': title,
         'fiscal_year': fiscal_year,
         'period_to': period_to,
         'as_of_date': as_of,
         'include_current_profit': include_current_profit,
         'current_year_profit': float(current_profit),
+        'has_opening_column': bool(tt58),
         'rows': rows,
         'totals': {
             'total_assets': float(total_assets),
@@ -321,11 +395,23 @@ def income_statement(
     period_from: int = 1,
     period_to: int | None = None,
 ) -> dict[str, Any]:
-    """Báo cáo KQHĐKD (B02-DN) theo kỳ hoặc lũy kế."""
+    """KQHĐKD — B02-DN (TT99) hoặc B02-DNSN (TT58)."""
     ensure_sme_journal_ready(conn, commit=False)
     period_to = period_to or period_from
     if period_from > period_to:
         raise ValueError('period_from không được lớn hơn period_to')
+
+    tt58 = _is_tt58_forms(conn)
+    if tt58:
+        from Services.sme.bctc_lines_tt58 import B02_DNSN_INCOME_STATEMENT as line_defs
+        report_code = 'B02-DNSN'
+        title = 'Báo cáo kết quả hoạt động kinh doanh'
+        net_code, gross_code, pbt_code, pat_code = '01', '03', '03', '20'
+    else:
+        line_defs = B02_INCOME_STATEMENT
+        report_code = 'B02-DN'
+        title = 'Báo cáo kết quả hoạt động kinh doanh'
+        net_code, gross_code, pbt_code, pat_code = '10', '20', '50', '60'
 
     accounts = _coa_line_map(conn)
     # Loại KCKQ: kết chuyển làm phát sinh DT/CP về 0 — B02 cần số trước kết chuyển
@@ -333,26 +419,46 @@ def income_statement(
         conn, fiscal_year, period_from, period_to,
         exclude_document_types=('KCKQ',),
     )
-    leaf_vals = _aggregate_leaf_amounts(accounts, bal_map, line_defs=B02_INCOME_STATEMENT)
-    rows = _build_rows(B02_INCOME_STATEMENT, leaf_vals)
+    leaf_vals = _aggregate_leaf_amounts(accounts, bal_map, line_defs=line_defs)
+
+    prior_leaf = None
+    if tt58 and fiscal_year > 1:
+        prior_map = _period_activity(
+            conn, fiscal_year - 1, period_from, period_to,
+            exclude_document_types=('KCKQ',),
+        )
+        prior_leaf = _aggregate_leaf_amounts(accounts, prior_map, line_defs=line_defs)
+
+    rows = _build_rows(
+        line_defs, leaf_vals,
+        opening_values=prior_leaf if prior_leaf is not None else None,
+    )
+    # Với B02-DNSN: amount_opening = năm trước (cột Năm trước)
+    if prior_leaf is not None:
+        for r in rows:
+            if 'amount_opening' in r:
+                r['amount_prior'] = r.pop('amount_opening')
+
     date_from, _ = period_bounds(fiscal_year, period_from)
     _, date_to = period_bounds(fiscal_year, period_to)
     by_code = {r['code']: r['amount'] for r in rows if r['amount'] is not None}
 
     return {
-        'report': 'B02-DN',
-        'title': 'Báo cáo kết quả hoạt động kinh doanh',
+        'report': report_code,
+        'form_set': 'tt58_dnsn' if tt58 else 'tt99_dn',
+        'title': title,
         'fiscal_year': fiscal_year,
         'period_from': period_from,
         'period_to': period_to,
         'date_from': date_from,
         'date_to': date_to,
+        'has_prior_column': bool(tt58),
         'rows': rows,
         'totals': {
-            'revenue_net': float(_money(by_code.get('10', 0))),
-            'gross_profit': float(_money(by_code.get('20', 0))),
-            'profit_before_tax': float(_money(by_code.get('50', 0))),
-            'profit_after_tax': float(_money(by_code.get('60', 0))),
+            'revenue_net': float(_money(by_code.get(net_code, 0))),
+            'gross_profit': float(_money(by_code.get(gross_code, 0))),
+            'profit_before_tax': float(_money(by_code.get(pbt_code, 0))),
+            'profit_after_tax': float(_money(by_code.get(pat_code, 0))),
         },
     }
 
@@ -545,13 +651,14 @@ def cash_flow_statement(
     period_to: int | None = None,
 ) -> dict[str, Any]:
     """
-    Báo cáo LCTT (B03-DN).
-
-    - Tiền = các TK postable map bctc_line_code = 111
-    - HĐKD: LN trước thuế + điều chỉnh WC/khấu hao; phần lệch so với dòng tiền
-      thực (phân loại từ nhật ký) gom vào chỉ tiêu thu/chi khác HĐKD
-    - HĐĐT / HĐTC: phân loại theo tài khoản đối ứng
+    Báo cáo LCTT (B03-DN) — chỉ áp dụng TT99.
+    TT58 siêu nhỏ không có mẫu B03-DNSN theo Thông tư 58/2026/TT-BTC.
     """
+    if _is_tt58_forms(conn):
+        raise ValueError(
+            'Doanh nghiệp siêu nhỏ (TT58) không lập Báo cáo lưu chuyển tiền tệ (B03). '
+            'Chỉ lập B01-DNSN và B02-DNSN.'
+        )
     ensure_sme_journal_ready(conn, commit=False)
     period_to = period_to or period_from
     if period_from > period_to:

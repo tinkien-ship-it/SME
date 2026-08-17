@@ -1,0 +1,420 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Sổ & biểu mẫu DNSN (TT58){% endblock %}
+{% block sme_content %}
+<div class="mb-3 d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1"><i class="fas fa-book text-primary me-2"></i>Sổ kế toán & biểu mẫu DNSN</h4>
+    <p class="text-muted small mb-0">
+      Theo Thông tư <b>58/2026/TT-BTC</b>. Hệ thống chỉ hiển thị sổ / chứng từ / BCTC
+      phù hợp phương pháp nộp thuế GTGT–TNDN đã chọn (Điều 5–8).
+    </p>
+  </div>
+  <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#tt58TaxRatesModal">
+    <i class="fas fa-percent me-1"></i>Thiết lập thuế suất
+  </button>
+</div>
+
+<div class="alert alert-light border small mb-3">
+  <div class="fw-semibold mb-1">Đối chiếu TT58 — trạng thái biểu mẫu</div>
+  <ul class="mb-0 ps-3">
+    <li><span class="text-success">Đủ</span>: S1, S2a–S2d, S3a–S3b, S4a–S4d · B01/B02-DNSN · 01-TT/02-TT/01-VT/02-VT · 4 PP thuế</li>
+    <li><span class="text-warning">Rút gọn / sẽ tinh chỉnh</span>: một số cột phụ lục (S4b giảm TSCĐ chi tiết, S4c lượng hàng/thuế tuyệt đối), branding in chứng từ DNSN riêng</li>
+    <li>Không có mẫu bắt buộc nào trong TT58 còn thiếu danh mục — phần còn lại là độ chi tiết cột và cấu hình thuế suất (modal bên cạnh).</li>
+  </ul>
+</div>
+
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+    <span>Phương pháp tính thuế (4 lựa chọn)</span>
+    <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="modal" data-bs-target="#tt58TaxRatesModal">
+      Thuế suất theo PP →
+    </button>
+  </div>
+  <div class="card-body">
+    <div class="row g-2" id="taxMethodCards">
+      {% for m in tax_methods %}
+      <div class="col-md-6">
+        <label class="border rounded p-3 h-100 d-block tax-method-card
+          {% if tax_method == m.code %}border-primary bg-primary bg-opacity-10{% endif %}"
+          style="cursor:pointer">
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="tt58_tax_method"
+                   value="{{ m.code }}" {% if tax_method == m.code %}checked{% endif %}>
+            <span class="form-check-label fw-semibold">{{ m.short_label }}</span>
+          </div>
+          <div class="small text-muted mt-1">{{ m.description }}</div>
+          <div class="small mt-2">
+            <span class="badge text-bg-light">Sổ bắt buộc: {{ m.required_books|join(', ') }}</span>
+            {% if m.show_bctc %}
+            <span class="badge text-bg-success">Có BCTC</span>
+            {% else %}
+            <span class="badge text-bg-secondary">Không bắt buộc BCTC</span>
+            {% endif %}
+          </div>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
+      <button type="button" class="btn btn-primary btn-sm" id="btnSaveTaxMethod">
+        Lưu phương pháp
+      </button>
+      <span class="small text-muted" id="taxMethodMsg">
+        Đang chọn: <strong>{{ regime_profile.tt58_tax_method_def.short_label if regime_profile.tt58_tax_method_def else '—' }}</strong>
+      </span>
+    </div>
+  </div>
+</div>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-auto">
+    <label class="form-label small mb-0">Năm xem sổ</label>
+    <input type="number" name="year" class="form-control form-control-sm" value="{{ year }}" style="width:100px">
+  </div>
+  <div class="col-auto d-flex align-items-end">
+    <button class="btn btn-sm btn-outline-primary">Áp dụng</button>
+  </div>
+</form>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-header bg-white fw-bold">Sổ kế toán bắt buộc theo phương pháp</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light">
+            <tr><th>Mẫu số</th><th>Tên sổ</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for b in required_books %}
+            <tr>
+              <td class="fw-semibold"><code>{{ b.code }}</code></td>
+              <td>{{ b.name }}</td>
+              <td class="text-end text-nowrap">
+                <a class="btn btn-sm btn-outline-primary"
+                   href="{{ url_for('SME_dnsn_book', code=b.code, year=year) }}">Xem</a>
+                <a class="btn btn-sm btn-outline-secondary" target="_blank"
+                   href="{{ url_for('SME_dnsn_book_print', code=b.code, year=year) }}">In</a>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" class="text-muted text-center py-3">Chưa có sổ bắt buộc</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if optional_books %}
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-header bg-white fw-bold">Sổ chi tiết tùy chọn (Điều 9)</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light">
+            <tr><th>Mẫu số</th><th>Tên sổ</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for b in optional_books %}
+            <tr>
+              <td class="fw-semibold"><code>{{ b.code }}</code></td>
+              <td>{{ b.name }}</td>
+              <td class="text-end text-nowrap">
+                <a class="btn btn-sm btn-outline-primary"
+                   href="{{ url_for('SME_dnsn_book', code=b.code, year=year) }}">Xem</a>
+                <a class="btn btn-sm btn-outline-secondary" target="_blank"
+                   href="{{ url_for('SME_dnsn_book_print', code=b.code, year=year) }}">In</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if regime_profile.show_bctc %}
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-header bg-white fw-bold">Báo cáo tài chính</div>
+      <div class="card-body py-3">
+        <p class="small text-muted mb-2">{{ regime_profile.bctc_hint }}</p>
+        <a href="{{ url_for('SME_BCTC_reports') }}" class="btn btn-primary btn-sm">
+          Lập B01-DNSN / B02-DNSN
+        </a>
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-secondary small mb-0">
+      Phương pháp hiện tại <strong>không bắt buộc</strong> lập Báo cáo tài chính nộp cơ quan nhà nước
+      (TNDN theo % doanh thu — Điều 10.1.b). Mục BCTC đã được ẩn khỏi menu.
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-header bg-white fw-bold">Thuế suất đang áp dụng</div>
+      <div class="card-body small">
+        <p class="text-muted mb-2" id="ratesHint">{{ rates_ui.hint if rates_ui else '' }}</p>
+        <ul class="list-unstyled mb-2" id="ratesSummary">
+          {% for s in tax_rates.sectors or [] %}
+          <li class="mb-1">
+            <strong>{{ s.label }}</strong><br>
+            {% if rates_ui.show_vat_pct_revenue %}GTGT {{ s.vat_pct }}% · {% endif %}
+            {% if rates_ui.show_cit_pct_revenue %}TNDN/DT {{ s.cit_pct_revenue }}%{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% if rates_ui.show_cit_pct_income %}
+        <div class="fw-semibold">TNDN trên thu nhập: {{ tax_rates.cit_pct_income }}%</div>
+        {% endif %}
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#tt58TaxRatesModal">
+          Chỉnh sửa / đổi hiệu lực
+        </button>
+      </div>
+    </div>
+
+    {% if vouchers %}
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-header bg-white fw-bold">Chứng từ kế toán (Điều 9 — tùy nghi)</div>
+      <ul class="list-group list-group-flush">
+        {% for v in vouchers %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span><code>{{ v.code }}</code> — {{ v.name }}</span>
+          {% if v.url %}
+          <a class="btn btn-sm btn-outline-primary" href="{{ v.url }}">Mở</a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="card-footer small text-muted">
+        Doanh nghiệp siêu nhỏ có thể lựa chọn dùng các chứng từ này khi cần quản lý quỹ / kho.
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Modal thuế suất ── #}
+<div class="modal fade" id="tt58TaxRatesModal" tabindex="-1" aria-labelledby="tt58TaxRatesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="tt58TaxRatesModalLabel">Thiết lập thuế suất GTGT / TNDN</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted" id="modalRatesHint">{{ rates_ui.hint if rates_ui else '' }}</p>
+        <div class="row g-2 mb-3">
+          <div class="col-md-4">
+            <label class="form-label small mb-0">Hiệu lực từ ngày</label>
+            <input type="date" class="form-control form-control-sm" id="rateEffectiveFrom"
+                   value="{{ tax_rates.as_of or '' }}">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label small mb-0">Ghi chú thay đổi</label>
+            <input type="text" class="form-control form-control-sm" id="rateNote"
+                   placeholder="VD: Điều chỉnh theo thông báo cơ quan thuế">
+          </div>
+        </div>
+
+        <div id="sectorRatesBlock" class="{% if not (rates_ui.show_vat_pct_revenue or rates_ui.show_cit_pct_revenue) %}d-none{% endif %}">
+          <h6 class="fw-semibold">Theo nhóm ngành (trên doanh thu)</h6>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle" id="sectorRatesTable">
+              <thead class="table-light">
+                <tr>
+                  <th>Nhóm ngành</th>
+                  <th class="col-vat {% if not rates_ui.show_vat_pct_revenue %}d-none{% endif %}">GTGT % / DT</th>
+                  <th class="col-cit-rev {% if not rates_ui.show_cit_pct_revenue %}d-none{% endif %}">TNDN % / DT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in tax_rates.sectors or [] %}
+                <tr data-key="{{ s.key }}">
+                  <td class="small">{{ s.label }}</td>
+                  <td class="col-vat {% if not rates_ui.show_vat_pct_revenue %}d-none{% endif %}">
+                    <input type="number" step="0.01" min="0" class="form-control form-control-sm rate-vat"
+                           value="{{ s.vat_pct }}">
+                  </td>
+                  <td class="col-cit-rev {% if not rates_ui.show_cit_pct_revenue %}d-none{% endif %}">
+                    <input type="number" step="0.01" min="0" class="form-control form-control-sm rate-cit-rev"
+                           value="{{ s.cit_pct_revenue }}">
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="citIncomeBlock" class="mt-3 {% if not rates_ui.show_cit_pct_income %}d-none{% endif %}">
+          <h6 class="fw-semibold">TNDN trên thu nhập tính thuế (Doanh thu − Chi phí)</h6>
+          <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label small mb-0">Thuế suất TNDN (%)</label>
+              <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="rateCitIncome"
+                     value="{{ tax_rates.cit_pct_income or 15 }}">
+            </div>
+            <div class="col-md-8 small text-muted">
+              Áp dụng khi chọn PP2 hoặc PP4. Dùng cho quyết toán TNDN / ước tính trên sổ DT–CP.
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <h6 class="fw-semibold small">Lịch sử thay đổi gần đây</h6>
+          <div class="small text-muted" id="rateHistoryBox">Đang tải…</div>
+        </div>
+        <div class="text-danger small mt-2 d-none" id="rateSaveError"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnSaveTaxRates">Lưu thuế suất</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block sme_scripts %}
+<script>
+(function () {
+  const ratesUi = {{ rates_ui|tojson }};
+  const methodUiMap = {
+    article5: { show_vat_pct_revenue: true, show_cit_pct_revenue: true, show_cit_pct_income: false,
+      hint: 'GTGT theo % doanh thu theo nhóm ngành; TNDN theo % doanh thu.' },
+    article6: { show_vat_pct_revenue: true, show_cit_pct_revenue: false, show_cit_pct_income: true,
+      hint: 'GTGT theo % doanh thu; TNDN = thuế suất × (Doanh thu − Chi phí được trừ).' },
+    article7: { show_vat_pct_revenue: false, show_cit_pct_revenue: true, show_cit_pct_income: false,
+      hint: 'GTGT khấu trừ (theo hóa đơn); TNDN theo % doanh thu theo nhóm ngành.' },
+    article8: { show_vat_pct_revenue: false, show_cit_pct_revenue: false, show_cit_pct_income: true,
+      hint: 'GTGT khấu trừ (theo hóa đơn); TNDN = thuế suất × thu nhập tính thuế.' },
+  };
+
+  function applyUi(ui) {
+    if (!ui) return;
+    const sectorBlock = document.getElementById('sectorRatesBlock');
+    const citInc = document.getElementById('citIncomeBlock');
+    const showSector = !!(ui.show_vat_pct_revenue || ui.show_cit_pct_revenue);
+    sectorBlock?.classList.toggle('d-none', !showSector);
+    citInc?.classList.toggle('d-none', !ui.show_cit_pct_income);
+    document.querySelectorAll('.col-vat').forEach(el => el.classList.toggle('d-none', !ui.show_vat_pct_revenue));
+    document.querySelectorAll('.col-cit-rev').forEach(el => el.classList.toggle('d-none', !ui.show_cit_pct_revenue));
+    const hint = document.getElementById('modalRatesHint');
+    const hint2 = document.getElementById('ratesHint');
+    if (hint) hint.textContent = ui.hint || '';
+    if (hint2) hint2.textContent = ui.hint || '';
+  }
+
+  function selectedMethod() {
+    return document.querySelector('input[name="tt58_tax_method"]:checked')?.value || '{{ tax_method or "article5" }}';
+  }
+
+  document.querySelectorAll('.tax-method-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.tax-method-card').forEach(c => {
+        c.classList.remove('border-primary', 'bg-primary', 'bg-opacity-10');
+      });
+      card.classList.add('border-primary', 'bg-primary', 'bg-opacity-10');
+      const input = card.querySelector('input[type=radio]');
+      if (input) input.checked = true;
+      applyUi(methodUiMap[input.value] || ratesUi);
+    });
+  });
+
+  const btn = document.getElementById('btnSaveTaxMethod');
+  const msg = document.getElementById('taxMethodMsg');
+  btn?.addEventListener('click', async () => {
+    const selected = document.querySelector('input[name="tt58_tax_method"]:checked');
+    if (!selected) { alert('Chọn một phương pháp'); return; }
+    btn.disabled = true;
+    try {
+      const res = await fetch('{{ url_for("api_sme_tt58_tax_method") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ method: selected.value }),
+      });
+      const j = await res.json();
+      if (!j.success) throw new Error(j.error || 'Lỗi lưu');
+      if (msg) msg.innerHTML = 'Đã lưu: <strong>' + (j.tax_method?.short_label || selected.value) + '</strong> — mở thuế suất…';
+      applyUi(methodUiMap[selected.value]);
+      const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('tt58TaxRatesModal'));
+      modal.show();
+      // reload sau khi đóng modal hoặc sau 1.2s nếu không mở
+      setTimeout(() => location.reload(), 800);
+    } catch (e) {
+      alert(e.message || e);
+      btn.disabled = false;
+    }
+  });
+
+  async function loadHistory() {
+    const box = document.getElementById('rateHistoryBox');
+    if (!box) return;
+    try {
+      const res = await fetch('{{ url_for("api_sme_tt58_tax_rates") }}');
+      const j = await res.json();
+      if (!j.success) throw new Error(j.error || 'Lỗi');
+      if (j.ui) applyUi(j.ui);
+      const hist = j.history || [];
+      if (!hist.length) { box.textContent = 'Chưa có lịch sử.'; return; }
+      box.innerHTML = hist.slice(0, 12).map(h => {
+        const parts = [];
+        if (h.sector_key === '__cit_income__') parts.push('TNDN/TN ' + h.cit_pct_income + '%');
+        else {
+          parts.push(h.sector_key);
+          if (h.vat_pct != null) parts.push('GTGT ' + h.vat_pct + '%');
+          if (h.cit_pct_revenue != null) parts.push('TNDN/DT ' + h.cit_pct_revenue + '%');
+        }
+        return '<div>' + (h.effective_from || '') + ' — ' + parts.join(' · ') +
+          (h.note ? ' <span class="text-muted">(' + h.note + ')</span>' : '') + '</div>';
+      }).join('');
+    } catch (e) {
+      box.textContent = e.message || 'Không tải được lịch sử';
+    }
+  }
+
+  document.getElementById('tt58TaxRatesModal')?.addEventListener('show.bs.modal', () => {
+    applyUi(methodUiMap[selectedMethod()] || ratesUi);
+    loadHistory();
+  });
+
+  document.getElementById('btnSaveTaxRates')?.addEventListener('click', async () => {
+    const err = document.getElementById('rateSaveError');
+    err?.classList.add('d-none');
+    const ui = methodUiMap[selectedMethod()] || ratesUi || {};
+    const sectors = [];
+    document.querySelectorAll('#sectorRatesTable tbody tr').forEach(tr => {
+      sectors.push({
+        key: tr.dataset.key,
+        vat_pct: parseFloat(tr.querySelector('.rate-vat')?.value || '0'),
+        cit_pct_revenue: parseFloat(tr.querySelector('.rate-cit-rev')?.value || '0'),
+      });
+    });
+    const payload = {
+      effective_from: document.getElementById('rateEffectiveFrom')?.value,
+      note: document.getElementById('rateNote')?.value,
+      sectors: (ui.show_vat_pct_revenue || ui.show_cit_pct_revenue) ? sectors : [],
+    };
+    if (ui.show_cit_pct_income) {
+      payload.cit_pct_income = parseFloat(document.getElementById('rateCitIncome')?.value || '15');
+    }
+    const btnSave = document.getElementById('btnSaveTaxRates');
+    btnSave.disabled = true;
+    try {
+      const res = await fetch('{{ url_for("api_sme_tt58_tax_rates") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (!j.success) throw new Error(j.error || 'Lỗi lưu');
+      location.reload();
+    } catch (e) {
+      if (err) { err.textContent = e.message || e; err.classList.remove('d-none'); }
+      btnSave.disabled = false;
+    }
+  });
+})();
+</script>
+{% endblock %}

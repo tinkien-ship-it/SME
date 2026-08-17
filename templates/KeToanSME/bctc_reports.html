@@ -69,17 +69,17 @@
         </div>
     </div>
 
-    <ul class="nav nav-tabs mb-3">
+    <ul class="nav nav-tabs mb-3" id="bctcTabs">
         <li class="nav-item">
-            <button class="nav-link active" type="button" data-panel="b01">Bảng CĐKT (B01-DN)</button>
+            <button class="nav-link active" type="button" data-panel="b01" id="tabB01">Bảng CĐKT (B01-DN)</button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" type="button" data-panel="b02">KQHĐKD (B02-DN)</button>
+            <button class="nav-link" type="button" data-panel="b02" id="tabB02">KQHĐKD (B02-DN)</button>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" id="navB03">
             <button class="nav-link" type="button" data-panel="b03">LCTT (B03-DN)</button>
         </li>
-        <li class="nav-item">
+        <li class="nav-item" id="navB09">
             <button class="nav-link" type="button" data-panel="b09" id="tabB09">Thuyết minh (B09-DN)</button>
         </li>
     </ul>
@@ -92,11 +92,12 @@
                         <tr>
                             <th style="width:70px;">Mã</th>
                             <th>Chỉ tiêu</th>
-                            <th class="text-end" style="width:160px;">Số cuối kỳ</th>
+                            <th class="text-end" style="width:140px;" id="b01ColA">Số cuối kỳ</th>
+                            <th class="text-end d-none" style="width:140px;" id="b01ColB">Số đầu năm</th>
                         </tr>
                     </thead>
                     <tbody id="b01Body">
-                        <tr><td colspan="3" class="text-center text-muted py-4">Nhấn Lập báo cáo</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted py-4">Nhấn Lập báo cáo</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -111,11 +112,12 @@
                         <tr>
                             <th style="width:70px;">Mã</th>
                             <th>Chỉ tiêu</th>
-                            <th class="text-end" style="width:160px;">Số kỳ này</th>
+                            <th class="text-end" style="width:140px;" id="b02ColA">Số kỳ này</th>
+                            <th class="text-end d-none" style="width:140px;" id="b02ColB">Năm trước</th>
                         </tr>
                     </thead>
                     <tbody id="b02Body">
-                        <tr><td colspan="3" class="text-center text-muted py-4">Nhấn Lập báo cáo</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted py-4">Nhấn Lập báo cáo</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -157,10 +159,25 @@
     const now = new Date();
     const yearEl = document.getElementById('rpYear');
     yearEl.value = now.getFullYear();
+    let isTt58 = false;
     fetch('/api/sme/regime-profile').then(r=>r.json()).then(j=>{
         if(j.success && j.data){
             const el=document.getElementById('regimeHint');
             if(el) el.innerHTML = (j.data.label||'') + ' — ' + (j.data.bctc_hint||el.textContent);
+            isTt58 = !!j.data.is_tt58_micro;
+            if(isTt58){
+                const t1=document.getElementById('tabB01');
+                const t2=document.getElementById('tabB02');
+                if(t1) t1.textContent = 'Tình hình TC (B01-DNSN)';
+                if(t2) t2.textContent = 'KQHĐKD (B02-DNSN)';
+                document.getElementById('navB03')?.classList.add('d-none');
+                document.getElementById('navB09')?.classList.add('d-none');
+                document.getElementById('b01ColA').textContent = 'Số cuối năm';
+                document.getElementById('b01ColB').classList.remove('d-none');
+                document.getElementById('b02ColA').textContent = 'Năm nay';
+                document.getElementById('b02ColB').classList.remove('d-none');
+                document.getElementById('rpProfit').parentElement?.classList.add('d-none');
+            }
         }
     }).catch(()=>{});
     const fromSel = document.getElementById('rpFrom');
@@ -192,9 +209,13 @@
 
     if (location.hash === '#b09') activatePanel('b09');
 
-    function renderRows(tbody, rows) {
+    function renderRows(tbody, rows, opts) {
+        opts = opts || {};
+        const dual = !!opts.dual;
+        const priorKey = opts.priorKey || 'amount_opening';
+        const cols = dual ? 4 : 3;
         if (!rows || !rows.length) {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">Không có dữ liệu</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="'+cols+'" class="text-center text-muted py-4">Không có dữ liệu</td></tr>';
             return;
         }
         tbody.innerHTML = rows.map(r => {
@@ -205,10 +226,12 @@
             ].filter(Boolean).join(' ');
             const indent = 'bctc-indent-' + Math.min(r.level || 0, 2);
             const amt = r.kind === 'header' ? '' : money(r.amount);
+            const prior = r.kind === 'header' ? '' : money(r[priorKey]);
             return `<tr class="${cls}">
                 <td class="bctc-mono">${r.kind === 'header' ? '' : r.code}</td>
                 <td class="${indent}">${r.name}</td>
                 <td class="bctc-amount">${amt}</td>
+                ${dual ? `<td class="bctc-amount">${prior}</td>` : ''}
             </tr>`;
         }).join('');
     }
@@ -311,55 +334,78 @@
         const profit = document.getElementById('rpProfit').checked ? '1' : '0';
         ['b01Body', 'b02Body', 'b03Body'].forEach(id => {
             document.getElementById(id).innerHTML =
-                '<tr><td colspan="3" class="text-center text-muted py-4">Đang tải…</td></tr>';
+                '<tr><td colspan="4" class="text-center text-muted py-4">Đang tải…</td></tr>';
         });
-        document.getElementById('b09Body').innerHTML =
-            '<div class="text-center text-muted py-4">Đang tải…</div>';
+        if (!isTt58) {
+            document.getElementById('b09Body').innerHTML =
+                '<div class="text-center text-muted py-4">Đang tải…</div>';
+        }
         try {
-            const [b01Res, b02Res, b03Res, b09Res] = await Promise.all([
+            const fetches = [
                 fetch(`/api/sme/bctc/b01?year=${y}&period_to=${pt}&include_current_profit=${profit}`),
                 fetch(`/api/sme/bctc/b02?year=${y}&period_from=${pf}&period_to=${pt}`),
-                fetch(`/api/sme/bctc/b03?year=${y}&period_from=${pf}&period_to=${pt}`),
-                fetch(`/api/sme/bctc/b09?year=${y}&period_to=${pt}`),
-            ]);
-            const b01 = await b01Res.json();
-            const b02 = await b02Res.json();
-            const b03 = await b03Res.json();
-            const b09 = await b09Res.json();
+            ];
+            if (!isTt58) {
+                fetches.push(
+                    fetch(`/api/sme/bctc/b03?year=${y}&period_from=${pf}&period_to=${pt}`),
+                    fetch(`/api/sme/bctc/b09?year=${y}&period_to=${pt}`),
+                );
+            }
+            const responses = await Promise.all(fetches);
+            const b01 = await responses[0].json();
+            const b02 = await responses[1].json();
             if (!b01.success) throw new Error(b01.error || 'Lỗi B01');
             if (!b02.success) throw new Error(b02.error || 'Lỗi B02');
-            if (!b03.success) throw new Error(b03.error || 'Lỗi B03');
-            if (!b09.success) throw new Error(b09.error || 'Lỗi B09');
 
-            renderRows(document.getElementById('b01Body'), b01.data.rows);
-            renderRows(document.getElementById('b02Body'), b02.data.rows);
-            renderRows(document.getElementById('b03Body'), b03.data.rows);
-            renderB09(b09.data);
+            const dualB01 = !!(b01.data.has_opening_column || isTt58);
+            const dualB02 = !!(b02.data.has_prior_column || isTt58);
+            renderRows(document.getElementById('b01Body'), b01.data.rows, {
+                dual: dualB01, priorKey: 'amount_opening',
+            });
+            renderRows(document.getElementById('b02Body'), b02.data.rows, {
+                dual: dualB02, priorKey: 'amount_prior',
+            });
 
             const t = b01.data.totals || {};
             const balCls = t.balanced ? 'bctc-ok' : 'bctc-bad';
             const balTxt = t.balanced
                 ? 'Cân đối Tài sản = Nguồn vốn'
                 : `Lệch ${money(t.difference)} (TS ${money(t.total_assets)} vs NV ${money(t.total_equity_and_liabilities)})`;
-            const cf = b03.data.totals || {};
-            const cfCls = cf.balanced ? 'bctc-ok' : 'bctc-bad';
-            const cfTxt = cf.balanced
-                ? 'LCTT khớp tiền đầu/cuối kỳ'
-                : `LCTT lệch ${money(cf.difference)}`;
-            const s = b09.data.summary || {};
-            document.getElementById('rpMeta').innerHTML =
-                `B01 tại ${b01.data.as_of_date}` +
+            let meta =
+                `${b01.data.report || 'B01'} tại ${b01.data.as_of_date}` +
                 (b01.data.include_current_profit
-                    ? ` · LN năm nay ${money(b01.data.current_year_profit)} → 421`
+                    ? ` · LN năm nay ${money(b01.data.current_year_profit)}`
                     : '') +
                 ` · <span class="${balCls}">${balTxt}</span>` +
-                ` · B02 LNST ${money(b02.data.totals.profit_after_tax)}` +
-                ` · B03 tiền cuối ${money(cf.cash_closing)} · <span class="${cfCls}">${cfTxt}</span>` +
-                ` · B09 tiền ${money(s.cash_closing)} · HTK ${money(s.inventory_closing)}`;
+                ` · ${b02.data.report || 'B02'} LNST ${money(b02.data.totals.profit_after_tax)}`;
+
+            if (!isTt58) {
+                const b03 = await responses[2].json();
+                const b09 = await responses[3].json();
+                if (!b03.success) throw new Error(b03.error || 'Lỗi B03');
+                if (!b09.success) throw new Error(b09.error || 'Lỗi B09');
+                renderRows(document.getElementById('b03Body'), b03.data.rows);
+                renderB09(b09.data);
+                const cf = b03.data.totals || {};
+                const cfCls = cf.balanced ? 'bctc-ok' : 'bctc-bad';
+                const cfTxt = cf.balanced
+                    ? 'LCTT khớp tiền đầu/cuối kỳ'
+                    : `LCTT lệch ${money(cf.difference)}`;
+                const s = b09.data.summary || {};
+                meta +=
+                    ` · B03 tiền cuối ${money(cf.cash_closing)} · <span class="${cfCls}">${cfTxt}</span>` +
+                    ` · B09 tiền ${money(s.cash_closing)} · HTK ${money(s.inventory_closing)}`;
+            } else {
+                document.getElementById('b03Body').innerHTML =
+                    '<tr><td colspan="3" class="text-muted text-center py-4">TT58 không lập B03-DNSN</td></tr>';
+                document.getElementById('b09Body').innerHTML =
+                    '<div class="text-muted text-center py-4">TT58 không lập thuyết minh B09-DN</div>';
+            }
+            document.getElementById('rpMeta').innerHTML = meta;
         } catch (e) {
             document.getElementById('rpMeta').textContent = e.message;
             document.getElementById('b01Body').innerHTML =
-                `<tr><td colspan="3" class="text-center text-danger py-4">${e.message}</td></tr>`;
+                `<tr><td colspan="4" class="text-center text-danger py-4">${e.message}</td></tr>`;
             document.getElementById('b09Body').innerHTML =
                 `<div class="text-center text-danger py-4">${e.message}</div>`;
         }

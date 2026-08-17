@@ -1,0 +1,51 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}{{ book.title }} — {{ book.code }}{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h4 class="fw-bold mb-1">{{ book.title }}</h4>
+    <p class="text-muted small mb-0">
+      Mẫu số <code>{{ book.code }}</code> · TT58/2026/TT-BTC · Năm {{ book.fiscal_year }}
+      {% if book.note %}<br>{{ book.note }}{% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_dnsn_books') }}">← Danh mục sổ</a>
+    <a class="btn btn-primary btn-sm" target="_blank"
+       href="{{ url_for('SME_dnsn_book_print', code=book.code, year=book.fiscal_year, partner=request.args.get('partner',''), product_id=request.args.get('product_id','')) }}">
+      <i class="fas fa-print me-1"></i>In
+    </a>
+  </div>
+</div>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-auto">
+    <label class="form-label small mb-0">Năm</label>
+    <input type="number" name="year" class="form-control form-control-sm" value="{{ book.fiscal_year }}">
+  </div>
+  {% if book.code == 'S4a-DNSN' %}
+  <div class="col-md-4">
+    <label class="form-label small mb-0">Đối tượng</label>
+    <select name="partner" class="form-select form-select-sm">
+      <option value="">— Chọn đối tượng —</option>
+      {% for p in book.partners or [] %}
+      <option value="{{ p.key }}" {% if request.args.get('partner')==p.key %}selected{% endif %}>
+        {{ p.name }} (PT {{ '{:,.0f}'.format(p.ar_net) }} / Trả {{ '{:,.0f}'.format(p.ap_net) }})
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  {% if book.code == 'S2c-DNSN' and book.detail %}
+  <input type="hidden" name="product_id" value="{{ book.detail.product_id }}">
+  <div class="col-auto d-flex align-items-end">
+    <a class="btn btn-sm btn-outline-secondary" href="?year={{ book.fiscal_year }}">← Danh sách hàng</a>
+  </div>
+  {% endif %}
+  <div class="col-auto d-flex align-items-end">
+    <button class="btn btn-sm btn-outline-primary">Xem</button>
+  </div>
+</form>
+
+{% include "KeToanSME/dnsn/_book_body.html" %}
+{% endblock %}

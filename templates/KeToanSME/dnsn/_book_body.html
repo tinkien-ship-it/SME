@@ -1,0 +1,511 @@
+{# Shared body for DNSN books — expects `book` dict #}
+{% macro money(v) -%}
+{%- if v is none or v == '' -%}{%- else -%}{{ '{:,.0f}'.format(v|float) }}{%- endif -%}
+{%- endmacro %}
+
+{% if book.code == 'S2d-DNSN' %}
+  {% for sec in book.sections %}
+  <div class="sec-title">{{ sec.title }} (TK {{ sec.account_code }})</div>
+  {% if sec.error %}<div class="text-danger small">{{ sec.error }}</div>{% endif %}
+  <table class="dnsn-table table table-sm table-bordered">
+    <thead>
+      <tr>
+        <th colspan="2">Hóa đơn, Chứng từ</th>
+        <th rowspan="2">Diễn giải</th>
+        <th colspan="2">Số tiền</th>
+      </tr>
+      <tr>
+        <th style="width:90px">Số hiệu</th>
+        <th style="width:90px">Ngày tháng</th>
+        <th style="width:110px">Thu/Gửi vào</th>
+        <th style="width:110px">Chi/Rút ra</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="2"></td>
+        <td><em>{{ sec.title }} tồn đầu kỳ</em></td>
+        <td class="num">{{ money(sec.opening) if sec.opening > 0 else '' }}</td>
+        <td class="num">{{ money(-sec.opening) if sec.opening < 0 else '' }}</td>
+      </tr>
+      {% for r in sec.rows %}
+      <tr>
+        <td class="center">{{ r.document_no }}</td>
+        <td class="center">{{ r.document_date }}</td>
+        <td>{{ r.description }}</td>
+        <td class="num">{{ money(r.amount_in) if r.amount_in else '' }}</td>
+        <td class="num">{{ money(r.amount_out) if r.amount_out else '' }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="fw-bold">
+        <td colspan="2"></td>
+        <td>Tổng {{ 'thu vào' if sec.account_code.startswith('111') else 'gửi vào' }} trong kỳ</td>
+        <td class="num">{{ money(sec.total_in) }}</td>
+        <td></td>
+      </tr>
+      <tr class="fw-bold">
+        <td colspan="2"></td>
+        <td>Tổng {{ 'chi ra' if sec.account_code.startswith('111') else 'rút ra' }} trong kỳ</td>
+        <td></td>
+        <td class="num">{{ money(sec.total_out) }}</td>
+      </tr>
+      <tr class="fw-bold">
+        <td colspan="2"></td>
+        <td>{{ sec.title }} tồn cuối kỳ</td>
+        <td class="num">{{ money(sec.closing) if sec.closing > 0 else '' }}</td>
+        <td class="num">{{ money(-sec.closing) if sec.closing < 0 else '' }}</td>
+      </tr>
+    </tbody>
+  </table>
+  {% endfor %}
+
+{% elif book.code in ('S1-DNSN','S2a-DNSN','S3a-DNSN') %}
+  {% if book.note %}<p class="small text-muted">{{ book.note }}</p>{% endif %}
+  {% for g in book.groups %}
+  <div class="sec-title">{{ loop.index }}. {{ g.title }}</div>
+  <table class="dnsn-table table table-sm table-bordered">
+    <thead>
+      <tr>
+        <th colspan="2">Hóa đơn, Chứng từ</th>
+        <th rowspan="2">Diễn giải</th>
+        <th rowspan="2" style="width:120px">Số tiền</th>
+      </tr>
+      <tr><th style="width:90px">Số hiệu</th><th style="width:90px">Ngày tháng</th></tr>
+    </thead>
+    <tbody>
+      {% for r in g.rows %}
+      <tr>
+        <td class="center">{{ r.document_no }}</td>
+        <td class="center">{{ r.document_date }}</td>
+        <td>{{ r.description }}</td>
+        <td class="num">{{ money(r.amount) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="text-muted text-center">Không phát sinh</td></tr>
+      {% endfor %}
+      <tr class="fw-bold">
+        <td colspan="2"></td>
+        <td>Tổng cộng ({{ loop.index }})</td>
+        <td class="num">{{ money(g.revenue) }}</td>
+      </tr>
+      {% if book.code != 'S2a-DNSN' or g.vat %}
+      <tr>
+        <td colspan="2"></td>
+        <td>Thuế GTGT{% if g.vat_pct %} ({{ g.vat_pct }}%){% endif %}</td>
+        <td class="num">{{ money(g.vat) }}</td>
+      </tr>
+      {% endif %}
+      {% if book.code in ('S1-DNSN','S3a-DNSN') %}
+      <tr>
+        <td colspan="2"></td>
+        <td>Thuế TNDN{% if g.cit_pct %} ({{ g.cit_pct }}%){% endif %}</td>
+        <td class="num">{{ money(g.cit) }}</td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="alert alert-info">Chưa có hóa đơn bán hàng trong năm.</div>
+  {% endfor %}
+  {% if book.totals %}
+  <table class="dnsn-table table table-sm table-bordered mt-2">
+    <tbody>
+      <tr class="fw-bold"><td>Tổng doanh thu</td><td class="num" style="width:140px">{{ money(book.totals.revenue) }}</td></tr>
+      <tr class="fw-bold"><td>Tổng số thuế GTGT phải nộp</td><td class="num">{{ money(book.totals.vat) }}</td></tr>
+      {% if book.code in ('S1-DNSN','S3a-DNSN') %}
+      <tr class="fw-bold"><td>Tổng số thuế TNDN phải nộp</td><td class="num">{{ money(book.totals.cit) }}</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+  {% endif %}
+
+{% elif book.code == 'S4a-DNSN' %}
+  {% if not book.detail %}
+  <div class="alert alert-info">Chọn đối tượng công nợ ở bộ lọc phía trên để xem sổ chi tiết.</div>
+  <table class="table table-sm table-bordered">
+    <thead><tr><th>Đối tượng</th><th class="text-end">Phải thu ròng</th><th class="text-end">Phải trả ròng</th></tr></thead>
+    <tbody>
+      {% for p in book.partners %}
+      <tr>
+        <td><a href="?year={{ book.fiscal_year }}&partner={{ p.key }}">{{ p.name }}</a></td>
+        <td class="text-end">{{ money(p.ar_net) }}</td>
+        <td class="text-end">{{ money(p.ap_net) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="text-muted text-center">Chưa có phát sinh công nợ có gắn đối tượng</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  {% set d = book.detail %}
+  <table class="dnsn-table table table-sm table-bordered">
+    <thead>
+      <tr>
+        <th colspan="2">Hóa đơn, Chứng từ</th>
+        <th rowspan="2">Diễn giải</th>
+        <th colspan="3">Các khoản nợ phải thu</th>
+        <th colspan="3">Các khoản nợ phải trả</th>
+      </tr>
+      <tr>
+        <th>Số hiệu</th><th>Ngày</th>
+        <th>Phải thu</th><th>Đã thu</th><th>Còn phải thu</th>
+        <th>Phải trả</th><th>Đã trả</th><th>Còn phải trả</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="2"></td><td><em>Số dư đầu kỳ</em></td>
+        <td class="num"></td><td class="num"></td><td class="num">{{ money(d.opening.ar) }}</td>
+        <td class="num"></td><td class="num"></td><td class="num">{{ money(d.opening.ap) }}</td>
+      </tr>
+      {% for r in d.rows %}
+      <tr>
+        <td class="center">{{ r.document_no }}</td>
+        <td class="center">{{ r.document_date }}</td>
+        <td>{{ r.description }}</td>
+        <td class="num">{{ money(r.ar_incurred) if r.ar_incurred else '' }}</td>
+        <td class="num">{{ money(r.ar_collected) if r.ar_collected else '' }}</td>
+        <td class="num">{{ money(r.ar_balance) }}</td>
+        <td class="num">{{ money(r.ap_incurred) if r.ap_incurred else '' }}</td>
+        <td class="num">{{ money(r.ap_paid) if r.ap_paid else '' }}</td>
+        <td class="num">{{ money(r.ap_balance) }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="fw-bold">
+        <td colspan="2"></td><td>Cộng số phát sinh trong kỳ</td>
+        <td class="num">{{ money(d.totals.ar_incurred) }}</td>
+        <td class="num">{{ money(d.totals.ar_collected) }}</td>
+        <td></td>
+        <td class="num">{{ money(d.totals.ap_incurred) }}</td>
+        <td class="num">{{ money(d.totals.ap_paid) }}</td>
+        <td></td>
+      </tr>
+      <tr class="fw-bold">
+        <td colspan="2"></td><td>Số dư cuối kỳ</td>
+        <td></td><td></td><td class="num">{{ money(d.closing.ar) }}</td>
+        <td></td><td></td><td class="num">{{ money(d.closing.ap) }}</td>
+      </tr>
+    </tbody>
+  </table>
+  {% endif %}
+
+{% elif book.code == 'S4b-DNSN' %}
+  <table class="dnsn-table table table-sm table-bordered">
+    <thead>
+      <tr>
+        <th>Mã TS</th><th>Tên tài sản</th><th>Ngày SD</th>
+        <th>Nguyên giá</th><th>% KH/năm</th><th>KH trong năm</th>
+        <th>Hao mòn LK</th><th>GT còn lại</th><th>TT</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in book.rows %}
+      <tr>
+        <td>{{ r.code }}</td>
+        <td>{{ r.name }}</td>
+        <td class="center">{{ r.start_date }}</td>
+        <td class="num">{{ money(r.cost) }}</td>
+        <td class="num">{{ r.dep_rate_pct }}</td>
+        <td class="num">{{ money(r.year_dep) }}</td>
+        <td class="num">{{ money(r.accum_dep) }}</td>
+        <td class="num">{{ money(r.net_value) }}</td>
+        <td class="center">{{ r.status }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="text-center text-muted">Chưa có TSCĐ</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+{% elif book.code == 'S4d-DNSN' %}
+  {% for sec in book.sections %}
+  <div class="sec-title">{{ sec.title }} (TK {{ sec.account_code }})</div>
+  <table class="dnsn-table table table-sm table-bordered">
+    <thead>
+      <tr>
+        <th colspan="2">Chứng từ</th><th rowspan="2">Diễn giải</th>
+        <th rowspan="2">Tăng</th><th rowspan="2">Giảm</th><th rowspan="2">Số dư</th>
+      </tr>
+      <tr><th>Số hiệu</th><th>Ngày</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="2"></td><td><em>Số dư đầu kỳ</em></td>
+        <td></td><td></td><td class="num">{{ money(sec.opening) }}</td>
+      </tr>
+      {% for r in sec.rows %}
+      <tr>
+        <td class="center">{{ r.document_no }}</td>
+        <td class="center">{{ r.document_date }}</td>
+        <td>{{ r.description }}</td>
+        <td class="num">{{ money(r.increase) if r.increase else '' }}</td>
+        <td class="num">{{ money(r.decrease) if r.decrease else '' }}</td>
+        <td class="num">{{ money(r.balance) }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="fw-bold">
+        <td colspan="2"></td><td>Cộng phát sinh</td>
+        <td class="num">{{ money(sec.increase) }}</td>
+        <td class="num">{{ money(sec.decrease) }}</td>
+        <td class="num">{{ money(sec.closing) }}</td>
+      </tr>
+    </tbody>
+  </table>
+  {% endfor %}
+
+{% elif book.code == 'S2b-DNSN' %}
+  {% if book.cit %}
+  <table class="dnsn-table table table-sm table-bordered mb-3">
+    <tbody>
+      <tr>
+        <td>Số thuế TNDN còn phải nộp đầu kỳ (1)</td>
+        <td class="num" style="width:140px">{{ money(book.cit.opening) }}</td>
+      </tr>
+    </tbody>
+  </table>
+  {% endif %}
+  <div class="sec-title">Số phát sinh trong kỳ</div>
+  {% for sec in book.sections %}
+  <div class="sec-title">{{ sec.title }} — Cộng: {{ money(sec.total) }}</div>
+  <table class="dnsn-table table table-sm table-bordered">
+    <thead>
+      <tr><th style="width:90px">Số hiệu</th><th style="width:90px">Ngày</th><th>Diễn giải</th><th style="width:120px">Số tiền</th></tr>
+    </thead>
+    <tbody>
+      {% for r in sec.rows %}
+      <tr>
+        <td class="center">{{ r.document_no }}</td>
+        <td class="center">{{ r.document_date }}</td>
+        <td>{{ r.description }}</td>
+        <td class="num">{{ money(r.amount) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="text-muted text-center">Không phát sinh</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+  {% if book.cit %}
+  <table class="dnsn-table table table-sm table-bordered mt-2">
+    <tbody>
+      <tr class="fw-bold">
+        <td>Tổng số thuế TNDN phải nộp trong kỳ (2)</td>
+        <td class="num" style="width:140px">{{ money(book.cit.payable_period) }}</td>
+      </tr>
+      <tr>
+        <td>Số thuế TNDN đã nộp trong kỳ (3)</td>
+        <td class="num">{{ money(book.cit.paid) }}</td>
+      </tr>
+      <tr class="fw-bold">
+        <td>Số thuế TNDN còn phải nộp cuối kỳ {(4)=(1)+(2)-(3)}</td>
+        <td class="num">{{ money(book.cit.closing) }}</td>
+      </tr>
+    </tbody>
+  </table>
+  {% endif %}
+
+{% elif book.code == 'S2c-DNSN' %}
+  {% if book.detail %}
+  {% set d = book.detail %}
+  <p class="mb-2"><strong>{{ d.product_code }}</strong> — {{ d.name }} · ĐVT: {{ d.unit }}</p>
+  <table class="dnsn-table table table-sm table-bordered">
+    <thead>
+      <tr>
+        <th colspan="2">Hóa đơn, Chứng từ</th>
+        <th rowspan="2">Diễn giải</th>
+        <th rowspan="2">ĐVT</th>
+        <th rowspan="2">Đơn giá</th>
+        <th colspan="2">Nhập</th>
+        <th colspan="2">Xuất</th>
+        <th colspan="2">Tồn</th>
+      </tr>
+      <tr>
+        <th>Số hiệu</th><th>Ngày</th>
+        <th>SL</th><th>TT</th>
+        <th>SL</th><th>TT</th>
+        <th>SL</th><th>TT</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="2"></td>
+        <td><em>Số dư đầu kỳ</em></td>
+        <td class="center">{{ d.unit }}</td>
+        <td class="num">{{ money(d.opening.unit_price) }}</td>
+        <td></td><td></td><td></td><td></td>
+        <td class="num">{{ d.opening.qty }}</td>
+        <td class="num">{{ money(d.opening.amount) }}</td>
+      </tr>
+      {% for r in d.rows %}
+      <tr>
+        <td class="center">{{ r.document_no }}</td>
+        <td class="center">{{ r.document_date }}</td>
+        <td>{{ r.description }}</td>
+        <td class="center">{{ r.unit }}</td>
+        <td class="num">{{ money(r.unit_price) }}</td>
+        <td class="num">{{ r.in_qty if r.in_qty else '' }}</td>
+        <td class="num">{{ money(r.in_amount) if r.in_amount else '' }}</td>
+        <td class="num">{{ r.out_qty if r.out_qty else '' }}</td>
+        <td class="num">{{ money(r.out_amount) if r.out_amount else '' }}</td>
+        <td class="num">{{ r.bal_qty }}</td>
+        <td class="num">{{ money(r.bal_amount) }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="fw-bold">
+        <td colspan="2"></td><td colspan="3">Cộng phát sinh trong kỳ</td>
+        <td class="num">{{ d.totals.in_qty }}</td>
+        <td class="num">{{ money(d.totals.in_amount) }}</td>
+        <td class="num">{{ d.totals.out_qty }}</td>
+        <td class="num">{{ money(d.totals.out_amount) }}</td>
+        <td></td><td></td>
+      </tr>
+      <tr class="fw-bold">
+        <td colspan="2"></td><td colspan="3">Số dư cuối kỳ</td>
+        <td></td><td></td><td></td><td></td>
+        <td class="num">{{ d.closing.qty }}</td>
+        <td class="num">{{ money(d.closing.amount) }}</td>
+      </tr>
+    </tbody>
+  </table>
+  {% else %}
+  <p class="small text-muted">Chọn một mã hàng để mở sổ chi tiết nhập–xuất–tồn theo mẫu S2c-DNSN.</p>
+  <table class="table table-sm table-bordered">
+    <thead>
+      <tr><th>Mã</th><th>Tên hàng</th><th>ĐVT</th><th>SL tồn</th><th>Đơn giá vốn</th><th>Thành tiền</th><th>PS năm</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for r in book.products or book.rows %}
+      <tr>
+        <td>{{ r.product_code }}</td>
+        <td>{{ r.name }}</td>
+        <td class="center">{{ r.unit }}</td>
+        <td class="num">{{ r.quantity }}</td>
+        <td class="num">{{ money(r.unit_cost) }}</td>
+        <td class="num">{{ money(r.amount) }}</td>
+        <td class="num">{{ r.move_count or '' }}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary"
+             href="?year={{ book.fiscal_year }}&product_id={{ r.product_id }}">Chi tiết</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center text-muted">Không có tồn kho / phát sinh</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+{% elif book.code == 'S3b-DNSN' %}
+  <table class="dnsn-table table table-sm table-bordered">
+    <thead>
+      <tr>
+        <th colspan="2">Hóa đơn, chứng từ</th>
+        <th rowspan="2">Diễn giải</th>
+        <th rowspan="2">Số thuế GTGT đầu vào</th>
+        <th rowspan="2">Số thuế GTGT đầu ra</th>
+      </tr>
+      <tr><th>Số hiệu</th><th>Ngày tháng</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="2"></td>
+        <td><em>Số dư đầu kỳ</em></td>
+        <td></td><td></td>
+      </tr>
+      <tr>
+        <td colspan="2"></td>
+        <td>Số thuế GTGT còn được khấu trừ hoặc được hoàn đầu kỳ</td>
+        <td class="num">{{ money(book.opening.deductible) }}</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td colspan="2"></td>
+        <td>Số thuế GTGT còn phải nộp đầu kỳ</td>
+        <td></td>
+        <td class="num">{{ money(book.opening.payable) }}</td>
+      </tr>
+      <tr class="fw-bold"><td colspan="5">Số phát sinh trong kỳ</td></tr>
+      {% for r in book.rows %}
+      <tr>
+        <td class="center">{{ r.document_no }}</td>
+        <td class="center">{{ r.document_date }}</td>
+        <td>{{ r.description }}</td>
+        <td class="num">{{ money(r.vat_in) if r.vat_in else '' }}</td>
+        <td class="num">{{ money(r.vat_out) if r.vat_out else '' }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="fw-bold">
+        <td colspan="2"></td>
+        <td>Cộng số phát sinh trong kỳ</td>
+        <td class="num">{{ money(book.totals.vat_in) }}</td>
+        <td class="num">{{ money(book.totals.vat_out) }}</td>
+      </tr>
+      <tr class="fw-bold">
+        <td colspan="2"></td>
+        <td>Tổng số thuế GTGT phải nộp trong kỳ</td>
+        <td></td>
+        <td class="num">{{ money(book.totals.payable_period) }}</td>
+      </tr>
+      <tr>
+        <td colspan="2"></td>
+        <td>Số thuế GTGT còn được khấu trừ cuối kỳ</td>
+        <td class="num">{{ money(book.closing.deductible) }}</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td colspan="2"></td>
+        <td>Số thuế GTGT còn phải nộp cuối kỳ</td>
+        <td></td>
+        <td class="num">{{ money(book.closing.payable) }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+{% elif book.code == 'S4c-DNSN' %}
+  {% if book.note %}<p class="small text-muted">{{ book.note }}</p>{% endif %}
+  <table class="dnsn-table table table-sm table-bordered" style="font-size:10pt">
+    <thead>
+      <tr>
+        <th>Ngày</th><th>Giao dịch</th>
+        <th>GTGT NK</th><th>TTĐB</th><th>XNK</th><th>TNDN</th>
+        <th>TNCN</th><th>Tài nguyên</th><th>Nhà đất</th><th>BVMT/Khác</th><th>Phải nộp</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in book.rows %}
+      <tr>
+        <td class="center">{{ r.document_date }}</td>
+        <td>{{ r.description }}</td>
+        <td class="num">{{ money(r.vat_import) if r.vat_import else '' }}</td>
+        <td class="num">{{ money(r.special) if r.special else '' }}</td>
+        <td class="num">{{ money(r.import_export) if r.import_export else '' }}</td>
+        <td class="num">{{ money(r.cit) if r.cit else '' }}</td>
+        <td class="num">{{ money(r.pit) if r.pit else '' }}</td>
+        <td class="num">{{ money(r.resource) if r.resource else '' }}</td>
+        <td class="num">{{ money(r.land) if r.land else '' }}</td>
+        <td class="num">{{ money(r.env or r.other) if (r.env or r.other) else '' }}</td>
+        <td class="num">{{ money(r.payable) if r.payable else '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="11" class="text-center text-muted">Không phát sinh thuế khác trong năm</td></tr>
+      {% endfor %}
+      {% if book.totals %}
+      <tr class="fw-bold">
+        <td colspan="2">Cộng</td>
+        <td class="num">{{ money(book.totals.vat_import) }}</td>
+        <td class="num">{{ money(book.totals.special) }}</td>
+        <td class="num">{{ money(book.totals.import_export) }}</td>
+        <td class="num">{{ money(book.totals.cit) }}</td>
+        <td class="num">{{ money(book.totals.pit) }}</td>
+        <td class="num">{{ money(book.totals.resource) }}</td>
+        <td class="num">{{ money(book.totals.land) }}</td>
+        <td class="num">{{ money(book.totals.env + book.totals.other) }}</td>
+        <td class="num">{{ money(book.totals.payable) }}</td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+{% else %}
+  <div class="alert alert-warning">Chưa có mẫu hiển thị cho {{ book.code }}</div>
+{% endif %}

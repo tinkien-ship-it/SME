@@ -47,6 +47,35 @@ def _write_rows(ws, rows: list[dict], amount_header: str = 'Số tiền') -> Non
         ws.column_dimensions[get_column_letter(i)].width = width
 
 
+def _write_rows_dual(ws, rows: list[dict], col_a: str, col_b: str, *, prior_key: str = 'amount_opening') -> None:
+    thin = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin'),
+    )
+    header_font = Font(bold=True)
+    ws.append(['Mã', 'Chỉ tiêu', col_a, col_b])
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.border = thin
+    for r in rows or []:
+        kind = r.get('kind')
+        code = '' if kind == 'header' else (r.get('code') or '')
+        name = r.get('name') or ''
+        a = None if kind == 'header' else _money(r.get('amount'))
+        b = None if kind == 'header' else _money(r.get(prior_key) if r.get(prior_key) is not None else r.get('amount_opening'))
+        ws.append([code, name, a if a is not None else '', b if b is not None else ''])
+        row = ws.max_row
+        for col in range(1, 5):
+            ws.cell(row, col).border = thin
+        if r.get('bold') or kind == 'header':
+            ws.cell(row, 2).font = Font(bold=True)
+        for col in (3, 4):
+            ws.cell(row, col).alignment = Alignment(horizontal='right')
+            ws.cell(row, col).number_format = '#,##0'
+    for i, width in enumerate((12, 55, 18, 18), 1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+
 def export_bctc_workbook(
     conn: sqlite3.Connection,
     *,
@@ -55,10 +84,14 @@ def export_bctc_workbook(
     period_to: int = 12,
     include_current_profit: bool = True,
 ) -> bytes:
-    """Trả về bytes file .xlsx gồm 4 sheet B01/B02/B03/B09."""
+    """Xuất Excel: TT99 = B01/B02/B03/B09; TT58 = B01-DNSN + B02-DNSN."""
     year = int(fiscal_year)
     p_from = max(1, min(12, int(period_from)))
     p_to = max(p_from, min(12, int(period_to)))
+
+    from Services.sme.regime_profile import get_ledger_profile
+    profile = get_ledger_profile(conn)
+    tt58 = bool(profile.get('is_tt58_micro'))
 
     b01 = balance_sheet(
         conn, fiscal_year=year, period_to=p_to,
@@ -67,67 +100,80 @@ def export_bctc_workbook(
     b02 = income_statement(
         conn, fiscal_year=year, period_from=p_from, period_to=p_to,
     )
-    b03 = cash_flow_statement(
-        conn, fiscal_year=year, period_from=p_from, period_to=p_to,
-    )
-    try:
-        b09 = notes_to_financial_statements(conn, fiscal_year=year, period_to=p_to)
-    except Exception:
-        b09 = {'narrative': {}, 'supplementary': {}, 'summary': {}}
 
     wb = Workbook()
     ws1 = wb.active
-    ws1.title = 'B01-CDKT'
-    ws1['A1'] = f'Bảng cân đối kế toán B01-DN — Năm {year} đến T{p_to}'
-    ws1['A1'].font = Font(bold=True, size=12)
-    ws1.append([])
-    _write_rows(ws1, b01.get('rows') or [], 'Số cuối kỳ')
+    if tt58:
+        ws1.title = 'B01-DNSN'
+        ws1['A1'] = f'Báo cáo tình hình tài chính B01-DNSN — Năm {year} đến T{p_to}'
+        ws1['A1'].font = Font(bold=True, size=12)
+        ws1.append([])
+        _write_rows_dual(ws1, b01.get('rows') or [], 'Số cuối năm', 'Số đầu năm', prior_key='amount_opening')
+    else:
+        ws1.title = 'B01-CDKT'
+        ws1['A1'] = f'Bảng cân đối kế toán B01-DN — Năm {year} đến T{p_to}'
+        ws1['A1'].font = Font(bold=True, size=12)
+        ws1.append([])
+        _write_rows(ws1, b01.get('rows') or [], 'Số cuối kỳ')
     t = b01.get('totals') or {}
     ws1.append([])
     ws1.append(['', 'Tài sản', _money(t.get('total_assets'))])
     ws1.append(['', 'Nguồn vốn', _money(t.get('total_equity_and_liabilities'))])
     ws1.append(['', 'Cân đối', 'OK' if t.get('balanced') else f"Lệch {_money(t.get('difference'))}"])
 
-    ws2 = wb.create_sheet('B02-KQKD')
-    ws2['A1'] = f'Kết quả HĐKD B02-DN — T{p_from}–T{p_to}/{year}'
+    ws2 = wb.create_sheet('B02-DNSN' if tt58 else 'B02-KQKD')
+    label = 'B02-DNSN' if tt58 else 'B02-DN'
+    ws2['A1'] = f'Kết quả HĐKD {label} — T{p_from}–T{p_to}/{year}'
     ws2['A1'].font = Font(bold=True, size=12)
     ws2.append([])
-    _write_rows(ws2, b02.get('rows') or [], 'Số kỳ này')
+    if tt58:
+        _write_rows_dual(ws2, b02.get('rows') or [], 'Năm nay', 'Năm trước', prior_key='amount_prior')
+    else:
+        _write_rows(ws2, b02.get('rows') or [], 'Số kỳ này')
 
-    ws3 = wb.create_sheet('B03-LCTT')
-    ws3['A1'] = f'Lưu chuyển tiền tệ B03-DN — T{p_from}–T{p_to}/{year}'
-    ws3['A1'].font = Font(bold=True, size=12)
-    ws3.append([])
-    _write_rows(ws3, b03.get('rows') or [], 'Số kỳ này')
+    if not tt58:
+        b03 = cash_flow_statement(
+            conn, fiscal_year=year, period_from=p_from, period_to=p_to,
+        )
+        try:
+            b09 = notes_to_financial_statements(conn, fiscal_year=year, period_to=p_to)
+        except Exception:
+            b09 = {'narrative': {}, 'supplementary': {}, 'summary': {}}
 
-    ws4 = wb.create_sheet('B09-TM')
-    ws4['A1'] = f'Thuyết minh B09-DN — Năm {year} đến T{p_to}'
-    ws4['A1'].font = Font(bold=True, size=12)
-    ws4.append(['Mục', 'Mã', 'Nội dung / Chỉ tiêu', 'Giá trị'])
-    for cell in ws4[2]:
-        cell.font = Font(bold=True)
-    narrative = b09.get('narrative') or {}
-    for key in ('I', 'II', 'III', 'IV'):
-        sec = narrative.get(key) or {}
-        for it in sec.get('items') or []:
-            ws4.append([key, it.get('code'), it.get('label'), it.get('value')])
-    supp = b09.get('supplementary') or {}
-    for key in ('V', 'VI'):
-        sec = supp.get(key) or {}
-        for note in sec.get('notes') or []:
-            for r in note.get('rows') or []:
-                val = r.get('amount')
-                if val is None:
-                    val = f"ĐN {_money(r.get('opening'))} / CK {_money(r.get('closing'))}"
-                else:
-                    val = _money(val)
-                ws4.append([
-                    key, note.get('code'),
-                    f"{r.get('account_code')} — {r.get('name')}",
-                    val,
-                ])
-    for i, width in enumerate((8, 12, 55, 40), 1):
-        ws4.column_dimensions[get_column_letter(i)].width = width
+        ws3 = wb.create_sheet('B03-LCTT')
+        ws3['A1'] = f'Lưu chuyển tiền tệ B03-DN — T{p_from}–T{p_to}/{year}'
+        ws3['A1'].font = Font(bold=True, size=12)
+        ws3.append([])
+        _write_rows(ws3, b03.get('rows') or [], 'Số kỳ này')
+
+        ws4 = wb.create_sheet('B09-TM')
+        ws4['A1'] = f'Thuyết minh B09-DN — Năm {year} đến T{p_to}'
+        ws4['A1'].font = Font(bold=True, size=12)
+        ws4.append(['Mục', 'Mã', 'Nội dung / Chỉ tiêu', 'Giá trị'])
+        for cell in ws4[2]:
+            cell.font = Font(bold=True)
+        narrative = b09.get('narrative') or {}
+        for key in ('I', 'II', 'III', 'IV'):
+            sec = narrative.get(key) or {}
+            for it in sec.get('items') or []:
+                ws4.append([key, it.get('code'), it.get('label'), it.get('value')])
+        supp = b09.get('supplementary') or {}
+        for key in ('V', 'VI'):
+            sec = supp.get(key) or {}
+            for note in sec.get('notes') or []:
+                for r in note.get('rows') or []:
+                    val = r.get('amount')
+                    if val is None:
+                        val = f"ĐN {_money(r.get('opening'))} / CK {_money(r.get('closing'))}"
+                    else:
+                        val = _money(val)
+                    ws4.append([
+                        key, note.get('code'),
+                        f"{r.get('account_code')} — {r.get('name')}",
+                        val,
+                    ])
+        for i, width in enumerate((8, 12, 55, 40), 1):
+            ws4.column_dimensions[get_column_letter(i)].width = width
 
     buf = io.BytesIO()
     wb.save(buf)

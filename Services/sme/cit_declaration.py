@@ -44,6 +44,14 @@ def cit_declaration_worksheet(
     year = int(fiscal_year)
     p_to = max(1, min(12, int(period_to)))
     rate = _money(tax_rate if tax_rate is not None else DEFAULT_RATE)
+    if tax_rate is None:
+        try:
+            from Services.sme.regime_profile import get_ledger_profile
+            from Services.sme.tt58_tax_rates import get_cit_income_rate_pct
+            if get_ledger_profile(conn).get('is_tt58_micro'):
+                rate = _money(get_cit_income_rate_pct(conn, as_of=f'{year:04d}-12-31') / 100.0)
+        except Exception:
+            pass
 
     # Lợi nhuận kế toán trước thuế ≈ từ B02 đến hết kỳ
     try:

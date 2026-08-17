@@ -2398,13 +2398,135 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_BCTC():
+        from Services.sme.regime_profile import get_ledger_profile
+        conn = get_db_connection()
+        try:
+            profile = get_ledger_profile(conn)
+        finally:
+            conn.close()
+        if profile.get('is_tt58_micro') and not profile.get('show_bctc'):
+            flash(
+                'Phương pháp thuế hiện tại không bắt buộc lập BCTC. '
+                'Chỉ dùng sổ DNSN theo Điều 5/7.',
+                'info',
+            )
+            return redirect(url_for('SME_dnsn_books'))
         return render_template('KeToanSME/dashboard_BCTC.html')
 
     @app.route('/SME_BCTC/reports')
     @login_required
     @require_sme_regime
     def SME_BCTC_reports():
+        from Services.sme.regime_profile import get_ledger_profile
+        conn = get_db_connection()
+        try:
+            profile = get_ledger_profile(conn)
+        finally:
+            conn.close()
+        if profile.get('is_tt58_micro') and not profile.get('show_bctc'):
+            flash(
+                'PP thuế đang chọn (TNDN theo % doanh thu) không bắt buộc '
+                'hiển thị BCTC. Đổi sang PP2 hoặc PP4 nếu cần lập B01/B02-DNSN.',
+                'warning',
+            )
+            return redirect(url_for('SME_dnsn_books'))
         return render_template('KeToanSME/bctc_reports.html')
+
+    @app.route('/SME_dnsn_books')
+    @login_required
+    @require_sme_regime
+    def SME_dnsn_books():
+        from Services.sme.bctc_lines_tt58 import DNSN_VOUCHER_FORMS
+        from Services.sme.dnsn_books import list_dnsn_books
+        from Services.sme.regime_profile import get_ledger_profile
+        from Services.sme.tt58_tax_rates import (
+            get_tt58_tax_rates,
+            rates_ui_context_for_method,
+        )
+        from flask import url_for as _url_for
+
+        conn = get_db_connection()
+        try:
+            profile = get_ledger_profile(conn)
+            tax_rates = get_tt58_tax_rates(conn) if profile.get('is_tt58_micro') else {}
+            rates_ui = rates_ui_context_for_method(profile.get('tt58_tax_method')) if profile.get('is_tt58_micro') else {}
+        finally:
+            conn.close()
+
+        tax_method = profile.get('tt58_tax_method') if profile.get('is_tt58_micro') else None
+        books = list_dnsn_books(tax_method=tax_method, include_optional=True)
+        required = [b for b in books if b.get('is_required')]
+        optional = [b for b in books if b.get('is_optional')]
+
+        vouchers = []
+        if profile.get('show_vouchers', True):
+            for v in DNSN_VOUCHER_FORMS:
+                item = dict(v)
+                ep = v.get('endpoint')
+                try:
+                    item['url'] = _url_for(ep) if ep else None
+                except Exception:
+                    item['url'] = None
+                vouchers.append(item)
+
+        return render_template(
+            'KeToanSME/dnsn_books.html',
+            books=books,
+            required_books=required,
+            optional_books=optional,
+            book_map={b['code']: b for b in books},
+            vouchers=vouchers,
+            regime_profile=profile,
+            tax_methods=profile.get('tt58_tax_methods') or [],
+            tax_method=tax_method,
+            tax_rates=tax_rates,
+            rates_ui=rates_ui,
+            year=request.args.get('year', default=datetime.today().year, type=int),
+        )
+
+    def _load_dnsn_book(code: str):
+        from Services.sme.dnsn_books import get_dnsn_book
+
+        year = request.args.get('year', default=datetime.today().year, type=int)
+        partner = (request.args.get('partner') or '').strip() or None
+        product_id = request.args.get('product_id', type=int)
+        branch = (
+            request.args.get('branch')
+            or session.get('sme_branch_filter')
+            or 'ALL'
+        )
+        conn = get_db_connection()
+        try:
+            return get_dnsn_book(
+                conn,
+                code,
+                fiscal_year=year,
+                partner_key=partner,
+                product_id=product_id,
+                branch_code=branch,
+            )
+        finally:
+            conn.close()
+
+    @app.route('/SME_dnsn_book/<path:code>')
+    @login_required
+    @require_sme_regime
+    def SME_dnsn_book(code):
+        try:
+            book = _load_dnsn_book(code)
+        except ValueError as exc:
+            abort(404, description=str(exc))
+        return render_template('KeToanSME/dnsn_book_view.html', book=book)
+
+    @app.route('/SME_dnsn_book/<path:code>/print')
+    @login_required
+    @require_sme_regime
+    def SME_dnsn_book_print(code):
+        try:
+            book = _load_dnsn_book(code)
+        except ValueError as exc:
+            abort(404, description=str(exc))
+        return render_template('KeToanSME/dnsn_book_print.html', book=book)
 
     @app.route('/SME_vat_declaration')
     @login_required
@@ -4752,6 +4874,12 @@ def register_ketoan_sme_routes(app):
     def api_sme_bctc_b09():
         conn = get_db_connection()
         try:
+            from Services.sme.regime_profile import get_ledger_profile
+            if get_ledger_profile(conn).get('is_tt58_micro'):
+                return jsonify({
+                    'success': False,
+                    'error': 'TT58 siêu nhỏ không lập thuyết minh B09-DN. Chỉ lập B01-DNSN và B02-DNSN.',
+                }), 400
             from Services.sme.b09_notes import notes_to_financial_statements
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month

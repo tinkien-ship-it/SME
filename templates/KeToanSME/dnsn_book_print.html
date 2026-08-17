@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>{{ book.code }} — {{ book.title }}</title>
+  {% include "KeToanSME/_print_styles.html" %}
+  <style>
+    .dnsn-table { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+    .dnsn-table th, .dnsn-table td { border: 1px solid #000; padding: 3px 5px; }
+    .dnsn-table th { background: #f0f0f0; text-align: center; }
+    .dnsn-table .num { text-align: right; white-space: nowrap; }
+    .dnsn-table .center { text-align: center; }
+    .sec-title { font-weight: bold; margin: 12px 0 4px; }
+    .form-meta { font-size: 10pt; }
+    h2 { text-align: center; margin: 8px 0; font-size: 14pt; }
+  </style>
+</head>
+<body>
+{% include "KeToanSME/_print_toolbar.html" %}
+<div class="print-container">
+  <div class="d-flex justify-content-between form-meta">
+    <div>
+      <div><strong>ĐƠN VỊ:</strong> {{ book.entity.name or '……………' }}</div>
+      <div><strong>Địa chỉ:</strong> {{ book.entity.address or '……………' }}</div>
+    </div>
+    <div class="text-end">
+      <div><strong>Mẫu số {{ book.code }}</strong></div>
+      <div>(Kèm theo Thông tư số 58/2026/TT-BTC)</div>
+    </div>
+  </div>
+  <h2>{{ book.title|upper }}</h2>
+  <div class="text-center mb-2">
+    Năm: {{ book.fiscal_year }}
+    {% if book.detail and book.detail.partner_name %} · Đối tượng: {{ book.detail.partner_name }}{% endif %}
+    {% if book.detail and book.detail.name %} · Hàng: {{ book.detail.product_code }} — {{ book.detail.name }}{% endif %}
+  </div>
+  {% include "KeToanSME/dnsn/_book_body.html" %}
+  <div class="d-flex justify-content-between mt-4" style="font-size:10.5pt">
+    <div class="text-center" style="width:32%"><div>NGƯỜI LẬP BIỂU</div><div>(Ký, ghi rõ họ tên)</div></div>
+    <div class="text-center" style="width:32%"><div>KẾ TOÁN TRƯỞNG</div><div>(Ký, ghi rõ họ tên)</div></div>
+    <div class="text-center" style="width:32%"><div>NGƯỜI ĐẠI DIỆN THEO PHÁP LUẬT</div><div>(Ký, ghi rõ họ tên, đóng dấu)</div></div>
+  </div>
+</div>
+</body>
+</html>
