@@ -3,10 +3,27 @@ from __future__ import annotations
 
 import sqlite3
 
+_SCHEMA_FLAG = 'sme_journal_schema_v3'
 
-def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+
+def _journal_schema_present(conn: sqlite3.Connection) -> bool:
+    from db_utils import sqlite_table_exists
+
+    needed = (
+        'sme_journal_entries',
+        'sme_journal_lines',
+        'sme_posting_rules',
+        'sme_account_balances',
+        'sme_journal_seed_meta',
+    )
+    if not all(sqlite_table_exists(conn, name) for name in needed):
+        return False
+    cols = {r[1] for r in conn.execute('PRAGMA table_info(sme_journal_entries)').fetchall()}
+    return 'branch_code' in cols
+
+
+def _apply_journal_schema(conn: sqlite3.Connection) -> None:
     c = conn.cursor()
-
     c.execute(
         """
         CREATE TABLE IF NOT EXISTS sme_journal_entries (
@@ -36,7 +53,6 @@ def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         )
         """
     )
-
     c.execute(
         """
         CREATE TABLE IF NOT EXISTS sme_journal_lines (
@@ -66,26 +82,11 @@ def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         )
         """
     )
-
+    c.execute('CREATE INDEX IF NOT EXISTS idx_sme_jl_entry ON sme_journal_lines(entry_id)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_sme_jl_account_date ON sme_journal_lines(account_code)')
     c.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_sme_jl_entry
-        ON sme_journal_lines(entry_id)
-        """
+        'CREATE INDEX IF NOT EXISTS idx_sme_je_doc ON sme_journal_entries(document_type, document_id)'
     )
-    c.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_sme_jl_account_date
-        ON sme_journal_lines(account_code)
-        """
-    )
-    c.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_sme_je_doc
-        ON sme_journal_entries(document_type, document_id)
-        """
-    )
-
     c.execute(
         """
         CREATE TABLE IF NOT EXISTS sme_posting_rules (
@@ -103,7 +104,6 @@ def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         )
         """
     )
-
     c.execute(
         """
         CREATE TABLE IF NOT EXISTS sme_account_balances (
@@ -121,7 +121,6 @@ def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         )
         """
     )
-
     c.execute(
         """
         CREATE TABLE IF NOT EXISTS sme_journal_seed_meta (
@@ -131,8 +130,6 @@ def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         )
         """
     )
-
-    # Multi-branch: cột analytic trên header chứng từ (NULL = dữ liệu cũ / HQ)
     je_cols = {r[1] for r in c.execute('PRAGMA table_info(sme_journal_entries)').fetchall()}
     if 'branch_code' not in je_cols:
         try:
@@ -146,5 +143,17 @@ def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         """
     )
 
-    if commit:
-        conn.commit()
+
+def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+    from db_utils import sqlite_is_ready, sqlite_mark_ready, with_sqlite_write
+
+    if sqlite_is_ready(conn, _SCHEMA_FLAG):
+        return
+    try:
+        if _journal_schema_present(conn):
+            sqlite_mark_ready(conn, _SCHEMA_FLAG)
+            return
+    except sqlite3.Error:
+        pass
+    with_sqlite_write(conn, _apply_journal_schema, commit=commit, label='sme_journal_schema')
+    sqlite_mark_ready(conn, _SCHEMA_FLAG)

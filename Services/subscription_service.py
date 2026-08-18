@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 
 from flask_bcrypt import generate_password_hash
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, get_main_db_connection
+from db_utils import BASE_DIR, MAIN_DB_PATH, get_main_db_connection, open_sqlite
 
 logger = logging.getLogger(__name__)
 
@@ -519,7 +519,7 @@ def find_account_by_email(email, active_only=True):
             db_path = os.path.join(BASE_DIR, db_path)
         if not os.path.exists(db_path):
             continue
-        with sqlite3.connect(db_path) as conn_u:
+        with open_sqlite(db_path) as conn_u:
             conn_u.row_factory = sqlite3.Row
             try:
                 user = conn_u.execute(
@@ -614,7 +614,7 @@ def get_tenant_business_info(tenant_id):
             'address': rec.get('address') or '',
             'tax_code': '',
         }
-    with sqlite3.connect(db_path) as conn:
+    with open_sqlite(db_path) as conn:
         conn.row_factory = sqlite3.Row
         biz = conn.execute("SELECT * FROM business_info LIMIT 1").fetchone()
     if biz:

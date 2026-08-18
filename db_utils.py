@@ -28,6 +28,8 @@ except ValueError:
 
 # Đã bật WAL theo đường dẫn — tránh PRAGMA journal_mode lặp lại mỗi lần mở
 _wal_ready_paths: set[str] = set()
+# Schema/seed đã xong trong process này (key = đường dẫn file DB)
+_process_ready: dict[str, set[str]] = {}
 
 
 def _is_locked_error(exc: BaseException) -> bool:
@@ -211,21 +213,32 @@ def _configure_sqlite_connection(conn: sqlite3.Connection, db_path: str | None =
         pass
     key = os.path.abspath(db_path) if db_path else None
     if key and key not in _wal_ready_paths:
-        try:
-            mode = conn.execute('PRAGMA journal_mode = WAL').fetchone()
-            if mode and str(mode[0]).lower() == 'wal':
-                _wal_ready_paths.add(key)
-                try:
-                    conn.execute('PRAGMA wal_autocheckpoint = 1000')
-                except sqlite3.Error:
-                    pass
-            elif mode:
-                logger.warning(
-                    'SQLite journal_mode=%s (WAL chưa bật — dễ database is locked với Gunicorn multi-worker)',
-                    mode[0],
-                )
-        except sqlite3.Error as exc:
-            logger.warning('SQLite WAL chưa bật: %s', exc)
+        last_wal_exc = None
+        for attempt in range(max(1, SQLITE_WRITE_RETRIES)):
+            try:
+                mode = conn.execute('PRAGMA journal_mode = WAL').fetchone()
+                last_wal_exc = None
+                if mode and str(mode[0]).lower() == 'wal':
+                    _wal_ready_paths.add(key)
+                    try:
+                        conn.execute('PRAGMA wal_autocheckpoint = 1000')
+                        conn.execute('PRAGMA journal_size_limit = 67108864')
+                    except sqlite3.Error:
+                        pass
+                elif mode:
+                    logger.warning(
+                        'SQLite journal_mode=%s (WAL chưa bật — dễ database is locked với Gunicorn multi-worker)',
+                        mode[0],
+                    )
+                break
+            except sqlite3.OperationalError as exc:
+                last_wal_exc = exc
+                if not _is_locked_error(exc) or attempt >= SQLITE_WRITE_RETRIES - 1:
+                    logger.warning('SQLite WAL chưa bật: %s', exc)
+                    break
+                time.sleep(min(0.05 * (2 ** attempt) + random.uniform(0, 0.04), 1.2))
+        if last_wal_exc and not _is_locked_error(last_wal_exc):
+            logger.warning('SQLite WAL chưa bật: %s', last_wal_exc)
     try:
         conn.execute('PRAGMA synchronous = NORMAL')
         conn.execute('PRAGMA temp_store = MEMORY')
@@ -244,13 +257,27 @@ def open_sqlite(db_path, *, timeout: float | None = None):
     Python, dễ giữ khóa giữa các worker Gunicorn.
     """
     path = _normalize_db_path(db_path) or db_path
-    raw = sqlite3.connect(
-        path,
-        timeout=SQLITE_TIMEOUT_SEC if timeout is None else timeout,
-        detect_types=sqlite3.PARSE_DECLTYPES,
-        check_same_thread=False,
-    )
-    return _AutoCloseConnection(_configure_sqlite_connection(raw, path))
+    wait = SQLITE_TIMEOUT_SEC if timeout is None else timeout
+    last_exc = None
+    for attempt in range(max(1, SQLITE_WRITE_RETRIES)):
+        try:
+            raw = sqlite3.connect(
+                path,
+                timeout=wait,
+                detect_types=sqlite3.PARSE_DECLTYPES,
+                check_same_thread=False,
+            )
+            return _AutoCloseConnection(_configure_sqlite_connection(raw, path))
+        except sqlite3.OperationalError as exc:
+            last_exc = exc
+            if not _is_locked_error(exc) or attempt >= SQLITE_WRITE_RETRIES - 1:
+                raise
+            sleep_s = min(0.08 * (2 ** attempt) + random.uniform(0, 0.08), 2.5)
+            logger.warning('open_sqlite locked (lần %s/%s), chờ %.2fs: %s', attempt + 1, SQLITE_WRITE_RETRIES, sleep_s, exc)
+            time.sleep(sleep_s)
+    if last_exc:
+        raise last_exc
+    raise sqlite3.OperationalError('open_sqlite failed')
 
 
 def sqlite_write_retry(fn, *, retries: int | None = None, label: str = 'sqlite_write'):
@@ -273,6 +300,89 @@ def sqlite_write_retry(fn, *, retries: int | None = None, label: str = 'sqlite_w
     if last_exc:
         raise last_exc
     return None
+
+
+def sqlite_db_file(conn) -> str | None:
+    """Đường dẫn file SQLite của connection; None nếu :memory: / unnamed."""
+    try:
+        raw = _raw_sqlite_conn(conn)
+        row = raw.execute('PRAGMA database_list').fetchone()
+        if not row:
+            return None
+        path = row[2] if not isinstance(row, sqlite3.Row) else row['file']
+        text = str(path or '').strip()
+        return os.path.abspath(text) if text else None
+    except sqlite3.Error:
+        return None
+
+
+def sqlite_is_ready(conn, flag: str) -> bool:
+    key = sqlite_db_file(conn) or f'conn:{id(_raw_sqlite_conn(conn))}'
+    return flag in _process_ready.get(key, set())
+
+
+def sqlite_mark_ready(conn, flag: str) -> None:
+    key = sqlite_db_file(conn) or f'conn:{id(_raw_sqlite_conn(conn))}'
+    _process_ready.setdefault(key, set()).add(flag)
+
+
+def sqlite_clear_ready(db_path: str | None = None) -> None:
+    if not db_path:
+        _process_ready.clear()
+        return
+    try:
+        _process_ready.pop(os.path.abspath(db_path), None)
+    except OSError:
+        pass
+
+
+def sqlite_table_exists(conn, name: str) -> bool:
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
+            (name,),
+        ).fetchone()
+        return bool(row)
+    except sqlite3.Error:
+        return False
+
+
+def with_sqlite_write(conn, fn, *, commit: bool = True, label: str = 'sqlite_write'):
+    """Chạy ``fn(target)`` có retry khi locked.
+
+    ``commit=False`` (đọc sổ / cùng transaction nghiệp vụ): ghi DDL/seed trên
+    **connection riêng** rồi commit ngay — không giữ khóa trên conn request,
+    không bị teardown rollback xóa seed.
+    ``commit=True``: ghi trên đúng ``conn`` rồi commit.
+    """
+    def _run():
+        own = None
+        target = conn
+        try:
+            if not commit:
+                path = sqlite_db_file(conn)
+                if path:
+                    own = open_sqlite(path)
+                    target = own
+            fn(target)
+            try:
+                target.commit()
+            except sqlite3.Error:
+                pass
+        except Exception:
+            try:
+                target.rollback()
+            except Exception:
+                pass
+            raise
+        finally:
+            if own is not None:
+                try:
+                    own.close()
+                except Exception:
+                    pass
+
+    return sqlite_write_retry(_run, label=label)
 
 
 def paths_same_db(a, b) -> bool:
@@ -373,7 +483,9 @@ def force_close_request_db_if_path(db_path: str | None) -> None:
     close_request_db()
     # WAL cache: cho phép process khác / lần mở sau cấu hình lại
     try:
-        _wal_ready_paths.discard(os.path.abspath(db_path))
+        abs_path = os.path.abspath(db_path)
+        _wal_ready_paths.discard(abs_path)
+        sqlite_clear_ready(abs_path)
     except OSError:
         pass
 

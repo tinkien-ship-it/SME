@@ -31,7 +31,7 @@ from flask_login import login_required, current_user
 
 from Services.invoice_buyer import DEFAULT_RETAIL_BUYER_NAME
 from Services.profit_report_helpers import compute_cogs, get_days_in_quarter
-from db_utils import get_db_connection
+from db_utils import get_db_connection, open_sqlite
 
 logger = logging.getLogger(__name__)
 import openpyxl
@@ -1459,8 +1459,7 @@ def register_ketoan_hkd_routes(app):
             if not os.path.exists(db_path):
                 return jsonify({'success': False, 'message': 'Không tìm thấy file database!'}), 500
 
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
+            conn = open_sqlite(db_path)
             cursor = conn.cursor()
 
             # BƯỚC 1: Xóa voucher_no cũ để tránh lỗi UNIQUE

@@ -13,7 +13,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from db_utils import MAIN_DB_PATH, _normalize_db_path, get_main_db_connection
+from db_utils import MAIN_DB_PATH, _normalize_db_path, get_main_db_connection, open_sqlite
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +165,7 @@ def read_scheduled_config(conn: sqlite3.Connection) -> dict | None:
 def _config_for_db(db_path: str) -> dict | None:
     if not db_path or not os.path.exists(db_path):
         return None
-    conn = sqlite3.connect(db_path)
+    conn = open_sqlite(db_path)
     try:
         return read_scheduled_config(conn)
     finally:

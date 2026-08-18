@@ -1,9 +1,10 @@
 # tenant.py - Path-based Multi-Tenant cho POS System
 from flask import g, request, current_app
-import sqlite3
 import os
 import shutil
 from datetime import datetime
+
+from db_utils import open_sqlite
 
 # Đường dẫn đến registry database
 REGISTRY_PATH = os.path.join(os.path.dirname(__file__), 'tenants', 'registry.db')
@@ -30,7 +31,7 @@ def init_tenant_database(tenant_id: str, business_name: str = "Cửa Hàng Mới
         print(f"⚠️  Tạo file database rỗng cho tenant '{tenant_id}'")
 
     # Đăng ký vào registry
-    conn = sqlite3.connect(REGISTRY_PATH)
+    conn = open_sqlite(REGISTRY_PATH)
     c = conn.cursor()
     c.execute("""
         INSERT OR REPLACE INTO tenants 
@@ -47,8 +48,7 @@ def get_tenant_db_path(tenant_id: str):
     if not tenant_id or tenant_id.lower() in ['main', '']:
         return None  # Tenant chính dùng database.db
 
-    conn = sqlite3.connect(REGISTRY_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = open_sqlite(REGISTRY_PATH)
     try:
         c = conn.cursor()
         c.execute("""

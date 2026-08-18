@@ -29,33 +29,44 @@ def ensure_sme_journal_ready(
     *,
     commit: bool = True,
 ) -> dict[str, Any]:
+    from db_utils import sqlite_is_ready, sqlite_mark_ready
+
+    flag = f'posting_rules:{RULES_SEED_VERSION}'
+    if sqlite_is_ready(conn, flag):
+        return {'seeded': False, 'cached': True, 'rules_version': RULES_SEED_VERSION}
     ensure_sme_coa_ready(conn, commit=commit)
     ensure_sme_journal_schema(conn, commit=commit)
-    return seed_posting_rules(conn, commit=commit)
+    out = seed_posting_rules(conn, commit=commit)
+    sqlite_mark_ready(conn, flag)
+    return out
 
 
-def seed_posting_rules(
-    conn: sqlite3.Connection,
-    *,
-    force: bool = False,
-    commit: bool = True,
-) -> dict[str, Any]:
+def _account_code_exists(conn: sqlite3.Connection, code: str) -> bool:
+    row = conn.execute(
+        'SELECT 1 FROM sme_chart_of_accounts WHERE code = ? LIMIT 1',
+        (code,),
+    ).fetchone()
+    return bool(row)
+
+
+def _apply_posting_rules(conn: sqlite3.Connection, *, force: bool = False) -> dict[str, Any]:
     c = conn.cursor()
     row = c.execute(
         "SELECT value FROM sme_journal_seed_meta WHERE key = 'rules_version'"
     ).fetchone()
     current = row[0] if row else None
-    count = c.execute("SELECT COUNT(*) FROM sme_posting_rules").fetchone()[0]
+    count = c.execute('SELECT COUNT(*) FROM sme_posting_rules').fetchone()[0]
     if not force and current == RULES_SEED_VERSION and count > 0:
         return {'seeded': False, 'rules_version': current, 'count': count}
 
     inserted = 0
     for rule in DEFAULT_POSTING_RULES:
-        # Bỏ qua nếu mã TK chưa có trong COA (tránh FK lỗi trên DB trống)
         for key in ('debit_account_code', 'credit_account_code', 'vat_account_code', 'import_tax_credit_account'):
             code = rule.get(key)
-            if code and not get_account(conn, code, commit=commit):
-                raise ValueError(f"Seed rule thiếu tài khoản {code} trong COA — chạy ensure_sme_coa_ready trước")
+            if code and not _account_code_exists(conn, code):
+                raise ValueError(
+                    f'Seed rule thiếu tài khoản {code} trong COA — chạy ensure_sme_coa_ready trước'
+                )
 
         exists = c.execute(
             """
@@ -104,10 +115,45 @@ def seed_posting_rules(
         """,
         (RULES_SEED_VERSION, _now()),
     )
-    if commit:
-        conn.commit()
-    count = c.execute("SELECT COUNT(*) FROM sme_posting_rules").fetchone()[0]
+    count = c.execute('SELECT COUNT(*) FROM sme_posting_rules').fetchone()[0]
     return {'seeded': True, 'rules_version': RULES_SEED_VERSION, 'inserted': inserted, 'count': count}
+
+
+def seed_posting_rules(
+    conn: sqlite3.Connection,
+    *,
+    force: bool = False,
+    commit: bool = True,
+) -> dict[str, Any]:
+    from db_utils import sqlite_is_ready, sqlite_mark_ready, sqlite_table_exists, with_sqlite_write
+
+    flag = f'posting_rules:{RULES_SEED_VERSION}'
+    if not force and sqlite_is_ready(conn, flag):
+        return {'seeded': False, 'cached': True, 'rules_version': RULES_SEED_VERSION}
+
+    ensure_sme_journal_schema(conn, commit=commit)
+    if not force and sqlite_table_exists(conn, 'sme_journal_seed_meta'):
+        try:
+            row = conn.execute(
+                "SELECT value FROM sme_journal_seed_meta WHERE key = 'rules_version'"
+            ).fetchone()
+            current = row[0] if row else None
+            count = conn.execute('SELECT COUNT(*) FROM sme_posting_rules').fetchone()[0]
+            if current == RULES_SEED_VERSION and count > 0:
+                sqlite_mark_ready(conn, flag)
+                return {'seeded': False, 'rules_version': current, 'count': count}
+        except sqlite3.Error:
+            pass
+
+    result: dict[str, Any] = {}
+
+    def _write(target):
+        nonlocal result
+        result = _apply_posting_rules(target, force=force)
+
+    with_sqlite_write(conn, _write, commit=commit, label='seed_posting_rules')
+    sqlite_mark_ready(conn, flag)
+    return result or {'seeded': True, 'rules_version': RULES_SEED_VERSION}
 
 
 def get_posting_rule(

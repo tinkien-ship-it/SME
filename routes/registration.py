@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from flask import jsonify, redirect, render_template, request, session, url_for
 
 from auth import login_required
-from db_utils import BASE_DIR, get_main_db_connection
+from db_utils import BASE_DIR, get_main_db_connection, open_sqlite
 from Services.login_service import verify_google_credential
 from Services.payment_bank import get_sale_payment_status
 from Services.subscription_service import (
@@ -376,7 +376,7 @@ def register_registration_routes(app):
         if db_path and not __import__('os').path.isabs(db_path):
             db_path = __import__('os').path.join(BASE_DIR, db_path)
 
-        conn = sqlite3.connect(db_path or __import__('os').path.join(BASE_DIR, 'database.db'))
+        conn = open_sqlite(db_path or __import__('os').path.join(BASE_DIR, 'database.db'))
         conn.row_factory = sqlite3.Row
         try:
             cur = conn.cursor()

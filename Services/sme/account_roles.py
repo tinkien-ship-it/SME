@@ -198,8 +198,12 @@ def _now() -> str:
 
 
 def ensure_account_roles_ready(conn: sqlite3.Connection, *, commit: bool = True) -> dict[str, Any]:
+    from db_utils import sqlite_is_ready
     from Services.sme.schema import ensure_sme_coa_schema
 
+    flag = f'account_roles:{ROLES_SEED_VERSION}'
+    if sqlite_is_ready(conn, flag):
+        return {'seeded': False, 'cached': True, 'roles_version': ROLES_SEED_VERSION}
     ensure_sme_coa_schema(conn, commit=False)
     return seed_account_roles(conn, commit=commit)
 
@@ -221,6 +225,37 @@ def seed_account_roles(
     force: bool = False,
     commit: bool = True,
 ) -> dict[str, Any]:
+    from db_utils import sqlite_is_ready, sqlite_mark_ready, sqlite_table_exists, with_sqlite_write
+
+    flag = f'account_roles:{ROLES_SEED_VERSION}'
+    if not force and sqlite_is_ready(conn, flag):
+        return {'seeded': False, 'cached': True, 'roles_version': ROLES_SEED_VERSION}
+
+    if not force and sqlite_table_exists(conn, 'sme_account_roles_meta'):
+        try:
+            row = conn.execute(
+                "SELECT value FROM sme_account_roles_meta WHERE key = 'roles_version'"
+            ).fetchone()
+            current = row[0] if row else None
+            count = conn.execute('SELECT COUNT(*) FROM sme_account_roles').fetchone()[0]
+            if current == ROLES_SEED_VERSION and count > 0:
+                sqlite_mark_ready(conn, flag)
+                return {'seeded': False, 'roles_version': current, 'count': count}
+        except sqlite3.Error:
+            pass
+
+    result: dict[str, Any] = {}
+
+    def _write(target):
+        nonlocal result
+        result = _apply_account_roles(target, force=force)
+
+    with_sqlite_write(conn, _write, commit=commit, label='seed_account_roles')
+    sqlite_mark_ready(conn, flag)
+    return result or {'seeded': True, 'roles_version': ROLES_SEED_VERSION}
+
+
+def _apply_account_roles(conn: sqlite3.Connection, *, force: bool = False) -> dict[str, Any]:
     c = conn.cursor()
     c.execute(
         """
@@ -238,8 +273,6 @@ def seed_account_roles(
     count = c.execute('SELECT COUNT(*) FROM sme_account_roles').fetchone()[0]
 
     if not force and current == ROLES_SEED_VERSION and count > 0:
-        if commit:
-            conn.commit()
         return {'seeded': False, 'roles_version': current, 'count': count}
 
     inserted = 0
@@ -308,8 +341,6 @@ def seed_account_roles(
         """,
         (ROLES_SEED_VERSION, _now()),
     )
-    if commit:
-        conn.commit()
     count = c.execute('SELECT COUNT(*) FROM sme_account_roles').fetchone()[0]
     return {
         'seeded': True,

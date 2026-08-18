@@ -69,6 +69,12 @@ def ensure_sme_coa_ready(
     commit: bool = True,
 ) -> dict[str, Any]:
     """Đảm bảo schema + seed TT99/recommended đã có trên DB tenant."""
+    from db_utils import sqlite_is_ready, sqlite_mark_ready
+
+    flag = f'coa_seed:{SEED_VERSION}'
+    if not force_reseed and sqlite_is_ready(conn, flag):
+        return {'seeded': False, 'cached': True, 'seed_version': SEED_VERSION}
+
     ensure_sme_coa_schema(conn, commit=commit)
     c = conn.cursor()
     row = c.execute(
@@ -80,6 +86,7 @@ def ensure_sme_coa_ready(
     if not force_reseed and current == SEED_VERSION and count > 0:
         from Services.sme.account_roles import ensure_account_roles_ready
         ensure_account_roles_ready(conn, commit=commit)
+        sqlite_mark_ready(conn, flag)
         return {'seeded': False, 'seed_version': current, 'count': count}
 
     if force_reseed:
@@ -167,6 +174,7 @@ def ensure_sme_coa_ready(
     ensure_account_roles_ready(conn, commit=False)
     if commit:
         conn.commit()
+    sqlite_mark_ready(conn, flag)
     count = c.execute("SELECT COUNT(*) FROM sme_chart_of_accounts").fetchone()[0]
     return {
         'seeded': True,
@@ -271,7 +279,9 @@ def get_account(
     *,
     commit: bool = True,
 ) -> dict | None:
-    ensure_sme_coa_ready(conn, commit=commit)
+    from db_utils import sqlite_is_ready
+    if not sqlite_is_ready(conn, f'coa_seed:{SEED_VERSION}'):
+        ensure_sme_coa_ready(conn, commit=commit)
     conn.row_factory = sqlite3.Row
     row = conn.execute(
         "SELECT * FROM sme_chart_of_accounts WHERE code = ?", (code,)

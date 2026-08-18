@@ -3,8 +3,22 @@ from __future__ import annotations
 
 import sqlite3
 
+_SCHEMA_FLAG = 'sme_coa_schema_v2'
 
-def ensure_sme_coa_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+
+def _coa_schema_present(conn: sqlite3.Connection) -> bool:
+    from db_utils import sqlite_table_exists
+
+    if not all(
+        sqlite_table_exists(conn, name)
+        for name in ('sme_chart_of_accounts', 'sme_coa_seed_meta', 'sme_account_roles')
+    ):
+        return False
+    cols = {r[1] for r in conn.execute('PRAGMA table_info(sme_chart_of_accounts)').fetchall()}
+    return 'is_default_posting' in cols
+
+
+def _apply_coa_schema(conn: sqlite3.Connection) -> None:
     c = conn.cursor()
     c.execute(
         """
@@ -40,17 +54,9 @@ def ensure_sme_coa_schema(conn: sqlite3.Connection, *, commit: bool = True) -> N
         )
         """
     )
+    c.execute('CREATE INDEX IF NOT EXISTS idx_sme_coa_parent ON sme_chart_of_accounts(parent_code)')
     c.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_sme_coa_parent
-        ON sme_chart_of_accounts(parent_code)
-        """
-    )
-    c.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_sme_coa_active_level
-        ON sme_chart_of_accounts(is_active, level)
-        """
+        'CREATE INDEX IF NOT EXISTS idx_sme_coa_active_level ON sme_chart_of_accounts(is_active, level)'
     )
     c.execute(
         """
@@ -61,8 +67,6 @@ def ensure_sme_coa_schema(conn: sqlite3.Connection, *, commit: bool = True) -> N
         )
         """
     )
-
-    # Cột default leaf cho resolve nghiệp vụ khi DN mở thêm TK con
     coa_cols = {r[1] for r in c.execute('PRAGMA table_info(sme_chart_of_accounts)').fetchall()}
     if 'is_default_posting' not in coa_cols:
         try:
@@ -72,7 +76,6 @@ def ensure_sme_coa_schema(conn: sqlite3.Connection, *, commit: bool = True) -> N
             )
         except sqlite3.OperationalError:
             pass
-
     c.execute(
         """
         CREATE TABLE IF NOT EXISTS sme_account_roles (
@@ -86,12 +89,7 @@ def ensure_sme_coa_schema(conn: sqlite3.Connection, *, commit: bool = True) -> N
         )
         """
     )
-    c.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_sme_account_roles_root
-        ON sme_account_roles(root_hint)
-        """
-    )
+    c.execute('CREATE INDEX IF NOT EXISTS idx_sme_account_roles_root ON sme_account_roles(root_hint)')
     c.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_sme_coa_default_posting
@@ -99,5 +97,17 @@ def ensure_sme_coa_schema(conn: sqlite3.Connection, *, commit: bool = True) -> N
         """
     )
 
-    if commit:
-        conn.commit()
+
+def ensure_sme_coa_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+    from db_utils import sqlite_is_ready, sqlite_mark_ready, with_sqlite_write
+
+    if sqlite_is_ready(conn, _SCHEMA_FLAG):
+        return
+    try:
+        if _coa_schema_present(conn):
+            sqlite_mark_ready(conn, _SCHEMA_FLAG)
+            return
+    except sqlite3.Error:
+        pass
+    with_sqlite_write(conn, _apply_coa_schema, commit=commit, label='sme_coa_schema')
+    sqlite_mark_ready(conn, _SCHEMA_FLAG)
