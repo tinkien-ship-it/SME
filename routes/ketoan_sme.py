@@ -234,6 +234,42 @@ def register_ketoan_sme_routes(app):
     from helpers import parse_date
     from Services.tenant_profile import require_sme_regime
 
+    @app.before_request
+    def _guard_sme_regime_pages():
+        """Chặn URL/API TT99 khi tenant là TT58 (và ngược lại với sổ DNSN)."""
+        from flask import jsonify, flash, redirect, url_for
+        from Services.sme_roles import sme_request_allowed
+        from Services.tenant_profile import (
+            get_current_tenant_profile,
+            is_master_session,
+            is_sme_regime,
+        )
+        ep = request.endpoint or ''
+        path = request.path or ''
+        if not (
+            ep.startswith('SME_')
+            or ep.startswith('api_sme')
+            or path.startswith('/SME_')
+            or path.startswith('/api/sme/')
+        ):
+            return None
+        if is_master_session():
+            return None
+        profile = get_current_tenant_profile() or {}
+        regime = profile.get('accounting_regime')
+        if not is_sme_regime(regime):
+            return None
+        allowed, msg = sme_request_allowed(ep, path, regime)
+        if allowed:
+            return None
+        if path.startswith('/api/') or request.is_json:
+            return jsonify({'success': False, 'error': msg}), 403
+        flash(msg, 'warning')
+        try:
+            return redirect(url_for('SME_dashboard'))
+        except Exception:
+            return redirect('/SME_dashboard')
+
     @app.context_processor
     def inject_sme_hub():
         from Services.sme_menu import (
@@ -316,6 +352,9 @@ def register_ketoan_sme_routes(app):
             'sme_branch': sme_branch,
             'sme_vat_filing_alert': vat_alert,
             'sme_micro_tt99_alert': micro_alert,
+            'sme_is_tt58': 'TT58' in str(
+                (getattr(g, 'tenant_profile', None) or {}).get('accounting_regime') or ''
+            ).upper(),
         }
 
     def _bootstrap_sme_db():
@@ -349,8 +388,12 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_hub_group(group_id):
-        from Services.sme_menu import get_sme_group_by_id
-        group = get_sme_group_by_id(group_id)
+        from Services.sme_menu import get_sme_menu_groups
+        group = None
+        for g in get_sme_menu_groups():
+            if g.get('id') == group_id and g.get('_type') != 'section_header':
+                group = g
+                break
         if not group:
             abort(404)
         if group_id == 'overview':
@@ -871,6 +914,8 @@ def register_ketoan_sme_routes(app):
             import_mode = 'stock'
         warehouses = [{'code': 'KHO_001', 'name': 'Kho mặc định', 'is_default': 1}]
         next_import_no = 'HT000001' if import_mode == 'service' else 'PN000001'
+        vat_in_inventory_cost = False
+        vat_in_cost_label = ''
         try:
             conn = get_db_connection()
             try:
@@ -882,10 +927,21 @@ def register_ketoan_sme_routes(app):
                 warehouses = list_active_warehouses(
                     conn, branch_code=branch,
                 ) or warehouses
+                from Services.sme.regime_profile import get_ledger_profile
+                profile = get_ledger_profile(conn)
+                vat_in_inventory_cost = bool(profile.get('vat_in_inventory_cost'))
+                td = profile.get('tt58_tax_method_def') or {}
+                if vat_in_inventory_cost:
+                    vat_in_cost_label = (
+                        f"Trường hợp {td.get('case_no') or td.get('method_no') or ''} "
+                        f"— GTGT theo % doanh thu: thuế GTGT đầu vào không khấu trừ, "
+                        f"đã cộng vào giá vốn hàng hóa / nguyên giá TSCĐ-CCDC. "
+                        f"Không hạch toán Nợ 133."
+                    ).strip()
             finally:
                 conn.close()
         except Exception:
-            logger.exception('SME_import load warehouses')
+            logger.exception('SME_import load warehouses / tax method')
         try:
             next_import_no = peek_next_import_no(import_mode) or next_import_no
         except Exception:
@@ -895,6 +951,8 @@ def register_ketoan_sme_routes(app):
             warehouses=warehouses,
             next_import_no=next_import_no,
             import_mode=import_mode,
+            vat_in_inventory_cost=vat_in_inventory_cost,
+            vat_in_cost_label=vat_in_cost_label,
         )
 
     @app.route('/SME_landed_cost')
@@ -2406,8 +2464,8 @@ def register_ketoan_sme_routes(app):
             conn.close()
         if profile.get('is_tt58_micro') and not profile.get('show_bctc'):
             flash(
-                'Phương pháp thuế hiện tại không bắt buộc lập BCTC. '
-                'Chỉ dùng sổ DNSN theo Điều 5/7.',
+                'Trường hợp thuế hiện tại không bắt buộc lập BCTC. '
+                'Chỉ dùng sổ DNSN theo Trường hợp 1 hoặc 3.',
                 'info',
             )
             return redirect(url_for('SME_dnsn_books'))
@@ -2425,8 +2483,9 @@ def register_ketoan_sme_routes(app):
             conn.close()
         if profile.get('is_tt58_micro') and not profile.get('show_bctc'):
             flash(
-                'PP thuế đang chọn (TNDN theo % doanh thu) không bắt buộc '
-                'hiển thị BCTC. Đổi sang PP2 hoặc PP4 nếu cần lập B01/B02-DNSN.',
+                'Trường hợp đang chọn (TNDN theo % doanh thu) không bắt buộc '
+                'lập BCTC. Đổi sang Trường hợp 2 hoặc 4 nếu cần lập B01/B02-DNSN '
+                '(nộp trong 90 ngày sau năm tài chính).',
                 'warning',
             )
             return redirect(url_for('SME_dnsn_books'))
@@ -2448,8 +2507,14 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         try:
             profile = get_ledger_profile(conn)
-            tax_rates = get_tt58_tax_rates(conn) if profile.get('is_tt58_micro') else {}
-            rates_ui = rates_ui_context_for_method(profile.get('tt58_tax_method')) if profile.get('is_tt58_micro') else {}
+            if profile.get('is_tt58_micro'):
+                try:
+                    tax_rates = get_tt58_tax_rates(conn)
+                except sqlite3.OperationalError:
+                    tax_rates = {}
+                rates_ui = rates_ui_context_for_method(profile.get('tt58_tax_method'))
+            else:
+                tax_rates, rates_ui = {}, {}
         finally:
             conn.close()
 
@@ -3229,6 +3294,9 @@ def register_ketoan_sme_routes(app):
                 if 'linked_lc_id' in import_cols:
                     set_parts.append('linked_lc_id = ?')
                     set_vals.append(linked_lc_id)
+                if 'po_id' in import_cols and po_id:
+                    set_parts.append('po_id = ?')
+                    set_vals.append(po_id)
                 set_vals.append(import_id)
                 c.execute(
                     f"UPDATE import SET {', '.join(set_parts)} WHERE id = ?",
@@ -3297,6 +3365,9 @@ def register_ketoan_sme_routes(app):
                 if 'linked_lc_id' in import_cols:
                     import_fields.append('linked_lc_id')
                     import_values.append(linked_lc_id)
+                if 'po_id' in import_cols and po_id:
+                    import_fields.append('po_id')
+                    import_values.append(po_id)
 
                 placeholders = ', '.join(['?'] * len(import_fields))
                 c.execute(
@@ -3324,6 +3395,8 @@ def register_ketoan_sme_routes(app):
             tools_created = 0
             total_import_tax_vnd = Decimal('0.00')
             total_excise_tax_vnd = Decimal('0.00')
+            from Services.sme.tt58_tax_methods import tt58_input_vat_in_inventory_cost
+            vat_in_inventory_cost = tt58_input_vat_in_inventory_cost(conn)
 
             for item in items:
                 line_type = _normalize_line_type(
@@ -3334,6 +3407,9 @@ def register_ketoan_sme_routes(app):
                 warehouse_code = (item.get('warehouse_code') or default_warehouse or 'KHO_001').strip()
                 if not tracks_retail_inventory(line_type):
                     warehouse_code = warehouse_code or 'KHO_001'
+                exp_acct = (item.get('expense_account') or '').strip()
+                if line_type == 'service' and not exp_acct:
+                    exp_acct = '642'
 
                 qty_in = round_money(item.get('qty', 0))
                 if qty_in <= 0:
@@ -3411,10 +3487,12 @@ def register_ketoan_sme_routes(app):
                 else:
                     tax_base_vnd = line_net_vnd
                 line_vat_vnd = round_money(tax_base_vnd * (tax_p / Decimal('100.00')))
-                # Giá vốn hóa HH/NVL/TSCĐ/CCDC (không gồm VAT)
+                # Giá vốn hóa HH/NVL/TSCĐ/CCDC (TH3/TH4: không gồm VAT; TH1/TH2: gồm VAT)
                 line_inventory_value_vnd = (
                     line_net_vnd + line_import_tax_vnd + line_excise_tax_vnd + line_extra_vnd
                 )
+                if vat_in_inventory_cost:
+                    line_inventory_value_vnd += line_vat_vnd
                 # Tổng hiển thị: hàng + thuế NK/TTĐB + VAT + CP khác
                 if import_type == 'IMPORT':
                     line_total_payment_vnd = (
@@ -3451,6 +3529,7 @@ def register_ketoan_sme_routes(app):
                         'unit': unit_in,
                         'line_type': 'service',
                         'warehouse_code': warehouse_code,
+                        'expense_account': exp_acct or '642',
                     })
                     items_for_json.append({
                         'product_name': inv_name or 'Dịch vụ',
@@ -3462,6 +3541,7 @@ def register_ketoan_sme_routes(app):
                         'line_type': 'service',
                         'invoice_product_type': 'service',
                         'warehouse_code': warehouse_code,
+                        'expense_account': exp_acct or '642',
                         'line_total': float(line_total_payment_vnd),
                     })
                     continue
@@ -3537,6 +3617,7 @@ def register_ketoan_sme_routes(app):
                     'unit': unit_in,
                     'line_type': line_type,
                     'warehouse_code': warehouse_code,
+                    'expense_account': exp_acct or None,
                 })
                 detail_id = c.lastrowid
 
@@ -4535,7 +4616,60 @@ def register_ketoan_sme_routes(app):
         finally:
             conn.close()
 
-    @app.route('/api/sme/journal/<int:entry_id>', methods=['GET'])
+    @app.route('/api/sme/journal', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_journal_create():
+        """Lập bút toán thủ công (nhật ký)."""
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        try:
+            from Services.sme.journal_engine import post_journal_entry
+            raw_lines = payload.get('lines') or []
+            lines = []
+            for i, ln in enumerate(raw_lines, start=1):
+                acct = str(ln.get('account_code') or ln.get('account') or '').strip()
+                debit = float(ln.get('debit') or 0)
+                credit = float(ln.get('credit') or 0)
+                if not acct or (debit <= 0 and credit <= 0):
+                    continue
+                lines.append({
+                    'sequence': i,
+                    'account_code': acct,
+                    'debit': debit,
+                    'credit': credit,
+                    'description': ln.get('description') or payload.get('description') or '',
+                })
+            if not lines:
+                return jsonify({'success': False, 'error': 'Thiếu dòng hạch toán'}), 400
+            date_s = (payload.get('posting_date') or payload.get('date') or '')[:10]
+            if not date_s:
+                return jsonify({'success': False, 'error': 'Thiếu ngày ghi sổ'}), 400
+            actor = (
+                (session.get('user') or {}).get('username')
+                or session.get('user_name') or session.get('username')
+            )
+            entry = post_journal_entry(
+                conn,
+                posting_date=date_s,
+                document_date=(payload.get('document_date') or date_s)[:10],
+                document_type=(payload.get('document_type') or 'BT').strip() or 'BT',
+                document_no=(payload.get('document_no') or '').strip() or None,
+                business_type=(payload.get('business_type') or 'THU_CONG').strip() or 'THU_CONG',
+                description=payload.get('description') or 'Bút toán thủ công',
+                created_by=actor,
+                lines=lines,
+            )
+            conn.commit()
+            return jsonify({'success': True, 'data': entry})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
     @login_required
     @require_sme_regime
     def api_sme_journal_get(entry_id):
@@ -5730,6 +5864,21 @@ def register_ketoan_sme_routes(app):
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/debt/aging')
+    @login_required
+    @require_sme_regime
+    def api_sme_debt_aging():
+        from Services.sme.debt_aging import debt_aging_summary
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            as_of = (request.args.get('as_of') or '').strip() or None
+            return jsonify({'success': True, 'data': debt_aging_summary(conn, as_of=as_of)})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:

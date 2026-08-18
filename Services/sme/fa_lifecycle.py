@@ -109,6 +109,8 @@ def list_active_assets(
     extra = ', warehouse_code' if 'warehouse_code' in cols else ''
     if has_br:
         extra += ', branch_code'
+    if 'expense_account' in cols:
+        extra += ', expense_account'
     sql = f"""
         SELECT id, ma_tai_san, ten_tai_san, nguyen_gia_tinh_khau_hao, thue_gtgt,
                gia_mua_chua_thue, so_luong, so_thang_khau_hao, ngay_bat_dau_su_dung, tinh_trang
@@ -150,9 +152,10 @@ def update_asset_depreciation_period(
     *,
     so_thang_khau_hao: int,
     start_date: str | None = None,
+    expense_account: str | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
-    """Thiết lập số tháng khấu hao TSCĐ (và tùy chọn ngày bắt đầu sử dụng)."""
+    """Thiết lập số tháng khấu hao TSCĐ (và tùy chọn ngày bắt đầu sử dụng / TK CP)."""
     ensure_fixed_assets_schema(conn)
     from Services.sme.branch_filter import assert_row_in_branch
     assert_row_in_branch(conn, FIXED_ASSETS_TABLE, asset_id, label='TSCĐ')
@@ -173,6 +176,10 @@ def update_asset_depreciation_period(
     if start_date and 'ngay_bat_dau_su_dung' in cols:
         sets.append('ngay_bat_dau_su_dung = ?')
         params.append(str(start_date)[:10])
+    exp = (expense_account or '').strip()
+    if exp and 'expense_account' in cols:
+        sets.append('expense_account = ?')
+        params.append(exp)
     if 'updated_at' in cols:
         sets.append('updated_at = ?')
         params.append(_now())

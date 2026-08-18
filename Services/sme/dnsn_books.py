@@ -29,10 +29,24 @@ BOOK_HANDLERS = {
 
 # Fallback nếu chưa có cấu hình DB (giữ tương thích)
 DEFAULT_SECTOR_TAX = {
-    'goods': {'vat_pct': 1.0, 'cit_pct': 0.5, 'label': 'Phân phối, cung cấp hàng hóa'},
-    'service': {'vat_pct': 5.0, 'cit_pct': 2.0, 'label': 'Dịch vụ, xây dựng không gồm nguyên vật liệu'},
-    'production': {'vat_pct': 3.0, 'cit_pct': 1.5, 'label': 'Sản xuất, vận tải, dịch vụ có gắn hàng hóa'},
-    'other': {'vat_pct': 2.0, 'cit_pct': 1.0, 'label': 'Hoạt động khác'},
+    'goods': {'vat_pct': 1.0, 'cit_pct': 0.3, 'label': 'Phân phối, cung cấp hàng hóa'},
+    'production': {
+        'vat_pct': 3.0, 'cit_pct': 1.2,
+        'label': 'Sản xuất, vận tải, dịch vụ / xây dựng có nguyên vật liệu',
+    },
+    'service': {
+        'vat_pct': 5.0, 'cit_pct': 1.5,
+        'label': 'Dịch vụ, xây dựng không gồm nguyên vật liệu',
+    },
+    'leasing': {
+        'vat_pct': 5.0, 'cit_pct': 4.0,
+        'label': 'Cho thuê tài sản, đại lý bảo hiểm / xổ số / bán hàng đa cấp',
+    },
+    'digital': {
+        'vat_pct': 5.0, 'cit_pct': 4.0,
+        'label': 'Hoạt động nội dung số (nhạc, game, quảng cáo…)',
+    },
+    'other': {'vat_pct': 2.0, 'cit_pct': 0.5, 'label': 'Hoạt động kinh doanh khác'},
 }
 
 

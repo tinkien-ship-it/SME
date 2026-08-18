@@ -9,6 +9,7 @@
   <div class="d-flex gap-2">
     <button class="btn btn-primary" id="btnGV">Góp vốn</button>
     <button class="btn btn-warning" id="btnCT">Công bố cổ tức</button>
+    <button class="btn btn-outline-primary" id="btnDist">Phân phối LN</button>
     <button class="btn btn-success" id="btnPay">Chi trả cổ tức</button>
   </div>
 </div>
@@ -25,6 +26,14 @@
     <div class="mb-2"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
     <div class="mb-2"><label class="form-label small">Đối tượng</label><input type="text" id="fParty" class="form-control"></div>
     <div class="mb-2"><label class="form-label small">Số tiền</label><input type="number" id="fAmt" class="form-control" step="1000"></div>
+    <div class="mb-2" id="wrapDest" style="display:none">
+      <label class="form-label small">TK nhận phân phối</label>
+      <select id="fDest" class="form-select">
+        <option value="418">418 — Quỹ thuộc vốn CSH</option>
+        <option value="353">353 — Quỹ khen thưởng, phúc lợi</option>
+        <option value="3388">3388 — Phải trả cổ tức</option>
+      </select>
+    </div>
     <div class="mb-2"><label class="form-label small">Ghi chú</label><input type="text" id="fNotes" class="form-control"></div>
   </div>
   <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-primary" id="btnSave">Ghi sổ</button></div>
@@ -33,7 +42,7 @@
 {% block sme_scripts %}
 <script>
 const fmt=n=>new Intl.NumberFormat('vi-VN').format(Math.round(n||0));
-const labels={contribute:'Góp vốn',dividend:'Công bố CT',dividend_pay:'Chi trả CT'};
+const labels={contribute:'Góp vốn',dividend:'Công bố CT',dividend_pay:'Chi trả CT',distribute:'Phân phối LN'};
 fDate.value=new Date().toISOString().slice(0,10);
 async function load(){
   const res=await fetch('/api/sme/capital'); const json=await res.json();
@@ -54,13 +63,16 @@ async function voidCap(id){
 }
 function openModal(type, title){
   fType.value=type; mTitle.textContent=title;
+  wrapDest.style.display = type === 'distribute' ? '' : 'none';
   new bootstrap.Modal(document.getElementById('modal')).show();
 }
 btnGV.onclick=()=>openModal('contribute','Góp vốn (Nợ tiền / Có 4111)');
 btnCT.onclick=()=>openModal('dividend','Công bố cổ tức (Nợ 4212 / Có 3388)');
+btnDist.onclick=()=>openModal('distribute','Phân phối LNST (Nợ 4212 / Có quỹ)');
 btnPay.onclick=()=>openModal('dividend_pay','Chi trả cổ tức (Nợ 3388 / Có tiền)');
 btnSave.onclick=async()=>{
   const payload={doc_type:fType.value, date:fDate.value, party_name:fParty.value, amount:parseFloat(fAmt.value)||0, notes:fNotes.value};
+  if (payload.doc_type === 'distribute') payload.dest_account = fDest.value || '418';
   if (payload.doc_type === 'dividend_pay' && window.assertSmeCashBalanceOrAlert) {
     const okBal = await window.assertSmeCashBalanceOrAlert(payload.amount, 'bank', { as_of: payload.date });
     if (!okBal) return;

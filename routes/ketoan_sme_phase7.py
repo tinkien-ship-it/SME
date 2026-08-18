@@ -300,6 +300,7 @@ def register_sme_phase7_routes(app, *, login_required, require_sme_regime):
                 tool_id,
                 so_thang_phan_bo=int(months or 0),
                 start_date=data.get('ngay_bat_dau_su_dung') or data.get('start_date') or data.get('date'),
+                expense_account=data.get('expense_account'),
                 commit=True,
             )
             return jsonify({'success': True, 'data': doc})

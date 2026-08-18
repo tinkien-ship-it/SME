@@ -212,3 +212,125 @@ def list_cit_provisions(
             'SELECT * FROM sme_cit_provisions ORDER BY fiscal_year DESC, period DESC LIMIT 48'
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def estimate_ytd_profit_before_cit(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    period: int,
+):
+    """LN kế toán lũy kế từ đầu năm đến kỳ, trước thuế TNDN (bỏ TK 821)."""
+    from Services.sme.period_close import (
+        EXPENSE_PREFIXES,
+        REVENUE_PREFIXES,
+        SKIP_CODES,
+        _matches_prefix,
+        _period_pl_activity,
+    )
+
+    rev = Decimal('0.00')
+    exp = Decimal('0.00')
+    year, per = int(fiscal_year), int(period)
+    for month in range(1, per + 1):
+        activity = _period_pl_activity(conn, year, month)
+        for code, bal in activity.items():
+            if code in SKIP_CODES or str(code).startswith('421') or str(code).startswith('821'):
+                continue
+            if _matches_prefix(code, REVENUE_PREFIXES):
+                net = _money(bal['credit']) - _money(bal['debit'])
+                if net > 0:
+                    rev += net
+            elif _matches_prefix(code, EXPENSE_PREFIXES):
+                net = _money(bal['debit']) - _money(bal['credit'])
+                if net > 0:
+                    exp += net
+    return (rev - exp).quantize(MONEY_Q)
+
+
+def accrue_period_cit(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    period: int,
+    provision_date: str | None = None,
+    tax_rate=0.20,
+    replace_existing: bool = False,
+    created_by: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Tạm nộp TNDN cuối quý (T3/T6/T9/T12): Nợ 8211 / Có 3334.
+
+    Số thuế = max(0, LNKT lũy kế × suất − đã trích các kỳ trước trong năm).
+    """
+    ensure_sme_journal_ready(conn, commit=False)
+    ensure_sme_cit_schema(conn, commit=False)
+    year, per = int(fiscal_year), int(period)
+    if per not in (3, 6, 9, 12):
+        return {
+            'posted': False, 'reason': 'not_quarter_end',
+            'period': per, 'fiscal_year': year, 'amount': 0.0,
+        }
+
+    existing = get_cit_provision(conn, year, per)
+    if existing and not replace_existing:
+        return {
+            'posted': False,
+            'reason': 'already_posted',
+            'period': per,
+            'fiscal_year': year,
+            'amount': float(existing.get('tax_amount') or 0),
+            'journal_entry_id': existing.get('journal_entry_id'),
+        }
+
+    pbt = estimate_ytd_profit_before_cit(conn, fiscal_year=year, period=per)
+    rate = _money(tax_rate if tax_rate is not None else 0.20)
+    if rate <= 0:
+        rate = _money('0.20')
+    ytd_tax = (pbt * rate).quantize(MONEY_Q) if pbt > 0 else Decimal('0.00')
+    prior = Decimal('0.00')
+    for row in list_cit_provisions(conn, fiscal_year=year):
+        if int(row.get('period') or 0) >= per:
+            continue
+        if str(row.get('status') or '') == 'void':
+            continue
+        prior += _money(row.get('tax_amount'))
+    tax = ytd_tax - prior
+    if tax <= 0:
+        return {
+            'posted': False,
+            'reason': 'no_taxable_profit',
+            'period': per,
+            'fiscal_year': year,
+            'taxable_income': float(pbt),
+            'ytd_tax': float(ytd_tax),
+            'prior_tax': float(prior),
+            'amount': 0.0,
+        }
+
+    rec = accrue_cit_provisional(
+        conn,
+        fiscal_year=year,
+        period=per,
+        tax_amount=tax,
+        taxable_income=pbt,
+        tax_rate=rate,
+        provision_date=provision_date,
+        notes=f'Tạm nộp TNDN quý (LNKT {float(pbt):,.0f} × {float(rate):g} − đã trích {float(prior):,.0f})',
+        created_by=created_by,
+        replace_existing=replace_existing,
+        commit=False,
+    )
+    if commit:
+        conn.commit()
+    return {
+        'posted': True,
+        'period': per,
+        'fiscal_year': year,
+        'amount': float(rec.get('tax_amount') or tax),
+        'taxable_income': float(pbt),
+        'tax_rate': float(rate),
+        'journal_entry_id': rec.get('journal_entry_id'),
+        'ytd_tax': float(ytd_tax),
+        'prior_tax': float(prior),
+    }

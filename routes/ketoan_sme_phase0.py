@@ -677,6 +677,7 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
                 asset_id,
                 so_thang_khau_hao=int(months or 0),
                 start_date=data.get('ngay_bat_dau_su_dung') or data.get('start_date'),
+                expense_account=data.get('expense_account'),
                 commit=True,
             )
             return jsonify({'success': True, 'data': doc})

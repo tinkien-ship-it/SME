@@ -125,6 +125,7 @@ def register_sme_phase3_routes(app, *, login_required, require_sme_regime):
         from Services.sme.capital import (
             contribute_capital,
             declare_dividend,
+            distribute_profit,
             list_capital_docs,
             pay_dividend,
         )
@@ -171,6 +172,18 @@ def register_sme_phase3_routes(app, *, login_required, require_sme_regime):
                     party_name=data.get('party_name') or 'Cổ đông',
                     payable_account=data.get('payable_account') or '3388',
                     cash_account=data.get('cash_account') or '1121',
+                    notes=data.get('notes') or '',
+                    created_by=_user(),
+                    commit=True,
+                )
+            elif dtype in ('distribute', 'phan_phoi', 'ppln'):
+                doc = distribute_profit(
+                    conn,
+                    doc_date=data.get('date') or data.get('doc_date'),
+                    amount=data.get('amount'),
+                    party_name=data.get('party_name') or '',
+                    equity_account=data.get('equity_account') or '4212',
+                    dest_account=data.get('dest_account') or data.get('cash_account') or '418',
                     notes=data.get('notes') or '',
                     created_by=_user(),
                     commit=True,

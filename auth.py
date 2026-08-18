@@ -169,8 +169,8 @@ def admin_or_master_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         role = _session_role()
-        # Cho phép nếu là admin HOẶC là master (không gồm manager)
-        if role not in ['admin', 'admin*', 'adminFB', 'adminSME', 'master']:
+        from Services.sme_roles import ADMIN_OR_MASTER_ROLES
+        if role not in ADMIN_OR_MASTER_ROLES:
             if request.path.startswith('/api/'):
                 return jsonify({"success": False, "error": "Forbidden"}), 403
             return redirect(url_for('sale'))
@@ -178,11 +178,8 @@ def admin_or_master_required(f):
     return decorated_function
 
 
-# Owner SME (managerSME) được vào /thiet-lap + API lưu thông tin DN / VietQR
-STORE_SETUP_ALLOWED_ROLES = frozenset({
-    'admin', 'admin*', 'adminFB', 'adminSME', 'master',
-    'managerSME',
-})
+# Owner SME (managerSME / managerSME58 / managerSME99) được vào /thiet-lap
+from Services.sme_roles import STORE_SETUP_ALLOWED_ROLES  # noqa: E402
 
 
 def admin_or_store_setup_required(f):
@@ -190,7 +187,8 @@ def admin_or_store_setup_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         role = _session_role()
-        if role not in STORE_SETUP_ALLOWED_ROLES:
+        from Services.sme_roles import STORE_SETUP_ALLOWED_ROLES as allowed
+        if role not in allowed:
             if request.path.startswith('/api/'):
                 return jsonify({"success": False, "error": "Forbidden"}), 403
             return redirect(url_for('sale'))
@@ -237,7 +235,8 @@ def require_permission(target_perm):
 
             # ==================== QUYỀN SIÊU CAO (BYPASS) ====================
             # Master và Admin (không dấu *) có toàn quyền
-            if role in ['master', 'admin', 'adminFB', 'adminSME']:
+            from Services.sme_roles import PERMISSION_BYPASS_ROLES
+            if role in PERMISSION_BYPASS_ROLES:
                 return f(*args, **kwargs)
 
             # ==================== KIỂM TRA QUYỀN THỰC TẾ ====================

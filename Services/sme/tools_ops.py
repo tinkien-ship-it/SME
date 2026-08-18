@@ -103,6 +103,7 @@ def update_tool_allocation_period(
     *,
     so_thang_phan_bo: int,
     start_date: str | None = None,
+    expense_account: str | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
     """Thiết lập số tháng phân bổ CCDC (và tùy chọn ngày bắt đầu)."""
@@ -127,6 +128,10 @@ def update_tool_allocation_period(
     if start_date and 'ngay_bat_dau_su_dung' in cols:
         sets.append('ngay_bat_dau_su_dung = ?')
         params.append(str(start_date)[:10])
+    exp = (expense_account or '').strip()
+    if exp and 'expense_account' in cols:
+        sets.append('expense_account = ?')
+        params.append(exp)
     params.append(tool_id)
     conn.execute(
         f"UPDATE {TOOLS_TABLE} SET {', '.join(sets)} WHERE id = ?",

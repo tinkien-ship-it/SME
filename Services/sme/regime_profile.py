@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any
 
 from Services.sme.tt58_tax_methods import (
-    DEFAULT_TT58_TAX_METHOD,
     get_tt58_tax_method_def,
     list_tt58_tax_methods,
     normalize_tt58_tax_method,
@@ -58,6 +57,13 @@ def set_tt58_tax_method(
         """,
         ('tt58_tax_method', code, now),
     )
+    conn.execute(
+        """
+        INSERT INTO sme_coa_seed_meta(key, value, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+        """,
+        ('tt58_tax_method_user_set', '1', now),
+    )
     if commit:
         conn.commit()
     return get_tt58_tax_method_def(code)
@@ -68,44 +74,70 @@ def get_ledger_profile(conn: sqlite3.Connection) -> dict[str, Any]:
     regime = 'SME_TT99'
     tax_method_raw = ''
     meta = _read_meta(
-        conn, ('ledger_profile', 'accounting_regime', 'tt58_tax_method'),
+        conn, (
+            'ledger_profile', 'accounting_regime',
+            'tt58_tax_method', 'tt58_tax_method_user_set',
+        ),
     )
     if meta.get('ledger_profile'):
         profile = str(meta['ledger_profile'])
     if meta.get('accounting_regime'):
         regime = str(meta['accounting_regime'])
-    tax_method_raw = meta.get('tt58_tax_method') or ''
+    tax_method_raw = (meta.get('tt58_tax_method') or '').strip()
+    # Seed PP1 tự động đêm qua không có cờ user_set → bỏ, hiện lại đủ sổ/BCTC.
+    if tax_method_raw and str(meta.get('tt58_tax_method_user_set') or '') != '1':
+        tax_method_raw = ''
 
-    # Fallback registry session nếu meta trống
-    if 'TT58' not in regime.upper() and 'tt58' not in profile.lower():
-        try:
-            from flask import has_request_context, session
-            if has_request_context():
-                from Services.tenant_profile import get_current_tenant_profile, normalize_accounting_regime
-                reg = normalize_accounting_regime(
-                    (get_current_tenant_profile() or {}).get('accounting_regime') or ''
-                )
-                if 'TT58' in reg.upper():
-                    regime = reg
-                    profile = 'sme_tt58'
-        except Exception:
-            pass
+    # Hồ sơ tenant (registry) thắng meta — bootstrap từng ghi nhầm TT99 lên tenant TT58.
+    try:
+        from flask import has_request_context
+        if has_request_context():
+            from Services.tenant_profile import (
+                get_current_tenant_profile,
+                is_sme_regime,
+                normalize_accounting_regime,
+            )
+            reg = normalize_accounting_regime(
+                (get_current_tenant_profile() or {}).get('accounting_regime') or ''
+            )
+            if is_sme_regime(reg):
+                regime = reg
+                profile = 'sme_tt58' if 'TT58' in reg.upper() else 'sme_tt99'
+    except Exception:
+        pass
 
     is_tt58 = 'tt58' in profile.lower() or 'TT58' in regime.upper()
     if is_tt58:
-        tax_code = normalize_tt58_tax_method(tax_method_raw or DEFAULT_TT58_TAX_METHOD)
-        tax_def = get_tt58_tax_method_def(tax_code)
-        show_bctc = bool(tax_def.get('show_bctc'))
-        require_bctc = bool(tax_def.get('require_bctc'))
-        bctc_hint = (
-            f"PP{tax_def['method_no']} (Điều {tax_def['article']}): "
-            + (
-                'Bắt buộc lập B01-DNSN / B02-DNSN năm (TNDN trên thu nhập tính thuế).'
-                if require_bctc else
-                'Không bắt buộc lập BCTC nộp CQNN (TNDN theo % doanh thu). '
-                'Chỉ hiển thị sổ/biểu mẫu theo phương pháp đã chọn.'
+        # Chưa lưu PP → không mặc định PP1 (PP1 ẩn BCTC + gần hết sổ).
+        tax_code = normalize_tt58_tax_method(tax_method_raw) if tax_method_raw else None
+        tax_def = get_tt58_tax_method_def(tax_code) if tax_code else None
+        if tax_def:
+            show_bctc = bool(tax_def.get('show_bctc'))
+            require_bctc = bool(tax_def.get('require_bctc'))
+            bctc_hint = (
+                f"Trường hợp {tax_def.get('case_no') or tax_def['method_no']}: "
+                + (
+                    'Bắt buộc lập B01-DNSN / B02-DNSN năm; nộp trong 90 ngày sau khi '
+                    'kết thúc năm tài chính (TNDN trên thu nhập tính thuế).'
+                    if require_bctc else
+                    'Không bắt buộc lập BCTC nộp cơ quan nhà nước '
+                    '(TNDN theo tỷ lệ % trên doanh thu). '
+                    'Chỉ hiển thị sổ bắt buộc của trường hợp đã chọn.'
+                )
             )
-        )
+            required_books = list(tax_def.get('required_books') or ())
+            optional_books = list(tax_def.get('optional_books') or ())
+            show_vouchers = bool(tax_def.get('show_vouchers'))
+        else:
+            show_bctc = True
+            require_bctc = False
+            bctc_hint = (
+                'Chưa chọn phương pháp thuế TT58 — đang hiện đủ sổ DNSN và B01/B02. '
+                'Vào Sổ DNSN hoặc Settings để chọn Trường hợp 1–4 (TT58).'
+            )
+            required_books = []
+            optional_books = []
+            show_vouchers = True
         return {
             'ledger_profile': 'sme_tt58',
             'accounting_regime': regime if 'TT58' in regime.upper() else 'SME_MICRO_TT58',
@@ -114,9 +146,12 @@ def get_ledger_profile(conn: sqlite3.Connection) -> dict[str, Any]:
             'tt58_tax_method': tax_code,
             'tt58_tax_method_def': tax_def,
             'tt58_tax_methods': list_tt58_tax_methods(),
-            'required_books': list(tax_def.get('required_books') or ()),
-            'optional_books': list(tax_def.get('optional_books') or ()),
-            'show_vouchers': bool(tax_def.get('show_vouchers')),
+            'vat_in_inventory_cost': bool(
+                tax_def and tax_def.get('input_vat_in_cost')
+            ),
+            'required_books': required_books,
+            'optional_books': optional_books,
+            'show_vouchers': show_vouchers,
             'show_bctc': show_bctc,
             'require_bctc': require_bctc,
             'bctc_forms': ['B01-DNSN', 'B02-DNSN'] if show_bctc else [],
@@ -133,6 +168,7 @@ def get_ledger_profile(conn: sqlite3.Connection) -> dict[str, Any]:
         'tt58_tax_method': None,
         'tt58_tax_method_def': None,
         'tt58_tax_methods': [],
+        'vat_in_inventory_cost': False,
         'required_books': [],
         'optional_books': [],
         'show_vouchers': True,

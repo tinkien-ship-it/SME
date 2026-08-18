@@ -2,6 +2,9 @@
 
 SME_HUB_TITLE = 'Kế toán doanh nghiệp'
 
+_R58 = ('SME_MICRO_TT58',)
+_R99 = ('SME_TT99',)
+
 SME_MENU_SECTIONS = (
     {'id': 'operations', 'label': 'NGHIỆP VỤ KINH DOANH'},
     {'id': 'accounting', 'label': 'KẾ TOÁN & TÀI CHÍNH'},
@@ -23,9 +26,9 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'sale', 'label': 'Điểm bán hàng', 'icon': 'fas fa-cash-register'},
             {'endpoint': 'SME_consignment', 'label': 'Hàng gửi đi bán (TK 157)', 'icon': 'fas fa-truck'},
-            {'endpoint': 'SME_sale_export', 'label': 'Bán hàng xuất khẩu', 'icon': 'fas fa-plane-departure'},
-            {'endpoint': 'SME_sale_export_list', 'label': 'Danh sách xuất khẩu', 'icon': 'fas fa-list'},
-            {'endpoint': 'SME_customs_declarations', 'label': 'Tờ khai hải quan điện tử', 'icon': 'fas fa-passport'},
+            {'endpoint': 'SME_sale_export', 'label': 'Bán hàng xuất khẩu', 'icon': 'fas fa-plane-departure', 'regimes': _R99},
+            {'endpoint': 'SME_sale_export_list', 'label': 'Danh sách xuất khẩu', 'icon': 'fas fa-list', 'regimes': _R99},
+            {'endpoint': 'SME_customs_declarations', 'label': 'Tờ khai hải quan điện tử', 'icon': 'fas fa-passport', 'regimes': _R99},
             {'endpoint': 'SME_order', 'label': 'Danh sách đơn hàng', 'icon': 'fas fa-list'},
             {'endpoint': 'SME_sale_details', 'label': 'Chi tiết hàng bán', 'icon': 'fas fa-receipt'},
             {'endpoint': 'SME_bank_transactions', 'label': 'Giao dịch ngân hàng', 'icon': 'fas fa-university'},
@@ -41,10 +44,10 @@ SME_MENU_GROUPS = (
             {'endpoint': 'SME_purchase_order_create', 'label': 'Lập đơn mua hàng', 'icon': 'fas fa-circle-plus'},
             {'endpoint': 'SME_purchase_order_list', 'label': 'Danh sách đơn mua', 'icon': 'fas fa-clipboard-list'},
             {'endpoint': 'SME_inward_invoice', 'label': 'Hóa đơn mua hàng', 'icon': 'fas fa-file-import'},
-            {'endpoint': 'SME_landed_cost', 'label': 'Phân bổ chi phí mua hàng', 'icon': 'fas fa-share-alt'},
+            {'endpoint': 'SME_landed_cost', 'label': 'Phân bổ chi phí mua hàng', 'icon': 'fas fa-share-alt', 'regimes': _R99},
             {'endpoint': 'SME_import', 'label': 'Lập phiếu nhập kho', 'icon': 'fas fa-box-open'},
-            {'endpoint': 'SME_customs_declarations', 'label': 'Tờ khai hải quan điện tử', 'icon': 'fas fa-passport'},
-            {'endpoint': 'SME_letter_of_credit', 'label': 'Mở L/C nhập khẩu', 'icon': 'fas fa-file-signature'},
+            {'endpoint': 'SME_customs_declarations', 'label': 'Tờ khai hải quan điện tử', 'icon': 'fas fa-passport', 'regimes': _R99},
+            {'endpoint': 'SME_letter_of_credit', 'label': 'Mở L/C nhập khẩu', 'icon': 'fas fa-file-signature', 'regimes': _R99},
             {'endpoint': 'SME_DanhSachPhieuNhapKho', 'label': 'Danh sách phiếu nhập', 'icon': 'fas fa-list-check'},
             {'endpoint': 'SME_import_details', 'label': 'Chi tiết mua hàng', 'icon': 'fas fa-list'},
             {'endpoint': 'SME_return_supplier', 'label': 'Trả nhà cung cấp', 'icon': 'fas fa-rotate-left'},
@@ -57,6 +60,7 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'inventory', 'label': 'Tồn kho', 'icon': 'fas fa-boxes-stacked'},
             {'endpoint': 'inventory_detail', 'label': 'Báo cáo tồn kho', 'icon': 'fas fa-chart-column'},
+            {'endpoint': 'SME_material_alloc', 'label': 'Xuất dùng nội bộ (Nợ 642/641/627)', 'icon': 'fas fa-box-open'},
             {'endpoint': 'SME_branches', 'label': 'Danh mục kho và chi nhánh', 'icon': 'fas fa-warehouse'},
         ),
     },
@@ -77,29 +81,29 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'SME_DanhSachPhieuThu', 'label': 'Phiếu thu — mẫu 01-TT', 'icon': 'fas fa-receipt'},
             {'endpoint': 'SME_DanhSachPhieuChi', 'label': 'Phiếu chi — mẫu 02-TT', 'icon': 'fas fa-money-bill-wave'},
-            {'endpoint': 'SME_fx_cash', 'label': 'Ngoại tệ — nhật ký và số dư', 'icon': 'fas fa-coins'},
-            {'endpoint': 'SME_advances', 'label': 'Tạm ứng và thanh toán — mẫu 03 đến 05-TT', 'icon': 'fas fa-hand-holding-dollar'},
-            {'endpoint': 'SME_temp_receipts', 'label': 'Biên lai thu tiền — mẫu 06-TT', 'icon': 'fas fa-file-invoice'},
-            {'endpoint': 'SME_gold_sheet', 'label': 'Bảng kê vàng — mẫu 07-TT', 'icon': 'fas fa-coins'},
-            {'endpoint': 'SME_cash_count', 'label': 'Kiểm kê quỹ tiền mặt — mẫu 08a-TT', 'icon': 'fas fa-coins'},
-            {'endpoint': 'SME_cash_count_fx', 'label': 'Kiểm kê quỹ ngoại tệ — mẫu 08b-TT', 'icon': 'fas fa-coins'},
-            {'endpoint': 'SME_payment_listing', 'label': 'Bảng kê chi tiền — mẫu 09-TT', 'icon': 'fas fa-list'},
+            {'endpoint': 'SME_fx_cash', 'label': 'Ngoại tệ — nhật ký và số dư', 'icon': 'fas fa-coins', 'regimes': _R99},
+            {'endpoint': 'SME_advances', 'label': 'Tạm ứng và thanh toán — mẫu 03 đến 05-TT', 'icon': 'fas fa-hand-holding-dollar', 'regimes': _R99},
+            {'endpoint': 'SME_temp_receipts', 'label': 'Biên lai thu tiền — mẫu 06-TT', 'icon': 'fas fa-file-invoice', 'regimes': _R99},
+            {'endpoint': 'SME_gold_sheet', 'label': 'Bảng kê vàng — mẫu 07-TT', 'icon': 'fas fa-coins', 'regimes': _R99},
+            {'endpoint': 'SME_cash_count', 'label': 'Kiểm kê quỹ tiền mặt — mẫu 08a-TT', 'icon': 'fas fa-coins', 'regimes': _R99},
+            {'endpoint': 'SME_cash_count_fx', 'label': 'Kiểm kê quỹ ngoại tệ — mẫu 08b-TT', 'icon': 'fas fa-coins', 'regimes': _R99},
+            {'endpoint': 'SME_payment_listing', 'label': 'Bảng kê chi tiền — mẫu 09-TT', 'icon': 'fas fa-list', 'regimes': _R99},
             {'endpoint': 'SME_DanhSachPhieuNhapKho_VT', 'label': 'Phiếu nhập kho — mẫu 01-VT', 'icon': 'fas fa-file-import'},
             {'endpoint': 'SME_DanhSachPhieuXuatKho_VT', 'label': 'Phiếu xuất kho — mẫu 02-VT', 'icon': 'fas fa-file-export'},
-            {'endpoint': 'SME_stock_inspection', 'label': 'Kiểm nghiệm vật tư — mẫu 03-VT', 'icon': 'fas fa-flask'},
-            {'endpoint': 'SME_stock_count', 'label': 'Kiểm kê kho — mẫu 05-VT', 'icon': 'fas fa-clipboard-check'},
-            {'endpoint': 'SME_purchase_listing', 'label': 'Bảng kê mua hàng — mẫu 06-VT', 'icon': 'fas fa-list-ol'},
+            {'endpoint': 'SME_stock_inspection', 'label': 'Kiểm nghiệm vật tư — mẫu 03-VT', 'icon': 'fas fa-flask', 'regimes': _R99},
+            {'endpoint': 'SME_stock_count', 'label': 'Kiểm kê kho — mẫu 05-VT', 'icon': 'fas fa-clipboard-check', 'regimes': _R99},
+            {'endpoint': 'SME_purchase_listing', 'label': 'Bảng kê mua hàng — mẫu 06-VT', 'icon': 'fas fa-list-ol', 'regimes': _R99},
             {'endpoint': 'SME_stock_transfer', 'label': 'Chuyển kho liên chi nhánh', 'icon': 'fas fa-right-left'},
             {'endpoint': 'SME_consignment', 'label': 'Hàng gửi đi bán (TK 157)', 'icon': 'fas fa-truck'},
-            {'endpoint': 'SME_form_01_bh', 'label': 'Đại lý và ký gửi — mẫu 01-BH', 'icon': 'fas fa-file-signature'},
-            {'endpoint': 'SME_form_02_bh', 'label': 'Thẻ quầy hàng — mẫu 02-BH', 'icon': 'fas fa-id-card'},
-            {'endpoint': 'SME_fa_docs', 'label': 'Biên bản tài sản cố định — mẫu 01/03/04/05', 'icon': 'fas fa-file-signature'},
-            {'endpoint': 'SME_fa_disposal', 'label': 'Thanh lý tài sản cố định — mẫu 02', 'icon': 'fas fa-trash-can'},
-            {'endpoint': 'SME_fa_depreciation_table', 'label': 'Bảng khấu hao tài sản cố định — mẫu 06', 'icon': 'fas fa-table'},
+            {'endpoint': 'SME_form_01_bh', 'label': 'Đại lý và ký gửi — mẫu 01-BH', 'icon': 'fas fa-file-signature', 'regimes': _R99},
+            {'endpoint': 'SME_form_02_bh', 'label': 'Thẻ quầy hàng — mẫu 02-BH', 'icon': 'fas fa-id-card', 'regimes': _R99},
+            {'endpoint': 'SME_fa_docs', 'label': 'Biên bản tài sản cố định — mẫu 01/03/04/05', 'icon': 'fas fa-file-signature', 'regimes': _R99},
+            {'endpoint': 'SME_fa_disposal', 'label': 'Thanh lý tài sản cố định — mẫu 02', 'icon': 'fas fa-trash-can', 'regimes': _R99},
+            {'endpoint': 'SME_fa_depreciation_table', 'label': 'Bảng khấu hao tài sản cố định — mẫu 06', 'icon': 'fas fa-table', 'regimes': _R99},
             {'endpoint': 'SME_bank_reconcile', 'label': 'Đối chiếu ngân hàng', 'icon': 'fas fa-scale-balanced'},
-            {'endpoint': 'SME_loans', 'label': 'Vay và trả nợ', 'icon': 'fas fa-landmark'},
-            {'endpoint': 'SME_deposits', 'label': 'Ký quỹ và ký cược', 'icon': 'fas fa-file-contract'},
-            {'endpoint': 'SME_letter_of_credit', 'label': 'Thư tín dụng (L/C)', 'icon': 'fas fa-file-signature'},
+            {'endpoint': 'SME_loans', 'label': 'Vay và trả nợ', 'icon': 'fas fa-landmark', 'regimes': _R99},
+            {'endpoint': 'SME_deposits', 'label': 'Ký quỹ và ký cược', 'icon': 'fas fa-file-contract', 'regimes': _R99},
+            {'endpoint': 'SME_letter_of_credit', 'label': 'Thư tín dụng (L/C)', 'icon': 'fas fa-file-signature', 'regimes': _R99},
         ),
     },
     {
@@ -113,7 +117,7 @@ SME_MENU_GROUPS = (
             {'endpoint': 'SME_general_ledger', 'label': 'Sổ cái và cân đối phát sinh', 'icon': 'fas fa-scale-balanced'},
             {'endpoint': 'SME_SoQuyTienMat', 'label': 'Sổ Quỹ Tiền Mặt', 'icon': 'fas fa-money-bill-wave'},
             {'endpoint': 'SME_SoTienGuiNganHang', 'label': 'Sổ Tiền Gửi Ngân Hàng', 'icon': 'fas fa-building-columns'},
-            {'endpoint': 'SME_fx_cash', 'label': 'Sổ ngoại tệ (1112 / 1122)', 'icon': 'fas fa-coins'},
+            {'endpoint': 'SME_fx_cash', 'label': 'Sổ ngoại tệ (1112 / 1122)', 'icon': 'fas fa-coins', 'regimes': _R99},
             {'endpoint': 'SME_SoCongNoPhaiThu', 'label': 'Sổ Công Nợ Phải Thu', 'icon': 'fas fa-user-clock'},
             {'endpoint': 'SME_SoCongNoPhaiTra', 'label': 'Sổ Công Nợ Phải Trả', 'icon': 'fas fa-file-invoice-dollar'},
             {'endpoint': 'SME_PhaiThuCongNhanVien', 'label': 'Sổ Phải Thu Nhân Viên', 'icon': 'fas fa-user-plus'},
@@ -128,8 +132,8 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'SME_production', 'label': 'Sản xuất', 'icon': 'fas fa-industry'},
             {'endpoint': 'SME_costing', 'label': 'Kế toán giá thành', 'icon': 'fas fa-calculator'},
-            {'endpoint': 'SME_material_remaining', 'label': 'Vật tư còn lại cuối kỳ — mẫu 04-VT', 'icon': 'fas fa-clipboard-list'},
-            {'endpoint': 'SME_material_alloc', 'label': 'Phân bổ nguyên vật liệu — mẫu 07-VT', 'icon': 'fas fa-share'},
+            {'endpoint': 'SME_material_remaining', 'label': 'Vật tư còn lại cuối kỳ — mẫu 04-VT', 'icon': 'fas fa-clipboard-list', 'regimes': _R99},
+            {'endpoint': 'SME_material_alloc', 'label': 'Phân bổ nguyên vật liệu — mẫu 07-VT', 'icon': 'fas fa-share', 'regimes': _R99},
         ),
     },
     {
@@ -139,11 +143,12 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'SME_SoQuyTienMat', 'label': 'Sổ Quỹ Tiền Mặt', 'icon': 'fas fa-money-bill-wave'},
             {'endpoint': 'SME_SoTienGuiNganHang', 'label': 'Sổ Tiền Gửi Ngân Hàng', 'icon': 'fas fa-building-columns'},
-            {'endpoint': 'SME_fx_cash', 'label': 'Sổ ngoại tệ (1112 / 1122)', 'icon': 'fas fa-coins'},
+            {'endpoint': 'SME_fx_cash', 'label': 'Sổ ngoại tệ (1112 / 1122)', 'icon': 'fas fa-coins', 'regimes': _R99},
             {'endpoint': 'SME_SoCongNoPhaiThu', 'label': 'Sổ Công Nợ Phải Thu', 'icon': 'fas fa-user-clock'},
             {'endpoint': 'SME_SoCongNoPhaiTra', 'label': 'Sổ Công Nợ Phải Trả', 'icon': 'fas fa-file-invoice-dollar'},
             {'endpoint': 'SME_PhaiThuCongNhanVien', 'label': 'Sổ Phải Thu Nhân Viên', 'icon': 'fas fa-user-plus'},
             {'endpoint': 'SME_PhaiTraCongNhanVien', 'label': 'Công nợ phải trả nhân viên', 'icon': 'fas fa-user-minus'},
+            {'endpoint': 'SME_accruals', 'label': 'Chi phí phải trả 335 / DT chưa TH 3387', 'icon': 'fas fa-file-invoice'},
         ),
     },
     {
@@ -155,6 +160,7 @@ SME_MENU_GROUPS = (
             {'endpoint': 'SME_fixed_assets', 'label': 'Danh mục tài sản cố định', 'icon': 'fas fa-building'},
             {'endpoint': 'SME_CCDC', 'label': 'Tổng quan công cụ dụng cụ', 'icon': 'fas fa-chart-pie'},
             {'endpoint': 'SME_tools', 'label': 'Danh mục công cụ dụng cụ', 'icon': 'fas fa-screwdriver-wrench'},
+            {'endpoint': 'SME_prepaid', 'label': 'Chi phí trả trước (TK 242)', 'icon': 'fas fa-calendar-check'},
         ),
     },
     {
@@ -195,18 +201,18 @@ SME_MENU_GROUPS = (
             },
             {
                 'endpoint': 'SME_dnsn_books', 'label': 'Sổ & biểu mẫu DNSN (TT58)',
-                'icon': 'fas fa-book', 'regimes': ('SME_MICRO_TT58',),
+                'icon': 'fas fa-book', 'regimes': _R58,
             },
             {'endpoint': 'SME_mgmt_report', 'label': 'Báo cáo quản trị', 'icon': 'fas fa-chart-column'},
             {'endpoint': 'SME_revenue_report', 'label': 'Báo cáo doanh thu điểm bán hàng', 'icon': 'fas fa-chart-bar'},
             {'endpoint': 'SME_profit_report', 'label': 'Báo cáo lợi nhuận điểm bán hàng', 'icon': 'fas fa-coins'},
             {
                 'endpoint': 'SME_fx_revaluation', 'label': 'Đánh giá lại tỷ giá',
-                'icon': 'fas fa-dollar-sign', 'regimes': ('SME_TT99',),
+                'icon': 'fas fa-dollar-sign', 'regimes': _R99,
             },
             {
                 'endpoint': 'SME_capital', 'label': 'Góp vốn và cổ tức',
-                'icon': 'fas fa-piggy-bank', 'regimes': ('SME_TT99',),
+                'icon': 'fas fa-piggy-bank', 'regimes': _R99,
             },
         ),
     },
@@ -293,23 +299,57 @@ def get_sme_menu_groups(accounting_regime: str | None = None):
     return result
 
 
+def _current_menu_flags():
+    regime = _normalize_menu_regime(None)
+    show_bctc = True
+    try:
+        from flask import has_request_context
+        if has_request_context():
+            from Services.tenant_profile import get_current_tenant_profile
+            regime = _normalize_menu_regime(
+                (get_current_tenant_profile() or {}).get('accounting_regime')
+            )
+    except Exception:
+        pass
+    if regime == 'SME_MICRO_TT58':
+        try:
+            from db_utils import get_db_connection
+            from Services.sme.regime_profile import get_ledger_profile
+            conn = get_db_connection()
+            try:
+                show_bctc = bool(get_ledger_profile(conn).get('show_bctc', True))
+            finally:
+                conn.close()
+        except Exception:
+            show_bctc = True
+    return regime, show_bctc
+
+
 def get_sme_quick_links():
-    endpoints = (
+    regime, show_bctc = _current_menu_flags()
+    endpoints = [
         ('SME_journal', 'Ghi sổ bút toán', 'fas fa-pen-to-square'),
         ('SME_chung_tu', 'Chứng từ kế toán', 'fas fa-file-invoice'),
         ('SME_purchase_order_create', 'Lập đơn mua hàng', 'fas fa-cart-plus'),
-        ('SME_BCTC_reports', 'Xem báo cáo tài chính', 'fas fa-chart-line'),
-    )
+    ]
+    if show_bctc:
+        endpoints.append(('SME_BCTC_reports', 'Xem báo cáo tài chính', 'fas fa-chart-line'))
+    elif regime == 'SME_MICRO_TT58':
+        endpoints.append(('SME_dnsn_books', 'Sổ & biểu mẫu DNSN (TT58)', 'fas fa-book'))
     return [{'endpoint': ep, 'label': label, 'icon': icon} for ep, label, icon in endpoints]
 
 
 def get_sme_featured_links():
-    endpoints = (
+    regime, show_bctc = _current_menu_flags()
+    endpoints = [
         ('SME_chart_of_accounts', 'Hệ thống tài khoản', 'fas fa-sitemap'),
         ('SME_general_ledger', 'Sổ cái / Cân đối phát sinh', 'fas fa-scale-balanced'),
         ('SME_san_xuat_gia_thanh', 'Sản xuất & giá thành', 'fas fa-industry'),
-        ('SME_BCTC', 'Trung tâm báo cáo', 'fas fa-chart-column'),
-    )
+    ]
+    if regime == 'SME_MICRO_TT58':
+        endpoints.append(('SME_dnsn_books', 'Sổ & biểu mẫu DNSN (TT58)', 'fas fa-book'))
+    if show_bctc:
+        endpoints.append(('SME_BCTC', 'Trung tâm báo cáo', 'fas fa-chart-column'))
     return [{'endpoint': ep, 'label': label, 'icon': icon} for ep, label, icon in endpoints]
 
 
@@ -325,10 +365,11 @@ def is_sme_endpoint(endpoint):
     )
 
 
-def get_sme_group_by_id(group_id):
-    for group in SME_MENU_GROUPS:
-        if group['id'] == group_id and group.get('_type') != 'section_header':
-            return dict(group)
+def get_sme_group_by_id(group_id, accounting_regime=None):
+    """Nhóm menu đã lọc theo chế độ TT58/TT99 của tenant."""
+    for group in get_sme_menu_groups(accounting_regime):
+        if group.get('id') == group_id and group.get('_type') != 'section_header':
+            return group
     return None
 
 

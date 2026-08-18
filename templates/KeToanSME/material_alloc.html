@@ -3,15 +3,23 @@
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
-    <h4 class="fw-bold mb-1">Phân bổ nguyên vật liệu / công cụ dụng cụ xuất dùng <span class="badge bg-secondary">07-VT</span></h4>
-    <p class="text-muted small mb-0">Nợ TK chi phí (621/627/642…) · Có 152/153/156 · theo kho / chi nhánh</p>
+    <h4 class="fw-bold mb-1">Xuất kho dùng nội bộ <span class="badge bg-secondary">07-VT</span></h4>
+    <p class="text-muted small mb-0">Nợ 642/641/627/621 · Có 152/155/156 theo giá vốn bình quân (WAC) · theo kho / chi nhánh</p>
   </div>
 </div>
 <div class="card shadow-sm border-0 mb-3"><div class="card-body">
   <div class="row g-2 mb-3">
     <div class="col-md-2"><label class="form-label small">Ngày</label><input type="date" id="fDate" class="form-control"></div>
     <div class="col-md-3"><label class="form-label small">Kho xuất</label><select id="fWh" class="form-select"></select></div>
-    <div class="col-md-2"><label class="form-label small">TK chi phí</label><input type="text" id="fAcc" class="form-control" value="621"></div>
+    <div class="col-md-2"><label class="form-label small">TK chi phí</label>
+      <select id="fAcc" class="form-select">
+        <option value="642">642 — Quản lý DN</option>
+        <option value="641">641 — Bán hàng</option>
+        <option value="627">627 — Sản xuất chung</option>
+        <option value="621">621 — NVL trực tiếp</option>
+        <option value="811">811 — Chi phí khác</option>
+      </select>
+    </div>
     <div class="col-md-3"><label class="form-label small">Ghi chú</label><input type="text" id="fNotes" class="form-control"></div>
     <div class="col-md-2 d-flex align-items-end"><button class="btn btn-secondary w-100" id="btnSave">Ghi sổ</button></div>
   </div>

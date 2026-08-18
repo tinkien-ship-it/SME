@@ -49,6 +49,7 @@
       <label class="form-label small fw-semibold">Loại nghiệp vụ</label>
       <select id="fPurpose" class="form-select">
         <option value="">Chi tiền thông thường</option>
+        <option value="nop_ngan_hang">Nộp tiền mặt vào NH — Nợ 1131 / Có 1111</option>
         <option value="supplier_advance">Tạm ứng NCC (ngoại tệ) — Nợ 331</option>
         <option value="buy_fx">Mua ngoại tệ bằng VND — Nợ 1122/1112</option>
       </select>
@@ -221,6 +222,7 @@ function isFxPayMethod(v){
 function needsFx(){
   const purpose = fPurpose.value;
   if (purpose === 'supplier_advance' || purpose === 'buy_fx') return true;
+  if (purpose === 'nop_ngan_hang') return false;
   if (fUseFx.checked) return true;
   return isFxPayMethod(fPay.value);
 }
@@ -360,10 +362,11 @@ document.getElementById('btnNew').onclick = async () => {
 };
 document.getElementById('btnSave').onclick = async () => {
   const debit = document.getElementById('fDebit').value;
-  if (!debit) return alert('Vui lòng chọn tài khoản đối ứng (Nợ)');
   const purpose = fPurpose.value;
   const isAdv = purpose === 'supplier_advance';
   const isBuyFx = purpose === 'buy_fx';
+  const isNopNh = purpose === 'nop_ngan_hang';
+  if (!debit && !isNopNh) return alert('Vui lòng chọn tài khoản đối ứng (Nợ)');
   const fx = needsFx();
   if (window.smeBankPayAccounts && window.smeBankPayAccounts.needs_choice) {
     const okPick = await window.warnSmeBankAccountChoiceIfNeeded();
@@ -371,6 +374,7 @@ document.getElementById('btnSave').onclick = async () => {
   }
   let debitAcct = debit;
   if (isAdv && !debit.startsWith('331')) debitAcct = '331';
+  if (isNopNh) debitAcct = '1131';
   if (isBuyFx) {
     if (debit.startsWith('1112')) debitAcct = debit;
     else if (debit.startsWith('1122')) debitAcct = debit;
@@ -388,11 +392,16 @@ document.getElementById('btnSave').onclick = async () => {
     amount: fx ? undefined : (parseFloat(fAmount.value) || 0),
     purpose: isAdv ? 'supplier_advance' : null,
   };
+  if (isNopNh) {
+    payload.purpose = 'nop_ngan_hang';
+    payload.payment_method = 'cash';
+    payload.debit_account = '1131';
+  }
   const pay = String(fPay.value || '');
   const isBuyIntoFx = fx
     && (debitAcct.startsWith('1122') || debitAcct.startsWith('1112'))
     && (pay === 'cash' || pay === 'bank' || pay === '1111' || pay.startsWith('1121'));
-  if (isBuyFx || isBuyIntoFx) payload.purpose = 'buy_fx';
+  if ((isBuyFx || isBuyIntoFx) && !isNopNh) payload.purpose = 'buy_fx';
   if (isAdv) payload.purpose = 'supplier_advance';
   if (fx && !(payload.amount_fc > 0)) return alert('Nhập số tiền ngoại tệ');
   if (fx && !(payload.exchange_rate > 0)) return alert('Nhập tỷ giá ngoại tệ');
@@ -407,6 +416,7 @@ document.getElementById('btnSave').onclick = async () => {
       ? '1111'
       : ((window.smeBankPayAccounts && window.smeBankPayAccounts.default_bank_account) || '1121');
   }
+  if (isNopNh) balMethod = 'cash';
   if (window.assertSmeCashBalanceOrAlert) {
     const okBal = await window.assertSmeCashBalanceOrAlert(payAmt, balMethod, { as_of: fDate.value });
     if (!okBal) return;
@@ -416,7 +426,7 @@ document.getElementById('btnSave').onclick = async () => {
   if(!json.success) return alert(json.error||'Lỗi');
   bootstrap.Modal.getInstance(document.getElementById('modalNew')).hide();
   const tag = payload.purpose === 'buy_fx' ? ' (mua ngoại tệ)'
-    : (isAdv ? ' (tạm ứng NCC)' : (fx ? ' (ngoại tệ)' : ''));
+    : (isNopNh ? ' (nộp NH · 1131)' : (isAdv ? ' (tạm ứng NCC)' : (fx ? ' (ngoại tệ)' : '')));
   alert('Đã lập '+json.voucher_no + tag);
   loadList();
 };

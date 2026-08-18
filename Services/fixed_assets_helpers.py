@@ -73,6 +73,7 @@ def ensure_fixed_assets_schema(conn):
         ('so_luong', 'REAL DEFAULT 1'),
         ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
         ('branch_code', 'TEXT'),
+        ('expense_account', "TEXT DEFAULT '642'"),
     ):
         _add_col(c, FIXED_ASSETS_TABLE, col, typ)
 
@@ -108,6 +109,7 @@ def ensure_fixed_assets_schema(conn):
         ('branch_code', 'TEXT'),
         ('so_thang_phan_bo', 'INTEGER DEFAULT 12'),
         ('ngay_bat_dau_su_dung', 'TEXT'),
+        ('expense_account', "TEXT DEFAULT '642'"),
     ):
         _add_col(c, TOOLS_TABLE, col, typ)
 

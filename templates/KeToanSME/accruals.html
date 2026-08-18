@@ -1,0 +1,139 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Chi phí phải trả / doanh thu chưa thực hiện{% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Chi phí phải trả &amp; doanh thu chưa thực hiện</h4>
+    <p class="text-muted small mb-0">
+      Trích Nợ 642 / Có <strong>335</strong> · nộp Nợ 335 / Có tiền.
+      Thu trước Nợ tiền / Có <strong>3387</strong> · ghi nhận DT Nợ 3387 / Có 511.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary" id="btnExp">Trích chi phí 335</button>
+    <button class="btn btn-primary" id="btnInc">Thu trước 3387</button>
+  </div>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table table-sm mb-0 align-middle">
+  <thead class="table-light"><tr>
+    <th>Số</th><th>Loại</th><th>Nội dung</th><th>Ngày</th>
+    <th class="text-end">Số tiền</th><th>TK</th><th>TT</th><th></th>
+  </tr></thead>
+  <tbody id="tbody"></tbody>
+</table>
+</div></div>
+
+<div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="mTitle">Chứng từ</h5>
+    <button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="fKind">
+    <div class="mb-2"><label class="form-label small">Nội dung *</label>
+      <input class="form-control" id="fName" placeholder="Điện nước / thuê nhà / khách trả trước…"></div>
+    <div class="row g-2">
+      <div class="col-md-6 mb-2"><label class="form-label small">Ngày *</label>
+        <input type="date" class="form-control" id="fDate"></div>
+      <div class="col-md-6 mb-2"><label class="form-label small">Số tiền *</label>
+        <input type="number" class="form-control" id="fAmt" min="0" step="1000"></div>
+    </div>
+    <div class="mb-2" id="wrapContra">
+      <label class="form-label small" id="lblContra">Tài khoản chi phí</label>
+      <select class="form-select" id="fContra">
+        <option value="642">642 — Quản lý doanh nghiệp</option>
+        <option value="641">641 — Bán hàng</option>
+        <option value="627">627 — Sản xuất chung</option>
+        <option value="635">635 — Chi phí tài chính</option>
+        <option value="811">811 — Chi phí khác</option>
+        <option value="5111">5111 — Doanh thu bán hàng</option>
+        <option value="5113">5113 — Doanh thu dịch vụ</option>
+      </select>
+    </div>
+    <div class="mb-2" id="wrapPay">
+      <label class="form-label small">Phương thức tiền</label>
+      <select class="form-select" id="fPay">
+        <option value="bank">Chuyển khoản (1121)</option>
+        <option value="cash">Tiền mặt (1111)</option>
+      </select>
+    </div>
+    <div class="mb-0"><label class="form-label small">Ghi chú</label>
+      <input class="form-control" id="fNotes"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+    <button class="btn btn-primary" id="btnSave">Ghi sổ</button>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n || 0));
+const kindLabel = {expense:'Phải trả 335', income:'DT chưa TH 3387'};
+const stLabel = {open:'Còn mở', settled:'Đã tất toán', void:'Đã hủy'};
+fDate.value = new Date().toISOString().slice(0,10);
+async function load(){
+  const res = await fetch('/api/sme/accruals');
+  const json = await res.json();
+  if (!json.success) {
+    tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center">${json.error||'Lỗi'}</td></tr>`;
+    return;
+  }
+  const rows = json.data || [];
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td class="fw-bold">${r.doc_no||''}</td>
+    <td>${kindLabel[r.kind]||r.kind}</td>
+    <td>${r.name||''}</td>
+    <td>${typeof fmtDateVi==='function'?fmtDateVi(r.doc_date):(r.doc_date||'')}</td>
+    <td class="text-end">${fmt(r.amount)}</td>
+    <td class="small">${r.kind==='expense' ? (r.contra_account+'/335') : ('3387/'+ (r.contra_account||'511'))}</td>
+    <td><span class="badge ${r.status==='open'?'bg-primary':(r.status==='void'?'bg-secondary':'bg-success')}">${stLabel[r.status]||r.status}</span></td>
+    <td class="text-nowrap text-end">
+      ${r.status==='open' ? `<button class="btn btn-sm btn-outline-success me-1" onclick="settleDoc(${r.id},'${r.kind}')">${r.kind==='income'?'Ghi nhận DT':'Nộp'}</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="voidDoc(${r.id})">Hủy</button>` : ''}
+    </td>
+  </tr>`).join('') || '<tr><td colspan="8" class="text-muted text-center">Chưa có chứng từ</td></tr>';
+}
+function openModal(kind){
+  fKind.value = kind;
+  mTitle.textContent = kind === 'income' ? 'Thu trước — Có 3387' : 'Trích chi phí phải trả — Có 335';
+  lblContra.textContent = kind === 'income' ? 'TK doanh thu khi ghi nhận' : 'Tài khoản chi phí';
+  fContra.value = kind === 'income' ? '5111' : '642';
+  wrapPay.style.display = kind === 'income' ? '' : 'none';
+  new bootstrap.Modal(document.getElementById('modal')).show();
+}
+btnExp.onclick = () => openModal('expense');
+btnInc.onclick = () => openModal('income');
+btnSave.onclick = async () => {
+  const payload = {
+    kind: fKind.value, name: fName.value.trim(), date: fDate.value,
+    amount: parseFloat(fAmt.value)||0, contra_account: fContra.value,
+    payment_method: fPay.value, notes: fNotes.value,
+  };
+  if (payload.kind === 'income' && window.assertSmeCashBalanceOrAlert) {
+    /* thu tiền — không cần kiểm tra chi */
+  }
+  const res = await fetch('/api/sme/accruals', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  const json = await res.json();
+  if (!json.success) return alert(json.error||'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('modal')).hide();
+  fName.value=''; fAmt.value=''; fNotes.value='';
+  load();
+};
+async function settleDoc(id, kind){
+  const msg = kind === 'income' ? 'Ghi nhận doanh thu (Nợ 3387 / Có 511)?' : 'Nộp chi phí phải trả (Nợ 335 / Có tiền)?';
+  if (!confirm(msg)) return;
+  const res = await fetch('/api/sme/accruals/'+id+'/settle', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({date: new Date().toISOString().slice(0,10)})});
+  const json = await res.json();
+  if (!json.success) return alert(json.error||'Lỗi');
+  load();
+}
+async function voidDoc(id){
+  if (!confirm('Hủy chứng từ gốc và đảo bút toán?')) return;
+  const res = await fetch('/api/sme/accruals/'+id+'/void', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+  const json = await res.json();
+  if (!json.success) return alert(json.error||'Lỗi');
+  load();
+}
+document.addEventListener('DOMContentLoaded', load);
+</script>
+{% endblock %}

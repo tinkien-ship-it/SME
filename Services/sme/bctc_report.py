@@ -282,6 +282,7 @@ def _build_rows(
         }
         if opening_values is not None:
             row['amount_opening'] = None if amount_opening is None else float(amount_opening)
+            row['opening_editable'] = kind == 'leaf'
         rows.append(row)
     return rows
 
@@ -331,12 +332,25 @@ def balance_sheet(
 
     accounts = _coa_line_map(conn)
     bal_map = _closing_balances(conn, fiscal_year, period_to)
-    leaf_vals = _aggregate_leaf_amounts(accounts, bal_map, line_defs=line_defs)
+    journal_close = _aggregate_leaf_amounts(accounts, bal_map, line_defs=line_defs)
 
-    opening_leaf = None
-    if tt58:
-        open_map = _year_opening_balances(conn, fiscal_year)
-        opening_leaf = _aggregate_leaf_amounts(accounts, open_map, line_defs=line_defs)
+    open_map = _year_opening_balances(conn, fiscal_year)
+    journal_open = _aggregate_leaf_amounts(accounts, open_map, line_defs=line_defs)
+
+    from Services.sme.bctc_opening import (
+        ending_from_opening_and_ytd,
+        leaf_codes,
+        list_opening_lines,
+        merge_opening_leaf,
+        opening_meta,
+    )
+    stored_open = list_opening_lines(conn, fiscal_year, 'B01')
+    open_meta = opening_meta(conn, fiscal_year, 'B01')
+    opening_leaf = merge_opening_leaf(journal_open, stored_open)
+    leaf_keys = leaf_codes(conn, 'B01')
+    leaf_vals = ending_from_opening_and_ytd(
+        opening_leaf, journal_open, journal_close, leaf_keys=leaf_keys,
+    )
 
     current_profit = Decimal('0.00')
     if include_current_profit:
@@ -377,7 +391,9 @@ def balance_sheet(
         'as_of_date': as_of,
         'include_current_profit': include_current_profit,
         'current_year_profit': float(current_profit),
-        'has_opening_column': bool(tt58),
+        'has_opening_column': True,
+        'opening_editable': True,
+        'opening_override': open_meta,
         'rows': rows,
         'totals': {
             'total_assets': float(total_assets),
@@ -421,23 +437,22 @@ def income_statement(
     )
     leaf_vals = _aggregate_leaf_amounts(accounts, bal_map, line_defs=line_defs)
 
-    prior_leaf = None
-    if tt58 and fiscal_year > 1:
+    prior_map = {}
+    if fiscal_year > 1:
         prior_map = _period_activity(
             conn, fiscal_year - 1, period_from, period_to,
             exclude_document_types=('KCKQ',),
         )
-        prior_leaf = _aggregate_leaf_amounts(accounts, prior_map, line_defs=line_defs)
+    journal_prior = _aggregate_leaf_amounts(accounts, prior_map, line_defs=line_defs)
+    from Services.sme.bctc_opening import list_opening_lines, merge_opening_leaf, opening_meta
+    stored_prior = list_opening_lines(conn, fiscal_year, 'B02')
+    prior_meta = opening_meta(conn, fiscal_year, 'B02')
+    prior_leaf = merge_opening_leaf(journal_prior, stored_prior)
 
-    rows = _build_rows(
-        line_defs, leaf_vals,
-        opening_values=prior_leaf if prior_leaf is not None else None,
-    )
-    # Với B02-DNSN: amount_opening = năm trước (cột Năm trước)
-    if prior_leaf is not None:
-        for r in rows:
-            if 'amount_opening' in r:
-                r['amount_prior'] = r.pop('amount_opening')
+    rows = _build_rows(line_defs, leaf_vals, opening_values=prior_leaf)
+    for r in rows:
+        if 'amount_opening' in r:
+            r['amount_prior'] = r.pop('amount_opening')
 
     date_from, _ = period_bounds(fiscal_year, period_from)
     _, date_to = period_bounds(fiscal_year, period_to)
@@ -452,7 +467,9 @@ def income_statement(
         'period_to': period_to,
         'date_from': date_from,
         'date_to': date_to,
-        'has_prior_column': bool(tt58),
+        'has_prior_column': True,
+        'prior_editable': True,
+        'prior_override': prior_meta,
         'rows': rows,
         'totals': {
             'revenue_net': float(_money(by_code.get(net_code, 0))),

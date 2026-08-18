@@ -174,32 +174,32 @@ DNSN_VOUCHER_FORMS: tuple[dict, ...] = (
 DNSN_BOOK_GROUPS: tuple[dict, ...] = (
     {
         'key': 'khoan',
-        'title': 'Nộp thuế GTGT & TNDN theo % trên doanh thu (Điều 5)',
+        'title': 'Trường hợp 1 — GTGT % DT + TNDN % DT (S1-DNSN · không bắt buộc BCTC)',
         'codes': ('S1-DNSN',),
     },
     {
         'key': 'gtgt_kk',
-        'title': 'GTGT phương pháp khấu trừ (Điều 6)',
+        'title': 'Trường hợp 2 — GTGT % DT + TNDN trên thu nhập (S2a–S2d · bắt buộc BCTC 90 ngày)',
         'codes': ('S2a-DNSN', 'S2b-DNSN', 'S2c-DNSN', 'S2d-DNSN'),
     },
     {
         'key': 'gtgt_tt',
-        'title': 'GTGT phương pháp trực tiếp trên GTGT (Điều 7)',
+        'title': 'Trường hợp 3 — GTGT khấu trừ + TNDN % DT (S3a–S3b · không bắt buộc BCTC)',
         'codes': ('S3a-DNSN', 'S3b-DNSN'),
     },
     {
         'key': 'kk_tt_shared',
-        'title': 'Dùng chung khi kê khai GTGT theo PP khấu trừ + TNDN theo doanh thu (Điều 8)',
+        'title': 'Trường hợp 4 — GTGT khấu trừ + TNDN trên thu nhập (S2b/S2c/S2d + S3b · bắt buộc BCTC 90 ngày)',
         'codes': ('S2b-DNSN', 'S2c-DNSN', 'S2d-DNSN', 'S3b-DNSN'),
     },
     {
         'key': 'common',
-        'title': 'Sổ kế toán khác (Điều 9)',
+        'title': 'Sổ chi tiết tùy chọn (Điều 9)',
         'codes': ('S4a-DNSN', 'S4b-DNSN', 'S4c-DNSN', 'S4d-DNSN'),
     },
     {
         'key': 'bctc',
-        'title': 'Báo cáo tài chính (B01-DNSN / B02-DNSN)',
+        'title': 'Báo cáo tài chính B01-DNSN / B02-DNSN (bắt buộc TH2 & TH4 — nộp trong 90 ngày)',
         'codes': (),
         'bctc': True,
     },

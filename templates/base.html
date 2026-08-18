@@ -318,7 +318,7 @@
                     {% endif %}
 
                     <!-- Kế Toán SME -->
-                    {% if user_has_sme_nav or current_user.role in ['accountantSME', 'managerSME', 'adminSME', 'master'] or 'SME_dashboard' in (current_user.permissions or '') %}
+                    {% if user_has_sme_nav or is_sme_user|default(false) or current_user.role == 'master' or 'SME_dashboard' in (current_user.permissions or '') %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'SME_dashboard' or (request.endpoint or '')[:4] == 'SME_' %}active{% endif %}" href="{{ url_for('SME_dashboard') }}">
                             <i class="fas fa-calculator"></i> Kế Toán SME
@@ -327,7 +327,7 @@
                     {% endif %}
 
                     <!-- Cài đặt -->
-                    {% if current_user.role in ['admin', 'admin*', 'adminFB', 'adminSME', 'master'] %}
+                    {% if current_user.role in ['admin', 'admin*', 'adminFB', 'master'] or is_sme_admin|default(false) %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'settings_page' %}active{% endif %}" href="{{ url_for('settings_page') }}">
                             <i class="fas fa-cog"></i> Cài Đặt
@@ -389,7 +389,7 @@
     <!-- Footer -->
     <footer class="footer text-center">
         <div class="container">
-            © Hệ thống kế toán doanh nghiệp | © 2026 | Phát triển bởi <strong>Trung Tín</strong>
+            © Hệ Thống Bán Hàng & Kế Toán HKD và Doanh Nghiệp | © 2026 | Phát triển bởi <strong>Kiên Trung Tín</strong>
             · Hỗ trợ Zalo:
             <a href="{{ support_zalo_url }}" target="_blank" rel="noopener" class="footer-zalo-link">
                 <i class="fas fa-comment-dots"></i> {{ support_zalo_display }}

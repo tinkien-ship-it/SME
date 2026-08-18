@@ -7,6 +7,8 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from Services.inventory_stock_helpers import (
+    apply_wac_inbound,
+    apply_wac_outbound,
     ledger_quantity,
     sync_inventory_quantity_from_moves,
 )
@@ -674,6 +676,15 @@ def allocate_materials(
             except sqlite3.Error:
                 pass
 
+        try:
+            _, cost_used = apply_wac_outbound(cur, pid, float(qty), float(cost))
+            cost = _money(cost_used)
+            amt = qty * cost
+        except ValueError:
+            raise
+        except Exception:
+            pass
+
         if has_wh and wh:
             cur.execute(
                 """
@@ -819,9 +830,21 @@ def void_material_allocation(
         "SELECT * FROM stock_moves WHERE ref_type = 'material_alloc' AND ref_id = ?",
         (alloc_id,),
     ).fetchall()
+    cur = conn.cursor()
     for m in moves:
         md = dict(m)
         qty = float(md.get('quantity') or 0)
+        pid = int(md.get('product_id') or 0)
+        cost = float(md.get('cost_price') or 0)
+        if pid <= 0 or qty == 0:
+            continue
+        try:
+            if qty < 0:
+                apply_wac_inbound(cur, pid, -qty, (-qty) * cost)
+            else:
+                apply_wac_outbound(cur, pid, qty, cost)
+        except Exception:
+            pass
         conn.execute(
             """
             INSERT INTO stock_moves
@@ -829,14 +852,14 @@ def void_material_allocation(
             VALUES (?, ?, ?, ?, ?, 'material_alloc_void', ?, ?, 'Hủy PB NVL', ?)
             """,
             (
-                md.get('product_id'), when,
+                pid, when,
                 'import' if qty < 0 else 'export',
                 alloc_id, doc['doc_no'],
-                float(-qty), reason, md.get('cost_price') or 0,
+                float(-qty), reason, cost,
             ),
         )
         try:
-            sync_inventory_quantity_from_moves(conn.cursor(), int(md['product_id']))
+            sync_inventory_quantity_from_moves(cur, pid)
         except Exception:
             pass
     conn.execute(

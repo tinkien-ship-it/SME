@@ -20,7 +20,7 @@
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table table-sm mb-0"><thead class="table-light"><tr>
   <th>Mã</th><th>Tên</th><th>Chi nhánh</th><th class="text-end">Nguyên giá</th>
-  <th>Số tháng phân bổ</th><th>Ngày bắt đầu sử dụng</th><th>Tình trạng</th><th></th>
+  <th>Số tháng phân bổ</th><th>TK chi phí</th><th>Ngày bắt đầu sử dụng</th><th>Tình trạng</th><th></th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 
@@ -39,6 +39,16 @@
       <input type="date" id="pStart" class="form-control" lang="vi">
       <div class="form-text">Để trống nếu giữ nguyên ngày hiện tại.</div>
     </div>
+    <div class="mb-2">
+      <label class="form-label small">Tài khoản chi phí phân bổ</label>
+      <select id="pExp" class="form-select">
+        <option value="642">642 — Quản lý doanh nghiệp</option>
+        <option value="641">641 — Bán hàng</option>
+        <option value="627">627 — Sản xuất chung</option>
+        <option value="622">622 — Nhân công trực tiếp</option>
+        <option value="811">811 — Chi phí khác</option>
+      </select>
+    </div>
   </div>
   <div class="modal-footer">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
@@ -56,7 +66,7 @@ async function load(){
     const res = await fetch('/api/sme/tools' + q);
     const json = await res.json();
     if (!json.success) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${json.error || 'Không tải được dữ liệu'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="text-danger">${json.error || 'Không tải được dữ liệu'}</td></tr>`;
       return;
     }
     const rows = json.data || [];
@@ -65,6 +75,7 @@ async function load(){
       <td class="small">${branchLabelVi(r.branch_code)}</td>
       <td class="text-end">${fmt(r.nguyen_gia || r.gia_mua_chua_thue || 0)}</td>
       <td class="fw-semibold">${r.so_thang_phan_bo || '—'}</td>
+      <td class="small">${r.expense_account || '642'}</td>
       <td class="small">${fmtDateVi(r.ngay_bat_dau_su_dung)}</td>
       <td>${statusLabelVi(r.tinh_trang)}</td>
       <td class="text-nowrap">
@@ -73,14 +84,15 @@ async function load(){
         ${r.tinh_trang === 'InStock' ? `<button type="button" class="btn btn-sm btn-outline-success ms-1 btn-act">Đưa vào sử dụng</button>` : ''}
         ${r.tinh_trang !== 'Disposed' ? `<button type="button" class="btn btn-sm btn-outline-danger ms-1 btn-scrap">Thanh lý</button>` : ''}
       </td>
-    </tr>`).join('') || '<tr><td colspan="8" class="text-muted text-center">Chưa có công cụ dụng cụ — nhập qua phiếu nhập kho</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="9" class="text-muted text-center">Chưa có công cụ dụng cụ — nhập qua phiếu nhập kho</td></tr>';
     [...tbody.querySelectorAll('tr')].forEach((tr, i) => {
       const row = rows[i];
       if (!row) return;
       const periodBtn = tr.querySelector('.btn-period');
       if (periodBtn) periodBtn.addEventListener('click', () => openPeriod({
         id: row.id, ma: row.ma_ccdc, ten: row.ten_ccdc,
-        months: row.so_thang_phan_bo, start: row.ngay_bat_dau_su_dung
+        months: row.so_thang_phan_bo, start: row.ngay_bat_dau_su_dung,
+        expense_account: row.expense_account || '642',
       }));
       const actBtn = tr.querySelector('.btn-act');
       if (actBtn) actBtn.addEventListener('click', () => act(row.id));
@@ -88,7 +100,7 @@ async function load(){
       if (scrapBtn) scrapBtn.addEventListener('click', () => scrap(row.id));
     });
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${e.message || 'Lỗi tải danh mục'}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-danger">${e.message || 'Lỗi tải danh mục'}</td></tr>`;
   }
 }
 function openPeriod(r){
@@ -96,10 +108,11 @@ function openPeriod(r){
   pLabel.textContent = (r.ma || '') + ' — ' + (r.ten || '');
   pMonths.value = r.months || 12;
   pStart.value = (r.start || '').toString().slice(0, 10);
+  pExp.value = r.expense_account || '642';
   periodModal.show();
 }
 btnSavePeriod.onclick = async () => {
-  const body = { so_thang_phan_bo: Number(pMonths.value || 0) };
+  const body = { so_thang_phan_bo: Number(pMonths.value || 0), expense_account: pExp.value };
   if (pStart.value) body.ngay_bat_dau_su_dung = pStart.value;
   const res = await fetch('/api/sme/tools/' + pId.value + '/period', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)

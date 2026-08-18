@@ -1,6 +1,7 @@
 """Đơn đặt hàng nhà cung cấp (SME) — theo dõi trước khi nhập kho / nhận HĐ."""
 from __future__ import annotations
 
+import re
 import sqlite3
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
@@ -69,6 +70,17 @@ def ensure_purchase_order_schema(conn: sqlite3.Connection, *, commit: bool = Tru
     )
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, 'sme_purchase_orders')
+    line_cols = {r[1] for r in conn.execute('PRAGMA table_info(sme_purchase_order_lines)').fetchall()}
+    if 'received_qty' not in line_cols:
+        conn.execute(
+            'ALTER TABLE sme_purchase_order_lines ADD COLUMN received_qty REAL NOT NULL DEFAULT 0'
+        )
+    try:
+        imp_cols = {r[1] for r in conn.execute('PRAGMA table_info(import)').fetchall()}
+        if 'po_id' not in imp_cols:
+            conn.execute('ALTER TABLE import ADD COLUMN po_id INTEGER')
+    except sqlite3.Error:
+        pass
     if commit:
         conn.commit()
 
@@ -151,7 +163,87 @@ def list_purchase_orders(
     params.extend(bp)
     sql += " ORDER BY po_date DESC, id DESC LIMIT ?"
     params.append(int(limit) or 200)
-    return [dict(r) for r in conn.execute(sql, params).fetchall()]
+    rows = [dict(r) for r in conn.execute(sql, params).fetchall()]
+    ids = [int(r['id']) for r in rows]
+    progress: dict[int, dict[str, float]] = {}
+    if ids:
+        ph = ','.join('?' * len(ids))
+        for ln in conn.execute(
+            f"""
+            SELECT po_id,
+                   COALESCE(SUM(qty), 0) AS ordered_qty,
+                   COALESCE(SUM(received_qty), 0) AS received_qty
+            FROM sme_purchase_order_lines
+            WHERE po_id IN ({ph})
+            GROUP BY po_id
+            """,
+            ids,
+        ).fetchall():
+            d = dict(ln)
+            pid = int(d['po_id'])
+            ordered = float(d['ordered_qty'] or 0)
+            recv = float(d['received_qty'] or 0)
+            progress[pid] = {
+                'ordered_qty': ordered,
+                'received_qty': recv,
+                'receive_pct': round(100.0 * recv / ordered, 1) if ordered else 0.0,
+            }
+    for r in rows:
+        r.update(progress.get(int(r['id']), {
+            'ordered_qty': 0.0, 'received_qty': 0.0, 'receive_pct': 0.0,
+        }))
+    billed: dict[int, float] = {}
+    try:
+        imp_cols = {c[1] for c in conn.execute('PRAGMA table_info(import)').fetchall()}
+        if ids and 'po_id' in imp_cols:
+            ph = ','.join('?' * len(ids))
+            for ln in conn.execute(
+                f"""
+                SELECT po_id, COALESCE(SUM(total_value), 0) AS billed
+                FROM import
+                WHERE po_id IN ({ph})
+                GROUP BY po_id
+                """,
+                ids,
+            ).fetchall():
+                d = dict(ln)
+                billed[int(d['po_id'])] = float(d['billed'] or 0)
+        elif ids:
+            # Fallback: ghi chú [PNK#id] trên đơn
+            for r in rows:
+                note = str(r.get('note') or '')
+                pnk_ids = [int(x) for x in re.findall(r'\[PNK#(\d+)\]', note)]
+                if not pnk_ids:
+                    continue
+                ph = ','.join('?' * len(pnk_ids))
+                row = conn.execute(
+                    f"SELECT COALESCE(SUM(total_value), 0) FROM import WHERE id IN ({ph})",
+                    pnk_ids,
+                ).fetchone()
+                billed[int(r['id'])] = float((row[0] if row else 0) or 0)
+    except sqlite3.Error:
+        billed = {}
+    for r in rows:
+        total = float(r.get('total_amount') or 0)
+        bill = billed.get(int(r['id']), 0.0)
+        r['billed_amount'] = bill
+        r['billed_pct'] = round(100.0 * bill / total, 1) if total else 0.0
+        recv_pct = float(r.get('receive_pct') or 0)
+        qty_ok = recv_pct >= 99.5
+        amt_ok = abs(bill - total) <= max(1.0, total * 0.02) if total else bill <= 0.5
+        if r.get('status') == 'cancelled':
+            r['match_status'] = 'cancelled'
+        elif recv_pct <= 0.05 and bill <= 0.5:
+            r['match_status'] = 'open'
+        elif qty_ok and amt_ok and bill > 0:
+            r['match_status'] = 'matched'
+        elif qty_ok and bill <= 0.5:
+            r['match_status'] = 'unbilled'
+        elif not qty_ok:
+            r['match_status'] = 'qty_short'
+        else:
+            r['match_status'] = 'amount_diff'
+    return rows
 
 
 def create_purchase_order(
@@ -495,6 +587,12 @@ def apply_po_receipt(
         tag = f'[PNK#{import_id}]'
         if tag not in note_extra:
             note_extra = (note_extra + ' ' + tag).strip()
+        try:
+            cols = {c[1] for c in conn.execute('PRAGMA table_info(import)').fetchall()}
+            if 'po_id' in cols:
+                conn.execute('UPDATE import SET po_id = ? WHERE id = ?', (int(po_id), int(import_id)))
+        except sqlite3.Error:
+            pass
 
     conn.execute(
         """

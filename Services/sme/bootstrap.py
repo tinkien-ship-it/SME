@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 
 # Cache theo đường dẫn DB — tránh chạy lại hàng chục ensure_* mỗi request (gây load chậm).
-_BOOTSTRAP_VERSION = '2026-08-03hq1'
+_BOOTSTRAP_VERSION = '2026-08-18accruals-loan-int'
 _sme_bootstrapped: dict[str, str] = {}
 
 
@@ -77,6 +77,9 @@ def ensure_sme_accounting_ready(
     from Services.sme.cash_extras import ensure_sme_cash_extras_schema
     from Services.sme.branches import ensure_sme_branches_schema, backfill_asset_branches_from_warehouse
     from Services.sme.tt58_tax_rates import ensure_tt58_tax_rates_schema
+    from Services.sme.ledger_ops import ensure_ledger_ops_schema
+    from Services.sme.prepaid import ensure_prepaid_schema
+    from Services.sme.accruals import ensure_accrual_schema
     from Services.tenant_profile import is_sme_regime, normalize_accounting_regime
 
     coa = ensure_sme_coa_ready(conn, commit=False)
@@ -95,6 +98,9 @@ def ensure_sme_accounting_ready(
     ensure_sme_inventory_ops_schema(conn, commit=False)
     ensure_sme_cit_schema(conn, commit=False)
     ensure_tt58_tax_rates_schema(conn, commit=False)
+    ensure_ledger_ops_schema(conn, commit=False)
+    ensure_prepaid_schema(conn, commit=False)
+    ensure_accrual_schema(conn, commit=False)
     ensure_sme_fx_schema(conn, commit=False)
     ensure_sme_loans_schema(conn, commit=False)
     ensure_sme_lc_schema(conn, commit=False)
@@ -116,11 +122,7 @@ def ensure_sme_accounting_ready(
     except Exception:
         pass
 
-    regime = normalize_accounting_regime(accounting_regime or 'SME_TT99')
-    if not is_sme_regime(regime):
-        regime = 'SME_TT99'
-    profile = 'sme_tt58' if 'TT58' in regime.upper() else 'sme_tt99'
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    existing_meta: dict[str, str] = {}
     try:
         conn.execute(
             """
@@ -131,6 +133,35 @@ def ensure_sme_accounting_ready(
             )
             """
         )
+        for r in conn.execute(
+            "SELECT key, value FROM sme_coa_seed_meta "
+            "WHERE key IN ('ledger_profile','accounting_regime')"
+        ).fetchall():
+            k = r[0] if not isinstance(r, sqlite3.Row) else r['key']
+            v = r[1] if not isinstance(r, sqlite3.Row) else r['value']
+            if k:
+                existing_meta[str(k)] = str(v or '')
+    except sqlite3.Error:
+        existing_meta = {}
+
+    # Không mặc định TT99 khi caller (sale_journal, API…) bỏ trống accounting_regime —
+    # lần đó từng ghi đè tenant TT58 thành TT99, làm menu/sổ DNSN “mất tiêu”.
+    if accounting_regime:
+        regime = normalize_accounting_regime(accounting_regime)
+    else:
+        regime = normalize_accounting_regime(
+            existing_meta.get('accounting_regime') or 'SME_TT99'
+        )
+    if not is_sme_regime(regime):
+        prev = existing_meta.get('accounting_regime') or ''
+        regime = (
+            normalize_accounting_regime(prev)
+            if is_sme_regime(prev)
+            else 'SME_TT99'
+        )
+    profile = 'sme_tt58' if 'TT58' in regime.upper() else 'sme_tt99'
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    try:
         for key, value in (
             ('ledger_profile', profile),
             ('accounting_regime', regime),
@@ -142,20 +173,7 @@ def ensure_sme_accounting_ready(
                 """,
                 (key, value, now),
             )
-        # Mặc định PP1 (Điều 5) cho tenant TT58 nếu chưa chọn
-        if profile == 'sme_tt58':
-            row = conn.execute(
-                "SELECT value FROM sme_coa_seed_meta WHERE key = 'tt58_tax_method'"
-            ).fetchone()
-            if not row or not (row[0] if not isinstance(row, sqlite3.Row) else row['value']):
-                from Services.sme.tt58_tax_methods import DEFAULT_TT58_TAX_METHOD
-                conn.execute(
-                    """
-                    INSERT INTO sme_coa_seed_meta(key, value, updated_at) VALUES (?, ?, ?)
-                    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-                    """,
-                    ('tt58_tax_method', DEFAULT_TT58_TAX_METHOD, now),
-                )
+        # Không tự gán Trường hợp 1 — chưa chọn thì hiện đủ sổ/BCTC cho đến khi user lưu.
     except sqlite3.Error:
         pass
 

@@ -133,8 +133,9 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
     support_password = kwargs.get('support_password') or customer_password
     owner_role = role_for_business_line(business_line, accounting_regime)
     support_role = support_role_for_business_line(business_line, accounting_regime)
-    # Chủ tenant SME (managerSME): thiết lập + xem nhật ký; không có quyền admin/settings
-    owner_permissions = 'view_audit_log' if owner_role == 'managerSME' else ''
+    # Chủ tenant SME (managerSME*): thiết lập + xem nhật ký; không có quyền admin/settings
+    from Services.sme_roles import is_sme_manager_role
+    owner_permissions = 'view_audit_log' if is_sme_manager_role(owner_role) else ''
 
     # 1. Copy Database mẫu
     if os.path.exists(os.path.join(BASE_DIR, 'database.db')):
@@ -436,6 +437,7 @@ def init_tenant(app):
             'role': user.get('role') or session.get('role') or '',
             'permissions': user.get('permissions') or '',
         }
+        from Services.sme_roles import is_sme_admin_role, is_sme_role
         sme = is_sme_regime(profile.get('accounting_regime'))
         return {
             'current_tenant': getattr(g, 'tenant_id', None),
@@ -447,6 +449,8 @@ def init_tenant(app):
             'tenant_is_sme': sme,
             'user_has_hub': user_can_access_hub(cu, profile),
             'user_has_sme_nav': user_can_see_sme_nav(cu, profile),
+            'is_sme_admin': is_sme_admin_role(cu.get('role')),
+            'is_sme_user': is_sme_role(cu.get('role')),
         }
 
 def init_tenant_middleware(app, get_db_connection_fn=None):

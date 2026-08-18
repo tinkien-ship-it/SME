@@ -15,8 +15,12 @@
     .bctc-indent-0 { padding-left: .5rem !important; }
     .bctc-indent-1 { padding-left: 1.25rem !important; }
     .bctc-indent-2 { padding-left: 2.25rem !important; }
-    .bctc-panel { display: none; }
-    .bctc-panel.active { display: block; }
+    .bctc-open-input {
+        width: 100%; min-width: 110px; text-align: right; font-family: ui-monospace, Consolas, monospace;
+        font-weight: 600; font-size: .85rem; border: 1px solid #cbd5e1; border-radius: 4px;
+        padding: 2px 6px; background: #fffbeb;
+    }
+    .bctc-open-input:focus { outline: none; border-color: #2563eb; background: #fff; }
 </style>
 {% endblock %}
 
@@ -25,10 +29,23 @@
         <div>
             <h4 class="fw-bold mb-1"><i class="fas fa-chart-line text-primary me-2"></i>Báo cáo tài chính</h4>
             <p class="text-muted small mb-0" id="regimeHint">
-                B01 / B02 / B03 / B09 lập từ nhật ký bút toán và <code>bctc_line_code</code> trên danh mục TK.
+                B01 / B02 lập từ nhật ký. Cột <b>Số đầu năm</b> có thể nhập tay hoặc import Excel từ phần mềm khác.
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnSaveOpening">
+                <i class="fas fa-floppy-disk me-1"></i> Lưu số đầu năm
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnTplOpening">
+                <i class="fas fa-download me-1"></i> Tải mẫu Excel
+            </button>
+            <button type="button" class="btn btn-outline-success btn-sm" id="btnImportOpening">
+                <i class="fas fa-file-import me-1"></i> Nhập Excel
+            </button>
+            <input type="file" id="fileOpeningXlsx" accept=".xlsx,.xlsm" class="d-none">
+            <button type="button" class="btn btn-outline-danger btn-sm" id="btnClearOpening" title="Xóa số nhập tay, quay lại số từ sổ">
+                Xóa số nhập tay
+            </button>
             <button type="button" class="btn btn-success btn-sm" id="btnExport">
                 <i class="fas fa-file-excel me-1"></i> Xuất Excel
             </button>
@@ -93,7 +110,7 @@
                             <th style="width:70px;">Mã</th>
                             <th>Chỉ tiêu</th>
                             <th class="text-end" style="width:140px;" id="b01ColA">Số cuối kỳ</th>
-                            <th class="text-end d-none" style="width:140px;" id="b01ColB">Số đầu năm</th>
+                            <th class="text-end" style="width:160px;" id="b01ColB">Số đầu năm</th>
                         </tr>
                     </thead>
                     <tbody id="b01Body">
@@ -113,7 +130,7 @@
                             <th style="width:70px;">Mã</th>
                             <th>Chỉ tiêu</th>
                             <th class="text-end" style="width:140px;" id="b02ColA">Số kỳ này</th>
-                            <th class="text-end d-none" style="width:140px;" id="b02ColB">Năm trước</th>
+                            <th class="text-end" style="width:160px;" id="b02ColB">Năm trước</th>
                         </tr>
                     </thead>
                     <tbody id="b02Body">
@@ -173,9 +190,7 @@
                 document.getElementById('navB03')?.classList.add('d-none');
                 document.getElementById('navB09')?.classList.add('d-none');
                 document.getElementById('b01ColA').textContent = 'Số cuối năm';
-                document.getElementById('b01ColB').classList.remove('d-none');
                 document.getElementById('b02ColA').textContent = 'Năm nay';
-                document.getElementById('b02ColB').classList.remove('d-none');
                 document.getElementById('rpProfit').parentElement?.classList.add('d-none');
             }
         }
@@ -226,12 +241,25 @@
             ].filter(Boolean).join(' ');
             const indent = 'bctc-indent-' + Math.min(r.level || 0, 2);
             const amt = r.kind === 'header' ? '' : money(r.amount);
-            const prior = r.kind === 'header' ? '' : money(r[priorKey]);
+            let priorCell = '';
+            if (dual) {
+                if (r.kind === 'header') {
+                    priorCell = '<td class="bctc-amount"></td>';
+                } else if (r.opening_editable || r.kind === 'leaf') {
+                    const raw = r[priorKey] == null ? 0 : Number(r[priorKey]);
+                    priorCell = `<td class="bctc-amount p-1">
+                        <input type="text" inputmode="decimal" class="bctc-open-input"
+                               data-code="${r.code}" value="${raw}">
+                    </td>`;
+                } else {
+                    priorCell = `<td class="bctc-amount">${money(r[priorKey])}</td>`;
+                }
+            }
             return `<tr class="${cls}">
                 <td class="bctc-mono">${r.kind === 'header' ? '' : r.code}</td>
                 <td class="${indent}">${r.name}</td>
                 <td class="bctc-amount">${amt}</td>
-                ${dual ? `<td class="bctc-amount">${prior}</td>` : ''}
+                ${priorCell}
             </tr>`;
         }).join('');
     }
@@ -357,8 +385,8 @@
             if (!b01.success) throw new Error(b01.error || 'Lỗi B01');
             if (!b02.success) throw new Error(b02.error || 'Lỗi B02');
 
-            const dualB01 = !!(b01.data.has_opening_column || isTt58);
-            const dualB02 = !!(b02.data.has_prior_column || isTt58);
+            const dualB01 = true;
+            const dualB02 = true;
             renderRows(document.getElementById('b01Body'), b01.data.rows, {
                 dual: dualB01, priorKey: 'amount_opening',
             });
@@ -378,6 +406,11 @@
                     : '') +
                 ` · <span class="${balCls}">${balTxt}</span>` +
                 ` · ${b02.data.report || 'B02'} LNST ${money(b02.data.totals.profit_after_tax)}`;
+            const ov = b01.data.opening_override || {};
+            if (ov.has_override) {
+                meta += ` · Số đầu năm nhập ${ov.source || 'tay'} (${ov.count} chỉ tiêu` +
+                    (ov.updated_at ? `, ${ov.updated_at}` : '') + ')';
+            }
 
             if (!isTt58) {
                 const b03 = await responses[2].json();
@@ -420,6 +453,116 @@
         window.location.href =
             `/api/sme/bctc/export.xlsx?year=${y}&period_from=${pf}&period_to=${pt}&include_current_profit=${profit}`;
     });
+
+    function parseOpenInput(val) {
+        const s = String(val || '').trim().replace(/\s/g, '');
+        if (!s) return 0;
+        let t = s;
+        if ((t.match(/\./g) || []).length > 1 && !t.includes(',')) {
+            t = t.replace(/\./g, '');
+        } else if (t.includes(',') && t.includes('.')) {
+            t = t.replace(/\./g, '').replace(',', '.');
+        } else if (t.includes(',')) {
+            t = t.replace(',', '.');
+        }
+        const n = Number(t);
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    function collectOpening(tbodyId) {
+        return Array.from(document.querySelectorAll('#' + tbodyId + ' input.bctc-open-input')).map(el => ({
+            code: el.dataset.code,
+            amount: parseOpenInput(el.value),
+        }));
+    }
+
+    async function postOpening(report, lines) {
+        const res = await fetch('/api/sme/bctc/opening', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                year: Number(yearEl.value),
+                report,
+                lines,
+                source: 'manual',
+            }),
+        });
+        const out = await res.json();
+        if (!out.success) throw new Error(out.error || 'Không lưu được');
+        return out;
+    }
+
+    document.getElementById('btnSaveOpening').addEventListener('click', async () => {
+        const btn = document.getElementById('btnSaveOpening');
+        try {
+            const b01n = collectOpening('b01Body');
+            const b02n = collectOpening('b02Body');
+            if (!b01n.length && !b02n.length) {
+                alert('Chưa có số để lưu — hãy lập báo cáo trước.');
+                return;
+            }
+            btn.disabled = true;
+            const b01 = b01n.length ? await postOpening('B01', b01n) : { saved: 0 };
+            const b02 = b02n.length ? await postOpening('B02', b02n) : { saved: 0 };
+            btn.textContent = `Đã lưu B01 ${b01.saved || 0} · B02 ${b02.saved || 0}`;
+            await loadAll();
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-floppy-disk me-1"></i> Lưu số đầu năm';
+            }, 1800);
+        } catch (e) {
+            btn.disabled = false;
+            alert(e.message);
+        }
+    });
+
+    document.getElementById('btnTplOpening').addEventListener('click', () => {
+        window.location.href = '/api/sme/bctc/opening/template.xlsx?year=' + yearEl.value;
+    });
+
+    document.getElementById('btnImportOpening').addEventListener('click', () => {
+        document.getElementById('fileOpeningXlsx').click();
+    });
+
+    document.getElementById('fileOpeningXlsx').addEventListener('change', async (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        ev.target.value = '';
+        if (!file) return;
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('year', yearEl.value);
+        try {
+            const res = await fetch('/api/sme/bctc/opening/import', { method: 'POST', body: fd });
+            const out = await res.json();
+            if (!out.success) throw new Error(out.error || 'Không nhập được file');
+            const d = out.data || {};
+            const parts = [];
+            if (d.b01_saved) parts.push('B01 ' + d.b01_saved + ' chỉ tiêu');
+            if (d.b02_saved) parts.push('B02 ' + d.b02_saved + ' chỉ tiêu');
+            if (d.dk && d.dk.posted) {
+                parts.push('bút toán DK ' + (d.dk.document_no || '') + ' (' + d.dk.lines + ' TK)');
+            }
+            const extra = (d.errors || []).length ? '\nLưu ý: ' + d.errors.slice(0, 8).join('; ') : '';
+            alert((parts.length ? 'Đã nhập: ' + parts.join(' · ') : 'Không có dòng số liệu') + extra);
+            await loadAll();
+        } catch (e) {
+            alert(e.message);
+        }
+    });
+
+    document.getElementById('btnClearOpening').addEventListener('click', async () => {
+        if (!confirm('Xóa số đầu năm / năm trước đã nhập tay hoặc Excel cho năm ' + yearEl.value + '?\nSố từ sổ nhật ký (nếu có) sẽ hiện lại.')) {
+            return;
+        }
+        try {
+            const y = yearEl.value;
+            await fetch('/api/sme/bctc/opening?year=' + y, { method: 'DELETE' });
+            await loadAll();
+        } catch (e) {
+            alert(e.message);
+        }
+    });
+
     loadAll();
 })();
 </script>

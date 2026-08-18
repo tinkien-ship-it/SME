@@ -20,7 +20,7 @@
 <div class="card shadow-sm border-0"><div class="table-responsive">
 <table class="table table-sm mb-0"><thead class="table-light"><tr>
   <th>Mã</th><th>Tên</th><th>Chi nhánh</th><th class="text-end">Nguyên giá</th>
-  <th>Số tháng khấu hao</th><th>Ngày bắt đầu sử dụng</th><th>Tình trạng</th><th></th>
+  <th>Số tháng khấu hao</th><th>TK chi phí</th><th>Ngày bắt đầu sử dụng</th><th>Tình trạng</th><th></th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 
@@ -39,6 +39,16 @@
       <input type="date" id="pStart" class="form-control" lang="vi">
       <div class="form-text">Để trống nếu giữ nguyên ngày hiện tại.</div>
     </div>
+    <div class="mb-2">
+      <label class="form-label small">Tài khoản chi phí khấu hao</label>
+      <select id="pExp" class="form-select">
+        <option value="642">642 — Quản lý doanh nghiệp</option>
+        <option value="641">641 — Bán hàng</option>
+        <option value="627">627 — Sản xuất chung</option>
+        <option value="622">622 — Nhân công trực tiếp</option>
+        <option value="811">811 — Chi phí khác</option>
+      </select>
+    </div>
   </div>
   <div class="modal-footer">
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
@@ -56,7 +66,7 @@ async function load(){
     const res = await fetch('/api/sme/fixed-assets/list' + q);
     const json = await res.json();
     if (!json.success) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${json.error || 'Không tải được dữ liệu'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" class="text-danger">${json.error || 'Không tải được dữ liệu'}</td></tr>`;
       return;
     }
     const rows = json.data || [];
@@ -66,6 +76,7 @@ async function load(){
       <td class="small">${branchLabelVi(r.branch_code)}</td>
       <td class="text-end">${fmt(r.original_cost || r.nguyen_gia_tinh_khau_hao || 0)}</td>
       <td class="fw-semibold">${r.so_thang_khau_hao || '—'}</td>
+      <td class="small">${r.expense_account || '642'}</td>
       <td class="small">${fmtDateVi(r.ngay_bat_dau_su_dung)}</td>
       <td>${statusLabelVi(r.tinh_trang)}</td>
       <td class="text-nowrap">
@@ -73,13 +84,13 @@ async function load(){
           ? `<button type="button" class="btn btn-sm btn-outline-primary btn-period">Thiết lập khấu hao</button>`
           : '<span class="text-muted small">—</span>'}
       </td>
-    </tr>`).join('') || '<tr><td colspan="8" class="text-muted text-center">Chưa có tài sản cố định — nhập qua phiếu nhập kho</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="9" class="text-muted text-center">Chưa có tài sản cố định — nhập qua phiếu nhập kho</td></tr>';
     [...tbody.querySelectorAll('tr')].forEach((tr, i) => {
       const btn = tr.querySelector('.btn-period');
       if (btn && rows[i]) btn.addEventListener('click', () => openPeriod(rows[i]));
     });
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${e.message || 'Lỗi tải danh mục'}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-danger">${e.message || 'Lỗi tải danh mục'}</td></tr>`;
   }
 }
 function openPeriod(r){
@@ -87,10 +98,11 @@ function openPeriod(r){
   pLabel.textContent = (r.ma_tai_san || '') + ' — ' + (r.ten_tai_san || '');
   pMonths.value = r.so_thang_khau_hao || 36;
   pStart.value = (r.ngay_bat_dau_su_dung || '').toString().slice(0, 10);
+  pExp.value = r.expense_account || '642';
   periodModal.show();
 }
 btnSavePeriod.onclick = async () => {
-  const body = { so_thang_khau_hao: Number(pMonths.value || 0) };
+  const body = { so_thang_khau_hao: Number(pMonths.value || 0), expense_account: pExp.value };
   if (pStart.value) body.ngay_bat_dau_su_dung = pStart.value;
   const res = await fetch('/api/sme/fixed-assets/' + pId.value + '/period', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)

@@ -1,10 +1,11 @@
-"""Công nợ / nộp BHXH · BHYT · BHTN cho SME (07-LĐTL).
+"""Công nợ / nộp BHXH · BHYT · BHTN · KPCĐ cho SME (07-LĐTL).
 
 Logic tương tự HKD ``insurance_debt_helpers`` nhưng:
 - Phải nộp NLĐ lấy từ ``salary_detail`` (đã chốt bảng lương)
 - Phải nộp DN (người SDLĐ) = lương TG × tỷ lệ chủ (cùng công thức chốt lương)
+- KPCĐ DN = 2% quỹ lương (TK 3382)
 - Đã nộp theo dõi qua ``sme_vouchers`` (phiếu chi + nhật ký Nợ 338x · Có 1111/1121)
-- Hạch toán tách từng khoản: 3383 BHXH · 3384 BHYT · 3385 BHTN
+- Hạch toán tách từng khoản: 3383 BHXH · 3384 BHYT · 3385 BHTN · 3382 KPCĐ
 """
 from __future__ import annotations
 
@@ -19,6 +20,12 @@ ACCOUNT_BY_TYPE = {
     'BHXH': '3383',
     'BHYT': '3384',
     'BHTN': '3385',
+    'KPCD': '3382',
+}
+
+SME_INS_LABELS = {
+    **INS_LABELS,
+    'KPCD': 'Kinh phí công đoàn',
 }
 
 PAYER_NLD = 'NLD'
@@ -65,10 +72,17 @@ def _salary_rows(conn: sqlite3.Connection, month: int, year: int) -> list[dict]:
         sync_chu_ho_from_business_info(conn, commit=False)
     except Exception:
         pass
+    cols = {r[1] for r in conn.execute('PRAGMA table_info(salary_detail)').fetchall()}
+    income_expr = (
+        'COALESCE(sd.total_income, sd.time_salary, 0)'
+        if 'total_income' in cols else
+        'COALESCE(sd.time_salary, 0)'
+    )
     rows = conn.execute(
-        """
+        f"""
         SELECT sd.employee_id, sd.fullname,
                COALESCE(sd.time_salary, 0) AS time_salary,
+               {income_expr} AS total_income,
                COALESCE(sd.bhxh, 0) AS bhxh,
                COALESCE(sd.bhyt, 0) AS bhyt,
                COALESCE(sd.bhtn, 0) AS bhtn,
@@ -199,7 +213,7 @@ def _type_row(
         'ins_type': ins_type,
         'account_code': ACCOUNT_BY_TYPE[ins_type],
         'payer': payer,
-        'label': INS_LABELS[ins_type],
+        'label': SME_INS_LABELS.get(ins_type, ins_type),
         'phai_nop': phai,
         'da_nop': da,
         'con_lai': round(con),
@@ -297,6 +311,11 @@ def compute_period_insurance_dn(conn: sqlite3.Connection, month: int, year: int)
             'total': sum(emp_types.values()),
         })
     type_rows = [_type_row(conn, t, totals[t], month, year, PAYER_DN) for t in INS_TYPES]
+    from Services.sme.ledger_ops import KPCD_EMPLOYER_RATE
+    kpcd_base = sum(float(item.get('total_income') or item.get('time_salary') or 0) for item in rows)
+    kpcd_amt = round(kpcd_base * float(KPCD_EMPLOYER_RATE))
+    if kpcd_amt > 0:
+        type_rows.append(_type_row(conn, 'KPCD', kpcd_amt, month, year, PAYER_DN))
     total_phai = sum(t['phai_nop'] for t in type_rows)
     total_da = sum(t['da_nop'] for t in type_rows)
     total_con = max(0.0, total_phai - total_da)
@@ -332,7 +351,8 @@ def compute_period_insurance(conn: sqlite3.Connection, month: int, year: int) ->
     nld_map = {t['ins_type']: t for t in nld['types']}
     dn_map = {t['ins_type']: t for t in dn['types']}
     combined_types = []
-    for ins in INS_TYPES:
+    type_order = list(INS_TYPES) + (['KPCD'] if 'KPCD' in dn_map else [])
+    for ins in type_order:
         nl = nld_map.get(ins, {})
         ch = dn_map.get(ins, {})
         phai = round(float(nl.get('phai_nop') or 0) + float(ch.get('phai_nop') or 0))
@@ -341,8 +361,8 @@ def compute_period_insurance(conn: sqlite3.Connection, month: int, year: int) ->
         st, st_cls, _ = _status(phai, da)
         combined_types.append({
             'ins_type': ins,
-            'label': INS_LABELS[ins],
-            'account_code': ACCOUNT_BY_TYPE[ins],
+            'label': SME_INS_LABELS.get(ins, ins),
+            'account_code': ACCOUNT_BY_TYPE.get(ins, '338'),
             'nld_phai_nop': round(float(nl.get('phai_nop') or 0)),
             'nld_da_nop': round(float(nl.get('da_nop') or 0)),
             'nld_con_lai': round(float(nl.get('con_lai') or 0)),
@@ -482,9 +502,10 @@ def get_insurance_debt_list(
             'nld_con_lai': s['nld_con_lai'],
             'chu_con_lai': s['dn_con_lai'],
             'dn_con_lai': s['dn_con_lai'],
-            'bhxh_con_lai': next(x['con_lai'] for x in data['types'] if x['ins_type'] == 'BHXH'),
-            'bhyt_con_lai': next(x['con_lai'] for x in data['types'] if x['ins_type'] == 'BHYT'),
-            'bhtn_con_lai': next(x['con_lai'] for x in data['types'] if x['ins_type'] == 'BHTN'),
+            'bhxh_con_lai': next((x['con_lai'] for x in data['types'] if x['ins_type'] == 'BHXH'), 0),
+            'bhyt_con_lai': next((x['con_lai'] for x in data['types'] if x['ins_type'] == 'BHYT'), 0),
+            'bhtn_con_lai': next((x['con_lai'] for x in data['types'] if x['ins_type'] == 'BHTN'), 0),
+            'kpcd_con_lai': next((x['con_lai'] for x in data['types'] if x['ins_type'] == 'KPCD'), 0),
             **s,
             'types': data['types'],
         })
@@ -523,9 +544,11 @@ def pay_insurance_item(
 
     ins = (ins_type or '').strip().upper()
     if ins not in ACCOUNT_BY_TYPE:
-        raise ValueError('Loại bảo hiểm không hợp lệ (BHXH/BHYT/BHTN)')
+        raise ValueError('Loại bảo hiểm không hợp lệ (BHXH/BHYT/BHTN/KPCĐ)')
     p = (payer or PAYER_NLD).strip().upper()
     if p in ('CHU', 'EMPLOYER'):
+        p = PAYER_DN
+    if ins == 'KPCD':
         p = PAYER_DN
     if p not in (PAYER_NLD, PAYER_DN):
         p = PAYER_NLD
@@ -596,7 +619,7 @@ def pay_insurance_period(
     branch_code: str | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
-    """Nộp cả kỳ — **1 phiếu chi**, bút toán nhiều dòng Nợ 3383/3384/3385 · Có tiền."""
+    """Nộp cả kỳ — **1 phiếu chi**, bút toán nhiều dòng Nợ 3383/3384/3385/3382 · Có tiền."""
     from datetime import datetime
     from Services.sme.vouchers import create_payment
 
@@ -630,7 +653,7 @@ def pay_insurance_period(
     if not allocs:
         raise ValueError('Kỳ này đã nộp đủ — không còn khoản phải nộp')
 
-    acct_label = {'3383': 'BHXH', '3384': 'BHYT', '3385': 'BHTN'}
+    acct_label = {'3383': 'BHXH', '3384': 'BHYT', '3385': 'BHTN', '3382': 'KPCĐ'}
     debit_lines = [
         {
             'account_code': acct,
@@ -644,7 +667,7 @@ def pay_insurance_period(
     date_s = (pay_date or datetime.now().strftime('%Y-%m-%d'))[:10]
     ref = period_reference_key(month, year)
     reason = (
-        f'Nộp BHXH/BHYT/BHTN tháng {int(month)}/{int(year)} '
+        f'Nộp BHXH/BHYT/BHTN/KPCĐ tháng {int(month)}/{int(year)} '
         f'({data["employee_count"]} NV) — 07-LĐTL'
     )
 

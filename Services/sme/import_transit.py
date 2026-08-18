@@ -2,7 +2,8 @@
 → nộp thuế HQ → nhập kho thực tế / đưa vào sử dụng.
 
 G1 IN_TRANSIT: Nợ 151 (HH/NVL/CCDC) hoặc Nợ 2411 (TSCĐ) + thuế vốn hóa /
-               Có 331 / Có 333* / Nợ 13312 / Có 33312 — không tăng tồn.
+               Có 331 / Có 333* / Có 33312 — không tăng tồn.
+               TH3/TH4: thêm Nợ 13312. TH1/TH2: VAT nằm trong 151/2411.
 G2 TAX_PAID:   Nợ 3333/3332/33312 / Có 112 — nút nộp thuế.
 G3 RECEIVED:   Nợ 156|152|153 / Có 151; Nợ 2112 / Có 2411 — tăng tồn / ghi TSCĐ.
 """
@@ -64,6 +65,12 @@ def ensure_import_transit_schema(conn: sqlite3.Connection, *, commit: bool = Tru
                 conn.execute(f'ALTER TABLE "import" ADD COLUMN {col} {decl}')
             except sqlite3.OperationalError:
                 pass
+    det = _cols(conn, 'import_details')
+    if det and 'expense_account' not in det:
+        try:
+            conn.execute('ALTER TABLE import_details ADD COLUMN expense_account TEXT')
+        except sqlite3.OperationalError:
+            pass
     if commit:
         conn.commit()
 
@@ -296,6 +303,9 @@ def receive_import_to_warehouse(
         (import_id,),
     ).fetchall()
 
+    from Services.sme.tt58_tax_methods import tt58_input_vat_in_inventory_cost
+    capitalize_vat = tt58_input_vat_in_inventory_cost(conn)
+
     lines: list[dict[str, Any]] = []
     seq = 1
     clearing_totals: dict[str, Decimal] = {}  # 151 / 2411 → số tất toán
@@ -309,6 +319,8 @@ def receive_import_to_warehouse(
             continue
         net = _money(r.get('subtotal')) - _money(r.get('discount'))
         inv_amt = net + _money(r.get('import_tax_amount')) + _money(r.get('excise_tax_amount'))
+        if capitalize_vat:
+            inv_amt += _money(r.get('tax'))
         if inv_amt <= 0:
             continue
         final_acct = resolve_postable_account(conn, final_inventory_account(lt))

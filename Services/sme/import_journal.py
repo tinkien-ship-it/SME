@@ -246,6 +246,10 @@ def sync_import_journals(
         select_parts.append("COALESCE(d.warehouse_code, 'KHO_001') AS warehouse_code")
     else:
         select_parts.append("'KHO_001' AS warehouse_code")
+    if 'expense_account' in detail_cols:
+        select_parts.append("COALESCE(d.expense_account, '') AS expense_account")
+    else:
+        select_parts.append("'' AS expense_account")
     if 'product_name' in detail_cols:
         select_parts.append("COALESCE(d.product_name, '') AS detail_product_name")
     else:
@@ -294,6 +298,7 @@ def sync_import_journals(
             'import_tax_amount': _money(row['import_tax_amount']),
             'excise_tax_amount': _money(row['excise_tax_amount']),
             'warehouse_code': row['warehouse_code'],
+            'expense_account': (row['expense_account'] or '').strip() if 'expense_account' in row.keys() else '',
         })
 
     if not stock_rows:
@@ -321,6 +326,9 @@ def sync_import_journals(
         or (imp['payment_method'] if 'payment_method' in imp.keys() else None),
         import_type=imp_type_for_pay,
     )
+
+    from Services.sme.tt58_tax_methods import tt58_input_vat_in_inventory_cost
+    capitalize_vat = tt58_input_vat_in_inventory_cost(conn)
 
     supplier_id = imp['supplier_id'] if 'supplier_id' in imp.keys() else None
     bill_no = imp['bill_no'] if 'bill_no' in imp.keys() else None
@@ -393,6 +401,9 @@ def sync_import_journals(
                 allocated_excise = Decimal('0.00')
             inv_amount = item['net'] + allocated_extra + allocated_nk + allocated_excise
             vat_total += item['tax']
+            # TH1/TH2: VAT không khấu trừ → cộng vào giá vốn / nguyên giá / chi phí
+            if capitalize_vat:
+                inv_amount += item['tax']
             # IMPORT: VAT nộp HQ (33312) — 331 chỉ gồm giá mua (+ extra)
             if resolved_import_type == 'IMPORT':
                 payable_total += item['net'] + allocated_extra
@@ -406,6 +417,7 @@ def sync_import_journals(
                 'amount': inv_amount,
                 'tax_pct': item['tax_pct'],
                 'warehouse_code': item['warehouse_code'],
+                'expense_account': item.get('expense_account') or '',
                 'description': f"{desc_text}: {item['product_name']}",
             })
 

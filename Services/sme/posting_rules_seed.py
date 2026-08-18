@@ -1,7 +1,7 @@
 """Quy tắc định khoản mặc định SME (TT99) — tham chiếu mã trong sme_chart_of_accounts."""
 from __future__ import annotations
 
-RULES_SEED_VERSION = 'posting_rules_v5_2026-07-payroll-sx'
+RULES_SEED_VERSION = 'posting_rules_v6_2026-08-ledger-ops'
 
 # payment_method: CASH | BANK_TRANSFER | CREDIT
 # business_type: mã nghiệp vụ nội bộ phần mềm
@@ -274,5 +274,86 @@ DEFAULT_POSTING_RULES: list[dict] = [
         'import_tax_credit_account': None,
         'is_vat_applicable': 0,
         'description': 'Sản xuất — nhập thành phẩm / xuất NVL',
+    },
+    # Tiền đang chuyển / giảm trừ DT / KPCĐ / dự phòng / thuê TC
+    {
+        'business_type': 'NOP_NGAN_HANG',
+        'payment_method': 'CASH',
+        'debit_account_code': '1131',
+        'credit_account_code': '1111',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Nộp tiền mặt vào NH — tiền đang chuyển',
+    },
+    {
+        'business_type': 'TAT_TOAN_113',
+        'payment_method': 'BANK_TRANSFER',
+        'debit_account_code': '1121',
+        'credit_account_code': '1131',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Tất toán tiền đang chuyển vào TGNH',
+    },
+    {
+        'business_type': 'TRA_HANG_BAN',
+        'payment_method': 'CASH',
+        'debit_account_code': '5212',
+        'credit_account_code': '1111',
+        'vat_account_code': '33311',
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 1,
+        'description': 'Hàng bán bị trả lại',
+    },
+    {
+        'business_type': 'GIAM_TRU_DOANH_THU',
+        'payment_method': 'CREDIT',
+        'debit_account_code': '5211',
+        'credit_account_code': '131',
+        'vat_account_code': '33311',
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 1,
+        'description': 'Chiết khấu / giảm giá hàng bán',
+    },
+    {
+        'business_type': 'TRICH_KPCD',
+        'payment_method': 'CREDIT',
+        'debit_account_code': '642',
+        'credit_account_code': '3382',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Trích kinh phí công đoàn 2% quỹ lương',
+    },
+    {
+        'business_type': 'TRICH_DU_PHONG',
+        'payment_method': 'INTERNAL',
+        'debit_account_code': '642',
+        'credit_account_code': '2293',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Trích dự phòng phải thu khó đòi',
+    },
+    {
+        'business_type': 'THUE_TAI_CHINH',
+        'payment_method': 'CREDIT',
+        'debit_account_code': '212',
+        'credit_account_code': '3412',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Nhận TSCĐ thuê tài chính',
+    },
+    {
+        'business_type': 'PHAN_PHOI_LN',
+        'payment_method': 'INTERNAL',
+        'debit_account_code': '4212',
+        'credit_account_code': '418',
+        'vat_account_code': None,
+        'import_tax_credit_account': None,
+        'is_vat_applicable': 0,
+        'description': 'Phân phối lợi nhuận sau thuế',
     },
 ]

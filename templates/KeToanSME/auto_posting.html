@@ -16,7 +16,8 @@
         <div>
             <h4 class="fw-bold mb-1"><i class="fas fa-robot text-primary me-2"></i>Tự động hóa kỳ kế toán</h4>
             <p class="text-muted small mb-0">
-                Một lần chạy kỳ: khấu hao TSCĐ → phân bổ CCDC (chi phí) → kết chuyển KQKD →
+                Một lần chạy kỳ: khấu hao TSCĐ → phân bổ CCDC → phân bổ chi phí trả trước 242 → trích lãi vay 635 →
+                tạm nộp TNDN (cuối quý T3/T6/T9/T12, Nợ 8211 / Có 3334) → kết chuyển KQKD →
                 quyết toán GTGT (bù trừ 133 đầu vào ↔ 33311 đầu ra, <em>không phân bổ VAT</em>) → khóa sổ.
                 Cuối năm: kết chuyển 4212 → 4211.
                 Lịch: chạy ngày 1 tháng sau; ngày ghi KH/PB = cuối tháng kỳ.
@@ -176,6 +177,7 @@
     function renderResult(d) {
         const dep = d.depreciation || {};
         const tools = d.tools || {};
+        const prepaid = d.prepaid || {};
         const close = d.period_close || {};
         const vat = d.vat_settlement || {};
         const act = d.activated || {};
@@ -199,6 +201,29 @@
             if (tools.entry_id) html += ` · bút toán #${tools.entry_id}`;
             if (tools.reason) html += ` · <span class="text-warning">${tools.reason}</span>`;
             html += `</div>`;
+        }
+        if (d.prepaid) {
+            html += `<div class="mb-2">Phân bổ chi phí trả trước: <span class="auto-ok">${money(prepaid.amount)} đ</span> · ${prepaid.assets || 0} khoản`;
+            if (prepaid.entry_id) html += ` · bút toán #${prepaid.entry_id}`;
+            if (prepaid.reason) html += ` · <span class="text-warning">${prepaid.reason}</span>`;
+            html += `</div>`;
+        }
+        const li = d.loan_interest || {};
+        if (d.loan_interest) {
+            html += `<div class="mb-2">Trích lãi vay: <span class="auto-ok">${money(li.amount)} đ</span> · ${li.loans || 0} khoản`;
+            if (li.reason) html += ` · <span class="text-warning">${li.reason}</span>`;
+            html += `</div>`;
+        }
+        const cit = d.cit || {};
+        if (d.cit && cit.reason !== 'not_quarter_end') {
+            if (cit.reason === 'no_taxable_profit') {
+                html += `<div class="mb-2 text-muted">Tạm nộp TNDN: không phát sinh (LNKT ${money(cit.taxable_income || 0)})</div>`;
+            } else {
+                html += `<div class="mb-2">Tạm nộp TNDN: <span class="auto-ok">${money(cit.amount)} đ</span>`;
+                if (cit.taxable_income != null) html += ` · LNKT ${money(cit.taxable_income)}`;
+                if (cit.reason) html += ` · <span class="text-warning">${cit.reason}</span>`;
+                html += `</div>`;
+            }
         }
         if (d.period_close) {
             html += `<div class="mb-2">Kết chuyển kết quả kinh doanh: doanh thu ${money(close.revenue_total)} − chi phí ${money(close.expense_total)} → `;
@@ -265,6 +290,13 @@
             html += `<div class="mt-2 small fw-semibold">Chi tiết công cụ dụng cụ</div><ul class="small">`;
             tools.details.forEach(x => {
                 html += `<li class="auto-mono">${x.code || x.id}: ${money(x.amount)}</li>`;
+            });
+            html += `</ul>`;
+        }
+        if ((prepaid.details || []).length) {
+            html += `<div class="mt-2 small fw-semibold">Chi tiết chi phí trả trước</div><ul class="small">`;
+            prepaid.details.forEach(x => {
+                html += `<li class="auto-mono">${x.code || x.id} ${x.name || ''}: ${money(x.amount)}</li>`;
             });
             html += `</ul>`;
         }

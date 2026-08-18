@@ -312,6 +312,11 @@ def create_receipt(
         'kh_advance', 'thu_tam_ung_kh',
     ):
         purpose_s = 'customer_advance'
+    if purpose_s in (
+        'tat_toan_113', 'settle_113', 'nhan_tien_nh', 'giai_toa_113',
+        'cash_in_transit_in',
+    ):
+        purpose_s = 'tat_toan_113'
 
     amt, fc_amt, cur, rate = _resolve_voucher_amounts(
         amount=amount, amount_fc=amount_fc, currency=currency, exchange_rate=exchange_rate,
@@ -324,6 +329,12 @@ def create_receipt(
 
     debit = _resolve_cash_gl(conn, payment_method, currency=cur)
     credit = str(credit_account or '131').strip() or '131'
+
+    # Tất toán 113: Nợ 1121 (TGNH) / Có 1131 (tiền đang chuyển)
+    if purpose_s == 'tat_toan_113':
+        cur = 'VND'
+        debit = _resolve_cash_gl(conn, 'bank', currency='VND')
+        credit = '1131'
 
     # Tạm ứng KH XK: Nợ 1122|1112 / Có 131 (bắt buộc NT)
     if purpose_s == 'customer_advance':
@@ -365,6 +376,8 @@ def create_receipt(
         desc = f'Tạm ứng khách hàng XK — Có 131 / Nợ {debit}'
     if purpose_s == 'fx_receipt' and not reason:
         desc = f'Thu ngoại tệ {cur} vào TK {debit}'.strip()
+    if purpose_s == 'tat_toan_113' and not reason:
+        desc = f'Tất toán tiền đang chuyển — Nợ {debit} / Có 1131'
     if cur != 'VND':
         desc = (
             f'{desc} ({float(fc_amt):g} {cur} × {float(rate):g})'
@@ -412,7 +425,8 @@ def create_receipt(
         document_id=source_id or sale_id,
         business_type=(
             'TAM_UNG_KH' if purpose_s == 'customer_advance'
-            else ('THU_NGOAI_TE' if purpose_s == 'fx_receipt' else 'THU_TIEN')
+            else ('THU_NGOAI_TE' if purpose_s == 'fx_receipt'
+                  else ('TAT_TOAN_113' if purpose_s == 'tat_toan_113' else 'THU_TIEN'))
         ),
         currency=cur,
         exchange_rate=float(rate),
@@ -439,7 +453,8 @@ def create_receipt(
         source_type or (
             'customer_advance' if purpose_s == 'customer_advance'
             else ('fx_receipt' if purpose_s == 'fx_receipt'
-                  else ('sale' if sale_id else None))
+                  else ('tat_toan_113' if purpose_s == 'tat_toan_113'
+                        else ('sale' if sale_id else None)))
         ),
         source_id or sale_id,
         entry['id'], 'posted', created_by, _now(), _now(), branch,
@@ -540,6 +555,10 @@ def create_payment(
         purpose_s = 'supplier_advance'
     if purpose_s in ('buy_fx', 'mua_ngoai_te', 'mua_nt', 'fx_purchase'):
         purpose_s = 'buy_fx'
+    if purpose_s in (
+        'nop_ngan_hang', 'nop_nh', 'cash_in_transit', '113', 'gui_tien_nh',
+    ):
+        purpose_s = 'nop_ngan_hang'
 
     amt, fc_amt, cur, rate = _resolve_voucher_amounts(
         amount=amount, amount_fc=amount_fc, currency=currency, exchange_rate=exchange_rate,
@@ -559,7 +578,7 @@ def create_payment(
 
     # Mua ngoại tệ: Nợ 1122|1112 (FC) / Có 1111|1121 (VND). Không bao giờ Có 1122.
     auto_buy_fx = (
-        purpose_s != 'supplier_advance'
+        purpose_s not in ('supplier_advance', 'nop_ngan_hang')
         and cur != 'VND'
         and not debit_lines
         and _is_fx_cash_account(debit)
@@ -574,6 +593,11 @@ def create_payment(
         if not _is_fx_cash_account(debit):
             debit = _resolve_cash_gl(conn, 'bank_fx', currency=cur)
         credit = _vnd_funding_account(payment_method, conn)
+    elif purpose_s == 'nop_ngan_hang':
+        # Nộp tiền mặt vào NH: Nợ 1131 / Có 1111 — chờ tất toán Nợ 1121 / Có 1131
+        cur = 'VND'
+        debit = '1131'
+        credit = _resolve_cash_gl(conn, 'cash', currency='VND')
     else:
         credit = _resolve_cash_gl(conn, payment_method, currency=cur)
 
@@ -583,6 +607,8 @@ def create_payment(
         desc = f'Tạm ứng NCC {party_name or ""}'.strip()
     if purpose_s == 'buy_fx' and not reason:
         desc = f'Mua ngoại tệ {cur} vào TK {debit}'.strip()
+    if purpose_s == 'nop_ngan_hang' and not reason:
+        desc = 'Nộp tiền mặt vào ngân hàng — Nợ 1131 / Có 1111'
     if cur != 'VND':
         desc = f'{desc} ({float(fc_amt):g} {cur} × {float(rate):g})'.strip()
 
@@ -676,6 +702,8 @@ def create_payment(
         biz = 'MUA_NGOAI_TE'
     elif purpose_s == 'supplier_advance':
         biz = 'TAM_UNG_NCC'
+    elif purpose_s == 'nop_ngan_hang':
+        biz = 'NOP_NGAN_HANG'
     else:
         biz = 'CHI_TIEN'
 
@@ -709,7 +737,8 @@ def create_payment(
     src_type = source_type or (
         'supplier_advance' if purpose_s == 'supplier_advance'
         else ('buy_fx' if purpose_s == 'buy_fx'
-              else ('import' if import_id else None))
+              else ('nop_ngan_hang' if purpose_s == 'nop_ngan_hang'
+                    else ('import' if import_id else None)))
     )
     base_vals: list[Any] = [
         'payment', form, vno, date_s,

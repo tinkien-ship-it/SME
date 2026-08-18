@@ -5,8 +5,8 @@
   <div>
     <h4 class="fw-bold mb-1"><i class="fas fa-book text-primary me-2"></i>Sổ kế toán & biểu mẫu DNSN</h4>
     <p class="text-muted small mb-0">
-      Theo Thông tư <b>58/2026/TT-BTC</b>. Hệ thống chỉ hiển thị sổ / chứng từ / BCTC
-      phù hợp phương pháp nộp thuế GTGT–TNDN đã chọn (Điều 5–8).
+      Theo Thông tư <b>58/2026/TT-BTC</b> (hiệu lực 01/07/2026, thay TT 132/2018/TT-BTC).
+      Hệ thống chỉ hiển thị sổ bắt buộc / BCTC đúng <b>4 trường hợp</b> nộp thuế GTGT–TNDN.
     </p>
   </div>
   <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#tt58TaxRatesModal">
@@ -15,17 +15,18 @@
 </div>
 
 <div class="alert alert-light border small mb-3">
-  <div class="fw-semibold mb-1">Đối chiếu TT58 — trạng thái biểu mẫu</div>
+  <div class="fw-semibold mb-1">Bảng tóm tắt 4 trường hợp DNSN (TT58)</div>
   <ul class="mb-0 ps-3">
-    <li><span class="text-success">Đủ</span>: S1, S2a–S2d, S3a–S3b, S4a–S4d · B01/B02-DNSN · 01-TT/02-TT/01-VT/02-VT · 4 PP thuế</li>
-    <li><span class="text-warning">Rút gọn / sẽ tinh chỉnh</span>: một số cột phụ lục (S4b giảm TSCĐ chi tiết, S4c lượng hàng/thuế tuyệt đối), branding in chứng từ DNSN riêng</li>
-    <li>Không có mẫu bắt buộc nào trong TT58 còn thiếu danh mục — phần còn lại là độ chi tiết cột và cấu hình thuế suất (modal bên cạnh).</li>
+    <li><b>TH1</b>: GTGT % DT + TNDN % DT → sổ <code>S1-DNSN</code> · không bắt buộc BCTC · VAT đầu vào cộng vào giá vốn khi nhập kho</li>
+    <li><b>TH2</b>: GTGT % DT + TNDN trên thu nhập → <code>S2a, S2b, S2c, S2d</code> · BCTC bắt buộc (90 ngày) · VAT đầu vào cộng vào giá vốn khi nhập kho</li>
+    <li><b>TH3</b>: GTGT khấu trừ + TNDN % DT → <code>S3a, S3b</code> · không bắt buộc BCTC · Nợ 133 khi nhập kho</li>
+    <li><b>TH4</b>: GTGT khấu trừ + TNDN trên thu nhập → <code>S2b, S2c, S2d, S3b</code> · BCTC bắt buộc (90 ngày) · Nợ 133 khi nhập kho</li>
   </ul>
 </div>
 
 <div class="card shadow-sm border-0 mb-3">
   <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
-    <span>Phương pháp tính thuế (4 lựa chọn)</span>
+    <span>4 trường hợp áp dụng chế độ kế toán DNSN</span>
     <button type="button" class="btn btn-link btn-sm p-0" data-bs-toggle="modal" data-bs-target="#tt58TaxRatesModal">
       Thuế suất theo PP →
     </button>
@@ -43,12 +44,18 @@
             <span class="form-check-label fw-semibold">{{ m.short_label }}</span>
           </div>
           <div class="small text-muted mt-1">{{ m.description }}</div>
+          <div class="small mt-1">GTGT: {{ m.vat_label }} · TNDN: {{ m.cit_label }}</div>
           <div class="small mt-2">
             <span class="badge text-bg-light">Sổ bắt buộc: {{ m.required_books|join(', ') }}</span>
             {% if m.show_bctc %}
-            <span class="badge text-bg-success">Có BCTC</span>
+            <span class="badge text-bg-success">BCTC bắt buộc · 90 ngày</span>
             {% else %}
             <span class="badge text-bg-secondary">Không bắt buộc BCTC</span>
+            {% endif %}
+            {% if m.input_vat_in_cost %}
+            <span class="badge text-bg-warning">VAT nhập kho → giá vốn</span>
+            {% else %}
+            <span class="badge text-bg-info">VAT khấu trừ (Nợ 133)</span>
             {% endif %}
           </div>
         </label>
@@ -57,7 +64,7 @@
     </div>
     <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
       <button type="button" class="btn btn-primary btn-sm" id="btnSaveTaxMethod">
-        Lưu phương pháp
+        Lưu trường hợp
       </button>
       <span class="small text-muted" id="taxMethodMsg">
         Đang chọn: <strong>{{ regime_profile.tt58_tax_method_def.short_label if regime_profile.tt58_tax_method_def else '—' }}</strong>
@@ -140,12 +147,13 @@
         <a href="{{ url_for('SME_BCTC_reports') }}" class="btn btn-primary btn-sm">
           Lập B01-DNSN / B02-DNSN
         </a>
+        <div class="small text-muted mt-2">Hạn nộp: trong 90 ngày sau khi kết thúc năm tài chính.</div>
       </div>
     </div>
     {% else %}
     <div class="alert alert-secondary small mb-0">
       Phương pháp hiện tại <strong>không bắt buộc</strong> lập Báo cáo tài chính nộp cơ quan nhà nước
-      (TNDN theo % doanh thu — Điều 10.1.b). Mục BCTC đã được ẩn khỏi menu.
+      (TNDN theo % doanh thu — Trường hợp 1 hoặc 3). Mục BCTC đã được ẩn khỏi menu.
     </div>
     {% endif %}
   </div>
@@ -157,15 +165,24 @@
         <p class="text-muted mb-2" id="ratesHint">{{ rates_ui.hint if rates_ui else '' }}</p>
         <ul class="list-unstyled mb-2" id="ratesSummary">
           {% for s in tax_rates.sectors or [] %}
+          {% if (rates_ui.show_vat_pct_revenue and s.in_vat_table) or (rates_ui.show_cit_pct_revenue and s.in_cit_table) %}
           <li class="mb-1">
             <strong>{{ s.label }}</strong><br>
-            {% if rates_ui.show_vat_pct_revenue %}GTGT {{ s.vat_pct }}% · {% endif %}
-            {% if rates_ui.show_cit_pct_revenue %}TNDN/DT {{ s.cit_pct_revenue }}%{% endif %}
+            {% if rates_ui.show_vat_pct_revenue and s.in_vat_table %}GTGT {{ s.vat_pct }}%{% endif %}
+            {% if rates_ui.show_vat_pct_revenue and rates_ui.show_cit_pct_revenue and s.in_vat_table and s.in_cit_table %} · {% endif %}
+            {% if rates_ui.show_cit_pct_revenue and s.in_cit_table %}TNDN/DT {{ s.cit_pct_revenue }}%{% endif %}
           </li>
+          {% endif %}
           {% endfor %}
         </ul>
         {% if rates_ui.show_cit_pct_income %}
-        <div class="fw-semibold">TNDN trên thu nhập: {{ tax_rates.cit_pct_income }}%</div>
+        <div class="fw-semibold mb-1">TNDN trên thu nhập tính thuế</div>
+        <ul class="small mb-0 ps-3">
+          {% for b in tax_rates.cit_income_brackets or [] %}
+          <li>{{ b.label }}: <strong>{{ b.pct }}%</strong></li>
+          {% endfor %}
+        </ul>
+        <div class="text-muted">Mức phổ thông: {{ tax_rates.cit_common_pct }}%</div>
         {% endif %}
         <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#tt58TaxRatesModal">
           Chỉnh sửa / đổi hiệu lực
@@ -208,7 +225,7 @@
           <div class="col-md-4">
             <label class="form-label small mb-0">Hiệu lực từ ngày</label>
             <input type="date" class="form-control form-control-sm" id="rateEffectiveFrom"
-                   value="{{ tax_rates.as_of or '' }}">
+                   value="{{ tax_rates.as_of or tax_rates.official_from or '2026-07-01' }}">
           </div>
           <div class="col-md-8">
             <label class="form-label small mb-0">Ghi chú thay đổi</label>
@@ -218,25 +235,26 @@
         </div>
 
         <div id="sectorRatesBlock" class="{% if not (rates_ui.show_vat_pct_revenue or rates_ui.show_cit_pct_revenue) %}d-none{% endif %}">
-          <h6 class="fw-semibold">Theo nhóm ngành (trên doanh thu)</h6>
+          <h6 class="fw-semibold">Bảng A / B — theo nhóm ngành (trên doanh thu)</h6>
+          <p class="small text-muted mb-1">A = GTGT % DT (TH1, TH2) · B = TNDN % DT (TH1, TH3). Nguồn: TT58/2026/TT-BTC.</p>
           <div class="table-responsive">
             <table class="table table-sm align-middle" id="sectorRatesTable">
               <thead class="table-light">
                 <tr>
                   <th>Nhóm ngành</th>
-                  <th class="col-vat {% if not rates_ui.show_vat_pct_revenue %}d-none{% endif %}">GTGT % / DT</th>
-                  <th class="col-cit-rev {% if not rates_ui.show_cit_pct_revenue %}d-none{% endif %}">TNDN % / DT</th>
+                  <th class="col-vat {% if not rates_ui.show_vat_pct_revenue %}d-none{% endif %}">A. GTGT % / DT</th>
+                  <th class="col-cit-rev {% if not rates_ui.show_cit_pct_revenue %}d-none{% endif %}">B. TNDN % / DT</th>
                 </tr>
               </thead>
               <tbody>
                 {% for s in tax_rates.sectors or [] %}
-                <tr data-key="{{ s.key }}">
-                  <td class="small">{{ s.label }}</td>
-                  <td class="col-vat {% if not rates_ui.show_vat_pct_revenue %}d-none{% endif %}">
+                <tr data-key="{{ s.key }}" data-in-vat="{{ 1 if s.in_vat_table else 0 }}" data-in-cit="{{ 1 if s.in_cit_table else 0 }}">
+                  <td class="small">{{ s.label }}{% if not s.in_vat_table %} <span class="text-muted">(chỉ bảng TNDN)</span>{% endif %}</td>
+                  <td class="col-vat {% if not rates_ui.show_vat_pct_revenue or not s.in_vat_table %}d-none{% endif %}">
                     <input type="number" step="0.01" min="0" class="form-control form-control-sm rate-vat"
-                           value="{{ s.vat_pct }}">
+                           value="{{ s.vat_pct }}" {% if not s.in_vat_table %}disabled{% endif %}>
                   </td>
-                  <td class="col-cit-rev {% if not rates_ui.show_cit_pct_revenue %}d-none{% endif %}">
+                  <td class="col-cit-rev {% if not rates_ui.show_cit_pct_revenue or not s.in_cit_table %}d-none{% endif %}">
                     <input type="number" step="0.01" min="0" class="form-control form-control-sm rate-cit-rev"
                            value="{{ s.cit_pct_revenue }}">
                   </td>
@@ -248,17 +266,27 @@
         </div>
 
         <div id="citIncomeBlock" class="mt-3 {% if not rates_ui.show_cit_pct_income %}d-none{% endif %}">
-          <h6 class="fw-semibold">TNDN trên thu nhập tính thuế (Doanh thu − Chi phí)</h6>
-          <div class="row g-2 align-items-end">
-            <div class="col-md-4">
-              <label class="form-label small mb-0">Thuế suất TNDN (%)</label>
-              <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="rateCitIncome"
-                     value="{{ tax_rates.cit_pct_income or 15 }}">
-            </div>
-            <div class="col-md-8 small text-muted">
-              Áp dụng khi chọn PP2 hoặc PP4. Dùng cho quyết toán TNDN / ước tính trên sổ DT–CP.
-            </div>
+          <h6 class="fw-semibold">Bảng C — TNDN trên thu nhập tính thuế (TH2 &amp; TH4)</h6>
+          <p class="small text-muted mb-2">Thuế suất × (Doanh thu − Chi phí được trừ). Hệ thống tự chọn bậc theo tổng doanh thu năm.</p>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle" id="citBracketTable">
+              <thead class="table-light">
+                <tr><th>Bậc doanh thu năm</th><th style="width:140px">Thuế suất %</th></tr>
+              </thead>
+              <tbody>
+                {% for b in tax_rates.cit_income_brackets or [] %}
+                <tr data-key="{{ b.key }}">
+                  <td class="small">{{ b.label }}</td>
+                  <td>
+                    <input type="number" step="0.01" min="0" class="form-control form-control-sm rate-cit-bracket"
+                           value="{{ b.pct }}">
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
           </div>
+          <div class="small text-muted">Mức phổ thông: {{ tax_rates.cit_common_pct or 20 }}%.</div>
         </div>
 
         <div class="mt-3">
@@ -282,13 +310,13 @@
   const ratesUi = {{ rates_ui|tojson }};
   const methodUiMap = {
     article5: { show_vat_pct_revenue: true, show_cit_pct_revenue: true, show_cit_pct_income: false,
-      hint: 'GTGT theo % doanh thu theo nhóm ngành; TNDN theo % doanh thu.' },
+      hint: 'Bảng A+B: GTGT và TNDN đều theo % doanh thu theo nhóm ngành (Trường hợp 1).' },
     article6: { show_vat_pct_revenue: true, show_cit_pct_revenue: false, show_cit_pct_income: true,
-      hint: 'GTGT theo % doanh thu; TNDN = thuế suất × (Doanh thu − Chi phí được trừ).' },
+      hint: 'Bảng A: GTGT % doanh thu. Bảng C: TNDN 15/17/20% trên thu nhập tính thuế (Trường hợp 2).' },
     article7: { show_vat_pct_revenue: false, show_cit_pct_revenue: true, show_cit_pct_income: false,
-      hint: 'GTGT khấu trừ (theo hóa đơn); TNDN theo % doanh thu theo nhóm ngành.' },
+      hint: 'GTGT khấu trừ theo hóa đơn. Bảng B: TNDN % doanh thu theo nhóm ngành (Trường hợp 3).' },
     article8: { show_vat_pct_revenue: false, show_cit_pct_revenue: false, show_cit_pct_income: true,
-      hint: 'GTGT khấu trừ (theo hóa đơn); TNDN = thuế suất × thu nhập tính thuế.' },
+      hint: 'GTGT khấu trừ theo hóa đơn. Bảng C: TNDN 15/17/20% trên thu nhập tính thuế (Trường hợp 4).' },
   };
 
   function applyUi(ui) {
@@ -326,7 +354,7 @@
   const msg = document.getElementById('taxMethodMsg');
   btn?.addEventListener('click', async () => {
     const selected = document.querySelector('input[name="tt58_tax_method"]:checked');
-    if (!selected) { alert('Chọn một phương pháp'); return; }
+    if (!selected) { alert('Chọn một trường hợp'); return; }
     btn.disabled = true;
     try {
       const res = await fetch('{{ url_for("api_sme_tt58_tax_method") }}', {
@@ -360,7 +388,9 @@
       if (!hist.length) { box.textContent = 'Chưa có lịch sử.'; return; }
       box.innerHTML = hist.slice(0, 12).map(h => {
         const parts = [];
-        if (h.sector_key === '__cit_income__') parts.push('TNDN/TN ' + h.cit_pct_income + '%');
+        if (h.sector_key === '__cit_income__' || (h.sector_key || '').startsWith('__cit_bracket_')) {
+          parts.push('TNDN/TN ' + h.cit_pct_income + '%');
+        }
         else {
           parts.push(h.sector_key);
           if (h.vat_pct != null) parts.push('GTGT ' + h.vat_pct + '%');
@@ -397,7 +427,13 @@
       sectors: (ui.show_vat_pct_revenue || ui.show_cit_pct_revenue) ? sectors : [],
     };
     if (ui.show_cit_pct_income) {
-      payload.cit_pct_income = parseFloat(document.getElementById('rateCitIncome')?.value || '15');
+      payload.cit_income_brackets = [];
+      document.querySelectorAll('#citBracketTable tbody tr').forEach(tr => {
+        payload.cit_income_brackets.push({
+          key: tr.dataset.key,
+          pct: parseFloat(tr.querySelector('.rate-cit-bracket')?.value || '0'),
+        });
+      });
     }
     const btnSave = document.getElementById('btnSaveTaxRates');
     btnSave.disabled = true;

@@ -70,6 +70,70 @@
       </div>
     </div>
     <div class="card border-0 shadow-sm"><div class="card-body" id="taxBody"><div class="text-muted">Đang tải…</div></div></div>
+
+    <div class="card border-0 shadow-sm mt-3">
+      <div class="card-body">
+        <h6 class="fw-bold mb-2">Thuế / phí khác · dự phòng · giảm trừ doanh thu</h6>
+        <p class="small text-muted mb-3">Trích 3332/3336/3337/3338/3339 · nộp GTGT 33311 / TNDN 3334 / KPCĐ 3382 · trích/hoàn 2293/2294 · chiết khấu 5211 / giảm giá 5213.</p>
+        <div class="row g-3">
+          <div class="col-lg-4">
+            <div class="border rounded p-2 h-100">
+              <div class="small fw-semibold mb-2">Thuế / phí khác</div>
+              <select id="otAcc" class="form-select form-select-sm mb-1">
+                <option value="3339">3339 Lệ phí môn bài / phí</option>
+                <option value="3337">3337 Nhà đất / thuê đất</option>
+                <option value="3338">3338 Thuế BVMT</option>
+                <option value="3332">3332 Thuế TTĐB</option>
+                <option value="3336">3336 Thuế tài nguyên</option>
+                <option value="33311">33311 Nộp GTGT</option>
+                <option value="3334">3334 Nộp TNDN</option>
+                <option value="3382">3382 Nộp KPCĐ</option>
+              </select>
+              <input type="date" id="otDate" class="form-control form-control-sm mb-1">
+              <input type="number" id="otAmt" class="form-control form-control-sm mb-1" min="0" step="1000" placeholder="Số tiền">
+              <div class="d-flex gap-1">
+                <button class="btn btn-sm btn-outline-primary" id="btnOtAccrue">Trích</button>
+                <button class="btn btn-sm btn-primary" id="btnOtPay">Nộp</button>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="border rounded p-2 h-100">
+              <div class="small fw-semibold mb-2">Dự phòng</div>
+              <select id="pvKind" class="form-select form-select-sm mb-1">
+                <option value="ar">2293 Phải thu khó đòi</option>
+                <option value="inventory">2294 Giảm giá HTK</option>
+              </select>
+              <select id="pvAct" class="form-select form-select-sm mb-1">
+                <option value="accrue">Trích</option>
+                <option value="reverse">Hoàn</option>
+                <option value="writeoff">Xóa nợ / giảm HTK</option>
+              </select>
+              <input type="date" id="pvDate" class="form-control form-control-sm mb-1">
+              <input type="number" id="pvAmt" class="form-control form-control-sm mb-1" min="0" step="1000" placeholder="Số tiền">
+              <button class="btn btn-sm btn-outline-warning" id="btnPv">Ghi sổ</button>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="border rounded p-2 h-100">
+              <div class="small fw-semibold mb-2">Giảm trừ doanh thu (521)</div>
+              <select id="saKind" class="form-select form-select-sm mb-1">
+                <option value="discount">5211 Chiết khấu thương mại</option>
+                <option value="allowance">5213 Giảm giá hàng bán</option>
+              </select>
+              <select id="saSettle" class="form-select form-select-sm mb-1">
+                <option value="131">Có 131 công nợ KH</option>
+                <option value="1111">Có 1111 tiền mặt</option>
+              </select>
+              <input type="date" id="saDate" class="form-control form-control-sm mb-1">
+              <input type="number" id="saAmt" class="form-control form-control-sm mb-1" min="0" step="1000" placeholder="Số tiền chưa VAT">
+              <input type="number" id="saVat" class="form-control form-control-sm mb-1" min="0" step="1000" placeholder="VAT (nếu có)">
+              <button class="btn btn-sm btn-outline-danger" id="btnSa">Ghi sổ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 {% endblock %}
 {% block sme_scripts %}
 <script>
@@ -236,6 +300,54 @@
   });
 
   loadFilingPolicy().then(()=>{ load(); loadMicro(); });
+
+  const today = now.toISOString().slice(0,10);
+  ['otDate','pvDate','saDate'].forEach(id => { const el=document.getElementById(id); if(el) el.value=today; });
+  async function postJson(url, body){
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json();
+    if(!data.success) throw new Error(data.error||'Lỗi');
+    return data;
+  }
+  document.getElementById('btnOtAccrue').addEventListener('click', async ()=>{
+    try{
+      const acc=document.getElementById('otAcc').value;
+      if(['3382','33311','3334'].includes(acc)) return alert('33311 / 3334 / 3382 chỉ dùng nút Nộp (đã trích khi ghi nhận thuế / chốt lương)');
+      const d=await postJson('/api/sme/other-tax',{
+        action:'accrue', date:otDate.value, amount:parseFloat(otAmt.value)||0, tax_account:acc,
+      });
+      alert('Đã trích '+ (d.data.doc_no||'')); load();
+    }catch(e){ alert(e.message); }
+  });
+  document.getElementById('btnOtPay').addEventListener('click', async ()=>{
+    try{
+      const d=await postJson('/api/sme/other-tax',{
+        action:'pay', date:otDate.value, amount:parseFloat(otAmt.value)||0,
+        tax_account:otAcc.value, payment_method:'bank',
+      });
+      const vno=(d.data.voucher&&d.data.voucher.voucher_no)||'';
+      alert('Đã nộp '+vno); load();
+    }catch(e){ alert(e.message); }
+  });
+  document.getElementById('btnPv').addEventListener('click', async ()=>{
+    try{
+      const d=await postJson('/api/sme/provisions',{
+        date:pvDate.value, amount:parseFloat(pvAmt.value)||0,
+        kind:pvKind.value, action:pvAct.value,
+      });
+      alert('Đã ghi '+ (d.data.doc_no||'')); load();
+    }catch(e){ alert(e.message); }
+  });
+  document.getElementById('btnSa').addEventListener('click', async ()=>{
+    try{
+      const d=await postJson('/api/sme/sales-allowance',{
+        date:saDate.value, amount:parseFloat(saAmt.value)||0,
+        vat_amount:parseFloat(saVat.value)||0,
+        kind:saKind.value, settle_account:saSettle.value,
+      });
+      alert('Đã ghi '+ (d.data.doc_no||'')); load();
+    }catch(e){ alert(e.message); }
+  });
 })();
 </script>
 {% endblock %}

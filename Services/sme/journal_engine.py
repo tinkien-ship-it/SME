@@ -1062,12 +1062,15 @@ def build_import_stock_lines(
     """
     Dựng dòng bút toán nhập kho từ quy tắc + COA.
     inventory_lines: [{product_id, amount, product_name, tax_pct, warehouse_code?}, ...]
-    amount = nguyên giá (gồm thuế NK + TTĐB nếu có, không gồm VAT).
+    amount = nguyên giá (gồm thuế NK + TTĐB nếu có).
+    Mặc định không gồm VAT (TH3/TH4 / TT99: Nợ 133).
+    TH1/TH2 (GTGT % DT): caller đã cộng VAT vào amount; không Nợ 133.
 
     ``in_transit=True`` (nhập khẩu G1):
       - HH/NVL/CCDC → Nợ **151**
       - TSCĐ → Nợ **2411** (mua sắm TSCĐ / đang đi đường)
-    IMPORT: VAT → Nợ 13312 / Có **33312** (không gộp vào 331).
+    IMPORT: VAT HQ — Có **33312** (không gộp vào 331).
+      TH3/TH4: thêm Nợ 13312. TH1/TH2: VAT đã nằm trong Nợ 151/156/2411.
     """
     rule = get_posting_rule(conn, business_type, payment_method, commit=False)
     if not rule:
@@ -1101,9 +1104,13 @@ def build_import_stock_lines(
         line_desc = item.get('description') or (
             f"{prefix}: {item.get('product_name') or item.get('product_id')}"
         )
+        line_debit = debit_inv
+        override = str(item.get('account_code') or item.get('expense_account') or '').strip()
+        if override:
+            line_debit = resolve_postable_account(conn, override)
         lines.append({
             'sequence': seq,
-            'account_code': debit_inv,
+            'account_code': line_debit,
             'debit': amt,
             'credit': 0,
             'partner_id': supplier_id,
@@ -1118,27 +1125,35 @@ def build_import_stock_lines(
         seq += 1
 
     vat_amt = _money(vat_amount)
+    capitalize_vat = False
+    try:
+        from Services.sme.tt58_tax_methods import tt58_input_vat_in_inventory_cost
+        capitalize_vat = tt58_input_vat_in_inventory_cost(conn)
+    except Exception:
+        capitalize_vat = False
     if rule.get('is_vat_applicable') and vat_amt > 0:
-        vat_code = rule.get('vat_account_code') or '13311'
-        if import_type == 'IMPORT':
-            prefer = '13312'
-            preferred_account = get_account(conn, prefer, commit=False)
-            if preferred_account and preferred_account.get('is_postable'):
-                vat_code = prefer
-        vat_code = resolve_postable_account(conn, vat_code)
-        lines.append({
-            'sequence': seq,
-            'account_code': vat_code,
-            'debit': vat_amt,
-            'credit': 0,
-            'partner_id': supplier_id,
-            'partner_type': 'supplier',
-            'vat_invoice_no': bill_no,
-            'tax_code': tax_code,
-            'description': f"Thuế GTGT đầu vào — {description or business_type}",
-        })
-        seq += 1
-        # GTGT hàng NK phải nộp HQ — không gộp vào công nợ NCC
+        # TH1/TH2: VAT đã vốn hóa vào kho/TSCĐ/chi phí — không Nợ 133
+        if not capitalize_vat:
+            vat_code = rule.get('vat_account_code') or '13311'
+            if import_type == 'IMPORT':
+                prefer = '13312'
+                preferred_account = get_account(conn, prefer, commit=False)
+                if preferred_account and preferred_account.get('is_postable'):
+                    vat_code = prefer
+            vat_code = resolve_postable_account(conn, vat_code)
+            lines.append({
+                'sequence': seq,
+                'account_code': vat_code,
+                'debit': vat_amt,
+                'credit': 0,
+                'partner_id': supplier_id,
+                'partner_type': 'supplier',
+                'vat_invoice_no': bill_no,
+                'tax_code': tax_code,
+                'description': f"Thuế GTGT đầu vào — {description or business_type}",
+            })
+            seq += 1
+        # GTGT hàng NK phải nộp HQ — không gộp vào công nợ NCC (kể cả khi vốn hóa)
         if import_type == 'IMPORT':
             vat_credit = resolve_postable_account(conn, '33312')
             lines.append({
@@ -1250,7 +1265,13 @@ def build_return_import_stock_lines(
         seq += 1
 
     vat_amt = _money(vat_amount)
-    if rule.get('is_vat_applicable') and vat_amt > 0:
+    capitalize_vat = False
+    try:
+        from Services.sme.tt58_tax_methods import tt58_input_vat_in_inventory_cost
+        capitalize_vat = tt58_input_vat_in_inventory_cost(conn)
+    except Exception:
+        capitalize_vat = False
+    if rule.get('is_vat_applicable') and vat_amt > 0 and not capitalize_vat:
         vat_code = resolve_postable_account(
             conn, rule.get('vat_account_code') or '13311'
         )

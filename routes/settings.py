@@ -521,12 +521,13 @@ def register_settings_routes(app):
             flash(f"Chào mừng bạn quay lại, {user_obj.full_name}!", "success")
 
             # ==================== LOGIC ĐIỀU HƯỚNG PHÂN QUYỀN AN TOÀN ====================
+            from Services.sme_roles import is_sme_role
             try:
                 if user_role in ('admin*', 'manager*') and current_tenant_id is not None:
                     return redirect(url_for('rental_service'))
                 if user_role in ('adminFB', 'managerFB') and current_tenant_id is not None:
                     return redirect(url_for('F_and_B_service'))
-                if user_role in ('adminSME', 'managerSME', 'accountantSME') and current_tenant_id is not None:
+                if is_sme_role(user_role) and current_tenant_id is not None:
                     return redirect(url_for('SME_dashboard'))
                 elif user_role == 'master' and current_tenant_id is None:
                     return redirect(url_for('master_settings'))
@@ -538,7 +539,7 @@ def register_settings_routes(app):
                     return redirect('/rental_service')
                 if user_role in ('adminFB', 'managerFB'):
                     return redirect('/F_and_B_service')
-                if user_role in ('adminSME', 'managerSME', 'accountantSME'):
+                if is_sme_role(user_role):
                     return redirect('/SME_dashboard')
                 elif user_role == 'master' and current_tenant_id is None:
                     return redirect('/master_settings')
@@ -1402,10 +1403,30 @@ Trân trọng,
         if not username:
             return jsonify({"success": False, "error": "Tên đăng nhập không được để trống"}), 400
 
+        from Services.sme_roles import validate_assignable_role
+        from Services.tenant_profile import get_current_tenant_profile
+        profile = get_current_tenant_profile() or {}
+        actor_role = str(session.get('role') or '').strip()
+        existing_role = None
         conn = get_db_connection()   # DB của tenant
 
         try:
             from Services.audit_log import write_audit
+            if user_id:
+                old_preview = conn.execute(
+                    "SELECT role FROM users WHERE id = ?",
+                    (user_id,),
+                ).fetchone()
+                if old_preview:
+                    existing_role = old_preview['role'] if not isinstance(old_preview, tuple) else old_preview[0]
+            ok, err = validate_assignable_role(
+                role,
+                profile.get('accounting_regime'),
+                actor_is_master=(actor_role == 'master'),
+                existing_role=existing_role,
+            )
+            if not ok:
+                return jsonify({"success": False, "error": err}), 400
             if user_id:  # ================== CẬP NHẬT ==================
                 old_row = conn.execute(
                     "SELECT id, username, full_name, email, phone, role, permissions FROM users WHERE id = ?",
@@ -2460,7 +2481,30 @@ Trân trọng,
             if esign.get(field):
                 esign[f'has_{field}'] = True
             esign[field] = ''
-    
+
+        tt58_ctx = None
+        try:
+            from Services.tenant_profile import get_current_tenant_profile
+            regime = str(
+                (get_current_tenant_profile() or {}).get('accounting_regime') or ''
+            ).upper()
+            if 'TT58' in regime or 'MICRO' in regime:
+                from Services.sme.regime_profile import get_ledger_profile
+                from Services.sme.tt58_tax_rates import (
+                    get_tt58_tax_rates,
+                    rates_ui_context_for_method,
+                )
+                lp = get_ledger_profile(db)
+                tt58_ctx = {
+                    'methods': lp.get('tt58_tax_methods') or [],
+                    'method': lp.get('tt58_tax_method'),
+                    'profile': lp,
+                    'rates': get_tt58_tax_rates(db),
+                    'ui': rates_ui_context_for_method(lp.get('tt58_tax_method')),
+                }
+        except Exception:
+            tt58_ctx = None
+
         return render_template('settings.html', 
                                info=info, 
                                esign=esign,
@@ -2468,7 +2512,8 @@ Trân trọng,
                                payment_provider=_get_setting('payment_provider', 'none'),
                                payment_tolerance=_get_setting('payment_amount_tolerance', '1000'),
                                has_sepay_key=bool(_get_setting('sepay_api_key', '')),
-                               has_casso_key=bool(_get_setting('casso_api_key', '')))
+                               has_casso_key=bool(_get_setting('casso_api_key', '')),
+                               tt58=tt58_ctx)
 
     @app.route('/api/settings/business', methods=['POST'])
     @admin_or_store_setup_required

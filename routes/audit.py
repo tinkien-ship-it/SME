@@ -10,11 +10,13 @@ from Services.audit_log import (
     query_login_history,
 )
 
+from Services.sme_roles import SME_ACCOUNTING_ROLES
+
 _AUDIT_VIEW_ROLES = frozenset({
-    'master', 'admin', 'admin*', 'adminFB', 'adminSME',
-    'manager', 'manager*', 'managerFB', 'managerSME',
-    'accountant', 'accountantSME',
-})
+    'master', 'admin', 'admin*', 'adminFB',
+    'manager', 'manager*', 'managerFB',
+    'accountant',
+}) | SME_ACCOUNTING_ROLES
 
 
 def _can_view_audit():

@@ -57,8 +57,14 @@
             <input type="text" id="fLiab" class="form-control" value="3411">
           </div>
           <div class="col-md-4" id="wrapCash">
-            <label class="form-label small fw-semibold">TK nhận tiền</label>
+            <label class="form-label small fw-semibold">TK nhận tiền / TSCĐ</label>
             <input type="text" id="fCash" class="form-control" value="1121">
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="fLease">
+              <label class="form-check-label small" for="fLease">Thuê tài chính — Nợ 212 / Có 3412</label>
+            </div>
           </div>
           <div class="col-md-4">
             <label class="form-label small fw-semibold">Ghi chú</label>
@@ -107,6 +113,7 @@ function resetForm() {
   fRate.value = '12';
   fLiab.value = '3411';
   fCash.value = '1121';
+  fLease.checked = false;
   fNotes.value = '';
   editHint.style.display = 'none';
   wrapCash.style.display = '';
@@ -151,6 +158,16 @@ btnNew.onclick = () => {
   btnSave.textContent = 'Ghi sổ';
   new bootstrap.Modal(document.getElementById('modal')).show();
 };
+
+fLease.addEventListener('change', () => {
+  if (fLease.checked) {
+    fLiab.value = '3412';
+    fCash.value = '212';
+  } else {
+    fLiab.value = '3411';
+    fCash.value = '1121';
+  }
+});
 
 async function editLoan(id, readOnly = false) {
   const res = await fetch('/api/sme/loans/' + id);
@@ -197,6 +214,11 @@ btnSave.onclick = async () => {
     cash_account: fCash.value || '1121',
     notes: fNotes.value || '',
   };
+  if (fLease.checked) {
+    payload.liability_account = '3412';
+    payload.cash_account = '212';
+    payload.notes = payload.notes || 'TSCĐ thuê tài chính';
+  }
   if (!payload.lender_name) return alert('Nhập bên cho vay');
   if (!(payload.principal > 0)) return alert('Nhập số tiền gốc');
   const loanId = fLoanId.value;

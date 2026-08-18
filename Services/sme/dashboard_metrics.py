@@ -195,6 +195,16 @@ def debt_hub_metrics(
     ar_collected = _sum_activity(activity, ('131',), side='credit')
     ap_paid = _sum_activity(activity, ('331',), side='debit')
 
+    sub_ar = 0.0
+    sub_ap = 0.0
+    try:
+        from Services.sme.debt_aging import subledger_open_totals
+        sub = subledger_open_totals(conn)
+        sub_ar = float(sub.get('ar') or 0)
+        sub_ap = float(sub.get('ap') or 0)
+    except Exception:
+        pass
+
     monthly = []
     for m in range(1, period_to + 1):
         act = _month_activity(conn, fiscal_year, m, branch_code)
@@ -217,6 +227,12 @@ def debt_hub_metrics(
         'ar_collected_ytd': _f(max(Decimal('0'), ar_collected)),
         'ap_paid_ytd': _f(max(Decimal('0'), ap_paid)),
         'net_working_capital': _f(receivable - payable),
+        'subledger_ar': sub_ar,
+        'subledger_ap': sub_ap,
+        'gl_ar': _f(max(Decimal('0'), receivable)),
+        'gl_ap': _f(max(Decimal('0'), payable)),
+        'ar_vs_gl_diff': round(sub_ar - _f(max(Decimal('0'), receivable)), 0),
+        'ap_vs_gl_diff': round(sub_ap - _f(max(Decimal('0'), payable)), 0),
         'monthly': monthly,
     }
 
@@ -314,8 +330,28 @@ def warehouse_hub_metrics(
 
     product_count = _safe_count(conn, "SELECT COUNT(*) FROM products") if _table_exists(conn, 'products') else 0
     sku_with_stock = 0
+    stock_wac = Decimal('0.00')
+    wac_by = {'152': Decimal('0'), '153': Decimal('0'), '155': Decimal('0'), '156': Decimal('0')}
     if _table_exists(conn, 'inventory'):
         sku_with_stock = _safe_count(conn, "SELECT COUNT(*) FROM inventory WHERE COALESCE(quantity,0) > 0")
+        try:
+            from Services.sme.inventory_ops import inventory_account_for_product
+            rows = conn.execute(
+                """
+                SELECT i.product_id, COALESCE(i.quantity, 0) AS qty, COALESCE(i.avg_cost, 0) AS cost
+                FROM inventory i
+                WHERE COALESCE(i.quantity, 0) <> 0
+                """
+            ).fetchall()
+            for r in rows:
+                d = dict(r)
+                val = _money(d.get('qty')) * _money(d.get('cost'))
+                stock_wac += val
+                acc = inventory_account_for_product(conn, int(d['product_id']))
+                if acc in wac_by:
+                    wac_by[acc] += val
+        except Exception:
+            pass
     elif _table_exists(conn, 'products'):
         try:
             sku_with_stock = _safe_count(conn, "SELECT COUNT(*) FROM products WHERE COALESCE(quantity,0) > 0")
@@ -344,6 +380,10 @@ def warehouse_hub_metrics(
         'cogs_ytd': _f(max(Decimal('0'), cogs)),
         'product_count': product_count,
         'sku_with_stock': sku_with_stock,
+        'stock_wac': _f(stock_wac),
+        'gl_stock_tradable': _f(max(Decimal('0'), raw + fg + goods)),
+        'wac_vs_gl_diff': _f(stock_wac - max(Decimal('0'), raw + fg + goods)),
+        'wac_by_account': {k: _f(v) for k, v in wac_by.items()},
         'monthly': monthly,
     }
 

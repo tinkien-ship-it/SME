@@ -64,8 +64,8 @@ def sync_return_sale_journals(
 ) -> dict[str, Any]:
     """
     Hạch toán khách trả:
-      Nợ 511 / Có 111|131 (hoàn tiền/công nợ) theo giá bán chưa VAT
-      Nợ 3331 / Có 111|131 (VAT nếu có) — gộp vào hoàn tiền
+      Nợ **5212** / Có 111|131 (hàng bán bị trả lại — không ghi thẳng 511)
+      Nợ 3331 / Có 111|131 (VAT nếu có)
       Nợ 156|152 / Có 632 (nhập lại giá vốn)
     document_id = return_sales.id
     """
@@ -159,9 +159,20 @@ def sync_return_sale_journals(
     lines: list[dict] = []
     seq = 1
     if refund > 0:
-        # Hoàn tiền mặt mặc định (đồng bộ phiếu chi HKD 511/111)
+        # Hàng bán bị trả lại — TT99: Nợ 5212 (không ghi thẳng 511)
+        settle_acc = '111'
+        try:
+            if sid:
+                unpaid = conn.execute(
+                    'SELECT COALESCE(unpaid_amount, 0) FROM cong_no WHERE sale_id = ?',
+                    (sid,),
+                ).fetchone()
+                if unpaid and float(unpaid[0] if not isinstance(unpaid, sqlite3.Row) else unpaid['unpaid_amount'] or 0) > 0:
+                    settle_acc = '131'
+        except sqlite3.Error:
+            settle_acc = '111'
         lines.append({
-            'sequence': seq, 'account_code': '511',
+            'sequence': seq, 'account_code': '5212',
             'debit': float(net), 'credit': 0, 'description': desc,
         })
         seq += 1
@@ -172,7 +183,7 @@ def sync_return_sale_journals(
             })
             seq += 1
         lines.append({
-            'sequence': seq, 'account_code': '111',
+            'sequence': seq, 'account_code': settle_acc,
             'debit': 0, 'credit': float(refund), 'description': desc,
         })
         seq += 1

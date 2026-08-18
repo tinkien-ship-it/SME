@@ -1,5 +1,6 @@
 """Cấu hình menu POS & Kế Toán HKD — nhóm + phân hệ sidebar."""
 from Services.tenant_profile import HKD_MENU_FEATURE_MAP, tenant_has_feature
+from Services.sme_roles import SME_ACCOUNTING_ROLES as SME_ACCOUNTING_ROLES_SET
 
 HUB_TITLE = 'POS và Kế Toán HKD'
 
@@ -8,9 +9,7 @@ HKD_DEFAULT_ROLES = (
     'admin', 'admin*', 'adminFB', 'master',
 )
 
-SME_ACCOUNTING_ROLES = (
-    'accountantSME', 'managerSME', 'adminSME',
-)
+SME_ACCOUNTING_ROLES = tuple(sorted(SME_ACCOUNTING_ROLES_SET))
 
 # Tiêu đề phân hệ trên sidebar (không phải menu con)
 MENU_SECTIONS = (
@@ -577,10 +576,12 @@ def user_can_see_sme_nav(user, tenant_profile=None) -> bool:
     if 'SME_dashboard' in perms or 'view_sme_accounting' in perms:
         return True
     # Tenant SME: hiện menu cho admin/manager vận hành DN
-    if _tenant_is_sme(tenant_profile) and role in (
-        'admin', 'adminSME', 'manager', 'managerSME', 'accountant', 'accountantSME',
-    ):
-        return True
+    if _tenant_is_sme(tenant_profile):
+        from Services.sme_roles import is_sme_role
+        if role in (
+            'admin', 'manager', 'accountant',
+        ) or is_sme_role(role):
+            return True
     return False
 
 

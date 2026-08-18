@@ -17,6 +17,7 @@ from Services.sme.journal_engine import (
 
 DOC_DEP = 'KHTS'
 DOC_TOOL = 'PBCC'
+DOC_PREPAID = 'PBTT'
 
 
 def _money(value: Any) -> Decimal:
@@ -215,6 +216,61 @@ def auto_activate_idle_assets(
     return {'fixed_assets_activated': fa_n, 'tools_activated': tool_n}
 
 
+def _row_keys(row) -> set:
+    try:
+        return set(row.keys())
+    except Exception:
+        return set()
+
+
+def _row_expense_account(row, default: str = '642') -> str:
+    keys = _row_keys(row)
+    if 'expense_account' in keys:
+        v = str(row['expense_account'] or '').strip()
+        if v:
+            return v
+    return default
+
+
+def _build_grouped_expense_lines(
+    conn: sqlite3.Connection,
+    *,
+    items: list[dict],
+    credit_account: str,
+    description: str,
+    default_debit: str = '642',
+) -> list[dict]:
+    by: dict[str, Decimal] = {}
+    for it in items:
+        acct = str(it.get('expense_account') or default_debit).strip() or default_debit
+        by[acct] = by.get(acct, Decimal('0.00')) + _money(it.get('amount'))
+    lines: list[dict] = []
+    seq = 1
+    total = Decimal('0.00')
+    for acct in sorted(by):
+        amt = by[acct]
+        if amt <= 0:
+            continue
+        lines.append({
+            'sequence': seq,
+            'account_code': resolve_postable_account(conn, acct),
+            'debit': amt,
+            'credit': 0,
+            'description': description,
+        })
+        seq += 1
+        total += amt
+    if total > 0:
+        lines.append({
+            'sequence': seq,
+            'account_code': resolve_postable_account(conn, credit_account),
+            'debit': 0,
+            'credit': total,
+            'description': description,
+        })
+    return lines
+
+
 def _build_simple_lines(
     conn: sqlite3.Connection,
     *,
@@ -253,10 +309,13 @@ def _collect_fa_amounts(conn: sqlite3.Connection, year: int, month: int) -> list
 
     if not _table_exists(conn, FIXED_ASSETS_TABLE):
         return []
+    fa_cols = {r[1] for r in conn.execute(f'PRAGMA table_info({FIXED_ASSETS_TABLE})').fetchall()}
+    extra = ', expense_account' if 'expense_account' in fa_cols else ''
     rows = conn.execute(
         f"""
         SELECT id, ma_tai_san, ten_tai_san, nguyen_gia_tinh_khau_hao, thue_gtgt,
                gia_mua_chua_thue, so_luong, so_thang_khau_hao, ngay_bat_dau_su_dung
+               {extra}
         FROM {FIXED_ASSETS_TABLE} WHERE tinh_trang = ?
         """,
         (STATUS_ACTIVE,),
@@ -282,6 +341,7 @@ def _collect_fa_amounts(conn: sqlite3.Connection, year: int, month: int) -> list
             'code': row['ma_tai_san'],
             'name': row['ten_tai_san'],
             'amount': _money(amount),
+            'expense_account': _row_expense_account(row, '642'),
         })
     return out
 
@@ -296,10 +356,13 @@ def _collect_tool_amounts(conn: sqlite3.Connection, year: int, month: int) -> li
 
     if not _table_exists(conn, TOOLS_TABLE):
         return []
+    tool_cols = {r[1] for r in conn.execute(f'PRAGMA table_info({TOOLS_TABLE})').fetchall()}
+    extra = ', expense_account' if 'expense_account' in tool_cols else ''
     rows = conn.execute(
         f"""
         SELECT id, ma_ccdc, ten_ccdc, nguyen_gia, thue_gtgt, gia_mua_chua_thue,
                so_luong, so_thang_phan_bo, ngay_bat_dau_su_dung
+               {extra}
         FROM {TOOLS_TABLE} WHERE tinh_trang = ?
         """,
         (STATUS_ACTIVE,),
@@ -325,6 +388,7 @@ def _collect_tool_amounts(conn: sqlite3.Connection, year: int, month: int) -> li
             'code': row['ma_ccdc'],
             'name': row['ten_ccdc'],
             'amount': _money(amount),
+            'expense_account': _row_expense_account(row, '642'),
         })
     return out
 
@@ -429,6 +493,8 @@ def run_period_automation(
         'activated': activated,
         'depreciation': {'entry_id': None, 'amount': 0.0, 'assets': 0},
         'tools': {'entry_id': None, 'amount': 0.0, 'assets': 0},
+        'prepaid': {'entry_id': None, 'amount': 0.0, 'assets': 0},
+        'loan_interest': {'posted': False, 'amount': 0.0, 'loans': 0},
         'period_close': {},
         'deleted_entry_ids': deleted_ids,
         'reversed_entry_ids': [],
@@ -448,11 +514,12 @@ def run_period_automation(
         fa_items = _collect_fa_amounts(conn, fiscal_year, period)
         total_fa = sum((x['amount'] for x in fa_items), Decimal('0.00'))
         if total_fa > 0:
-            lines = _build_simple_lines(
+            lines = _build_grouped_expense_lines(
                 conn,
-                business_type='KHAU_HAO_TSCD',
-                amount=total_fa,
+                items=fa_items,
+                credit_account='2141',
                 description=f'Khấu hao TSCĐ tháng {period:02d}/{fiscal_year}',
+                default_debit='642',
             )
             entry = post_journal_entry(
                 conn,
@@ -504,11 +571,12 @@ def run_period_automation(
         tool_items = _collect_tool_amounts(conn, fiscal_year, period)
         total_tools = sum((x['amount'] for x in tool_items), Decimal('0.00'))
         if total_tools > 0:
-            lines = _build_simple_lines(
+            lines = _build_grouped_expense_lines(
                 conn,
-                business_type='PHAN_BO_CCDC',
-                amount=total_tools,
+                items=tool_items,
+                credit_account='153',
                 description=f'Phân bổ CCDC tháng {period:02d}/{fiscal_year}',
+                default_debit='642',
             )
             entry = post_journal_entry(
                 conn,
@@ -546,6 +614,109 @@ def run_period_automation(
             }
             result['entry_ids'].append(entry['id'])
             result['posted'] = True
+
+    # --- Phân bổ chi phí trả trước 242 ---
+    existing_pp = _clear_kind('PREPAID_ALLOC', DOC_PREPAID, 'sme_prepaid_expenses')
+    if existing_pp and not replace_existing:
+        result['prepaid'] = {
+            'entry_id': existing_pp,
+            'amount': 0.0,
+            'assets': 0,
+            'reason': 'already_posted',
+        }
+    else:
+        from Services.sme.prepaid import collect_prepaid_amounts
+        pp_items = collect_prepaid_amounts(conn, fiscal_year, period)
+        total_pp = sum((x['amount'] for x in pp_items), Decimal('0.00'))
+        if total_pp > 0:
+            lines = _build_grouped_expense_lines(
+                conn,
+                items=pp_items,
+                credit_account='242',
+                description=f'Phân bổ chi phí trả trước tháng {period:02d}/{fiscal_year}',
+                default_debit='642',
+            )
+            entry = post_journal_entry(
+                conn,
+                posting_date=posting_date,
+                document_date=posting_date,
+                document_type=DOC_PREPAID,
+                document_no=f'PBTT{fiscal_year}{period:02d}',
+                document_id=doc_id,
+                business_type='PHAN_BO_CPTT',
+                description=f'Phân bổ CPTB {period:02d}/{fiscal_year} ({len(pp_items)} khoản)',
+                created_by=created_by,
+                branch_code='HQ',
+                lines=lines,
+            )
+            for item in pp_items:
+                conn.execute(
+                    """
+                    INSERT INTO sme_auto_asset_postings
+                    (kind, asset_table, asset_id, fiscal_year, period, amount, journal_entry_id)
+                    VALUES ('PREPAID_ALLOC', ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        'sme_prepaid_expenses', item['asset_id'], fiscal_year, period,
+                        float(item['amount']), entry['id'],
+                    ),
+                )
+            result['prepaid'] = {
+                'entry_id': entry['id'],
+                'amount': float(total_pp),
+                'assets': len(pp_items),
+                'details': [
+                    {'id': i['asset_id'], 'code': i['code'], 'name': i['name'], 'amount': float(i['amount'])}
+                    for i in pp_items
+                ],
+            }
+            result['entry_ids'].append(entry['id'])
+            result['posted'] = True
+
+    # --- Trích lãi vay (635/335) trước kết chuyển KQKD ---
+    result['loan_interest'] = {'posted': False, 'amount': 0.0, 'loans': 0}
+    try:
+        from Services.sme.loans_deposits import accrue_period_loan_interest
+        li = accrue_period_loan_interest(
+            conn,
+            fiscal_year=fiscal_year,
+            period=period,
+            interest_date=posting_date,
+            replace_existing=replace_existing,
+            created_by=created_by,
+            commit=False,
+        )
+        result['loan_interest'] = li
+        if li.get('reversed_entry_ids'):
+            result['reversed_entry_ids'].extend(li['reversed_entry_ids'])
+        for rec in li.get('details') or []:
+            if rec.get('journal_entry_id'):
+                result['entry_ids'].append(rec['journal_entry_id'])
+        if li.get('posted'):
+            result['posted'] = True
+    except Exception:
+        result['loan_interest'] = {'posted': False, 'amount': 0.0, 'loans': 0, 'reason': 'skip'}
+
+    # --- Tạm nộp TNDN cuối quý (trước KCKQ để 821 vào kết chuyển) ---
+    result['cit'] = {'posted': False, 'amount': 0.0}
+    try:
+        from Services.sme.cit import accrue_period_cit
+        cit = accrue_period_cit(
+            conn,
+            fiscal_year=fiscal_year,
+            period=period,
+            provision_date=posting_date,
+            replace_existing=replace_existing,
+            created_by=created_by,
+            commit=False,
+        )
+        result['cit'] = cit
+        if cit.get('journal_entry_id'):
+            result['entry_ids'].append(cit['journal_entry_id'])
+        if cit.get('posted'):
+            result['posted'] = True
+    except Exception:
+        result['cit'] = {'posted': False, 'amount': 0.0, 'reason': 'skip'}
 
     # --- Kết chuyển KQKD (sau KH/PB để gồm chi phí kỳ) ---
     from Services.sme.period_close import run_period_close

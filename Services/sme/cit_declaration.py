@@ -44,14 +44,6 @@ def cit_declaration_worksheet(
     year = int(fiscal_year)
     p_to = max(1, min(12, int(period_to)))
     rate = _money(tax_rate if tax_rate is not None else DEFAULT_RATE)
-    if tax_rate is None:
-        try:
-            from Services.sme.regime_profile import get_ledger_profile
-            from Services.sme.tt58_tax_rates import get_cit_income_rate_pct
-            if get_ledger_profile(conn).get('is_tt58_micro'):
-                rate = _money(get_cit_income_rate_pct(conn, as_of=f'{year:04d}-12-31') / 100.0)
-        except Exception:
-            pass
 
     # Lợi nhuận kế toán trước thuế ≈ từ B02 đến hết kỳ
     try:
@@ -60,7 +52,10 @@ def cit_declaration_worksheet(
         accounting_profit = _money(totals.get('profit_before_tax') or 0)
     except Exception:
         accounting_profit = Decimal('0.00')
+        totals = {}
         b02 = {}
+
+    revenue_for_rate = _money(totals.get('revenue_net') or 0)
 
     # Nếu B02 chưa có profit_before_tax rõ — ước từ phát sinh doanh thu - chi phí
     if accounting_profit == 0:
@@ -73,6 +68,23 @@ def cit_declaration_worksheet(
             if code.startswith(('632', '641', '642', '635', '811', '621', '622', '627')):
                 exp += _money(bal.get('debit')) - _money(bal.get('credit'))
         accounting_profit = rev - exp
+        if revenue_for_rate <= 0:
+            revenue_for_rate = rev
+
+    if tax_rate is None:
+        try:
+            from Services.sme.regime_profile import get_ledger_profile
+            from Services.sme.tt58_tax_rates import get_cit_income_rate_pct
+            if get_ledger_profile(conn).get('is_tt58_micro'):
+                rate = _money(
+                    get_cit_income_rate_pct(
+                        conn,
+                        as_of=f'{year:04d}-12-31',
+                        revenue=float(revenue_for_rate),
+                    ) / 100.0
+                )
+        except Exception:
+            pass
 
     adj = adjustments or {}
     non_deduct = _money(adj.get('non_deductible'))

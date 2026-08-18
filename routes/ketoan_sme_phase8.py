@@ -48,6 +48,112 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
         finally:
             conn.close()
 
+    @app.route('/api/sme/bctc/opening', methods=['GET', 'POST', 'DELETE'])
+    @login_required
+    @require_sme_regime
+    def api_sme_bctc_opening():
+        from Services.sme.bctc_opening import (
+            clear_opening_lines,
+            list_opening_lines,
+            opening_meta,
+            save_opening_lines,
+        )
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            if request.method == 'GET':
+                year = request.args.get('year', type=int) or datetime.now().year
+                report = (request.args.get('report') or 'B01').strip().upper()
+                lines = list_opening_lines(conn, year, report)
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'fiscal_year': year,
+                        'report': report,
+                        'lines': {k: float(v) for k, v in lines.items()},
+                        'meta': opening_meta(conn, year, report),
+                    },
+                })
+            if request.method == 'DELETE':
+                year = request.args.get('year', type=int) or datetime.now().year
+                report = request.args.get('report')
+                n = clear_opening_lines(conn, fiscal_year=year, report=report)
+                return jsonify({'success': True, 'deleted': n})
+            payload = request.get_json(silent=True) or {}
+            year = int(payload.get('year') or payload.get('fiscal_year') or datetime.now().year)
+            report = str(payload.get('report') or 'B01').strip().upper()
+            info = save_opening_lines(
+                conn,
+                fiscal_year=year,
+                report=report,
+                lines=payload.get('lines') or [],
+                source=str(payload.get('source') or 'manual'),
+                updated_by=_user(),
+            )
+            return jsonify({'success': True, **info})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            logger.exception('api_sme_bctc_opening')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/bctc/opening/template.xlsx')
+    @login_required
+    @require_sme_regime
+    def api_sme_bctc_opening_template():
+        from Services.sme.bctc_opening import build_opening_template
+        conn = get_db_connection()
+        try:
+            data = build_opening_template(conn)
+            year = request.args.get('year', type=int) or datetime.now().year
+            return Response(
+                data,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                headers={
+                    'Content-Disposition': (
+                        f'attachment; filename="Mau_BCTC_so_dau_nam_{year}.xlsx"'
+                    ),
+                },
+            )
+        except Exception as e:
+            logger.exception('api_sme_bctc_opening_template')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/bctc/opening/import', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_bctc_opening_import():
+        from Services.sme.bctc_opening import apply_excel_import, parse_opening_excel
+        file = request.files.get('file')
+        if not file or not (file.filename or '').lower().endswith(('.xlsx', '.xlsm')):
+            return jsonify({
+                'success': False,
+                'error': 'Chọn file Excel .xlsx (xuất từ phần mềm khác hoặc mẫu hệ thống).',
+            }), 400
+        year = request.form.get('year', type=int) or request.args.get('year', type=int)
+        year = year or datetime.now().year
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            parsed = parse_opening_excel(file)
+            result = apply_excel_import(
+                conn, fiscal_year=int(year), parsed=parsed, created_by=_user(),
+            )
+            return jsonify({'success': True, 'data': result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_bctc_opening_import')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/api/sme/regime-profile')
     @login_required
     @require_sme_regime
@@ -131,6 +237,7 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
                 conn,
                 sectors=data.get('sectors') or [],
                 cit_pct_income=data.get('cit_pct_income'),
+                cit_income_brackets=data.get('cit_income_brackets'),
                 effective_from=data.get('effective_from'),
                 note=data.get('note'),
                 created_by=session.get('username') or session.get('user') or 'user',
@@ -503,5 +610,299 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
         except Exception as e:
             logger.exception('api_sme_pit_declaration')
             return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    def _ledger_err(conn, e, name):
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        if isinstance(e, ValueError):
+            return jsonify({'success': False, 'error': str(e)}), 400
+        logger.exception(name)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/sme/ledger-ops', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_ledger_ops_list():
+        from Services.sme.ledger_ops import list_ledger_ops
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            op = (request.args.get('op_type') or '').strip() or None
+            rows = list_ledger_ops(conn, op_type=op, limit=200)
+            return jsonify({'success': True, 'data': rows})
+        except Exception as e:
+            logger.exception('api_sme_ledger_ops_list')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/sales-allowance', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_sales_allowance():
+        from Services.sme.ledger_ops import post_sales_allowance
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            out = post_sales_allowance(
+                conn,
+                doc_date=payload.get('date') or payload.get('doc_date'),
+                amount=payload.get('amount'),
+                vat_amount=payload.get('vat_amount') or 0,
+                kind=payload.get('kind') or 'discount',
+                customer_name=payload.get('customer_name') or '',
+                settle_account=payload.get('settle_account') or '131',
+                notes=payload.get('notes') or '',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': out})
+        except Exception as e:
+            return _ledger_err(conn, e, 'api_sme_sales_allowance')
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/provisions', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_provisions():
+        from Services.sme.ledger_ops import post_provision
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            out = post_provision(
+                conn,
+                doc_date=payload.get('date') or payload.get('doc_date'),
+                amount=payload.get('amount'),
+                kind=payload.get('kind') or 'ar',
+                action=payload.get('action') or 'accrue',
+                notes=payload.get('notes') or '',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': out})
+        except Exception as e:
+            return _ledger_err(conn, e, 'api_sme_provisions')
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/other-tax', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_other_tax():
+        from Services.sme.ledger_ops import OTHER_TAX_DEFS, accrue_other_tax, pay_other_tax
+        payload = request.get_json(silent=True) or {}
+        action = (payload.get('action') or 'accrue').strip().lower()
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            if action in ('pay', 'nop'):
+                out = pay_other_tax(
+                    conn,
+                    doc_date=payload.get('date') or payload.get('doc_date'),
+                    amount=payload.get('amount'),
+                    tax_account=payload.get('tax_account') or '3339',
+                    payment_method=payload.get('payment_method') or 'bank',
+                    notes=payload.get('notes') or '',
+                    created_by=_user(),
+                    commit=True,
+                )
+            else:
+                out = accrue_other_tax(
+                    conn,
+                    doc_date=payload.get('date') or payload.get('doc_date'),
+                    amount=payload.get('amount'),
+                    tax_account=payload.get('tax_account') or '3339',
+                    expense_account=payload.get('expense_account'),
+                    notes=payload.get('notes') or '',
+                    created_by=_user(),
+                    commit=True,
+                )
+            return jsonify({
+                'success': True, 'data': out,
+                'tax_defs': [{'code': c, 'label': n, 'expense': e} for c, n, e in OTHER_TAX_DEFS],
+            })
+        except Exception as e:
+            return _ledger_err(conn, e, 'api_sme_other_tax')
+        finally:
+            conn.close()
+
+    @app.route('/SME_prepaid')
+    @login_required
+    @require_sme_regime
+    def SME_prepaid():
+        return render_template('KeToanSME/prepaid.html')
+
+    @app.route('/api/sme/prepaid', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_prepaid_list():
+        from Services.sme.prepaid import list_prepaid
+        from Services.sme.branches import request_branch_filter
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = list_prepaid(
+                conn,
+                status=request.args.get('status') or None,
+                branch_code=request_branch_filter(),
+            )
+            return jsonify({'success': True, 'data': rows})
+        except Exception as e:
+            logger.exception('api_sme_prepaid_list')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/prepaid', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_prepaid_create():
+        from Services.sme.prepaid import create_prepaid
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = create_prepaid(
+                conn,
+                name=payload.get('name') or payload.get('party_name') or '',
+                start_date=payload.get('date') or payload.get('start_date'),
+                amount=payload.get('amount'),
+                months=int(payload.get('months') or 12),
+                vat_amount=payload.get('vat_amount') or 0,
+                expense_account=payload.get('expense_account') or '642',
+                payment_method=payload.get('payment_method') or 'bank',
+                notes=payload.get('notes') or '',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            return _ledger_err(conn, e, 'api_sme_prepaid_create')
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/prepaid/<int:doc_id>/void', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_prepaid_void(doc_id):
+        from Services.sme.prepaid import void_prepaid
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = void_prepaid(
+                conn, doc_id,
+                reason=payload.get('reason') or 'Hủy chi phí trả trước',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            return _ledger_err(conn, e, 'api_sme_prepaid_void')
+        finally:
+            conn.close()
+
+    @app.route('/SME_accruals')
+    @login_required
+    @require_sme_regime
+    def SME_accruals():
+        return render_template('KeToanSME/accruals.html')
+
+    @app.route('/api/sme/accruals', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_accruals_list():
+        from Services.sme.accruals import list_accruals
+        from Services.sme.branches import request_branch_filter
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = list_accruals(
+                conn,
+                kind=request.args.get('kind') or None,
+                status=request.args.get('status') or None,
+                branch_code=request_branch_filter(),
+            )
+            return jsonify({'success': True, 'data': rows})
+        except Exception as e:
+            logger.exception('api_sme_accruals_list')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/accruals', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_accruals_create():
+        from Services.sme.accruals import create_accrual
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = create_accrual(
+                conn,
+                kind=payload.get('kind') or 'expense',
+                name=payload.get('name') or '',
+                doc_date=payload.get('date') or payload.get('doc_date'),
+                amount=payload.get('amount'),
+                contra_account=payload.get('contra_account'),
+                payment_method=payload.get('payment_method') or 'bank',
+                notes=payload.get('notes') or '',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            return _ledger_err(conn, e, 'api_sme_accruals_create')
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/accruals/<int:doc_id>/settle', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_accruals_settle(doc_id):
+        from Services.sme.accruals import settle_accrual
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = settle_accrual(
+                conn, doc_id,
+                settle_date=payload.get('date') or payload.get('settle_date'),
+                payment_method=payload.get('payment_method'),
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            return _ledger_err(conn, e, 'api_sme_accruals_settle')
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/accruals/<int:doc_id>/void', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_accruals_void(doc_id):
+        from Services.sme.accruals import void_accrual
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = void_accrual(
+                conn, doc_id,
+                reason=payload.get('reason') or 'Hủy chứng từ',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': data})
+        except Exception as e:
+            return _ledger_err(conn, e, 'api_sme_accruals_void')
         finally:
             conn.close()

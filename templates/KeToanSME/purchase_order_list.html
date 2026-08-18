@@ -4,15 +4,18 @@
 <style>
 .money{font-family:ui-monospace,Consolas,monospace;text-align:right}
 .badge-draft{background:#6c757d}.badge-confirmed{background:#0d6efd}
-.badge-partial{background:#fd7e14}.badge-received{background:#198754}.badge-cancelled{background:#dc3545}
+.badge-matched{background:#198754}.badge-unbilled{background:#6f42c1}
+.badge-qty_short{background:#fd7e14}.badge-amount_diff{background:#dc3545}
+.badge-open{background:#6c757d}
 </style>
 {% endblock %}
 {% block content %}
-<div class="container-fluid py-3" style="max-width:1100px">
+<div class="container-fluid py-3" style="max-width:1280px">
   <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
     <div>
       <h4 class="fw-bold mb-1">Đơn đặt hàng nhà cung cấp</h4>
-      <p class="text-muted small mb-0">Theo dõi nhu cầu mua trước khi nhận hóa đơn / nhập kho ·
+        <p class="text-muted small mb-0">Theo dõi nhu cầu mua trước khi nhận hóa đơn / nhập kho ·
+        đặt vs nhận vs hóa đơn ·
         <a href="{{ url_for('SME_purchasing') }}">Mua hàng</a></p>
     </div>
     <a class="btn btn-primary btn-sm" href="{{ url_for('SME_purchase_order_create') }}"><i class="fas fa-plus me-1"></i> Tạo đơn</a>
@@ -38,9 +41,10 @@
   <div class="card border-0 shadow-sm"><div class="table-responsive">
     <table class="table table-sm table-hover mb-0 align-middle">
       <thead class="table-light"><tr>
-        <th>Số đơn hàng</th><th>Ngày</th><th>Nhà cung cấp</th><th class="text-end">Tổng</th><th>Tình trạng</th><th></th>
+        <th>Số đơn hàng</th><th>Ngày</th><th>Nhà cung cấp</th><th class="text-end">Tổng</th>
+        <th>Tiến độ nhận</th><th class="text-end">Hóa đơn</th><th>Đối chiếu</th><th>Tình trạng</th><th></th>
       </tr></thead>
-      <tbody id="tbody"><tr><td colspan="6" class="text-muted text-center py-4">Đang tải…</td></tr></tbody>
+      <tbody id="tbody"><tr><td colspan="9" class="text-muted text-center py-4">Đang tải…</td></tr></tbody>
     </table>
   </div></div>
 </div>
@@ -50,6 +54,7 @@
 (function(){
   const money=v=>Number(v||0).toLocaleString('vi-VN',{maximumFractionDigits:0});
   const label={draft:'Nháp',confirmed:'Đã xác nhận',partial:'Nhận một phần',received:'Đã nhận đủ',cancelled:'Đã hủy'};
+  const matchLabel={matched:'Khớp',unbilled:'Chưa có HĐ',qty_short:'Thiếu nhận',amount_diff:'Lệch tiền',open:'Chưa nhận',cancelled:'Đã hủy'};
   async function load(){
     const q=new URLSearchParams({
       date_from:document.getElementById('df').value||'',
@@ -60,21 +65,36 @@
     const res=await fetch('/api/sme/purchase-orders?'+q);
     const data=await res.json();
     const tbody=document.getElementById('tbody');
-    if(!data.success){ tbody.innerHTML=`<tr><td colspan="6" class="text-danger text-center py-3">${data.error||'Lỗi'}</td></tr>`; return; }
+    if(!data.success){ tbody.innerHTML=`<tr><td colspan="9" class="text-danger text-center py-3">${data.error||'Lỗi'}</td></tr>`; return; }
     const rows=data.data||[];
-    if(!rows.length){ tbody.innerHTML='<tr><td colspan="6" class="text-muted text-center py-4">Chưa có đơn</td></tr>'; return; }
-    tbody.innerHTML=rows.map(r=>`<tr>
+    if(!rows.length){ tbody.innerHTML='<tr><td colspan="9" class="text-muted text-center py-4">Chưa có đơn</td></tr>'; return; }
+    tbody.innerHTML=rows.map(r=>{
+      const pct=Math.max(0, Math.min(100, Number(r.receive_pct||0)));
+      const recv=Number(r.received_qty||0);
+      const ord=Number(r.ordered_qty||0);
+      const bill=Number(r.billed_amount||0);
+      const ms=r.match_status||'open';
+      return `<tr>
       <td><a href="/SME_purchase_order_create?id=${r.id}">${r.po_no}</a></td>
       <td>${typeof fmtDateVi==='function'?fmtDateVi(r.po_date):(r.po_date||'')}</td>
       <td>${r.supplier_name||''}</td>
       <td class="money">${money(r.total_amount)}</td>
+      <td style="min-width:140px">
+        <div class="small text-muted">${money(recv)} / ${money(ord)}</div>
+        <div class="progress" style="height:6px">
+          <div class="progress-bar ${pct>=100?'bg-success':(pct>0?'bg-warning':'bg-secondary')}" style="width:${pct}%"></div>
+        </div>
+        <div class="small">${pct.toLocaleString('vi-VN')}%</div>
+      </td>
+      <td class="money">${money(bill)}</td>
+      <td><span class="badge badge-${ms}">${matchLabel[ms]||ms}</span></td>
       <td><span class="badge badge-${r.status}">${label[r.status]||statusLabelVi(r.status)}</span></td>
       <td class="text-end">
         ${['draft','confirmed','partial'].includes(r.status)
           ? `<a class="btn btn-outline-success btn-sm py-0 me-1" href="/SME_import?po_id=${r.id}">Nhập kho</a>` : ''}
         <a class="btn btn-outline-secondary btn-sm py-0" href="/SME_purchase_order_create?id=${r.id}">Sửa</a>
       </td>
-    </tr>`).join('');
+    </tr>`;}).join('');
   }
   document.getElementById('btn').addEventListener('click', load);
   load();

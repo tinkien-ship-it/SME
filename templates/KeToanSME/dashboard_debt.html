@@ -64,6 +64,67 @@
         </div>
 
         <div class="card shadow-sm border-0 mt-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0">Tuổi nợ phải thu / phải trả</h6>
+                <span class="small text-muted" id="agingAsOf">—</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="small fw-semibold mb-2">Phải thu khách hàng</div>
+                        <table class="table table-sm mb-0"><thead class="table-light">
+                            <tr><th>Kỳ hạn</th><th class="text-end">Số tiền</th><th class="text-end">Số CT</th></tr>
+                        </thead><tbody id="arAging"></tbody></table>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small fw-semibold mb-2">Phải trả nhà cung cấp</div>
+                        <table class="table table-sm mb-0"><thead class="table-light">
+                            <tr><th>Kỳ hạn</th><th class="text-end">Số tiền</th><th class="text-end">Số CT</th></tr>
+                        </thead><tbody id="apAging"></tbody></table>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
+                        <div class="small fw-semibold mb-2">Chứng từ phải thu quá hạn</div>
+                        <table class="table table-sm mb-0"><thead class="table-light">
+                            <tr><th>Khách</th><th>CT</th><th>Ngày CT</th><th class="text-end">Số ngày</th><th class="text-end">Còn</th></tr>
+                        </thead><tbody id="arAgingDet"></tbody></table>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small fw-semibold mb-2">Chứng từ phải trả quá hạn</div>
+                        <table class="table table-sm mb-0"><thead class="table-light">
+                            <tr><th>NCC</th><th>CT</th><th>Ngày CT</th><th class="text-end">Số ngày</th><th class="text-end">Còn</th></tr>
+                        </thead><tbody id="apAgingDet"></tbody></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0">Đối chiếu sổ chi tiết ↔ sổ cái 131 / 331</h6>
+                <span class="small" id="debtReconFlag">—</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="small fw-semibold mb-2">Phải thu khách hàng</div>
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Sổ chi tiết (còn lại)</span><span id="reconArSub">0 đ</span></div>
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Sổ cái 131</span><span id="reconArGl">0 đ</span></div>
+                        <div class="d-flex justify-content-between fw-semibold"><span>Chênh lệch</span><span id="reconArDiff">0 đ</span></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small fw-semibold mb-2">Phải trả nhà cung cấp</div>
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Sổ chi tiết (còn lại)</span><span id="reconApSub">0 đ</span></div>
+                        <div class="d-flex justify-content-between small"><span class="text-muted">Sổ cái 331</span><span id="reconApGl">0 đ</span></div>
+                        <div class="d-flex justify-content-between fw-semibold"><span>Chênh lệch</span><span id="reconApDiff">0 đ</span></div>
+                    </div>
+                </div>
+                <p class="small text-muted mb-0 mt-2">Sổ chi tiết lấy từ công nợ bán / phiếu nhập chưa thanh toán. Lệch thường do thu chi chưa gắn chứng từ gốc hoặc bút toán thủ công trên 131/331.</p>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mt-4">
             <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">Lối tắt</h6></div>
             <div class="card-body d-flex flex-wrap gap-2">
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoQuyTienMat') }}">Sổ Quỹ Tiền Mặt</a>
@@ -71,6 +132,7 @@
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoCongNoPhaiThu') }}">Sổ phải thu</a>
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoCongNoPhaiTra') }}">Sổ phải trả</a>
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_chung_tu') }}">Chứng từ thu/chi</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_accruals') }}">Chi phí phải trả 335</a>
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoSachKeToan') }}">Sổ sách kế toán</a>
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_tax_nsnn') }}">Thuế và ngân sách nhà nước</a>
             </div>
@@ -103,6 +165,20 @@
         document.getElementById('ar-collected').textContent = money(d.ar_collected_ytd);
         document.getElementById('ap-paid').textContent = money(d.ap_paid_ytd);
         document.getElementById('net-wc').textContent = money(d.net_working_capital);
+        const arDiff = Number(d.ar_vs_gl_diff || 0), apDiff = Number(d.ap_vs_gl_diff || 0);
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = money(v); };
+        set('reconArSub', d.subledger_ar);
+        set('reconArGl', d.gl_ar);
+        set('reconArDiff', arDiff);
+        set('reconApSub', d.subledger_ap);
+        set('reconApGl', d.gl_ap);
+        set('reconApDiff', apDiff);
+        const flag = document.getElementById('debtReconFlag');
+        if (flag) {
+            const ok = Math.abs(arDiff) < 1 && Math.abs(apDiff) < 1;
+            flag.textContent = ok ? 'Khớp' : 'Lệch';
+            flag.className = 'small fw-semibold ' + (ok ? 'text-success' : 'text-danger');
+        }
         const months = d.monthly || [];
         if (trendChart) trendChart.destroy();
         trendChart = new Chart(document.getElementById('debtTrendChart').getContext('2d'), {
@@ -132,6 +208,36 @@
                 plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => ' ' + c.label + ': ' + money(c.parsed) } } }
             }
         });
+        loadAging().catch(() => {});
+    }
+    async function loadAging() {
+        const res = await fetch('/api/sme/debt/aging');
+        const payload = await res.json();
+        if (!payload.success) return;
+        const d = payload.data || {};
+        const asOfEl = document.getElementById('agingAsOf');
+        if (asOfEl) asOfEl.textContent = 'Tính đến ' + (d.as_of || '');
+        const render = (id, block) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const rows = (block && block.buckets) || [];
+            const total = (block && block.total) || 0;
+            el.innerHTML = rows.map(b =>
+                `<tr><td>${b.label}</td><td class="text-end">${money(b.amount)}</td><td class="text-end">${b.count}</td></tr>`
+            ).join('') + `<tr class="fw-bold"><td>Tổng</td><td class="text-end">${money(total)}</td><td></td></tr>`;
+        };
+        render('arAging', d.ar);
+        render('apAging', d.ap);
+        const det = (id, block) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const rows = ((block && block.details) || []).slice().sort((a,b)=>(b.days||0)-(a.days||0)).slice(0,8);
+            el.innerHTML = rows.length ? rows.map(x =>
+                `<tr><td>${x.party||''}</td><td class="small">${x.doc_no||''}</td><td class="small">${x.doc_date||''}</td><td class="text-end">${x.days||0}</td><td class="text-end">${money(x.amount)}</td></tr>`
+            ).join('') : '<tr><td colspan="5" class="text-muted text-center">Không có</td></tr>';
+        };
+        det('arAgingDet', d.ar);
+        det('apAgingDet', d.ap);
     }
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('dateFilter').addEventListener('change', () => loadDash().catch(e => alert(e.message)));

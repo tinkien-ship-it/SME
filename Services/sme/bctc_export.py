@@ -103,18 +103,22 @@ def export_bctc_workbook(
 
     wb = Workbook()
     ws1 = wb.active
-    if tt58:
-        ws1.title = 'B01-DNSN'
-        ws1['A1'] = f'Báo cáo tình hình tài chính B01-DNSN — Năm {year} đến T{p_to}'
-        ws1['A1'].font = Font(bold=True, size=12)
-        ws1.append([])
-        _write_rows_dual(ws1, b01.get('rows') or [], 'Số cuối năm', 'Số đầu năm', prior_key='amount_opening')
-    else:
-        ws1.title = 'B01-CDKT'
-        ws1['A1'] = f'Bảng cân đối kế toán B01-DN — Năm {year} đến T{p_to}'
-        ws1['A1'].font = Font(bold=True, size=12)
-        ws1.append([])
-        _write_rows(ws1, b01.get('rows') or [], 'Số cuối kỳ')
+    ws1.title = 'B01-DNSN' if tt58 else 'B01-CDKT'
+    form_name = 'B01-DNSN' if tt58 else 'B01-DN'
+    title_b01 = (
+        f'Báo cáo tình hình tài chính {form_name} — Năm {year} đến T{p_to}'
+        if tt58 else
+        f'Bảng cân đối kế toán {form_name} — Năm {year} đến T{p_to}'
+    )
+    ws1['A1'] = title_b01
+    ws1['A1'].font = Font(bold=True, size=12)
+    ws1.append([])
+    _write_rows_dual(
+        ws1, b01.get('rows') or [],
+        'Số cuối năm' if tt58 else 'Số cuối kỳ',
+        'Số đầu năm',
+        prior_key='amount_opening',
+    )
     t = b01.get('totals') or {}
     ws1.append([])
     ws1.append(['', 'Tài sản', _money(t.get('total_assets'))])
@@ -126,10 +130,12 @@ def export_bctc_workbook(
     ws2['A1'] = f'Kết quả HĐKD {label} — T{p_from}–T{p_to}/{year}'
     ws2['A1'].font = Font(bold=True, size=12)
     ws2.append([])
-    if tt58:
-        _write_rows_dual(ws2, b02.get('rows') or [], 'Năm nay', 'Năm trước', prior_key='amount_prior')
-    else:
-        _write_rows(ws2, b02.get('rows') or [], 'Số kỳ này')
+    _write_rows_dual(
+        ws2, b02.get('rows') or [],
+        'Năm nay' if tt58 else 'Số kỳ này',
+        'Năm trước',
+        prior_key='amount_prior',
+    )
 
     if not tt58:
         b03 = cash_flow_statement(

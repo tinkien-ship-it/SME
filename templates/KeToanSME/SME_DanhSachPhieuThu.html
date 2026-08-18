@@ -49,6 +49,7 @@
       <label class="form-label small fw-semibold">Loại nghiệp vụ</label>
       <select id="fPurpose" class="form-select">
         <option value="">Thu tiền thông thường</option>
+        <option value="tat_toan_113">Tất toán 113 — Nợ 1121 / Có 1131</option>
         <option value="fx_receipt">Thu ngoại tệ vào 1112/1122</option>
         <option value="customer_advance">Tạm ứng khách hàng XK (Nợ 1122 / Có 131)</option>
         <option value="supplier_advance">Tạm ứng NCC ngoại tệ → lập Phiếu chi (Nợ 331)</option>
@@ -222,6 +223,7 @@ function isFxPayMethod(v){
 function needsFx(){
   const purpose = fPurpose.value;
   if (purpose === 'fx_receipt' || purpose === 'supplier_advance' || purpose === 'customer_advance') return true;
+  if (purpose === 'tat_toan_113') return false;
   if (fUseFx.checked) return true;
   return isFxPayMethod(fPay.value);
 }
@@ -408,6 +410,27 @@ document.getElementById('btnSave').onclick = async () => {
     if(!json.success) return alert(json.error||'Lỗi');
     bootstrap.Modal.getInstance(document.getElementById('modalNew')).hide();
     alert('Đã lập phiếu thu '+json.voucher_no+' (tạm ứng KH · Có 131)');
+    loadList();
+    return;
+  }
+  if (purpose === 'tat_toan_113') {
+    const payload = {
+      date: fDate.value,
+      payer_name: fParty.value || 'Ngân hàng',
+      payment_method: 'bank',
+      credit_account: '1131',
+      reason: fReason.value || 'Tất toán tiền đang chuyển',
+      amount: parseFloat(fAmount.value) || 0,
+      purpose: 'tat_toan_113',
+    };
+    if (!(payload.amount > 0)) return alert('Nhập số tiền');
+    const res = await fetch('/api/sme/vouchers/receipts', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if(!json.success) return alert(json.error||'Lỗi');
+    bootstrap.Modal.getInstance(document.getElementById('modalNew')).hide();
+    alert('Đã lập phiếu thu '+json.voucher_no+' (tất toán 113 · Nợ 1121)');
     loadList();
     return;
   }

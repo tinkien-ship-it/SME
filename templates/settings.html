@@ -109,6 +109,11 @@
                     <button class="nav-link text-start mb-2" data-bs-toggle="pill" data-bs-target="#tab-users">
                         <i class="fas fa-users-cog me-2"></i> Nhân viên & Phân quyền
                     </button>
+                    {% if tt58 %}
+                    <button class="nav-link text-start mb-2" data-bs-toggle="pill" data-bs-target="#tab-tt58">
+                        <i class="fas fa-book me-2"></i> Kế toán SME (TT58)
+                    </button>
+                    {% endif %}
                     <button class="nav-link text-start mb-2" data-bs-toggle="pill" data-bs-target="#tab-system">
                         <i class="fas fa-server me-2"></i> Hệ thống & Sao lưu
                     </button>
@@ -274,7 +279,7 @@
 
                 <!-- Tab 2: Nhân viên & Phân quyền -->
                 <div class="tab-pane fade" id="tab-users">
-                    {% if current_user.role in ['admin', 'admin*', 'adminFB', 'adminSME', 'master'] %}
+                    {% if current_user.role in ['admin', 'admin*', 'adminFB', 'master'] or is_sme_admin|default(false) %}
                     <div class="row g-4">
                         <div class="col-lg-7">
                             <div class="card setting-card shadow-sm">
@@ -331,23 +336,53 @@
                                         </div>
                                     </div>
                                     <div class="mb-4">
+                                        {% set _regime = (tenant_profile.accounting_regime or '')|upper %}
+                                        {% set _is_tt58 = 'TT58' in _regime or 'MICRO' in _regime %}
+                                        {% set _is_tt99 = tenant_is_sme and not _is_tt58 %}
                                         <label class="form-label">Vai trò</label>
                                         <select id="u_role" name="role" class="form-select">
+                                            <optgroup label="Bán hàng / vận hành">
                                             <option value="staff">Nhân Viên Bán Hàng</option>
                                             <option value="staff*">Nhân Viên Dịch Vụ Lưu Trú</option>
                                             <option value="staff**">Nhân Viên Dịch Vụ Ăn Uống</option>
+                                            </optgroup>
+                                            <optgroup label="POS / Hộ kinh doanh">
                                             <option value="accountant">Kế Toán</option>
-                                            <option value="accountantSME">Kế Toán SME</option>
                                             <option value="manager">Quản Lý Cửa Hàng POS</option>
                                             <option value="manager*">Quản lý Dịch Vụ Lưu Trú</option>
                                             <option value="managerFB">Quản lý Dịch Vụ Ăn Uống</option>
-                                            <option value="managerSME">Quản lý SME</option>
                                             <option value="admin">Quản Trị Viên Cửa Hàng POS</option>
                                             <option value="admin*">Quản Trị Viên Dịch Vụ Lưu Trú</option>
                                             <option value="adminFB">Quản Trị Viên Dịch Vụ Ăn Uống</option>
+                                            </optgroup>
+                                            {% if _is_tt58 %}
+                                            <optgroup label="Kế Toán SME (TT58) — doanh nghiệp siêu nhỏ">
+                                            <option value="accountantSME58">Kế Toán SME (TT58)</option>
+                                            <option value="managerSME58">Quản lý SME (TT58)</option>
+                                            <option value="adminSME58">Quản Trị Viên SME (TT58)</option>
+                                            </optgroup>
+                                            {% endif %}
+                                            {% if _is_tt99 %}
+                                            <optgroup label="Kế Toán SME (TT99) — doanh nghiệp">
+                                            <option value="accountantSME99">Kế Toán SME (TT99)</option>
+                                            <option value="managerSME99">Quản lý SME (TT99)</option>
+                                            <option value="adminSME99">Quản Trị Viên SME (TT99)</option>
+                                            </optgroup>
+                                            {% endif %}
+                                            <optgroup label="Tương thích (user cũ)" id="legacySmeRoleGroup" hidden>
+                                            <option value="accountantSME">Kế Toán SME</option>
+                                            <option value="managerSME">Quản lý SME</option>
                                             <option value="adminSME">Quản Trị Viên SME</option>
+                                            </optgroup>
+                                            {% if current_user.role == 'master' %}
                                             <option value="master">Master</option>
+                                            {% endif %}
                                         </select>
+                                        {% if _is_tt58 %}
+                                        <div class="form-text">User TT58 chỉ thấy chứng từ 01-TT / 02-TT / 01-VT / 02-VT, sổ DNSN theo trường hợp đã chọn, và BCTC khi Trường hợp 2 hoặc 4.</div>
+                                        {% elif _is_tt99 %}
+                                        <div class="form-text">User TT99 dùng đầy đủ mẫu chứng từ Thông tư 99 (03–09-TT, XK/HQ, L/C, ngoại tệ…).</div>
+                                        {% endif %}
                                     </div>
                                     <div class="perm-group">
                                         <p class="small fw-bold text-primary mb-3">PHÂN QUYỀN CHI TIẾT</p>
@@ -400,10 +435,113 @@
                     <div class="alert alert-warning text-center py-5 my-4">
                         <i class="fas fa-lock fa-3x mb-3 d-block text-warning"></i>
                         <h5 class="mb-2">Bạn không có quyền truy cập phần này</h5>
-                        <p class="mb-0">Chỉ <strong>Quản trị viên (admin / adminSME / master)</strong> mới có thể quản lý nhân viên & phân quyền. Quản lý (manager) không được phân quyền tại đây.</p>
+                        <p class="mb-0">Chỉ <strong>Quản trị viên (admin / admin SME / master)</strong> mới có thể quản lý nhân viên &amp; phân quyền. Vai trò Kế toán SME (TT58) và (TT99) tách riêng theo chế độ tenant.</p>
                     </div>
                     {% endif %}
                 </div>
+
+                {% if tt58 %}
+                <!-- Tab TT58: 4 trường hợp DNSN -->
+                <div class="tab-pane fade" id="tab-tt58">
+                    <div class="card setting-card shadow-sm p-4 mb-4">
+                        <h5 class="section-header text-primary">4 trường hợp áp dụng chế độ kế toán DNSN</h5>
+                        <p class="small text-muted mb-3">
+                            Thông tư <strong>58/2026/TT-BTC</strong> (hiệu lực 01/07/2026, thay TT 132/2018/TT-BTC).
+                            Chọn đúng trường hợp — hệ thống chỉ mở sổ bắt buộc và BCTC tương ứng.
+                        </p>
+                        <div class="row g-2" id="settingsTaxMethodCards">
+                            {% for m in tt58.methods %}
+                            <div class="col-md-6">
+                                <label class="border rounded p-3 h-100 d-block
+                                  {% if tt58.method == m.code %}border-primary bg-primary bg-opacity-10{% endif %}"
+                                  style="cursor:pointer">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="settings_tt58_tax_method"
+                                               value="{{ m.code }}" {% if tt58.method == m.code %}checked{% endif %}>
+                                        <span class="form-check-label fw-semibold">{{ m.short_label }}</span>
+                                    </div>
+                                    <div class="small text-muted mt-1">GTGT: {{ m.vat_label }}<br>TNDN: {{ m.cit_label }}</div>
+                                    <div class="small mt-2">
+                                        <span class="badge text-bg-light">{{ m.required_books|join(', ') }}</span>
+                                        {% if m.show_bctc %}
+                                        <span class="badge text-bg-success">BCTC · 90 ngày</span>
+                                        {% else %}
+                                        <span class="badge text-bg-secondary">Không BCTC</span>
+                                        {% endif %}
+                                        {% if m.input_vat_in_cost %}
+                                        <span class="badge text-bg-warning">VAT → giá vốn</span>
+                                        {% else %}
+                                        <span class="badge text-bg-info">VAT khấu trừ</span>
+                                        {% endif %}
+                                    </div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
+                            <button type="button" class="btn btn-primary btn-sm" id="btnSaveSettingsTaxMethod">
+                                Lưu trường hợp
+                            </button>
+                            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_dnsn_books') }}">
+                                Mở sổ DNSN &amp; thuế suất
+                            </a>
+                            <span class="small text-muted" id="settingsTaxMethodMsg">
+                                Đang chọn: <strong>{{ tt58.profile.tt58_tax_method_def.short_label if tt58.profile.tt58_tax_method_def else 'Chưa chọn' }}</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="card setting-card shadow-sm p-4 mb-4">
+                        <h5 class="section-header">Thuế suất đang áp dụng (TT58)</h5>
+                        <p class="small text-muted">{{ tt58.ui.hint if tt58.ui else '' }}</p>
+                        <div class="row g-3">
+                            <div class="col-lg-7">
+                                <h6 class="small fw-semibold">A. GTGT % DT · B. TNDN % DT theo ngành</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Nhóm ngành</th>
+                                                {% if tt58.ui.show_vat_pct_revenue %}<th>GTGT %</th>{% endif %}
+                                                {% if tt58.ui.show_cit_pct_revenue %}<th>TNDN/DT %</th>{% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for s in tt58.rates.sectors or [] %}
+                                            <tr>
+                                                <td class="small">{{ s.label }}</td>
+                                                {% if tt58.ui.show_vat_pct_revenue %}
+                                                <td>{% if s.in_vat_table %}{{ s.vat_pct }}%{% else %}—{% endif %}</td>
+                                                {% endif %}
+                                                {% if tt58.ui.show_cit_pct_revenue %}
+                                                <td>{% if s.in_cit_table %}{{ s.cit_pct_revenue }}%{% else %}—{% endif %}</td>
+                                                {% endif %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-lg-5">
+                                <h6 class="small fw-semibold">C. TNDN trên thu nhập (TH2 &amp; TH4)</h6>
+                                <ul class="small mb-2">
+                                    {% for b in tt58.rates.cit_income_brackets or [] %}
+                                    <li>{{ b.label }}: <strong>{{ b.pct }}%</strong></li>
+                                    {% endfor %}
+                                </ul>
+                                <p class="small text-muted mb-0">Mức phổ thông {{ tt58.rates.cit_common_pct }}%. Chỉnh thuế suất tại trang Sổ DNSN.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border small">
+                        <div class="fw-semibold mb-1">Tiêu chí doanh nghiệp siêu nhỏ (NĐ 80/2021/NĐ-CP)</div>
+                        Lao động BHXH bình quân năm ≤ 10 người; và doanh thu hoặc vốn:
+                        nông–lâm–thủy / công nghiệp–xây dựng DT ≤ 3 tỷ hoặc vốn ≤ 3 tỷ;
+                        thương mại–dịch vụ DT ≤ 10 tỷ hoặc vốn ≤ 3 tỷ.
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- Tab 3: Hệ thống & Sao lưu -->
                 <div class="tab-pane fade" id="tab-system">
@@ -928,13 +1066,21 @@ const ROLE_LABELS = {
     'admin*': ['bg-danger', 'Quản Trị Viên'],
     adminFB: ['bg-danger', 'Quản Trị Viên'],
     adminSME: ['bg-primary', 'Quản trị SME'],
+    adminSME58: ['bg-primary', 'Quản trị SME (TT58)'],
+    adminSME99: ['bg-primary', 'Quản trị SME (TT99)'],
     manager: ['bg-danger', 'Quản Lý'],
     'manager*': ['bg-warning', 'Quản lý'],
     managerFB: ['bg-warning', 'Quản lý'],
     managerSME: ['bg-warning', 'Quản lý SME'],
+    managerSME58: ['bg-warning', 'Quản lý SME (TT58)'],
+    managerSME99: ['bg-warning', 'Quản lý SME (TT99)'],
     accountant: ['bg-info', 'Kế toán'],
     accountantSME: ['bg-info', 'Kế toán SME'],
+    accountantSME58: ['bg-info', 'Kế toán SME (TT58)'],
+    accountantSME99: ['bg-info', 'Kế toán SME (TT99)'],
 };
+const SME_PROTECTED_ROLES = ['master', 'admin', 'admin*', 'adminFB', 'adminSME', 'adminSME58', 'adminSME99'];
+const LEGACY_SME_ROLES = ['accountantSME', 'managerSME', 'adminSME'];
 
 async function loadUsers() {
     const tbody = document.getElementById('userTableBody');
@@ -953,7 +1099,7 @@ async function loadUsers() {
 
         tbody.innerHTML = list.map(u => {
             const [roleBadge, roleName] = ROLE_LABELS[u.role] || ['bg-secondary', 'Nhân viên'];
-            const canDelete = !['master', 'admin', 'admin*', 'adminFB', 'adminSME'].includes(u.role);
+            const canDelete = !SME_PROTECTED_ROLES.includes(u.role);
             return `
                 <tr>
                     <td class="fw-bold">${escapeHtml(u.username)}</td>
@@ -995,6 +1141,10 @@ function editUser(user) {
     document.getElementById('u_fullname').value = user.full_name || '';
     document.getElementById('u_email').value = user.email || '';
     document.getElementById('u_phone').value = user.phone || '';
+    const legacyGroup = document.getElementById('legacySmeRoleGroup');
+    if (legacyGroup) {
+        legacyGroup.hidden = !LEGACY_SME_ROLES.includes(user.role);
+    }
     document.getElementById('u_role').value = user.role;
     const perms = user.permissions ? user.permissions.split(',') : [];
     document.querySelectorAll('.perm-cb').forEach(cb => {
@@ -1009,6 +1159,8 @@ function resetUserForm() {
     document.getElementById('userFormTitle').textContent = 'Thêm nhân viên mới';
     document.getElementById('u_password').placeholder = 'Mật khẩu cho tài khoản mới';
     document.querySelectorAll('.perm-cb').forEach(cb => { cb.checked = false; });
+    const legacyGroup = document.getElementById('legacySmeRoleGroup');
+    if (legacyGroup) legacyGroup.hidden = true;
 }
 
 async function saveUser() {
@@ -1673,6 +1825,31 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('auto_print_bill', this.checked ? 'true' : 'false');
         });
     }
+
+    const btnSaveTt58 = document.getElementById('btnSaveSettingsTaxMethod');
+    btnSaveTt58?.addEventListener('click', async () => {
+        const selected = document.querySelector('input[name="settings_tt58_tax_method"]:checked');
+        const msg = document.getElementById('settingsTaxMethodMsg');
+        if (!selected) {
+            Swal.fire('Cảnh báo', 'Chọn một trường hợp TT58', 'warning');
+            return;
+        }
+        btnSaveTt58.disabled = true;
+        try {
+            const res = await fetch('/api/sme/tt58-tax-method', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ method: selected.value }),
+            });
+            const j = await res.json();
+            if (!j.success) throw new Error(j.error || 'Lỗi lưu');
+            if (msg) msg.innerHTML = 'Đã lưu: <strong>' + (j.tax_method?.short_label || selected.value) + '</strong>';
+            location.reload();
+        } catch (e) {
+            Swal.fire('Lỗi', e.message || String(e), 'error');
+            btnSaveTt58.disabled = false;
+        }
+    });
 
     syncBankSelectFromInputs();
     togglePaymentFields();

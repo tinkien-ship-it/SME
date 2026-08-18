@@ -270,19 +270,21 @@ def parse_tenant_settings(raw):
 
 
 def role_for_business_line(business_line, accounting_regime=None):
-    """Role chủ tenant. SME → managerSME; HKD theo ngành vụ (manager)."""
+    """Role chủ tenant. SME → managerSME58/99 theo chế độ; HKD theo ngành vụ."""
     from Services.tenant_profile import is_sme_regime
     if is_sme_regime(accounting_regime):
-        return 'managerSME'
+        from Services.sme_roles import owner_role_for_regime
+        return owner_role_for_regime(accounting_regime)
     bl = (business_line or 'pos').strip()
     return BUSINESS_LINE_OPTIONS.get(bl, BUSINESS_LINE_OPTIONS['pos'])['role']
 
 
 def support_role_for_business_line(business_line, accounting_regime=None):
-    """Role tài khoản hỗ trợ KETO. SME → adminSME."""
+    """Role tài khoản hỗ trợ KETO. SME → adminSME58/99 theo chế độ."""
     from Services.tenant_profile import is_sme_regime
     if is_sme_regime(accounting_regime):
-        return 'adminSME'
+        from Services.sme_roles import support_role_for_regime
+        return support_role_for_regime(accounting_regime)
     bl = (business_line or 'pos').strip()
     return BUSINESS_LINE_OPTIONS.get(bl, BUSINESS_LINE_OPTIONS['pos'])['support_role']
 

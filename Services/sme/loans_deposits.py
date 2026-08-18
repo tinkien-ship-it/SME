@@ -130,7 +130,7 @@ def disburse_loan(
     created_by: str | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
-    """Giải ngân vay: Nợ 111/112 / Có 341|311."""
+    """Giải ngân vay: Nợ 111/112 / Có 341|311. Thuê TC: Nợ 212 / Có 3412."""
     ensure_sme_journal_ready(conn, commit=False)
     ensure_sme_loans_schema(conn, commit=False)
     amt = _money(principal)
@@ -145,6 +145,9 @@ def disburse_loan(
     liab = (liability_account or '3411').strip() or '3411'
     cash = (cash_account or '1121').strip() or '1121'
     desc = notes or f'Giải ngân vay {loan_no} — {name}'
+    biz = 'THUE_TAI_CHINH' if cash.startswith('212') or liab.startswith('3412') else 'GIAI_NGAN_VAY'
+    if biz == 'THUE_TAI_CHINH' and not notes:
+        desc = f'TSCĐ thuê tài chính {loan_no} — {name}'
     from Services.sme.branches import resolve_posting_branch
     branch = resolve_posting_branch(conn, None)
     entry = post_journal_entry(
@@ -153,7 +156,7 @@ def disburse_loan(
         document_date=date_s,
         document_type='VAY',
         document_no=loan_no,
-        business_type='GIAI_NGAN_VAY',
+        business_type=biz,
         description=desc,
         created_by=created_by,
         branch_code=branch,
@@ -244,6 +247,95 @@ def accrue_loan_interest(
     if commit:
         conn.commit()
     return {'id': cur.lastrowid, 'amount': float(interest), 'journal_entry_id': entry['id'], 'loan_no': loan['loan_no']}
+
+
+def accrue_period_loan_interest(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int,
+    period: int,
+    interest_date: str | None = None,
+    replace_existing: bool = False,
+    created_by: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Trích lãi mọi khoản vay đang hiệu lực trong kỳ (Nợ 635 / Có 335)."""
+    ensure_sme_journal_ready(conn, commit=False)
+    ensure_sme_loans_schema(conn, commit=False)
+    conn.row_factory = sqlite3.Row
+    year, month = int(fiscal_year), int(period)
+    date_s = (interest_date or f'{year:04d}-{month:02d}-28')[:10]
+    existing = conn.execute(
+        """
+        SELECT id, loan_id, amount, journal_entry_id, status
+        FROM sme_loan_interest
+        WHERE period_year = ? AND period_month = ?
+        """,
+        (year, month),
+    ).fetchall()
+    accrued = [dict(r) for r in existing if str(dict(r).get('status') or 'accrued') == 'accrued']
+    if accrued and not replace_existing:
+        total = sum(float(r.get('amount') or 0) for r in accrued)
+        return {
+            'posted': False,
+            'reason': 'already_posted',
+            'loans': len(accrued),
+            'amount': total,
+            'details': [],
+        }
+    reversed_ids: list[int] = []
+    if replace_existing:
+        for r in existing:
+            d = dict(r)
+            jid = d.get('journal_entry_id')
+            if jid and d.get('status') == 'accrued':
+                try:
+                    reverse_journal_entry(
+                        conn, int(jid), created_by=created_by,
+                        reason=f'Thay thế trích lãi vay {year}/{month:02d}',
+                    )
+                    reversed_ids.append(int(jid))
+                except Exception:
+                    pass
+            conn.execute('DELETE FROM sme_loan_interest WHERE id = ?', (int(d['id']),))
+
+    posted: list[dict[str, Any]] = []
+    skipped: list[str] = []
+    for loan in list_loans(conn):
+        if str(loan.get('status') or '') != 'active':
+            continue
+        rate = float(loan.get('interest_rate') or 0)
+        principal = float(loan.get('principal') or 0)
+        if rate <= 0 or principal <= 0:
+            continue
+        start = str(loan.get('start_date') or '')[:10]
+        if start and start > date_s:
+            continue
+        try:
+            rec = accrue_loan_interest(
+                conn,
+                loan_id=int(loan['id']),
+                period_year=year,
+                period_month=month,
+                interest_date=date_s,
+                created_by=created_by,
+                commit=False,
+            )
+            posted.append(rec)
+        except ValueError as e:
+            skipped.append(f"{loan.get('loan_no')}: {e}")
+    total = sum(float(x.get('amount') or 0) for x in posted)
+    if commit:
+        conn.commit()
+    return {
+        'posted': bool(posted),
+        'loans': len(posted),
+        'amount': total,
+        'details': posted,
+        'skipped': skipped,
+        'reversed_entry_ids': reversed_ids,
+        'posting_date': date_s,
+    }
 
 
 def repay_loan(

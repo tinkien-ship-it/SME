@@ -247,6 +247,8 @@ def sync_return_import_journals(
 
     posted: list[dict] = []
     desc_base = reason or f"Trả hàng NCC theo {import_no or ('PN#' + str(import_id))}"
+    from Services.sme.tt58_tax_methods import tt58_input_vat_in_inventory_cost
+    capitalize_vat = tt58_input_vat_in_inventory_cost(conn)
     for b_type, items in groups.items():
         inventory_lines = []
         vat_total = Decimal('0.00')
@@ -257,10 +259,13 @@ def sync_return_import_journals(
         for item in items:
             vat_total += item['vat']
             refund_total += item['net'] + item['vat']
+            inv_amt = item['net']
+            if capitalize_vat:
+                inv_amt += item['vat']
             inventory_lines.append({
                 'product_id': item['product_id'],
                 'product_name': item['product_name'],
-                'amount': item['net'],
+                'amount': inv_amt,
                 'tax_pct': item['tax_pct'],
                 'warehouse_code': item['warehouse_code'],
                 'description': f"{label}: {item['product_name']}",
@@ -271,7 +276,7 @@ def sync_return_import_journals(
             business_type=b_type,
             payment_method=pay_method,
             inventory_lines=inventory_lines,
-            vat_amount=vat_total,
+            vat_amount=Decimal('0.00') if capitalize_vat else vat_total,
             refund_amount=refund_total,
             supplier_id=int(supplier_id) if supplier_id else None,
             bill_no=bill_no,

@@ -230,6 +230,63 @@ def pay_dividend(
     return out
 
 
+def distribute_profit(
+    conn: sqlite3.Connection,
+    *,
+    doc_date: str,
+    amount,
+    party_name: str = '',
+    equity_account: str = '4212',
+    dest_account: str = '418',
+    notes: str = '',
+    created_by: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Phân phối LNST: Nợ 4212 / Có 418 (quỹ) | 353 (khen thưởng) | 3388 (cổ tức)."""
+    ensure_sme_journal_ready(conn, commit=False)
+    ensure_sme_capital_schema(conn, commit=False)
+    amt = _money(amount)
+    if amt <= 0:
+        raise ValueError('Số phân phối phải > 0')
+    date_s = str(doc_date or '')[:10]
+    if not date_s:
+        raise ValueError('Thiếu ngày')
+    eq = (equity_account or '4212').strip() or '4212'
+    dest = (dest_account or '418').strip() or '418'
+    desc = notes or f'Phân phối LNST → {dest}'
+    from Services.sme.branches import resolve_posting_branch
+    branch = resolve_posting_branch(conn, None)
+    doc_no = _next_no(conn, 'PPLN')
+    entry = post_journal_entry(
+        conn,
+        posting_date=date_s,
+        document_date=date_s,
+        document_type='PPLN',
+        document_no=doc_no,
+        business_type='PHAN_PHOI_LN',
+        description=desc,
+        created_by=created_by,
+        branch_code=branch,
+        lines=[
+            {'sequence': 1, 'account_code': eq, 'debit': float(amt), 'credit': 0, 'description': desc},
+            {'sequence': 2, 'account_code': dest, 'debit': 0, 'credit': float(amt), 'description': desc},
+        ],
+    )
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO sme_capital_docs (
+            doc_type, doc_no, doc_date, party_name, amount, equity_account, cash_account,
+            journal_entry_id, status, notes, created_by, created_at, branch_code
+        ) VALUES ('distribute',?,?,?,?,?,?,?,'posted',?,?,?,?)
+        """,
+        (doc_no, date_s, party_name or '', float(amt), eq, dest, entry['id'], notes or '', created_by, _now(), branch),
+    )
+    if commit:
+        conn.commit()
+    return get_capital_doc(conn, cur.lastrowid)
+
+
 def get_capital_doc(conn: sqlite3.Connection, doc_id: int) -> dict[str, Any] | None:
     ensure_sme_capital_schema(conn, commit=False)
     row = conn.execute('SELECT * FROM sme_capital_docs WHERE id = ?', (doc_id,)).fetchone()

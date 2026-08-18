@@ -70,12 +70,30 @@
       </div></div>
     </div>
     <div class="card shadow-sm border-0 mt-4">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0">Đối chiếu thẻ kho WAC ↔ sổ cái 152 / 155 / 156</h6>
+        <span class="small" id="wacDiff">—</span>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4"><div class="small text-muted">Giá trị tồn WAC (qty × avg_cost)</div>
+            <div class="fw-bold" id="wacStock">0 đ</div></div>
+          <div class="col-md-4"><div class="small text-muted">Số dư sổ 152+155+156</div>
+            <div class="fw-bold" id="wacGl">0 đ</div></div>
+          <div class="col-md-4"><div class="small text-muted">Chênh lệch (WAC − sổ)</div>
+            <div class="fw-bold" id="wacDelta">0 đ</div></div>
+        </div>
+        <p class="small text-muted mb-0 mt-2">Không gồm 153 (CCDC) và 154 (dở dang). Chênh lệch lớn thường do nhập/xuất chưa đồng bộ sổ kép hoặc điều chỉnh kiểm kê.</p>
+      </div>
+    </div>
+    <div class="card shadow-sm border-0 mt-4">
       <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">Lối tắt</h6></div>
       <div class="card-body d-flex flex-wrap gap-2">
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('inventory') }}">Tồn kho</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('inventory_detail') }}">Báo cáo tồn kho</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_import') }}">Nhập kho</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_DanhSachPhieuNhapKho') }}">Danh sách phiếu nhập</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_material_alloc') }}">Xuất dùng nội bộ</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_chung_tu') }}">Chứng từ kho</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_san_xuat_gia_thanh') }}">SX &amp; giá thành</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('inventory') }}">Tồn kho</a>
@@ -113,6 +131,13 @@ async function loadDash(){
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+money(c.parsed.y)}}}}});
   if(pieChart) pieChart.destroy();
   pieChart=new Chart(document.getElementById('whPie').getContext('2d'),{type:'doughnut',data:{labels:['Nguyên vật liệu 152','Hàng hóa 156','Thành phẩm 155','Dở dang 154'],datasets:[{data:[d.inventory_raw||0,d.inventory_goods||0,d.inventory_fg||0,d.inventory_wip||0],backgroundColor:['#0d6efd','#198754','#ffc107','#6c757d']}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>' '+c.label+': '+money(c.parsed)}}}}});
+  const wac=Number(d.stock_wac||0), gl=Number(d.gl_stock_tradable||0), diff=Number(d.wac_vs_gl_diff||0);
+  document.getElementById('wacStock').textContent=money(wac);
+  document.getElementById('wacGl').textContent=money(gl);
+  document.getElementById('wacDelta').textContent=money(diff);
+  const el=document.getElementById('wacDiff');
+  el.textContent = Math.abs(diff) < 1 ? 'Khớp' : 'Lệch';
+  el.className = 'small fw-semibold ' + (Math.abs(diff) < 1 ? 'text-success' : 'text-danger');
 
 }
 document.addEventListener('DOMContentLoaded',()=>{

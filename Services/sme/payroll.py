@@ -651,9 +651,10 @@ def accrue_payroll(
 ) -> dict[str, Any]:
     """
     Chốt bảng lương kỳ + bút toán (PA A — theo bộ phận):
-      Nợ 622/627/641/642 = gross + BH chủ (theo department từng NV)
+      Nợ 622/627/641/642 = gross + BH chủ + KPCĐ 2% (theo department từng NV)
       Có 3341 = thực lĩnh
       Có 3383/3384/3385 = BH NLĐ + BH chủ (tách loại)
+      Có 3382 = KPCĐ 2% quỹ lương (DN trích)
       Có 3335 = TNCN (nếu có)
     """
     from Services.employee_payroll_helpers import (
@@ -661,6 +662,7 @@ def accrue_payroll(
         expense_account_for_department,
     )
     from Services.insurance_debt_helpers import _load_rates
+    from Services.sme.ledger_ops import kpcd_employer_amount
 
     ensure_sme_journal_ready(conn, commit=False)
     ensure_sme_payroll_schema(conn, commit=False)
@@ -683,6 +685,7 @@ def accrue_payroll(
     emp_bhyt = Decimal('0.00')
     emp_bhtn = Decimal('0.00')
     emp_tncn = Decimal('0.00')
+    total_kpcd = Decimal('0.00')
     expense_by_account: dict[str, Decimal] = {}
     rates = _load_rates(conn)
 
@@ -729,8 +732,10 @@ def accrue_payroll(
         exp_acct = expense_account_for_department(dept) or fallback_exp
         emp_parts_one = _employer_parts_for_record(conn, r, rates=rates)
         emp_employer = emp_parts_one['bhxh'] + emp_parts_one['bhyt'] + emp_parts_one['bhtn']
+        kpcd_one = kpcd_employer_amount(income)
+        total_kpcd += kpcd_one
         expense_by_account[exp_acct] = (
-            expense_by_account.get(exp_acct, Decimal('0.00')) + income + emp_employer
+            expense_by_account.get(exp_acct, Decimal('0.00')) + income + emp_employer + kpcd_one
         )
 
         insert_cols = [
@@ -775,7 +780,7 @@ def accrue_payroll(
         )
 
     employer_total, emp_parts = _employer_insurance_from_records(conn, records)
-    expense_amt = total_income + employer_total
+    expense_amt = total_income + employer_total + total_kpcd
     if not expense_by_account and expense_amt > 0:
         expense_by_account[fallback_exp] = expense_amt
 
@@ -797,8 +802,8 @@ def accrue_payroll(
             'debit': float(amt),
             'credit': 0,
             'description': (
-                f'CP lương + BH DN T{month}/{year} — '
-                f'{department_label(acct)}'
+            f'CP lương + BH DN + KPCĐ T{month}/{year} — '
+            f'{department_label(acct)}'
             ),
         })
         seq += 1
@@ -851,6 +856,15 @@ def accrue_payroll(
             'description': f'BHTN T{month}/{year}',
         })
         seq += 1
+    if total_kpcd > 0:
+        lines.append({
+            'sequence': seq,
+            'account_code': '3382',
+            'debit': 0,
+            'credit': float(total_kpcd),
+            'description': f'KPCĐ 2% quỹ lương T{month}/{year}',
+        })
+        seq += 1
     if emp_tncn > 0:
         lines.append({
             'sequence': seq,
@@ -890,7 +904,7 @@ def accrue_payroll(
             )
         except Exception:
             pass
-    desc = f'Trích lương + BH T{month}/{year}'
+    desc = f'Trích lương + BH + KPCĐ T{month}/{year}'
     entry = post_journal_entry(
         conn,
         posting_date=date_s,
