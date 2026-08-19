@@ -1,6 +1,36 @@
 """Mã sản phẩm theo loại hàng (HKD import)."""
 import sqlite3
 
+# Tiền tố mã khi nhập kho / tạo danh mục:
+#   Hàng hóa (mua để bán) → HH    Thành phẩm → SP
+#   Vật tư → VT    TSCĐ → TSCD    CCDC → CCDC    Dịch vụ → DV
+# Mã cũ SP* (hàng hóa) và TP* (thành phẩm) vẫn giữ nếu đã gán.
+_CODE_SPEC = {
+    'materials': ('VT', 4),
+    'material': ('VT', 4),
+    'raw_materials': ('VT', 4),
+    'nvl': ('VT', 4),
+    'finished_goods': ('SP', 4),
+    'finished': ('SP', 4),
+    'thanh_pham': ('SP', 4),
+    'thanhpham': ('SP', 4),
+    'goods': ('HH', 4),
+    'hang_hoa': ('HH', 4),
+    'fixed_asset': ('TSCD', 4),
+    'tscd': ('TSCD', 4),
+    'tools': ('CCDC', 4),
+    'tool': ('CCDC', 4),
+    'ccdc': ('CCDC', 4),
+    'service': ('DV', 3),
+    'services': ('DV', 3),
+    'dich_vu': ('DV', 3),
+}
+
+
+def product_code_spec(product_type) -> tuple[str, int] | None:
+    pt = (product_type or 'goods').strip().lower()
+    return _CODE_SPEC.get(pt)
+
 
 def _max_seq_with_prefix(c, prefix, digit_width=4):
     px = prefix.upper()
@@ -20,18 +50,11 @@ def _max_seq_with_prefix(c, prefix, digit_width=4):
 
 
 def peek_next_product_code(c, product_type):
-    pt = (product_type or 'goods').strip().lower()
-    if pt == 'materials':
-        return _max_seq_with_prefix(c, 'VT', 4)
-    if pt == 'finished_goods':
-        return _max_seq_with_prefix(c, 'TP', 3)
-    if pt == 'fixed_asset':
-        return _max_seq_with_prefix(c, 'TSCD', 4)
-    if pt == 'tools':
-        return _max_seq_with_prefix(c, 'CCDC', 4)
-    if pt == 'service':
-        return _max_seq_with_prefix(c, 'DV', 3)
-    return None
+    spec = product_code_spec(product_type)
+    if not spec:
+        return None
+    prefix, width = spec
+    return _max_seq_with_prefix(c, prefix, width)
 
 
 def assign_product_codes(c, product_id, product_type, unit1=None,
@@ -39,7 +62,7 @@ def assign_product_codes(c, product_id, product_type, unit1=None,
     """Gán product_code + barcode sau INSERT/upsert.
 
     Tem NSX (external_barcode) được ưu tiên; không ghi đè mã NSX đã lưu.
-    Không có tem → sinh mã nội bộ SPxxxx01 như cũ.
+    Không có tem → sinh mã nội bộ (HH/SP/VT…) + đuôi 01/02.
     """
     from Services.product_barcode import (
         barcode_owned_by_other,
@@ -66,18 +89,12 @@ def assign_product_codes(c, product_id, product_type, unit1=None,
 
     if existing_code:
         code = existing_code
-    elif pt == 'materials':
-        code = _max_seq_with_prefix(c, 'VT', 4)
-    elif pt == 'finished_goods':
-        code = _max_seq_with_prefix(c, 'TP', 3)
-    elif pt == 'fixed_asset':
-        code = _max_seq_with_prefix(c, 'TSCD', 4)
-    elif pt == 'tools':
-        code = _max_seq_with_prefix(c, 'CCDC', 4)
-    elif pt == 'service':
-        code = _max_seq_with_prefix(c, 'DV', 3)
     else:
-        code = f"SP{product_id:04d}"
+        spec = product_code_spec(pt)
+        if spec:
+            code = _max_seq_with_prefix(c, spec[0], spec[1])
+        else:
+            code = _max_seq_with_prefix(c, 'HH', 4)
 
     gen_bc = code if pt in ('fixed_asset', 'tools', 'service') else f"{code}01"
     gen_b1 = f"{code}02" if unit1 and pt not in ('fixed_asset', 'tools', 'service') else None

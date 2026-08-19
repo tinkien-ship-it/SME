@@ -442,21 +442,11 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_sale_export():
-        # Không mở DB khi render form — tránh DDL/write-lock (ensure_warehouse) làm treo TTFB.
-        # Danh sách kho: cache process hoặc mặc định; user ít khi đổi kho trên form XK.
-        warehouses = [{'code': 'KHO_001', 'name': 'Kho mặc định', 'is_default': 1}]
-        try:
-            db_key = getattr(g, 'db_path', None) or session.get('db_path') or ''
-            cache = getattr(app, '_sme_wh_cache', None) or {}
-            hit = cache.get(db_key) if db_key else None
-            if hit and hit[1]:
-                warehouses = hit[1]
-        except Exception:
-            pass
+        # Không mở DB khi render form (DDL/warehouse lock). Kho + hàng load qua API.
         return render_template(
             'KeToanSME/sale_export.html',
             products_json='[]',
-            warehouses=warehouses,
+            warehouses=[{'code': 'KHO_001', 'name': 'Kho mặc định', 'is_default': 1}],
             edit_id=request.args.get('sale_id') or request.args.get('id'),
         )
 
@@ -4670,6 +4660,8 @@ def register_ketoan_sme_routes(app):
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
+
+    @app.route('/api/sme/journal/<int:entry_id>', methods=['GET'])
     @login_required
     @require_sme_regime
     def api_sme_journal_get(entry_id):

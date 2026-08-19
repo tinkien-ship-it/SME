@@ -52,9 +52,9 @@ ROLE_LABELS = {
     'adminSME99': 'Quản trị SME (TT99)',
 }
 
-# Trang / endpoint chỉ thuộc TT99 (mẫu 03–09-TT, 03–07-VT, XK/HQ, L/C, FX, TSCĐ đánh số…).
+# Trang / endpoint chỉ thuộc TT99 (mẫu 03–09-TT, 03–07-VT, L/C, FX, TSCĐ đánh số…).
+# Bán hàng xuất khẩu + tờ khai HQ dùng chung TT58 và TT99.
 TT99_ONLY_ENDPOINTS = frozenset({
-    'SME_sale_export', 'SME_sale_export_list', 'SME_customs_declarations',
     'SME_landed_cost', 'SME_letter_of_credit',
     'SME_fx_cash',
     'SME_advances', 'SME_advance_in',
@@ -76,8 +76,6 @@ TT99_ONLY_ENDPOINTS = frozenset({
 })
 
 TT99_ONLY_PATH_PREFIXES = (
-    '/api/sme/customs-declarations',
-    '/api/sme/export-sale',
     '/api/sme/landed-cost',
     '/api/sme/lc',
     '/api/sme/import-payment/open-lcs',

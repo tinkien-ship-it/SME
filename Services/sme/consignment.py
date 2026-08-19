@@ -147,17 +147,22 @@ def _product_meta(conn: sqlite3.Connection, product_id: int) -> dict:
     if not row:
         raise ValueError(f'Không tìm thấy sản phẩm #{product_id}')
     d = dict(row)
+    pt = str(d.get('product_type') or 'goods').strip().lower()
     code = str(d.get('product_code') or '').strip().upper()
-    if code.startswith('TP'):
+    if pt in ('finished_goods', 'finished', 'thanh_pham', 'thanhpham'):
         d['product_type'] = 'finished_goods'
-    elif code.startswith('SP'):
+    elif code.startswith('TP'):
+        d['product_type'] = 'finished_goods'
+    elif code.startswith('HH'):
+        d['product_type'] = 'goods'
+    elif code.startswith('SP') and pt not in ('finished_goods', 'finished'):
         d['product_type'] = 'goods'
     return d
 
 
 def _is_shippable_consign_code(product_code: str | None) -> bool:
     code = str(product_code or '').strip().upper()
-    return code.startswith('SP') or code.startswith('TP')
+    return code.startswith('HH') or code.startswith('SP') or code.startswith('TP')
 
 
 def _inv_role(product_type: str | None) -> str:

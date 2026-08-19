@@ -129,18 +129,19 @@
   const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const typeLabel=t=>{
     t=(t||'goods').toLowerCase();
-    if(['finished_goods','finished','ready_made'].includes(t)) return 'TP (155)';
-    if(['materials','raw_materials','material'].includes(t)) return 'NVL';
+    if(['finished_goods','finished','thanh_pham'].includes(t)) return 'SP (155)';
+    if(['materials','raw_materials','material'].includes(t)) return 'NVL (152)';
     return 'HH (156)';
   };
   const productCode=p=>String(p.product_code||p.code||'').trim().toUpperCase();
   const productKind=p=>{
+    const t=(p.product_type||'').toLowerCase();
     const code=productCode(p);
-    if(code.startsWith('TP')) return 'TP';
-    if(code.startsWith('SP')) return 'SP';
+    if(['finished_goods','finished','thanh_pham'].includes(t) || code.startsWith('TP')) return 'TP';
+    if(code.startsWith('HH') || t==='goods' || code.startsWith('SP')) return 'SP';
     return '';
   };
-  const kindLabel=kind=>kind==='TP'?'TP (155)':(kind==='SP'?'HH (156)':'');
+  const kindLabel=kind=>kind==='TP'?'SP/TP (155)':(kind==='SP'?'HH (156)':'');
   const emailOk=e=>{
     e=(e||'').trim();
     const i=e.indexOf('@');
@@ -196,7 +197,7 @@
   }
   async function loadProducts(){
     const wh=fWh.value||'';
-    const qs=new URLSearchParams({stock_only:'1', prefixes:'SP,TP'});
+    const qs=new URLSearchParams({stock_only:'1', prefixes:'HH,SP,TP'});
     if(wh) qs.set('warehouse', wh);
     const res=await fetch('/api/sme/products/brief?'+qs.toString());
     const json=await res.json();

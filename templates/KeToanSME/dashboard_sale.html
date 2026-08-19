@@ -22,9 +22,7 @@
           <option value="this_year">Năm nay</option>
         </select>
         <a href="{{ url_for('sale') }}" class="btn btn-primary quick-action-btn px-4"><i class="fas fa-cart-shopping me-2"></i>Điểm bán hàng</a>
-        {% if not sme_is_tt58 %}
         <a href="{{ url_for('SME_sale_export') }}" class="btn btn-outline-primary quick-action-btn px-3"><i class="fas fa-plane-departure me-2"></i>Xuất khẩu</a>
-        {% endif %}
       </div>
     </div>
     <div class="row g-4 mb-4">
@@ -79,6 +77,9 @@
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('order') }}">Đơn hàng</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoCongNoPhaiThu') }}">Phải thu</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_consignment') }}">Gửi đại lý (157)</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_sale_export') }}">Bán hàng xuất khẩu</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_sale_export_list') }}">Danh sách xuất khẩu</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_customs_declarations') }}">Tờ khai HQ</a>
 {% if not sme_is_tt58 %}
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_form_01_bh') }}">01-BH</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_form_02_bh') }}">02-BH</a>

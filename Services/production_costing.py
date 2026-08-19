@@ -503,7 +503,7 @@ def _ensure_finished_product_codes(cursor, finished_product_id: int) -> tuple[st
         code = (row[0] or '').strip()
         barcode = (row[1] or '').strip()
         unit1 = row[2] if len(row) > 2 else None
-    if code.upper().startswith('TP') and barcode:
+    if code.upper().startswith(('TP', 'SP')) and barcode:
         return code, barcode
     from Services.import_line_helpers import assign_product_codes
     new_code, new_barcode, _b1 = assign_product_codes(

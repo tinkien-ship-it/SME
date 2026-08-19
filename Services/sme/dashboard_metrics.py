@@ -259,10 +259,23 @@ def _safe_sum(conn: sqlite3.Connection, sql: str, params: tuple = ()) -> float:
         return 0.0
 
 
-def physical_inventory_value(conn: sqlite3.Connection) -> float:
-    """Giá trị tồn kho vật lý = Σ (số lượng × giá vốn bình quân), loại dịch vụ.
+# Hàng hóa / thành phẩm / NVL — không gồm TSCĐ (211) và CCDC (153)
+_TRADABLE_PRODUCT_SQL = """
+    LOWER(COALESCE(NULLIF(TRIM(p.product_type), ''), 'goods')) IN (
+        'goods', 'hang_hoa',
+        'materials', 'material', 'raw_materials', 'nvl',
+        'finished_goods', 'finished', 'thanh_pham', 'thanhpham'
+    )
+    AND UPPER(COALESCE(p.product_code, '')) NOT LIKE 'TSCD%'
+    AND UPPER(COALESCE(p.product_code, '')) NOT LIKE 'CCDC%'
+    AND UPPER(COALESCE(p.product_code, '')) NOT LIKE 'DV%'
+"""
 
-    Khớp trang Tồn kho / Báo cáo tồn kho (không dùng số dư sổ cái 152–156).
+
+def physical_inventory_value(conn: sqlite3.Connection) -> float:
+    """Giá trị tồn kho vật lý HH / TP / NVL = Σ (SL × giá vốn bình quân).
+
+    Loại TSCĐ, CCDC và dịch vụ (theo dõi trên sổ TSCĐ / CCDC, không phải HTK).
     Số lượng ưu tiên tổng stock_moves; fallback cột inventory.quantity.
     """
     if not _table_exists(conn, 'inventory') or not _table_exists(conn, 'products'):
@@ -271,7 +284,7 @@ def physical_inventory_value(conn: sqlite3.Connection) -> float:
     try:
         if has_moves:
             row = conn.execute(
-                """
+                f"""
                 SELECT COALESCE(SUM(
                     COALESCE(
                         (SELECT SUM(sm.quantity) FROM stock_moves sm WHERE sm.product_id = i.product_id),
@@ -281,20 +294,18 @@ def physical_inventory_value(conn: sqlite3.Connection) -> float:
                 ), 0)
                 FROM inventory i
                 JOIN products p ON p.id = i.product_id
-                WHERE COALESCE(p.product_type, 'goods') != 'service'
-                  AND UPPER(COALESCE(p.product_code, '')) NOT LIKE 'DV%'
+                WHERE {_TRADABLE_PRODUCT_SQL}
                 """
             ).fetchone()
         else:
             row = conn.execute(
-                """
+                f"""
                 SELECT COALESCE(SUM(
                     COALESCE(i.quantity, 0) * COALESCE(i.avg_cost, 0)
                 ), 0)
                 FROM inventory i
                 JOIN products p ON p.id = i.product_id
-                WHERE COALESCE(p.product_type, 'goods') != 'service'
-                  AND UPPER(COALESCE(p.product_code, '')) NOT LIKE 'DV%'
+                WHERE {_TRADABLE_PRODUCT_SQL}
                 """
             ).fetchone()
         return float(row[0] if row else 0)
@@ -309,7 +320,7 @@ def warehouse_hub_metrics(
     period_to: int | None = None,
     branch_code: str | None = None,
 ) -> dict[str, Any]:
-    """Hub kho: số dư HTK, PS nhập/xuất (giá vốn), số mặt hàng."""
+    """Hub kho: số dư HH/TP/NVL (156/155/152) — không gồm CCDC 153 hay TSCĐ 211."""
     from datetime import datetime
     ensure_sme_journal_ready(conn, commit=False)
     period_to = period_to or datetime.now().month
@@ -324,37 +335,53 @@ def warehouse_hub_metrics(
     wip = _sum_balance(bals, ('154',), normal='debit')
     fg = _sum_balance(bals, ('155',), normal='debit')
     goods = _sum_balance(bals, ('156',), normal='debit')
-    inventory = raw + tools_inv + wip + fg + goods
-    purchase_in = _sum_activity(activity, ('152', '153', '155', '156'), side='debit')
+    inventory = raw + fg + goods
+    purchase_in = _sum_activity(activity, ('152', '155', '156'), side='debit')
     cogs = _sum_activity(activity, ('632',), side='debit')
 
-    product_count = _safe_count(conn, "SELECT COUNT(*) FROM products") if _table_exists(conn, 'products') else 0
+    product_count = 0
     sku_with_stock = 0
     stock_wac = Decimal('0.00')
-    wac_by = {'152': Decimal('0'), '153': Decimal('0'), '155': Decimal('0'), '156': Decimal('0')}
-    if _table_exists(conn, 'inventory'):
-        sku_with_stock = _safe_count(conn, "SELECT COUNT(*) FROM inventory WHERE COALESCE(quantity,0) > 0")
+    wac_by = {'152': Decimal('0'), '155': Decimal('0'), '156': Decimal('0')}
+    if _table_exists(conn, 'products'):
+        product_count = _safe_count(
+            conn,
+            f"SELECT COUNT(*) FROM products p WHERE {_TRADABLE_PRODUCT_SQL}",
+        )
+    if _table_exists(conn, 'inventory') and _table_exists(conn, 'products'):
+        sku_with_stock = _safe_count(
+            conn,
+            f"""
+            SELECT COUNT(*) FROM inventory i
+            JOIN products p ON p.id = i.product_id
+            WHERE COALESCE(i.quantity, 0) > 0 AND {_TRADABLE_PRODUCT_SQL}
+            """,
+        )
         try:
             from Services.sme.inventory_ops import inventory_account_for_product
             rows = conn.execute(
-                """
+                f"""
                 SELECT i.product_id, COALESCE(i.quantity, 0) AS qty, COALESCE(i.avg_cost, 0) AS cost
                 FROM inventory i
-                WHERE COALESCE(i.quantity, 0) <> 0
+                JOIN products p ON p.id = i.product_id
+                WHERE COALESCE(i.quantity, 0) <> 0 AND {_TRADABLE_PRODUCT_SQL}
                 """
             ).fetchall()
             for r in rows:
                 d = dict(r)
                 val = _money(d.get('qty')) * _money(d.get('cost'))
-                stock_wac += val
                 acc = inventory_account_for_product(conn, int(d['product_id']))
                 if acc in wac_by:
+                    stock_wac += val
                     wac_by[acc] += val
         except Exception:
             pass
     elif _table_exists(conn, 'products'):
         try:
-            sku_with_stock = _safe_count(conn, "SELECT COUNT(*) FROM products WHERE COALESCE(quantity,0) > 0")
+            sku_with_stock = _safe_count(
+                conn,
+                f"SELECT COUNT(*) FROM products p WHERE COALESCE(p.quantity,0) > 0 AND {_TRADABLE_PRODUCT_SQL}",
+            )
         except Exception:
             sku_with_stock = 0
 
@@ -364,7 +391,7 @@ def warehouse_hub_metrics(
         monthly.append({
             'period': m,
             'label': f'T{m:02d}',
-            'purchase_in': _f(_sum_activity(act, ('152', '153', '155', '156'), side='debit')),
+            'purchase_in': _f(_sum_activity(act, ('152', '155', '156'), side='debit')),
             'cogs': _f(_sum_activity(act, ('632',), side='debit')),
         })
 
@@ -376,6 +403,7 @@ def warehouse_hub_metrics(
         'inventory_goods': _f(max(Decimal('0'), goods)),
         'inventory_fg': _f(max(Decimal('0'), fg)),
         'inventory_wip': _f(max(Decimal('0'), wip)),
+        'inventory_tools': _f(max(Decimal('0'), tools_inv)),
         'purchase_in_ytd': _f(max(Decimal('0'), purchase_in)),
         'cogs_ytd': _f(max(Decimal('0'), cogs)),
         'product_count': product_count,

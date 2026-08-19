@@ -142,7 +142,7 @@ def _endpoint_metric(
         )
         return _metric(
             wh.get('inventory_total'),
-            detail='Tổng hàng tồn kho (152+153+154+155+156)',
+            detail='Tổng HH + TP + NVL (156+155+152)',
         )
 
     return None

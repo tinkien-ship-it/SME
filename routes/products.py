@@ -48,18 +48,18 @@ def _maybe_assign_product_codes(c, product_id, product_type, unit1=None,
 
 
 def _next_seq_product_code(c, prefix):
-    """Sinh mã DV001, TP001… theo max hiện có với prefix cho trước."""
+    """Sinh mã DV001, HH0001, SP0001… theo max hiện có với prefix cho trước."""
     from Services.import_line_helpers import _max_seq_with_prefix
-    width = 3 if prefix.upper() in ('TP', 'DV') else 4
+    width = 3 if prefix.upper() in ('DV', 'TP') else 4
     return _max_seq_with_prefix(c, prefix, width)
 
 
 def _next_tp_product_code(c):
-    return _next_seq_product_code(c, 'TP')
+    return _next_seq_product_code(c, 'SP')
 
 
 def _assign_finished_goods_codes(c, product_id, unit1=None):
-    """Mã thành phẩm giống products.html: TP001, barcode TP00101 / TP00102."""
+    """Mã thành phẩm: SP0001, barcode SP000101 / SP000102 (mã cũ TP* giữ nguyên)."""
     from Services.import_line_helpers import assign_product_codes
     code, barcode, _barcode1 = assign_product_codes(
         c, product_id, 'finished_goods', unit1,

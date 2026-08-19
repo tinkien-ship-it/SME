@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-_INTERNAL_PREFIXES = ('SP', 'VT', 'TP', 'CCDC', 'TSCD', 'DV', 'NVL', 'M')
+_INTERNAL_PREFIXES = ('HH', 'SP', 'VT', 'TP', 'CCDC', 'TSCD', 'DV', 'NVL', 'M')
 _GTIN_LENS = (8, 12, 13, 14)
 
 

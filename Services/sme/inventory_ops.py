@@ -173,6 +173,8 @@ def inventory_account_for_product(conn: sqlite3.Connection, product_id: int) -> 
         return '155'
     if pt in ('tools', 'tool', 'ccdc'):
         return '153'
+    if pt in ('fixed_asset', 'tscd'):
+        return '211'
     return '156'
 
 

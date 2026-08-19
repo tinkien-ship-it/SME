@@ -267,6 +267,12 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
                     if any(code.startswith(px) for px in prefixes):
                         filtered.append(r)
                 data = filtered
+            for row in data:
+                row['price'] = (
+                    float(row.get('wholesale_price') or 0)
+                    or float(row.get('base_price') or 0)
+                    or float(row.get('avg_cost') or 0)
+                )
             resp = jsonify({'success': True, 'data': data})
             resp.headers['Cache-Control'] = 'private, max-age=60'
             return resp
@@ -287,6 +293,8 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
                 data = [dict(r) for r in rows]
                 if stock_only:
                     data = [r for r in data if float(r.get('quantity') or 0) > 1e-9]
+                for row in data:
+                    row['price'] = float(row.get('avg_cost') or 0)
                 resp = jsonify({'success': True, 'data': data})
                 resp.headers['Cache-Control'] = 'private, max-age=60'
                 return resp
