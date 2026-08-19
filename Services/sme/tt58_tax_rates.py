@@ -3,7 +3,7 @@
 Hiệu lực thông tư: 01/07/2026. Số liệu mặc định theo bảng tóm tắt:
   A. GTGT % trên doanh thu — Trường hợp 1 & 2
   B. TNDN % trên doanh thu — Trường hợp 1 & 3
-  C. TNDN trên thu nhập tính thuế — Trường hợp 2 & 4 (bậc 15 / 17 / 20%)
+  C. TNDN trên thu nhập tính thuế — Trường hợp 2 & 4 (bậc 15 / 17%, tối đa DT 10 tỷ)
 """
 from __future__ import annotations
 
@@ -67,7 +67,10 @@ DEFAULT_SECTORS: tuple[dict[str, Any], ...] = (
 )
 
 # C. TNDN trên thu nhập tính thuế (TH2 / TH4)
-# Doanh thu ≤ 3 tỷ → 15%; > 3 đến 50 tỷ → 17%; > 50 tỷ → 20%. Mức phổ thông 20%.
+# TT58/DNSN chỉ thiết lập đến doanh thu 10 tỷ: ≤ 3 tỷ → 15%; > 3 đến 10 tỷ → 17%.
+# Doanh thu > 10 tỷ không áp dụng TT58 — chuyển TT99 (không liệt kê bậc > 50 tỷ / 20%).
+TT58_MAX_REVENUE = 10_000_000_000
+
 CIT_INCOME_BRACKETS: tuple[dict[str, Any], ...] = (
     {
         'key': 'le3b',
@@ -77,18 +80,11 @@ CIT_INCOME_BRACKETS: tuple[dict[str, Any], ...] = (
         'db_key': '__cit_bracket_le3b__',
     },
     {
-        'key': 'gt3_le50b',
-        'label': 'Tổng doanh thu năm > 3 tỷ đến 50 tỷ đồng',
-        'max_revenue': 50_000_000_000,
+        'key': 'gt3_le10b',
+        'label': 'Tổng doanh thu năm > 3 tỷ đến 10 tỷ đồng',
+        'max_revenue': TT58_MAX_REVENUE,
         'pct': 17.0,
         'db_key': '__cit_bracket_gt3_le50b__',
-    },
-    {
-        'key': 'gt50b',
-        'label': 'Tổng doanh thu năm > 50 tỷ đồng',
-        'max_revenue': None,
-        'pct': 20.0,
-        'db_key': '__cit_bracket_gt50b__',
     },
 )
 
@@ -364,10 +360,9 @@ def sector_tax_map(
 
 
 def cit_income_pct_for_revenue(revenue, brackets: list[dict[str, Any]] | None = None) -> float:
-    """Chọn bậc 15 / 17 / 20% theo tổng doanh thu năm."""
+    """Chọn bậc 15 / 17% theo tổng doanh thu năm (TT58 — tối đa 10 tỷ)."""
     rev = float(revenue or 0)
     rows = brackets if brackets is not None else [dict(b) for b in CIT_INCOME_BRACKETS]
-    # Sắp theo trần tăng dần; bậc cuối không trần
     ordered = sorted(
         rows,
         key=lambda x: (10**18 if x.get('max_revenue') is None else float(x.get('max_revenue') or 0)),
@@ -376,7 +371,10 @@ def cit_income_pct_for_revenue(revenue, brackets: list[dict[str, Any]] | None = 
         cap = b.get('max_revenue')
         if cap is None or rev <= float(cap):
             return float(b.get('pct') or DEFAULT_CIT_INCOME_PCT)
-    return float(CIT_COMMON_PCT)
+    # Trên 10 tỷ: không áp dụng TT58 — dùng bậc cao nhất còn liệt kê (17%)
+    if ordered:
+        return float(ordered[-1].get('pct') or DEFAULT_CIT_INCOME_PCT)
+    return float(DEFAULT_CIT_INCOME_PCT)
 
 
 def get_cit_income_rate_pct(
@@ -460,6 +458,7 @@ def save_tt58_tax_rates(
 
     if cit_income_brackets:
         by_key = {b['key']: b for b in CIT_INCOME_BRACKETS}
+        by_key['gt3_le50b'] = by_key.get('gt3_le10b')  # legacy API key
         for item in cit_income_brackets:
             bk = (item.get('key') or '').strip()
             spec = by_key.get(bk)
@@ -522,7 +521,7 @@ def rates_ui_context_for_method(method_code: str | None) -> dict[str, Any]:
             'cit_mode': None,
             'hint': (
                 'Chọn Trường hợp 1–4 rồi lưu — hệ thống chỉ hiện thuế suất đúng trường hợp '
-                '(bảng A GTGT % DT, B TNDN % DT, C TNDN trên thu nhập 15/17/20%).'
+                '(bảng A GTGT % DT, B TNDN % DT, C TNDN trên thu nhập 15/17% — tối đa DT 10 tỷ).'
             ),
         }
     td = get_tt58_tax_method_def(normalize_tt58_tax_method(method_code))
@@ -542,10 +541,10 @@ def rates_ui_context_for_method(method_code: str | None) -> dict[str, Any]:
         'hint': (
             'Bảng A+B: GTGT và TNDN đều theo % doanh thu theo nhóm ngành (Trường hợp 1).'
             if vat_mode == 'pct_revenue' and cit_mode == 'pct_revenue' else
-            'Bảng A: GTGT % doanh thu. Bảng C: TNDN 15/17/20% trên thu nhập tính thuế (Trường hợp 2).'
+            'Bảng A: GTGT % doanh thu. Bảng C: TNDN 15/17% trên thu nhập tính thuế (Trường hợp 2, DT ≤ 10 tỷ).'
             if vat_mode == 'pct_revenue' and cit_mode == 'taxable_income' else
             'GTGT khấu trừ theo hóa đơn. Bảng B: TNDN % doanh thu theo nhóm ngành (Trường hợp 3).'
             if vat_mode == 'deduction' and cit_mode == 'pct_revenue' else
-            'GTGT khấu trừ theo hóa đơn. Bảng C: TNDN 15/17/20% trên thu nhập tính thuế (Trường hợp 4).'
+            'GTGT khấu trừ theo hóa đơn. Bảng C: TNDN 15/17% trên thu nhập tính thuế (Trường hợp 4, DT ≤ 10 tỷ).'
         ),
     }

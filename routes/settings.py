@@ -2138,7 +2138,27 @@ Trân trọng,
 
             # TT58 → TT99: đồng bộ COA/quy tắc/schema + kiểm tra toàn vẹn số liệu
             tt99_sync = None
+            tt58_setup_warning = None
             new_regime = (settings_patch or {}).get('accounting_regime') or accounting_regime
+            if new_regime and str(new_regime).upper() == 'SME_MICRO_TT58':
+                try:
+                    from datetime import datetime
+                    from db_utils import get_tenant_db_connection
+                    from Services.sme.micro_enterprise import evaluate_tt58_setup_warning
+
+                    tconn = get_tenant_db_connection(tenant_id)
+                    try:
+                        merged = dict(old_settings or {})
+                        merged.update(settings_patch or {})
+                        tt58_setup_warning = evaluate_tt58_setup_warning(
+                            tconn,
+                            fiscal_year=datetime.now().year,
+                            settings=merged,
+                        )
+                    finally:
+                        tconn.close()
+                except Exception:
+                    tt58_setup_warning = None
             if new_regime:
                 try:
                     from Services.sme.migrate_tt58_to_tt99 import migrate_tt58_to_tt99_if_needed
@@ -2178,6 +2198,9 @@ Trân trọng,
                         ' — đã đồng bộ TT99; kiểm tra toàn vẹn có cảnh báo '
                         '(xem tt99_sync.checks — cần rà soát số liệu trước khi khóa sổ).'
                     )
+            if tt58_setup_warning and not tt58_setup_warning.get('eligible'):
+                payload['tt58_setup_warning'] = tt58_setup_warning
+                payload['message'] += f" — Cảnh báo TT58: {tt58_setup_warning.get('message')}"
             return jsonify(payload)
         
         except Exception as e:

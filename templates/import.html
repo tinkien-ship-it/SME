@@ -188,16 +188,23 @@
         </div>
 
         <div class="card shadow-sm border-0 mb-5">
-            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom">
-                <span class="small fw-bold text-primary uppercase"><i class="bi bi-list-ul"></i>
-                    {% if import_mode == 'service' %}Chi tiết dịch vụ / chi phí{% elif import_mode == 'fb' %}Chi tiết hàng dùng ngay / nguyên vật liệu{% else %}Chi tiết mặt hàng{% endif %}
-                </span>
-                {% if import_mode != 'service' %}
-                <span class="small text-muted fw-normal ms-2">Sửa ĐV cơ bản / ĐV sỉ / giá bán trên dòng. Quét tem lẻ hoặc tem thùng (sỉ). Để trống → tự sinh mã khi lưu.</span>
-                {% endif %}
-                <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="addRow()">
-                    <i class="bi bi-plus-lg"></i> THÊM DÒNG
-                </button>
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom flex-wrap gap-2">
+                <div class="d-flex flex-column flex-grow-1">
+                    <span class="small fw-bold text-primary uppercase"><i class="bi bi-list-ul"></i>
+                        {% if import_mode == 'service' %}Chi tiết dịch vụ / chi phí{% elif import_mode == 'fb' %}Chi tiết hàng dùng ngay / nguyên vật liệu{% else %}Chi tiết mặt hàng{% endif %}
+                    </span>
+                    {% if import_mode != 'service' %}
+                    <span class="small text-white fw-normal">Nhập ĐV lẻ / ĐV sỉ / giá bán trên dòng. Quét mã vạch lẻ hoặc mã vạch thùng (sỉ) có sẵn trên hàng. Để trống → tự sinh mã vạch khi lưu.</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="addRow()">
+                        <i class="bi bi-plus-lg"></i> THÊM DÒNG
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm fw-bold text-white" id="btnResetColWidths" title="Khôi phục độ rộng cột mặc định">
+                        <i class="fas fa-columns me-1 text-white"></i><span class="text-white">Đặt lại cột</span>
+                    </button>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive" style="max-height: 50vh;">
@@ -219,7 +226,7 @@
                                 <th style="width:150px; background:#fff7ed;">Tiền Thanh Toán<div class="resizer"></div></th>
                                 <th style="width:160px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã vạch lẻ<div class="resizer"></div></th>
                                 <th style="width:160px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã vạch sỉ<div class="resizer"></div></th>
-                                <th style="width:90px;" class="service-mode-hide">ĐV CB<div class="resizer"></div></th>
+                                <th style="width:90px;" class="service-mode-hide">ĐV Lẻ<div class="resizer"></div></th>
                                 <th style="width:90px;" class="service-mode-hide">ĐV sỉ<div class="resizer"></div></th>
                                 <th style="width:80px;" class="service-mode-hide">Tỷ Lệ<div class="resizer"></div></th>
                                 <th style="width:110px; background:#f0fdf4;" class="service-mode-hide">Giá Lẻ<div class="resizer"></div></th>
@@ -350,13 +357,66 @@ const toast = (msg, type = 'success') => {
 const initResizer = () => {
     const table = document.getElementById('itemsTable');
     if (!table) return;
-    table.querySelectorAll('th').forEach(col => {
+    table.style.tableLayout = 'fixed';
+
+    const storageKey = 'colWidths:import-itemsTable';
+    const saved = (() => {
+        try { return JSON.parse(localStorage.getItem(storageKey) || 'null'); } catch (e) { return null; }
+    })();
+    const applyWidths = (widths) => {
+        if (!widths || !Array.isArray(widths)) return;
+        const ths = table.querySelectorAll('thead th');
+        const trs = table.querySelectorAll('tbody tr');
+        for (let i = 0; i < ths.length && i < widths.length; i++) {
+            const w = widths[i];
+            if (!w || !Number.isFinite(w)) continue;
+            ths[i].style.width = w + 'px';
+            ths[i].style.minWidth = w + 'px';
+            for (let r = 0; r < trs.length; r++) {
+                const cell = trs[r].cells[i];
+                if (cell) cell.style.width = w + 'px';
+            }
+        }
+    };
+    applyWidths(saved);
+
+    const ths = table.querySelectorAll('thead th');
+    table.querySelectorAll('th').forEach((col, colIndex) => {
         const resizer = col.querySelector('.resizer');
         if (!resizer) return;
         let x = 0, w = 0;
-        const mouseDown = e => { x = e.clientX; w = col.offsetWidth; document.addEventListener('mousemove', mouseMove); document.addEventListener('mouseup', mouseUp); };
-        const mouseMove = e => col.style.width = `${w + (e.clientX - x)}px`;
-        const mouseUp = () => { document.removeEventListener('mousemove', mouseMove); document.removeEventListener('mouseup', mouseUp); };
+        const mouseDown = e => {
+            x = e.clientX;
+            w = col.offsetWidth;
+            document.addEventListener('mousemove', mouseMove);
+            document.addEventListener('mouseup', mouseUp);
+        };
+        const mouseMove = e => {
+            const nextW = Math.max(40, w + (e.clientX - x));
+            col.style.width = `${nextW}px`;
+            col.style.minWidth = `${nextW}px`;
+            const trs = table.querySelectorAll('tbody tr');
+            for (let r = 0; r < trs.length; r++) {
+                const cell = trs[r].cells[colIndex];
+                if (cell) cell.style.width = `${nextW}px`;
+            }
+        };
+        const mouseUp = () => {
+            document.removeEventListener('mousemove', mouseMove);
+            document.removeEventListener('mouseup', mouseUp);
+            // persist
+            const current = [];
+            ths.forEach(th => {
+                const raw = th.style.width || '';
+                if (raw && raw.endsWith('px')) {
+                    const n = parseInt(raw, 10);
+                    current.push(Number.isFinite(n) ? n : th.offsetWidth);
+                } else {
+                    current.push(th.offsetWidth);
+                }
+            });
+            try { localStorage.setItem(storageKey, JSON.stringify(current)); } catch (e) {}
+        };
         resizer.addEventListener('mousedown', mouseDown);
     });
 };
@@ -897,6 +957,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initResizer();
+
+    const btnReset = document.getElementById('btnResetColWidths');
+    if (btnReset) {
+        btnReset.addEventListener('click', () => {
+            try { localStorage.removeItem('colWidths:import-itemsTable'); } catch (e) {}
+            location.reload();
+        });
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const invoiceId = urlParams.get('invoice_id');

@@ -182,7 +182,7 @@
           <li>{{ b.label }}: <strong>{{ b.pct }}%</strong></li>
           {% endfor %}
         </ul>
-        <div class="text-muted">Mức phổ thông: {{ tax_rates.cit_common_pct }}%</div>
+        <div class="text-muted">Doanh thu &gt; 10 tỷ không áp dụng TT58 — chuyển Kế toán SME (TT99).</div>
         {% endif %}
         <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#tt58TaxRatesModal">
           Chỉnh sửa / đổi hiệu lực
@@ -267,7 +267,7 @@
 
         <div id="citIncomeBlock" class="mt-3 {% if not rates_ui.show_cit_pct_income %}d-none{% endif %}">
           <h6 class="fw-semibold">Bảng C — TNDN trên thu nhập tính thuế (TH2 &amp; TH4)</h6>
-          <p class="small text-muted mb-2">Thuế suất × (Doanh thu − Chi phí được trừ). Hệ thống tự chọn bậc theo tổng doanh thu năm.</p>
+          <p class="small text-muted mb-2">Thuế suất × (Doanh thu − Chi phí được trừ). Hệ thống tự chọn bậc theo tổng doanh thu năm (tối đa 10 tỷ).</p>
           <div class="table-responsive">
             <table class="table table-sm align-middle" id="citBracketTable">
               <thead class="table-light">
@@ -312,11 +312,11 @@
     article5: { show_vat_pct_revenue: true, show_cit_pct_revenue: true, show_cit_pct_income: false,
       hint: 'Bảng A+B: GTGT và TNDN đều theo % doanh thu theo nhóm ngành (Trường hợp 1).' },
     article6: { show_vat_pct_revenue: true, show_cit_pct_revenue: false, show_cit_pct_income: true,
-      hint: 'Bảng A: GTGT % doanh thu. Bảng C: TNDN 15/17/20% trên thu nhập tính thuế (Trường hợp 2).' },
+      hint: 'Bảng A: GTGT % doanh thu. Bảng C: TNDN 15/17% trên thu nhập tính thuế (Trường hợp 2, DT ≤ 10 tỷ).' },
     article7: { show_vat_pct_revenue: false, show_cit_pct_revenue: true, show_cit_pct_income: false,
       hint: 'GTGT khấu trừ theo hóa đơn. Bảng B: TNDN % doanh thu theo nhóm ngành (Trường hợp 3).' },
     article8: { show_vat_pct_revenue: false, show_cit_pct_revenue: false, show_cit_pct_income: true,
-      hint: 'GTGT khấu trừ theo hóa đơn. Bảng C: TNDN 15/17/20% trên thu nhập tính thuế (Trường hợp 4).' },
+      hint: 'GTGT khấu trừ theo hóa đơn. Bảng C: TNDN 15/17% trên thu nhập tính thuế (Trường hợp 4, DT ≤ 10 tỷ).' },
   };
 
   function applyUi(ui) {

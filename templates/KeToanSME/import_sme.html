@@ -210,18 +210,23 @@
 
         <div class="card shadow-sm border-0 mb-5">
             <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center border-bottom flex-wrap gap-2">
-                <div>
+                <div class="flex-grow-1">
                     <span class="small fw-bold text-primary uppercase"><i class="bi bi-list-ul"></i> Chi tiết mặt hàng</span>
                     <div id="importTaxHint" class="small text-muted mt-1 hidden-field">
                         Hàng nhập khẩu: thuế NK + TTĐB nhập theo % hoặc số tuyệt đối (tờ khai) —
                         được vốn hóa vào giá vốn HH / NVL / TSCĐ / CCDC.
                         Bút toán: Có 3333 (NK), Có 3332 (TTĐB).
                     </div>
+                    <span class="small text-white">Nhập ĐV lẻ / ĐV sỉ / giá bán trên dòng. Quét mã vạch lẻ hoặc mã vạch thùng (sỉ) có sẵn trên hàng. Để trống → tự sinh mã vạch khi lưu.</span>
                 </div>
-                <span class="small text-muted me-2">Sửa ĐV CB / ĐV sỉ / giá bán trên dòng. Quét tem lẻ hoặc tem thùng (sỉ). Để trống → tự sinh mã khi lưu.</span>
-                <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="addRow()">
-                    <i class="bi bi-plus-lg"></i> THÊM DÒNG
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="addRow()">
+                        <i class="bi bi-plus-lg"></i> THÊM DÒNG
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm fw-bold text-white" id="btnResetColWidths" title="Khôi phục độ rộng cột mặc định">
+                        <i class="fas fa-columns me-1 text-white"></i><span class="text-white">Đặt lại cột</span>
+                    </button>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive" style="max-height: 55vh;">
@@ -229,17 +234,17 @@
                         <thead>
                             <tr>
                                 <th style="width:55px;">ID</th>
-                                <th style="width:110px;">Kho</th>
-                                <th style="width:200px; color:#b30000;" id="thLineType">Loại hàng</th>
-                                <th style="width:110px;" id="thAcctHint">Định khoản</th>
+                                <th style="width:70px;">Kho</th>
+                                <th style="width:165px; color:#b30000;" id="thLineType">Loại hàng</th>
+                                <th style="width:90px;" id="thAcctHint">Định khoản</th>
                                 <th style="width:280px;">Tên hàng</th>
-                                <th style="width:90px;">ĐVT</th>
-                                <th style="width:80px;">SL</th>
-                                <th style="width:110px;">Đơn giá</th>
+                                <th style="width:60px;">ĐVT</th>
+                                <th style="width:60px;">Số Lượng</th>
+                                <th style="width:60px;">Đơn giá</th>
                                 <th style="width:110px;">Thành tiền</th>
-                                <th style="width:60px;">% CK</th>
+                                <th style="width:60px;">% Chiếc Khấu</th>
                                 <th style="width:90px;">Tiền CK</th>
-                                <th style="width:70px;">% VAT</th>
+                                <th style="width:50px;">% VAT</th>
                                 <th style="width:70px;" class="nk-col" title="Thuế nhập khẩu">% NK</th>
                                 <th style="width:70px;" class="nk-col" title="Thuế tiêu thụ đặc biệt">% TTĐB</th>
                                 <th style="width:90px;">Thuế GTGT</th>
@@ -248,7 +253,7 @@
                                 <th style="width:140px; background:#fff7ed;">Tiền Thanh Toán</th>
                                 <th style="width:155px;">Mã vạch lẻ</th>
                                 <th style="width:155px;">Mã vạch sỉ</th>
-                                <th style="width:80px;" class="stock-col">ĐV CB</th>
+                                <th style="width:80px;" class="stock-col">ĐV Lẻ</th>
                                 <th style="width:80px;" class="stock-col">ĐV sỉ</th>
                                 <th style="width:70px;" class="stock-col">Tỷ Lệ</th>
                                 <th style="width:100px; background:#f0fdf4;" class="stock-col">Giá Lẻ</th>
@@ -290,6 +295,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=4"></script>
 <script src="{{ url_for('static', filename='js/import-product-match.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='js/column-resize.js') }}?v=1"></script>
 
 <style>
     .suggest-box { position: fixed !important; z-index: 99999 !important; background: white; border: 1px solid #86b7fe;
@@ -1103,6 +1109,21 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSuppliersList();
     loadQuySoDu();
     try { toggleImportSource(); } catch (e) {}
+
+    // Resize columns + persist (localStorage)
+    try {
+        if (window.initResizableTableColumns) {
+            window.initResizableTableColumns('itemsTable', 'colWidths:import_sme-itemsTable');
+        }
+    } catch (e) { /* ignore */ }
+
+    const btnReset = document.getElementById('btnResetColWidths');
+    if (btnReset) {
+        btnReset.addEventListener('click', () => {
+            try { localStorage.removeItem('colWidths:import_sme-itemsTable'); } catch (e) {}
+            location.reload();
+        });
+    }
 
     // XML — đúng logic import.html: chọn file chỉ hiện tên; TỰ ĐỘNG LẬP mới upload
     const btnUploadXML = document.getElementById('btnUploadXML');

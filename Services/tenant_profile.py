@@ -21,6 +21,7 @@ ACCOUNTING_REGIMES = {
     'SME_MICRO_TT58': {
         'code': 'SME_MICRO_TT58',
         'label': 'Doanh nghiệp siêu nhỏ (TT58 / VAS)',
+        'description': 'Chỉ khi DT ≤ 10 tỷ, BHXH ≤ 10 người, vốn CSH ≤ 3 tỷ',
         'active': True,
         'coming_soon': False,
     },

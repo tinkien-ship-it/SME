@@ -179,6 +179,7 @@
         const dtWrap = document.getElementById(opts.dtWrapId || 'swal-dt-wrap');
         const vatWrap = document.getElementById(opts.vatFilingWrapId || 'swal-vat-filing-wrap');
         const vatEl = document.getElementById(opts.vatFilingSelectId || 'swal-vat-filing');
+        const tt58Hint = document.getElementById(opts.tt58HintId || 'swal-tt58-hint');
         const bizNameLabel = document.getElementById(opts.bizNameLabelId || 'swal-biz-name-label');
         const sectors = opts.sectors || [];
         const legalIntro = opts.legalIntro || '';
@@ -221,6 +222,10 @@
             }
             if (vatWrap) {
                 vatWrap.style.display = sme ? '' : 'none';
+            }
+            if (tt58Hint) {
+                const isTt58 = String(regimeEl.value || '').toUpperCase() === 'SME_MICRO_TT58';
+                tt58Hint.classList.toggle('d-none', !isTt58);
             }
             if (sme && vatEl && !vatEl.dataset.userTouched) {
                 const code = String(regimeEl.value || '').toUpperCase();

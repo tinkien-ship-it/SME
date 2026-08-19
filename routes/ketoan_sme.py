@@ -5413,8 +5413,8 @@ def register_ketoan_sme_routes(app):
                     ],
                     'accounting_regime': profile.get('accounting_regime'),
                     'hint': (
-                        'DN siêu nhỏ: LĐ BHXH BQ năm ≤ 10 và (DT ≤ trần lĩnh vực HOẶC vốn ≤ 3 tỷ). '
-                        'Hết diện → chuyển TT99 (Master đổi chế độ kế toán).'
+                        'Kế toán SME (TT58): doanh thu năm ≤ 10 tỷ, lao động BHXH bình quân ≤ 10 người, '
+                        'vốn chủ sở hữu ≤ 3 tỷ. Vượt ngưỡng → chuyển TT99 (Master đổi chế độ kế toán).'
                     ),
                 },
             })
