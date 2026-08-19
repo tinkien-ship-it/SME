@@ -81,6 +81,45 @@
         });
     }
 
+    function normName(s) {
+        return String(s || '').trim().toLowerCase();
+    }
+
+    function isExactCatalogMatch(cand, invoiceName) {
+        if (!cand || !cand.product) return false;
+        if (cand.match_type === 'name' && (cand.score || 0) >= 100) return true;
+        const inv = normName(invoiceName);
+        const cat = normName(cand.product.name);
+        return !!(inv && cat && inv === cat);
+    }
+
+    function shouldAutoBind(top, invoiceName) {
+        if (!top || !top.product) return false;
+        if (top.auto_bind) return true;
+        return isExactCatalogMatch(top, invoiceName);
+    }
+
+    function rowHasProduct(row) {
+        return (parseInt(row.querySelector('.p-id')?.value, 10) || 0) > 0;
+    }
+
+    /** Gợi ý gõ tay: tên trùng hẳn danh mục → gán luôn, không mở hộp gợi ý. */
+    function tryExactFromManageList(row, searchVal, products, setProductToRow) {
+        if (!row || rowHasProduct(row) || !Array.isArray(products) || !products.length) return false;
+        const search = normName(searchVal);
+        if (!search) return false;
+        const exact = products.find(function (p) {
+            return normName(p.name) === search;
+        });
+        if (!exact || !setProductToRow) return false;
+        const inv = invoiceNameOf(row) || searchVal;
+        preserveInvoiceName(row, inv);
+        setProductToRow(row, exact, 'exact', row.querySelector('.invoice-unit')?.value || '');
+        preserveInvoiceName(row, inv);
+        onProductChosen(row, exact);
+        return true;
+    }
+
     async function matchCandidates(payload) {
         const res = await fetch('/api/products/match-candidates', {
             method: 'POST',
@@ -261,14 +300,14 @@
             });
             const cands = json.candidates || [];
             const top = cands[0];
-            if (top && top.auto_bind && top.product) {
+            if (shouldAutoBind(top, name)) {
                 applyLink(row, top.product, unit);
                 return;
             }
             const pid = parseInt(row.querySelector('.p-id')?.value, 10) || 0;
             if (cands.length && !pid) {
                 row[CAND_KEY] = cands;
-                row.dataset.matchPending = (top && (top.score || 0) >= HIGH_SCORE) ? '1' : '1';
+                row.dataset.matchPending = '1';
                 row.dataset.matchScore = String((top && top.score) || 0);
                 row.classList.add('row-suggested');
                 setLinkButton(row);
@@ -353,5 +392,7 @@
         matchCandidates: matchCandidates,
         linkAlias: linkAlias,
         openModal: function () { openModal(pendingRows()); },
+        tryExactFromManageList: tryExactFromManageList,
+        isExactCatalogMatch: isExactCatalogMatch,
     };
 })(window);

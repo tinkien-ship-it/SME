@@ -482,25 +482,31 @@ def match_products(
     # 3) Tên danh mục / mã nội bộ
     for p in products:
         code = str(p.get('product_code') or '').strip()
+        pname = (p.get('name') or '').strip()
         reasons: list[str] = []
         score = 0
         auto = False
         mtype = 'keyword'
-        if fold_name(p.get('name')) == q_fold:
+        if pname == name or fold_name(pname) == q_fold:
             score, reasons, auto, mtype = 100, ['Trùng tên danh mục'], True, 'name'
         elif code and (fold_name(code) == q_fold or fold_name(code) in q_fold.split()):
             score, reasons, auto, mtype = 96, [f'Mã {code}'], True, 'code'
         else:
-            s, r = _score_text(name, p.get('name') or '', q_tokens, q_models)
+            s, r = _score_text(name, pname, q_tokens, q_models)
             score, reasons = s, r
             if code:
                 cs, cr = _score_text(name, code, q_tokens, q_models)
                 if cs > score:
                     score, reasons = cs, cr
-            for a in alias_by_pid.get(int(p['id']), []):
-                ascore, ar = _score_text(name, a.get('invoice_name') or '', q_tokens, q_models)
-                if ascore > score:
-                    score, reasons = ascore, (['Bí danh cũ'] + ar)[:4]
+        for a in alias_by_pid.get(int(p['id']), []):
+            inv_a = (a.get('invoice_name') or '').strip()
+            ascore, ar = _score_text(name, inv_a, q_tokens, q_models)
+            if ascore > score:
+                score, reasons = ascore, (['Bí danh cũ'] + ar)[:4]
+                if ascore >= AUTO_SCORE and (
+                    inv_a == name or fold_name(inv_a) == q_fold
+                ):
+                    auto, mtype = True, 'alias'
         if score >= SUGGEST_SCORE:
             consider(p['id'], score, mtype, reasons, auto)
 
