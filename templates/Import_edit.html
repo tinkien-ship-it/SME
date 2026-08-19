@@ -234,6 +234,7 @@
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='js/import-product-match.js') }}?v=3"></script>
 
 <script>
 // ====================== 1. BIẾN TOÀN CỤC & DỮ LIỆU GỐC ======================
@@ -548,6 +549,9 @@ const showSuggestions = debounce(async function(inputEl) {
             `;
             item.onclick = (e) => {
                 e.stopPropagation();
+                const typed = inputEl.value.trim();
+                const hidden = row.querySelector('.invoice-name-hidden');
+                if (hidden && typed) hidden.value = typed;
                 inputEl.value = p.name;
                 setProductToRow(row, p, 'suggest');
                 box.remove();
@@ -584,6 +588,9 @@ const showSuggestions = debounce(async function(inputEl) {
 // ====================== 4. XỬ LÝ DÒNG VÀ ĐỒNG BỘ MẶT HÀNG ======================
 async function performInitialMatch(row, name, invUnit = '') {
     if (!name) return;
+    if (window.KetoImportMatch) {
+        return KetoImportMatch.applyToRow(row, { name, unit: invUnit, setProductToRow });
+    }
     try {
         const queryKey = name.split(' ')[0];
         const res = await fetch(`/api/products/manage?q=${encodeURIComponent(queryKey)}`);
@@ -631,6 +638,7 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         } else if (matchType === 'suggest') {
             row.classList.add('row-suggested');
         }
+        if (window.KetoImportMatch) KetoImportMatch.onProductChosen(row, product);
     } else {
         row.querySelector('.p-id').value = '';
         row.querySelector('.base-unit').value = '';
@@ -694,6 +702,7 @@ function addRow(data = {}) {
     if (window.KetoImportBarcode) {
         KetoImportBarcode.bindLine(tr, { setProductToRow });
     }
+    if (window.KetoImportMatch) KetoImportMatch.bindRow(tr, { setProductToRow });
     calcRow(tr);
 }
 
@@ -938,6 +947,11 @@ async function saveChanges() {
         await loadQuySoDu();
         const check = checkSoDu(totalAmount, paymentMethod);
         if (!check.ok) return Swal.fire('Không đủ tiền', check.message, 'warning');
+    }
+
+    if (window.KetoImportMatch) {
+        const matchOk = await KetoImportMatch.confirmBeforeSave();
+        if (!matchOk) return;
     }
 
     const btn = document.getElementById('btnSave');

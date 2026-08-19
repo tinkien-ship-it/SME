@@ -233,13 +233,6 @@
                                 <th style="width:200px; color:#b30000;" id="thLineType">Loại hàng</th>
                                 <th style="width:110px;" id="thAcctHint">Định khoản</th>
                                 <th style="width:280px;">Tên hàng</th>
-                                <th style="width:155px;">Mã vạch lẻ</th>
-                                <th style="width:155px;">Mã vạch sỉ</th>
-                                <th style="width:80px;" class="stock-col">ĐV CB</th>
-                                <th style="width:80px;" class="stock-col">ĐV sỉ</th>
-                                <th style="width:55px;" class="stock-col">TL</th>
-                                <th style="width:100px; background:#f0fdf4;" class="stock-col">Giá lẻ</th>
-                                <th style="width:100px; background:#eff6ff;" class="stock-col">Giá sỉ</th>
                                 <th style="width:90px;">ĐVT</th>
                                 <th style="width:80px;">SL</th>
                                 <th style="width:110px;">Đơn giá</th>
@@ -252,7 +245,14 @@
                                 <th style="width:90px;">Thuế GTGT</th>
                                 <th style="width:95px;" class="nk-col">Thuế NK</th>
                                 <th style="width:95px;" class="nk-col">Thuế TTĐB</th>
-                                <th style="width:120px; background:#fff7ed;">Thanh toán</th>
+                                <th style="width:140px; background:#fff7ed;">Tiền Thanh Toán</th>
+                                <th style="width:155px;">Mã vạch lẻ</th>
+                                <th style="width:155px;">Mã vạch sỉ</th>
+                                <th style="width:80px;" class="stock-col">ĐV CB</th>
+                                <th style="width:80px;" class="stock-col">ĐV sỉ</th>
+                                <th style="width:70px;" class="stock-col">Tỷ Lệ</th>
+                                <th style="width:100px; background:#f0fdf4;" class="stock-col">Giá Lẻ</th>
+                                <th style="width:100px; background:#eff6ff;" class="stock-col">Giá Sỉ</th>
                                 <th style="width:90px;">Mã SP</th>
                                 <th style="width:50px;">Xóa</th>
                             </tr>
@@ -289,6 +289,7 @@
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='js/import-product-match.js') }}?v=3"></script>
 
 <style>
     .suggest-box { position: fixed !important; z-index: 99999 !important; background: white; border: 1px solid #86b7fe;
@@ -611,6 +612,9 @@ const showSuggestions = debounce(async function(inputEl) {
             `;
             item.onclick = (e) => {
                 e.stopPropagation();
+                const typed = inputEl.value.trim();
+                const hidden = row.querySelector('.invoice-name-hidden');
+                if (hidden && typed) hidden.value = typed;
                 inputEl.value = p.name;
                 setProductToRow(row, p, 'suggest');
                 box.remove();
@@ -646,6 +650,9 @@ const showSuggestions = debounce(async function(inputEl) {
 // ====================== CÁC HÀM CÒN LẠI (GIỮ NGUYÊN) ======================
 async function performInitialMatch(row, name, invUnit = '') {
     if (!name || isServiceLineType(row.querySelector('.line-type-select')?.value)) return;
+    if (window.KetoImportMatch) {
+        return KetoImportMatch.applyToRow(row, { name, unit: invUnit, setProductToRow });
+    }
     try {
         const queryKey = name.split(' ')[0];
         const res = await fetch(`/api/products/manage?q=${encodeURIComponent(queryKey)}`);
@@ -690,6 +697,7 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         }
         if (matchType === 'exact') row.classList.add('row-exact-match');
         else if (matchType === 'suggest') row.classList.add('row-suggested');
+        if (window.KetoImportMatch) KetoImportMatch.onProductChosen(row, product);
     } else {
         row.querySelector('.p-id').value = '';
         row.querySelector('.base-unit').value = invoiceUnit || '';
@@ -726,13 +734,6 @@ function addRow(data = {}) {
             <input type="text" class="product-name form-control form-control-sm border-0" value="${(data.invoice_name || '').replace(/"/g, '&quot;')}" placeholder="Gõ tên sản phẩm...">
             <input type="hidden" class="invoice-name-hidden" value="${(data.invoice_name || '').replace(/"/g, '&quot;')}">
         </td>
-        <td class="stock-only-cell">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
-        <td class="stock-only-cell">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode1 || '', 'wholesale')) || ''}</td>
-        <td class="stock-only-cell"><input type="text" class="base-unit form-control form-control-sm text-center border-0" value="${data.base_unit || data.unit || ''}"></td>
-        <td class="stock-only-cell"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0" value="${(data.wholesale_unit && data.wholesale_unit !== '—') ? data.wholesale_unit : ''}"></td>
-        <td class="stock-only-cell"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="${data.unit_ratio || data.ratio || 1}" min="1"></td>
-        <td class="stock-only-cell"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="${formatVNDCustom(data.base_sale_price || 0)}"></td>
-        <td class="stock-only-cell"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="${formatVNDCustom(data.sale_price || 0)}"></td>
         <td><input type="text" class="invoice-unit form-control form-control-sm text-center border-0" value="${data.unit || ''}"></td>
         <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty != null && data.qty !== '' ? data.qty : 1}"></td>
         <td><input type="text" class="buy-price form-control form-control-sm text-end border-0" value="${formatVNDCustom(data.price || 0)}"></td>
@@ -751,6 +752,13 @@ function addRow(data = {}) {
         <td class="nk-cell"><input type="text" class="import-tax-amt form-control form-control-sm text-end border-0 text-warning" value="${formatVNDCustom(data.import_tax_amount || 0)}" title="Thuế NK (VND) — có thể sửa số tuyệt đối từ tờ khai"></td>
         <td class="nk-cell"><input type="text" class="excise-tax-amt form-control form-control-sm text-end border-0 text-warning" value="${formatVNDCustom(data.excise_tax_amount || 0)}" title="Thuế TTĐB (VND) — có thể sửa số tuyệt đối từ tờ khai"></td>
         <td class="pay-amt text-end fw-bold text-danger pe-2">0</td>
+        <td class="stock-only-cell">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
+        <td class="stock-only-cell">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode1 || '', 'wholesale')) || ''}</td>
+        <td class="stock-only-cell"><input type="text" class="base-unit form-control form-control-sm text-center border-0" value="${data.base_unit || data.unit || ''}"></td>
+        <td class="stock-only-cell"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0" value="${(data.wholesale_unit && data.wholesale_unit !== '—') ? data.wholesale_unit : ''}"></td>
+        <td class="stock-only-cell"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="${data.unit_ratio || data.ratio || 1}" min="1"></td>
+        <td class="stock-only-cell"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="${formatVNDCustom(data.base_sale_price || 0)}"></td>
+        <td class="stock-only-cell"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="${formatVNDCustom(data.sale_price || 0)}"></td>
         <td><input type="text" class="product-code-preview form-control form-control-sm bg-light text-center border-0" readonly placeholder="Mã..." value="${data.product_code || ''}"></td>
         <td class="text-center">
             <button type="button" class="btn btn-sm text-danger" onclick="this.closest('tr').remove(); calcTotal()">
@@ -778,6 +786,7 @@ function addRow(data = {}) {
     if (window.KetoImportBarcode) {
         KetoImportBarcode.bindLine(tr, { setProductToRow });
     }
+    if (window.KetoImportMatch) KetoImportMatch.bindRow(tr, { setProductToRow });
     const isImport = getImportType() === 'IMPORT';
     tr.querySelectorAll('.nk-cell').forEach(el => el.classList.toggle('hidden-field', !isImport));
 
@@ -1392,23 +1401,22 @@ async function handleXMLUpload() {
         const tbody = document.querySelector('#itemsTable tbody');
         tbody.innerHTML = '';
         for (const item of data.items) {
-            addRow();
-            const row = tbody.lastElementChild;
-            const name = item.name?.trim();
-            const unit = item.unit || '';
-            row.querySelector('.product-name').value = name;
-            row.querySelector('.invoice-name-hidden').value = name;
-            row.querySelector('.qty').value = formatVNDCustom(item.quantity);
-            row.querySelector('.buy-price').value = formatVNDCustom(item.price);
-            row.querySelector('.disc-pct').value = parseFloat(item.discount_percent) || 0;
-            const taxVal = String(item.vat_rate || '0').replace('%', '').trim();
-            const selTax = row.querySelector('.tax-pct');
-            if (selTax) selTax.value = [...selTax.options].some(o => o.value === taxVal) ? taxVal : '10';
-            try { await performInitialMatch(row, name, unit); } catch (e) { console.warn(e); }
-            calcRow(row);
+            const name = (item.name || '').trim();
+            addRow({
+                invoice_name: name,
+                unit: item.unit || '',
+                qty: item.quantity,
+                price: item.price,
+                discount_pct: parseFloat(item.discount_percent) || 0,
+                tax_pct: String(item.vat_rate || '0').replace('%', '').trim(),
+                skip_match: true,
+            });
         }
         calcTotal();
-        toast('Nạp dữ liệu XML thành công!');
+        if (window.KetoImportMatch) {
+            await KetoImportMatch.scanTable({ setProductToRow });
+        }
+        toast('Nạp ' + (data.items || []).length + ' dòng từ XML');
     } catch (err) {
         console.error('handleXMLUpload', err);
         toast(err.message || String(err), 'error');
@@ -1455,7 +1463,7 @@ async function loadInvoiceFromServer(invoiceId) {
             addRow();
             return;
         }
-        lines.forEach(item => {
+        for (const item of lines) {
             addRow({
                 invoice_name: item.THHDVu,
                 unit: item.DVTinh,
@@ -1464,27 +1472,32 @@ async function loadInvoiceFromServer(invoiceId) {
                 discount_pct: parseFloat(item.TyLeCK) || 0,
                 tax_pct: String(item.TSuat || '0').replace('%', '').trim(),
                 line_type: IS_SERVICE_MODE ? 'service' : DEFAULT_LINE_TYPE,
+                skip_match: true,
             });
-        });
+        }
+        calcTotal();
+        if (!IS_SERVICE_MODE && window.KetoImportMatch) {
+            await KetoImportMatch.scanTable({ setProductToRow });
+        }
     } catch (err) { toast(err.message, 'error'); }
 }
 
 function getConsolidatedItems() {
     const rows = document.querySelectorAll('#itemsTable tbody tr');
-    const consolidatedMap = new Map();
-
+    const items = [];
     rows.forEach(tr => {
         const name = tr.querySelector('.product-name').value.trim();
         if (!name) return;
 
         const lineType = normalizeLineType(tr.querySelector('.line-type-select')?.value);
         const wh = (tr.querySelector('.warehouse-select')?.value || '').trim();
-        const key = `${name.toLowerCase()}|${lineType}|${wh}`;
-
-        const itemData = {
-            product_id: parseInt(tr.querySelector('.p-id').value) || null,
-            name: name,
+        const pid = parseInt(tr.querySelector('.p-id').value) || null;
+        const catalogName = (tr.dataset.catalogName || '').trim();
+        items.push({
+            product_id: pid,
+            name: (pid && catalogName) ? catalogName : name,
             invoice_name: tr.querySelector('.invoice-name-hidden').value.trim() || name,
+            catalog_name: catalogName,
             line_type: lineType,
             invoice_product_type: lineType,
             warehouse_code: wh || null,
@@ -1507,18 +1520,9 @@ function getConsolidatedItems() {
             sale_price: parseNumber(tr.querySelector('.sale-price').value),
             barcode: (tr.querySelector('.line-barcode')?.value || '').trim(),
             barcode1: (tr.querySelector('.line-barcode1')?.value || '').trim()
-        };
-
-        if (consolidatedMap.has(key)) {
-            const exist = consolidatedMap.get(key);
-            exist.qty += itemData.qty;
-            exist.buyprice = itemData.buyprice;
-        } else {
-            consolidatedMap.set(key, itemData);
-        }
+        });
     });
-
-    return Array.from(consolidatedMap.values());
+    return items;
 }
 
 document.getElementById('btnSaveImport').addEventListener('click', async function(e) {
@@ -1557,6 +1561,11 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
             });
             return;
         }
+    }
+
+    if (window.KetoImportMatch) {
+        const matchOk = await KetoImportMatch.confirmBeforeSave();
+        if (!matchOk) return;
     }
 
     const editId = (document.getElementById('editImportId')?.value || '').trim();
@@ -1603,7 +1612,7 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: it.product_id || null,
-                    name: it.name,
+                    name: (it.product_id && it.catalog_name) ? it.catalog_name : it.name,
                     unit: it.base_unit || it.unit || 'Cái',
                     base_price: it.base_sale_price || 0,
                     buyprice: it.buyprice,

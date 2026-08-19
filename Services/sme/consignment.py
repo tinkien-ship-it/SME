@@ -165,6 +165,26 @@ def _is_shippable_consign_code(product_code: str | None) -> bool:
     return code.startswith('HH') or code.startswith('SP') or code.startswith('TP')
 
 
+def _is_shippable_consign_item(meta: dict[str, Any] | None) -> bool:
+    d = meta or {}
+    pt = str(d.get('product_type') or '').strip().lower()
+    code = str(d.get('product_code') or d.get('barcode') or '').strip().upper()
+    if pt in (
+        'materials', 'material', 'raw_materials', 'nvl',
+        'service', 'services', 'dich_vu',
+        'fixed_asset', 'fixed_assets', 'tools', 'tool', 'ccdc',
+    ):
+        return False
+    if code.startswith(('VT', 'TSCD', 'CCDC', 'DV')):
+        return False
+    if pt in (
+        '', 'goods', 'hang_hoa', 'hanghoa', 'ready_made',
+        'finished_goods', 'finished', 'thanh_pham', 'thanhpham',
+    ):
+        return True
+    return _is_shippable_consign_code(d.get('product_code') or d.get('barcode'))
+
+
 def _inv_role(product_type: str | None) -> str:
     _cogs, inv, _ = cogs_accounts_for_line(product_type, channel='domestic')
     return inv or 'inv.goods'
@@ -644,9 +664,9 @@ def ship_consignment(
                 f'Không đủ tồn «{meta["name"]}» tại {wh}: còn {avail:g}, cần {float(qty):g}'
             )
         meta = _product_meta(conn, pid)
-        if not _is_shippable_consign_code(meta.get('product_code')):
+        if not _is_shippable_consign_item(meta):
             raise ValueError(
-                f'«{meta["name"]}» không phải hàng hóa (SP) hoặc thành phẩm (TP) — không xuất gửi'
+                f'«{meta["name"]}» không phải hàng hóa (HH) hoặc thành phẩm (SP) — không xuất gửi'
             )
         cost = _money(raw.get('unit_cost') if raw.get('unit_cost') is not None else _avg_cost(conn, pid))
         prepared.append({

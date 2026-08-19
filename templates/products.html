@@ -112,7 +112,12 @@
 {% endblock %}
 {% block content %}
 <div class="container-fluid products-page mt-4">
-    <h3 class="page-hero-title">Quản Lý Sản Phẩm & Dịch Vụ</h3>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <h3 class="page-hero-title mb-0">Quản Lý Sản Phẩm & Dịch Vụ</h3>
+        <a href="{{ url_for('product_aliases') }}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-link me-1"></i> Tên hàng đã liên kết
+        </a>
+    </div>
     
     <div class="card mb-4 shadow-sm">
         <div class="card-body py-3">

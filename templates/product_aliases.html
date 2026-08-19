@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% block extra_style %}
+<style>
+    .alias-page { max-width: 100%; padding-left: 0.75rem; padding-right: 0.75rem; }
+    .alias-table { font-size: 0.88rem; margin-bottom: 0; }
+    .alias-table th { background: #f8f9fa; white-space: nowrap; }
+    .alias-table td { vertical-align: middle; }
+    .alias-invoice { font-weight: 600; word-break: break-word; }
+    .alias-product { word-break: break-word; }
+    .alias-pick { cursor: pointer; }
+    .alias-pick:hover { background: #eef4ff; }
+    .alias-pick.active { background: #dbeafe; }
+    #aliasPickList { max-height: 280px; overflow: auto; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid alias-page mt-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <h3 class="page-hero-title mb-0">Tên hàng đã liên kết</h3>
+        <a href="{{ url_for('products') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-box me-1"></i> Danh mục sản phẩm
+        </a>
+    </div>
+    <p class="text-muted small mb-3">
+        Mỗi dòng là một tên trên hóa đơn nhà cung cấp đã gắn với mã hàng trong kho.
+        <strong>Bỏ liên kết</strong> chỉ xóa ánh xạ tên — tồn kho và phiếu nhập đã ghi không đổi.
+        Lần nhập sau, tên đó sẽ được hỏi lại hoặc tạo hàng mới.
+    </p>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <input type="search" class="form-control" id="aliasSearch"
+                           placeholder="Tìm tên trên HĐ, mã hàng, tên kho, nhà cung cấp...">
+                </div>
+                <div class="col-md-auto">
+                    <button type="button" class="btn btn-outline-secondary" id="btnAliasReload">Tải lại</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover alias-table">
+                    <thead>
+                        <tr>
+                            <th>Tên trên hóa đơn</th>
+                            <th>Nhà cung cấp</th>
+                            <th>Mã kho</th>
+                            <th>Hàng trong kho</th>
+                            <th>Ngày liên kết</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aliasBody">
+                        <tr><td colspan="6" class="text-center text-muted py-4">Đang tải...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="small text-muted mt-2">Hiển thị <strong id="aliasCount">0</strong> liên kết</div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="aliasEditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Đổi hàng trong kho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="aliasEditId">
+                <div class="mb-3">
+                    <div class="small text-muted">Tên trên hóa đơn</div>
+                    <div class="fw-semibold" id="aliasEditInvoice"></div>
+                    <div class="small text-muted mt-1" id="aliasEditCurrent"></div>
+                </div>
+                <label class="form-label" for="aliasPickSearch">Tìm mã / tên hàng đúng</label>
+                <input type="search" class="form-control mb-2" id="aliasPickSearch"
+                       placeholder="Gõ mã hoặc tên hàng trong kho...">
+                <div class="border rounded" id="aliasPickList">
+                    <div class="text-muted small p-3">Gõ để tìm hàng.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="btnAliasSave" disabled>Lưu liên kết</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const bodyEl = document.getElementById('aliasBody');
+    const countEl = document.getElementById('aliasCount');
+    const searchEl = document.getElementById('aliasSearch');
+    const pickList = document.getElementById('aliasPickList');
+    const pickSearch = document.getElementById('aliasPickSearch');
+    const saveBtn = document.getElementById('btnAliasSave');
+    const modalEl = document.getElementById('aliasEditModal');
+    let searchTimer = null;
+    let pickTimer = null;
+    let selectedPid = 0;
+    let rows = [];
+
+    function esc(s) {
+        return String(s || '').replace(/[&<>"']/g, function (c) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+        });
+    }
+
+    function fmtDate(v) {
+        if (!v) return '—';
+        const d = new Date(String(v).replace(' ', 'T'));
+        if (Number.isNaN(d.getTime())) return esc(v);
+        return d.toLocaleString('vi-VN');
+    }
+
+    async function loadAliases() {
+        const q = (searchEl.value || '').trim();
+        bodyEl.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Đang tải...</td></tr>';
+        try {
+            const res = await fetch('/api/products/aliases?q=' + encodeURIComponent(q));
+            const data = await res.json();
+            rows = data.data || [];
+            render();
+        } catch (err) {
+            bodyEl.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Không tải được danh sách.</td></tr>';
+        }
+    }
+
+    function render() {
+        countEl.textContent = String(rows.length);
+        if (!rows.length) {
+            bodyEl.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Chưa có tên hàng nào được liên kết, hoặc không khớp từ khóa.</td></tr>';
+            return;
+        }
+        bodyEl.innerHTML = rows.map(function (r) {
+            const id = Number(r.id);
+            const code = r.product_code || '—';
+            const pname = r.product_name || ('ID ' + (r.product_id || '—'));
+            return [
+                '<tr>',
+                '<td class="alias-invoice">' + esc(r.invoice_name) + '</td>',
+                '<td>' + esc(r.supplier_name || (r.supplier_id ? ('#' + r.supplier_id) : 'Mọi NCC')) + '</td>',
+                '<td><code>' + esc(code) + '</code></td>',
+                '<td class="alias-product">' + esc(pname) + '</td>',
+                '<td class="text-nowrap">' + fmtDate(r.created_at) + '</td>',
+                '<td class="text-end text-nowrap">',
+                '<button type="button" class="btn btn-sm btn-outline-primary me-1" data-act="edit" data-id="' + id + '">Đổi hàng</button>',
+                '<button type="button" class="btn btn-sm btn-outline-danger" data-act="del" data-id="' + id + '">Bỏ liên kết</button>',
+                '</td>',
+                '</tr>',
+            ].join('');
+        }).join('');
+    }
+
+    bodyEl.addEventListener('click', async function (e) {
+        const btn = e.target.closest('button[data-act]');
+        if (!btn) return;
+        const id = Number(btn.getAttribute('data-id'));
+        const row = rows.find(function (x) { return Number(x.id) === id; });
+        if (!row) return;
+        if (btn.getAttribute('data-act') === 'edit') {
+            openEdit(row);
+            return;
+        }
+        if (!window.confirm('Bỏ liên kết tên «' + (row.invoice_name || '') + '»?\nTồn kho và phiếu nhập đã ghi không bị đổi.')) {
+            return;
+        }
+        const res = await fetch('/api/products/aliases/' + id, { method: 'DELETE' });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok || !data.success) {
+            window.alert(data.error || 'Không bỏ được liên kết.');
+            return;
+        }
+        await loadAliases();
+    });
+
+    function openEdit(row) {
+        selectedPid = 0;
+        saveBtn.disabled = true;
+        document.getElementById('aliasEditId').value = String(row.id);
+        document.getElementById('aliasEditInvoice').textContent = row.invoice_name || '';
+        document.getElementById('aliasEditCurrent').textContent =
+            'Hiện đang gắn: ' + (row.product_code || '') + ' — ' + (row.product_name || '');
+        pickSearch.value = '';
+        pickList.innerHTML = '<div class="text-muted small p-3">Gõ để tìm hàng đúng trong kho.</div>';
+        if (window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+        setTimeout(function () { pickSearch.focus(); }, 200);
+    }
+
+    async function searchProducts(q) {
+        const needle = (q || '').trim();
+        if (needle.length < 1) {
+            pickList.innerHTML = '<div class="text-muted small p-3">Gõ để tìm hàng đúng trong kho.</div>';
+            return;
+        }
+        pickList.innerHTML = '<div class="text-muted small p-3">Đang tìm...</div>';
+        try {
+            const res = await fetch('/api/products/manage?q=' + encodeURIComponent(needle));
+            const list = await res.json();
+            const goods = (list || []).filter(function (p) {
+                const t = String(p.product_type || '').toLowerCase();
+                return t !== 'service' && t !== 'services';
+            }).slice(0, 40);
+            if (!goods.length) {
+                pickList.innerHTML = '<div class="text-muted small p-3">Không tìm thấy hàng phù hợp.</div>';
+                return;
+            }
+            pickList.innerHTML = goods.map(function (p) {
+                return [
+                    '<div class="alias-pick px-3 py-2 border-bottom" data-pid="' + Number(p.id) + '">',
+                    '<div><code>' + esc(p.product_code || '') + '</code> ' + esc(p.name || '') + '</div>',
+                    '<div class="small text-muted">Tồn: ' + Number(p.quantity || 0).toLocaleString('vi-VN') + '</div>',
+                    '</div>',
+                ].join('');
+            }).join('');
+        } catch (err) {
+            pickList.innerHTML = '<div class="text-danger small p-3">Không tìm được hàng.</div>';
+        }
+    }
+
+    pickList.addEventListener('click', function (e) {
+        const item = e.target.closest('.alias-pick');
+        if (!item) return;
+        pickList.querySelectorAll('.alias-pick.active').forEach(function (el) { el.classList.remove('active'); });
+        item.classList.add('active');
+        selectedPid = Number(item.getAttribute('data-pid')) || 0;
+        saveBtn.disabled = selectedPid <= 0;
+    });
+
+    saveBtn.addEventListener('click', async function () {
+        const id = Number(document.getElementById('aliasEditId').value);
+        if (id <= 0 || selectedPid <= 0) return;
+        saveBtn.disabled = true;
+        const res = await fetch('/api/products/aliases/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: selectedPid }),
+        });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok || !data.success) {
+            window.alert(data.error || 'Không đổi được liên kết.');
+            saveBtn.disabled = false;
+            return;
+        }
+        if (window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        }
+        await loadAliases();
+    });
+
+    searchEl.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadAliases, 280);
+    });
+    pickSearch.addEventListener('input', function () {
+        clearTimeout(pickTimer);
+        pickTimer = setTimeout(function () { searchProducts(pickSearch.value); }, 250);
+    });
+    document.getElementById('btnAliasReload').addEventListener('click', loadAliases);
+    loadAliases();
+})();
+</script>
+{% endblock %}

@@ -1,5 +1,16 @@
 {% extends "KeToanSME/_layout.html" %}
 {% block title %}Hàng gửi đi bán (TK 157){% endblock %}
+{% block sme_head %}
+<style>
+.cg-suggest { position: fixed; z-index: 1080; max-height: 280px; overflow: auto;
+  background: #fff; border: 1px solid #86b7fe; border-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,.12); }
+.cg-suggest .item { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+.cg-suggest .item:hover, .cg-suggest .item.active { background: #f0f8ff; }
+.cg-suggest .item:last-child { border-bottom: none; }
+.cg-search-wrap { position: relative; min-width: 220px; }
+#shipCard .table-responsive { overflow: visible; }
+</style>
+{% endblock %}
 {% block sme_content %}
 <div class="mb-3 d-flex justify-content-between flex-wrap gap-2">
   <div>
@@ -13,7 +24,7 @@
   </div>
 </div>
 
-<div class="card shadow-sm border-0 mb-3">
+<div class="card shadow-sm border-0 mb-3" id="shipCard">
   <div class="card-header bg-white fw-bold">1. Lập phiếu xuất gửi</div>
   <div class="card-body">
     <p class="small text-muted mb-2">
@@ -40,11 +51,17 @@
       </div>
       <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary btn-sm w-100" id="btnShip">Xuất gửi (Nợ 157)</button></div>
     </div>
-    <div class="table-responsive" style="max-height:42vh">
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+      <p class="small text-muted mb-0">Tìm từng hàng hóa / thành phẩm theo tên hoặc mã, rồi nhập số lượng. Không liệt kê cả kho.</p>
+      <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddShipRow">
+        <i class="fas fa-plus me-1"></i> Thêm dòng
+      </button>
+    </div>
+    <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
         <thead class="table-light"><tr>
-          <th>Hàng / thành phẩm</th><th>Loại</th><th class="text-end">Tồn kho</th>
-          <th class="text-end">Giá vốn</th><th class="text-end">SL gửi</th><th class="text-end">Giá đại lý (gợi ý)</th>
+          <th style="min-width:280px">Hàng / thành phẩm</th><th>Loại</th><th class="text-end">Tồn kho</th>
+          <th class="text-end">Giá vốn</th><th class="text-end">SL gửi</th><th class="text-end">Giá đại lý (gợi ý)</th><th></th>
         </tr></thead>
         <tbody id="shipLines"></tbody>
       </table>
@@ -134,12 +151,13 @@
     return 'HH (156)';
   };
   const productCode=p=>String(p.product_code||p.code||'').trim().toUpperCase();
+  const BLOCKED_KIND=new Set(['materials','material','raw_materials','nvl','service','services','dich_vu','fixed_asset','fixed_assets','tools','tool','ccdc']);
   const productKind=p=>{
-    const t=(p.product_type||'').toLowerCase();
+    const t=(p.product_type||'goods').toLowerCase().trim();
     const code=productCode(p);
-    if(['finished_goods','finished','thanh_pham'].includes(t) || code.startsWith('TP')) return 'TP';
-    if(code.startsWith('HH') || t==='goods' || code.startsWith('SP')) return 'SP';
-    return '';
+    if(BLOCKED_KIND.has(t) || ['VT','TSCD','CCDC','DV'].some(px=>code.startsWith(px))) return '';
+    if(['finished_goods','finished','thanh_pham','thanhpham'].includes(t) || code.startsWith('TP')) return 'TP';
+    return 'SP';
   };
   const kindLabel=kind=>kind==='TP'?'SP/TP (155)':(kind==='SP'?'HH (156)':'');
   const emailOk=e=>{
@@ -148,7 +166,9 @@
     return i>0 && e.includes('.', i+1);
   };
   fDate.value=today(); sDate.value=today(); rDate.value=today();
-  let products=[], activeDoc=null, customers=[];
+  let activeDoc=null, customers=[];
+  let searchTimer=null;
+  let suggestSeq=0;
 
   function fillAgent(c){
     if(!c) return;
@@ -195,30 +215,172 @@
     const list=json.data||[{code:'KHO_001',name:'Kho trung tâm'}];
     fWh.innerHTML=list.map(w=>`<option value="${w.code}">${w.code} — ${w.name||''}</option>`).join('');
   }
-  async function loadProducts(){
+  async function searchProducts(q){
+    const qs=new URLSearchParams({
+      q: q||'',
+      limit: '30',
+      prefixes: 'HH,SP,TP',
+    });
     const wh=fWh.value||'';
-    const qs=new URLSearchParams({stock_only:'1', prefixes:'HH,SP,TP'});
     if(wh) qs.set('warehouse', wh);
     const res=await fetch('/api/sme/products/brief?'+qs.toString());
-    const json=await res.json();
-    products=(json.data||[]).filter(p=>{
-      if(!(Number(p.quantity||0) > 0)) return false;
-      const kind=productKind(p);
-      return kind==='SP' || kind==='TP';
-    });
-    shipLines.innerHTML=products.map(p=>{
-      const kind=productKind(p);
+    const json=await res.json().catch(()=>({}));
+    if(!res.ok || json.success===false) throw new Error(json.error||'Không tìm được hàng hóa');
+    return (json.data||[]).filter(p=>productKind(p));
+  }
+
+  function hideSuggest(tr){
+    const box=tr.querySelector('.cg-suggest');
+    if(box){ box.classList.add('d-none'); box.innerHTML=''; box.style.display='none'; }
+  }
+  function placeSuggest(tr){
+    const box=tr.querySelector('.cg-suggest');
+    const input=tr.querySelector('.prod-search');
+    if(!box||!input) return;
+    const r=input.getBoundingClientRect();
+    box.style.left=Math.max(8, r.left)+'px';
+    box.style.top=(r.bottom+2)+'px';
+    box.style.width=Math.max(r.width, 280)+'px';
+    box.style.display='block';
+  }
+
+  function selectedIds(){
+    return [...shipLines.querySelectorAll('tr[data-id]')].map(tr=>String(tr.dataset.id));
+  }
+
+  function applyProduct(tr, p){
+    const kind=productKind(p);
+    const code=p.product_code||p.code||'';
+    const agentPrice=Number(p.wholesale_price ?? p.price ?? 0)||0;
+    tr.dataset.id=String(p.id);
+    tr.dataset.kind=kind;
+    tr.dataset.code=code;
+    const search=tr.querySelector('.prod-search');
+    if(search) search.value=`${code?code+' — ':''}${p.name||''}`;
+    tr.querySelector('.prod-kind').textContent=kindLabel(kind)||typeLabel(p.product_type);
+    tr.querySelector('.prod-qty').textContent=Number(p.quantity||0);
+    tr.querySelector('.prod-cost').textContent=money(p.avg_cost);
+    const qtyEl=tr.querySelector('.qty');
+    if(qtyEl && !(parseFloat(qtyEl.value)>0)) qtyEl.value='1';
+    qtyEl.max=String(p.quantity||0);
+    const priceEl=tr.querySelector('.price');
+    if(priceEl && !(parseFloat(priceEl.value)>0)) priceEl.value=String(agentPrice);
+    hideSuggest(tr);
+    qtyEl?.focus();
+    qtyEl?.select();
+  }
+
+  function renderSuggest(tr, rows, q){
+    const box=tr.querySelector('.cg-suggest');
+    if(!box) return;
+    if(!rows.length){
+      box.innerHTML=`<div class="item text-muted">Không tìm thấy «${esc(q)}»</div>`;
+      box.classList.remove('d-none');
+      placeSuggest(tr);
+      return;
+    }
+    const taken=new Set(selectedIds());
+    box.innerHTML=rows.map(p=>{
       const code=p.product_code||p.code||'';
-      const agentPrice=Number(p.wholesale_price ?? p.price ?? 0)||0;
-      return `<tr data-id="${p.id}" data-kind="${kind}">
-      <td>${esc(p.name)}<div class="small text-muted">${esc(code)}</div></td>
-      <td class="small">${kindLabel(kind)||typeLabel(p.product_type)}</td>
-      <td class="text-end">${Number(p.quantity||0)}</td>
-      <td class="text-end">${money(p.avg_cost)}</td>
-      <td><input type="number" class="form-control form-control-sm text-end qty" min="0" step="any" value="0"></td>
-      <td><input type="number" class="form-control form-control-sm text-end price" min="0" step="any" value="${agentPrice}"></td>
-    </tr>`;
-    }).join('')||'<tr><td colspan="6" class="text-muted text-center">Không có hàng tồn kho SP/TP</td></tr>';
+      const disabled=taken.has(String(p.id)) && String(tr.dataset.id)!==String(p.id);
+      return `<div class="item ${disabled?'text-muted':''}" data-pid="${p.id}" data-disabled="${disabled?1:0}">
+        <div class="fw-semibold">${esc(p.name)}</div>
+        <div class="small text-muted">${esc(code)} · ${esc(kindLabel(productKind(p))||typeLabel(p.product_type))} · tồn ${Number(p.quantity||0)}</div>
+      </div>`;
+    }).join('');
+    box.classList.remove('d-none');
+    placeSuggest(tr);
+    box.querySelectorAll('.item[data-pid]').forEach(el=>{
+      el.addEventListener('mousedown', (ev)=>{
+        ev.preventDefault();
+        if(el.dataset.disabled==='1') return;
+        const p=rows.find(x=>String(x.id)===String(el.dataset.pid));
+        if(p) applyProduct(tr, p);
+      });
+    });
+  }
+
+  function bindSearch(tr){
+    const input=tr.querySelector('.prod-search');
+    if(!input) return;
+    input.addEventListener('input', ()=>{
+      tr.dataset.id='';
+      tr.querySelector('.prod-kind').textContent='—';
+      tr.querySelector('.prod-qty').textContent='—';
+      tr.querySelector('.prod-cost').textContent='—';
+      const q=input.value.trim();
+      clearTimeout(searchTimer);
+      if(q.length<1){ hideSuggest(tr); return; }
+      const seq=++suggestSeq;
+      searchTimer=setTimeout(async ()=>{
+        try{
+          const rows=await searchProducts(q);
+          if(seq!==suggestSeq) return;
+          renderSuggest(tr, rows, q);
+        }catch(e){
+          if(seq!==suggestSeq) return;
+          renderSuggest(tr, [], q);
+        }
+      }, 220);
+    });
+    input.addEventListener('focus', ()=>{
+      if(input.value.trim().length>=1 && !tr.dataset.id) input.dispatchEvent(new Event('input'));
+    });
+    input.addEventListener('blur', ()=>{ setTimeout(()=>hideSuggest(tr), 180); });
+    input.addEventListener('keydown', (e)=>{
+      if(e.key==='Escape') hideSuggest(tr);
+      if(e.key==='Enter'){
+        e.preventDefault();
+        const first=tr.querySelector('.cg-suggest .item[data-pid][data-disabled="0"]');
+        first?.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+      }
+    });
+  }
+
+  function addShipRow(){
+    const tr=document.createElement('tr');
+    tr.dataset.id='';
+    tr.innerHTML=`
+      <td>
+        <div class="cg-search-wrap">
+          <input class="form-control form-control-sm prod-search" placeholder="Tìm tên, mã hàng / thành phẩm…" autocomplete="off">
+          <div class="cg-suggest d-none"></div>
+        </div>
+      </td>
+      <td class="small prod-kind">—</td>
+      <td class="text-end prod-qty">—</td>
+      <td class="text-end prod-cost">—</td>
+      <td><input type="number" class="form-control form-control-sm text-end qty" min="0" step="any" value=""></td>
+      <td><input type="number" class="form-control form-control-sm text-end price" min="0" step="any" value=""></td>
+      <td class="text-center"><button type="button" class="btn btn-sm text-danger btn-del-row" title="Xóa dòng">&times;</button></td>`;
+    shipLines.appendChild(tr);
+    bindSearch(tr);
+    tr.querySelector('.prod-search').focus();
+    return tr;
+  }
+
+  function resetShipLines(){
+    shipLines.innerHTML='';
+    addShipRow();
+  }
+
+  async function refreshRowStocks(){
+    const rows=[...shipLines.querySelectorAll('tr[data-id]')];
+    if(!rows.length) return;
+    for(const tr of rows){
+      const code=tr.dataset.code||tr.querySelector('.prod-search')?.value||'';
+      if(!code) continue;
+      try{
+        const found=await searchProducts(code.split('—')[0].trim());
+        const p=found.find(x=>String(x.id)===String(tr.dataset.id))||found[0];
+        if(p && String(p.id)===String(tr.dataset.id)){
+          tr.querySelector('.prod-qty').textContent=Number(p.quantity||0);
+          tr.querySelector('.prod-cost').textContent=money(p.avg_cost);
+          const qtyEl=tr.querySelector('.qty');
+          if(qtyEl) qtyEl.max=String(p.quantity||0);
+        }
+      }catch(e){}
+    }
   }
   function emailBadge(r){
     if(r.email_sent_at) return `<span class="badge text-bg-success" title="${esc(r.agent_email||'')}">Đã gửi mail</span>`;
@@ -269,6 +431,7 @@
     if(err) return alert(err);
     const items=[];
     shipLines.querySelectorAll('tr[data-id]').forEach(tr=>{
+      if(!tr.dataset.id) return;
       const qty=parseFloat(tr.querySelector('.qty').value)||0;
       if(qty<=0) return;
       items.push({
@@ -277,7 +440,7 @@
         unit_price: parseFloat(tr.querySelector('.price').value)||0,
       });
     });
-    if(!items.length) return alert('Nhập SL gửi');
+    if(!items.length) return alert('Chọn hàng và nhập số lượng gửi');
     const sendMail=!!fSendEmail.checked;
     if(!confirm(`Xuất gửi ${items.length} dòng cho «${fAgent.value.trim()}»?\nNợ 157 / Có 155·156`+(sendMail?'\nĐồng thời gửi email phiếu xuất kho.':''))) return;
     const payload={
@@ -305,7 +468,7 @@
       else msg+='\nPhiếu đã lập nhưng gửi email thất bại: '+(json.email_error||'không rõ');
     }
     alert(msg);
-    loadProducts(); loadHist(); loadAgents();
+    loadHist(); loadAgents(); resetShipLines();
   });
 
   window.resendEmail=async (id)=>{
@@ -412,7 +575,7 @@
     if(!json.success) return alert(json.error||'Lỗi');
     bootstrap.Modal.getInstance(retModal)?.hide();
     alert('Đã ghi trả lại');
-    loadProducts(); loadHist();
+    loadHist();
   });
 
   window.voidDoc=async (id)=>{
@@ -420,13 +583,21 @@
     const res=await fetch(`/api/sme/consignments/${id}/void`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
     const json=await res.json();
     if(!json.success) return alert(json.error||'Lỗi');
-    loadProducts(); loadHist();
+    loadHist();
   };
 
-  fWh.addEventListener('change', loadProducts);
-  btnReload.addEventListener('click', ()=>{ loadProducts(); loadHist(); });
+  shipLines.addEventListener('click', (ev)=>{
+    const btn=ev.target.closest('.btn-del-row');
+    if(!btn) return;
+    const tr=btn.closest('tr');
+    tr?.remove();
+    if(!shipLines.querySelector('tr')) addShipRow();
+  });
+  document.getElementById('btnAddShipRow').addEventListener('click', ()=>addShipRow());
+  fWh.addEventListener('change', refreshRowStocks);
+  btnReload.addEventListener('click', ()=>{ loadHist(); });
   (async()=>{
-    await loadWh(); await loadAgents(); await loadProducts(); await loadHist();
+    await loadWh(); await loadAgents(); resetShipLines(); await loadHist();
   })();
 })();
 </script>

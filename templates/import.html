@@ -208,13 +208,6 @@
                                 <th style="width:110px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Kho<div class="resizer"></div></th>
                                 <th style="width:130px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Loại Hàng<div class="resizer"></div></th>
                                 <th style="width:280px;">Tên {% if import_mode == 'service' %}dịch vụ{% else %}hàng{% endif %}<div class="resizer"></div></th>
-                                <th style="width:160px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã vạch lẻ<div class="resizer"></div></th>
-                                <th style="width:160px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã vạch sỉ<div class="resizer"></div></th>
-                                <th style="width:90px;" class="service-mode-hide">ĐV CB<div class="resizer"></div></th>
-                                <th style="width:90px;" class="service-mode-hide">ĐV sỉ<div class="resizer"></div></th>
-                                <th style="width:60px;" class="service-mode-hide">TL<div class="resizer"></div></th>
-                                <th style="width:110px; background:#f0fdf4;" class="service-mode-hide">Giá lẻ<div class="resizer"></div></th>
-                                <th style="width:110px; background:#eff6ff;" class="service-mode-hide">Giá sỉ<div class="resizer"></div></th>
                                 <th style="width:100px;">ĐVT Phiếu<div class="resizer"></div></th>
                                 <th style="width:90px;">Số Lượng<div class="resizer"></div></th>
                                 <th style="width:120px;">Đơn giá<div class="resizer"></div></th>
@@ -223,7 +216,14 @@
                                 <th style="width:110px;">Tiền CK<div class="resizer"></div></th>
                                 <th style="width:80px;">% VAT<div class="resizer"></div></th>
                                 <th style="width:110px;">Tiền VAT<div class="resizer"></div></th>
-                                <th style="width:140px; background:#fff7ed;">Tiền TT<div class="resizer"></div></th>
+                                <th style="width:150px; background:#fff7ed;">Tiền Thanh Toán<div class="resizer"></div></th>
+                                <th style="width:160px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã vạch lẻ<div class="resizer"></div></th>
+                                <th style="width:160px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã vạch sỉ<div class="resizer"></div></th>
+                                <th style="width:90px;" class="service-mode-hide">ĐV CB<div class="resizer"></div></th>
+                                <th style="width:90px;" class="service-mode-hide">ĐV sỉ<div class="resizer"></div></th>
+                                <th style="width:80px;" class="service-mode-hide">Tỷ Lệ<div class="resizer"></div></th>
+                                <th style="width:110px; background:#f0fdf4;" class="service-mode-hide">Giá Lẻ<div class="resizer"></div></th>
+                                <th style="width:110px; background:#eff6ff;" class="service-mode-hide">Giá Sỉ<div class="resizer"></div></th>
                                 <th style="width:100px;"{% if import_mode == 'service' %} class="service-mode-hide"{% endif %}>Mã SP<div class="resizer"></div></th>
                                 <th style="width:60px;">Xóa<div class="resizer"></div></th>
                             </tr>
@@ -261,6 +261,7 @@
 <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='js/import-product-match.js') }}?v=3"></script>
 
 <style>
     .suggest-box {
@@ -437,6 +438,9 @@ const showSuggestions = debounce(async function(inputEl) {
             `;
             item.onclick = (e) => {
                 e.stopPropagation();
+                const typed = inputEl.value.trim();
+                const hidden = row.querySelector('.invoice-name-hidden');
+                if (hidden && typed) hidden.value = typed;
                 inputEl.value = p.name;
                 setProductToRow(row, p, 'suggest');
                 box.remove();
@@ -536,6 +540,9 @@ function applyLineTypeUI(row) {
 
 async function performInitialMatch(row, name, invUnit = '') {
     if (!name || isServiceLineType(row.querySelector('.line-type-select')?.value)) return;
+    if (window.KetoImportMatch) {
+        return KetoImportMatch.applyToRow(row, { name, unit: invUnit, setProductToRow });
+    }
     try {
         const queryKey = name.split(' ')[0];
         const res = await fetch(`/api/products/manage?q=${encodeURIComponent(queryKey)}`);
@@ -577,6 +584,7 @@ function setProductToRow(row, product, matchType = 'none', invoiceUnit = '') {
         }
         if (matchType === 'exact') row.classList.add('row-exact-match');
         else if (matchType === 'suggest') row.classList.add('row-suggested');
+        if (window.KetoImportMatch) KetoImportMatch.onProductChosen(row, product);
     } else {
         row.querySelector('.p-id').value = '';
         row.querySelector('.base-unit').value = invoiceUnit || '';
@@ -606,15 +614,8 @@ function addRow(data = {}) {
             <input type="text" class="product-name form-control form-control-sm border-0" value="${data.invoice_name || ''}" placeholder="Gõ tên sản phẩm...">
             <input type="hidden" class="invoice-name-hidden" value="${data.invoice_name || ''}">
         </td>
-        <td class="stock-only-cell ${svcHide}">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
-        <td class="stock-only-cell ${svcHide}">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode1 || '', 'wholesale')) || ''}</td>
-        <td class="stock-only-cell ${svcHide}"><input type="text" class="base-unit form-control form-control-sm text-center border-0" value="${data.base_unit || data.unit || ''}"></td>
-        <td class="stock-only-cell ${svcHide}"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0" value="${(data.wholesale_unit && data.wholesale_unit !== '—') ? data.wholesale_unit : ''}"></td>
-        <td class="stock-only-cell ${svcHide}"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="${data.unit_ratio || data.ratio || 1}" min="1"></td>
-        <td class="stock-only-cell ${svcHide}"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="${formatVNDCustom(data.base_sale_price || 0)}"></td>
-        <td class="stock-only-cell ${svcHide}"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="${formatVNDCustom(data.sale_price || 0)}"></td>
         <td><input type="text" class="invoice-unit form-control form-control-sm text-center border-0" value="${data.unit || ''}"></td>
-        <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty || 1}"></td>
+        <td><input type="text" class="qty form-control form-control-sm text-end border-0" value="${data.qty != null && data.qty !== '' ? data.qty : 1}"></td>
         <td><input type="text" class="buy-price form-control form-control-sm text-end border-0" value="${formatVNDCustom(data.price || 0)}"></td>
         <td class="line-total text-end fw-bold pe-2">0</td>
         <td><input type="number" class="disc-pct form-control form-control-sm text-center border-0" value="${data.discount_pct || 0}" step="0.01"></td>
@@ -627,6 +628,13 @@ function addRow(data = {}) {
         </select></td>
         <td class="tax-amt text-end pe-2">0</td>
         <td class="pay-amt text-end fw-bold text-danger pe-2">0</td>
+        <td class="stock-only-cell ${svcHide}">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
+        <td class="stock-only-cell ${svcHide}">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode1 || '', 'wholesale')) || ''}</td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="base-unit form-control form-control-sm text-center border-0" value="${data.base_unit || data.unit || ''}"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="wholesale-unit form-control form-control-sm text-center border-0" value="${(data.wholesale_unit && data.wholesale_unit !== '—') ? data.wholesale_unit : ''}"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="number" class="ratio form-control form-control-sm text-center border-0" value="${data.unit_ratio || data.ratio || 1}" min="1"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="base-sale-price form-control form-control-sm text-end border-0 text-success" value="${formatVNDCustom(data.base_sale_price || 0)}"></td>
+        <td class="stock-only-cell ${svcHide}"><input type="text" class="sale-price form-control form-control-sm text-end border-0 text-primary" value="${formatVNDCustom(data.sale_price || 0)}"></td>
         <td class="${svcHide}"><input type="text" class="product-code-preview form-control form-control-sm bg-light text-center border-0" readonly placeholder="Mã..."></td>
         <td class="text-center"><button type="button" class="btn btn-sm text-danger" onclick="this.closest('tr').remove(); calcTotal()"><i class="bi bi-trash"></i></button></td>
     `;
@@ -645,7 +653,7 @@ function addRow(data = {}) {
         });
         tr.querySelector('.line-type-select')?.addEventListener('change', () => applyLineTypeUI(tr));
         tr.querySelector('.wholesale-unit')?.addEventListener('input', () => updateCodePreview(tr));
-        if (data.invoice_name) performInitialMatch(tr, data.invoice_name, data.unit);
+        if (data.invoice_name && !data.skip_match) performInitialMatch(tr, data.invoice_name, data.unit);
     } else if (data.unit) {
         tr.querySelector('.invoice-unit').value = data.unit;
     }
@@ -654,6 +662,7 @@ function addRow(data = {}) {
     if (!IS_SERVICE_MODE && window.KetoImportBarcode) {
         KetoImportBarcode.bindLine(tr, { setProductToRow });
     }
+    if (window.KetoImportMatch) KetoImportMatch.bindRow(tr, { setProductToRow });
     calcRow(tr);
 }
 
@@ -775,6 +784,10 @@ function bindImportFormSubmit() {
             await loadQuySoDu();
             const check = checkSoDu(totalAmount, paymentMethod);
             if (!check.ok) return Swal.fire('Không đủ tiền', check.message, 'warning');
+        }
+        if (window.KetoImportMatch) {
+            const matchOk = await KetoImportMatch.confirmBeforeSave();
+            if (!matchOk) return;
         }
         const btn = this.querySelector('button[type="submit"]');
         btn.disabled = true;
@@ -916,6 +929,7 @@ async function handleXMLUpload() {
         const response = await fetch('/api/parse-xml-invoice', { method: 'POST', body: formData });
         const data = await response.json();
         if (!data.success) throw new Error(data.error);
+        if (!(data.items || []).length) throw new Error('File XML không có dòng hàng hóa');
         const realId = await updateSupplierFromXML(data.supplier);
         document.getElementById('supplierId').value = realId || '';
         document.getElementById('supplierSearch').value = data.supplier?.name || '';
@@ -929,24 +943,22 @@ async function handleXMLUpload() {
         }
         const tbody = document.querySelector('#itemsTable tbody');
         tbody.innerHTML = '';
-        for (const item of data.items) {
-            addRow();
-            const row = tbody.lastElementChild;
-            const name = item.name?.trim();
-            const unit = item.unit || '';
-            row.querySelector('.product-name').value = name;
-            row.querySelector('.invoice-name-hidden').value = name;
-            row.querySelector('.qty').value = formatVNDCustom(item.quantity);
-            row.querySelector('.buy-price').value = formatVNDCustom(item.price);
-            row.querySelector('.disc-pct').value = parseFloat(item.discount_percent) || 0;
-            const taxVal = String(item.vat_rate || '0').replace('%', '').trim();
-            const selTax = row.querySelector('.tax-pct');
-            if (selTax) selTax.value = [...selTax.options].some(o => o.value === taxVal) ? taxVal : '10';
-            await performInitialMatch(row, name, unit);
-            calcRow(row);
+        for (const item of (data.items || [])) {
+            addRow({
+                invoice_name: (item.name || '').trim(),
+                unit: item.unit || '',
+                qty: item.quantity,
+                price: item.price,
+                discount_pct: parseFloat(item.discount_percent) || 0,
+                tax_pct: String(item.vat_rate || '0').replace('%', '').trim(),
+                skip_match: true,
+            });
         }
         calcTotal();
-        toast('Nạp dữ liệu XML thành công!');
+        if (!IS_SERVICE_MODE && window.KetoImportMatch) {
+            await KetoImportMatch.scanTable({ setProductToRow });
+        }
+        toast('Nạp ' + ((data.items || []).length) + ' dòng từ XML');
     } catch (err) { toast(err.message, 'error'); }
     finally { btn.disabled = false; }
 }
@@ -989,22 +1001,27 @@ async function loadInvoiceFromServer(invoiceId) {
             addRow();
             return;
         }
-        lines.forEach(item => {
+        for (const item of lines) {
             addRow({
                 invoice_name: item.THHDVu,
                 unit: item.DVTinh,
                 qty: item.SLuong,
                 price: item.DGia,
                 discount_pct: parseFloat(item.TyLeCK) || 0,
-                tax_pct: String(item.TSuat || '0').replace('%', '').trim()
+                tax_pct: String(item.TSuat || '0').replace('%', '').trim(),
+                skip_match: true,
             });
-        });
+        }
+        calcTotal();
+        if (!IS_SERVICE_MODE && window.KetoImportMatch) {
+            await KetoImportMatch.scanTable({ setProductToRow });
+        }
     } catch (err) { toast(err.message, 'error'); }
 }
 
 function getConsolidatedItems() {
     const rows = document.querySelectorAll('#itemsTable tbody tr');
-    const consolidatedMap = new Map();
+    const items = [];
     rows.forEach(tr => {
         const name = tr.querySelector('.product-name').value.trim();
         const invName = tr.querySelector('.invoice-name-hidden').value.trim() || name;
@@ -1014,42 +1031,31 @@ function getConsolidatedItems() {
         if (!name) return;
         const qty = parseNumber(tr.querySelector('.qty').value);
         const price = parseNumber(tr.querySelector('.buy-price').value);
-        const tax_pct = parseFloat(tr.querySelector('.tax-pct').value) || 0;
-        const disc_pct = parseFloat(tr.querySelector('.disc-pct').value) || 0;
-        const rowTotal = qty * price;
-        const key = `${line_type}|${warehouse_code}|${name.toLowerCase()}|${unit.toLowerCase()}|${IS_SERVICE_MODE ? price : ''}`;
-        if (consolidatedMap.has(key)) {
-            const existing = consolidatedMap.get(key);
-            existing.qty += qty;
-            existing.totalValue += rowTotal;
-            if (price > 0) { existing.tax_pct = tax_pct; existing.discountPct = disc_pct; }
-        } else {
-            consolidatedMap.set(key, {
-                product_id: isServiceLineType(line_type) ? null : (parseInt(tr.querySelector('.p-id')?.value) || null),
-                name: name,
-                invoice_name: invName,
-                unit: unit,
-                qty: qty,
-                totalValue: rowTotal,
-                tax_pct: tax_pct,
-                discountPct: disc_pct,
-                line_type: line_type,
-                type: line_type,
-                warehouse_code: warehouse_code,
-                base_unit: (tr.querySelector('.base-unit')?.value || '').trim() || unit,
-                wholesale_unit: (tr.querySelector('.wholesale-unit')?.value || '').trim().replace(/^—$/, ''),
-                ratio: parseFloat(tr.querySelector('.ratio')?.value) || 1,
-                base_sale_price: parseNumber(tr.querySelector('.base-sale-price')?.value),
-                sale_price: parseNumber(tr.querySelector('.sale-price')?.value),
-                barcode: (tr.querySelector('.line-barcode')?.value || '').trim(),
-                barcode1: (tr.querySelector('.line-barcode1')?.value || '').trim()
-            });
-        }
+        const pid = isServiceLineType(line_type) ? null : (parseInt(tr.querySelector('.p-id')?.value) || null);
+        const catalogName = (tr.dataset.catalogName || '').trim();
+        items.push({
+            product_id: pid,
+            name: (pid && catalogName) ? catalogName : name,
+            invoice_name: invName,
+            catalog_name: catalogName,
+            unit: unit,
+            qty: qty,
+            buyprice: price,
+            tax_pct: parseFloat(tr.querySelector('.tax-pct').value) || 0,
+            discountPct: parseFloat(tr.querySelector('.disc-pct').value) || 0,
+            line_type: line_type,
+            type: line_type,
+            warehouse_code: warehouse_code,
+            base_unit: (tr.querySelector('.base-unit')?.value || '').trim() || unit,
+            wholesale_unit: (tr.querySelector('.wholesale-unit')?.value || '').trim().replace(/^—$/, ''),
+            ratio: parseFloat(tr.querySelector('.ratio')?.value) || 1,
+            base_sale_price: parseNumber(tr.querySelector('.base-sale-price')?.value),
+            sale_price: parseNumber(tr.querySelector('.sale-price')?.value),
+            barcode: (tr.querySelector('.line-barcode')?.value || '').trim(),
+            barcode1: (tr.querySelector('.line-barcode1')?.value || '').trim()
+        });
     });
-    return Array.from(consolidatedMap.values()).map(item => ({
-        ...item,
-        buyprice: item.qty > 0 ? Math.round(item.totalValue / item.qty) : 0
-    }));
+    return items;
 }
 
 async function upsertProduct(item) {

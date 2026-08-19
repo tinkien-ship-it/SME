@@ -478,6 +478,18 @@ def init_db(bcrypt=None):
 		 FOREIGN KEY (sale_id) REFERENCES sale(id)
             )
         ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS product_aliases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            invoice_name TEXT NOT NULL,
+            supplier_id INTEGER,
+            supplier_sku TEXT,
+            barcode TEXT,
+            normalized_name TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
 #Bảng Tôn Kho (Để tính giá vốn bình quân gia quyền)
     c.execute('''CREATE TABLE IF NOT EXISTS inventory (
     		 product_id INTEGER PRIMARY KEY,

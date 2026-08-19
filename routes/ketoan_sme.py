@@ -3543,12 +3543,12 @@ def register_ketoan_sme_routes(app):
 
                 if inv_name:
                     try:
-                        c.execute(
-                            """
-                            INSERT OR IGNORE INTO product_aliases (product_id, invoice_name, supplier_id)
-                            VALUES (?, ?, ?)
-                            """,
-                            (pid, inv_name, supplier_id),
+                        from Services.product_match import save_product_alias
+                        save_product_alias(
+                            conn,
+                            product_id=int(pid),
+                            invoice_name=inv_name,
+                            supplier_id=supplier_id,
                         )
                     except sqlite3.Error:
                         pass

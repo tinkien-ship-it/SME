@@ -213,6 +213,13 @@ POS_HKD_MENU = [
                 'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master'),
             },
             {
+                'endpoint': 'product_aliases',
+                'label': 'Tên hàng đã liên kết',
+                'icon': 'fas fa-link text-info',
+                'perm': 'view_products',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master'),
+            },
+            {
                 'endpoint': 'suppliers_page',
                 'label': 'Nhà Cung Cấp',
                 'icon': 'fas fa-truck text-muted',

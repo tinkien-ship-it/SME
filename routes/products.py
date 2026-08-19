@@ -891,3 +891,8 @@ def register_products_routes(app):
     @login_required
     def products():
         return render_template('products.html')
+
+    @app.route('/product-aliases')
+    @login_required
+    def product_aliases():
+        return render_template('product_aliases.html')

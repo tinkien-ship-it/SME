@@ -573,7 +573,11 @@ def register_inventory_routes(app):
             for hh in hh_nodes:
 
                 try:
-                    name = (hh.findtext('THHDVu') or '').strip()
+                    name = (
+                        (hh.findtext('THHDVu') or '')
+                        or (hh.findtext('Ten') or '')
+                        or (hh.findtext('TenHH') or '')
+                    ).strip()
                     if not name:
                         continue
                     unit = (hh.findtext('DVTinh') or 'Cái').strip() or 'Cái'
@@ -888,10 +892,13 @@ def register_inventory_routes(app):
                     continue
 
                 if inv_name:
-                    c.execute("""
-                        INSERT OR IGNORE INTO product_aliases (product_id, invoice_name, supplier_id)
-                        VALUES (?, ?, ?)
-                    """, (pid, inv_name.strip(), supplier_id))
+                    from Services.product_match import save_product_alias
+                    save_product_alias(
+                        conn,
+                        product_id=int(pid),
+                        invoice_name=inv_name.strip(),
+                        supplier_id=supplier_id,
+                    )
 
                 unit_in_lower = unit_in.lower()
                 product_name = p_info['name']
@@ -1290,39 +1297,180 @@ def register_inventory_routes(app):
         finally:
             conn.close()
 
-    #=== API TÌM TÊN SẢN PHẨM LIÊN KẾT - HÀNG CÓ TÊN TRÊN HÓA ĐƠN KHÁC VỚI TÊN TRÊN POS ===#
-    @app.route('/api/products/smart-link', methods=['POST'])
-    def smart_link():
-        """Tìm kiếm sản phẩm dựa trên tên hóa đơn lạ"""
-        data = request.json
-        inv_name = data.get('invoice_name', '').strip()
-        supplier_id = data.get('supplier_id')
-    
+    #=== API khớp tên HĐ NCC với hàng đã có trong kho ===#
+    @app.route('/api/products/match-candidates', methods=['POST'])
+    @login_required
+    def api_products_match_candidates():
+        data = request.get_json(silent=True) or {}
+        inv_name = (data.get('invoice_name') or data.get('name') or data.get('q') or '').strip()
+        barcode = (data.get('barcode') or '').strip()
+        try:
+            supplier_id = int(data.get('supplier_id') or 0) or None
+        except (TypeError, ValueError):
+            supplier_id = None
+        try:
+            limit = int(data.get('limit') or 5)
+        except (TypeError, ValueError):
+            limit = 5
         conn = get_db_connection()
-        # 1. Tìm chính xác trong bảng Alias
-        alias = conn.execute(
-            "SELECT product_id FROM product_aliases WHERE invoice_name = ? AND supplier_id = ?", 
-            (inv_name, supplier_id)
-        ).fetchone()
-    
-        if alias:
-            return jsonify({'success': True, 'match_type': 'EXACT', 'product_id': alias['product_id']})
+        conn.row_factory = sqlite3.Row
+        try:
+            from Services.product_match import HIGH_SCORE, match_products
+            candidates = match_products(
+                conn,
+                invoice_name=inv_name,
+                supplier_id=supplier_id,
+                barcode=barcode,
+                limit=limit,
+            )
+            return jsonify({
+                'success': True,
+                'candidates': candidates,
+                'high_score': HIGH_SCORE,
+            })
+        except Exception as e:
+            logging.exception('api_products_match_candidates')
+            return jsonify({'success': False, 'error': str(e), 'candidates': []}), 500
+        finally:
+            conn.close()
 
-        # 2. Gợi ý dựa trên mã số kỹ thuật (ví dụ: 63174)
-        codes = re.findall(r'\d{4,6}', inv_name)
-        if codes:
-            suggested = conn.execute(
-                "SELECT id, name FROM products WHERE name LIKE ?", (f'%{codes[0]}%',)
-            ).fetchone()
-            if suggested:
-                return jsonify({
-                    'success': True, 
-                    'match_type': 'SUGGEST', 
-                    'product_id': suggested['id'], 
-                    'product_name': suggested['name']
-                })
+    @app.route('/api/products/link-alias', methods=['POST'])
+    @login_required
+    def api_products_link_alias():
+        data = request.get_json(silent=True) or {}
+        try:
+            product_id = int(data.get('product_id') or 0)
+        except (TypeError, ValueError):
+            product_id = 0
+        inv_name = (data.get('invoice_name') or data.get('name') or '').strip()
+        barcode = (data.get('barcode') or '').strip() or None
+        sku = (data.get('supplier_sku') or '').strip() or None
+        try:
+            supplier_id = int(data.get('supplier_id') or 0) or None
+        except (TypeError, ValueError):
+            supplier_id = None
+        if product_id <= 0 or not inv_name:
+            return jsonify({'success': False, 'error': 'Thiếu sản phẩm hoặc tên hóa đơn'}), 400
+        conn = get_db_connection()
+        try:
+            from Services.product_match import save_product_alias
+            save_product_alias(
+                conn,
+                product_id=product_id,
+                invoice_name=inv_name,
+                supplier_id=supplier_id,
+                barcode=barcode,
+                supplier_sku=sku,
+                commit=True,
+            )
+            return jsonify({'success': True, 'product_id': product_id})
+        except Exception as e:
+            conn.rollback()
+            logging.exception('api_products_link_alias')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
 
-        return jsonify({'success': False, 'match_type': 'NONE'})
+    @app.route('/api/products/smart-link', methods=['POST'])
+    @login_required
+    def smart_link():
+        """Tương thích cũ: EXACT / SUGGEST / NONE — dùng matcher mới."""
+        data = request.get_json(silent=True) or {}
+        inv_name = (data.get('invoice_name') or '').strip()
+        barcode = (data.get('barcode') or '').strip()
+        try:
+            supplier_id = int(data.get('supplier_id') or 0) or None
+        except (TypeError, ValueError):
+            supplier_id = None
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            from Services.product_match import match_products
+            cands = match_products(
+                conn,
+                invoice_name=inv_name,
+                supplier_id=supplier_id,
+                barcode=barcode,
+                limit=3,
+            )
+            if not cands:
+                return jsonify({'success': False, 'match_type': 'NONE', 'candidates': []})
+            top = cands[0]
+            product = top.get('product') or {}
+            match_type = 'EXACT' if top.get('auto_bind') else 'SUGGEST'
+            return jsonify({
+                'success': True,
+                'match_type': match_type,
+                'product_id': product.get('id'),
+                'product_name': product.get('name'),
+                'candidates': cands,
+            })
+        except Exception as e:
+            logging.exception('smart_link')
+            return jsonify({'success': False, 'match_type': 'NONE', 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/products/aliases', methods=['GET'])
+    @login_required
+    def api_products_aliases_list():
+        q = (request.args.get('q') or request.args.get('search') or '').strip()
+        try:
+            supplier_id = int(request.args.get('supplier_id') or 0) or None
+        except (TypeError, ValueError):
+            supplier_id = None
+        try:
+            product_id = int(request.args.get('product_id') or 0) or None
+        except (TypeError, ValueError):
+            product_id = None
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            from Services.product_match import list_product_aliases
+            rows = list_product_aliases(
+                conn, q=q, supplier_id=supplier_id, product_id=product_id, limit=800,
+            )
+            return jsonify({'success': True, 'data': rows})
+        except Exception as e:
+            logging.exception('api_products_aliases_list')
+            return jsonify({'success': False, 'error': str(e), 'data': []}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/products/aliases/<int:alias_id>', methods=['PUT', 'DELETE'])
+    @login_required
+    def api_products_aliases_item(alias_id):
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            from Services.product_match import delete_product_alias, update_product_alias
+            if request.method == 'DELETE':
+                ok = delete_product_alias(conn, alias_id, commit=True)
+                if not ok:
+                    return jsonify({'success': False, 'error': 'Không tìm thấy liên kết'}), 404
+                return jsonify({'success': True})
+            data = request.get_json(silent=True) or {}
+            pid = data.get('product_id')
+            try:
+                pid = int(pid) if pid not in (None, '') else None
+            except (TypeError, ValueError):
+                pid = None
+            inv = data.get('invoice_name')
+            row = update_product_alias(
+                conn, alias_id, product_id=pid, invoice_name=inv, commit=True,
+            )
+            if not row:
+                return jsonify({'success': False, 'error': 'Không tìm thấy liên kết'}), 404
+            return jsonify({'success': True, 'data': row})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logging.exception('api_products_aliases_item')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
 
     #===HÀM ĐƠN VỊ SỈ, LẺ===#
     def suggest_wholesale_unit(unit):

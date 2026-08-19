@@ -70,6 +70,7 @@ SME_MENU_GROUPS = (
         'description': 'Sản phẩm, nhà cung cấp và khách hàng',
         'items': (
             {'endpoint': 'products', 'label': 'Danh mục sản phẩm', 'icon': 'fas fa-box'},
+            {'endpoint': 'product_aliases', 'label': 'Tên hàng đã liên kết', 'icon': 'fas fa-link'},
             {'endpoint': 'suppliers_page', 'label': 'Nhà cung cấp', 'icon': 'fas fa-truck'},
             {'endpoint': 'customers_page', 'label': 'Khách hàng', 'icon': 'fas fa-users'},
         ),

@@ -30,6 +30,70 @@ def _user():
     return session.get('user_name') or session.get('username')
 
 
+_GOODS_TYPES = frozenset({
+    '', 'goods', 'hang_hoa', 'hanghoa', 'ready_made', 'readymade',
+})
+_FINISHED_TYPES = frozenset({
+    'finished_goods', 'finished', 'thanh_pham', 'thanhpham',
+})
+_BLOCKED_PRODUCT_TYPES = frozenset({
+    'materials', 'material', 'raw_materials', 'nvl',
+    'service', 'services', 'dich_vu', 'dichvu',
+    'fixed_asset', 'fixed_assets', 'tscd',
+    'tools', 'tool', 'ccdc',
+})
+_BLOCKED_CODE_PREFIXES = ('VT', 'TSCD', 'CCDC', 'DV')
+
+
+def _table_cols(conn: sqlite3.Connection, table: str) -> set[str]:
+    try:
+        return {r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()}
+    except sqlite3.Error:
+        return set()
+
+
+def _like_needles(q: str) -> list[str]:
+    raw = (q or '').strip()
+    if not raw:
+        return []
+    variants = {raw, raw.lower(), raw.upper(), raw.casefold()}
+    swapped = raw.replace('Đ', '\0').replace('đ', 'Đ').replace('\0', 'đ')
+    variants.update({swapped, swapped.lower(), swapped.upper()})
+    return [f'%{v}%' for v in variants if v]
+
+
+def _text_matches_q(value, q: str) -> bool:
+    if not q:
+        return True
+    text = str(value or '')
+    if q.casefold() in text.casefold():
+        return True
+    return q.upper() in text.upper()
+
+
+def _brief_matches_prefixes(row: dict, prefixes: list[str]) -> bool:
+    """HH/SP/TP = hàng hóa + thành phẩm. Không bắt buộc mã bắt đầu bằng HH/SP/TP."""
+    if not prefixes:
+        return True
+    code = str(row.get('product_code') or row.get('code') or '').strip().upper()
+    pt = str(row.get('product_type') or '').strip().lower()
+    if pt in _BLOCKED_PRODUCT_TYPES:
+        return False
+    if any(code.startswith(px) for px in _BLOCKED_CODE_PREFIXES):
+        return False
+    if any(code.startswith(px) for px in prefixes):
+        return True
+    want_goods = any(px in prefixes for px in ('HH', 'SP'))
+    want_fg = any(px in prefixes for px in ('TP', 'SP'))
+    if want_fg and pt in _FINISHED_TYPES:
+        return True
+    if want_goods and pt in _GOODS_TYPES:
+        return True
+    if want_goods and pt not in _FINISHED_TYPES:
+        return True
+    return False
+
+
 def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
 
     @app.route('/SME_stock_count')
@@ -226,23 +290,68 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
         stock_only = (request.args.get('stock_only') or '').strip().lower() in ('1', 'true', 'yes')
         prefixes_raw = (request.args.get('prefixes') or '').strip().upper()
         prefixes = [p.strip() for p in prefixes_raw.split(',') if p.strip()] if prefixes_raw else []
+        q = (request.args.get('q') or request.args.get('search') or '').strip()
         try:
-            rows = conn.execute(
-                """
-                SELECT p.id, p.name, p.unit, COALESCE(p.product_type,'goods') AS product_type,
-                       COALESCE(p.product_code, '') AS product_code,
-                       COALESCE(NULLIF(TRIM(p.product_code), ''), p.barcode, '') AS code,
-                       COALESCE(i.quantity,0) AS quantity, COALESCE(i.avg_cost,0) AS avg_cost,
-                       COALESCE(p.price, 0) AS wholesale_price,
-                       COALESCE(p.base_price, 0) AS base_price
+            limit = int(request.args.get('limit') or (40 if q else 800))
+        except (TypeError, ValueError):
+            limit = 40 if q else 800
+        limit = min(max(limit, 1), 800)
+        try:
+            pcols = _table_cols(conn, 'products')
+            icols = _table_cols(conn, 'inventory')
+            has_code = 'product_code' in pcols
+            has_barcode = 'barcode' in pcols
+            has_type = 'product_type' in pcols
+            has_price = 'price' in pcols
+            has_base = 'base_price' in pcols
+            has_inv = bool(icols)
+            code_expr = "COALESCE(p.product_code, '')" if has_code else "''"
+            barcode_expr = "COALESCE(p.barcode, '')" if has_barcode else "''"
+            type_expr = (
+                "COALESCE(NULLIF(TRIM(p.product_type), ''), 'goods')"
+                if has_type else "'goods'"
+            )
+            price_expr = "COALESCE(p.price, 0)" if has_price else "0"
+            base_expr = "COALESCE(p.base_price, 0)" if has_base else "0"
+            qty_expr = "COALESCE(i.quantity, 0)" if has_inv else "0"
+            cost_expr = "COALESCE(i.avg_cost, 0)" if has_inv else "0"
+            join_sql = "LEFT JOIN inventory i ON i.product_id = p.id" if has_inv else ""
+
+            where = ["1=1"]
+            params: list = []
+            needles = _like_needles(q) if q else []
+            if needles:
+                ors = []
+                for n in needles:
+                    ors.append("p.name LIKE ?")
+                    params.append(n)
+                    if has_code:
+                        ors.append("IFNULL(p.product_code, '') LIKE ?")
+                        params.append(n)
+                    if has_barcode:
+                        ors.append("IFNULL(p.barcode, '') LIKE ?")
+                        params.append(n)
+                where.append('(' + ' OR '.join(ors) + ')')
+
+            # Tìm theo q trên toàn bộ danh mục — không cắt 800 dòng trước khi lọc tên.
+            sql_limit = 2000 if q else 800
+            sql = f"""
+                SELECT p.id, p.name, p.unit, {type_expr} AS product_type,
+                       {code_expr} AS product_code,
+                       COALESCE(NULLIF(TRIM({code_expr}), ''), {barcode_expr}) AS code,
+                       {barcode_expr} AS barcode,
+                       {qty_expr} AS quantity, {cost_expr} AS avg_cost,
+                       {price_expr} AS wholesale_price,
+                       {base_expr} AS base_price
                 FROM products p
-                LEFT JOIN inventory i ON i.product_id = p.id
-                ORDER BY p.name LIMIT 800
-                """
-            ).fetchall()
-            data = [dict(r) for r in rows]
+                {join_sql}
+                WHERE {' AND '.join(where)}
+                ORDER BY p.name
+                LIMIT {int(sql_limit)}
+            """
+            data = [dict(r) for r in conn.execute(sql, params).fetchall()]
             if warehouse:
-                sm_cols = {r[1] for r in conn.execute('PRAGMA table_info(stock_moves)').fetchall()}
+                sm_cols = _table_cols(conn, 'stock_moves')
                 if 'warehouse_code' in sm_cols:
                     qty_map = {
                         int(r[0]): float(r[1] or 0)
@@ -261,12 +370,16 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
             if stock_only:
                 data = [r for r in data if float(r.get('quantity') or 0) > 1e-9]
             if prefixes:
-                filtered = []
-                for r in data:
-                    code = str(r.get('product_code') or r.get('code') or '').strip().upper()
-                    if any(code.startswith(px) for px in prefixes):
-                        filtered.append(r)
-                data = filtered
+                data = [r for r in data if _brief_matches_prefixes(r, prefixes)]
+            if q:
+                data = [
+                    r for r in data
+                    if _text_matches_q(r.get('name'), q)
+                    or _text_matches_q(r.get('product_code'), q)
+                    or _text_matches_q(r.get('code'), q)
+                    or _text_matches_q(r.get('barcode'), q)
+                ]
+            data = data[:limit]
             for row in data:
                 row['price'] = (
                     float(row.get('wholesale_price') or 0)
@@ -274,32 +387,11 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
                     or float(row.get('avg_cost') or 0)
                 )
             resp = jsonify({'success': True, 'data': data})
-            resp.headers['Cache-Control'] = 'private, max-age=60'
+            resp.headers['Cache-Control'] = 'no-store' if q else 'private, max-age=60'
             return resp
         except Exception as e:
-            # barcode / product_code column may be missing on older DBs
-            try:
-                rows = conn.execute(
-                    """
-                    SELECT p.id, p.name, p.unit, COALESCE(p.product_type,'goods') AS product_type,
-                           '' AS product_code, '' AS code,
-                           COALESCE(i.quantity,0) AS quantity, COALESCE(i.avg_cost,0) AS avg_cost,
-                           0 AS wholesale_price, 0 AS base_price
-                    FROM products p
-                    LEFT JOIN inventory i ON i.product_id = p.id
-                    ORDER BY p.name LIMIT 800
-                    """
-                ).fetchall()
-                data = [dict(r) for r in rows]
-                if stock_only:
-                    data = [r for r in data if float(r.get('quantity') or 0) > 1e-9]
-                for row in data:
-                    row['price'] = float(row.get('avg_cost') or 0)
-                resp = jsonify({'success': True, 'data': data})
-                resp.headers['Cache-Control'] = 'private, max-age=60'
-                return resp
-            except Exception:
-                return jsonify({'success': False, 'error': str(e)}), 500
+            logger.exception('api_sme_products_brief')
+            return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
 
