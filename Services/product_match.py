@@ -38,6 +38,20 @@ def fold_name(value: str | None) -> str:
     return re.sub(r'\s+', ' ', text).strip()
 
 
+def names_exact_for_auto(a: str | None, b: str | None) -> bool:
+    """Trùng hoàn toàn — chỉ bỏ qua hoa/thường, dấu tiếng Việt, khoảng trắng thừa.
+
+    Tên lồng nhau hoặc thêm/bớt ký tự không được coi là trùng (không tự liên kết).
+    """
+    left = (a or '').strip()
+    right = (b or '').strip()
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+    return fold_name(left) == fold_name(right)
+
+
 def extract_models(value: str | None) -> set[str]:
     raw = str(value or '')
     folded = fold_name(raw)
@@ -410,7 +424,8 @@ def match_products(
 ) -> list[dict[str, Any]]:
     """Trả danh sách ứng viên đã xếp hạng.
 
-    auto_bind=True chỉ khi barcode / alias / tên / mã nội bộ khớp chắc.
+    auto_bind=True chỉ khi: mã vạch khớp, alias NCC này (tên HĐ trùng hẳn),
+    hoặc tên danh mục trùng hoàn toàn. Mọi trường hợp gần giống → gợi ý, không tự gán.
     """
     ensure_product_aliases_schema(conn, commit=False)
     name = (invoice_name or '').strip()
@@ -441,7 +456,7 @@ def match_products(
             'score': int(score),
             'match_type': match_type,
             'reasons': reasons[:4],
-            'auto_bind': bool(auto and score >= AUTO_SCORE),
+            'auto_bind': bool(auto),
             'product': _product_payload(p),
         }
 
@@ -468,18 +483,18 @@ def match_products(
     q_models = extract_models(name)
     sid = int(supplier_id) if supplier_id else 0
 
-    # 2) Alias đúng NCC + tên HĐ
+    # 2) Alias — chỉ tự gán khi NCC hiện tại và tên HĐ trùng hẳn alias đã lưu
     for a in aliases:
         inv = (a.get('invoice_name') or '').strip()
-        if fold_name(inv) != q_fold:
+        if not names_exact_for_auto(inv, name):
             continue
         a_sid = int(a.get('supplier_id') or 0)
         if a_sid == sid and sid:
             consider(a['product_id'], 100, 'alias', ['Tên HĐ đã liên kết NCC này'], True)
         else:
-            consider(a['product_id'], 95, 'alias', ['Tên HĐ đã liên kết NCC khác'], True)
+            consider(a['product_id'], 95, 'alias', ['Tên HĐ đã liên kết NCC khác'], False)
 
-    # 3) Tên danh mục / mã nội bộ
+    # 3) Tên danh mục / mã nội bộ (mã chỉ gợi ý — không tự gán)
     for p in products:
         code = str(p.get('product_code') or '').strip()
         pname = (p.get('name') or '').strip()
@@ -487,10 +502,12 @@ def match_products(
         score = 0
         auto = False
         mtype = 'keyword'
-        if pname == name or fold_name(pname) == q_fold:
+        if names_exact_for_auto(pname, name):
             score, reasons, auto, mtype = 100, ['Trùng tên danh mục'], True, 'name'
-        elif code and (fold_name(code) == q_fold or fold_name(code) in q_fold.split()):
-            score, reasons, auto, mtype = 96, [f'Mã {code}'], True, 'code'
+        elif code and fold_name(code) == q_fold:
+            score, reasons, auto, mtype = 92, [f'Mã {code}'], False, 'code'
+        elif code and fold_name(code) in q_fold.split():
+            score, reasons, auto, mtype = 80, [f'Mã {code} trong tên HĐ'], False, 'code'
         else:
             s, r = _score_text(name, pname, q_tokens, q_models)
             score, reasons = s, r
@@ -503,10 +520,8 @@ def match_products(
             ascore, ar = _score_text(name, inv_a, q_tokens, q_models)
             if ascore > score:
                 score, reasons = ascore, (['Bí danh cũ'] + ar)[:4]
-                if ascore >= AUTO_SCORE and (
-                    inv_a == name or fold_name(inv_a) == q_fold
-                ):
-                    auto, mtype = True, 'alias'
+                if names_exact_for_auto(inv_a, name):
+                    auto, mtype = False, 'alias'
         if score >= SUGGEST_SCORE:
             consider(p['id'], score, mtype, reasons, auto)
 

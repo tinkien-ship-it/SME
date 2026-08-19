@@ -13,16 +13,23 @@
             'tr.row-exact-match { background-color: #ecfdf5 !important; }',
             'tr.row-suggested { background-color: #fffbeb !important; }',
             '.match-open-btn { font-size: 11px; padding: 1px 8px; white-space: nowrap; }',
-            '.keto-link-overlay { position: fixed; inset: 0; z-index: 20000; background: rgba(15,23,42,.45); display: flex; align-items: center; justify-content: center; padding: 16px; }',
+            '.keto-link-overlay { position: fixed; inset: 0; z-index: 20000; background: rgba(15,23,42,.45); display: flex; align-items: stretch; justify-content: center; padding: 12px 16px; }',
             '.keto-link-overlay.d-none { display: none !important; }',
-            '.keto-link-card { background: #fff; border-radius: 12px; width: min(920px, 100%); max-height: 86vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(15,23,42,.25); }',
-            '.keto-link-card header { padding: 16px 20px 12px; border-bottom: 1px solid #e2e8f0; }',
+            '.keto-link-card { background: #fff; border-radius: 12px; width: min(1680px, 96vw); max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(15,23,42,.25); }',
+            '.keto-link-card header { padding: 16px 24px 12px; border-bottom: 1px solid #e2e8f0; flex: 0 0 auto; }',
             '.keto-link-card header h5 { margin: 0; font-weight: 700; }',
-            '.keto-link-card .keto-link-body { padding: 12px 20px; overflow: auto; }',
-            '.keto-link-card table { width: 100%; font-size: 13px; }',
-            '.keto-link-card th { text-align: left; color: #64748b; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }',
-            '.keto-link-card td { padding: 8px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }',
-            '.keto-link-card footer { padding: 12px 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }',
+            '.keto-link-card .keto-link-body { padding: 12px 24px; overflow: auto; flex: 1 1 auto; }',
+            '.keto-link-card table { width: 100%; table-layout: fixed; font-size: 13px; }',
+            '.keto-link-card th { text-align: left; color: #64748b; font-weight: 600; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }',
+            '.keto-link-card td { padding: 10px; vertical-align: top; border-bottom: 1px solid #f1f5f9; }',
+            '.keto-link-card th:nth-child(1), .keto-link-card td:nth-child(1) { width: 42%; }',
+            '.keto-link-card th:nth-child(2), .keto-link-card td:nth-child(2) { width: 64px; }',
+            '.keto-link-card th:nth-child(3), .keto-link-card td:nth-child(3) { width: auto; }',
+            '.keto-link-card th:nth-child(4), .keto-link-card td:nth-child(4) { width: 108px; white-space: nowrap; }',
+            '.keto-link-card .keto-inv-name { font-weight: 700; white-space: normal; overflow-wrap: anywhere; word-break: break-word; line-height: 1.45; }',
+            '.keto-link-card .keto-cand-sel { width: 100%; min-height: 38px; white-space: normal; }',
+            '.keto-link-card .keto-cand-full { margin-top: 6px; color: #334155; white-space: normal; overflow-wrap: anywhere; word-break: break-word; line-height: 1.4; }',
+            '.keto-link-card footer { padding: 12px 24px; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; flex: 0 0 auto; }',
         ].join('\n');
         document.head.appendChild(st);
 
@@ -81,21 +88,39 @@
         });
     }
 
-    function normName(s) {
-        return String(s || '').trim().toLowerCase();
+    function foldName(s) {
+        const mapFrom = 'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ'
+            + 'ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ';
+        const mapTo = 'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd'
+            + 'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd';
+        let t = String(s || '');
+        t = t.split('').map(function (ch) {
+            const i = mapFrom.indexOf(ch);
+            return i >= 0 ? mapTo[i] : ch;
+        }).join('').toLowerCase();
+        return t.replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+    }
+
+    function namesExact(a, b) {
+        const left = String(a || '').trim();
+        const right = String(b || '').trim();
+        if (!left || !right) return false;
+        if (left === right) return true;
+        return foldName(left) === foldName(right);
     }
 
     function isExactCatalogMatch(cand, invoiceName) {
         if (!cand || !cand.product) return false;
-        if (cand.match_type === 'name' && (cand.score || 0) >= 100) return true;
-        const inv = normName(invoiceName);
-        const cat = normName(cand.product.name);
-        return !!(inv && cat && inv === cat);
+        return namesExact(invoiceName, cand.product.name);
     }
 
     function shouldAutoBind(top, invoiceName) {
         if (!top || !top.product) return false;
-        if (top.auto_bind) return true;
+        if (top.match_type === 'barcode' && top.auto_bind) return true;
+        if (top.match_type === 'alias' && top.auto_bind) return true;
+        if (top.match_type === 'name' && top.auto_bind) {
+            return isExactCatalogMatch(top, invoiceName);
+        }
         return isExactCatalogMatch(top, invoiceName);
     }
 
@@ -106,10 +131,9 @@
     /** Gợi ý gõ tay: tên trùng hẳn danh mục → gán luôn, không mở hộp gợi ý. */
     function tryExactFromManageList(row, searchVal, products, setProductToRow) {
         if (!row || rowHasProduct(row) || !Array.isArray(products) || !products.length) return false;
-        const search = normName(searchVal);
-        if (!search) return false;
+        if (!String(searchVal || '').trim()) return false;
         const exact = products.find(function (p) {
-            return normName(p.name) === search;
+            return namesExact(searchVal, p.name);
         });
         if (!exact || !setProductToRow) return false;
         const inv = invoiceNameOf(row) || searchVal;
@@ -234,8 +258,9 @@
                 cands.map(function (c) {
                     const p = c.product || {};
                     const why = (c.reasons || []).join(', ');
-                    return '<option value="' + esc(p.id) + '">'
-                        + esc((p.product_code ? p.product_code + ' — ' : '') + p.name)
+                    const label = (p.product_code ? p.product_code + ' — ' : '') + (p.name || '');
+                    return '<option value="' + esc(p.id) + '" data-full="' + esc(label) + '" title="' + esc(label) + '">'
+                        + esc(label)
                         + (why ? ' (' + esc(why) + ')' : '')
                         + '</option>';
                 })
@@ -243,10 +268,14 @@
             if (cands[0] && cands[0].product) {
                 opts[1] = opts[1].replace('<option ', '<option selected ');
             }
+            const topLabel = (cands[0] && cands[0].product)
+                ? ((cands[0].product.product_code ? cands[0].product.product_code + ' — ' : '') + (cands[0].product.name || ''))
+                : '';
             return '<tr data-row-idx="' + idx + '">'
-                + '<td><b>' + esc(inv) + '</b></td>'
+                + '<td><div class="keto-inv-name">' + esc(inv) + '</div></td>'
                 + '<td class="text-end">' + esc(qty) + '</td>'
-                + '<td><select class="form-select form-select-sm keto-cand-sel">' + opts.join('') + '</select></td>'
+                + '<td><select class="form-select form-select-sm keto-cand-sel">' + opts.join('') + '</select>'
+                + '<div class="keto-cand-full">' + esc(topLabel) + '</div></td>'
                 + '<td><button type="button" class="btn btn-sm btn-outline-secondary keto-new-one">Hàng mới</button></td>'
                 + '</tr>';
         }).join('');
@@ -255,6 +284,14 @@
                 markCreateNew(list[i]);
                 btn.closest('tr').remove();
                 if (!tb.querySelector('tr')) hideModal();
+            });
+        });
+        tb.querySelectorAll('.keto-cand-sel').forEach(function (sel) {
+            sel.addEventListener('change', function () {
+                const full = sel.parentElement.querySelector('.keto-cand-full');
+                if (!full) return;
+                const opt = sel.options[sel.selectedIndex];
+                full.textContent = (opt && opt.value) ? (opt.getAttribute('data-full') || opt.textContent || '') : '';
             });
         });
         box._rows = list;
