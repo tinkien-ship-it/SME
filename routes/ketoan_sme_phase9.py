@@ -91,15 +91,25 @@ def register_sme_phase9_routes(app, *, login_required, require_sme_regime):
     @require_sme_regime
     def api_sme_branch_select():
         from Services.sme.branches import get_branch, get_default_branch_code
+        from Services.user_branch import user_allowed_branch_codes
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
             data = request.get_json(silent=True) or {}
             code = (data.get('branch_code') or data.get('code') or '').strip().upper()
+
+            allowed = user_allowed_branch_codes(conn, session.get('user_id', 0))
+
             if code in ('', 'ALL'):
-                session['sme_branch_code'] = get_default_branch_code(conn)
-                session['sme_branch_filter'] = 'ALL'
+                if allowed is not None:
+                    session['sme_branch_code'] = allowed[0] if allowed else get_default_branch_code(conn)
+                    session['sme_branch_filter'] = allowed[0] if len(allowed) == 1 else 'ALL'
+                else:
+                    session['sme_branch_code'] = get_default_branch_code(conn)
+                    session['sme_branch_filter'] = 'ALL'
             else:
+                if allowed is not None and code not in allowed:
+                    return jsonify({'success': False, 'error': 'Bạn không có quyền truy cập chi nhánh này'}), 403
                 br = get_branch(conn, code)
                 if not br or not br.get('is_active'):
                     return jsonify({'success': False, 'error': 'Chi nhánh không hợp lệ'}), 400
@@ -208,6 +218,109 @@ def register_sme_phase9_routes(app, *, login_required, require_sme_regime):
         except Exception as e:
             conn.rollback()
             logger.exception('api_sme_warehouse_set_branch')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/warehouses/<code>', methods=['PUT', 'PATCH'])
+    @login_required
+    @require_sme_regime
+    def api_sme_warehouses_update(code):
+        """Sửa thông tin kho: name/address/branch_code/is_default/is_active."""
+        from Services.import_line_helpers import update_warehouse
+        conn = get_db_connection()
+        try:
+            data = request.get_json(silent=True) or {}
+            row = update_warehouse(
+                conn,
+                code=code,
+                name=data.get('name'),
+                address=data.get('address'),
+                branch_code=data.get('branch_code'),
+                is_default=data.get('is_default', None),
+                is_active=data.get('is_active', None),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': row})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_warehouses_update')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    # ==================== User-Branch Assignment ====================
+
+    @app.route('/api/sme/user-branches/<int:user_id>', methods=['GET'])
+    @login_required
+    def api_user_branches_get(user_id):
+        from Services.user_branch import get_user_branches
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            return jsonify({'success': True, 'data': get_user_branches(conn, user_id)})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/user-branches/<int:user_id>', methods=['PUT'])
+    @login_required
+    def api_user_branches_set(user_id):
+        from Services.user_branch import set_user_branches
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            codes = data.get('branch_codes', [])
+            default_code = data.get('default_branch_code')
+            if not codes:
+                return jsonify({'success': False, 'error': 'Cần ít nhất 1 chi nhánh'}), 400
+            set_user_branches(conn, user_id, codes, default_code=default_code)
+            return jsonify({'success': True})
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/user-branches/<int:user_id>/add', methods=['POST'])
+    @login_required
+    def api_user_branch_add(user_id):
+        from Services.user_branch import assign_user_branch
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            code = (data.get('branch_code') or '').strip()
+            if not code:
+                return jsonify({'success': False, 'error': 'Thiếu branch_code'}), 400
+            assign_user_branch(conn, user_id, code, is_default=bool(data.get('is_default')))
+            return jsonify({'success': True})
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/user-branches/<int:user_id>/remove', methods=['POST'])
+    @login_required
+    def api_user_branch_remove(user_id):
+        from Services.user_branch import remove_user_branch
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            code = (data.get('branch_code') or '').strip()
+            if not code:
+                return jsonify({'success': False, 'error': 'Thiếu branch_code'}), 400
+            remove_user_branch(conn, user_id, code)
+            return jsonify({'success': True})
+        except Exception as e:
+            conn.rollback()
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()

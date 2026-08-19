@@ -168,6 +168,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="{{ url_for('static', filename='js/pos-offline.js') }}?v=2"></script>
 <script>
 let currentPage = 1;
 let lastOrders = [];
@@ -488,5 +489,18 @@ async function fetchUrl(invoiceNo, type) {
         return null;
     }
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.PosOffline) {
+        PosOffline.init({ autoSyncIntervalMs: 120000 });
+        document.addEventListener('pos-offline-synced', function (ev) {
+            const n = (ev.detail && ev.detail.processed) || 0;
+            if (n > 0) {
+                Swal.fire({ icon: 'success', title: 'Đã đồng bộ ' + n + ' đơn offline', timer: 2500, showConfirmButton: false });
+                if (typeof loadOrders === 'function') loadOrders(currentPage);
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

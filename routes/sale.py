@@ -42,8 +42,11 @@ from Services.sale_helpers import (
     table_has_column,
 )
 from Services.sme.sale_journal import sync_sale_journals
+from Services.accounting_queue import enqueue_accounting_job
 from Services.sme.hkd_side_effects import write_hkd_cash_vouchers
 from Services.tenant_profile import get_current_tenant_profile
+from Services.pos_offline_schema import ensure_pos_offline_schema, find_sale_by_client_uuid
+from Services.pos_catalog import fetch_pos_catalog
 
 
 def _apply_sale_business_line(cursor, update_sql, update_params, ref_doc):
@@ -477,14 +480,14 @@ def complete_pos_bank_payment(sale_id):
             """, (customer_name, company_name, address, tax_code, '131', '511', sale_date, total_amount, sale_id, ref_doc))
 
         cursor.execute("UPDATE sale SET status = 'completed', date = ? WHERE id = ?", (sale_date, sale_id))
-        sync_sale_journals(
+        conn.commit()
+        enqueue_accounting_job(
             conn,
             sale_id,
             accounting_regime=get_current_tenant_profile().get('accounting_regime'),
             features=get_current_tenant_profile().get('features'),
             created_by=session.get('user_name'),
         )
-        conn.commit()
         return {"success": True, "sale_id": sale_id}
     except Exception as e:
         if conn:
@@ -577,6 +580,7 @@ def register_sale_routes(app):
     @login_required
     def api_checkout():
         data = request.get_json()
+        client_uuid = (data.get('client_uuid') or '').strip()
         sale_id = data.get('order_id') or data.get('sale_id')
         items = data.get('items', [])
         status = data.get('status', 'completed').strip().lower()
@@ -585,6 +589,24 @@ def register_sale_routes(app):
             return jsonify({"success": False, "error": "Giỏ hàng trống."}), 400
         if status not in ['draft', 'completed', 'pending']:
             return jsonify({"success": False, "error": "Trạng thái không hợp lệ."}), 400
+
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            ensure_pos_offline_schema(conn, commit=False)
+            if client_uuid and not sale_id:
+                existing = find_sale_by_client_uuid(conn, client_uuid)
+                if existing:
+                    return jsonify({
+                        "success": True,
+                        "sale_id": existing['id'],
+                        "status": existing.get('status') or status,
+                        "deduped": True,
+                    }), 200
+        except Exception:
+            pass
+        finally:
+            conn.close()
 
         # Tính total_amount chính xác từ từng dòng
         total_amount = 0.0
@@ -620,6 +642,7 @@ def register_sale_routes(app):
         cursor = conn.cursor()
 
         try:
+            ensure_pos_offline_schema(conn, commit=False)
             begin_immediate(conn, label='api_checkout')
             sale_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             old_status = 'draft'
@@ -633,6 +656,9 @@ def register_sale_routes(app):
 
             merged = defaultdict(lambda: {"deduct": 0.0, "details": [], "hkd_sector": "G1", "product_type": "goods"})
 
+            from Services.user_branch import get_current_user_warehouse_codes
+            _pos_wh_codes = get_current_user_warehouse_codes()
+
             for item in items:
                 pid = int(item['product_id'])
                 qty_input = float(item['quantity'])
@@ -641,7 +667,7 @@ def register_sale_routes(app):
                 discount_pct = float(item.get('discount_pct', 0))
                 tax_pct = float(item.get('tax_pct', 0))
 
-                row = fetch_product_for_checkout(cursor, pid)
+                row = fetch_product_for_checkout(cursor, pid, warehouse_codes=_pos_wh_codes)
                 if not row:
                     raise Exception(f"Sản phẩm ID {pid} không tồn tại.")
 
@@ -685,20 +711,31 @@ def register_sale_routes(app):
                         INSERT INTO sale 
                         (date, total_amount, payment_method, customer_name, company_name, tax_code, 
                          customer_phone, address, note, status, email, business_line,
-                         budget_unit_code, passport_no)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pos', ?, ?)
+                         budget_unit_code, passport_no, client_uuid)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pos', ?, ?, ?)
                     """, (sale_date, total_amount, payment_method, customer_name, company_name,
                           tax_code, customer_phone, address, note, status, email,
-                          budget_unit_code or None, passport_no or None))
+                          budget_unit_code or None, passport_no or None,
+                          client_uuid or None))
                 else:
-                    cursor.execute("""
-                        INSERT INTO sale 
-                        (date, total_amount, payment_method, customer_name, company_name, tax_code, 
-                         customer_phone, address, note, status, email, budget_unit_code, passport_no)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (sale_date, total_amount, payment_method, customer_name, company_name,
-                          tax_code, customer_phone, address, note, status, email,
-                          budget_unit_code or None, passport_no or None))
+                    ins_cols = [
+                        'date', 'total_amount', 'payment_method', 'customer_name', 'company_name', 'tax_code',
+                        'customer_phone', 'address', 'note', 'status', 'email',
+                        'budget_unit_code', 'passport_no',
+                    ]
+                    ins_vals = [
+                        sale_date, total_amount, payment_method, customer_name, company_name,
+                        tax_code, customer_phone, address, note, status, email,
+                        budget_unit_code or None, passport_no or None,
+                    ]
+                    if table_has_column(cursor, 'sale', 'client_uuid'):
+                        ins_cols.append('client_uuid')
+                        ins_vals.append(client_uuid or None)
+                    placeholders = ', '.join(['?'] * len(ins_cols))
+                    cursor.execute(
+                        f"INSERT INTO sale ({', '.join(ins_cols)}) VALUES ({placeholders})",
+                        ins_vals,
+                    )
 
                 sale_id = cursor.lastrowid
                 ref_doc = f"ĐH{str(sale_id).zfill(6)}"
@@ -794,16 +831,16 @@ def register_sale_routes(app):
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (customer_name, company_name, address, tax_code, '131', '511', sale_date, total_amount, sale_id, ref_doc))
 
+            conn.commit()
             if status == 'completed' or old_status == 'completed':
-                sync_sale_journals(
+                enqueue_accounting_job(
                     conn,
                     sale_id,
                     accounting_regime=get_current_tenant_profile().get('accounting_regime'),
-            features=get_current_tenant_profile().get('features'),
+                    features=get_current_tenant_profile().get('features'),
                     created_by=session.get('user_name'),
                     replace_existing=old_status == 'completed',
                 )
-            conn.commit()
             return jsonify({"success": True, "sale_id": sale_id, "status": status}), 200
 
         except Exception as e:
@@ -906,6 +943,7 @@ def register_sale_routes(app):
         data = request.get_json()
         if not data:
             return jsonify({"success": False, "error": "Dữ liệu không hợp lệ."}), 400
+        client_uuid = (data.get('client_uuid') or '').strip()
         try:
             from Services.sme.branches import active_report_branch_filter, assert_sale_in_branch
             if active_report_branch_filter() is not None:
@@ -916,6 +954,24 @@ def register_sale_routes(app):
                     _conn.close()
         except ValueError as ve:
             return jsonify({"success": False, "error": str(ve)}), 403
+
+        conn_pre = get_db_connection()
+        try:
+            ensure_pos_offline_schema(conn_pre, commit=False)
+            if client_uuid:
+                existing = find_sale_by_client_uuid(conn_pre, client_uuid)
+                if existing and int(existing['id']) != int(sale_id):
+                    return jsonify({
+                        "success": True,
+                        "sale_id": existing['id'],
+                        "status": existing.get('status') or data.get('status', 'draft'),
+                        "deduped": True,
+                    }), 200
+        except Exception:
+            pass
+        finally:
+            conn_pre.close()
+
         items = data.get('items', [])
         if not items:
             return jsonify({"success": False, "error": "Giỏ hàng trống."}), 400
@@ -977,6 +1033,8 @@ def register_sale_routes(app):
             cursor.execute("DELETE FROM sale_items WHERE sale_id = ?", (sale_id,))
             # Gộp items và kiểm tra tồn kho
             merged = defaultdict(lambda: {"deduct": 0.0, "details": [], "hkd_sector": "G1", "product_type": "goods"})
+            from Services.user_branch import get_current_user_warehouse_codes
+            _pos_wh_codes2 = get_current_user_warehouse_codes()
             for item in items:
                 pid = int(item['product_id'])
                 qty_input = float(item['quantity'])
@@ -984,7 +1042,7 @@ def register_sale_routes(app):
                 use_unit1 = bool(item.get('UseSaleUnit', item.get('use_unit1', False)))
                 discount_pct = float(item.get('discount_pct', 0))
                 tax_pct = float(item.get('tax_pct', 0))
-                p_row = fetch_product_for_checkout(cursor, pid)
+                p_row = fetch_product_for_checkout(cursor, pid, warehouse_codes=_pos_wh_codes2)
                 if not p_row:
                     raise Exception(f"Sản phẩm ID {pid} không tồn tại.")
                 p = dict(p_row)
@@ -1028,6 +1086,11 @@ def register_sale_routes(app):
             update_sql += " WHERE id = ?"
             update_params.append(sale_id)
             cursor.execute(update_sql, update_params)
+            if client_uuid and table_has_column(cursor, 'sale', 'client_uuid'):
+                cursor.execute(
+                    "UPDATE sale SET client_uuid = COALESCE(client_uuid, ?) WHERE id = ?",
+                    (client_uuid, sale_id),
+                )
             # Lưu sale_items mới
             for pid, info in merged.items():
                 for d in info["details"]:
@@ -1084,15 +1147,15 @@ def register_sale_routes(app):
                          date_of_debt, unpaid_amount, sale_id, sale_no)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (customer_name, company_name, address, tax_code, '131', '511', sale_date, total_amount, sale_id, ref_doc))
-            sync_sale_journals(
+            conn.commit()
+            enqueue_accounting_job(
                 conn,
                 sale_id,
                 accounting_regime=get_current_tenant_profile().get('accounting_regime'),
-            features=get_current_tenant_profile().get('features'),
+                features=get_current_tenant_profile().get('features'),
                 created_by=session.get('user_name'),
                 replace_existing=old_status != 'draft',
             )
-            conn.commit()
             return jsonify({"success": True, "sale_id": sale_id, "status": new_status}), 200
         except Exception as e:
             conn.rollback()
@@ -2097,11 +2160,11 @@ def register_sale_routes(app):
                 c.execute("UPDATE cong_no SET unpaid_amount = MAX(0, unpaid_amount - ?) WHERE sale_no = ?", 
                          (refund_amount, sale_master['sale_no']))
 
-            sync_sale_journals(
+            enqueue_accounting_job(
                 conn,
                 sale_id,
                 accounting_regime=get_current_tenant_profile().get('accounting_regime'),
-            features=get_current_tenant_profile().get('features'),
+                features=get_current_tenant_profile().get('features'),
                 created_by=session.get('user_name'),
                 replace_existing=True,
             )
@@ -2170,6 +2233,49 @@ def register_sale_routes(app):
     @login_required
     def sale():
         return render_template('sale.html')
+
+    @app.route('/api/pos/catalog', methods=['GET'])
+    @login_required
+    def api_pos_catalog():
+        include_menu = request.args.get('include_menu', '0') == '1'
+        conn = get_db_connection()
+        try:
+            ensure_pos_offline_schema(conn, commit=False)
+            from Services.user_branch import get_current_user_warehouse_codes
+            wh_codes = get_current_user_warehouse_codes()
+            payload = fetch_pos_catalog(conn, include_menu=include_menu, warehouse_codes=wh_codes)
+            return jsonify({'success': True, **payload})
+        except Exception as e:
+            logging.exception('api_pos_catalog')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sale/<int:sale_id>/accounting-status')
+    @login_required
+    def api_sale_accounting_status(sale_id):
+        from Services.accounting_queue import get_sale_accounting_status
+        conn = get_db_connection()
+        try:
+            conn.row_factory = sqlite3.Row
+            status = get_sale_accounting_status(conn, sale_id)
+            return jsonify({'success': True, **status})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/sw-pos.js')
+    def sw_pos():
+        from flask import send_from_directory
+        import os
+        return send_from_directory(
+            os.path.join(app.root_path, 'static'),
+            'sw-pos.js',
+            mimetype='application/javascript',
+            max_age=3600,
+        )
+
     @app.route('/return/sale')
     @login_required
     def return_sale_page():

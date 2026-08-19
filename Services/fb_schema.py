@@ -87,6 +87,7 @@ _SALE_EXTRA_COLS = (
     ('status', 'TEXT'),
     ('created_at', 'TEXT'),
     ('total_amount', 'REAL DEFAULT 0'),
+    ('client_uuid', 'TEXT'),
 )
 
 _SALE_ITEMS_EXTRA_COLS = (

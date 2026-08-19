@@ -13,23 +13,52 @@ def table_has_column(cursor, table, column):
     return column in [r[1] for r in cursor.fetchall()]
 
 
-def fetch_product_for_checkout(cursor, product_id):
-    """Lấy thông tin SP + tồn kho cho checkout POS (ưu tiên sổ cái)."""
-    cursor.execute("""
-        SELECT
-            p.id, p.name, p.unit, p.unit1, p.unit_ratio,
-            COALESCE(p.product_type, 'goods') AS product_type,
-            p.hkd_sector_code,
-            COALESCE(
-                (SELECT SUM(sm.quantity) FROM stock_moves sm WHERE sm.product_id = p.id),
-                i.quantity,
-                0
-            ) AS stock,
-            COALESCE(i.avg_cost, 0) AS avg_cost
-        FROM products p
-        LEFT JOIN inventory i ON p.id = i.product_id
-        WHERE p.id = ?
-    """, (product_id,))
+def fetch_product_for_checkout(cursor, product_id, warehouse_codes=None):
+    """Lấy thông tin SP + tồn kho cho checkout POS (ưu tiên sổ cái).
+
+    warehouse_codes: nếu chỉ định, chỉ tính stock/avg_cost trong các kho này.
+    """
+    if warehouse_codes:
+        ph = ','.join('?' * len(warehouse_codes))
+        cursor.execute(f"""
+            SELECT
+                p.id, p.name, p.unit, p.unit1, p.unit_ratio,
+                COALESCE(p.product_type, 'goods') AS product_type,
+                p.hkd_sector_code,
+                COALESCE(
+                    (SELECT SUM(sm.quantity) FROM stock_moves sm
+                     WHERE sm.product_id = p.id AND sm.warehouse_code IN ({ph})),
+                    COALESCE(
+                        (SELECT SUM(i2.quantity) FROM inventory i2
+                         WHERE i2.product_id = p.id AND i2.warehouse_code IN ({ph})),
+                        0
+                    )
+                ) AS stock,
+                COALESCE(
+                    (SELECT AVG(i3.avg_cost) FROM inventory i3
+                     WHERE i3.product_id = p.id AND i3.warehouse_code IN ({ph}) AND i3.quantity > 0),
+                    COALESCE(i.avg_cost, 0)
+                ) AS avg_cost
+            FROM products p
+            LEFT JOIN inventory i ON p.id = i.product_id
+            WHERE p.id = ?
+        """, warehouse_codes + warehouse_codes + warehouse_codes + [product_id])
+    else:
+        cursor.execute("""
+            SELECT
+                p.id, p.name, p.unit, p.unit1, p.unit_ratio,
+                COALESCE(p.product_type, 'goods') AS product_type,
+                p.hkd_sector_code,
+                COALESCE(
+                    (SELECT SUM(sm.quantity) FROM stock_moves sm WHERE sm.product_id = p.id),
+                    i.quantity,
+                    0
+                ) AS stock,
+                COALESCE(i.avg_cost, 0) AS avg_cost
+            FROM products p
+            LEFT JOIN inventory i ON p.id = i.product_id
+            WHERE p.id = ?
+        """, (product_id,))
     return cursor.fetchone()
 
 

@@ -1,8 +1,11 @@
 """Lập lịch backup DB và kiểm tra tenant hết hạn."""
+import logging
 import os
 import shutil
 import sqlite3
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask_apscheduler import APScheduler
@@ -138,9 +141,72 @@ def init_schedulers(app, backup_root):
         minute=0,
         id='sme_vat_filing_alert_yearly',
     )
+    backup_scheduler.add_job(
+        func=lambda: _process_accounting_queue(app),
+        trigger="interval",
+        seconds=3,
+        id='accounting_queue_worker',
+        max_instances=1,
+        replace_existing=True,
+    )
     backup_scheduler.start()
 
     return expiry_scheduler, backup_scheduler
+
+
+def _process_accounting_queue(app):
+    """Background worker: xử lý hàng đợi kế toán cho tất cả tenant."""
+    import os
+    from db_utils import BASE_DIR, open_sqlite, REGISTRY_PATH
+
+    try:
+        tenant_dbs = []
+        tenants_dir = os.path.join(BASE_DIR, 'tenants')
+        if os.path.isdir(tenants_dir):
+            for fn in os.listdir(tenants_dir):
+                if fn.endswith('.db'):
+                    tenant_dbs.append(os.path.join(tenants_dir, fn))
+
+        if os.path.isfile(REGISTRY_PATH):
+            try:
+                with open_sqlite(REGISTRY_PATH) as reg:
+                    rows = reg.execute(
+                        "SELECT db_path FROM tenants WHERE db_path IS NOT NULL AND TRIM(db_path) != ''"
+                    ).fetchall()
+                for row in rows:
+                    p = row[0] if not isinstance(row, sqlite3.Row) else row['db_path']
+                    if p:
+                        full = os.path.abspath(os.path.join(BASE_DIR, p)) if not os.path.isabs(p) else p
+                        if os.path.isfile(full) and full not in tenant_dbs:
+                            tenant_dbs.append(full)
+            except Exception:
+                pass
+
+        for db_path in tenant_dbs:
+            try:
+                with open_sqlite(db_path) as conn:
+                    conn.row_factory = sqlite3.Row
+                    has_table = conn.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='accounting_jobs'"
+                    ).fetchone()
+                    if not has_table:
+                        continue
+                    pending = conn.execute(
+                        "SELECT 1 FROM accounting_jobs WHERE status IN ('pending','retry') LIMIT 1"
+                    ).fetchone()
+                    if not pending:
+                        continue
+                    from Services.accounting_queue import process_accounting_jobs
+                    result = process_accounting_jobs(conn)
+                    if result['processed'] or result['failed']:
+                        logger.info(
+                            'accounting_queue [%s]: processed=%d failed=%d',
+                            os.path.basename(db_path), result['processed'], result['failed'],
+                        )
+            except Exception as e:
+                logger.debug('accounting_queue skip %s: %s', db_path, e)
+    except Exception as e:
+        logger.error('accounting_queue worker error: %s', e)
 
 
 def _scheduled_sme_auto_posting():

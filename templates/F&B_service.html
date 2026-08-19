@@ -474,6 +474,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{{ url_for('static', filename='js/pos-offline.js') }}?v=2"></script>
 <script>
     let activeTableId = null;   
     let activeSaleId = null;    
@@ -484,6 +485,15 @@
     let qrPollTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.PosOffline) {
+        PosOffline.init({ includeMenu: true, autoSyncIntervalMs: 60000 });
+        document.addEventListener('pos-offline-synced', function (ev) {
+            const n = (ev.detail && ev.detail.processed) || 0;
+            if (n > 0) Swal.fire({ icon: 'success', title: 'Đã đồng bộ ' + n + ' đơn F&B', timer: 2500, showConfirmButton: false });
+            const errs = (ev.detail && ev.detail.errors) || [];
+            if (errs.length) PosOffline.showOutboxPanel();
+        });
+    }
     $('.select2').select2({ width: '100%' });
     
     loadTables();
@@ -1273,6 +1283,7 @@ async function refreshCart() {
         const cartTotalEle = document.getElementById('cartTotal');
 
         if (data.success && data.items && data.items.length > 0) {
+            if (window.PosOffline) PosOffline.cacheFbSale(activeTableId, data);
             currentTotal = data.total_amount;
             let html = '';
             
@@ -1453,9 +1464,18 @@ async function executeCheckout() {
 
     const items = [];
     try {
-        const saleRes = await fetch(`/api/fb/get-sale/${activeTableId}`);
-        const saleData = await saleRes.json();
-        if (saleData.success && saleData.items) {
+        let saleData = null;
+        if (window.PosOffline && !PosOffline.isOnline()) {
+            saleData = await PosOffline.getCachedFbSale(activeTableId);
+            if (!saleData || !saleData.items || !saleData.items.length) {
+                Swal.fire('Offline', 'Không có dữ liệu bàn trong cache. Mở bàn khi có mạng trước khi thanh toán offline.', 'warning');
+                return;
+            }
+        } else {
+            const saleRes = await fetch(`/api/fb/get-sale/${activeTableId}`);
+            saleData = await saleRes.json();
+        }
+        if (saleData && saleData.success !== false && saleData.items) {
             saleData.items.forEach(i => {
                 // Ép kiểu dữ liệu UseSaleUnit về dạng số (1 cho sỉ, 0 cho lẻ)
                 let useSaleUnitVal = 0;
@@ -1500,6 +1520,7 @@ async function executeCheckout() {
         items: items, // Danh sách items chứa đầy đủ thông tin định lượng quy đổi
         business_line: 'fb_service'
     };
+    if (window.PosOffline) payload.client_uuid = PosOffline.uuid();
 
     const confirm = await Swal.fire({
         title: 'Xác nhận thanh toán?',
@@ -1514,15 +1535,34 @@ async function executeCheckout() {
     if (!confirm.isConfirmed) return;
 
     try {
-        const res = await fetch('/api/fb/checkout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const result = await res.json();
+        let result;
+        if (window.PosOffline) {
+            result = await PosOffline.submitSale({
+                url: '/api/fb/checkout',
+                method: 'POST',
+                payload: payload,
+                kind: 'fb_checkout',
+                label: 'F&B bàn ' + activeTableId,
+            });
+        } else {
+            const res = await fetch('/api/fb/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            result = await res.json();
+        }
 
         if (result.success) {
+            if (result.queued) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Đã lưu offline',
+                    text: 'Thanh toán bàn sẽ đồng bộ và ghi sổ khi có mạng',
+                    timer: 4500,
+                });
+                return;
+            }
             const paymentMethod = payload.payment_method;
             const payTotalText = document.getElementById('pay_total_display')?.innerText || '0đ';
 

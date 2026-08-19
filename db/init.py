@@ -289,6 +289,16 @@ def apply_schema_migrations(conn):
         ensure_production_schema(conn)
     except Exception as e:
         print(f'[MIGRATE] production: {e}')
+    try:
+        from Services.pos_offline_schema import ensure_pos_offline_schema
+        ensure_pos_offline_schema(conn, commit=False)
+    except Exception as e:
+        print(f'[MIGRATE] pos offline: {e}')
+    try:
+        from Services.user_branch import ensure_user_branch_schema
+        ensure_user_branch_schema(conn, commit=False)
+    except Exception as e:
+        print(f'[MIGRATE] user_branch: {e}')
     conn.commit()
 
 

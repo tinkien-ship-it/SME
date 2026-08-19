@@ -613,11 +613,23 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             current_app.logger.error("Tenant middleware error: %s", e, exc_info=True)
             if request.path.startswith('/api/'):
                 return jsonify({"success": False, "error": "Lỗi phiên làm việc — thử đăng nhập lại"}), 500
-            # Nếu lỗi kết nối DB trên VPS (như nghẽn file), đẩy về trang đăng nhập bằng URL tĩnh để cứu vớt hệ thống
             try:
                 response = redirect(url_for('login'))
             except Exception:
                 response = redirect('/login')
             return response
+
+        # ==================== 4. Cache user-branch context ====================
+        try:
+            if session.get('user_id') and hasattr(g, 'db_path') and g.db_path:
+                from Services.user_branch import cache_user_branch_context
+                conn_ub = open_sqlite(g.db_path)
+                try:
+                    conn_ub.row_factory = sqlite3.Row
+                    cache_user_branch_context(conn_ub)
+                finally:
+                    conn_ub.close()
+        except Exception:
+            pass
 
     print("--- ĐÃ CẬP NHẬT VÀ KHỞI TẠO TENANT MIDDLEWARE AN TOÀN THÀNH CÔNG ---")

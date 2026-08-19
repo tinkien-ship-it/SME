@@ -1380,9 +1380,76 @@ Trân trọng,
     @app.route('/api/settings/list_users', methods=['GET'])
     @admin_or_master_required
     def list_users():
+        from Services.sme.branches import ensure_sme_branches_schema
+        from Services.sme_roles import PERMISSION_BYPASS_ROLES
+        from Services.user_branch import ensure_user_branch_schema
+
         db = get_db_connection()
-        cursor = db.execute("SELECT id, username, full_name, role, email, phone, permissions FROM users")
+        try:
+            ensure_sme_branches_schema(db, commit=False)
+        except Exception:
+            pass
+        try:
+            ensure_user_branch_schema(db, commit=False)
+        except Exception:
+            pass
+
+        cursor = db.execute(
+            "SELECT id, username, full_name, role, email, phone, permissions FROM users"
+        )
         users = [dict(row) for row in cursor.fetchall()]
+
+        # Preload branch names for display
+        branch_rows = []
+        try:
+            branch_rows = db.execute("SELECT code, name FROM sme_branches").fetchall()
+        except Exception:
+            branch_rows = []
+        branch_name_map = {}
+        for r in branch_rows:
+            code = (r["code"] if hasattr(r, "keys") else r[0]) or ""
+            name = (r["name"] if hasattr(r, "keys") else r[1]) or ""
+            branch_name_map[str(code).strip().upper()] = str(name).strip()
+
+        # Preload user -> branch_codes mapping (only for non-bypass users)
+        user_branch_map: dict[int, list[str]] = {}
+        try:
+            ub_rows = db.execute(
+                "SELECT user_id, branch_code FROM user_branches"
+            ).fetchall()
+            for r in ub_rows:
+                uid = int(r["user_id"] if hasattr(r, "keys") else r[0])
+                bc = str(r["branch_code"] if hasattr(r, "keys") else r[1] or '').strip().upper()
+                if not bc:
+                    continue
+                user_branch_map.setdefault(uid, []).append(bc)
+        except Exception:
+            user_branch_map = {}
+
+        for u in users:
+            uid = int(u.get("id") or 0)
+            role = str(u.get("role") or '').strip()
+            if role in PERMISSION_BYPASS_ROLES:
+                u["branch_names"] = "Tất cả chi nhánh"
+            else:
+                codes = user_branch_map.get(uid) or []
+                if not codes:
+                    u["branch_names"] = "Chưa gán"
+                else:
+                    names = []
+                    for c in codes:
+                        n = branch_name_map.get(str(c).strip().upper(), '') or str(c)
+                        names.append(n)
+                    # Giới hạn hiển thị để không dài
+                    uniq_names = []
+                    for n in names:
+                        if n not in uniq_names:
+                            uniq_names.append(n)
+                    if len(uniq_names) > 3:
+                        u["branch_names"] = ', '.join(uniq_names[:3]) + f' + {len(uniq_names) - 3} khác'
+                    else:
+                        u["branch_names"] = ', '.join(uniq_names)
+
         return jsonify(users)
 
     # API: Lưu hoặc Cập nhật User — chỉ admin / master (không cho manager dù có edit_data)

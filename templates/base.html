@@ -2,6 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if tenant_id %}<meta name="keto-tenant-id" id="keto-tenant-id" content="{{ tenant_id }}">{% endif %}
     <meta name="description" content="Hệ thống POS quản lý bán hàng, tồn kho, nhập kho, báo cáo">
     <title>{% block title %}Điểm bán hàng{% endblock %} — {{ info.business_name or 'Hệ thống kế toán doanh nghiệp' }}</title>
     <link rel="icon" href="data:,">

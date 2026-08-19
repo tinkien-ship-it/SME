@@ -179,6 +179,15 @@ def register_products_routes(app):
                 product_type = ((product['product_type'] if 'product_type' in product.keys() else None) or 'goods').lower()
                 is_service = product_type == 'service'
                 stock = float(product['quantity'] if 'quantity' in product.keys() else 0)
+                from Services.user_branch import get_current_user_warehouse_codes
+                wh_codes = get_current_user_warehouse_codes()
+                if wh_codes is not None:
+                    ph2 = ','.join('?' * len(wh_codes))
+                    row_stock = conn.execute(
+                        f"SELECT COALESCE(SUM(quantity), 0) FROM inventory WHERE product_id = ? AND warehouse_code IN ({ph2})",
+                        [product['id']] + wh_codes,
+                    ).fetchone()
+                    stock = float(row_stock[0]) if row_stock else 0
                 if is_unit1 and not is_service:
                     ratio = float(product['unit_ratio'] or 1) or 1.0
                     max_qty = int(stock / ratio) if ratio else int(stock)

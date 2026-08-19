@@ -412,6 +412,68 @@ def create_warehouse(
     return {'code': code, 'name': name}
 
 
+def update_warehouse(
+    conn,
+    code: str,
+    *,
+    name: str | None = None,
+    address: str | None = None,
+    branch_code: str | None = None,
+    is_default: bool | None = None,
+    is_active: bool | None = None,
+    commit: bool = True,
+) -> dict:
+    """Cập nhật thông tin kho SME (name/address/branch_code/default/active)."""
+    ensure_warehouse_schema(conn)
+    code = (code or '').strip().upper().replace(' ', '_')
+    if not code:
+        raise ValueError('Thiếu mã kho')
+
+    cols = {r[1] for r in conn.execute('PRAGMA table_info(warehouses)').fetchall()}
+    row = conn.execute('SELECT code FROM warehouses WHERE UPPER(code) = ?', (code,)).fetchone()
+    if not row:
+        raise ValueError(f'Không tìm thấy kho {code}')
+
+    fields = []
+    vals = []
+    if name is not None:
+        name = (name or '').strip()
+        if not name:
+            raise ValueError('Thiếu tên kho')
+        fields.append('name')
+        vals.append(name)
+    if address is not None and 'address' in cols:
+        fields.append('address')
+        vals.append((address or '').strip() or None)
+    if branch_code is not None and 'branch_code' in cols:
+        fields.append('branch_code')
+        vals.append((branch_code or 'HQ').strip().upper() or 'HQ')
+    if is_active is not None and 'is_active' in cols:
+        fields.append('is_active')
+        vals.append(1 if is_active else 0)
+
+    if is_default:
+        # Đảm bảo duy nhất 1 kho mặc định (phần còn lại set về 0)
+        if 'is_default' in cols:
+            conn.execute('UPDATE warehouses SET is_default = 0 WHERE code != ?', (code,))
+            fields.append('is_default')
+            vals.append(1)
+    elif is_default is False:
+        if 'is_default' in cols:
+            fields.append('is_default')
+            vals.append(0)
+
+    if fields:
+        ph = ', '.join([f"{k}=?" for k in fields])
+        conn.execute(f"UPDATE warehouses SET {ph} WHERE UPPER(code)=?", vals + [code])
+
+    if commit:
+        conn.commit()
+
+    r = conn.execute('SELECT * FROM warehouses WHERE UPPER(code) = ?', (code,)).fetchone()
+    return dict(r) if r and hasattr(r, 'keys') else {'code': code}
+
+
 def next_warehouse_code(conn) -> str:
     """Gợi ý mã kho tiếp theo: KHO_004, KHO_005, …"""
     ensure_warehouse_schema(conn)

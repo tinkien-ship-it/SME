@@ -412,10 +412,12 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="{{ url_for('static', filename='js/pos-offline.js') }}?v=2"></script>
 <script>
     let cart = [];
     let editingOrderId = null;
     let pendingSaleId = null;
+    let orderClientUuid = null;
     let isProcessingPayment = false;
     let qrModalBootstrap = null;
     let scannerModalBootstrap = null;
@@ -508,10 +510,13 @@
             return parseInt(checked, 10);
         }
         const saved = localStorage.getItem(invoiceModeStorageKey());
-        if (saved !== null && saved !== '') {
-            return parseInt(saved, 10);
-        }
+        if (saved !== null && saved !== '') return parseInt(saved, 10);
         return defaultIssueLoaiHdon();
+    }
+
+    function ensureOrderClientUuid() {
+        if (!orderClientUuid && window.PosOffline) orderClientUuid = PosOffline.uuid();
+        return orderClientUuid;
     }
 
     function applyInvoiceModeRadios(mode) {
@@ -569,17 +574,35 @@ function saveDraft() {
     };
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(storagePayload));
 
-    // Gọi API lưu server
-    fetch(editingOrderId ? `/api/sale/update_item/${editingOrderId}` : '/api/cart/checkout', {
-        method: editingOrderId ? 'PUT' : 'POST',
+    // Gọi API lưu server (hoặc hàng đợi offline)
+    const draftUrl = editingOrderId ? `/api/sale/update_item/${editingOrderId}` : '/api/cart/checkout';
+    const draftMethod = editingOrderId ? 'PUT' : 'POST';
+    const finishDraft = function(res) {
+        if (!res || !res.success) {
+            Swal.fire('Lỗi', (res && res.error) || 'Không lưu được đơn tạm', 'error');
+            return;
+        }
+        localStorage.removeItem(CART_STORAGE_KEY);
+        if (res.queued) {
+            Swal.fire({ icon: 'info', title: 'Đã lưu offline', text: res.message || 'Đơn tạm sẽ đồng bộ khi có mạng', timer: 3500 });
+            cart = [];
+            updateCart();
+            resetCustomerToDefault();
+            return;
+        }
+        window.location.href = '/sale';
+    };
+    if (window.PosOffline) {
+        PosOffline.submitSale({ url: draftUrl, method: draftMethod, payload: payload, label: 'Đơn tạm' })
+            .then(finishDraft)
+            .catch(function (e) { Swal.fire('Lỗi', e.message || 'Không lưu được', 'error'); });
+        return;
+    }
+    fetch(draftUrl, {
+        method: draftMethod,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-    }).then(() => {
-        // Sau khi đồng bộ server thành công, giữ lại hoặc chuyển trang tùy nhu cầu. 
-        // Ở đây xóa local để tránh load lại tự động nếu không cần thiết
-        localStorage.removeItem(CART_STORAGE_KEY);
-        window.location.href = '/sale'; 
-    });
+    }).then(function (r) { return r.json(); }).then(finishDraft);
 }
 
 function restoreFromStorage() {
@@ -664,6 +687,54 @@ function calculateLineTotal(item) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    if (window.PosOffline) {
+        await PosOffline.init({ autoSyncIntervalMs: 60000 });
+        document.addEventListener('pos-offline-synced', function (ev) {
+            const detail = ev.detail || {};
+            const n = detail.processed || 0;
+            const items = detail.items || [];
+            const errs = detail.errors || [];
+            if (n > 0 && typeof Swal !== 'undefined') {
+                let html = 'Đã đồng bộ <b>' + n + '</b> đơn lên server và ghi sổ kế toán.';
+                const qrItems = items.filter(function (it) {
+                    return it.side_effects && it.side_effects.pending_qr;
+                });
+                if (qrItems.length) {
+                    html += '<br>Đơn CK — mở QR thanh toán bên dưới.';
+                }
+                Swal.fire({ icon: 'success', title: 'Đồng bộ xong', html: html, timer: qrItems.length ? undefined : 3500 });
+                if (qrItems.length && qrModalBootstrap) {
+                    const sid = qrItems[0].side_effects.pending_qr;
+                    const total = qrItems[0].payload && qrItems[0].payload.total;
+                    pendingSaleId = sid;
+                    document.getElementById('qrImage').src = '/qr_payment/' + sid + '?t=' + Date.now();
+                    if (total != null) {
+                        document.getElementById('qrAmountDisplay').textContent = formatVND(total);
+                    }
+                    qrModalBootstrap.show();
+                }
+                items.forEach(function (it) {
+                    const inv = it.side_effects && it.side_effects.invoice;
+                    if (inv && !inv.success) {
+                        Swal.fire({ icon: 'error', title: 'Hóa đơn chưa phát hành', text: inv.error || 'Lỗi không xác định' });
+                    }
+                });
+            }
+            if (errs.length && typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: errs.length + ' đơn đồng bộ lỗi',
+                    html: errs.map(function (e) { return (e.label || e.client_uuid) + ': ' + e.error; }).join('<br>'),
+                    footer: '<small>Bấm badge góc phải để xem / thử lại</small>',
+                });
+            }
+        });
+        document.addEventListener('pos-offline-status', function (ev) {
+            if (!ev.detail.online && typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'info', title: 'Đang offline', text: 'Bán hàng vẫn dùng danh mục đã cache.', timer: 2500, showConfirmButton: false });
+            }
+        });
+    }
     const qrEl = document.getElementById('qrModal');
     const scEl = document.getElementById('scannerModal');
     if (qrEl) qrModalBootstrap = new bootstrap.Modal(qrEl);
@@ -784,12 +855,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function handleBarcodeScan(barcode) {
         try {
-            const response = await fetch('/api/scan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ barcode: barcode })
-            });
-            const result = await response.json();
+            const result = window.PosOffline
+                ? await PosOffline.scanBarcode(barcode)
+                : await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ barcode: barcode })
+                }).then(function (r) { return r.json(); });
             if (result.success) {
                 const p = result.data;
                 const qty = p.qty || result.parsed?.weight_kg || 1;
@@ -1003,8 +1075,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchInput.addEventListener('input', debounce(async () => {
             const q = searchInput.value.trim();
             if (q.length < 1) { resultsDiv.style.display = 'none'; return; }
-            const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
-            const products = await r.json();
+            let products = [];
+            if (window.PosOffline) {
+                products = await PosOffline.searchProducts(q);
+                if (!products.length && PosOffline.isOnline()) {
+                    const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
+                    products = await r.json();
+                }
+            } else {
+                const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
+                products = await r.json();
+            }
             resultsDiv.innerHTML = '';
             products.forEach(p => {
                 const isService = isServiceProduct(p);
@@ -1196,6 +1277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         return {
             order_id: editingOrderId || pendingSaleId,
+            client_uuid: ensureOrderClientUuid(),
             items,
             total,
             customer_name: document.getElementById('customerName')?.value || '',
@@ -1216,6 +1298,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         const data = getOrderData();
         if (data.payment_method === '112') {
             data.status = 'pending';
+            if (window.PosOffline) {
+                const res = await PosOffline.submitSale({
+                    url: '/api/cart/checkout',
+                    method: 'POST',
+                    payload: data,
+                    label: 'POS CK ' + (data.total || ''),
+                });
+                if (res.success && res.queued) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Đã lưu offline',
+                        text: 'Thanh toán CK sẽ đồng bộ khi có mạng. In QR sau khi đồng bộ xong.',
+                        timer: 4500,
+                    });
+                    cart = [];
+                    updateCart();
+                    resetCustomerToDefault();
+                    return;
+                }
+                if (res.success && res.sale_id) {
+                    pendingSaleId = res.sale_id;
+                    document.getElementById('qrImage').src = `/qr_payment/${res.sale_id}`;
+                    document.getElementById('qrAmountDisplay').textContent = formatVND(data.total);
+                    qrModalBootstrap.show();
+                    return;
+                }
+                if (!res.success) {
+                    Swal.fire('Lỗi', res.error || 'Không tạo được đơn CK', 'error');
+                    return;
+                }
+            }
             const r = await fetch('/api/cart/checkout', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
             const res = await r.json();
             if (res.success) {
@@ -1230,12 +1343,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 // ====================== XỬ LÝ ĐƠN HÀNG THÀNH CÔNG ======================
-function processOrder(data) {
+async function processOrder(data) {
     const btn = document.getElementById('checkoutBtn');
     if (btn) btn.disabled = true;
 
     const autoInvoiceChecked = document.getElementById('autoInvoice').checked;
     data.auto_issue_invoice = autoInvoiceChecked ? 1 : 0;
+    data.invoice_loai_hdon = resolveIssueLoaiHdon();
     data.status = data.status || 'completed';
 
     const isEditing = !!(editingOrderId || pendingSaleId);
@@ -1249,16 +1363,46 @@ function processOrder(data) {
         printWindow.document.write('<html><head><title>KETO POS</title></head><body style="font-family:sans-serif; text-align:center; padding-top:50px; color:#555;"><h3>Đang xử lý đơn hàng, vui lòng chờ...</h3></body></html>');
     }
 
-    fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    })
-    .then(r => r.json())
-    .then(res => {
+    try {
+        let res;
+        if (window.PosOffline) {
+            res = await PosOffline.submitSale({
+                url: url,
+                method: method,
+                payload: data,
+                label: 'POS ' + (data.total || ''),
+            });
+        } else {
+            const r = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            res = await r.json();
+        }
         if (!res.success) {
-            if (printWindow) printWindow.close(); 
+            if (printWindow) printWindow.close();
             throw new Error(res.error || 'Không thể xử lý đơn hàng');
+        }
+
+        if (res.queued && res.offline) {
+            if (printWindow) printWindow.close();
+            Swal.fire({
+                icon: 'info',
+                title: 'Đã lưu offline',
+                html: 'Đơn hàng sẽ đồng bộ lên cloud và ghi sổ kế toán khi có mạng.<br><small>Mã: ' + (res.client_uuid || '') + '</small>',
+                timer: 5000,
+            });
+            resetCustomerToDefault();
+            editingOrderId = null;
+            pendingSaleId = null;
+            orderClientUuid = null;
+            cart = [];
+            updateCart();
+            if (btn) btn.disabled = false;
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) searchInput.focus();
+            return;
         }
 
         successSound.play();
@@ -1268,6 +1412,7 @@ function processOrder(data) {
         
         editingOrderId = null;
         pendingSaleId = null;
+        orderClientUuid = null;
 
         if (autoInvoiceChecked && res.sale_id) {
             const loaiHdon = resolveIssueLoaiHdon();
@@ -1334,11 +1479,10 @@ function processOrder(data) {
         // Trỏ chuột tự động quay về ô tìm kiếm sản phẩm cho đơn hàng tiếp theo
         const searchInput = document.getElementById('searchInput');
         if (searchInput) searchInput.focus();
-    })
-    .catch(e => {
+    } catch (e) {
         Swal.fire({ title: 'Lỗi', text: e.message || 'Có lỗi xảy ra', icon: 'error' });
         if (btn) btn.disabled = false;
-    });
+    }
 }
 
 function validateCustomer() {

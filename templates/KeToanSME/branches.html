@@ -60,14 +60,40 @@
   </div>
   <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button><button class="btn btn-primary" id="btnSaveWh">Lưu kho</button></div>
 </div></div></div>
+<hr class="my-4">
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h5 class="fw-bold mb-0">Phân quyền nhân viên theo chi nhánh</h5>
+  <button class="btn btn-outline-secondary btn-sm" id="btnReloadUB">Tải lại</button>
+</div>
+<p class="text-muted small">Gán user vào chi nhánh → user đó chỉ bán hàng có trong kho thuộc chi nhánh tương ứng. Admin/Master luôn thấy tất cả.</p>
+<div class="card shadow-sm border-0"><div class="table-responsive">
+<table class="table table-sm mb-0"><thead class="table-light"><tr>
+  <th>User</th><th>Vai trò</th><th>Chi nhánh được gán</th><th></th>
+</tr></thead><tbody id="ubBody"></tbody></table>
+</div></div>
+
+<div class="modal fade" id="ubModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Gán chi nhánh cho user</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="mb-2"><strong id="ubUserName"></strong> <span class="text-muted" id="ubUserRole"></span></div>
+    <div class="mb-2" id="ubCheckboxes"></div>
+    <div class="mb-2"><label class="form-label small">Chi nhánh mặc định</label><select id="ubDefault" class="form-select form-select-sm"></select></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button><button class="btn btn-primary" id="btnSaveUB">Lưu</button></div>
+</div></div></div>
 {% endblock %}
 {% block sme_scripts %}
 <script>
 let branchOpts = [];
+let branchAll = [];
 let nextWhCode = 'KHO_004';
+let whRows = [];
+let branchEditCode = null;
+let whEditCode = null;
 
 async function load(){
   const res=await fetch('/api/sme/branches?active=0'); const json=await res.json();
+  branchAll = (json.data||[]);
   branchOpts = (json.data||[]).filter(r=>r.is_active);
   tbody.innerHTML=(json.data||[]).map(r=>`<tr>
     <td class="fw-bold">${r.code}</td><td>${r.name||''}</td>
@@ -76,9 +102,11 @@ async function load(){
     <td>${r.is_active ? 'Đang dùng' : 'Ngừng dùng'}</td>
     <td class="text-nowrap">
       <button class="btn btn-sm btn-outline-primary" onclick="useBr('${r.code}')">Làm việc</button>
-      ${r.is_active?`<button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggle(${JSON.stringify(r.code)},0)">Tắt</button>`:
-        `<button class="btn btn-sm btn-outline-success ms-1" onclick="toggle(${JSON.stringify(r.code)},1)">Bật</button>`}
-      ${!r.is_default&&r.is_active?`<button class="btn btn-sm btn-outline-warning ms-1" onclick="setDef(${JSON.stringify(r.code)})">Mặc định</button>`:''}
+      ${r.is_active?`<button class="btn btn-sm btn-outline-secondary ms-1" onclick='toggle(${JSON.stringify(r.code)},0)'>Tắt</button>`:
+        `<button class="btn btn-sm btn-outline-success ms-1" onclick='toggle(${JSON.stringify(r.code)},1)'>Bật</button>`}
+      ${!r.is_default&&r.is_active?`<button class="btn btn-sm btn-outline-warning ms-1" onclick='setDef(${JSON.stringify(r.code)})'>Mặc định</button>`:''}
+      <button class="btn btn-sm btn-outline-dark ms-1" onclick='editBranch(${JSON.stringify(r.code)})'>Sửa</button>
+      ${r.is_active?`<button class="btn btn-sm btn-outline-danger ms-1" onclick='deleteBranch(${JSON.stringify(r.code)})'>Xóa</button>`:''}
     </td>
   </tr>`).join('')||'<tr><td colspan="7" class="text-muted text-center">Chưa có</td></tr>';
   loadWh();
@@ -97,11 +125,16 @@ async function loadWh(){
   if(!json.success){ whBody.innerHTML=`<tr><td colspan="4" class="text-danger">${json.error||'Lỗi'}</td></tr>`; return; }
   nextWhCode = json.next_code || 'KHO_004';
   const rows=json.data||[];
+  whRows = rows;
   whBody.innerHTML=rows.map(w=>`<tr data-code="${w.code}">
     <td class="fw-bold">${w.code}</td>
     <td>${w.name||''}${w.is_default?' ★':''}</td>
     <td>${branchSelectHtml(w.branch_code)}</td>
-    <td><button class="btn btn-sm btn-outline-primary btn-save-wh">Gắn</button></td>
+    <td>
+      <button class="btn btn-sm btn-outline-primary btn-save-wh">Gắn</button>
+      <button class="btn btn-sm btn-outline-dark ms-1" onclick='editWh(${JSON.stringify(w.code)})'>Sửa</button>
+      <button class="btn btn-sm btn-outline-danger ms-1" onclick='deleteWh(${JSON.stringify(w.code)})'>Xóa</button>
+    </td>
   </tr>`).join('')||'<tr><td colspan="4" class="text-muted text-center">Chưa có kho</td></tr>';
 }
 
@@ -131,8 +164,86 @@ async function setDef(code){
   const res=await fetch('/api/sme/branches/'+encodeURIComponent(code),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_default:true})});
   const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
 }
-btnNew.onclick=()=>{ fCode.value=''; fName.value=''; fAddr.value=''; fPhone.value=''; fDef.checked=false; new bootstrap.Modal(modal).show(); };
+
+function deleteBranch(code){
+  if (!confirm('Xóa chi nhánh (soft-delete: đặt is_active=false)?')) return;
+  toggle(code, 0);
+}
+
+async function deleteWh(code){
+  if (!confirm('Xóa kho (soft-delete: đặt is_active=false)?')) return;
+  const res=await fetch('/api/sme/warehouses/'+encodeURIComponent(code),{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({is_active:false})
+  });
+  const json=await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  loadWh();
+}
+
+function editBranch(code){
+  branchEditCode = code;
+  const b = (branchAll||[]).find(x => (x.code||'').toUpperCase() === (code||'').toUpperCase());
+  if (!b) {
+    alert('Không tìm thấy dữ liệu chi nhánh (thử tải lại trang).');
+    return;
+  }
+  fCode.value = b.code;
+  fCode.disabled = true;
+  fName.value = b.name || '';
+  fAddr.value = b.address || '';
+  fPhone.value = b.phone || '';
+  fDef.checked = !!b.is_default;
+  new bootstrap.Modal(modal).show();
+}
+
+function editWh(code){
+  whEditCode = code;
+  const w = (whRows||[]).find(x => (x.code||'').toUpperCase() === (code||'').toUpperCase());
+  if (!w) {
+    alert('Không tìm thấy dữ liệu kho (thử tải lại).');
+    return;
+  }
+  whCode.value = w.code;
+  whCode.disabled = true;
+  whName.value = w.name || '';
+  whAddr.value = w.address || '';
+  whDef.checked = !!w.is_default;
+  whBranch.innerHTML = (branchOpts.map(b => `<option value="${b.code}">${b.code === 'HQ' ? 'HQ — Trụ sở chính' : (b.code + ' — ' + b.name)}</option>`).join('')
+    || '<option value="HQ">HQ — Trụ sở chính</option>');
+  whBranch.value = w.branch_code || 'HQ';
+  new bootstrap.Modal(whModal).show();
+}
+
+btnNew.onclick=()=>{
+  branchEditCode = null;
+  fCode.disabled = false;
+  fCode.value='';
+  fName.value='';
+  fAddr.value='';
+  fPhone.value='';
+  fDef.checked=false;
+  new bootstrap.Modal(modal).show();
+};
 btnSave.onclick=async()=>{
+  if (branchEditCode) {
+    const res=await fetch('/api/sme/branches/'+encodeURIComponent(branchEditCode),{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        name:fName.value,
+        address:fAddr.value,
+        phone:fPhone.value,
+        is_default:fDef.checked
+      })
+    });
+    const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi');
+    branchEditCode = null;
+    fCode.disabled = false;
+    bootstrap.Modal.getInstance(modal).hide(); load();
+    return;
+  }
   const res=await fetch('/api/sme/branches',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
     code:fCode.value, name:fName.value, address:fAddr.value, phone:fPhone.value, is_default:fDef.checked
   })});
@@ -142,6 +253,8 @@ btnSave.onclick=async()=>{
 btnReloadWh.onclick=loadWh;
 
 btnNewWh.onclick=()=>{
+  whEditCode = null;
+  whCode.disabled = false;
   whCode.value = nextWhCode || 'KHO_004';
   whName.value = '';
   whAddr.value = '';
@@ -151,6 +264,25 @@ btnNewWh.onclick=()=>{
   new bootstrap.Modal(whModal).show();
 };
 btnSaveWh.onclick=async()=>{
+  if (whEditCode) {
+    const res=await fetch('/api/sme/warehouses/'+encodeURIComponent(whEditCode),{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        name: whName.value,
+        address: whAddr.value,
+        branch_code: whBranch.value,
+        is_default: whDef.checked
+      })
+    });
+    const json=await res.json();
+    if(!json.success) return alert(json.error||'Lỗi');
+    whEditCode = null;
+    whCode.disabled = false;
+    bootstrap.Modal.getInstance(whModal).hide();
+    loadWh();
+    return;
+  }
   const res=await fetch('/api/sme/warehouses',{
     method:'POST', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
@@ -168,5 +300,107 @@ btnSaveWh.onclick=async()=>{
 };
 
 load();
+
+// ==================== User-Branch ====================
+let allUsers = [];
+let ubEditUserId = null;
+const UB_ROLE_LABELS = {
+  master: 'Master',
+  admin: 'Quản Trị Viên',
+  'admin*': 'Quản Trị Viên',
+  adminFB: 'Quản Trị Viên',
+  staff: 'Nhân Viên Bán Hàng',
+  'staff*': 'Nhân Viên Dịch Vụ Lưu Trú',
+  'staff**': 'Nhân Viên Dịch Vụ Ăn Uống',
+  manager: 'Quản Lý',
+  'manager*': 'Quản Lý',
+  managerFB: 'Quản Lý',
+  accountant: 'Kế Toán',
+  adminSME: 'Quản Trị Viên SME',
+  adminSME58: 'Quản Trị Viên SME (TT58)',
+  adminSME99: 'Quản Trị Viên SME (TT99)',
+  managerSME: 'Quản Lý SME',
+  managerSME58: 'Quản Lý SME (TT58)',
+  managerSME99: 'Quản Lý SME (TT99)',
+  accountantSME: 'Kế Toán SME',
+  accountantSME58: 'Kế Toán SME (TT58)',
+  accountantSME99: 'Kế Toán SME (TT99)',
+};
+
+function ubRoleLabel(role){
+  return UB_ROLE_LABELS[role] || role || 'Nhân viên';
+}
+
+async function loadUserBranches(){
+  try {
+    const res = await fetch('/api/settings/list_users');
+    const json = await res.json();
+    allUsers = json.users || json.data || json || [];
+  } catch(e) { allUsers = []; }
+
+  const ubBody = document.getElementById('ubBody');
+  if (!allUsers.length) {
+    ubBody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Không tải được danh sách user</td></tr>';
+    return;
+  }
+
+  const rows = [];
+  for (const u of allUsers) {
+    try {
+      const r = await fetch('/api/sme/user-branches/' + u.id);
+      const j = await r.json();
+      const codes = (j.data || []).map(x => x.branch_code);
+      const label = codes.length ? codes.join(', ') : '<span class="text-muted">Tất cả (chưa gán)</span>';
+      rows.push(`<tr>
+        <td>${u.username || u.full_name || ''}</td>
+        <td><small class="badge bg-secondary">${ubRoleLabel(u.role)}</small></td>
+        <td>${label}</td>
+        <td><button class="btn btn-sm btn-outline-primary" onclick="editUB(${u.id}, '${(u.username||'').replace(/'/g,"\\'")}', '${u.role||''}')">Sửa</button></td>
+      </tr>`);
+    } catch(e) {
+      rows.push(`<tr><td>${u.username||''}</td><td>${ubRoleLabel(u.role)}</td><td class="text-danger">Lỗi</td><td></td></tr>`);
+    }
+  }
+  ubBody.innerHTML = rows.join('') || '<tr><td colspan="4">Trống</td></tr>';
+}
+
+async function editUB(userId, name, role) {
+  ubEditUserId = userId;
+  document.getElementById('ubUserName').textContent = name;
+  document.getElementById('ubUserRole').textContent = ubRoleLabel(role);
+
+  const r = await fetch('/api/sme/user-branches/' + userId);
+  const j = await r.json();
+  const assigned = (j.data || []).map(x => x.branch_code);
+  const defCode = (j.data || []).find(x => x.is_default);
+
+  const checkboxes = branchOpts.map(b => {
+    const checked = assigned.includes(b.code) ? 'checked' : '';
+    return `<div class="form-check"><input class="form-check-input ub-chk" type="checkbox" value="${b.code}" ${checked}><label class="form-check-label">${b.code} — ${b.name}</label></div>`;
+  }).join('');
+  document.getElementById('ubCheckboxes').innerHTML = checkboxes;
+
+  const selOpts = branchOpts.map(b => `<option value="${b.code}" ${defCode && defCode.branch_code === b.code ? 'selected' : ''}>${b.code}</option>`).join('');
+  document.getElementById('ubDefault').innerHTML = '<option value="">-- Tự động --</option>' + selOpts;
+
+  new bootstrap.Modal(document.getElementById('ubModal')).show();
+}
+
+document.getElementById('btnSaveUB').onclick = async () => {
+  const codes = [...document.querySelectorAll('.ub-chk:checked')].map(el => el.value);
+  const def = document.getElementById('ubDefault').value || null;
+  const res = await fetch('/api/sme/user-branches/' + ubEditUserId, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ branch_codes: codes, default_branch_code: def })
+  });
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Lỗi');
+  bootstrap.Modal.getInstance(document.getElementById('ubModal')).hide();
+  loadUserBranches();
+};
+
+document.getElementById('btnReloadUB').onclick = loadUserBranches;
+setTimeout(loadUserBranches, 500);
 </script>
 {% endblock %}

@@ -295,13 +295,14 @@
                                             <tr>
                                                 <th>Tên đăng nhập</th>
                                                 <th>Họ tên</th>
+                                                <th>Tên chi nhánh</th>
                                                 <th>Vai trò</th>
                                                 <th>Trạng thái</th>
-                                                <th class="text-end">Thao tác</th>
+                                                <th class="text-end" style="white-space:nowrap; min-width:160px;">Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody id="userTableBody">
-                                            <tr><td colspan="5" class="text-center py-4 text-muted">Chọn tab để tải danh sách...</td></tr>
+                                            <tr><td colspan="6" class="text-center py-4 text-muted">Chọn tab để tải danh sách...</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -1093,7 +1094,7 @@ async function loadUsers() {
         list.forEach(u => { usersCache[u.id] = u; });
 
         if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Chưa có tài khoản nhân viên nào</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Chưa có tài khoản nhân viên nào</td></tr>';
             return;
         }
 
@@ -1108,21 +1109,24 @@ async function loadUsers() {
                         <small class="text-muted">${escapeHtml(u.email)}</small>
                         <small class="text-muted">${escapeHtml(u.phone)}</small>
                     </td>
+                    <td>${escapeHtml(u.branch_names) || '<span class="text-muted">—</span>'}</td>
                     <td><span class="badge ${roleBadge}">${roleName}</span></td>
                     <td><span class="badge bg-success">Hoạt động</span></td>
-                    <td class="text-end">
-                        <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editUserById(${u.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        ${canDelete ? `
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteUserById(${u.id})">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>` : ''}
+                    <td class="text-end" style="white-space:nowrap; min-width:160px;">
+                        <div class="d-flex justify-content-end gap-2 align-items-center flex-nowrap">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="editUserById(${u.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            ${canDelete ? `
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteUserById(${u.id})">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>` : ''}
+                        </div>
                     </td>
                 </tr>`;
         }).join('');
     } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Không thể tải danh sách</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Không thể tải danh sách</td></tr>';
         showSettingsError(err.message);
     }
 }

@@ -196,6 +196,10 @@ def inject_business_info():
         return {'info': business_data}
 
 @app.context_processor
+def inject_tenant_meta():
+    return {'tenant_id': getattr(g, 'tenant_id', None)}
+
+@app.context_processor
 def inject_now():
     return {'now': datetime.now()}
 

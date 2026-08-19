@@ -27,6 +27,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from Services.invoice_buyer import DEFAULT_RETAIL_BUYER_NAME, normalize_retail_buyer_name
+from Services.pos_offline_schema import ensure_pos_offline_schema, find_sale_by_client_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ from Services.hkd_sector import resolve_item_hkd_sector
 from Services.sale_helpers import insert_sale_item_with_sector
 from Services.inventory_stock_helpers import sync_inventory_quantity_from_moves
 from Services.sme.sale_journal import sync_sale_journals
+from Services.accounting_queue import enqueue_accounting_job
 from Services.tenant_profile import get_current_tenant_profile
 from db_utils import get_db_connection
 
@@ -339,7 +341,7 @@ def _fb_finalize_checkout(cursor, sale_id, table_id, customer_name, payment_meth
     cursor.execute(
         "UPDATE tables SET current_sale_id = NULL, status = 'Available' WHERE id = ?", (table_id,))
 
-    sync_sale_journals(
+    enqueue_accounting_job(
         cursor.connection,
         sale_id,
         accounting_regime=get_current_tenant_profile().get('accounting_regime'),
@@ -713,6 +715,7 @@ def register_fb_routes(app):
     def checkout_table():
         data = request.json or {}
         table_id = data.get('table_id')
+        client_uuid = (data.get('client_uuid') or '').strip()
 
         customer_name = normalize_retail_buyer_name(data.get('customer_name'))
         payment_method = data.get('payment_method', '111')
@@ -726,6 +729,18 @@ def register_fb_routes(app):
         cursor = conn.cursor()
 
         try:
+            ensure_pos_offline_schema(conn, commit=False)
+            if client_uuid:
+                existing = find_sale_by_client_uuid(conn, client_uuid)
+                if existing and str(existing.get('status') or '').lower() == 'completed':
+                    return jsonify({
+                        "success": True,
+                        "sale_id": existing['id'],
+                        "sale_no": existing.get('sale_no') or f"ĐH{str(existing['id']).zfill(6)}",
+                        "deduped": True,
+                        "message": "Đơn đã được đồng bộ trước đó",
+                    })
+
             cursor.execute("BEGIN IMMEDIATE")
 
             table = cursor.execute(
@@ -737,6 +752,19 @@ def register_fb_routes(app):
             now_dt = datetime.now()
             sale_date = now_dt.strftime('%Y-%m-%d %H:%M:%S')
             sale_no = f"ĐH{str(sale_id).zfill(6)}"
+
+            row_sale = cursor.execute(
+                "SELECT status FROM sale WHERE id = ?", (sale_id,),
+            ).fetchone()
+            if row_sale and str(row_sale['status'] or '').lower() == 'completed':
+                conn.commit()
+                return jsonify({
+                    "success": True,
+                    "sale_id": sale_id,
+                    "sale_no": sale_no,
+                    "deduped": True,
+                    "message": "Bàn đã thanh toán",
+                })
 
             items = _fb_load_sale_items(cursor, sale_id)
             if not items:
@@ -773,6 +801,14 @@ def register_fb_routes(app):
             _fb_finalize_checkout(
                 cursor, sale_id, table_id, customer_name, payment_method, sale_date, is_einvoice, items
             )
+            if client_uuid:
+                try:
+                    cursor.execute(
+                        "UPDATE sale SET client_uuid = ? WHERE id = ?",
+                        (client_uuid, sale_id),
+                    )
+                except sqlite3.OperationalError:
+                    pass
 
             conn.commit()
             return jsonify({
