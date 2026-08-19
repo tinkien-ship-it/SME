@@ -50,6 +50,84 @@
         return html;
     }
 
+    function isTt58Regime(code) {
+        return String(code || '').toUpperCase() === 'SME_MICRO_TT58';
+    }
+
+    function buildSmeRevenueBandOptions(sector, selectedCode) {
+        const sec = String(sector || 'trade_service').toLowerCase();
+        const bands = sec === 'agri_industry'
+            ? [
+                { code: 'le3b', label: '≤ 3 tỷ/năm' },
+                { code: 'gt3b', label: '> 3 tỷ/năm (không đủ TT58 — chọn TT99)' },
+            ]
+            : [
+                { code: 'le10b', label: '≤ 10 tỷ/năm' },
+                { code: 'gt10b', label: '> 10 tỷ/năm (không đủ TT58 — chọn TT99)' },
+            ];
+        const selected = selectedCode || bands[0].code;
+        return bands.map(function (b) {
+            const sel = selected === b.code ? ' selected' : '';
+            return `<option value="${escapeHtml(b.code)}"${sel}>${escapeHtml(b.label)}</option>`;
+        }).join('');
+    }
+
+    function refreshSmeRevenueBands(sectorSelectId, bandSelectId) {
+        const sectorEl = document.getElementById(sectorSelectId);
+        const bandEl = document.getElementById(bandSelectId);
+        if (!sectorEl || !bandEl) return;
+        const prev = bandEl.value;
+        bandEl.innerHTML = buildSmeRevenueBandOptions(sectorEl.value, prev);
+        if (!bandEl.value) bandEl.selectedIndex = 0;
+    }
+
+    function bindSmeMicroProvisionFields(opts) {
+        opts = opts || {};
+        const regimeEl = document.getElementById(opts.regimeSelectId || 'swal-regime');
+        const wrap = document.getElementById(opts.wrapId || 'swal-sme-micro-wrap');
+        const sectorEl = document.getElementById(opts.sectorSelectId || 'swal-enterprise-sector');
+        const bandEl = document.getElementById(opts.bandSelectId || 'swal-sme-revenue-band');
+        const hintEl = document.getElementById(opts.hintId || 'swal-sme-micro-hint');
+        if (!regimeEl || !wrap) return;
+
+        const apply = function () {
+            const tt58 = isTt58Regime(regimeEl.value);
+            wrap.style.display = tt58 ? '' : 'none';
+            if (tt58 && sectorEl && bandEl) {
+                refreshSmeRevenueBands(sectorEl.id, bandEl.id);
+            }
+            if (hintEl && tt58) {
+                hintEl.textContent = (
+                    'Nhóm 1 (NLTS/CN&XD): LĐ BHXH ≤ 10 và (DT ≤ 3 tỷ hoặc vốn ≤ 3 tỷ). '
+                    + 'Nhóm 2 (TM&DV): LĐ BHXH ≤ 10 và (DT ≤ 10 tỷ hoặc vốn ≤ 3 tỷ).'
+                );
+            }
+        };
+
+        if (sectorEl && !sectorEl._smeMicroBound) {
+            sectorEl.addEventListener('change', function () {
+                refreshSmeRevenueBands(sectorEl.id, bandEl ? bandEl.id : '');
+            });
+            sectorEl._smeMicroBound = true;
+        }
+        regimeEl.addEventListener('change', apply);
+        apply();
+    }
+
+    function checkTt58ProvisionWarning(payload) {
+        payload = payload || {};
+        if (!isTt58Regime(payload.accounting_regime)) return null;
+        const sector = String(payload.enterprise_sector || 'trade_service').toLowerCase();
+        const band = String(payload.sme_revenue_band || '').toLowerCase();
+        if (sector === 'agri_industry' && band === 'gt3b') {
+            return 'Nhóm 1 (NLTS/CN&XD): doanh thu dự kiến > 3 tỷ/năm — không đủ điều kiện TT58. Vui lòng chọn Kế toán SME (TT99).';
+        }
+        if (sector === 'trade_service' && band === 'gt10b') {
+            return 'Nhóm 2 (TM&DV): doanh thu dự kiến > 10 tỷ/năm — không đủ điều kiện TT58. Vui lòng chọn Kế toán SME (TT99).';
+        }
+        return null;
+    }
+
     function buildRegimeOptions(selectedCode) {
         const regimes = (_cache && _cache.accounting_regimes) || [
             { code: 'HKD', label: 'HKD (Hộ kinh doanh)', selectable: true },
@@ -181,6 +259,9 @@
         const vatEl = document.getElementById(opts.vatFilingSelectId || 'swal-vat-filing');
         const tt58Hint = document.getElementById(opts.tt58HintId || 'swal-tt58-hint');
         const bizNameLabel = document.getElementById(opts.bizNameLabelId || 'swal-biz-name-label');
+        const blEl = document.getElementById(opts.businessLineId || 'swal-business-line');
+        const blWrap = document.getElementById(opts.businessLineWrapId || '')
+            || (blEl ? blEl.closest('.mb-2') : null);
         const sectors = opts.sectors || [];
         const legalIntro = opts.legalIntro || '';
         if (!regimeEl) return;
@@ -211,6 +292,9 @@
             if (dtWrap) {
                 dtWrap.style.display = sme ? 'none' : '';
             }
+            if (blWrap) {
+                blWrap.style.display = sme ? 'none' : '';
+            }
             if (bizNameLabel) {
                 bizNameLabel.textContent = sme
                     ? 'Tên doanh nghiệp *'
@@ -236,8 +320,7 @@
                 }
             }
             if (!sme && root && !root.querySelector('.nn-sector-cb:checked')) {
-                const bl = document.getElementById(opts.businessLineId || 'swal-business-line');
-                setNnSectors(nnBox, suggestNnForBusinessLine(bl ? bl.value : 'pos', sectors));
+                setNnSectors(nnBox, suggestNnForBusinessLine(blEl ? blEl.value : 'pos', sectors));
             }
             if (!sme) {
                 bindNnSectorHelp(nnBox, helpId, sectors, legalIntro);
@@ -267,6 +350,10 @@
         bindNnSectorHelp: bindNnSectorHelp,
         bindBusinessLineNnSuggest: bindBusinessLineNnSuggest,
         bindRegimeHkdFields: bindRegimeHkdFields,
+        bindSmeMicroProvisionFields: bindSmeMicroProvisionFields,
+        buildSmeRevenueBandOptions: buildSmeRevenueBandOptions,
+        checkTt58ProvisionWarning: checkTt58ProvisionWarning,
+        isTt58Regime: isTt58Regime,
         suggestNnForBusinessLine: suggestNnForBusinessLine,
         isSmeRegime: isSmeRegime,
     };

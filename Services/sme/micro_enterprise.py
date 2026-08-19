@@ -1,12 +1,12 @@
-"""Tiêu chí áp dụng Kế toán SME TT58 — cảnh báo chuyển sang TT99.
+"""Tiêu chí xác định doanh nghiệp siêu nhỏ (NĐ 80/2021/NĐ-CP) — cảnh báo TT58 → TT99.
 
-Chỉ nên dùng TT58 khi đồng thời thỏa cả 3 điều kiện (NĐ 80/2021/NĐ-CP):
-  - Doanh thu năm ≤ 10 tỷ đồng
-  - Lao động tham gia BHXH bình quân năm ≤ 10 người
-  - Vốn chủ sở hữu cuối năm ≤ 3 tỷ đồng
+Nhóm 1 — NLTS / CN&XD:
+  LĐ BHXH BQ năm ≤ 10 VÀ (DT năm ≤ 3 tỷ HOẶC tổng nguồn vốn ≤ 3 tỷ)
 
-Vượt bất kỳ ngưỡng nào → cảnh báo chuyển ``SME_MICRO_TT58`` → ``SME_TT99``.
-Không tự đổi chế độ (cần Master đổi ``accounting_regime``).
+Nhóm 2 — Thương mại / Dịch vụ:
+  LĐ BHXH BQ năm ≤ 10 VÀ (DT năm ≤ 10 tỷ HOẶC tổng nguồn vốn ≤ 3 tỷ)
+
+Hết diện siêu nhỏ → cảnh báo chuyển ``SME_MICRO_TT58`` → ``SME_TT99``.
 """
 from __future__ import annotations
 
@@ -26,18 +26,27 @@ SECTOR_AGRI_INDUSTRY = 'agri_industry'  # NLTS + CN&XD
 SECTOR_TRADE_SERVICE = 'trade_service'  # TM&DV
 
 MAX_BHXH_HEADCOUNT = 10
-EQUITY_LIMIT = 3_000_000_000
-REVENUE_LIMIT = 10_000_000_000
-# Giữ alias cũ cho tương thích import/API nội bộ
-CAPITAL_LIMIT = EQUITY_LIMIT
-REVENUE_LIMIT_AGRI_INDUSTRY = REVENUE_LIMIT
-REVENUE_LIMIT_TRADE_SERVICE = REVENUE_LIMIT
+CAPITAL_LIMIT = 3_000_000_000
+REVENUE_LIMIT_AGRI_INDUSTRY = 3_000_000_000
+REVENUE_LIMIT_TRADE_SERVICE = 10_000_000_000
+EQUITY_LIMIT = CAPITAL_LIMIT
 
 TT58_ELIGIBILITY_HINT = (
-    'Kế toán SME (TT58) chỉ phù hợp khi: doanh thu năm ≤ 10 tỷ, '
-    'lao động BHXH bình quân ≤ 10 người, vốn chủ sở hữu ≤ 3 tỷ. '
-    'Vượt ngưỡng → chuyển sang Kế toán SME (TT99) theo quy định.'
+    'Nhóm 1 (NLTS/CN&XD): LĐ BHXH ≤ 10 và (DT ≤ 3 tỷ hoặc vốn ≤ 3 tỷ). '
+    'Nhóm 2 (TM&DV): LĐ BHXH ≤ 10 và (DT ≤ 10 tỷ hoặc vốn ≤ 3 tỷ). '
+    'Hết diện siêu nhỏ → chuyển Kế toán SME (TT99).'
 )
+
+SME_REVENUE_BANDS: dict[str, tuple[dict[str, Any], ...]] = {
+    SECTOR_AGRI_INDUSTRY: (
+        {'code': 'le3b', 'label': '≤ 3 tỷ/năm'},
+        {'code': 'gt3b', 'label': '> 3 tỷ/năm', 'warn_tt99': True},
+    ),
+    SECTOR_TRADE_SERVICE: (
+        {'code': 'le10b', 'label': '≤ 10 tỷ/năm'},
+        {'code': 'gt10b', 'label': '> 10 tỷ/năm', 'warn_tt99': True},
+    ),
+}
 
 SECTOR_LABELS = {
     SECTOR_AGRI_INDUSTRY: 'Nông–lâm–thủy sản / Công nghiệp–Xây dựng',
@@ -143,36 +152,35 @@ def average_bhxh_headcount(conn: sqlite3.Connection, fiscal_year: int) -> dict[s
     }
 
 
-def year_owner_equity(conn: sqlite3.Connection, fiscal_year: int) -> float:
-    """Vốn chủ sở hữu cuối năm (B01 mã 400; fallback cộng 411+421)."""
+def revenue_limit_for_sector(sector: str) -> float:
+    if normalize_enterprise_sector(sector) == SECTOR_AGRI_INDUSTRY:
+        return float(REVENUE_LIMIT_AGRI_INDUSTRY)
+    return float(REVENUE_LIMIT_TRADE_SERVICE)
+
+
+def year_total_capital(conn: sqlite3.Connection, fiscal_year: int) -> float:
+    """Tổng nguồn vốn cuối năm (B01 mã 500; fallback 400 / tổng nguồn)."""
     from Services.sme.bctc_report import balance_sheet
 
     bs = balance_sheet(conn, fiscal_year=fiscal_year, period_to=12)
     rows = bs.get('rows') or []
-    for row in rows:
+    for code in ('500', '400'):
+        for row in rows:
+            if str(row.get('code') or '').strip() == code:
+                return max(float(row.get('amount') or 0), 0.0)
+    totals = bs.get('totals') or {}
+    return max(float(totals.get('total_equity_and_liabilities') or 0), 0.0)
+
+
+def year_owner_equity(conn: sqlite3.Connection, fiscal_year: int) -> float:
+    """Vốn chủ sở hữu (mã 400) — hiển thị tham khảo."""
+    from Services.sme.bctc_report import balance_sheet
+
+    bs = balance_sheet(conn, fiscal_year=fiscal_year, period_to=12)
+    for row in bs.get('rows') or []:
         if str(row.get('code') or '').strip() == '400':
             return max(float(row.get('amount') or 0), 0.0)
-
-    # Fallback: cộng trực tiếp các tài khoản vốn CSH
-    try:
-        from Services.sme.dashboard_metrics import _closing_balances, _sum_balance
-        from decimal import Decimal
-
-        bals = _closing_balances(conn, fiscal_year, 12)
-        equity = (
-            _sum_balance(bals, ('411',), normal='credit')
-            + _sum_balance(bals, ('421',), normal='credit')
-            + _sum_balance(bals, ('412', '413', '418', '422'), normal='credit')
-            - _sum_balance(bals, ('419',), normal='debit')
-        )
-        return max(float(equity or Decimal('0')), 0.0)
-    except Exception:
-        return 0.0
-
-
-def year_total_capital(conn: sqlite3.Connection, fiscal_year: int) -> float:
-    """Alias — trả về vốn chủ sở hữu (mã 400)."""
-    return year_owner_equity(conn, fiscal_year)
+    return year_total_capital(conn, fiscal_year)
 
 
 def evaluate_micro_criteria(
@@ -181,13 +189,13 @@ def evaluate_micro_criteria(
     fiscal_year: int,
     settings: dict | None = None,
 ) -> dict[str, Any]:
-    """Đánh giá tenant còn đủ điều kiện dùng TT58 hay không."""
+    """Đánh giá có còn là DN siêu nhỏ theo NĐ 80 hay không."""
     from Services.sme.vat_filing_alert import compute_year_sales_revenue
 
     settings = settings or {}
     sector = resolve_enterprise_sector(settings)
-    revenue_limit = REVENUE_LIMIT
-    equity_limit = EQUITY_LIMIT
+    revenue_limit = revenue_limit_for_sector(sector)
+    capital_limit = CAPITAL_LIMIT
 
     # Cho phép ghi đè thủ công số LĐ BHXH bình quân
     manual_head = settings.get('avg_bhxh_headcount')
@@ -204,51 +212,50 @@ def evaluate_micro_criteria(
             pass
 
     revenue = compute_year_sales_revenue(conn, fiscal_year)
+    capital = year_total_capital(conn, fiscal_year)
     owner_equity = year_owner_equity(conn, fiscal_year)
     avg_head = float(head_info.get('average') or 0)
 
     labor_ok = avg_head <= MAX_BHXH_HEADCOUNT + 1e-9
     revenue_ok = revenue <= float(revenue_limit) + 1e-6
-    equity_ok = owner_equity <= float(equity_limit) + 1e-6
-    is_micro = bool(labor_ok and revenue_ok and equity_ok)
+    capital_ok = capital <= float(capital_limit) + 1e-6
+    finance_ok = revenue_ok or capital_ok
+    is_micro = bool(labor_ok and finance_ok)
 
     fail_reasons: list[str] = []
-    if not revenue_ok:
-        fail_reasons.append(
-            f'Doanh thu năm {revenue:,.0f} đ vượt ngưỡng {revenue_limit:,.0f} đ '
-            f'(> 10 tỷ) — cần chuyển Kế toán SME (TT99)'
-        )
     if not labor_ok:
         fail_reasons.append(
             f'Lao động BHXH bình quân năm = {avg_head:g} (> {MAX_BHXH_HEADCOUNT} người) '
             f'— cần chuyển Kế toán SME (TT99)'
         )
-    if not equity_ok:
+    if not finance_ok:
         fail_reasons.append(
-            f'Vốn chủ sở hữu {owner_equity:,.0f} đ vượt ngưỡng {equity_limit:,.0f} đ '
-            f'(> 3 tỷ) — cần chuyển Kế toán SME (TT99)'
+            f'Doanh thu {revenue:,.0f} đ vượt trần {revenue_limit:,.0f} đ '
+            f'VÀ tổng nguồn vốn {capital:,.0f} đ vượt trần {capital_limit:,.0f} đ '
+            f'({SECTOR_LABELS.get(sector, sector)}) — cần chuyển Kế toán SME (TT99)'
         )
 
     return {
         'fiscal_year': int(fiscal_year),
         'sector': sector,
         'sector_label': SECTOR_LABELS.get(sector, sector),
+        'group_no': 1 if sector == SECTOR_AGRI_INDUSTRY else 2,
         'avg_bhxh_headcount': avg_head,
         'headcount_source': head_info.get('source'),
         'revenue': round(revenue, 2),
+        'capital': round(capital, 2),
         'owner_equity': round(owner_equity, 2),
-        'capital': round(owner_equity, 2),
         'limits': {
             'max_bhxh_headcount': MAX_BHXH_HEADCOUNT,
             'revenue_limit': revenue_limit,
-            'equity_limit': equity_limit,
-            'capital_limit': equity_limit,
+            'capital_limit': capital_limit,
+            'equity_limit': capital_limit,
         },
         'labor_ok': labor_ok,
         'revenue_ok': revenue_ok,
-        'equity_ok': equity_ok,
-        'capital_ok': equity_ok,
-        'finance_ok': revenue_ok and equity_ok,
+        'capital_ok': capital_ok,
+        'equity_ok': capital_ok,
+        'finance_ok': finance_ok,
         'is_micro_enterprise': is_micro,
         'tt58_eligible': is_micro,
         'fail_reasons': fail_reasons,
@@ -313,8 +320,8 @@ def evaluate_tt58_to_tt99_alert(
             })
             result['persisted'] = True
         result['message'] = (
-            f'Năm {fiscal_year}: vẫn đủ điều kiện Kế toán SME (TT58) '
-            f'(DT ≤ 10 tỷ, BHXH ≤ 10 người, vốn CSH ≤ 3 tỷ).'
+            f'Năm {fiscal_year}: vẫn đủ tiêu chí DN siêu nhỏ '
+            f'({criteria["sector_label"]}) — giữ TT58.'
         )
         return result
 
@@ -347,6 +354,58 @@ def evaluate_tt58_to_tt99_alert(
         ok = update_registry_settings(tenant_id, {ALERT_KEY: alert})
         result['persisted'] = bool(ok)
     return result
+
+
+def check_tt58_provision_eligibility(
+    *,
+    accounting_regime: str | None,
+    enterprise_sector: str | None = None,
+    sme_revenue_band: str | None = None,
+) -> dict[str, Any]:
+    """Kiểm tra khi tạo/sửa tenant — cảnh báo TT58 nếu DT dự kiến vượt trần nhóm."""
+    regime = normalize_accounting_regime(accounting_regime)
+    if regime != 'SME_MICRO_TT58':
+        return {
+            'eligible': True,
+            'warn': False,
+            'message': '',
+            'hint': TT58_ELIGIBILITY_HINT,
+        }
+
+    sector = normalize_enterprise_sector(enterprise_sector)
+    band = str(sme_revenue_band or '').strip().lower()
+    rev_limit = revenue_limit_for_sector(sector)
+    sector_label = SECTOR_LABELS.get(sector, sector)
+    group_no = 1 if sector == SECTOR_AGRI_INDUSTRY else 2
+
+    warn = False
+    message = ''
+    if sector == SECTOR_AGRI_INDUSTRY and band == 'gt3b':
+        warn = True
+        message = (
+            f'Nhóm 1 ({sector_label}): doanh thu dự kiến > 3 tỷ/năm — '
+            f'không đủ điều kiện Kế toán SME (TT58). '
+            f'Vui lòng chọn Kế toán SME (TT99).'
+        )
+    elif sector == SECTOR_TRADE_SERVICE and band == 'gt10b':
+        warn = True
+        message = (
+            f'Nhóm 2 ({sector_label}): doanh thu dự kiến > 10 tỷ/năm — '
+            f'không đủ điều kiện Kế toán SME (TT58). '
+            f'Vui lòng chọn Kế toán SME (TT99).'
+        )
+
+    return {
+        'eligible': not warn,
+        'warn': warn,
+        'sector': sector,
+        'sector_label': sector_label,
+        'group_no': group_no,
+        'revenue_limit': rev_limit,
+        'sme_revenue_band': band,
+        'message': message,
+        'hint': TT58_ELIGIBILITY_HINT,
+    }
 
 
 def evaluate_tt58_setup_warning(

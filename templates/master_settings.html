@@ -654,7 +654,7 @@ async function showTenantModal(mode, data = {}) {
                         <select id="swal-regime" class="form-select">${regimeOptions}</select>
                         <div class="form-text">HKD = sổ hộ; SME TT58/TT99 = sổ kép DN</div>
                         <div id="swal-tt58-hint" class="alert alert-warning small py-2 px-2 mt-2 mb-0 d-none" role="alert">
-                            Kế toán SME (TT58) chỉ phù hợp khi: doanh thu năm ≤ 10 tỷ, lao động BHXH bình quân ≤ 10 người, vốn chủ sở hữu ≤ 3 tỷ. Vượt ngưỡng → chọn Kế toán SME (TT99).
+                            TT58 chỉ cho DN siêu nhỏ (NĐ 80): chọn nhóm lĩnh vực và doanh thu dự kiến bên dưới. Vượt trần → chọn TT99.
                         </div>
                     </div>
                     <div class="col-6" id="swal-dt-wrap">
@@ -662,6 +662,18 @@ async function showTenantModal(mode, data = {}) {
                         <select id="swal-revenue-tier" class="form-select">${dtOptions}</select>
                         <div class="form-text">Chỉ áp dụng Hộ kinh doanh</div>
                     </div>
+                </div>
+                <div class="mb-2" id="swal-sme-micro-wrap" style="display:none">
+                    <label class="form-label small fw-bold">Nhóm lĩnh vực DN siêu nhỏ (NĐ 80) *</label>
+                    <select id="swal-enterprise-sector" class="form-select form-select-sm mb-2">
+                        <option value="agri_industry" ${(data.enterprise_sector || '') === 'agri_industry' ? 'selected' : ''}>Nhóm 1 — Nông–lâm–thủy / Công nghiệp–Xây dựng (DT ≤ 3 tỷ hoặc vốn ≤ 3 tỷ)</option>
+                        <option value="trade_service" ${(!data.enterprise_sector || data.enterprise_sector === 'trade_service') ? 'selected' : ''}>Nhóm 2 — Thương mại–Dịch vụ (DT ≤ 10 tỷ hoặc vốn ≤ 3 tỷ)</option>
+                    </select>
+                    <label class="form-label small fw-bold">Doanh thu dự kiến / năm *</label>
+                    <select id="swal-sme-revenue-band" class="form-select form-select-sm mb-1">
+                        ${HkdSectorForm.buildSmeRevenueBandOptions(data.enterprise_sector || 'trade_service', data.sme_revenue_band || '')}
+                    </select>
+                    <div id="swal-sme-micro-hint" class="form-text"></div>
                 </div>
                 <div class="mb-2" id="swal-vat-filing-wrap" style="display:none">
                     <label class="form-label small fw-bold">Kỳ kê khai GTGT (SME)</label>
@@ -697,6 +709,13 @@ async function showTenantModal(mode, data = {}) {
                 sectors,
                 legalIntro,
             });
+            HkdSectorForm.bindSmeMicroProvisionFields({
+                regimeSelectId: 'swal-regime',
+                wrapId: 'swal-sme-micro-wrap',
+                sectorSelectId: 'swal-enterprise-sector',
+                bandSelectId: 'swal-sme-revenue-band',
+                hintId: 'swal-sme-micro-hint',
+            });
             const expiryEl = document.getElementById('swal-expiry-date');
             if (expiryEl) {
                 KetoDatePicker.init(expiryEl, data.expiry_date || null);
@@ -712,7 +731,7 @@ async function showTenantModal(mode, data = {}) {
                 return Swal.showValidationMessage('HKD cần chọn ít nhất một ngành nghề NN');
             }
             const vatEl = document.getElementById('swal-vat-filing');
-            return {
+            const payload = {
                 tenant_id: tid,
                 business_name: document.getElementById('swal-business-name').value.trim(),
                 phone: document.getElementById('swal-phone').value.trim(),
@@ -727,6 +746,13 @@ async function showTenantModal(mode, data = {}) {
                 vat_filing_period: sme && vatEl ? vatEl.value : undefined,
                 filing_period: sme && vatEl ? vatEl.value : undefined,
             };
+            if (HkdSectorForm.isTt58Regime(regime)) {
+                payload.enterprise_sector = document.getElementById('swal-enterprise-sector')?.value || 'trade_service';
+                payload.sme_revenue_band = document.getElementById('swal-sme-revenue-band')?.value || '';
+                const warn = HkdSectorForm.checkTt58ProvisionWarning(payload);
+                if (warn) return Swal.showValidationMessage(warn);
+            }
+            return payload;
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
@@ -742,7 +768,8 @@ async function showTenantModal(mode, data = {}) {
                 });
                 const res = await response.json();
                 if (res.success) {
-                    Swal.fire('Thành công', res.message, 'success');
+                    const icon = res.tt58_provision_warning ? 'warning' : 'success';
+                    Swal.fire(icon === 'warning' ? 'Đã lưu — cảnh báo TT58' : 'Thành công', res.message, icon);
                     loadTenants();
                 } else {
                     Swal.fire('Lỗi', res.error, 'error');

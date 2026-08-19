@@ -623,7 +623,10 @@ def register_settings_routes(app):
             tenant_dict['enabled_nn_sectors'] = profile.get('enabled_nn_sectors') or []
             tenant_dict['vat_filing_period'] = profile.get('vat_filing_period') or profile.get('filing_period')
             tenant_dict['filing_period'] = profile.get('filing_period')
-            tenant_dict['settings'] = parse_tenant_settings(tenant_dict.get('settings'))
+            st = parse_tenant_settings(tenant_dict.get('settings')) or {}
+            tenant_dict['enterprise_sector'] = st.get('enterprise_sector')
+            tenant_dict['sme_revenue_band'] = st.get('sme_revenue_band')
+            tenant_dict['settings'] = st
 
             return jsonify({
                 "success": True,
@@ -1954,6 +1957,19 @@ Trân trọng,
                     normalize_vat_filing_period,
                     default_vat_filing_period_for_regime,
                 )
+                from Services.sme.micro_enterprise import (
+                    check_tt58_provision_eligibility,
+                    normalize_enterprise_sector,
+                )
+                sector = normalize_enterprise_sector(data.get('enterprise_sector'))
+                band = (data.get('sme_revenue_band') or '').strip()
+                provision = check_tt58_provision_eligibility(
+                    accounting_regime=regime,
+                    enterprise_sector=sector,
+                    sme_revenue_band=band,
+                )
+                if provision.get('warn'):
+                    return jsonify({'success': False, 'error': provision.get('message')}), 400
                 fp = normalize_vat_filing_period(
                     data.get('vat_filing_period') or data.get('filing_period'),
                     default=default_vat_filing_period_for_regime(regime),
@@ -1961,7 +1977,10 @@ Trân trọng,
                 extra_settings = {
                     'vat_filing_period': fp,
                     'filing_period': fp,
+                    'enterprise_sector': sector,
                 }
+                if band:
+                    extra_settings['sme_revenue_band'] = band
             result = provision_tenant(
                 tenant_id,
                 business_name,
@@ -2038,6 +2057,15 @@ Trân trọng,
                 conn.close()
                 return jsonify({"success": False, "error": "Không tìm thấy tenant"}), 404
 
+            old_settings = {}
+            try:
+                from Services.subscription_service import parse_tenant_settings
+                old_settings = parse_tenant_settings(
+                    old_row['settings'] if hasattr(old_row, 'keys') else old_row[6]
+                ) or {}
+            except Exception:
+                old_settings = {}
+
             c.execute("""
                 UPDATE tenants 
                 SET business_name = ?, phone = ?, address = ?, email = ?, expiry_date = ?
@@ -2056,9 +2084,40 @@ Trân trọng,
                 settings_patch['primary_nn_sector'] = None
                 settings_patch['default_hkd_sector'] = None
                 from Services.tenant_profile import (
+                    normalize_accounting_regime,
                     normalize_vat_filing_period,
                     default_vat_filing_period_for_regime,
                 )
+                from Services.sme.micro_enterprise import (
+                    check_tt58_provision_eligibility,
+                    normalize_enterprise_sector,
+                )
+                if data.get('enterprise_sector'):
+                    settings_patch['enterprise_sector'] = normalize_enterprise_sector(
+                        data.get('enterprise_sector')
+                    )
+                if data.get('sme_revenue_band'):
+                    settings_patch['sme_revenue_band'] = str(data.get('sme_revenue_band')).strip()
+                eff_regime = normalize_accounting_regime(
+                    accounting_regime or old_settings.get('accounting_regime')
+                )
+                if eff_regime == 'SME_MICRO_TT58':
+                    provision = check_tt58_provision_eligibility(
+                        accounting_regime=eff_regime,
+                        enterprise_sector=(
+                            settings_patch.get('enterprise_sector')
+                            or old_settings.get('enterprise_sector')
+                            or data.get('enterprise_sector')
+                        ),
+                        sme_revenue_band=(
+                            settings_patch.get('sme_revenue_band')
+                            or old_settings.get('sme_revenue_band')
+                            or data.get('sme_revenue_band')
+                        ),
+                    )
+                    if provision.get('warn'):
+                        conn.close()
+                        return jsonify({'success': False, 'error': provision.get('message')}), 400
                 if data.get('vat_filing_period') or data.get('filing_period'):
                     fp = normalize_vat_filing_period(
                         data.get('vat_filing_period') or data.get('filing_period'),
@@ -2116,14 +2175,6 @@ Trân trọng,
                 if accounting_regime:
                     settings_patch['accounting_regime'] = accounting_regime
 
-            old_settings = {}
-            try:
-                from Services.subscription_service import parse_tenant_settings
-                old_settings = parse_tenant_settings(
-                    old_row['settings'] if hasattr(old_row, 'keys') else old_row[6]
-                ) or {}
-            except Exception:
-                old_settings = {}
             old_regime = old_settings.get('accounting_regime')
 
             if settings_patch:

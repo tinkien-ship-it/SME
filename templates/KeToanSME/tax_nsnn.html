@@ -45,8 +45,8 @@
       <div class="card-body py-3">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
           <div>
-            <h6 class="fw-bold mb-1">Điều kiện Kế toán SME (TT58)</h6>
-            <p class="small text-muted mb-0" id="microHint">Doanh thu năm ≤ 10 tỷ, lao động BHXH bình quân ≤ 10 người, vốn chủ sở hữu ≤ 3 tỷ. Vượt ngưỡng → chuyển TT99.</p>
+            <h6 class="fw-bold mb-1">Tiêu chí doanh nghiệp siêu nhỏ (TT58 · NĐ 80/2021)</h6>
+            <p class="small text-muted mb-0" id="microHint">Nhóm 1: LĐ BHXH ≤ 10 và (DT ≤ 3 tỷ hoặc vốn ≤ 3 tỷ). Nhóm 2: LĐ BHXH ≤ 10 và (DT ≤ 10 tỷ hoặc vốn ≤ 3 tỷ). Hết diện → chuyển TT99.</p>
           </div>
           <button type="button" class="btn btn-outline-secondary btn-sm" id="btnMicroEval">Đánh giá lại</button>
         </div>
@@ -54,8 +54,8 @@
           <div class="col-md-5">
             <label class="form-label small mb-1">Lĩnh vực hoạt động</label>
             <select id="enterpriseSector" class="form-select form-select-sm">
-              <option value="trade_service">Thương mại–Dịch vụ (tham chiếu thuế TT58)</option>
-              <option value="agri_industry">Nông–lâm–thủy / CN–Xây dựng (tham chiếu thuế TT58)</option>
+              <option value="trade_service">Nhóm 2 — Thương mại–Dịch vụ (DT ≤ 10 tỷ hoặc vốn ≤ 3 tỷ)</option>
+              <option value="agri_industry">Nhóm 1 — Nông–lâm–thủy / CN–Xây dựng (DT ≤ 3 tỷ hoặc vốn ≤ 3 tỷ)</option>
             </select>
           </div>
           <div class="col-md-3">
@@ -264,10 +264,11 @@
       const ok=!!c.is_micro_enterprise;
       const lim=c.limits||{};
       const equity=c.owner_equity!=null?c.owner_equity:c.capital;
-      box.innerHTML=`<div class="${ok?'text-success':'text-danger'} fw-semibold">${ok?'Đủ điều kiện TT58':'Không đủ điều kiện TT58 — cần chuyển TT99'}</div>`
-        +`<div class="mt-1">Lĩnh vực (thuế): ${c.sector_label||'—'} · LĐ BHXH BQ: <strong>${money(c.avg_bhxh_headcount)}</strong> (nguồn: ${c.headcount_source||'—'})`
-        +` · DT: <strong>${money(c.revenue)}</strong> đ (≤ ${money(lim.revenue_limit)})`
-        +` · Vốn CSH: <strong>${money(equity)}</strong> đ (≤ ${money(lim.equity_limit||lim.capital_limit)})</div>`;
+      const capital=c.capital!=null?c.capital:equity;
+      box.innerHTML=`<div class="${ok?'text-success':'text-danger'} fw-semibold">${ok?'Đủ tiêu chí DN siêu nhỏ (TT58)':'Không còn siêu nhỏ — cần chuyển TT99'}</div>`
+        +`<div class="mt-1">Nhóm ${c.group_no||'—'} — ${c.sector_label||'—'} · LĐ BHXH BQ: <strong>${money(c.avg_bhxh_headcount)}</strong> (nguồn: ${c.headcount_source||'—'})`
+        +` · DT: <strong>${money(c.revenue)}</strong> đ (trần ${money(lim.revenue_limit)})`
+        +` · Nguồn vốn: <strong>${money(capital)}</strong> đ (trần ${money(lim.capital_limit||lim.equity_limit)})</div>`;
       if((c.fail_reasons||[]).length){
         box.innerHTML+=`<ul class="mb-0 mt-1">${c.fail_reasons.map(r=>`<li>${r}</li>`).join('')}</ul>`;
       }

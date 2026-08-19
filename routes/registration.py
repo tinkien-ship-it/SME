@@ -204,6 +204,19 @@ def register_registration_routes(app):
         sme = is_sme_regime(regime)
         extra_settings = None
         if sme:
+            from Services.sme.micro_enterprise import (
+                check_tt58_provision_eligibility,
+                normalize_enterprise_sector,
+            )
+            sector = normalize_enterprise_sector(payload.get('enterprise_sector'))
+            band = (payload.get('sme_revenue_band') or '').strip()
+            provision = check_tt58_provision_eligibility(
+                accounting_regime=regime,
+                enterprise_sector=sector,
+                sme_revenue_band=band,
+            )
+            if provision.get('warn'):
+                return jsonify({'success': False, 'error': provision.get('message')}), 400
             fp = normalize_vat_filing_period(
                 payload.get('vat_filing_period') or payload.get('filing_period'),
                 default=default_vat_filing_period_for_regime(regime),
@@ -211,7 +224,10 @@ def register_registration_routes(app):
             extra_settings = {
                 'vat_filing_period': fp,
                 'filing_period': fp,
+                'enterprise_sector': sector,
             }
+            if band:
+                extra_settings['sme_revenue_band'] = band
 
         result = provision_trial_tenant(
             tenant_id=tenant_id,
