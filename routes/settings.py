@@ -313,8 +313,8 @@ def register_settings_routes(app):
     _LOGIN_FALLBACK_HTML = """<!doctype html>
 <html lang="vi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Đăng Nhập - KETO ALL IN ONE — Hệ thống kế toán doanh nghiệp</title>
-<meta name="description" content="KETO ALL IN ONE — Hệ thống kế toán doanh nghiệp">
+<title>Đăng Nhập - KETO POS ALL IN ONE - Hệ Thống Bán Hàng kiêm Kế Toán cho Hộ Kinh Doanh và Doanh Nghiệp.</title>
+<meta name="description" content="KETO POS ALL IN ONE - Hệ Thống Bán Hàng kiêm Kế Toán cho Hộ Kinh Doanh và Doanh Nghiệp.">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head><body class="bg-light">
 <div class="container" style="max-width:420px">
