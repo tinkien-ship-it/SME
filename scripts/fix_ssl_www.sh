@@ -1,28 +1,35 @@
 #!/bin/bash
-# Cap lai SSL cho ca ketoshop.pro.vn va www.ketoshop.pro.vn
+# Cap lai SSL cho ca ketoshop.pro.vn va www.ketoshop.pro.vn (khong hoi interactive)
 # Chay tren VPS (root):
 #   bash /root/pos/scripts/fix_ssl_www.sh
 #
 # Dieu kien:
-#   - DNS A (hoac CNAME) cua www.ketoshop.pro.vn da tro ve IP VPS
-#   - Nginx dang phuc vu domain, certbot da cai
+#   - DNS A/CNAME cua www da tro ve IP VPS
+#   - Nginx + certbot da cai
 
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-ketoshop.pro.vn}"
 WWW="www.${DOMAIN}"
 EMAIL="${CERTBOT_EMAIL:-}"
+CERT_NAME="${CERTBOT_CERT_NAME:-$DOMAIN}"
 
 echo "=== Kiem tra DNS ==="
-getent hosts "$DOMAIN" || true
-getent hosts "$WWW" || true
+APEX_IP=$(getent ahostsv4 "$DOMAIN" 2>/dev/null | awk '{print $1; exit}' || true)
+WWW_IP=$(getent ahostsv4 "$WWW" 2>/dev/null | awk '{print $1; exit}' || true)
+echo "  $DOMAIN -> ${APEX_IP:-?}"
+echo "  $WWW -> ${WWW_IP:-?}"
+if [ -n "$APEX_IP" ] && [ -n "$WWW_IP" ] && [ "$APEX_IP" != "$WWW_IP" ]; then
+  echo "LOI: DNS www khong trung IP apex. Sua DNS roi chay lai."
+  exit 1
+fi
 
 echo ""
-echo "=== Cap nhat Nginx server_name (neu co file site) ==="
+echo "=== Cap nhat Nginx server_name (neu co) ==="
 SITE=""
 for f in /etc/nginx/sites-enabled/* /etc/nginx/conf.d/*.conf; do
   [ -f "$f" ] || continue
-  if grep -q "$DOMAIN" "$f" 2>/dev/null; then
+  if grep -qE "(^|[[:space:]])${DOMAIN}([[:space:;]]|$)" "$f" 2>/dev/null; then
     SITE="$f"
     break
   fi
@@ -30,43 +37,82 @@ done
 
 if [ -n "$SITE" ]; then
   echo "  Tim thay: $SITE"
-  # Dam bao server_name co ca apex va www
-  if grep -qE "server_name[[:space:]].*${DOMAIN}" "$SITE"; then
-    if ! grep -qE "server_name[[:space:]].*${WWW}" "$SITE"; then
-      sed -i -E "s/(server_name[[:space:]]+)([^;]*${DOMAIN}[^;]*);/\1\2 ${WWW};/" "$SITE" || true
-      # Neu van chua co www, them dong rieng an toan hon bang comment huong dan
-      if ! grep -q "$WWW" "$SITE"; then
-        echo "  ! Chua tu dong them www. Sua tay server_name thanh:"
-        echo "    server_name ${DOMAIN} ${WWW};"
-      fi
-    fi
+  if ! grep -qE "(^|[[:space:]])${WWW}([[:space:;]]|$)" "$SITE"; then
+    # Them www vao dong server_name dau tien chua domain
+    python3 - <<PY || true
+from pathlib import Path
+import re
+p = Path("$SITE")
+text = p.read_text(encoding="utf-8", errors="replace")
+www = "$WWW"
+domain = "$DOMAIN"
+def repl(m):
+    names = m.group(2)
+    if www in names.split():
+        return m.group(0)
+    return f"{m.group(1)}{names} {www};"
+new, n = re.subn(
+    r"(server_name\s+)([^;]*\b" + re.escape(domain) + r"\b[^;]*);",
+    repl,
+    text,
+    count=1,
+)
+if n:
+    p.write_text(new, encoding="utf-8")
+    print("  -> Da them", www, "vao server_name")
+else:
+    print("  ! Khong sua duoc server_name tu dong — sua tay:")
+    print(f"    server_name {domain} {www};")
+PY
   fi
   nginx -t
   systemctl reload nginx
 else
-  echo "  ! Khong tim thay file nginx chua $DOMAIN — van thu cap cert"
+  echo "  ! Khong tim thay file nginx chua $DOMAIN"
 fi
 
 echo ""
-echo "=== Cap chung chi Let's Encrypt (apex + www) ==="
-CERTBOT_ARGS=(certonly --nginx -d "$DOMAIN" -d "$WWW" --agree-tos --non-interactive --expand)
+echo "=== Danh sach cert hien co ==="
+certbot certificates 2>/dev/null | sed -n '1,80p' || true
+
+EMAIL_ARGS=()
 if [ -n "$EMAIL" ]; then
-  CERTBOT_ARGS+=(--email "$EMAIL")
+  EMAIL_ARGS=(--email "$EMAIL")
 else
-  CERTBOT_ARGS+=(--register-unsafely-without-email)
+  EMAIL_ARGS=(--register-unsafely-without-email)
 fi
 
-# expand cert hien co; neu fail thu certonly lai
-if ! certbot "${CERTBOT_ARGS[@]}"; then
-  echo "  ! certbot --expand that bai — thu lai..."
-  certbot certonly --nginx -d "$DOMAIN" -d "$WWW" --agree-tos --non-interactive \
-    ${EMAIL:+--email "$EMAIL"} ${EMAIL:---register-unsafely-without-email} || {
+echo ""
+echo "=== Expand cert '$CERT_NAME' them $WWW (non-interactive) ==="
+# --cert-name + --expand + --non-interactive: khong hoi "Do you want to expand..."
+if ! certbot certonly \
+  --nginx \
+  --cert-name "$CERT_NAME" \
+  -d "$DOMAIN" \
+  -d "$WWW" \
+  --expand \
+  --non-interactive \
+  --agree-tos \
+  "${EMAIL_ARGS[@]}"; then
+  echo ""
+  echo "  ! Expand theo cert-name that bai — thu tao/cap nhat bang ten domain..."
+  certbot certonly \
+    --nginx \
+    -d "$DOMAIN" \
+    -d "$WWW" \
+    --expand \
+    --non-interactive \
+    --agree-tos \
+    "${EMAIL_ARGS[@]}" || {
       echo ""
       echo "LOI: Khong cap duoc SSL cho $WWW"
-      echo "Kiem tra:"
-      echo "  1) DNS www phai tro ve IP VPS: dig +short $WWW"
-      echo "  2) Mo port 80/443"
-      echo "  3) Nginx listen 80 cho ca $DOMAIN va $WWW"
+      echo "Chay tay:"
+      echo "  certbot certificates"
+      echo "  certbot certonly --nginx --cert-name $CERT_NAME -d $DOMAIN -d $WWW --expand --non-interactive --agree-tos"
+      echo "Kiem tra them:"
+      echo "  1) dig +short $WWW"
+      echo "  2) port 80/443 mo"
+      echo "  3) nginx: server_name $DOMAIN $WWW;"
       exit 1
     }
 fi
@@ -75,12 +121,17 @@ nginx -t
 systemctl reload nginx
 
 echo ""
-echo "=== Kiem tra ==="
-echo | openssl s_client -servername "$WWW" -connect "$WWW:443" 2>/dev/null \
-  | openssl x509 -noout -subject -ext subjectAltName 2>/dev/null | head -20 || true
+echo "=== Kiem tra SAN tren chung chi ==="
+echo | openssl s_client -servername "$WWW" -connect "127.0.0.1:443" 2>/dev/null \
+  | openssl x509 -noout -subject -ext subjectAltName 2>/dev/null | head -30 || true
 
 echo ""
-echo "Xong. Thu: https://$WWW/login  va  https://$DOMAIN/login"
-echo "Google OAuth: them ca 2 origin:"
+echo "=== HTTP check ==="
+curl -sI -o /dev/null -w "https://$DOMAIN/login => %{http_code}\n" "https://$DOMAIN/login" || true
+curl -sI -o /dev/null -w "https://$WWW/login => %{http_code}\n" "https://$WWW/login" || true
+
+echo ""
+echo "Xong. Thu trinh duyet: https://$WWW/login"
+echo "Google OAuth origins can co:"
 echo "  https://$DOMAIN"
 echo "  https://$WWW"
