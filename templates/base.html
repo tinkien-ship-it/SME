@@ -7,9 +7,10 @@
     <meta name="description" content="{% block meta_description %}Hệ thống kế toán doanh nghiệp — quản lý bán hàng, kho và kê khai thuế{% endblock %}">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="vi_VN">
+    <meta property="og:site_name" content="KETO POS ALL IN ONE">
     <meta property="og:title" content="{% block og_title %}{{ self.page_title() }}{% endblock %}">
     <meta property="og:description" content="{% block og_description %}{{ self.meta_description() }}{% endblock %}">
-    {% if request %}<meta property="og:url" content="{{ request.url_root.rstrip('/') }}{{ request.path }}">{% endif %}
+    <meta property="og:url" content="{% block og_url %}{{ og_url or '' }}{% endblock %}">
     <meta property="og:updated_time" content="{% block og_updated %}{{ now.strftime('%Y-%m-%dT%H:%M:%S') if now else '' }}{% endblock %}">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{{ self.og_title() }}">

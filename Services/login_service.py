@@ -320,9 +320,31 @@ def google_oauth_redirect_ready():
 def get_public_base_url(fallback_root: str | None = None) -> str:
     """URL gốc công khai — ưu tiên PUBLIC_BASE_URL (.env) khi đứng sau proxy."""
     base = (os.getenv("PUBLIC_BASE_URL") or os.getenv("APP_BASE_URL") or "").strip().rstrip("/")
-    if base:
-        return base
-    return (fallback_root or "").rstrip("/")
+    if not base:
+        base = (fallback_root or "").rstrip("/")
+    if base.startswith("http://"):
+        host = base[len("http://"):].split("/")[0].lower()
+        if host == "ketoshop.pro.vn" or host.endswith(".ketoshop.pro.vn"):
+            base = "https://" + base[len("http://"):]
+    return base
+
+
+def public_page_url(path: str | None = None) -> str:
+    """URL tuyệt đối HTTPS cho Open Graph (Facebook không tin http:// phía sau proxy)."""
+    from flask import has_request_context, request
+
+    root = ""
+    if has_request_context():
+        root = get_public_base_url(request.url_root)
+        if path is None:
+            path = request.path or "/"
+    else:
+        root = get_public_base_url()
+        if path is None:
+            path = "/"
+    if not path.startswith("/"):
+        path = "/" + path
+    return f"{root.rstrip('/')}{path}"
 
 
 _OAUTH_CALLBACK_ENDPOINTS = (

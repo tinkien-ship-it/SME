@@ -8,7 +8,11 @@ def register_core_routes(app):
 
     @app.route('/')
     def index():
-        return redirect(url_for('sale'))
+        from flask import session
+        # Khách / crawler Facebook: vào /login (1 lần redirect). User đã đăng nhập → POS.
+        if session.get('session_token') and session.get('user'):
+            return redirect(url_for('sale'))
+        return redirect(url_for('login'))
 
     # ==================== HƯỚNG DẪN SỬ DỤNG ====================
     @app.route('/huong-dan-su-dung')

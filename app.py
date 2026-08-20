@@ -204,6 +204,11 @@ def inject_now():
     return {'now': datetime.now()}
 
 @app.context_processor
+def inject_open_graph():
+    from Services.login_service import public_page_url
+    return {'og_url': public_page_url()}
+
+@app.context_processor
 def inject_support_info():
     from Services.support_config import support_context
     ctx = support_context()

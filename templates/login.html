@@ -3,7 +3,8 @@
 {% block og_title %}Đăng Nhập - KETO POS ALL IN ONE - Hệ Thống Bán Hàng kiêm Kế Toán cho Hộ Kinh Doanh và Doanh Nghiệp.{% endblock %}
 {% block meta_description %}KETO POS ALL IN ONE - Hệ Thống Bán Hàng kiêm Kế Toán cho Hộ Kinh Doanh và Doanh Nghiệp.{% endblock %}
 {% block og_description %}KETO POS ALL IN ONE - Hệ Thống Bán Hàng kiêm Kế Toán cho Hộ Kinh Doanh và Doanh Nghiệp.{% endblock %}
-{% block og_updated %}2026-08-20T09:01:00{% endblock %}
+{% block og_url %}https://ketoshop.pro.vn/login{% endblock %}
+{% block og_updated %}2026-08-20T09:18:00{% endblock %}
 
 {% block content %}
 <style>
@@ -141,6 +142,10 @@
         font-weight: 700;
         text-decoration: underline;
         cursor: pointer;
+        display: inline-block;
+        padding: 2px 0;
+        position: relative;
+        z-index: 2;
     }
 
     .trial-register-link:hover {
@@ -152,8 +157,39 @@
         border: none;
         padding: 0;
         font: inherit;
-        display: inline;
+        display: inline-block;
         text-align: inherit;
+    }
+
+    .trial-register-cta {
+        display: block;
+        width: 100%;
+        margin-top: 12px;
+        padding: 12px 16px;
+        font-weight: 700;
+        font-size: 1rem;
+        border: none;
+        border-radius: 8px;
+        background: #16a34a;
+        color: #fff !important;
+        text-align: center;
+        text-decoration: none !important;
+        cursor: pointer;
+        position: relative;
+        z-index: 2;
+    }
+
+    .trial-register-cta:hover {
+        background: #15803d;
+        color: #fff !important;
+    }
+
+    #googleSignInWrap,
+    #googleTrialRegisterWrap {
+        position: relative;
+        z-index: 1;
+        overflow: hidden;
+        max-width: 100%;
     }
 
     #googleTrialRegisterWrap {
@@ -303,8 +339,12 @@
                         <strong>6 tháng miễn phí</strong> bằng tài khoản Google —
                         {% if google_redirect_ready %}
                         <a href="{{ url_for('trial_google_start') }}" class="trial-register-link">chỉ cần nhấn vào link này và làm theo hướng dẫn</a>.
+                        <a href="{{ url_for('trial_google_start') }}" class="trial-register-cta" id="btnTrialRegister">
+                            Đăng ký dùng thử miễn phí
+                        </a>
                         {% else %}
                         <button type="button" id="linkTrialRegister" class="trial-register-link">chỉ cần nhấn vào link này hoặc nút bên dưới</button>.
+                        <button type="button" id="btnTrialRegister" class="trial-register-cta">Đăng ký dùng thử miễn phí</button>
                         <div id="googleTrialRegisterWrap" class="d-flex justify-content-center"></div>
                         {% endif %}
                     </div>
@@ -730,25 +770,33 @@ function triggerGoogleRegister() {
 }
 
 function initGoogleSignIn() {
-    if (!ensureGoogleInitialized()) {
-        setTimeout(initGoogleSignIn, 200);
-        return;
-    }
-    renderGoogleLoginButton();
-
-    {% if not google_redirect_ready %}
-    ensureRegisterButtonRendered();
-    document.getElementById('linkTrialRegister')?.addEventListener('click', () => {
-        triggerGoogleRegister();
-    });
-    {% endif %}
-
+    // Form đăng ký sau OAuth: mở ngay, KHÔNG chờ Google GIS (tránh treo nếu GIS bị chặn/chậm)
     {% if trial_google_pending %}
     openTrialRegisterModal(null, {
         email: {{ trial_google_pending.email | default('', true) | tojson }},
         name: {{ trial_google_pending.name | default('', true) | tojson }},
     });
     {% endif %}
+
+    let gsiAttempts = 0;
+    function bootGsi() {
+        if (!ensureGoogleInitialized()) {
+            gsiAttempts += 1;
+            if (gsiAttempts < 50) {
+                setTimeout(bootGsi, 200);
+            }
+            return;
+        }
+        renderGoogleLoginButton();
+
+        {% if not google_redirect_ready %}
+        ensureRegisterButtonRendered();
+        const startRegister = () => triggerGoogleRegister();
+        document.getElementById('linkTrialRegister')?.addEventListener('click', startRegister);
+        document.getElementById('btnTrialRegister')?.addEventListener('click', startRegister);
+        {% endif %}
+    }
+    bootGsi();
 }
 
 document.addEventListener('DOMContentLoaded', initGoogleSignIn);

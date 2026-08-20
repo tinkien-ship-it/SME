@@ -1079,6 +1079,7 @@ def register_settings_routes(app):
                 'name': user_info.get('name') or '',
                 'verified_at': datetime.now().isoformat(timespec='seconds'),
             }
+            session.permanent = True
             session.modified = True
             return redirect(url_for('login', trial_google=1))
         except Exception as exc:
