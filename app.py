@@ -396,11 +396,38 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # Cấu hình bảo mật Cookie Session
+# SME_SESSION_COOKIE_DOMAIN=.ketoshop.pro.vn → cookie dùng chung apex + www (tránh mất OAuth state)
+_session_cookie_domain = (os.getenv("SME_SESSION_COOKIE_DOMAIN") or "").strip() or None
 app.config.update(
-    SESSION_COOKIE_SECURE=True,   # Chỉ gửi cookie qua HTTPS (Vì bạn đã bật SSL thành công)
-    SESSION_COOKIE_HTTPONLY=True, # Ngăn chặn Javascript đọc trộm cookie
-    SESSION_COOKIE_SAMESITE='Lax' # Chống tấn công CSRF, giúp lưu session ổn định
+    SESSION_COOKIE_SECURE=True,   # Chỉ gửi cookie qua HTTPS
+    SESSION_COOKIE_HTTPONLY=True, # Ngăn Javascript đọc cookie
+    SESSION_COOKIE_SAMESITE='Lax',
+    **({"SESSION_COOKIE_DOMAIN": _session_cookie_domain} if _session_cookie_domain else {}),
 )
+
+# Ép về host chuẩn (www → apex) — tránh OAuth/session lệch host
+_canonical_host = (os.getenv("SME_CANONICAL_HOST") or "").strip().lower()
+
+@app.before_request
+def _redirect_www_to_canonical():
+    if not _canonical_host:
+        return None
+    if request.method not in ("GET", "HEAD"):
+        return None
+    # Không nhảy host giữa chừng OAuth callback (tránh mất code/state)
+    path = request.path or ""
+    if path.startswith("/login/google") or path.startswith("/trial/google"):
+        return None
+    host = (request.host or "").split(":")[0].lower()
+    if host != f"www.{_canonical_host}":
+        return None
+    from urllib.parse import urlsplit, urlunsplit
+    parts = urlsplit(request.url)
+    netloc = _canonical_host
+    if parts.port and parts.port not in (80, 443):
+        netloc = f"{_canonical_host}:{parts.port}"
+    target = urlunsplit(("https", netloc, parts.path, parts.query, parts.fragment))
+    return redirect(target, code=301)
 # === SALE routes (POS / Bán hàng) → routes/sale.py ===
 from routes.sale import register_sale_routes
 register_sale_routes(app)

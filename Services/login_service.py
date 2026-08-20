@@ -355,26 +355,74 @@ _OAUTH_CALLBACK_ENDPOINTS = (
 
 
 def oauth_redirect_uri(endpoint: str) -> str:
-    """
-    Redirect URI OAuth — ưu tiên PUBLIC_BASE_URL (HTTPS production),
-    tránh origin/redirect lệch khi đứng sau Nginx proxy.
+    """Redirect URI OAuth — **cùng host** với trình duyệt đang mở.
+
+    Không ép sang PUBLIC_BASE_URL: nếu user vào www mà callback về apex
+    (hoặc ngược lại) → mất cookie session → MismatchingStateError
+    → «Đăng nhập Google thất bại hoặc bị hủy».
     """
     from flask import has_request_context, request, url_for
+    from urllib.parse import urlparse
 
     try:
         path = url_for(endpoint, _external=False)
         if path.startswith("http://") or path.startswith("https://"):
             return path
-        root = ""
+
         if has_request_context() and getattr(request, "url_root", None):
-            root = get_public_base_url(request.url_root)
-        else:
-            root = get_public_base_url()
-        if not root:
-            return url_for(endpoint, _external=True)
-        return f"{root.rstrip('/')}{path}"
+            root = request.url_root.rstrip("/")
+            parsed = urlparse(root)
+            host = (parsed.hostname or "").lower()
+            # Sau Nginx proxy thường thấy http:// — nâng https cho domain thật
+            if parsed.scheme == "http" and host and host not in ("127.0.0.1", "localhost"):
+                root = f"https://{parsed.netloc}"
+            return f"{root}{path}"
+
+        root = get_public_base_url()
+        if root:
+            return f"{root.rstrip('/')}{path}"
+        return url_for(endpoint, _external=True)
     except Exception:
         return ""
+
+
+def google_oauth_callback_error_message(exc: BaseException | None = None) -> str:
+    """Thông báo lỗi OAuth dễ hiểu (query Google + exception Authlib)."""
+    from flask import has_request_context, request
+
+    if has_request_context():
+        err = (request.args.get("error") or "").strip()
+        desc = (request.args.get("error_description") or "").replace("+", " ").strip()
+        if err == "access_denied":
+            return "Bạn đã hủy đăng nhập Google."
+        if err == "redirect_uri_mismatch" or "redirect_uri" in (desc or "").lower():
+            return (
+                "redirect_uri chưa khớp Google Cloud Console. "
+                "Thêm đủ callback cho cả https://ketoshop.pro.vn và https://www.ketoshop.pro.vn"
+            )
+        if err:
+            return f"Google từ chối: {err}" + (f" — {desc}" if desc else "")
+
+    text = str(exc or "")
+    low = text.lower()
+    name = type(exc).__name__ if exc else ""
+    if "mismatchingstate" in name.lower() or "state" in low:
+        return (
+            "Phiên Google bị mất (cookie). Thường do mở lẫn www và không-www. "
+            "Hãy dùng https://ketoshop.pro.vn (không www) rồi thử lại."
+        )
+    if "redirect_uri" in low:
+        return (
+            "redirect_uri chưa khớp. Thêm vào Google Cloud → Authorized redirect URIs: "
+            "https://ketoshop.pro.vn/login/google/callback , "
+            "https://ketoshop.pro.vn/trial/google/callback , "
+            "và bản www tương ứng."
+        )
+    if "invalid_client" in low or "client" in low and "secret" in low:
+        return "Sai Google Client ID/Secret trong Master Settings."
+    if text:
+        return f"Đăng nhập Google thất bại: {text[:180]}"
+    return "Đăng nhập Google thất bại hoặc bị hủy."
 
 
 def _localhost_mirror_root(url_root: str) -> str | None:

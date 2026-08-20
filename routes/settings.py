@@ -265,6 +265,7 @@ def register_settings_routes(app):
         get_auth_settings_db,
         google_login_enabled,
         google_login_visible,
+        google_oauth_callback_error_message,
         login_redirect_target,
         normalize_vn_phone,
         resolve_user_phone,
@@ -945,13 +946,27 @@ def register_settings_routes(app):
                 "warning",
             )
             return redirect(url_for('login'))
+        session.permanent = True
         session['oauth_mode'] = 'login'
         session.modified = True
-        return google.authorize_redirect(oauth_redirect_uri('login_google_callback'))
+        redirect_uri = oauth_redirect_uri('login_google_callback')
+        current_app.logger.info('Google login redirect_uri=%s host=%s', redirect_uri, request.host)
+        return google.authorize_redirect(redirect_uri)
 
     @app.route('/login/google/callback')
     def login_google_callback():
+        # Google trả lỗi trên query (hủy / redirect_uri_mismatch)
+        if request.args.get('error'):
+            flash(google_oauth_callback_error_message(), 'danger')
+            session.pop('oauth_mode', None)
+            return redirect(url_for('login', google_setup=1))
+
         if session.get('oauth_mode') != 'login':
+            flash(
+                'Phiên Google bị mất (cookie). Hãy mở https://ketoshop.pro.vn/login '
+                '(không lẫn www) rồi thử lại.',
+                'danger',
+            )
             return redirect(url_for('login'))
         try:
             if not configure_google_oauth(google):
@@ -965,8 +980,19 @@ def register_settings_routes(app):
 
             account = find_user_by_email(email)
             if not account:
-                flash("Email Google chưa được đăng ký trong hệ thống.", "danger")
-                return redirect(url_for('login'))
+                # Chưa có tài khoản → chuyển sang luồng đăng ký dùng thử
+                session['trial_google'] = {
+                    'email': email,
+                    'name': user_info.get('name') or '',
+                    'verified_at': datetime.now().isoformat(timespec='seconds'),
+                }
+                session.permanent = True
+                session.modified = True
+                flash(
+                    "Email Google chưa có tài khoản. Vui lòng hoàn tất đăng ký dùng thử.",
+                    "info",
+                )
+                return redirect(url_for('login', trial_google=1))
 
             user = account['user']
             db_to_open = account['db_path']
@@ -1019,9 +1045,9 @@ def register_settings_routes(app):
             return _finalize_login_from_dict(user, db_to_open, current_tenant_id, get_device_fingerprint())
 
         except Exception as exc:
-            current_app.logger.error("Google login lỗi: %s", exc)
-            flash("Đăng nhập Google thất bại hoặc bị hủy.", "danger")
-            return redirect(url_for('login'))
+            current_app.logger.error("Google login lỗi: %s", exc, exc_info=True)
+            flash(google_oauth_callback_error_message(exc), "danger")
+            return redirect(url_for('login', google_setup=1))
         finally:
             session.pop('oauth_mode', None)
 
@@ -1038,15 +1064,28 @@ def register_settings_routes(app):
                 "warning",
             )
             return redirect(url_for('login', google_setup=1))
+        session.permanent = True
         session['oauth_mode'] = 'trial_register'
         session.modified = True
-        return google.authorize_redirect(oauth_redirect_uri('trial_google_callback'))
+        redirect_uri = oauth_redirect_uri('trial_google_callback')
+        current_app.logger.info('Trial Google redirect_uri=%s host=%s', redirect_uri, request.host)
+        return google.authorize_redirect(redirect_uri)
 
     @app.route('/trial/google/callback')
     def trial_google_callback():
         from Services.subscription_service import find_account_by_email, tenant_is_expired
 
+        if request.args.get('error'):
+            flash(google_oauth_callback_error_message(), 'danger')
+            session.pop('oauth_mode', None)
+            return redirect(url_for('login', google_setup=1))
+
         if session.get('oauth_mode') != 'trial_register':
+            flash(
+                'Phiên đăng ký Google bị mất (cookie). Hãy dùng https://ketoshop.pro.vn/login '
+                '(không lẫn www) rồi nhấn lại «Đăng ký dùng thử».',
+                'danger',
+            )
             return redirect(url_for('login'))
         try:
             if not configure_google_oauth(google):
@@ -1083,17 +1122,8 @@ def register_settings_routes(app):
             session.modified = True
             return redirect(url_for('login', trial_google=1))
         except Exception as exc:
-            current_app.logger.error("Trial Google OAuth lỗi: %s", exc)
-            msg = str(exc).lower()
-            if 'origin' in msg or 'redirect_uri' in msg:
-                flash(
-                    "Google từ chối OAuth (origin/redirect chưa khớp). "
-                    "Thêm https://ketoshop.pro.vn vào Authorized JavaScript origins "
-                    "và các callback vào Authorized redirect URIs trên Google Cloud Console.",
-                    "danger",
-                )
-                return redirect(url_for('login', google_setup=1))
-            flash("Xác thực Google thất bại hoặc bị hủy.", "danger")
+            current_app.logger.error("Trial Google OAuth lỗi: %s", exc, exc_info=True)
+            flash(google_oauth_callback_error_message(exc), "danger")
             return redirect(url_for('login', google_setup=1))
         finally:
             session.pop('oauth_mode', None)

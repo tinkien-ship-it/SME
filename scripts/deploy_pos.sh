@@ -9,9 +9,12 @@
 #   MASTER_EMAIL=...
 #   AUTO_REPAIR_REGISTRY=1
 #   SME_SQLITE_TIMEOUT=60
-#   SME_SKIP_RUNTIME_MIGRATE=1     # sau migrate_all_dbs — tranh migrate nang luc login
-#   SME_LOGIN_WRITE_RETRIES=4      # giam cho phan hoi login nhanh hon
-#   SME_ACCOUNTING_QUEUE_SEC=10    # worker ke toan (mac dinh 10s, truoc day 3s)
+#   SME_SKIP_RUNTIME_MIGRATE=1
+#   SME_LOGIN_WRITE_RETRIES=3
+#   SME_ACCOUNTING_QUEUE_SEC=10
+#   SME_CANONICAL_HOST=ketoshop.pro.vn          # www → apex (tranh mat OAuth session)
+#   SME_SESSION_COOKIE_DOMAIN=.ketoshop.pro.vn  # cookie chung www + apex
+#   PUBLIC_BASE_URL=https://ketoshop.pro.vn
 
 set -uo pipefail
 
@@ -51,6 +54,7 @@ keys = (
     'MASTER_FULL_NAME', 'AUTO_REPAIR_REGISTRY', 'SME_SQLITE_TIMEOUT',
     'SME_SQLITE_WRITE_RETRIES', 'SME_SKIP_RUNTIME_MIGRATE',
     'SME_LOGIN_WRITE_RETRIES', 'SME_ACCOUNTING_QUEUE_SEC',
+    'SME_CANONICAL_HOST', 'SME_SESSION_COOKIE_DOMAIN', 'PUBLIC_BASE_URL',
 )
 for k in keys:
     v = vals.get(k)
