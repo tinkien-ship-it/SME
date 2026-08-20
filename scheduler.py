@@ -144,7 +144,7 @@ def init_schedulers(app, backup_root):
     backup_scheduler.add_job(
         func=lambda: _process_accounting_queue(app),
         trigger="interval",
-        seconds=3,
+        seconds=int(os.environ.get('SME_ACCOUNTING_QUEUE_SEC', '10') or 10),
         id='accounting_queue_worker',
         max_instances=1,
         replace_existing=True,
@@ -155,7 +155,7 @@ def init_schedulers(app, backup_root):
 
 
 def _process_accounting_queue(app):
-    """Background worker: xử lý hàng đợi kế toán cho tất cả tenant."""
+    """Background worker: xử lý hàng đợi kế toán cho tenant có job pending."""
     import os
     from db_utils import BASE_DIR, open_sqlite, REGISTRY_PATH
 
@@ -203,6 +203,11 @@ def _process_accounting_queue(app):
                             'accounting_queue [%s]: processed=%d failed=%d',
                             os.path.basename(db_path), result['processed'], result['failed'],
                         )
+            except sqlite3.OperationalError as e:
+                if 'locked' in str(e).lower():
+                    logger.debug('accounting_queue skip locked %s', os.path.basename(db_path))
+                else:
+                    logger.debug('accounting_queue skip %s: %s', db_path, e)
             except Exception as e:
                 logger.debug('accounting_queue skip %s: %s', db_path, e)
     except Exception as e:

@@ -124,15 +124,21 @@ def get_client_ip():
     return request.remote_addr
 
 def get_location(ip):
-    if ip in ['127.0.0.1', 'localhost']: return "Nội bộ (Localhost)"
+    if ip in ['127.0.0.1', 'localhost']:
+        return "Nội bộ (Localhost)"
+    # VPS: tắt gọi API ngoài mặc định — tránh treo login khi ip-api chậm/chặn
+    if os.environ.get('SME_GEOIP', '').strip().lower() not in ('1', 'true', 'yes', 'on'):
+        return ip or "Không xác định"
     try:
-        # Gọi API lấy vị trí (timeout 1.5s để tránh treo app)
-        res = requests.get(f'http://ip-api.com/json/{ip}?fields=city,country', timeout=1.5).json()
+        res = requests.get(
+            f'http://ip-api.com/json/{ip}?fields=city,country',
+            timeout=float(os.environ.get('SME_GEOIP_TIMEOUT', '0.8') or 0.8),
+        ).json()
         if res.get('status') == 'success':
             return f"{res.get('city')}, {res.get('country')}"
-    except:
+    except Exception:
         pass
-    return "Không xác định"
+    return ip or "Không xác định"
 
 def log_login_attempt(user_id, username, tenant_id, status='Thành công'):
     """Ghi lịch sử vào Main Database (best-effort — không chặn đăng nhập)."""
@@ -200,16 +206,19 @@ def _persist_successful_login(user_id, username, tenant_id, db_to_open, new_sess
             conn_m.commit()
 
     try:
+        login_retries = int(os.environ.get('SME_LOGIN_WRITE_RETRIES', '4') or 4)
         if same_main:
             sqlite_write_retry(
                 lambda: _write_main_side_effects(include_session=True),
                 label='login_main_all',
+                retries=login_retries,
             )
         else:
-            sqlite_write_retry(_write_session_only, label='login_session')
+            sqlite_write_retry(_write_session_only, label='login_session', retries=login_retries)
             sqlite_write_retry(
                 lambda: _write_main_side_effects(include_session=False),
                 label='login_main_writes',
+                retries=login_retries,
             )
     except Exception as e:
         try:

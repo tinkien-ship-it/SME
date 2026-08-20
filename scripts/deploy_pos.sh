@@ -9,6 +9,9 @@
 #   MASTER_EMAIL=...
 #   AUTO_REPAIR_REGISTRY=1
 #   SME_SQLITE_TIMEOUT=60
+#   SME_SKIP_RUNTIME_MIGRATE=1     # sau migrate_all_dbs — tranh migrate nang luc login
+#   SME_LOGIN_WRITE_RETRIES=4      # giam cho phan hoi login nhanh hon
+#   SME_ACCOUNTING_QUEUE_SEC=10    # worker ke toan (mac dinh 10s, truoc day 3s)
 
 set -uo pipefail
 
@@ -46,7 +49,8 @@ except Exception:
 keys = (
     'DEPLOY_BRANCH', 'MASTER_USERNAME', 'MASTER_PASSWORD', 'MASTER_EMAIL',
     'MASTER_FULL_NAME', 'AUTO_REPAIR_REGISTRY', 'SME_SQLITE_TIMEOUT',
-    'SME_SQLITE_WRITE_RETRIES',
+    'SME_SQLITE_WRITE_RETRIES', 'SME_SKIP_RUNTIME_MIGRATE',
+    'SME_LOGIN_WRITE_RETRIES', 'SME_ACCOUNTING_QUEUE_SEC',
 )
 for k in keys:
     v = vals.get(k)

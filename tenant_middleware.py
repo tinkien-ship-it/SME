@@ -29,6 +29,8 @@ def _maybe_migrate_tenant_db(db_path):
     """Migrate schema tenant DB một lần / process (products.product_type, import.doc_type, …)."""
     if not db_path:
         return
+    if os.environ.get('SME_SKIP_RUNTIME_MIGRATE', '').strip().lower() in ('1', 'true', 'yes', 'on'):
+        return
     normalized = os.path.abspath(db_path)
     if normalized in _tenant_schema_migrated:
         return
