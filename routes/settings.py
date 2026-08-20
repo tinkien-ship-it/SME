@@ -8,6 +8,7 @@ import secrets
 import smtplib
 import sqlite3
 import string
+import threading
 import traceback
 import uuid
 import hashlib
@@ -123,6 +124,22 @@ def get_client_ip():
         return request.headers.getlist("X-Forwarded-For")[0].split(',')[0]
     return request.remote_addr
 
+def _defer_login_db_write(fn, *, label='login_deferred'):
+    """Ghi DB phụ (lịch sử, audit) ngoài request — không chặn redirect login."""
+    def _run():
+        try:
+            from db_utils import sqlite_write_retry
+            retries = int(os.environ.get('SME_LOGIN_DEFER_RETRIES', '6') or 6)
+            sqlite_write_retry(fn, label=label, retries=retries)
+        except Exception as exc:
+            try:
+                current_app.logger.warning('%s failed: %s', label, exc)
+            except Exception:
+                print(f'{label} failed: {exc}')
+
+    threading.Thread(target=_run, daemon=True, name=label).start()
+
+
 def get_location(ip):
     if ip in ['127.0.0.1', 'localhost']:
         return "Nội bộ (Localhost)"
@@ -142,39 +159,36 @@ def get_location(ip):
 
 def log_login_attempt(user_id, username, tenant_id, status='Thành công'):
     """Ghi lịch sử vào Main Database (best-effort — không chặn đăng nhập)."""
-    from db_utils import sqlite_write_retry
-
     ip = get_client_ip()
     loc = get_location(ip)
     ua = request.headers.get('User-Agent')
-    try:
-        def _write():
-            with get_main_db_connection() as conn:
-                conn.execute("""
-                    INSERT INTO login_history (tenant_id, user_id, username, ip_address, location, device_info, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (tenant_id, user_id, username, ip, loc, ua, status))
-                conn.commit()
-        sqlite_write_retry(_write, label='log_login_attempt', retries=6)
-    except Exception as e:
-        print(f"Lỗi ghi log lịch sử: {e}")
+
+    def _write():
+        with get_main_db_connection() as conn:
+            conn.execute("""
+                INSERT INTO login_history (tenant_id, user_id, username, ip_address, location, device_info, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (tenant_id, user_id, username, ip, loc, ua, status))
+            conn.commit()
+
+    _defer_login_db_write(_write, label='log_login_attempt')
 
 
 def _persist_successful_login(user_id, username, tenant_id, db_to_open, new_session_id, fingerprint, status='Thành công'):
-    """Ghi session + trusted device + login_history.
+    """Ghi session (đồng bộ) + trusted device / lịch sử / audit (nền).
 
-    Khi đăng nhập master (db_to_open == main DB), gộp mọi ghi vào MỘT transaction
-    để tránh 3 lần mở/ghi database.db liên tiếp → database is locked.
+    Chỉ cập nhật last_session_id là bắt buộc cho single-session; phần còn lại
+    chạy thread nền để tránh 504 khi database.db bị locked trên VPS.
     """
-    from db_utils import MAIN_DB_PATH, paths_same_db, sqlite_write_retry
+    from db_utils import sqlite_write_retry
 
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     ip = get_client_ip()
     loc = get_location(ip)
     ua = request.headers.get('User-Agent')
-    same_main = paths_same_db(db_to_open, MAIN_DB_PATH)
+    login_retries = int(os.environ.get('SME_LOGIN_WRITE_RETRIES', '3') or 3)
 
-    def _write_session_only():
+    def _write_session_critical():
         with open_sqlite(db_to_open) as conn_target:
             conn_target.execute(
                 "UPDATE users SET last_session_id = ? WHERE id = ?",
@@ -182,13 +196,8 @@ def _persist_successful_login(user_id, username, tenant_id, db_to_open, new_sess
             )
             conn_target.commit()
 
-    def _write_main_side_effects(include_session=False):
+    def _write_main_extras():
         with get_main_db_connection() as conn_m:
-            if include_session:
-                conn_m.execute(
-                    "UPDATE users SET last_session_id = ? WHERE id = ?",
-                    (new_session_id, user_id),
-                )
             conn_m.execute(
                 """INSERT OR REPLACE INTO user_trusted_devices
                    (username, device_fingerprint, last_login) VALUES (?, ?, ?)""",
@@ -205,28 +214,7 @@ def _persist_successful_login(user_id, username, tenant_id, db_to_open, new_sess
                 pass
             conn_m.commit()
 
-    try:
-        login_retries = int(os.environ.get('SME_LOGIN_WRITE_RETRIES', '4') or 4)
-        if same_main:
-            sqlite_write_retry(
-                lambda: _write_main_side_effects(include_session=True),
-                label='login_main_all',
-                retries=login_retries,
-            )
-        else:
-            sqlite_write_retry(_write_session_only, label='login_session', retries=login_retries)
-            sqlite_write_retry(
-                lambda: _write_main_side_effects(include_session=False),
-                label='login_main_writes',
-                retries=login_retries,
-            )
-    except Exception as e:
-        try:
-            current_app.logger.error('persist login side-effects: %s', e)
-        except Exception:
-            print(f'persist login side-effects: {e}')
-
-    try:
+    def _write_audit_deferred():
         from Services.audit_log import write_audit
         write_audit(
             'login', 'auth',
@@ -237,8 +225,17 @@ def _persist_successful_login(user_id, username, tenant_id, db_to_open, new_sess
             status='success' if 'Thành công' in str(status) else 'failed',
             use_main=True,
         )
-    except Exception:
-        pass
+
+    try:
+        sqlite_write_retry(_write_session_critical, label='login_session', retries=login_retries)
+    except Exception as e:
+        try:
+            current_app.logger.error('login session write: %s', e)
+        except Exception:
+            print(f'login session write: {e}')
+
+    _defer_login_db_write(_write_main_extras, label='login_main_writes')
+    _defer_login_db_write(_write_audit_deferred, label='login_audit')
 
 
 def register_settings_routes(app):
@@ -316,7 +313,8 @@ def register_settings_routes(app):
     _LOGIN_FALLBACK_HTML = """<!doctype html>
 <html lang="vi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Đăng nhập — KETO ALL IN ONE</title>
+<title>Đăng Nhập - KETO ALL IN ONE — Hệ thống kế toán doanh nghiệp</title>
+<meta name="description" content="KETO ALL IN ONE — Hệ thống kế toán doanh nghiệp">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head><body class="bg-light">
 <div class="container" style="max-width:420px">

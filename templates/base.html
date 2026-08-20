@@ -3,8 +3,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% if tenant_id %}<meta name="keto-tenant-id" id="keto-tenant-id" content="{{ tenant_id }}">{% endif %}
-    <meta name="description" content="Hệ thống POS quản lý bán hàng, tồn kho, nhập kho, báo cáo">
-    <title>{% block title %}Điểm bán hàng{% endblock %} — {{ info.business_name or 'Hệ thống kế toán doanh nghiệp' }}</title>
+    <title>{% block page_title %}{% block title %}Điểm bán hàng{% endblock %} — {{ info.business_name or 'Hệ thống kế toán doanh nghiệp' }}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Hệ thống kế toán doanh nghiệp — quản lý bán hàng, kho và kê khai thuế{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="vi_VN">
+    <meta property="og:title" content="{% block og_title %}{{ self.page_title() }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ self.meta_description() }}{% endblock %}">
+    {% if request %}<meta property="og:url" content="{{ request.url_root.rstrip('/') }}{{ request.path }}">{% endif %}
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ self.og_title() }}">
+    <meta name="twitter:description" content="{{ self.og_description() }}">
     <link rel="icon" href="data:,">
 
     {# Vendor local — không phụ thuộc CDN (TTFB/parse nhanh, cache 1 ngày) #}

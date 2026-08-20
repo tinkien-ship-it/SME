@@ -362,7 +362,7 @@ def add_user_to_mapping(username: str, email: str, tenant_id: str):
                 """, (username.strip(), email.strip() if email else None, tenant_id))
                 conn.commit()
 
-        sqlite_write_retry(_write, label='add_user_to_mapping')
+        sqlite_write_retry(_write, label='add_user_to_mapping', retries=4)
         print(f"DEBUG: Đã thêm/cập nhật mapping → username='{username}' | email='{email}' | tenant='{tenant_id}'")
         return True
     except Exception as e:
