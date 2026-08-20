@@ -356,19 +356,23 @@ _OAUTH_CALLBACK_ENDPOINTS = (
 
 def oauth_redirect_uri(endpoint: str) -> str:
     """
-    Redirect URI OAuth — luôn khớp host/port trình duyệt đang mở.
-    Tránh redirect_uri_mismatch khi PUBLIC_BASE_URL trỏ production nhưng test localhost.
+    Redirect URI OAuth — ưu tiên PUBLIC_BASE_URL (HTTPS production),
+    tránh origin/redirect lệch khi đứng sau Nginx proxy.
     """
     from flask import has_request_context, request, url_for
 
     try:
+        path = url_for(endpoint, _external=False)
+        if path.startswith("http://") or path.startswith("https://"):
+            return path
+        root = ""
         if has_request_context() and getattr(request, "url_root", None):
-            root = request.url_root.rstrip("/")
-            path = url_for(endpoint, _external=False)
-            if path.startswith("http://") or path.startswith("https://"):
-                return path
-            return f"{root}{path}"
-        return url_for(endpoint, _external=True)
+            root = get_public_base_url(request.url_root)
+        else:
+            root = get_public_base_url()
+        if not root:
+            return url_for(endpoint, _external=True)
+        return f"{root.rstrip('/')}{path}"
     except Exception:
         return ""
 

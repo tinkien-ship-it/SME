@@ -485,6 +485,7 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             'api_trial_google_check',
             'api_trial_register',
             'api_tenant_profile_options',
+            'api_google_setup_hint',
             'api_subscription_plans',
             'api_renewal_checkout',
             'api_renewal_status',

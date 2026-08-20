@@ -329,10 +329,32 @@
 
                     {% if google_visible and google_client_id %}
                     <div class="text-center text-muted small my-3">hoặc đăng nhập nhanh bằng Google</div>
+                    {% if google_redirect_ready %}
+                    <a href="{{ url_for('login_google') }}" class="btn btn-outline-danger btn-lg w-100 fw-semibold mb-2 d-inline-flex align-items-center justify-content-center gap-2" id="btnGoogleLoginRedirect">
+                        <i class="fab fa-google"></i> Đăng nhập bằng Google
+                    </a>
+                    {% else %}
                     <div id="googleSignInWrap" class="d-flex justify-content-center mb-2"></div>
+                    {% endif %}
                     <p class="text-muted small text-center mb-3">
                         Có thể chọn email Google khác mỗi lần đăng nhập / đăng ký.
                     </p>
+
+                    {% if request.args.get('google_setup') == '1' %}
+                    <div class="alert alert-warning small text-start mb-3" id="googleSetupHintBox">
+                        <strong>Lỗi Google OAuth (origin_mismatch)</strong><br>
+                        Vào Google Cloud Console → Credentials → OAuth client → thêm đúng:
+                        <div class="mt-2"><strong>Authorized JavaScript origins</strong>
+                            <pre class="bg-white border rounded p-2 mb-2 small">https://ketoshop.pro.vn</pre>
+                        </div>
+                        <div><strong>Authorized redirect URIs</strong>
+                            <pre class="bg-white border rounded p-2 mb-0 small">https://ketoshop.pro.vn/login/google/callback
+https://ketoshop.pro.vn/trial/google/callback
+https://ketoshop.pro.vn/login/google/2fa</pre>
+                        </div>
+                        <div class="mt-2 mb-0">Lưu → đợi 2–5 phút → thử lại cửa sổ ẩn danh.</div>
+                    </div>
+                    {% endif %}
 
                     <div class="trial-register-box mb-3">
                         Nếu <strong>chưa có tài khoản</strong>, hãy đăng ký dùng thử
@@ -770,12 +792,17 @@ function triggerGoogleRegister() {
 }
 
 function initGoogleSignIn() {
-    // Form đăng ký sau OAuth: mở ngay, KHÔNG chờ Google GIS (tránh treo nếu GIS bị chặn/chậm)
+    // Form đăng ký sau OAuth: mở ngay, KHÔNG chờ Google GIS
     {% if trial_google_pending %}
     openTrialRegisterModal(null, {
         email: {{ trial_google_pending.email | default('', true) | tojson }},
         name: {{ trial_google_pending.name | default('', true) | tojson }},
     });
+    {% endif %}
+
+    {% if google_redirect_ready %}
+    // Đăng nhập/đăng ký bằng OAuth redirect — không cần JavaScript origin (tránh origin_mismatch)
+    return;
     {% endif %}
 
     let gsiAttempts = 0;
@@ -788,13 +815,10 @@ function initGoogleSignIn() {
             return;
         }
         renderGoogleLoginButton();
-
-        {% if not google_redirect_ready %}
         ensureRegisterButtonRendered();
         const startRegister = () => triggerGoogleRegister();
         document.getElementById('linkTrialRegister')?.addEventListener('click', startRegister);
         document.getElementById('btnTrialRegister')?.addEventListener('click', startRegister);
-        {% endif %}
     }
     bootGsi();
 }

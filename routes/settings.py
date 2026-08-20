@@ -1084,6 +1084,15 @@ def register_settings_routes(app):
             return redirect(url_for('login', trial_google=1))
         except Exception as exc:
             current_app.logger.error("Trial Google OAuth lỗi: %s", exc)
+            msg = str(exc).lower()
+            if 'origin' in msg or 'redirect_uri' in msg:
+                flash(
+                    "Google từ chối OAuth (origin/redirect chưa khớp). "
+                    "Thêm https://ketoshop.pro.vn vào Authorized JavaScript origins "
+                    "và các callback vào Authorized redirect URIs trên Google Cloud Console.",
+                    "danger",
+                )
+                return redirect(url_for('login', google_setup=1))
             flash("Xác thực Google thất bại hoặc bị hủy.", "danger")
             return redirect(url_for('login', google_setup=1))
         finally:
