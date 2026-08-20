@@ -456,6 +456,14 @@ def google_oauth_setup_hints(base_url: str | None = None) -> dict:
                 _add_origin(f"http://localhost:{port or 5000}")
             if parsed.scheme == "http" and host not in ("127.0.0.1", "localhost"):
                 _add_origin(f"https://{parsed.netloc}")
+            # Apex + www (tranh origin_mismatch / CERT_COMMON_NAME_INVALID khi user vao www)
+            if host and host not in ("127.0.0.1", "localhost") and not host.startswith("www."):
+                _add_origin(f"{parsed.scheme}://www.{host}")
+                _add_redirects_for_base(f"{parsed.scheme}://www.{host}")
+            if host.startswith("www."):
+                apex = host[4:]
+                _add_origin(f"{parsed.scheme}://{apex}")
+                _add_redirects_for_base(f"{parsed.scheme}://{apex}")
         _add_redirects_for_base(root)
 
     for extra in (os.getenv("GOOGLE_EXTRA_ORIGINS") or "").split(","):
