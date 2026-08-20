@@ -340,11 +340,15 @@ def register_settings_routes(app):
 
     def _render_login_page():
         try:
-            return render_template('login.html', **_login_page_context())
+            html = render_template('login.html', **_login_page_context())
         except Exception as exc:
             # Không để trang đăng nhập trả 500 — hiển thị form tối giản để user vẫn vào được
             current_app.logger.exception("render login.html: %s", exc)
             return _LOGIN_FALLBACK_HTML, 200, {'Content-Type': 'text/html; charset=utf-8'}
+        resp = make_response(html)
+        resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        return resp
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():

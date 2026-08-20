@@ -10,6 +10,7 @@
     <meta property="og:title" content="{% block og_title %}{{ self.page_title() }}{% endblock %}">
     <meta property="og:description" content="{% block og_description %}{{ self.meta_description() }}{% endblock %}">
     {% if request %}<meta property="og:url" content="{{ request.url_root.rstrip('/') }}{{ request.path }}">{% endif %}
+    <meta property="og:updated_time" content="{% block og_updated %}{{ now.strftime('%Y-%m-%dT%H:%M:%S') if now else '' }}{% endblock %}">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{{ self.og_title() }}">
     <meta name="twitter:description" content="{{ self.og_description() }}">
