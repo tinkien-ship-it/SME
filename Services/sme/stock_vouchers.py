@@ -154,8 +154,24 @@ def list_stock_in(
         ensure_import_payment_schema(conn, commit=False)
     except Exception:
         pass
+    try:
+        from Services.inward_invoice_helpers import migrate_import_for_service
+        migrate_import_for_service(conn)
+    except Exception:
+        pass
+    try:
+        from Services.sme.tax_payment_ops import ensure_tax_payment_schema
+        ensure_tax_payment_schema(conn, commit=False)
+    except Exception:
+        pass
 
-    sql = """
+    cols = {r[1] for r in conn.execute('PRAGMA table_info("import")').fetchall()}
+    env_sel = (
+        'COALESCE(i.env_tax_amount, 0) AS env_tax_amount'
+        if 'env_tax_amount' in cols else '0 AS env_tax_amount'
+    )
+
+    sql = f"""
         SELECT
             i.id,
             COALESCE(i.import_no, 'PN' || printf('%06d', i.id)) AS voucher_no,
@@ -175,6 +191,7 @@ def list_stock_in(
             i.receive_journal_id,
             COALESCE(i.import_tax_amount, 0) AS import_tax_amount,
             COALESCE(i.excise_tax_amount, 0) AS excise_tax_amount,
+            {env_sel},
             COALESCE(i.amount_fc, 0) AS amount_fc,
             COALESCE(i.advance_fc, 0) AS advance_fc
         FROM import i

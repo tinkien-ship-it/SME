@@ -3187,7 +3187,7 @@ Trân trọng,
                        etax_password, etax_cvalue, etax_ckey,
                        api_url, sign_service_url, misa_has_code,
                        minvoice_cctbao_id, minvoice_has_code,
-                       auto_issue_schedule
+                       auto_issue_schedule, auto_sync_purchase, purchase_api_url
                 FROM invoice_settings 
                 WHERE provider_name = ?
             """, (provider_name,))
@@ -3199,7 +3199,7 @@ Trân trọng,
                 'etax_password', 'etax_cvalue', 'etax_ckey', 'api_url',
                 'sign_service_url', 'misa_has_code',
                 'minvoice_cctbao_id', 'minvoice_has_code',
-                'auto_issue_schedule',
+                'auto_issue_schedule', 'auto_sync_purchase', 'purchase_api_url',
             ], row)) if row else {}
 
             # Form khác (vd. POS) có thể lưu cấu hình mà không gửi cờ lịch → giữ nguyên
@@ -3210,10 +3210,22 @@ Trân trọng,
             if not auto_issue_invoice:
                 auto_issue_schedule = 0
 
+            if 'auto_sync_purchase' in data:
+                auto_sync_purchase = 1 if data.get('auto_sync_purchase') in (True, 'true', '1', 1) else 0
+            else:
+                # Mặc định bật khi dùng Mắt Bão (đường truyền HĐĐT đã cho phép HĐ đầu vào)
+                default_sync = '1' if provider_name == 'matbao' else '0'
+                auto_sync_purchase = 1 if str(old.get('auto_sync_purchase', default_sync) or default_sync) in ('1', 'True', 'true') else 0
+
+            purchase_api_url = (data.get('purchase_api_url') or '').strip().rstrip('/')
+            if not purchase_api_url:
+                purchase_api_url = (old.get('purchase_api_url') or '').strip().rstrip('/')
+
             # Xây dựng giá trị cuối cùng: nếu field gửi lên rỗng → giữ nguyên cũ (đặc biệt password)
             values = {
                 'provider_name': provider_name,
                 'api_url': api_url if api_url else old.get('api_url', ''),
+                'purchase_api_url': purchase_api_url,
                 'username': data.get('username', old.get('username', '')),
                 'api_key': data.get('api_key', old.get('api_key', '')),
                 'serial_number': data.get('serial_number', old.get('serial_number', '')),
@@ -3228,6 +3240,7 @@ Trân trọng,
                 'etax_ckey': data.get('etax_ckey', old.get('etax_ckey', '')),
                 'auto_issue_invoice': auto_issue_invoice,
                 'auto_issue_schedule': auto_issue_schedule,
+                'auto_sync_purchase': auto_sync_purchase,
                 'is_active': 1,
                 'updated_at': 'datetime("now")'
             }
@@ -3244,19 +3257,21 @@ Trân trọng,
             # Chuẩn bị câu lệnh SQL
             sql = """
                 INSERT OR REPLACE INTO invoice_settings (
-                    provider_name, api_url, username, password, api_key, app_secret,
+                    provider_name, api_url, purchase_api_url, username, password, api_key, app_secret,
                     serial_number, tax_code, invoice_series, invoice_type,
                     sign_service_url, misa_has_code,
                     minvoice_cctbao_id, minvoice_has_code,
                     etax_password, etax_cvalue, etax_ckey,
-                    auto_issue_invoice, auto_issue_schedule, is_active, updated_at
+                    auto_issue_invoice, auto_issue_schedule, auto_sync_purchase,
+                    is_active, updated_at
                 ) VALUES (
-                    :provider_name, :api_url, :username, :password, :api_key, :app_secret,
+                    :provider_name, :api_url, :purchase_api_url, :username, :password, :api_key, :app_secret,
                     :serial_number, :tax_code, :invoice_series, :invoice_type,
                     :sign_service_url, :misa_has_code,
                     :minvoice_cctbao_id, :minvoice_has_code,
                     :etax_password, :etax_cvalue, :etax_ckey,
-                    :auto_issue_invoice, :auto_issue_schedule, :is_active, datetime('now')
+                    :auto_issue_invoice, :auto_issue_schedule, :auto_sync_purchase,
+                    :is_active, datetime('now')
                 )
             """
 
@@ -3304,12 +3319,12 @@ Trân trọng,
             ensure_invoice_settings_schema(conn)
 
             cursor.execute("""
-                SELECT provider_name, api_url, username, app_id, 
+                SELECT provider_name, api_url, purchase_api_url, username, app_id, 
                        serial_number, tax_code, invoice_series, invoice_type, 
                        sign_service_url, misa_has_code,
                        minvoice_cctbao_id, minvoice_has_code,
                        password, app_secret, esign_pin, auto_issue_invoice,
-                       auto_issue_schedule,
+                       auto_issue_schedule, auto_sync_purchase,
                        etax_password, etax_cvalue, etax_ckey, api_key
                 FROM invoice_settings
                 ORDER BY is_active DESC, updated_at DESC
@@ -3331,6 +3346,7 @@ Trân trọng,
             # FIX: chuẩn hóa auto_issue_invoice
             res_data['auto_issue_invoice'] = int(res_data.get('auto_issue_invoice', 0))
             res_data['auto_issue_schedule'] = int(res_data.get('auto_issue_schedule') or 0)
+            res_data['auto_sync_purchase'] = int(res_data.get('auto_sync_purchase') if res_data.get('auto_sync_purchase') is not None else 1)
             res_data['misa_has_code'] = int(res_data.get('misa_has_code') or 0)
             res_data['minvoice_has_code'] = int(res_data.get('minvoice_has_code') if res_data.get('minvoice_has_code') is not None else 1)
 

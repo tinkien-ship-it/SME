@@ -67,9 +67,14 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <button id="btnRefresh" class="btn btn-primary w-100 fw-bold">
-                    <i class="bi bi-arrow-repeat me-2"></i>LÀM MỚI DỮ LIỆU
-                </button>
+                <div class="d-flex gap-2">
+                    <button id="btnRefresh" class="btn btn-primary flex-grow-1 fw-bold">
+                        <i class="bi bi-arrow-repeat me-2"></i>LÀM MỚI
+                    </button>
+                    <button id="btnBatchApPay" class="btn btn-danger fw-bold" type="button" disabled>
+                        Chi nhiều
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -79,6 +84,7 @@
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
+                        <th class="text-center" style="width:2.5rem"><input type="checkbox" id="chkAllAp"></th>
                         <th class="text-center">Số Đơn Nhập</th>
                         <th class="text-center">Ngày Nhập</th>
                         <th class="text-end">Tổng Nợ</th>
@@ -221,7 +227,7 @@ async function loadDebtData() {
     if (!supplier) return;
 
     const $tbody = $('#debtTableBody');
-    $tbody.html('<tr><td colspan="6" class="text-center p-5"><div class="spinner-border text-primary"></div></td></tr>');
+    $tbody.html('<tr><td colspan="7" class="text-center p-5"><div class="spinner-border text-primary"></div></td></tr>');
 
     try {
         const data = await fetchJSON(`/api/sme/debt/supplier-detail?supplier=${encodeURIComponent(supplier)}`);
@@ -234,7 +240,8 @@ async function loadDebtData() {
         $('#remainingDebt').text(formatDebtMoney(data.summary.remaining));
 
         if (!data.records || data.records.length === 0) {
-            $tbody.html('<tr><td colspan="6" class="text-center p-5 text-success fw-bold">Không còn nợ đọng.</td></tr>');
+            $tbody.html('<tr><td colspan="7" class="text-center p-5 text-success fw-bold">Không còn nợ đọng.</td></tr>');
+            $('#btnBatchApPay').prop('disabled', true);
             return;
         }
 
@@ -244,6 +251,9 @@ async function loadDebtData() {
             const dateStr = r.date ? flatpickr.formatDate(new Date(r.date), "d/m/Y") : '—';
             return `
                 <tr>
+                    <td class="text-center">
+                        <input type="checkbox" class="ap-chk" data-id="${r.id}" data-remaining="${r.remaining_amount || 0}">
+                    </td>
                     <td class="text-center fw-bold text-primary">${escapeHtml(r.import_no)}</td>
                     <td class="text-center small">${dateStr}</td>
                     <td class="text-end fw-bold">${formatDebtMoney(r.total_value)}</td>
@@ -259,8 +269,12 @@ async function loadDebtData() {
                 </tr>`;
         });
         $tbody.html(rows.join(''));
+        $('#btnBatchApPay').prop('disabled', false);
+        $('#chkAllAp').off('change').on('change', function() {
+            $('.ap-chk').prop('checked', this.checked);
+        });
     } catch (err) {
-        $tbody.html(`<tr><td colspan="6" class="text-center text-danger p-5">Lỗi: ${escapeHtml(err.message || 'tải dữ liệu')}</td></tr>`);
+        $tbody.html(`<tr><td colspan="7" class="text-center text-danger p-5">Lỗi: ${escapeHtml(err.message || 'tải dữ liệu')}</td></tr>`);
         console.error(err);
     }
 }
@@ -355,6 +369,46 @@ $(document).ready(() => {
     });
     $('#supplierFilter').change(loadDebtData);
     $('#btnRefresh').click(loadDebtData);
+    $('#btnBatchApPay').click(async function() {
+        const checked = [...document.querySelectorAll('.ap-chk:checked')];
+        if (!checked.length) {
+            return Swal.fire('Cảnh báo', 'Chọn ít nhất một phiếu nhập còn nợ', 'warning');
+        }
+        const allocations = checked.map(c => ({
+            import_id: parseInt(c.dataset.id, 10),
+            amount: parseFloat(c.dataset.remaining) || 0,
+        })).filter(a => a.import_id && a.amount > 0);
+        if (!allocations.length) {
+            return Swal.fire('Cảnh báo', 'Không có số còn nợ hợp lệ', 'warning');
+        }
+        const total = allocations.reduce((s, a) => s + a.amount, 0);
+        const payDate = new Date().toISOString().slice(0, 10);
+        const payload = {
+            receiver_name: $('#supplierFilter').val(),
+            amount: total,
+            payment_method: 'bank',
+            debit_account: '331',
+            date: payDate,
+            reason: `Thanh toán ${allocations.length} phiếu nhập`,
+            allocations,
+        };
+        try {
+            const res = await fetch('/api/sme/vouchers/payments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire('Thành công', `Đã lập phiếu chi ${result.voucher_no}`, 'success');
+                loadDebtData();
+            } else {
+                Swal.fire('Lỗi', result.error || 'Không lưu được', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', 'Lỗi kết nối máy chủ', 'error');
+        }
+    });
 });
 </script>
 {% endblock %}

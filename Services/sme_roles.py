@@ -52,60 +52,17 @@ ROLE_LABELS = {
     'adminSME99': 'Quản trị SME (TT99)',
 }
 
-# Trang / endpoint chỉ thuộc TT99 (mẫu 03–09-TT, 03–07-VT, L/C, FX, TSCĐ đánh số…).
-# Bán hàng xuất khẩu + tờ khai HQ dùng chung TT58 và TT99.
-TT99_ONLY_ENDPOINTS = frozenset({
-    'SME_landed_cost', 'SME_letter_of_credit',
-    'SME_fx_cash',
-    'SME_advances', 'SME_advance_in',
-    'SME_temp_receipts', 'SME_temp_receipt_in',
-    'SME_gold_sheet', 'SME_gold_sheet_in',
-    'SME_cash_count', 'SME_cash_count_in', 'SME_cash_count_fx',
-    'SME_payment_listing', 'SME_payment_listing_in',
-    'SME_stock_inspection',
-    'SME_stock_count', 'SME_stock_count_in',
-    'SME_purchase_listing',
-    'SME_form_01_bh', 'SME_form_02_bh',
-    'SME_fa_docs',
-    'SME_fa_disposal', 'SME_fa_disposal_in',
-    'SME_fa_depreciation_table', 'SME_fa_depreciation_table_in',
-    'SME_loans', 'SME_deposits',
-    'SME_material_remaining',
-    'SME_fx_revaluation', 'SME_capital',
-    'api_sme_form_01_bh', 'api_sme_form_02_bh',
-})
+# Trước đây một số nghiệp vụ (L/C, FX, vay, mẫu TT…) bị khóa với TT58.
+# Chính sách hiện tại: TT58 được dùng đầy đủ nghiệp vụ mua/bán/kế toán như TT99;
+# đồng thời bắt buộc có sổ & biểu mẫu DNSN (TT58) để CQT đối chiếu khi kiểm tra.
+# Giữ frozenset rỗng để tương thích gọi cũ; không chặn endpoint/path TT99 trên TT58.
+TT99_ONLY_ENDPOINTS = frozenset()
 
-TT99_ONLY_PATH_PREFIXES = (
-    '/api/sme/landed-cost',
-    '/api/sme/lc',
-    '/api/sme/import-payment/open-lcs',
-    '/api/sme/advances',
-    '/api/sme/temp-receipts',
-    '/api/sme/gold-sheets',
-    '/api/sme/cash-count',
-    '/api/sme/cash-count-fx',
-    '/api/sme/payment-listing',
-    '/api/sme/stock-inspection',
-    '/api/sme/stock-count',
-    '/api/sme/purchase-listing',
-    '/api/sme/sale-forms/01-bh',
-    '/api/sme/sale-forms/02-bh',
-    '/api/sme/fa-docs',
-    '/api/sme/fa-disposal',
-    '/api/sme/fa-depreciation-table',
-    '/api/sme/loans',
-    '/api/sme/deposits',
-    '/api/sme/material-remaining',
-    '/api/sme/fx-revaluation',
-    '/api/sme/fx-cash',
-    '/api/sme/capital',
-)
+TT99_ONLY_PATH_PREFIXES = ()
 
-TT99_ONLY_PATH_MARKERS = (
-    '/settle-lc',
-    '/pay-customs-tax',
-)
+TT99_ONLY_PATH_MARKERS = ()
 
+# Chỉ TT58: sổ DNSN + cấu hình trường hợp thuế / tỷ lệ % (framework TT58).
 TT58_ONLY_ENDPOINTS = frozenset({
     'SME_dnsn_books', 'SME_dnsn_book', 'SME_dnsn_book_print',
 })

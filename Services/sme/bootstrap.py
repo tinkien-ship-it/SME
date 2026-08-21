@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 
 # Cache theo đường dẫn DB — tránh chạy lại hàng chục ensure_* mỗi request (gây load chậm).
-_BOOTSTRAP_VERSION = '2026-08-18accruals-loan-int'
+_BOOTSTRAP_VERSION = '2026-08-21congno-settle-partner'
 _sme_bootstrapped: dict[str, str] = {}
 
 
@@ -119,6 +119,16 @@ def ensure_sme_accounting_ready(
     try:
         from Services.sme.customs_declaration import ensure_customs_declaration_schema
         ensure_customs_declaration_schema(conn, commit=False)
+    except Exception:
+        pass
+    try:
+        from Services.sme.cong_no_ops import ensure_cong_no_schema
+        ensure_cong_no_schema(conn, commit=False)
+    except Exception:
+        pass
+    try:
+        from Services.sme.import_settle import ensure_import_settle_schema
+        ensure_import_settle_schema(conn, commit=False)
     except Exception:
         pass
 

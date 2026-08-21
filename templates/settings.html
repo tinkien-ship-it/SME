@@ -380,9 +380,9 @@
                                             {% endif %}
                                         </select>
                                         {% if _is_tt58 %}
-                                        <div class="form-text">User TT58 chỉ thấy chứng từ 01-TT / 02-TT / 01-VT / 02-VT, sổ DNSN theo trường hợp đã chọn, và BCTC khi Trường hợp 2 hoặc 4.</div>
+                                        <div class="form-text">User TT58 dùng <strong>đầy đủ</strong> nghiệp vụ mua/bán/kế toán như TT99 (kèm L/C, ngoại tệ, mẫu chứng từ…); đồng thời bắt buộc sổ &amp; biểu mẫu DNSN theo trường hợp thuế đã chọn. BCTC hiện khi Trường hợp 2 hoặc 4.</div>
                                         {% elif _is_tt99 %}
-                                        <div class="form-text">User TT99 dùng đầy đủ mẫu chứng từ Thông tư 99 (03–09-TT, XK/HQ, L/C, ngoại tệ…).</div>
+                                        <div class="form-text">User TT99 dùng đầy đủ mẫu chứng từ Thông tư 99 (03–09-TT, XK/HQ, L/C, ngoại tệ…). Không có menu sổ DNSN (framework TT58).</div>
                                         {% endif %}
                                     </div>
                                     <div class="perm-group">
@@ -681,6 +681,8 @@
                                         {% for p in invoice_providers %}
                                         <option value="{{ p.code }}"
                                             data-default-url="{{ p.default_api_url }}"
+                                            data-purchase-url="{{ p.default_purchase_api_url or '' }}"
+                                            data-purchase-sync="{{ '1' if p.supports_purchase_sync else '0' }}"
                                             data-status="{{ p.status }}"
                                             data-draft="{{ '1' if p.supports_draft else '0' }}"
                                             {% if esign.provider_name == p.code %}selected{% endif %}>
@@ -696,6 +698,13 @@
                                     <label class="form-label fw-bold required" id="labelApiUrl">API Endpoint (URL)</label>
                                     <input type="url" name="api_url" id="inputApiUrl" class="form-control" value="{{ esign.api_url or '' }}" placeholder="Ví dụ: https://testapi.meinvoice.vn/api/v3" required>
                                     <small class="form-text text-muted" id="hintApiUrl">Dùng URL test khi thử nghiệm (nếu có)</small>
+                                </div>
+                                <div class="col-md-6" id="wrapPurchaseApiUrl" style="display:none;">
+                                    <label class="form-label fw-bold">API Hóa đơn đầu vào (Purchase)</label>
+                                    <input type="url" name="purchase_api_url" id="inputPurchaseApiUrl" class="form-control"
+                                           value="{{ esign.purchase_api_url or '' }}"
+                                           placeholder="https://api-hoadondauvao.matbao.in">
+                                    <small class="form-text text-muted">Mắt Bão: để trống nếu cùng host phát hành; demo thường dùng api-hoadondauvao riêng.</small>
                                 </div>
                                 <!-- Mã số thuế -->
                                 <div class="col-md-6">
@@ -844,7 +853,7 @@
                                 <!-- === BỔ SUNG: Thông tin đăng nhập eTax === -->
                                 <div class="col-12 mt-4">
                                     <h6 class="fw-bold text-danger"><i class="fas fa-shield-virus me-2"></i>Thông tin đăng nhập eTax (Cổng thuế điện tử)</h6>
-                                    <small class="text-muted d-block mb-3">Dùng để nộp tờ khai, tra cứu hóa đơn, kết nối Tổng cục Thuế (nếu nhà cung cấp yêu cầu)</small>
+                                    <small class="text-muted d-block mb-3">Dùng đồng bộ HĐ mua từ CQT / tra cứu. Xuất XML tờ khai GTGT·TNDN trên menu Thuế; nộp chính thức qua HTKK / eTax của cơ quan thuế.</small>
                                 </div>
 
                                 <div class="col-md-6">
@@ -852,7 +861,7 @@
                                     <input type="password" name="etax_password" class="form-control border-danger" value=""
                                            placeholder="{% if esign.has_etax_password %}******** (Đã lưu, nhập mới để thay đổi){% else %}Mật khẩu https://thuedientu.gdt.gov.vn{% endif %}"
                                            autocomplete="new-password">
-                                    <small class="form-text text-danger">Bắt buộc nếu dùng tính năng nộp tờ khai tự động</small>
+                                    <small class="form-text text-danger">Dùng để đồng bộ HĐ đầu vào qua cổng CQT (captcha) và tra cứu thuế — chưa nộp tờ khai trực tiếp từ phần mềm</small>
                                 </div>
 
                                 <div class="col-md-6">
@@ -908,6 +917,18 @@
                                             <strong>17:00 hằng ngày (giờ Việt Nam)</strong>. Cần bật sẵn công tắc tự động xuất ở trên.
                                         </div>
                                         <div class="small mt-1" id="invoiceScheduleLastRun"></div>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-3" id="wrapAutoSyncPurchase" style="display:none;">
+                                    <div class="form-check form-switch p-3 bg-success-subtle rounded border border-success-subtle">
+                                        <input class="form-check-input" type="checkbox" name="auto_sync_purchase" id="auto_sync_purchase"
+                                               {% if esign.auto_sync_purchase is not defined or esign.auto_sync_purchase in ('1', 1, True) %}checked{% endif %}>
+                                        <label class="form-check-label fw-bold text-success" for="auto_sync_purchase">
+                                            <i class="fas fa-cloud-download-alt me-1"></i>Tự đồng bộ hóa đơn mua hàng (9h · 15h · 24h)
+                                        </label>
+                                        <div class="small text-muted mt-1">
+                                            Lấy HĐ đầu vào qua kênh HĐĐT Mắt Bảo lúc <strong>09:00, 15:00 và 00:00</strong> (giờ Việt Nam). Không cần captcha. Đồng bộ cổng CQT vẫn thao tác thủ công trên trang HĐ mua.
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1461,6 +1482,16 @@ function applyEinvoiceProviderUi(code, opt) {
     setVisible('misaExtraBlock', !!cfg.showMisaExtra);
     setVisible('mobifoneExtraBlock', !!cfg.showMobifoneExtra);
     setVisible('vnptExtraBlock', !!cfg.showVnptExtra);
+
+    const purchaseSync = !!(opt && opt.dataset.purchaseSync === '1') || code === 'matbao';
+    const wrapPurchase = document.getElementById('wrapPurchaseApiUrl');
+    const wrapAutoSync = document.getElementById('wrapAutoSyncPurchase');
+    if (wrapPurchase) wrapPurchase.style.display = purchaseSync ? '' : 'none';
+    if (wrapAutoSync) wrapAutoSync.style.display = purchaseSync ? '' : 'none';
+    const purchaseInput = document.getElementById('inputPurchaseApiUrl');
+    if (purchaseInput && !purchaseInput.value && opt && opt.dataset.purchaseUrl) {
+        purchaseInput.placeholder = opt.dataset.purchaseUrl;
+    }
 }
 
 async function loadInvoiceSettings() {
@@ -1486,6 +1517,7 @@ async function loadInvoiceSettings() {
         const data = result.data;
         setField('provider_name', data.provider_name || '');
         setField('api_url', data.api_url || '');
+        setField('purchase_api_url', data.purchase_api_url || '');
         setField('tax_code', data.tax_code || '');
         setField('username', data.username || '');
         setField('api_key', data.api_key || '');
@@ -1506,6 +1538,10 @@ async function loadInvoiceSettings() {
         if (autoCheckbox) autoCheckbox.checked = data.auto_issue_invoice == 1;
         const scheduleCheckbox = document.getElementById('auto_issue_schedule');
         if (scheduleCheckbox) scheduleCheckbox.checked = data.auto_issue_schedule == 1;
+        const autoSyncPurchase = document.getElementById('auto_sync_purchase');
+        if (autoSyncPurchase) {
+            autoSyncPurchase.checked = data.auto_sync_purchase == null || data.auto_sync_purchase == 1;
+        }
         loadInvoiceScheduleStatus();
 
         ['password', 'app_secret', 'esign_pin', 'etax_password'].forEach(fieldName => {

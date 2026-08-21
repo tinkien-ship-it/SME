@@ -137,7 +137,7 @@ def register_fixed_asset_from_import(
 ):
     """Ghi nhận TSCĐ khi nhập kho — không qua tồn POS.
 
-    Nguyên giá tính khấu hao = giá vốn hóa (CIF − CK + thuế NK + TTĐB),
+    Nguyên giá tính khấu hao = giá vốn hóa (CIF − CK + thuế NK + TTĐB + BVMT),
     không gồm VAT đầu vào khấu trừ.
     """
     ensure_fixed_assets_schema(c.connection)

@@ -1,0 +1,59 @@
+# Kiến thức Trợ lý AI — Kế toán SME Thông tư 58 (DNSN / doanh nghiệp siêu nhỏ)
+# RAG đọc tự động. Mỗi ## là một khối. Trả lời theo ngôn ngữ người dùng mới, chỉ dẫn đúng menu SME (không HKD).
+
+## SME TT58 là gì
+Kế toán SME TT58 áp dụng doanh nghiệp siêu nhỏ theo Thông tư 58/2026/TT-BTC (chế độ kế toán doanh nghiệp siêu nhỏ — DNSN). Trong phần mềm, mã chế độ thường là SME_MICRO_TT58. Khác HKD (Thông tư 88). Khác TT99 ở chỗ TT58 bắt buộc bộ sổ & biểu mẫu DNSN theo trường hợp thuế để CQT đối chiếu khi kiểm tra/thanh tra. Về nghiệp vụ mua hàng, bán hàng, kế toán vận hành: TT58 được dùng đầy đủ như TT99 (L/C, ngoại tệ, vay, mẫu chứng từ…).
+
+## Lần đầu dùng TT58 — checklist
+1) Đăng nhập tài khoản vai trò kế toán/quản lý SME58. 2) Hệ thống → Thiết lập: tên DN, MST, địa chỉ, tài khoản ngân hàng, nhà cung cấp hóa đơn điện tử. 3) Chọn Trường hợp thuế 1–4 (TT58) — bắt buộc để sổ DNSN và BCTC đúng. 4) Nhập tỷ lệ % thuế theo ngành (hàng hóa, dịch vụ…) nếu nộp theo % DT. 5) Tạo/gắn kho (KHO_001…) và chi nhánh (HQ = trụ sở). 6) Ghi vốn góp: Sổ Quỹ Tiền Mặt hoặc Sổ Tiền Gửi NH → Lập phiếu thu → Nợ 1111/1121 · Có 4111. 7) Đồng bộ hoặc nhập Hóa đơn mua → Lập phiếu nhập. 8) Bán tại Điểm bán hàng. 9) Cuối kỳ: Kết chuyển khóa sổ; in đủ sổ DNSN theo trường hợp.
+
+## Bốn trường hợp thuế TT58
+Trường hợp 1 (article5): GTGT % doanh thu + TNDN % doanh thu. Chỉ bắt buộc sổ S1-DNSN. Không bắt buộc BCTC. VAT đầu vào cộng vào giá vốn/TSCĐ (không khấu trừ 133). Trường hợp 2 (article6): GTGT % DT + TNDN trên thu nhập (DT−CP). Bắt buộc S2a–S2d; bắt buộc BCTC năm (90 ngày). VAT đầu vào vào giá vốn. Trường hợp 3 (article7): GTGT khấu trừ + TNDN % DT. Bắt buộc S3a, S3b. Không bắt buộc BCTC. Có theo dõi 133. Trường hợp 4 (article8): GTGT khấu trừ + TNDN trên thu nhập. Sổ S2b–d + S3b (+ tùy chọn S4); bắt buộc BCTC. Menu «Sổ & biểu mẫu DNSN» chỉ hiện với TT58 — đây là framework bắt buộc khi CQT kiểm tra.
+
+## Bản đồ menu TT58 — nghiệp vụ đầy đủ + DNSN
+TT58 thấy đủ menu nghiệp vụ như TT99: bán hàng (POS, 157, XK, HQ, NH, HĐ, trả hàng); mua hàng (đơn mua, HĐ mua, phân bổ CP, PN, L/C, tờ khai HQ, trả NCC); chứng từ (01–09-TT, 01–07-VT, BH, TSCĐ biên bản, vay, ký quỹ, ngoại tệ…); sổ quỹ/NH/công nợ; SX; nhân sự; thuế; BCTC (theo TH). Thêm riêng: Sổ & biểu mẫu DNSN. Không khóa L/C, FX, vay, mẫu FA/BH.
+
+## Bán hàng tiền mặt TT58
+Vào Bán hàng → Điểm bán hàng. Chọn hàng (quét mã / gõ tên). Chọn phương thức 111 (tiền mặt). Hoàn tất → đơn status completed. Hệ thống: xuất kho; ghi doanh thu SALE_REVENUE (Nợ 111 · Có 511…); nếu trường hợp % DT thì ghi thuế Nợ 811/Có 33311 và Nợ 821/Có 3334 theo tỷ lệ ngành; ghi giá vốn SALE_COGS (Nợ 632 · Có 156/152…). Bật xuất HĐĐT nếu cần. Không cần lập phiếu thu riêng vì đã Nợ tiền mặt trên hóa đơn bán.
+
+## Bán hàng chuyển khoản (chờ CK) TT58
+Tại POS chọn 112. Đơn có thể pending chờ VietQR/SePay/Casso. Khi tiền về khớp mã DH…… + số tiền → hệ thống hoàn tất đơn và ghi sổ. Xem Giao dịch ngân hàng / Đối chiếu NH. Nếu đơn đã bán công nợ rồi tiền mới về: hệ thống có thể tự lập Phiếu thu Nợ 112 · Có 131; hoặc bấm Tạo phiếu thu trên dòng sao kê.
+
+## Bán hàng công nợ TT58
+POS chọn 131. Đơn completed → phát sinh cong_no (unpaid = tổng; paid = 0). Nhật ký: Nợ 131 · Có 511 (+ thuế theo trường hợp). Thu tiền sau: Sổ Công Nợ Phải Thu → chọn khách → Thu tiền → lập phiếu thu 01-TT (Nợ 111/112 · Có 131). Có thể chọn nhiều hóa đơn (Thu nhiều HĐ) — hệ thống phân bổ allocations theo từng sale_id. Số còn lại = unpaid − paid.
+
+## Khách trả hàng TT58
+Bán hàng → Khách trả hàng. Chọn đơn, số lượng, xác nhận. Hệ thống nhập kho lại, ghi bút toán trả hàng (giảm doanh thu/giá vốn). Công nợ: giảm unpaid (không tăng paid). Nếu đã xuất HĐĐT: dùng Hóa đơn bán → Xuất hóa đơn thay thế theo hướng dẫn tab Bán hàng.
+
+## Hàng gửi đại lý (TK 157) TT58
+Menu Hàng gửi đi bán (TK 157). 1) Gửi hàng: Nợ 157 · Có kho. 2) Khi đại lý bán được: xuất HĐĐT trước → xác nhận bán → Nợ 632·Có 157 và Nợ tiền/công nợ · Có 511. 3) Đại lý trả hàng: hàng tốt về kho hoặc hàng hỏng vào giá vốn. Có thể dùng thêm mẫu 01-BH / 02-BH nếu cần.
+
+## Xuất khẩu và L/C TT58
+Bán hàng xuất khẩu → lập đơn → ship (hàng trên 157) → tờ khai HQ / thông quan (clearance) → khi CLEARED mới ghi doanh thu Nợ 131 · Có 511 và cho phép HĐĐT. Thu ngoại tệ/settle công nợ theo quy trình XK. Nộp thuế HQ tại chức năng nộp thuế nếu có. Được mở L/C, sổ ngoại tệ 1112/1122, đánh giá tỷ giá khi nghiệp vụ phát sinh — giống TT99.
+
+## Mua hàng nội địa TT58 — từ HĐ đến nhập kho
+1) Mua hàng → Hóa đơn mua hàng: đồng bộ Matbao/CQT (nhập captcha nếu cần) hoặc tạo tay. 2) Với từng HĐ: Lập phiếu nhập (hàng để bán/NVL) hoặc Hạch toán (dịch vụ dùng ngay) hoặc Phân bổ (chi phí cộng giá vốn). 3) Trên phiếu nhập: chọn loại hàng (HH/VT/TSCĐ/CCDC), kho, đơn vị lẻ/sỉ, giá bán. 4) Lưu → hệ thống tạo mã HH/VT/TSCD/CCDC, NCC, tồn kho (nếu HH/VT), bút toán Nợ 156/152… (+ 133 nếu trường hợp khấu trừ) · Có 331 hoặc tiền. Trường hợp 1–2: VAT đầu vào thường cộng vào giá vốn (không 133).
+
+## Nhập khẩu / hàng đi đường TT58
+Phiếu nhập loại nhập khẩu có thể bắt đầu giai đoạn IN_TRANSIT (Nợ 151 · Có 331 + thuế Có 333*). Nộp thuế HQ → cập nhật stage. Nhập kho thực: Nợ 156 · Có 151. Phân bổ chi phí mua (vận chuyển…) tại Phân bổ chi phí mua hàng. Có thể dùng L/C, tạm ứng NCC, ngoại tệ.
+
+## Trả nhà cung cấp và công nợ phải trả TT58
+Sổ Công Nợ Phải Trả → chọn NCC → Trả tiền (phiếu chi 02-TT Nợ 331 · Có 111/112). Có nút Chi nhiều để một phiếu chi nhiều phiếu nhập (allocations). Hoặc Chứng từ → Phiếu chi. Trả hàng NCC: menu Trả nhà cung cấp.
+
+## Ngân hàng, ngoại tệ, vay TT58
+Giao dịch ngân hàng / Đối chiếu NH: khớp sao kê; tạo phiếu thu thu nợ (gắn sale_id → Có 131). Sổ ngoại tệ 1112/1122, kiểm quỹ NT 08b, mua NT, tạm ứng NT. Vay và trả nợ; ký quỹ; góp vốn cổ tức — dùng khi phát sinh. Không nhầm Có 511 khi đã có doanh thu bán.
+
+## Sổ DNSN TT58 — framework bắt buộc
+Vào Sổ & biểu mẫu DNSN. In đúng sổ theo trường hợp đã chọn (S1; S2a–d; S3a–b; S4a–d tùy chọn). Đây là bộ biểu mẫu/framework theo TT58 để CQT đối chiếu khi kiểm tra hoặc thanh tra — phải đầy đủ, đúng kỳ. Sổ S4a cần bút toán có partner_id (khách/NCC). Song song vẫn dùng chứng từ vận hành đầy đủ (01–09-TT, VT, TSCĐ…).
+
+## Thuế và báo cáo TT58
+Theo dõi thuế NSNN (133/333). Tờ khai GTGT, TNDN, TNCN theo nhu cầu. BCTC hiện khi trường hợp 2 hoặc 4 (show_bctc). Trường hợp 1 và 3: tập trung sổ DNSN; vẫn có thể chạy nghiệp vụ đầy đủ.
+
+## Cuối kỳ TT58
+Sổ sách → Kết chuyển, khóa sổ và cuối năm: khấu hao TSCĐ → phân bổ CCDC/trả trước → kết chuyển KQKD → khóa. Không chạy trước cuối tháng trừ khi được phép. Kỳ khóa thì không ghi/đảo bút toán mới.
+
+## TT58 vs TT99 — điểm khác chính
+Cùng nghiệp vụ mua/bán/kế toán. TT58 thêm: chọn Trường hợp 1–4, sổ DNSN bắt buộc, thuế % DT có thể tự ghi 811/821. TT99: BCTC B01–B09 luôn có; không có menu sổ DNSN.
+
+## Lỗi thường gặp TT58
+Sổ DNSN trống/thiếu: chưa chọn trường hợp thuế hoặc chưa phát sinh đúng loại bút toán — phải bổ sung trước khi CQT kiểm tra. S4a thiếu đối tượng: bán không gắn khách/MST. Công nợ sai: phải dùng thu trên sổ SME (unpaid↓ paid↑). Thuế % DT không ra: kiểm tra tỷ lệ ngành và trường hợp 1/2. Menu mất BCTC: đang TH1/TH3 là đúng thiết kế framework.

@@ -109,6 +109,9 @@ def ensure_export_sale_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         ('branch_code', 'TEXT'),
         ('export_status', "TEXT DEFAULT 'shipped'"),
         ('internal_transfer_doc_no', 'TEXT'),
+        ('tax_payment_voucher_id', 'INTEGER'),
+        ('tax_payment_journal_id', 'INTEGER'),
+        ('tax_paid_at', 'TEXT'),
     ]
     names = _cols(conn, 'sale')
     for col, decl in extras:

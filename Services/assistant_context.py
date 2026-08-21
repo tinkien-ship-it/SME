@@ -97,8 +97,8 @@ PAGE_CONTEXT: dict[str, dict[str, Any]] = {
     'huong_dan_su_dung': {
         'label': 'Hướng Dẫn Sử Dụng',
         'hint': (
-            'Tab: Bán hàng | Kế Toán HKD | Kế Toán SME | F&B | Phòng trọ. '
-            'Doanh nghiệp SME mở tab Kế Toán SME.'
+            'Tab: Bán hàng | Kế Toán HKD | Kế Toán SME (nhánh TT58 DNSN / TT99) | F&B | Phòng trọ. '
+            'Doanh nghiệp SME mở tab Kế Toán SME rồi chọn đúng chế độ tenant.'
         ),
     },
     'order': {
@@ -271,11 +271,18 @@ REGIME_HINTS = {
     'DN': 'Loại hình: Doanh nghiệp — TT99/TT58, sổ kép. Dùng ngôn ngữ menu Kế toán doanh nghiệp.',
     'SME': (
         'Loại hình: Doanh nghiệp SME (TT99 hoặc TT58) — sổ kép. '
-        'Menu: Kế toán doanh nghiệp. Ưu tiên tab Hướng dẫn Kế Toán SME. '
+        'Menu: Kế toán doanh nghiệp. Mở Hướng dẫn → tab Kế Toán SME → chọn đúng TT58 hoặc TT99. '
         'Không nhầm với thao tác HKD (Nộp Quỹ kiểu TT88).'
     ),
-    'SME_TT99': 'Doanh nghiệp theo Thông tư 99/2025/TT-BTC — sổ kép SME.',
-    'SME_MICRO_TT58': 'Doanh nghiệp siêu nhỏ theo Thông tư 58 — sổ kép SME.',
+    'SME_TT99': (
+        'Doanh nghiệp Thông tư 99/2025/TT-BTC — sổ kép đầy đủ, BCTC B01–B09, L/C, ngoại tệ, vay. '
+        'Hướng dẫn: tab Kế Toán SME → SME TT99. Không chỉ dẫn sổ DNSN (TT58).'
+    ),
+    'SME_MICRO_TT58': (
+        'Doanh nghiệp siêu nhỏ Thông tư 58 — DNSN. Phải chọn Trường hợp thuế 1–4; '
+        'in đủ sổ DNSN (framework CQT). Được dùng đầy đủ nghiệp vụ mua/bán/kế toán như TT99 '
+        '(L/C, FX, vay, mẫu chứng từ…). Hướng dẫn: tab Kế Toán SME → SME TT58.'
+    ),
 }
 
 ROLE_HINTS = {
@@ -343,6 +350,10 @@ def rag_section_for_regime(regime: str | None) -> str | None:
     r = (regime or '').upper()
     if r == 'HKD':
         return None
+    if 'TT58' in r or 'MICRO' in r:
+        return 'Kế toán SME TT58'
+    if 'TT99' in r:
+        return 'Kế toán SME TT99'
     if r.startswith('SME') or r in ('DN',):
         return 'Kế toán SME'
     return None

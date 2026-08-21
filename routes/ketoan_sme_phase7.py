@@ -12,6 +12,20 @@ from db_utils import get_db_connection
 logger = logging.getLogger(__name__)
 
 
+def _dispatch_named_view(app, *names: str):
+    """Gọi view đã đăng ký theo tên (ổn định hơn lookup đơn)."""
+    for name in names:
+        view = app.view_functions.get(name)
+        if view:
+            return view()
+    needles = [n.lower() for n in names]
+    for name, fn in app.view_functions.items():
+        low = name.lower()
+        if any(low == n or low.endswith('.' + n) or low.endswith(n) for n in needles):
+            return fn()
+    return None
+
+
 def _user():
     return session.get('user_name') or session.get('username')
 
@@ -526,10 +540,10 @@ def register_sme_phase7_routes(app, *, login_required, require_sme_regime):
         finally:
             conn.close()
 
-        view = app.view_functions.get('api_return_import_post')
-        if not view:
+        view_result = _dispatch_named_view(app, 'api_return_import_post')
+        if view_result is None:
             return jsonify({'success': False, 'error': 'API trả NCC chưa sẵn sàng'}), 500
-        return view()
+        return view_result
 
     @app.route('/api/sme/returns/sale', methods=['GET'])
     @login_required
@@ -628,10 +642,10 @@ def register_sme_phase7_routes(app, *, login_required, require_sme_regime):
         finally:
             conn.close()
 
-        view = app.view_functions.get('api_return_sale')
-        if not view:
+        view_result = _dispatch_named_view(app, 'api_return_sale')
+        if view_result is None:
             return jsonify({'success': False, 'error': 'API trả hàng bán chưa sẵn sàng'}), 500
-        return view()
+        return view_result
 
     @app.route('/api/sme/temp-receipts/<int:doc_id>/void', methods=['POST'])
     @login_required

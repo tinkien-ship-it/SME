@@ -163,14 +163,21 @@
         </div>
 
         <div class="card shadow-sm border-0 mt-4">
-            <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">Lối tắt</h6></div>
+            <div class="card-header bg-white py-3"><h6 class="fw-bold mb-0">Lối tắt mua hàng</h6></div>
             <div class="card-body d-flex flex-wrap gap-2">
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_purchase_order_create') }}">Lập đơn mua</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_purchase_order_list') }}">Danh sách đơn mua</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_inward_invoice') }}">Hóa đơn mua</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_landed_cost') }}">Phân bổ chi phí mua</a>
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_import') }}">Lập phiếu nhập</a>
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_DanhSachPhieuNhapKho') }}">Danh sách phiếu nhập</a>
-                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_inward_invoice') }}">Hóa đơn mua</a>
-                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_return_supplier') }}">Trả NCC</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_DanhSachPhieuNhapKho_VT') }}">Phiếu nhập 01-VT</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_customs_declarations') }}">Tờ khai hải quan</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_letter_of_credit') }}">Mở L/C</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_purchase_listing') }}">Bảng kê mua 06-VT</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_import_details') }}">Chi tiết mua hàng</a>
                 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_SoCongNoPhaiTra') }}">Công nợ phải trả</a>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_return_supplier') }}">Trả NCC</a>
             </div>
         </div>
 {% endblock %}

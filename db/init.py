@@ -95,6 +95,8 @@ _INVOICE_SETTINGS_DDL = """
         minvoice_has_code INTEGER DEFAULT 1,
         auto_issue_invoice INTEGER DEFAULT 0,
         auto_issue_schedule INTEGER DEFAULT 0,
+        auto_sync_purchase INTEGER DEFAULT 1,
+        purchase_api_url TEXT,
         is_active INTEGER DEFAULT 0,
         updated_at TEXT
     )
@@ -110,6 +112,8 @@ _INVOICE_SETTINGS_COLS = [
     ('esign_pin', 'TEXT'),
     ('auto_issue_invoice', 'INTEGER DEFAULT 0'),
     ('auto_issue_schedule', 'INTEGER DEFAULT 0'),
+    ('auto_sync_purchase', 'INTEGER DEFAULT 1'),
+    ('purchase_api_url', 'TEXT'),
     ('is_active', 'INTEGER DEFAULT 0'),
     ('updated_at', 'TEXT'),
 ]

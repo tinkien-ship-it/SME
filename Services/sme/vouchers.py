@@ -241,6 +241,21 @@ def _is_fx_cash_account(code: str) -> bool:
     return c.startswith('1122') or c.startswith('1112')
 
 
+def _supplier_partner_id(conn: sqlite3.Connection, import_id: int | None) -> int | None:
+    if not import_id:
+        return None
+    try:
+        row = conn.execute(
+            'SELECT supplier_id FROM import WHERE id = ?', (int(import_id),),
+        ).fetchone()
+        if not row:
+            return None
+        sid = row[0] if not isinstance(row, sqlite3.Row) else row['supplier_id']
+        return int(sid) if sid else None
+    except (TypeError, ValueError, sqlite3.Error):
+        return None
+
+
 def _resolve_voucher_amounts(
     *,
     amount=None,
@@ -285,6 +300,7 @@ def create_receipt(
     source_type: str | None = None,
     source_id: int | None = None,
     sale_id: int | None = None,
+    allocations: list | None = None,
     currency: str = 'VND',
     exchange_rate=1,
     amount_fc=None,
@@ -297,6 +313,7 @@ def create_receipt(
 
     Hỗ trợ ngoại tệ: ``amount_fc`` × ``exchange_rate`` (tỷ giá ngày thu) → VND.
     Thu ngoại tệ vào 1112/1122: Nợ TK NT (có FC) · Có đối ứng.
+    ``allocations``: [{sale_id, amount}, ...] — một PT phân bổ nhiều HĐ bán.
     """
     from Services.sme.branches import resolve_posting_branch
 
@@ -317,6 +334,35 @@ def create_receipt(
         'cash_in_transit_in',
     ):
         purpose_s = 'tat_toan_113'
+
+    alloc_rows: list[dict[str, Any]] = []
+    if allocations:
+        for raw in allocations:
+            if not isinstance(raw, dict):
+                continue
+            try:
+                sid = int(raw.get('sale_id') or 0)
+                aamt = float(raw.get('amount') or 0)
+            except (TypeError, ValueError):
+                continue
+            if sid <= 0 or aamt <= 0:
+                continue
+            alloc_rows.append({'sale_id': sid, 'amount': aamt})
+        if not alloc_rows:
+            raise ValueError('Danh sách phân bổ thu công nợ trống hoặc không hợp lệ')
+        if amount is None and amount_fc is None:
+            amount = sum(r['amount'] for r in alloc_rows)
+        if not sale_id:
+            sale_id = alloc_rows[0]['sale_id']
+        if not reference_document:
+            nos = []
+            for r in alloc_rows:
+                sn = conn.execute(
+                    'SELECT sale_no FROM sale WHERE id = ?', (r['sale_id'],),
+                ).fetchone()
+                if sn:
+                    nos.append(str(sn[0] if not isinstance(sn, sqlite3.Row) else sn['sale_no']))
+            reference_document = ', '.join(nos)
 
     amt, fc_amt, cur, rate = _resolve_voucher_amounts(
         amount=amount, amount_fc=amount_fc, currency=currency, exchange_rate=exchange_rate,
@@ -395,7 +441,19 @@ def create_receipt(
         )
     )
 
-    lines = [
+    def _partner_for_sale(sid: int | None) -> int | None:
+        if not sid:
+            return None
+        try:
+            from Services.sme.sale_journal import resolve_sale_partner_id
+            row = conn.execute('SELECT * FROM sale WHERE id = ?', (int(sid),)).fetchone()
+            if row:
+                return resolve_sale_partner_id(conn, row)
+        except Exception:
+            return None
+        return None
+
+    lines: list[dict[str, Any]] = [
         {
             'sequence': 1,
             'account_code': debit,
@@ -405,7 +463,27 @@ def create_receipt(
             'credit_fc': 0,
             'description': desc,
         },
-        {
+    ]
+    if alloc_rows and credit.startswith('131') and purpose_s != 'customer_advance':
+        ratio = float(fc_amt) / float(amt) if amt and cur != 'VND' else 0.0
+        seq = 2
+        for ar in alloc_rows:
+            a_vnd = float(ar['amount'])
+            a_fc = (a_vnd * ratio) if ratio else 0.0
+            lines.append({
+                'sequence': seq,
+                'account_code': credit,
+                'debit': 0,
+                'credit': a_vnd,
+                'debit_fc': 0,
+                'credit_fc': float(a_fc) if use_credit_fc else 0,
+                'description': desc,
+                'partner_type': 'customer',
+                'partner_id': _partner_for_sale(ar['sale_id']),
+            })
+            seq += 1
+    else:
+        lines.append({
             'sequence': 2,
             'account_code': credit,
             'debit': 0,
@@ -413,8 +491,9 @@ def create_receipt(
             'debit_fc': 0,
             'credit_fc': float(fc_amt) if use_credit_fc else 0,
             'description': desc,
-        },
-    ]
+            'partner_type': 'customer' if credit.startswith('131') else None,
+            'partner_id': _partner_for_sale(sale_id) if credit.startswith('131') else None,
+        })
 
     entry = post_journal_entry(
         conn,
@@ -472,21 +551,15 @@ def create_receipt(
     )
     voucher_id = cur_db.lastrowid
 
-    # Cập nhật công nợ bán (bảng cong_no dùng chung vận hành) nếu thu theo đơn
-    # Tạm ứng KH (customer_advance): chưa gắn sale — không trừ cong_no
-    if sale_id and credit.startswith('131') and purpose_s != 'customer_advance':
+    # Cập nhật công nợ bán nếu thu theo đơn / phân bổ
+    if credit.startswith('131') and purpose_s != 'customer_advance':
         try:
-            cur_db.execute(
-                """
-                UPDATE cong_no
-                SET unpaid_amount = CASE
-                    WHEN COALESCE(unpaid_amount, 0) - ? < 0 THEN 0
-                    ELSE COALESCE(unpaid_amount, 0) - ?
-                END
-                WHERE sale_id = ?
-                """,
-                (float(amt), float(amt), sale_id),
-            )
+            from Services.sme.cong_no_ops import apply_ar_receipt
+            if alloc_rows:
+                for ar in alloc_rows:
+                    apply_ar_receipt(conn, int(ar['sale_id']), float(ar['amount']))
+            elif sale_id:
+                apply_ar_receipt(conn, int(sale_id), float(amt))
         except sqlite3.OperationalError:
             pass
 
@@ -506,6 +579,7 @@ def create_receipt(
         'credit_account': credit,
         'purpose': purpose_s,
         'branch_code': branch,
+        'allocations': alloc_rows or None,
     }
 
 
@@ -524,6 +598,7 @@ def create_payment(
     source_type: str | None = None,
     source_id: int | None = None,
     import_id: int | None = None,
+    allocations: list | None = None,
     currency: str = 'VND',
     exchange_rate=1,
     amount_fc=None,
@@ -539,12 +614,41 @@ def create_payment(
     ``purpose=supplier_advance``: tạm ứng NCC (Nợ 331), hỗ trợ ngoại tệ + tỷ giá ngày ứng.
     ``purpose=buy_fx``: mua ngoại tệ bằng VND — Nợ 1122|1112 (FC) / Có 1111|1121 (VND).
     ``debit_lines`` (tuỳ chọn): nhiều dòng Nợ ``[{account_code, amount, description?}, ...]``.
+    ``allocations``: [{import_id, amount}, ...] — một PC phân bổ nhiều phiếu nhập.
     """
     from Services.sme.branches import resolve_posting_branch
 
     ensure_sme_journal_ready(conn, commit=False)
     ensure_sme_voucher_schema(conn, commit=False)
     branch = resolve_posting_branch(conn, branch_code)
+
+    alloc_imports: list[dict[str, Any]] = []
+    if allocations and not debit_lines:
+        for raw in allocations:
+            if not isinstance(raw, dict):
+                continue
+            try:
+                iid = int(raw.get('import_id') or 0)
+                aamt = float(raw.get('amount') or 0)
+            except (TypeError, ValueError):
+                continue
+            if iid <= 0 or aamt <= 0:
+                continue
+            alloc_imports.append({'import_id': iid, 'amount': aamt})
+        if alloc_imports:
+            debit_lines = [
+                {
+                    'account_code': str(debit_account or '331').strip() or '331',
+                    'amount': a['amount'],
+                    'partner_id': _supplier_partner_id(conn, a['import_id']),
+                    'description': reason or 'Thanh toán công nợ NCC',
+                }
+                for a in alloc_imports
+            ]
+            if not import_id:
+                import_id = alloc_imports[0]['import_id']
+            if amount is None and amount_fc is None:
+                amount = sum(a['amount'] for a in alloc_imports)
 
     date_s = str(voucher_date or '')[:10]
     if not date_s:
@@ -634,6 +738,8 @@ def create_payment(
                 'debit_fc': float(_money(ln.get('amount_fc') or 0)),
                 'credit_fc': 0,
                 'description': (ln.get('description') or desc),
+                'partner_type': 'supplier' if acct.startswith('331') else None,
+                'partner_id': ln.get('partner_id') if acct.startswith('331') else None,
             })
             total += ln_amt
             seq += 1
@@ -667,6 +773,12 @@ def create_payment(
             'description': desc,
             'partner_type': (
                 'supplier' if purpose_s == 'supplier_advance' or debit.startswith('331') else None
+            ),
+            'partner_id': (
+                _supplier_partner_id(conn, import_id)
+                if (import_id and (
+                    purpose_s == 'supplier_advance' or debit.startswith('331')
+                )) else None
             ),
         })
 
@@ -761,16 +873,27 @@ def create_payment(
     )
     voucher_id = cur_db.lastrowid
 
-    if import_id and str(debit).startswith('331'):
+    if str(debit).startswith('331'):
         try:
-            cur_db.execute(
-                """
-                UPDATE import
-                SET paid_amount = COALESCE(paid_amount, 0) + ?
-                WHERE id = ?
-                """,
-                (float(amt), import_id),
-            )
+            if alloc_imports:
+                for a in alloc_imports:
+                    cur_db.execute(
+                        """
+                        UPDATE import
+                        SET paid_amount = COALESCE(paid_amount, 0) + ?
+                        WHERE id = ?
+                        """,
+                        (float(a['amount']), int(a['import_id'])),
+                    )
+            elif import_id:
+                cur_db.execute(
+                    """
+                    UPDATE import
+                    SET paid_amount = COALESCE(paid_amount, 0) + ?
+                    WHERE id = ?
+                    """,
+                    (float(amt), import_id),
+                )
         except sqlite3.OperationalError:
             pass
 
@@ -917,14 +1040,8 @@ def void_voucher(
     if voucher.get('voucher_type') == 'receipt' and voucher.get('source_id'):
         try:
             if (voucher.get('credit_account') or '').startswith('131'):
-                conn.execute(
-                    """
-                    UPDATE cong_no
-                    SET unpaid_amount = COALESCE(unpaid_amount, 0) + ?
-                    WHERE sale_id = ?
-                    """,
-                    (float(voucher['amount']), int(voucher['source_id'])),
-                )
+                from Services.sme.cong_no_ops import reverse_ar_receipt
+                reverse_ar_receipt(conn, int(voucher['source_id']), float(voucher['amount']))
         except sqlite3.OperationalError:
             pass
     if voucher.get('voucher_type') == 'payment' and voucher.get('source_id'):

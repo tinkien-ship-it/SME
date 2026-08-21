@@ -51,6 +51,36 @@ def _nullify_journal_fks(conn: sqlite3.Connection, entry_id: int) -> list[str]:
             ).fetchall()
         ]
 
+    settle_fc = 0.0
+    if sale_ids_settle:
+        if _table_exists(conn, 'sme_vouchers'):
+            try:
+                vrow = conn.execute(
+                    """
+                    SELECT COALESCE(amount_fc, 0)
+                    FROM sme_vouchers WHERE journal_entry_id = ? LIMIT 1
+                    """,
+                    (eid,),
+                ).fetchone()
+                if vrow:
+                    settle_fc = float(vrow[0] or 0)
+            except sqlite3.Error:
+                pass
+        if settle_fc <= 0:
+            try:
+                crow = conn.execute(
+                    """
+                    SELECT COALESCE(SUM(credit_fc), 0)
+                    FROM sme_journal_lines
+                    WHERE entry_id = ? AND account_code LIKE '131%'
+                    """,
+                    (eid,),
+                ).fetchone()
+                if crow:
+                    settle_fc = float(crow[0] or 0) or settle_fc
+            except sqlite3.Error:
+                pass
+
     targets: list[tuple[str, str]] = [
         ('sale', 'settle_journal_id'),
         ('import', 'settle_journal_id'),
@@ -93,19 +123,33 @@ def _nullify_journal_fks(conn: sqlite3.Connection, entry_id: int) -> list[str]:
 
     if sale_ids_settle:
         scols = _table_cols(conn, 'sale')
-        sets = ['settle_journal_id = NULL']
-        if 'settle_amount_fc' in scols:
-            sets.append('settle_amount_fc = 0')
-        if 'ar_status' in scols:
-            sets.append("ar_status = CASE WHEN COALESCE(ar_status,'') = 'settled' THEN 'open' ELSE ar_status END")
-        ph = ','.join('?' * len(sale_ids_settle))
-        try:
-            conn.execute(
-                f"UPDATE sale SET {', '.join(sets)} WHERE id IN ({ph})",
-                sale_ids_settle,
-            )
-        except sqlite3.Error:
-            pass
+        for sid in sale_ids_settle:
+            sets: list[str] = []
+            vals: list[Any] = []
+            # settle_journal_id đã NULL ở vòng targets; chỉ chỉnh số NT đã thu
+            if 'settle_amount_fc' in scols and settle_fc > 0:
+                sets.append(
+                    """settle_amount_fc = CASE
+                        WHEN COALESCE(settle_amount_fc, 0) - ? < 0 THEN 0
+                        ELSE COALESCE(settle_amount_fc, 0) - ?
+                    END"""
+                )
+                vals.extend([settle_fc, settle_fc])
+            if 'ar_status' in scols:
+                sets.append(
+                    "ar_status = CASE WHEN COALESCE(ar_status,'') = 'settled' "
+                    "THEN 'open' ELSE ar_status END"
+                )
+            if sets:
+                vals.append(sid)
+                try:
+                    conn.execute(
+                        f"UPDATE sale SET {', '.join(sets)} WHERE id = ?",
+                        vals,
+                    )
+                except sqlite3.Error:
+                    pass
+            # cong_no: reverse_ar_receipt chạy trong _delete_vouchers_for_journal
     return cleared
 
 def _delete_vouchers_for_journal(
@@ -143,14 +187,8 @@ def _delete_vouchers_for_journal(
                     and fd.get('source_id')
                     and str(fd.get('credit_account') or '').startswith('131')
                 ):
-                    conn.execute(
-                        """
-                        UPDATE cong_no
-                        SET unpaid_amount = COALESCE(unpaid_amount, 0) + ?
-                        WHERE sale_id = ?
-                        """,
-                        (float(fd.get('amount') or 0), int(fd['source_id'])),
-                    )
+                    from Services.sme.cong_no_ops import reverse_ar_receipt
+                    reverse_ar_receipt(conn, int(fd['source_id']), float(fd.get('amount') or 0))
         except sqlite3.Error:
             pass
         conn.execute('DELETE FROM sme_vouchers WHERE id = ?', (vid,))

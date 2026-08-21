@@ -161,7 +161,15 @@ def _load_all_chunks() -> list[dict[str, str]]:
     huongdan_path = os.path.join(BASE_DIR, 'templates', 'huongdansudung.html')
     notes_path = os.path.join(BASE_DIR, 'data', 'assistant_release_notes.txt')
     sme_guide_path = os.path.join(BASE_DIR, 'data', 'assistant_sme_guide.txt')
-    paths = (huongdan_path, notes_path, sme_guide_path)
+    sme_tt58_path = os.path.join(BASE_DIR, 'data', 'assistant_sme_guide_tt58.txt')
+    sme_tt99_path = os.path.join(BASE_DIR, 'data', 'assistant_sme_guide_tt99.txt')
+    # Partial HTML guides (user-facing, also RAG)
+    partial_tt58 = os.path.join(BASE_DIR, 'templates', 'partials', 'huongdan_sme_tt58.html')
+    partial_tt99 = os.path.join(BASE_DIR, 'templates', 'partials', 'huongdan_sme_tt99.html')
+    paths = (
+        huongdan_path, notes_path, sme_guide_path,
+        sme_tt58_path, sme_tt99_path, partial_tt58, partial_tt99,
+    )
     mtimes = []
     for p in paths:
         if os.path.isfile(p):
@@ -182,6 +190,52 @@ def _load_all_chunks() -> list[dict[str, str]]:
         chunks.extend(_parse_markdown_guide(
             sme_guide, section='Kế toán SME', doc_prefix='sme_guide',
         ))
+    sme_tt58 = _read_file(sme_tt58_path)
+    if sme_tt58:
+        chunks.extend(_parse_markdown_guide(
+            sme_tt58, section='Kế toán SME TT58', doc_prefix='sme_tt58',
+        ))
+    sme_tt99 = _read_file(sme_tt99_path)
+    if sme_tt99:
+        chunks.extend(_parse_markdown_guide(
+            sme_tt99, section='Kế toán SME TT99', doc_prefix='sme_tt99',
+        ))
+    # Parse partial HTML as SME sections (h5 chunks)
+    for path, section, prefix in (
+        (partial_tt58, 'Kế toán SME TT58', 'partial_tt58'),
+        (partial_tt99, 'Kế toán SME TT99', 'partial_tt99'),
+    ):
+        html = _read_file(path)
+        if not html:
+            continue
+        parts = re.split(r'(<h5[^>]*>.*?</h5>)', html, flags=re.I | re.S)
+        current_title = section
+        buf: list[str] = []
+        for part in parts:
+            h5 = _H5_RE.search(part)
+            if h5:
+                if buf:
+                    text = _strip_html(' '.join(buf))
+                    if len(text) > 40:
+                        chunks.append({
+                            'doc_id': f'{prefix}_{len(chunks)}',
+                            'title': current_title,
+                            'section': section,
+                            'text': text[:1200],
+                        })
+                    buf = []
+                current_title = _strip_html(h5.group(1))
+            else:
+                buf.append(part)
+        if buf:
+            text = _strip_html(' '.join(buf))
+            if len(text) > 40:
+                chunks.append({
+                    'doc_id': f'{prefix}_{len(chunks)}',
+                    'title': current_title,
+                    'section': section,
+                    'text': text[:1200],
+                })
 
     _CACHE['mtime'] = cache_mtime
     _CACHE['chunks'] = chunks

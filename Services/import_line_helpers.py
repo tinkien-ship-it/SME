@@ -588,6 +588,10 @@ def fetch_import_details_raw(c, import_id):
         select_parts.append('COALESCE(excise_tax_pct, 0) AS excise_tax_pct')
     if 'excise_tax_amount' in detail_cols:
         select_parts.append('COALESCE(excise_tax_amount, 0) AS excise_tax_amount')
+    if 'env_tax_pct' in detail_cols:
+        select_parts.append('COALESCE(env_tax_pct, 0) AS env_tax_pct')
+    if 'env_tax_amount' in detail_cols:
+        select_parts.append('COALESCE(env_tax_amount, 0) AS env_tax_amount')
     if 'expense_account' in detail_cols:
         select_parts.append("COALESCE(expense_account, '') AS expense_account")
 

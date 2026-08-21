@@ -43,6 +43,11 @@
                     🔄 Làm mới
                 </button>
             </div>
+            <div class="col-md-3">
+                <button id="btnBatchPay" class="btn btn-success w-100" onclick="openBatchPaymentModal()" disabled>
+                    Thu nhiều HĐ
+                </button>
+            </div>
         </div>
     </div>
 
@@ -78,6 +83,7 @@
             <table class="table table-hover table-bordered align-middle mb-0">
                 <thead class="table-light">
                     <tr>
+                        <th class="text-center" style="width:2.5rem"><input type="checkbox" id="chkAllDebt" title="Chọn tất cả"></th>
                         <th class="text-center">Số Đơn Hàng</th>
                         <th class="text-center">Khách Hàng/ Đơn Vị</th>
                         <th class="text-center">Ngày Phát Sinh</th>
@@ -90,7 +96,7 @@
                 </thead>
                 <tbody id="debtTableBody">
                     <tr>
-                        <td colspan="8" class="text-center text-muted p-5">
+                        <td colspan="9" class="text-center text-muted p-5">
                             Vui lòng chọn khách hàng còn nợ để xem công nợ
                         </td>
                     </tr>
@@ -236,7 +242,7 @@ async function loadDebtData() {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang tải...';
 
     const tbody = document.getElementById('debtTableBody');
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center p-5">Đang tải công nợ...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center p-5">Đang tải công nợ...</td></tr>`;
 
     try {
         const res = await fetch(`/api/sme/debt/customer-detail?customer=${encodeURIComponent(customer)}`);
@@ -248,7 +254,8 @@ async function loadDebtData() {
         document.getElementById('remainingDebt').textContent = formatVND(data.summary.remaining);
 
         if (!data.records || data.records.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center p-5 text-muted">Hiện không có khoản nợ nào chưa thanh toán.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center p-5 text-muted">Hiện không có khoản nợ nào chưa thanh toán.</td></tr>`;
+            document.getElementById('btnBatchPay').disabled = true;
         } else {
             tbody.innerHTML = data.records.map(r => {
                 // Logic xử lý hiển thị tên
@@ -264,6 +271,12 @@ async function loadDebtData() {
 
                 return `
                 <tr>
+                    <td class="text-center">
+                        <input type="checkbox" class="debt-chk"
+                               data-sale-id="${r.sale_id}"
+                               data-sale-no="${r.sale_no || ''}"
+                               data-remaining="${r.remaining || 0}">
+                    </td>
                     <td class="text-center fw-bold">${r.sale_no || '—'}</td>
                     <td class="text-start">${customerDisplayHtml}</td>
                     <td class="text-center">${formatDateVN(r.date_of_debt)}</td>
@@ -284,10 +297,18 @@ async function loadDebtData() {
                     </td>
                 </tr>`;
             }).join('');
+            document.getElementById('btnBatchPay').disabled = false;
+            const chkAll = document.getElementById('chkAllDebt');
+            if (chkAll) {
+                chkAll.checked = false;
+                chkAll.onchange = () => {
+                    document.querySelectorAll('.debt-chk').forEach(c => { c.checked = chkAll.checked; });
+                };
+            }
         }
         document.getElementById('recordCount').textContent = `${data.records.length} khoản`;
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger p-5">Lỗi: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger p-5">Lỗi: ${err.message}</td></tr>`;
         console.error(err);
     } finally {
         btn.disabled = false;
@@ -425,6 +446,53 @@ document.getElementById('btnSavePayment').addEventListener('click', async functi
         alert("Lỗi kết nối: " + err.message);
     }
 });
+
+async function openBatchPaymentModal() {
+    const checked = [...document.querySelectorAll('.debt-chk:checked')];
+    if (!checked.length) {
+        alert('Chọn ít nhất một hóa đơn còn nợ.');
+        return;
+    }
+    const allocations = checked.map(c => ({
+        sale_id: parseInt(c.dataset.saleId, 10),
+        amount: parseFloat(c.dataset.remaining) || 0,
+        sale_no: c.dataset.saleNo || '',
+    })).filter(a => a.sale_id && a.amount > 0);
+    if (!allocations.length) {
+        alert('Không có số còn phải thu hợp lệ.');
+        return;
+    }
+    const total = allocations.reduce((s, a) => s + a.amount, 0);
+    const method = prompt('Phương thức (111=tiền mặt, 112=CK):', '112');
+    if (!method) return;
+    const date = new Date().toISOString().slice(0, 10);
+    const reason = `Thu công nợ ${allocations.length} hóa đơn`;
+    const payload = {
+        date,
+        payer_name: document.getElementById('customerFilter').value.trim(),
+        amount: total,
+        payment_method: method,
+        credit_account: '131',
+        reason,
+        allocations,
+    };
+    try {
+        const res = await fetch('/api/sme/vouchers/receipts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await res.json();
+        if (result.success) {
+            alert(`Đã lập phiếu thu ${result.voucher_no} — ${allocations.length} HĐ (${formatVND(total)})`);
+            loadDebtData();
+        } else {
+            alert('Lỗi: ' + (result.error || 'Không xác định'));
+        }
+    } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+    }
+}
 
 // ================== PRINT ==================
 function printLedger() {

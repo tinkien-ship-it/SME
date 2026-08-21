@@ -213,9 +213,9 @@
                 <div class="flex-grow-1">
                     <span class="small fw-bold text-primary uppercase"><i class="bi bi-list-ul"></i> Chi tiết mặt hàng</span>
                     <div id="importTaxHint" class="small text-muted mt-1 hidden-field">
-                        Hàng nhập khẩu: thuế NK + TTĐB nhập theo % hoặc số tuyệt đối (tờ khai) —
+                        Hàng nhập khẩu: thuế NK + TTĐB + BVMT nhập theo % hoặc số tuyệt đối (tờ khai) —
                         được vốn hóa vào giá vốn HH / NVL / TSCĐ / CCDC.
-                        Bút toán: Có 3333 (NK), Có 3332 (TTĐB).
+                        Bút toán: Có 3333 (NK), Có 3332 (TTĐB), Có 3338 (BVMT).
                     </div>
                     <span class="small text-white">Nhập ĐV lẻ / ĐV sỉ / giá bán trên dòng. Quét mã vạch lẻ hoặc mã vạch thùng (sỉ) có sẵn trên hàng. Để trống → tự sinh mã vạch khi lưu.</span>
                 </div>
@@ -247,9 +247,11 @@
                                 <th style="width:50px;">% VAT</th>
                                 <th style="width:70px;" class="nk-col" title="Thuế nhập khẩu">% NK</th>
                                 <th style="width:70px;" class="nk-col" title="Thuế tiêu thụ đặc biệt">% TTĐB</th>
+                                <th style="width:70px;" class="nk-col" title="Thuế bảo vệ môi trường">% BVMT</th>
                                 <th style="width:90px;">Thuế GTGT</th>
                                 <th style="width:95px;" class="nk-col">Thuế NK</th>
                                 <th style="width:95px;" class="nk-col">Thuế TTĐB</th>
+                                <th style="width:95px;" class="nk-col" title="Thuế bảo vệ môi trường — tính vào giá vốn">Thuế BVMT</th>
                                 <th style="width:140px; background:#fff7ed;">Tiền Thanh Toán</th>
                                 <th style="width:155px;">Mã vạch lẻ</th>
                                 <th style="width:155px;">Mã vạch sỉ</th>
@@ -380,8 +382,8 @@ function toggleImportSource() {
     if (!isImport) {
         const rateEl = document.getElementById('ExchangeRate');
         if (rateEl) rateEl.value = '1';
-        document.querySelectorAll('.import-tax-pct, .excise-tax-pct').forEach(el => { el.value = '0'; });
-        document.querySelectorAll('.import-tax-amt, .excise-tax-amt').forEach(el => { el.value = '0'; });
+        document.querySelectorAll('.import-tax-pct, .excise-tax-pct, .env-tax-pct').forEach(el => { el.value = '0'; });
+        document.querySelectorAll('.import-tax-amt, .excise-tax-amt, .env-tax-amt').forEach(el => { el.value = '0'; });
         try { togglePaymentMethod(); } catch (e) {}
     } else {
         try { toggleImportPaymentMode(); } catch (e) {}
@@ -758,9 +760,11 @@ function addRow(data = {}) {
         </select></td>
         <td class="nk-cell"><input type="number" class="import-tax-pct form-control form-control-sm text-center border-0" value="${data.import_tax_pct || 0}" step="0.01" min="0" title="% thuế nhập khẩu — tính vào giá vốn"></td>
         <td class="nk-cell"><input type="number" class="excise-tax-pct form-control form-control-sm text-center border-0" value="${data.excise_tax_pct || 0}" step="0.01" min="0" title="% thuế TTĐB trên (CIF + thuế NK) — tính vào giá vốn"></td>
+        <td class="nk-cell"><input type="number" class="env-tax-pct form-control form-control-sm text-center border-0" value="${data.env_tax_pct || 0}" step="0.01" min="0" title="% thuế BVMT trên (CIF + NK + TTĐB) — tính vào giá vốn"></td>
         <td class="tax-amt text-end pe-2">0</td>
         <td class="nk-cell"><input type="text" class="import-tax-amt form-control form-control-sm text-end border-0 text-warning" value="${formatVNDCustom(data.import_tax_amount || 0)}" title="Thuế NK (VND) — có thể sửa số tuyệt đối từ tờ khai"></td>
         <td class="nk-cell"><input type="text" class="excise-tax-amt form-control form-control-sm text-end border-0 text-warning" value="${formatVNDCustom(data.excise_tax_amount || 0)}" title="Thuế TTĐB (VND) — có thể sửa số tuyệt đối từ tờ khai"></td>
+        <td class="nk-cell"><input type="text" class="env-tax-amt form-control form-control-sm text-end border-0 text-warning" value="${formatVNDCustom(data.env_tax_amount || 0)}" title="Thuế BVMT (VND) — có thể sửa số tuyệt đối từ tờ khai; tính vào giá vốn"></td>
         <td class="pay-amt text-end fw-bold text-danger pe-2">0</td>
         <td class="stock-only-cell">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode || '')) || ''}</td>
         <td class="stock-only-cell">${(window.KetoImportBarcode && KetoImportBarcode.barcodeCellHtml(data.barcode1 || '', 'wholesale')) || ''}</td>
@@ -828,6 +832,12 @@ function attachRowEvents(row) {
                 calcRow(row, { fromAmountField: 'excise' });
                 return;
             }
+            if (el.classList.contains('env-tax-amt')) {
+                const pct = row.querySelector('.env-tax-pct');
+                if (pct) pct.value = '0';
+                calcRow(row, { fromAmountField: 'env' });
+                return;
+            }
             calcRow(row);
         });
     });
@@ -851,16 +861,22 @@ function calcRow(row, opts = {}) {
     const exciseTaxPct = canCapitalize
         ? (parseFloat(row.querySelector('.excise-tax-pct')?.value) || 0)
         : 0;
+    const envTaxPct = canCapitalize
+        ? (parseFloat(row.querySelector('.env-tax-pct')?.value) || 0)
+        : 0;
 
     const nkAmtEl = row.querySelector('.import-tax-amt');
     const exciseAmtEl = row.querySelector('.excise-tax-amt');
+    const envAmtEl = row.querySelector('.env-tax-amt');
     // % thay đổi → tính lại tiền; sửa tiền tuyệt đối → giữ số người dùng nhập
     let importTaxAmt = 0;
     let exciseTaxAmt = 0;
+    let envTaxAmt = 0;
     if (canCapitalize) {
         if (opts.preserveTaxAmounts) {
             importTaxAmt = Math.round(parseNumber(nkAmtEl?.value));
             exciseTaxAmt = Math.round(parseNumber(exciseAmtEl?.value));
+            envTaxAmt = Math.round(parseNumber(envAmtEl?.value));
         } else if (opts.fromAmountField === 'import') {
             importTaxAmt = Math.round(parseNumber(nkAmtEl?.value));
         } else if (importTaxPct > 0) {
@@ -880,16 +896,27 @@ function calcRow(row, opts = {}) {
             } else if (opts.fromAmountField !== 'excise') {
                 exciseTaxAmt = Math.round(parseNumber(exciseAmtEl?.value));
             }
+
+            const envBase = afterDisc + importTaxAmt + exciseTaxAmt;
+            if (opts.fromAmountField === 'env') {
+                envTaxAmt = Math.round(parseNumber(envAmtEl?.value));
+            } else if (envTaxPct > 0) {
+                envTaxAmt = Math.round(envBase * (envTaxPct / 100));
+                if (envAmtEl) envAmtEl.value = formatVNDCustom(envTaxAmt);
+            } else if (opts.fromAmountField !== 'env') {
+                envTaxAmt = Math.round(parseNumber(envAmtEl?.value));
+            }
         }
     } else {
         if (nkAmtEl) nkAmtEl.value = '0';
         if (exciseAmtEl) exciseAmtEl.value = '0';
+        if (envAmtEl) envAmtEl.value = '0';
     }
 
     const vatPct = parseFloat(row.querySelector('.tax-pct').value) || 0;
-    const vatBase = afterDisc + importTaxAmt + exciseTaxAmt;
+    const vatBase = afterDisc + importTaxAmt + exciseTaxAmt + envTaxAmt;
     const vatAmt = Math.round(vatBase * (vatPct / 100));
-    const finalPay = afterDisc + importTaxAmt + exciseTaxAmt + vatAmt;
+    const finalPay = afterDisc + importTaxAmt + exciseTaxAmt + envTaxAmt + vatAmt;
 
     row.querySelector('.line-total').textContent = formatVNDCustom(rawTotal);
     row.querySelector('.disc-amt').textContent = formatVNDCustom(discAmt);
@@ -1316,6 +1343,8 @@ async function loadImportForEdit(importId) {
                 import_tax_amount: item.import_tax_amount || 0,
                 excise_tax_pct: item.excise_tax_pct || item.ttdb_pct || 0,
                 excise_tax_amount: item.excise_tax_amount || item.ttdb_amount || 0,
+                env_tax_pct: item.env_tax_pct || item.bvmt_pct || 0,
+                env_tax_amount: item.env_tax_amount || item.bvmt_amount || 0,
                 product_code: item.product_code || '',
                 barcode: item.barcode || '',
                 barcode1: item.barcode1 || '',
@@ -1538,6 +1567,8 @@ function getConsolidatedItems() {
             import_tax_amount: parseNumber(tr.querySelector('.import-tax-amt')?.value),
             excise_tax_pct: parseFloat(tr.querySelector('.excise-tax-pct')?.value) || 0,
             excise_tax_amount: parseNumber(tr.querySelector('.excise-tax-amt')?.value),
+            env_tax_pct: parseFloat(tr.querySelector('.env-tax-pct')?.value) || 0,
+            env_tax_amount: parseNumber(tr.querySelector('.env-tax-amt')?.value),
             base_unit: tr.querySelector('.base-unit').value.trim(),
             wholesale_unit: (tr.querySelector('.wholesale-unit').value || '').trim().replace(/^—$/, ''),
             ratio: parseFloat(tr.querySelector('.ratio').value) || 1,

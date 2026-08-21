@@ -1,0 +1,79 @@
+{# Hướng dẫn người dùng mới — SME TT99. Include trong tab ketoan-sme. #}
+<div class="alert alert-secondary border-0 mb-4">
+  <strong>Bạn đang dùng chế độ nào?</strong>
+  Doanh nghiệp theo <strong>Thông tư 99/2025/TT-BTC</strong>.
+  Đầy đủ nghiệp vụ và BCTC B01–B09.
+  Tenant TT58 cũng dùng được cùng các nghiệp vụ này, nhưng TT58 còn thêm sổ DNSN (không có trên TT99).
+</div>
+
+<h5 class="text-primary fw-bold mb-3">1. Chuẩn bị lần đầu</h5>
+<ul class="step-list mb-4">
+  <li><strong>Thiết lập:</strong> tên DN, MST, địa chỉ, ngân hàng, hóa đơn điện tử (Matbao / MISA / VNPT…).</li>
+  <li><strong>Chi nhánh &amp; kho:</strong> HQ = trụ sở; gắn <strong>KHO_001</strong>… đúng chi nhánh trước khi nhập/xuất.</li>
+  <li><strong>Danh mục tài khoản:</strong> Sổ sách → Danh mục tài khoản (đã seed sẵn — chỉ chỉnh khi kế toán yêu cầu).</li>
+  <li><strong>Vốn góp:</strong> Sổ Quỹ / Sổ NH → Lập phiếu thu → Nợ <strong>1111</strong>/<strong>1121</strong> · Có <strong>4111</strong>.</li>
+  <li>Đồng bộ <strong>Hóa đơn mua hàng</strong> → lập phiếu nhập → in mã vạch → bán tại <strong>Điểm bán hàng</strong>.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">2. Mua hàng nội địa</h5>
+<ol class="mb-4">
+  <li><strong>Mua hàng → Hóa đơn mua hàng</strong>: đồng bộ tháng hoặc nhập tay.</li>
+  <li><strong>Lập phiếu nhập</strong> (HH/VT/TSCĐ/CCDC) / <strong>Hạch toán</strong> (dịch vụ) / <strong>Phân bổ chi phí mua hàng</strong>.</li>
+  <li>Chọn loại hàng, kho, đơn vị, giá bán. Thanh toán ngay hoặc công nợ <strong>331</strong>.</li>
+  <li>VAT đầu vào thường ghi <strong>Nợ 133*</strong> (khấu trừ) · Có 331/tiền — khác nhiều trường hợp TT58 % DT.</li>
+  <li>Trả NCC: <strong>Sổ Công Nợ Phải Trả</strong> → Trả tiền / <strong>Chi nhiều</strong>, hoặc Phiếu chi 02-TT.</li>
+  <li>Trả hàng NCC: <strong>Trả nhà cung cấp</strong>.</li>
+</ol>
+
+<h5 class="text-primary fw-bold mb-3">3. Nhập khẩu, L/C, ngoại tệ</h5>
+<ul class="step-list mb-4">
+  <li><strong>Hàng đi đường 151</strong> → nộp thuế HQ → <strong>nhập kho 156</strong>. Theo dõi trạng thái phiếu nhập.</li>
+  <li><strong>Mở L/C nhập khẩu</strong> / Thư tín dụng: dùng khi thanh toán bằng L/C (cùng nghiệp vụ cũng mở cho tenant TT58).</li>
+  <li><strong>Ngoại tệ:</strong> nhật ký &amp; số dư 1112/1122; mua NT; tạm ứng KH/NCC NT; cuối kỳ <strong>Đánh giá lại tỷ giá</strong>.</li>
+  <li><strong>Phân bổ chi phí mua</strong> (freight, bảo hiểm…) vào giá vốn / nguyên giá.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">4. Bán hàng</h5>
+<ul class="step-list mb-4">
+  <li><strong>Điểm bán hàng:</strong> 111 tiền mặt · 112 CK (chờ webhook) · 131 công nợ.</li>
+  <li>Hệ thống ghi doanh thu (thường tách VAT Có <strong>33311</strong>) + giá vốn. Xuất HĐĐT theo cấu hình.</li>
+  <li>Thu nợ: <strong>Sổ Công Nợ Phải Thu</strong> → Thu tiền / Thu nhiều HĐ → phiếu thu Có <strong>131</strong>.</li>
+  <li><strong>Giao dịch NH / Đối chiếu NH:</strong> khớp đơn chờ CK hoặc tạo PT thu công nợ từ sao kê (gắn đúng đơn).</li>
+  <li><strong>Khách trả hàng</strong>; <strong>Hàng gửi đi bán 157</strong> (xuất HĐ trước khi xác nhận bán); mẫu <strong>01-BH / 02-BH</strong> nếu cần.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">5. Xuất khẩu</h5>
+<ul class="step-list mb-4">
+  <li>Lập đơn XK → ship (157) → <strong>Tờ khai HQ / thông quan</strong> → trạng thái <strong>CLEARED</strong> mới ghi doanh thu &amp; cho HĐĐT.</li>
+  <li>Thu tiền / settle công nợ XK; chi phí XK; settle L/C nếu dùng.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">6. Chứng từ tiền &amp; kho đặc thù TT99</h5>
+<ul class="step-list mb-4">
+  <li>Tạm ứng 03–05-TT; Biên lai 06-TT; Bảng kê vàng 07-TT; Kiểm quỹ TM 08a &amp; <strong>NT 08b</strong>; Bảng kê chi 09-TT.</li>
+  <li>PN/PX 01–02-VT; Kiểm nghiệm 03-VT; Kiểm kê 05-VT; Bảng kê mua 06-VT; VT còn lại 04-VT; Phân bổ NVL 07-VT.</li>
+  <li>Chuyển kho liên chi nhánh; Đối chiếu ngân hàng.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">7. TSCĐ, CCDC, vay, vốn</h5>
+<ul class="step-list mb-4">
+  <li>Nhập TSCĐ/CCDC qua phiếu nhập → danh mục → đưa vào sử dụng / khấu hao / phân bổ.</li>
+  <li>Biên bản TSCĐ mẫu 01/03/04/05; thanh lý mẫu 02; bảng KH mẫu 06.</li>
+  <li>Chi phí trả trước TK 242. <strong>Vay và trả nợ</strong>; <strong>Ký quỹ</strong>; <strong>Góp vốn và cổ tức</strong>.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">8. Sản xuất, nhân sự, thuế, BCTC</h5>
+<ul class="step-list mb-4">
+  <li><strong>Sản xuất / giá thành:</strong> BOM → phiếu SX → xuất VT → nhập TP; tập hợp 621/622/627.</li>
+  <li><strong>Nhân sự:</strong> NV → chấm công → bảng lương 01-LĐTL → BHXH → trả lương; tờ khai TNCN (có XML).</li>
+  <li><strong>Thuế &amp; NSNN:</strong> 133/333, GTGT, TNDN tạm/QT, TNCN.</li>
+  <li><strong>Bộ báo cáo tài chính</strong> B01–B09 luôn có trên TT99.</li>
+  <li><strong>Kết chuyển, khóa sổ và cuối năm</strong> — chạy sau cuối tháng; khóa năm vào tháng 12.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3 huongdan-luu-y">9. Lưu ý tránh sai</h5>
+<ul class="step-list mb-2 huongdan-luu-y">
+  <li>Thu nợ phải Có <strong>131</strong>, không Có 511 (tránh ghi doanh thu hai lần).</li>
+  <li>XK chưa thông quan thì chưa xuất HĐĐT / chưa ghi đủ doanh thu.</li>
+  <li>Không tìm sổ DNSN trên TT99 — sổ DNSN chỉ thuộc framework TT58. Tenant TT58 dùng chung nghiệp vụ vận hành với TT99.</li>
+</ul>

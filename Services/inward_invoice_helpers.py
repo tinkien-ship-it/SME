@@ -311,6 +311,7 @@ def migrate_import_for_service(conn):
         ('import', 'exchange_rate', 'REAL DEFAULT 1'),
         ('import', 'import_tax_amount', 'REAL DEFAULT 0'),
         ('import', 'excise_tax_amount', 'REAL DEFAULT 0'),
+        ('import', 'env_tax_amount', 'REAL DEFAULT 0'),
         ('import', 'payment_method', 'TEXT'),
         ('import', 'warehouse_code', 'TEXT'),
         ('import', 'receipt_stage', "TEXT DEFAULT 'RECEIVED'"),
@@ -322,11 +323,13 @@ def migrate_import_for_service(conn):
         ('import', 'receive_journal_id', 'INTEGER'),
         ('import', 'transit_posted_at', 'TEXT'),
         ('import', 'received_at', 'TEXT'),
-        # Dòng nhập khẩu: thuế NK / TTĐB phân bổ vào giá vốn HH·NVL·TSCĐ·CCDC
+        # Dòng nhập khẩu: thuế NK / TTĐB / BVMT phân bổ vào giá vốn HH·NVL·TSCĐ·CCDC
         ('import_details', 'import_tax_pct', 'REAL DEFAULT 0'),
         ('import_details', 'import_tax_amount', 'REAL DEFAULT 0'),
         ('import_details', 'excise_tax_pct', 'REAL DEFAULT 0'),
         ('import_details', 'excise_tax_amount', 'REAL DEFAULT 0'),
+        ('import_details', 'env_tax_pct', 'REAL DEFAULT 0'),
+        ('import_details', 'env_tax_amount', 'REAL DEFAULT 0'),
     ]
     for table, col, col_type in extras:
         c.execute(f'PRAGMA table_info({table})')

@@ -1,0 +1,53 @@
+# Kiến thức Trợ lý AI — Kế toán SME Thông tư 99 (doanh nghiệp)
+# RAG đọc tự động. Mỗi ## là một khối. Chỉ dẫn menu Kế toán doanh nghiệp SME_TT99; không nhầm HKD hay TT58 DNSN.
+
+## SME TT99 là gì
+Kế toán SME TT99 áp dụng doanh nghiệp theo Thông tư 99/2025/TT-BTC. Mã chế độ SME_TT99. Sổ kép đầy đủ, hệ thống tài khoản doanh nghiệp, chứng từ mẫu 01–09-TT, 01–07-VT, biên bản TSCĐ, L/C, ngoại tệ… Menu: Kế toán doanh nghiệp. Tenant TT58 cũng dùng được cùng các nghiệp vụ vận hành này; điểm khác là TT58 có thêm sổ DNSN (framework TT58) còn TT99 không có menu DNSN.
+
+## Lần đầu dùng TT99 — checklist
+1) Vai trò kế toán/quản lý SME99. 2) Thiết lập: tên DN, MST, địa chỉ, NH, HĐĐT (Matbao/MISA/VNPT). 3) Chi nhánh + kho (HQ, KHO_001…). 4) Hệ thống tài khoản đã seed — kiểm tra Danh mục tài khoản. 5) Vốn góp: phiếu thu Nợ 1111/1121 · Có 4111. 6) Đồng bộ HĐ mua / lập PN. 7) Bán POS. 8) Cuối kỳ Kết chuyển khóa sổ; xem BCTC B01–B09-DN.
+
+## Bản đồ menu TT99 — đầy đủ nghiệp vụ
+Đầy đủ: bán/mua/XK/HQ; L/C; ngoại tệ; chứng từ 01–09-TT, 01–07-VT, BH, TSCĐ biên bản; vay; ký quỹ; FX reval; vốn; BCTC B01–B09. Không có menu «Sổ & biểu mẫu DNSN» (framework chỉ thuộc TT58). Tenant TT58 cũng mở được các nghiệp vụ vận hành này.
+
+## Bán hàng tiền mặt / CK / công nợ TT99
+Giống thao tác POS TT58 nhưng thuế GTGT theo hóa đơn (Có 33311 phần VAT tách khỏi doanh thu khi không dùng % DT). Phương thức: 111 tiền mặt, 112 chuyển khoản (pending → webhook hoàn tất), 131 công nợ. Nhật ký SALE_REVENUE + SALE_COGS. Thu công nợ: Sổ Phải Thu → Thu tiền / Thu nhiều HĐ → phiếu thu 01-TT · Có 131. unpaid↓ paid↑.
+
+## Xuất khẩu và L/C TT99
+Bán XK + tờ khai HQ + thông quan như TT58. Thêm: Mở L/C, thanh toán/settle L/C (marker settle-lc). Ngoại tệ: thu/chi 1112/1122, tạm ứng KH/NCC NT, đánh giá lại tỷ giá cuối kỳ. Xuất khẩu: ship trên 157 → clearance CLEARED → doanh thu/công nợ → HĐĐT → settle AR.
+
+## Hàng gửi đại lý và mẫu BH TT99
+Luồng TK 157 như TT58. Thêm mẫu 01-BH (đại lý ký gửi) và 02-BH (thẻ quầy) khi cần chứng từ theo TT99.
+
+## Mua hàng nội địa TT99
+HĐ mua → Lập PN / Hạch toán / Phân bổ. VAT đầu vào khấu trừ thường Nợ 133* · Có 331 (trừ khi chính sách khác). Phân bổ chi phí mua hàng cộng vào 156/152/211… Trả NCC phiếu chi / Chi nhiều HĐ. Trả NCC hàng: Trả nhà cung cấp.
+
+## Nhập khẩu TT99 đầy đủ
+IN_TRANSIT 151 → nộp thuế HQ (3333/33312/3332/3338…) → RECEIVED 156. Có thể gắn tạm ứng NCC, thanh toán một phần, mở L/C. Theo dõi payment_mode / receipt_stage trên phiếu nhập.
+
+## Ngoại tệ và ngân hàng TT99
+Sổ/nghiệp vụ ngoại tệ 1112/1122; mua NT (Nợ 1122 · Có 1121 VND); tạm ứng NT. Đối chiếu NH + tạo PT từ sao kê. Giao dịch NH khớp đơn pending 112 hoặc PT công nợ đơn completed.
+
+## Tài sản cố định TT99
+Nhập loại TSCĐ → Danh mục → đưa vào sử dụng / khấu hao. Biên bản giao nhận, kiểm kê, đánh giá lại, thanh lý theo mẫu 01–05; bảng KH mẫu 06. Chạy KH kỳ tại Kết chuyển khóa sổ. CCDC tương tự phân bổ; chi phí trả trước TK 242.
+
+## Vay, ký quỹ, vốn TT99
+Vay và trả nợ: giải ngân, trích lãi, trả gốc. Ký quỹ ký cược. Góp vốn và cổ tức. Đánh giá lại tỷ giá cuối kỳ trên số dư NT.
+
+## Nhân sự lương bảo hiểm TT99
+Nhân viên → chấm công → bảng lương 01-LĐTL → thưởng/ngoài giờ/thuê ngoài → HĐ khoán → phân bổ lương → nộp BHXH 07-LĐTL → trả qua phải trả NV / phiếu chi. Tờ khai TNCN (có thể xuất XML).
+
+## Sản xuất giá thành TT99
+Định mức BOM, phiếu SX, xuất VT, nhập TP. Giá thành tập hợp 621/622/627. Mẫu 04-VT vật tư còn lại; 07-VT phân bổ NVL (TT99).
+
+## Thuế và BCTC TT99
+Luôn có Bộ báo cáo tài chính B01–B09-DN. Theo dõi 133/333; tờ khai GTGT; TNDN tạm nộp và quyết toán; TNCN. Kỳ kê khai quý mặc định; doanh thu năm trước > ngưỡng có thể tháng.
+
+## Cuối kỳ TT99
+Kết chuyển khóa sổ: KH TSCĐ → PB CCDC/trả trước → lãi vay (nếu có) → kết chuyển DT/CP → 911 → 4212 → QT GTGT → khóa. Cuối năm 4212→4211; khóa năm tháng 12. Kỳ khóa không ghi mới.
+
+## Phân biệt nhanh TT99 vs TT58
+TT99: BCTC B01–B09 luôn có; không sổ DNSN. TT58: chọn 4 trường hợp thuế; sổ DNSN bắt buộc (framework CQT); thuế % DT có thể tự ghi 811/821; BCTC theo TH2/TH4. Cùng được dùng đầy đủ nghiệp vụ mua/bán/kế toán (POS, HĐ mua, L/C, FX, vay, phiếu thu/chi, công nợ…).
+
+## Lỗi thường gặp TT99
+Không vào được DNSN: đúng — sổ DNSN chỉ thuộc framework TT58. Double doanh thu: tạo PT Có 511 trong khi bán đã Có 511 — phải Có 131 khi thu nợ. Xuất khẩu chưa clearance đã đòi HĐĐT: chờ CLEARED. Consignment confirm trước HĐĐT: hệ thống yêu cầu xuất HĐ trước.

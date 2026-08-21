@@ -142,6 +142,14 @@ def init_schedulers(app, backup_root):
         id='sme_vat_filing_alert_yearly',
     )
     backup_scheduler.add_job(
+        func=_scheduled_purchase_invoice_sync,
+        trigger="cron",
+        hour='0,9,15',
+        minute=0,
+        id='purchase_invoice_sync_slots',
+        replace_existing=True,
+    )
+    backup_scheduler.add_job(
         func=lambda: _process_accounting_queue(app),
         trigger="interval",
         seconds=int(os.environ.get('SME_ACCOUNTING_QUEUE_SEC', '10') or 10),
@@ -152,6 +160,22 @@ def init_schedulers(app, backup_root):
     backup_scheduler.start()
 
     return expiry_scheduler, backup_scheduler
+
+
+def _scheduled_purchase_invoice_sync():
+    """09:00, 15:00, 00:00 (VN): đồng bộ HĐ mua qua kênh portal Mắt Bảo."""
+    try:
+        from Services.purchase_invoice_schedule import run_purchase_sync_for_all_tenants
+        result = run_purchase_sync_for_all_tenants()
+        if result.get('skipped'):
+            print(f"[{datetime.now()}] Purchase invoice sync skipped: {result.get('reason')}")
+            return
+        print(
+            f"[{datetime.now()}] Purchase invoice sync: {result.get('summary')} "
+            f"months={result.get('months')}"
+        )
+    except Exception as e:
+        print(f"[{datetime.now()}] Purchase invoice sync failed: {e}")
 
 
 def _process_accounting_queue(app):

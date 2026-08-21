@@ -492,3 +492,97 @@ def workspace(
         'bank_lines': bank_lines,
         'branch_code': branch_code or 'ALL',
     }
+
+
+def create_receipt_from_bank_txn(
+    conn: sqlite3.Connection,
+    bank_txn_id: int,
+    *,
+    sale_id: int | None = None,
+    party_name: str = '',
+    credit_account: str = '131',
+    reason: str = '',
+    created_by: str | None = None,
+    commit: bool = True,
+) -> dict[str, Any]:
+    """Tạo phiếu thu SME từ giao dịch NH chưa khớp (Nợ 112 / Có 131|511)."""
+    from Services.sme.vouchers import create_receipt
+
+    row = conn.execute(
+        'SELECT * FROM bank_transactions WHERE id = ?',
+        (int(bank_txn_id),),
+    ).fetchone()
+    if not row:
+        raise ValueError('Không tìm thấy giao dịch ngân hàng')
+    txn = dict(row)
+    if str(txn.get('direction') or 'in').lower() not in ('in', 'credit', 'thu', ''):
+        if float(txn.get('amount') or 0) < 0:
+            raise ValueError('Chỉ tạo phiếu thu từ giao dịch tiền vào')
+    amt = abs(float(txn.get('amount') or 0))
+    if amt <= 0:
+        raise ValueError('Số tiền giao dịch không hợp lệ')
+
+    # Đã gắn sale qua webhook?
+    sid = sale_id or txn.get('sale_id') or txn.get('extracted_sale_id')
+    try:
+        sid = int(sid) if sid else None
+    except (TypeError, ValueError):
+        sid = None
+
+    name = (party_name or txn.get('counterparty_name') or '').strip()
+    if not name and sid:
+        s = conn.execute(
+            'SELECT customer_name, company_name FROM sale WHERE id = ?', (sid,),
+        ).fetchone()
+        if s:
+            sd = dict(s)
+            name = (sd.get('company_name') or sd.get('customer_name') or '').strip()
+    if not name:
+        name = 'Thu từ ngân hàng'
+
+    date_s = str(txn.get('transaction_date') or '')[:10]
+    if not date_s:
+        date_s = datetime.now().strftime('%Y-%m-%d')
+
+    content = (txn.get('content') or '')[:200]
+    desc = reason or (f'Thu NH — {content}' if content else 'Thu tiền từ sao kê ngân hàng')
+
+    # Có 131 nếu gắn đơn bán; không thì 511 (thu bán hàng/khác chưa đối chiếu công nợ)
+    credit = (credit_account or '131').strip() or '131'
+    if not sid and credit.startswith('131'):
+        credit = '511'
+
+    voucher = create_receipt(
+        conn,
+        voucher_date=date_s,
+        party_name=name,
+        amount=amt,
+        payment_method='transfer',
+        credit_account=credit,
+        reason=desc,
+        reference_document=f'BANK-{bank_txn_id}',
+        source_type='sale' if sid else 'bank_txn',
+        source_id=sid if sid else int(bank_txn_id),
+        sale_id=sid,
+        created_by=created_by,
+        commit=False,
+    )
+
+    # Đánh dấu đã đưa vào sổ (khác ledger_reconciled của phiên ĐC)
+    try:
+        cols = {r[1] for r in conn.execute('PRAGMA table_info(bank_transactions)').fetchall()}
+        if 'match_status' in cols:
+            conn.execute(
+                "UPDATE bank_transactions SET match_status = 'matched', match_reason = ?, sale_id = COALESCE(sale_id, ?) WHERE id = ?",
+                (f"PT {voucher.get('voucher_no')}", sid, int(bank_txn_id)),
+            )
+    except sqlite3.Error:
+        pass
+
+    if commit:
+        conn.commit()
+    return {
+        'voucher': voucher,
+        'bank_txn_id': int(bank_txn_id),
+        'sale_id': sid,
+    }

@@ -1,0 +1,85 @@
+{# Hướng dẫn người dùng mới — SME TT58 (DNSN). Include trong tab ketoan-sme. #}
+<div class="alert alert-info border-0 mb-4">
+  <strong>Bạn đang dùng chế độ nào?</strong>
+  Doanh nghiệp siêu nhỏ — <strong>Thông tư 58</strong> (DNSN).
+  Được dùng <strong>đầy đủ nghiệp vụ mua hàng, bán hàng, kế toán</strong> như TT99 (L/C, ngoại tệ, vay, mẫu chứng từ…).
+  Đồng thời <strong>bắt buộc</strong> đủ sổ &amp; biểu mẫu DNSN theo trường hợp thuế để cơ quan thuế đối chiếu khi kiểm tra / thanh tra.
+  Menu <em>Sổ &amp; biểu mẫu DNSN</em> chỉ có trên TT58.
+</div>
+
+<h5 class="text-primary fw-bold mb-3">1. Chuẩn bị lần đầu (làm theo thứ tự)</h5>
+<ul class="step-list mb-4">
+  <li><strong>Thiết lập hệ thống:</strong> Tiện ích → Thiết lập hệ thống (hoặc Hệ thống → Thiết lập): tên DN, MST, địa chỉ, tài khoản ngân hàng, nhà cung cấp hóa đơn điện tử.</li>
+  <li><strong>Chọn Trường hợp thuế 1–4</strong> (bắt buộc TT58). Mỗi trường hợp quyết định sổ DNSN nào phải in và có/không BCTC. Nếu chưa chọn, sổ/báo cáo có thể thiếu hoặc “lạ”.</li>
+  <li><strong>Nhập tỷ lệ % thuế theo ngành</strong> (hàng hóa, dịch vụ…) nếu trường hợp nộp GTGT/TNDN theo % doanh thu.</li>
+  <li><strong>Chi nhánh &amp; kho:</strong> Sổ sách → Chi nhánh và đơn vị / Tồn kho → Danh mục kho. Trụ sở mã <strong>HQ</strong>; kho thường <strong>KHO_001</strong>.</li>
+  <li><strong>Ghi vốn góp ban đầu:</strong> Tiền Và Công Nợ → Sổ Quỹ Tiền Mặt (hoặc Sổ Tiền Gửi NH) → <strong>Lập phiếu thu</strong> → Nợ <strong>1111</strong>/<strong>1121</strong> · Có <strong>4111</strong>.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">2. Bốn trường hợp thuế — chọn đúng trước khi bán nhiều</h5>
+<ul class="step-list mb-4">
+  <li><strong>TH1:</strong> GTGT % DT + TNDN % DT → sổ <strong>S1-DNSN</strong>; không bắt buộc BCTC; VAT mua thường cộng vào giá vốn.</li>
+  <li><strong>TH2:</strong> GTGT % DT + TNDN trên thu nhập → sổ <strong>S2a–S2d</strong>; <strong>bắt buộc BCTC</strong> (nộp trong 90 ngày sau năm tài chính).</li>
+  <li><strong>TH3:</strong> GTGT khấu trừ + TNDN % DT → sổ <strong>S3a, S3b</strong>; không bắt buộc BCTC; có theo dõi thuế khấu trừ.</li>
+  <li><strong>TH4:</strong> GTGT khấu trừ + TNDN trên thu nhập → sổ kết hợp + <strong>bắt buộc BCTC</strong>.</li>
+</ul>
+<p class="mb-4">In sổ: menu <strong>Báo cáo → Sổ &amp; biểu mẫu DNSN (TT58)</strong>.</p>
+
+<h5 class="text-primary fw-bold mb-3">3. Mua hàng — từ hóa đơn đến nhập kho</h5>
+<ol class="mb-4">
+  <li>Vào <strong>Mua hàng → Hóa đơn mua hàng</strong>. Đồng bộ từ cổng (Matbao/CQT) theo tháng hoặc tạo tay.</li>
+  <li>Với từng hóa đơn chọn một việc:
+    <ul>
+      <li><strong>Lập phiếu nhập</strong> — hàng/NVL/TSCĐ/CCDC vào kho hoặc danh mục tài sản.</li>
+      <li><strong>Hạch toán</strong> — dịch vụ / chi phí dùng ngay.</li>
+      <li><strong>Phân bổ</strong> — chi phí cộng vào giá vốn hàng/TSCĐ (vận chuyển, lắp đặt…).</li>
+    </ul>
+  </li>
+  <li>Trên phiếu nhập: chọn <strong>Loại hàng</strong>, <strong>Kho</strong>, đơn vị lẻ/sỉ, giá bán (nếu HH). Hệ thống tự tạo mã <strong>HH</strong>/<strong>VT</strong>/<strong>TSCD</strong>/<strong>CCDC</strong> và NCC.</li>
+  <li>Thanh toán ngay hoặc <strong>Chưa thanh toán</strong> (công nợ 331). Trả sau tại <strong>Sổ Công Nợ Phải Trả</strong> hoặc <strong>Phiếu chi 02-TT</strong>. Có thể <strong>Chi nhiều</strong> phiếu nhập một lần.</li>
+</ol>
+<p class="huongdan-luu-y mb-4">TH1/TH2: thuế GTGT đầu vào thường <strong>không</strong> tách Nợ 133 mà cộng vào giá. TH3/TH4 mới khấu trừ kiểu Nợ 133.</p>
+
+<h5 class="text-primary fw-bold mb-3">4. Nhập khẩu / hàng đi đường (tóm tắt)</h5>
+<ul class="step-list mb-4">
+  <li>Phiếu nhập khẩu có thể ở trạng thái <strong>hàng đi đường (151)</strong> → <strong>nộp thuế hải quan</strong> → <strong>nhập kho thật (156)</strong>.</li>
+  <li>Dùng <strong>Tờ khai hải quan điện tử</strong> và chức năng nộp thuế trên phiếu/import. Có thể <strong>mở L/C</strong> nếu nghiệp vụ cần (TT58 dùng chung nghiệp vụ với TT99).</li>
+  <li>Chi phí phát sinh thêm: <strong>Phân bổ chi phí mua hàng</strong>.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">5. Bán hàng tại điểm bán</h5>
+<ul class="step-list mb-4">
+  <li>Vào <strong>Bán hàng → Điểm bán hàng</strong>. Quét mã hoặc gõ tên. In mã vạch từ Danh sách phiếu nhập / Danh mục sản phẩm.</li>
+  <li><strong>Tiền mặt (111):</strong> hoàn tất → hệ thống ghi thu tiền + doanh thu + giá vốn (+ thuế % DT nếu TH1/TH2).</li>
+  <li><strong>Chuyển khoản (112):</strong> có thể chờ thanh toán; khi NH báo có tiền khớp mã đơn <code>DH……</code> → tự hoàn tất. Xem <strong>Giao dịch ngân hàng</strong>.</li>
+  <li><strong>Công nợ (131):</strong> phát sinh phải thu. Thu sau tại <strong>Sổ Công Nợ Phải Thu</strong> → Thu tiền / <strong>Thu nhiều HĐ</strong>.</li>
+  <li>Bật <strong>Xuất hóa đơn điện tử</strong> khi cần. Sửa HĐ đã xuất: Hóa đơn bán → Xuất hóa đơn thay thế.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">6. Khách trả hàng / gửi đại lý / xuất khẩu</h5>
+<ul class="step-list mb-4">
+  <li><strong>Khách trả hàng:</strong> chọn đơn → số lượng → xác nhận (tồn kho + sổ cập nhật; công nợ giảm gốc nợ).</li>
+  <li><strong>Hàng gửi đi bán (157):</strong> gửi hàng → khi bán được phải <strong>xuất HĐĐT trước</strong> rồi xác nhận bán.</li>
+  <li><strong>Xuất khẩu:</strong> lập đơn XK → xuất kho/ship → thông quan (CLEARED) → mới ghi doanh thu/HĐĐT → thu tiền settle.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">7. Tiền, công nợ, ngân hàng</h5>
+<ul class="step-list mb-4">
+  <li><strong>Phiếu thu 01-TT / Phiếu chi 02-TT</strong> trong Chứng từ kế toán (hoặc nút trên sổ quỹ/NH/công nợ).</li>
+  <li><strong>Đối chiếu ngân hàng:</strong> khớp sao kê; tạo phiếu thu từ dòng tiền vào khi thu nợ (gắn đúng đơn bán → Có 131).</li>
+  <li><strong>Tạm ứng, kiểm quỹ tiền mặt, kiểm kê kho</strong> dùng được trên TT58.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">8. Cuối kỳ, thuế, báo cáo</h5>
+<ul class="step-list mb-4">
+  <li><strong>Kết chuyển, khóa sổ và cuối năm:</strong> khấu hao / phân bổ → kết chuyển → khóa. Kỳ đã khóa không ghi sổ mới.</li>
+  <li><strong>Thuế &amp; NSNN:</strong> theo dõi 133/333, tờ khai GTGT / TNDN / TNCN theo nhu cầu.</li>
+  <li><strong>BCTC:</strong> chỉ hiện với TH2/TH4. TH1/TH3: dùng sổ DNSN.</li>
+</ul>
+
+<h5 class="text-primary fw-bold mb-3">9. Nghiệp vụ đầy đủ + framework TT58</h5>
+<ul class="step-list mb-2">
+  <li>TT58 <strong>được phép</strong> mọi nghiệp vụ mua/bán/kế toán của TT99: L/C, ngoại tệ (1112/1122, 08b), vay/ký quỹ, biên bản TSCĐ 01–06, mẫu 01/02-BH, bảng kê vàng/chi tiền, kiểm nghiệm…</li>
+  <li><strong>Bắt buộc</strong> chọn đúng Trường hợp thuế 1–4 và in/lưu đủ sổ DNSN (S1 / S2a–d / S3a–b / S4…) theo trường hợp — đây là bộ framework CQT dùng khi kiểm tra.</li>
+  <li>BCTC năm: bắt buộc với TH2/TH4; TH1/TH3 tập trung sổ DNSN (vẫn có thể dùng chứng từ vận hành đầy đủ).</li>
+</ul>

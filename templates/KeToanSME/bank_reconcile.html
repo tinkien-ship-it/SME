@@ -40,6 +40,7 @@
 </div>
 <div class="mt-3 d-flex gap-2 flex-wrap">
   <button class="btn btn-outline-primary" id="btnMatch" disabled>Khớp cặp đã chọn</button>
+  <button class="btn btn-outline-info" id="btnCreatePt" disabled title="Tạo phiếu thu từ dòng sao kê đang chọn">Tạo phiếu thu từ sao kê</button>
   <button class="btn btn-outline-success" id="btnClose" disabled>Đóng phiên đối chiếu</button>
   <span class="align-self-center small text-muted" id="sessionInfo"></span>
 </div>
@@ -94,8 +95,24 @@ async function loadWorkspace(){
     <td class="text-end">${fmt(r.signed_amount)}</td><td class="small">${r.content||''}</td>
   </tr>`).join('') || '<tr><td colspan="4" class="text-muted text-center">Không còn giao dịch chưa khớp (hoặc chưa đồng bộ sao kê)</td></tr>';
   bookBody.querySelectorAll('input[name=book]').forEach(el => el.onchange = () => { selectedBook = +el.value; btnMatch.disabled = !(selectedBook&&selectedBank&&reconcileId); });
-  bankBody.querySelectorAll('input[name=bank]').forEach(el => el.onchange = () => { selectedBank = +el.value; btnMatch.disabled = !(selectedBook&&selectedBank&&reconcileId); });
+  bankBody.querySelectorAll('input[name=bank]').forEach(el => el.onchange = () => {
+    selectedBank = +el.value;
+    btnMatch.disabled = !(selectedBook&&selectedBank&&reconcileId);
+    btnCreatePt.disabled = !selectedBank;
+  });
 }
+
+document.getElementById('btnCreatePt').onclick = async () => {
+  if(!selectedBank) return alert('Chọn một dòng sao kê');
+  if(!confirm('Tạo phiếu thu SME từ giao dịch sao kê đã chọn?')) return;
+  const res = await fetch('/api/sme/bank-txn/'+selectedBank+'/create-receipt',{
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({})
+  });
+  const json = await res.json();
+  if(!json.success) return alert(json.error||'Lỗi');
+  alert('Đã tạo phiếu thu '+(json.data?.voucher?.voucher_no||''));
+  loadWorkspace();
+};
 
 document.getElementById('btnLoad').onclick = () => { loadWorkspace(); loadHist(); };
 document.getElementById('btnStart').onclick = async () => {

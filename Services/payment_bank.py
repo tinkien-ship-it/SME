@@ -429,7 +429,7 @@ def _update_transaction_match(provider, external_id, sale_id, match_status, matc
 
 
 def _resolve_match_status(result):
-    if result.get('completed'):
+    if result.get('completed') or result.get('sme_receipt'):
         return 'matched'
     if result.get('matched'):
         return 'partial'
@@ -667,7 +667,7 @@ def complete_pending_bank_payment(sale_id, source='manual'):
 
 
 def try_match_transaction(content, amount, external_id, provider, update_bank_row=True):
-    """Khớp giao dịch ngân hàng với đơn pending và tự hoàn tất."""
+    """Khớp giao dịch ngân hàng với đơn pending và tự hoàn tất; hoặc SME PT công nợ."""
     sale_id = extract_sale_id_from_text(content)
     if not sale_id:
         result = {'matched': False, 'reason': 'no_sale_code'}
@@ -686,6 +686,30 @@ def try_match_transaction(content, amount, external_id, provider, update_bank_ro
             result = {'matched': False, 'reason': 'sale_not_found', 'sale_id': sale_id}
             if update_bank_row:
                 _update_transaction_match(provider, external_id, sale_id, 'unmatched', 'sale_not_found')
+            return result
+        if sale['status'] == 'completed':
+            # Đơn đã bán (thường 131): thử lập phiếu thu SME từ sao kê
+            sme = _try_sme_ar_receipt_from_bank(
+                conn, sale_id=sale_id, amount=amount,
+                provider=provider, external_id=external_id,
+            )
+            if sme.get('matched'):
+                if update_bank_row:
+                    _update_transaction_match(
+                        provider, external_id, sale_id, 'matched',
+                        sme.get('reason') or 'sme_receipt',
+                    )
+                return sme
+            result = {
+                'matched': False,
+                'reason': sme.get('reason') or 'not_pending',
+                'sale_id': sale_id,
+            }
+            if update_bank_row:
+                _update_transaction_match(
+                    provider, external_id, sale_id, 'unmatched',
+                    result['reason'],
+                )
             return result
         if sale['status'] != 'pending':
             result = {'matched': False, 'reason': 'not_pending', 'sale_id': sale_id}
@@ -716,6 +740,92 @@ def try_match_transaction(content, amount, external_id, provider, update_bank_ro
     if update_bank_row:
         _update_transaction_match(provider, external_id, sale_id, 'partial', result.get('error') or 'complete_failed')
     return partial
+
+
+def _try_sme_ar_receipt_from_bank(conn, *, sale_id, amount, provider, external_id):
+    """Tạo PT SME khi webhook khớp đơn completed còn công nợ."""
+    try:
+        from Services.sme.cong_no_ops import ensure_cong_no_schema, remaining_sql
+        ensure_cong_no_schema(conn, commit=False)
+        rem_expr = remaining_sql('cn', conn)
+        row = conn.execute(
+            f"""
+            SELECT cn.sale_id, {rem_expr} AS remaining
+            FROM cong_no cn WHERE cn.sale_id = ?
+            """,
+            (int(sale_id),),
+        ).fetchone()
+        remaining = float(row['remaining'] if row and 'remaining' in row.keys() else (row[1] if row else 0) or 0)
+        if remaining <= 0:
+            return {'matched': False, 'reason': 'no_open_ar', 'sale_id': sale_id}
+
+        # Idempotent: đã có PT BANK gắn giao dịch này
+        txn = conn.execute(
+            """
+            SELECT id, match_status FROM bank_transactions
+            WHERE provider = ? AND CAST(external_id AS TEXT) = ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (provider, str(external_id)),
+        ).fetchone()
+        if not txn:
+            return {'matched': False, 'reason': 'bank_txn_missing', 'sale_id': sale_id}
+        txn_id = int(txn['id'] if 'id' in txn.keys() else txn[0])
+        if str(txn['match_status'] if 'match_status' in txn.keys() else '') == 'matched':
+            # Đã khớp trước đó
+            existing = conn.execute(
+                "SELECT id FROM sme_vouchers WHERE reference_document = ? LIMIT 1",
+                (f'BANK-{txn_id}',),
+            ).fetchone()
+            if existing:
+                return {
+                    'matched': True, 'sale_id': sale_id, 'completed': False,
+                    'sme_receipt': True, 'already': True, 'reason': 'already_receipt',
+                }
+
+        recv = abs(float(amount or 0))
+        if recv <= 0:
+            return {'matched': False, 'reason': 'bad_amount', 'sale_id': sale_id}
+        # Cho phép thu đúng số còn nợ hoặc đúng tổng đơn (sai số amount_matches)
+        if not amount_matches(remaining, recv) and not amount_matches(
+            conn.execute('SELECT total_amount FROM sale WHERE id = ?', (sale_id,)).fetchone()[0],
+            recv,
+        ):
+            # Vẫn cho phép nếu số nhận ≤ remaining (thu một phần)
+            if recv > remaining + 1:
+                return {
+                    'matched': False, 'reason': 'amount_mismatch_ar',
+                    'sale_id': sale_id, 'expected': remaining, 'received': recv,
+                }
+
+        from Services.sme.bank_reconcile import create_receipt_from_bank_txn
+        from Services.tenant_profile import get_current_tenant_profile
+        regime = (get_current_tenant_profile() or {}).get('accounting_regime') or ''
+        if 'SME' not in str(regime).upper() and 'TT58' not in str(regime).upper() and 'TT99' not in str(regime).upper():
+            # Không ép PT SME trên tenant HKD
+            if 'HKD' in str(regime).upper():
+                return {'matched': False, 'reason': 'not_sme_regime', 'sale_id': sale_id}
+
+        result = create_receipt_from_bank_txn(
+            conn,
+            txn_id,
+            sale_id=int(sale_id),
+            credit_account='131',
+            reason=f'Thu công nợ đơn #{sale_id} từ NH (webhook)',
+            created_by='bank_webhook',
+            commit=True,
+        )
+        return {
+            'matched': True,
+            'sale_id': sale_id,
+            'completed': False,
+            'sme_receipt': True,
+            'voucher_no': (result.get('voucher') or {}).get('voucher_no'),
+            'reason': 'sme_ar_receipt',
+        }
+    except Exception as exc:
+        logger.exception('SME AR bank receipt failed sale_id=%s', sale_id)
+        return {'matched': False, 'reason': f'sme_receipt_error:{exc}', 'sale_id': sale_id}
 
 
 def parse_sepay_webhook(payload):

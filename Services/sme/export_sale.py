@@ -734,6 +734,7 @@ def list_export_sales(
         c for c in (
             'customs_decl_no', 'invoice_number', 'invoice_status', 'invoice_id',
             'export_status', 'internal_transfer_doc_no',
+            'export_tax_vnd', 'export_tax_fc', 'tax_payment_voucher_id',
         )
         if c in scols
     ]

@@ -11,7 +11,8 @@ EINVOICE_PROVIDERS = {
         'supports_portal_sync': True,
         'supports_purchase_sync': True,
         'default_api_url': 'https://api.matbao.net',
-        'doc_hint': 'Portal Mắt Bão → Tích hợp API',
+        'default_purchase_api_url': 'https://api-hoadondauvao.matbao.in',
+        'doc_hint': 'Portal Mắt Bão → Tích hợp API. HĐ đầu vào: purchase API (api-hoadondauvao) hoặc cùng host nếu MB gộp.',
     },
     'misa': {
         'code': 'misa',
@@ -215,7 +216,9 @@ def list_providers_for_ui():
             'label': label,
             'status': meta['status'],
             'supports_draft': meta.get('supports_draft', False),
+            'supports_purchase_sync': meta.get('supports_purchase_sync', False),
             'default_api_url': meta.get('default_api_url', ''),
+            'default_purchase_api_url': meta.get('default_purchase_api_url', ''),
             'doc_hint': meta.get('doc_hint', ''),
         })
     return sorted(out, key=lambda x: (0 if x['status'] == 'ready' else 1 if x['status'] == 'beta' else 2, x['label']))

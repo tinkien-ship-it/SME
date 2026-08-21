@@ -1097,6 +1097,7 @@ def build_import_stock_lines(
     vat_amount: Decimal | float = 0,
     import_tax_amount: Decimal | float = 0,
     excise_tax_amount: Decimal | float = 0,
+    env_tax_amount: Decimal | float = 0,
     payable_amount: Decimal | float | None = None,
     supplier_id: int | None = None,
     bill_no: str | None = None,
@@ -1108,7 +1109,7 @@ def build_import_stock_lines(
     """
     Dựng dòng bút toán nhập kho từ quy tắc + COA.
     inventory_lines: [{product_id, amount, product_name, tax_pct, warehouse_code?}, ...]
-    amount = nguyên giá (gồm thuế NK + TTĐB nếu có).
+    amount = nguyên giá (gồm thuế NK + TTĐB + BVMT nếu có).
     Mặc định không gồm VAT (TH3/TH4 / TT99: Nợ 133).
     TH1/TH2 (GTGT % DT): caller đã cộng VAT vào amount; không Nợ 133.
 
@@ -1235,6 +1236,18 @@ def build_import_stock_lines(
             'credit': excise_tax,
             'partner_type': 'tax',
             'description': 'Thuế tiêu thụ đặc biệt (hàng nhập khẩu) phải nộp NSNN',
+        })
+        seq += 1
+
+    env_tax = _money(env_tax_amount)
+    if import_type == 'IMPORT' and env_tax > 0:
+        lines.append({
+            'sequence': seq,
+            'account_code': resolve_postable_account(conn, '3338'),
+            'debit': 0,
+            'credit': env_tax,
+            'partner_type': 'tax',
+            'description': 'Thuế bảo vệ môi trường (hàng nhập khẩu) phải nộp NSNN',
         })
         seq += 1
 

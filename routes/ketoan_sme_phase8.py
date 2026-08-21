@@ -613,6 +613,38 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
         finally:
             conn.close()
 
+    @app.route('/api/sme/pit/xml')
+    @login_required
+    @require_sme_regime
+    def api_sme_pit_xml():
+        """Xuất XML khung 05/KK-TNCN (đối chiếu HTKK — không nộp cổng)."""
+        from flask import Response
+        from Services.sme.pit_xml import generate_sme_pit_xml
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            year = request.args.get('year', type=int) or datetime.now().year
+            p_from = request.args.get('period_from', type=int) or 1
+            p_to = request.args.get('period_to', type=int) or 12
+            as_json = (request.args.get('format') or '').lower() == 'json'
+            result = generate_sme_pit_xml(
+                conn, fiscal_year=year, period_from=p_from, period_to=p_to,
+            )
+            if as_json:
+                return jsonify(result)
+            return Response(
+                result['xml'],
+                mimetype='application/xml; charset=utf-8',
+                headers={
+                    'Content-Disposition': f'attachment; filename="{result["filename"]}"',
+                },
+            )
+        except Exception as e:
+            logger.exception('api_sme_pit_xml')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     def _ledger_err(conn, e, name):
         try:
             conn.rollback()

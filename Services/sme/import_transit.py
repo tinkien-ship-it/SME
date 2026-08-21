@@ -4,7 +4,8 @@
 G1 IN_TRANSIT: Nợ 151 (HH/NVL/CCDC) hoặc Nợ 2411 (TSCĐ) + thuế vốn hóa /
                Có 331 / Có 333* / Có 33312 — không tăng tồn.
                TH3/TH4: thêm Nợ 13312. TH1/TH2: VAT nằm trong 151/2411.
-G2 TAX_PAID:   Nợ 3333/3332/33312 / Có 112 — nút nộp thuế.
+G2 TAX_PAID / TAX_PARTIAL: nộp từng khoản (NK, GTGT NK, TTĐB, BVMT)
+               hoặc gộp cùng cơ quan nhận — Nợ 333* / Có 1111|1121.
 G3 RECEIVED:   Nợ 156|152|153 / Có 151; Nợ 2112 / Có 2411 — tăng tồn / ghi TSCĐ.
 """
 from __future__ import annotations
@@ -24,6 +25,7 @@ MONEY_Q = Decimal('0.01')
 
 STAGE_IN_TRANSIT = 'IN_TRANSIT'
 STAGE_TAX_PAID = 'TAX_PAID'
+STAGE_TAX_PARTIAL = 'TAX_PARTIAL'
 STAGE_RECEIVED = 'RECEIVED'
 STAGE_DOMESTIC = 'RECEIVED'  # mua trong nước = nhập kho ngay
 
@@ -82,7 +84,7 @@ def default_receipt_stage(import_type: str) -> str:
 
 def is_in_transit_stage(stage: str | None, import_type: str | None = None) -> bool:
     s = (stage or '').strip().upper()
-    if s in (STAGE_IN_TRANSIT, STAGE_TAX_PAID):
+    if s in (STAGE_IN_TRANSIT, STAGE_TAX_PAID, STAGE_TAX_PARTIAL):
         return True
     if s == STAGE_RECEIVED:
         return False
@@ -117,111 +119,20 @@ def pay_customs_taxes(
     payment_method: str = 'bank',
     created_by: str | None = None,
     commit: bool = False,
+    agency_type: str | None = None,
 ) -> dict[str, Any]:
-    """G2: Nộp thuế HQ — Nợ 3333/3332/33312 / Có 1121|1111."""
-    from Services.sme.branches import resolve_posting_branch
-    from Services.sme.vouchers import create_payment
+    """G2: Nộp thuế — ủy quyền sang tax_payment_ops (nộp theo khoản / nhóm cơ quan)."""
+    from Services.sme.tax_payment_ops import pay_customs_taxes_compat
 
-    ensure_sme_journal_ready(conn, commit=False)
-    ensure_import_transit_schema(conn, commit=False)
-
-    imp = conn.execute('SELECT * FROM "import" WHERE id = ?', (import_id,)).fetchone()
-    if not imp:
-        raise ValueError('Không tìm thấy phiếu nhập')
-    imp = dict(imp)
-    itype = str(imp.get('import_type') or 'DOMESTIC').upper()
-    if itype != 'IMPORT':
-        raise ValueError('Chỉ áp dụng nộp thuế HQ cho hàng nhập khẩu')
-
-    stage = str(imp.get('receipt_stage') or STAGE_IN_TRANSIT).upper()
-    if stage == STAGE_RECEIVED and imp.get('tax_payment_journal_id'):
-        raise ValueError('Đã nộp thuế và nhập kho — không nộp lại')
-    if imp.get('tax_payment_journal_id'):
-        raise ValueError('Đã nộp thuế HQ cho phiếu này')
-
-    nk = _money(imp.get('import_tax_amount'))
-    excise = _money(imp.get('excise_tax_amount'))
-    # VAT nhập khẩu: tổng tax trên dòng chi tiết
-    vat = Decimal('0.00')
-    detail_cols = _cols(conn, 'import_details')
-    if 'tax' in detail_cols:
-        row = conn.execute(
-            'SELECT COALESCE(SUM(tax), 0) FROM import_details WHERE import_id = ?',
-            (import_id,),
-        ).fetchone()
-        vat = _money(row[0] if row else 0)
-
-    if nk <= 0 and excise <= 0 and vat <= 0:
-        raise ValueError('Không có thuế HQ phải nộp trên phiếu này')
-
-    date_s = str(pay_date or imp.get('date') or '')[:10]
-    if not date_s:
-        raise ValueError('Thiếu ngày nộp thuế')
-
-    debit_lines = []
-    if nk > 0:
-        debit_lines.append({
-            'account_code': '3333',
-            'amount': float(nk),
-            'description': f'Nộp thuế NK — PN {imp.get("import_no") or import_id}',
-        })
-    if excise > 0:
-        debit_lines.append({
-            'account_code': '3332',
-            'amount': float(excise),
-            'description': f'Nộp thuế TTĐB — PN {imp.get("import_no") or import_id}',
-        })
-    if vat > 0:
-        debit_lines.append({
-            'account_code': '33312',
-            'amount': float(vat),
-            'description': f'Nộp thuế GTGT hàng NK — PN {imp.get("import_no") or import_id}',
-        })
-
-    total = sum((_money(x['amount']) for x in debit_lines), Decimal('0.00'))
-    party = 'Cơ quan Hải quan / Kho bạc Nhà nước'
-    voucher = create_payment(
+    return pay_customs_taxes_compat(
         conn,
-        voucher_date=date_s,
-        party_name=party,
-        amount=float(total),
-        payment_method=payment_method or 'bank',
-        debit_account=debit_lines[0]['account_code'],
-        debit_lines=debit_lines,
-        reason=f'Nộp thuế HQ theo tờ khai — {imp.get("import_no") or ("#" + str(import_id))}',
-        reference_document=imp.get('customs_decl_no') or imp.get('bill_no') or '',
-        source_type='import_customs_tax',
-        source_id=import_id,
-        import_id=import_id,
-        purpose='customs_tax',
+        import_id,
+        pay_date=pay_date,
+        payment_method=payment_method,
         created_by=created_by,
-        branch_code=resolve_posting_branch(conn, None),
-        commit=False,
+        commit=commit,
+        agency_type=agency_type,
     )
-
-    new_stage = STAGE_TAX_PAID if stage != STAGE_RECEIVED else stage
-    cols = _cols(conn, 'import')
-    sets = ["tax_payment_voucher_id = ?", "tax_payment_journal_id = ?"]
-    vals: list[Any] = [voucher['id'], voucher.get('journal_entry_id')]
-    if 'receipt_stage' in cols:
-        sets.append('receipt_stage = ?')
-        vals.append(new_stage)
-    vals.append(import_id)
-    conn.execute(f'UPDATE "import" SET {", ".join(sets)} WHERE id = ?', vals)
-
-    if commit:
-        conn.commit()
-    return {
-        'import_id': import_id,
-        'receipt_stage': new_stage,
-        'voucher': voucher,
-        'amounts': {
-            'import_tax': float(nk),
-            'excise_tax': float(excise),
-            'vat': float(vat),
-            'total': float(total),
-        },
-    }
 
 
 def receive_import_to_warehouse(
@@ -255,7 +166,7 @@ def receive_import_to_warehouse(
     stage = str(imp.get('receipt_stage') or '').upper()
     if stage == STAGE_RECEIVED or imp.get('receive_journal_id'):
         raise ValueError('Phiếu đã nhập kho thực tế')
-    if stage not in (STAGE_IN_TRANSIT, STAGE_TAX_PAID, ''):
+    if stage not in (STAGE_IN_TRANSIT, STAGE_TAX_PAID, STAGE_TAX_PARTIAL, ''):
         raise ValueError(f'Trạng thái không hợp lệ để nhập kho: {stage or "(trống)"}')
 
     date_s = str(receive_date or imp.get('date') or '')[:10]
@@ -284,6 +195,10 @@ def receive_import_to_warehouse(
     select.append(
         'COALESCE(d.excise_tax_amount, 0) AS excise_tax_amount'
         if 'excise_tax_amount' in detail_cols else '0 AS excise_tax_amount'
+    )
+    select.append(
+        'COALESCE(d.env_tax_amount, 0) AS env_tax_amount'
+        if 'env_tax_amount' in detail_cols else '0 AS env_tax_amount'
     )
     select.append(
         "COALESCE(d.product_name, '') AS product_name"
@@ -318,7 +233,12 @@ def receive_import_to_warehouse(
         if lt == 'service':
             continue
         net = _money(r.get('subtotal')) - _money(r.get('discount'))
-        inv_amt = net + _money(r.get('import_tax_amount')) + _money(r.get('excise_tax_amount'))
+        inv_amt = (
+            net
+            + _money(r.get('import_tax_amount'))
+            + _money(r.get('excise_tax_amount'))
+            + _money(r.get('env_tax_amount'))
+        )
         if capitalize_vat:
             inv_amt += _money(r.get('tax'))
         if inv_amt <= 0:

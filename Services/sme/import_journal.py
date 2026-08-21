@@ -131,6 +131,7 @@ def sync_import_journals(
     import_type: str | None = None,
     import_tax_amount: Decimal | float | None = None,
     excise_tax_amount: Decimal | float | None = None,
+    env_tax_amount: Decimal | float | None = None,
     exchange_rate: Decimal | float | None = None,
 ) -> dict:
     """
@@ -138,13 +139,14 @@ def sync_import_journals(
     hàng hóa/NVL (156/152 hoặc 151 nếu đang đi đường), dịch vụ (642), TSCĐ (2112), CCDC (153)
     + VAT + đối ứng.
     Hỗ trợ DOMESTIC / IMPORT:
-    thuế NK → Nợ kho/151 + Có 3333; TTĐB → Có 3332; VAT → Nợ 13312 / Có 33312.
+    thuế NK → Nợ kho/151 + Có 3333; TTĐB → Có 3332; BVMT → Có 3338; VAT → Nợ 13312 / Có 33312.
 
     Không commit — caller commit cùng giao dịch nhập kho.
     """
     from Services.sme.import_transit import (
         STAGE_IN_TRANSIT,
         STAGE_TAX_PAID,
+        STAGE_TAX_PARTIAL,
         ensure_import_transit_schema,
         is_in_transit_stage,
     )
@@ -200,7 +202,7 @@ def sync_import_journals(
         stage = str(imp['receipt_stage']).strip().upper()
     in_transit = (
         resolved_import_type == 'IMPORT'
-        and (is_in_transit_stage(stage) or stage in (STAGE_IN_TRANSIT, STAGE_TAX_PAID, ''))
+        and (is_in_transit_stage(stage) or stage in (STAGE_IN_TRANSIT, STAGE_TAX_PAID, STAGE_TAX_PARTIAL, ''))
         and stage != 'RECEIVED'
     )
     # Phiếu IMPORT mới mặc định đi đường nếu stage trống
@@ -215,6 +217,11 @@ def sync_import_journals(
         excise_tax_amount
         if excise_tax_amount is not None
         else (imp['excise_tax_amount'] if 'excise_tax_amount' in imp_keys else 0)
+    )
+    total_env_tax = _money(
+        env_tax_amount
+        if env_tax_amount is not None
+        else (imp['env_tax_amount'] if 'env_tax_amount' in imp_keys else 0)
     )
 
     detail_cols = _table_columns(conn, 'import_details')
@@ -238,6 +245,10 @@ def sync_import_journals(
         select_parts.append('COALESCE(d.excise_tax_amount, 0) AS excise_tax_amount')
     else:
         select_parts.append('0 AS excise_tax_amount')
+    if 'env_tax_amount' in detail_cols:
+        select_parts.append('COALESCE(d.env_tax_amount, 0) AS env_tax_amount')
+    else:
+        select_parts.append('0 AS env_tax_amount')
     if 'line_type' in detail_cols:
         select_parts.append("COALESCE(d.line_type, 'goods') AS line_type")
     else:
@@ -297,6 +308,7 @@ def sync_import_journals(
             'tax_pct': float(row['tax_pct'] or 0),
             'import_tax_amount': _money(row['import_tax_amount']),
             'excise_tax_amount': _money(row['excise_tax_amount']),
+            'env_tax_amount': _money(row['env_tax_amount']),
             'warehouse_code': row['warehouse_code'],
             'expense_account': (row['expense_account'] or '').strip() if 'expense_account' in row.keys() else '',
         })
@@ -356,14 +368,17 @@ def sync_import_journals(
         payable_total = Decimal('0.00')
         group_import_tax = Decimal('0.00')
         group_excise_tax = Decimal('0.00')
+        group_env_tax = Decimal('0.00')
         desc_text = BUSINESS_TYPE_LABELS.get(b_type, b_type)
         group_base = sum((item['subtotal'] for item in items), Decimal('0.00'))
         group_base_safe = group_base if group_base > 0 else Decimal('1.00')
-        # Ưu tiên thuế NK/TTĐB đã lưu trên dòng; thiếu thì phân bổ theo tỷ trọng header
+        # Ưu tiên thuế NK/TTĐB/BVMT đã lưu trên dòng; thiếu thì phân bổ theo tỷ trọng header
         line_nk_sum = sum((item['import_tax_amount'] for item in items), Decimal('0.00'))
         line_excise_sum = sum((item['excise_tax_amount'] for item in items), Decimal('0.00'))
+        line_env_sum = sum((item.get('env_tax_amount') or Decimal('0.00') for item in items), Decimal('0.00'))
         use_line_nk = line_nk_sum > 0
         use_line_excise = line_excise_sum > 0
+        use_line_env = line_env_sum > 0
         if (
             resolved_import_type == 'IMPORT'
             and not use_line_nk
@@ -382,6 +397,15 @@ def sync_import_journals(
             group_excise_tax_budget = _money(total_excise_tax * (group_base / nk_base_safe))
         else:
             group_excise_tax_budget = Decimal('0.00')
+        if (
+            resolved_import_type == 'IMPORT'
+            and not use_line_env
+            and total_env_tax > 0
+            and b_type in IMPORT_TAX_BUSINESS_TYPES
+        ):
+            group_env_tax_budget = _money(total_env_tax * (group_base / nk_base_safe))
+        else:
+            group_env_tax_budget = Decimal('0.00')
 
         for item in items:
             allocated_extra = _money((item['subtotal'] / base_safe) * extra_cost)
@@ -399,7 +423,18 @@ def sync_import_journals(
                 )
             else:
                 allocated_excise = Decimal('0.00')
-            inv_amount = item['net'] + allocated_extra + allocated_nk + allocated_excise
+            if use_line_env:
+                allocated_env = item.get('env_tax_amount') or Decimal('0.00')
+            elif b_type in IMPORT_TAX_BUSINESS_TYPES:
+                allocated_env = _money(
+                    (item['subtotal'] / group_base_safe) * group_env_tax_budget
+                )
+            else:
+                allocated_env = Decimal('0.00')
+            inv_amount = (
+                item['net'] + allocated_extra + allocated_nk
+                + allocated_excise + allocated_env
+            )
             vat_total += item['tax']
             # TH1/TH2: VAT không khấu trừ → cộng vào giá vốn / nguyên giá / chi phí
             if capitalize_vat:
@@ -411,6 +446,7 @@ def sync_import_journals(
                 payable_total += item['net'] + item['tax'] + allocated_extra
             group_import_tax += allocated_nk
             group_excise_tax += allocated_excise
+            group_env_tax += allocated_env
             inventory_lines.append({
                 'product_id': item['product_id'],
                 'product_name': item['product_name'],
@@ -429,6 +465,7 @@ def sync_import_journals(
             vat_amount=vat_total,
             import_tax_amount=group_import_tax,
             excise_tax_amount=group_excise_tax,
+            env_tax_amount=group_env_tax,
             payable_amount=payable_total,
             supplier_id=int(supplier_id) if supplier_id else None,
             bill_no=bill_no,

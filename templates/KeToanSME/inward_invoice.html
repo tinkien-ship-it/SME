@@ -225,17 +225,36 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold"><i class="fas fa-cloud-download-alt me-2"></i>Đồng bộ dữ liệu GDT</h5>
+                <h5 class="modal-title fw-bold"><i class="fas fa-cloud-download-alt me-2"></i>Đồng bộ hóa đơn mua</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
+                <label class="form-label fw-bold">Nguồn lấy hóa đơn</label>
+                <select id="syncSource" class="form-select mb-3">
+                    <option value="portal" selected>Kênh HĐĐT Mắt Bảo (khuyến nghị)</option>
+                    <option value="tct">Cổng Tổng cục Thuế (CQT)</option>
+                    <option value="both">Cả hai nguồn</option>
+                </select>
                 <label class="form-label fw-bold">Chọn tháng muốn lấy hóa đơn:</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light"><i class="fas fa-calendar-alt text-primary"></i></span>
                     <input type="text" id="syncMonth" class="form-control form-control-lg bg-white" readonly placeholder="Chọn tháng/năm...">
                 </div>
-                <div class="alert alert-info mt-3 small">
-                    <i class="fas fa-info-circle me-1"></i> Hệ thống sẽ kết nối với Tổng cục thuế và bỏ qua các hóa đơn đã tồn tại.
+                <div id="syncCaptchaBlock" class="mt-3 d-none">
+                    <label class="form-label fw-bold">Captcha CQT</label>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <div id="syncCaptchaPreview" class="border rounded bg-white p-2 flex-grow-1 text-center" style="min-height:48px"></div>
+                        <button type="button" class="btn btn-outline-secondary" onclick="refreshPurchaseCaptcha()" title="Làm mới captcha">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <input type="hidden" id="syncCaptchaKey">
+                    <input type="text" id="syncCaptchaValue" class="form-control" placeholder="Nhập mã captcha" autocomplete="off">
+                    <div class="form-text">Cần mật khẩu eTax đã lưu trong Settings → HĐĐT.</div>
+                </div>
+                <div class="alert alert-info mt-3 small mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Portal: lấy HĐ qua đường truyền HĐĐT. CQT: cần captcha khi hết phiên đăng nhập. Hệ thống bỏ qua hóa đơn đã có.
                 </div>
             </div>
             <div class="modal-footer bg-light">
@@ -782,35 +801,112 @@ $('#btnSaveHachToan').on('click', async function() {
     }
 });
 
-// Đồng bộ
-function startSync() {
+// Đồng bộ HĐ mua — portal / CQT / cả hai
+let _syncCaptchaNeeded = false;
+
+document.getElementById('syncSource')?.addEventListener('change', function () {
+    const need = this.value === 'tct' || this.value === 'both';
+    document.getElementById('syncCaptchaBlock')?.classList.toggle('d-none', !need);
+    if (need && !_syncCaptchaNeeded) {
+        refreshPurchaseCaptcha();
+    }
+});
+
+document.getElementById('syncModal')?.addEventListener('shown.bs.modal', function () {
+    const src = document.getElementById('syncSource')?.value || 'portal';
+    const need = src === 'tct' || src === 'both';
+    document.getElementById('syncCaptchaBlock')?.classList.toggle('d-none', !need);
+    if (need) refreshPurchaseCaptcha();
+});
+
+async function refreshPurchaseCaptcha() {
+    const preview = document.getElementById('syncCaptchaPreview');
+    const keyEl = document.getElementById('syncCaptchaKey');
+    if (preview) preview.innerHTML = '<span class="text-muted small">Đang tải captcha...</span>';
+    try {
+        const r = await fetch('/api/invoices/purchase/captcha');
+        const res = await r.json();
+        if (!res.success) throw new Error(res.error || 'Không lấy được captcha');
+        if (keyEl) keyEl.value = res.key || '';
+        const content = res.content || '';
+        if (preview) {
+            if (String(content).trim().startsWith('<')) {
+                preview.innerHTML = content;
+            } else if (String(content).startsWith('data:')) {
+                preview.innerHTML = `<img src="${content}" alt="captcha" style="max-height:56px">`;
+            } else {
+                preview.innerHTML = `<img src="data:image/png;base64,${content}" alt="captcha" style="max-height:56px">`;
+            }
+        }
+        _syncCaptchaNeeded = true;
+    } catch (err) {
+        if (preview) preview.innerHTML = `<span class="text-danger small">${err.message || 'Lỗi captcha'}</span>`;
+    }
+}
+
+async function startSync(forceLogin) {
     const fp = document.getElementById('syncMonth')._flatpickr;
     const monthValue = fp.input.value;
-    Swal.fire({ 
-        title: 'Đang kết nối GDT...', 
-        html: `Đang quét hóa đơn tháng <b>${monthValue}</b>`, 
-        allowOutsideClick: false, 
-        didOpen: () => Swal.showLoading() 
+    const source = document.getElementById('syncSource')?.value || 'portal';
+    const needCaptcha = source === 'tct' || source === 'both';
+    const cvalue = (document.getElementById('syncCaptchaValue')?.value || '').trim();
+    const ckey = (document.getElementById('syncCaptchaKey')?.value || '').trim();
+
+    if (needCaptcha && forceLogin && (!cvalue || !ckey)) {
+        Swal.fire('Thiếu captcha', 'Hãy lấy captcha và nhập mã trước khi đồng bộ CQT.', 'warning');
+        return;
+    }
+
+    const payload = { month: monthValue, source };
+    if (needCaptcha && (forceLogin || (cvalue && ckey))) {
+        payload.login = true;
+        payload.cvalue = cvalue;
+        payload.ckey = ckey;
+    }
+
+    Swal.fire({
+        title: 'Đang đồng bộ...',
+        html: `Nguồn <b>${source}</b> · tháng <b>${monthValue}</b>`,
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
     });
 
-    fetch('/api/invoices/sync-gdt', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ month: monthValue })
-    })
-    .then(r => r.json())
-    .then(res => {
+    try {
+        const r = await fetch('/api/invoices/sync-gdt', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const res = await r.json();
         if (res.success) {
-            Swal.fire('Thành công!', `Đã thêm ${res.count || 0} hóa đơn mới.`, 'success')
-                .then(() => { 
-                    bootstrap.Modal.getInstance(document.getElementById('syncModal')).hide(); 
-                    loadInvoices(); 
+            const n = (res.summary && res.summary.new_inserted != null)
+                ? res.summary.new_inserted
+                : (res.count || 0);
+            const skip = (res.summary && res.summary.duplicates_skipped) || 0;
+            Swal.fire('Thành công!', `Đã thêm ${n} hóa đơn mới` + (skip ? ` (bỏ trùng ${skip})` : '') + '.', 'success')
+                .then(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('syncModal'))?.hide();
+                    loadInvoices();
                 });
-        } else {
-            Swal.fire('Thất bại', res.error || 'Lỗi', 'error');
+            return;
         }
-    })
-    .catch(() => Swal.fire('Lỗi kết nối', 'Không thể kết nối server', 'error'));
+        if (res.need_captcha || res.need_login || r.status === 401) {
+            document.getElementById('syncCaptchaBlock')?.classList.remove('d-none');
+            await refreshPurchaseCaptcha();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Cần đăng nhập CQT',
+                text: res.error || 'Nhập captcha rồi bấm Đồng bộ lại.',
+                confirmButtonText: 'Đã nhập captcha — Đồng bộ'
+            }).then((r2) => {
+                if (r2.isConfirmed) startSync(true);
+            });
+            return;
+        }
+        Swal.fire('Thất bại', res.error || 'Lỗi', 'error');
+    } catch (e) {
+        Swal.fire('Lỗi kết nối', 'Không thể kết nối server', 'error');
+    }
 }
 </script>
 {% endblock %}

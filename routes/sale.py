@@ -478,6 +478,13 @@ def complete_pos_bank_payment(sale_id):
                 (customer_name, company_name, address, tax_code, debit_account, credit_account, date_of_debt, unpaid_amount, sale_id, sale_no)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (customer_name, company_name, address, tax_code, '131', '511', sale_date, total_amount, sale_id, ref_doc))
+            try:
+                cursor.execute(
+                    "UPDATE cong_no SET paid_amount = COALESCE(paid_amount, 0) WHERE sale_id = ?",
+                    (sale_id,),
+                )
+            except Exception:
+                pass
 
         cursor.execute("UPDATE sale SET status = 'completed', date = ? WHERE id = ?", (sale_date, sale_id))
         conn.commit()
@@ -2157,8 +2164,19 @@ def register_sale_routes(app):
                 """, (voucher_no, sale_master['customer_name'], refund_amount, f"Hoàn tiền đơn {sale_master['sale_no']}", 
                       sale_master['sale_no'], sale_id, session.get('user_name', 'Admin'), return_date))
             
-                c.execute("UPDATE cong_no SET unpaid_amount = MAX(0, unpaid_amount - ?) WHERE sale_no = ?", 
-                         (refund_amount, sale_master['sale_no']))
+                try:
+                    from Services.sme.cong_no_ops import apply_ar_credit_note
+                    apply_ar_credit_note(
+                        conn,
+                        sale_id=int(sale_id) if sale_id else None,
+                        sale_no=sale_master['sale_no'],
+                        amount=float(refund_amount),
+                    )
+                except Exception:
+                    c.execute(
+                        "UPDATE cong_no SET unpaid_amount = MAX(0, unpaid_amount - ?) WHERE sale_no = ?",
+                        (refund_amount, sale_master['sale_no']),
+                    )
 
             enqueue_accounting_job(
                 conn,

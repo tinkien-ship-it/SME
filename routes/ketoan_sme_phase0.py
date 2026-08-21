@@ -621,6 +621,42 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
         finally:
             conn.close()
 
+    @app.route('/api/sme/bank-txn/<int:txn_id>/create-receipt', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_bank_txn_create_receipt(txn_id):
+        """Tạo phiếu thu từ giao dịch NH chưa vào sổ."""
+        from Services.sme.bank_reconcile import create_receipt_from_bank_txn
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            sale_id = data.get('sale_id')
+            try:
+                sale_id = int(sale_id) if sale_id not in (None, '', 0, '0') else None
+            except (TypeError, ValueError):
+                sale_id = None
+            result = create_receipt_from_bank_txn(
+                conn,
+                txn_id,
+                sale_id=sale_id,
+                party_name=data.get('party_name') or '',
+                credit_account=data.get('credit_account') or '131',
+                reason=data.get('reason') or '',
+                created_by=session.get('user_name') or session.get('username'),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_bank_txn_create_receipt')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     # ── FA disposal + 06-TSCĐ ───────────────────────────────
     @app.route('/api/sme/fixed-assets/list')
     @login_required

@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
     <h4 class="fw-bold mb-1">Danh sách phiếu xuất khẩu</h4>
-    <p class="text-muted small mb-0">Doanh thu XK · công nợ 131 · tạm ứng / L/C</p>
+    <p class="text-muted small mb-0">Doanh thu XK · công nợ 131 · tạm ứng / L/C · nộp thuế XK</p>
   </div>
   <a href="{{ url_for('SME_sale_export') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus me-1"></i> Lập phiếu XK</a>
 </div>
@@ -28,6 +28,42 @@
     </table>
   </div>
 </div>
+
+<div class="modal fade" id="exportTaxPayModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nộp thuế xuất khẩu <span id="exTaxSaleNo" class="text-muted small"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="exTaxBody" class="small mb-3">Đang tải…</div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label small">Ngày nộp</label>
+            <input type="date" class="form-control form-control-sm" id="exTaxDate">
+          </div>
+          <div class="col-6">
+            <label class="form-label small">Tài khoản Có</label>
+            <select class="form-select form-select-sm" id="exTaxMethod">
+              <option value="bank">Tiền gửi ngân hàng (1121)</option>
+              <option value="cash">Tiền mặt (1111)</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label small">Cơ quan tiếp nhận</label>
+            <input type="text" class="form-control form-control-sm" id="exTaxAgency"
+              value="Cơ quan Hải quan / Kho bạc Nhà nước">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-warning btn-sm" onclick="submitExportTax()">Nộp thuế XK</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block sme_scripts %}
@@ -40,6 +76,12 @@ const PHASE = {
   shipped: 'Xuất kho — chờ thông quan',
   cleared: 'Đã thông quan',
 };
+let _exTaxSaleId = null;
+
+function money(n) {
+  return Number(n || 0).toLocaleString('vi-VN');
+}
+
 async function load() {
   const q = document.getElementById('q').value.trim();
   const res = await fetch('/api/sme/export-sale?' + new URLSearchParams({ q, limit: 100 }));
@@ -54,7 +96,11 @@ async function load() {
     body.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Chưa có phiếu xuất khẩu</td></tr>';
     return;
   }
-  body.innerHTML = rows.map(r => `
+  body.innerHTML = rows.map(r => {
+    const canPayTax = r.export_status === 'cleared'
+      && Number(r.export_tax_vnd || 0) > 0
+      && !r.tax_payment_voucher_id;
+    return `
     <tr>
       <td class="fw-semibold">${r.sale_no || ('#'+r.id)}</td>
       <td>${(r.date||'').slice(0,10)}</td>
@@ -65,10 +111,63 @@ async function load() {
       <td><span class="badge ${r.export_status==='cleared'?'text-bg-success':'text-bg-warning'}">${PHASE[r.export_status]||r.export_status||'—'}</span></td>
       <td><span class="badge text-bg-light border">${LABELS[r.payment_mode]||r.payment_mode||'—'}</span></td>
       <td>${r.ar_status || '—'}</td>
-      <td><a class="btn btn-sm btn-outline-primary" href="/SME_sale_export?sale_id=${r.id}">Mở</a></td>
-    </tr>
-  `).join('');
+      <td class="text-nowrap">
+        <a class="btn btn-sm btn-outline-primary" href="/SME_sale_export?sale_id=${r.id}">Mở</a>
+        ${canPayTax ? `<button type="button" class="btn btn-sm btn-outline-warning" onclick="openExportTaxModal(${r.id})">Nộp thuế XK</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
 }
+
+async function openExportTaxModal(saleId) {
+  _exTaxSaleId = saleId;
+  document.getElementById('exTaxDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('exTaxBody').textContent = 'Đang tải…';
+  const res = await fetch(`/api/sme/export-sale/${saleId}/tax-obligations`);
+  const data = await res.json();
+  if (!data.success) {
+    alert(data.error || 'Lỗi');
+    return;
+  }
+  document.getElementById('exTaxSaleNo').textContent = data.sale_no ? `· ${data.sale_no}` : '';
+  const it = (data.items || [])[0];
+  if (!it) {
+    document.getElementById('exTaxBody').innerHTML = '<span class="text-muted">Không có thuế XK phải nộp.</span>';
+  } else if (it.is_paid) {
+    document.getElementById('exTaxBody').innerHTML = `<span class="text-success">Đã nộp thuế XK (${money(it.amount)} ₫).</span>`;
+  } else {
+    document.getElementById('exTaxBody').innerHTML = `
+      <div><strong>${it.label}</strong> (TK ${it.account_code})</div>
+      <div class="fs-5 fw-bold text-danger my-1">${money(it.remaining)} ₫</div>
+      <div class="text-muted">${it.customs_decl_no ? 'Tờ khai: ' + it.customs_decl_no : ''}</div>
+      <div class="text-muted">Nộp Hải quan / KBNN</div>`;
+  }
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('exportTaxPayModal')).show();
+}
+
+async function submitExportTax() {
+  if (!_exTaxSaleId) return;
+  const res = await fetch(`/api/sme/export-sale/${_exTaxSaleId}/pay-taxes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tax_kinds: ['export_duty'],
+      payment_method: document.getElementById('exTaxMethod').value,
+      date: document.getElementById('exTaxDate').value,
+      agency_name: document.getElementById('exTaxAgency').value,
+      agency_type: 'customs',
+    }),
+  });
+  const data = await res.json();
+  if (!data.success) {
+    alert(data.error || 'Lỗi nộp thuế');
+    return;
+  }
+  bootstrap.Modal.getInstance(document.getElementById('exportTaxPayModal'))?.hide();
+  alert(`Đã nộp ${money(data.amount)} ₫ · ${data.voucher?.voucher_no || ''}`);
+  load();
+}
+
 document.getElementById('btnSearch').addEventListener('click', load);
 document.getElementById('q').addEventListener('keydown', e => { if (e.key==='Enter') load(); });
 load();

@@ -28,275 +28,21 @@ from flask import (
 from flask_login import login_required
 
 from db_utils import get_db_connection
+from Services.purchase_invoice_sync import (
+    SOURCE_BOTH,
+    SOURCE_PORTAL,
+    SOURCE_TCT,
+    MatbaoPurchaseProvider,
+    prepare_invoice_data,
+    sync_month_to_db,
+)
 
 logger = logging.getLogger(__name__)
-from dateutil import parser
-from dateutil.relativedelta import relativedelta
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-
-class MatbaoPurchaseProvider:
-    def __init__(self, config):
-        self.config = config
-        self.base_url = config.get('api_url', '').strip().rstrip('/')
-        self.api_key  = config.get('api_key', '').strip() # Đây là token để lấy Bearer
-        self.name     = config.get('name', 'matbao_purchase')
-
-        if not self.base_url or not self.api_key:
-            raise ValueError(f"Thiếu api_url hoặc api_key cho {self.name}")
-
-        self._bearer_token = None
-        self.session = requests.Session()
-        
-        # Thiết lập retry để xử lý lỗi mạng tạm thời
-        retries = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
-        self.session.mount('https://', HTTPAdapter(max_retries=retries))
-
-    def _get_bearer_token(self):
-        """Lấy Bearer token từ endpoint /auth/token"""
-        if self._bearer_token:
-            return True
-        try:
-            url = f"{self.base_url}/auth/token"
-            payload = {"token": self.api_key}
-            logging.info(f"[{self.name}] Đang lấy token từ: {url} với key: {self.api_key[:5]}***")
-            r = self.session.post(url, json=payload, timeout=10, verify=False)
-            r.raise_for_status()
-            data = r.json()
-            if data.get("Success") and data.get("Data"):
-                self._bearer_token = data["Data"]
-                return True
-            else:
-                # Log lỗi trả về từ server Mắt Bão (ví dụ: "Không có quyền truy cập")
-                logging.error(f"[{self.name}] Server từ chối cấp token: {data.get('Data')}")
-                return False
-        except Exception as e:
-            logging.error(f"[{self.name}] Lỗi lấy Bearer token: {str(e)}")
-            return False
-
-    def _get_headers(self):
-        """Tạo header chuẩn cho mọi request"""
-        if not self._bearer_token and not self._get_bearer_token():
-            raise RuntimeError("Không thể xác thực API (Bearer Token)")
-        return {
-            "Authorization": f"Bearer {self._bearer_token}",
-            "Content-Type": "application/json"
-        }
-
-    def get_tct_captcha(self):
-        """BƯỚC 1: Lấy captcha từ server Mắt Bão"""
-        try:
-            url = f"{self.base_url}/hoa-don-dau-vao/get-captcha"
-            r = self.session.get(url, headers=self._get_headers(), timeout=15, verify=False)
-            r.raise_for_status()
-            data = r.json()
-            if data.get("Success"):
-                # Trả về ckey và content (svg) để hiển thị lên UI
-                return {"success": True, "key": data['Data']['key'], "content": data['Data']['content']}
-            return {"success": False, "error": data.get("Data")}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-
-    def login_tct(self):
-        """BƯỚC 2: Đăng nhập TCT bằng data từ DB (invoice_settings — provider đang active)."""
-        conn = None
-        try:
-            from Services.einvoice_registry import normalize_provider_code
-            provider_key = normalize_provider_code(
-                self.config.get('provider_name') or self.config.get('name') or 'matbao'
-            )
-            conn = get_db_connection()
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-
-            # Ưu tiên đúng provider đang dùng; không hardcode matbao + is_active riêng
-            cursor.execute("""
-                SELECT tax_code, etax_password, etax_cvalue, etax_ckey
-                FROM invoice_settings
-                WHERE LOWER(TRIM(provider_name)) = ?
-                LIMIT 1
-            """, (provider_key,))
-            row = cursor.fetchone()
-            if not row:
-                cursor.execute("""
-                    SELECT tax_code, etax_password, etax_cvalue, etax_ckey
-                    FROM invoice_settings
-                    WHERE is_active = 1
-                    LIMIT 1
-                """)
-                row = cursor.fetchone()
-
-            if not row:
-                return {"success": False, "error": "Không tìm thấy cấu hình HĐĐT / eTax trong Settings"}
-
-            payload = {
-                "username": str(row['tax_code'] or '').strip(),
-                "password": str(row['etax_password'] or '').strip(),
-                "cvalue":   str(row['etax_cvalue'] or '').strip(),
-                "ckey":     str(row['etax_ckey'] or '').strip(),
-            }
-            if not payload["username"] or not payload["password"]:
-                return {
-                    "success": False,
-                    "error": "Thiếu MST hoặc mật khẩu eTax (CQT) trong Settings → HĐĐT",
-                }
-
-            url = f"{self.base_url}/hoa-don-dau-vao/login-tct"
-            r = self.session.post(url, json=payload, headers=self._get_headers(), timeout=20, verify=False)
-            r.raise_for_status()
-            
-            data = r.json()
-            if data.get("Success"):
-                logging.info(f"[{self.name}] Đăng nhập TCT thành công")
-                return {"success": True, "message": data.get("Data")}
-            
-            return {"success": False, "error": data.get("Data")}
-
-        except Exception as e:
-            logging.error(f"[{self.name}] Lỗi Login TCT: {str(e)}")
-            return {"success": False, "error": str(e)}
-        finally:
-            if conn: conn.close()
-
-    def sync_invoices_by_month(self, month_str: str):
-        """
-        Đồng bộ hóa đơn theo tháng (Hàm chính)
-        """
-        try:
-            # 1. Chuẩn bị thời gian
-            dt = parser.parse(month_str.replace('/', '-'), fuzzy=True)
-            from_date = dt.strftime("%Y-%m-01")
-            next_m = dt + relativedelta(months=1)
-            to_date = (next_m - timedelta(seconds=1)).strftime("%Y-%m-%d 23:59:59")
-
-            # 2. Lấy Headers (Sẽ tự động gọi Auth nếu chưa có token)
-            try:
-                headers = self._get_headers()
-            except Exception as auth_err:
-                return {"success": False, "error": str(auth_err)}
-
-            # 3. URL và Payload (Theo tài liệu hàm load-data-tct)
-            url = f"{self.base_url}/hoa-don-dau-vao/load-data-tct"
-            payload = {
-                "comName": "",
-                "comTaxCode": "",
-                "no": 0,
-                "fromDateYMD": from_date,
-                "toDateYMD": to_date,
-                "trangthai": -1,
-                "loaihoadon": -1,
-                "pattern": "",
-                "serial": "",
-                "typeDataPDF": 1
-            }
-
-            logging.info(f"[{self.name}] Syncing {month_str}...")
-
-            # 4. Thực hiện request GET kèm BODY
-            r = self.session.request(
-                method="GET",
-                url=url,
-                json=payload,
-                headers=headers,
-                timeout=60,
-                verify=False
-            )
-
-            # Xử lý trường hợp Token hết hạn bất ngờ (401)
-            if r.status_code == 401:
-                logging.warning(f"[{self.name}] Token hết hạn, đang thử lại...")
-                self._bearer_token = None
-                return self.sync_invoices_by_month(month_str)
-
-            r.raise_for_status()
-            resp = r.json()
-
-            if resp.get("Success"):
-                invoices = resp.get("Data") or []
-                return {
-                    "success": True,
-                    "invoices": invoices,
-                    "count": len(invoices)
-                }
-            
-            return {"success": False, "error": resp.get("Data") or "API trả về lỗi Success=False"}
-
-        except Exception as e:
-            logging.error(f"[{self.name}] Lỗi sync_invoices_by_month: {str(e)}")
-            return {"success": False, "error": str(e)}
-
-# ====================== MAPPING DỮ LIỆU HÓA ĐƠN ĐẦU VÀO LƯU DB  ======================
-def prepare_invoice_data(inv):
-    """
-    Map dữ liệu từ API Mắt Bão (inv) sang cấu trúc bảng supplier_invoice
-    Dựa trên tài liệu Matbao Purchase Inv API.docx
-    """
-    try:
-        # 1. Xử lý ngày hóa đơn (NLap thường là YYYY-MM-DDTHH:MM:SS)
-        n_lap = inv.get('NLap') or ''
-        invoice_date = n_lap[:10] if n_lap else datetime.now().strftime('%Y-%m-%d')
-        entry_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-        # 2. Thông tin định danh hóa đơn
-        serial = str(inv.get('KHHDon', '')).strip()      # Ký hiệu (ví dụ: 1C23TAA)
-        invoice_no = str(inv.get('SHDon', '')).strip()   # Số hóa đơn (ví dụ: 123)
-        seller_name = str(inv.get('NBanTen', '')).strip()
-        seller_tax = str(inv.get('NBanMST', '')).strip()
-
-        # 3. Hàm xử lý số thực an toàn
-        def safe_float(val):
-            if val is None or val == '': return 0.0
-            try:
-                # Xóa dấu phẩy nếu có (định dạng VN) và chuyển sang float
-                clean_val = str(val).replace(',', '')
-                return float(Decimal(clean_val))
-            except:
-                return 0.0
-
-        # 4. Các trường số tiền (Theo tài liệu API)
-        amount = safe_float(inv.get('TgTCThue', 0))          # Tổng tiền chưa thuế
-        discount_pct = safe_float(inv.get('TLCKhau', 0))  # Tổng tiền chiết khấu
-        discount_amount = safe_float(inv.get('STCKhau', 0))  # Tổng tiền chiết khấu
-        tax_amount = safe_float(inv.get('TgTThue', 0))       # Tổng tiền thuế
-        total = safe_float(inv.get('TgTTTBSo', 0))           # Tổng thanh toán bằng số
-        pdf_url = inv.get('LinkDownloadPDF')
-        address = inv.get('NBanDChi')
-
-        # Tự tính % thuế nếu API không trả về trực tiếp
-        tax_percent = 0.0
-        if amount > 0:
-            tax_percent = round((tax_amount / amount) * 100, 0)
-
-        # Lưu toàn bộ JSON gốc để đối chiếu khi cần
-        xml_data = json.dumps(inv, ensure_ascii=False)
-
-        return (
-            invoice_date,    # row[0]
-            serial,          # row[1]
-            invoice_no,      # row[2]
-            seller_name,     # row[3]
-            seller_tax,      # row[4]
-            amount,          # row[5]
-            discount_pct,    # row[6] discount_percent
-            discount_amount, # row[7]
-            tax_percent,     # row[8]
-            tax_amount,      # row[9]
-            total,           # row[10]
-            'new',           # row[11] status
-            xml_data,        # row[12]
-            entry_date,      # row[13]
-            pdf_url          # row[14]
-        )
-    except Exception as e:
-        logging.error(f"Lỗi format dữ liệu hóa đơn: {str(e)}")
-        return None
-
-# ====================== LẤY CONFIG TỪ DB (theo Settings) ======================
 def get_matbao_config():
     """
     Backward-compatible: trả config đồng bộ HĐ đầu vào theo provider đang active.
@@ -378,13 +124,63 @@ def register_inward_routes(app):
         info = conn.execute("SELECT * FROM business_info LIMIT 1").fetchone()
         conn.close()
         return render_template('KeToanHKD/inward_invoice.html', info=info)
+
+    @app.route('/api/invoices/purchase/captcha', methods=['GET'])
+    @login_required
+    def purchase_invoice_captcha():
+        """Lấy captcha CQT qua proxy Mắt Bảo."""
+        try:
+            from Services.invoice_config import get_purchase_sync_config
+            from Services.einvoice_registry import normalize_provider_code
+
+            config = get_purchase_sync_config()
+            if normalize_provider_code(config.get('provider_name') or '') != 'matbao':
+                return jsonify({'success': False, 'error': 'Chỉ hỗ trợ Mắt Bão'}), 400
+            provider = MatbaoPurchaseProvider(config)
+            return jsonify(provider.get_tct_captcha())
+        except Exception as exc:
+            logging.exception('purchase captcha')
+            return jsonify({'success': False, 'error': str(exc)}), 500
+
+    @app.route('/api/invoices/purchase/login-tct', methods=['POST'])
+    @login_required
+    def purchase_invoice_login_tct():
+        """Đăng nhập cổng CQT (sau khi user nhập captcha)."""
+        data = request.get_json(silent=True) or {}
+        try:
+            from Services.invoice_config import get_purchase_sync_config
+            from Services.einvoice_registry import normalize_provider_code
+
+            config = get_purchase_sync_config()
+            if normalize_provider_code(config.get('provider_name') or '') != 'matbao':
+                return jsonify({'success': False, 'error': 'Chỉ hỗ trợ Mắt Bão'}), 400
+            provider = MatbaoPurchaseProvider(config)
+            result = provider.login_tct(
+                cvalue=data.get('cvalue'),
+                ckey=data.get('ckey') or data.get('key'),
+                password=data.get('password'),
+                username=data.get('username'),
+                persist_captcha=True,
+            )
+            status = 200 if result.get('success') else 400
+            return jsonify(result), status
+        except Exception as exc:
+            logging.exception('purchase login-tct')
+            return jsonify({'success': False, 'error': str(exc)}), 500
+
     @app.route('/api/invoices/sync-gdt', methods=['POST'])
+    @login_required
     def sync_gdt():
         """
-        Đồng bộ HĐ đầu vào theo nhà cung cấp đang chọn ở Settings.
+        Đồng bộ HĐ đầu vào.
+        Body: { month: 'MM/YYYY', source: 'portal'|'tct'|'both',
+                login: bool, cvalue, ckey, password? }
         """
         data = request.get_json(silent=True) or {}
-        month_str = data.get('month') # Định dạng MM/YYYY
+        month_str = data.get('month')
+        source = (data.get('source') or SOURCE_PORTAL).strip().lower()
+        if source not in (SOURCE_PORTAL, SOURCE_TCT, SOURCE_BOTH):
+            source = SOURCE_PORTAL
 
         if not month_str:
             return jsonify({"success": False, "error": "Vui lòng chọn tháng đồng bộ"}), 400
@@ -396,78 +192,68 @@ def register_inward_routes(app):
 
             config = get_purchase_sync_config()
             provider_key = normalize_provider_code(config.get('provider_name') or 'matbao')
-            # Hiện chỉ Matbao có API hoa-don-dau-vao; registry đã chặn provider khác
             if provider_key != 'matbao':
                 label = (get_provider_meta(provider_key) or {}).get('label') or provider_key
                 return jsonify({
                     "success": False,
                     "error": (
                         f"Đồng bộ HĐ mua hàng chưa hỗ trợ {label}. "
-                        "Vào Settings chọn Mắt Bão (hoặc provider có supports_purchase_sync)."
+                        "Vào Settings chọn Mắt Bão."
                     ),
                 }), 400
 
-            provider = MatbaoPurchaseProvider(config)
+            login_first = False
+            captcha = None
+            if source in (SOURCE_TCT, SOURCE_BOTH):
+                cvalue = str(data.get('cvalue') or '').strip()
+                ckey = str(data.get('ckey') or data.get('key') or '').strip()
+                want_login = bool(data.get('login')) or bool(cvalue and ckey)
+                if want_login:
+                    if not cvalue or not ckey:
+                        return jsonify({
+                            'success': False,
+                            'need_captcha': True,
+                            'error': 'Vui lòng lấy và nhập captcha CQT trước khi đồng bộ cổng thuế',
+                        }), 400
+                    login_first = True
+                    captcha = {
+                        'cvalue': cvalue,
+                        'ckey': ckey,
+                        'password': data.get('password'),
+                        'username': data.get('username'),
+                    }
 
-            # 2. Gọi API lấy danh sách
-            result = provider.sync_invoices_by_month(month_str)
-
-            if not result["success"]:
-                return jsonify(result), 400
-
-            invoices = result["invoices"]
-        
-            # 3. Lưu vào Database
             conn = get_db_connection()
-            cursor = conn.cursor()
-            new_count = 0
-            skip_count = 0
+            result = sync_month_to_db(
+                conn,
+                config,
+                month_str,
+                source=source,
+                login_first=login_first,
+                captcha=captcha,
+            )
+            if not result.get('success'):
+                status = 400
+                if result.get('need_captcha') or result.get('need_login'):
+                    status = 401
+                return jsonify(result), status
 
-            for inv in invoices:
-                row_data = prepare_invoice_data(inv)
-                if not row_data:
-                    continue
-
-                # Kiểm tra trùng lặp dựa trên MST người bán, Ký hiệu và Số hóa đơn
-                cursor.execute("""
-                    SELECT id FROM supplier_invoice 
-                    WHERE seller_tax_code = ? AND serial = ? AND invoice_no = ?
-                """, (row_data[4], row_data[1], row_data[2]))
-
-                if cursor.fetchone():
-                    skip_count += 1
-                    continue
-
-                # Insert vào bảng supplier_invoice
-                cursor.execute("""
-                    INSERT INTO supplier_invoice (
-                        invoice_date, serial, invoice_no, seller_name, seller_tax_code,
-                        amount, discount_percent, discount_amount, tax_percent, tax_amount,
-                        total, status, xml_data, date, pdf_url
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, row_data)
-                new_count += 1
-
-            conn.commit()
-
+            summary = result.get('summary') or {}
             return jsonify({
                 "success": True,
-                "message": f"Đồng bộ thành công tháng {month_str}",
-                "summary": {
-                    "total_received": len(invoices),
-                    "new_inserted": new_count,
-                    "duplicates_skipped": skip_count
-                }
+                "message": result.get('message') or f"Đồng bộ thành công tháng {month_str}",
+                "count": summary.get('new_inserted', 0),
+                "summary": summary,
+                "sources_ok": result.get('sources_ok') or [],
+                "warnings": result.get('warnings') or [],
             })
 
         except Exception as e:
             logging.exception("Lỗi trong quá trình đồng bộ hóa đơn")
             return jsonify({"success": False, "error": str(e)}), 500
         finally:
-            if conn: conn.close()
-
-    from flask import jsonify, request
-    import sqlite3
+            if conn:
+                conn.close()
 
     @app.route('/api/invoices/inward/<int:invoice_id>/pdf')
     @login_required

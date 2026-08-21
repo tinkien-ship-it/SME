@@ -293,15 +293,8 @@ def settle_export_ar(
         conn.execute(f"UPDATE sale SET {', '.join(sets)} WHERE id = ?", vals)
 
     try:
-        conn.execute(
-            """
-            UPDATE cong_no SET unpaid_amount = CASE
-                WHEN COALESCE(unpaid_amount,0) - ? < 0 THEN 0
-                ELSE COALESCE(unpaid_amount,0) - ?
-            END WHERE sale_id = ?
-            """,
-            (float(book_vnd), float(book_vnd), sale_id),
-        )
+        from Services.sme.cong_no_ops import apply_ar_receipt
+        apply_ar_receipt(conn, int(sale_id), float(book_vnd))
     except sqlite3.OperationalError:
         pass
 

@@ -1124,15 +1124,27 @@ def register_ketoan_sme_routes(app):
     @require_sme_regime
     def api_sme_debt_customers():
         from Services.sme.branches import request_branch_filter, sale_branch_filter_sql
+        from Services.sme.cong_no_ops import (
+            ensure_cong_no_schema,
+            remaining_sql,
+            sync_remaining_from_unpaid,
+        )
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
+            try:
+                ensure_cong_no_schema(conn, commit=True)
+                sync_remaining_from_unpaid(conn)
+                conn.commit()
+            except sqlite3.Error:
+                pass
             branch = request_branch_filter()
-            sql = """
+            rem = remaining_sql('cn', conn)
+            sql = f"""
                 SELECT DISTINCT cn.customer_name, s.company_name
                 FROM cong_no cn
                 LEFT JOIN sale s ON cn.sale_id = s.id
-                WHERE cn.remaining_amount <> 0
+                WHERE ({rem}) <> 0
             """
             params: list = []
             bf, bp = sale_branch_filter_sql(conn, branch, alias='s')
@@ -1158,11 +1170,23 @@ def register_ketoan_sme_routes(app):
         if not customer_name:
             return jsonify(success=False, error='Thiếu tên khách hàng'), 400
         from Services.sme.branches import request_branch_filter, sale_branch_filter_sql
+        from Services.sme.cong_no_ops import (
+            ensure_cong_no_schema,
+            remaining_sql,
+            sync_remaining_from_unpaid,
+        )
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
+            try:
+                ensure_cong_no_schema(conn, commit=True)
+                sync_remaining_from_unpaid(conn)
+                conn.commit()
+            except sqlite3.Error:
+                pass
             branch = request_branch_filter()
             bf, bp = sale_branch_filter_sql(conn, branch, alias='s')
+            rem = remaining_sql('cn', conn)
             sql_records = f"""
                 SELECT
                     cn.debt_id,
@@ -1172,12 +1196,12 @@ def register_ketoan_sme_routes(app):
                     cn.sale_id,
                     s.company_name,
                     cn.unpaid_amount     AS total_debt,
-                    cn.paid_amount       AS paid_amount,
-                    cn.remaining_amount  AS remaining
+                    COALESCE(cn.paid_amount, 0) AS paid_amount,
+                    ({rem}) AS remaining
                 FROM cong_no cn
                 LEFT JOIN sale s ON cn.sale_id = s.id
                 WHERE cn.customer_name = ?
-                  AND cn.remaining_amount > 0
+                  AND ({rem}) > 0
                   {bf}
                 ORDER BY cn.date_of_debt ASC, cn.debt_id ASC
             """
@@ -1185,8 +1209,8 @@ def register_ketoan_sme_routes(app):
             sql_summary = f"""
                 SELECT
                     COALESCE(SUM(cn.unpaid_amount), 0)    AS total_debt_all,
-                    COALESCE(SUM(cn.paid_amount), 0)      AS total_paid_all,
-                    COALESCE(SUM(cn.remaining_amount), 0)  AS current_remaining
+                    COALESCE(SUM(COALESCE(cn.paid_amount, 0)), 0) AS total_paid_all,
+                    COALESCE(SUM({rem}), 0)  AS current_remaining
                 FROM cong_no cn
                 LEFT JOIN sale s ON cn.sale_id = s.id
                 WHERE cn.customer_name = ?
@@ -1687,6 +1711,7 @@ def register_ketoan_sme_routes(app):
                 source_type=data.get('source_type'),
                 source_id=data.get('source_id'),
                 sale_id=data.get('sale_id'),
+                allocations=data.get('allocations'),
                 currency=data.get('currency') or 'VND',
                 exchange_rate=data.get('exchange_rate') or data.get('fx_rate') or 1,
                 amount_fc=data.get('amount_fc'),
@@ -1743,6 +1768,7 @@ def register_ketoan_sme_routes(app):
                 source_type=data.get('source_type'),
                 source_id=data.get('source_id'),
                 import_id=data.get('import_id') or data.get('import_ref_id'),
+                allocations=data.get('allocations'),
                 currency=data.get('currency') or 'VND',
                 exchange_rate=data.get('exchange_rate') or data.get('fx_rate') or 1,
                 amount_fc=data.get('amount_fc'),
@@ -1843,6 +1869,9 @@ def register_ketoan_sme_routes(app):
                     'receipt_stage': r.get('receipt_stage') or 'RECEIVED',
                     'tax_payment_voucher_id': r.get('tax_payment_voucher_id'),
                     'receive_journal_id': r.get('receive_journal_id'),
+                    'import_tax_amount': float(r.get('import_tax_amount') or 0),
+                    'excise_tax_amount': float(r.get('excise_tax_amount') or 0),
+                    'env_tax_amount': float(r.get('env_tax_amount') or 0),
                 })
             return jsonify({'success': True, 'data': data})
         except Exception as e:
@@ -3254,6 +3283,9 @@ def register_ketoan_sme_routes(app):
                 if 'excise_tax_amount' in import_cols:
                     set_parts.append('excise_tax_amount = ?')
                     set_vals.append(0)
+                if 'env_tax_amount' in import_cols:
+                    set_parts.append('env_tax_amount = ?')
+                    set_vals.append(0)
                 if 'doc_type' in import_cols:
                     set_parts.append('doc_type = ?')
                     set_vals.append(doc_type_input)
@@ -3325,6 +3357,9 @@ def register_ketoan_sme_routes(app):
                 if 'excise_tax_amount' in import_cols:
                     import_fields.append('excise_tax_amount')
                     import_values.append(0)
+                if 'env_tax_amount' in import_cols:
+                    import_fields.append('env_tax_amount')
+                    import_values.append(0)
                 if 'doc_type' in import_cols:
                     import_fields.append('doc_type')
                     import_values.append(doc_type_input)
@@ -3385,6 +3420,7 @@ def register_ketoan_sme_routes(app):
             tools_created = 0
             total_import_tax_vnd = Decimal('0.00')
             total_excise_tax_vnd = Decimal('0.00')
+            total_env_tax_vnd = Decimal('0.00')
             from Services.sme.tt58_tax_methods import tt58_input_vat_in_inventory_cost
             vat_in_inventory_cost = tt58_input_vat_in_inventory_cost(conn)
 
@@ -3423,6 +3459,15 @@ def register_ketoan_sme_routes(app):
                     if import_type == 'IMPORT'
                     else Decimal('0.00')
                 )
+                env_tax_p = (
+                    Decimal(str(
+                        item.get('env_tax_pct', 0)
+                        or item.get('bvmt_pct', 0)
+                        or 0
+                    ))
+                    if import_type == 'IMPORT'
+                    else Decimal('0.00')
+                )
                 unit_in = str(item.get('unit') or 'Cái').strip()
                 inv_name = (
                     item.get('invoice_name')
@@ -3440,6 +3485,7 @@ def register_ketoan_sme_routes(app):
                     line_disc_vnd = round_money(line_subtotal_vnd - line_net_vnd)
                 line_import_tax_vnd = Decimal('0.00')
                 line_excise_tax_vnd = Decimal('0.00')
+                line_env_tax_vnd = Decimal('0.00')
                 if import_type == 'IMPORT' and line_type != 'service':
                     # Ưu tiên số tiền tuyệt đối từ tờ khai (nếu gửi); không thì tính theo %
                     raw_nk_amt = item.get('import_tax_amount')
@@ -3468,26 +3514,47 @@ def register_ketoan_sme_routes(app):
                     elif raw_excise_amt not in (None, ''):
                         line_excise_tax_vnd = round_money(raw_excise_amt)
 
+                    raw_env_amt = item.get('env_tax_amount') or item.get('bvmt_amount')
+                    # BVMT: thường số tuyệt đối tờ khai; % tính trên (CIF + NK + TTĐB)
+                    env_base = line_net_vnd + line_import_tax_vnd + line_excise_tax_vnd
+                    if (
+                        raw_env_amt not in (None, '')
+                        and Decimal(str(raw_env_amt or 0)) > 0
+                        and env_tax_p <= 0
+                    ):
+                        line_env_tax_vnd = round_money(raw_env_amt)
+                    elif env_tax_p > 0:
+                        line_env_tax_vnd = round_money(
+                            env_base * (env_tax_p / Decimal('100.00'))
+                        )
+                    elif raw_env_amt not in (None, ''):
+                        line_env_tax_vnd = round_money(raw_env_amt)
+
                 total_import_tax_vnd += line_import_tax_vnd
                 total_excise_tax_vnd += line_excise_tax_vnd
+                total_env_tax_vnd += line_env_tax_vnd
                 line_extra_vnd = round_money((line_subtotal_vnd / total_base_safe) * extra_cost)
-                # Cơ sở GTGT hàng NK = CIF + NK + TTĐB
+                # Cơ sở GTGT hàng NK = CIF + NK + TTĐB + BVMT
                 if import_type == 'IMPORT':
-                    tax_base_vnd = line_net_vnd + line_import_tax_vnd + line_excise_tax_vnd
+                    tax_base_vnd = (
+                        line_net_vnd + line_import_tax_vnd
+                        + line_excise_tax_vnd + line_env_tax_vnd
+                    )
                 else:
                     tax_base_vnd = line_net_vnd
                 line_vat_vnd = round_money(tax_base_vnd * (tax_p / Decimal('100.00')))
                 # Giá vốn hóa HH/NVL/TSCĐ/CCDC (TH3/TH4: không gồm VAT; TH1/TH2: gồm VAT)
                 line_inventory_value_vnd = (
-                    line_net_vnd + line_import_tax_vnd + line_excise_tax_vnd + line_extra_vnd
+                    line_net_vnd + line_import_tax_vnd
+                    + line_excise_tax_vnd + line_env_tax_vnd + line_extra_vnd
                 )
                 if vat_in_inventory_cost:
                     line_inventory_value_vnd += line_vat_vnd
-                # Tổng hiển thị: hàng + thuế NK/TTĐB + VAT + CP khác
+                # Tổng hiển thị: hàng + thuế NK/TTĐB/BVMT + VAT + CP khác
                 if import_type == 'IMPORT':
                     line_total_payment_vnd = (
                         line_net_vnd + line_import_tax_vnd + line_excise_tax_vnd
-                        + line_vat_vnd + line_extra_vnd
+                        + line_env_tax_vnd + line_vat_vnd + line_extra_vnd
                     )
                 else:
                     line_total_payment_vnd = line_net_vnd + line_vat_vnd + line_extra_vnd
@@ -3580,6 +3647,8 @@ def register_ketoan_sme_routes(app):
                     'import_tax_amount': float(line_import_tax_vnd),
                     'excise_tax_pct': float(excise_tax_p),
                     'excise_tax_amount': float(line_excise_tax_vnd),
+                    'env_tax_pct': float(env_tax_p),
+                    'env_tax_amount': float(line_env_tax_vnd),
                     'line_type': line_type,
                     'invoice_product_type': line_type,
                     'warehouse_code': warehouse_code,
@@ -3602,6 +3671,8 @@ def register_ketoan_sme_routes(app):
                     'import_tax_amount': float(line_import_tax_vnd),
                     'excise_tax_pct': float(excise_tax_p),
                     'excise_tax_amount': float(line_excise_tax_vnd),
+                    'env_tax_pct': float(env_tax_p),
+                    'env_tax_amount': float(line_env_tax_vnd),
                     'payment_amt': float(line_total_payment_vnd),
                     'product_name': product_name,
                     'unit': unit_in,
@@ -3729,6 +3800,9 @@ def register_ketoan_sme_routes(app):
             if 'excise_tax_amount' in import_cols:
                 update_parts.append('excise_tax_amount = ?')
                 update_vals.append(float(total_excise_tax_vnd))
+            if 'env_tax_amount' in import_cols:
+                update_parts.append('env_tax_amount = ?')
+                update_vals.append(float(total_env_tax_vnd))
             if 'payment_mode' in import_cols:
                 update_parts.append('payment_mode = ?')
                 update_vals.append(payment_mode)
@@ -3800,6 +3874,7 @@ def register_ketoan_sme_routes(app):
                 import_type=import_type,
                 import_tax_amount=total_import_tax_vnd,
                 excise_tax_amount=total_excise_tax_vnd,
+                env_tax_amount=total_env_tax_vnd,
                 exchange_rate=exchange_rate,
             )
             accounting_tx_ids = list(journal_result.get('entry_ids') or [])
@@ -4036,7 +4111,7 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def api_sme_import_pay_customs_tax(import_id):
-        """G2 — Nộp thuế HQ: Nợ 3333/3332/33312 / Có 112."""
+        """G2 — Nộp thuế (tương thích): nộp nhóm chưa nộp; ưu tiên Hải quan nếu lẫn nhóm."""
         from Services.sme.import_transit import pay_customs_taxes
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
@@ -4047,6 +4122,7 @@ def register_ketoan_sme_routes(app):
                 import_id,
                 pay_date=data.get('date') or data.get('pay_date'),
                 payment_method=data.get('payment_method') or 'bank',
+                agency_type=data.get('agency_type'),
                 created_by=session.get('user_name') or session.get('username'),
                 commit=True,
             )
@@ -4057,6 +4133,114 @@ def register_ketoan_sme_routes(app):
         except Exception as e:
             conn.rollback()
             logger.exception('api_sme_import_pay_customs_tax')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/import/<int:import_id>/tax-obligations', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_import_tax_obligations(import_id):
+        """Danh sách khoản thuế phải nộp trên phiếu nhập khẩu."""
+        from Services.sme.tax_payment_ops import list_import_tax_obligations
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = list_import_tax_obligations(conn, import_id)
+            return jsonify({'success': True, **data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            logger.exception('api_sme_import_tax_obligations')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/import/<int:import_id>/pay-taxes', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_import_pay_taxes(import_id):
+        """Nộp một/nhiều khoản thuế (cùng cơ quan nhận) — Có 1111 hoặc 1121."""
+        from Services.sme.tax_payment_ops import pay_selected_taxes, SOURCE_IMPORT
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            kinds = data.get('tax_kinds') or data.get('kinds') or []
+            if isinstance(kinds, str):
+                kinds = [kinds]
+            result = pay_selected_taxes(
+                conn,
+                source_type=SOURCE_IMPORT,
+                source_id=import_id,
+                tax_kinds=kinds,
+                payment_method=data.get('payment_method') or 'bank',
+                pay_date=data.get('date') or data.get('pay_date'),
+                agency_name=data.get('agency_name') or data.get('party_name'),
+                agency_type=data.get('agency_type'),
+                created_by=session.get('user_name') or session.get('username'),
+                commit=True,
+            )
+            return jsonify({'success': True, **result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_import_pay_taxes')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/export-sale/<int:sale_id>/tax-obligations', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_export_tax_obligations(sale_id):
+        from Services.sme.tax_payment_ops import list_export_tax_obligations
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = list_export_tax_obligations(conn, sale_id)
+            return jsonify({'success': True, **data})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            logger.exception('api_sme_export_tax_obligations')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/export-sale/<int:sale_id>/pay-taxes', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_export_pay_taxes(sale_id):
+        from Services.sme.tax_payment_ops import pay_selected_taxes, SOURCE_EXPORT
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            kinds = data.get('tax_kinds') or data.get('kinds') or ['export_duty']
+            if isinstance(kinds, str):
+                kinds = [kinds]
+            result = pay_selected_taxes(
+                conn,
+                source_type=SOURCE_EXPORT,
+                source_id=sale_id,
+                tax_kinds=kinds,
+                payment_method=data.get('payment_method') or 'bank',
+                pay_date=data.get('date') or data.get('pay_date'),
+                agency_name=data.get('agency_name') or data.get('party_name'),
+                agency_type=data.get('agency_type') or 'customs',
+                created_by=session.get('user_name') or session.get('username'),
+                commit=True,
+            )
+            return jsonify({'success': True, **result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_export_pay_taxes')
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
@@ -4248,6 +4432,12 @@ def register_ketoan_sme_routes(app):
     def api_sme_invoices_inward_list():
         """Danh sách HĐ mua — lọc CN (ủy quyền logic /api/invoices/inward)."""
         view = app.view_functions.get('get_inward_invoices')
+        if not view:
+            for name, fn in app.view_functions.items():
+                low = name.lower()
+                if name == 'get_inward_invoices' or low.endswith('.get_inward_invoices') or low.endswith('get_inward_invoices'):
+                    view = fn
+                    break
         if not view:
             return jsonify({'success': False, 'error': 'API HĐ mua chưa sẵn sàng'}), 500
         return view()

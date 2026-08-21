@@ -180,6 +180,52 @@
         </div>
     </div>
 </div>
+
+<!-- Modal nộp thuế theo khoản -->
+<div class="modal fade" id="importTaxPayModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nộp thuế hàng nhập khẩu <span id="taxModalImportNo" class="text-muted small"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2" id="taxModalDecl"></p>
+        <div id="taxModalBody" class="small">Đang tải…</div>
+        <hr>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Ngày nộp</label>
+            <input type="date" class="form-control form-control-sm" id="taxPayDate">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Tài khoản Có (nguồn tiền)</label>
+            <select class="form-select form-select-sm" id="taxPayMethod">
+              <option value="bank">Tiền gửi ngân hàng (1121)</option>
+              <option value="cash">Tiền mặt (1111)</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Cơ quan tiếp nhận</label>
+            <input type="text" class="form-control form-control-sm" id="taxPayAgency" placeholder="Tự điền theo nhóm đã chọn">
+          </div>
+        </div>
+        <div class="alert alert-light border small mt-3 mb-0">
+          <strong>Lưu ý:</strong> Thuế NK + GTGT NK → Hải quan.
+          TTĐB + BVMT → cơ quan thuế địa phương (có thể nộp gộp cùng nhóm).
+          Không gộp hai nhóm cơ quan trên một phiếu chi.
+          TTĐB hàng NK đã vốn hóa vào giá vốn — khi bán ra chỉ tính GTGT, không tính lại TTĐB.
+        </div>
+      </div>
+      <div class="modal-footer flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-warning btn-sm" id="btnPaySelectedTaxes" onclick="submitSelectedImportTaxes()">
+          <i class="bi bi-cash-coin"></i> Nộp các khoản đã chọn
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -222,10 +268,11 @@ function renderImportRows(data, tbody) {
         let stageBadge = '';
         if (isImport) {
             if (stage === 'IN_TRANSIT') stageBadge = '<span class="badge bg-info text-dark ms-1">Đi đường 151</span>';
+            else if (stage === 'TAX_PARTIAL') stageBadge = '<span class="badge bg-warning text-dark ms-1">Nộp thuế dở dang</span>';
             else if (stage === 'TAX_PAID') stageBadge = '<span class="badge bg-primary ms-1">Đã nộp thuế</span>';
             else stageBadge = '<span class="badge bg-success ms-1">Đã nhập kho</span>';
         }
-        const canPayTax = isImport && !item.tax_payment_voucher_id && stage !== 'RECEIVED';
+        const canPayTax = isImport && (stage === 'IN_TRANSIT' || stage === 'TAX_PARTIAL');
         const canReceive = isImport && stage !== 'RECEIVED' && !item.receive_journal_id;
         const mode = String(item.payment_mode || '').toLowerCase();
         const remainFc = Math.max(0, (parseFloat(item.amount_fc) || 0) - (parseFloat(item.advance_fc) || 0) - (parseFloat(item.settle_amount_fc) || 0));
@@ -246,7 +293,7 @@ function renderImportRows(data, tbody) {
                 <div class="action-btn-group">
                     <a class="btn btn-sm btn-outline-primary" title="Xem" href="/SME_import/view/${item.id}"><i class="bi bi-eye"></i></a>
                     <a class="btn btn-sm btn-outline-info" title="Sửa phiếu nhập" href="/SME_import?import_id=${item.id}"><i class="bi bi-pencil"></i></a>
-                    ${canPayTax ? `<button type="button" class="btn btn-sm btn-outline-warning" title="Nộp thuế HQ" onclick="payCustomsTax(${item.id})"><i class="bi bi-cash-coin"></i></button>` : ''}
+                    ${canPayTax ? `<button type="button" class="btn btn-sm btn-outline-warning" title="Nộp thuế HQ / thuế địa phương" onclick="openImportTaxModal(${item.id})"><i class="bi bi-cash-coin"></i></button>` : ''}
                     ${canReceive ? `<button type="button" class="btn btn-sm btn-outline-dark" title="Nhập kho thực tế" onclick="receiveWarehouse(${item.id})"><i class="bi bi-box-seam"></i></button>` : ''}
                     ${canSettleAp ? `<button type="button" class="btn btn-sm btn-outline-danger" title="Thanh toán NCC (CLTG)" onclick="settleImportAp(${item.id})"><i class="bi bi-currency-exchange"></i></button>` : ''}
                     ${canSettleLc ? `<button type="button" class="btn btn-sm btn-outline-secondary" title="Tất toán L/C" onclick="settleImportLc(${item.id})"><i class="bi bi-bank"></i></button>` : ''}
@@ -345,7 +392,13 @@ function renderImportRow(item) {
     const importNo = item.import_no || item.id;
     const isImport = String(item.import_type || '').toUpperCase() === 'IMPORT';
     const stage = String(item.receipt_stage || 'RECEIVED').toUpperCase();
-    const canPayTax = isImport && !item.tax_payment_voucher_id && stage !== 'RECEIVED';
+    let stageBadge = '';
+    if (isImport) {
+        if (stage === 'IN_TRANSIT') stageBadge = '<span class="badge bg-info text-dark ms-1">Đi đường</span>';
+        else if (stage === 'TAX_PARTIAL') stageBadge = '<span class="badge bg-warning text-dark ms-1">Thuế dở dang</span>';
+        else if (stage === 'TAX_PAID') stageBadge = '<span class="badge bg-primary ms-1">Đã nộp thuế</span>';
+    }
+    const canPayTax = isImport && (stage === 'IN_TRANSIT' || stage === 'TAX_PARTIAL');
     const canReceive = isImport && stage !== 'RECEIVED' && !item.receive_journal_id;
     const mode = String(item.payment_mode || '').toLowerCase();
     const remainFc = Math.max(0, (parseFloat(item.amount_fc) || 0) - (parseFloat(item.advance_fc) || 0) - (parseFloat(item.settle_amount_fc) || 0));
@@ -355,7 +408,7 @@ function renderImportRow(item) {
     const canSettleLc = isImport && !item.settle_journal_id && mode === 'lc' && item.linked_lc_id;
     return `
         <tr data-id="${item.id}">
-            <td class="text-center"><strong>${escapeHtml(String(importNo))}</strong></td>
+            <td class="text-center"><strong>${escapeHtml(String(importNo))}</strong>${stageBadge}</td>
             <td class="text-center">${formatDate(item.date)}</td>
             <td class="text-start" title="${escapeHtml(item.supplier_name || '')}">${escapeHtml(item.supplier_name || '—')}</td>
             <td class="text-center">${escapeHtml(item.bill_no || '—')}</td>
@@ -366,7 +419,7 @@ function renderImportRow(item) {
                 <div class="action-btn-group">
                     <a class="btn btn-sm btn-outline-primary" title="Xem" href="/SME_import/view/${item.id}"><i class="bi bi-eye"></i></a>
                     <a class="btn btn-sm btn-outline-info" title="Sửa phiếu nhập" href="/SME_import?import_id=${item.id}"><i class="bi bi-pencil"></i></a>
-                    ${canPayTax ? `<button type="button" class="btn btn-sm btn-outline-warning" title="Nộp thuế HQ" onclick="payCustomsTax(${item.id})"><i class="bi bi-cash-coin"></i></button>` : ''}
+                    ${canPayTax ? `<button type="button" class="btn btn-sm btn-outline-warning" title="Nộp thuế HQ / thuế địa phương" onclick="openImportTaxModal(${item.id})"><i class="bi bi-cash-coin"></i></button>` : ''}
                     ${canReceive ? `<button type="button" class="btn btn-sm btn-outline-dark" title="Nhập kho thực tế" onclick="receiveWarehouse(${item.id})"><i class="bi bi-box-seam"></i></button>` : ''}
                     ${canSettleAp ? `<button type="button" class="btn btn-sm btn-outline-danger" title="Thanh toán NCC (CLTG)" onclick="settleImportAp(${item.id})"><i class="bi bi-currency-exchange"></i></button>` : ''}
                     ${canSettleLc ? `<button type="button" class="btn btn-sm btn-outline-secondary" title="Tất toán L/C" onclick="settleImportLc(${item.id})"><i class="bi bi-bank"></i></button>` : ''}
@@ -511,37 +564,156 @@ async function deleteImport(id, importNo) {
     }
 }
 
-async function payCustomsTax(id) {
-    const cached = (importCache || []).find(i => Number(i.id) === Number(id));
-    const taxHint = Number(cached?.import_tax_amount || 0) + Number(cached?.excise_tax_amount || 0)
-        + Number(cached?.vat_amount || cached?.tax_amount || 0);
-    if (window.assertSmeCashBalanceOrAlert && taxHint > 0) {
-        const okBal = await window.assertSmeCashBalanceOrAlert(taxHint, 'bank');
+async function openImportTaxModal(id) {
+    window._taxPayImportId = id;
+    const body = document.getElementById('taxModalBody');
+    body.innerHTML = 'Đang tải…';
+    document.getElementById('taxPayDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('taxPayMethod').value = 'bank';
+    document.getElementById('taxPayAgency').value = '';
+    try {
+        const res = await fetch(`/api/sme/import/${id}/tax-obligations`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Lỗi tải khoản thuế');
+        window._taxPaySummary = data;
+        document.getElementById('taxModalImportNo').textContent =
+            data.import_no ? `· ${data.import_no}` : `· #${id}`;
+        document.getElementById('taxModalDecl').textContent = data.customs_decl_no
+            ? `Tờ khai HQ: ${data.customs_decl_no}`
+            : 'Chưa gắn số tờ khai HQ';
+        body.innerHTML = renderTaxObligationHtml(data);
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('importTaxPayModal'));
+        modal.show();
+    } catch (err) {
+        showToast(err.message || 'Không tải được danh sách thuế', true);
+    }
+}
+
+function renderTaxObligationHtml(data) {
+    const labels = data.agency_labels || {};
+    const groups = [
+        { key: 'customs', title: 'Nộp Hải quan', items: (data.by_agency && data.by_agency.customs) || [] },
+        { key: 'local_tax', title: 'Nộp cơ quan thuế địa phương', items: (data.by_agency && data.by_agency.local_tax) || [] },
+    ];
+    if (!data.items || !data.items.length) {
+        return '<div class="text-muted">Không có khoản thuế phải nộp trên phiếu này.</div>';
+    }
+    let html = '';
+    for (const g of groups) {
+        if (!g.items.length) continue;
+        html += `<div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <strong>${g.title}</strong>
+            <button type="button" class="btn btn-outline-primary btn-sm py-0"
+              onclick="selectAgencyGroup('${g.key}')">Chọn cả nhóm</button>
+          </div>
+          <div class="text-muted mb-2" style="font-size:11px">${labels[g.key] || ''}</div>
+          <div class="list-group list-group-flush border rounded">`;
+        for (const it of g.items) {
+            const disabled = it.is_paid ? 'disabled' : '';
+            const checked = !it.is_paid ? '' : '';
+            const status = it.is_paid
+                ? `<span class="badge bg-success">Đã nộp${it.pay_date ? ' · ' + it.pay_date : ''}</span>`
+                : `<span class="badge bg-warning text-dark">Còn ${formatNumber(it.remaining)}</span>`;
+            html += `<label class="list-group-item d-flex gap-2 align-items-start ${it.is_paid ? 'opacity-75' : ''}">
+              <input type="checkbox" class="form-check-input mt-1 tax-kind-cb" value="${it.tax_kind}"
+                data-agency="${it.agency_type}" data-agency-name="${escapeHtml(it.agency_name || '')}"
+                data-remaining="${it.remaining}" ${disabled} ${checked}
+                onchange="onTaxKindSelectionChange()">
+              <div class="flex-grow-1">
+                <div class="d-flex justify-content-between gap-2">
+                  <span class="fw-semibold">${escapeHtml(it.label)} <span class="text-muted">(TK ${it.account_code})</span></span>
+                  ${status}
+                </div>
+                <div class="text-end fw-bold">${formatNumber(it.amount)}</div>
+                <div class="text-muted" style="font-size:11px">${escapeHtml(it.hint || '')}</div>
+                ${it.is_paid ? '' : `<button type="button" class="btn btn-sm btn-warning py-0 mt-1"
+                  onclick="event.preventDefault(); paySingleImportTax('${it.tax_kind}')">Nộp riêng</button>`}
+              </div>
+            </label>`;
+        }
+        html += '</div></div>';
+    }
+    html += `<div class="fw-semibold">Còn phải nộp: <span class="text-danger">${formatNumber(data.unpaid_total || 0)}</span></div>`;
+    return html;
+}
+
+function selectAgencyGroup(agencyType) {
+    document.querySelectorAll('.tax-kind-cb').forEach(cb => {
+        if (cb.disabled) return;
+        cb.checked = cb.dataset.agency === agencyType;
+    });
+    onTaxKindSelectionChange();
+}
+
+function onTaxKindSelectionChange() {
+    const checked = [...document.querySelectorAll('.tax-kind-cb:checked')];
+    const agencyEl = document.getElementById('taxPayAgency');
+    if (!checked.length) return;
+    const agencies = new Set(checked.map(c => c.dataset.agency));
+    if (agencies.size === 1) {
+        agencyEl.value = checked[0].dataset.agencyName || '';
+    }
+}
+
+async function paySingleImportTax(kind) {
+    document.querySelectorAll('.tax-kind-cb').forEach(cb => {
+        cb.checked = !cb.disabled && cb.value === kind;
+    });
+    onTaxKindSelectionChange();
+    await submitSelectedImportTaxes();
+}
+
+async function submitSelectedImportTaxes() {
+    const id = window._taxPayImportId;
+    const checked = [...document.querySelectorAll('.tax-kind-cb:checked')];
+    if (!checked.length) {
+        showToast('Chọn ít nhất một khoản thuế', true);
+        return;
+    }
+    const agencies = new Set(checked.map(c => c.dataset.agency));
+    if (agencies.size > 1) {
+        showToast('Chỉ nộp gộp các khoản cùng một cơ quan nhận (Hải quan hoặc thuế địa phương)', true);
+        return;
+    }
+    const kinds = checked.map(c => c.value);
+    const total = checked.reduce((s, c) => s + (parseFloat(c.dataset.remaining) || 0), 0);
+    const method = document.getElementById('taxPayMethod').value || 'bank';
+    if (window.assertSmeCashBalanceOrAlert && total > 0) {
+        const okBal = await window.assertSmeCashBalanceOrAlert(total, method === 'cash' ? 'cash' : 'bank');
         if (!okBal) return;
     }
-    const ok = await Swal.fire({
-        title: 'Nộp thuế hải quan?',
-        html: 'Ghi sổ: Nợ 3333 / 3332 / 33312 · Có 112 (UNC nộp thuế HQ).',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Nộp thuế',
-        cancelButtonText: 'Hủy'
-    });
-    if (!ok.isConfirmed) return;
     try {
-        const res = await fetch(`/api/sme/import/${id}/pay-customs-tax`, {
+        const res = await fetch(`/api/sme/import/${id}/pay-taxes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ payment_method: 'bank' })
+            body: JSON.stringify({
+                tax_kinds: kinds,
+                payment_method: method,
+                date: document.getElementById('taxPayDate').value,
+                agency_name: document.getElementById('taxPayAgency').value,
+                agency_type: checked[0].dataset.agency,
+            })
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'Lỗi');
-        const amt = data.amounts?.total;
-        showToast(`Đã nộp thuế HQ${amt != null ? ': ' + formatNumber(amt) + '₫' : ''} · ${data.voucher?.voucher_no || ''}`);
+        showToast(`Đã nộp ${formatNumber(data.amount || 0)}₫ · ${data.voucher?.voucher_no || ''}`);
+        if (data.summary && data.summary.unpaid_count > 0) {
+            window._taxPaySummary = data.summary;
+            document.getElementById('taxModalBody').innerHTML = renderTaxObligationHtml(data.summary);
+        } else {
+            bootstrap.Modal.getInstance(document.getElementById('importTaxPayModal'))?.hide();
+        }
         document.getElementById('btnFilter')?.click();
+        if (typeof loadImport === 'function') loadImport();
     } catch (err) {
         showToast(err.message || 'Nộp thuế thất bại', true);
     }
+}
+
+async function payCustomsTax(id) {
+    // Giữ tương thích — mở modal mới
+    return openImportTaxModal(id);
 }
 
 async function receiveWarehouse(id) {

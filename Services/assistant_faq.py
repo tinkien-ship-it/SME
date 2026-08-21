@@ -489,8 +489,8 @@ STATIC_FAQ: list[dict[str, Any]] = [
         'title': 'Hướng dẫn đầy đủ',
         'answer': (
             'Mở **Hướng Dẫn Sử Dụng** (Tiện ích trong menu SME hoặc menu Kế toán HKD). '
-            'Tab **Kế Toán SME** cho doanh nghiệp TT99/TT58; tab **Kế Toán HKD** cho hộ kinh doanh TT88; '
-            'có thêm tab Bán hàng, F&B, Phòng trọ. '
+            'Tab **Kế Toán SME** → chọn nhánh **SME TT58 (DNSN)** hoặc **SME TT99** đúng chế độ tenant; '
+            'tab **Kế Toán HKD** cho hộ kinh doanh TT88; thêm tab Bán hàng, F&B, Phòng trọ. '
             'Cần hỗ trợ từ xa: cài **UltraViewer**, gửi mã kết nối qua Zalo **0908870287**.'
         ),
     },
@@ -516,9 +516,66 @@ STATIC_FAQ: list[dict[str, Any]] = [
         'answer': (
             'Menu **Kế toán doanh nghiệp** dùng sổ kép theo **Thông tư 99** hoặc **Thông tư 58**. '
             'Chọn **chi nhánh** trên thanh trên (Tất cả = hợp nhất). '
-            'Hướng dẫn: tab **Kế Toán SME** trong **Hướng Dẫn Sử Dụng**. '
+            'Hướng dẫn: tab **Kế Toán SME** → chọn **TT58** hoặc **TT99**. '
             'Cập nhật pháp luật / thuế DN: **Tiện ích → Cập nhật kiến thức** '
             '(`/SME_cap-nhat-kien-thuc`).'
+        ),
+    },
+    {
+        'id': 'sme_tt58_start',
+        'keywords': [
+            'tt58', 'dnsn', 'siêu nhỏ', 'trường hợp thuế', 'sổ dnsn',
+            'bắt đầu tt58', 'hướng dẫn tt58', 'article5', 's1-dnsn',
+        ],
+        'pages': ['SME_dashboard', 'SME_dnsn_books', 'huong_dan_su_dung'],
+        'title': 'Bắt đầu Kế toán SME TT58 (DNSN)',
+        'answer': (
+            '1) Thiết lập DN + ngân hàng + HĐĐT. 2) **Chọn Trường hợp thuế 1–4** và tỷ lệ % ngành. '
+            '3) Vốn góp phiếu thu 1111/1121·4111. 4) Hóa đơn mua → Lập phiếu nhập. 5) Bán POS. '
+            '6) In đủ sổ tại **Sổ & biểu mẫu DNSN** (framework bắt buộc khi CQT kiểm tra). '
+            'TT58 được dùng **đầy đủ nghiệp vụ** như TT99 (L/C, ngoại tệ, vay, mẫu chứng từ…). '
+            'Chi tiết: Hướng dẫn → tab Kế Toán SME → **SME TT58**.'
+        ),
+        'follow_ups': [
+            'Bốn trường hợp thuế TT58?',
+            'Thu công nợ khách hàng SME?',
+            'Khác nhau TT58 và TT99?',
+        ],
+    },
+    {
+        'id': 'sme_tt99_start',
+        'keywords': [
+            'tt99', 'thông tư 99', 'bắt đầu tt99', 'hướng dẫn tt99',
+            'l/c', 'ngoại tệ sme', 'b01', 'bctc sme',
+        ],
+        'pages': ['SME_dashboard', 'SME_BCTC_reports', 'huong_dan_su_dung'],
+        'title': 'Bắt đầu Kế toán SME TT99',
+        'answer': (
+            '1) Thiết lập DN + HĐĐT. 2) Chi nhánh/kho. 3) Vốn góp phiếu thu. '
+            '4) HĐ mua → PN / phân bổ. 5) Bán POS (VAT hóa đơn 33311). '
+            '6) Cuối kỳ Kết chuyển khóa sổ; xem **BCTC B01–B09**. '
+            'Có thêm L/C, ngoại tệ, vay, mẫu 03–09-TT / biên bản TSCĐ. '
+            'Chi tiết: Hướng dẫn → tab Kế Toán SME → **SME TT99**.'
+        ),
+        'follow_ups': [
+            'Xuất khẩu SME?',
+            'Mở L/C nhập khẩu?',
+            'Khác nhau TT58 và TT99?',
+        ],
+    },
+    {
+        'id': 'sme_tt58_vs_tt99',
+        'keywords': [
+            'khác nhau tt58 và tt99', 'tt58 hay tt99', 'phân biệt tt58',
+            'dnsn hay tt99', 'chế độ nào',
+        ],
+        'pages': ['huong_dan_su_dung', 'SME_dashboard'],
+        'title': 'Khác nhau TT58 và TT99',
+        'answer': (
+            '**TT58 (siêu nhỏ):** chọn 4 trường hợp thuế; **bắt buộc sổ DNSN** (framework CQT); '
+            'thuế % DT có thể tự ghi 811/821; BCTC theo TH2/TH4. '
+            'Được dùng **cùng đầy đủ nghiệp vụ** mua/bán/kế toán như TT99 (L/C, FX, vay, mẫu chứng từ…). '
+            '**TT99:** BCTC B01–B09 luôn có; không có menu sổ DNSN.'
         ),
     },
     {
@@ -759,8 +816,10 @@ PAGE_SUGGESTIONS: dict[str, list[str]] = {
     'SME_vat_declaration': ['Lập tờ khai thuế GTGT?'],
     'huong_dan_su_dung': [
         'Tab Kế Toán SME ở đâu?',
+        'Bắt đầu Kế toán SME TT58 (DNSN)?',
+        'Bắt đầu Kế toán SME TT99?',
+        'Khác nhau TT58 và TT99?',
         'Khác nhau HKD và SME?',
-        'Bắt đầu dùng kế toán doanh nghiệp?',
     ],
     '_default': [
         'Kế toán tính giá thành?',

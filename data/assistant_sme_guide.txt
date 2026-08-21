@@ -1,59 +1,10 @@
-# Kiến thức Trợ lý AI — Kế toán doanh nghiệp (SME) TT99 / TT58
-# File này được RAG đọc tự động. Mỗi mục ## là một khối kiến thức.
+# Kiến thức chung SME (cả TT58 và TT99). Chi tiết theo chế độ: assistant_sme_guide_tt58.txt / _tt99.txt
 
-## Tổng quan Kế toán SME
-Kế toán doanh nghiệp (SME) dùng sổ kép theo Thông tư 99/2025/TT-BTC (doanh nghiệp) hoặc Thông tư 58 (siêu nhỏ). Menu trung tâm: Kế toán doanh nghiệp. Chọn chi nhánh trên thanh trên: «Tất cả chi nhánh» để xem hợp nhất, hoặc một chi nhánh để ghi sổ / lọc báo cáo vận hành. Trụ sở chính mã HQ.
+## Phân biệt chế độ
+HKD = Thông tư 88, menu kế toán HKD. SME TT58 = siêu nhỏ DNSN: bắt buộc sổ DNSN theo trường hợp thuế (framework CQT), đồng thời được dùng đầy đủ nghiệp vụ mua/bán/kế toán như TT99. SME TT99 = doanh nghiệp đầy đủ BCTC B01–B09, không có menu sổ DNSN. Luôn nhận diện đúng chế độ trước khi hướng dẫn sổ báo cáo.
 
-## Bắt đầu sử dụng SME
-1) Thiết lập cửa hàng (tên, MST, địa chỉ, ngân hàng). 2) Vào Tiền Và Công Nợ → Sổ Quỹ Tiền Mặt hoặc Sổ Tiền Gửi Ngân Hàng → Lập phiếu thu để ghi vốn góp ban đầu: Nợ 1111 (tiền mặt) hoặc 1121 (ngân hàng), Có 4111 Vốn góp chủ sở hữu. 3) Nhập danh mục sản phẩm / NCC / khách. 4) Nhập kho hoặc mua hàng. 5) Bán hàng tại Điểm bán hàng. 6) Cuối kỳ chạy Kết chuyển, khóa sổ và cuối năm.
+## Điểm chung thao tác SME
+Thiết lập DN → vốn góp phiếu thu 1111/1121·4111 → Hóa đơn mua → Lập phiếu nhập/Hạch toán/Phân bổ → in mã vạch → Điểm bán hàng (111/112/131) → thu/chi công nợ trên sổ phải thu/trả → đối chiếu NH → Kết chuyển khóa sổ. Chi nhánh HQ; kho KHO_001…
 
-## Chi nhánh và kho
-Danh mục chi nhánh và kho tại Chi nhánh và đơn vị / Danh mục kho và chi nhánh. Kho mặc định: KHO_001, KHO_002, KHO_003. Gắn kho vào chi nhánh để nhập xuất đúng đơn vị. Dữ liệu cũ không gắn chi nhánh được xem như Trụ sở chính (HQ).
-
-## Phiếu thu trên sổ quỹ và sổ ngân hàng
-Trên Sổ Quỹ Tiền Mặt: nút Lập phiếu thu — mặc định Nợ 1111, Có 4111. Trên Sổ Tiền Gửi Ngân Hàng: mặc định Nợ 1121, Có 4111. Có thể đổi tài khoản Có (131 thu nợ khách, 141 tạm ứng…). Sau khi lưu, sổ tự tải lại. Phiếu thu mẫu 01-TT; danh sách đầy đủ tại Chứng từ kế toán → Phiếu thu.
-
-## Phiếu chi
-Chứng từ kế toán → Phiếu chi (mẫu 02-TT): chi tiền mặt hoặc chuyển khoản, ghi sổ Nợ tài khoản chi phí/công nợ · Có 1111/1121.
-
-## Bán hàng SME
-Điểm bán hàng ghi doanh thu và giá vốn vào nhật ký bút toán. Xem đơn tại Danh sách đơn hàng; hóa đơn bán; khách trả hàng. Tổng quan bán hàng xem Doanh thu / giá vốn / phải thu.
-
-## Mua hàng và nhập kho
-Lập đơn mua → Hóa đơn mua hàng → Lập phiếu nhập kho. Phân loại hàng: hàng hóa, nguyên vật liệu, tài sản cố định, công cụ dụng cụ. Phân bổ chi phí mua hàng (vận chuyển, lắp đặt) vào giá vốn. Trả nhà cung cấp từ sổ công nợ phải trả hoặc phiếu chi.
-
-## Tồn kho
-Tồn kho và Báo cáo tồn kho. Chuyển kho liên chi nhánh tại Chứng từ → Chuyển kho liên chi nhánh (không ghi sổ cái khi cùng pháp nhân). Kiểm kê kho mẫu 05-VT; kiểm nghiệm vật tư mẫu 03-VT.
-
-## Nhật ký bút toán và sổ cái
-Sổ sách kế toán → Nhật ký bút toán: xem, lọc theo chi nhánh / loại chứng từ / ngày; có thể đảo bút toán. Sổ cái và cân đối phát sinh: đối chiếu số dư tài khoản. Số bút toán dạng BT0000001.
-
-## Sổ công nợ
-Sổ Công Nợ Phải Thu (131), Sổ Công Nợ Phải Trả (331), Sổ Phải Thu Nhân Viên (141), Sổ Phải Trả Nhân Viên (334). Thu nợ / trả nợ lập phiếu thu hoặc phiếu chi gắn đúng đối tượng. Menu nhóm Tiền Và Công Nợ hiển thị số dư trên thẻ nếu có công thức.
-
-## Tài sản cố định
-Nhập TSCĐ qua phiếu nhập (loại tài sản cố định) → Danh mục tài sản cố định → Thiết lập khấu hao (số tháng, ngày bắt đầu). Trạng thái: Trong kho → Đang sử dụng → Đã thanh lý. Chạy khấu hao kỳ tại Kết chuyển, khóa sổ và cuối năm. Biên bản giao nhận / thanh lý / bảng khấu hao mẫu 01–06 TSCĐ; trang in có nút IN và ĐÓNG TRANG, ngày kiểu Việt Nam.
-
-## Công cụ dụng cụ
-Nhập CCDC qua phiếu nhập → Danh mục công cụ dụng cụ → Thiết lập phân bổ hoặc Đưa vào sử dụng. Phân bổ tự động theo kỳ khi chạy tự động hóa kỳ.
-
-## Sản xuất và giá thành
-Sản xuất và giá thành → Sản xuất: định mức, phiếu sản xuất, xuất nguyên vật liệu, nhập thành phẩm theo giá vốn bình quân. Kế toán giá thành tập hợp 621/622/627. Mẫu 04-VT vật tư còn lại; 07-VT phân bổ nguyên vật liệu.
-
-## Nhân sự và tiền lương
-Danh sách nhân viên → Bảng chấm công → Lập bảng lương mẫu 01-LĐTL → Thưởng ngoài giờ thuê ngoài → Hợp đồng giao khoán → Nộp bảo hiểm xã hội → Phân bổ lương. Trả lương qua sổ phải trả nhân viên / phiếu chi.
-
-## Kết chuyển khóa sổ cuối năm
-Tiện ích hoặc Sổ sách → Kết chuyển, khóa sổ và cuối năm: một lần chạy kỳ gồm khấu hao tài sản cố định → phân bổ công cụ dụng cụ → kết chuyển doanh thu/chi phí → 911 → 4212 → quyết toán thuế giá trị gia tăng → khóa sổ. Cuối năm kết chuyển 4212 → 4211. Có thể chỉ quyết toán thuế giá trị gia tăng.
-
-## Báo cáo tài chính và thuế
-Bộ báo cáo tài chính mẫu B01–B09; Báo cáo quản trị; Thuế và ngân sách nhà nước (133/333); Tờ khai thuế giá trị gia tăng; Thuế thu nhập doanh nghiệp tạm nộp và quyết toán; Thuế thu nhập cá nhân khấu trừ từ lương.
-
-## Ngày và in chứng từ
-Mọi trang in SME: thanh IN và ĐÓNG TRANG; ngày hiển thị dd/mm/yyyy hoặc Ngày dd tháng mm năm yyyy. Ô chọn ngày trên form vẫn dùng định dạng trình duyệt.
-
-## Phân biệt HKD và SME
-Hộ kinh doanh (HKD) theo Thông tư 88 — menu kế toán HKD riêng. Doanh nghiệp SME theo Thông tư 99/58 — menu Kế toán doanh nghiệp, sổ kép, chứng từ 01-TT/02-TT, không dùng phiếu quỹ kiểu HKD cho cùng nghiệp vụ SME.
-
-## Lỗi thường gặp SME
-Danh mục TSCĐ/CCDC trống: tải lại trang (Ctrl+F5); kiểm tra đã nhập qua phiếu nhập và chi nhánh đang chọn. Không ghi được sổ: kiểm tra kỳ đã khóa — mở khóa hoặc bật ghi đè khi chạy kỳ. Số dư quỹ không khớp: đối chiếu nhật ký bút toán tài khoản 111/112 và phiếu thu/chi.
+## Hướng dẫn đầy đủ nằm ở đâu
+Trong app: Tiện ích → Hướng dẫn sử dụng → tab Kế Toán SME → chọn nhánh TT58 hoặc TT99. Trợ lý AI ưu tiên file guide TT58/TT99 theo regime tenant.

@@ -42,10 +42,9 @@ def _put(buckets: list[dict], days: int, amount: float) -> None:
 
 
 def _cong_no_remaining_sql(conn: sqlite3.Connection) -> str:
-    cols = {r[1] for r in conn.execute('PRAGMA table_info(cong_no)').fetchall()}
-    if 'remaining_amount' in cols:
-        return 'COALESCE(cn.remaining_amount, 0)'
-    return '(COALESCE(cn.unpaid_amount, 0) - COALESCE(cn.paid_amount, 0))'
+    from Services.sme.cong_no_ops import ensure_cong_no_schema, remaining_sql
+    ensure_cong_no_schema(conn, commit=False)
+    return remaining_sql('cn', conn)
 
 
 def ar_aging(

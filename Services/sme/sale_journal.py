@@ -27,6 +27,50 @@ def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
     return {row[1] for row in conn.execute(f'PRAGMA table_info({table})').fetchall()}
 
 
+def resolve_sale_partner_id(conn: sqlite3.Connection, sale) -> int | None:
+    """customer_id trên sale, hoặc tra/tạo customers theo MST/tên — dùng cho S4a DNSN."""
+    d = dict(sale) if sale is not None and not isinstance(sale, dict) else (sale or {})
+    raw = d.get('customer_id')
+    if raw not in (None, '', 0, '0'):
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            pass
+    tax = str(d.get('tax_code') or '').strip()
+    name = str(d.get('customer_name') or '').strip()
+    company = str(d.get('company_name') or '').strip()
+    if not tax and not name and not company:
+        return None
+    try:
+        if tax:
+            row = conn.execute(
+                'SELECT id FROM customers WHERE tax_code = ? LIMIT 1', (tax,),
+            ).fetchone()
+            if row:
+                return int(row[0] if not isinstance(row, sqlite3.Row) else row['id'])
+        lookup = name or company
+        if lookup:
+            row = conn.execute(
+                'SELECT id FROM customers WHERE name = ? OR company_name = ? LIMIT 1',
+                (lookup, lookup),
+            ).fetchone()
+            if row:
+                return int(row[0] if not isinstance(row, sqlite3.Row) else row['id'])
+            conn.execute(
+                'INSERT INTO customers (name, company_name, tax_code) VALUES (?, ?, ?)',
+                (name or company, company or None, tax or None),
+            )
+            return int(conn.execute('SELECT last_insert_rowid()').fetchone()[0])
+    except sqlite3.Error:
+        return None
+    return None
+
+
+def _partner_id_for_sale(conn: sqlite3.Connection, sale) -> int | None:
+    return resolve_sale_partner_id(conn, sale)
+
+
+
 def _active_sale_entries(conn: sqlite3.Connection, sale_id: int) -> list[int]:
     placeholders = ','.join('?' for _ in SALE_DOCUMENT_TYPES)
     rows = conn.execute(
@@ -65,6 +109,70 @@ def _sale_vat(conn: sqlite3.Connection, sale_id: int, business_line: str) -> Dec
     return vat
 
 
+def _tt58_pct_revenue_tax(
+    conn: sqlite3.Connection,
+    sale: sqlite3.Row,
+    revenue_base: Decimal,
+) -> tuple[Decimal, Decimal]:
+    """GTGT / TNDN % trên DT theo ngành (TT58 PP1/PP2/PP3). Trả (vat, cit)."""
+    from Services.sme.dnsn_books import _sector_key
+    from Services.sme.regime_profile import get_ledger_profile
+    from Services.sme.tt58_tax_rates import sector_tax_map
+
+    profile = get_ledger_profile(conn)
+    if not profile.get('is_tt58_micro'):
+        return Decimal('0.00'), Decimal('0.00')
+    tax_def = profile.get('tt58_tax_method_def') or {}
+    if not tax_def:
+        return Decimal('0.00'), Decimal('0.00')
+
+    sale_date = str(sale['date'] or '')[:10] or '2099-12-31'
+    sector_map = sector_tax_map(conn, as_of=sale_date)
+    # Xác định ngành từ dòng hàng / business_line
+    sector = 'other'
+    try:
+        item_cols = _table_columns(conn, 'sale_items')
+        sector_col = 'hkd_sector_code' if 'hkd_sector_code' in item_cols else None
+        bl_col = 'business_line' if 'business_line' in item_cols else None
+        pt_join = 'LEFT JOIN products p ON p.id = si.product_id' if 'product_id' in item_cols else ''
+        pt_expr = 'p.product_type' if pt_join else "NULL"
+        sc = f'si.{sector_col}' if sector_col else 'NULL'
+        bl = f'si.{bl_col}' if bl_col else 'NULL'
+        rows = conn.execute(
+            f"""
+            SELECT {sc} AS sector_code, {bl} AS business_line, {pt_expr} AS product_type,
+                   COALESCE(si.quantity,0)*COALESCE(si.price,0) AS amt
+            FROM sale_items si
+            {pt_join}
+            WHERE si.sale_id = ?
+            """,
+            (int(sale['id']),),
+        ).fetchall()
+        by_sec: dict[str, Decimal] = {}
+        for r in rows:
+            sk = _sector_key(
+                r['business_line'] if hasattr(r, 'keys') else r[1],
+                r['sector_code'] if hasattr(r, 'keys') else r[0],
+                r['product_type'] if hasattr(r, 'keys') else r[2],
+            )
+            amt = _money(r['amt'] if hasattr(r, 'keys') else r[3])
+            by_sec[sk] = by_sec.get(sk, Decimal('0')) + amt
+        if by_sec:
+            sector = max(by_sec.items(), key=lambda x: x[1])[0]
+    except sqlite3.Error:
+        bl = str(sale['business_line'] or '') if 'business_line' in sale.keys() else ''
+        sector = _sector_key(bl, None, None)
+
+    meta = sector_map.get(sector) or sector_map.get('other') or {}
+    vat = Decimal('0.00')
+    cit = Decimal('0.00')
+    if tax_def.get('vat_mode') == 'pct_revenue':
+        vat = (revenue_base * Decimal(str(meta.get('vat_pct') or 0)) / Decimal('100')).quantize(Decimal('0.01'))
+    if tax_def.get('cit_mode') == 'pct_revenue':
+        cit = (revenue_base * Decimal(str(meta.get('cit_pct') or 0)) / Decimal('100')).quantize(Decimal('0.01'))
+    return vat, cit
+
+
 def _build_revenue_lines(
     conn: sqlite3.Connection,
     sale: sqlite3.Row,
@@ -82,13 +190,29 @@ def _build_revenue_lines(
     if total <= 0:
         return business_type, []
     business_line = str(sale['business_line'] or 'pos') if 'business_line' in sale.keys() else 'pos'
-    vat = _sale_vat(conn, int(sale['id']), business_line)
-    if vat > total:
-        raise ValueError(f'Thuế GTGT {vat} lớn hơn tổng thanh toán {total}')
-    revenue = total - vat
+
+    from Services.sme.regime_profile import get_ledger_profile
+    profile = get_ledger_profile(conn)
+    tax_def = profile.get('tt58_tax_method_def') or {}
+    use_pct_vat = bool(profile.get('is_tt58_micro') and tax_def.get('vat_mode') == 'pct_revenue')
+
+    if use_pct_vat:
+        # TT58 % DT: toàn bộ thanh toán = doanh thu; thuế = % × DT (không tách VAT HĐ)
+        revenue = total
+        invoice_vat = Decimal('0.00')
+        pct_vat, pct_cit = _tt58_pct_revenue_tax(conn, sale, revenue)
+    else:
+        invoice_vat = _sale_vat(conn, int(sale['id']), business_line)
+        if invoice_vat > total:
+            raise ValueError(f'Thuế GTGT {invoice_vat} lớn hơn tổng thanh toán {total}')
+        revenue = total - invoice_vat
+        pct_vat, pct_cit = Decimal('0.00'), Decimal('0.00')
+
     revenue_account = '5113' if business_line == 'fb_service' else rule['credit_account_code']
+    partner_id = _partner_id_for_sale(conn, sale)
     common = {
         'partner_type': 'customer',
+        'partner_id': partner_id,
         'tax_code': sale['tax_code'] if 'tax_code' in sale.keys() else None,
         'vat_invoice_no': sale['invoice_number'] if 'invoice_number' in sale.keys() else None,
     }
@@ -107,13 +231,44 @@ def _build_revenue_lines(
             'credit': revenue,
             'description': 'Doanh thu bán hàng và cung cấp dịch vụ',
         })
-    if vat > 0:
+    if invoice_vat > 0:
         lines.append({
             **common,
             'account_code': rule.get('vat_account_code') or '33311',
             'debit': 0,
-            'credit': vat,
+            'credit': invoice_vat,
             'description': 'Thuế GTGT đầu ra',
+        })
+    # TT58: ghi nhận nghĩa vụ thuế % DT (Nợ CP thuế / Có 3331 / 3334)
+    if pct_vat > 0:
+        lines.append({
+            **common,
+            'account_code': '811',
+            'debit': pct_vat,
+            'credit': 0,
+            'description': 'Thuế GTGT theo tỷ lệ % trên doanh thu (TT58)',
+        })
+        lines.append({
+            **common,
+            'account_code': rule.get('vat_account_code') or '33311',
+            'debit': 0,
+            'credit': pct_vat,
+            'description': 'Thuế GTGT phải nộp % DT (TT58)',
+        })
+    if pct_cit > 0:
+        lines.append({
+            **common,
+            'account_code': '821',
+            'debit': pct_cit,
+            'credit': 0,
+            'description': 'Thuế TNDN theo tỷ lệ % trên doanh thu (TT58)',
+        })
+        lines.append({
+            **common,
+            'account_code': '3334',
+            'debit': 0,
+            'credit': pct_cit,
+            'description': 'Thuế TNDN phải nộp % DT (TT58)',
         })
     return business_type, lines
 
