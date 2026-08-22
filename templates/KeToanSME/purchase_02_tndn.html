@@ -1,13 +1,10 @@
 {% extends "KeToanSME/_layout.html" %}
 {% block title %}Bảng kê thu mua 02/TNDN{% endblock %}
 {% block sme_head %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
 <style>
   #tbl02 { table-layout: fixed; width: 100%; min-width: 1100px; }
   #tbl02 th { position: relative; vertical-align: middle; }
   #tbl02 .col-resize-handle { user-select: none; }
-  .flatpickr-calendar { z-index: 9999 !important; }
 </style>
 {% endblock %}
 {% block sme_content %}
@@ -31,8 +28,10 @@
     <button type="button" class="btn btn-primary btn-sm" id="btnLoad">Xem</button>
     <button type="button" class="btn btn-success btn-sm" id="btnExport"><i class="fas fa-file-excel me-1"></i>Xuất Excel</button>
     <a class="btn btn-outline-secondary btn-sm" href="/api/sme/purchase-02-tndn/template.xlsx">Mẫu Excel</a>
-    <label class="btn btn-outline-primary btn-sm mb-0">
-      Nhập Excel<input type="file" id="fileImport" accept=".xlsx,.xlsm" class="d-none">
+    <label class="btn btn-outline-primary btn-sm mb-0 position-relative" style="cursor:pointer;overflow:hidden">
+      <i class="fas fa-file-excel me-1"></i>Nhập Excel
+      <input type="file" id="fileImport" name="fileImport" accept=".xlsx,.xlsm"
+             style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:0">
     </label>
     <button type="button" class="btn btn-outline-secondary btn-sm" id="btnResetCols" title="Đặt lại độ rộng cột">Cột mặc định</button>
     <a class="btn btn-outline-warning btn-sm" href="{{ url_for('SME_import') }}">Lập phiếu nhập</a>
@@ -105,14 +104,33 @@
 {% endblock %}
 
 {% block sme_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script src="{{ url_for('static', filename='js/column-resize.js') }}"></script>
 <script>
 (function(){
   const DEFAULT_PLACE = {{ (_place or '')|tojson }};
   const COL_KEY = 'colWidths:purchase_02_tndn';
+  const el = (id) => document.getElementById(id);
+  const fromDate = el('fromDate');
+  const toDate = el('toDate');
+  const saveDate = el('saveDate');
+  const purchasePlace = el('purchasePlace');
+  const tbody = el('tbody');
+  const tfootTotal = el('tfootTotal');
+  const fileImport = el('fileImport');
   const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+
+  // Gắn sớm — không phụ thuộc flatpickr phía dưới
+  if (fileImport) {
+    fileImport.addEventListener('change', async (ev) => {
+      const file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      try {
+        await importExcelFile(file);
+      } finally {
+        ev.target.value = '';
+      }
+    });
+  }
 
   function isoToday() {
     const d = new Date();
@@ -133,23 +151,83 @@
     if (!m) return '';
     return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
   }
-  function fpIso(el) {
-    if (el && el._flatpickr && el._flatpickr.selectedDates[0]) {
-      return flatpickr.formatDate(el._flatpickr.selectedDates[0], 'Y-m-d');
+  function fpIso(input) {
+    if (!input) return '';
+    if (window.KetoDatePicker && typeof KetoDatePicker.getIsoValue === 'function') {
+      const iso = KetoDatePicker.getIsoValue(input);
+      if (iso) return iso;
     }
-    return vnToIso(el && el.value);
+    if (input._flatpickr && input._flatpickr.selectedDates[0]) {
+      return flatpickr.formatDate(input._flatpickr.selectedDates[0], 'Y-m-d');
+    }
+    return vnToIso(input.value) || (String(input.value || '').match(/^\d{4}-\d{2}-\d{2}/) ? String(input.value).slice(0,10) : '');
   }
 
-  const fpOpts = { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true };
-  const fpFrom = flatpickr('#fromDate', Object.assign({}, fpOpts));
-  const fpTo = flatpickr('#toDate', Object.assign({}, fpOpts));
-  const fpSave = flatpickr('#saveDate', Object.assign({}, fpOpts));
-  fpFrom.setDate(isoToVn(isoFirstOfMonth()), true, 'd/m/Y');
-  fpTo.setDate(isoToVn(isoToday()), true, 'd/m/Y');
-  fpSave.setDate(isoToVn(isoToday()), true, 'd/m/Y');
+  const fpOpts = {
+    dateFormat: 'd/m/Y',
+    locale: (typeof flatpickr !== 'undefined' && flatpickr.l10ns && flatpickr.l10ns.vn) || 'vn',
+    allowInput: true,
+    disableMobile: true,
+  };
+  let fpFrom = null, fpTo = null, fpSave = null;
+  try {
+    if (typeof flatpickr === 'function') {
+      fpFrom = flatpickr(fromDate, Object.assign({}, fpOpts));
+      fpTo = flatpickr(toDate, Object.assign({}, fpOpts));
+      fpSave = flatpickr(saveDate, Object.assign({}, fpOpts));
+      fpFrom.setDate(isoToVn(isoFirstOfMonth()), true, 'd/m/Y');
+      fpTo.setDate(isoToVn(isoToday()), true, 'd/m/Y');
+      fpSave.setDate(isoToVn(isoToday()), true, 'd/m/Y');
+    } else {
+      fromDate.value = isoToVn(isoFirstOfMonth());
+      toDate.value = isoToVn(isoToday());
+      saveDate.value = isoToVn(isoToday());
+    }
+  } catch (e) {
+    console.warn('flatpickr init', e);
+    fromDate.value = isoToVn(isoFirstOfMonth());
+    toDate.value = isoToVn(isoToday());
+    saveDate.value = isoToVn(isoToday());
+  }
 
   let rows = [];
-  let resizeReady = false;
+  let loadSeq = 0;
+
+  function setDateInputs(fromIso, toIso, saveIso) {
+    if (fromIso) {
+      if (fpFrom) fpFrom.setDate(isoToVn(fromIso), true, 'd/m/Y');
+      else fromDate.value = isoToVn(fromIso);
+    }
+    if (toIso) {
+      if (fpTo) fpTo.setDate(isoToVn(toIso), true, 'd/m/Y');
+      else toDate.value = isoToVn(toIso);
+    }
+    if (saveIso) {
+      if (fpSave) fpSave.setDate(isoToVn(saveIso), true, 'd/m/Y');
+      else saveDate.value = isoToVn(saveIso);
+    }
+  }
+
+  function applyImportedLines(rawLines) {
+    rows = (rawLines || []).map(r => ({
+      purchase_date: r.purchase_date || '',
+      seller_name: r.seller_name || '',
+      seller_address: r.seller_address || '',
+      seller_id_no: r.seller_id_no || '',
+      seller_phone: r.seller_phone || '',
+      item_name: r.item_name || '',
+      quantity: r.quantity,
+      unit: r.unit || '',
+      unit_price: r.unit_price,
+      amount: r.amount,
+      note: r.note || '',
+    }));
+    const dates = rows.map(r => String(r.purchase_date || '').slice(0, 10)).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    if (dates.length) {
+      setDateInputs(dates[0], dates[dates.length - 1], dates[dates.length - 1]);
+    }
+    render();
+  }
 
   function moneyCell(v) {
     return `<input type="text" class="form-control form-control-sm text-end cell-amt" value="${fmt(Number(v)||0)}">`;
@@ -169,7 +247,7 @@
     try {
       const widths = JSON.parse(localStorage.getItem(COL_KEY) || 'null');
       if (!Array.isArray(widths)) return;
-      const table = document.getElementById('tbl02');
+      const table = el('tbl02');
       const ths = table.querySelectorAll('thead th');
       const trs = table.querySelectorAll('tbody tr');
       for (let i = 0; i < ths.length && i < widths.length; i++) {
@@ -185,15 +263,17 @@
   }
 
   function bindRowDatePickers() {
-    tbody.querySelectorAll('.cell-date').forEach(el => {
-      if (el._flatpickr) return;
-      flatpickr(el, Object.assign({}, fpOpts));
+    tbody.querySelectorAll('.cell-date').forEach(input => {
+      if (input._flatpickr) return;
+      try {
+        if (typeof flatpickr === 'function') flatpickr(input, Object.assign({}, fpOpts));
+      } catch (e) { /* ignore */ }
     });
   }
 
   function render() {
     tbody.innerHTML = rows.map((r,i) => {
-      const dVn = r.purchase_date && r.purchase_date.includes('-')
+      const dVn = r.purchase_date && String(r.purchase_date).includes('-')
         ? isoToVn(r.purchase_date)
         : (r.purchase_date || '');
       return `
@@ -287,12 +367,20 @@
   });
 
   async function load() {
+    const seq = ++loadSeq;
     const fromIso = fpIso(fromDate);
     const toIso = fpIso(toDate);
     if (!fromIso || !toIso) return alert('Chọn khoảng ngày (dd/mm/yyyy)');
     const q = new URLSearchParams({ from: fromIso, to: toIso });
-    const res = await fetch('/api/sme/purchase-02-tndn?' + q);
-    const json = await res.json();
+    let json;
+    try {
+      const res = await fetch('/api/sme/purchase-02-tndn?' + q);
+      json = await res.json();
+    } catch (e) {
+      if (seq !== loadSeq) return;
+      return alert('Không tải được dữ liệu');
+    }
+    if (seq !== loadSeq) return; // đã import Excel / load mới hơn → bỏ qua
     if (!json.success) return alert(json.error || 'Lỗi tải');
     const data = json.data || {};
     const rawLines = data.lines || [];
@@ -313,8 +401,8 @@
     render();
   }
 
-  btnLoad.onclick = () => load();
-  btnAddRow.onclick = () => {
+  el('btnLoad').onclick = () => load();
+  el('btnAddRow').onclick = () => {
     collectFromDom();
     rows.push({
       purchase_date: fpIso(toDate) || isoToday(),
@@ -323,7 +411,7 @@
     });
     render();
   };
-  btnExport.onclick = () => {
+  el('btnExport').onclick = () => {
     const fromIso = fpIso(fromDate);
     const toIso = fpIso(toDate);
     const q = new URLSearchParams({
@@ -332,7 +420,7 @@
     });
     window.location.href = '/api/sme/purchase-02-tndn/export.xlsx?' + q;
   };
-  btnSave.onclick = async () => {
+  el('btnSave').onclick = async () => {
     const lines = collectFromDom().filter(r => r.seller_name || r.item_name);
     const saveIso = fpIso(saveDate);
     if (!saveIso) return alert('Chọn ngày lưu (dd/mm/yyyy)');
@@ -352,39 +440,67 @@
     alert('Đã lưu ' + json.saved + ' dòng (tháng ' + json.period_month + ')');
     load();
   };
-  fileImport.onchange = async (ev) => {
-    const file = ev.target.files?.[0];
-    ev.target.value = '';
+
+  async function importExcelFile(file) {
     if (!file) return;
+    const low = (file.name || '').toLowerCase();
+    if (!low.endsWith('.xlsx') && !low.endsWith('.xlsm')) {
+      return alert('Chỉ hỗ trợ file Excel .xlsx / .xlsm');
+    }
+    // Hủy load() đang chạy để không ghi đè bảng sau khi nạp Excel
+    loadSeq += 1;
     const saveIso = fpIso(saveDate) || isoToday();
     const fd = new FormData();
-    fd.append('file', file);
+    fd.append('file', file, file.name);
     fd.append('save_date', saveIso);
     fd.append('period_month', saveIso.slice(0, 7));
     fd.append('purchase_place', (purchasePlace.value || '').trim() || DEFAULT_PLACE);
+    // Ưu tiên nạp UI; lưu DB nếu được (lỗi DB vẫn trả lines)
     fd.append('save', '1');
-    const res = await fetch('/api/sme/purchase-02-tndn/import-excel', { method: 'POST', body: fd });
-    const json = await res.json();
-    if (!json.success) return alert(json.error || 'Lỗi import');
-    rows = (json.lines || []).map(r => ({ ...r }));
-    if (json.purchase_place) applyPurchasePlace(json.purchase_place, true);
-    if (json.period_month) {
-      const d = json.period_month + '-01';
-      fpSave.setDate(isoToVn(saveIso), true, 'd/m/Y');
+    let json;
+    try {
+      const res = await fetch('/api/sme/purchase-02-tndn/import-excel', {
+        method: 'POST',
+        body: fd,
+        credentials: 'same-origin',
+      });
+      const text = await res.text();
+      try {
+        json = JSON.parse(text);
+      } catch (e) {
+        throw new Error(res.status === 401 || res.status === 403
+          ? 'Phiên đăng nhập hết hạn — tải lại trang rồi thử lại'
+          : ('Máy chủ trả lỗi (' + res.status + '). Không đọc được kết quả import.'));
+      }
+    } catch (err) {
+      alert(err.message || String(err));
+      return;
     }
-    render();
-    alert('Đã nhập ' + json.count + ' dòng' + (json.saved ? ' (đã lưu ' + json.saved + ')' : ''));
-  };
+    if (!json.success) return alert(json.error || 'Lỗi import');
+    const imported = json.lines || [];
+    if (!imported.length) {
+      return alert('File không có dòng dữ liệu hợp lệ (cần cột Ngày mua / Người bán / Hàng hóa).');
+    }
+    applyImportedLines(imported);
+    if (json.purchase_place) applyPurchasePlace(json.purchase_place, true);
+    let msg = 'Đã nạp ' + (json.count || imported.length) + ' dòng vào bảng';
+    if (json.saved) msg += ' (đã lưu ' + json.saved + ')';
+    else msg += ' — nhấn «Lưu bảng kê» để ghi vào hệ thống';
+    if (json.warning) msg += '\n\nCảnh báo: ' + json.warning;
+    alert(msg);
+  }
 
-  btnResetCols.onclick = () => {
-    try { localStorage.removeItem(COL_KEY); } catch (e) {}
-    location.reload();
-  };
+  const btnResetCols = el('btnResetCols');
+  if (btnResetCols) {
+    btnResetCols.onclick = () => {
+      try { localStorage.removeItem(COL_KEY); } catch (e) {}
+      location.reload();
+    };
+  }
 
   if (!purchasePlace.value && DEFAULT_PLACE) purchasePlace.value = DEFAULT_PLACE;
   if (window.initResizableTableColumns) {
     initResizableTableColumns('tbl02', COL_KEY, { minWidth: 40 });
-    resizeReady = true;
   }
   load();
 })();

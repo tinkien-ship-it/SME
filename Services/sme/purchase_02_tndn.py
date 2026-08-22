@@ -209,6 +209,9 @@ def biz_export_fields(biz: dict | None = None) -> dict:
         'phone': (
             biz.get('phone') or biz.get('tel') or biz.get('mobile') or ''
         ).strip(),
+        'representative_name': (
+            biz.get('representative_name') or biz.get('owner_name') or ''
+        ).strip(),
         'purchase_place': default_purchase_place(biz),
     }
 
@@ -324,37 +327,80 @@ def parse_excel_rows(file_storage_or_bytes) -> list[dict]:
                 file_storage_or_bytes.seek(0)
             except Exception:
                 pass
-        wb = load_workbook(BytesIO(data), data_only=True)
+        raw = data
     else:
-        wb = load_workbook(BytesIO(file_storage_or_bytes), data_only=True)
+        raw = file_storage_or_bytes
+    # data_only=False: lấy giá trị đã gõ (tránh None khi file chưa mở bằng Excel)
+    wb = load_workbook(BytesIO(raw), data_only=False)
     ws = wb.active
+
+    def row_vals(r: int) -> list[str]:
+        out = []
+        for c in range(1, min(ws.max_column or 1, 20) + 1):
+            v = ws.cell(r, c).value
+            if v is None:
+                out.append('')
+            elif hasattr(v, 'strftime'):
+                try:
+                    out.append(v.strftime('%d/%m/%Y'))
+                except Exception:
+                    out.append(str(v).strip().lower())
+            else:
+                out.append(str(v).strip().lower())
+        return out
+
+    def map_header_cells(vals: list[str]) -> dict[int, str]:
+        alias_items = sorted(_HEADER_ALIASES.items(), key=lambda kv: -len(kv[0] or ''))
+        col_map: dict[int, str] = {}
+        for c, raw_h in enumerate(vals, start=1):
+            if not raw_h:
+                continue
+            key = _HEADER_ALIASES.get(raw_h)
+            if not key:
+                for ak, av in alias_items:
+                    if ak and ak in raw_h:
+                        key = av
+                        break
+            if key and key != 'stt':
+                col_map[c] = key
+        return col_map
 
     header_row = None
     col_map: dict[int, str] = {}
-    for r in range(1, min(ws.max_row or 1, 25) + 1):
-        vals = []
-        for c in range(1, min(ws.max_column or 1, 20) + 1):
-            v = ws.cell(r, c).value
-            vals.append(str(v).strip().lower() if v is not None else '')
+    max_scan = min(ws.max_row or 1, 50)
+    for r in range(1, max_scan + 1):
+        vals = row_vals(r)
         joined = ' '.join(vals)
-        if 'căn cước' in joined or 'người bán' in joined or (
-            'ngày mua' in joined and 'đơn giá' in joined
-        ) or ('stt' in vals and any('ngày' in x for x in vals)):
-            header_row = r
-            for c, raw in enumerate(vals, start=1):
-                key = _HEADER_ALIASES.get(raw)
-                if not key:
-                    for ak, av in _HEADER_ALIASES.items():
-                        if ak and ak in raw:
-                            key = av
-                            break
-                if key and key != 'stt':
-                    col_map[c] = key
-            break
+        has_stt = any(v == 'stt' or v.startswith('stt') for v in vals[:3])
+        looks_like = (
+            'ngày mua' in joined
+            or ('đơn giá' in joined and 'số lượng' in joined)
+            or 'căn cước' in joined
+            or 'người bán' in joined
+            or 'tổng giá thanh toán' in joined
+        )
+        if not (has_stt and looks_like):
+            # Cho phép header không có chữ STT nhưng đủ cột đặc trưng
+            if not (
+                'ngày mua' in joined
+                and ('đơn giá' in joined or 'tổng giá' in joined)
+                and ('người bán' in joined or 'căn cước' in joined)
+            ):
+                continue
+        mapped = map_header_cells(vals)
+        if len(mapped) < 3:
+            continue
+        header_row = r
+        col_map = mapped
+        break
 
     if not header_row or not col_map:
-        # Fallback: giả định hàng 6 = header chuẩn mẫu hệ thống
-        header_row = 6
+        header_row = 11
+        for r in range(1, max_scan + 1):
+            vals = row_vals(r)
+            if any(v == 'stt' for v in vals[:3]):
+                header_row = r
+                break
         for i, h in enumerate(EXCEL_HEADERS, start=1):
             key = _HEADER_ALIASES.get(h.lower())
             if key and key != 'stt':
@@ -362,6 +408,14 @@ def parse_excel_rows(file_storage_or_bytes) -> list[dict]:
 
     lines: list[dict] = []
     for r in range(header_row + 1, (ws.max_row or header_row) + 1):
+        # Bỏ dòng tổng / chữ ký / ghi chú
+        a0 = ws.cell(r, 1).value
+        a0s = str(a0 or '').strip().lower()
+        if a0s.startswith('tổng') or a0s.startswith('ghi chú') or a0s.startswith('người lập'):
+            break
+        if a0s.startswith('- tổng') or 'số tiền bằng chữ' in a0s:
+            break
+
         row: dict[str, Any] = {}
         empty = True
         for c, key in col_map.items():
@@ -371,14 +425,16 @@ def parse_excel_rows(file_storage_or_bytes) -> list[dict]:
             row[key] = val
         if empty:
             continue
-        # Bỏ dòng tổng / dòng trống tên
+
         seller = str(row.get('seller_name') or '').strip()
         item = str(row.get('item_name') or '').strip()
         name_probe = (seller or item).lower()
-        if 'tổng' in name_probe:
+        if 'tổng' in name_probe or name_probe.startswith('người'):
             continue
         if not seller and not item:
+            # Hàng chỉ có số STT / ngày trống → bỏ
             continue
+
         pdate = _norm_date(row.get('purchase_date'))
         qty = _f(row.get('quantity'))
         price = _f(row.get('unit_price'))
@@ -411,6 +467,7 @@ def build_excel(
     phone: str = '',
     purchase_place: str = '',
     period_label: str = '',
+    representative_name: str = '',
 ) -> BytesIO:
     """Xuất Excel đẹp (kiểu Báo cáo tồn kho): tiêu đề, header xám, border, tổng."""
     wb = Workbook()
@@ -595,9 +652,17 @@ def build_excel(
     ws[f'I{r}'].font = Font(name='Calibri', italic=True, size=9)
     ws[f'I{r}'].alignment = align_c
 
-    # Khoảng trống chữ ký
-    for blank in range(total_row + 6, total_row + 9):
+    # Khoảng trống chữ ký + họ tên người đại diện (settings)
+    for blank in range(total_row + 6, total_row + 8):
         ws.row_dimensions[blank].height = 16
+
+    rep = (representative_name or '').strip()
+    r_name = total_row + 8
+    ws.merge_cells(f'I{r_name}:L{r_name}')
+    ws[f'I{r_name}'] = rep or '................................'
+    ws[f'I{r_name}'].font = font_bold
+    ws[f'I{r_name}'].alignment = align_c
+    ws.row_dimensions[r_name].height = 18
 
     r = total_row + 10
     ws.merge_cells(f'A{r}:L{r}')
@@ -676,6 +741,7 @@ def build_template_excel(biz: dict | None = None) -> BytesIO:
         address=fields['address'],
         phone=fields['phone'],
         purchase_place=fields['purchase_place'],
+        representative_name=fields.get('representative_name') or '',
         period_label='Mẫu nhập liệu — thay bằng dữ liệu thực tế',
     )
 

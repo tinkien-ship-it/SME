@@ -467,6 +467,7 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
             phone=biz.get('phone') or '',
             purchase_place=place,
             period_label=period_label,
+            representative_name=biz.get('representative_name') or '',
         )
         return send_file(
             bio,
@@ -491,16 +492,22 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
         )
         from Services.sme.branches import request_branch_filter
 
-        f = request.files.get('file')
-        if not f or not (f.filename or '').lower().endswith(('.xlsx', '.xlsm')):
-            return jsonify({'success': False, 'error': 'Chọn file Excel .xlsx'}), 400
+        f = request.files.get('file') or request.files.get('excel') or next(iter(request.files.values()), None)
+        fname = ((f.filename if f else '') or '').lower()
+        if not f or not fname:
+            return jsonify({'success': False, 'error': 'Chưa nhận được file Excel'}), 400
+        if not (fname.endswith('.xlsx') or fname.endswith('.xlsm')):
+            return jsonify({'success': False, 'error': 'Chỉ hỗ trợ file .xlsx / .xlsm (file hiện tại: ' + (f.filename or '') + ')'}), 400
         try:
             lines = parse_excel_rows(f)
         except Exception as e:
             logger.exception('parse 02-tndn excel')
             return jsonify({'success': False, 'error': f'Không đọc được Excel: {e}'}), 400
         if not lines:
-            return jsonify({'success': False, 'error': 'Không có dòng dữ liệu hợp lệ trong file'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'Không có dòng dữ liệu hợp lệ trong file. Dùng «Mẫu Excel» của hệ thống, điền từ dòng dưới tiêu đề STT.',
+            }), 400
 
         save = (request.form.get('save') or request.args.get('save') or '1').strip() != '0'
         save_date = (request.form.get('save_date') or '').strip()
@@ -513,6 +520,7 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
 
         saved = 0
         place = (request.form.get('purchase_place') or '').strip()
+        save_warning = ''
         conn = get_db_connection()
         try:
             if not place:
@@ -528,12 +536,21 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
                 )
                 conn.commit()
         except ValueError as e:
-            conn.rollback()
-            return jsonify({'success': False, 'error': str(e)}), 400
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            # Vẫn trả dữ liệu đã parse để UI nạp bảng
+            save_warning = str(e)
+            saved = 0
         except Exception as e:
-            conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             logger.exception('save 02-tndn excel')
-            return jsonify({'success': False, 'error': str(e)}), 500
+            save_warning = str(e)
+            saved = 0
         finally:
             conn.close()
 
@@ -546,6 +563,7 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
             'period_month': period,
             'purchase_place': place,
             'count': len(lines),
+            'warning': save_warning or None,
             'hint': 'Số căn cước = mã số thuế (MST) khi lập phiếu nhập.',
         })
 

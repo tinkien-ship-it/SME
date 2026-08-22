@@ -69,8 +69,11 @@
                 <div class="col-md-auto small fw-bold text-primary">NHẬP TỪ XML (HĐĐT):</div>
                 <div class="col-md-5">
                     <div class="input-group input-group-sm">
-                        <label class="input-group-text btn btn-primary fw-bold text-white" for="xmlFile">Chọn file</label>
-                        <input type="file" id="xmlFile" class="form-control" accept=".xml" style="display: none;">
+                        <label class="input-group-text btn btn-primary fw-bold text-white mb-0 position-relative" style="cursor:pointer;overflow:hidden">
+                            <i class="fas fa-folder-open me-1"></i>Chọn file
+                            <input type="file" id="xmlFile" name="xmlFile" accept=".xml,text/xml,application/xml"
+                                   style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:0">
+                        </label>
                         <span id="fileNameDisplay" class="form-control bg-white text-muted" style="line-height: 24px;">Chưa có file được chọn</span>
                         <button class="btn btn-primary fw-bold" type="button" id="btnUploadXML">TỰ ĐỘNG LẬP</button>
                     </div>
@@ -89,8 +92,11 @@
                 </div>
                 <div class="col-md-6">
                     <div class="input-group input-group-sm">
-                        <label class="input-group-text btn btn-warning fw-bold" for="excel02File">Chọn Excel</label>
-                        <input type="file" id="excel02File" class="form-control" accept=".xlsx,.xlsm" style="display:none;">
+                        <label class="input-group-text btn btn-warning fw-bold mb-0 position-relative" style="cursor:pointer;overflow:hidden">
+                            <i class="fas fa-folder-open me-1"></i>Chọn Excel
+                            <input type="file" id="excel02File" name="excel02File" accept=".xlsx,.xlsm"
+                                   style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:0">
+                        </label>
                         <span id="excel02FileName" class="form-control bg-white text-muted" style="line-height:24px;">Chưa chọn file</span>
                         <button class="btn btn-warning fw-bold" type="button" id="btnImport02Excel">NẠP VÀO PHIẾU</button>
                     </div>
@@ -1180,39 +1186,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // XML — đúng logic import.html: chọn file chỉ hiện tên; TỰ ĐỘNG LẬP mới upload
+    // XML HĐĐT — chọn file xong tự nạp (vẫn có nút TỰ ĐỘNG LẬP để nạp lại)
     const btnUploadXML = document.getElementById('btnUploadXML');
     if (btnUploadXML) btnUploadXML.addEventListener('click', handleXMLUpload);
 
     const xmlFileInput = document.getElementById('xmlFile');
     if (xmlFileInput) {
-        xmlFileInput.addEventListener('change', function() {
+        xmlFileInput.addEventListener('change', async function () {
             const display = document.getElementById('fileNameDisplay');
             const file = this.files?.[0];
             if (!file) return;
             if (!file.name.toLowerCase().endsWith('.xml')) {
                 this.value = '';
-                display.textContent = 'Chưa có file được chọn';
+                if (display) display.textContent = 'Chưa có file được chọn';
                 return toast('Chỉ hỗ trợ file XML của hóa đơn điện tử!', 'error');
             }
-            display.textContent = file.name;
+            if (display) display.textContent = file.name;
+            await handleXMLUpload();
         });
     }
 
-    // Excel 02/TNDN — thu mua không HĐ (CCCD = MST)
+    // Excel 02/TNDN — thu mua không HĐ (CCCD = MST); label[for=excel02File] mở hộp chọn file
     const excel02Input = document.getElementById('excel02File');
     if (excel02Input) {
-        excel02Input.addEventListener('change', function () {
+        excel02Input.addEventListener('change', async function () {
             const display = document.getElementById('excel02FileName');
             const file = this.files?.[0];
             if (!file) return;
             const low = file.name.toLowerCase();
             if (!low.endsWith('.xlsx') && !low.endsWith('.xlsm')) {
                 this.value = '';
-                display.textContent = 'Chưa chọn file';
+                if (display) display.textContent = 'Chưa chọn file';
                 return toast('Chỉ hỗ trợ Excel .xlsx', 'error');
             }
-            display.textContent = file.name;
+            if (display) display.textContent = file.name;
+            // Chọn xong → tự nạp vào phiếu
+            await handleImport02Excel();
         });
     }
     document.getElementById('btnImport02Excel')?.addEventListener('click', handleImport02Excel);
@@ -1222,7 +1231,6 @@ document.addEventListener('DOMContentLoaded', () => {
             applyExcel02Group(window._excel02Groups[idx]);
         }
     });
-    }
 
     const supplierSearch = document.getElementById('supplierSearch');
     if (supplierSearch) {
@@ -1476,12 +1484,24 @@ async function handleXMLUpload() {
     const fileInput = document.getElementById('xmlFile');
     if (!fileInput?.files?.[0]) return toast('Vui lòng chọn file XML!', 'error');
     const btn = document.getElementById('btnUploadXML');
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
     const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
+    formData.append('file', fileInput.files[0], fileInput.files[0].name);
     try {
-        const response = await fetch('/api/parse-xml-invoice', { method: 'POST', body: formData });
-        const data = await response.json();
+        const response = await fetch('/api/parse-xml-invoice', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+        });
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            throw new Error(response.status === 401 || response.status === 403
+                ? 'Phiên đăng nhập hết hạn — tải lại trang'
+                : ('Máy chủ trả lỗi (' + response.status + ') khi đọc XML'));
+        }
         if (!data.success) throw new Error(data.error || 'Không đọc được XML');
         if (!data.items || !data.items.length) throw new Error('File XML không có dòng hàng hóa');
 
@@ -1528,7 +1548,7 @@ async function handleXMLUpload() {
         console.error('handleXMLUpload', err);
         toast(err.message || String(err), 'error');
     } finally {
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
     }
 }
 
@@ -1603,13 +1623,21 @@ async function handleImport02Excel() {
     const file = fileInput?.files?.[0];
     if (!file) return toast('Chọn file Excel 02/TNDN trước', 'error');
     const btn = document.getElementById('btnImport02Excel');
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
     try {
         const fd = new FormData();
         fd.append('file', file);
         fd.append('save', '0');
         const res = await fetch('/api/sme/purchase-02-tndn/import-excel', { method: 'POST', body: fd });
-        const json = await res.json();
+        const text = await res.text();
+        let json;
+        try {
+            json = JSON.parse(text);
+        } catch (e) {
+            throw new Error(res.status === 401 || res.status === 403
+                ? 'Phiên đăng nhập hết hạn — tải lại trang'
+                : ('Không đọc được phản hồi máy chủ (' + res.status + ')'));
+        }
         if (!json.success) throw new Error(json.error || 'Import thất bại');
         const groups = json.groups || [];
         window._excel02Groups = groups;
@@ -1629,10 +1657,11 @@ async function handleImport02Excel() {
         } else {
             throw new Error('Không có nhóm người bán trong file');
         }
+        if (json.warning) toast(json.warning, 'error');
     } catch (err) {
         toast(err.message || String(err), 'error');
     } finally {
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
     }
 }
 
