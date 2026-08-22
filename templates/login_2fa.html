@@ -125,6 +125,15 @@
                 </div>
 
                 <div class="auth-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    <div class="mb-3">
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'message' else 'info' }} small py-2 mb-2">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endwith %}
                     <div class="d-grid gap-3">
                         
                         {% if auth.google_allowed and auth.google_client_id %}
@@ -191,15 +200,22 @@ function handleGoogle2faCredential(response) {
     fetch('{{ url_for("login_google_2fa_credential") }}', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ credential: response.credential })
     })
-    .then(r => r.json())
-    .then(data => {
+    .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
         if (data.success && data.redirect) {
             window.location.href = data.redirect;
             return;
         }
-        alert(data.error || 'Xác thực Google thất bại');
+        const msg = data.error || 'Xác thực Google thất bại';
+        if (r.status === 401 || /hết hạn|không hợp lệ/i.test(msg)) {
+            alert(msg + '\n\nTrang sẽ tải lại — hãy nhấn lại nút Google.');
+            window.location.reload();
+            return;
+        }
+        alert(msg);
     })
     .catch(() => alert('Không kết nối được máy chủ'));
 }
@@ -213,7 +229,8 @@ function initGoogle2faSignIn() {
         client_id: '{{ auth.google_client_id }}',
         callback: handleGoogle2faCredential,
         auto_select: false,
-        context: 'signin'
+        context: 'signin',
+        use_fedcm_for_prompt: false
     });
     google.accounts.id.renderButton(
         document.getElementById('google2faWrap'),

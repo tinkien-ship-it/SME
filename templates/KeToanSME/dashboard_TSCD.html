@@ -74,11 +74,9 @@
       <div class="card-body d-flex flex-wrap gap-2">
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_auto_posting') }}">Tự động kỳ</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_fixed_assets') }}">Danh mục tài sản cố định</a>
-{% if not sme_is_tt58 %}
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_fa_docs') }}">Biên bản tài sản cố định</a>
 <a class="btn btn-outline-danger btn-sm" href="{{ url_for('SME_fa_disposal') }}">Thanh lý tài sản cố định</a>
 <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_fa_depreciation_table') }}">Bảng khấu hao mẫu 06</a>
-{% endif %}
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_general_ledger') }}">Sổ cái 211/214</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_BCTC') }}">Báo cáo tài chính</a>
 </div>

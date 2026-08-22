@@ -52,10 +52,9 @@ ROLE_LABELS = {
     'adminSME99': 'Quản trị SME (TT99)',
 }
 
-# Trước đây một số nghiệp vụ (L/C, FX, vay, mẫu TT…) bị khóa với TT58.
-# Chính sách hiện tại: TT58 được dùng đầy đủ nghiệp vụ mua/bán/kế toán như TT99;
-# đồng thời bắt buộc có sổ & biểu mẫu DNSN (TT58) để CQT đối chiếu khi kiểm tra.
-# Giữ frozenset rỗng để tương thích gọi cũ; không chặn endpoint/path TT99 trên TT58.
+# Chính sách: DN siêu nhỏ (TT58) có thể phát sinh mọi nghiệp vụ như DN TT99.
+# Do đó TT58 được mở đầy đủ nghiệp vụ mua/bán/kế toán; khác biệt chỉ ở framework
+# sổ & biểu mẫu DNSN (+ cấu hình trường hợp thuế) bắt buộc theo TT58.
 TT99_ONLY_ENDPOINTS = frozenset()
 
 TT99_ONLY_PATH_PREFIXES = ()

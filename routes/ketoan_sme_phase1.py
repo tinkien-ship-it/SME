@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 from datetime import datetime
 
@@ -119,6 +120,29 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
     @require_sme_regime
     def SME_purchase_listing():
         return render_template('KeToanSME/purchase_listing.html')
+
+    @app.route('/SME_purchase_02_tndn')
+    @login_required
+    @require_sme_regime
+    def SME_purchase_02_tndn():
+        """Bảng kê thu mua không có hóa đơn — mẫu 02/TNDN (TT 20/2026/TT-BTC)."""
+        from Services.sme.purchase_02_tndn import (
+            biz_export_fields,
+            default_purchase_place,
+            load_tenant_business_info,
+        )
+        biz = {}
+        conn = get_db_connection()
+        try:
+            biz = load_tenant_business_info(conn)
+        finally:
+            conn.close()
+        fields = biz_export_fields(biz)
+        return render_template(
+            'KeToanSME/purchase_02_tndn.html',
+            biz=fields,
+            default_purchase_place=fields.get('purchase_place') or default_purchase_place(biz),
+        )
 
     @app.route('/SME_cit')
     @login_required
@@ -279,6 +303,251 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
+
+    # ── 02/TNDN — bảng kê thu mua không có hóa đơn ─────────
+    @app.route('/api/sme/purchase-02-tndn', methods=['GET', 'POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_purchase_02_tndn():
+        from Services.sme.purchase_02_tndn import (
+            biz_export_fields,
+            default_purchase_place,
+            ensure_purchase_02_tndn_tables,
+            list_lines,
+            load_tenant_business_info,
+            replace_period_lines,
+            resolve_branch_for_read,
+            resolve_branch_for_write,
+        )
+        from Services.sme.branches import request_branch_filter
+
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            ensure_purchase_02_tndn_tables(conn)
+            biz = biz_export_fields(load_tenant_business_info(conn))
+            default_place = biz.get('purchase_place') or default_purchase_place(biz)
+            branch_raw = request_branch_filter()
+
+            if request.method == 'GET':
+                date_from = request.args.get('from') or datetime.now().strftime('%Y-%m-01')
+                date_to = request.args.get('to') or datetime.now().strftime('%Y-%m-%d')
+                lines = list_lines(
+                    conn,
+                    date_from=date_from,
+                    date_to=date_to,
+                    branch_code=resolve_branch_for_read(branch_raw),
+                )
+                total = sum(float(x.get('amount') or 0) for x in lines)
+                place = ''
+                for x in lines:
+                    if (x.get('purchase_place') or '').strip():
+                        place = (x.get('purchase_place') or '').strip()
+                        break
+                if not place:
+                    place = default_place
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'lines': lines,
+                        'count': len(lines),
+                        'total': total,
+                        'purchase_place': place,
+                        'default_purchase_place': default_place,
+                        'business': biz,
+                    },
+                })
+
+            payload = request.get_json(silent=True) or {}
+            save_date = (payload.get('save_date') or '').strip()
+            period = (payload.get('period_month') or '').strip()
+            if save_date and re.match(r'^\d{4}-\d{2}-\d{2}$', save_date):
+                period = save_date[:7]
+            if not period:
+                d0 = (payload.get('from') or datetime.now().strftime('%Y-%m-01'))[:7]
+                period = d0
+            place = (payload.get('purchase_place') or '').strip() or default_place
+            n = replace_period_lines(
+                conn,
+                period_month=period,
+                lines=payload.get('lines') or [],
+                purchase_place=place,
+                branch_code=resolve_branch_for_write(branch_raw),
+            )
+            conn.commit()
+            return jsonify({
+                'success': True,
+                'saved': n,
+                'period_month': period,
+                'save_date': save_date or None,
+                'purchase_place': place,
+            })
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_purchase_02_tndn')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/purchase-02-tndn/template.xlsx')
+    @login_required
+    @require_sme_regime
+    def api_sme_purchase_02_tndn_template():
+        from flask import send_file
+        from Services.sme.purchase_02_tndn import (
+            build_template_excel,
+            biz_export_fields,
+            load_tenant_business_info,
+        )
+
+        conn = get_db_connection()
+        try:
+            biz = biz_export_fields(load_tenant_business_info(conn))
+        finally:
+            conn.close()
+        bio = build_template_excel(biz)
+        return send_file(
+            bio,
+            as_attachment=True,
+            download_name='Mau_02_TNDN_Bang_ke_thu_mua.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+    @app.route('/api/sme/purchase-02-tndn/export.xlsx')
+    @login_required
+    @require_sme_regime
+    def api_sme_purchase_02_tndn_export():
+        from flask import send_file
+        from Services.sme.purchase_02_tndn import (
+            build_excel,
+            biz_export_fields,
+            ensure_purchase_02_tndn_tables,
+            list_lines,
+            load_tenant_business_info,
+            resolve_branch_for_read,
+        )
+        from Services.sme.branches import request_branch_filter
+
+        date_from = request.args.get('from') or datetime.now().strftime('%Y-%m-01')
+        date_to = request.args.get('to') or datetime.now().strftime('%Y-%m-%d')
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            ensure_purchase_02_tndn_tables(conn)
+            biz = biz_export_fields(load_tenant_business_info(conn))
+            lines = list_lines(
+                conn,
+                date_from=date_from,
+                date_to=date_to,
+                branch_code=resolve_branch_for_read(request_branch_filter()),
+            )
+        finally:
+            conn.close()
+
+        place = (request.args.get('purchase_place') or '').strip()
+        if not place and lines:
+            place = (lines[0].get('purchase_place') or '').strip()
+        if not place:
+            place = biz.get('purchase_place') or ''
+        # Nhãn kỳ + ngày ký (ưu tiên ngày "đến", định dạng VN)
+        try:
+            d_from = datetime.strptime(date_from[:10], '%Y-%m-%d').strftime('%d/%m/%Y')
+            d_to = datetime.strptime(date_to[:10], '%Y-%m-%d').strftime('%d/%m/%Y')
+            period_label = f'Từ {d_from} đến {d_to}'
+        except ValueError:
+            period_label = f'Từ {date_from} đến {date_to}'
+        bio = build_excel(
+            lines,
+            business_name=biz.get('business_name') or '',
+            tax_code=biz.get('tax_code') or '',
+            address=biz.get('address') or '',
+            phone=biz.get('phone') or '',
+            purchase_place=place,
+            period_label=period_label,
+        )
+        return send_file(
+            bio,
+            as_attachment=True,
+            download_name=f'02_TNDN_{date_from}_{date_to}.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+    @app.route('/api/sme/purchase-02-tndn/import-excel', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_purchase_02_tndn_import_excel():
+        """Import Excel → lưu bảng kê (và/hoặc trả groups để nạp phiếu nhập)."""
+        from Services.sme.purchase_02_tndn import (
+            ensure_purchase_02_tndn_tables,
+            parse_excel_rows,
+            group_lines_for_import,
+            replace_period_lines,
+            resolve_branch_for_write,
+            default_purchase_place,
+            load_tenant_business_info,
+        )
+        from Services.sme.branches import request_branch_filter
+
+        f = request.files.get('file')
+        if not f or not (f.filename or '').lower().endswith(('.xlsx', '.xlsm')):
+            return jsonify({'success': False, 'error': 'Chọn file Excel .xlsx'}), 400
+        try:
+            lines = parse_excel_rows(f)
+        except Exception as e:
+            logger.exception('parse 02-tndn excel')
+            return jsonify({'success': False, 'error': f'Không đọc được Excel: {e}'}), 400
+        if not lines:
+            return jsonify({'success': False, 'error': 'Không có dòng dữ liệu hợp lệ trong file'}), 400
+
+        save = (request.form.get('save') or request.args.get('save') or '1').strip() != '0'
+        save_date = (request.form.get('save_date') or '').strip()
+        period = (request.form.get('period_month') or '').strip()
+        if save_date and len(save_date) >= 7:
+            period = save_date[:7]
+        if not period:
+            months = [str(x.get('purchase_date') or '')[:7] for x in lines if x.get('purchase_date')]
+            period = months[0] if months else datetime.now().strftime('%Y-%m')
+
+        saved = 0
+        place = (request.form.get('purchase_place') or '').strip()
+        conn = get_db_connection()
+        try:
+            if not place:
+                place = default_purchase_place(load_tenant_business_info(conn))
+            if save and period:
+                ensure_purchase_02_tndn_tables(conn)
+                saved = replace_period_lines(
+                    conn,
+                    period_month=period,
+                    lines=lines,
+                    purchase_place=place,
+                    branch_code=resolve_branch_for_write(request_branch_filter()),
+                )
+                conn.commit()
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('save 02-tndn excel')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+        groups = group_lines_for_import(lines)
+        return jsonify({
+            'success': True,
+            'lines': lines,
+            'groups': groups,
+            'saved': saved,
+            'period_month': period,
+            'purchase_place': place,
+            'count': len(lines),
+            'hint': 'Số căn cước = mã số thuế (MST) khi lập phiếu nhập.',
+        })
 
     @app.route('/api/sme/products/brief')
     @login_required

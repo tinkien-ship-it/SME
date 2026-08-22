@@ -279,9 +279,10 @@ REGIME_HINTS = {
         'Hướng dẫn: tab Kế Toán SME → SME TT99. Không chỉ dẫn sổ DNSN (TT58).'
     ),
     'SME_MICRO_TT58': (
-        'Doanh nghiệp siêu nhỏ Thông tư 58 — DNSN. Phải chọn Trường hợp thuế 1–4; '
-        'in đủ sổ DNSN (framework CQT). Được dùng đầy đủ nghiệp vụ mua/bán/kế toán như TT99 '
-        '(L/C, FX, vay, mẫu chứng từ…). Hướng dẫn: tab Kế Toán SME → SME TT58.'
+        'Doanh nghiệp siêu nhỏ Thông tư 58 — DNSN. Nghiệp vụ mua/bán/kế toán mở đầy đủ như TT99 '
+        '(DN siêu nhỏ có thể phát sinh nghiệp vụ giống DN thường). '
+        'Phải chọn Trường hợp thuế 1–4 và in đủ sổ DNSN (framework CQT). '
+        'Hướng dẫn: tab Kế Toán SME → SME TT58.'
     ),
 }
 

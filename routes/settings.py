@@ -78,6 +78,53 @@ def is_device_trusted(username, fingerprint):
         return False
 
 # Sau khi User nhập OTP thành công, lưu thiết bị này vào danh sách "Quen"
+def _client_host0() -> str:
+    return (request.host or '').split(':')[0].lower()
+
+
+def _otp_onscreen_allowed() -> bool:
+    """
+    Hiện mã OTP trên UI chỉ khi đang dev localhost.
+    VPS / production: luôn False — OTP chỉ qua email/SMS.
+    Chặn spoof Host: localhost bằng cách yêu cầu app.debug (gunicorn VPS = False).
+    Ép tắt: SME_SHOW_OTP_ON_SCREEN=0 | ép bật (vẫn cần debug+local): =1
+    """
+    raw = (os.environ.get('SME_SHOW_OTP_ON_SCREEN') or '').strip().lower()
+    if raw in ('0', 'false', 'no', 'off'):
+        return False
+    # Production (gunicorn/waitress, debug=False) — không bao giờ hiện mã
+    try:
+        if not current_app.debug:
+            return False
+    except Exception:
+        return False
+    if _client_host0() not in ('127.0.0.1', 'localhost'):
+        return False
+    public = (
+        os.environ.get('SME_PUBLIC_BASE_URL')
+        or os.environ.get('PUBLIC_BASE_URL')
+        or ''
+    ).strip().lower()
+    if public.startswith('https://') and 'localhost' not in public and '127.0.0.1' not in public:
+        return False
+    if raw in ('1', 'true', 'yes', 'on'):
+        return True
+    # Mặc định localhost + debug: cho hiện (tiện dev khi SMTP Zoho chặn)
+    return True
+
+
+def _mask_email(email: str) -> str:
+    email = (email or '').strip()
+    if '@' not in email:
+        return '***'
+    local, _, domain = email.partition('@')
+    if len(local) <= 2:
+        shown = local[:1] + '***'
+    else:
+        shown = local[:2] + '***'
+    return f'{shown}@{domain}'
+
+
 def add_trusted_device(username, fingerprint):
     from db_utils import get_main_db_connection, sqlite_write_retry
 
@@ -470,6 +517,7 @@ def register_settings_routes(app):
 
                 if should_ask_2fa:
                     # Lưu thông tin tạm thời vào session để xử lý ở trang xác thực OTP
+                    session.permanent = True
                     session['pending_auth'] = {
                         'user': {
                             'id': int(user['id']),
@@ -485,6 +533,7 @@ def register_settings_routes(app):
                         'fingerprint': fingerprint,
                         'google_allowed': google_login_enabled(),
                     }
+                    session.modified = True
                     try:
                         return redirect(url_for('login_2fa'))
                     except Exception:
@@ -684,64 +733,98 @@ def register_settings_routes(app):
     @app.route('/send-otp-email', methods=['POST'])
     def send_otp_email():
         if 'pending_auth' not in session:
+            flash("Phiên xác thực đã hết hạn. Vui lòng đăng nhập lại.", "warning")
             return redirect(url_for('login'))
-    
+
         auth_data = session['pending_auth']
         username = auth_data['user']['username']
-        email_to = None
+        # Ưu tiên email đã lưu lúc login — tránh query DB (dễ locked) làm chậm/vỡ phiên
+        email_to = (auth_data.get('email') or '').strip() or None
 
-        # --- BƯỚC 1: TÌM TRONG TENANT DATABASE ---
-        db_path_raw = auth_data.get('db_path')
-        if db_path_raw and not os.path.isabs(db_path_raw):
-            g.db_path = os.path.join(BASE_DIR, db_path_raw)
-        else:
-            g.db_path = db_path_raw
+        if not email_to:
+            db_path_raw = auth_data.get('db_path')
+            if db_path_raw and not os.path.isabs(db_path_raw):
+                g.db_path = os.path.join(BASE_DIR, db_path_raw)
+            else:
+                g.db_path = db_path_raw
 
-        try:
-            conn = get_db_connection()
-            user_row = conn.execute("SELECT email FROM users WHERE username = ?", (username,)).fetchone()
-            conn.close()
-            if user_row and user_row['email']:
-                email_to = user_row['email']
-        except Exception as e:
-            current_app.logger.error(f"DEBUG_OTP: Lỗi khi tìm ở Tenant DB: {e}")
+            try:
+                conn = get_db_connection()
+                user_row = conn.execute(
+                    "SELECT email FROM users WHERE username = ?", (username,),
+                ).fetchone()
+                conn.close()
+                if user_row and user_row['email']:
+                    email_to = user_row['email']
+            except Exception as e:
+                current_app.logger.error("DEBUG_OTP: Lỗi khi tìm ở Tenant DB: %s", e)
 
-        # --- BƯỚC 2: TÌM TRONG MAIN DATABASE (Nếu tenant không có) ---
         if not email_to:
             g.db_path = os.path.join(BASE_DIR, 'database.db')
             try:
                 conn_main = get_db_connection()
-                user_main = conn_main.execute("SELECT email FROM users WHERE username = ?", (username,)).fetchone()
+                user_main = conn_main.execute(
+                    "SELECT email FROM users WHERE username = ?", (username,),
+                ).fetchone()
                 conn_main.close()
                 if user_main and user_main['email']:
                     email_to = user_main['email']
             except Exception as e:
-                current_app.logger.error(f"DEBUG_OTP: Lỗi khi tìm ở Main DB: {e}")
-
-        # --- BƯỚC 3: DỰ PHÒNG CUỐI CÙNG TỪ SESSION ---
-        if not email_to:
-            email_to = auth_data.get('email')
+                current_app.logger.error("DEBUG_OTP: Lỗi khi tìm ở Main DB: %s", e)
 
         if not email_to:
             flash("Tài khoản chưa cập nhật email. Không thể gửi mã OTP!", "danger")
             return redirect(url_for('login_2fa'))
 
-        # TẠO MÃ VÀ GỬI MAIL
         otp_code = ''.join(random.choices(string.digits, k=6))
+        session.permanent = True
         session['otp_check'] = {
             'code': otp_code,
             'channel': 'email',
             'email': email_to,
-            'expires': (datetime.now() + timedelta(minutes=5)).timestamp()
+            'expires': (datetime.now() + timedelta(minutes=5)).timestamp(),
         }
         session.modified = True
 
-        ok, err_msg = send_otp_email_logic(email_to, otp_code)
-        if ok:
-            flash("Mã xác thực đã được gửi tới email của bạn.", "success")
+        show_onscreen = _otp_onscreen_allowed()
+        masked = _mask_email(email_to)
+
+        if show_onscreen:
+            # Dev localhost: gửi nền + hiện mã (SMTP Zoho thường chặn từ máy local)
+            app_obj = current_app._get_current_object()
+
+            def _send_bg():
+                with app_obj.app_context():
+                    ok, err_msg = send_otp_email_logic(email_to, otp_code)
+                    if not ok:
+                        app_obj.logger.error(
+                            "Lỗi gửi OTP email tới %s: %s", masked, err_msg,
+                        )
+
+            threading.Thread(target=_send_bg, daemon=True, name='send-otp-email').start()
+            flash(
+                f"Mã OTP (localhost): {otp_code} — đang thử gửi email tới {masked}.",
+                "warning",
+            )
             return redirect(url_for('verify_otp_page'))
-        flash(err_msg or "Hệ thống mail đang bận hoặc cấu hình sai SMTP. Vui lòng thử lại sau!", "danger")
-        return redirect(url_for('login_2fa'))
+
+        # VPS / production: bắt buộc gửi email thành công; không hiện mã trên UI / log
+        ok, err_msg = send_otp_email_logic(email_to, otp_code)
+        if not ok:
+            session.pop('otp_check', None)
+            session.modified = True
+            current_app.logger.error(
+                "Lỗi gửi OTP email tới %s: %s", masked, err_msg,
+            )
+            flash(
+                err_msg
+                or "Không gửi được email OTP. Kiểm tra cấu hình SMTP hoặc thử lại sau.",
+                "danger",
+            )
+            return redirect(url_for('login_2fa'))
+
+        flash(f"Mã xác thực đã được gửi tới email {masked}.", "success")
+        return redirect(url_for('verify_otp_page'))
 
     @app.route('/send-otp-sms', methods=['POST'])
     def send_otp_sms_route():
@@ -787,13 +870,16 @@ def register_settings_routes(app):
     @app.route('/verify-otp', methods=['GET'])
     def verify_otp_page():
         if 'pending_auth' not in session or 'otp_check' not in session:
+            flash("Phiên xác thực đã hết hạn. Vui lòng đăng nhập lại.", "warning")
             return redirect(url_for('login'))
         otp = session['otp_check']
         return render_template(
             'verify_2fa.html',
             channel=otp.get('channel', 'email'),
-            email=otp.get('email') or session['pending_auth'].get('email'),
+            email=_mask_email(otp.get('email') or session['pending_auth'].get('email') or ''),
             phone_display=otp.get('display'),
+            # Chỉ truyền mã khi được phép (localhost + debug); VPS luôn None
+            localhost_otp=otp.get('code') if _otp_onscreen_allowed() else None,
         )
 
     @app.route('/verify-otp-code', methods=['POST'])
@@ -832,18 +918,20 @@ def register_settings_routes(app):
         return render_template(
             'verify_2fa.html',
             channel=otp.get('channel', 'email'),
-            email=otp.get('email') or auth.get('email'),
+            email=_mask_email(otp.get('email') or (auth or {}).get('email') or ''),
             phone_display=otp.get('display'),
+            localhost_otp=otp.get('code') if _otp_onscreen_allowed() else None,
         )
 
     def _google_login_by_email(email):
         """
         Đăng nhập bằng Google: email đã xác minh bởi Google và khớp email đăng ký → vào thẳng.
+        Ưu tiên tài khoản master (cùng email với tenant) rồi mới tới tenant.
         """
-        from Services.subscription_service import find_account_by_email, tenant_is_expired
+        from Services.subscription_service import get_tenant_record, tenant_is_expired
 
-        account = find_account_by_email(email, active_only=False)
-        if not account:
+        found = find_user_by_email(email)
+        if not found:
             return {
                 'success': False,
                 'needs_registration': True,
@@ -851,31 +939,35 @@ def register_settings_routes(app):
                 'error': f'Email Google "{email}" chưa được đăng ký. Vui lòng đăng ký dùng thử.',
             }
 
-        if not account.get('tenant_active') or tenant_is_expired({
-            'is_active': account.get('tenant_active'),
-            'expiry_date': account.get('expiry_date'),
-        }):
-            session['renewal_context'] = {
-                'tenant_id': account['tenant_id'],
-                'email': email,
-                'business_name': account.get('business_name') or '',
-            }
-            return {
-                'success': False,
-                'needs_renewal': True,
-                'redirect': url_for('renewal_page'),
-                'error': 'Tài khoản đã hết hạn. Vui lòng gia hạn để tiếp tục sử dụng.',
-            }
+        user = found['user']
+        db_to_open = found['db_path']
+        current_tenant_id = found.get('tenant_id')
 
-        user = account['user']
-        db_to_open = account['db_path']
-        current_tenant_id = account['tenant_id']
-        resp = _finalize_login_from_dict(user, db_to_open, current_tenant_id, get_device_fingerprint())
+        if current_tenant_id is not None:
+            rec = get_tenant_record(current_tenant_id, include_inactive=True) or {}
+            if not rec.get('is_active') or tenant_is_expired({
+                'is_active': rec.get('is_active'),
+                'expiry_date': rec.get('expiry_date'),
+            }):
+                session['renewal_context'] = {
+                    'tenant_id': current_tenant_id,
+                    'email': email,
+                    'business_name': rec.get('business_name') or '',
+                }
+                return {
+                    'success': False,
+                    'needs_renewal': True,
+                    'redirect': url_for('renewal_page'),
+                    'error': 'Tài khoản đã hết hạn. Vui lòng gia hạn để tiếp tục sử dụng.',
+                }
+
+        resp = _finalize_login_from_dict(
+            user, db_to_open, current_tenant_id, get_device_fingerprint(),
+        )
         redirect_url = getattr(resp, 'location', None)
         if not redirect_url:
-            settings = account.get('settings') or {}
-            if not settings.get('onboarding_completed'):
-                redirect_url = url_for('onboarding_page')
+            if current_tenant_id is None and str(user.get('role', '')).strip() == 'master':
+                redirect_url = url_for('master_settings')
             else:
                 redirect_url = url_for('sale')
         return {'success': True, 'redirect': redirect_url}
@@ -962,11 +1054,20 @@ def register_settings_routes(app):
             return redirect(url_for('login', google_setup=1))
 
         if session.get('oauth_mode') != 'login':
-            flash(
-                'Phiên Google bị mất (cookie). Hãy mở https://ketoshop.pro.vn/login '
-                '(không lẫn www) rồi thử lại.',
-                'danger',
-            )
+            host0 = (request.host or '').split(':')[0].lower()
+            if host0 in ('127.0.0.1', 'localhost'):
+                flash(
+                    'Phiên Google bị mất (cookie). Dùng cố định một địa chỉ '
+                    f'http://{host0}:5000/login — xóa cookie site, khởi động lại '
+                    'app.py (SESSION_COOKIE_SECURE=False), rồi thử lại.',
+                    'danger',
+                )
+            else:
+                flash(
+                    'Phiên Google bị mất (cookie). Hãy mở https://ketoshop.pro.vn/login '
+                    '(không lẫn www) rồi thử lại.',
+                    'danger',
+                )
             return redirect(url_for('login'))
         try:
             if not configure_google_oauth(google):
@@ -1022,6 +1123,7 @@ def register_settings_routes(app):
                         should_ask_2fa = True
 
                 if should_ask_2fa:
+                    session.permanent = True
                     session['pending_auth'] = {
                         'user': {
                             'id': int(user['id']),
@@ -1037,6 +1139,7 @@ def register_settings_routes(app):
                         'fingerprint': fingerprint,
                         'google_allowed': google_login_enabled(),
                     }
+                    session.modified = True
                     session.pop('oauth_mode', None)
                     flash("Thiết bị mới — vui lòng xác minh OTP.", "info")
                     return redirect(url_for('login_2fa'))

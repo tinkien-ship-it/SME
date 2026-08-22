@@ -79,6 +79,34 @@
         </div>
     </div>
 
+    <!-- Excel 02/TNDN — thu mua không có hóa đơn (CCCD = MST) -->
+    <div class="card mb-2 border-warning" id="excel02TndnZone" style="border-style:dashed!important;">
+        <div class="card-body py-1">
+            <div class="row align-items-center g-2">
+                <div class="col-md-auto small fw-bold text-warning">
+                    NHẬP EXCEL 02/TNDN:
+                    <span class="fw-normal text-muted">(thu mua không HĐ — căn cước = MST)</span>
+                </div>
+                <div class="col-md-6">
+                    <div class="input-group input-group-sm">
+                        <label class="input-group-text btn btn-warning fw-bold" for="excel02File">Chọn Excel</label>
+                        <input type="file" id="excel02File" class="form-control" accept=".xlsx,.xlsm" style="display:none;">
+                        <span id="excel02FileName" class="form-control bg-white text-muted" style="line-height:24px;">Chưa chọn file</span>
+                        <button class="btn btn-warning fw-bold" type="button" id="btnImport02Excel">NẠP VÀO PHIẾU</button>
+                    </div>
+                </div>
+                <div class="col-md-auto">
+                    <a class="btn btn-sm btn-outline-secondary" href="/api/sme/purchase-02-tndn/template.xlsx">Mẫu Excel</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('SME_purchase_02_tndn') }}">Bảng kê 02/TNDN</a>
+                </div>
+            </div>
+            <div id="excel02GroupPick" class="mt-2 d-none">
+                <label class="small fw-bold text-muted">Chọn nhóm người bán / ngày để nạp:</label>
+                <select id="excel02GroupSelect" class="form-select form-select-sm"></select>
+            </div>
+        </div>
+    </div>
+
     <form id="importForm">
         <input type="hidden" id="import_no" value="{{ next_import_no|default('') }}">
         <input type="hidden" id="editImportId" value="">
@@ -1171,6 +1199,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Excel 02/TNDN — thu mua không HĐ (CCCD = MST)
+    const excel02Input = document.getElementById('excel02File');
+    if (excel02Input) {
+        excel02Input.addEventListener('change', function () {
+            const display = document.getElementById('excel02FileName');
+            const file = this.files?.[0];
+            if (!file) return;
+            const low = file.name.toLowerCase();
+            if (!low.endsWith('.xlsx') && !low.endsWith('.xlsm')) {
+                this.value = '';
+                display.textContent = 'Chưa chọn file';
+                return toast('Chỉ hỗ trợ Excel .xlsx', 'error');
+            }
+            display.textContent = file.name;
+        });
+    }
+    document.getElementById('btnImport02Excel')?.addEventListener('click', handleImport02Excel);
+    document.getElementById('excel02GroupSelect')?.addEventListener('change', function () {
+        const idx = Number(this.value);
+        if (window._excel02Groups && window._excel02Groups[idx]) {
+            applyExcel02Group(window._excel02Groups[idx]);
+        }
+    });
+    }
+
     const supplierSearch = document.getElementById('supplierSearch');
     if (supplierSearch) {
         supplierSearch.addEventListener('change', () => applySupplierByName(supplierSearch.value));
@@ -1489,6 +1542,98 @@ async function updateSupplierFromXML(sup) {
         const result = await res.json();
         return result.success ? result.supplier_id : null;
     } catch(e) { return null; }
+}
+
+/** Nạp nhóm 02/TNDN vào form phiếu nhập — CCCD → MST */
+async function applyExcel02Group(g) {
+    if (!g) return;
+    const taxCode = (g.seller_id_no || '').replace(/\D/g, '');
+    const realId = await updateSupplierFromXML({
+        name: g.seller_name,
+        tax_code: taxCode,
+        address: g.seller_address || '',
+    });
+    document.getElementById('supplierId').value = realId || '';
+    document.getElementById('supplierSearch').value = g.seller_name || '';
+    document.getElementById('taxCode').value = taxCode;
+    document.getElementById('supplierAddress').value = g.seller_address || '';
+    document.getElementById('bill_no').value = '';
+    if (g.purchase_date) {
+        const parts = String(g.purchase_date).slice(0, 10).split('-');
+        if (parts.length === 3) {
+            const dmy = parts[2] + '/' + parts[1] + '/' + parts[0];
+            if (document.getElementById('importDate')._flatpickr) {
+                document.getElementById('importDate')._flatpickr.setDate(dmy);
+            } else {
+                document.getElementById('importDate').value = dmy;
+            }
+            if (document.getElementById('bill_date')._flatpickr) {
+                document.getElementById('bill_date')._flatpickr.setDate(dmy);
+            }
+        }
+    }
+    const tbody = document.querySelector('#itemsTable tbody');
+    tbody.innerHTML = '';
+    const items = g.items || [];
+    if (!items.length) {
+        toast('Nhóm không có dòng hàng', 'error');
+        addRow();
+        return;
+    }
+    for (const item of items) {
+        addRow({
+            invoice_name: item.invoice_name,
+            unit: item.unit,
+            qty: item.qty,
+            price: item.price,
+            tax_pct: 0,
+            line_type: IS_SERVICE_MODE ? 'service' : DEFAULT_LINE_TYPE,
+            skip_match: true,
+        });
+    }
+    calcTotal();
+    if (!IS_SERVICE_MODE && window.KetoImportMatch) {
+        await KetoImportMatch.scanTable({ setProductToRow });
+    }
+    toast('Đã nạp ' + items.length + ' dòng — MST/CCCD: ' + (taxCode || '(trống)'));
+}
+
+async function handleImport02Excel() {
+    const fileInput = document.getElementById('excel02File');
+    const file = fileInput?.files?.[0];
+    if (!file) return toast('Chọn file Excel 02/TNDN trước', 'error');
+    const btn = document.getElementById('btnImport02Excel');
+    btn.disabled = true;
+    try {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('save', '0');
+        const res = await fetch('/api/sme/purchase-02-tndn/import-excel', { method: 'POST', body: fd });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Import thất bại');
+        const groups = json.groups || [];
+        window._excel02Groups = groups;
+        const wrap = document.getElementById('excel02GroupPick');
+        const sel = document.getElementById('excel02GroupSelect');
+        if (groups.length > 1) {
+            wrap.classList.remove('d-none');
+            sel.innerHTML = groups.map((g, i) => {
+                const d = g.purchase_date || '';
+                const label = `${g.seller_name || 'N/A'} · CCCD ${g.seller_id_no || '—'} · ${d} · ${g.items.length} dòng`;
+                return `<option value="${i}">${label}</option>`;
+            }).join('');
+            await applyExcel02Group(groups[0]);
+        } else if (groups.length === 1) {
+            wrap.classList.add('d-none');
+            await applyExcel02Group(groups[0]);
+        } else {
+            throw new Error('Không có nhóm người bán trong file');
+        }
+    } catch (err) {
+        toast(err.message || String(err), 'error');
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 async function loadInvoiceFromServer(invoiceId) {

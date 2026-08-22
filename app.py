@@ -397,10 +397,34 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # Cấu hình bảo mật Cookie Session
 # SME_SESSION_COOKIE_DOMAIN=.ketoshop.pro.vn → cookie dùng chung apex + www (tránh mất OAuth state)
+# SESSION_COOKIE_SECURE=True trên http://localhost → trình duyệt KHÔNG gửi cookie
+# → mất pending_auth/OTP và oauth_mode ("phiên Google hết hạn").
 _session_cookie_domain = (os.getenv("SME_SESSION_COOKIE_DOMAIN") or "").strip() or None
+
+
+def _resolve_session_cookie_secure() -> bool:
+    raw = (os.getenv("SME_SESSION_COOKIE_SECURE") or "").strip().lower()
+    if raw in ("0", "false", "no", "off"):
+        return False
+    if raw in ("1", "true", "yes", "on"):
+        return True
+    public = (
+        os.getenv("SME_PUBLIC_BASE_URL")
+        or os.getenv("PUBLIC_BASE_URL")
+        or ""
+    ).strip().lower()
+    if public.startswith("http://") or "localhost" in public or "127.0.0.1" in public:
+        return False
+    env = (os.getenv("FLASK_ENV") or os.getenv("ENV") or "").strip().lower()
+    if env in ("development", "dev", "local"):
+        return False
+    # Mặc định Secure (VPS HTTPS). python app.py sẽ tắt lại bên dưới.
+    return True
+
+
 app.config.update(
-    SESSION_COOKIE_SECURE=True,   # Chỉ gửi cookie qua HTTPS
-    SESSION_COOKIE_HTTPONLY=True, # Ngăn Javascript đọc cookie
+    SESSION_COOKIE_SECURE=_resolve_session_cookie_secure(),
+    SESSION_COOKIE_HTTPONLY=True,  # Ngăn Javascript đọc cookie
     SESSION_COOKIE_SAMESITE='Lax',
     **({"SESSION_COOKIE_DOMAIN": _session_cookie_domain} if _session_cookie_domain else {}),
 )
@@ -589,8 +613,11 @@ def _handle_internal_error(error):
 
 
 if __name__ == '__main__':
+    # Localhost HTTP: cookie Secure=True sẽ bị trình duyệt bỏ → mất OTP / Google OAuth.
+    app.config['SESSION_COOKIE_SECURE'] = False
     print("POS System & Scheduler đã sẵn sàng.")
     print("Server running: http://127.0.0.1:5000")
+    print("SESSION_COOKIE_SECURE=False (localhost HTTP)")
 
     app.run(
         host='0.0.0.0',

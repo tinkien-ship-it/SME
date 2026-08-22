@@ -2,7 +2,7 @@
 # RAG đọc tự động. Mỗi ## là một khối. Trả lời theo ngôn ngữ người dùng mới, chỉ dẫn đúng menu SME (không HKD).
 
 ## SME TT58 là gì
-Kế toán SME TT58 áp dụng doanh nghiệp siêu nhỏ theo Thông tư 58/2026/TT-BTC (chế độ kế toán doanh nghiệp siêu nhỏ — DNSN). Trong phần mềm, mã chế độ thường là SME_MICRO_TT58. Khác HKD (Thông tư 88). Khác TT99 ở chỗ TT58 bắt buộc bộ sổ & biểu mẫu DNSN theo trường hợp thuế để CQT đối chiếu khi kiểm tra/thanh tra. Về nghiệp vụ mua hàng, bán hàng, kế toán vận hành: TT58 được dùng đầy đủ như TT99 (L/C, ngoại tệ, vay, mẫu chứng từ…).
+Kế toán SME TT58 áp dụng doanh nghiệp siêu nhỏ theo Thông tư 58/2026/TT-BTC (DNSN). Mã chế độ SME_MICRO_TT58. Lưu ý quan trọng: nghiệp vụ kinh tế phát sinh của DN siêu nhỏ có thể giống hệt DN theo TT99 — vì vậy phần mềm mở đầy đủ mọi nghiệp vụ mua hàng, bán hàng, kế toán (L/C, ngoại tệ, vay, mẫu chứng từ, TSCĐ biên bản, 01/02-BH…). Điểm khác TT99: TT58 bắt buộc bộ sổ & biểu mẫu DNSN theo trường hợp thuế để CQT đối chiếu khi kiểm tra/thanh tra. Không nhầm với HKD (Thông tư 88).
 
 ## Lần đầu dùng TT58 — checklist
 1) Đăng nhập tài khoản vai trò kế toán/quản lý SME58. 2) Hệ thống → Thiết lập: tên DN, MST, địa chỉ, tài khoản ngân hàng, nhà cung cấp hóa đơn điện tử. 3) Chọn Trường hợp thuế 1–4 (TT58) — bắt buộc để sổ DNSN và BCTC đúng. 4) Nhập tỷ lệ % thuế theo ngành (hàng hóa, dịch vụ…) nếu nộp theo % DT. 5) Tạo/gắn kho (KHO_001…) và chi nhánh (HQ = trụ sở). 6) Ghi vốn góp: Sổ Quỹ Tiền Mặt hoặc Sổ Tiền Gửi NH → Lập phiếu thu → Nợ 1111/1121 · Có 4111. 7) Đồng bộ hoặc nhập Hóa đơn mua → Lập phiếu nhập. 8) Bán tại Điểm bán hàng. 9) Cuối kỳ: Kết chuyển khóa sổ; in đủ sổ DNSN theo trường hợp.

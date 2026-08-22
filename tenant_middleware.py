@@ -502,6 +502,15 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
         if not request.endpoint or request.endpoint in public_endpoints:
             return None  # Cho phép đi tiếp (Bỏ qua kiểm tra bảo mật)
 
+        # Đường dẫn auth công khai (phòng endpoint đổi tên / 404 có path)
+        path = request.path or ''
+        if path.startswith((
+            '/login', '/send-otp', '/verify-otp', '/authorize-google',
+            '/trial/google', '/api/trial', '/api/auth/google',
+            '/forgot', '/reset', '/static/', '/favicon',
+        )):
+            return None
+
         # ==================== 2. Kiểm tra trạng thái Đăng nhập ====================
         user_data = session.get('user')
         session_token = session.get('session_token')
@@ -509,6 +518,13 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
 
         # NẾU CHƯA ĐĂNG NHẬP: Chặn đứng ngay lập tức, dọn rác và đá về trang login chính
         if not user_data or not session_token or not db_path:
+            # Đang chờ OTP/2FA — KHÔNG xóa pending_auth (trước đây request / hoặc
+            # endpoint lạ giữa trang 2FA sẽ clear session → nhấn gửi OTP bị đá về login).
+            if session.get('pending_auth'):
+                try:
+                    return redirect(url_for('login_2fa'))
+                except Exception:
+                    return redirect('/login-2fa')
             session.clear()  # Dọn sạch session tạm hoặc session lỗi nếu có
             # API phải trả JSON — không redirect HTML (tránh fetch().json() vỡ)
             if request.path.startswith('/api/') or request.accept_mimetypes.best == 'application/json':

@@ -390,12 +390,20 @@ def google_oauth_callback_error_message(exc: BaseException | None = None) -> str
     """Thông báo lỗi OAuth dễ hiểu (query Google + exception Authlib)."""
     from flask import has_request_context, request
 
+    host = ""
     if has_request_context():
+        host = (request.host or "").split(":")[0].lower()
         err = (request.args.get("error") or "").strip()
         desc = (request.args.get("error_description") or "").replace("+", " ").strip()
         if err == "access_denied":
             return "Bạn đã hủy đăng nhập Google."
         if err == "redirect_uri_mismatch" or "redirect_uri" in (desc or "").lower():
+            if host in ("127.0.0.1", "localhost"):
+                return (
+                    "redirect_uri chưa khớp Google Cloud Console. "
+                    f"Thêm http://{host}:{(request.host.split(':')[1] if ':' in (request.host or '') else '5000')}"
+                    "/login/google/callback (và /trial/google/callback, /authorize-google-2fa)."
+                )
             return (
                 "redirect_uri chưa khớp Google Cloud Console. "
                 "Thêm đủ callback cho cả https://ketoshop.pro.vn và https://www.ketoshop.pro.vn"
@@ -407,11 +415,22 @@ def google_oauth_callback_error_message(exc: BaseException | None = None) -> str
     low = text.lower()
     name = type(exc).__name__ if exc else ""
     if "mismatchingstate" in name.lower() or "state" in low:
+        if host in ("127.0.0.1", "localhost"):
+            return (
+                "Phiên Google bị mất (cookie). Trên localhost hãy dùng cùng một host "
+                "(chỉ http://127.0.0.1:5000 hoặc chỉ http://localhost:5000), "
+                "xóa cookie site rồi thử lại. Đảm bảo SESSION_COOKIE_SECURE=0 trên HTTP."
+            )
         return (
             "Phiên Google bị mất (cookie). Thường do mở lẫn www và không-www. "
             "Hãy dùng https://ketoshop.pro.vn (không www) rồi thử lại."
         )
     if "redirect_uri" in low:
+        if host in ("127.0.0.1", "localhost"):
+            return (
+                "redirect_uri chưa khớp. Thêm vào Google Cloud → Authorized redirect URIs: "
+                f"http://{host}:5000/login/google/callback"
+            )
         return (
             "redirect_uri chưa khớp. Thêm vào Google Cloud → Authorized redirect URIs: "
             "https://ketoshop.pro.vn/login/google/callback , "
@@ -559,6 +578,10 @@ def verify_google_credential(credential):
     Xác minh JWT từ nút Google / One Tap (tài khoản Gmail đang lưu trên trình duyệt).
     Trả về (user_info dict, error message).
     """
+    import base64
+    import json
+    import time
+
     credential = (credential or "").strip()
     if not credential:
         return None, "Thiếu mã xác thực Google"
@@ -567,6 +590,21 @@ def verify_google_credential(credential):
     if not client_id:
         return None, "Chưa cấu hình GOOGLE_CLIENT_ID (Master Settings hoặc .env)"
 
+    # Peek JWT (không tin tưởng) — báo hết hạn rõ ràng trước khi gọi tokeninfo
+    try:
+        parts = credential.split(".")
+        if len(parts) >= 2:
+            pad = "=" * (-len(parts[1]) % 4)
+            peek = json.loads(base64.urlsafe_b64decode(parts[1] + pad))
+            exp = int(peek.get("exp") or 0)
+            if exp and time.time() > exp + 60:
+                return None, (
+                    "Phiên Google đã hết hạn — nhấn lại nút Đăng nhập / xác minh Google "
+                    "để lấy mã mới."
+                )
+    except Exception:
+        pass
+
     try:
         resp = requests.get(
             "https://oauth2.googleapis.com/tokeninfo",
@@ -574,7 +612,13 @@ def verify_google_credential(credential):
             timeout=15,
         )
         if not resp.ok:
-            return None, "Phiên Google không hợp lệ hoặc đã hết hạn"
+            body = (resp.text or "").lower()
+            if "expired" in body or resp.status_code == 400:
+                return None, (
+                    "Phiên Google không hợp lệ hoặc đã hết hạn — nhấn lại nút Google "
+                    "để xác thực lại."
+                )
+            return None, "Không xác minh được Google (mạng hoặc token lỗi). Thử lại."
 
         data = resp.json()
         if data.get("aud") != client_id:
@@ -592,6 +636,8 @@ def verify_google_credential(credential):
             "name": data.get("name"),
             "picture": data.get("picture"),
         }, None
+    except requests.Timeout:
+        return None, "Google không phản hồi (timeout). Kiểm tra mạng rồi thử lại."
     except Exception as exc:
         return None, str(exc)
 
@@ -655,10 +701,34 @@ def _abs_db_path(db_path_raw):
 
 
 def find_user_by_email(email):
-    """Tìm user theo email (mapping tenant hoặc DB main)."""
+    """Tìm user theo email (ưu tiên master trên DB main, rồi mapping tenant)."""
     email = (email or "").strip().lower()
     if not email:
         return None
+
+    main_db = os.path.join(BASE_DIR, "database.db")
+    # Ưu tiên tài khoản master: email master thường trùng mapping tenant (Google login
+    # trước đây nhảy nhầm vào tenant → không vào được master_settings).
+    if os.path.exists(main_db):
+        with open_sqlite(main_db) as conn:
+            master = conn.execute(
+                """
+                SELECT * FROM users
+                WHERE role = 'master'
+                  AND LOWER(COALESCE(email, '')) = ?
+                ORDER BY id
+                LIMIT 1
+                """,
+                (email,),
+            ).fetchone()
+        if master:
+            return {
+                "user": dict(master),
+                "db_path": main_db,
+                "tenant_id": None,
+                "tenant_2fa_enabled": False,
+                "email": email,
+            }
 
     with get_main_db_connection() as conn:
         rows = conn.execute(
@@ -696,7 +766,6 @@ def find_user_by_email(email):
                 "email": row["email"] or user["email"] or email,
             }
 
-    main_db = os.path.join(BASE_DIR, "database.db")
     if os.path.exists(main_db):
         with open_sqlite(main_db) as conn:
             user = conn.execute(

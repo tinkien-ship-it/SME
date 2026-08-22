@@ -104,6 +104,24 @@
                     </p>
                 </div>
 
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="mb-3">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'message' else 'info' }} small py-2 mb-2 text-start">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                {% if localhost_otp %}
+                <div class="alert alert-warning small py-2 mb-3 text-start">
+                    <strong>Chỉ máy local (debug):</strong> mã OTP là
+                    <code class="fs-5">{{ localhost_otp }}</code>
+                    <div class="mt-1 text-muted">Trên VPS mã chỉ gửi qua email — không hiện trên màn hình.</div>
+                </div>
+                {% endif %}
+
                 <form method="POST" action="{{ url_for('verify_otp_code') }}">
                     <div class="mb-4">
                         <label class="form-label d-block text-center mb-3 small fw-semibold text-uppercase text-secondary">Nhập mã xác thực</label>

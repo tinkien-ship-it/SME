@@ -533,7 +533,7 @@ STATIC_FAQ: list[dict[str, Any]] = [
             '1) Thiết lập DN + ngân hàng + HĐĐT. 2) **Chọn Trường hợp thuế 1–4** và tỷ lệ % ngành. '
             '3) Vốn góp phiếu thu 1111/1121·4111. 4) Hóa đơn mua → Lập phiếu nhập. 5) Bán POS. '
             '6) In đủ sổ tại **Sổ & biểu mẫu DNSN** (framework bắt buộc khi CQT kiểm tra). '
-            'TT58 được dùng **đầy đủ nghiệp vụ** như TT99 (L/C, ngoại tệ, vay, mẫu chứng từ…). '
+            'Nghiệp vụ phát sinh có thể giống DN TT99 → TT58 mở **đầy đủ** L/C, ngoại tệ, vay, mẫu chứng từ… '
             'Chi tiết: Hướng dẫn → tab Kế Toán SME → **SME TT58**.'
         ),
         'follow_ups': [
@@ -572,9 +572,8 @@ STATIC_FAQ: list[dict[str, Any]] = [
         'pages': ['huong_dan_su_dung', 'SME_dashboard'],
         'title': 'Khác nhau TT58 và TT99',
         'answer': (
-            '**TT58 (siêu nhỏ):** chọn 4 trường hợp thuế; **bắt buộc sổ DNSN** (framework CQT); '
-            'thuế % DT có thể tự ghi 811/821; BCTC theo TH2/TH4. '
-            'Được dùng **cùng đầy đủ nghiệp vụ** mua/bán/kế toán như TT99 (L/C, FX, vay, mẫu chứng từ…). '
+            '**TT58:** nghiệp vụ mua/bán/kế toán **mở đủ như TT99** (DN siêu nhỏ vẫn có thể phát sinh L/C, FX, vay…). '
+            'Thêm: chọn 4 trường hợp thuế; **bắt buộc sổ DNSN** (framework CQT); thuế % DT có thể tự ghi 811/821; BCTC theo TH2/TH4. '
             '**TT99:** BCTC B01–B09 luôn có; không có menu sổ DNSN.'
         ),
     },

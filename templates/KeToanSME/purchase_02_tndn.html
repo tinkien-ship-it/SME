@@ -1,0 +1,392 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Bảng kê thu mua 02/TNDN{% endblock %}
+{% block sme_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<style>
+  #tbl02 { table-layout: fixed; width: 100%; min-width: 1100px; }
+  #tbl02 th { position: relative; vertical-align: middle; }
+  #tbl02 .col-resize-handle { user-select: none; }
+  .flatpickr-calendar { z-index: 9999 !important; }
+</style>
+{% endblock %}
+{% block sme_content %}
+{% set _biz = biz or {} %}
+{% set _place = default_purchase_place or _biz.purchase_place or '' %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2 align-items-start">
+  <div>
+    <h4 class="fw-bold mb-1">Bảng kê thu mua không có hóa đơn
+      <span class="badge bg-primary">02/TNDN</span>
+    </h4>
+    <p class="text-muted small mb-0">
+      Theo Thông tư 20/2026/TT-BTC.
+      <strong>Số căn cước người bán = mã số thuế (MST)</strong> khi lập phiếu nhập.
+      <a href="{{ url_for('static', filename='forms/Mau_so_02_TNDN.docx') }}" class="ms-1">Tải mẫu Word gốc</a>
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <input type="text" id="fromDate" class="form-control form-control-sm" style="width:120px" placeholder="dd/mm/yyyy" autocomplete="off">
+    <span class="text-muted small">→</span>
+    <input type="text" id="toDate" class="form-control form-control-sm" style="width:120px" placeholder="dd/mm/yyyy" autocomplete="off">
+    <button type="button" class="btn btn-primary btn-sm" id="btnLoad">Xem</button>
+    <button type="button" class="btn btn-success btn-sm" id="btnExport"><i class="fas fa-file-excel me-1"></i>Xuất Excel</button>
+    <a class="btn btn-outline-secondary btn-sm" href="/api/sme/purchase-02-tndn/template.xlsx">Mẫu Excel</a>
+    <label class="btn btn-outline-primary btn-sm mb-0">
+      Nhập Excel<input type="file" id="fileImport" accept=".xlsx,.xlsm" class="d-none">
+    </label>
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnResetCols" title="Đặt lại độ rộng cột">Cột mặc định</button>
+    <a class="btn btn-outline-warning btn-sm" href="{{ url_for('SME_import') }}">Lập phiếu nhập</a>
+  </div>
+</div>
+
+<div class="alert alert-light border small py-2 mb-3">
+  <div class="row g-1">
+    <div class="col-md-6"><strong>DN:</strong> {{ _biz.business_name or '—' }}</div>
+    <div class="col-md-3"><strong>MST:</strong> {{ _biz.tax_code or '—' }}</div>
+    <div class="col-md-3"><strong>ĐT:</strong> {{ _biz.phone or '—' }}</div>
+    <div class="col-12"><strong>Địa chỉ DN:</strong> {{ _biz.address or '—' }}</div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-6">
+        <label class="form-label small mb-0">Địa chỉ nơi tổ chức thu mua</label>
+        <input type="text" id="purchasePlace" class="form-control form-control-sm"
+               value="{{ _place|e }}"
+               placeholder="Mặc định = thông tin doanh nghiệp (tenant)">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-0">Ngày lưu</label>
+        <input type="text" id="saveDate" class="form-control form-control-sm" placeholder="dd/mm/yyyy" autocomplete="off">
+      </div>
+      <div class="col-md-3">
+        <button type="button" class="btn btn-warning btn-sm w-100" id="btnSave">Lưu bảng kê</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0 align-middle" id="tbl02">
+      <thead class="table-light text-center small">
+        <tr>
+          <th style="width:44px">STT</th>
+          <th style="width:110px">Ngày mua</th>
+          <th style="width:140px">Tên người bán</th>
+          <th style="width:160px">Địa chỉ</th>
+          <th style="width:120px">Số căn cước (MST)</th>
+          <th style="width:100px">SĐT</th>
+          <th style="width:160px">Tên HH/DV</th>
+          <th style="width:80px">SL</th>
+          <th style="width:60px">ĐVT</th>
+          <th style="width:100px">Đơn giá</th>
+          <th style="width:110px">Tổng giá</th>
+          <th style="width:100px">Ghi chú</th>
+          <th style="width:44px"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+      <tfoot>
+        <tr class="fw-bold table-light">
+          <td colspan="10" class="text-end">Tổng giá trị mua vào</td>
+          <td class="text-end" id="tfootTotal">0</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="card-footer bg-white d-flex gap-2">
+    <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddRow">+ Thêm dòng</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block sme_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+<script src="{{ url_for('static', filename='js/column-resize.js') }}"></script>
+<script>
+(function(){
+  const DEFAULT_PLACE = {{ (_place or '')|tojson }};
+  const COL_KEY = 'colWidths:purchase_02_tndn';
+  const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+
+  function isoToday() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function isoFirstOfMonth() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-01';
+  }
+  function isoToVn(iso) {
+    if (!iso || iso.length < 10) return '';
+    const p = iso.slice(0,10).split('-');
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+  function vnToIso(vn) {
+    if (!vn) return '';
+    const m = String(vn).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return '';
+    return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+  }
+  function fpIso(el) {
+    if (el && el._flatpickr && el._flatpickr.selectedDates[0]) {
+      return flatpickr.formatDate(el._flatpickr.selectedDates[0], 'Y-m-d');
+    }
+    return vnToIso(el && el.value);
+  }
+
+  const fpOpts = { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true };
+  const fpFrom = flatpickr('#fromDate', Object.assign({}, fpOpts));
+  const fpTo = flatpickr('#toDate', Object.assign({}, fpOpts));
+  const fpSave = flatpickr('#saveDate', Object.assign({}, fpOpts));
+  fpFrom.setDate(isoToVn(isoFirstOfMonth()), true, 'd/m/Y');
+  fpTo.setDate(isoToVn(isoToday()), true, 'd/m/Y');
+  fpSave.setDate(isoToVn(isoToday()), true, 'd/m/Y');
+
+  let rows = [];
+  let resizeReady = false;
+
+  function moneyCell(v) {
+    return `<input type="text" class="form-control form-control-sm text-end cell-amt" value="${fmt(Number(v)||0)}">`;
+  }
+  function numCell(v, cls) {
+    return `<input type="text" class="form-control form-control-sm text-end ${cls||''}" value="${v!=null&&v!==''?v:''}">`;
+  }
+  function parseMoney(s) {
+    if (s == null || s === '') return 0;
+    return Number(String(s).replace(/\./g,'').replace(/,/g,'.').replace(/[^\d.-]/g,'')) || 0;
+  }
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  function reapplyColWidths() {
+    try {
+      const widths = JSON.parse(localStorage.getItem(COL_KEY) || 'null');
+      if (!Array.isArray(widths)) return;
+      const table = document.getElementById('tbl02');
+      const ths = table.querySelectorAll('thead th');
+      const trs = table.querySelectorAll('tbody tr');
+      for (let i = 0; i < ths.length && i < widths.length; i++) {
+        const w = widths[i];
+        if (!w || !Number.isFinite(w)) continue;
+        ths[i].style.width = w + 'px';
+        ths[i].style.minWidth = w + 'px';
+        for (let r = 0; r < trs.length; r++) {
+          if (trs[r].cells[i]) trs[r].cells[i].style.width = w + 'px';
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function bindRowDatePickers() {
+    tbody.querySelectorAll('.cell-date').forEach(el => {
+      if (el._flatpickr) return;
+      flatpickr(el, Object.assign({}, fpOpts));
+    });
+  }
+
+  function render() {
+    tbody.innerHTML = rows.map((r,i) => {
+      const dVn = r.purchase_date && r.purchase_date.includes('-')
+        ? isoToVn(r.purchase_date)
+        : (r.purchase_date || '');
+      return `
+      <tr data-i="${i}">
+        <td class="text-center">${i+1}</td>
+        <td><input type="text" class="form-control form-control-sm cell-date text-center" value="${esc(dVn)}" placeholder="dd/mm/yyyy" autocomplete="off"></td>
+        <td><input type="text" class="form-control form-control-sm cell-seller" value="${esc(r.seller_name)}"></td>
+        <td><input type="text" class="form-control form-control-sm cell-addr" value="${esc(r.seller_address)}"></td>
+        <td><input type="text" class="form-control form-control-sm cell-idno" value="${esc(r.seller_id_no)}" title="CCCD = MST"></td>
+        <td><input type="text" class="form-control form-control-sm cell-phone" value="${esc(r.seller_phone)}"></td>
+        <td><input type="text" class="form-control form-control-sm cell-item" value="${esc(r.item_name)}"></td>
+        <td>${numCell(r.quantity,'cell-qty')}</td>
+        <td><input type="text" class="form-control form-control-sm text-center cell-unit" value="${esc(r.unit)}"></td>
+        <td>${moneyCell(r.unit_price)}</td>
+        <td>${moneyCell(r.amount)}</td>
+        <td><input type="text" class="form-control form-control-sm cell-note" value="${esc(r.note)}"></td>
+        <td class="text-center">
+          <button type="button" class="btn btn-link btn-sm text-danger p-0 btn-del" title="Xóa dòng">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="13" class="text-center text-muted py-4">Chưa có dữ liệu — thêm dòng hoặc nhập Excel</td></tr>';
+    recalcTotal();
+    bindRowDatePickers();
+    reapplyColWidths();
+  }
+
+  function collectFromDom() {
+    const out = [];
+    tbody.querySelectorAll('tr[data-i]').forEach(tr => {
+      const qty = parseMoney(tr.querySelector('.cell-qty')?.value);
+      let price = parseMoney(tr.querySelectorAll('.cell-amt')[0]?.value);
+      let amt = parseMoney(tr.querySelectorAll('.cell-amt')[1]?.value);
+      if (!amt && qty && price) amt = Math.round(qty * price);
+      const dateEl = tr.querySelector('.cell-date');
+      out.push({
+        purchase_date: fpIso(dateEl) || vnToIso(dateEl?.value) || '',
+        seller_name: tr.querySelector('.cell-seller')?.value || '',
+        seller_address: tr.querySelector('.cell-addr')?.value || '',
+        seller_id_no: (tr.querySelector('.cell-idno')?.value || '').replace(/\D/g,''),
+        seller_phone: tr.querySelector('.cell-phone')?.value || '',
+        item_name: tr.querySelector('.cell-item')?.value || '',
+        quantity: qty,
+        unit: tr.querySelector('.cell-unit')?.value || '',
+        unit_price: price,
+        amount: amt,
+        note: tr.querySelector('.cell-note')?.value || '',
+      });
+    });
+    rows = out;
+    return out;
+  }
+
+  function recalcTotal() {
+    let sum = 0;
+    tbody.querySelectorAll('tr[data-i]').forEach(tr => {
+      sum += parseMoney(tr.querySelectorAll('.cell-amt')[1]?.value);
+    });
+    tfootTotal.textContent = fmt(sum);
+  }
+
+  function applyPurchasePlace(place, force) {
+    const cur = (purchasePlace.value || '').trim();
+    const next = (place || '').trim();
+    if (!next) return;
+    if (force || !cur || cur === DEFAULT_PLACE) purchasePlace.value = next;
+  }
+
+  tbody.addEventListener('input', e => {
+    if (e.target.classList.contains('cell-qty') || e.target.classList.contains('cell-amt')) {
+      const tr = e.target.closest('tr');
+      if (!tr) return;
+      const qty = parseMoney(tr.querySelector('.cell-qty')?.value);
+      const priceInp = tr.querySelectorAll('.cell-amt')[0];
+      const amtInp = tr.querySelectorAll('.cell-amt')[1];
+      if (e.target === tr.querySelector('.cell-qty') || e.target === priceInp) {
+        const price = parseMoney(priceInp?.value);
+        if (qty && price) amtInp.value = fmt(Math.round(qty * price));
+      }
+      recalcTotal();
+    }
+  });
+  tbody.addEventListener('click', e => {
+    if (e.target.closest('.btn-del')) {
+      collectFromDom();
+      const i = Number(e.target.closest('tr').dataset.i);
+      rows.splice(i, 1);
+      render();
+    }
+  });
+
+  async function load() {
+    const fromIso = fpIso(fromDate);
+    const toIso = fpIso(toDate);
+    if (!fromIso || !toIso) return alert('Chọn khoảng ngày (dd/mm/yyyy)');
+    const q = new URLSearchParams({ from: fromIso, to: toIso });
+    const res = await fetch('/api/sme/purchase-02-tndn?' + q);
+    const json = await res.json();
+    if (!json.success) return alert(json.error || 'Lỗi tải');
+    const data = json.data || {};
+    const rawLines = data.lines || [];
+    rows = rawLines.map(r => ({
+      purchase_date: r.purchase_date || '',
+      seller_name: r.seller_name || '',
+      seller_address: r.seller_address || '',
+      seller_id_no: r.seller_id_no || '',
+      seller_phone: r.seller_phone || '',
+      item_name: r.item_name || '',
+      quantity: r.quantity,
+      unit: r.unit || '',
+      unit_price: r.unit_price,
+      amount: r.amount,
+      note: r.note || '',
+    }));
+    applyPurchasePlace(data.purchase_place || data.default_purchase_place || DEFAULT_PLACE, !rawLines.length);
+    render();
+  }
+
+  btnLoad.onclick = () => load();
+  btnAddRow.onclick = () => {
+    collectFromDom();
+    rows.push({
+      purchase_date: fpIso(toDate) || isoToday(),
+      seller_name: '', seller_address: '', seller_id_no: '', seller_phone: '',
+      item_name: '', quantity: 1, unit: '', unit_price: 0, amount: 0, note: '',
+    });
+    render();
+  };
+  btnExport.onclick = () => {
+    const fromIso = fpIso(fromDate);
+    const toIso = fpIso(toDate);
+    const q = new URLSearchParams({
+      from: fromIso, to: toIso,
+      purchase_place: purchasePlace.value || DEFAULT_PLACE || '',
+    });
+    window.location.href = '/api/sme/purchase-02-tndn/export.xlsx?' + q;
+  };
+  btnSave.onclick = async () => {
+    const lines = collectFromDom().filter(r => r.seller_name || r.item_name);
+    const saveIso = fpIso(saveDate);
+    if (!saveIso) return alert('Chọn ngày lưu (dd/mm/yyyy)');
+    const res = await fetch('/api/sme/purchase-02-tndn', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        save_date: saveIso,
+        period_month: saveIso.slice(0, 7),
+        purchase_place: (purchasePlace.value || '').trim() || DEFAULT_PLACE,
+        lines,
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) return alert(json.error || 'Lỗi lưu');
+    if (json.purchase_place) purchasePlace.value = json.purchase_place;
+    alert('Đã lưu ' + json.saved + ' dòng (tháng ' + json.period_month + ')');
+    load();
+  };
+  fileImport.onchange = async (ev) => {
+    const file = ev.target.files?.[0];
+    ev.target.value = '';
+    if (!file) return;
+    const saveIso = fpIso(saveDate) || isoToday();
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('save_date', saveIso);
+    fd.append('period_month', saveIso.slice(0, 7));
+    fd.append('purchase_place', (purchasePlace.value || '').trim() || DEFAULT_PLACE);
+    fd.append('save', '1');
+    const res = await fetch('/api/sme/purchase-02-tndn/import-excel', { method: 'POST', body: fd });
+    const json = await res.json();
+    if (!json.success) return alert(json.error || 'Lỗi import');
+    rows = (json.lines || []).map(r => ({ ...r }));
+    if (json.purchase_place) applyPurchasePlace(json.purchase_place, true);
+    if (json.period_month) {
+      const d = json.period_month + '-01';
+      fpSave.setDate(isoToVn(saveIso), true, 'd/m/Y');
+    }
+    render();
+    alert('Đã nhập ' + json.count + ' dòng' + (json.saved ? ' (đã lưu ' + json.saved + ')' : ''));
+  };
+
+  btnResetCols.onclick = () => {
+    try { localStorage.removeItem(COL_KEY); } catch (e) {}
+    location.reload();
+  };
+
+  if (!purchasePlace.value && DEFAULT_PLACE) purchasePlace.value = DEFAULT_PLACE;
+  if (window.initResizableTableColumns) {
+    initResizableTableColumns('tbl02', COL_KEY, { minWidth: 40 });
+    resizeReady = true;
+  }
+  load();
+})();
+</script>
+{% endblock %}
