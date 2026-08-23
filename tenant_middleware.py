@@ -544,6 +544,7 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             'api_onboarding_skip',
             'webhook_sepay',
             'webhook_casso',
+            'keto_pos_intro',
         ]
         
         # Phòng hờ request.endpoint bị None khi truy cập file tĩnh lỗi hoặc các route không tồn tại
@@ -556,6 +557,7 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             '/login', '/send-otp', '/verify-otp', '/authorize-google',
             '/trial/google', '/api/trial', '/api/auth/google',
             '/forgot', '/reset', '/static/', '/favicon',
+            '/gioi-thieu-keto-pos',
         )):
             return None
 

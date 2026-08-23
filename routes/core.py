@@ -39,9 +39,13 @@ def register_core_routes(app):
                 back_url = url_for('HKD_dashboard')
 
         share_url = request.url_root.rstrip('/') + url_for('keto_pos_intro')
+        og_image_url = request.url_root.rstrip('/') + url_for(
+            'static', filename='branding/main/logo.jpg'
+        )
         return render_template(
             'keto_pos_gioi_thieu.html',
             intro_mode='page',
             share_url=share_url,
+            og_image_url=og_image_url,
             back_url=back_url,
         )

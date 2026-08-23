@@ -11,6 +11,7 @@
     <meta property="og:title" content="{% block og_title %}{{ self.page_title() }}{% endblock %}">
     <meta property="og:description" content="{% block og_description %}{{ self.meta_description() }}{% endblock %}">
     <meta property="og:url" content="{% block og_url %}{{ og_url or '' }}{% endblock %}">
+    {% block og_image %}{% if og_image_url|default('') %}<meta property="og:image" content="{{ og_image_url }}">{% endif %}{% endblock %}
     <meta property="og:updated_time" content="{% block og_updated %}{{ now.strftime('%Y-%m-%dT%H:%M:%S') if now else '' }}{% endblock %}">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{{ self.og_title() }}">
@@ -317,7 +318,7 @@
     {% block head_extra %}{% endblock %}
     {% block extra_style %}{% endblock %}
 </head>
-<body{% if request.endpoint == 'login' %} class="page-login"{% elif master_viewing_firm|default(false) %} class="page-firm-master-settings"{% endif %}>
+<body{% if request.endpoint in ('login', 'keto_pos_intro') and not (request.endpoint == 'keto_pos_intro' and session.get('user')) %} class="page-login"{% elif master_viewing_firm|default(false) %} class="page-firm-master-settings"{% endif %}>
     {% if master_viewing_firm and request.endpoint != 'login' %}
     <header class="firm-master-topbar bg-dark text-white shadow-sm">
         <div class="container-fluid py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -427,7 +428,8 @@
     {% endif %}
 
     {% set vn_flag_url = default_business_logo_url() %}
-    {% if request.endpoint != 'login' and not master_viewing_firm|default(false) %}
+    {% set _intro_guest = request.endpoint == 'keto_pos_intro' and not session.get('user') %}
+    {% if request.endpoint != 'login' and not _intro_guest and not master_viewing_firm|default(false) %}
     <!-- Navbar chính -->
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background: linear-gradient(135deg, #1e3a8a, #1e40af);">
         <div class="container-fluid">
