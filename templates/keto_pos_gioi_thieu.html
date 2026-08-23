@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block page_title %}Giới thiệu KETO POS{% endblock %}
+{% block og_title %}Giới thiệu KETO POS — POS + Kế toán + Thuế + HĐĐT{% endblock %}
+{% block meta_description %}KETO POS: bán hàng, kế toán HKD/TT58/TT99, F&B, lưu trú, hóa đơn điện tử, trợ lý AI — một nền tảng cho mọi nghiệp vụ.{% endblock %}
+
+{% block content %}
+<style>
+    .keto-intro-page {
+        max-width: 960px;
+        margin: 0 auto;
+    }
+    .keto-intro-brand {
+        font-size: 2.25rem;
+        color: #1e40af;
+    }
+    .keto-intro--login .keto-intro-brand {
+        font-size: 1.75rem;
+    }
+    .keto-intro-accordion .accordion-button {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    .keto-intro--login {
+        max-height: min(72vh, 640px);
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+    .keto-intro--login .keto-intro-hero .lead {
+        font-size: 1rem;
+    }
+</style>
+
+<div class="container py-4 keto-intro-page">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{{ back_url }}">Trang chủ</a></li>
+                <li class="breadcrumb-item active">Giới thiệu KETO POS</li>
+            </ol>
+        </nav>
+    </div>
+
+    {% include "partials/keto_pos_intro.html" %}
+</div>
+
+<script>
+(function () {
+    const btn = document.getElementById('btnShareKetoIntro');
+    if (!btn) return;
+    const url = {{ share_url | tojson }};
+    const title = 'KETO POS — POS + Kế toán + Thuế + HĐĐT';
+    btn.addEventListener('click', async function () {
+        try {
+            if (navigator.share) {
+                await navigator.share({ title, url });
+                return;
+            }
+        } catch (e) { /* user cancelled */ }
+        try {
+            await navigator.clipboard.writeText(url);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'success', title: 'Đã sao chép link', timer: 1500, showConfirmButton: false });
+            } else {
+                alert('Đã sao chép link giới thiệu.');
+            }
+        } catch (e) {
+            prompt('Sao chép link giới thiệu:', url);
+        }
+    });
+})();
+</script>
+{% endblock %}

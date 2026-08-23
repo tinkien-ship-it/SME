@@ -228,6 +228,7 @@ SME_MENU_GROUPS = (
         'icon': 'fas fa-cubes', 'color': 'secondary', 'endpoint': 'SME_utilities',
         'description': 'Công cụ hỗ trợ và thiết lập hệ thống',
         'items': (
+            {'endpoint': 'keto_pos_intro', 'label': 'Giới thiệu KETO POS', 'icon': 'fas fa-bullhorn'},
             {'endpoint': 'huong_dan_su_dung', 'label': 'Hướng dẫn sử dụng', 'icon': 'fas fa-circle-question'},
             {'endpoint': 'SME_cap_nhat_kien_thuc', 'label': 'Cập nhật kiến thức', 'icon': 'fas fa-newspaper'},
             {'endpoint': 'SME_audit_log', 'label': 'Nhật ký truy cập', 'icon': 'fas fa-clock-rotate-left'},

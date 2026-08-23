@@ -239,12 +239,28 @@
 
     @media (max-width: 576px) {
         .switch-btn {
-            padding: 14px 10px;
-            font-size: 1.05rem;
+            padding: 14px 8px;
+            font-size: 0.95rem;
         }
         .form-column {
             padding: 30px 18px;
         }
+    }
+
+    .login-intro-scroll {
+        max-height: min(72vh, 640px);
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .login-intro-scroll .keto-intro-brand {
+        font-size: 1.5rem;
+        color: #1e40af;
+    }
+
+    .login-intro-scroll .accordion-button {
+        font-size: 0.88rem;
+        padding: 0.65rem 0.85rem;
     }
 </style>
 
@@ -295,8 +311,9 @@
 
                 <!-- Nút chuyển -->
                 <div class="switch-container">
-                    <button id="btnLogin" class="switch-btn active">ĐĂNG NHẬP</button>
-                    <button id="btnPricing" class="switch-btn">BẢNG GIÁ</button>
+                    <button type="button" id="btnLogin" class="switch-btn active">ĐĂNG NHẬP</button>
+                    <button type="button" id="btnPricing" class="switch-btn">BẢNG GIÁ</button>
+                    <button type="button" id="btnIntro" class="switch-btn">GIỚI THIỆU</button>
                 </div>
 
                 <!-- Nội dung Đăng Nhập -->
@@ -417,6 +434,15 @@ https://www.ketoshop.pro.vn/login/google/2fa</pre>
                     </div>
                 </div>
 
+                <!-- Nội dung Giới thiệu -->
+                <div id="contentIntro" style="display: none;">
+                    <div class="login-intro-scroll">
+                        {% with intro_mode='login' %}
+                        {% include "partials/keto_pos_intro.html" %}
+                        {% endwith %}
+                    </div>
+                </div>
+
                 <!-- Bản quyền -->
                 <div class="text-center mt-auto pt-5">
                     <small class="text-muted">
@@ -434,22 +460,36 @@ https://www.ketoshop.pro.vn/login/google/2fa</pre>
 </div>
 
 <script>
-    // Chuyển đổi giữa Đăng nhập và Bảng giá
-    document.getElementById('btnLogin').addEventListener('click', function() {
-        document.getElementById('contentLogin').style.display = 'block';
-        document.getElementById('contentPricing').style.display = 'none';
-        this.classList.add('active');
-        document.getElementById('btnPricing').classList.remove('active');
-    });
+    function showLoginTab(tab) {
+        const login = document.getElementById('contentLogin');
+        const pricing = document.getElementById('contentPricing');
+        const intro = document.getElementById('contentIntro');
+        const btnLogin = document.getElementById('btnLogin');
+        const btnPricing = document.getElementById('btnPricing');
+        const btnIntro = document.getElementById('btnIntro');
+        if (!login || !pricing || !intro) return;
 
-    document.getElementById('btnPricing').addEventListener('click', function() {
-        document.getElementById('contentLogin').style.display = 'none';
-        document.getElementById('contentPricing').style.display = 'block';
-        this.classList.add('active');
-        document.getElementById('btnLogin').classList.remove('active');
-    });
+        login.style.display = tab === 'login' ? 'block' : 'none';
+        pricing.style.display = tab === 'pricing' ? 'block' : 'none';
+        intro.style.display = tab === 'intro' ? 'block' : 'none';
 
-    // Toggle mật khẩu
+        [btnLogin, btnPricing, btnIntro].forEach(b => b && b.classList.remove('active'));
+        if (tab === 'login' && btnLogin) btnLogin.classList.add('active');
+        if (tab === 'pricing' && btnPricing) btnPricing.classList.add('active');
+        if (tab === 'intro' && btnIntro) btnIntro.classList.add('active');
+    }
+
+    document.getElementById('btnLogin')?.addEventListener('click', () => showLoginTab('login'));
+    document.getElementById('btnPricing')?.addEventListener('click', () => showLoginTab('pricing'));
+    document.getElementById('btnIntro')?.addEventListener('click', () => showLoginTab('intro'));
+
+    // Mở tab Giới thiệu khi có ?tab=intro
+    if (new URLSearchParams(window.location.search).get('tab') === 'intro') {
+        showLoginTab('intro');
+    }
+</script>
+
+<script>
     document.addEventListener('DOMContentLoaded', function() {
         const passwordInput = document.getElementById('password');
         const togglePassword = document.getElementById('togglePassword');

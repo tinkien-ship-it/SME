@@ -1,0 +1,270 @@
+{# Nội dung giới thiệu KETO POS — dùng chung login tab + trang tenant #}
+{% set _compact = intro_mode == 'login' %}
+<div class="keto-intro{% if _compact %} keto-intro--login{% endif %}">
+    <header class="keto-intro-hero text-center mb-4">
+        <h1 class="keto-intro-brand fw-bold mb-2">KETO POS</h1>
+        <p class="keto-intro-tagline lead mb-1">Một nền tảng — Bán hàng, Kế toán, Thuế, Hóa đơn điện tử</p>
+        <p class="text-muted mb-0">Làm đúng luật Việt Nam — từ hộ kinh doanh đến doanh nghiệp &amp; đơn vị dịch vụ kế toán</p>
+    </header>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-primary fw-bold"><i class="fas fa-layer-group me-2"></i>All-in-One</h6>
+                    <p class="small mb-0">Bán hàng xong → tự ghi sổ, trừ kho, hạch toán, xuất HĐĐT — không nhập liệu hai lần.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-primary fw-bold"><i class="fas fa-scale-balanced me-2"></i>Đúng chế độ VN</h6>
+                    <p class="small mb-0">HKD (DT1–DT4), TT58 DNSN, TT99 VAS — đủ sổ, biểu mẫu, tờ khai thuế.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-primary fw-bold"><i class="fas fa-wifi-slash me-2"></i>POS Offline</h6>
+                    <p class="small mb-0">Mất mạng vẫn bán hàng; VietQR &amp; tự xác nhận chuyển khoản (SePay/Casso).</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion keto-intro-accordion" id="ketoIntroAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#introPos" aria-expanded="true">
+                    <i class="fas fa-cash-register me-2 text-primary"></i> Bán hàng &amp; Thu ngân (POS)
+                </button>
+            </h2>
+            <div id="introPos" class="accordion-collapse collapse show" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <ul class="mb-0">
+                        <li>Điểm bán hàng nhanh — bán lẻ / bán sỉ hai đơn vị, hai mức giá</li>
+                        <li>Bán theo cân — tích hợp cân điện tử, mã vạch PLU</li>
+                        <li>POS offline — cache sản phẩm, đồng bộ khi có mạng</li>
+                        <li>Tiền mặt, chuyển khoản, VietQR; tự xác nhận CK ngân hàng</li>
+                        <li>Quản lý đơn, trả hàng, in hóa đơn; phân quyền theo chi nhánh/kho</li>
+                        <li>Hàng gửi đi bán (TK 157), bán xuất khẩu, đại lý ký gửi (SME)</li>
+                        <li>Tự hạch toán từ giao dịch bán hàng sang sổ kế toán</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#introFb">
+                    <i class="fas fa-utensils me-2 text-danger"></i> Nhà hàng — F&amp;B
+                </button>
+            </h2>
+            <div id="introFb" class="accordion-collapse collapse" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <ul class="mb-0">
+                        <li>Sơ đồ bàn theo khu vực — gọi món tại bàn, bán lẻ/sỉ từng món</li>
+                        <li>Thực đơn &amp; định mức NVL — tự trừ kho khi thanh toán</li>
+                        <li>Theo dõi phục vụ, kiểm kê NVL, chốt xuất kho cuối ngày</li>
+                        <li>Import menu/bàn Excel; VietQR &amp; HĐĐT khi checkout</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#introRental">
+                    <i class="fas fa-bed me-2 text-info"></i> Lưu trú — Phòng trọ
+                </button>
+            </h2>
+            <div id="introRental" class="accordion-collapse collapse" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <ul class="mb-0">
+                        <li>Sơ đồ phòng, hợp đồng thuê, check-in / check-out</li>
+                        <li>Tiền phòng theo ngày/tháng; điện, nước, dịch vụ</li>
+                        <li>Màn hình VietQR cho khách; xuất HĐĐT khi thu tiền</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#introStock">
+                    <i class="fas fa-boxes-stacked me-2 text-warning"></i> Kho — Mua hàng — Sản xuất
+                </button>
+            </h2>
+            <div id="introStock" class="accordion-collapse collapse" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <ul class="mb-0">
+                        <li>Tồn kho realtime, giá vốn bình quân (WAC), đa kho — đa chi nhánh</li>
+                        <li>Nhập/xuất kho, trả hàng nhập, kiểm kê; đơn mua, HĐ mua, landed cost</li>
+                        <li>L/C nhập khẩu, tờ khai hải quan; sản xuất &amp; tính giá thành</li>
+                        <li>Danh mục hàng hóa, thành phẩm, dịch vụ, NVL — mã vạch, ảnh</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#introHkd">
+                    <i class="fas fa-store me-2 text-success"></i> Kế toán Hộ kinh doanh (HKD)
+                </button>
+            </h2>
+            <div id="introHkd" class="accordion-collapse collapse" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <ul class="mb-0">
+                        <li>4 mức doanh thu DT1–DT4; 4 nhóm ngành NN1–NN4</li>
+                        <li>Đủ sổ HKD: S1a, S2a–S2e, S3, S3a, S4, S5, SP1–SP4</li>
+                        <li>Chứng từ 01-TT, 02-TT, 03-VT, 04-VT, 05-LĐTL</li>
+                        <li>Công nợ, TSCĐ, CCDC, khoản vay; kê khai thuế HKD; gói DV001–DV004</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#introSme">
+                    <i class="fas fa-building me-2 text-primary"></i> Kế toán Doanh nghiệp (TT58 / TT99)
+                </button>
+            </h2>
+            <div id="introSme" class="accordion-collapse collapse" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <p class="fw-semibold mb-1">TT58 — Doanh nghiệp siêu nhỏ:</p>
+                    <ul>
+                        <li>Sổ DNSN S1–S3b, B01/B02-DNSN; 4 trường hợp thuế TH1–TH4</li>
+                    </ul>
+                    <p class="fw-semibold mb-1">TT99 — Doanh nghiệp:</p>
+                    <ul class="mb-0">
+                        <li>Hạch toán kép, COA TT99, sổ quỹ, sổ ngân hàng, ngoại tệ</li>
+                        <li>Kết chuyển, khóa sổ; BCTC B01–B09-DN</li>
+                        <li>Tờ khai GTGT, TNDN, TNCN; đối chiếu NH, vay, L/C, góp vốn</li>
+                        <li>Đa chi nhánh; nhập số dư đầu kỳ từ MISA/Fast/Bravo</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#introEinv">
+                    <i class="fas fa-file-invoice me-2 text-secondary"></i> Hóa đơn điện tử (HĐĐT)
+                </button>
+            </h2>
+            <div id="introEinv" class="accordion-collapse collapse" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <ul class="mb-0">
+                        <li>Phát hành &amp; ký số tự động khi thanh toán</li>
+                        <li>Mắt Bão (sẵn sàng); MISA, Viettel, VNPT, EasyInvoice, Mobifone…</li>
+                        <li>Đồng bộ HĐ mua từ cổng thuế — 3 lần/ngày tự động</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#introHr">
+                    <i class="fas fa-users me-2 text-info"></i> Nhân sự — Lương — Chấm công
+                </button>
+            </h2>
+            <div id="introHr" class="accordion-collapse collapse" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <ul class="mb-0">
+                        <li>Danh sách NV, chấm công, lập bảng lương (01-LĐTL)</li>
+                        <li>Thưởng, ngoài giờ, BHXH 07-LĐTL; sổ S5, công nợ lương &amp; BHXH</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#introDvkt">
+                    <i class="fas fa-briefcase me-2 text-dark"></i> Đơn vị dịch vụ kế toán (DVKT)
+                </button>
+            </h2>
+            <div id="introDvkt" class="accordion-collapse collapse" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <ul class="mb-0">
+                        <li>Quản lý 10–500+ doanh nghiệp thuê; phân quyền KTV / KTT / chủ đơn vị</li>
+                        <li>Chuyển sổ một cú click; tạo DN mới gắn DVKT</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#introAi">
+                    <i class="fas fa-robot me-2 text-primary"></i> Trợ lý AI &amp; Hỗ trợ
+                </button>
+            </h2>
+            <div id="introAi" class="accordion-collapse collapse" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <ul class="mb-0">
+                        <li>Trợ lý AI — hướng dẫn thao tác, FAQ, tra cứu luật thuế TT58/TT99</li>
+                        <li>Learning Machine — tự chẩn đoán &amp; sửa lỗi hệ thống (OAuth, OTP, DB locked)</li>
+                        <li>Zalo OA; cập nhật kiến thức pháp luật tự động (RSS)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#introSec">
+                    <i class="fas fa-shield-halved me-2 text-success"></i> Bảo mật &amp; Báo cáo
+                </button>
+            </h2>
+            <div id="introSec" class="accordion-collapse collapse" data-bs-parent="#ketoIntroAccordion">
+                <div class="accordion-body small">
+                    <ul class="mb-0">
+                        <li>Google OAuth — dùng thử 6 tháng; 2FA (Email/SMS/TOTP)</li>
+                        <li>Phân quyền chi tiết, audit log, sao lưu DB hàng đêm</li>
+                        <li>Dashboard doanh thu, lợi nhuận, tồn kho, công nợ, BCTC, thuế</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="keto-intro-audience mt-4">
+        <h5 class="fw-bold text-center mb-3">KETO POS dành cho ai?</h5>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Đối tượng</th><th>Giải pháp</th></tr>
+                </thead>
+                <tbody class="small">
+                    <tr><td>Cửa hàng, siêu thị mini</td><td>POS + HKD + HĐĐT</td></tr>
+                    <tr><td>Nhà hàng, quán cà phê</td><td>F&amp;B + kho NVL + HKD/DN</td></tr>
+                    <tr><td>Khách sạn, phòng trọ</td><td>Lưu trú + thu tiền + HĐĐT</td></tr>
+                    <tr><td>Xưởng sản xuất nhỏ</td><td>POS + sản xuất + giá thành + TT58/TT99</td></tr>
+                    <tr><td>Doanh nghiệp vừa &amp; nhỏ</td><td>Kế toán TT99 + BCTC + tờ khai</td></tr>
+                    <tr><td>Công ty dịch vụ kế toán</td><td>DVKT — quản lý hàng trăm sổ sách</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="keto-intro-footer text-center mt-4 pt-3 border-top">
+        <p class="fw-bold text-primary mb-1">KETO POS — TẦM NHÌN VIỆT</p>
+        <p class="small text-muted mb-2"><em>Bán hàng nhanh. Kế toán chuẩn. Thuế đúng luật. Một phần mềm — mọi nghiệp vụ.</em></p>
+        <p class="small mb-0">
+            <strong>Dùng thử miễn phí 6 tháng</strong> — đăng ký bằng Google, thiết lập trong vài phút.
+        </p>
+        {% if not _compact and share_url %}
+        <div class="mt-3">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnShareKetoIntro">
+                <i class="fas fa-share-nodes me-1"></i> Chia sẻ trang giới thiệu
+            </button>
+        </div>
+        {% endif %}
+    </footer>
+</div>

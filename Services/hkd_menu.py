@@ -444,6 +444,13 @@ POS_HKD_MENU = [
         'description': 'Thiết lập và nhật ký hệ thống',
         'items': [
             {
+                'endpoint': 'keto_pos_intro',
+                'label': 'Giới Thiệu KETO POS',
+                'icon': 'fas fa-bullhorn text-primary',
+                'public': True,
+                'hide_metric': True,
+            },
+            {
                 'endpoint': 'store_setup_page',
                 'label': 'Thiết Lập',
                 'icon': 'fas fa-sliders-h text-dark',
@@ -471,6 +478,7 @@ HUB_EXTRA_ENDPOINTS = frozenset({
     'hkd_accounting',
     'HKD_hub_group',
     'huong_dan_su_dung',
+    'keto_pos_intro',
     'cap_nhat_kien_thuc_page',
     'audit_log_page',
     'store_setup_page',
