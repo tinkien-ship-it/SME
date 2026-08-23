@@ -131,6 +131,29 @@
                     <div class="card setting-card shadow-sm p-4">
                         <form id="businessForm">
                             <h5 class="section-header">Thông Tin Doanh Nghiệp hoặc Hộ Kinh Doanh</h5>
+                            <div class="row g-3 mb-2">
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">Logo Hộ kinh doanh / Doanh nghiệp</label>
+                                    <p class="text-muted small mb-2">Hiển thị trên thanh menu. Mặc định là <strong>cờ Việt Nam</strong>; có thể thay bằng logo riêng tại <a href="{{ url_for('store_setup_page') }}">Thiết lập hệ thống</a> hoặc tại đây.</p>
+                                    <div class="d-flex flex-wrap align-items-center gap-3">
+                                        <div id="businessLogoPreview" class="border rounded bg-light d-flex align-items-center justify-content-center overflow-hidden business-logo-preview-box business-logo-preview-box--sm">
+                                            {% set vn_flag_url = default_business_logo_url() %}
+                                            <img id="settingsBusinessLogoImg" src="{{ business_logo_url or vn_flag_url }}" alt="Logo" class="business-logo-preview-img{% if not has_custom_business_logo|default(false) %} is-vn-flag{% endif %}" onerror="this.onerror=null;this.src='{{ vn_flag_url }}';this.classList.add('is-vn-flag');">
+                                        </div>
+                                        <div class="d-flex flex-column gap-2">
+                                            <input type="file" id="businessLogoInput" class="form-control form-control-sm" accept="image/png,image/jpeg,image/webp,image/gif">
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="uploadBusinessLogo()">
+                                                    <i class="fas fa-upload me-1"></i>Tải logo lên
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="removeBusinessLogo()" {% if not has_custom_business_logo|default(false) %}disabled{% endif %} id="btnRemoveBusinessLogo">
+                                                    <i class="fas fa-flag me-1"></i>Đặt lại cờ VN
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="row g-3">
                                 <div class="col-md-8">
                                     <label class="form-label required">Tên doanh nghiệp / hộ kinh doanh</label>
@@ -280,22 +303,30 @@
                 <!-- Tab 2: Nhân viên & Phân quyền -->
                 <div class="tab-pane fade" id="tab-users">
                     {% if current_user.role in ['admin', 'admin*', 'adminFB', 'master'] or is_sme_admin|default(false) %}
+                    {% if is_firm_tenant_settings|default(false) %}
+                    <div class="alert alert-info border-0 shadow-sm mb-4">
+                        <i class="fas fa-building me-2"></i>
+                        Tenant DVKT: bảng dưới liệt kê tài khoản cổng <strong>/firm</strong> (registry). Form bên phải chỉ áp dụng cho user trong sổ kế toán nội bộ (nếu có).
+                    </div>
+                    {% endif %}
                     <div class="row g-4">
                         <div class="col-lg-7">
                             <div class="card setting-card shadow-sm">
                                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3 px-4">
                                     <h6 class="mb-0">Danh sách tài khoản nhân viên</h6>
+                                    {% if not is_firm_tenant_settings|default(false) %}
                                     <button class="btn btn-sm btn-outline-light" onclick="resetUserForm()">
                                         <i class="fas fa-plus me-1"></i> Thêm nhân viên
                                     </button>
+                                    {% endif %}
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-hover mb-0 align-middle">
                                         <thead class="table-light">
                                             <tr>
-                                                <th>Tên đăng nhập</th>
+                                                <th>{% if is_firm_tenant_settings|default(false) %}Email đăng nhập{% else %}Tên đăng nhập{% endif %}</th>
                                                 <th>Họ tên</th>
-                                                <th>Tên chi nhánh</th>
+                                                <th>{% if is_firm_tenant_settings|default(false) %}DN phụ trách{% else %}Tên chi nhánh{% endif %}</th>
                                                 <th>Vai trò</th>
                                                 <th>Trạng thái</th>
                                                 <th class="text-end" style="white-space:nowrap; min-width:160px;">Thao tác</th>
@@ -308,6 +339,7 @@
                                 </div>
                             </div>
                         </div>
+                        {% if not is_firm_tenant_settings|default(false) %}
                         <div class="col-lg-5">
                             <div class="card setting-card shadow-sm p-4 border-top border-primary border-4 border-top-0">
                                 <h5 id="userFormTitle" class="fw-bold mb-4 text-primary">Thêm nhân viên mới</h5>
@@ -431,6 +463,20 @@
                                 </form>
                             </div>
                         </div>
+                        {% else %}
+                        <div class="col-lg-5">
+                            <div class="card setting-card shadow-sm p-4 border-top border-info border-4 border-top-0">
+                                <h5 class="fw-bold mb-3 text-info"><i class="fas fa-building me-2"></i>Nhân viên cổng DVKT</h5>
+                                <p class="text-muted small mb-3">
+                                    Tài khoản đăng nhập <strong>/firm</strong> được lưu trên registry hệ thống (bảng bên trái).
+                                    Chủ đơn vị quản lý thêm/sửa nhân viên và phân quyền DN thuê tại cổng DVKT sau khi đăng nhập.
+                                </p>
+                                <p class="text-muted small mb-0">
+                                    Form «Thêm nhân viên» bên dưới chỉ dùng cho user trong <strong>sổ kế toán nội bộ</strong> (nếu có tạo riêng).
+                                </p>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% else %}
                     <div class="alert alert-warning text-center py-5 my-4">
@@ -965,6 +1011,8 @@
 let usersCache = {};
 let esignLoaded = false;
 let backupLoaded = false;
+const IS_FIRM_TENANT_SETTINGS = {{ 'true' if is_firm_tenant_settings|default(false) else 'false' }};
+const USER_TABLE_COLS = 6;
 
 function escapeHtml(str) {
     return String(str ?? '')
@@ -1101,6 +1149,12 @@ const ROLE_LABELS = {
     accountantSME58: ['bg-info', 'Kế toán SME (TT58)'],
     accountantSME99: ['bg-info', 'Kế toán SME (TT99)'],
 };
+const FIRM_ROLE_LABELS = {
+    owner: ['bg-primary', 'Chủ đơn vị'],
+    chief_accountant: ['bg-warning', 'Kế Toán Trưởng'],
+    accountant: ['bg-info', 'Kế Toán Viên'],
+    viewer: ['bg-secondary', 'Chỉ xem'],
+};
 const SME_PROTECTED_ROLES = ['master', 'admin', 'admin*', 'adminFB', 'adminSME', 'adminSME58', 'adminSME99'];
 const LEGACY_SME_ROLES = ['accountantSME', 'managerSME', 'adminSME'];
 
@@ -1115,24 +1169,20 @@ async function loadUsers() {
         list.forEach(u => { usersCache[u.id] = u; });
 
         if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Chưa có tài khoản nhân viên nào</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="${USER_TABLE_COLS}" class="text-center py-4 text-muted">Chưa có tài khoản nhân viên nào</td></tr>`;
             return;
         }
 
         tbody.innerHTML = list.map(u => {
-            const [roleBadge, roleName] = ROLE_LABELS[u.role] || ['bg-secondary', 'Nhân viên'];
-            const canDelete = !SME_PROTECTED_ROLES.includes(u.role);
-            return `
-                <tr>
-                    <td class="fw-bold">${escapeHtml(u.username)}</td>
-                    <td>
-                        <div>${escapeHtml(u.full_name) || '<span class="text-muted">—</span>'}</div>
-                        <small class="text-muted">${escapeHtml(u.email)}</small>
-                        <small class="text-muted">${escapeHtml(u.phone)}</small>
-                    </td>
-                    <td>${escapeHtml(u.branch_names) || '<span class="text-muted">—</span>'}</td>
-                    <td><span class="badge ${roleBadge}">${roleName}</span></td>
-                    <td><span class="badge bg-success">Hoạt động</span></td>
+            const roleMap = u.is_firm_user ? FIRM_ROLE_LABELS : ROLE_LABELS;
+            const roleLabel = u.role_label || (roleMap[u.role] || ['bg-secondary', 'Nhân viên'])[1];
+            const roleBadge = (roleMap[u.role] || ['bg-secondary', roleLabel])[0];
+            const canDelete = !IS_FIRM_TENANT_SETTINGS && !SME_PROTECTED_ROLES.includes(u.role);
+            const statusBadge = (u.is_active === 0 || u.is_active === false)
+                ? '<span class="badge bg-secondary">Ngưng</span>'
+                : '<span class="badge bg-success">Hoạt động</span>';
+            const actionCell = IS_FIRM_TENANT_SETTINGS ? `
+                    <td class="text-end text-muted small">Cổng /firm</td>` : `
                     <td class="text-end" style="white-space:nowrap; min-width:160px;">
                         <div class="d-flex justify-content-end gap-2 align-items-center flex-nowrap">
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="editUserById(${u.id})">
@@ -1143,11 +1193,23 @@ async function loadUsers() {
                                 <i class="fas fa-trash-alt"></i>
                             </button>` : ''}
                         </div>
+                    </td>`;
+            return `
+                <tr>
+                    <td class="fw-bold">${escapeHtml(u.username)}</td>
+                    <td>
+                        <div>${escapeHtml(u.full_name) || '<span class="text-muted">—</span>'}</div>
+                        ${IS_FIRM_TENANT_SETTINGS ? '' : `<small class="text-muted">${escapeHtml(u.email)}</small>
+                        <small class="text-muted">${escapeHtml(u.phone)}</small>`}
                     </td>
+                    <td>${escapeHtml(u.branch_names) || '<span class="text-muted">—</span>'}</td>
+                    <td><span class="badge ${roleBadge}">${escapeHtml(roleLabel)}</span></td>
+                    <td>${statusBadge}</td>
+                    ${actionCell}
                 </tr>`;
         }).join('');
     } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Không thể tải danh sách</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="${USER_TABLE_COLS}" class="text-center py-4 text-danger">Không thể tải danh sách</td></tr>`;
         showSettingsError(err.message);
     }
 }
@@ -1780,6 +1842,59 @@ async function loadPaymentBankStatus() {
         const data = await res.json();
         if (data.success) updatePaymentStatusBadges(data);
     } catch (e) { /* ignore */ }
+}
+
+async function uploadBusinessLogo() {
+    const input = document.getElementById('businessLogoInput');
+    const file = input?.files?.[0];
+    if (!file) {
+        Swal.fire('Cảnh báo', 'Chọn file logo trước khi tải lên', 'warning');
+        return;
+    }
+    const fd = new FormData();
+    fd.append('logo', file);
+    Swal.fire({ title: 'Đang tải logo...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+        const res = await fetch('/api/settings/business-logo', { method: 'POST', body: fd, credentials: 'same-origin' });
+        const data = await res.json();
+        if (!data.success) {
+            Swal.fire('Lỗi', data.error || 'Không tải được logo', 'error');
+            return;
+        }
+        const preview = document.getElementById('businessLogoPreview');
+        if (preview && data.logo_url) {
+            preview.innerHTML = `<img src="${data.logo_url}?t=${Date.now()}" alt="Logo" class="business-logo-preview-img">`;
+        }
+        const btnRemove = document.getElementById('btnRemoveBusinessLogo');
+        if (btnRemove) btnRemove.disabled = false;
+        if (input) input.value = '';
+        Swal.fire('Thành công', data.message || 'Đã lưu logo', 'success').then(() => location.reload());
+    } catch (err) {
+        showSettingsError(err.message);
+    }
+}
+
+async function removeBusinessLogo() {
+    const ok = await Swal.fire({
+        title: 'Đặt lại cờ Việt Nam?',
+        text: 'Logo tùy chỉnh sẽ bị gỡ',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Đặt lại',
+        cancelButtonText: 'Hủy',
+    });
+    if (!ok.isConfirmed) return;
+    try {
+        const res = await fetch('/api/settings/business-logo', { method: 'DELETE', credentials: 'same-origin' });
+        const data = await res.json();
+        if (!data.success) {
+            Swal.fire('Lỗi', data.error || 'Không xóa được logo', 'error');
+            return;
+        }
+        Swal.fire('Đã cập nhật', data.message || '', 'success').then(() => location.reload());
+    } catch (err) {
+        showSettingsError(err.message);
+    }
 }
 
 async function savePaymentBankSettings() {

@@ -1,4 +1,58 @@
 <script>
+async function uploadBusinessLogo() {
+    const input = document.getElementById('businessLogoInput');
+    const file = input?.files?.[0];
+    if (!file) {
+        notifyUser('Cảnh báo', 'Chọn file logo trước khi tải lên', 'warning');
+        return;
+    }
+    const fd = new FormData();
+    fd.append('logo', file);
+    try {
+        const res = await fetch('/api/settings/business-logo', { method: 'POST', body: fd, credentials: 'same-origin' });
+        const data = await res.json();
+        if (!data.success) {
+            notifyUser('Lỗi', data.error || 'Không tải được logo', 'error');
+            return;
+        }
+        notifyUser('Thành công', data.message || 'Đã lưu logo', 'success');
+        setTimeout(() => location.reload(), 800);
+    } catch (err) {
+        notifyUser('Lỗi', err.message || 'Lỗi kết nối', 'error');
+    }
+}
+
+async function resetBusinessLogoDefault() {
+    const ok = typeof Swal !== 'undefined'
+        ? (await Swal.fire({
+            title: 'Đặt lại cờ Việt Nam?',
+            text: 'Logo tùy chỉnh sẽ bị gỡ',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Đặt lại',
+            cancelButtonText: 'Hủy',
+        })).isConfirmed
+        : confirm('Đặt lại logo mặc định (cờ Việt Nam)?');
+    if (!ok) return;
+    try {
+        const res = await fetch('/api/settings/business-logo', { method: 'DELETE', credentials: 'same-origin' });
+        const data = await res.json();
+        if (!data.success) {
+            notifyUser('Lỗi', data.error || 'Không đặt lại được', 'error');
+            return;
+        }
+        notifyUser('Đã cập nhật', data.message || '', 'success');
+        setTimeout(() => location.reload(), 800);
+    } catch (err) {
+        notifyUser('Lỗi', err.message || 'Lỗi kết nối', 'error');
+    }
+}
+
+function notifyUser(title, text, icon) {
+    if (typeof Swal !== 'undefined') Swal.fire({ icon: icon || 'info', title, text });
+    else alert(title + (text ? ': ' + text : ''));
+}
+
 function onBankBinChange(selectEl) {
     const opt = selectEl.options[selectEl.selectedIndex];
     const bin = opt.value;

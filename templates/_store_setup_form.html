@@ -12,6 +12,39 @@
     <div class="card setup-card mb-4">
         <div class="card-body p-4">
             <h5 class="setup-section-title">
+                <i class="fas fa-image me-2"></i>Logo hiển thị trên menu
+            </h5>
+            <p class="text-muted small mb-3">
+                Mặc định là <strong>cờ Việt Nam</strong>. Bạn có thể tải logo riêng (PNG/JPG/WEBP/GIF, tối đa 2 MB) hoặc đặt lại cờ mặc định bất cứ lúc nào.
+            </p>
+            {% set vn_flag_url = default_business_logo_url() %}
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <div id="businessLogoPreview" class="border rounded bg-light d-flex align-items-center justify-content-center overflow-hidden business-logo-preview-box">
+                    <img id="businessLogoPreviewImg" src="{{ business_logo_url or vn_flag_url }}" alt="Logo" class="business-logo-preview-img{% if not has_custom_business_logo|default(false) %} is-vn-flag{% endif %}" onerror="this.onerror=null;this.src='{{ vn_flag_url }}';this.classList.add('is-vn-flag');">
+                </div>
+                <div class="d-flex flex-column gap-2 flex-grow-1" style="min-width:220px;">
+                    <input type="file" id="businessLogoInput" class="form-control form-control-sm" accept="image/png,image/jpeg,image/webp,image/gif">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="uploadBusinessLogo()">
+                            <i class="fas fa-upload me-1"></i>Tải logo lên
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetBusinessLogoDefault()" {% if not has_custom_business_logo|default(false) %}disabled{% endif %} id="btnResetBusinessLogo">
+                            <i class="fas fa-flag me-1"></i>Đặt lại cờ VN
+                        </button>
+                    </div>
+                    {% if has_custom_business_logo|default(false) %}
+                    <span class="small text-success"><i class="fas fa-check-circle me-1"></i>Đang dùng logo tùy chỉnh</span>
+                    {% else %}
+                    <span class="small text-muted"><i class="fas fa-flag me-1"></i>Đang dùng cờ Việt Nam mặc định</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card setup-card mb-4">
+        <div class="card-body p-4">
+            <h5 class="setup-section-title">
                 <i class="fas fa-store me-2"></i>Thông Tin Doanh Nghiệp hoặc Hộ Kinh Doanh
             </h5>
             <div class="row g-3">

@@ -32,7 +32,8 @@ from flask import (
     session,
     url_for,
 )
-from flask_login import login_required, current_user
+from auth import login_required, tenant_settings_required
+from flask_login import current_user
 from requests.auth import HTTPBasicAuth
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -2031,7 +2032,7 @@ def register_invoice_routes(app):
             if conn: conn.close()
 
     @app.route('/api/settings/test_invoice_connection', methods=['POST'])
-    @login_required
+    @tenant_settings_required
     def test_invoice_connection():
         try:
             from Services.einvoice_factory import test_einvoice_connection

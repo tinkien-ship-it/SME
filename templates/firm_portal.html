@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1100px;">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h4 class="mb-1"><i class="fas fa-building me-2 text-primary"></i>Cổng DVKT</h4>
+            <div class="text-muted small">{{ firm_name }}{% if firm_role %} · {{ firm_role_label or firm_role }}{% endif %}</div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">Đăng xuất</a>
+    </div>
+
+    <div class="card shadow-sm border-success mb-4">
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h5 class="mb-1"><i class="fas fa-calculator me-2 text-success"></i>Kế toán SME đơn vị</h5>
+                <div class="text-muted small">Sổ kế toán nội bộ của <strong>{{ firm_name }}</strong> — tách biệt với sổ doanh nghiệp thuê dịch vụ.
+                    Cài đặt HĐĐT / thông tin đơn vị do <strong>Master</strong> thiết lập tại «Thiết lập tổng quản trị».</div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-success" id="btnEnterOwnBooks">
+                    <i class="fas fa-book-open me-1"></i> Vào sổ DVKT
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Doanh nghiệp thuê dịch vụ</strong>
+            {% if can_manage_clients %}
+            <button type="button" class="btn btn-primary btn-sm" id="btnAddClient">
+                <i class="fas fa-plus me-1"></i> Thêm DN
+            </button>
+            {% endif %}
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tên DN</th>
+                            <th>MST</th>
+                            <th>Chế độ</th>
+                            <th>Kế toán phụ trách</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="firmClientBody">
+                        {% for c in clients %}
+                        <tr data-client-id="{{ c.client_id }}">
+                            <td>
+                                <div class="fw-semibold">{{ c.client_name }}</div>
+                                {% if c.phone %}<div class="small text-muted">{{ c.phone }}</div>{% endif %}
+                                {% if c.representative_name %}<div class="small text-muted">ĐD: {{ c.representative_name }}</div>{% endif %}
+                            </td>
+                            <td>{{ c.tax_code or '—' }}</td>
+                            <td><span class="badge bg-secondary text-wrap text-start" style="white-space: normal; max-width: 220px;">{{ c.accounting_regime_label or c.accounting_regime or 'SME_TT99' }}</span></td>
+                            <td>
+                                <div class="{% if not c.charge_staff_is_default %}fw-semibold{% endif %}">{{ c.charge_staff_display or '—' }}</div>
+                                {% if c.charge_staff_is_default %}
+                                <div class="small text-muted">Đại diện DVKT</div>
+                                {% elif c.charge_staff_names and c.charge_staff_names|length > 1 %}
+                                <div class="small text-muted">{{ c.charge_staff_names|length }} kế toán viên</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-success btn-enter-client" data-client-id="{{ c.client_id }}" title="Vào sổ">
+                                        <i class="fas fa-book-open"></i>
+                                    </button>
+                                    {% if can_manage_clients %}
+                                    <button type="button" class="btn btn-outline-warning btn-edit-client" data-client-id="{{ c.client_id }}" title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info btn-access-client" data-client-id="{{ c.client_id }}" title="Phân quyền nhân viên">
+                                        <i class="fas fa-user-shield"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-delete-client" data-client-id="{{ c.client_id }}" data-client-name="{{ c.client_name }}" title="Xóa">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">Chưa có doanh nghiệp thuê.{% if can_manage_clients %} Bấm «Thêm DN» để tạo sổ.{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% if can_manage_clients %}
+    <div class="card shadow-sm">
+        <div class="card-header"><strong>Nhân viên DVKT</strong></div>
+        <div class="card-body">
+            <form id="firmAddUserForm" class="row g-2 align-items-end mb-4">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold mb-0">Email đăng nhập</label>
+                    <input type="email" class="form-control form-control-sm" name="login_email" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold mb-0">Họ tên</label>
+                    <input type="text" class="form-control form-control-sm" name="full_name" placeholder="Họ tên">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold mb-0">Vai trò</label>
+                    <select class="form-select form-select-sm" name="firm_role">
+                        <option value="accountant">Kế Toán Viên</option>
+                        <option value="chief_accountant">Kế Toán Trưởng</option>
+                        <option value="viewer">Người chỉ được phép xem</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold mb-0">Mật khẩu</label>
+                    <input type="password" class="form-control form-control-sm" name="password" required>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">Thêm</button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0" id="firmStaffTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Họ tên</th>
+                            <th>Email đăng nhập</th>
+                            <th>Vai trò</th>
+                            <th>DN phụ trách</th>
+                            <th>Ngày tạo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="firmStaffBody">
+                        {% for u in firm_users %}
+                        <tr data-user-id="{{ u.id }}"{% if u.id == firm_user_id %} class="table-primary"{% endif %}>
+                            <td>
+                                <div class="fw-semibold">{{ u.full_name or u.login_email }}</div>
+                                {% if u.id == firm_user_id %}<span class="badge bg-primary">Bạn</span>{% endif %}
+                            </td>
+                            <td>{{ u.login_email }}</td>
+                            <td>
+                                {% if u.firm_role == 'owner' %}
+                                <span class="badge bg-dark">{{ u.firm_role_label }}</span>
+                                {% elif u.firm_role == 'chief_accountant' %}
+                                <span class="badge bg-info text-dark">{{ u.firm_role_label }}</span>
+                                {% elif u.firm_role == 'accountant' %}
+                                <span class="badge bg-secondary">{{ u.firm_role_label }}</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark border">{{ u.firm_role_label }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ u.assigned_clients_label }}</td>
+                            <td class="text-muted small">{{ (u.created_at or '')[:10] or '—' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">Chưa có nhân viên. Dùng form trên để thêm.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+const CAN_MANAGE = {{ 'true' if can_manage_clients else 'false' }};
+
+async function firmFetch(url, options = {}) {
+    const res = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', ...(options.headers || {}) },
+        ...options,
+    });
+    let data = {};
+    try { data = await res.json(); } catch (e) {
+        throw new Error(`Phản hồi không hợp lệ (HTTP ${res.status})`);
+    }
+    if (!res.ok && !data.error) data.error = `HTTP ${res.status}`;
+    return { res, data };
+}
+
+function clientFormHtml(c = {}, readonlyId = true) {
+    const idAttr = readonlyId ? 'readonly style="background:#e9ecef"' : '';
+    return `
+        <div class="text-start">
+            ${c.client_id ? `<label class="form-label small fw-bold">Mã DN</label>
+            <input id="fc-id" class="form-control mb-2" value="${c.client_id || ''}" ${idAttr}>` : ''}
+            <label class="form-label small fw-bold">Tên doanh nghiệp *</label>
+            <input id="fc-name" class="form-control mb-2" value="${c.client_name || ''}">
+            <div class="row">
+                <div class="col-6">
+                    <label class="form-label small fw-bold">MST</label>
+                    <input id="fc-tax" class="form-control mb-2" value="${c.tax_code || ''}">
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold">SĐT</label>
+                    <input id="fc-phone" class="form-control mb-2" value="${c.phone || ''}">
+                </div>
+            </div>
+            <label class="form-label small fw-bold">Email</label>
+            <input id="fc-email" class="form-control mb-2" value="${c.email || ''}">
+            <label class="form-label small fw-bold">Địa chỉ</label>
+            <input id="fc-address" class="form-control mb-2" value="${c.address || ''}">
+            <label class="form-label small fw-bold">Người đại diện</label>
+            <input id="fc-rep" class="form-control mb-2" value="${c.representative_name || ''}">
+            <label class="form-label small fw-bold">Chế độ kế toán DN thuê</label>
+            <select id="fc-regime" class="form-select mb-2">
+                <option value="SME_TT99" ${(c.accounting_regime || 'SME_TT99') === 'SME_TT99' ? 'selected' : ''}>Thông Tư 99/2025/TT-BTC</option>
+                <option value="SME_MICRO_TT58" ${c.accounting_regime === 'SME_MICRO_TT58' ? 'selected' : ''}>Thông Tư 58/2026/TT-BTC (DNSN)</option>
+            </select>
+            <label class="form-label small fw-bold">Ghi chú</label>
+            <textarea id="fc-notes" class="form-control" rows="2">${c.notes || ''}</textarea>
+        </div>`;
+}
+
+function readClientFormPayload() {
+    const name = document.getElementById('fc-name')?.value.trim();
+    if (!name) return Swal.showValidationMessage('Nhập tên doanh nghiệp');
+    return {
+        client_name: name,
+        tax_code: document.getElementById('fc-tax')?.value.trim() || '',
+        phone: document.getElementById('fc-phone')?.value.trim() || '',
+        email: document.getElementById('fc-email')?.value.trim() || '',
+        address: document.getElementById('fc-address')?.value.trim() || '',
+        representative_name: document.getElementById('fc-rep')?.value.trim() || '',
+        accounting_regime: document.getElementById('fc-regime')?.value,
+        notes: document.getElementById('fc-notes')?.value.trim() || '',
+    };
+}
+
+document.querySelectorAll('.btn-enter-client').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const id = btn.dataset.clientId;
+        btn.disabled = true;
+        try {
+            const { data } = await firmFetch(`/api/firm/enter/${encodeURIComponent(id)}`, { method: 'POST' });
+            if (data.success && data.redirect) window.location.href = data.redirect;
+            else Swal.fire('Lỗi', data.error || 'Không vào được sổ', 'error');
+        } catch (e) {
+            Swal.fire('Lỗi', e.message || 'Lỗi kết nối', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+});
+
+function openAddClientModal() {
+    if (typeof Swal === 'undefined') return alert('Thiếu SweetAlert2');
+    Swal.fire({
+        title: 'Thêm doanh nghiệp thuê',
+        width: 640,
+        html: clientFormHtml({}, false),
+        showCancelButton: true,
+        confirmButtonText: 'Tạo sổ',
+        preConfirm: readClientFormPayload,
+    }).then(async (r) => {
+        if (!r.isConfirmed) return;
+        Swal.fire({ title: 'Đang tạo sổ...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+        try {
+            const { data } = await firmFetch('/api/firm/clients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(r.value),
+            });
+            if (data.success) Swal.fire('Thành công', 'Đã tạo sổ DN thuê', 'success').then(() => location.reload());
+            else Swal.fire('Lỗi', data.error || 'Không tạo được', 'error');
+        } catch (e) {
+            Swal.fire('Lỗi', e.message, 'error');
+        }
+    });
+}
+
+async function openEditClientModal(clientId) {
+    Swal.fire({ title: 'Đang tải...', didOpen: () => Swal.showLoading() });
+    try {
+        const { data } = await firmFetch(`/api/firm/clients/${encodeURIComponent(clientId)}`);
+        if (!data.success) {
+            Swal.fire('Lỗi', data.error || 'Không tải được', 'error');
+            return;
+        }
+        const c = data.client || {};
+        Swal.fire({
+            title: 'Sửa doanh nghiệp thuê',
+            width: 640,
+            html: clientFormHtml(c, true),
+            showCancelButton: true,
+            confirmButtonText: 'Lưu',
+            preConfirm: readClientFormPayload,
+        }).then(async (r) => {
+            if (!r.isConfirmed) return;
+            Swal.fire({ title: 'Đang lưu...', didOpen: () => Swal.showLoading() });
+            const { data: save } = await firmFetch(`/api/firm/clients/${encodeURIComponent(clientId)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(r.value),
+            });
+            if (save.success) Swal.fire('Đã lưu', '', 'success').then(() => location.reload());
+            else Swal.fire('Lỗi', save.error || 'Không lưu được', 'error');
+        });
+    } catch (e) {
+        Swal.fire('Lỗi', e.message, 'error');
+    }
+}
+
+function accessTableHtml(staff) {
+    if (!staff || !staff.length) {
+        return '<p class="text-muted small mb-0">Chưa có nhân viên DVKT. Thêm nhân viên ở mục bên dưới.</p>';
+    }
+    let rows = staff.map(s => {
+        const disabled = s.implicit_access ? 'disabled' : '';
+        const checked = s.assigned ? 'checked' : '';
+        const roleOpts = `
+            <option value="accounting" ${s.access_role === 'accounting' ? 'selected' : ''}>Kế toán phụ trách</option>
+            <option value="view" ${s.access_role === 'view' ? 'selected' : ''}>Chỉ được xem</option>`;
+        return `<tr data-user-id="${s.id}">
+            <td>
+                <div class="fw-semibold">${s.full_name || s.login_email}</div>
+                <div class="small text-muted">${s.login_email}</div>
+                <span class="badge bg-light text-dark">${s.firm_role_label || s.firm_role}</span>
+            </td>
+            <td class="text-center">
+                <input type="checkbox" class="form-check-input fa-assign" ${checked} ${disabled}
+                       title="${s.implicit_access ? 'Kế Toán Trưởng / Chủ đơn vị có toàn quyền' : ''}">
+            </td>
+            <td>
+                <select class="form-select form-select-sm fa-role" ${disabled || !s.assigned ? 'disabled' : ''}>${roleOpts}</select>
+            </td>
+        </tr>`;
+    }).join('');
+    return `<div class="table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Nhân viên</th><th class="text-center">Phụ trách</th><th>Quyền trên sổ</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+        <p class="small text-muted mt-2 mb-0">Chủ đơn vị và Kế Toán Trưởng tự động có quyền toàn bộ DN thuê.</p>`;
+}
+
+async function openAccessClientModal(clientId) {
+    Swal.fire({ title: 'Đang tải...', didOpen: () => Swal.showLoading() });
+    try {
+        const { data } = await firmFetch(`/api/firm/clients/${encodeURIComponent(clientId)}`);
+        if (!data.success) {
+            Swal.fire('Lỗi', data.error || 'Không tải được', 'error');
+            return;
+        }
+        const clientName = (data.client || {}).client_name || clientId;
+        Swal.fire({
+            title: `Phân quyền — ${clientName}`,
+            width: 720,
+            html: accessTableHtml(data.staff_access || []),
+            showCancelButton: true,
+            confirmButtonText: 'Lưu phân quyền',
+            didOpen: () => {
+                document.querySelectorAll('#swal2-html-container tr[data-user-id]').forEach(tr => {
+                    const cb = tr.querySelector('.fa-assign');
+                    const sel = tr.querySelector('.fa-role');
+                    if (!cb || cb.disabled) return;
+                    const sync = () => { if (sel) sel.disabled = !cb.checked; };
+                    cb.addEventListener('change', sync);
+                    sync();
+                });
+            },
+            preConfirm: () => {
+                const assignments = [];
+                document.querySelectorAll('#swal2-html-container tr[data-user-id]').forEach(tr => {
+                    const uid = parseInt(tr.dataset.userId, 10);
+                    const cb = tr.querySelector('.fa-assign');
+                    const sel = tr.querySelector('.fa-role');
+                    if (!cb || cb.disabled) return;
+                    assignments.push({
+                        firm_user_id: uid,
+                        assigned: cb.checked,
+                        access_role: sel ? sel.value : 'accounting',
+                    });
+                });
+                return { assignments };
+            },
+        }).then(async (r) => {
+            if (!r.isConfirmed) return;
+            Swal.fire({ title: 'Đang lưu...', didOpen: () => Swal.showLoading() });
+            const { data: save } = await firmFetch(`/api/firm/clients/${encodeURIComponent(clientId)}/access`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(r.value),
+            });
+            if (save.success) Swal.fire('Đã lưu phân quyền', '', 'success').then(() => location.reload());
+            else Swal.fire('Lỗi', save.error || 'Không lưu được', 'error');
+        });
+    } catch (e) {
+        Swal.fire('Lỗi', e.message, 'error');
+    }
+}
+
+async function deleteClient(clientId, clientName) {
+    const r = await Swal.fire({
+        title: 'Xóa doanh nghiệp thuê?',
+        html: `Ngừng phục vụ <strong>${clientName}</strong>?<br><span class="small text-muted">Sổ kế toán vẫn giữ trên máy chủ nhưng không hiển thị trên cổng.</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Xóa',
+        confirmButtonColor: '#dc3545',
+    });
+    if (!r.isConfirmed) return;
+    try {
+        const { data } = await firmFetch(`/api/firm/clients/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
+        if (data.success) Swal.fire('Đã xóa', '', 'success').then(() => location.reload());
+        else Swal.fire('Lỗi', data.error || 'Không xóa được', 'error');
+    } catch (e) {
+        Swal.fire('Lỗi', e.message, 'error');
+    }
+}
+
+document.getElementById('btnAddClient')?.addEventListener('click', openAddClientModal);
+
+document.getElementById('btnEnterOwnBooks')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btnEnterOwnBooks');
+    if (btn) btn.disabled = true;
+    try {
+        const { data } = await firmFetch('/api/firm/enter-own', { method: 'POST' });
+        if (data.success && data.redirect) window.location.href = data.redirect;
+        else Swal.fire('Lỗi', data.error || 'Không vào được sổ DVKT', 'error');
+    } catch (e) {
+        Swal.fire('Lỗi', e.message || 'Lỗi kết nối', 'error');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+});
+
+document.querySelectorAll('.btn-edit-client').forEach(btn => {
+    btn.addEventListener('click', () => openEditClientModal(btn.dataset.clientId));
+});
+document.querySelectorAll('.btn-access-client').forEach(btn => {
+    btn.addEventListener('click', () => openAccessClientModal(btn.dataset.clientId));
+});
+document.querySelectorAll('.btn-delete-client').forEach(btn => {
+    btn.addEventListener('click', () => deleteClient(btn.dataset.clientId, btn.dataset.clientName || btn.dataset.clientId));
+});
+
+document.getElementById('firmAddUserForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const payload = Object.fromEntries(fd.entries());
+    try {
+        const { data } = await firmFetch('/api/firm/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (data.success) {
+            Swal.fire('Đã thêm nhân viên', data.login_email, 'success').then(() => location.reload());
+        } else {
+            Swal.fire('Lỗi', data.error || 'Không thêm được', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', err.message || 'Lỗi kết nối', 'error');
+    }
+});
+</script>
+{% endblock %}

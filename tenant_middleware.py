@@ -19,6 +19,8 @@ from db_utils import (
     sqlite_write_retry,
 )
 
+from Services.firm_tenant import is_firm_tenant  # noqa: E402 — dùng trong middleware onboarding
+
 _tenant_schema_migrated = set()
 # Cache kiểm tra single-session — tránh mở SQLite users mỗi request HTML/API
 _session_token_cache: dict[tuple, tuple[float, str | None]] = {}
@@ -308,6 +310,42 @@ def load_tenant():
 
     tenant_data = None
 
+    # Firm đang làm sổ DN thuê — db_path đã set trong session
+    if session.get('firm_viewing_client') and session.get('db_path'):
+        raw_path = session['db_path']
+        g.db_path = os.path.join(BASE_DIR, raw_path) if not os.path.isabs(raw_path) else raw_path
+        g.tenant_id = session.get('last_tenant_id')
+        g.tenant_info = {
+            'business_name': session.get('firm_client_name') or '',
+            'phone': session.get('firm_client_tax_code') or '',
+        }
+        g.is_main_tenant = False
+        return
+
+    # Firm đang làm sổ Kế toán SME nội bộ (sổ DVKT)
+    if session.get('firm_viewing_own_books') and session.get('firm_tenant_id'):
+        fid = session['firm_tenant_id']
+        tenant_data = get_tenant_db_path(fid)
+        if tenant_data:
+            g.tenant_id = fid
+            raw_path = session.get('db_path') or tenant_data['db_path']
+            g.db_path = os.path.join(BASE_DIR, raw_path) if not os.path.isabs(raw_path) else raw_path
+            g.tenant_info = tenant_data
+            g.is_main_tenant = False
+            return
+
+    # Firm đã login, chưa chọn sổ — meta DB firm
+    if session.get('firm_tenant_id') and session.get('db_path') and not session.get('firm_viewing_client') and not session.get('firm_viewing_own_books'):
+        fid = session['firm_tenant_id']
+        tenant_data = get_tenant_db_path(fid)
+        if tenant_data:
+            g.tenant_id = fid
+            raw_path = session.get('db_path') or tenant_data['db_path']
+            g.db_path = os.path.join(BASE_DIR, raw_path) if not os.path.isabs(raw_path) else raw_path
+            g.tenant_info = tenant_data
+            g.is_main_tenant = False
+            return
+
     # Bước 1: Kiểm tra trên URL
     if first_part and first_part not in excluded:
         tenant_data = get_tenant_db_path(first_part)
@@ -430,7 +468,7 @@ def init_tenant(app):
     @app.context_processor
     def inject_tenant():
         from flask import session
-        from auth import build_template_user
+        from auth import build_template_user, user_can_access_tenant_settings, is_master_configuring_firm_tenant
         from Services.tenant_profile import is_sme_regime
         from Services.hkd_menu import user_can_access_hub, user_can_see_sme_nav
         profile = getattr(g, 'tenant_profile', None) or {}
@@ -440,6 +478,7 @@ def init_tenant(app):
             'permissions': user.get('permissions') or '',
         }
         from Services.sme_roles import is_sme_admin_role, is_sme_role
+        from Services.firm_tenant import is_firm_session, is_firm_using_accounting, is_firm_viewing_client, is_firm_viewing_own_books
         sme = is_sme_regime(profile.get('accounting_regime'))
         return {
             'current_tenant': getattr(g, 'tenant_id', None),
@@ -447,12 +486,21 @@ def init_tenant(app):
             'tenant_info': getattr(g, 'tenant_info', {}),
             'tenant_profile': profile,
             'master_viewing_tenant': session.get('master_viewing_tenant'),
+            'master_viewing_firm': is_master_configuring_firm_tenant(),
+            'firm_viewing_client': is_firm_viewing_client(),
+            'firm_viewing_own_books': is_firm_viewing_own_books(),
+            'firm_viewing_accounting': is_firm_using_accounting(),
+            'firm_session': is_firm_session(),
+            'firm_name': session.get('firm_name') or '',
+            'firm_client_name': session.get('firm_client_name') or '',
+            'firm_client_tax_code': session.get('firm_client_tax_code') or '',
             'current_user': user,
             'tenant_is_sme': sme,
             'user_has_hub': user_can_access_hub(cu, profile),
             'user_has_sme_nav': user_can_see_sme_nav(cu, profile),
             'is_sme_admin': is_sme_admin_role(cu.get('role')),
             'is_sme_user': is_sme_role(cu.get('role')),
+            'user_can_tenant_settings': user_can_access_tenant_settings(),
         }
 
 def init_tenant_middleware(app, get_db_connection_fn=None):
@@ -545,22 +593,71 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
 
         _maybe_migrate_tenant_db(g.db_path)
 
+        from Services.firm_tenant import is_firm_session, is_firm_using_accounting
+        _firm_portal_endpoints = {
+            'firm_portal', 'api_firm_clients', 'api_firm_add_client',
+            'api_firm_get_client', 'api_firm_update_client', 'api_firm_delete_client',
+            'api_firm_set_client_access', 'api_firm_list_users',
+            'api_firm_enter_client', 'api_firm_enter_own_books', 'api_firm_leave_client', 'api_firm_add_user',
+            'logout', 'static',
+        }
+        _firm_portal_path = path == '/firm' or path.startswith('/api/firm/')
+        if is_firm_session() and not is_firm_using_accounting():
+            ep = request.endpoint or ''
+            if ep not in _firm_portal_endpoints and not _firm_portal_path and not path.startswith('/static/'):
+                if request.path.startswith('/api/'):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Chọn sổ tại cổng DVKT (sổ nội bộ hoặc doanh nghiệp thuê) trước khi thao tác',
+                    }), 403
+                return redirect(url_for('firm_portal'))
+
+        from auth import is_master_configuring_firm_tenant, MASTER_FIRM_SETTINGS_ENDPOINTS
+        if is_master_configuring_firm_tenant():
+            ep = request.endpoint or ''
+            if ep not in MASTER_FIRM_SETTINGS_ENDPOINTS and not path.startswith('/static/'):
+                if request.path.startswith('/api/'):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Chế độ cấu hình DVKT — chỉ được dùng trang Cài đặt tenant',
+                    }), 403
+                return redirect(url_for('settings_page'))
+
         tenant_id = session.get('last_tenant_id')
         onboarding_ok = {
             'onboarding_page', 'api_onboarding_status', 'api_onboarding_complete',
             'api_onboarding_skip', 'logout', 'static',
+            'firm_portal', 'api_firm_clients', 'api_firm_add_client',
+            'api_firm_get_client', 'api_firm_update_client', 'api_firm_delete_client',
+            'api_firm_set_client_access', 'api_firm_list_users',
+            'api_firm_enter_client', 'api_firm_enter_own_books', 'api_firm_leave_client', 'api_firm_add_user',
         }
         if tenant_id:
             try:
-                from Services.tenant_profile import load_tenant_profile
-                g.tenant_profile = load_tenant_profile(tenant_id)
-                g.tenant_settings = g.tenant_profile.get('settings') or {}
+                if (session.get('firm_viewing_client') or session.get('firm_viewing_own_books')) and getattr(g, 'db_path', None):
+                    from Services.tenant_profile import load_profile_from_tenant_db
+                    g.tenant_profile = load_profile_from_tenant_db(g.db_path)
+                    g.tenant_settings = g.tenant_profile.get('settings') or {}
+                elif is_firm_tenant(tenant_id):
+                    from Services.tenant_profile import load_tenant_profile
+                    g.tenant_profile = load_tenant_profile(tenant_id)
+                    g.tenant_settings = g.tenant_profile.get('settings') or {}
+                else:
+                    from Services.tenant_profile import load_tenant_profile
+                    g.tenant_profile = load_tenant_profile(tenant_id)
+                    g.tenant_settings = g.tenant_profile.get('settings') or {}
             except Exception:
                 g.tenant_profile = {}
                 g.tenant_settings = {}
 
         if tenant_id and request.endpoint not in onboarding_ok:
-            if not (session.get('master_viewing_tenant') and session.get('role') == 'master'):
+            skip_onboarding = (
+                (session.get('master_viewing_tenant') and session.get('role') == 'master')
+                or session.get('firm_viewing_client')
+                or session.get('firm_viewing_own_books')
+                or is_firm_tenant(tenant_id)
+            )
+            if not skip_onboarding:
                 try:
                     from Services.subscription_service import parse_tenant_settings
                     settings = getattr(g, 'tenant_settings', None) or {}
@@ -575,12 +672,14 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
 
         # ==================== 3. Kiểm tra Single Session (Đá thiết bị cũ) ====================
         try:
-            # Master xem tenant: token lưu ở DB gốc (database.db), không phải DB tenant
+            # Master / Firm xem client — token lưu ở registry (firm_users) hoặc DB gốc
             validate_db_path = g.db_path
             if session.get('master_viewing_tenant') and session.get('role') == 'master':
                 validate_db_path = session.get('master_home_db_path') or MAIN_DB_PATH
                 if not os.path.isabs(validate_db_path):
                     validate_db_path = os.path.join(BASE_DIR, validate_db_path)
+            elif session.get('firm_user_id') and session.get('firm_tenant_id'):
+                validate_db_path = MAIN_DB_PATH
 
             user_id = user_data['id']
             cache_key = (os.path.abspath(validate_db_path), user_id, session_token)
@@ -589,15 +688,27 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             if cached and (now_ts - cached[0]) < _SESSION_TOKEN_CACHE_TTL_SEC:
                 db_token = cached[1]
             else:
-                conn = open_sqlite(validate_db_path)
-                try:
-                    row = conn.execute(
-                        "SELECT last_session_id FROM users WHERE id = ?",
-                        (user_id,),
-                    ).fetchone()
-                finally:
-                    conn.close()
-                db_token = row[0] if row else None
+                db_token = None
+                if session.get('firm_user_id') and session.get('firm_tenant_id'):
+                    conn = get_main_db_connection()
+                    try:
+                        row = conn.execute(
+                            "SELECT last_session_id FROM firm_users WHERE id = ?",
+                            (user_id,),
+                        ).fetchone()
+                        db_token = row[0] if row else None
+                    finally:
+                        conn.close()
+                else:
+                    conn = open_sqlite(validate_db_path)
+                    try:
+                        row = conn.execute(
+                            "SELECT last_session_id FROM users WHERE id = ?",
+                            (user_id,),
+                        ).fetchone()
+                        db_token = row[0] if row else None
+                    finally:
+                        conn.close()
                 _session_token_cache[cache_key] = (now_ts, db_token)
                 # Giữ cache nhỏ — tránh phình khi nhiều user
                 if len(_session_token_cache) > 256:

@@ -67,6 +67,11 @@ def ensure_registry_tables(conn=None):
                 created.append(name)
         conn.execute('CREATE INDEX IF NOT EXISTS idx_tenant_id ON tenants(tenant_id)')
         conn.commit()
+        try:
+            from Services.firm_tenant import ensure_firm_schema
+            ensure_firm_schema(conn)
+        except Exception:
+            pass
     finally:
         if own:
             conn.close()
@@ -196,6 +201,7 @@ _TENANT_TABLE_EXTRAS = [
     ('business_info', 'revenue_tier_effective', 'TEXT'),
     ('business_info', 'default_hkd_sector', "TEXT DEFAULT 'G1'"),
     ('business_info', 'filing_period', "TEXT DEFAULT 'quarterly'"),
+    ('business_info', 'logo_path', 'TEXT'),
     ('users', 'must_change_password', 'INTEGER DEFAULT 0'),
     ('users', 'is_support_account', 'INTEGER DEFAULT 0'),
     ('users', 'email', 'TEXT'),

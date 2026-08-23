@@ -1,6 +1,7 @@
 """Nền tảng cấu hình tenant — chế độ kế toán, nhóm doanh thu R1–R4, feature flags."""
 from __future__ import annotations
 
+import os
 import sqlite3
 from functools import wraps
 
@@ -669,6 +670,52 @@ def load_tenant_profile(tenant_id):
     return profile
 
 
+def load_profile_from_tenant_db(db_path, tenant_id=None):
+    """Đọc profile từ DB tenant (business_info) — dùng khi firm xem sổ DN thuê."""
+    if not db_path or not os.path.exists(db_path):
+        return _empty_profile()
+    from db_utils import open_sqlite
+
+    business = {}
+    settings = {}
+    try:
+        with open_sqlite(db_path) as conn:
+            row = conn.execute('SELECT * FROM business_info LIMIT 1').fetchone()
+            if row:
+                business = dict(row)
+            try:
+                st = conn.execute(
+                    "SELECT value FROM settings WHERE key IN ('tenant_settings', 'tenant_profile_settings') LIMIT 1"
+                ).fetchone()
+                if st and st[0]:
+                    settings = parse_tenant_settings(st[0])
+            except Exception:
+                pass
+    except Exception:
+        return _empty_profile()
+
+    if not business:
+        return _empty_profile()
+
+    if not settings:
+        settings = build_tenant_settings(
+            accounting_regime=business.get('accounting_regime') or 'SME_TT99',
+            extra={
+                'filing_period': business.get('filing_period') or 'monthly',
+                'onboarding_completed': True,
+                'firm_client': True,
+            },
+        )
+
+    registry_row = {
+        'tenant_id': tenant_id or business.get('tenant_id'),
+        'business_name': business.get('business_name'),
+        'business_type': 'firm_client',
+        'settings': settings,
+    }
+    return build_profile_from_registry(registry_row)
+
+
 def invalidate_tenant_profile_cache(tenant_id=None):
     """Xóa cache profile sau khi cập nhật settings tenant."""
     cache = getattr(load_tenant_profile, '_cache', None)
@@ -740,6 +787,7 @@ BUSINESS_INFO_PROFILE_COLUMNS = (
     ('revenue_tier_effective', 'TEXT'),
     ('default_hkd_sector', "TEXT DEFAULT 'G1'"),
     ('filing_period', "TEXT DEFAULT 'quarterly'"),
+    ('logo_path', 'TEXT'),
 )
 
 

@@ -107,41 +107,49 @@ def _existing_tables(cursor: sqlite3.Cursor) -> dict[str, str]:
 def clear_trial_business_data(conn: sqlite3.Connection) -> list[str]:
     """Xóa dữ liệu mẫu, giữ schema và các danh mục tham chiếu hệ thống."""
     cursor = conn.cursor()
+    # PRAGMA foreign_keys chỉ có hiệu lực ngoài transaction — commit trước khi tắt FK.
+    try:
+        conn.commit()
+    except sqlite3.Error:
+        pass
+    cursor.execute('PRAGMA foreign_keys=OFF')
     existing = _existing_tables(cursor)
     cleared: list[str] = []
 
-    for requested in TRIAL_BUSINESS_TABLES:
-        actual = existing.get(requested.lower())
-        if not actual:
-            continue
-        cursor.execute(f'DELETE FROM "{actual}"')
-        cleared.append(actual)
+    try:
+        for requested in TRIAL_BUSINESS_TABLES:
+            actual = existing.get(requested.lower())
+            if not actual:
+                continue
+            cursor.execute(f'DELETE FROM "{actual}"')
+            cleared.append(actual)
 
-    # Giữ bảng sequence nhưng đưa số chứng từ về trạng thái tenant mới.
-    import_seq = existing.get("import_sequence")
-    if import_seq:
-        cursor.execute(f'DELETE FROM "{import_seq}"')
-        cursor.execute(
-            f'INSERT INTO "{import_seq}" (id, current_seq) VALUES (1, 0)'
-        )
+        import_seq = existing.get("import_sequence")
+        if import_seq:
+            cursor.execute(f'DELETE FROM "{import_seq}"')
+            cursor.execute(
+                f'INSERT INTO "{import_seq}" (id, current_seq) VALUES (1, 0)'
+            )
 
-    voucher_seq = existing.get("voucher_seq")
-    if voucher_seq:
-        cursor.execute(f'DELETE FROM "{voucher_seq}"')
-        cursor.executemany(
-            f'INSERT INTO "{voucher_seq}" (type, seq) VALUES (?, 0)',
-            (("PT",), ("PC",), ("PN",), ("PX",)),
-        )
+        voucher_seq = existing.get("voucher_seq")
+        if voucher_seq:
+            cursor.execute(f'DELETE FROM "{voucher_seq}"')
+            cursor.executemany(
+                f'INSERT INTO "{voucher_seq}" (type, seq) VALUES (?, 0)',
+                (("PT",), ("PC",), ("PN",), ("PX",)),
+            )
 
-    sqlite_sequence = existing.get("sqlite_sequence")
-    if sqlite_sequence:
-        reset_names = {
-            name.lower()
-            for name in cleared
-        } | {"users", "business_info"}
-        cursor.executemany(
-            f'DELETE FROM "{sqlite_sequence}" WHERE LOWER(name) = ?',
-            ((name,) for name in reset_names),
-        )
+        sqlite_sequence = existing.get("sqlite_sequence")
+        if sqlite_sequence:
+            reset_names = {
+                name.lower()
+                for name in cleared
+            } | {"users", "business_info"}
+            cursor.executemany(
+                f'DELETE FROM "{sqlite_sequence}" WHERE LOWER(name) = ?',
+                ((name,) for name in reset_names),
+            )
+    finally:
+        cursor.execute('PRAGMA foreign_keys=ON')
 
     return cleared

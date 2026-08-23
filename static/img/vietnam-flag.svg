@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" role="img" aria-label="Co Viet Nam">
+  <!-- Ty le 3:2 (ngang), sao cao 4/10 chieu cao -->
+  <rect width="600" height="400" fill="#da251d"/>
+  <polygon fill="#ffff00" points="300.0,112.0 319.8,172.8 383.7,172.8 332.0,210.4 351.7,271.2 300.0,233.6 248.3,271.2 268.0,210.4 216.3,172.8 280.2,172.8"/>
+</svg>

@@ -160,6 +160,10 @@ def url_for(endpoint, **values):
     return original_url_for(endpoint, **values)
 
 app.add_template_global(url_for, 'url_for')
+
+from Services.business_branding import default_business_logo_url as _default_business_logo_url
+
+app.add_template_global(_default_business_logo_url, 'default_business_logo_url')
 def get_business_config():
     conn = get_db_connection()
     # Lấy thông tin hộ kinh doanh đang hoạt động mới nhất
@@ -173,27 +177,30 @@ def inject_business_info():
     Cung cấp thông tin doanh nghiệp cho tất cả Template Frontend.
     Ưu tiên lấy dữ liệu từ bảng 'business_info' của database hiện tại (g.db_path).
     """
-    # 1. Khởi tạo giá trị mặc định từ tenant_info (nếu có)
-    # Điều này giúp hiển thị tên shop cơ bản ngay cả khi bảng business_info trống
-    business_data = dict(g.tenant_info) if g.get('tenant_info') else {}
+    from Services.business_branding import get_business_logo_context
+
+    business_data = {}
+    logo_ctx = get_business_logo_context(None)
 
     try:
-        # 2. Kết nối tới DB hiện tại (Hàm này đã được fix dùng g.db_path ở các bước trước)
+        if g.get('tenant_info'):
+            business_data = dict(g.tenant_info)
+
         conn = get_db_connection()
         row = conn.execute("SELECT * FROM business_info LIMIT 1").fetchone()
         conn.close()
 
         if row:
-            # Chuyển row thành dict và cập nhật/ghi đè vào business_data
-            # Dữ liệu trong bảng business_info của Tenant sẽ có độ ưu tiên cao nhất
             business_data.update(dict(row))
 
-        return {'info': business_data}
-
+        logo_ctx = get_business_logo_context(business_data.get('logo_path'))
     except Exception as e:
-        # Trong trường hợp bảng business_info chưa tồn tại ở một số tenant cũ
         print(f"Lỗi inject_business_info ({g.get('tenant_id', 'Main')}): {e}")
-        return {'info': business_data}
+
+    return {
+        'info': business_data,
+        **logo_ctx,
+    }
 
 @app.context_processor
 def inject_tenant_meta():
@@ -544,6 +551,9 @@ register_payment_routes(app)
 # === SCALE routes → routes/scale.py ===
 from routes.scale import register_scale_routes
 register_scale_routes(app)
+
+from routes.firm_portal import register_firm_portal_routes
+register_firm_portal_routes(app)
 
 init_schedulers(app, BACKUP_DIR)
 

@@ -119,13 +119,14 @@
                                 <th>Tên cửa hàng</th>
                                 <th>Liên hệ</th>
                                 <th>Hết hạn</th>
+                                <th class="text-center">DN thuê (DVKT)</th>
                                 <th>Trạng thái</th>
                                 <th class="text-center">2FA</th>
                                 <th class="text-end">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="tenantTableBody">
-                            <tr><td colspan="7" class="text-center py-5 text-muted">Đang tải dữ liệu...</td></tr>
+                            <tr><td colspan="8" class="text-center py-5 text-muted">Đang tải dữ liệu...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -517,6 +518,33 @@ async function adjustTenantTrial(tenantId, months) {
     }
 }
 
+async function loadFirmPackages() {
+    try {
+        const res = await fetch('/api/master/firm_packages');
+        const json = await res.json();
+        if (json.success && json.packages?.length) {
+            window.FIRM_PACKAGES = json.packages;
+        }
+    } catch (e) {
+        window.FIRM_PACKAGES = window.FIRM_PACKAGES || [];
+    }
+}
+
+function buildFirmPackageSelectOptions(selectedId, selectedMax) {
+    const pkgs = window.FIRM_PACKAGES || [];
+    if (!pkgs.length) {
+        return [10, 20, 30, 40, 50, 100, 200, 300, 400, 500, 600].map(n => {
+            const sel = Number(selectedMax || 50) === n ? 'selected' : '';
+            return `<option value="${n}" data-package-id="firm_${n}" ${sel}>${n} doanh nghiệp</option>`;
+        }).join('') + `<option value="0" data-package-id="firm_unlimited" ${Number(selectedMax) === 0 ? 'selected' : ''}>Không giới hạn</option>`;
+    }
+    return pkgs.map(p => {
+        const sel = (selectedId && p.id === selectedId) || (!selectedId && Number(selectedMax) === Number(p.max_clients))
+            ? 'selected' : '';
+        return `<option value="${p.max_clients}" data-package-id="${p.id}" ${sel}>${p.label}</option>`;
+    }).join('');
+}
+
 async function loadTenants() {
     try {
         const response = await fetch('/api/master/tenants');
@@ -528,7 +556,7 @@ async function loadTenants() {
         if (countEl) countEl.innerText = `${tenants.length} Tenants`;
 
         if (!res.success || tenants.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted">${res.error || 'Chưa có tenant nào.'}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted">${res.error || 'Chưa có tenant nào.'}</td></tr>`;
             return;
         }
 
@@ -551,12 +579,24 @@ async function loadTenants() {
             const is2FAOn = Boolean(t.is_2fa_enabled);
             const dtBadge = t.revenue_tier ? `<span class="badge bg-info text-dark me-1">${t.revenue_tier}</span>` : '';
             const nnBadge = (t.enabled_nn_sectors || []).map(n => `<span class="badge bg-secondary me-1">${n}</span>`).join('');
+            const isFirm = t.tenant_type === 'firm';
+            const typeBadge = isFirm
+                ? '<span class="badge bg-primary me-1">DVKT</span>' : '';
+            const usage = t.firm_usage || {};
+            let firmUsageCell = '<span class="text-muted small">—</span>';
+            if (isFirm) {
+                const atCap = usage.at_capacity;
+                const usageCls = atCap ? 'bg-danger' : (usage.active_clients > 0 ? 'bg-success' : 'bg-secondary');
+                firmUsageCell = `
+                    <div class="fw-semibold"><span class="badge ${usageCls}">${usage.usage_label || '0 / —'}</span></div>
+                    <div class="small text-muted mt-1">${t.firm_package_label || usage.package_label || ''}</div>`;
+            }
             html += `
                 <tr class="tenant-row">
                     <td><code class="fw-bold text-primary">${t.tenant_id}</code></td>
                     <td>
                         <span class="fw-bold text-dark">${t.business_name || '---'}</span>
-                        <div class="mt-1">${dtBadge}${nnBadge}</div>
+                        <div class="mt-1">${typeBadge}${dtBadge}${nnBadge}</div>
                     </td>
                     <td>
                         <div class="small">
@@ -573,6 +613,7 @@ async function loadTenants() {
                                     onclick="adjustTenantTrial('${t.tenant_id}', 1)" title="Tăng 1 tháng dùng thử">+1</button>
                         </div>
                     </td>
+                    <td class="text-center">${firmUsageCell}</td>
                     <td>${statusBadge}</td>
                     <td class="text-center">
                         <button onclick="toggle2FA('${t.tenant_id}', ${is2FAOn})" 
@@ -581,8 +622,8 @@ async function loadTenants() {
                         </button>
                     </td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-primary me-1" onclick="enterTenant('${t.tenant_id}')" title="Vào tenant test">
-                            <i class="fas fa-sign-in-alt"></i>
+                        <button class="btn btn-sm ${isFirm ? 'btn-success' : 'btn-primary'} me-1" onclick="enterTenant('${t.tenant_id}')" title="${isFirm ? 'Cài đặt HĐĐT & thông tin DVKT' : 'Vào tenant test'}">
+                            <i class="fas ${isFirm ? 'fa-cog' : 'fa-sign-in-alt'}"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-warning me-1" onclick="fetchAndEditTenant('${t.tenant_id}')">
                             <i class="fas fa-edit"></i>
@@ -595,7 +636,7 @@ async function loadTenants() {
         });
         tbody.innerHTML = html;
     } catch (err) {
-        document.getElementById('tenantTableBody').innerHTML = `<tr><td colspan="7" class="text-center py-5 text-danger">Lỗi kết nối server.</td></tr>`;
+        document.getElementById('tenantTableBody').innerHTML = `<tr><td colspan="8" class="text-center py-5 text-danger">Lỗi kết nối server.</td></tr>`;
     }
 }
 
@@ -622,6 +663,7 @@ async function showTenantModal(mode, data = {}) {
         { allowEmpty: true }
     );
     const regimeOptions = HkdSectorForm.buildRegimeOptions(data.accounting_regime || 'HKD');
+    const firmPkgOpts = buildFirmPackageSelectOptions(data.firm_package_id, data.max_clients);
     const blOpts = `
         <option value="pos" ${data.business_line === 'pos' ? 'selected' : ''}>Bán Hàng - Dịch Vụ - Sản Xuất</option>
         <option value="fb_service" ${data.business_line === 'fb_service' ? 'selected' : ''}>Dịch Vụ Ăn Uống</option>
@@ -631,10 +673,15 @@ async function showTenantModal(mode, data = {}) {
         width: 760,
         html: `
             <div class="text-start">
+                <label class="form-label small fw-bold">Loại tenant</label>
+                <select id="swal-tenant-type" class="form-select mb-2" ${isEdit ? 'disabled' : ''}>
+                    <option value="standalone" ${(data.tenant_type || 'standalone') === 'standalone' ? 'selected' : ''}>Doanh nghiệp độc lập</option>
+                    <option value="firm" ${data.tenant_type === 'firm' ? 'selected' : ''}>Đơn Vị Dịch Vụ Kế Toán</option>
+                </select>
                 <label class="form-label small fw-bold">Tenant ID ${isEdit ? '(Cố định)' : '*'}</label>
                 <input id="swal-tenant-id" class="form-control mb-2" value="${data.tenant_id || ''}" 
                        ${isEdit ? 'readonly style="background:#e9ecef"' : ''} placeholder="Ví dụ: cua_hang_a">
-                <label class="form-label small fw-bold">Tên doanh nghiệp</label>
+                <label class="form-label small fw-bold">Tên doanh nghiệp / đơn vị</label>
                 <input id="swal-business-name" class="form-control mb-2" value="${data.business_name || ''}">
                 <div class="row">
                     <div class="col-6">
@@ -642,12 +689,31 @@ async function showTenantModal(mode, data = {}) {
                         <input id="swal-phone" class="form-control mb-2" value="${data.phone || ''}">
                     </div>
                     <div class="col-6">
-                        <label class="form-label small fw-bold">Email</label>
+                        <label class="form-label small fw-bold">Email <span id="swal-email-hint" class="text-muted fw-normal">(owner đăng nhập — DVKT)</span></label>
                         <input id="swal-email" class="form-control mb-2" value="${data.email || ''}">
                     </div>
                 </div>
                 <label class="form-label small fw-bold">Địa chỉ</label>
                 <textarea id="swal-address" class="form-control mb-2" rows="2">${data.address || ''}</textarea>
+
+                <div id="swal-firm-panel" style="display:none">
+                    <div class="alert alert-info py-2 small mb-2">
+                        Email owner dùng để đăng nhập cổng <strong>/firm</strong>. Doanh nghiệp thuê dịch vụ
+                        <strong>không có tài khoản</strong> — chỉ có sổ kế toán riêng trên cổng đơn vị.
+                    </div>
+                    <label class="form-label small fw-bold">Gói số doanh nghiệp được phép cung cấp dịch vụ *</label>
+                    <select id="swal-max-clients" class="form-select mb-2">${firmPkgOpts}</select>
+                    <div class="alert alert-secondary py-2 small mb-2">
+                        <strong>Chế độ kế toán được phép cho DN thuê dịch vụ (mặc định):</strong>
+                        <ul class="mb-0 mt-1 ps-3">
+                            <li>Kế toán SME (TT58) — doanh nghiệp siêu nhỏ</li>
+                            <li>Kế toán SME (TT99)</li>
+                        </ul>
+                        <div class="form-text mt-1 mb-0">Không áp dụng sổ Hộ kinh doanh cho mô hình đơn vị dịch vụ.</div>
+                    </div>
+                </div>
+
+                <div id="swal-standalone-panel">
                 <div class="row g-2 mb-2">
                     <div class="col-6">
                         <label class="form-label small fw-bold">Chế độ kế toán</label>
@@ -688,6 +754,8 @@ async function showTenantModal(mode, data = {}) {
                     <select id="swal-business-line" class="form-select">${blOpts}</select>
                 </div>
                 <div class="mb-2">${nnField}</div>
+                </div>
+
                 <label class="form-label small fw-bold">Ngày hết hạn hợp đồng</label>
                 <input type="text" id="swal-expiry-date" class="form-control keto-date-input text-center" placeholder="dd/mm/yyyy" autocomplete="off">
             </div>
@@ -720,19 +788,60 @@ async function showTenantModal(mode, data = {}) {
             if (expiryEl) {
                 KetoDatePicker.init(expiryEl, data.expiry_date || null);
             }
+            const tenantTypeEl = document.getElementById('swal-tenant-type');
+            const firmPanel = document.getElementById('swal-firm-panel');
+            const standalonePanel = document.getElementById('swal-standalone-panel');
+            const emailHint = document.getElementById('swal-email-hint');
+            const syncTenantTypeUi = () => {
+                const isFirm = (tenantTypeEl && tenantTypeEl.value === 'firm')
+                    || (isEdit && data.tenant_type === 'firm');
+                if (firmPanel) firmPanel.style.display = isFirm ? 'block' : 'none';
+                if (standalonePanel) standalonePanel.style.display = isFirm ? 'none' : 'block';
+                if (emailHint) emailHint.style.display = isFirm ? 'inline' : 'none';
+            };
+            if (tenantTypeEl) {
+                tenantTypeEl.addEventListener('change', syncTenantTypeUi);
+                syncTenantTypeUi();
+            }
         },
         preConfirm: () => {
             const tid = document.getElementById('swal-tenant-id').value.trim();
             if (!tid) return Swal.showValidationMessage('Vui lòng nhập Tenant ID');
+            const tenantType = document.getElementById('swal-tenant-type')?.value || 'standalone';
+            const vatEl = document.getElementById('swal-vat-filing');
+
+            if (tenantType === 'firm' || (isEdit && data.tenant_type === 'firm')) {
+                const email = document.getElementById('swal-email').value.trim();
+                if (!email) return Swal.showValidationMessage('Đơn Vị Dịch Vụ Kế Toán cần email owner để đăng nhập');
+                const maxEl = document.getElementById('swal-max-clients');
+                const maxClients = parseInt(maxEl?.value || '50', 10);
+                const firmPackageId = maxEl?.selectedOptions?.[0]?.dataset?.packageId || '';
+                return {
+                    tenant_id: tid,
+                    tenant_type: 'firm',
+                    business_name: document.getElementById('swal-business-name').value.trim(),
+                    phone: document.getElementById('swal-phone').value.trim(),
+                    email,
+                    address: document.getElementById('swal-address').value.trim(),
+                    expiry_date: KetoDatePicker.getIsoValue('swal-expiry-date'),
+                    accounting_regime: 'SME_TT99',
+                    business_line: 'accounting_firm',
+                    max_clients: isNaN(maxClients) ? 50 : maxClients,
+                    firm_package_id: firmPackageId,
+                    firm_client_regimes: ['SME_MICRO_TT58', 'SME_TT99'],
+                    customer_password: document.getElementById('swal-customer-password')?.value || 'admin',
+                };
+            }
+
             const regime = document.getElementById('swal-regime').value;
             const sme = HkdSectorForm.isSmeRegime(regime);
             const nnList = HkdSectorForm.getSelectedNnSectors('swal-nn-box', { allowEmpty: sme });
             if (!sme && !nnList.length) {
                 return Swal.showValidationMessage('HKD cần chọn ít nhất một ngành nghề NN');
             }
-            const vatEl = document.getElementById('swal-vat-filing');
             const payload = {
                 tenant_id: tid,
+                tenant_type: 'standalone',
                 business_name: document.getElementById('swal-business-name').value.trim(),
                 phone: document.getElementById('swal-phone').value.trim(),
                 email: document.getElementById('swal-email').value.trim(),
@@ -745,6 +854,7 @@ async function showTenantModal(mode, data = {}) {
                 primary_nn_sector: sme ? '' : (nnList[0] || ''),
                 vat_filing_period: sme && vatEl ? vatEl.value : undefined,
                 filing_period: sme && vatEl ? vatEl.value : undefined,
+                customer_password: document.getElementById('swal-customer-password')?.value || 'admin',
             };
             if (HkdSectorForm.isTt58Regime(regime)) {
                 payload.enterprise_sector = document.getElementById('swal-enterprise-sector')?.value || 'trade_service';
@@ -785,15 +895,25 @@ function createNewTenant() { showTenantModal('create'); }
 
 async function enterTenant(tenantId) {
     try {
-        const res = await fetch(`/api/master/enter_tenant/${encodeURIComponent(tenantId)}`, { method: 'POST' });
-        const data = await res.json();
+        const res = await fetch(`/api/master/enter_tenant/${encodeURIComponent(tenantId)}`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        });
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (parseErr) {
+            Swal.fire('Lỗi', `Server trả về phản hồi không hợp lệ (HTTP ${res.status})`, 'error');
+            return;
+        }
         if (data.success && data.redirect) {
             window.location.href = data.redirect;
         } else {
-            Swal.fire('Lỗi', data.error || 'Không vào được tenant', 'error');
+            Swal.fire('Lỗi', data.error || `Không vào được tenant (HTTP ${res.status})`, 'error');
         }
     } catch (e) {
-        Swal.fire('Lỗi', 'Không kết nối server', 'error');
+        Swal.fire('Lỗi', 'Không kết nối server: ' + (e.message || e), 'error');
     }
 }
 
@@ -1431,6 +1551,7 @@ async function saveTaxRate(e) {
 
 /** --- KHỞI TẠO --- **/
 document.addEventListener('DOMContentLoaded', () => {
+    loadFirmPackages();
     loadTenants();
     loadTrialSettings();
     loadMain2FAStatus();

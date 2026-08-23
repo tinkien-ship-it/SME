@@ -87,6 +87,28 @@ def init_auth(app):
                     permissions=u.get('permissions', ''),
                 )
 
+            # Firm user — id lưu trên registry (firm_users), không có trong DB tenant/client
+            if session.get('firm_user_id') and (session.get('user') or {}).get('is_firm_user'):
+                u = session.get('user') or {}
+                if str(u.get('id')) != str(user_id):
+                    return None
+                db_path_raw = session.get('db_path')
+                if not db_path_raw:
+                    return None
+                if os.path.isabs(db_path_raw):
+                    db_path = os.path.abspath(db_path_raw)
+                else:
+                    db_path = os.path.join(BASE_DIR, db_path_raw)
+                return User(
+                    id=u['id'],
+                    username=u['username'],
+                    role=session.get('role') or u.get('role') or 'accountant',
+                    db_path=db_path,
+                    tenant_id=session.get('last_tenant_id'),
+                    full_name=u.get('full_name') or u['username'],
+                    permissions=u.get('permissions', ''),
+                )
+
             db_path_raw = session.get("db_path")
             if not db_path_raw:
                 db_path = os.path.join(BASE_DIR, "database.db")
@@ -173,7 +195,88 @@ def admin_or_master_required(f):
         if role not in ADMIN_OR_MASTER_ROLES:
             if request.path.startswith('/api/'):
                 return jsonify({"success": False, "error": "Forbidden"}), 403
-            return redirect(url_for('sale'))
+            return _settings_forbidden_redirect()
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def _settings_forbidden_redirect():
+    try:
+        if session.get('firm_tenant_id'):
+            flash(
+                'Cài đặt HĐĐT và thông tin đơn vị DVKT do Master thiết lập từ «Thiết lập tổng quản trị».',
+                'info',
+            )
+            return redirect(url_for('firm_portal'))
+    except Exception:
+        pass
+    try:
+        return redirect(url_for('sale'))
+    except Exception:
+        return redirect('/')
+
+
+def user_can_access_tenant_settings() -> bool:
+    """Cài đặt tenant: admin/master, quản lý SME độc lập, hoặc Master đang cấu hình DVKT."""
+    from Services.sme_roles import ADMIN_OR_MASTER_ROLES, SME_MANAGER_ROLES
+    role = _session_role()
+    if role in ADMIN_OR_MASTER_ROLES:
+        return True
+    if role not in SME_MANAGER_ROLES:
+        return False
+    # Phiên DVKT (owner/KTV/…) không tự cấu hình — chỉ Master switch từ /master/settings
+    if session.get('firm_tenant_id') or session.get('firm_user_id'):
+        return False
+    return True
+
+
+def is_master_configuring_firm_tenant() -> bool:
+    """Master đang vào tenant DVKT từ Thiết lập tổng quản trị — chỉ được dùng /settings."""
+    if _session_role() != 'master':
+        return False
+    tid = (session.get('master_viewing_tenant') or '').strip()
+    if not tid:
+        return False
+    from Services.firm_tenant import is_firm_tenant
+    return is_firm_tenant(tid)
+
+
+MASTER_FIRM_SETTINGS_ENDPOINTS = frozenset({
+    'settings_page',
+    'logout',
+    'static',
+    'api_master_leave_tenant',
+    'api_save_business',
+    'api_upload_business_logo',
+    'api_delete_business_logo',
+    'api_get_payment_bank',
+    'api_save_payment_bank',
+    'api_test_payment_connection',
+    'api_save_system',
+    'list_backups',
+    'backup_now',
+    'download_backup',
+    'save_esign_settings',
+    'get_esign_settings',
+    'test_invoice_connection',
+    'list_users',
+    'save_user',
+    'delete_user_api',
+    'api_invoice_schedule_status',
+    'api_invoice_schedule_toggle',
+    'api_sme_tt58_tax_method',
+    'api_database_reset',
+})
+
+
+def tenant_settings_required(f):
+    """Trang /settings và API HĐĐT — không cho phiên DVKT tự cấu hình."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not user_can_access_tenant_settings():
+            if request.path.startswith('/api/'):
+                return jsonify({"success": False, "error": "Forbidden"}), 403
+            return _settings_forbidden_redirect()
         return f(*args, **kwargs)
     return decorated_function
 

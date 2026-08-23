@@ -39,14 +39,78 @@
             display: flex;
             flex-direction: column;
         }
-        body.page-login {
-            display: block;
-            background: #f8f9fa;
+        body.page-firm-master-settings {
+            background: #f4f6f9;
+        }
+        .firm-master-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1030;
         }
         .navbar-brand {
             font-weight: 700;
             font-size: 1.25rem;
             line-height: 1.2;
+        }
+        .navbar-brand-logo {
+            width: 52px;
+            height: 52px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+        .navbar-brand-logo-img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            object-position: center center;
+            display: block;
+            margin: auto;
+        }
+        .navbar-brand-logo-img.is-vn-flag {
+            width: 100%;
+            height: 100%;
+        }
+        .business-logo-preview-box {
+            width: 96px;
+            height: 96px;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .business-logo-preview-box.business-logo-preview-box--sm {
+            width: 88px;
+            height: 88px;
+            padding: 7px;
+        }
+        .business-logo-preview-img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            object-position: center center;
+            display: block;
+            margin: auto;
+        }
+        .business-logo-preview-img.is-vn-flag {
+            width: 100%;
+            height: 100%;
+        }
+        .navbar-brand-logo-placeholder {
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 1.35rem;
+        }
+        .navbar-brand-text {
+            min-width: 0;
         }
         .navbar .nav-link {
             font-weight: 500;
@@ -253,18 +317,61 @@
     {% block head_extra %}{% endblock %}
     {% block extra_style %}{% endblock %}
 </head>
-<body{% if request.endpoint == 'login' %} class="page-login"{% endif %}>
-    {% if master_viewing_tenant and request.endpoint != 'login' %}
+<body{% if request.endpoint == 'login' %} class="page-login"{% elif master_viewing_firm|default(false) %} class="page-firm-master-settings"{% endif %}>
+    {% if master_viewing_firm and request.endpoint != 'login' %}
+    <header class="firm-master-topbar bg-dark text-white shadow-sm">
+        <div class="container-fluid py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex flex-column flex-md-row align-items-md-center gap-1 gap-md-3">
+                <span class="fw-bold"><i class="fas fa-building me-2"></i>Cài đặt đơn vị DVKT</span>
+                <span class="small opacity-75">
+                    {{ master_viewing_tenant }}
+                    {% if tenant_profile.business_name or info.business_name %}
+                    · {{ tenant_profile.business_name or info.business_name }}
+                    {% endif %}
+                </span>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-light" onclick="leaveMasterTenant()">
+                    <i class="fas fa-arrow-left me-1"></i>Về Master Settings
+                </button>
+                <a href="{{ url_for('logout') }}" class="btn btn-sm btn-light">
+                    <i class="fas fa-sign-out-alt me-1"></i>Thoát
+                </a>
+            </div>
+        </div>
+    </header>
+    <script>
+    async function leaveMasterTenant() {
+        try {
+            const res = await fetch('/api/master/leave_tenant', { method: 'POST' });
+            const data = await res.json();
+            if (data.redirect) window.location.href = data.redirect;
+            else window.location.href = '/master/settings';
+        } catch (e) {
+            window.location.href = '/master/settings';
+        }
+    }
+    </script>
+    {% elif master_viewing_tenant and request.endpoint != 'login' %}
     <div class="alert alert-warning mb-0 py-2 rounded-0 border-0 d-flex flex-wrap justify-content-center align-items-center gap-2 text-center">
         <span class="small">
             <i class="fas fa-user-shield"></i>
+            {% if master_viewing_firm %}
+            Master đang cấu hình DVKT <strong>{{ master_viewing_tenant }}</strong>
+            <span class="text-muted">— chỉ trang Cài đặt tenant (HĐĐT, thông tin đơn vị)</span>
+            {% else %}
             Master đang xem tenant <strong>{{ master_viewing_tenant }}</strong>
             {% if tenant_profile.accounting_regime_label %} · {{ tenant_profile.accounting_regime_label }}{% elif tenant_profile.accounting_regime %} · {{ tenant_profile.accounting_regime }}{% endif %}
             {% if tenant_profile.revenue_tier %} · {{ tenant_profile.revenue_tier }}{% endif %}
             {% if tenant_profile.enabled_nn_sectors %} · NN: {{ tenant_profile.enabled_nn_sectors|join(', ') }}{% endif %}
+            {% endif %}
         </span>
+        {% if not master_viewing_firm %}
         <a class="btn btn-sm btn-outline-dark" href="{{ url_for('HKD_dashboard') }}" {% if tenant_is_sme %}title="Tenant SME — HKD chỉ để đối chiếu"{% endif %}>Kế toán HKD</a>
         <a class="btn btn-sm btn-outline-dark" href="{{ url_for('SME_dashboard') }}">Kế toán SME</a>
+        {% else %}
+        <a class="btn btn-sm btn-outline-dark" href="{{ url_for('settings_page') }}">Cài đặt DVKT</a>
+        {% endif %}
         <button type="button" class="btn btn-sm btn-dark" onclick="leaveMasterTenant()">Rời tenant</button>
     </div>
     <script>
@@ -281,16 +388,58 @@
     </script>
     {% endif %}
 
-    {% if request.endpoint != 'login' %}
+    {% if firm_viewing_client and request.endpoint != 'login' %}
+    <div class="alert alert-info mb-0 py-2 rounded-0 border-0 d-flex flex-wrap justify-content-center align-items-center gap-2 text-center">
+        <span class="small">
+            <i class="fas fa-briefcase"></i>
+            DVKT <strong>{{ firm_name }}</strong> đang làm sổ
+            <strong>{{ firm_client_name }}</strong>
+            {% if firm_client_tax_code %} · MST {{ firm_client_tax_code }}{% endif %}
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-dark" onclick="leaveFirmClient()">Về cổng DVKT</button>
+    </div>
+    {% elif firm_viewing_own_books and request.endpoint != 'login' %}
+    <div class="alert alert-success mb-0 py-2 rounded-0 border-0 d-flex flex-wrap justify-content-center align-items-center gap-2 text-center">
+        <span class="small">
+            <i class="fas fa-calculator"></i>
+            DVKT <strong>{{ firm_name }}</strong> — sổ <strong>Kế toán SME nội bộ</strong>
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-dark" onclick="leaveFirmClient()">Về cổng DVKT</button>
+    </div>
+    {% elif firm_session and not firm_viewing_accounting and request.endpoint != 'login' %}
+    <div class="alert alert-primary mb-0 py-1 rounded-0 border-0 text-center small">
+        <i class="fas fa-building"></i> Phiên DVKT — <a href="{{ url_for('firm_portal') }}" class="alert-link">Cổng quản lý DN thuê &amp; sổ nội bộ</a>
+    </div>
+    {% endif %}
+    {% if firm_session and firm_viewing_accounting and request.endpoint != 'login' %}
+    <script>
+    async function leaveFirmClient() {
+        try {
+            const res = await fetch('/api/firm/leave', { method: 'POST', credentials: 'same-origin' });
+            const data = await res.json();
+            if (data.redirect) window.location.href = data.redirect;
+            else window.location.href = '/firm';
+        } catch (e) {
+            window.location.href = '/firm';
+        }
+    }
+    </script>
+    {% endif %}
+
+    {% set vn_flag_url = default_business_logo_url() %}
+    {% if request.endpoint != 'login' and not master_viewing_firm|default(false) %}
     <!-- Navbar chính -->
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background: linear-gradient(135deg, #1e3a8a, #1e40af);">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% if tenant_is_sme or user_has_sme_nav %}{{ url_for('SME_dashboard') }}{% else %}{{ url_for('sale') }}{% endif %}">
-                <div class="d-flex flex-column">
+            <a class="navbar-brand d-flex align-items-center gap-3" href="{% if tenant_is_sme or user_has_sme_nav %}{{ url_for('SME_dashboard') }}{% else %}{{ url_for('sale') }}{% endif %}">
+                <div class="navbar-brand-logo" title="{% if has_custom_business_logo|default(false) %}Logo đơn vị{% else %}Cờ Việt Nam (mặc định){% endif %}">
+                    <img src="{{ business_logo_url or vn_flag_url }}" alt="Logo {{ info.business_name or '' }}" class="navbar-brand-logo-img{% if not has_custom_business_logo|default(false) %} is-vn-flag{% endif %}" onerror="this.onerror=null;this.src='{{ vn_flag_url }}';this.classList.add('is-vn-flag');">
+                </div>
+                <div class="d-flex flex-column navbar-brand-text">
                     <span class="fw-bold">KETO POS 68</span>
                     <span style="font-size: 0.95rem;" class="fw-bold">TẦM NHÌN VIỆT</span>
-                    <span style="font-size: 0.82rem;" class="fw-bold">{{ info.business_name or 'Cửa Hàng' }}</span>
-                    <span style="font-size: 0.72rem;">{{ info.phone or '' }}</span>
+                    <span style="font-size: 0.82rem;" class="fw-bold text-truncate">{{ info.business_name or 'Cửa Hàng' }}</span>
+                    <span style="font-size: 0.72rem;">MST: {{ info.tax_code or '—' }}</span>
                 </div>
             </a>
 
@@ -338,7 +487,7 @@
                     {% endif %}
 
                     <!-- Cài đặt -->
-                    {% if current_user.role in ['admin', 'admin*', 'adminFB', 'master'] or is_sme_admin|default(false) %}
+                    {% if user_can_tenant_settings|default(false) or is_sme_admin|default(false) %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'settings_page' %}active{% endif %}" href="{{ url_for('settings_page') }}">
                             <i class="fas fa-cog"></i> Cài Đặt
@@ -347,7 +496,7 @@
                     {% endif %}
 
                     <!-- Thiết lập tổng quản trị -->
-                    {% if current_user.role == 'master' %}
+                    {% if current_user.role == 'master' and not master_viewing_firm|default(false) %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'master_settings' %}active{% endif %}" href="{{ url_for('master_settings') }}">
                             <i class="fas fa-tools"></i> Thiết lập tổng quản trị
@@ -377,9 +526,10 @@
             </div>
         </div>
     </nav>
+    {% endif %}
 
-    <!-- Nội dung chính -->
-    <div class="container-fluid mt-3 mt-lg-4 flex-grow-1">
+    {% if request.endpoint != 'login' %}
+    <div class="container-fluid {% if master_viewing_firm|default(false) %}mt-3{% else %}mt-3 mt-lg-4{% endif %} flex-grow-1">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -392,12 +542,13 @@
         {% endwith %}
     {% endif %}
 
-        {% block content %}{% endblock %}
+    {% block content %}{% endblock %}
 
     {% if request.endpoint != 'login' %}
     </div>
+    {% endif %}
 
-    <!-- Footer -->
+    {% if request.endpoint != 'login' and not master_viewing_firm|default(false) %}
     <footer class="footer text-center">
         <div class="container">
             © Hệ Thống Bán Hàng & Kế Toán HKD và Doanh Nghiệp | © 2026 | Phát triển bởi <strong>Kiên Trung Tín</strong>

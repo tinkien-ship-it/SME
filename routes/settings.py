@@ -294,6 +294,7 @@ def register_settings_routes(app):
         login_required,
         master_required,
         require_permission,
+        tenant_settings_required,
     )
     from flask_login import login_user
     from app import bcrypt, google
@@ -407,6 +408,45 @@ def register_settings_routes(app):
             if not username or not password:
                 flash("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.", "danger")
                 return _render_login_page()
+
+            # ==================== 0. Đăng nhập DVKT (firm_users trên registry) ====================
+            from Services.firm_tenant import (
+                get_firm_user_by_login,
+                verify_firm_password,
+                finalize_firm_login,
+            )
+            firm_user = get_firm_user_by_login(username)
+            if firm_user:
+                if not firm_user.get('firm_active', 1):
+                    flash('Tài khoản đơn vị DVKT đã bị khóa. Liên hệ quản trị.', 'danger')
+                    return _render_login_page()
+                exp = (firm_user.get('expiry_date') or '').strip()
+                if exp:
+                    try:
+                        from datetime import datetime as _dt
+                        if _dt.strptime(exp[:10], '%Y-%m-%d').date() < _dt.now().date():
+                            flash('Gói dịch vụ DVKT đã hết hạn. Liên hệ quản trị để gia hạn.', 'warning')
+                            return _render_login_page()
+                    except ValueError:
+                        pass
+                if not verify_firm_password(firm_user, password):
+                    flash('Mật khẩu không chính xác!', 'danger')
+                    return _render_login_page()
+                token = finalize_firm_login(firm_user)
+                session.permanent = True
+                user_obj = User(
+                    id=firm_user['id'],
+                    username=firm_user['login_email'],
+                    role=session.get('role') or 'managerSME99',
+                    db_path=session.get('db_path'),
+                    tenant_id=session.get('last_tenant_id'),
+                    full_name=firm_user.get('full_name') or firm_user['login_email'],
+                    permissions='view_audit_log',
+                )
+                session['user_id'] = int(firm_user['id'])
+                login_user(user_obj, remember=True)
+                flash(f"Chào mừng {user_obj.full_name} — cổng DVKT", 'success')
+                return redirect(url_for('firm_portal'))
 
             # ==================== 1. Xác định Tenant và Database ====================
             tenant_record = get_tenant_by_username(username, active_only=True)
@@ -657,7 +697,9 @@ def register_settings_routes(app):
                 tenant = conn.execute("""
                     SELECT tenant_id, business_name, phone, email, address,
                            expiry_date, is_active, is_2fa_enabled,
-                           created_at, settings, business_type
+                           created_at, settings, business_type,
+                           COALESCE(tenant_type, 'standalone') AS tenant_type,
+                           COALESCE(max_clients, 50) AS max_clients
                     FROM tenants
                     WHERE tenant_id = ?
                 """, (tenant_id,)).fetchone()
@@ -687,7 +729,18 @@ def register_settings_routes(app):
             st = parse_tenant_settings(tenant_dict.get('settings')) or {}
             tenant_dict['enterprise_sector'] = st.get('enterprise_sector')
             tenant_dict['sme_revenue_band'] = st.get('sme_revenue_band')
+            tenant_dict['firm_package_id'] = st.get('firm_package_id')
             tenant_dict['settings'] = st
+            if tenant_dict.get('tenant_type') == 'firm':
+                from Services.firm_tenant import firm_usage_summary, resolve_firm_package
+                tenant_dict['firm_usage'] = firm_usage_summary(
+                    tenant_id, tenant_dict.get('max_clients'),
+                )
+                pkg = resolve_firm_package(
+                    tenant_dict.get('firm_package_id'),
+                    tenant_dict.get('max_clients'),
+                )
+                tenant_dict['firm_package_label'] = pkg.get('label')
 
             return jsonify({
                 "success": True,
@@ -1537,6 +1590,12 @@ Trân trọng,
     @app.route('/api/settings/list_users', methods=['GET'])
     @admin_or_master_required
     def list_users():
+        from auth import is_master_configuring_firm_tenant
+        if is_master_configuring_firm_tenant():
+            tid = (session.get('master_viewing_tenant') or '').strip()
+            from Services.firm_tenant import list_firm_users_for_settings
+            return jsonify(list_firm_users_for_settings(tid))
+
         from Services.sme.branches import ensure_sme_branches_schema
         from Services.sme_roles import PERMISSION_BYPASS_ROLES
         from Services.user_branch import ensure_user_branch_schema
@@ -1793,18 +1852,39 @@ Trân trọng,
     def api_master_tenants():
         """Lấy danh sách tất cả các tenants cho giao diện quản trị Master"""
         try:
-            # Luôn đọc registry trên MAIN DB — không dùng get_db_connection()
-            # (có thể đang trỏ tenant DB khi session còn last_tenant_id).
+            from Services.firm_tenant import ensure_firm_schema
+            ensure_firm_schema()
+            # Luôn đọc registry trên MAIN DB
             with get_main_db_connection() as conn:
                 c = conn.cursor()
                 c.execute("""
                     SELECT id, tenant_id, db_path, business_name, phone, email, address,
-                           expiry_date, is_active, is_2fa_enabled, created_at, settings, business_type
+                           expiry_date, is_active, is_2fa_enabled, created_at, settings, business_type,
+                           COALESCE(tenant_type, 'standalone') AS tenant_type,
+                           COALESCE(max_clients, 50) AS max_clients
                     FROM tenants
                     ORDER BY created_at DESC
                 """)
                 rows = c.fetchall()
                 from Services.tenant_profile import build_profile_from_registry
+                from Services.firm_tenant import (
+                    TENANT_TYPE_FIRM,
+                    firm_usage_summary,
+                    resolve_firm_package,
+                )
+                from Services.subscription_service import parse_tenant_settings
+
+                firm_counts: dict[str, int] = {}
+                firm_ids = [dict(r)['tenant_id'] for r in rows if dict(r).get('tenant_type') == TENANT_TYPE_FIRM]
+                if firm_ids:
+                    placeholders = ','.join('?' * len(firm_ids))
+                    cnt_rows = c.execute(f"""
+                        SELECT firm_tenant_id, COUNT(*) AS c
+                        FROM firm_clients
+                        WHERE status = 'active' AND firm_tenant_id IN ({placeholders})
+                        GROUP BY firm_tenant_id
+                    """, firm_ids).fetchall()
+                    firm_counts = {r['firm_tenant_id']: int(r['c']) for r in cnt_rows}
 
                 tenants = []
                 for row in rows:
@@ -1815,6 +1895,26 @@ Trân trọng,
                     tenant_dict['revenue_tier'] = profile.get('revenue_tier')
                     tenant_dict['enabled_nn_sectors'] = profile.get('enabled_nn_sectors') or []
                     tenant_dict['business_line'] = profile.get('business_line')
+                    st = parse_tenant_settings(tenant_dict.get('settings'))
+                    tenant_dict['firm_package_id'] = st.get('firm_package_id')
+                    if tenant_dict.get('tenant_type') == TENANT_TYPE_FIRM:
+                        active = firm_counts.get(tenant_dict['tenant_id'], 0)
+                        usage = firm_usage_summary(
+                            tenant_dict['tenant_id'],
+                            tenant_dict.get('max_clients'),
+                        )
+                        usage['active_clients'] = active
+                        if not usage['unlimited']:
+                            usage['usage_label'] = f"{active} / {usage['max_clients']}"
+                            usage['at_capacity'] = active >= usage['max_clients']
+                        else:
+                            usage['usage_label'] = f'{active} / ∞'
+                        pkg = resolve_firm_package(
+                            tenant_dict.get('firm_package_id'),
+                            tenant_dict.get('max_clients'),
+                        )
+                        tenant_dict['firm_package_label'] = pkg.get('label') or usage['package_label']
+                        tenant_dict['firm_usage'] = usage
                     tenants.append(tenant_dict)
 
             return jsonify({
@@ -1833,6 +1933,13 @@ Trân trọng,
                 "success": False,
                 "error": f"Lỗi hệ thống: {str(e)}"
             }), 500
+
+    @app.route('/api/master/firm_packages', methods=['GET'])
+    @login_required
+    @master_required
+    def api_master_firm_packages():
+        from Services.firm_tenant import list_firm_client_packages
+        return jsonify({'success': True, 'packages': list_firm_client_packages()})
 
 
     # ====================== MAIN DATABASE 2FA TOGGLE ======================
@@ -2099,6 +2206,75 @@ Trân trọng,
         if not tenant_id or not phone:
             return jsonify({"success": False, "error": "Vui lòng nhập Tenant ID và Số điện thoại"}), 400
 
+        tenant_type = (data.get('tenant_type') or 'standalone').strip().lower()
+        if tenant_type == 'firm':
+            from Services.firm_tenant import provision_firm_tenant
+            owner_email = (data.get('email') or '').strip()
+            owner_password = data.get('customer_password') or data.get('owner_password') or 'admin'
+            if not owner_email:
+                return jsonify({'success': False, 'error': 'Đơn Vị Dịch Vụ Kế Toán cần email owner (đăng nhập)'}), 400
+            from Services.firm_tenant import resolve_firm_package
+            pkg = resolve_firm_package(
+                data.get('firm_package_id'),
+                data.get('max_clients'),
+            )
+            max_clients = pkg['max_clients']
+            regime = (data.get('accounting_regime') or 'SME_TT99').strip()
+            firm_client_regimes = data.get('firm_client_regimes') or ['SME_MICRO_TT58', 'SME_TT99']
+            firm_client_regimes = [
+                r for r in firm_client_regimes
+                if r in ('SME_MICRO_TT58', 'SME_TT99')
+            ] or ['SME_MICRO_TT58', 'SME_TT99']
+            result = provision_firm_tenant(
+                tenant_id,
+                business_name,
+                phone,
+                owner_email=owner_email,
+                owner_password=owner_password,
+                owner_name=(data.get('representative_name') or business_name).strip(),
+                address=(data.get('address') or '').strip(),
+                tax_code=(data.get('tax_code') or '').strip(),
+                expiry_date=data.get('expiry_date'),
+                max_clients=max_clients,
+                accounting_regime=regime,
+                extra_settings={
+                    'firm_client_regimes': firm_client_regimes,
+                    'firm_package_id': pkg['id'],
+                    'firm_package_label': pkg['label'],
+                },
+            )
+            if not result.get('success'):
+                return jsonify(result), 400
+            from Services.audit_log import write_audit
+            write_audit(
+                'create', 'tenant',
+                f"Tạo tenant DVKT {tenant_id} ({business_name})",
+                entity_type='tenant', entity_id=tenant_id, entity_label=business_name,
+                new_data={'tenant_id': tenant_id, 'tenant_type': 'firm', 'owner_email': owner_email},
+                tenant_id=tenant_id,
+                use_main=True,
+            )
+            return jsonify({
+                'success': True,
+                'message': (
+                    f"Đơn Vị Dịch Vụ Kế Toán '{business_name}' đã sẵn sàng. "
+                    f"Owner: {owner_email} — gói {pkg['label']}."
+                    + (
+                        f" Đã gửi email thông tin đăng nhập tới {owner_email}."
+                        if result.get('email_sent')
+                        else (
+                            f" Chưa gửi được email: {result.get('email_error') or 'lỗi không xác định'}."
+                            if result.get('email_error')
+                            else ''
+                        )
+                    )
+                ),
+                'tenant_id': tenant_id,
+                'tenant_type': 'firm',
+                'email_sent': result.get('email_sent'),
+                'email_error': result.get('email_error'),
+            })
+
         from Services.subscription_service import provision_tenant
         from Services.tenant_profile import is_sme_regime
 
@@ -2210,6 +2386,40 @@ Trân trọng,
             if not old_row:
                 conn.close()
                 return jsonify({"success": False, "error": "Không tìm thấy tenant"}), 404
+
+            from Services.firm_tenant import (
+                TENANT_TYPE_FIRM,
+                count_firm_active_clients,
+                is_firm_unlimited,
+                resolve_firm_package,
+            )
+            tenant_type_row = c.execute(
+                "SELECT COALESCE(tenant_type, 'standalone') AS tenant_type FROM tenants WHERE tenant_id = ?",
+                (tenant_id,),
+            ).fetchone()
+            is_firm = (tenant_type_row['tenant_type'] if tenant_type_row else 'standalone') == TENANT_TYPE_FIRM
+            if is_firm and (data.get('firm_package_id') is not None or data.get('max_clients') is not None):
+                pkg = resolve_firm_package(data.get('firm_package_id'), data.get('max_clients'))
+                active = count_firm_active_clients(tenant_id)
+                if not is_firm_unlimited(pkg['max_clients']) and active > pkg['max_clients']:
+                    conn.close()
+                    return jsonify({
+                        'success': False,
+                        'error': (
+                            f"Không thể hạ gói: đang phục vụ {active} DN, "
+                            f"gói mới chỉ cho phép {pkg['max_clients']}."
+                        ),
+                    }), 400
+                c.execute(
+                    "UPDATE tenants SET max_clients = ? WHERE tenant_id = ?",
+                    (pkg['max_clients'], tenant_id),
+                )
+                from Services.tenant_profile import update_registry_settings
+                update_registry_settings(tenant_id, {
+                    'firm_package_id': pkg['id'],
+                    'firm_package_label': pkg['label'],
+                    'max_clients': pkg['max_clients'],
+                }, conn=conn)
 
             old_settings = {}
             try:
@@ -2527,15 +2737,32 @@ Trân trọng,
         rec = get_tenant_record(tenant_id.strip(), include_inactive=True)
         if not rec:
             return jsonify({'success': False, 'error': 'Không tìm thấy tenant'}), 404
-        db_path = _normalize_db_path(rec.get('db_path'))
-        if not db_path:
-            return jsonify({'success': False, 'error': 'Tenant chưa có database'}), 400
+
+        from Services.firm_tenant import is_firm_tenant
+        tid = tenant_id.strip()
+        is_firm = is_firm_tenant(tid)
+
+        if is_firm:
+            try:
+                from Services.firm_tenant import ensure_firm_own_books_ready
+                db_path = ensure_firm_own_books_ready(tid)
+            except FileNotFoundError as exc:
+                return jsonify({'success': False, 'error': str(exc)}), 400
+            except Exception as exc:
+                return jsonify({
+                    'success': False,
+                    'error': f'Không chuẩn bị được sổ DVKT: {exc}',
+                }), 500
+        else:
+            db_path = _normalize_db_path(rec.get('db_path'))
+            if not db_path:
+                return jsonify({'success': False, 'error': 'Tenant chưa có database'}), 400
 
         session.setdefault('master_home_db_path', session.get('db_path'))
         session.setdefault('master_home_tenant_id', session.get('last_tenant_id'))
-        session['last_tenant_id'] = tenant_id.strip()
+        session['last_tenant_id'] = tid
         session['db_path'] = db_path
-        session['master_viewing_tenant'] = tenant_id.strip()
+        session['master_viewing_tenant'] = tid
         if session.get('user'):
             session['user'] = dict(session['user'])
             session['user']['role'] = 'master'
@@ -2547,27 +2774,33 @@ Trân trọng,
             username=u.get('username', 'master'),
             role='master',
             db_path=db_path,
-            tenant_id=tenant_id.strip(),
+            tenant_id=tid,
             full_name=u.get('full_name') or 'Master',
             permissions=u.get('permissions', ''),
         ), remember=True)
         session.modified = True
 
         from Services.tenant_profile import load_tenant_profile, is_sme_regime
-        profile = load_tenant_profile(tenant_id.strip())
+        profile = load_tenant_profile(tid)
         regime = profile.get('accounting_regime') or 'HKD'
-        if is_sme_regime(regime):
+        if is_firm:
+            redirect_to = url_for('settings_page')
+            message = f'Đã mở Cài đặt DVKT {tid}'
+        elif is_sme_regime(regime):
             redirect_to = url_for('SME_dashboard')
+            message = f"Đã vào tenant {tid} ({profile.get('accounting_regime_label') or regime})"
         else:
             redirect_to = url_for('HKD_dashboard')
+            message = f"Đã vào tenant {tid} ({profile.get('accounting_regime_label') or regime})"
         return jsonify({
             'success': True,
-            'tenant_id': tenant_id.strip(),
+            'tenant_id': tid,
+            'tenant_type': 'firm' if is_firm else 'standalone',
             'accounting_regime': regime,
             'revenue_tier': profile.get('revenue_tier'),
             'enabled_nn_sectors': profile.get('enabled_nn_sectors'),
             'redirect': redirect_to,
-            'message': f"Đã vào tenant {tenant_id} ({profile.get('accounting_regime_label') or regime})",
+            'message': message,
         })
 
     @app.route('/api/master/leave_tenant', methods=['POST'])
@@ -2622,23 +2855,44 @@ Trân trọng,
         conn = get_main_db_connection()
         db_path = None
         tenant_label = tenant_id
+        is_firm = False
         try:
             conn.row_factory = sqlite3.Row
             c = conn.cursor()
 
             # 2. Lấy thông tin đường dẫn DB trước khi xóa
-            c.execute("SELECT db_path, business_name FROM tenants WHERE tenant_id = ?", (tenant_id,))
+            c.execute(
+                """
+                SELECT db_path, business_name,
+                       COALESCE(tenant_type, 'standalone') AS tenant_type
+                FROM tenants WHERE tenant_id = ?
+                """,
+                (tenant_id,),
+            )
             row = c.fetchone()
             if not row:
                 return jsonify({"success": False, "error": "Không tìm thấy tenant"}), 404
 
             db_path = _normalize_db_path(row['db_path'])
             tenant_label = row['business_name'] or tenant_id
+            tenant_type = (row['tenant_type'] or 'standalone').strip().lower()
+            is_firm = tenant_type == 'firm'
 
             # Đóng connection request đang mở file tenant (nếu master đang xem tenant này)
             force_close_request_db_if_path(db_path)
 
-            # 3. Xóa metadata trên MAIN trong một transaction
+            # 3. Xóa metadata DVKT trên registry (firm_users, firm_clients, …)
+            if is_firm:
+                from Services.firm_tenant import purge_firm_tenant_registry
+                purge_result = purge_firm_tenant_registry(tenant_id, conn=conn)
+                if not purge_result.get('success'):
+                    conn.rollback()
+                    return jsonify({
+                        'success': False,
+                        'error': purge_result.get('error') or 'Không xóa được dữ liệu DVKT',
+                    }), 500
+
+            # 4. Xóa metadata tenant trên MAIN trong một transaction
             c.execute("""
                 DELETE FROM user_trusted_devices
                 WHERE username IN (
@@ -2711,8 +2965,13 @@ Trân trọng,
             except Exception:
                 pass
 
-        # 4. Xóa file vật lý sau khi đã đóng hết connection MAIN
+        # 5. Xóa file vật lý sau khi đã đóng hết connection MAIN
         file_note = ''
+        if is_firm:
+            from Services.firm_tenant import remove_firm_tenant_files
+            firm_removed = remove_firm_tenant_files(tenant_id)
+            if firm_removed.get('errors'):
+                file_note += ' ' + '; '.join(firm_removed['errors'])
         if db_path:
             removed = remove_sqlite_files(db_path)
             if removed.get('errors'):
@@ -2750,7 +3009,7 @@ Trân trọng,
         )
 
     @app.route('/settings')
-    @admin_or_master_required
+    @tenant_settings_required
     def settings_page():
         from helpers import get_setting as _get_setting
         from Services.invoice_config import get_active_invoice_config
@@ -2800,6 +3059,8 @@ Trân trọng,
         except Exception:
             tt58_ctx = None
 
+        from auth import is_master_configuring_firm_tenant
+
         return render_template('settings.html', 
                                info=info, 
                                esign=esign,
@@ -2808,7 +3069,8 @@ Trân trọng,
                                payment_tolerance=_get_setting('payment_amount_tolerance', '1000'),
                                has_sepay_key=bool(_get_setting('sepay_api_key', '')),
                                has_casso_key=bool(_get_setting('casso_api_key', '')),
-                               tt58=tt58_ctx)
+                               tt58=tt58_ctx,
+                               is_firm_tenant_settings=is_master_configuring_firm_tenant())
 
     @app.route('/api/settings/business', methods=['POST'])
     @admin_or_store_setup_required
@@ -2934,6 +3196,79 @@ Trân trọng,
             if conn:
                 conn.close()
 
+    @app.route('/api/settings/business-logo', methods=['POST'])
+    @admin_or_store_setup_required
+    def api_upload_business_logo():
+        from Services.business_branding import ensure_business_logo_column, save_business_logo_file
+
+        file = request.files.get('logo') or request.files.get('file')
+        result = save_business_logo_file(file, tenant_id=getattr(g, 'tenant_id', None))
+        if not result.get('success'):
+            return jsonify(result), 400
+
+        conn = None
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            ensure_business_logo_column(cur)
+            row = cur.execute('SELECT id FROM business_info LIMIT 1').fetchone()
+            logo_path = result['logo_path']
+            if row:
+                cur.execute(
+                    'UPDATE business_info SET logo_path = ? WHERE id = ?',
+                    (logo_path, row['id'] if hasattr(row, 'keys') else row[0]),
+                )
+            else:
+                cur.execute(
+                    'INSERT INTO business_info (business_name, logo_path) VALUES (?, ?)',
+                    ('', logo_path),
+                )
+            conn.commit()
+            return jsonify({
+                'success': True,
+                'message': 'Đã lưu logo',
+                'logo_path': logo_path,
+                'logo_url': result.get('logo_url'),
+            })
+        except Exception as exc:
+            if conn:
+                conn.rollback()
+            return jsonify({'success': False, 'error': str(exc)}), 500
+        finally:
+            if conn:
+                conn.close()
+
+    @app.route('/api/settings/business-logo', methods=['DELETE'])
+    @admin_or_store_setup_required
+    def api_delete_business_logo():
+        from Services.business_branding import ensure_business_logo_column, remove_business_logo_file
+
+        conn = None
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            ensure_business_logo_column(cur)
+            row = cur.execute('SELECT id, logo_path FROM business_info LIMIT 1').fetchone()
+            if row:
+                old_path = row['logo_path'] if hasattr(row, 'keys') else row[1]
+                remove_business_logo_file(old_path)
+                bid = row['id'] if hasattr(row, 'keys') else row[0]
+                cur.execute('UPDATE business_info SET logo_path = NULL WHERE id = ?', (bid,))
+            conn.commit()
+            from Services.business_branding import default_business_logo_url
+            return jsonify({
+                'success': True,
+                'message': 'Đã đặt lại logo mặc định (cờ Việt Nam)',
+                'logo_url': default_business_logo_url(),
+            })
+        except Exception as exc:
+            if conn:
+                conn.rollback()
+            return jsonify({'success': False, 'error': str(exc)}), 500
+        finally:
+            if conn:
+                conn.close()
+
     @app.route('/api/settings/payment-bank', methods=['GET'])
     @admin_or_store_setup_required
     def api_get_payment_bank():
@@ -3043,7 +3378,7 @@ Trân trọng,
                 conn.close()
 
     @app.route('/api/settings/test_payment_connection', methods=['POST'])
-    @admin_or_master_required
+    @tenant_settings_required
     def api_test_payment_connection():
         from Services.payment_bank import test_provider_connection
         data = request.get_json(silent=True) or {}
@@ -3054,7 +3389,7 @@ Trân trọng,
 
     # API Lưu các cài đặt hệ thống và Backup dữ liệu #
     @app.route('/api/settings/system', methods=['POST'])
-    @admin_or_master_required
+    @tenant_settings_required
     def api_save_system():
         data = request.json
         conn = get_db_connection()
@@ -3075,7 +3410,7 @@ Trân trọng,
             conn.close()
     @app.route('/api/settings/list_backups', methods=['GET'])
     @login_required
-    @admin_or_master_required
+    @tenant_settings_required
     def list_backups():
         # 1. Đảm bảo tenant_id không bao giờ là None
         # Nếu không có tenant_id (đang ở main), mặc định dùng thư mục 'main'
@@ -3130,7 +3465,7 @@ Trân trọng,
             return jsonify({"error": "Không thể đọc danh sách"}), 500
 
     @app.route('/api/settings/backup_now', methods=['POST'])
-    @login_required
+    @tenant_settings_required
     def backup_now():
         try:
             # 1. Xác định Tenant ID (Mặc định là 'main' nếu không có g.tenant_id)
@@ -3251,7 +3586,7 @@ Trân trọng,
     # Route: Lưu cấu hình eSign từ frontend
     @app.route('/api/settings/esign', methods=['POST'])
     @login_required
-    @admin_or_master_required
+    @tenant_settings_required
     def save_esign_settings():
         data = request.get_json()
         if not data:
@@ -3410,7 +3745,7 @@ Trân trọng,
 
     @app.route('/api/settings/esign', methods=['GET'])
     @login_required
-    @admin_or_master_required
+    @tenant_settings_required
     def get_esign_settings():
 
         conn = get_db_connection()
