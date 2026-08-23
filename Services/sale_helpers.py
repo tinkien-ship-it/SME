@@ -151,3 +151,10 @@ def insert_sale_item_with_sector(cursor, columns, values, hkd_sector_code=None):
         f"INSERT INTO sale_items ({', '.join(cols)}) VALUES ({placeholders})",
         vals,
     )
+    if table_has_column(cursor, 'sale_items', 'id'):
+        try:
+            cursor.execute(
+                'UPDATE sale_items SET id = rowid WHERE id IS NULL AND rowid = last_insert_rowid()'
+            )
+        except Exception:
+            pass

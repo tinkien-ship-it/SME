@@ -203,6 +203,32 @@ def _normalize_db_path(db_path):
     return text
 
 
+def ensure_sqlite_wal(conn: sqlite3.Connection, db_path: str | None = None) -> str | None:
+    """Bật WAL trên connection đang mở (có retry khi locked)."""
+    raw = _raw_sqlite_conn(conn)
+    path = os.path.abspath(db_path) if db_path else sqlite_db_file(conn)
+
+    def _set():
+        mode = raw.execute('PRAGMA journal_mode=WAL').fetchone()
+        if path and mode and str(mode[0]).lower() == 'wal':
+            _wal_ready_paths.add(path)
+            try:
+                raw.execute('PRAGMA wal_autocheckpoint = 1000')
+                raw.execute('PRAGMA journal_size_limit = 67108864')
+            except sqlite3.Error:
+                pass
+        return str(mode[0]) if mode else None
+
+    return sqlite_write_retry(_set, label='ensure_sqlite_wal')
+
+
+def locked_user_message() -> str:
+    return (
+        'Hệ thống đang bận (database is locked). '
+        'Vui lòng thử lại sau vài giây. Nếu lặp lại, Master chạy Kiểm tra & tự sửa (WAL).'
+    )
+
+
 def _configure_sqlite_connection(conn: sqlite3.Connection, db_path: str | None = None) -> sqlite3.Connection:
     """WAL + busy_timeout giúp đọc/ghi song song ổn định hơn trên SQLite file."""
     conn.row_factory = sqlite3.Row

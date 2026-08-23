@@ -174,6 +174,23 @@ def ask_assistant(
             _log_result(msg, result, channel, tenant_id, username, zalo_user_id, page_key, ctx)
         return result
 
+    # Learning Machine — lỗi đăng nhập / OTP / database locked
+    try:
+        from Services.assistant_learning_machine import resolve_learning_machine
+        lm = resolve_learning_machine(msg, ctx)
+        if lm and float(lm.get('confidence') or 0) >= 0.6:
+            return _finish({
+                'text': lm['text'],
+                'source': 'learning_machine',
+                'confidence': float(lm.get('confidence') or 0.75),
+                'faq_id': lm.get('faq_id'),
+                'needs_escalation': bool(lm.get('needs_escalation')),
+                'help_url': help_url,
+                'tier': get_assistant_runtime_config().get('ai_mode_label', 'Miễn phí'),
+            })
+    except Exception as exc:
+        logger.warning('learning_machine: %s', exc)
+
     # FAQ khớp cao — luôn ưu tiên (miễn phí, nhanh)
     if faq_match and faq_score >= 3.5:
         text = faq_match.entry['answer']

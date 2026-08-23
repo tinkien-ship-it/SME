@@ -152,6 +152,13 @@ def ensure_fb_schema(conn: sqlite3.Connection, *, commit: bool = True) -> list[s
     _ensure_extra_cols(conn, 'sale', _SALE_EXTRA_COLS, changed)
     _ensure_extra_cols(conn, 'sale_items', _SALE_ITEMS_EXTRA_COLS, changed)
 
+    try:
+        from Services.schema_compat import ensure_sale_items_canonical
+        for item in ensure_sale_items_canonical(conn, commit=False):
+            changed.append(item)
+    except Exception as exc:
+        print('[MIGRATE] sale_items canonical: %s' % exc)
+
     if commit:
         conn.commit()
     return changed

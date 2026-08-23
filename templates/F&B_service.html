@@ -683,11 +683,14 @@ if (qtyServed > 0 && totalQty > qtyServed) {
     container.innerHTML = html;
 }
 
-async function markItemServed(saleId, menuId) {
+async function markItemServed(saleId, menuId, isWholesale = false) {
     if (!confirm('Xác nhận món này đã phục vụ?')) return;
+    const useSaleUnit = (isWholesale === true || isWholesale === 'true' || isWholesale === 1) ? 1 : 0;
     try {
         const res = await fetch(`/api/fb/mark-served/${saleId}/${menuId}`, { 
-            method: 'POST' 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ use_sale_unit: useSaleUnit }),
         });
         const result = await res.json();
         
@@ -1192,15 +1195,6 @@ async function addItem(menuId, isWholesale = false) {
             activeSaleId = data.sale_id;
             await refreshCart(); 
             loadTables(); 
-
-            const Toast = Swal.mixin({ 
-                toast: true, 
-                position: 'top-end', 
-                showConfirmButton: false, 
-                timer: 1000, 
-                timerProgressBar: true 
-            });
-            Toast.fire({ icon: 'success', title: data.message || 'Đã thêm món' });
         } else {
             Swal.fire('Lỗi', data.message || 'Không thể thêm món', 'error');
         }
@@ -1210,30 +1204,38 @@ async function addItem(menuId, isWholesale = false) {
     }
 }
 
-async function updateQuantity(menuId, change, isWholesale = false) {
+async function updateQuantity(menuId, change, isWholesale = false, saleItemId = null) {
     if (!activeTableId) return;
 
-    // 1. CHUẨN HÓA KIỂU DỮ LIỆU SỐ LƯỢNG THAY ĐỔI
     const numericChange = parseFloat(change);
     if (isNaN(numericChange)) {
         console.error("Số lượng thay đổi không hợp lệ:", change);
         return;
     }
 
-    // 2. CHUẨN HÓA CỜ SỈ/LẺ: Chấp nhận cả kiểu Boolean true và chuỗi "true" từ HTML gửi sang
     const checkWholesale = (isWholesale === true || isWholesale === 'true' || isWholesale === 1);
     const useSaleUnit = checkWholesale ? 1 : 0;
+
+    let menuIdPayload = menuId;
+    if (menuIdPayload === 'null' || menuIdPayload === 'undefined' || menuIdPayload === '') {
+        menuIdPayload = null;
+    } else if (menuIdPayload != null && String(menuIdPayload).match(/^\d+$/)) {
+        menuIdPayload = parseInt(menuIdPayload, 10);
+    }
+
+    const body = {
+        table_id: parseInt(activeTableId, 10),
+        change: numericChange,
+        use_sale_unit: useSaleUnit,
+    };
+    if (saleItemId) body.sale_item_id = parseInt(saleItemId, 10);
+    if (menuIdPayload != null) body.menu_id = menuIdPayload;
 
     try {
         const res = await fetch('/api/fb/update-item-quantity', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                table_id: parseInt(activeTableId), 
-                menu_id: parseInt(menuId), // Nếu menuId của bạn là UUID (chuỗi), hãy bỏ parseInt() đi, để nguyên menu_id: menuId
-                change: numericChange,
-                use_sale_unit: useSaleUnit // Đồng bộ chính xác 0 hoặc 1 lên backend
-            })
+            body: JSON.stringify(body)
         });
         
         const data = await res.json();
@@ -1244,20 +1246,6 @@ async function updateQuantity(menuId, change, isWholesale = false) {
             }
             if (data.is_empty) {
                 activeSaleId = null;
-            }
-            
-            if (typeof Swal !== 'undefined' && Swal.mixin) {
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 1000,
-                    timerProgressBar: true
-                });
-                Toast.fire({
-                    icon: 'success',
-                    title: data.message || 'Cập nhật thành công!'
-                });
             }
         } else {
             console.error("Backend trả về lỗi khi cập nhật số lượng:", data.message);
@@ -1316,7 +1304,7 @@ async function refreshCart() {
                         
                         <div class="d-flex align-items-center mx-3">
                             <button class="btn btn-sm btn-outline-secondary rounded-circle px-2" 
-                                    onclick="updateQuantity('${item.menu_id}', -1, ${isWholesale})">-</button>
+                                    onclick="updateQuantity('${item.menu_id ?? ''}', -1, ${isWholesale}, ${item.sale_item_id || 'null'})">-</button>
                             
                             <div class="text-center mx-3" style="min-width: 45px;">
                                 <span class="fw-bold d-block">${item.quantity}</span>
@@ -1324,13 +1312,13 @@ async function refreshCart() {
                             </div>
                             
                             <button class="btn btn-sm btn-outline-secondary rounded-circle px-2" 
-                                    onclick="updateQuantity('${item.menu_id}', 1, ${isWholesale})">+</button>
+                                    onclick="updateQuantity('${item.menu_id ?? ''}', 1, ${isWholesale}, ${item.sale_item_id || 'null'})">+</button>
                         </div>
 
                         <div class="text-end" style="min-width: 100px;">
                             <div class="fw-bold">${formatCurrency(item.line_total)}</div>
                             <button class="btn btn-sm text-danger p-0 mt-1" 
-                                    onclick="updateQuantity('${item.menu_id}', 0, ${isWholesale})">
+                                    onclick="updateQuantity('${item.menu_id ?? ''}', 0, ${isWholesale}, ${item.sale_item_id || 'null'})">
                                 <i class="bi bi-trash"></i> Xóa
                             </button>
                         </div>

@@ -71,6 +71,16 @@ def ensure_assistant_schema(conn=None) -> None:
             escalated INTEGER DEFAULT 0,
             context_json TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS assistant_health_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            overall_status TEXT,
+            score INTEGER DEFAULT 0,
+            summary_json TEXT NOT NULL,
+            fixes_json TEXT,
+            created_at TEXT DEFAULT (datetime('now','localtime'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_assist_health_created ON assistant_health_runs(created_at DESC);
     """)
     conn.commit()
     if own:
@@ -292,10 +302,62 @@ def assistant_stats() -> dict[str, int]:
         "SELECT COUNT(*) FROM assistant_faq_dynamic WHERE status = 'approved'"
     ).fetchone()[0]
     zalo_users = conn.execute('SELECT COUNT(*) FROM assistant_zalo_sessions').fetchone()[0]
+    health_runs = 0
+    try:
+        health_runs = conn.execute('SELECT COUNT(*) FROM assistant_health_runs').fetchone()[0]
+    except sqlite3.OperationalError:
+        pass
     conn.close()
     return {
         'total_chats': total,
         'pending_review': pending,
         'dynamic_faq': faq_dyn,
         'zalo_users': zalo_users,
+        'health_runs': health_runs,
     }
+
+
+def log_health_run(report: dict[str, Any]) -> int:
+    ensure_assistant_schema()
+    conn = get_main_db_connection()
+    cur = conn.execute(
+        """INSERT INTO assistant_health_runs (overall_status, score, summary_json, fixes_json)
+           VALUES (?, ?, ?, ?)""",
+        (
+            report.get('overall') or 'unknown',
+            int(report.get('score') or 0),
+            json.dumps(report, ensure_ascii=False),
+            json.dumps(report.get('fixes_applied') or [], ensure_ascii=False),
+        ),
+    )
+    run_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return run_id
+
+
+def get_latest_health_report() -> dict[str, Any] | None:
+    ensure_assistant_schema()
+    conn = get_main_db_connection()
+    try:
+        row = conn.execute(
+            """SELECT id, overall_status, score, summary_json, fixes_json, created_at
+               FROM assistant_health_runs ORDER BY id DESC LIMIT 1"""
+        ).fetchone()
+    except sqlite3.OperationalError:
+        conn.close()
+        return None
+    conn.close()
+    if not row:
+        return None
+    data = dict(row)
+    try:
+        data['report'] = json.loads(data.pop('summary_json') or '{}')
+    except json.JSONDecodeError:
+        data['report'] = {}
+    try:
+        data['fixes_applied'] = json.loads(data.get('fixes_json') or '[]')
+    except json.JSONDecodeError:
+        data['fixes_applied'] = []
+    data.pop('fixes_json', None)
+    return data

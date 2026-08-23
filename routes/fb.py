@@ -45,18 +45,51 @@ from Services.inventory_stock_helpers import sync_inventory_quantity_from_moves
 from Services.sme.sale_journal import sync_sale_journals
 from Services.accounting_queue import enqueue_accounting_job
 from Services.tenant_profile import get_current_tenant_profile
-from db_utils import get_db_connection
+from Services.schema_compat import (
+    ensure_sale_items_canonical,
+    expand_use_sale_unit_values,
+    normalize_use_sale_unit,
+    sale_item_pk_column,
+    sale_item_pk_expr,
+    use_sale_unit_expr,
+    use_sale_unit_insert_columns,
+    use_sale_unit_where_clause,
+)
+from db_utils import (
+    _is_locked_error,
+    begin_immediate,
+    get_db_connection,
+    locked_user_message,
+    rollback_quietly,
+    sqlite_write_retry,
+)
+
+
+def _fb_table_cols(cursor, table: str) -> set[str]:
+    from Services.schema_compat import table_cols_lower
+    return table_cols_lower(cursor, table)
+
+
+def _fb_use_sale_unit_expr(cursor, alias: str = 'si') -> str:
+    return use_sale_unit_expr(cursor, alias)
+
+
+def _fb_normalize_use_sale_unit(raw) -> int:
+    return normalize_use_sale_unit(raw)
 
 
 def _fb_load_sale_items(cursor, sale_id):
-    return cursor.execute("""
+    use_expr = use_sale_unit_expr(cursor, 'si')
+    pk_expr = sale_item_pk_expr(cursor, 'si')
+    return cursor.execute(f"""
         SELECT 
+            {pk_expr} AS sale_item_id,
             si.menu_id,
             si.quantity,
             si.price,
             si.line_total,
             si.unit AS sale_item_unit,
-            si.UseSaleUnit AS db_use_sale_unit,
+            {use_expr} AS db_use_sale_unit,
             m.product_type, 
             m.name as item_name, 
             m.product_id as origin_product_id,
@@ -65,7 +98,7 @@ def _fb_load_sale_items(cursor, sale_id):
             i.avg_cost, 
             i.quantity as stock_qty
         FROM sale_items si
-        JOIN menu m ON si.menu_id = m.id
+        LEFT JOIN menu m ON si.menu_id = m.id
         LEFT JOIN products p ON m.product_id = p.id
         LEFT JOIN inventory i ON m.product_id = i.product_id
         WHERE si.sale_id = ?
@@ -88,6 +121,8 @@ def _fb_validate_stock(cursor, items):
     for item in items:
         menu_id = item['menu_id']
         order_qty = float(item['quantity'] or 0)
+        if order_qty <= 0:
+            continue
         product_type = item['product_type']
         raw_use_unit = item['db_use_sale_unit']
         use_sale_unit = 1 if raw_use_unit in [1, '1', True, 'true'] else 0
@@ -103,16 +138,17 @@ def _fb_validate_stock(cursor, items):
                 return False, f"Kho không đủ hàng! '{item['item_name']}' cần {required_stock_qty} {stock_unit} nhưng hiện tại chỉ còn {current_stock} {stock_unit}."
 
         # Món có định mức NVL → kiểm tra tồn lúc checkout (ready_made đã xử lý ở trên)
-        recipes = _fb_fetch_recipes(cursor, menu_id)
-        for ingredient in recipes:
-            required_qty = float(ingredient['recipe_qty'] or 0) * order_qty
-            current_stock = float(ingredient['stock_qty'] or 0)
-            if current_stock < required_qty:
-                return False, (
-                    f"Không đủ nguyên liệu chế biến món '{item['item_name']}'! "
-                    f"Nguyên liệu '{ingredient['material_name']}' cần {required_qty} {ingredient['unit']} "
-                    f"nhưng kho chỉ còn {current_stock} {ingredient['unit']}."
-                )
+        if menu_id:
+            recipes = _fb_fetch_recipes(cursor, menu_id)
+            for ingredient in recipes:
+                required_qty = float(ingredient['recipe_qty'] or 0) * order_qty
+                current_stock = float(ingredient['stock_qty'] or 0)
+                if current_stock < required_qty:
+                    return False, (
+                        f"Không đủ nguyên liệu chế biến món '{item['item_name']}'! "
+                        f"Nguyên liệu '{ingredient['material_name']}' cần {required_qty} {ingredient['unit']} "
+                        f"nhưng kho chỉ còn {current_stock} {ingredient['unit']}."
+                    )
         # Món chế biến không có định mức → không kiểm tra tại checkout (chốt cuối ngày qua draft_inventory)
     return True, None
 
@@ -274,26 +310,27 @@ def _fb_finalize_checkout(cursor, sale_id, table_id, customer_name, payment_meth
             })
 
         # Món có định mức NVL → trừ kho ngay khi checkout
-        recipes = _fb_fetch_recipes(cursor, item['menu_id'])
-        for ingredient in recipes:
-            mat_id = ingredient['product_id']
-            total_mat_qty = float(ingredient['recipe_qty'] or 0) * order_qty
-            mat_cost = float(ingredient['avg_cost'] or 0)
-            cursor.execute("""
-                INSERT INTO stock_moves (product_id, date, type, ref_id, quantity, cost_price, ref_document, ref_type, type1, note)
-                VALUES (?, ?, 'SALE_RECIPE', ?, ?, ?, ?, ?, ?, ?)
-            """, (mat_id, sale_date, sale_id, -total_mat_qty, mat_cost, sale_no, 'export', 'Xuất nguyên liệu',
-                  f"Hao phí chế biến món '{item['item_name']}' tại bàn {table_id}"))
-            sync_inventory_quantity_from_moves(cursor, mat_id)
+        if item['menu_id']:
+            recipes = _fb_fetch_recipes(cursor, item['menu_id'])
+            for ingredient in recipes:
+                mat_id = ingredient['product_id']
+                total_mat_qty = float(ingredient['recipe_qty'] or 0) * order_qty
+                mat_cost = float(ingredient['avg_cost'] or 0)
+                cursor.execute("""
+                    INSERT INTO stock_moves (product_id, date, type, ref_id, quantity, cost_price, ref_document, ref_type, type1, note)
+                    VALUES (?, ?, 'SALE_RECIPE', ?, ?, ?, ?, ?, ?, ?)
+                """, (mat_id, sale_date, sale_id, -total_mat_qty, mat_cost, sale_no, 'export', 'Xuất nguyên liệu',
+                      f"Hao phí chế biến món '{item['item_name']}' tại bàn {table_id}"))
+                sync_inventory_quantity_from_moves(cursor, mat_id)
 
-            px_items.append({
-                "product_id": mat_id,
-                "product_name": ingredient['material_name'],
-                "unit": ingredient['unit'],
-                "quantity": total_mat_qty,
-                "price": 0,
-                "amount": 0
-            })
+                px_items.append({
+                    "product_id": mat_id,
+                    "product_name": ingredient['material_name'],
+                    "unit": ingredient['unit'],
+                    "quantity": total_mat_qty,
+                    "price": 0,
+                    "amount": 0
+                })
         # Món processed không có định mức: không trừ kho tại checkout — kiểm kê cuối ngày (draft_inventory)
 
     final_total = sum(float(item['line_total'] or 0) for item in items)
@@ -341,13 +378,16 @@ def _fb_finalize_checkout(cursor, sale_id, table_id, customer_name, payment_meth
     cursor.execute(
         "UPDATE tables SET current_sale_id = NULL, status = 'Available' WHERE id = ?", (table_id,))
 
-    enqueue_accounting_job(
-        cursor.connection,
-        sale_id,
-        accounting_regime=get_current_tenant_profile().get('accounting_regime'),
-        features=get_current_tenant_profile().get('features'),
-        created_by=session.get('user_name'),
-    )
+    try:
+        enqueue_accounting_job(
+            cursor.connection,
+            sale_id,
+            accounting_regime=get_current_tenant_profile().get('accounting_regime'),
+            features=get_current_tenant_profile().get('features'),
+            created_by=session.get('user_name') or (session.get('user') or {}).get('username'),
+        )
+    except Exception as exc:
+        logger.warning('enqueue_accounting_job F&B sale %s: %s', sale_id, exc)
     return final_total, sale_no
 
 
@@ -355,8 +395,9 @@ def complete_fb_bank_payment(sale_id):
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    try:
-        cursor.execute("BEGIN IMMEDIATE")
+
+    def _run():
+        begin_immediate(conn, label='fb_bank_payment')
         sale = cursor.execute("SELECT * FROM sale WHERE id = ?", (sale_id,)).fetchone()
         if not sale:
             return {"success": False, "error": "Không tìm thấy hóa đơn"}
@@ -368,24 +409,29 @@ def complete_fb_bank_payment(sale_id):
         try:
             meta = json.loads(sale['note'] or '{}')
         except (json.JSONDecodeError, TypeError):
+            conn.rollback()
             return {"success": False, "error": "Thiếu metadata bàn cho đơn F&B pending"}
 
         table_id = meta.get('table_id')
         is_einvoice = meta.get('is_einvoice', False)
         if not table_id:
+            conn.rollback()
             return {"success": False, "error": "Không xác định được bàn thanh toán"}
 
         table = cursor.execute(
             "SELECT current_sale_id FROM tables WHERE id = ?", (table_id,)).fetchone()
         if not table or table['current_sale_id'] != sale_id:
+            conn.rollback()
             return {"success": False, "error": "Bàn không còn giữ đơn hàng này"}
 
         items = _fb_load_sale_items(cursor, sale_id)
         if not items:
+            conn.rollback()
             return {"success": False, "error": "Đơn hàng rỗng"}
 
         ok, err = _fb_validate_stock(cursor, items)
         if not ok:
+            conn.rollback()
             return {"success": False, "error": err}
 
         sale_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -397,9 +443,16 @@ def complete_fb_bank_payment(sale_id):
         )
         conn.commit()
         return {"success": True, "sale_id": sale_id}
+
+    try:
+        return sqlite_write_retry(_run, label='fb_bank_payment')
+    except sqlite3.OperationalError as e:
+        rollback_quietly(conn)
+        if _is_locked_error(e):
+            return {"success": False, "error": locked_user_message()}
+        raise
     except Exception as e:
-        if conn:
-            conn.rollback()
+        rollback_quietly(conn)
         return {"success": False, "error": str(e)}
     finally:
         conn.close()
@@ -606,18 +659,22 @@ def register_fb_routes(app):
         from Services.fb_schema import ensure_fb_schema
 
         db = get_db_connection()
+        db.row_factory = sqlite3.Row
         cursor = db.cursor()
 
         try:
             ensure_fb_schema(db)
+            payload = request.get_json(silent=True) or {}
+            use_sale_unit = _fb_normalize_use_sale_unit(payload.get('use_sale_unit', 0))
+            use_expr = _fb_use_sale_unit_expr(cursor, 'si')
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-            cursor.execute("""
+            cursor.execute(f"""
             UPDATE sale_items 
             SET quantity_served = quantity,
                 served_at = ? 
-            WHERE sale_id = ? AND menu_id = ?
-            """, (now, sale_id, menu_id))
+            WHERE sale_id = ? AND menu_id = ? AND ({use_expr}) = ?
+            """, (now, sale_id, menu_id, use_sale_unit))
 
             if cursor.rowcount == 0:
                 return jsonify({"success": False, "message": "Không tìm thấy món trong đơn hàng"}), 404
@@ -639,11 +696,16 @@ def register_fb_routes(app):
     @app.route('/api/fb/get-sale/<int:table_id>')
     @login_required
     def get_sale_by_table(table_id):
+        from Services.fb_schema import ensure_fb_schema
+
         db = get_db_connection()
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
 
         try:
+            ensure_fb_schema(db)
+            use_expr = use_sale_unit_expr(cursor, 'si')
+            pk_expr = sale_item_pk_expr(cursor, 'si')
             table_info = cursor.execute(
                 "SELECT current_sale_id FROM tables WHERE id = ?",
                 (table_id,)
@@ -664,19 +726,20 @@ def register_fb_routes(app):
                 (sale_id,)
             ).fetchone()
 
-            items_query = """
+            items_query = f"""
             SELECT 
+                {pk_expr} AS sale_item_id,
                 si.menu_id,
-                si.UseSaleUnit,
+                {use_expr} AS UseSaleUnit,
                 si.unit,
                 m.item_code,
-                m.name AS product_name,
+                COALESCE(NULLIF(m.name, ''), si.product_name, si.item_name) AS product_name,
                 m.image_path,
                 si.quantity,
                 si.price AS unit_price,
                 si.line_total
             FROM sale_items si
-            JOIN menu m ON si.menu_id = m.id
+            LEFT JOIN menu m ON si.menu_id = m.id
             WHERE si.sale_id = ?
             """
             rows = cursor.execute(items_query, (sale_id,)).fetchall()
@@ -729,6 +792,8 @@ def register_fb_routes(app):
         cursor = conn.cursor()
 
         try:
+            from Services.fb_schema import ensure_fb_schema
+            ensure_fb_schema(conn, commit=False)
             ensure_pos_offline_schema(conn, commit=False)
             if client_uuid:
                 existing = find_sale_by_client_uuid(conn, client_uuid)
@@ -741,87 +806,106 @@ def register_fb_routes(app):
                         "message": "Đơn đã được đồng bộ trước đó",
                     })
 
-            cursor.execute("BEGIN IMMEDIATE")
+            def _checkout():
+                begin_immediate(conn, label='fb_checkout')
 
-            table = cursor.execute(
-                "SELECT current_sale_id FROM tables WHERE id = ?", (table_id,)).fetchone()
-            if not table or not table['current_sale_id']:
-                return jsonify({"success": False, "message": "Bàn không có đơn hàng"}), 404
+                table = cursor.execute(
+                    "SELECT current_sale_id FROM tables WHERE id = ?", (table_id,)).fetchone()
+                if not table or not table['current_sale_id']:
+                    conn.rollback()
+                    return {"success": False, "message": "Bàn không có đơn hàng"}, 404
 
-            sale_id = table['current_sale_id']
-            now_dt = datetime.now()
-            sale_date = now_dt.strftime('%Y-%m-%d %H:%M:%S')
-            sale_no = f"ĐH{str(sale_id).zfill(6)}"
+                sale_id = table['current_sale_id']
+                now_dt = datetime.now()
+                sale_date = now_dt.strftime('%Y-%m-%d %H:%M:%S')
+                sale_no = f"ĐH{str(sale_id).zfill(6)}"
 
-            row_sale = cursor.execute(
-                "SELECT status FROM sale WHERE id = ?", (sale_id,),
-            ).fetchone()
-            if row_sale and str(row_sale['status'] or '').lower() == 'completed':
+                row_sale = cursor.execute(
+                    "SELECT status FROM sale WHERE id = ?", (sale_id,),
+                ).fetchone()
+                if row_sale and str(row_sale['status'] or '').lower() == 'completed':
+                    conn.commit()
+                    return {
+                        "success": True,
+                        "sale_id": sale_id,
+                        "sale_no": sale_no,
+                        "deduped": True,
+                        "message": "Bàn đã thanh toán",
+                    }, 200
+
+                items = _fb_load_sale_items(cursor, sale_id)
+                if not items:
+                    conn.rollback()
+                    return {"success": False, "message": "Đơn hàng rỗng, không thể thanh toán"}, 400
+
+                orphan = [it for it in items if not it['menu_id']]
+                if orphan:
+                    conn.rollback()
+                    return {
+                        "success": False,
+                        "message": "Đơn có dòng không hợp lệ (thiếu mã món). Vui lòng xóa và gọi lại món.",
+                    }, 400
+
+                ok, err = _fb_validate_stock(cursor, items)
+                if not ok:
+                    conn.rollback()
+                    return {"success": False, "message": err}, 400
+
+                final_total = sum(float(item['line_total'] or 0) for item in items)
+
+                if payment_method == '112':
+                    note_payload = json.dumps({
+                        'table_id': table_id,
+                        'is_einvoice': bool(is_einvoice),
+                        'user_note': data.get('note', '')
+                    }, ensure_ascii=False)
+                    cursor.execute("""
+                        UPDATE sale SET status = 'pending', total_amount = ?, payment_method = ?, customer_name = ?,
+                        business_line = 'fb_service', date = ?, sale_no = ?, note = ? WHERE id = ?
+                    """, (final_total, payment_method, customer_name, sale_date, sale_no, note_payload, sale_id))
+                    conn.commit()
+                    return {
+                        "success": True,
+                        "sale_id": sale_id,
+                        "sale_no": sale_no,
+                        "pending_qr": True,
+                        "total_amount": final_total,
+                        "request_einvoice": is_einvoice,
+                        "message": "Chờ khách chuyển khoản qua QR"
+                    }, 200
+
+                _fb_finalize_checkout(
+                    cursor, sale_id, table_id, customer_name, payment_method, sale_date, is_einvoice, items
+                )
+                if client_uuid:
+                    try:
+                        cursor.execute(
+                            "UPDATE sale SET client_uuid = ? WHERE id = ?",
+                            (client_uuid, sale_id),
+                        )
+                    except sqlite3.OperationalError:
+                        pass
+
                 conn.commit()
-                return jsonify({
+                return {
                     "success": True,
                     "sale_id": sale_id,
                     "sale_no": sale_no,
-                    "deduped": True,
-                    "message": "Bàn đã thanh toán",
-                })
-
-            items = _fb_load_sale_items(cursor, sale_id)
-            if not items:
-                return jsonify({"success": False, "message": "Đơn hàng rỗng, không thể thanh toán"}), 400
-
-            ok, err = _fb_validate_stock(cursor, items)
-            if not ok:
-                conn.rollback()
-                return jsonify({"success": False, "message": err}), 400
-
-            final_total = sum(float(item['line_total'] or 0) for item in items)
-
-            if payment_method == '112':
-                note_payload = json.dumps({
-                    'table_id': table_id,
-                    'is_einvoice': bool(is_einvoice),
-                    'user_note': data.get('note', '')
-                }, ensure_ascii=False)
-                cursor.execute("""
-                    UPDATE sale SET status = 'pending', total_amount = ?, payment_method = ?, customer_name = ?,
-                    business_line = 'fb_service', date = ?, sale_no = ?, note = ? WHERE id = ?
-                """, (final_total, payment_method, customer_name, sale_date, sale_no, note_payload, sale_id))
-                conn.commit()
-                return jsonify({
-                    "success": True,
-                    "sale_id": sale_id,
-                    "sale_no": sale_no,
-                    "pending_qr": True,
-                    "total_amount": final_total,
                     "request_einvoice": is_einvoice,
-                    "message": "Chờ khách chuyển khoản qua QR"
-                })
+                    "message": "Thanh toán và trừ kho sỉ/lẻ thành công!"
+                }, 200
 
-            _fb_finalize_checkout(
-                cursor, sale_id, table_id, customer_name, payment_method, sale_date, is_einvoice, items
-            )
-            if client_uuid:
-                try:
-                    cursor.execute(
-                        "UPDATE sale SET client_uuid = ? WHERE id = ?",
-                        (client_uuid, sale_id),
-                    )
-                except sqlite3.OperationalError:
-                    pass
+            payload, status = sqlite_write_retry(_checkout, label='fb_checkout')
+            return jsonify(payload), status
 
-            conn.commit()
-            return jsonify({
-                "success": True,
-                "sale_id": sale_id,
-                "sale_no": sale_no,
-                "request_einvoice": is_einvoice,
-                "message": "Thanh toán và trừ kho sỉ/lẻ thành công!"
-            })
-
+        except sqlite3.OperationalError as e:
+            rollback_quietly(conn)
+            if _is_locked_error(e):
+                return jsonify({"success": False, "message": locked_user_message()}), 503
+            raise
         except Exception as e:
-            conn.rollback()
-            print(f"--- Lỗi Checkout: {str(e)} ---")
+            rollback_quietly(conn)
+            logger.error('Lỗi Checkout F&B: %s', e)
             return jsonify({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}), 500
         finally:
             conn.close()
@@ -871,105 +955,136 @@ def register_fb_routes(app):
     @app.route('/api/fb/add-item', methods=['POST'])
     @login_required
     def api_add_item_to_table():
-        data = request.json
+        from Services.fb_schema import ensure_fb_schema
+
+        data = request.json or {}
         table_id = data.get('table_id')
         menu_id = data.get('menu_id')
-
-        try:
-            use_sale_unit = int(data.get('use_sale_unit', 0))
-            if use_sale_unit not in [0, 1]:
-                use_sale_unit = 0
-        except (ValueError, TypeError):
-            use_sale_unit = 0
+        use_sale_unit = normalize_use_sale_unit(data.get('use_sale_unit', 0))
 
         try:
             quantity = float(data.get('quantity', 1))
         except (ValueError, TypeError):
             quantity = 1.0
 
+        if not table_id or menu_id is None or menu_id == '':
+            return jsonify({"success": False, "message": "Thiếu bàn hoặc mã món"}), 400
+
         db = get_db_connection()
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
 
         try:
-            table = cursor.execute(
-                "SELECT current_sale_id FROM tables WHERE id = ?", (table_id,)).fetchone()
-            if not table:
-                return jsonify({"success": False, "message": "Bàn không tồn tại"}), 404
+            ensure_fb_schema(db, commit=False)
 
-            sale_id = table['current_sale_id']
+            def _add():
+                begin_immediate(db, label='fb_add_item')
 
-            if not sale_id:
-                now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                cursor.execute(
-                    "INSERT INTO sale (status, table_id, created_at, total_amount) VALUES ('Draft', ?, ?, 0)",
-                    (table_id, now_str)
-                )
-                sale_id = cursor.lastrowid
-                cursor.execute(
-                    "UPDATE tables SET current_sale_id = ?, status = 'Busy' WHERE id = ?", (sale_id, table_id))
+                table = cursor.execute(
+                    "SELECT current_sale_id FROM tables WHERE id = ?", (table_id,)).fetchone()
+                if not table:
+                    db.rollback()
+                    return {"success": False, "message": "Bàn không tồn tại"}, 404
 
-            item_menu = cursor.execute(
-                "SELECT name, base_price, unit, price, unit1, product_id, product_type FROM menu WHERE id = ?",
-                (menu_id,)
-            ).fetchone()
+                sale_id = table['current_sale_id']
 
-            if not item_menu:
-                return jsonify({"success": False, "message": "Món ăn không tồn tại trong thực đơn"}), 404
+                if not sale_id:
+                    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    cursor.execute(
+                        "INSERT INTO sale (status, table_id, created_at, total_amount) VALUES ('Draft', ?, ?, 0)",
+                        (table_id, now_str)
+                    )
+                    sale_id = cursor.lastrowid
+                    cursor.execute(
+                        "UPDATE tables SET current_sale_id = ?, status = 'Busy' WHERE id = ?",
+                        (sale_id, table_id),
+                    )
 
-            item_name = item_menu['name']
-            product_id = item_menu['product_id']
+                item_menu = cursor.execute(
+                    "SELECT name, base_price, unit, price, unit1, product_id, product_type FROM menu WHERE id = ?",
+                    (menu_id,)
+                ).fetchone()
 
-            if use_sale_unit == 1:
-                price_to_sell = item_menu['price'] if item_menu['price'] is not None else 0
-                unit_to_save = item_menu['unit1']
-            else:
-                price_to_sell = item_menu['base_price'] if item_menu['base_price'] is not None else 0
-                unit_to_save = item_menu['unit']
+                if not item_menu:
+                    db.rollback()
+                    return {"success": False, "message": "Món ăn không tồn tại trong thực đơn"}, 404
 
-            existing_item = cursor.execute(
-                "SELECT quantity FROM sale_items WHERE sale_id = ? AND menu_id = ? AND UseSaleUnit = ?",
-                (sale_id, menu_id, use_sale_unit)
-            ).fetchone()
+                item_name = item_menu['name']
+                product_id = item_menu['product_id']
 
-            if existing_item:
-                new_qty = existing_item['quantity'] + quantity
-                new_line_total = new_qty * price_to_sell
-                cursor.execute(
-                    "UPDATE sale_items SET quantity = ?, line_total = ? WHERE sale_id = ? AND menu_id = ? AND UseSaleUnit = ?",
-                    (new_qty, new_line_total, sale_id, menu_id, use_sale_unit)
-                )
-            else:
-                line_total = quantity * price_to_sell
-                hkd_sector = resolve_item_hkd_sector(
-                    business_line='fb_service',
-                    menu_product_type=item_menu['product_type'] if 'product_type' in item_menu.keys() else None,
-                )
-                insert_sale_item_with_sector(
-                    cursor,
-                    [
+                if use_sale_unit == 1:
+                    price_to_sell = item_menu['price'] if item_menu['price'] is not None else 0
+                    unit_to_save = item_menu['unit1']
+                else:
+                    price_to_sell = item_menu['base_price'] if item_menu['base_price'] is not None else 0
+                    unit_to_save = item_menu['unit']
+
+                where_unit = use_sale_unit_where_clause(cursor, 'si')
+                existing_item = cursor.execute(f"""
+                    SELECT quantity FROM sale_items si
+                    WHERE si.sale_id = ? AND si.menu_id = ? AND {where_unit}
+                """, (sale_id, menu_id, use_sale_unit)).fetchone()
+
+                if existing_item:
+                    new_qty = existing_item['quantity'] + quantity
+                    new_line_total = new_qty * price_to_sell
+                    unit_cols = use_sale_unit_insert_columns(cursor)
+                    set_parts = ['quantity = ?', 'line_total = ?']
+                    params = [new_qty, new_line_total]
+                    for col in unit_cols:
+                        set_parts.append(f'{col} = ?')
+                        params.append(use_sale_unit)
+                    params.extend([sale_id, menu_id, use_sale_unit])
+                    where_plain = use_sale_unit_where_clause(cursor, alias=None)
+                    cursor.execute(f"""
+                        UPDATE sale_items SET {', '.join(set_parts)}
+                        WHERE sale_id = ? AND menu_id = ? AND {where_plain}
+                    """, params)
+                else:
+                    line_total = quantity * price_to_sell
+                    hkd_sector = resolve_item_hkd_sector(
+                        business_line='fb_service',
+                        menu_product_type=item_menu['product_type'] if 'product_type' in item_menu.keys() else None,
+                    )
+                    base_cols = [
                         'sale_id', 'menu_id', 'product_id', 'product_name', 'quantity',
-                        'unit', 'price', 'line_total', 'UseSaleUnit', 'created_at',
-                    ],
-                    [
+                        'unit', 'price', 'line_total', 'created_at',
+                    ]
+                    base_vals = [
                         sale_id, menu_id, product_id, item_name, quantity,
-                        unit_to_save, price_to_sell, line_total, use_sale_unit,
+                        unit_to_save, price_to_sell, line_total,
                         datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    ],
-                    hkd_sector_code=hkd_sector,
-                )
+                    ]
+                    unit_cols = use_sale_unit_insert_columns(cursor)
+                    base_cols.extend(unit_cols)
+                    base_vals.extend(expand_use_sale_unit_values(cursor, use_sale_unit))
+                    insert_sale_item_with_sector(
+                        cursor, base_cols, base_vals, hkd_sector_code=hkd_sector,
+                    )
 
-            cursor.execute("""
-                UPDATE sale 
-                SET total_amount = (SELECT SUM(line_total) FROM sale_items WHERE sale_id = ?) 
-                WHERE id = ?
-            """, (sale_id, sale_id))
+                cursor.execute("""
+                    UPDATE sale 
+                    SET total_amount = (SELECT SUM(line_total) FROM sale_items WHERE sale_id = ?) 
+                    WHERE id = ?
+                """, (sale_id, sale_id))
 
-            db.commit()
-            return jsonify({"success": True, "sale_id": sale_id, "message": f"Đã thêm {item_name} ({unit_to_save})"})
+                db.commit()
+                return {
+                    "success": True,
+                    "sale_id": sale_id,
+                    "message": f"Đã thêm {item_name} ({unit_to_save})",
+                }, 200
 
+            payload, status = sqlite_write_retry(_add, label='fb_add_item')
+            return jsonify(payload), status
+
+        except sqlite3.OperationalError as e:
+            rollback_quietly(db)
+            if _is_locked_error(e):
+                return jsonify({"success": False, "message": locked_user_message()}), 503
+            raise
         except Exception as e:
-            db.rollback()
+            rollback_quietly(db)
             return jsonify({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}), 500
         finally:
             db.close()
@@ -977,121 +1092,148 @@ def register_fb_routes(app):
     @app.route('/api/fb/update-item-quantity', methods=['POST'])
     @login_required
     def update_item_quantity():
-        data = request.json
+        from Services.fb_schema import ensure_fb_schema
+
+        data = request.json or {}
         table_id = data.get('table_id')
         menu_id = data.get('menu_id')
+        sale_item_id = data.get('sale_item_id')
 
         try:
             change = float(data.get('change', 0))
         except (ValueError, TypeError):
             change = 0.0
 
-        raw_sale_unit = data.get('use_sale_unit', 0)
-        if str(raw_sale_unit).lower() in ['true', '1']:
-            use_sale_unit = 1
-        else:
-            use_sale_unit = 0
+        use_sale_unit = normalize_use_sale_unit(data.get('use_sale_unit', 0))
 
         db = get_db_connection()
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
+        pk_col = 'rowid'
 
         try:
-            table = cursor.execute(
-                "SELECT current_sale_id FROM tables WHERE id = ?", (table_id,)).fetchone()
-            sale_id = table['current_sale_id'] if table else None
+            ensure_fb_schema(db, commit=False)
+            pk_col = sale_item_pk_column(cursor)
 
-            if not sale_id:
-                return jsonify({"success": False, "message": "Không tìm thấy đơn hàng cho bàn này"}), 404
+            def _update_qty():
+                begin_immediate(db, label='fb_update_item_qty')
 
-            current_item = cursor.execute("""
-                SELECT quantity, COALESCE(quantity_served, 0) AS quantity_served 
-                FROM sale_items 
-                WHERE sale_id = ? 
-                  AND menu_id = ? 
-                  AND (UseSaleUnit = ? OR UseSaleUnit = CAST(? AS TEXT))
-            """, (sale_id, menu_id, use_sale_unit, use_sale_unit)).fetchone()
+                table = cursor.execute(
+                    "SELECT current_sale_id FROM tables WHERE id = ?", (table_id,)).fetchone()
+                sale_id = table['current_sale_id'] if table else None
 
-            if not current_item:
-                return jsonify({"success": False, "message": "Món ăn không tồn tại trong giỏ hàng"}), 404
+                if not sale_id:
+                    db.rollback()
+                    return {"success": False, "message": "Không tìm thấy đơn hàng cho bàn này"}, 404
 
-            current_qty = float(current_item['quantity'] if current_item['quantity'] is not None else 0)
-            qty_served = float(current_item['quantity_served'] if current_item['quantity_served'] is not None else 0)
+                use_expr = use_sale_unit_expr(cursor, 'si')
 
-            if change == 0:
-                if qty_served > 0:
-                    return jsonify({
-                        "success": False,
-                        "message": f"Món này đã phục vụ {int(qty_served)} phần, không thể xóa! Vui lòng chỉ giảm số lượng món chưa lên bàn."
-                    }), 400
-            else:
-                new_qty = current_qty + change
+                if sale_item_id:
+                    current_item = cursor.execute(f"""
+                        SELECT {pk_col} AS id, menu_id, quantity,
+                               COALESCE(quantity_served, 0) AS quantity_served
+                        FROM sale_items
+                        WHERE {pk_col} = ? AND sale_id = ?
+                    """, (sale_item_id, sale_id)).fetchone()
+                else:
+                    if menu_id is None or menu_id == '':
+                        db.rollback()
+                        return {
+                            "success": False,
+                            "message": "Thiếu mã món — tải lại trang và thử lại",
+                        }, 400
+                    current_item = cursor.execute(f"""
+                        SELECT {pk_col} AS id, menu_id, quantity,
+                               COALESCE(quantity_served, 0) AS quantity_served
+                        FROM sale_items si
+                        WHERE si.sale_id = ?
+                          AND si.menu_id = ?
+                          AND ({use_expr}) = ?
+                    """, (sale_id, menu_id, use_sale_unit)).fetchone()
 
-                if new_qty < qty_served:
-                    return jsonify({
-                        "success": False,
-                        "message": f"Không thể giảm! Món này đã phục vụ {int(qty_served)} phần lên bàn cho khách."
-                    }), 400
+                if not current_item:
+                    db.rollback()
+                    return {"success": False, "message": "Món ăn không tồn tại trong giỏ hàng"}, 404
 
-                if new_qty < 0:
-                    new_qty = 0
+                row_id = current_item['id']
 
-            if change == 0:
-                cursor.execute("""
+                current_qty = float(current_item['quantity'] if current_item['quantity'] is not None else 0)
+                qty_served = float(current_item['quantity_served'] if current_item['quantity_served'] is not None else 0)
+
+                if change == 0:
+                    if qty_served > 0:
+                        db.rollback()
+                        return {
+                            "success": False,
+                            "message": (
+                                f"Món này đã phục vụ {int(qty_served)} phần, không thể xóa! "
+                                "Vui lòng chỉ giảm số lượng món chưa lên bàn."
+                            ),
+                        }, 400
+                else:
+                    new_qty = current_qty + change
+                    if new_qty < qty_served:
+                        db.rollback()
+                        return {
+                            "success": False,
+                            "message": (
+                                f"Không thể giảm! Món này đã phục vụ {int(qty_served)} phần lên bàn cho khách."
+                            ),
+                        }, 400
+
+                if change == 0:
+                    cursor.execute(f"DELETE FROM sale_items WHERE {pk_col} = ?", (row_id,))
+                else:
+                    cursor.execute(f"""
+                        UPDATE sale_items 
+                        SET quantity = quantity + ?, 
+                            line_total = (quantity + ?) * price 
+                        WHERE {pk_col} = ?
+                    """, (change, change, row_id))
+
+                cursor.execute(f"""
                     DELETE FROM sale_items 
-                    WHERE sale_id = ? 
-                      AND menu_id = ? 
-                      AND (UseSaleUnit = ? OR UseSaleUnit = CAST(? AS TEXT))
-                """, (sale_id, menu_id, use_sale_unit, use_sale_unit))
-            else:
-                cursor.execute("""
-                    UPDATE sale_items 
-                    SET quantity = quantity + ?, 
-                        line_total = (quantity + ?) * price 
-                    WHERE sale_id = ? 
-                      AND menu_id = ? 
-                      AND (UseSaleUnit = ? OR UseSaleUnit = CAST(? AS TEXT))
-                """, (change, change, sale_id, menu_id, use_sale_unit, use_sale_unit))
+                    WHERE {pk_col} = ? AND quantity <= 0 AND COALESCE(quantity_served, 0) <= 0
+                """, (row_id,))
 
-            cursor.execute("""
-                DELETE FROM sale_items 
-                WHERE sale_id = ? 
-                  AND menu_id = ? 
-                  AND (UseSaleUnit = ? OR UseSaleUnit = CAST(? AS TEXT)) 
-                  AND quantity <= 0 
-                  AND COALESCE(quantity_served, 0) <= 0
-            """, (sale_id, menu_id, use_sale_unit, use_sale_unit))
+                check_items = cursor.execute(
+                    "SELECT COUNT(*) as cnt FROM sale_items WHERE sale_id = ?", (sale_id,)).fetchone()
 
-            check_items = cursor.execute(
-                "SELECT COUNT(*) as cnt FROM sale_items WHERE sale_id = ?", (sale_id,)).fetchone()
+                if check_items['cnt'] == 0:
+                    cursor.execute(
+                        "UPDATE tables SET current_sale_id = NULL, status = 'Available' WHERE id = ?",
+                        (table_id,),
+                    )
+                    cursor.execute("DELETE FROM sale WHERE id = ?", (sale_id,))
+                    max_id_row = cursor.execute("SELECT MAX(id) FROM sale").fetchone()
+                    new_max_id = max_id_row[0] if max_id_row and max_id_row[0] is not None else 0
+                    cursor.execute(
+                        "UPDATE sqlite_sequence SET seq = ? WHERE name = 'sale'", (new_max_id,))
+                    message = "Đơn hàng đã được dọn dẹp, bàn đã trống"
+                    is_empty = True
+                else:
+                    cursor.execute("""
+                        UPDATE sale 
+                        SET total_amount = (SELECT SUM(line_total) FROM sale_items WHERE sale_id = ?) 
+                        WHERE id = ?
+                    """, (sale_id, sale_id))
+                    message = "Cập nhật số lượng thành công"
+                    is_empty = False
 
-            if check_items['cnt'] == 0:
-                cursor.execute(
-                    "UPDATE tables SET current_sale_id = NULL, status = 'Available' WHERE id = ?", (table_id,))
-                cursor.execute("DELETE FROM sale WHERE id = ?", (sale_id,))
+                db.commit()
+                return {"success": True, "message": message, "is_empty": is_empty}, 200
 
-                max_id_row = cursor.execute("SELECT MAX(id) FROM sale").fetchone()
-                new_max_id = max_id_row[0] if max_id_row and max_id_row[0] is not None else 0
-                cursor.execute(
-                    "UPDATE sqlite_sequence SET seq = ? WHERE name = 'sale'", (new_max_id,))
+            payload, status = sqlite_write_retry(_update_qty, label='fb_update_item_qty')
+            return jsonify(payload), status
 
-                message = "Đơn hàng đã được dọn dẹp, bàn đã trống"
-                is_empty = True
-            else:
-                cursor.execute("""
-                    UPDATE sale 
-                    SET total_amount = (SELECT SUM(line_total) FROM sale_items WHERE sale_id = ?) 
-                    WHERE id = ?
-                """, (sale_id, sale_id))
-                message = "Cập nhật số lượng thành công"
-                is_empty = False
-
-            db.commit()
-            return jsonify({"success": True, "message": message, "is_empty": is_empty})
-
+        except sqlite3.OperationalError as e:
+            rollback_quietly(db)
+            if _is_locked_error(e):
+                return jsonify({"success": False, "message": locked_user_message()}), 503
+            raise
         except Exception as e:
-            db.rollback()
-            print(f"--- Lỗi nghiêm trọng tại update-item-quantity: {str(e)} ---")
+            rollback_quietly(db)
+            logger.error('Lỗi update-item-quantity: %s', e)
             return jsonify({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}), 500
         finally:
             db.close()

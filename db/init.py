@@ -309,6 +309,13 @@ def apply_schema_migrations(conn):
         ensure_user_branch_schema(conn, commit=False)
     except Exception as e:
         print(f'[MIGRATE] user_branch: {e}')
+    try:
+        from db_utils import ensure_sqlite_wal, sqlite_db_file
+        mode = ensure_sqlite_wal(conn, sqlite_db_file(conn))
+        if mode and str(mode).lower() != 'wal':
+            print(f'[MIGRATE] journal_mode={mode} (mong doi WAL)')
+    except Exception as e:
+        print(f'[MIGRATE] WAL: {e}')
     conn.commit()
 
 

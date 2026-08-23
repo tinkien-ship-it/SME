@@ -1306,6 +1306,100 @@ async function loadAssistantMaster() {
     loadAssistantSettings();
     loadAssistantPending();
     loadAssistantFaqList();
+    loadAssistantHealth(false);
+}
+
+function healthStatusBadge(status) {
+    const s = (status || '').toLowerCase();
+    if (s === 'ok') return '<span class="badge bg-success">OK</span>';
+    if (s === 'warn') return '<span class="badge bg-warning text-dark">Cảnh báo</span>';
+    if (s === 'error') return '<span class="badge bg-danger">Lỗi</span>';
+    return '<span class="badge bg-secondary">—</span>';
+}
+
+function renderAssistantHealthReport(report) {
+    const summary = document.getElementById('assistantHealthSummary');
+    const tbody = document.getElementById('assistantHealthBody');
+    if (!report || !tbody) return;
+    const overall = report.overall || 'unknown';
+    const score = report.score != null ? report.score : '—';
+    const at = report.generated_at || '';
+    const fixes = report.fixes_applied || [];
+    let fixNote = '';
+    if (fixes.length) {
+        fixNote = '<br><span class="text-success"><i class="fas fa-check"></i> Đã tự sửa: '
+            + fixes.map(f => escAssist(f.message || f.action)).join('; ') + '</span>';
+    }
+    summary.innerHTML = `
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            ${healthStatusBadge(overall)}
+            <strong>Điểm sức khỏe: ${score}/100</strong>
+            <span class="text-muted">${escAssist(at)}</span>
+        </div>${fixNote}`;
+    const checks = report.checks || [];
+    if (!checks.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center py-3 text-muted">Không có dữ liệu</td></tr>';
+        return;
+    }
+    tbody.innerHTML = checks.map(c => `
+        <tr>
+            <td class="fw-semibold">${escAssist(c.label || c.id)}</td>
+            <td>${healthStatusBadge(c.status)}</td>
+            <td class="small">${escAssist(c.message)}${c.fixable ? ' <span class="badge bg-info text-dark">có thể tự sửa</span>' : ''}</td>
+        </tr>`).join('');
+    const errWrap = document.getElementById('assistantHealthErrorsWrap');
+    const errPre = document.getElementById('assistantHealthErrors');
+    const errs = report.recent_errors || [];
+    if (errWrap && errPre) {
+        if (errs.length) {
+            errWrap.style.display = '';
+            errPre.textContent = errs.join('\n');
+        } else {
+            errWrap.style.display = 'none';
+        }
+    }
+}
+
+async function loadAssistantHealth(runCheck) {
+    try {
+        const url = runCheck ? '/api/master/assistant/health/run' : '/api/master/assistant/health';
+        const res = await fetch(url, runCheck ? {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ auto_fix: false }),
+        } : {});
+        const json = await res.json();
+        if (!json.success) return;
+        const report = runCheck ? json.report : (json.live || (json.latest_saved && json.latest_saved.report));
+        if (report) renderAssistantHealthReport(report);
+    } catch (e) { /* ignore */ }
+}
+
+async function runAssistantHealth(autoFix) {
+    const btnLabel = autoFix ? 'Đang kiểm tra & tự sửa...' : 'Đang kiểm tra...';
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({ title: btnLabel, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    }
+    try {
+        const res = await fetch('/api/master/assistant/health/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ auto_fix: !!autoFix }),
+        });
+        const json = await res.json();
+        if (typeof Swal !== 'undefined') Swal.close();
+        if (!json.success) {
+            if (typeof Swal !== 'undefined') Swal.fire('Lỗi', json.error || 'Không chạy được', 'error');
+            return;
+        }
+        renderAssistantHealthReport(json.report);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Hoàn tất', json.message || 'Đã kiểm tra hệ thống', 'success');
+        }
+        loadAssistantSettings();
+    } catch (e) {
+        if (typeof Swal !== 'undefined') Swal.fire('Lỗi', 'Không kết nối server', 'error');
+    }
 }
 
 async function loadAssistantSettings() {
@@ -1352,7 +1446,8 @@ async function loadAssistantSettings() {
             <span class="badge bg-primary">${st.total_chats || 0} hội thoại</span>
             <span class="badge bg-warning text-dark">${st.pending_review || 0} chờ duyệt</span>
             <span class="badge bg-success">${st.dynamic_faq || 0} FAQ động</span>
-            <span class="badge ${json.openai_configured ? 'bg-info text-dark' : 'bg-secondary'}">${json.openai_configured ? 'OpenAI sẵn sàng' : 'Chưa có OpenAI key'}</span>`;
+            <span class="badge ${json.openai_configured ? 'bg-info text-dark' : 'bg-secondary'}">${json.openai_configured ? 'OpenAI sẵn sàng' : 'Chưa có OpenAI key'}</span>
+            <span class="badge bg-dark">LM ${st.health_runs || 0} lần kiểm tra</span>`;
     } catch (e) { /* ignore */ }
 }
 

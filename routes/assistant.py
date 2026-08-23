@@ -12,10 +12,12 @@ from Services.assistant_store import (
     dismiss_review,
     ensure_assistant_schema,
     get_assistant_settings,
+    get_latest_health_report,
     list_dynamic_faq,
     list_pending_reviews,
     save_assistant_settings,
 )
+from Services.assistant_learning_machine import run_health_with_fixes, run_system_diagnostics
 from Services.support_config import get_assistant_runtime_config, support_context
 from Services.zalo_oa_service import (
     handle_zalo_message,
@@ -217,3 +219,28 @@ def register_assistant_routes(app):
     @master_required
     def api_master_assistant_faq_list():
         return jsonify({'success': True, 'data': list_dynamic_faq()})
+
+    @app.route('/api/master/assistant/health', methods=['GET'])
+    @login_required
+    @master_required
+    def api_master_assistant_health_get():
+        latest = get_latest_health_report()
+        live = run_system_diagnostics()
+        return jsonify({
+            'success': True,
+            'live': live,
+            'latest_saved': latest,
+        })
+
+    @app.route('/api/master/assistant/health/run', methods=['POST'])
+    @login_required
+    @master_required
+    def api_master_assistant_health_run():
+        data = request.get_json(silent=True) or {}
+        auto_fix = bool(data.get('auto_fix'))
+        report = run_health_with_fixes(auto_fix=auto_fix)
+        return jsonify({
+            'success': True,
+            'report': report,
+            'message': 'Đã kiểm tra hệ thống' + (' và áp dụng tự sửa' if auto_fix else ''),
+        })
