@@ -41,6 +41,8 @@ def database_url() -> str:
         raise RuntimeError('PostgreSQL: thiếu DATABASE_URL hoặc SME_PG_URL')
     if url.startswith('postgres://'):
         url = 'postgresql://' + url[len('postgres://'):]
+    if url.startswith('postgresql+psycopg://'):
+        url = 'postgresql://' + url[len('postgresql+psycopg://'):]
     return url
 
 
