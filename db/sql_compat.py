@@ -13,6 +13,7 @@ def convert_sqlite_ddl(sql: str) -> str:
     text = re.sub(r'\bINTEGER\b', 'BIGINT', text, flags=re.I)
     text = re.sub(r'\bREAL\b', 'DOUBLE PRECISION', text, flags=re.I)
     text = re.sub(r'\bBLOB\b', 'BYTEA', text, flags=re.I)
+    text = re.sub(r'\bDATETIME\b', 'TIMESTAMP', text, flags=re.I)
     text = re.sub(
         r"datetime\s*\(\s*'now'\s*(?:,\s*'localtime'\s*)?\)",
         'CURRENT_TIMESTAMP',
@@ -112,7 +113,7 @@ def _quote_literal(value: str) -> str:
 
 def _pragma_table_info_sql(table: str, schema: str) -> str:
     sch = _quote_literal(schema)
-    tbl = _quote_ident(table)
+    tbl = _quote_literal(table)
     return f"""
         SELECT
             (c.ordinal_position - 1)::bigint AS cid,
