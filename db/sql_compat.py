@@ -41,11 +41,19 @@ _PRAGMA_NOOP = re.compile(
 )
 _PRAGMA_JOURNAL_FETCH = re.compile(r'PRAGMA\s+journal_mode\s*$', re.IGNORECASE)
 _SQLITE_MASTER_EXISTS = re.compile(
-    r"SELECT\s+1\s+FROM\s+sqlite_master\s+WHERE\s+type\s*=\s*['\"]table['\"]\s+AND\s+name\s*=\s*\?\s+LIMIT\s+1",
+    r"SELECT\s+1\s+FROM\s+sqlite_master\s+WHERE\s+type\s*=\s*['\"]table['\"]\s+AND\s+name\s*=\s*\?(?:\s+LIMIT\s+1)?",
     re.IGNORECASE,
 )
 _SQLITE_MASTER_EXISTS_NO_LIMIT = re.compile(
     r"SELECT\s+1\s+FROM\s+sqlite_master\s+WHERE\s+type\s*=\s*['\"]table['\"]\s+AND\s+name\s*=\s*['\"]([^'\"]+)['\"]",
+    re.IGNORECASE,
+)
+_SQLITE_MASTER_NAME_EQ_LIT = re.compile(
+    r"SELECT\s+name\s+FROM\s+sqlite_master\s+WHERE\s+type\s*=\s*['\"]table['\"]\s+AND\s+name\s*=\s*['\"]([^'\"]+)['\"]",
+    re.IGNORECASE,
+)
+_SQLITE_MASTER_NAME_EQ_PARAM = re.compile(
+    r"SELECT\s+name\s+FROM\s+sqlite_master\s+WHERE\s+type\s*=\s*['\"]table['\"]\s+AND\s+name\s*=\s*\?",
     re.IGNORECASE,
 )
 _SQLITE_MASTER_LIST = re.compile(
@@ -202,6 +210,20 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
         return (
             f'SELECT 1 FROM information_schema.tables '
             f'WHERE table_schema = {sch} AND table_name = {table_name}'
+        )
+    m = _SQLITE_MASTER_NAME_EQ_LIT.search(text)
+    if m:
+        sch = _quote_literal(schema)
+        table_name = _quote_literal(m.group(1))
+        return (
+            f"SELECT table_name AS name FROM information_schema.tables "
+            f"WHERE table_schema = {sch} AND table_name = {table_name} LIMIT 1"
+        )
+    if _SQLITE_MASTER_NAME_EQ_PARAM.search(text):
+        sch = _quote_literal(schema)
+        return (
+            f"SELECT table_name AS name FROM information_schema.tables "
+            f"WHERE table_schema = {sch} AND table_name = %s LIMIT 1"
         )
     if _SQLITE_MASTER_LIST.search(text):
         sch = _quote_literal(schema)

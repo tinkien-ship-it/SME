@@ -549,11 +549,8 @@ def scan_barcode():
         conn.close()
 
 # === CẤU HÌNH TỪ THÔNG SỐ KĨ THUẬT VIETTEL ===
-# Cấu hình database (thay đổi URI theo db của bạn, ví dụ PostgreSQL, MySQL, hoặc SQLite)
-_sqlalchemy_db_url = os.getenv('DATABASE_URL', 'sqlite:///pos.db')
-if _sqlalchemy_db_url.startswith('postgresql://'):
-    _sqlalchemy_db_url = 'postgresql+psycopg://' + _sqlalchemy_db_url[len('postgresql://'):]
-app.config['SQLALCHEMY_DATABASE_URI'] = _sqlalchemy_db_url  # Mặc định SQLite cho test
+# SQLAlchemy legacy — không gắn DATABASE_URL Postgres (tránh PoolTimeout).
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///pos.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)

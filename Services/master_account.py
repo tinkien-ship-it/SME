@@ -56,18 +56,21 @@ def hash_password(password: str) -> str:
 
 
 def ensure_users_table(conn: sqlite3.Connection) -> list[str]:
+    from db.dialect import column_names, table_exists
+    from db.schema_helpers import add_column_if_missing, execute_ddl
+
     changed = []
-    existed = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'"
-    ).fetchone()
-    conn.execute(USERS_DDL)
+    existed = table_exists(conn, 'users')
+    execute_ddl(conn, USERS_DDL)
     if not existed:
         changed.append('create:users')
-    cols = {r[1] for r in conn.execute('PRAGMA table_info(users)')}
+    cols = {c.lower() for c in column_names(conn, 'users')}
     for name, decl in EXTRA_COLUMNS.items():
-        if name not in cols:
-            conn.execute('ALTER TABLE users ADD COLUMN %s %s' % (name, decl))
+        if name.lower() in cols:
+            continue
+        if add_column_if_missing(conn, 'users', name, decl):
             changed.append('alter:users.%s' % name)
+            cols.add(name.lower())
     return changed
 
 

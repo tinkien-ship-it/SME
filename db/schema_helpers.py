@@ -55,6 +55,8 @@ def _pg_col_type(sqlite_type: str) -> str:
         'REAL': 'DOUBLE PRECISION',
         'BLOB': 'BYTEA',
         'TEXT': 'TEXT',
+        'DATETIME': 'TIMESTAMP',
+        'DATE': 'DATE',
     }
     key = upper.split()[0] if upper else 'TEXT'
     return mapping.get(key, t)

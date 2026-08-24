@@ -104,9 +104,21 @@ class PgCursor:
 
     def execute(self, query: str, params: Any = None):
         sql = rewrite_sql_for_postgres(query, schema=self._schema)
-        if params is None:
-            return self._cur.execute(sql)
-        return self._cur.execute(sql, params)
+        # SAVEPOINT: 1 câu lỗi không abort cả transaction (giống SQLite hơn).
+        try:
+            self._cur.execute('SAVEPOINT sme_stmt')
+            if params is None:
+                result = self._cur.execute(sql)
+            else:
+                result = self._cur.execute(sql, params)
+            self._cur.execute('RELEASE SAVEPOINT sme_stmt')
+            return result
+        except Exception:
+            try:
+                self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
+            except Exception:
+                pass
+            raise
 
     def executescript(self, script: str):
         for stmt in str(script or '').split(';'):
@@ -154,9 +166,20 @@ class PgConnection:
 
     def execute(self, query: str, params: Any = None):
         sql = rewrite_sql_for_postgres(query, schema=self._schema)
-        if params is None:
-            return self._conn.execute(sql)
-        return self._conn.execute(sql, params)
+        try:
+            self._conn.execute('SAVEPOINT sme_stmt')
+            if params is None:
+                result = self._conn.execute(sql)
+            else:
+                result = self._conn.execute(sql, params)
+            self._conn.execute('RELEASE SAVEPOINT sme_stmt')
+            return result
+        except Exception:
+            try:
+                self._conn.execute('ROLLBACK TO SAVEPOINT sme_stmt')
+            except Exception:
+                pass
+            raise
 
     def executescript(self, script: str):
         for stmt in str(script or '').split(';'):

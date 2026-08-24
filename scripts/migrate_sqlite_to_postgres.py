@@ -20,6 +20,13 @@ BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if BASE not in sys.path:
     sys.path.insert(0, BASE)
 
+# Nap .env neu co (VPS: /root/pos/.env)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(BASE, '.env'))
+except Exception:
+    pass
+
 os.environ.setdefault('SME_DB_BACKEND', 'postgres')
 
 from db.dialect import pg_schema_from_db_path, sanitize_pg_schema  # noqa: E402

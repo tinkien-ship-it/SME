@@ -71,6 +71,8 @@ keys = (
     'SME_DISABLE_SCHEDULERS', 'SME_FORCE_SCHEDULERS',
     'SME_ACCT_QUEUE_PROBE_TIMEOUT', 'SME_ACCT_QUEUE_MAX_DBS',
     'SME_CANONICAL_HOST', 'SME_SESSION_COOKIE_DOMAIN', 'PUBLIC_BASE_URL',
+    'SME_DB_BACKEND', 'DATABASE_URL', 'SME_PG_URL',
+    'SME_PG_POOL_MIN', 'SME_PG_POOL_MAX', 'SME_PG_REGISTRY_SCHEMA',
 )
 for k in keys:
     v = vals.get(k)
@@ -206,11 +208,61 @@ PY
 
 python scripts/verify_pg_sql_compat.py 2>/dev/null || echo "  (verify_pg_sql_compat — bo qua)"
 
+python - <<'PY'
+# Postgres: neu chua co du lieu → import tu SQLite file truoc khi migrate schema
+import os, subprocess, sys
+backend = (os.environ.get('SME_DB_BACKEND') or '').strip().lower()
+db_url = (os.environ.get('DATABASE_URL') or os.environ.get('SME_PG_URL') or '').strip().lower()
+is_pg = backend in ('postgres', 'postgresql', 'pg') or db_url.startswith('postgres')
+if not is_pg:
+    raise SystemExit(0)
+os.environ.setdefault('SME_DB_BACKEND', 'postgres')
+need_import = True
+try:
+    from db.postgres_backend import open_pg
+    from db.dialect import pg_schema_from_db_path, table_exists
+    with open_pg(schema=pg_schema_from_db_path(None)) as conn:
+        if table_exists(conn, 'tenants'):
+            n = int(conn.execute('SELECT COUNT(*) FROM tenants').fetchone()[0] or 0)
+            need_import = n == 0
+            print('  -> Postgres tenants: %d' % n)
+        else:
+            print('  -> Postgres chua co bang tenants')
+except Exception as exc:
+    print('  ! Kiem tra Postgres:', exc)
+if need_import:
+    print('  -> Import SQLite → PostgreSQL (lan dau)...')
+    rc = subprocess.call([sys.executable, 'scripts/migrate_sqlite_to_postgres.py'])
+    if rc != 0:
+        print('  ! migrate_sqlite_to_postgres thoat ma', rc)
+else:
+    print('  -> Bo qua import SQLite (Postgres da co tenants)')
+PY
+
 python scripts/migrate_all_dbs.py || echo "  ! Migrate co DB loi — xem log phia tren"
 
 python - <<'PY'
 import glob, os, sqlite3, subprocess, sys
+backend = (os.environ.get('SME_DB_BACKEND') or '').strip().lower()
+db_url = (os.environ.get('DATABASE_URL') or '').strip().lower()
+is_pg = backend in ('postgres', 'postgresql', 'pg') or db_url.startswith('postgres')
 files = [p for p in glob.glob('tenants/*.db') if not p.endswith('registry.db')]
+
+if is_pg:
+    print('  -> PostgreSQL: bo qua repair_vps_main_db.py (script SQLite)')
+    try:
+        from db.postgres_backend import open_pg
+        from db.dialect import pg_schema_from_db_path
+        with open_pg(schema=pg_schema_from_db_path(None)) as conn:
+            tenants = int(conn.execute('SELECT COUNT(*) FROM tenants').fetchone()[0] or 0)
+            masters = int(conn.execute("SELECT COUNT(*) FROM users WHERE role='master'").fetchone()[0] or 0)
+        print('  -> registry Postgres: %d tenant / %d file SQLite | master: %d' % (tenants, len(files), masters))
+        if tenants == 0 and files:
+            print('  ! Postgres registry RONG — chay: python scripts/migrate_sqlite_to_postgres.py')
+    except Exception as exc:
+        print('  ! Doc registry Postgres that bai:', exc)
+    raise SystemExit(0)
+
 rows = masters = None
 err = None
 try:
@@ -270,7 +322,26 @@ echo "HTTP /login => $HTTP"
 [ "$HTTP" = "200" ] || echo "  ! /login chua tra ve 200 — xem logs/app_error.log"
 
 python - <<'PY'
-import sqlite3
+import os, sqlite3
+backend = (os.environ.get('SME_DB_BACKEND') or '').strip().lower()
+db_url = (os.environ.get('DATABASE_URL') or '').strip().lower()
+is_pg = backend in ('postgres', 'postgresql', 'pg') or db_url.startswith('postgres')
+if is_pg:
+    try:
+        from db.postgres_backend import open_pg
+        from db.dialect import pg_schema_from_db_path
+        with open_pg(schema=pg_schema_from_db_path(None)) as c:
+            n = int(c.execute("SELECT COUNT(*) FROM users WHERE role='master'").fetchone()[0] or 0)
+            t = int(c.execute('SELECT COUNT(*) FROM tenants').fetchone()[0] or 0)
+        print('  -> Postgres tenants=%d master=%d' % (t, n))
+        if t == 0:
+            print('  ! Postgres registry RONG — import: python scripts/migrate_sqlite_to_postgres.py')
+        if n == 0:
+            print('  ! CHUA CO MASTER — them MASTER_PASSWORD vao .env roi:')
+            print('    python scripts/ensure_master_user.py --apply')
+    except Exception as exc:
+        print('  ! Khong kiem tra duoc Postgres:', exc)
+    raise SystemExit(0)
 try:
     with sqlite3.connect('file:database.db?mode=ro', uri=True) as c:
         mode = c.execute('PRAGMA journal_mode').fetchone()[0]

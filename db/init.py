@@ -458,12 +458,19 @@ def migrate_all_databases(verbose=True):
                 schemas.add(pg_schema_from_db_path(dbp, tenant_id=tid))
         except Exception as e:
             print(f'[MIGRATE] discover postgres schemas: {e!r}')
+            # Fallback: suy schema từ file SQLite còn trên disk
+            for path in _discover_database_paths():
+                schemas.add(pg_schema_from_db_path(path))
 
         for schema in sorted(schemas):
             try:
                 ensure_pg_schema(schema)
                 with open_pg(schema=schema) as conn:
                     apply_schema_migrations(conn)
+                    try:
+                        conn.commit()
+                    except Exception:
+                        pass
                 ok += 1
                 if verbose:
                     print(f'[MIGRATE] OK schema {schema}')

@@ -106,9 +106,13 @@ _SALE_ITEMS_EXTRA_COLS = (
 
 def _cols(conn: sqlite3.Connection, table: str) -> set[str]:
     try:
-        return {r[1] for r in conn.execute('PRAGMA table_info("%s")' % table)}
-    except sqlite3.DatabaseError:
-        return set()
+        from db.dialect import column_names
+        return column_names(conn, table)
+    except Exception:
+        try:
+            return {r[1] for r in conn.execute('PRAGMA table_info("%s")' % table)}
+        except Exception:
+            return set()
 
 
 def _has_col(have: set[str], name: str) -> bool:
@@ -117,9 +121,13 @@ def _has_col(have: set[str], name: str) -> bool:
 
 
 def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
-    return conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
-    ).fetchone() is not None
+    try:
+        from db.dialect import table_exists
+        return table_exists(conn, name)
+    except Exception:
+        return conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
+        ).fetchone() is not None
 
 
 def _ensure_extra_cols(conn: sqlite3.Connection, table: str, extras, changed: list[str]) -> None:
