@@ -522,6 +522,7 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             'send_otp_sms_route',
             'verify_otp_page',
             'verify_otp_code',
+            'verify_totp_page',
             'login_google',
             'login_google_callback',
             'login_google_credential',
@@ -558,7 +559,8 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
         # Đường dẫn auth công khai (phòng endpoint đổi tên / 404 có path)
         path = request.path or ''
         if path.startswith((
-            '/login', '/send-otp', '/verify-otp', '/authorize-google',
+            '/login', '/send-otp', '/verify-otp', '/verify-totp',
+            '/authorize-google',
             '/trial/google', '/api/trial', '/api/auth/google',
             '/forgot', '/reset', '/static/', '/favicon',
             '/gioi-thieu-keto-pos',
@@ -572,9 +574,15 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
 
         # NẾU CHƯA ĐĂNG NHẬP: Chặn đứng ngay lập tức, dọn rác và đá về trang login chính
         if not user_data or not session_token or not db_path:
-            # Đang chờ OTP/2FA — KHÔNG xóa pending_auth (trước đây request / hoặc
-            # endpoint lạ giữa trang 2FA sẽ clear session → nhấn gửi OTP bị đá về login).
+            # Đang chờ OTP/2FA/TOTP — giữ pending_auth; Master → /verify-totp
             if session.get('pending_auth'):
+                auth = session.get('pending_auth') or {}
+                role = str((auth.get('user') or {}).get('role') or '').strip()
+                if role == 'master' or auth.get('auth_method') == 'totp':
+                    try:
+                        return redirect(url_for('verify_totp_page'))
+                    except Exception:
+                        return redirect('/verify-totp')
                 try:
                     return redirect(url_for('login_2fa'))
                 except Exception:

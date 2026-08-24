@@ -127,14 +127,27 @@ ls -1t /root/pos_backup_*.tar.gz 2>/dev/null | tail -n +11 | xargs -r rm -f
 echo "=== [3/6] Dong bo code tu origin/$BRANCH ==="
 [ -d .git ] || fail "/root/pos chua co Git. Chay scripts/setup_git_vps.sh truoc."
 
+# Tranh CRLF / file cu / index.lock gay reset fail
+rm -f .git/index.lock 2>/dev/null || true
 git fetch --prune origin "$BRANCH" || fail "git fetch that bai (kiem tra mang / credential)"
 git rev-parse --verify --quiet "origin/$BRANCH" >/dev/null \
   || fail "khong thay origin/$BRANCH. Kiem tra ten branch: git branch -r"
-git reset --hard "origin/$BRANCH" || fail "git reset --hard that bai"
+
+if ! git reset --hard "origin/$BRANCH"; then
+  echo "  ! git reset --hard that bai — thu khoi phuc:"
+  git status -sb || true
+  git clean -fd || true
+  git reset --hard "origin/$BRANCH" || fail "git reset --hard that bai (lan 2)"
+fi
 find . -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null
 echo "  -> $(git rev-parse --short HEAD) $(git log -1 --pretty=%s)"
-cp -f scripts/deploy_pos.sh /root/deploy_pos.sh 2>/dev/null || true
-chmod +x /root/deploy_pos.sh scripts/*.sh 2>/dev/null || true
+# Cap nhat script deploy tren /root (sau khi reset thanh cong)
+if [ -f scripts/deploy_pos.sh ]; then
+  # Bo CRLF neu file bi commit tu Windows
+  sed -i 's/\r$//' scripts/deploy_pos.sh 2>/dev/null || true
+  cp -f scripts/deploy_pos.sh /root/deploy_pos.sh
+  chmod +x /root/deploy_pos.sh scripts/*.sh 2>/dev/null || true
+fi
 
 echo "=== [4/6] Cai dependency (bo pywin32 tren Linux) ==="
 grep -v pywin32 requirements.txt | pip install -r /dev/stdin -q \
