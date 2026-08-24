@@ -41,6 +41,14 @@ DB_BACKUP_DIR="/root/pos_db_backups"
 
 fail() { echo "LOI: $*" >&2; exit 1; }
 
+# Bo CRLF neu file bi copy tu Windows (tranh loi: ue / fi)
+if [ -f "$0" ]; then
+  sed -i 's/\r$//' "$0" 2>/dev/null || true
+fi
+if [ -f "$APP_DIR/scripts/deploy_pos.sh" ]; then
+  sed -i 's/\r$//' "$APP_DIR/scripts/deploy_pos.sh" 2>/dev/null || true
+fi
+
 cd "$APP_DIR" || fail "khong vao duoc $APP_DIR"
 # shellcheck disable=SC1090
 source "$VENV" || fail "khong activate duoc venv: $VENV"

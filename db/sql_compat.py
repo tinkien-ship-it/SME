@@ -14,6 +14,10 @@ def convert_sqlite_ddl(sql: str) -> str:
     text = re.sub(r'\bREAL\b', 'DOUBLE PRECISION', text, flags=re.I)
     text = re.sub(r'\bBLOB\b', 'BYTEA', text, flags=re.I)
     text = re.sub(r'\bDATETIME\b', 'TIMESTAMP', text, flags=re.I)
+    text = re.sub(r'\bNUMERIC\b', 'NUMERIC', text, flags=re.I)
+    text = re.sub(r'\bDOUBLE\b(?!\s+PRECISION)', 'DOUBLE PRECISION', text, flags=re.I)
+    text = re.sub(r'\s+WITHOUT\s+ROWID\b', '', text, flags=re.I)
+    text = re.sub(r'\s+ON\s+CONFLICT\s+(?:REPLACE|IGNORE|ABORT|FAIL|ROLLBACK)\b', '', text, flags=re.I)
     text = re.sub(
         r"datetime\s*\(\s*'now'\s*(?:,\s*'localtime'\s*)?\)",
         'CURRENT_TIMESTAMP',
@@ -21,6 +25,8 @@ def convert_sqlite_ddl(sql: str) -> str:
         flags=re.I,
     )
     text = re.sub(r'\bUNIQUE\s*\([^)]+\)\s*ON CONFLICT REPLACE', 'UNIQUE', text, flags=re.I)
+    # SQLite COLLATE NOCASE trong DDL → bỏ (Postgres dùng citext/ilike runtime)
+    text = re.sub(r'\s+COLLATE\s+NOCASE\b', '', text, flags=re.I)
     return text
 
 

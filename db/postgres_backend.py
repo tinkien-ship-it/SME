@@ -60,14 +60,25 @@ def get_pool() -> ConnectionPool:
         if _POOL is None:
             min_size = int(os.environ.get('SME_PG_POOL_MIN', '2') or 2)
             max_size = int(os.environ.get('SME_PG_POOL_MAX', '20') or 20)
+            timeout = float(os.environ.get('SME_PG_POOL_TIMEOUT', '10') or 10)
             _POOL = ConnectionPool(
                 conninfo=database_url(),
                 min_size=min_size,
                 max_size=max_size,
-                kwargs={'row_factory': compat_row_factory, 'autocommit': False},
+                timeout=timeout,
+                kwargs={
+                    'row_factory': compat_row_factory,
+                    'autocommit': False,
+                    'connect_timeout': 10,
+                },
                 open=True,
             )
         return _POOL
+
+
+def reset_pg_pool() -> None:
+    """Đóng pool (sau migrate hang / leak) rồi tạo lại lần get tiếp theo."""
+    close_pg_pool()
 
 
 def schema_lock(schema: str) -> threading.RLock:

@@ -86,6 +86,8 @@ def main() -> int:
         return 0
 
     ok = 0
+    from db.postgres_backend import reset_pg_pool  # noqa: E402
+
     for sqlite_path, schema in targets:
         print(f'Migrate {sqlite_path} → schema {schema} ...')
         try:
@@ -94,12 +96,16 @@ def main() -> int:
                 f'  OK: {stats["tables"]} bảng, {stats["rows"]} dòng'
                 + (f', {len(stats["errors"])} cảnh báo' if stats['errors'] else '')
             )
-            if stats['errors'][:3]:
-                for err in stats['errors'][:3]:
+            if stats['errors'][:5]:
+                for err in stats['errors'][:5]:
                     print(f'    - {err}')
             ok += 1
         except Exception as exc:
             print(f'  LOI: {exc}', file=sys.stderr)
+            try:
+                reset_pg_pool()
+            except Exception:
+                pass
 
     print(f'Hoàn tất: {ok}/{len(targets)} database.')
     return 0 if ok == len(targets) else 2

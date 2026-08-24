@@ -1,7 +1,6 @@
 """Chuyển DDL / dữ liệu SQLite → PostgreSQL (schema-per-tenant)."""
 from __future__ import annotations
 
-import re
 import sqlite3
 from typing import Any
 
@@ -25,6 +24,25 @@ def _sqlite_create_sql(conn: sqlite3.Connection, table: str) -> str | None:
     return row[0] if row and row[0] else None
 
 
+def _safe_rollback(pg) -> None:
+    try:
+        pg.rollback()
+    except Exception:
+        pass
+
+
+def _exec(pg, sql: str, params: Any = None) -> None:
+    """Chạy 1 câu; lỗi thì rollback để không kẹt InFailedSqlTransaction."""
+    try:
+        if params is None:
+            pg.execute(sql)
+        else:
+            pg.execute(sql, params)
+    except Exception:
+        _safe_rollback(pg)
+        raise
+
+
 def import_sqlite_file(
     sqlite_path: str,
     pg_schema: str,
@@ -43,48 +61,60 @@ def import_sqlite_file(
         tables = [t for t in _sqlite_tables(src) if t not in skip]
         pool = get_pool()
         with pool.connection() as pg:
-            pg.execute(f'SET search_path TO "{sch}", public')
+            # Autocommit từng câu DDL/DML thất bại không abort cả block
+            try:
+                pg.autocommit = True
+            except Exception:
+                pass
+            _exec(pg, f'SET search_path TO "{sch}", public')
+
             for table in tables:
                 ddl = _sqlite_create_sql(src, table)
                 if not ddl:
                     continue
-                pg.execute(f'DROP TABLE IF EXISTS "{table}" CASCADE')
                 try:
-                    pg.execute(convert_sqlite_ddl(ddl))
+                    _exec(pg, f'DROP TABLE IF EXISTS "{table}" CASCADE')
+                    _exec(pg, convert_sqlite_ddl(ddl))
                 except Exception as exc:
                     stats['errors'].append(f'{table} DDL: {exc}')
                     continue
+
                 cols = [c[1] for c in src.execute(f'PRAGMA table_info({table})').fetchall()]
                 if not cols:
+                    stats['tables'] += 1
                     continue
                 col_list = ', '.join(f'"{c}"' for c in cols)
                 placeholders = ', '.join(['%s'] * len(cols))
                 rows = src.execute(f'SELECT * FROM "{table}"').fetchall()
+                inserted = 0
                 for row in rows:
                     vals = [row[c] for c in cols]
                     try:
-                        pg.execute(
+                        _exec(
+                            pg,
                             f'INSERT INTO "{table}" ({col_list}) VALUES ({placeholders})',
                             vals,
                         )
-                        stats['rows'] += 1
+                        inserted += 1
                     except Exception as exc:
-                        stats['errors'].append(f'{table} row: {exc}')
+                        if len(stats['errors']) < 20:
+                            stats['errors'].append(f'{table} row: {exc}')
+                stats['rows'] += inserted
                 stats['tables'] += 1
-            # Cập nhật sequence sau import
+
             for table in tables:
                 try:
-                    pg.execute(
+                    _exec(
+                        pg,
                         f"""
                         SELECT setval(
                             pg_get_serial_sequence('"{table}"', 'id'),
-                            COALESCE((SELECT MAX(id) FROM "{table}"), 1)
+                            GREATEST(COALESCE((SELECT MAX(id) FROM "{table}"), 1), 1)
                         )
-                        """
+                        """,
                     )
                 except Exception:
-                    pass
-            pg.commit()
+                    _safe_rollback(pg)
     finally:
         src.close()
     return stats
