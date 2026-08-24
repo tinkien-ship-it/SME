@@ -1,13 +1,13 @@
 /* Service worker — cache shell POS + tài nguyên tĩnh để bán offline trên VPS. */
-const CACHE_SHELL = 'keto-pos-shell-v2';
-const CACHE_API = 'keto-pos-api-v1';
+const CACHE_SHELL = 'keto-pos-shell-v3';
+const CACHE_API = 'keto-pos-api-v2';
 
 const ASSETS = [
     '/static/vendor/bootstrap/bootstrap.min.css',
     '/static/vendor/bootstrap/bootstrap.bundle.min.js',
     '/static/vendor/jquery/jquery-3.6.0.min.js',
     '/static/vendor/fontawesome/css/all.min.css',
-    '/static/js/pos-offline.js',
+    '/static/js/pos-offline.js?v=3',
     '/static/manifest-pos.json',
 ];
 
@@ -49,28 +49,51 @@ function isCatalogApi(url) {
     return url.includes('/api/pos/catalog');
 }
 
+function isPosOfflineScript(url) {
+    return url.includes('/static/js/pos-offline.js');
+}
+
 self.addEventListener('fetch', function (ev) {
     if (ev.request.method !== 'GET') return;
     const url = ev.request.url;
 
-    /* Tài nguyên tĩnh */
-    if (url.includes('/static/')) {
+    /* pos-offline.js — luôn ưu tiên mạng để nhận bản sync mới */
+    if (isPosOfflineScript(url)) {
         ev.respondWith(
-            caches.match(ev.request).then(function (cached) {
-                if (cached) return cached;
-                return fetch(ev.request).then(function (resp) {
-                    if (resp && resp.status === 200) {
-                        const copy = resp.clone();
-                        caches.open(CACHE_SHELL).then(function (c) { c.put(ev.request, copy); });
-                    }
-                    return resp;
+            fetch(ev.request).then(function (resp) {
+                if (resp && resp.status === 200) {
+                    const copy = resp.clone();
+                    caches.open(CACHE_SHELL).then(function (c) { c.put(ev.request, copy); });
+                }
+                return resp;
+            }).catch(function () {
+                return caches.match(ev.request).then(function (cached) {
+                    return cached || caches.match('/static/js/pos-offline.js?v=3') ||
+                        caches.match('/static/js/pos-offline.js');
                 });
             })
         );
         return;
     }
 
-    /* Trang bán hàng — network first, fallback cache (offline vẫn mở được POS) */
+    /* Tài nguyên tĩnh khác */
+    if (url.includes('/static/')) {
+        ev.respondWith(
+            caches.match(ev.request).then(function (cached) {
+                const net = fetch(ev.request).then(function (resp) {
+                    if (resp && resp.status === 200) {
+                        const copy = resp.clone();
+                        caches.open(CACHE_SHELL).then(function (c) { c.put(ev.request, copy); });
+                    }
+                    return resp;
+                }).catch(function () { return cached; });
+                return cached || net;
+            })
+        );
+        return;
+    }
+
+    /* Trang bán hàng — network first, fallback cache */
     if (isPosPage(url)) {
         ev.respondWith(
             fetch(ev.request).then(function (resp) {

@@ -22,10 +22,40 @@
         opts = opts || {};
         if (opts.tenantKey) return String(opts.tenantKey);
         const meta = document.querySelector('meta[name="keto-tenant-id"]');
-        if (meta && meta.content) return meta.content;
-        const parts = (global.location && location.pathname.split('/').filter(Boolean)) || [];
-        if (parts.length && !parts[0].includes('.')) return parts[0];
+        if (meta && meta.content) return String(meta.content).trim();
+        // Không lấy segment path (/sale) làm tenant — sẽ lệch khi đổi URL.
         return 'default';
+    }
+
+    async function probeServerReachable() {
+        try {
+            const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+            const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 4000) : null;
+            const res = await fetch('/api/pos/catalog?probe=1', {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                signal: ctrl ? ctrl.signal : undefined,
+            });
+            if (timer) clearTimeout(timer);
+            // 401/403 vẫn nghĩa là có mạng (session hết hạn)
+            return res.status > 0;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function normalizeCheckoutPayload(payload, opts) {
+        const p = Object.assign({}, payload || {});
+        const forceNew = !opts || opts.forceNew !== false;
+        if (forceNew) {
+            // Đơn offline mới: bỏ order_id/sale_id cũ (draft/QR) để không gọi nhầm update.
+            delete p.order_id;
+            delete p.sale_id;
+        }
+        if (!p.client_uuid) p.client_uuid = uuid();
+        if (!p.status) p.status = 'completed';
+        return p;
     }
 
     function openDb() {
@@ -213,7 +243,13 @@
         online = !!next;
         if (was !== online) {
             document.dispatchEvent(new CustomEvent('pos-offline-status', { detail: { online: online } }));
-            if (online) processOutbox().catch(function () {});
+            if (online) {
+                // Xác nhận thật sự tới được server rồi mới sync (navigator.onLine hay báo sai).
+                probeServerReachable().then(function (ok) {
+                    if (ok) processOutbox().catch(function () {});
+                    else setOnlineState(false);
+                });
+            }
         }
         updateBadge();
     }
@@ -413,7 +449,10 @@
     async function getPendingOutbox() {
         const all = await idbGetAll('outbox');
         return all.filter(function (x) {
-            return x.tenant === tenantKey && (x.status === 'pending' || x.status === 'error');
+            const t = x.tenant || 'default';
+            // Bản cũ gán tenant = 'sale' (lấy từ pathname) — vẫn đồng bộ.
+            const tenantOk = t === tenantKey || t === 'sale' || t === 'default' || !x.tenant;
+            return tenantOk && (x.status === 'pending' || x.status === 'error');
         }).sort(function (a, b) {
             return String(a.created_at).localeCompare(String(b.created_at));
         });
@@ -445,25 +484,34 @@
 
     async function submitSale(opts) {
         opts = opts || {};
-        const payload = Object.assign({}, opts.payload || {});
-        const url = opts.url || '/api/cart/checkout';
-        const method = opts.method || 'POST';
-        if (!payload.client_uuid) payload.client_uuid = uuid();
+        const isUpdate = !!(opts.kind === 'pos_update' || (opts.url && String(opts.url).indexOf('/api/sale/update_item/') >= 0));
+        const payload = normalizeCheckoutPayload(opts.payload || {}, { forceNew: !isUpdate });
+        // Đơn mới luôn POST checkout — tránh PUT update_item khi đang offline.
+        const url = isUpdate ? (opts.url || '/api/cart/checkout') : '/api/cart/checkout';
+        const method = isUpdate ? (opts.method || 'PUT') : 'POST';
 
-        if (isOnline()) {
+        const reachable = isOnline() && await probeServerReachable();
+        if (reachable) {
             try {
                 const res = await fetch(url, {
                     method: method,
                     headers: Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {}),
                     body: JSON.stringify(payload),
                     credentials: 'same-origin',
+                    cache: 'no-store',
                 });
                 const data = await res.json().catch(function () { return {}; });
                 if (res.ok && data.success) {
                     return Object.assign({ offline: false, queued: false }, data);
                 }
-                if (!res.ok && res.status >= 400 && res.status < 500 && !String(data.error || '').includes('mạng')) {
-                    return Object.assign({ success: false, offline: false, queued: false }, data);
+                // Lỗi nghiệp vụ (4xx) — không xếp hàng đợi
+                if (res.status >= 400 && res.status < 500) {
+                    return Object.assign({
+                        success: false,
+                        offline: false,
+                        queued: false,
+                        error: data.error || data.message || ('HTTP ' + res.status),
+                    }, data);
                 }
             } catch (e) {
                 /* fall through to queue */
@@ -472,7 +520,7 @@
 
         const entry = {
             client_uuid: payload.client_uuid,
-            kind: opts.kind || 'pos_checkout',
+            kind: isUpdate ? 'pos_update' : 'pos_checkout',
             url: url,
             method: method,
             payload: payload,
@@ -482,6 +530,10 @@
             label: opts.label || ('POS ' + (payload.total || '') + 'đ'),
         };
         await enqueueOutbox(entry);
+        // Nếu mạng vừa về, thử sync ngay
+        if (isOnline()) {
+            setTimeout(function () { processOutbox().catch(function () {}); }, 300);
+        }
         return {
             success: true,
             offline: true,
@@ -501,6 +553,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ loai_hdon: payload.invoice_loai_hdon != null ? payload.invoice_loai_hdon : 1 }),
                     credentials: 'same-origin',
+                    cache: 'no-store',
                 });
                 effects.invoice = await invRes.json().catch(function () { return null; });
             } catch (e) {
@@ -513,31 +566,87 @@
         return effects;
     }
 
+    function isRetryableSyncFailure(res, data, errMsg) {
+        if (!res) return true;
+        if (res.status === 0 || res.status >= 500) return true;
+        if (res.status === 503) return true;
+        const msg = String(errMsg || data.error || data.message || '').toLowerCase();
+        if (msg.indexOf('locked') >= 0 || msg.indexOf('mạng') >= 0 || msg.indexOf('timeout') >= 0) return true;
+        return false;
+    }
+
     async function replayOutboxItem(item) {
         item.attempts = (item.attempts || 0) + 1;
-        const res = await fetch(item.url, {
-            method: item.method || 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(item.payload),
-            credentials: 'same-origin',
-        });
-        const data = await res.json().catch(function () { return {}; });
+        // Chuẩn hóa payload cũ đã xếp hàng (có thể còn order_id draft).
+        if (item.kind !== 'pos_update') {
+            item.url = '/api/cart/checkout';
+            item.method = 'POST';
+            item.payload = normalizeCheckoutPayload(item.payload || {}, { forceNew: true });
+            item.payload.client_uuid = item.client_uuid || item.payload.client_uuid;
+        }
+        let res;
+        try {
+            res = await fetch(item.url, {
+                method: item.method || 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item.payload),
+                credentials: 'same-origin',
+                cache: 'no-store',
+            });
+        } catch (e) {
+            item.status = 'pending';
+            item.last_error = 'Mất mạng: ' + String(e.message || e);
+            await idbPut('outbox', item);
+            return { ok: false, retryable: true, error: item.last_error, item: item };
+        }
+
+        const rawText = await res.text().catch(function () { return ''; });
+        let data = {};
+        try { data = rawText ? JSON.parse(rawText) : {}; } catch (e) { data = {}; }
+
         if (res.ok && data.success) {
             item.status = 'synced';
             item.sale_id = data.sale_id;
             item.synced_at = new Date().toISOString();
+            item.last_error = null;
             item.side_effects = await handleSyncedSideEffects(item, data);
             await idbPut('outbox', item);
             return { ok: true, data: data, item: item };
         }
+
+        // Redirect login / HTML → phiên hết hạn
+        if (res.status === 401 || res.status === 403 ||
+            (rawText && rawText.indexOf('<html') >= 0) ||
+            (res.redirected && res.url && res.url.indexOf('/login') >= 0)) {
+            item.status = 'error';
+            item.last_error = 'Phiên đăng nhập hết hạn — đăng nhập lại rồi bấm Đồng bộ';
+            await idbPut('outbox', item);
+            return { ok: false, retryable: false, error: item.last_error, data: data, item: item };
+        }
+
+        const errMsg = data.error || data.message || ('HTTP ' + res.status);
+        if (isRetryableSyncFailure(res, data, errMsg)) {
+            item.status = 'pending';
+            item.last_error = errMsg;
+            await idbPut('outbox', item);
+            return { ok: false, retryable: true, error: errMsg, data: data, item: item };
+        }
+
         item.status = 'error';
-        item.last_error = data.error || data.message || ('HTTP ' + res.status);
+        item.last_error = errMsg;
         await idbPut('outbox', item);
-        return { ok: false, error: item.last_error, data: data, item: item };
+        return { ok: false, retryable: false, error: item.last_error, data: data, item: item };
     }
 
     async function processOutbox() {
-        if (syncing || !isOnline()) return { processed: 0 };
+        if (syncing) return { processed: 0 };
+        const reachable = await probeServerReachable();
+        if (!reachable) {
+            online = false;
+            updateBadge();
+            return { processed: 0, offline: true };
+        }
+        online = true;
         syncing = true;
         let processed = 0;
         const errors = [];
@@ -552,9 +661,10 @@
                         syncedItems.push(r.item);
                     } else {
                         errors.push({ client_uuid: item.client_uuid, error: r.error, label: item.label });
+                        if (r.retryable) break; // dừng, lần sau thử tiếp
                     }
                 } catch (e) {
-                    item.status = 'error';
+                    item.status = 'pending';
                     item.last_error = String(e.message || e);
                     await idbPut('outbox', item);
                     errors.push({ client_uuid: item.client_uuid, error: item.last_error, label: item.label });
@@ -563,7 +673,7 @@
             }
             const all = await idbGetAll('outbox');
             backupOutboxLocal(all.filter(function (x) {
-                return x.tenant === tenantKey && (x.status === 'pending' || x.status === 'error');
+                return (!x.tenant || x.tenant === tenantKey) && (x.status === 'pending' || x.status === 'error');
             }));
             await purgeOldSyncedOutbox();
         } finally {

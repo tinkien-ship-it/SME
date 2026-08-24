@@ -418,7 +418,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
-<script src="{{ url_for('static', filename='js/pos-offline.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/pos-offline.js') }}?v=3"></script>
 <script>
     let cart = [];
     let editingOrderId = null;
@@ -1282,7 +1282,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         return {
-            order_id: editingOrderId || pendingSaleId,
+            order_id: editingOrderId || null,
             client_uuid: ensureOrderClientUuid(),
             items,
             total,
@@ -1304,10 +1304,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const data = getOrderData();
         if (data.payment_method === '112') {
             data.status = 'pending';
+            delete data.order_id;
+            delete data.sale_id;
             if (window.PosOffline) {
                 const res = await PosOffline.submitSale({
                     url: '/api/cart/checkout',
                     method: 'POST',
+                    kind: 'pos_checkout',
                     payload: data,
                     label: 'POS CK ' + (data.total || ''),
                 });
@@ -1358,9 +1361,15 @@ async function processOrder(data) {
     data.invoice_loai_hdon = resolveIssueLoaiHdon();
     data.status = data.status || 'completed';
 
-    const isEditing = !!(editingOrderId || pendingSaleId);
-    const url = isEditing ? `/api/sale/update_item/${editingOrderId || pendingSaleId}` : '/api/cart/checkout';
+    // Chỉ coi là sửa đơn khi đang edit đơn đã có trên server (editingOrderId).
+    // pendingSaleId (QR chờ CK) không dùng update khi offline — tạo đơn mới + client_uuid.
+    const isEditing = !!editingOrderId;
+    const url = isEditing ? `/api/sale/update_item/${editingOrderId}` : '/api/cart/checkout';
     const method = isEditing ? 'PUT' : 'POST';
+    if (!isEditing) {
+        delete data.order_id;
+        delete data.sale_id;
+    }
 
     const ts = new Date().getTime();
 
@@ -1375,6 +1384,7 @@ async function processOrder(data) {
             res = await PosOffline.submitSale({
                 url: url,
                 method: method,
+                kind: isEditing ? 'pos_update' : 'pos_checkout',
                 payload: data,
                 label: 'POS ' + (data.total || ''),
             });
