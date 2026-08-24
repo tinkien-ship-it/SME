@@ -31,7 +31,7 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, get_db_connection, sqlite_commit
+from db_utils import BASE_DIR, MAIN_DB_PATH, get_db_connection, sqlite_commit, begin_immediate
 from Services.invoice_buyer import DEFAULT_RETAIL_BUYER_NAME, normalize_retail_buyer_name
 from Services.hkd_sector import resolve_item_hkd_sector
 from Services.sale_helpers import insert_sale_item_with_sector
@@ -45,7 +45,7 @@ def complete_rental_bank_payment(sale_id):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     try:
-        cursor.execute("BEGIN IMMEDIATE")
+        begin_immediate(conn, label='rental_bank_payment')
         sale = cursor.execute("SELECT * FROM sale WHERE id = ?", (sale_id,)).fetchone()
         if not sale:
             return {"success": False, "error": "Không tìm thấy hóa đơn"}
@@ -397,7 +397,7 @@ def register_rental_routes(app):
         cursor = conn.cursor()
 
         try:
-            cursor.execute("BEGIN IMMEDIATE")
+            begin_immediate(conn, label='rental_checkout')
 
             # Tính tổng tiền từ danh sách khoản thu
             total_amount = sum(float(i.get('total', 0)) for i in items)

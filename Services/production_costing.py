@@ -13,9 +13,8 @@ import sqlite3
 from datetime import datetime
 
 from db_utils import sqlite_commit
+from Services.inventory_cost import apply_cost_inbound, apply_cost_outbound
 from Services.inventory_stock_helpers import (
-    apply_wac_inbound,
-    apply_wac_outbound,
     get_wac,
     ledger_quantity,
     sync_inventory_quantity_from_moves,
@@ -565,7 +564,10 @@ def create_production_order(
             q_act = float(line['qty_actual'])
             if q_act <= 0:
                 continue
-            _new_wac, cost_used = apply_wac_outbound(c, mid, q_act)
+            _new_wac, cost_used, fifo_details = apply_cost_outbound(
+                c, mid, q_act, None,
+                ref_type='production', ref_id=None, conn=c.connection,
+            )
             line_cost = round(q_act * cost_used, 2)
             material_cost += line_cost
             material_rows.append({
@@ -574,6 +576,9 @@ def create_production_order(
                 'qty_actual': q_act,
                 'unit_cost': cost_used,
                 'total_cost': line_cost,
+                'fifo_consumption_ids': [
+                    d['consumption_id'] for d in (fifo_details or []) if d.get('consumption_id')
+                ],
             })
 
         material_cost = round(material_cost, 2)
@@ -603,6 +608,11 @@ def create_production_order(
         order_id = c.lastrowid
 
         for m in material_rows:
+            for cid in m.get('fifo_consumption_ids') or []:
+                c.execute(
+                    'UPDATE inventory_lot_consumptions SET ref_id = ? WHERE id = ?',
+                    (order_id, cid),
+                )
             c.execute(
                 """
                 INSERT INTO production_order_materials (
@@ -644,7 +654,16 @@ def create_production_order(
 
         # HKD / không trì hoãn: nhập TP ngay. SME: chờ nút Nhập kho thành phẩm.
         if not defer_fg_receipt:
-            apply_wac_inbound(c, finished_product_id, qty, total_cost)
+            apply_cost_inbound(
+                c, finished_product_id, qty, total_cost,
+                unit_cost=unit_cost,
+                source_type='PRODUCTION',
+                source_id=order_id,
+                received_at=when,
+                lot_no=f'SX-{voucher_no}',
+                note=f'SX {voucher_no}: nhập TP',
+                conn=c.connection,
+            )
             fg_move = _insert_stock_move(
                 c,
                 product_id=finished_product_id,
@@ -849,7 +868,16 @@ def receive_finished_goods(
     c = conn.cursor()
     try:
         receipt_no = next_fg_receipt_voucher(c)
-        apply_wac_inbound(c, fg_id, qty, amount)
+        apply_cost_inbound(
+            c, fg_id, qty, amount,
+            unit_cost=unit_cost,
+            source_type='PRODUCTION',
+            source_id=order_id,
+            received_at=when,
+            lot_no=receipt_no,
+            note=f'SX {voucher_no}: nhập TP đợt {receipt_no}',
+            conn=c.connection,
+        )
         move_id = _insert_stock_move(
             c,
             product_id=fg_id,
@@ -958,7 +986,10 @@ def cancel_production_order(
                     rcost = float(r.get('unit_cost') or unit_cost)
                     if rq <= 0:
                         continue
-                    apply_wac_outbound(c, fg_id, rq, rcost)
+                    apply_cost_outbound(
+                        c, fg_id, rq, rcost,
+                        ref_type='production_cancel_fg', ref_id=order_id, conn=c.connection,
+                    )
                     _insert_stock_move(
                         c,
                         product_id=fg_id,
@@ -977,7 +1008,10 @@ def cancel_production_order(
                     )
                 sync_inventory_quantity_from_moves(c, fg_id)
             else:
-                apply_wac_outbound(c, fg_id, qty_to_reverse, unit_cost)
+                apply_cost_outbound(
+                    c, fg_id, qty_to_reverse, unit_cost,
+                    ref_type='production_cancel_fg', ref_id=order_id, conn=c.connection,
+                )
                 _insert_stock_move(
                     c,
                     product_id=fg_id,
@@ -999,7 +1033,16 @@ def cancel_production_order(
             if q_act <= 0:
                 continue
             value = q_act * cost
-            apply_wac_inbound(c, mid, q_act, value)
+            apply_cost_inbound(
+                c, mid, q_act, value,
+                unit_cost=cost,
+                source_type='PRODUCTION_REVERSE',
+                source_id=order_id,
+                received_at=when,
+                lot_no=f'HX-{voucher_no}-{mid}',
+                note=f'Hủy SX {voucher_no}: hoàn NVL',
+                conn=c.connection,
+            )
             _insert_stock_move(
                 c,
                 product_id=mid,

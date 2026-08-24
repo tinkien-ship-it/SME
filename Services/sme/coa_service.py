@@ -62,35 +62,34 @@ def _now() -> str:
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
-def ensure_sme_coa_ready(
+def _coa_disk_ready(conn: sqlite3.Connection) -> bool:
+    """COA đã seed trên disk — không cần ghi khi mở sổ/báo cáo."""
+    try:
+        from db_utils import sqlite_table_exists
+
+        if not sqlite_table_exists(conn, 'sme_coa_seed_meta'):
+            return False
+        row = conn.execute(
+            "SELECT value FROM sme_coa_seed_meta WHERE key = 'seed_version'"
+        ).fetchone()
+        current = row[0] if row else None
+        count = conn.execute('SELECT COUNT(*) FROM sme_chart_of_accounts').fetchone()[0]
+        return current == SEED_VERSION and int(count or 0) > 0
+    except sqlite3.Error:
+        return False
+
+
+def _apply_coa_seed(
     conn: sqlite3.Connection,
     *,
     force_reseed: bool = False,
-    commit: bool = True,
 ) -> dict[str, Any]:
-    """Đảm bảo schema + seed TT99/recommended đã có trên DB tenant."""
-    from db_utils import sqlite_is_ready, sqlite_mark_ready, sqlite_commit
+    """Ghi seed COA trên connection đang giữ — caller commit."""
+    from Services.sme.schema import ensure_sme_coa_schema
 
-    flag = f'coa_seed:{SEED_VERSION}'
-    if not force_reseed and sqlite_is_ready(conn, flag):
-        return {'seeded': False, 'cached': True, 'seed_version': SEED_VERSION}
-
-    ensure_sme_coa_schema(conn, commit=commit)
+    ensure_sme_coa_schema(conn, commit=True)
     c = conn.cursor()
-    row = c.execute(
-        "SELECT value FROM sme_coa_seed_meta WHERE key = 'seed_version'"
-    ).fetchone()
-    current = row[0] if row else None
-    count = c.execute("SELECT COUNT(*) FROM sme_chart_of_accounts").fetchone()[0]
-
-    if not force_reseed and current == SEED_VERSION and count > 0:
-        from Services.sme.account_roles import ensure_account_roles_ready
-        ensure_account_roles_ready(conn, commit=commit)
-        sqlite_mark_ready(conn, flag)
-        return {'seeded': False, 'seed_version': current, 'count': count}
-
     if force_reseed:
-        # Chỉ xóa tài khoản hệ thống/recommended chưa phát sinh custom chồng; giữ custom của DN
         c.execute(
             """
             DELETE FROM sme_chart_of_accounts
@@ -111,7 +110,7 @@ def ensure_sme_coa_ready(
         ).fetchone()
         if exists:
             if exists[1]:
-                continue  # không ghi đè TK do người dùng tạo
+                continue
             c.execute(
                 """
                 UPDATE sme_chart_of_accounts SET
@@ -171,11 +170,9 @@ def ensure_sme_coa_ready(
         (SEED_VERSION, _now()),
     )
     from Services.sme.account_roles import ensure_account_roles_ready
-    ensure_account_roles_ready(conn, commit=False)
-    if commit:
-        sqlite_commit(conn, label='coa_service')
-    sqlite_mark_ready(conn, flag)
-    count = c.execute("SELECT COUNT(*) FROM sme_chart_of_accounts").fetchone()[0]
+
+    ensure_account_roles_ready(conn, commit=True)
+    count = c.execute('SELECT COUNT(*) FROM sme_chart_of_accounts').fetchone()[0]
     return {
         'seeded': True,
         'seed_version': SEED_VERSION,
@@ -183,6 +180,66 @@ def ensure_sme_coa_ready(
         'updated': updated,
         'count': count,
     }
+
+
+def ensure_sme_coa_ready(
+    conn: sqlite3.Connection,
+    *,
+    force_reseed: bool = False,
+    commit: bool = True,
+) -> dict[str, Any]:
+    """Đảm bảo schema + seed TT99/recommended đã có trên DB tenant."""
+    from db_utils import (
+        _is_locked_error,
+        sqlite_commit,
+        sqlite_is_ready,
+        sqlite_mark_ready,
+        with_sqlite_write,
+    )
+
+    flag = f'coa_seed:{SEED_VERSION}'
+    if not force_reseed and sqlite_is_ready(conn, flag):
+        return {'seeded': False, 'cached': True, 'seed_version': SEED_VERSION}
+
+    if not force_reseed and _coa_disk_ready(conn):
+        from Services.sme.account_roles import ensure_account_roles_ready
+
+        try:
+            ensure_account_roles_ready(conn, commit=commit)
+        except sqlite3.OperationalError as exc:
+            if not _is_locked_error(exc):
+                raise
+        sqlite_mark_ready(conn, flag)
+        count = conn.execute('SELECT COUNT(*) FROM sme_chart_of_accounts').fetchone()[0]
+        return {'seeded': False, 'seed_version': SEED_VERSION, 'count': count}
+
+    result: dict[str, Any] = {}
+
+    def _bootstrap(target: sqlite3.Connection) -> None:
+        nonlocal result
+        result = _apply_coa_seed(target, force_reseed=force_reseed)
+        sqlite_commit(target, label='coa_seed')
+
+    try:
+        if commit:
+            _bootstrap(conn)
+        else:
+            with_sqlite_write(conn, _bootstrap, commit=False, label='coa_seed')
+    except sqlite3.OperationalError as exc:
+        if _is_locked_error(exc) and _coa_disk_ready(conn):
+            sqlite_mark_ready(conn, flag)
+            count = conn.execute('SELECT COUNT(*) FROM sme_chart_of_accounts').fetchone()[0]
+            return {
+                'seeded': False,
+                'skipped': True,
+                'reason': 'seed_busy',
+                'seed_version': SEED_VERSION,
+                'count': count,
+            }
+        raise
+
+    sqlite_mark_ready(conn, flag)
+    return result or {'seeded': True, 'seed_version': SEED_VERSION}
 
 
 def _refresh_postable_flags(c: sqlite3.Cursor) -> None:

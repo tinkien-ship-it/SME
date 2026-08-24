@@ -1,18 +1,20 @@
-"""Tương thích schema SQLite giữa tenant cũ/mới — sale_items, sỉ/lẻ, khóa dòng."""
+"""Tương thích schema giữa tenant cũ/mới — sale_items, sỉ/lẻ, khóa dòng."""
 from __future__ import annotations
 
 import sqlite3
+
+from db.dialect import is_postgres
+from db.schema_helpers import column_exists, table_cols_lower, table_exists
 from db_utils import sqlite_commit
 
 _CANONICAL_USE_UNIT = 'use_sale_unit'
 _LEGACY_USE_UNIT = 'UseSaleUnit'
 
 
-def table_cols_lower(cursor, table: str) -> set[str]:
-    try:
-        return {(r[1] or '').lower() for r in cursor.execute(f'PRAGMA table_info({table})')}
-    except sqlite3.Error:
-        return set()
+def table_cols_lower_cursor(cursor, table: str) -> set[str]:
+    """Tương thích cursor-only call sites."""
+    conn = getattr(cursor, 'connection', None) or cursor
+    return table_cols_lower(conn, table)
 
 
 def _col_exists(cols: set[str], name: str) -> bool:
@@ -21,7 +23,7 @@ def _col_exists(cols: set[str], name: str) -> bool:
 
 def use_sale_unit_expr(cursor, alias: str = 'si') -> str:
     """Biểu thức SQL đọc đơn vị sỉ/lẻ — hỗ trợ cả UseSaleUnit và use_sale_unit."""
-    cols = table_cols_lower(cursor, 'sale_items')
+    cols = table_cols_lower_cursor(cursor, 'sale_items')
     a = alias
     has_upper = _col_exists(cols, _LEGACY_USE_UNIT)
     has_lower = _col_exists(cols, _CANONICAL_USE_UNIT)
@@ -42,7 +44,7 @@ def normalize_use_sale_unit(raw) -> int:
 
 def sale_item_pk_column(cursor) -> str:
     """Tên cột khóa dòng trên sale_items (không alias)."""
-    cols = table_cols_lower(cursor, 'sale_items')
+    cols = table_cols_lower_cursor(cursor, 'sale_items')
     if _col_exists(cols, 'id'):
         return 'id'
     return 'rowid'
@@ -59,7 +61,7 @@ def sale_item_pk_expr(cursor, alias: str = 'si') -> str:
 def use_sale_unit_where_clause(cursor, alias: str | None = 'si') -> str:
     if alias:
         return f'({use_sale_unit_expr(cursor, alias)}) = ?'
-    cols = table_cols_lower(cursor, 'sale_items')
+    cols = table_cols_lower_cursor(cursor, 'sale_items')
     has_upper = _col_exists(cols, _LEGACY_USE_UNIT)
     has_lower = _col_exists(cols, _CANONICAL_USE_UNIT)
     if has_upper and has_lower:
@@ -73,7 +75,7 @@ def use_sale_unit_where_clause(cursor, alias: str | None = 'si') -> str:
 
 def use_sale_unit_insert_columns(cursor) -> list[str]:
     """Tên cột ghi khi INSERT — ghi cả hai nếu tenant có cả hai."""
-    cols = table_cols_lower(cursor, 'sale_items')
+    cols = table_cols_lower_cursor(cursor, 'sale_items')
     names: list[str] = []
     if _col_exists(cols, _LEGACY_USE_UNIT):
         names.append(_LEGACY_USE_UNIT)
@@ -92,11 +94,11 @@ def expand_use_sale_unit_values(cursor, value: int) -> list[int]:
 def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True) -> list[str]:
     """Đồng bộ UseSaleUnit ↔ use_sale_unit; thêm cột id mirror rowid nếu thiếu."""
     changed: list[str] = []
-    if not _table_exists(conn, 'sale_items'):
+    if not table_exists(conn, 'sale_items'):
         return changed
 
     c = conn.cursor()
-    cols = table_cols_lower(c, 'sale_items')
+    cols = table_cols_lower(conn, 'sale_items')
     has_upper = _col_exists(cols, _LEGACY_USE_UNIT)
     has_lower = _col_exists(cols, _CANONICAL_USE_UNIT)
 
@@ -163,15 +165,16 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
         except sqlite3.OperationalError:
             pass
 
-    cols = table_cols_lower(c, 'sale_items')
+    cols = table_cols_lower(conn, 'sale_items')
     if not _col_exists(cols, 'id'):
         try:
             c.execute('ALTER TABLE sale_items ADD COLUMN id INTEGER')
-            c.execute('UPDATE sale_items SET id = rowid WHERE id IS NULL')
+            if not is_postgres():
+                c.execute('UPDATE sale_items SET id = rowid WHERE id IS NULL')
             changed.append('alter:sale_items.id')
         except sqlite3.OperationalError:
             pass
-    else:
+    elif not is_postgres():
         try:
             c.execute('UPDATE sale_items SET id = rowid WHERE id IS NULL')
         except sqlite3.OperationalError:
@@ -180,11 +183,3 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
     if commit:
         sqlite_commit(conn, label='schema_compat')
     return changed
-
-
-def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
-    row = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
-        (name,),
-    ).fetchone()
-    return bool(row)

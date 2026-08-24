@@ -2839,9 +2839,8 @@ def register_ketoan_sme_routes(app):
                 register_fixed_asset_from_import,
                 register_tool_from_import,
             )
+            from Services.inventory_cost import apply_cost_inbound, reverse_import_cost
             from Services.inventory_stock_helpers import (
-                apply_wac_inbound,
-                reverse_import_moves_wac,
                 sync_inventory_quantity_from_moves,
                 sync_inventory_quantities,
             )
@@ -3232,7 +3231,7 @@ def register_ketoan_sme_routes(app):
                         }), 403
 
                 sync_pids = set(old_pids)
-                reverse_import_moves_wac(c, import_id)
+                reverse_import_cost(c, import_id, conn=conn)
                 c.execute("DELETE FROM import_details WHERE import_id = ?", (import_id,))
                 c.execute(
                     "DELETE FROM stock_moves WHERE ref_id = ? AND type IN ('import', 'RETURN_IMPORT')",
@@ -3742,9 +3741,21 @@ def register_ketoan_sme_routes(app):
                     except sqlite3.Error:
                         pass
 
-                    apply_wac_inbound(c, pid, float(qty_retail), float(line_inventory_value_vnd))
                     move_note = (
                         f"Nhập kho từ {supplier_name} ({desc_label}: {product_name}) — {warehouse_code}"
+                    )
+                    apply_cost_inbound(
+                        c, pid, float(qty_retail), float(line_inventory_value_vnd),
+                        unit_cost=float(cost_per_retail),
+                        source_type='IMPORT',
+                        source_id=import_id,
+                        source_line_id=detail_id,
+                        warehouse_code=warehouse_code,
+                        received_at=import_date,
+                        lot_no=f'PN-{import_no}-{pid}',
+                        expiry_date=(item.get('expiry_date') or '').strip() or None,
+                        note=move_note,
+                        conn=conn,
                     )
                     _insert_sme_import_stock_move(
                         c,
@@ -6745,3 +6756,5 @@ def register_ketoan_sme_routes(app):
         login_required=login_required,
         require_sme_regime=require_sme_regime,
     )
+    from Services.inventory_lot_routes import register_inventory_lot_routes
+    register_inventory_lot_routes(app)

@@ -67,6 +67,7 @@ SME_MENU_GROUPS = (
             {'endpoint': 'inventory', 'label': 'Tồn kho', 'icon': 'fas fa-boxes-stacked'},
             {'endpoint': 'inventory_detail', 'label': 'Báo cáo tồn kho', 'icon': 'fas fa-chart-column'},
             {'endpoint': 'SME_material_alloc', 'label': 'Xuất dùng nội bộ (Nợ 642/641/627)', 'icon': 'fas fa-box-open'},
+            {'endpoint': 'SME_inventory_lots', 'label': 'Theo dõi lô hàng', 'icon': 'fas fa-layer-group'},
             {'endpoint': 'SME_branches', 'label': 'Danh mục kho và chi nhánh', 'icon': 'fas fa-warehouse'},
         ),
     },

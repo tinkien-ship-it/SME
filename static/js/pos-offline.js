@@ -731,6 +731,11 @@
         window.addEventListener('online', function () { setOnlineState(true); });
         window.addEventListener('offline', function () { setOnlineState(false); });
         setOnlineState(navigator.onLine);
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' && isOnline()) {
+                processOutbox().catch(function () {});
+            }
+        });
         if (isOnline()) {
             await syncCatalog({ includeMenu: !!opts.includeMenu });
             processOutbox().catch(function () {});

@@ -1,4 +1,4 @@
-"""Kết nối SQLite dùng chung — nguồn duy nhất cho tenant DB và main/registry DB."""
+"""Kết nối DB dùng chung — SQLite (mặc định) hoặc PostgreSQL (VPS production)."""
 import logging
 import os
 import random
@@ -8,6 +8,20 @@ import time
 from contextlib import contextmanager
 
 from flask import g, has_request_context, session
+
+from db.dialect import (
+    db_backend,
+    is_postgres,
+    is_sqlite,
+    is_locked_error as _dialect_locked_error,
+    pg_schema_from_db_path,
+    table_exists as _dialect_table_exists,
+)
+from db.schema_helpers import (  # noqa: F401 — re-export cho module legacy
+    add_column_if_missing,
+    column_exists,
+    table_cols,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,32 +90,58 @@ def sqlite_file_write_lock(conn_or_path, *, timeout: float | None = None):
 
 
 def _is_locked_error(exc: BaseException) -> bool:
+    if _dialect_locked_error(exc):
+        return True
     msg = str(exc).lower()
     return 'database is locked' in msg or 'database table is locked' in msg
 
 
-def _raw_sqlite_conn(conn):
-    """Lấy sqlite3.Connection thật từ proxy request-scoped / auto-close."""
+def _raw_db_conn(conn):
+    """Lấy connection thật từ proxy request-scoped / auto-close."""
     cur = conn
-    for _ in range(4):
+    for _ in range(6):
         if isinstance(cur, sqlite3.Connection):
             return cur
+        if hasattr(cur, '_conn') and isinstance(getattr(cur, '_conn', None), sqlite3.Connection):
+            return getattr(cur, '_conn')
         if isinstance(cur, _RequestScopedConnection):
             cur = object.__getattribute__(cur, '_conn')
             continue
         if isinstance(cur, _AutoCloseConnection):
             cur = cur._raw()
             continue
+        inner = getattr(cur, '_inner', None)
+        if inner is not None:
+            cur = inner
+            continue
         break
     return cur
 
 
-def begin_immediate(conn, *, label: str = 'begin_immediate') -> None:
-    """``BEGIN IMMEDIATE`` có retry khi database locked; bỏ qua nếu đã trong transaction.
+def _raw_sqlite_conn(conn):
+    """Alias tương thích — chỉ SQLite thật."""
+    raw = _raw_db_conn(conn)
+    if isinstance(raw, sqlite3.Connection):
+        return raw
+    raise TypeError('Expected sqlite3 connection')
 
-    Sau lỗi FK / constraint trên cùng connection request-scoped, gọi ``rollback``
-    rồi mới BEGIN lại để tránh giữ khóa và làm checkout bị ``database is locked``.
-    """
+
+def begin_immediate(conn, *, label: str = 'begin_immediate') -> None:
+    """Bắt đầu transaction ghi — SQLite: BEGIN IMMEDIATE; PostgreSQL: BEGIN."""
+    if is_postgres():
+        def _pg():
+            raw = _raw_db_conn(conn)
+            if getattr(raw, 'in_transaction', False):
+                return
+            schema = getattr(raw, '_sme_pg_schema', 'public')
+            from db.postgres_backend import pg_write_lock
+            with pg_write_lock(schema):
+                if not getattr(raw, 'in_transaction', False):
+                    raw.execute('BEGIN')
+        from db.postgres_backend import pg_write_retry
+        pg_write_retry(_pg, label=label)
+        return
+
     def _do():
         raw = _raw_sqlite_conn(conn)
         try:
@@ -109,19 +149,20 @@ def begin_immediate(conn, *, label: str = 'begin_immediate') -> None:
                 return
         except Exception:
             pass
-        try:
-            raw.execute('BEGIN IMMEDIATE')
-        except sqlite3.OperationalError as exc:
-            msg = str(exc).lower()
-            # Transaction aborted / cannot start — gỡ rồi thử lại trong retry loop
-            if 'within a transaction' in msg or 'transaction' in msg:
-                try:
-                    raw.rollback()
-                except Exception:
-                    pass
+        lock_key = sqlite_db_file(conn)
+        with sqlite_file_write_lock(lock_key or conn):
+            try:
                 raw.execute('BEGIN IMMEDIATE')
-                return
-            raise
+            except sqlite3.OperationalError as exc:
+                msg = str(exc).lower()
+                if 'within a transaction' in msg or 'transaction' in msg:
+                    try:
+                        raw.rollback()
+                    except Exception:
+                        pass
+                    raw.execute('BEGIN IMMEDIATE')
+                    return
+                raise
 
     sqlite_write_retry(_do, label=label)
 
@@ -372,9 +413,13 @@ def sqlite_write_retry(fn, *, retries: int | None = None, label: str = 'sqlite_w
 
 
 def sqlite_db_file(conn) -> str | None:
-    """Đường dẫn file SQLite của connection; None nếu :memory: / unnamed."""
+    """Đường dẫn file SQLite hoặc schema Postgres (khóa ghi / cache)."""
+    raw = _raw_db_conn(conn)
+    if getattr(raw, '_sme_backend', None) == 'postgres':
+        return getattr(raw, '_sme_pg_schema', None)
     try:
-        raw = _raw_sqlite_conn(conn)
+        if not isinstance(raw, sqlite3.Connection):
+            return getattr(raw, '_sme_pg_schema', None)
         row = raw.execute('PRAGMA database_list').fetchone()
         if not row:
             return None
@@ -406,14 +451,33 @@ def sqlite_clear_ready(db_path: str | None = None) -> None:
 
 
 def sqlite_table_exists(conn, name: str) -> bool:
-    try:
-        row = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
-            (name,),
-        ).fetchone()
-        return bool(row)
-    except sqlite3.Error:
-        return False
+    return _dialect_table_exists(conn, name)
+
+
+def resolve_pg_schema() -> str:
+    tenant_id = getattr(g, 'tenant_id', None) if has_request_context() else None
+    db_path = resolve_db_path()
+    if is_postgres() and paths_same_db(db_path, MAIN_DB_PATH):
+        return pg_schema_from_db_path(MAIN_DB_PATH, tenant_id=None)
+    return pg_schema_from_db_path(db_path, tenant_id=tenant_id)
+
+
+def _open_db_for_path(db_path: str, *, request_scoped: bool = False):
+    if is_postgres():
+        from db.postgres_backend import open_pg, open_pg_request, ensure_pg_schema
+        schema = pg_schema_from_db_path(
+            db_path,
+            tenant_id=getattr(g, 'tenant_id', None) if has_request_context() else None,
+        )
+        if schema != 'public':
+            ensure_pg_schema(schema)
+        if request_scoped:
+            return open_pg_request(schema)
+        return open_pg(schema=schema)
+    inner = open_sqlite(db_path)
+    if request_scoped:
+        return _RequestScopedConnection(inner)
+    return inner
 
 
 def with_sqlite_write(conn, fn, *, commit: bool = True, label: str = 'sqlite_write'):
@@ -431,7 +495,9 @@ def with_sqlite_write(conn, fn, *, commit: bool = True, label: str = 'sqlite_wri
             if not commit:
                 path = sqlite_db_file(conn)
                 if path:
-                    own = open_sqlite(path, timeout=5.0)
+                    # Gỡ transaction đọc trên conn request — tránh 2 handle cùng file → locked
+                    rollback_quietly(conn)
+                    own = open_sqlite(path, timeout=SQLITE_TIMEOUT_SEC)
                     target = own
                     lock_key = path
             with sqlite_file_write_lock(lock_key or conn):
@@ -472,11 +538,33 @@ def sqlite_run_write(conn, fn, *, label: str = 'sqlite_write'):
 
 
 def sqlite_commit(conn, *, label: str = 'sqlite_commit') -> None:
-    """Commit giao dịch hiện tại với ``BEGIN IMMEDIATE`` + retry (route đã ghi xong)."""
+    """Commit giao dịch hiện tại — file lock + retry (SQLite) hoặc schema lock (PostgreSQL)."""
+
+    if is_postgres():
+        def _pg():
+            raw = _raw_db_conn(conn)
+            schema = getattr(raw, '_sme_pg_schema', 'public')
+            from db.postgres_backend import pg_write_lock, pg_write_retry
+            with pg_write_lock(schema):
+                if not getattr(raw, 'in_transaction', False):
+                    raw.execute('BEGIN')
+                raw.commit()
+        from db.postgres_backend import pg_write_retry
+        pg_write_retry(_pg, label=label)
+        return
 
     def _do():
-        begin_immediate(conn, label=label)
-        conn.commit()
+        raw = _raw_sqlite_conn(conn)
+        in_txn = False
+        try:
+            in_txn = bool(getattr(raw, 'in_transaction', False))
+        except Exception:
+            pass
+        lock_key = sqlite_db_file(conn)
+        with sqlite_file_write_lock(lock_key or conn):
+            if not in_txn:
+                raw.execute('BEGIN IMMEDIATE')
+            raw.commit()
 
     sqlite_write_retry(_do, label=label)
 
@@ -518,22 +606,26 @@ def get_db_connection():
     ``conn.close()`` trong route là no-op — teardown mới đóng thật.
     """
     db_path = resolve_db_path()
+    cache_key = resolve_pg_schema() if is_postgres() else db_path
     logger.debug(
-        "DB: %s | Tenant: %s",
-        db_path,
+        "DB: %s | Tenant: %s | Backend: %s",
+        cache_key,
         getattr(g, "tenant_id", None) if has_request_context() else "NO_CTX",
+        db_backend(),
     )
     if has_request_context():
         cached = getattr(g, '_sme_db', None)
         cached_path = getattr(g, '_sme_db_path', None)
-        if cached is not None and cached_path == db_path:
+        if cached is not None and cached_path == cache_key:
             return cached
 
-        conn = _RequestScopedConnection(open_sqlite(db_path))
+        conn = _open_db_for_path(db_path, request_scoped=True)
         g._sme_db = conn
-        g._sme_db_path = db_path
+        g._sme_db_path = cache_key
+        if is_postgres():
+            g._sme_pg_schema = cache_key
         return conn
-    return open_sqlite(db_path)
+    return _open_db_for_path(db_path, request_scoped=False)
 
 
 def close_request_db():
@@ -553,14 +645,19 @@ def close_request_db():
     try:
         if isinstance(conn, _RequestScopedConnection):
             conn._real_close()
+        elif hasattr(conn, '_real_close'):
+            conn._real_close()
         else:
             conn.close()
-    except sqlite3.Error:
+    except (sqlite3.Error, Exception):
         pass
 
 
 def get_main_db_connection():
     """Kết nối main/registry database (tenants, mapping, login history)."""
+    if is_postgres():
+        from db.postgres_backend import open_pg
+        return open_pg(schema=pg_schema_from_db_path(MAIN_DB_PATH))
     return open_sqlite(MAIN_DB_PATH)
 
 
@@ -628,6 +725,17 @@ def get_tenant_db_connection(tenant_id):
     if not row or not row["db_path"]:
         return None
     db_path = _normalize_db_path(row["db_path"])
+    if is_postgres():
+        from db.postgres_backend import open_pg, ensure_pg_schema
+        schema = pg_schema_from_db_path(db_path, tenant_id=tenant_id.strip())
+        ensure_pg_schema(schema)
+        return open_pg(schema=schema)
     if not db_path or not os.path.exists(db_path):
         return None
     return open_sqlite(db_path)
+
+
+def open_db(db_path=None, *, request_scoped: bool = False):
+    """Mở DB theo backend hiện tại (SQLite file hoặc Postgres schema)."""
+    path = _normalize_db_path(db_path) if db_path else resolve_db_path()
+    return _open_db_for_path(path, request_scoped=request_scoped)

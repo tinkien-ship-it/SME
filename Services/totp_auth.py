@@ -52,7 +52,9 @@ def parse_device_signal(raw: str | dict | None) -> dict[str, str]:
     if not isinstance(data, dict):
         return {}
     out = {}
-    for key in ('platform', 'screen', 'timezone', 'cores', 'memory', 'touch', 'lang'):
+    # device_id (localStorage) ổn định nhất trên cùng trình duyệt.
+    # Không dùng deviceMemory — Chrome-only và hay đổi/thiếu → fingerprint lệch → hỏi TOTP lại.
+    for key in ('device_id', 'platform', 'screen', 'timezone', 'cores', 'touch', 'lang'):
         val = data.get(key)
         if val is None:
             continue
@@ -69,11 +71,11 @@ def machine_fingerprint(user_agent: str, accept_language: str, signal: dict | No
     lang = (signal.get('lang') or (accept_language or '').split(',')[0] or '').strip()[:24]
     parts = [
         os_family,
+        signal.get('device_id') or '',
         signal.get('platform') or '',
         signal.get('screen') or '',
         signal.get('timezone') or '',
         signal.get('cores') or '',
-        signal.get('memory') or '',
         signal.get('touch') or '',
         lang.lower(),
     ]
@@ -98,6 +100,7 @@ def ensure_totp_columns(conn: sqlite3.Connection) -> None:
 
 
 def get_user_totp_secret(conn: sqlite3.Connection, user_id: int) -> str | None:
+    """Secret đã xác nhận (đủ điều kiện xác thực đăng nhập)."""
     ensure_totp_columns(conn)
     row = conn.execute(
         'SELECT totp_secret, totp_confirmed_at FROM users WHERE id = ?',
@@ -112,6 +115,32 @@ def get_user_totp_secret(conn: sqlite3.Connection, user_id: int) -> str | None:
     return str(secret).strip() or None
 
 
+def get_user_totp_secret_any(conn: sqlite3.Connection, user_id: int) -> str | None:
+    """Secret đã lưu (kể cả chưa confirm) — tái dùng khi setup để tránh tạo nhiều QR."""
+    ensure_totp_columns(conn)
+    row = conn.execute(
+        'SELECT totp_secret FROM users WHERE id = ?',
+        (user_id,),
+    ).fetchone()
+    if not row:
+        return None
+    secret = row['totp_secret'] if hasattr(row, 'keys') else row[0]
+    return str(secret).strip() if secret else None
+
+
+def save_totp_draft(conn: sqlite3.Connection, user_id: int, secret: str) -> None:
+    """Lưu secret nháp khi hiện QR — chưa confirm nên chưa dùng để đăng nhập."""
+    ensure_totp_columns(conn)
+    conn.execute(
+        """
+        UPDATE users
+        SET totp_secret = ?, totp_confirmed_at = NULL
+        WHERE id = ? AND (totp_secret IS NULL OR totp_confirmed_at IS NULL)
+        """,
+        (secret, user_id),
+    )
+
+
 def generate_totp_secret() -> str:
     return pyotp.random_base32()
 
@@ -124,7 +153,12 @@ def provisioning_uri(secret: str, username: str) -> str:
 
 
 def qr_png_data_url(otpauth_uri: str) -> str:
-    import qrcode
+    try:
+        import qrcode
+    except ImportError as exc:
+        raise RuntimeError(
+            "Thiếu thư viện qrcode. Chạy: pip install 'qrcode[pil]==8.2'"
+        ) from exc
 
     img = qrcode.make(otpauth_uri)
     buf = io.BytesIO()
@@ -204,9 +238,9 @@ def remember_trusted_device(
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     conn.execute(
         """
-        INSERT OR REPLACE INTO user_trusted_devices
-        (username, device_fingerprint, last_login)
+        INSERT INTO user_trusted_devices (username, device_fingerprint, last_login)
         VALUES (?, ?, ?)
+        ON CONFLICT(username, device_fingerprint) DO UPDATE SET last_login = excluded.last_login
         """,
         (username, fingerprint, now),
     )

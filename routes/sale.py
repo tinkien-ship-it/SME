@@ -32,8 +32,8 @@ from Services.hkd_sector import requires_stock_check
 from Services.inventory_stock_helpers import (
     revert_sale_stock,
     sync_inventory_quantity_from_moves,
-    apply_wac_inbound,
 )
+from Services.inventory_cost import apply_cost_return_inbound
 from Services.sale_helpers import (
     deduct_inventory_for_sale,
     fetch_product_for_checkout,
@@ -2101,14 +2101,26 @@ def register_sale_routes(app):
             c.execute("UPDATE sale SET total_amount = ?, status = ?, updated_at = ? WHERE id = ?", 
                      (new_total_amount, new_status, return_date, sale_id))
 
-            # === 5. Hoàn Kho & WAC (sổ cái trước, sync snapshot sau) ===
+            # === 5. Ghi return_sales trước (FIFO cần return_sales_id) ===
+            c.execute(
+                "INSERT INTO return_sales (date, sale_id, product_id, quantity, UseSaleUnit, reason) VALUES (?, ?, ?, ?, ?, ?)",
+                (return_date, sale_id, product_id, qty_return, use_unit, reason),
+            )
+            return_sales_id = c.lastrowid
+
+            # === 6. Hoàn kho (WAC hoặc FIFO — gắn lô cũ) ===
             cost_price_base = float(item['cost_price_base'])
             unit_ratio = float(item['unit_ratio'])
             real_qty_in = qty_return * unit_ratio if use_unit == 1 else qty_return
 
-            apply_wac_inbound(
-                c, product_id, real_qty_in, real_qty_in * cost_price_base,
+            restored_cost = apply_cost_return_inbound(
+                c, product_id, real_qty_in, sale_id,
+                return_sales_id=int(return_sales_id),
+                unit_cost_fallback=cost_price_base,
+                conn=conn,
             )
+            if restored_cost > 0:
+                cost_price_base = float(restored_cost)
 
             c.execute("""
                 INSERT INTO inventory_transactions (product_id, type, type1, quantity, cost_price, reference_id, reference_type, note, created_at)
@@ -2122,13 +2134,6 @@ def register_sale_routes(app):
                   f"Trả đơn {sale_master['sale_no']} - {reason}", sale_master['sale_no']))
 
             sync_inventory_quantity_from_moves(c, product_id)
-
-            # === 6. Ghi return_sales ===
-            c.execute(
-                "INSERT INTO return_sales (date, sale_id, product_id, quantity, UseSaleUnit, reason) VALUES (?, ?, ?, ?, ?, ?)",
-                (return_date, sale_id, product_id, qty_return, use_unit, reason),
-            )
-            return_sales_id = c.lastrowid
 
             # === 7. Tạo Chứng từ Nhập Kho ===
             c.execute("SELECT import_no FROM phieu_nhap_kho WHERE import_no LIKE 'PN%' ORDER BY id DESC LIMIT 1")

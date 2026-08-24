@@ -24,21 +24,69 @@ def _now() -> str:
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
+def _journal_disk_ready(conn: sqlite3.Connection) -> bool:
+    """Nhật ký + rule hạch toán đã seed — trang đọc sổ không cần ghi."""
+    from Services.sme.journal_schema import _journal_schema_present
+
+    if not _journal_schema_present(conn):
+        return False
+    try:
+        row = conn.execute(
+            "SELECT value FROM sme_journal_seed_meta WHERE key = 'rules_version'"
+        ).fetchone()
+        current = row[0] if row else None
+        count = conn.execute('SELECT COUNT(*) FROM sme_posting_rules').fetchone()[0]
+        return current == RULES_SEED_VERSION and int(count or 0) > 0
+    except sqlite3.Error:
+        return False
+
+
 def ensure_sme_journal_ready(
     conn: sqlite3.Connection,
     *,
     commit: bool = True,
 ) -> dict[str, Any]:
-    from db_utils import sqlite_is_ready, sqlite_mark_ready, sqlite_commit
+    from db_utils import (
+        _is_locked_error,
+        sqlite_is_ready,
+        sqlite_mark_ready,
+        with_sqlite_write,
+    )
 
     flag = f'posting_rules:{RULES_SEED_VERSION}'
     if sqlite_is_ready(conn, flag):
         return {'seeded': False, 'cached': True, 'rules_version': RULES_SEED_VERSION}
-    ensure_sme_coa_ready(conn, commit=commit)
-    ensure_sme_journal_schema(conn, commit=commit)
-    out = seed_posting_rules(conn, commit=commit)
+
+    if _journal_disk_ready(conn):
+        sqlite_mark_ready(conn, flag)
+        return {'seeded': False, 'cached': True, 'rules_version': RULES_SEED_VERSION}
+
+    out: dict[str, Any] = {}
+
+    def _bootstrap(target: sqlite3.Connection) -> None:
+        nonlocal out
+        ensure_sme_coa_ready(target, commit=True)
+        ensure_sme_journal_schema(target, commit=True)
+        out = seed_posting_rules(target, commit=True)
+
+    try:
+        if commit:
+            _bootstrap(conn)
+        else:
+            with_sqlite_write(conn, _bootstrap, commit=False, label='journal_bootstrap')
+    except sqlite3.OperationalError as exc:
+        if _is_locked_error(exc) and _journal_disk_ready(conn):
+            sqlite_mark_ready(conn, flag)
+            return {
+                'seeded': False,
+                'skipped': True,
+                'reason': 'seed_busy',
+                'rules_version': RULES_SEED_VERSION,
+            }
+        raise
+
     sqlite_mark_ready(conn, flag)
-    return out
+    return out or {'seeded': True, 'rules_version': RULES_SEED_VERSION}
 
 
 def _account_code_exists(conn: sqlite3.Connection, code: str) -> bool:

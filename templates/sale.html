@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Bán Hàng - KETO POS{% endblock %}
+{% block head_extra %}
+<link rel="manifest" href="{{ url_for('static', filename='manifest-pos.json') }}">
+<meta name="theme-color" content="#3b71ca">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+{% endblock %}
 
 {% block content %}
 <style>
@@ -688,7 +694,7 @@ function calculateLineTotal(item) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (window.PosOffline) {
-        await PosOffline.init({ autoSyncIntervalMs: 60000 });
+        await PosOffline.init({ autoSyncIntervalMs: 30000 });
         document.addEventListener('pos-offline-synced', function (ev) {
             const detail = ev.detail || {};
             const n = detail.processed || 0;

@@ -193,15 +193,13 @@ def ensure_firm_schema(conn: sqlite3.Connection | None = None) -> None:
         return
     conn = conn or get_main_db_connection()
     try:
-        cols = {r[1] for r in conn.execute('PRAGMA table_info(tenants)').fetchall()}
-        if 'tenant_type' not in cols:
-            conn.execute(
-                "ALTER TABLE tenants ADD COLUMN tenant_type TEXT NOT NULL DEFAULT 'standalone'"
-            )
-        if 'max_clients' not in cols:
-            conn.execute("ALTER TABLE tenants ADD COLUMN max_clients INTEGER DEFAULT 50")
+        from db.schema_helpers import add_column_if_missing, execute_ddl, table_cols
 
-        conn.execute("""
+        cols = table_cols(conn, 'tenants')
+        add_column_if_missing(conn, 'tenants', 'tenant_type', "TEXT NOT NULL DEFAULT 'standalone'")
+        add_column_if_missing(conn, 'tenants', 'max_clients', 'INTEGER DEFAULT 50')
+
+        execute_ddl(conn, """
             CREATE TABLE IF NOT EXISTS firm_users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 firm_tenant_id TEXT NOT NULL,
@@ -216,11 +214,11 @@ def ensure_firm_schema(conn: sqlite3.Connection | None = None) -> None:
                 UNIQUE(firm_tenant_id, login_email)
             )
         """)
-        conn.execute("""
+        execute_ddl(conn, """
             CREATE INDEX IF NOT EXISTS idx_firm_users_email
             ON firm_users(LOWER(login_email))
         """)
-        conn.execute("""
+        execute_ddl(conn, """
             CREATE TABLE IF NOT EXISTS firm_clients (
                 client_id TEXT NOT NULL,
                 firm_tenant_id TEXT NOT NULL,
@@ -239,11 +237,11 @@ def ensure_firm_schema(conn: sqlite3.Connection | None = None) -> None:
                 PRIMARY KEY (firm_tenant_id, client_id)
             )
         """)
-        conn.execute("""
+        execute_ddl(conn, """
             CREATE INDEX IF NOT EXISTS idx_firm_clients_firm
             ON firm_clients(firm_tenant_id, status)
         """)
-        conn.execute("""
+        execute_ddl(conn, """
             CREATE TABLE IF NOT EXISTS firm_user_client_access (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 firm_user_id INTEGER NOT NULL,
@@ -255,7 +253,7 @@ def ensure_firm_schema(conn: sqlite3.Connection | None = None) -> None:
                 UNIQUE(firm_user_id, client_id)
             )
         """)
-        conn.execute("""
+        execute_ddl(conn, """
             CREATE TABLE IF NOT EXISTS firm_audit_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 firm_tenant_id TEXT NOT NULL,
@@ -557,10 +555,11 @@ def init_firm_meta_database(firm_tenant_id: str, business_name: str, phone: str,
         ensure_tenant_db_schema(conn)
         from Services.tenant_db_bootstrap import clear_trial_business_data
         from Services.audit_log import ensure_audit_table
-        conn.execute('PRAGMA foreign_keys=OFF')
+        from db.schema_helpers import set_foreign_keys
+        set_foreign_keys(conn, False)
         clear_trial_business_data(conn)
         ensure_audit_table(conn)
-        conn.execute('PRAGMA foreign_keys=ON')
+        set_foreign_keys(conn, True)
         sqlite_commit(conn, label='firm_tenant')
     return db_path
 
@@ -607,11 +606,12 @@ def ensure_firm_own_books_ready(firm_tenant_id: str) -> str:
 
     if not settings.get('firm_own_books_ready'):
         def _bootstrap(conn):
-            conn.execute('PRAGMA foreign_keys=OFF')
+            from db.schema_helpers import set_foreign_keys
+            set_foreign_keys(conn, False)
             clear_trial_business_data(conn)
             ensure_tenant_db_schema(conn)
             ensure_audit_table(conn)
-            conn.execute('PRAGMA foreign_keys=ON')
+            set_foreign_keys(conn, True)
 
         _exclusive_tenant_db_write(abs_path, 'ensure_firm_own_books_bootstrap', _bootstrap)
         _mark_firm_own_books_ready(firm_tenant_id)
@@ -665,7 +665,8 @@ def init_client_book_database(
     from db.init import ensure_tenant_db_schema
 
     def _init(conn):
-        conn.execute('PRAGMA foreign_keys=OFF')
+        from db.schema_helpers import set_foreign_keys
+        set_foreign_keys(conn, False)
         cur = conn.cursor()
         for table in ('user_tenant_mapping', 'user_trusted_devices', 'tenants'):
             cur.execute(f'DROP TABLE IF EXISTS {table}')
@@ -697,7 +698,7 @@ def init_client_book_database(
         ensure_tenant_db_schema(conn)
         from Services.audit_log import ensure_audit_table
         ensure_audit_table(conn)
-        conn.execute('PRAGMA foreign_keys=ON')
+        set_foreign_keys(conn, True)
 
     _exclusive_tenant_db_write(abs_path, 'init_client_book_database', _init)
     return rel
@@ -1359,8 +1360,10 @@ def _sync_client_business_info(client: dict, **fields) -> None:
         cached_path = getattr(g, '_sme_db_path', None)
         if cached_path and paths_same_db(cached_path, abs_path):
             try:
-                _write(get_db_connection())
-                get_db_connection().commit()
+                conn = get_db_connection()
+                _write(conn)
+                from db_utils import sqlite_commit
+                sqlite_commit(conn, label='sync_client_business_info')
                 return
             except Exception as exc:
                 if not _is_locked_error(exc):

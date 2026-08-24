@@ -280,6 +280,17 @@ def void_return_sale(
     except Exception:
         pass
 
+    try:
+        from Services.inventory_cost_method import is_fifo_mode
+        if is_fifo_mode(conn):
+            from Services.fifo_lots import reverse_return_lots
+            pid = doc.get('product_id')
+            sid = doc.get('sale_id')
+            if pid and sid:
+                reverse_return_lots(conn.cursor(), return_id, int(sid), int(pid))
+    except Exception:
+        pass
+
     conn.execute(
         "UPDATE return_sales SET status = 'void' WHERE id = ?",
         (return_id,),

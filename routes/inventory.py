@@ -28,15 +28,13 @@ from flask_login import login_required
 
 from db_utils import get_db_connection, sqlite_commit, begin_immediate
 from helpers import format_price
+from Services.inventory_cost import apply_cost_inbound, apply_cost_outbound_return_import, reverse_import_cost
 from Services.inventory_stock_helpers import (
-    apply_wac_inbound,
-    apply_wac_outbound,
     import_base_qty,
     import_cost_to_base,
     ledger_quantity,
     rebuild_all_wac_from_moves,
     reconcile_all_inventory,
-    reverse_import_moves_wac,
     sync_inventory_quantity_from_moves,
     sync_inventory_quantities,
 )
@@ -994,7 +992,19 @@ def register_inventory_routes(app):
                         "INSERT INTO chi_tiet_phieu_nhap_kho (import_id, product_id, quantity, buyprice, subtotal, discount_amount, tax_amount, cost_price, unit_type, tax_pct, discount_pct) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                         params_detail,
                     )
-                    apply_wac_inbound(c, pid, float(qty_retail), float(line_total))
+                    apply_cost_inbound(
+                        c, pid, float(qty_retail), float(line_total),
+                        unit_cost=float(cost_per_retail),
+                        source_type='IMPORT',
+                        source_id=import_id,
+                        source_line_id=detail_id,
+                        warehouse_code=warehouse_code,
+                        received_at=import_date,
+                        lot_no=f'PN-{import_no}-{pid}',
+                        expiry_date=(item.get('expiry_date') or '').strip() or None,
+                        note=f'Nhập từ {supplier_name}',
+                        conn=conn,
+                    )
                     move_note = f"Nhập từ {supplier_name} (Gốc: {qty_in} {unit_in}) — {warehouse_code}"
                     if sm_has_wh:
                         c.execute("""
@@ -1747,9 +1757,16 @@ def register_inventory_routes(app):
                 if original_qty_base > 0 else 0.0
             )
 
-            # 5. Xuất kho theo cost_price gốc của phiếu nhập (WAC chính xác khi trả NCC)
-            _, cost_used = apply_wac_outbound(c, product_id, return_qty_base, cost_price_base)
+            # 5. Xuất kho — WAC theo giá PN; FIFO ưu tiên lô của PN gốc
+            _, cost_used = apply_cost_outbound_return_import(
+                c, product_id, return_qty_base, cost_price_base,
+                import_id=import_id,
+                ref_type='return_import',
+                ref_id=import_id,
+                conn=conn,
+            )
             cost_out = return_qty_base * cost_used
+            cost_price_base = float(cost_used or cost_price_base)
 
             # 6. Ghi lịch sử kho (Stock Moves)
             c.execute("""
@@ -1860,7 +1877,7 @@ def register_inventory_routes(app):
         conn = get_db_connection()
         c = conn.cursor()
         try:
-            c.execute('BEGIN IMMEDIATE')
+            begin_immediate(conn, label='inventory_return_checkout')
             result = process_return_import_checkout(c, data)
             profile = get_current_tenant_profile()
             posting_date = (data.get('date') or datetime.now().strftime('%Y-%m-%d %H:%M:%S'))[:10]
@@ -2467,7 +2484,7 @@ def register_inventory_routes(app):
                 # ================== HOÀN WAC PHIẾU NHẬP CŨ (chỉ dòng hàng hóa có kho) ==================
                 sync_pids = set()
                 if old_stock_details:
-                    wac_pids = reverse_import_moves_wac(c, import_id)
+                    wac_pids = reverse_import_cost(c, import_id, conn=conn)
                     sync_pids.update(wac_pids)
 
                 # ================== DỌN SẠCH NHẬT KÝ CHI TIẾT CŨ & LƯU MỚI ==================
@@ -2526,7 +2543,16 @@ def register_inventory_routes(app):
 
                     total_value += cost_value_full
 
-                    apply_wac_inbound(c, pid, float(qty_base_final), float(cost_value_full))
+                    apply_cost_inbound(
+                        c, pid, float(qty_base_final), float(cost_value_full),
+                        unit_cost=float(cost_price_base),
+                        source_type='IMPORT',
+                        source_id=import_id,
+                        received_at=import_date,
+                        lot_no=f'PN-{import_no}-{pid}',
+                        note=f'Nhập kho – PN#{import_no}',
+                        conn=conn,
+                    )
 
                     c.execute("""INSERT INTO import_details
                                 (import_id, product_id, qty, buyprice, discount, tax, tax_pct, discount_pct, cost_price, unit_type)
@@ -2790,7 +2816,7 @@ def register_inventory_routes(app):
                 sync_pids.add(p_id)
 
             # 3. Hoàn WAC theo stock_moves import gốc rồi xóa chứng từ
-            wac_pids = reverse_import_moves_wac(c, import_id)
+            wac_pids = reverse_import_cost(c, import_id, conn=conn)
             sync_pids.update(wac_pids)
 
             # 4. Xóa dữ liệu liên quan

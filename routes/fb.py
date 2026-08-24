@@ -1787,9 +1787,7 @@ def register_fb_routes(app):
         cursor = conn.cursor()
 
         try:
-            cursor.execute("BEGIN IMMEDIATE")
-
-            excel_file = pd.ExcelFile(file)
+            begin_immediate(conn, label='fb_import_areas')
             sheet_names = excel_file.sheet_names
 
             area_sheet = next(
@@ -2627,10 +2625,8 @@ def register_fb_routes(app):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         try:
-            cursor.execute("BEGIN IMMEDIATE")
+            begin_immediate(conn, label='fb_inventory_count')
             _ensure_draft_inventory_table(cursor)
-
-            saved = []
             skipped = []
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -2874,10 +2870,8 @@ def register_fb_routes(app):
         cursor = conn.cursor()
 
         try:
-            cursor.execute("BEGIN IMMEDIATE")
+            begin_immediate(conn, label='fb_end_of_day_export')
             _ensure_draft_inventory_table(cursor)
-
-            # 1. Lấy toàn bộ dữ liệu nháp chưa chốt kèm tồn kho hiện tại (inventory.quantity)
             drafts = cursor.execute("""
                 SELECT d.id, d.product_id, d.quantity as qty_change, d.note as draft_note,
                        p.name, p.unit, COALESCE(i.avg_cost, 0) AS avg_cost,

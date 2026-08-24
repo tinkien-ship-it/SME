@@ -54,15 +54,17 @@ REGISTRY_TABLES_DDL = {
 
 def ensure_registry_tables(conn=None):
     """Tao bang registry con thieu tren main DB. Tra ve list ten bang da tao."""
+    from db.dialect import is_postgres, table_exists
+    from db.sql_compat import convert_sqlite_ddl
+
     own = conn is None
     conn = conn or get_main_db_connection()
     created = []
     try:
         for name, ddl in REGISTRY_TABLES_DDL.items():
-            existed = conn.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
-            ).fetchone()
-            conn.execute(ddl)
+            existed = table_exists(conn, name)
+            sql = convert_sqlite_ddl(ddl) if is_postgres() else ddl
+            conn.execute(sql)
             if not existed:
                 created.append(name)
         conn.execute('CREATE INDEX IF NOT EXISTS idx_tenant_id ON tenants(tenant_id)')
@@ -215,34 +217,23 @@ _TENANT_TABLE_EXTRAS = [
 ]
 
 
-def _table_has_column(cursor, table, column):
-    try:
-        cursor.execute(f'PRAGMA table_info({table})')
-        want = (column or '').lower()
-        return want in {(r[1] or '').lower() for r in cursor.fetchall()}
-    except Exception:
-        return False
+def _table_has_column(conn, table, column):
+    from db.schema_helpers import column_exists
+    return column_exists(conn, table, column)
 
 
 def ensure_products_schema(conn):
     """Migrate cột products / sale_items trên DB tenant."""
-    c = conn.cursor()
-    c.execute('PRAGMA table_info(products)')
-    columns = {col[1] for col in c.fetchall()}
+    from db.schema_helpers import add_column_if_missing, table_cols, table_exists
+
+    if not table_exists(conn, 'products'):
+        return
+    columns = table_cols(conn, 'products')
     if columns:
         for col, col_type in _PRODUCTS_COLS:
             if col not in columns:
-                try:
-                    c.execute(f'ALTER TABLE products ADD COLUMN {col} {col_type}')
-                except sqlite3.OperationalError as e:
-                    print(f'[MIGRATE] products.{col}: {e}')
-    c.execute('PRAGMA table_info(sale_items)')
-    si_columns = {col[1] for col in c.fetchall()}
-    if si_columns and 'hkd_sector_code' not in si_columns:
-        try:
-            c.execute('ALTER TABLE sale_items ADD COLUMN hkd_sector_code TEXT')
-        except sqlite3.OperationalError as e:
-            print(f'[MIGRATE] sale_items.hkd_sector_code: {e}')
+                add_column_if_missing(conn, 'products', col, col_type)
+    add_column_if_missing(conn, 'sale_items', 'hkd_sector_code', 'TEXT')
     conn.commit()
 
 
@@ -260,10 +251,11 @@ def apply_schema_migrations(conn):
     except Exception as e:
         print(f'[MIGRATE] fb schema: {e}')
     for table, col, col_type in _TENANT_TABLE_EXTRAS:
-        if _table_has_column(c, table, col):
+        if _table_has_column(conn, table, col):
             continue
         try:
-            c.execute(f'ALTER TABLE {table} ADD COLUMN {col} {col_type}')
+            from db.schema_helpers import add_column_if_missing
+            add_column_if_missing(conn, table, col, col_type, cursor=c)
         except sqlite3.OperationalError as e:
             print(f'[MIGRATE] Không thể thêm {table}.{col}: {e}')
     conn.commit()
@@ -310,10 +302,12 @@ def apply_schema_migrations(conn):
     except Exception as e:
         print(f'[MIGRATE] user_branch: {e}')
     try:
-        from db_utils import ensure_sqlite_wal, sqlite_db_file
-        mode = ensure_sqlite_wal(conn, sqlite_db_file(conn))
-        if mode and str(mode).lower() != 'wal':
-            print(f'[MIGRATE] journal_mode={mode} (mong doi WAL)')
+        from db.dialect import is_postgres
+        if not is_postgres():
+            from db_utils import ensure_sqlite_wal, sqlite_db_file
+            mode = ensure_sqlite_wal(conn, sqlite_db_file(conn))
+            if mode and str(mode).lower() != 'wal':
+                print(f'[MIGRATE] journal_mode={mode} (mong doi WAL)')
     except Exception as e:
         print(f'[MIGRATE] WAL: {e}')
     conn.commit()
@@ -392,9 +386,12 @@ def _migrate_main_system_tables():
         print(f'[MIGRATE] ensure users/master: {e}')
     try:
         from Services.audit_log import ensure_audit_table
+        from db.dialect import is_postgres
+        from db.schema_helpers import execute_ddl
+
         conn2 = get_main_db_connection()
         ensure_audit_table(conn2)
-        conn2.execute("""
+        execute_ddl(conn2, """
             CREATE TABLE IF NOT EXISTS login_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 login_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -442,7 +439,41 @@ def migrate_all_databases(verbose=True):
     Nên dừng Gunicorn (systemctl stop pos) trước khi chạy — tránh database is locked.
     """
     import os
+    from db.dialect import is_postgres, pg_schema_from_db_path
     from db_utils import open_sqlite, sqlite_write_retry
+
+    if is_postgres():
+        from db.postgres_backend import ensure_pg_schema, open_pg
+
+        ok, fail = 0, 0
+        schemas = {pg_schema_from_db_path(None)}  # registry/public
+        try:
+            with open_pg(schema=pg_schema_from_db_path(None)) as reg:
+                rows = reg.execute(
+                    "SELECT tenant_id, db_path FROM tenants WHERE db_path IS NOT NULL AND TRIM(db_path) != ''"
+                ).fetchall()
+            for row in rows:
+                tid = row['tenant_id'] if hasattr(row, 'keys') else row[0]
+                dbp = row['db_path'] if hasattr(row, 'keys') else row[1]
+                schemas.add(pg_schema_from_db_path(dbp, tenant_id=tid))
+        except Exception as e:
+            print(f'[MIGRATE] discover postgres schemas: {e!r}')
+
+        for schema in sorted(schemas):
+            try:
+                ensure_pg_schema(schema)
+                with open_pg(schema=schema) as conn:
+                    apply_schema_migrations(conn)
+                ok += 1
+                if verbose:
+                    print(f'[MIGRATE] OK schema {schema}')
+            except Exception as e:
+                fail += 1
+                print(f'[MIGRATE] FAIL schema {schema}: {e!r}')
+        _migrate_main_system_tables()
+        if verbose:
+            print(f'[MIGRATE] Done (PostgreSQL): {ok} schema(s), {fail} failed')
+        return ok, fail
 
     paths = _discover_database_paths()
     ok, fail = 0, 0

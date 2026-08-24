@@ -632,6 +632,56 @@
                                 </div>
                             </div>
 
+                            <h5 class="section-header text-warning mt-4">Phương pháp tính giá vốn (WAC / FIFO)</h5>
+                            <div class="alert alert-warning small" id="costMethodWarning">
+                                Phương pháp áp dụng cả năm tài chính. Không đổi khi đã có phát sinh kho.
+                                Chỉ đổi sau khi khóa sổ năm cũ hoặc sang năm mới chưa phát sinh.
+                            </div>
+                            <div class="row g-3" id="inventoryCostMethodBox">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Phương pháp</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="inventory_cost_method" id="cost_method_wac" value="wac">
+                                        <label class="form-check-label" for="cost_method_wac">Bình quân gia quyền (WAC)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="inventory_cost_method" id="cost_method_fifo" value="fifo">
+                                        <label class="form-check-label" for="cost_method_fifo">FIFO (nhập trước xuất trước)</label>
+                                    </div>
+                                    <div class="form-check mt-3 p-2 bg-light rounded" id="lotOpsTrackingBox">
+                                        <input class="form-check-input" type="checkbox" id="lotOpsTracking">
+                                        <label class="form-check-label" for="lotOpsTracking">
+                                            <strong>Theo dõi lô vận hành</strong> (khi WAC)
+                                        </label>
+                                        <div class="small text-muted mt-1">
+                                            Ghi lô nhập/xuất theo FEFO (hết hạn sớm trước) để phản ánh hàng vật lý và tránh hàng cũ quá hạn.
+                                            <em>Giá vốn vẫn tính theo WAC.</em>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="btnSaveLotOps">
+                                            Lưu theo dõi lô
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Năm tài chính áp dụng</label>
+                                    <input type="number" class="form-control" id="costMethodYear" min="2020" max="2099">
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label fw-bold">Trạng thái</label>
+                                    <div class="p-3 bg-light rounded small" id="costMethodStatus">Đang tải…</div>
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="costMethodConfirm">
+                                        <label class="form-check-label" for="costMethodConfirm">Tôi đã hiểu — không đổi trong năm tài chính</label>
+                                    </div>
+                                    <button type="button" class="btn btn-warning btn-sm mt-2" id="btnSaveCostMethod" disabled>
+                                        <i class="fas fa-lock me-1"></i>Lưu phương pháp giá vốn
+                                    </button>
+                                    <a href="/SME_inventory_lots" class="btn btn-outline-secondary btn-sm mt-2 ms-1">
+                                        <i class="fas fa-layer-group me-1"></i>Theo dõi lô
+                                    </a>
+                                </div>
+                            </div>
+
                             <h5 class="section-header text-warning mt-4">Cân điện tử (POS)</h5>
                             <p class="text-muted small">Kết nối cân qua cổng USB/Serial (Chrome/Edge). Sản phẩm bán theo cân cần bật 「Bán theo cân」 trong Quản lý sản phẩm.</p>
                             <div class="row g-3">
@@ -2089,6 +2139,119 @@ document.addEventListener('DOMContentLoaded', () => {
     ['bank_code_input', 'bank_account_input'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', updateQrPreview);
     });
+
+    loadInventoryCostMethodSettings();
 });
+
+async function loadInventoryCostMethodSettings() {
+    const statusEl = document.getElementById('costMethodStatus');
+    const btn = document.getElementById('btnSaveCostMethod');
+    const confirmCb = document.getElementById('costMethodConfirm');
+    const yearEl = document.getElementById('costMethodYear');
+    const lotOps = document.getElementById('lotOpsTracking');
+    const lotOpsBox = document.getElementById('lotOpsTrackingBox');
+    const btnLotOps = document.getElementById('btnSaveLotOps');
+    if (!statusEl || !btn) return;
+
+    async function parseJsonResponse(res) {
+        const text = await res.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            const snippet = (text || '').replace(/\s+/g, ' ').slice(0, 120);
+            throw new Error(
+                res.status === 404
+                    ? 'API chưa có trên server — hãy restart ứng dụng rồi thử lại.'
+                    : `Server trả lỗi (HTTP ${res.status}): ${snippet || 'không đọc được phản hồi'}`
+            );
+        }
+    }
+
+    try {
+        const res = await fetch('/api/settings/inventory-cost-method');
+        const j = await parseJsonResponse(res);
+        if (!j.success) throw new Error(j.error || 'Lỗi');
+        const m = j.method || 'wac';
+        document.getElementById('cost_method_wac').checked = (m === 'wac');
+        document.getElementById('cost_method_fifo').checked = (m === 'fifo');
+        if (yearEl) yearEl.value = j.effective_year || j.current_fiscal_year || new Date().getFullYear();
+        const lotHint = j.lot_ops_only
+            ? '<div class="text-primary">Đang theo dõi lô vận hành (COGS = WAC, xuất FEFO).</div>'
+            : (m === 'fifo' ? '<div class="text-primary">FIFO: lô dùng cho giá vốn + theo dõi.</div>' : '');
+        statusEl.innerHTML = `
+            <div><strong>${j.method_label || m.toUpperCase()}</strong></div>
+            <div>Năm áp dụng: ${j.effective_year || '—'}</div>
+            <div>${j.has_activity_in_effective_year ? 'Đã có phát sinh kho trong năm áp dụng.' : 'Chưa có phát sinh kho trong năm áp dụng.'}</div>
+            <div>${j.can_change ? '<span class="text-success">Có thể đổi phương pháp (năm mới / đã khóa sổ).</span>' : '<span class="text-danger">Không thể đổi trong năm hiện tại.</span>'}</div>
+            ${lotHint}`;
+        if (lotOps) {
+            lotOps.checked = !!j.lot_ops_tracking;
+            lotOps.disabled = (m === 'fifo');
+        }
+        if (lotOpsBox) lotOpsBox.style.opacity = (m === 'fifo') ? '0.55' : '1';
+        if (btnLotOps) btnLotOps.disabled = (m === 'fifo');
+        const canEdit = !!j.can_change;
+        document.querySelectorAll('input[name="inventory_cost_method"]').forEach(el => { el.disabled = !canEdit; });
+        if (yearEl) yearEl.readOnly = !canEdit;
+        confirmCb.disabled = !canEdit;
+        btn.disabled = !canEdit;
+    } catch (e) {
+        statusEl.textContent = e.message || 'Không tải được cấu hình';
+    }
+
+    if (!btn.dataset.boundCostMethod) {
+        btn.dataset.boundCostMethod = '1';
+        confirmCb?.addEventListener('change', () => {
+            btn.disabled = !(confirmCb.checked && !document.querySelector('input[name="inventory_cost_method"]:disabled'));
+        });
+        btn.addEventListener('click', async () => {
+            const selected = document.querySelector('input[name="inventory_cost_method"]:checked');
+            if (!selected) return Swal.fire('Cảnh báo', 'Chọn WAC hoặc FIFO', 'warning');
+            if (!confirmCb?.checked) return Swal.fire('Cảnh báo', 'Tick xác nhận trước khi lưu', 'warning');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/settings/inventory-cost-method', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        method: selected.value,
+                        effective_year: parseInt(yearEl?.value || new Date().getFullYear(), 10),
+                        confirm: true,
+                    }),
+                });
+                const j = await parseJsonResponse(res);
+                if (!j.success) throw new Error(j.error || 'Lỗi');
+                Swal.fire('Thành công', j.message || 'Đã lưu', 'success');
+                loadInventoryCostMethodSettings();
+            } catch (e) {
+                Swal.fire('Lỗi', e.message || String(e), 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    }
+
+    if (btnLotOps && !btnLotOps.dataset.boundLotOps) {
+        btnLotOps.dataset.boundLotOps = '1';
+        btnLotOps.addEventListener('click', async () => {
+            btnLotOps.disabled = true;
+            try {
+                const res = await fetch('/api/settings/inventory-lot-ops', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ enabled: !!lotOps?.checked }),
+                });
+                const j = await parseJsonResponse(res);
+                if (!j.success) throw new Error(j.error || 'Lỗi');
+                Swal.fire('Thành công', j.message || 'Đã lưu', 'success');
+                loadInventoryCostMethodSettings();
+            } catch (e) {
+                Swal.fire('Lỗi', e.message || String(e), 'error');
+            } finally {
+                btnLotOps.disabled = false;
+            }
+        });
+    }
+}
 </script>
 {% endblock %}

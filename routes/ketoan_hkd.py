@@ -31,7 +31,7 @@ from flask_login import login_required, current_user
 
 from Services.invoice_buyer import DEFAULT_RETAIL_BUYER_NAME
 from Services.profit_report_helpers import compute_cogs, get_days_in_quarter
-from db_utils import get_db_connection, open_sqlite, sqlite_commit
+from db_utils import get_db_connection, open_sqlite, sqlite_commit, begin_immediate
 
 logger = logging.getLogger(__name__)
 import openpyxl
@@ -5734,7 +5734,7 @@ def register_ketoan_hkd_routes(app):
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("BEGIN IMMEDIATE")
+            begin_immediate(conn, label='hkd_reset_data')
 
             # Danh sách bảng cần xóa (theo thứ tự tránh lỗi foreign key)
             tables = [

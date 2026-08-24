@@ -146,10 +146,8 @@ def receive_import_to_warehouse(
 ) -> dict[str, Any]:
     """G3: Chuyển 151 → 156/152… và tăng tồn kho vật lý."""
     from Services.import_line_helpers import tracks_retail_inventory
-    from Services.inventory_stock_helpers import (
-        apply_wac_inbound,
-        sync_inventory_quantity_from_moves,
-    )
+    from Services.inventory_cost import apply_cost_inbound
+    from Services.inventory_stock_helpers import sync_inventory_quantity_from_moves
     from Services.sme.branch_filter import warehouse_branch_or_session
     from Services.sme.branches import resolve_posting_branch
 
@@ -331,7 +329,17 @@ def receive_import_to_warehouse(
     for job in stock_jobs:
         pid = job['product_id']
         cur = conn.cursor()
-        apply_wac_inbound(cur, pid, job['qty'], job['amount'])
+        apply_cost_inbound(
+            cur, pid, job['qty'], job['amount'],
+            unit_cost=job.get('cost_per'),
+            source_type='IMPORT',
+            source_id=import_id,
+            warehouse_code=job.get('warehouse_code'),
+            received_at=date_s,
+            lot_no=f'PN-{import_no}-{pid}',
+            note=f'Nhập kho thực tế — {import_no}',
+            conn=conn,
+        )
         if sm_cols:
             _insert_stock_move_simple(
                 conn, sm_cols,

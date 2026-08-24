@@ -251,7 +251,7 @@ def create_or_update_export_sale(
     commit: bool = False,
 ) -> dict[str, Any]:
     """Tạo/cập nhật phiếu xuất kho ra cảng (chờ thông quan) + Nợ 157/Có kho."""
-    from Services.inventory_stock_helpers import apply_wac_outbound
+    from Services.inventory_cost import apply_cost_outbound, cost_snapshot_for_sale
     from Services.sme.inventory_ops import sync_inventory_quantity_from_moves
 
     ensure_export_sale_schema(conn, commit=False)
@@ -532,9 +532,13 @@ def create_or_update_export_sale(
     for it in normalized_items:
         pid = it['product_id']
         qty = float(it['qty'])
-        # cost WAC
+        # cost WAC hoặc FIFO
         try:
-            _new_c, move_cost = apply_wac_outbound(conn.cursor(), pid, qty, None)
+            cost_hint = cost_snapshot_for_sale(conn.cursor(), pid, conn=conn)
+            _new_c, move_cost, _fifo = apply_cost_outbound(
+                conn.cursor(), pid, qty, cost_hint,
+                ref_type='export', ref_id=sale_id, conn=conn,
+            )
             cost = float(move_cost or 0)
         except Exception:
             pcols = _cols(conn, 'products')

@@ -289,16 +289,24 @@ def get_setting(key, default=""):
 
 
 def get_next_voucher_no(prefix):
-    with get_db_connection() as conn:
-        c = conn.cursor()
-        c.execute("""
+    from db_utils import sqlite_run_write
+
+    conn = get_db_connection()
+
+    def _alloc(target):
+        c = target.cursor()
+        c.execute(
+            """
             INSERT INTO voucher_seq (type, seq) VALUES (?, 0)
             ON CONFLICT(type) DO UPDATE SET seq = seq + 1
-        """, (prefix,))
-        c.execute("SELECT seq FROM voucher_seq WHERE type=?", (prefix,))
+            """,
+            (prefix,),
+        )
+        c.execute('SELECT seq FROM voucher_seq WHERE type=?', (prefix,))
         seq = c.fetchone()[0]
-        conn.commit()
-        return f"{prefix}{seq:06d}"
+        return f'{prefix}{seq:06d}'
+
+    return sqlite_run_write(conn, _alloc, label='voucher_seq')
 
 
 def validate_json(required_fields, data):

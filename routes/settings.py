@@ -1093,10 +1093,28 @@ def register_settings_routes(app):
         if request.method == 'GET' and setup_mode:
             from Services.totp_auth import (
                 generate_totp_secret,
+                get_user_totp_secret_any,
                 provisioning_uri,
                 qr_png_data_url,
+                save_totp_draft,
             )
-            secret = session.get('pending_totp_secret') or generate_totp_secret()
+            secret = session.get('pending_totp_secret')
+            if not secret:
+                try:
+                    with get_main_db_connection() as conn:
+                        secret = get_user_totp_secret_any(conn, int(user['id']))
+                except Exception:
+                    secret = None
+            if not secret:
+                secret = generate_totp_secret()
+                try:
+                    with get_main_db_connection() as conn:
+                        from db_utils import begin_immediate, sqlite_commit
+                        begin_immediate(conn, label='totp_draft')
+                        save_totp_draft(conn, int(user['id']), secret)
+                        sqlite_commit(conn, label='totp_draft')
+                except Exception as exc:
+                    current_app.logger.warning('totp draft save: %s', exc)
             session['pending_totp_secret'] = secret
             session.modified = True
             uri = provisioning_uri(secret, user.get('username') or 'master')
@@ -1118,6 +1136,13 @@ def register_settings_routes(app):
             secret = None
             if setup_mode:
                 secret = session.get('pending_totp_secret')
+                if not secret:
+                    try:
+                        with get_main_db_connection() as conn:
+                            from Services.totp_auth import get_user_totp_secret_any
+                            secret = get_user_totp_secret_any(conn, int(user['id']))
+                    except Exception:
+                        secret = None
             else:
                 try:
                     with get_main_db_connection() as conn:
@@ -1129,11 +1154,23 @@ def register_settings_routes(app):
                 flash('Mã Authenticator không đúng hoặc đã hết hạn.', 'danger')
                 if setup_mode and not setup_payload:
                     from Services.totp_auth import (
-                        generate_totp_secret,
+                        get_user_totp_secret_any,
                         provisioning_uri,
                         qr_png_data_url,
                     )
-                    secret_show = session.get('pending_totp_secret') or generate_totp_secret()
+                    secret_show = (
+                        session.get('pending_totp_secret')
+                        or secret
+                    )
+                    if not secret_show:
+                        try:
+                            with get_main_db_connection() as conn:
+                                secret_show = get_user_totp_secret_any(conn, int(user['id']))
+                        except Exception:
+                            secret_show = None
+                    if not secret_show:
+                        from Services.totp_auth import generate_totp_secret
+                        secret_show = generate_totp_secret()
                     session['pending_totp_secret'] = secret_show
                     uri = provisioning_uri(secret_show, user.get('username') or 'master')
                     setup_payload = {
@@ -3860,7 +3897,6 @@ Trân trọng,
         code = 200 if result.get('success') else 400
         return jsonify(result), code
 
-    # API Lưu các cài đặt hệ thống và Backup dữ liệu #
     @app.route('/api/settings/system', methods=['POST'])
     @tenant_settings_required
     def api_save_system():
@@ -3882,6 +3918,106 @@ Trân trọng,
             return jsonify({"success": False, "error": str(e)})
         finally:
             conn.close()
+
+    @app.route('/api/settings/inventory-cost-method', methods=['GET'])
+    @login_required
+    @tenant_settings_required
+    def api_get_inventory_cost_method():
+        from Services.inventory_cost_method import cost_method_status, ensure_inventory_lot_schema
+        conn = get_db_connection()
+        try:
+            ensure_inventory_lot_schema(conn)
+            return jsonify({'success': True, **cost_method_status(conn)})
+        finally:
+            conn.close()
+
+    @app.route('/api/settings/inventory-cost-method', methods=['POST'])
+    @login_required
+    @tenant_settings_required
+    def api_save_inventory_cost_method():
+        from datetime import datetime
+        from Services.inventory_cost_method import apply_cost_method_change, ensure_inventory_lot_schema
+        data = request.get_json() or {}
+        method = (data.get('method') or '').strip().lower()
+        target_year = data.get('effective_year') or datetime.now().year
+        confirm = bool(data.get('confirm'))
+        try:
+            target_year = int(target_year)
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'Năm tài chính không hợp lệ'}), 400
+        conn = get_db_connection()
+        try:
+            ensure_inventory_lot_schema(conn)
+            status = apply_cost_method_change(
+                conn,
+                method,
+                target_year,
+                changed_by=session.get('user_name') or session.get('username') or '',
+                confirm=confirm,
+            )
+            return jsonify({'success': True, 'message': 'Đã lưu phương pháp giá vốn.', **status})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/settings/inventory-lot-ops', methods=['POST'])
+    @login_required
+    @tenant_settings_required
+    def api_save_inventory_lot_ops():
+        """Bật/tắt theo dõi lô vận hành khi đang WAC (không ảnh hưởng giá vốn)."""
+        conn = None
+        try:
+            from Services.inventory_cost_method import (
+                ensure_inventory_lot_schema,
+                set_lot_ops_tracking,
+            )
+            data = request.get_json(silent=True) or {}
+            enabled = data.get('enabled') in (True, 1, '1', 'true', 'True', 'yes')
+            conn = get_db_connection()
+            ensure_inventory_lot_schema(conn)
+            status = set_lot_ops_tracking(
+                conn,
+                enabled,
+                changed_by=session.get('user_name') or session.get('username') or '',
+            )
+            msg = (
+                'Đã bật theo dõi lô vận hành (giá vốn vẫn WAC).'
+                if status.get('lot_ops_tracking')
+                else 'Đã tắt theo dõi lô vận hành.'
+            )
+            if status.get('seeded_opening_lots'):
+                msg += f" Đã tạo {status['seeded_opening_lots']} lô tồn đầu kỳ."
+            # Chỉ trả field JSON-safe
+            payload = {
+                'success': True,
+                'message': msg,
+                'method': status.get('method'),
+                'method_label': status.get('method_label'),
+                'lot_ops_tracking': bool(status.get('lot_ops_tracking')),
+                'lot_tracking_enabled': bool(status.get('lot_tracking_enabled')),
+                'lot_ops_only': bool(status.get('lot_ops_only')),
+                'seeded_opening_lots': int(status.get('seeded_opening_lots') or 0),
+                'can_change': bool(status.get('can_change')),
+                'effective_year': status.get('effective_year'),
+                'current_fiscal_year': status.get('current_fiscal_year'),
+            }
+            return jsonify(payload)
+        except Exception as e:
+            try:
+                current_app.logger.exception('inventory-lot-ops: %s', e)
+            except Exception:
+                pass
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
     @app.route('/api/settings/list_backups', methods=['GET'])
     @login_required
     @tenant_settings_required

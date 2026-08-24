@@ -792,11 +792,12 @@ BUSINESS_INFO_PROFILE_COLUMNS = (
 
 
 def ensure_business_info_profile_columns(cursor):
-    cursor.execute('PRAGMA table_info(business_info)')
-    existing = {row[1] for row in cursor.fetchall()}
+    from db.schema_helpers import add_column_if_missing, table_cols
+    conn = getattr(cursor, 'connection', None) or cursor
+    existing = table_cols(conn, 'business_info')
     for col, ddl in BUSINESS_INFO_PROFILE_COLUMNS:
         if col not in existing:
-            cursor.execute(f'ALTER TABLE business_info ADD COLUMN {col} {ddl}')
+            add_column_if_missing(conn, 'business_info', col, ddl, cursor=cursor)
 
 
 def sync_business_info_profile(cursor, profile):

@@ -12,7 +12,8 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from db_utils import sqlite_commit
-from Services.inventory_stock_helpers import apply_wac_value_adjustment, ledger_quantity
+from Services.inventory_cost import apply_cost_value_adjustment
+from Services.inventory_stock_helpers import ledger_quantity
 from Services.sme.journal_engine import (
     post_journal_entry,
     resolve_postable_account,
@@ -1090,8 +1091,11 @@ def allocate_landed_cost(
                     f'SP #{pid} ({t.get("product_name") or ""}) hết tồn — '
                     f'không thể vốn hóa {float(alloc):,.0f} ₫'
                 )
-            wac_before, wac_after, _q = apply_wac_value_adjustment(
-                conn.cursor(), int(pid), float(alloc)
+            wac_before, wac_after, _q = apply_cost_value_adjustment(
+                conn.cursor(), int(pid), float(alloc),
+                prefer_source_id=int(t['import_id']),
+                prefer_source_type='IMPORT',
+                conn=conn,
             )
             bumped = _bump_import_stock_move_cost(
                 conn,
@@ -1277,8 +1281,8 @@ def reverse_landed_cost(
     reason: str = 'Hủy phân bổ chi phí để sửa lại',
     commit: bool = True,
 ) -> dict:
-    """Đảo phân bổ: WAC, vốn stock_moves, nguyên giá TSCĐ/CCDC, journal, mở lại HĐ."""
-    from Services.inventory_stock_helpers import apply_wac_value_adjustment
+    """Đảo phân bổ: WAC/FIFO lots, vốn stock_moves, nguyên giá TSCĐ/CCDC, journal, mở lại HĐ."""
+    from Services.inventory_cost import apply_cost_value_adjustment
     from Services.sme.bootstrap import ensure_sme_accounting_ready
     from Services.sme.journal_engine import reverse_journal_entry
 
@@ -1328,9 +1332,14 @@ def reverse_landed_cost(
         target_import_id = int(line['target_import_id'])
 
         if lt in ('goods', 'materials') and pid:
-            # Đảo WAC hiện tại
+            # Đảo giá vốn (WAC hoặc unit_cost lô)
             try:
-                apply_wac_value_adjustment(conn.cursor(), pid, float(-alloc))
+                apply_cost_value_adjustment(
+                    conn.cursor(), pid, float(-alloc),
+                    prefer_source_id=target_import_id,
+                    prefer_source_type='IMPORT',
+                    conn=conn,
+                )
             except ValueError:
                 # Hết tồn — vẫn cố gắng đảo vốn dòng import gốc
                 pass

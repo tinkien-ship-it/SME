@@ -4,8 +4,8 @@ import json
 from datetime import datetime
 
 from Services.hkd_sector import requires_stock_check
+from Services.inventory_cost import apply_cost_outbound_return_import
 from Services.inventory_stock_helpers import (
-    apply_wac_outbound,
     import_base_qty,
     import_cost_to_base,
     sync_inventory_quantities,
@@ -215,7 +215,13 @@ def process_return_import_checkout(cursor, data):
 
         cost_out = 0.0
         if requires_stock_check(detail.get('product_type')) and qty_base > 0:
-            _, cost_used = apply_wac_outbound(cursor, pid, qty_base, import_cost_base)
+            _, cost_used = apply_cost_outbound_return_import(
+                cursor, pid, qty_base, import_cost_base,
+                import_id=import_id,
+                ref_type='return_import',
+                ref_id=import_id,
+                conn=cursor.connection,
+            )
             cost_out = qty_base * cost_used
             sync_pids.add(pid)
 

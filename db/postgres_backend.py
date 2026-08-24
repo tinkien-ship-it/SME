@@ -1,0 +1,286 @@
+"""PostgreSQL backend — schema-per-tenant, API tương thích sqlite3.Connection.execute()."""
+from __future__ import annotations
+
+import logging
+import os
+import random
+import threading
+import time
+from contextlib import contextmanager
+from typing import Any
+
+from db.dialect import (
+    BACKEND_POSTGRES,
+    is_locked_error,
+    pg_schema_from_db_path,
+    sanitize_pg_schema,
+)
+from db.sql_compat import compat_row_factory, rewrite_sql_for_postgres
+
+logger = logging.getLogger(__name__)
+
+try:
+    import psycopg
+    from psycopg import sql as pg_sql
+    from psycopg_pool import ConnectionPool
+except ImportError:  # pragma: no cover
+    psycopg = None  # type: ignore
+    pg_sql = None  # type: ignore
+    ConnectionPool = None  # type: ignore
+
+_POOL: ConnectionPool | None = None
+_POOL_GUARD = threading.Lock()
+_SCHEMA_LOCKS_GUARD = threading.Lock()
+_SCHEMA_LOCKS: dict[str, threading.RLock] = {}
+_SCHEMA_READY: set[str] = set()
+
+
+def database_url() -> str:
+    url = (os.environ.get('DATABASE_URL') or os.environ.get('SME_PG_URL') or '').strip()
+    if not url:
+        raise RuntimeError('PostgreSQL: thiếu DATABASE_URL hoặc SME_PG_URL')
+    if url.startswith('postgres://'):
+        url = 'postgresql://' + url[len('postgres://'):]
+    return url
+
+
+def _require_psycopg() -> None:
+    if psycopg is None or ConnectionPool is None:
+        raise RuntimeError(
+            'PostgreSQL backend cần psycopg: pip install "psycopg[binary]" psycopg-pool'
+        )
+
+
+def get_pool() -> ConnectionPool:
+    global _POOL
+    _require_psycopg()
+    with _POOL_GUARD:
+        if _POOL is None:
+            min_size = int(os.environ.get('SME_PG_POOL_MIN', '2') or 2)
+            max_size = int(os.environ.get('SME_PG_POOL_MAX', '20') or 20)
+            _POOL = ConnectionPool(
+                conninfo=database_url(),
+                min_size=min_size,
+                max_size=max_size,
+                kwargs={'row_factory': compat_row_factory, 'autocommit': False},
+                open=True,
+            )
+        return _POOL
+
+
+def schema_lock(schema: str) -> threading.RLock:
+    key = sanitize_pg_schema(schema)
+    with _SCHEMA_LOCKS_GUARD:
+        if key not in _SCHEMA_LOCKS:
+            _SCHEMA_LOCKS[key] = threading.RLock()
+        return _SCHEMA_LOCKS[key]
+
+
+@contextmanager
+def pg_write_lock(schema: str, *, timeout: float | None = None):
+    wait = float(os.environ.get('SME_PG_WRITE_LOCK_SEC', '30') or 30)
+    if timeout is not None:
+        wait = timeout
+    lock = schema_lock(schema)
+    acquired = lock.acquire(timeout=max(0.1, wait))
+    if not acquired:
+        raise psycopg.OperationalError('schema write lock timeout')  # type: ignore
+    try:
+        yield
+    finally:
+        lock.release()
+
+
+class PgCursor:
+    """Cursor psycopg — rewrite SQL SQLite → PostgreSQL."""
+
+    __slots__ = ('_cur', '_schema')
+
+    def __init__(self, cur, schema: str):
+        self._cur = cur
+        self._schema = schema
+
+    def execute(self, query: str, params: Any = None):
+        sql = rewrite_sql_for_postgres(query, schema=self._schema)
+        if params is None:
+            return self._cur.execute(sql)
+        return self._cur.execute(sql, params)
+
+    def __getattr__(self, name):
+        return getattr(self._cur, name)
+
+
+class PgConnection:
+    """Wrapper psycopg với ``execute()`` kiểu SQLite và search_path theo tenant."""
+
+    __slots__ = ('_conn', '_schema', '_sme_backend', '_sme_pg_schema', '_closed', '_from_pool')
+
+    def __init__(self, conn, schema: str, *, from_pool: bool = True):
+        self._conn = conn
+        self._schema = sanitize_pg_schema(schema)
+        self._sme_backend = BACKEND_POSTGRES
+        self._sme_pg_schema = self._schema
+        self._closed = False
+        self._from_pool = from_pool
+        self._set_search_path()
+
+    def _set_search_path(self) -> None:
+        reg = (os.environ.get('SME_PG_REGISTRY_SCHEMA') or 'public').strip() or 'public'
+        paths = [self._schema]
+        if self._schema != reg:
+            paths.append(reg)
+        paths.append('public')
+        ordered = []
+        seen = set()
+        for p in paths:
+            if p not in seen:
+                ordered.append(p)
+                seen.add(p)
+        self._conn.execute(
+            pg_sql.SQL('SET search_path TO {}').format(
+                pg_sql.SQL(', ').join(pg_sql.Identifier(p) for p in ordered)
+            )
+        )
+
+    def execute(self, query: str, params: Any = None):
+        sql = rewrite_sql_for_postgres(query, schema=self._schema)
+        if params is None:
+            return self._conn.execute(sql)
+        return self._conn.execute(sql, params)
+
+    def cursor(self):
+        return PgCursor(self._conn.cursor(), self._schema)
+
+    def commit(self):
+        return self._conn.commit()
+
+    def rollback(self):
+        return self._conn.rollback()
+
+    @property
+    def autocommit(self):
+        return self._conn.autocommit
+
+    @autocommit.setter
+    def autocommit(self, value):
+        self._conn.autocommit = value
+
+    @property
+    def in_transaction(self) -> bool:
+        try:
+            status = self._conn.info.transaction_status
+            return status not in (psycopg.pq.TransactionStatus.IDLE,)  # type: ignore
+        except Exception:
+            return False
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        try:
+            self._conn.rollback()
+        except Exception:
+            pass
+        try:
+            if self._from_pool:
+                self._conn.close()  # trả về pool
+            else:
+                self._conn.close()
+        except Exception:
+            pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        try:
+            if exc_type is not None:
+                self.rollback()
+        finally:
+            self.close()
+        return False
+
+
+class _PgRequestScoped:
+    """Proxy: close() no-op trong request; teardown mới trả connection về pool."""
+
+    __slots__ = ('_inner',)
+
+    def __init__(self, inner: PgConnection):
+        self._inner = inner
+
+    def close(self):
+        return None
+
+    def _real_close(self):
+        self._inner.close()
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+def open_pg_request(schema: str):
+    """Connection Postgres tái sử dụng trong request Flask."""
+    return _PgRequestScoped(open_pg(schema=schema))
+
+
+def open_pg(schema: str | None = None, *, db_path: str | None = None, tenant_id: str | None = None):
+    """Mở connection Postgres với search_path = schema tenant."""
+    _require_psycopg()
+    sch = schema or pg_schema_from_db_path(db_path, tenant_id=tenant_id)
+    pool = get_pool()
+    raw = pool.getconn()
+    try:
+        return PgConnection(raw, sch, from_pool=True)
+    except Exception:
+        pool.putconn(raw)
+        raise
+
+
+def pg_write_retry(fn, *, retries: int | None = None, label: str = 'pg_write'):
+    total = int(os.environ.get('SME_PG_WRITE_RETRIES', '8') or 8)
+    if retries is not None:
+        total = retries
+    last_exc = None
+    for attempt in range(max(1, total)):
+        try:
+            return fn()
+        except Exception as exc:
+            last_exc = exc
+            if not is_locked_error(exc) or attempt >= total - 1:
+                raise
+            sleep_s = min(0.08 * (2 ** attempt) + random.uniform(0, 0.08), 2.5)
+            logger.warning('%s retry %s/%s: %s', label, attempt + 1, total, exc)
+            time.sleep(sleep_s)
+    if last_exc:
+        raise last_exc
+    return None
+
+
+def ensure_pg_schema(schema: str) -> None:
+    """Tạo schema tenant nếu chưa có."""
+    sch = sanitize_pg_schema(schema)
+    if sch in _SCHEMA_READY:
+        return
+    pool = get_pool()
+    with pool.connection() as conn:
+        conn.execute(pg_sql.SQL('CREATE SCHEMA IF NOT EXISTS {}').format(pg_sql.Identifier(sch)))
+        conn.commit()
+    _SCHEMA_READY.add(sch)
+
+
+def close_pg_pool() -> None:
+    global _POOL
+    with _POOL_GUARD:
+        if _POOL is not None:
+            try:
+                _POOL.close()
+            except Exception:
+                pass
+            _POOL = None

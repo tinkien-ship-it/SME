@@ -1,0 +1,18 @@
+{
+  "name": "KETO POS",
+  "short_name": "KETO POS",
+  "description": "Bán hàng POS — hỗ trợ offline, đồng bộ khi có mạng",
+  "start_url": "/sale",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#3b71ca",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/img/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

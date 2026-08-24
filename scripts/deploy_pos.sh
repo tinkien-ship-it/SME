@@ -17,6 +17,18 @@
 #   SME_CANONICAL_HOST=ketoshop.pro.vn          # www → apex (tranh mat OAuth session)
 #   SME_SESSION_COOKIE_DOMAIN=.ketoshop.pro.vn  # cookie chung www + apex
 #   PUBLIC_BASE_URL=https://ketoshop.pro.vn
+#
+# PostgreSQL (production VPS — khuyến nghị thay SQLite khi nhiều user):
+#   SME_DB_BACKEND=postgres
+#   DATABASE_URL=postgresql://sme:SECRET@127.0.0.1:5432/sme
+#   SME_PG_POOL_MIN=2
+#   SME_PG_POOL_MAX=30
+#   SME_PG_REGISTRY_SCHEMA=public
+# Sau khi cấu hình Postgres lần đầu:
+#   python scripts/migrate_sqlite_to_postgres.py
+#
+# Offline POS: trang /sale cache qua service worker; đơn offline lưu IndexedDB
+# và đồng bộ khi có mạng (client_uuid chống trùng).
 
 set -uo pipefail
 
@@ -151,6 +163,7 @@ fi
 echo "=== [4/6] Cai dependency (bo pywin32 tren Linux) ==="
 grep -v pywin32 requirements.txt | pip install -r /dev/stdin -q \
   || fail "pip install that bai"
+pip install "psycopg[binary]" psycopg-pool -q 2>/dev/null || true
 
 echo "=== [5/6] Kiem tra + migrate + tu sua registry/master (service DANG TAT) ==="
 python - <<'PY'
@@ -165,25 +178,33 @@ except Exception as exc:
 PY
 
 python - <<'PY'
-import glob, os, sqlite3
-bad = []
-for path in ['database.db'] + sorted(glob.glob('tenants/*.db')):
-    if not os.path.exists(path):
-        continue
-    try:
-        with sqlite3.connect('file:%s?mode=ro' % path, uri=True) as conn:
-            result = conn.execute('PRAGMA quick_check').fetchone()[0]
-        if result != 'ok':
-            bad.append((path, result[:120]))
-    except Exception as exc:
-        bad.append((path, str(exc)))
-if bad:
-    print('  ! DATABASE CO VAN DE:')
-    for path, why in bad:
-        print('    - %s: %s' % (path, why))
+import os
+backend = (os.environ.get('SME_DB_BACKEND') or '').strip().lower()
+db_url = (os.environ.get('DATABASE_URL') or '').strip().lower()
+if backend in ('postgres', 'postgresql', 'pg') or db_url.startswith('postgres'):
+    print('  -> PostgreSQL backend — bo qua PRAGMA quick_check SQLite')
 else:
-    print('  -> Tat ca database: ok')
+    import glob, sqlite3
+    bad = []
+    for path in ['database.db'] + sorted(glob.glob('tenants/*.db')):
+        if not os.path.exists(path):
+            continue
+        try:
+            with sqlite3.connect('file:%s?mode=ro' % path, uri=True) as conn:
+                result = conn.execute('PRAGMA quick_check').fetchone()[0]
+            if result != 'ok':
+                bad.append((path, result[:120]))
+        except Exception as exc:
+            bad.append((path, str(exc)))
+    if bad:
+        print('  ! DATABASE CO VAN DE:')
+        for path, why in bad:
+            print('    - %s: %s' % (path, why))
+    else:
+        print('  -> Tat ca database: ok')
 PY
+
+python scripts/verify_pg_sql_compat.py 2>/dev/null || echo "  (verify_pg_sql_compat — bo qua)"
 
 python scripts/migrate_all_dbs.py || echo "  ! Migrate co DB loi — xem log phia tren"
 

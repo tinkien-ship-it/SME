@@ -38,7 +38,7 @@ from requests.auth import HTTPBasicAuth
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from db_utils import BASE_DIR, get_db_connection, sqlite_commit
+from db_utils import BASE_DIR, get_db_connection, sqlite_commit, begin_immediate
 from Services.invoice_buyer import (
     DEFAULT_RETAIL_BUYER_NAME,
     enrich_sale_buyer_identity,
@@ -1935,7 +1935,7 @@ def register_invoice_routes(app):
         cursor = conn.cursor()
 
         try:
-            cursor.execute("BEGIN IMMEDIATE")
+            begin_immediate(conn, label='invoice_replacement_edit')
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
             # 1. Kiểm tra đơn hàng cũ

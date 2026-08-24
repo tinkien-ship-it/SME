@@ -160,9 +160,10 @@ DEFAULT_POLICIES = {
         '(nếu có). Dự phòng được trích theo ước tính tổn thất dựa trên khả năng thu hồi.'
     ),
     'inventory': (
-        'Hàng tồn kho ghi nhận theo giá gốc. Giá xuất kho tính theo phương pháp bình quân '
-        'gia quyền liên hoàn (WAC). Cuối kỳ đánh giá theo giá gốc và giá trị thuần có thể thực hiện được, '
-        'lấy giá trị thấp hơn.'
+        'Hàng tồn kho ghi nhận theo giá gốc. Giá xuất kho tính theo phương pháp đã chọn '
+        'trong năm tài chính: bình quân gia quyền liên hoàn (WAC) hoặc nhập trước xuất trước (FIFO). '
+        'Phương pháp không thay đổi trong năm khi đã có phát sinh. '
+        'Cuối kỳ đánh giá theo giá gốc và giá trị thuần có thể thực hiện được, lấy giá trị thấp hơn.'
     ),
     'fixed_assets': (
         'TSCĐ hữu hình ghi nhận theo nguyên giá và khấu hao theo đường thẳng trong suốt '
@@ -180,7 +181,8 @@ DEFAULT_POLICIES = {
         'rủi ro và lợi ích, doanh thu được xác định tương đối chắc chắn và có khả năng thu được lợi ích kinh tế.'
     ),
     'cogs': (
-        'Giá vốn hàng bán được ghi nhận đồng thời với doanh thu tương ứng, theo giá xuất kho WAC.'
+        'Giá vốn hàng bán được ghi nhận đồng thời với doanh thu tương ứng, '
+        'theo giá xuất kho (WAC hoặc FIFO theo chính sách năm tài chính).'
     ),
     'expenses': (
         'Chi phí bán hàng và chi phí quản lý doanh nghiệp được ghi nhận trong kỳ phát sinh, '

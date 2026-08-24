@@ -498,7 +498,17 @@ https://www.ketoshop.pro.vn/login/google/2fa</pre>
         const deviceSignal = document.getElementById('deviceSignal');
         if (deviceSignal) {
             try {
+                let deviceId = '';
+                try {
+                    deviceId = localStorage.getItem('sme_master_device_id') || '';
+                    if (!deviceId) {
+                        deviceId = (crypto.randomUUID && crypto.randomUUID())
+                            || ('d' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+                        localStorage.setItem('sme_master_device_id', deviceId);
+                    }
+                } catch (e) { deviceId = ''; }
                 const payload = {
+                    device_id: deviceId,
                     platform: navigator.platform || '',
                     screen: [
                         window.screen && screen.width,
@@ -507,7 +517,6 @@ https://www.ketoshop.pro.vn/login/google/2fa</pre>
                     ].join('x'),
                     timezone: (Intl.DateTimeFormat().resolvedOptions().timeZone) || '',
                     cores: String(navigator.hardwareConcurrency || ''),
-                    memory: String(navigator.deviceMemory || ''),
                     touch: String(navigator.maxTouchPoints || 0),
                     lang: (navigator.language || navigator.userLanguage || '')
                 };

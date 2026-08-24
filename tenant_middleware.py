@@ -16,6 +16,7 @@ from db_utils import (
     get_db_connection,
     get_main_db_connection,
     open_sqlite,
+    paths_same_db,
     sqlite_write_retry,
     sqlite_commit,
     begin_immediate,
@@ -32,6 +33,10 @@ _SESSION_TOKEN_CACHE_TTL_SEC = 20.0
 def _maybe_migrate_tenant_db(db_path):
     """Migrate schema tenant DB một lần / process (products.product_type, import.doc_type, …)."""
     if not db_path:
+        return
+    from db.dialect import is_postgres
+    if is_postgres():
+        # Schema Postgres được migrate qua scripts/migrate_sqlite_to_postgres.py
         return
     if os.environ.get('SME_SKIP_RUNTIME_MIGRATE', '').strip().lower() in ('1', 'true', 'yes', 'on'):
         return
@@ -60,14 +65,11 @@ def ensure_tenants_dir():
     return tenants_dir
 
 def _ensure_users_extra_columns(cursor):
-    cursor.execute("PRAGMA table_info(users)")
-    cols = {col[1] for col in cursor.fetchall()}
-    if 'must_change_password' not in cols:
-        cursor.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0")
-    if 'is_support_account' not in cols:
-        cursor.execute("ALTER TABLE users ADD COLUMN is_support_account INTEGER DEFAULT 0")
-    if 'email' not in cols:
-        cursor.execute("ALTER TABLE users ADD COLUMN email TEXT")
+    from db.schema_helpers import add_column_if_missing
+    conn = getattr(cursor, 'connection', None) or cursor
+    add_column_if_missing(conn, 'users', 'must_change_password', 'INTEGER DEFAULT 0', cursor=cursor)
+    add_column_if_missing(conn, 'users', 'is_support_account', 'INTEGER DEFAULT 0', cursor=cursor)
+    add_column_if_missing(conn, 'users', 'email', 'TEXT', cursor=cursor)
 
 
 def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwargs):
@@ -166,10 +168,12 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
             clear_trial_business_data(conn_tenant)
 
         cursor_tenant.execute("DELETE FROM users")
-        try:
-            cursor_tenant.execute("DELETE FROM sqlite_sequence WHERE name='users'")
-        except Exception:
-            pass
+        from db.dialect import is_postgres
+        if not is_postgres():
+            try:
+                cursor_tenant.execute("DELETE FROM sqlite_sequence WHERE name='users'")
+            except Exception:
+                pass
 
         _ensure_users_extra_columns(cursor_tenant)
 
@@ -243,34 +247,78 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
     created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     def _write_registry():
+        from db.dialect import is_postgres
         with get_main_db_connection() as conn_registry:
             c_reg = conn_registry.cursor()
-            c_reg.execute("""
-                INSERT OR REPLACE INTO tenants
-                (tenant_id, db_path, business_name, phone, address, email, expiry_date, created_at, is_active, settings, business_type)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-            """, (
-                tenant_id,
-                rel_db_path,
-                business_name,
-                phone,
-                kwargs.get('address', ''),
-                contact_email,
-                kwargs.get('expiry_date'),
-                created_at,
-                json.dumps(settings_payload, ensure_ascii=False),
-                business_line,
-            ))
-            c_reg.execute("""
-                INSERT OR REPLACE INTO user_tenant_mapping
-                (username, email, tenant_id, twofa_type, is_active, business_type)
-                VALUES (?, ?, ?, 1, 1, ?)
-            """, (phone, email or contact_email, tenant_id, business_line))
-            c_reg.execute("""
-                INSERT OR REPLACE INTO user_tenant_mapping
-                (username, email, tenant_id, twofa_type, is_active, business_type)
-                VALUES (?, ?, ?, 1, 1, ?)
-            """, (support_username, '', tenant_id, business_line))
+            if is_postgres():
+                c_reg.execute("""
+                    INSERT INTO tenants
+                    (tenant_id, db_path, business_name, phone, address, email, expiry_date, created_at, is_active, settings, business_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1, %s, %s)
+                    ON CONFLICT (tenant_id) DO UPDATE SET
+                        db_path = EXCLUDED.db_path,
+                        business_name = EXCLUDED.business_name,
+                        phone = EXCLUDED.phone,
+                        address = EXCLUDED.address,
+                        email = EXCLUDED.email,
+                        expiry_date = EXCLUDED.expiry_date,
+                        settings = EXCLUDED.settings,
+                        business_type = EXCLUDED.business_type,
+                        is_active = 1
+                """, (
+                    tenant_id,
+                    rel_db_path,
+                    business_name,
+                    phone,
+                    kwargs.get('address', ''),
+                    contact_email,
+                    kwargs.get('expiry_date'),
+                    created_at,
+                    json.dumps(settings_payload, ensure_ascii=False),
+                    business_line,
+                ))
+                for uname, em, btype in (
+                    (phone, email or contact_email, business_line),
+                    (support_username, '', business_line),
+                ):
+                    c_reg.execute("""
+                        INSERT INTO user_tenant_mapping
+                        (username, email, tenant_id, twofa_type, is_active, business_type)
+                        VALUES (%s, %s, %s, 1, 1, %s)
+                        ON CONFLICT (username) DO UPDATE SET
+                            email = EXCLUDED.email,
+                            tenant_id = EXCLUDED.tenant_id,
+                            twofa_type = 1,
+                            is_active = 1,
+                            business_type = EXCLUDED.business_type
+                    """, (uname, em, tenant_id, btype))
+            else:
+                c_reg.execute("""
+                    INSERT OR REPLACE INTO tenants
+                    (tenant_id, db_path, business_name, phone, address, email, expiry_date, created_at, is_active, settings, business_type)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                """, (
+                    tenant_id,
+                    rel_db_path,
+                    business_name,
+                    phone,
+                    kwargs.get('address', ''),
+                    contact_email,
+                    kwargs.get('expiry_date'),
+                    created_at,
+                    json.dumps(settings_payload, ensure_ascii=False),
+                    business_line,
+                ))
+                c_reg.execute("""
+                    INSERT OR REPLACE INTO user_tenant_mapping
+                    (username, email, tenant_id, twofa_type, is_active, business_type)
+                    VALUES (?, ?, ?, 1, 1, ?)
+                """, (phone, email or contact_email, tenant_id, business_line))
+                c_reg.execute("""
+                    INSERT OR REPLACE INTO user_tenant_mapping
+                    (username, email, tenant_id, twofa_type, is_active, business_type)
+                    VALUES (?, ?, ?, 1, 1, ?)
+                """, (support_username, '', tenant_id, business_line))
             sqlite_commit(conn_registry, label='init_tenant_registry')
 
     try:
@@ -279,6 +327,18 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
         if os.path.exists(tenant_db_path):
             os.remove(tenant_db_path)
         raise Exception(f"Lỗi Registry: {str(e)}")
+
+    try:
+        from db.dialect import is_postgres, pg_schema_from_db_path
+        if is_postgres():
+            from db.pg_migrate import import_sqlite_file
+            schema = pg_schema_from_db_path(rel_db_path, tenant_id=tenant_id)
+            import_sqlite_file(tenant_db_path, schema)
+    except Exception as e:
+        try:
+            current_app.logger.warning('PostgreSQL tenant import (%s): %s', tenant_id, e)
+        except Exception:
+            print(f'[PG] tenant import {tenant_id}: {e}')
 
     return tenant_db_path
 
@@ -728,15 +788,23 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
                     finally:
                         conn.close()
                 else:
-                    conn = open_sqlite(validate_db_path)
-                    try:
+                    if hasattr(g, 'db_path') and g.db_path and paths_same_db(validate_db_path, g.db_path):
+                        conn = get_db_connection()
                         row = conn.execute(
                             "SELECT last_session_id FROM users WHERE id = ?",
                             (user_id,),
                         ).fetchone()
                         db_token = row[0] if row else None
-                    finally:
-                        conn.close()
+                    else:
+                        conn = open_sqlite(validate_db_path)
+                        try:
+                            row = conn.execute(
+                                "SELECT last_session_id FROM users WHERE id = ?",
+                                (user_id,),
+                            ).fetchone()
+                            db_token = row[0] if row else None
+                        finally:
+                            conn.close()
                 _session_token_cache[cache_key] = (now_ts, db_token)
                 # Giữ cache nhỏ — tránh phình khi nhiều user
                 if len(_session_token_cache) > 256:
@@ -781,12 +849,7 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
         try:
             if session.get('user_id') and hasattr(g, 'db_path') and g.db_path:
                 from Services.user_branch import cache_user_branch_context
-                conn_ub = open_sqlite(g.db_path)
-                try:
-                    conn_ub.row_factory = sqlite3.Row
-                    cache_user_branch_context(conn_ub)
-                finally:
-                    conn_ub.close()
+                cache_user_branch_context(get_db_connection())
         except Exception:
             pass
 

@@ -53,9 +53,12 @@
                 </h4>
                 <p class="text-muted text-center small mb-4">
                     {% if setup_mode %}
-                    Quét mã QR bằng ứng dụng Google Authenticator / Microsoft Authenticator, rồi nhập mã 6 số để hoàn tất.
+                    Quét <strong>một lần</strong> mã QR bằng Google Authenticator / Microsoft Authenticator,
+                    rồi nhập mã 6 số hiện trên app để hoàn tất.
+                    <br><span class="text-secondary">Lưu ý: app tự đổi mã mỗi 30 giây — hệ thống <em>không gửi</em> mã vào app.</span>
                     {% else %}
-                    Thiết bị này chưa được tin cậy. Nhập mã 6 số từ Google Authenticator.
+                    Thiết bị này chưa được tin cậy. Nhập mã 6 số đang hiện trên Authenticator
+                    (mã tự đổi mỗi 30 giây; không phải tin nhắn / email).
                     {% endif %}
                 </p>
 

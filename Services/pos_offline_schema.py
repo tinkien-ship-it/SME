@@ -2,30 +2,20 @@
 from __future__ import annotations
 
 import sqlite3
+
+from db.schema_helpers import add_column_if_missing, column_exists, ensure_index, row_to_dict
 from db_utils import sqlite_commit
 
 
-def _cols(conn: sqlite3.Connection, table: str) -> set[str]:
-    try:
-        return {r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()}
-    except sqlite3.Error:
-        return set()
-
-
 def ensure_pos_offline_schema(conn: sqlite3.Connection, *, commit: bool = False) -> None:
-    cols = _cols(conn, 'sale')
-    if 'client_uuid' not in cols:
-        try:
-            conn.execute('ALTER TABLE sale ADD COLUMN client_uuid TEXT')
-        except sqlite3.OperationalError:
-            pass
-    try:
-        conn.execute(
-            'CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_client_uuid '
-            'ON sale(client_uuid) WHERE client_uuid IS NOT NULL AND client_uuid != \'\''
-        )
-    except sqlite3.OperationalError:
+    if add_column_if_missing(conn, 'sale', 'client_uuid', 'TEXT'):
         pass
+    ensure_index(
+        conn,
+        'idx_sale_client_uuid',
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_client_uuid "
+        "ON sale(client_uuid) WHERE client_uuid IS NOT NULL AND client_uuid != ''",
+    )
     if commit:
         sqlite_commit(conn, label='pos_offline_schema')
 
@@ -35,8 +25,7 @@ def find_sale_by_client_uuid(conn: sqlite3.Connection, client_uuid: str) -> dict
     if not uid:
         return None
     ensure_pos_offline_schema(conn, commit=False)
-    cols = _cols(conn, 'sale')
-    if 'client_uuid' not in cols:
+    if not column_exists(conn, 'sale', 'client_uuid'):
         return None
     row = conn.execute(
         'SELECT id, status, sale_no FROM sale WHERE client_uuid = ? LIMIT 1',
@@ -44,6 +33,11 @@ def find_sale_by_client_uuid(conn: sqlite3.Connection, client_uuid: str) -> dict
     ).fetchone()
     if not row:
         return None
-    if isinstance(row, sqlite3.Row):
-        return dict(row)
-    return {'id': row[0], 'status': row[1], 'sale_no': row[2] if len(row) > 2 else None}
+    d = row_to_dict(row)
+    if 'id' not in d and 'value' in d:
+        return None
+    return {
+        'id': d.get('id'),
+        'status': d.get('status'),
+        'sale_no': d.get('sale_no'),
+    }

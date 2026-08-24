@@ -1,16 +1,16 @@
 """Helper checkout POS: tồn kho theo product_type và snapshot nhóm HKD."""
 
 from Services.hkd_sector import requires_stock_check, resolve_item_hkd_sector
-from Services.inventory_stock_helpers import (
-    apply_wac_outbound,
-    sync_inventory_quantity_from_moves,
-    wac_snapshot_for_sale,
-)
+from Services.inventory_cost import apply_cost_outbound, cost_snapshot_for_sale
+from Services.inventory_stock_helpers import sync_inventory_quantity_from_moves
+
+
+from db.schema_helpers import column_exists
 
 
 def table_has_column(cursor, table, column):
-    cursor.execute(f"PRAGMA table_info({table})")
-    return column in [r[1] for r in cursor.fetchall()]
+    conn = getattr(cursor, 'connection', None) or cursor
+    return column_exists(conn, table, column)
 
 
 def fetch_product_for_checkout(cursor, product_id, warehouse_codes=None):
@@ -107,13 +107,17 @@ def _ensure_inventory_avg_cost(cursor, product_id, avg_cost):
 
 
 def deduct_inventory_for_sale(cursor, product_id, deduct_qty, avg_cost, sale_id, sale_date, ref_doc):
-    """Trừ kho: snapshot WAC từ inventory, ghi stock_moves, sync quantity."""
+    """Trừ kho: WAC hoặc FIFO, ghi stock_moves, sync quantity."""
     deduct_qty = float(deduct_qty)
-    cost_used = wac_snapshot_for_sale(cursor, product_id)
+    conn = cursor.connection
+    cost_used = cost_snapshot_for_sale(cursor, product_id, conn=conn)
     if cost_used <= 0 and float(avg_cost or 0) > 0:
         cost_used = float(avg_cost)
     _ensure_inventory_avg_cost(cursor, product_id, cost_used)
-    apply_wac_outbound(cursor, product_id, deduct_qty, cost_used)
+    _new_avg, cost_used, fifo_details = apply_cost_outbound(
+        cursor, product_id, deduct_qty, cost_used,
+        ref_type='sale', ref_id=sale_id, conn=conn,
+    )
     cursor.execute("""
         INSERT INTO stock_moves
         (product_id, date, type, ref_id, quantity, cost_price, ref_document, ref_type, type1, note)
@@ -122,6 +126,14 @@ def deduct_inventory_for_sale(cursor, product_id, deduct_qty, avg_cost, sale_id,
         product_id, sale_date, sale_id, -deduct_qty, cost_used,
         ref_doc, 'export', 'Bán', 'Bán hàng cho khách',
     ))
+    move_id = cursor.lastrowid
+    for det in fifo_details or []:
+        cid = det.get('consumption_id')
+        if cid:
+            cursor.execute(
+                'UPDATE inventory_lot_consumptions SET stock_move_id = ? WHERE id = ?',
+                (move_id, cid),
+            )
     cursor.execute("""
         INSERT INTO inventory_transactions
         (product_id, type1, type, quantity, cost_price, reference_id, reference_type, created_at)

@@ -5,10 +5,10 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
+from Services.inventory_cost import reverse_import_cost
 from Services.inventory_stock_helpers import (
     import_base_qty,
     ledger_quantity,
-    reverse_import_moves_wac,
     sync_inventory_quantities,
 )
 from Services.sme.import_journal import IMPORT_DOCUMENT_TYPE, reverse_journal_entry
@@ -371,7 +371,7 @@ def void_import(
     )
 
     # ── 3. Kho / WAC ───────────────────────────────────────
-    sync_pids = set(reverse_import_moves_wac(c, import_id) or [])
+    sync_pids = set(reverse_import_cost(c, import_id, conn=conn) or [])
     _safe_exec(
         conn,
         """

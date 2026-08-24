@@ -6,9 +6,8 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from Services.inventory_cost import apply_cost_inbound, apply_cost_outbound
 from Services.inventory_stock_helpers import (
-    apply_wac_inbound,
-    apply_wac_outbound,
     ledger_quantity,
     sync_inventory_quantity_from_moves,
 )
@@ -680,7 +679,10 @@ def allocate_materials(
                 pass
 
         try:
-            _, cost_used = apply_wac_outbound(cur, pid, float(qty), float(cost))
+            _, cost_used, _fifo = apply_cost_outbound(
+                cur, pid, float(qty), float(cost),
+                ref_type='material_alloc', ref_id=aid, conn=conn,
+            )
             cost = _money(cost_used)
             amt = qty * cost
         except ValueError:
@@ -843,9 +845,21 @@ def void_material_allocation(
             continue
         try:
             if qty < 0:
-                apply_wac_inbound(cur, pid, -qty, (-qty) * cost)
+                apply_cost_inbound(
+                    cur, pid, -qty, (-qty) * cost,
+                    unit_cost=cost,
+                    source_type='MATERIAL_ALLOC_VOID',
+                    source_id=alloc_id,
+                    received_at=when,
+                    lot_no=f'H07-{doc["doc_no"]}-{pid}',
+                    note=reason,
+                    conn=conn,
+                )
             else:
-                apply_wac_outbound(cur, pid, qty, cost)
+                apply_cost_outbound(
+                    cur, pid, qty, cost,
+                    ref_type='material_alloc_void', ref_id=alloc_id, conn=conn,
+                )
         except Exception:
             pass
         conn.execute(
