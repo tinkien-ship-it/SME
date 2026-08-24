@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import sqlite3
+from db.errors import INTEGRITY_ERROR, OPERATIONAL_ERROR
 import traceback
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -469,7 +470,7 @@ def complete_fb_bank_payment(sale_id):
 
     try:
         return sqlite_write_retry(_run, label='fb_bank_payment')
-    except sqlite3.OperationalError as e:
+    except OPERATIONAL_ERROR as e:
         rollback_quietly(conn)
         if _is_locked_error(e):
             return {"success": False, "error": locked_user_message()}
@@ -922,7 +923,7 @@ def register_fb_routes(app):
                             "UPDATE sale SET client_uuid = ? WHERE id = ?",
                             (client_uuid, sale_id),
                         )
-                    except sqlite3.OperationalError:
+                    except OPERATIONAL_ERROR:
                         pass
 
                 sqlite_commit(conn, label='fb_write')
@@ -937,7 +938,7 @@ def register_fb_routes(app):
             payload, status = sqlite_write_retry(_checkout, label='fb_checkout')
             return jsonify(payload), status
 
-        except sqlite3.OperationalError as e:
+        except OPERATIONAL_ERROR as e:
             rollback_quietly(conn)
             if _is_locked_error(e):
                 return jsonify({"success": False, "message": locked_user_message()}), 503
@@ -1117,7 +1118,7 @@ def register_fb_routes(app):
             payload, status = sqlite_write_retry(_add, label='fb_add_item')
             return jsonify(payload), status
 
-        except sqlite3.OperationalError as e:
+        except OPERATIONAL_ERROR as e:
             rollback_quietly(db)
             if _is_locked_error(e):
                 return jsonify({"success": False, "message": locked_user_message()}), 503
@@ -1265,7 +1266,7 @@ def register_fb_routes(app):
             payload, status = sqlite_write_retry(_update_qty, label='fb_update_item_qty')
             return jsonify(payload), status
 
-        except sqlite3.OperationalError as e:
+        except OPERATIONAL_ERROR as e:
             rollback_quietly(db)
             if _is_locked_error(e):
                 return jsonify({"success": False, "message": locked_user_message()}), 503

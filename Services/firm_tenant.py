@@ -18,6 +18,7 @@ from flask_bcrypt import check_password_hash, generate_password_hash
 from db_utils import (
     BASE_DIR,
     MAIN_DB_PATH,
+    db_path_available,
     force_close_request_db_if_path,
     get_db_connection,
     get_main_db_connection,
@@ -276,7 +277,7 @@ def ensure_firm_schema(conn: sqlite3.Connection | None = None) -> None:
 def _read_tenant_business_row(db_path: str) -> dict[str, Any]:
     """Đọc business_info — tái sử dụng connection request nếu cùng file DB."""
     abs_path = _normalize_db_path(db_path)
-    if not abs_path or not os.path.isfile(abs_path):
+    if not db_path_available(abs_path):
         return {}
 
     def _query(target) -> dict[str, Any]:
@@ -601,7 +602,7 @@ def ensure_firm_own_books_ready(firm_tenant_id: str) -> str:
         raise FileNotFoundError('Không tìm thấy tenant DVKT')
     settings = parse_tenant_settings(rec.get('settings'))
     abs_path = client_db_abs(rec.get('db_path') or os.path.join('tenants', f'{firm_tenant_id}.db'))
-    if not os.path.isfile(abs_path):
+    if not db_path_available(abs_path):
         raise FileNotFoundError('File sổ kế toán DVKT không tồn tại')
 
     if not settings.get('firm_own_books_ready'):
@@ -1118,7 +1119,7 @@ def get_client_record(firm_tenant_id: str, client_id: str) -> dict | None:
 def client_has_active_einvoice(db_rel: str) -> bool:
     """Kiểm tra sổ DN thuê đã có cấu hình HĐĐT active chưa."""
     abs_db = client_db_abs(db_rel or '')
-    if not abs_db or not os.path.exists(abs_db):
+    if not db_path_available(abs_db):
         return False
     try:
         from db_utils import open_sqlite
@@ -1313,7 +1314,7 @@ def get_client_manage_detail(firm_tenant_id: str, client_id: str) -> dict | None
 
 def _sync_client_business_info(client: dict, **fields) -> None:
     abs_path = client_db_abs(client.get('db_path') or '')
-    if not abs_path or not os.path.isfile(abs_path):
+    if not db_path_available(abs_path):
         return
     vals = {
         'client_name': fields.get('client_name', client.get('client_name')),
@@ -1608,7 +1609,7 @@ def enter_client_context(firm_tenant_id: str, firm_user_id: int, client_id: str)
     client = ctx['client']
     fu = ctx['firm_user']
     abs_db = client_db_abs(client['db_path'])
-    if not os.path.exists(abs_db):
+    if not db_path_available(abs_db):
         return {'success': False, 'error': 'File sổ kế toán không tồn tại'}
 
     sme_role = ctx['sme_role']

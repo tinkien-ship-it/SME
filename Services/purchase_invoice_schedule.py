@@ -8,7 +8,13 @@ import sqlite3
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from db_utils import MAIN_DB_PATH, _normalize_db_path, get_main_db_connection, open_sqlite
+from db_utils import (
+    MAIN_DB_PATH,
+    _normalize_db_path,
+    db_path_available,
+    get_main_db_connection,
+    open_sqlite,
+)
 from Services.invoice_schedule import claim_job_run, finish_job_run, now_vn
 
 logger = logging.getLogger(__name__)
@@ -41,7 +47,7 @@ def _months_to_sync(reference: datetime | None = None) -> list[str]:
 
 
 def _config_for_db(db_path: str) -> dict | None:
-    if not db_path or not os.path.exists(db_path):
+    if not db_path_available(db_path):
         return None
     conn = open_sqlite(db_path)
     try:

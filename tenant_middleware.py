@@ -34,11 +34,24 @@ def _maybe_migrate_tenant_db(db_path):
     """Migrate schema tenant DB một lần / process (products.product_type, import.doc_type, …)."""
     if not db_path:
         return
-    from db.dialect import is_postgres
-    if is_postgres():
-        # Schema Postgres được migrate qua scripts/migrate_sqlite_to_postgres.py
-        return
     if os.environ.get('SME_SKIP_RUNTIME_MIGRATE', '').strip().lower() in ('1', 'true', 'yes', 'on'):
+        return
+    from db.dialect import is_postgres, pg_schema_from_db_path
+    if is_postgres():
+        schema = pg_schema_from_db_path(db_path)
+        cache_key = f'pg:{schema}'
+        if cache_key in _tenant_schema_migrated:
+            return
+        try:
+            with open_sqlite(db_path) as conn:
+                from db.init import ensure_tenant_db_schema
+                ensure_tenant_db_schema(conn)
+            _tenant_schema_migrated.add(cache_key)
+        except Exception as e:
+            try:
+                current_app.logger.error('Tenant schema migrate failed (pg %s): %s', schema, e)
+            except Exception:
+                print(f'[MIGRATE] pg schema {schema}: {e}')
         return
     normalized = os.path.abspath(db_path)
     if normalized in _tenant_schema_migrated:

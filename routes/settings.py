@@ -40,6 +40,7 @@ from werkzeug.utils import secure_filename
 from db_utils import (
     BASE_DIR,
     MAIN_DB_PATH,
+    db_path_available,
     get_db_connection,
     get_main_db_connection,
     open_sqlite,
@@ -514,8 +515,8 @@ def register_settings_routes(app):
                 current_tenant_id = None
                 tenant_2fa_enabled = False
 
-            # Kiểm tra file cơ sở dữ liệu đích có tồn tại hay không trước khi kết nối
-            if not db_to_open or not os.path.exists(db_to_open):
+            # Kiểm tra DB đích có sẵn (file SQLite hoặc schema Postgres)
+            if not db_path_available(db_to_open):
                 flash("Cơ sở dữ liệu của chi nhánh không tồn tại hoặc đường dẫn sai cấu hình!", "danger")
                 current_app.logger.error(f"Đăng nhập thất bại: Không tìm thấy file DB tại {db_to_open}")
                 return _render_login_page()
@@ -3235,7 +3236,7 @@ Trân trọng,
             return jsonify({'success': False, 'error': 'Không tìm thấy doanh nghiệp thuê'}), 404
 
         abs_db = client_db_abs(client.get('db_path') or '')
-        if not abs_db or not os.path.exists(abs_db):
+        if not db_path_available(abs_db):
             return jsonify({'success': False, 'error': 'File sổ kế toán không tồn tại'}), 400
 
         try:
@@ -4086,8 +4087,8 @@ Trân trọng,
             # 2. Database đang active (tenant shop hoặc main)
             db_path = resolve_db_path()
 
-            # Kiểm tra file gốc có tồn tại không trước khi copy
-            if not os.path.exists(db_path):
+            # Kiểm tra DB nguồn có sẵn (SQLite file hoặc Postgres)
+            if not db_path_available(db_path):
                 return jsonify({"success": False, "error": f"Không tìm thấy file database tại: {db_path}"})
 
             # 4. Xác định thư mục lưu trữ backup

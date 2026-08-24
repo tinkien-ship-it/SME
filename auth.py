@@ -117,11 +117,11 @@ def init_auth(app):
             else:
                 db_path = os.path.join(BASE_DIR, db_path_raw)
 
-            if not os.path.exists(db_path):
+            from db_utils import db_path_available, open_sqlite
+            if not db_path_available(db_path):
                 current_app.logger.error(f"Database path không tồn tại: {db_path}")
                 return None
 
-            from db_utils import open_sqlite
             with open_sqlite(db_path) as conn:
                 user_row = conn.execute(
                     "SELECT * FROM users WHERE id = ?", (int(user_id),)

@@ -76,6 +76,12 @@ _SQLITE_SEQ_INSERT = re.compile(
     re.IGNORECASE,
 )
 
+# last_insert_rowid() → lastval()
+_LAST_INSERT_ROWID = re.compile(
+    r'SELECT\s+last_insert_rowid\s*\(\s*\)',
+    re.IGNORECASE,
+)
+
 # --- rowid (SQLite only) ---
 _ROWID_UPDATE = re.compile(
     r'UPDATE\s+[\w"]+\s+SET\s+id\s*=\s*rowid\b',
@@ -105,14 +111,33 @@ TABLE_UPSERT_KEYS: dict[str, list[str]] = {
     'inventory': ['product_id'],
     'voucher_seq': ['type'],
     'sme_tt58_tax_rates': ['sector_code', 'effective_from'],
+    'sme_payroll_runs__mb': ['id'],
+    'accounting_jobs': ['sale_id', 'job_type', 'status'],
+    'warehouses': ['code'],
 }
 
 _IOR_RE = re.compile(
-    r'INSERT\s+OR\s+(REPLACE|IGNORE)\s+INTO\s+["`]?([\w]+)["`]?\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)',
+    r'INSERT\s+OR\s+(REPLACE|IGNORE)\s+INTO\s+["`]?([\w]+)["`]?\s*\(([^)]+)\)\s*VALUES\s*(.+)',
     re.IGNORECASE | re.DOTALL,
 )
 
 _CREATE_TABLE = re.compile(r'^\s*CREATE\s+TABLE\b', re.IGNORECASE)
+
+# IFNULL(a, b) → COALESCE(a, b)
+_IFNULL_RE = re.compile(r'\bIFNULL\s*\(', re.IGNORECASE)
+
+# printf('%06d', expr) → lpad((expr)::text, 6, '0')
+_PRINTF_PAD = re.compile(
+    r"""printf\s*\(\s*'%0(\d+)d'\s*,\s*([^)]+?)\)""",
+    re.IGNORECASE,
+)
+
+# COLLATE NOCASE (runtime) → bỏ
+_COLLATE_NOCASE = re.compile(r'\s+COLLATE\s+NOCASE\b', re.IGNORECASE)
+
+# Alias.rowid / table.rowid → .id (sau khi sale_items có cột id)
+_ROWID_COL = re.compile(r'\b([a-zA-Z_][\w]*)\.rowid\b', re.IGNORECASE)
+_BARE_ROWID_ORDER = re.compile(r'\bORDER\s+BY\s+rowid\b', re.IGNORECASE)
 
 
 def _quote_ident(name: str) -> str:
@@ -156,7 +181,7 @@ def _convert_insert_or_replace(sql: str) -> str | None:
     m = _IOR_RE.search(sql)
     if not m:
         return None
-    mode, raw_table, raw_cols, _vals = m.groups()
+    mode, raw_table, raw_cols, raw_vals = m.groups()
     table = raw_table.strip().strip('`"')
     cols = [c.strip().strip('`"') for c in raw_cols.split(',')]
     keys = TABLE_UPSERT_KEYS.get(table.lower()) or TABLE_UPSERT_KEYS.get(table)
@@ -164,23 +189,51 @@ def _convert_insert_or_replace(sql: str) -> str | None:
         return None
     col_sql = ', '.join(_quote_ident(c) for c in cols)
     conflict = ', '.join(_quote_ident(k) for k in keys)
-    placeholders = ', '.join(['%s'] * len(cols))
+    # Giữ nguyên VALUES (placeholder hoặc literal, 1 hay nhiều hàng)
+    vals = raw_vals.strip().rstrip(';').strip()
     if mode.upper() == 'IGNORE':
         return (
-            f'INSERT INTO {_quote_ident(table)} ({col_sql}) VALUES ({placeholders}) '
+            f'INSERT INTO {_quote_ident(table)} ({col_sql}) VALUES {vals} '
             f'ON CONFLICT ({conflict}) DO NOTHING'
         )
     updates = [c for c in cols if c not in keys]
     if not updates:
         return (
-            f'INSERT INTO {_quote_ident(table)} ({col_sql}) VALUES ({placeholders}) '
+            f'INSERT INTO {_quote_ident(table)} ({col_sql}) VALUES {vals} '
             f'ON CONFLICT ({conflict}) DO NOTHING'
         )
     set_clause = ', '.join(f'{_quote_ident(c)} = EXCLUDED.{_quote_ident(c)}' for c in updates)
     return (
-        f'INSERT INTO {_quote_ident(table)} ({col_sql}) VALUES ({placeholders}) '
+        f'INSERT INTO {_quote_ident(table)} ({col_sql}) VALUES {vals} '
         f'ON CONFLICT ({conflict}) DO UPDATE SET {set_clause}'
     )
+
+
+def _rewrite_ifnull(sql: str) -> str:
+    """IFNULL(...) → COALESCE(...) (cùng arity)."""
+    if not _IFNULL_RE.search(sql):
+        return sql
+    out = []
+    i = 0
+    upper = sql
+    while True:
+        m = _IFNULL_RE.search(upper, i)
+        if not m:
+            out.append(sql[i:])
+            break
+        out.append(sql[i:m.start()])
+        out.append('COALESCE(')
+        i = m.end()
+    return ''.join(out)
+
+
+def _rewrite_printf(sql: str) -> str:
+    def _pad(m: re.Match) -> str:
+        width = m.group(1)
+        expr = m.group(2).strip()
+        return f"lpad(({expr})::text, {width}, '0')"
+
+    return _PRINTF_PAD.sub(_pad, sql)
 
 
 def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
@@ -247,10 +300,21 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
     if _ROWID_UPDATE.search(text):
         return 'SELECT 1 AS _rowid_ok'
 
+    # last_insert_rowid()
+    if _LAST_INSERT_ROWID.search(text):
+        return 'SELECT lastval() AS last_insert_rowid'
+
     text = _adapt_params(text)
 
     # datetime('now')
     text = _DATETIME_NOW.sub('CURRENT_TIMESTAMP', text)
+
+    # IFNULL / printf / COLLATE / alias.rowid
+    text = _rewrite_ifnull(text)
+    text = _rewrite_printf(text)
+    text = _COLLATE_NOCASE.sub('', text)
+    text = _ROWID_COL.sub(r'\1.id', text)
+    text = _BARE_ROWID_ORDER.sub('ORDER BY id', text)
 
     # CREATE TABLE SQLite DDL
     if _CREATE_TABLE.match(text):
@@ -260,6 +324,13 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
     ior = _convert_insert_or_replace(text)
     if ior:
         return ior
+
+    # Fail-loud nếu còn INSERT OR mà chưa map upsert key
+    if re.search(r'INSERT\s+OR\s+(?:REPLACE|IGNORE)\s+INTO\b', text, flags=re.IGNORECASE):
+        raise ValueError(
+            'PostgreSQL: INSERT OR REPLACE/IGNORE chưa map TABLE_UPSERT_KEYS — '
+            f'sql={text[:180]!r}'
+        )
 
     return text
 
@@ -289,6 +360,13 @@ class CompatRow:
             return self[key]
         except KeyError:
             return default
+
+    def __contains__(self, key):
+        if isinstance(key, str):
+            return key in self._names
+        if isinstance(key, int):
+            return 0 <= key < len(self._values)
+        return False
 
     def keys(self):
         return self._names

@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import os
 import random
+import re
 import threading
 import time
 from contextlib import contextmanager
@@ -34,16 +35,26 @@ _SCHEMA_LOCKS_GUARD = threading.Lock()
 _SCHEMA_LOCKS: dict[str, threading.RLock] = {}
 _SCHEMA_READY: set[str] = set()
 
+_INSERT_RE = re.compile(
+    r'^\s*INSERT\s+(?:OR\s+\w+\s+)?INTO\b',
+    re.IGNORECASE,
+)
+
 
 def database_url() -> str:
-    url = (os.environ.get('DATABASE_URL') or os.environ.get('SME_PG_URL') or '').strip()
-    if not url:
-        raise RuntimeError('PostgreSQL: thiếu DATABASE_URL hoặc SME_PG_URL')
-    if url.startswith('postgres://'):
-        url = 'postgresql://' + url[len('postgres://'):]
-    if url.startswith('postgresql+psycopg://'):
-        url = 'postgresql://' + url[len('postgresql+psycopg://'):]
-    return url
+    for key in ('SME_PG_URL', 'DATABASE_URL'):
+        url = (os.environ.get(key) or '').strip()
+        if not url:
+            continue
+        if url.startswith('postgres://'):
+            url = 'postgresql://' + url[len('postgres://'):]
+        if url.startswith('postgresql+psycopg://'):
+            url = 'postgresql://' + url[len('postgresql+psycopg://'):]
+        if url.startswith('postgresql://'):
+            return url
+    raise RuntimeError(
+        'PostgreSQL: thiếu SME_PG_URL hoặc DATABASE_URL dạng postgresql://...'
+    )
 
 
 def _require_psycopg() -> None:
@@ -104,32 +115,83 @@ def pg_write_lock(schema: str, *, timeout: float | None = None):
         lock.release()
 
 
-class PgCursor:
-    """Cursor psycopg — rewrite SQL SQLite → PostgreSQL."""
+def _is_insert(sql: str) -> bool:
+    return bool(_INSERT_RE.match(sql or ''))
 
-    __slots__ = ('_cur', '_schema')
+
+def _read_lastval(executor) -> int:
+    """Đọc sequence vừa dùng sau INSERT (tương đương sqlite lastrowid)."""
+    try:
+        row = executor.execute('SELECT lastval()').fetchone()
+        if row is None:
+            return 0
+        return int(row[0] if not isinstance(row, dict) else list(row.values())[0])
+    except Exception:
+        return 0
+
+
+class PgCursor:
+    """Cursor psycopg — rewrite SQL SQLite → PostgreSQL + lastrowid."""
+
+    __slots__ = ('_cur', '_schema', 'lastrowid', 'rowcount', 'description')
 
     def __init__(self, cur, schema: str):
         self._cur = cur
         self._schema = schema
+        self.lastrowid = 0
+        self.rowcount = -1
+        self.description = None
 
     def execute(self, query: str, params: Any = None):
         sql = rewrite_sql_for_postgres(query, schema=self._schema)
-        # SAVEPOINT: 1 câu lỗi không abort cả transaction (giống SQLite hơn).
+        want_id = _is_insert(query) and 'RETURNING' not in sql.upper()
         try:
             self._cur.execute('SAVEPOINT sme_stmt')
-            if params is None:
-                result = self._cur.execute(sql)
-            else:
-                result = self._cur.execute(sql, params)
+            used_returning = False
+            if want_id:
+                try:
+                    sql_ret = sql.rstrip().rstrip(';') + ' RETURNING id'
+                    if params is None:
+                        self._cur.execute(sql_ret)
+                    else:
+                        self._cur.execute(sql_ret, params)
+                    used_returning = True
+                except Exception:
+                    self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
+                    self._cur.execute('SAVEPOINT sme_stmt')
+                    used_returning = False
+            if not used_returning:
+                if params is None:
+                    self._cur.execute(sql)
+                else:
+                    self._cur.execute(sql, params)
+            if _is_insert(query):
+                if used_returning:
+                    row = self._cur.fetchone()
+                    if row is None:
+                        self.lastrowid = 0
+                    else:
+                        self.lastrowid = int(
+                            row[0] if not isinstance(row, dict) else list(row.values())[0]
+                        )
+                else:
+                    self.lastrowid = _read_lastval(self._cur)
             self._cur.execute('RELEASE SAVEPOINT sme_stmt')
-            return result
+            self.description = getattr(self._cur, 'description', None)
+            self.rowcount = getattr(self._cur, 'rowcount', -1)
+            return self
         except Exception:
             try:
                 self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
             except Exception:
                 pass
             raise
+
+    def executemany(self, query: str, params_seq):
+        sql = rewrite_sql_for_postgres(query, schema=self._schema)
+        self._cur.executemany(sql, params_seq)
+        self.rowcount = getattr(self._cur, 'rowcount', -1)
+        return self
 
     def executescript(self, script: str):
         for stmt in str(script or '').split(';'):
@@ -139,6 +201,26 @@ class PgCursor:
             self.execute(sql)
         return self
 
+    def fetchone(self):
+        return self._cur.fetchone()
+
+    def fetchall(self):
+        return self._cur.fetchall()
+
+    def fetchmany(self, size=None):
+        if size is None:
+            return self._cur.fetchmany()
+        return self._cur.fetchmany(size)
+
+    def close(self):
+        try:
+            self._cur.close()
+        except Exception:
+            pass
+
+    def __iter__(self):
+        return iter(self._cur)
+
     def __getattr__(self, name):
         return getattr(self._cur, name)
 
@@ -146,7 +228,10 @@ class PgCursor:
 class PgConnection:
     """Wrapper psycopg với ``execute()`` kiểu SQLite và search_path theo tenant."""
 
-    __slots__ = ('_conn', '_schema', '_sme_backend', '_sme_pg_schema', '_closed', '_from_pool')
+    __slots__ = (
+        '_conn', '_schema', '_sme_backend', '_sme_pg_schema', '_closed', '_from_pool',
+        'lastrowid', 'row_factory',
+    )
 
     def __init__(self, conn, schema: str, *, from_pool: bool = True):
         self._conn = conn
@@ -155,6 +240,8 @@ class PgConnection:
         self._sme_pg_schema = self._schema
         self._closed = False
         self._from_pool = from_pool
+        self.lastrowid = 0
+        self.row_factory = None
         self._set_search_path()
 
     def _set_search_path(self) -> None:
@@ -176,21 +263,11 @@ class PgConnection:
         )
 
     def execute(self, query: str, params: Any = None):
-        sql = rewrite_sql_for_postgres(query, schema=self._schema)
-        try:
-            self._conn.execute('SAVEPOINT sme_stmt')
-            if params is None:
-                result = self._conn.execute(sql)
-            else:
-                result = self._conn.execute(sql, params)
-            self._conn.execute('RELEASE SAVEPOINT sme_stmt')
-            return result
-        except Exception:
-            try:
-                self._conn.execute('ROLLBACK TO SAVEPOINT sme_stmt')
-            except Exception:
-                pass
-            raise
+        """Tương thích sqlite3: trả cursor; hỗ trợ lastrowid sau INSERT."""
+        cur = self.cursor()
+        cur.execute(query, params)
+        self.lastrowid = cur.lastrowid
+        return cur
 
     def executescript(self, script: str):
         for stmt in str(script or '').split(';'):
@@ -234,10 +311,7 @@ class PgConnection:
         except Exception:
             pass
         try:
-            if self._from_pool:
-                self._conn.close()  # trả về pool
-            else:
-                self._conn.close()
+            self._conn.close()
         except Exception:
             pass
 
@@ -269,6 +343,16 @@ class _PgRequestScoped:
 
     def __getattr__(self, name):
         return getattr(self._inner, name)
+
+    def __setattr__(self, name, value):
+        if name == '_inner':
+            object.__setattr__(self, name, value)
+            return
+        # Cho phép gán row_factory = sqlite3.Row (no-op trên PG)
+        if name == 'row_factory':
+            setattr(self._inner, name, value)
+            return
+        setattr(self._inner, name, value)
 
     def __enter__(self):
         return self

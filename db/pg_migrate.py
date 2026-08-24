@@ -1,6 +1,7 @@
 """Chuyển DDL / dữ liệu SQLite → PostgreSQL (schema-per-tenant)."""
 from __future__ import annotations
 
+import re
 import sqlite3
 from typing import Any
 
@@ -22,6 +23,40 @@ def _sqlite_create_sql(conn: sqlite3.Connection, table: str) -> str | None:
         (table,),
     ).fetchone()
     return row[0] if row and row[0] else None
+
+
+def _sqlite_indexes(conn: sqlite3.Connection) -> list[tuple[str, str]]:
+    """Trả [(name, sql)] index người dùng (không phải autoindex)."""
+    rows = conn.execute(
+        """
+        SELECT name, sql FROM sqlite_master
+        WHERE type='index'
+          AND sql IS NOT NULL
+          AND name NOT LIKE 'sqlite_%'
+        ORDER BY name
+        """
+    ).fetchall()
+    return [(r[0], r[1]) for r in rows if r[0] and r[1]]
+
+
+def _convert_index_ddl(sql: str) -> str | None:
+    text = (sql or '').strip().rstrip(';')
+    if not text:
+        return None
+    # Bỏ UNIQUE INDEX trùng PK thường gây lỗi — vẫn thử tạo
+    text = re.sub(r'\s+ON\s+', ' ON ', text, flags=re.I)
+    text = convert_sqlite_ddl(text)
+    # IF NOT EXISTS
+    if re.match(r'^\s*CREATE\s+(UNIQUE\s+)?INDEX\b', text, re.I):
+        if 'IF NOT EXISTS' not in text.upper():
+            text = re.sub(
+                r'^\s*CREATE\s+(UNIQUE\s+)?INDEX\b',
+                lambda m: f"CREATE {m.group(1) or ''}INDEX IF NOT EXISTS",
+                text,
+                count=1,
+                flags=re.I,
+            )
+    return text
 
 
 def _safe_rollback(pg) -> None:
@@ -49,11 +84,17 @@ def import_sqlite_file(
     *,
     skip_tables: set[str] | None = None,
 ) -> dict[str, Any]:
-    """Import toàn bộ bảng từ file SQLite vào schema PostgreSQL."""
+    """Import toàn bộ bảng + index từ file SQLite vào schema PostgreSQL."""
     skip = skip_tables or set()
     sch = sanitize_pg_schema(pg_schema)
     ensure_pg_schema(sch)
-    stats = {'schema': sch, 'tables': 0, 'rows': 0, 'errors': []}
+    stats = {
+        'schema': sch,
+        'tables': 0,
+        'rows': 0,
+        'indexes': 0,
+        'errors': [],
+    }
 
     src = sqlite3.connect(sqlite_path)
     src.row_factory = sqlite3.Row
@@ -61,7 +102,6 @@ def import_sqlite_file(
         tables = [t for t in _sqlite_tables(src) if t not in skip]
         pool = get_pool()
         with pool.connection() as pg:
-            # Autocommit từng câu DDL/DML thất bại không abort cả block
             try:
                 pg.autocommit = True
             except Exception:
@@ -97,10 +137,21 @@ def import_sqlite_file(
                         )
                         inserted += 1
                     except Exception as exc:
-                        if len(stats['errors']) < 20:
+                        if len(stats['errors']) < 40:
                             stats['errors'].append(f'{table} row: {exc}')
                 stats['rows'] += inserted
                 stats['tables'] += 1
+
+            for _name, idx_sql in _sqlite_indexes(src):
+                conv = _convert_index_ddl(idx_sql)
+                if not conv:
+                    continue
+                try:
+                    _exec(pg, conv)
+                    stats['indexes'] += 1
+                except Exception as exc:
+                    if len(stats['errors']) < 60:
+                        stats['errors'].append(f'index: {exc}')
 
             for table in tables:
                 try:

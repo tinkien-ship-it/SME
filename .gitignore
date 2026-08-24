@@ -19,6 +19,7 @@ env/
 .env
 .env.*
 !.env.txt
+!.env.example
 config/auth.local.json
 config/google_oauth.persist.json
 *.pem

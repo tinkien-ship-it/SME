@@ -5,9 +5,10 @@ import re
 from typing import Any
 
 from db.dialect import BACKEND_POSTGRES, column_names as _column_names, is_postgres, table_exists
+from db.errors import DB_ERROR
 from db.sql_compat import convert_sqlite_ddl
 
-_DB_ERROR = (Exception,)
+_DB_ERROR = DB_ERROR
 
 
 def table_cols(conn, table: str) -> set[str]:

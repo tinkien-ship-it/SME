@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 from flask import g, has_request_context, session
 
+from db.errors import OPERATIONAL_ERROR
 from db.dialect import (
     db_backend,
     is_postgres,
@@ -168,15 +169,18 @@ def begin_immediate(conn, *, label: str = 'begin_immediate') -> None:
 
 
 def rollback_quietly(conn) -> None:
-    """Rollback an toàn (request-scoped / đã commit)."""
+    """Rollback an toàn (request-scoped / đã commit) — SQLite hoặc PostgreSQL."""
     try:
-        raw = _raw_sqlite_conn(conn)
-        raw.rollback()
+        raw = _raw_db_conn(conn)
+        if hasattr(raw, 'rollback'):
+            raw.rollback()
+            return
     except Exception:
-        try:
-            conn.rollback()
-        except Exception:
-            pass
+        pass
+    try:
+        conn.rollback()
+    except Exception:
+        pass
 
 
 class _AutoCloseConnection:
@@ -358,13 +362,30 @@ def _configure_sqlite_connection(conn: sqlite3.Connection, db_path: str | None =
     return conn
 
 
+def db_path_available(db_path) -> bool:
+    """True nếu có thể mở DB tenant (file SQLite tồn tại, hoặc backend Postgres)."""
+    if not db_path:
+        return False
+    if is_postgres():
+        return True
+    path = _normalize_db_path(db_path) or db_path
+    return os.path.isfile(path)
+
+
 def open_sqlite(db_path, *, timeout: float | None = None):
-    """Mở file SQLite với timeout/WAL; trả proxy tự đóng khi dùng ``with`` / ``close()``.
+    """Mở DB tenant — SQLite file hoặc Postgres schema (khi SME_DB_BACKEND=postgres).
 
     LUÔN dùng hàm này (hoặc get_db_connection / get_main_db_connection) thay vì
     ``sqlite3.connect`` thô — ``with sqlite3.connect(...)`` KHÔNG đóng file trên
     Python, dễ giữ khóa giữa các worker Gunicorn.
     """
+    if is_postgres():
+        from db.postgres_backend import ensure_pg_schema, open_pg
+        from db.dialect import pg_schema_from_db_path
+        schema = pg_schema_from_db_path(db_path)
+        ensure_pg_schema(schema)
+        return open_pg(schema=schema)
+
     path = _normalize_db_path(db_path) or db_path
     wait = SQLITE_TIMEOUT_SEC if timeout is None else timeout
     last_exc = None
@@ -390,13 +411,13 @@ def open_sqlite(db_path, *, timeout: float | None = None):
 
 
 def sqlite_write_retry(fn, *, retries: int | None = None, label: str = 'sqlite_write'):
-    """Chạy ``fn()``; nếu database is locked thì chờ rồi thử lại (Gunicorn multi-worker)."""
+    """Chạy ``fn()``; nếu database is locked / PG deadlock thì chờ rồi thử lại."""
     total = SQLITE_WRITE_RETRIES if retries is None else retries
     last_exc = None
     for attempt in range(max(1, total)):
         try:
             return fn()
-        except sqlite3.OperationalError as exc:
+        except OPERATIONAL_ERROR as exc:
             last_exc = exc
             if not _is_locked_error(exc) or attempt >= total - 1:
                 raise
@@ -505,7 +526,7 @@ def with_sqlite_write(conn, fn, *, commit: bool = True, label: str = 'sqlite_wri
                 fn(target)
                 try:
                     target.commit()
-                except sqlite3.Error:
+                except Exception:
                     pass
         except Exception:
             try:
@@ -520,6 +541,9 @@ def with_sqlite_write(conn, fn, *, commit: bool = True, label: str = 'sqlite_wri
                 except Exception:
                     pass
 
+    if is_postgres():
+        from db.postgres_backend import pg_write_retry
+        return pg_write_retry(_run, label=label)
     return sqlite_write_retry(_run, label=label)
 
 
@@ -730,7 +754,7 @@ def get_tenant_db_connection(tenant_id):
         schema = pg_schema_from_db_path(db_path, tenant_id=tenant_id.strip())
         ensure_pg_schema(schema)
         return open_pg(schema=schema)
-    if not db_path or not os.path.exists(db_path):
+    if not db_path_available(db_path):
         return None
     return open_sqlite(db_path)
 

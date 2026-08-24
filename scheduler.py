@@ -12,8 +12,13 @@ import atexit
 import logging
 import os
 import sqlite3
+import subprocess
+import sys
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
+
+from db.errors import INTEGRITY_ERROR, OPERATIONAL_ERROR
 
 logger = logging.getLogger(__name__)
 
@@ -311,6 +316,26 @@ def check_tenant_expirations():
 def backup_database(backup_root):
     """Quét Registry và backup cho tất cả Tenant + Main DB."""
     try:
+        from db.dialect import is_postgres
+        if is_postgres():
+            # pg_dump toàn DB — không copy file .db
+            try:
+                out = Path(backup_root) / 'pg'
+                rc = subprocess.call([
+                    sys.executable,
+                    str(Path(BASE_DIR) / 'scripts' / 'pg_dump_backup.py'),
+                    '--out', str(out),
+                ])
+                if rc == 0:
+                    print(f"[{datetime.now()}] Backup PostgreSQL OK → {out}")
+                else:
+                    print(
+                        f"[{datetime.now()}] Backup PostgreSQL thất bại (rc={rc}) "
+                        "— kiểm tra pg_dump / DATABASE_URL"
+                    )
+            except Exception as exc:
+                print(f"[{datetime.now()}] Backup PostgreSQL lỗi: {exc}")
+            return
         if not os.path.exists(backup_root):
             os.makedirs(backup_root, exist_ok=True)
 
@@ -350,7 +375,7 @@ def backup_database(backup_root):
                     with open_sqlite(db_path, timeout=2.0) as src:
                         with open_sqlite(dest, timeout=5.0) as dst:
                             _raw_sqlite_conn(src).backup(_raw_sqlite_conn(dst))
-                except sqlite3.OperationalError as e:
+                except OPERATIONAL_ERROR as e:
                     if 'locked' in str(e).lower():
                         print(f"Bỏ qua backup {tenant_id}: database đang bận")
                         continue
@@ -526,18 +551,52 @@ def _scheduled_purchase_invoice_sync():
 
 
 def _collect_tenant_db_paths() -> list[str]:
-    """Danh sách DB tenant (registry + tenants/*.db), không trùng."""
+    """Danh sách DB tenant (registry + tenants/*.db), không trùng.
+
+    Trên PostgreSQL: trả đường dẫn logic (tenants/<id>.db) để open_sqlite → schema.
+    """
+    from db.dialect import is_postgres
+
     seen: set[str] = set()
     out: list[str] = []
 
     def _add(path: str) -> None:
         if not path:
             return
+        if is_postgres():
+            # Giữ path logic — không yêu cầu file tồn tại
+            key = str(path).replace('\\', '/')
+            if key in seen:
+                return
+            seen.add(key)
+            out.append(path if os.path.isabs(path) else os.path.join(BASE_DIR, path))
+            return
         full = os.path.abspath(path if os.path.isabs(path) else os.path.join(BASE_DIR, path))
         if full in seen or not os.path.isfile(full):
             return
         seen.add(full)
         out.append(full)
+
+    if is_postgres():
+        try:
+            with open_sqlite(REGISTRY_PATH, timeout=_QUEUE_PROBE_TIMEOUT_SEC) as reg:
+                rows = reg.execute(
+                    "SELECT db_path, tenant_id FROM tenants "
+                    "WHERE db_path IS NOT NULL AND TRIM(db_path) != ''"
+                ).fetchall()
+            for row in rows:
+                if hasattr(row, 'keys'):
+                    p = row['db_path'] if 'db_path' in row.keys() else row[0]
+                    tid = row['tenant_id'] if 'tenant_id' in row.keys() else None
+                else:
+                    p, tid = row[0], (row[1] if len(row) > 1 else None)
+                if p:
+                    _add(p)
+                elif tid:
+                    _add(os.path.join(BASE_DIR, 'tenants', f'{tid}.db'))
+        except Exception as exc:
+            logger.warning('collect tenant schemas (pg): %s', exc)
+        return out
 
     tenants_dir = os.path.join(BASE_DIR, 'tenants')
     if os.path.isdir(tenants_dir):
@@ -577,11 +636,14 @@ def _db_has_pending_accounting_jobs(db_path: str) -> bool | None:
                 "SELECT 1 FROM accounting_jobs WHERE status IN ('pending','retry') LIMIT 1"
             ).fetchone()
             return bool(pending)
-    except sqlite3.OperationalError as e:
+    except OPERATIONAL_ERROR as e:
         if 'locked' in str(e).lower():
             return None
         return False
-    except Exception:
+    except Exception as e:
+        msg = str(e).lower()
+        if 'lock' in msg or 'deadlock' in msg or 'timeout' in msg:
+            return None
         return False
 
 
@@ -624,7 +686,7 @@ def _process_accounting_queue(app):
                             result.get('failed', 0),
                         )
                 processed_dbs += 1
-            except sqlite3.OperationalError as e:
+            except OPERATIONAL_ERROR as e:
                 if 'locked' in str(e).lower():
                     logger.debug('accounting_queue skip locked %s', os.path.basename(db_path))
                 else:

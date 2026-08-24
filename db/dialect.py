@@ -47,6 +47,20 @@ def pg_schema_from_db_path(db_path: str | None, *, tenant_id: str | None = None)
     text = (db_path or '').replace('\\', '/').strip()
     if not text:
         return 'public'
+    # Đã là tên schema (sqlite_db_file trên PG trả schema)
+    base_only = os.path.basename(text)
+    if (
+        '/' not in text
+        and not text.endswith('.db')
+        and (
+            text in ('public', 'registry', 'database')
+            or text.startswith('t_')
+            or text.startswith('firm_')
+        )
+    ):
+        if text in ('registry', 'database'):
+            return (os.environ.get('SME_PG_REGISTRY_SCHEMA') or 'public').strip() or 'public'
+        return sanitize_pg_schema(text)
     if '/firms/' in text and '/clients/' in text:
         parts = text.split('/')
         try:

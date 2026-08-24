@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 
 from flask_bcrypt import generate_password_hash
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, get_main_db_connection, open_sqlite, sqlite_commit
+from db_utils import BASE_DIR, MAIN_DB_PATH, db_path_available, get_main_db_connection, open_sqlite, sqlite_commit
 
 logger = logging.getLogger(__name__)
 
@@ -517,7 +517,7 @@ def find_account_by_email(email, active_only=True):
         db_path = row['db_path']
         if db_path and not os.path.isabs(db_path):
             db_path = os.path.join(BASE_DIR, db_path)
-        if not os.path.exists(db_path):
+        if not db_path_available(db_path):
             continue
         with open_sqlite(db_path) as conn_u:
             conn_u.row_factory = sqlite3.Row
@@ -606,7 +606,7 @@ def get_tenant_business_info(tenant_id):
     db_path = rec['db_path']
     if db_path and not os.path.isabs(db_path):
         db_path = os.path.join(BASE_DIR, db_path)
-    if not os.path.exists(db_path):
+    if not db_path_available(db_path):
         return {
             'business_name': rec.get('business_name') or '',
             'phone': rec.get('phone') or tenant_id,

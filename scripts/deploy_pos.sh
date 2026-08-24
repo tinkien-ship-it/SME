@@ -215,6 +215,7 @@ else:
 PY
 
 python scripts/verify_pg_sql_compat.py 2>/dev/null || echo "  (verify_pg_sql_compat — bo qua)"
+python scripts/pg_staging_smoke.py 2>/dev/null || echo "  (pg_staging_smoke unit — bo qua)"
 
 python - <<'PY'
 # Postgres: neu chua co du lieu → import tu SQLite file truoc khi migrate schema
@@ -245,6 +246,12 @@ if need_import:
         print('  ! migrate_sqlite_to_postgres thoat ma', rc)
 else:
     print('  -> Bo qua import SQLite (Postgres da co tenants)')
+# Live smoke neu co DATABASE_URL
+rc = subprocess.call([sys.executable, 'scripts/pg_staging_smoke.py', '--live'])
+if rc != 0:
+    print('  ! pg_staging_smoke --live that bai (rc=%s)' % rc)
+else:
+    print('  -> pg_staging_smoke --live OK')
 PY
 
 python scripts/migrate_all_dbs.py || echo "  ! Migrate co DB loi — xem log phia tren"

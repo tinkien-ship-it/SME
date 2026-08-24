@@ -672,9 +672,9 @@ def load_tenant_profile(tenant_id):
 
 def load_profile_from_tenant_db(db_path, tenant_id=None):
     """Đọc profile từ DB tenant (business_info) — dùng khi firm xem sổ DN thuê."""
-    if not db_path or not os.path.exists(db_path):
+    from db_utils import db_path_available, open_sqlite, sqlite_commit
+    if not db_path_available(db_path):
         return _empty_profile()
-    from db_utils import open_sqlite, sqlite_commit
 
     business = {}
     settings = {}

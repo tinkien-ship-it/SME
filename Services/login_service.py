@@ -8,7 +8,15 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, get_main_db_connection, open_sqlite, sqlite_write_retry, sqlite_commit
+from db_utils import (
+    BASE_DIR,
+    MAIN_DB_PATH,
+    db_path_available,
+    get_main_db_connection,
+    open_sqlite,
+    sqlite_write_retry,
+    sqlite_commit,
+)
 
 REGISTRY_PATH = MAIN_DB_PATH
 _BASE_DIR = Path(__file__).resolve().parent.parent
@@ -709,7 +717,7 @@ def find_user_by_email(email):
     main_db = os.path.join(BASE_DIR, "database.db")
     # Ưu tiên tài khoản master: email master thường trùng mapping tenant (Google login
     # trước đây nhảy nhầm vào tenant → không vào được master_settings).
-    if os.path.exists(main_db):
+    if db_path_available(main_db):
         with open_sqlite(main_db) as conn:
             master = conn.execute(
                 """
@@ -745,7 +753,7 @@ def find_user_by_email(email):
 
     for row in rows:
         db_path = _abs_db_path(row["db_path"])
-        if not os.path.exists(db_path):
+        if not db_path_available(db_path):
             continue
         with open_sqlite(db_path) as conn_u:
             user = conn_u.execute(
@@ -766,7 +774,7 @@ def find_user_by_email(email):
                 "email": row["email"] or user["email"] or email,
             }
 
-    if os.path.exists(main_db):
+    if db_path_available(main_db):
         with open_sqlite(main_db) as conn:
             user = conn.execute(
                 "SELECT * FROM users WHERE LOWER(COALESCE(email, '')) = ?",

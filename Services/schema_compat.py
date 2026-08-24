@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 
 from db.dialect import is_postgres
+from db.errors import OPERATIONAL_ERROR
 from db.schema_helpers import column_exists, table_cols_lower, table_exists
 from db_utils import sqlite_commit
 
@@ -46,6 +47,8 @@ def sale_item_pk_column(cursor) -> str:
     """Tên cột khóa dòng trên sale_items (không alias)."""
     cols = table_cols_lower_cursor(cursor, 'sale_items')
     if _col_exists(cols, 'id'):
+        return 'id'
+    if is_postgres():
         return 'id'
     return 'rowid'
 
@@ -109,7 +112,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             )
             changed.append(f'alter:sale_items.{_LEGACY_USE_UNIT}')
             has_upper = True
-        except sqlite3.OperationalError:
+        except OPERATIONAL_ERROR:
             pass
 
     if not has_lower:
@@ -119,7 +122,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             )
             changed.append(f'alter:sale_items.{_CANONICAL_USE_UNIT}')
             has_lower = True
-        except sqlite3.OperationalError:
+        except OPERATIONAL_ERROR:
             pass
 
     if has_upper and has_lower:
@@ -140,7 +143,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             """)
             if c.rowcount:
                 changed.append('sync:sale_items.UseSaleUnit')
-        except sqlite3.OperationalError:
+        except OPERATIONAL_ERROR:
             pass
     elif has_upper and not has_lower:
         try:
@@ -151,7 +154,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
                 UPDATE sale_items SET {_CANONICAL_USE_UNIT} = COALESCE({_LEGACY_USE_UNIT}, 0)
             """)
             changed.append('backfill:sale_items.use_sale_unit')
-        except sqlite3.OperationalError:
+        except OPERATIONAL_ERROR:
             pass
     elif has_lower and not has_upper:
         try:
@@ -162,7 +165,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
                 UPDATE sale_items SET {_LEGACY_USE_UNIT} = COALESCE({_CANONICAL_USE_UNIT}, 0)
             """)
             changed.append('backfill:sale_items.UseSaleUnit')
-        except sqlite3.OperationalError:
+        except OPERATIONAL_ERROR:
             pass
 
     cols = table_cols_lower(conn, 'sale_items')
@@ -172,12 +175,12 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             if not is_postgres():
                 c.execute('UPDATE sale_items SET id = rowid WHERE id IS NULL')
             changed.append('alter:sale_items.id')
-        except sqlite3.OperationalError:
+        except OPERATIONAL_ERROR:
             pass
     elif not is_postgres():
         try:
             c.execute('UPDATE sale_items SET id = rowid WHERE id IS NULL')
-        except sqlite3.OperationalError:
+        except OPERATIONAL_ERROR:
             pass
 
     if commit:

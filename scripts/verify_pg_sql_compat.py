@@ -19,10 +19,16 @@ CASES = [
     ("SELECT name FROM sqlite_master WHERE type='table' AND name='supplier_invoice'", 'information_schema'),
     ("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", 'ON CONFLICT'),
     ("INSERT OR IGNORE INTO inventory (product_id, quantity, avg_cost) VALUES (?, 0, 0)", 'DO NOTHING'),
+    ("INSERT OR IGNORE INTO voucher_seq (type, seq) VALUES ('PT', 0), ('PC', 0), ('PN', 0), ('PX', 0)", 'ON CONFLICT'),
+    ("SELECT last_insert_rowid()", 'lastval'),
     ("CREATE TABLE IF NOT EXISTS t (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, d DATETIME)", 'TIMESTAMP'),
     ("UPDATE sale_items SET id = rowid WHERE id IS NULL", '_rowid_ok'),
     ("SELECT value FROM settings WHERE key = ?", '%s'),
     ("DELETE FROM sqlite_sequence WHERE name=?", '_seq_ok'),
+    ("SELECT IFNULL(MAX(id),0) FROM sale", 'COALESCE'),
+    ("COALESCE(s.sale_no, 'DH' || printf('%06d', s.id))", 'lpad'),
+    ("ORDER BY s.date DESC, si.rowid", 'si.id'),
+    ("ORDER BY fullname COLLATE NOCASE", 'fullname'),
 ]
 
 failed = 0

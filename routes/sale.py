@@ -2,6 +2,7 @@
 import json
 import logging
 import sqlite3
+from db.errors import INTEGRITY_ERROR, OPERATIONAL_ERROR
 import traceback
 from collections import defaultdict
 from datetime import datetime
@@ -358,7 +359,7 @@ def _delete_sale_child_rows(cursor, sale_id: int) -> None:
     ):
         try:
             cursor.execute(sql, params)
-        except sqlite3.OperationalError:
+        except OPERATIONAL_ERROR:
             # Bảng/cột chưa có trên DB cũ
             pass
 
@@ -969,7 +970,7 @@ def register_sale_routes(app):
                     SET seq = (SELECT IFNULL(MAX(id),0) FROM sale)
                     WHERE name = 'sale'
                 """)
-            except sqlite3.OperationalError:
+            except OPERATIONAL_ERROR:
                 pass
 
             sqlite_commit(conn, label='sale')
@@ -979,7 +980,7 @@ def register_sale_routes(app):
                 'message': f'Đã xóa đơn pending #{sale_id}'
             })
 
-        except sqlite3.IntegrityError as e:
+        except INTEGRITY_ERROR as e:
             if conn:
                 rollback_quietly(conn)
             logging.error("delete_pending IntegrityError: %s", e, exc_info=True)
@@ -988,7 +989,7 @@ def register_sale_routes(app):
                 'error': f'Không xóa được do ràng buộc dữ liệu: {e}',
             }), 500
 
-        except sqlite3.OperationalError as e:
+        except OPERATIONAL_ERROR as e:
             if conn:
                 rollback_quietly(conn)
             error_str = str(e).lower()
@@ -1794,7 +1795,7 @@ def register_sale_routes(app):
             sqlite_run_write(conn, _update_customer, label='update_sale_customer')
             return jsonify({"success": True}), 200
     
-        except sqlite3.OperationalError as e:
+        except OPERATIONAL_ERROR as e:
             if _is_locked_error(e):
                 return jsonify({"success": False, "message": locked_user_message()}), 503
             print("Lỗi cập nhật khách hàng:", e)
@@ -1982,7 +1983,7 @@ def register_sale_routes(app):
                 "order_id": sale_id,
                 "message": "Tạo đơn bán hàng thành công!"
             })
-        except sqlite3.OperationalError as e:
+        except OPERATIONAL_ERROR as e:
             if _is_locked_error(e):
                 return jsonify({"success": False, "message": locked_user_message()}), 503
             return jsonify({"success": False, "message": str(e)}), 500
@@ -2355,7 +2356,7 @@ def register_sale_routes(app):
 
             sqlite_run_write(db, _update_order, label='sale_update')
             return jsonify({"success": True, "message": "Cập nhật thành công"})
-        except sqlite3.OperationalError as e:
+        except OPERATIONAL_ERROR as e:
             if _is_locked_error(e):
                 return jsonify({"error": locked_user_message()}), 503
             return jsonify({"error": str(e)}), 500
