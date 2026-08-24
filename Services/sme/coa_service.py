@@ -8,6 +8,7 @@ from typing import Any
 
 from Services.sme.coa_seed_tt99 import SEED_VERSION, iter_seed_accounts
 from Services.sme.schema import ensure_sme_coa_schema
+from db_utils import sqlite_commit
 
 _CODE_RE = re.compile(r'^\d{3,6}$')
 

@@ -14,6 +14,7 @@ from Services.sme.journal_engine import (
     post_journal_entry,
     resolve_postable_account,
 )
+from db_utils import sqlite_commit
 
 DOC_DEP = 'KHTS'
 DOC_TOOL = 'PBCC'

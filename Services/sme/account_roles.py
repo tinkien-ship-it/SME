@@ -236,12 +236,12 @@ def seed_account_roles(
 ) -> dict[str, Any]:
     from db_utils import (
         _is_locked_error,
+        sqlite_commit,
         sqlite_is_ready,
         sqlite_mark_ready,
         sqlite_table_exists,
         with_sqlite_write,
-    sqlite_commit,
-)
+    )
 
     flag = f'account_roles:{ROLES_SEED_VERSION}'
     if not force and sqlite_is_ready(conn, flag):

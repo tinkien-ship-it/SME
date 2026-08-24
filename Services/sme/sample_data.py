@@ -24,6 +24,7 @@ from Services.sme.bootstrap import ensure_sme_accounting_ready
 from Services.sme.journal_engine import post_journal_entry
 from Services.sme.period_close import run_period_close
 from Services.sme.vat_settlement import run_vat_settlement
+from db_utils import sqlite_commit
 
 SAMPLE_TAG = 'SME_SAMPLE'
 SAMPLE_PREFIX = 'SAMPLE_'

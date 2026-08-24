@@ -75,7 +75,7 @@ def enqueue_accounting_job(
     ensure_accounting_queue_schema(conn, commit=False)
 
     def _enqueue():
-        from db_utils import begin_immediate
+        from db_utils import begin_immediate, sqlite_commit
 
         begin_immediate(conn, label='enqueue_accounting_job')
 
@@ -158,7 +158,7 @@ def get_sale_accounting_status(conn: sqlite3.Connection, sale_id: int) -> dict:
 
 def _process_one_job(conn: sqlite3.Connection, job: sqlite3.Row) -> str:
     """Xử lý 1 job trong **một** transaction (BEGIN IMMEDIATE → ghi sổ → cập nhật status → COMMIT)."""
-    from db_utils import begin_immediate, rollback_quietly
+    from db_utils import begin_immediate, rollback_quietly, sqlite_commit
     from Services.sme.sale_journal import sync_sale_journals
 
     job_id = job['id']

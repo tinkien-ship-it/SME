@@ -10,6 +10,7 @@ from typing import Any
 from Services.sme.coa_service import ensure_sme_coa_ready, get_account
 from Services.sme.journal_schema import ensure_sme_journal_schema
 from Services.sme.posting_rules_seed import DEFAULT_POSTING_RULES, RULES_SEED_VERSION
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
