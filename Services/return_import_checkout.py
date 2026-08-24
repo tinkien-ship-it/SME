@@ -225,17 +225,20 @@ def process_return_import_checkout(cursor, data):
             cost_out = qty_base * cost_used
             sync_pids.add(pid)
 
-            cursor.execute(
-                """
-                INSERT INTO stock_moves
-                (product_id, date, type, ref_id, quantity, cost_price, note, ref_document, ref_type, type1)
-                VALUES (?, ?, 'RETURN_IMPORT', ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    pid, return_date, import_id, -qty_base, import_cost_base,
-                    f"Trả NCC {ref_doc} - {reason}", pn_ref, 'export', 'Trả HN',
-                ),
-            )
+            from Services.stock_move_write import insert_stock_move, resolve_posting_warehouse_code
+            insert_stock_move(cursor, {
+                'product_id': pid,
+                'date': return_date,
+                'type': 'RETURN_IMPORT',
+                'ref_id': import_id,
+                'quantity': -qty_base,
+                'cost_price': import_cost_base,
+                'note': f"Trả NCC {ref_doc} - {reason}",
+                'ref_document': pn_ref,
+                'ref_type': 'export',
+                'type1': 'Trả HN',
+                'warehouse_code': resolve_posting_warehouse_code(cursor.connection),
+            })
             cursor.execute(
                 """
                 INSERT INTO inventory_transactions

@@ -835,6 +835,8 @@ def update_registry_settings(tenant_id, settings_patch, conn=None):
     """
     import json
 
+    from db_utils import sqlite_commit
+
     own_conn = conn is None
     if own_conn:
         from db_utils import get_main_db_connection

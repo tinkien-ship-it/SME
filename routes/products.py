@@ -180,14 +180,26 @@ def register_products_routes(app):
                 is_service = product_type == 'service'
                 stock = float(product['quantity'] if 'quantity' in product.keys() else 0)
                 from Services.user_branch import get_current_user_warehouse_codes
+                from db.schema_helpers import column_exists
                 wh_codes = get_current_user_warehouse_codes()
                 if wh_codes is not None:
                     ph2 = ','.join('?' * len(wh_codes))
-                    row_stock = conn.execute(
-                        f"SELECT COALESCE(SUM(quantity), 0) FROM inventory WHERE product_id = ? AND warehouse_code IN ({ph2})",
-                        [product['id']] + wh_codes,
-                    ).fetchone()
-                    stock = float(row_stock[0]) if row_stock else 0
+                    if column_exists(conn, 'stock_moves', 'warehouse_code'):
+                        row_stock = conn.execute(
+                            f"SELECT COALESCE(SUM(quantity), 0) FROM stock_moves "
+                            f"WHERE product_id = ? AND warehouse_code IN ({ph2})",
+                            [product['id']] + wh_codes,
+                        ).fetchone()
+                    elif column_exists(conn, 'inventory', 'warehouse_code'):
+                        row_stock = conn.execute(
+                            f"SELECT COALESCE(SUM(quantity), 0) FROM inventory "
+                            f"WHERE product_id = ? AND warehouse_code IN ({ph2})",
+                            [product['id']] + wh_codes,
+                        ).fetchone()
+                    else:
+                        row_stock = None
+                    if row_stock is not None:
+                        stock = float(row_stock[0])
                 if is_unit1 and not is_service:
                     ratio = float(product['unit_ratio'] or 1) or 1.0
                     max_qty = int(stock / ratio) if ratio else int(stock)

@@ -1,6 +1,7 @@
 """Hủy chứng từ trả hàng NCC / khách trả hàng — đảo journal + stock_moves."""
 from __future__ import annotations
 
+import logging
 import sqlite3
 from datetime import datetime
 from typing import Any
@@ -8,6 +9,8 @@ from typing import Any
 from Services.inventory_stock_helpers import sync_inventory_quantity_from_moves
 from Services.sme.return_import_journal import reverse_return_import_journals
 from db_utils import sqlite_commit
+
+logger = logging.getLogger(__name__)
 
 
 def _now() -> str:
@@ -48,8 +51,8 @@ def _reverse_stock_moves(
     ref_id: int,
     note: str,
 ) -> int:
-    sm_cols = {r[1] for r in conn.execute('PRAGMA table_info(stock_moves)').fetchall()}
-    has_wh = 'warehouse_code' in sm_cols
+    from Services.stock_move_write import insert_stock_move
+
     # Khách trả: type='RETURN_SALE' / ref_type có thể là 'import'
     moves = conn.execute(
         """
@@ -69,41 +72,24 @@ def _reverse_stock_moves(
         qty = float(md.get('quantity') or 0)
         if qty == 0:
             continue
-        # Đảo chiều: nhập ↔ xuất
         rev_type = 'export' if qty > 0 else 'import'
-        if has_wh:
-            conn.execute(
-                """
-                INSERT INTO stock_moves
-                    (product_id, date, type, ref_id, ref_document, ref_type,
-                     quantity, note, type1, cost_price, warehouse_code)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    md['product_id'], when, rev_type, ref_id,
-                    md.get('ref_document') or '', ref_type,
-                    -qty, note, 'Hủy trả hàng', md.get('cost_price') or 0,
-                    md.get('warehouse_code'),
-                ),
-            )
-        else:
-            conn.execute(
-                """
-                INSERT INTO stock_moves
-                    (product_id, date, type, ref_id, ref_document, ref_type,
-                     quantity, note, type1, cost_price)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    md['product_id'], when, rev_type, ref_id,
-                    md.get('ref_document') or '', ref_type,
-                    -qty, note, 'Hủy trả hàng', md.get('cost_price') or 0,
-                ),
-            )
+        insert_stock_move(conn, {
+            'product_id': md['product_id'],
+            'date': when,
+            'type': rev_type,
+            'ref_id': ref_id,
+            'ref_document': md.get('ref_document') or '',
+            'ref_type': ref_type,
+            'quantity': -qty,
+            'note': note,
+            'type1': 'Hủy trả hàng',
+            'cost_price': md.get('cost_price') or 0,
+            'warehouse_code': md.get('warehouse_code'),
+        })
         try:
             sync_inventory_quantity_from_moves(conn.cursor(), int(md['product_id']))
-        except Exception:
-            pass
+        except Exception as sync_exc:
+            logger.warning('reverse stock sync product %s: %s', md.get('product_id'), sync_exc)
         n += 1
     return n
 
@@ -248,8 +234,10 @@ def void_return_sale(
             sync_sale_journals(
                 conn, int(sale_id), created_by=created_by, replace_existing=True,
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                'void_return_sale re-sync journals sale %s: %s', sale_id, exc, exc_info=True,
+            )
 
     moved = _reverse_stock_moves(
         conn, ref_type='RETURN_SALE', ref_id=return_id, note=reason,

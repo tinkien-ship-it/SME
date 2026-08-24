@@ -237,7 +237,7 @@ def _migrate_legacy_warehouse_codes(c):
         c.execute('DELETE FROM warehouses WHERE UPPER(code) = ?', (old.upper(),))
 
 
-_WAREHOUSE_SCHEMA_VERSION = '2026-08-03g'
+_WAREHOUSE_SCHEMA_VERSION = '2026-08-24a'
 _warehouse_schema_ready: dict[str, str] = {}
 
 
@@ -346,6 +346,12 @@ def ensure_warehouse_schema(conn):
             c.execute("ALTER TABLE stock_moves ADD COLUMN warehouse_code TEXT DEFAULT 'KHO_001'")
         except sqlite3.OperationalError:
             pass
+
+    try:
+        from Services.stock_move_write import ensure_stock_moves_extended_schema
+        ensure_stock_moves_extended_schema(conn)
+    except Exception:
+        pass
 
     try:
         sqlite_commit(conn, label='import_line_helpers')

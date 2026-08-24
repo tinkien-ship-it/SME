@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import sqlite3
 
-_SCHEMA_FLAG = 'sme_journal_schema_v3'
+_SCHEMA_FLAG = 'sme_journal_schema_v4'
 
 
 def _journal_schema_present(conn: sqlite3.Connection) -> bool:
@@ -18,8 +18,9 @@ def _journal_schema_present(conn: sqlite3.Connection) -> bool:
     )
     if not all(sqlite_table_exists(conn, name) for name in needed):
         return False
-    cols = {r[1] for r in conn.execute('PRAGMA table_info(sme_journal_entries)').fetchall()}
-    return 'branch_code' in cols
+    je_cols = {r[1] for r in conn.execute('PRAGMA table_info(sme_journal_entries)').fetchall()}
+    jl_cols = {r[1] for r in conn.execute('PRAGMA table_info(sme_journal_lines)').fetchall()}
+    return 'branch_code' in je_cols and 'warehouse_code' in jl_cols
 
 
 def _apply_journal_schema(conn: sqlite3.Connection) -> None:
@@ -136,6 +137,12 @@ def _apply_journal_schema(conn: sqlite3.Connection) -> None:
             c.execute('ALTER TABLE sme_journal_entries ADD COLUMN branch_code TEXT')
         except sqlite3.OperationalError:
             pass
+    jl_cols = {r[1] for r in c.execute('PRAGMA table_info(sme_journal_lines)').fetchall()}
+    if 'warehouse_code' not in jl_cols:
+        try:
+            c.execute('ALTER TABLE sme_journal_lines ADD COLUMN warehouse_code TEXT')
+        except sqlite3.OperationalError:
+            pass
     c.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_sme_je_branch
@@ -146,6 +153,14 @@ def _apply_journal_schema(conn: sqlite3.Connection) -> None:
 
 def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
     from db_utils import sqlite_is_ready, sqlite_mark_ready, with_sqlite_write
+    from db.schema_helpers import add_column_if_missing
+
+    # Luôn bổ sung cột legacy dù flag đã sẵn (tenant cũ).
+    add_column_if_missing(conn, 'sme_journal_entries', 'branch_code', 'TEXT')
+    add_column_if_missing(conn, 'sme_journal_lines', 'warehouse_code', 'TEXT')
+    add_column_if_missing(conn, 'sme_journal_lines', 'product_id', 'INTEGER')
+    add_column_if_missing(conn, 'sme_journal_lines', 'partner_id', 'INTEGER')
+    add_column_if_missing(conn, 'sme_journal_lines', 'partner_type', 'TEXT')
 
     if sqlite_is_ready(conn, _SCHEMA_FLAG):
         return

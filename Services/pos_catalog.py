@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 
+from db.schema_helpers import column_exists
 from Services.scale_service import get_scale_config
 
 
@@ -14,10 +15,32 @@ def fetch_pos_catalog(
     warehouse_codes: list[str] | None = None,
 ) -> dict:
     """
-    warehouse_codes: nếu chỉ định, chỉ trả sản phẩm có tồn kho trong các kho này.
+    warehouse_codes: nếu chỉ định, tồn theo stock_moves.warehouse_code (inventory thường không có cột kho).
     None = không lọc (tất cả sản phẩm).
     """
-    if warehouse_codes:
+    has_sm_wh = column_exists(conn, 'stock_moves', 'warehouse_code')
+    has_inv_wh = column_exists(conn, 'inventory', 'warehouse_code')
+
+    if warehouse_codes and has_sm_wh:
+        placeholders = ','.join('?' * len(warehouse_codes))
+        sql = f"""
+            SELECT
+                p.id, p.name, p.product_code, p.barcode, p.base_price, p.unit,
+                p.unit1, p.unit_ratio, p.price AS sale_price,
+                p.barcode1, p.sell_by_weight, p.weight_plu,
+                COALESCE(p.product_type, 'goods') AS product_type,
+                COALESCE((
+                    SELECT SUM(sm.quantity) FROM stock_moves sm
+                    WHERE sm.product_id = p.id AND sm.warehouse_code IN ({placeholders})
+                ), 0) AS quantity,
+                COALESCE(i.avg_cost, 0) AS avg_cost
+            FROM products p
+            LEFT JOIN inventory i ON i.product_id = p.id
+            ORDER BY p.id
+            LIMIT 12000
+        """
+        cur = conn.execute(sql, warehouse_codes)
+    elif warehouse_codes and has_inv_wh:
         placeholders = ','.join('?' * len(warehouse_codes))
         sql = f"""
             SELECT

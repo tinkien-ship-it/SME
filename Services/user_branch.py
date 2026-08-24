@@ -185,9 +185,10 @@ def cache_user_branch_context(conn: sqlite3.Connection) -> None:
     g._user_warehouse_codes = user_allowed_warehouse_codes(conn, user_id)
 
 
-def stock_branch_filter_sql(alias: str = 'i') -> tuple[str, list]:
+def stock_branch_filter_sql(alias: str = 'i', conn: sqlite3.Connection | None = None) -> tuple[str, list]:
     """
-    SQL filter cho inventory/stock_moves theo warehouse thuộc chi nhánh user.
+    SQL filter cho stock_moves theo warehouse thuộc chi nhánh user.
+    Không dùng trên inventory (không có warehouse_code).
     Returns (sql_fragment, params). Nếu không giới hạn → ('', []).
     """
     wh_codes = get_current_user_warehouse_codes()
@@ -195,5 +196,19 @@ def stock_branch_filter_sql(alias: str = 'i') -> tuple[str, list]:
         return '', []
     if not wh_codes:
         return ' AND 1=0', []
+    db = conn
+    if db is None:
+        try:
+            from flask import g
+            db = getattr(g, 'db', None) or getattr(g, '_db_conn', None)
+        except Exception:
+            db = None
+    if db is not None:
+        from db.schema_helpers import column_exists
+        # Prefer stock_moves semantics; inventory never has warehouse_code in base schema
+        if not column_exists(db, 'stock_moves', 'warehouse_code') and not column_exists(
+            db, 'inventory', 'warehouse_code'
+        ):
+            return '', []
     placeholders = ','.join('?' * len(wh_codes))
     return f' AND {alias}.warehouse_code IN ({placeholders})', list(wh_codes)

@@ -1006,16 +1006,23 @@ def register_inventory_routes(app):
                         conn=conn,
                     )
                     move_note = f"Nhập từ {supplier_name} (Gốc: {qty_in} {unit_in}) — {warehouse_code}"
-                    if sm_has_wh:
-                        c.execute("""
-                            INSERT INTO stock_moves (product_id, date, type, ref_id, quantity, cost_price, note, ref_document, ref_type, type1, unit, unit1, unit_ratio, warehouse_code)
-                            VALUES (?, ?, 'import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (pid, import_date, import_id, float(qty_retail), float(cost_per_retail), move_note, import_no, 'import', 'Nhập', retail_unit, wholesale_unit, float(ratio), warehouse_code))
-                    else:
-                        c.execute("""
-                            INSERT INTO stock_moves (product_id, date, type, ref_id, quantity, cost_price, note, ref_document, ref_type, type1, unit, unit1, unit_ratio)
-                            VALUES (?, ?, 'import', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (pid, import_date, import_id, float(qty_retail), float(cost_per_retail), move_note, import_no, 'import', 'Nhập', retail_unit, wholesale_unit, float(ratio)))
+                    from Services.stock_move_write import insert_stock_move
+                    insert_stock_move(c, {
+                        'product_id': pid,
+                        'date': import_date,
+                        'type': 'import',
+                        'ref_id': import_id,
+                        'quantity': float(qty_retail),
+                        'cost_price': float(cost_per_retail),
+                        'note': move_note,
+                        'ref_document': import_no,
+                        'ref_type': 'import',
+                        'type1': 'Nhập',
+                        'unit': retail_unit,
+                        'unit1': wholesale_unit,
+                        'unit_ratio': float(ratio),
+                        'warehouse_code': warehouse_code,
+                    })
                     c.execute("""
                         INSERT INTO inventory_transactions
                         (product_id, type, type1, quantity, cost_price, reference_id, reference_type, note, created_at)
@@ -1769,11 +1776,20 @@ def register_inventory_routes(app):
             cost_price_base = float(cost_used or cost_price_base)
 
             # 6. Ghi lịch sử kho (Stock Moves)
-            c.execute("""
-                INSERT INTO stock_moves (product_id, date, type, ref_id, quantity, cost_price, note, ref_document, ref_type, type1)
-                VALUES (?, ?, 'RETURN_IMPORT', ?, ?, ?, ?, ?, ?, ?)
-            """, (product_id, return_date, import_id, -return_qty_base, cost_price_base,
-                  f"Trả hàng nhập PN{str(import_id).zfill(6)} - {reason}", f"PN{str(import_id).zfill(6)}", 'export', 'Trả HN'))
+            from Services.stock_move_write import insert_stock_move, resolve_posting_warehouse_code
+            insert_stock_move(c, {
+                'product_id': product_id,
+                'date': return_date,
+                'type': 'RETURN_IMPORT',
+                'ref_id': import_id,
+                'quantity': -return_qty_base,
+                'cost_price': cost_price_base,
+                'note': f"Trả hàng nhập PN{str(import_id).zfill(6)} - {reason}",
+                'ref_document': f"PN{str(import_id).zfill(6)}",
+                'ref_type': 'export',
+                'type1': 'Trả HN',
+                'warehouse_code': resolve_posting_warehouse_code(conn),
+            })
 
             c.execute("""
                 INSERT INTO inventory_transactions
@@ -1789,8 +1805,10 @@ def register_inventory_routes(app):
             if last_px and last_px['voucher_no'] and len(last_px['voucher_no']) > 2:
                 try:
                     px_num = int(last_px['voucher_no'][2:]) + 1
-                except: px_num = 1
-            else: px_num = 1
+                except (TypeError, ValueError):
+                    px_num = 1
+            else:
+                px_num = 1
             px_voucher_no = f"PX{px_num:06d}"
 
             px_unit_price = cost_price_base * (ratio if is_wholesale_entry else 1)

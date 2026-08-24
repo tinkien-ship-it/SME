@@ -13,6 +13,8 @@ import logging
 import sqlite3
 from datetime import datetime
 
+from db_utils import begin_immediate, rollback_quietly, sqlite_commit, sqlite_write_retry
+
 logger = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = 5
@@ -25,6 +27,8 @@ _SKIP_REASONS = frozenset({
 
 
 def ensure_accounting_queue_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+    from db.schema_helpers import add_column_if_missing, table_exists
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS accounting_jobs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,13 +47,32 @@ def ensure_accounting_queue_schema(conn: sqlite3.Connection, *, commit: bool = T
             UNIQUE(sale_id, job_type, status)
         )
     """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_acctjob_status
-        ON accounting_jobs(status, created_at)
-    """)
+    if table_exists(conn, 'accounting_jobs'):
+        for col, typ in (
+            ('accounting_regime', 'TEXT'),
+            ('created_by', 'TEXT'),
+            ('replace_existing', 'INTEGER DEFAULT 0'),
+            ('features_json', 'TEXT'),
+            ('started_at', 'TEXT'),
+            ('completed_at', 'TEXT'),
+            ('last_error', 'TEXT'),
+            ('attempts', 'INTEGER DEFAULT 0'),
+            ('created_at', "TEXT DEFAULT (datetime('now','localtime'))"),
+            ('status', "TEXT DEFAULT 'pending'"),
+            ('job_type', "TEXT DEFAULT 'sale_journal'"),
+        ):
+            add_column_if_missing(conn, 'accounting_jobs', col, typ)
+    try:
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_acctjob_status
+            ON accounting_jobs(status, created_at)
+        """)
+    except Exception:
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_acctjob_status
+            ON accounting_jobs(status)
+        """)
     if commit:
-        from db_utils import begin_immediate, sqlite_write_retry, sqlite_commit
-
         def _commit_schema():
             begin_immediate(conn, label='acct_queue_schema')
             sqlite_commit(conn, label='accounting_queue')
@@ -75,8 +98,6 @@ def enqueue_accounting_job(
     ensure_accounting_queue_schema(conn, commit=False)
 
     def _enqueue():
-        from db_utils import begin_immediate, sqlite_commit
-
         begin_immediate(conn, label='enqueue_accounting_job')
 
         existing = conn.execute(
@@ -116,7 +137,6 @@ def enqueue_accounting_job(
         return cursor.lastrowid
 
     if commit:
-        from db_utils import sqlite_write_retry
         return sqlite_write_retry(_enqueue, label='enqueue_accounting_job')
 
     existing = conn.execute(
@@ -158,8 +178,6 @@ def ensure_sale_accounting_posted(
     Dùng sau checkout / đồng bộ offline / dedupe client_uuid — tránh đơn đã lưu
     mà chưa có bút toán vì enqueue lỗi hoặc worker chưa chạy.
     """
-    from db_utils import begin_immediate, rollback_quietly, sqlite_commit
-
     out: dict = {'sale_id': sale_id, 'enqueued': False, 'posted': False}
     try:
         job_id = enqueue_accounting_job(
@@ -234,8 +252,12 @@ def ensure_sale_accounting_posted(
                 (str(exc)[:500], sale_id),
             )
             sqlite_commit(conn, label='ensure_sale_acct_err')
-        except Exception:
+        except Exception as fail_exc:
             rollback_quietly(conn)
+            logger.warning(
+                'ensure_sale_accounting_posted mark-retry sale %s: %s',
+                sale_id, fail_exc, exc_info=True,
+            )
     return out
 
 
@@ -266,7 +288,6 @@ def get_sale_accounting_status(conn: sqlite3.Connection, sale_id: int) -> dict:
 
 def _process_one_job(conn: sqlite3.Connection, job: sqlite3.Row) -> str:
     """Xử lý 1 job trong **một** transaction (BEGIN IMMEDIATE → ghi sổ → cập nhật status → COMMIT)."""
-    from db_utils import begin_immediate, rollback_quietly, sqlite_commit
     from Services.sme.sale_journal import sync_sale_journals
 
     job_id = job['id']
@@ -313,7 +334,7 @@ def process_accounting_jobs(conn: sqlite3.Connection, *, batch_size: int = BATCH
     Xử lý batch jobs pending. Gọi từ background worker.
     Mỗi job = 1 transaction ngắn (không commit rời từng bước).
     """
-    from db_utils import _is_locked_error, rollback_quietly, sqlite_write_retry
+    from db_utils import _is_locked_error
 
     ensure_accounting_queue_schema(conn, commit=False)
     conn.row_factory = sqlite3.Row
@@ -353,7 +374,6 @@ def process_accounting_jobs(conn: sqlite3.Connection, *, batch_size: int = BATCH
             new_status = 'failed' if attempts >= MAX_ATTEMPTS else 'retry'
             try:
                 def _fail():
-                    from db_utils import begin_immediate
                     begin_immediate(conn, label='accounting_job_fail')
                     conn.execute(
                         "UPDATE accounting_jobs SET status = ?, last_error = ?, attempts = ? WHERE id = ?",
@@ -362,8 +382,11 @@ def process_accounting_jobs(conn: sqlite3.Connection, *, batch_size: int = BATCH
                     sqlite_commit(conn, label='accounting_queue')
 
                 sqlite_write_retry(_fail, label=f'accounting_job_fail_{job_id}')
-            except Exception:
-                pass
+            except Exception as fail_exc:
+                logger.warning(
+                    'accounting_job_fail persist #%d sale=%d: %s',
+                    job_id, sale_id, fail_exc, exc_info=True,
+                )
             failed += 1
             if not _is_locked_error(e):
                 logger.warning('accounting_job #%d sale=%d failed: %s', job_id, sale_id, error_msg)

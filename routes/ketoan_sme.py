@@ -59,26 +59,29 @@ def _insert_sme_import_stock_move(
     ratio,
     warehouse_code,
 ):
-    """Ghi stock_moves khi nhập mua SME; bổ sung in/out nếu schema có."""
-    fields = [
-        'product_id', 'date', 'type', 'ref_id', 'quantity', 'cost_price', 'note',
-        'ref_document', 'ref_type', 'type1', 'unit', 'unit1', 'unit_ratio',
-    ]
-    values = [
-        product_id, import_date, 'import', import_id, float(qty), float(cost_per_retail),
-        move_note, import_no, 'import', 'Nhập', retail_unit, wholesale_unit, float(ratio),
-    ]
+    """Ghi stock_moves khi nhập mua SME; chỉ dùng cột có trong schema."""
+    from Services.stock_move_write import insert_stock_move
+
+    fields = {
+        'product_id': product_id,
+        'date': import_date,
+        'type': 'import',
+        'ref_id': import_id,
+        'quantity': float(qty),
+        'cost_price': float(cost_per_retail),
+        'note': move_note,
+        'ref_document': import_no,
+        'ref_type': 'import',
+        'type1': 'Nhập',
+        'unit': retail_unit,
+        'unit1': wholesale_unit,
+        'unit_ratio': float(ratio),
+        'warehouse_code': warehouse_code,
+    }
     if 'in_quantity' in sm_cols and 'out_quantity' in sm_cols:
-        fields.extend(['in_quantity', 'out_quantity'])
-        values.extend([float(qty), 0.0])
-    if 'warehouse_code' in sm_cols:
-        fields.append('warehouse_code')
-        values.append(warehouse_code)
-    placeholders = ', '.join(['?'] * len(values))
-    c.execute(
-        f"INSERT INTO stock_moves ({', '.join(fields)}) VALUES ({placeholders})",
-        values,
-    )
+        fields['in_quantity'] = float(qty)
+        fields['out_quantity'] = 0.0
+    insert_stock_move(c, fields)
 
 
 def _sme_assert_sale_branch_access(conn, sale_id, sale, branch):

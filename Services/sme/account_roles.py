@@ -9,6 +9,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.sme.coa_service import ensure_sme_coa_ready, get_account
 
 ROLES_SEED_VERSION = 'account_roles_v3_2026-08'

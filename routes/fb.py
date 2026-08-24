@@ -272,8 +272,11 @@ def _fb_import_upsert_product(c, item):
 
 
 def _fb_finalize_checkout(cursor, sale_id, table_id, customer_name, payment_method, sale_date, is_einvoice, items):
+    from Services.stock_move_write import insert_stock_move, resolve_posting_warehouse_code
+
     sale_no = f"ĐH{str(sale_id).zfill(6)}"
     px_items = []
+    wh = resolve_posting_warehouse_code(cursor.connection)
 
     for item in items:
         order_qty = float(item['quantity'] or 0)
@@ -295,10 +298,19 @@ def _fb_finalize_checkout(cursor, sale_id, table_id, customer_name, payment_meth
                 deduct_qty = order_qty
                 display_price = price
 
-            cursor.execute("""
-                INSERT INTO stock_moves (product_id, date, type, ref_id, quantity, cost_price, ref_document, ref_type, type1, note)
-                VALUES (?, ?, 'SALE', ?, ?, ?, ?, ?, ?, ?)
-            """, (origin_pid, sale_date, sale_id, -deduct_qty, avg_cost, sale_no, 'export', 'Bán', f"Bán tại bàn {table_id}"))
+            insert_stock_move(cursor, {
+                'product_id': origin_pid,
+                'date': sale_date,
+                'type': 'SALE',
+                'ref_id': sale_id,
+                'quantity': -deduct_qty,
+                'cost_price': avg_cost,
+                'ref_document': sale_no,
+                'ref_type': 'export',
+                'type1': 'Bán',
+                'note': f"Bán tại bàn {table_id}",
+                'warehouse_code': wh,
+            })
             sync_inventory_quantity_from_moves(cursor, origin_pid)
 
             px_items.append({
@@ -317,11 +329,19 @@ def _fb_finalize_checkout(cursor, sale_id, table_id, customer_name, payment_meth
                 mat_id = ingredient['product_id']
                 total_mat_qty = float(ingredient['recipe_qty'] or 0) * order_qty
                 mat_cost = float(ingredient['avg_cost'] or 0)
-                cursor.execute("""
-                    INSERT INTO stock_moves (product_id, date, type, ref_id, quantity, cost_price, ref_document, ref_type, type1, note)
-                    VALUES (?, ?, 'SALE_RECIPE', ?, ?, ?, ?, ?, ?, ?)
-                """, (mat_id, sale_date, sale_id, -total_mat_qty, mat_cost, sale_no, 'export', 'Xuất nguyên liệu',
-                      f"Hao phí chế biến món '{item['item_name']}' tại bàn {table_id}"))
+                insert_stock_move(cursor, {
+                    'product_id': mat_id,
+                    'date': sale_date,
+                    'type': 'SALE_RECIPE',
+                    'ref_id': sale_id,
+                    'quantity': -total_mat_qty,
+                    'cost_price': mat_cost,
+                    'ref_document': sale_no,
+                    'ref_type': 'export',
+                    'type1': 'Xuất nguyên liệu',
+                    'note': f"Hao phí chế biến món '{item['item_name']}' tại bàn {table_id}",
+                    'warehouse_code': wh,
+                })
                 sync_inventory_quantity_from_moves(cursor, mat_id)
 
                 px_items.append({
@@ -380,15 +400,17 @@ def _fb_finalize_checkout(cursor, sale_id, table_id, customer_name, payment_meth
         "UPDATE tables SET current_sale_id = NULL, status = 'Available' WHERE id = ?", (table_id,))
 
     try:
-        enqueue_accounting_job(
+        from Services.accounting_queue import ensure_sale_accounting_posted
+        ensure_sale_accounting_posted(
             cursor.connection,
             sale_id,
             accounting_regime=get_current_tenant_profile().get('accounting_regime'),
             features=get_current_tenant_profile().get('features'),
             created_by=session.get('user_name') or (session.get('user') or {}).get('username'),
+            sync_now=True,
         )
     except Exception as exc:
-        logger.warning('enqueue_accounting_job F&B sale %s: %s', sale_id, exc)
+        logger.warning('ensure accounting F&B sale %s: %s', sale_id, exc)
     return final_total, sale_no
 
 
@@ -799,6 +821,22 @@ def register_fb_routes(app):
             if client_uuid:
                 existing = find_sale_by_client_uuid(conn, client_uuid)
                 if existing and str(existing.get('status') or '').lower() == 'completed':
+                    try:
+                        from Services.accounting_queue import ensure_sale_accounting_posted
+                        profile = get_current_tenant_profile()
+                        ensure_sale_accounting_posted(
+                            conn,
+                            int(existing['id']),
+                            accounting_regime=profile.get('accounting_regime'),
+                            features=profile.get('features'),
+                            created_by=session.get('user_name') or (session.get('user') or {}).get('username'),
+                            sync_now=True,
+                        )
+                    except Exception as acct_exc:
+                        logger.warning(
+                            'ensure_sale_accounting_posted F&B dedupe sale %s: %s',
+                            existing.get('id'), acct_exc,
+                        )
                     return jsonify({
                         "success": True,
                         "sale_id": existing['id'],

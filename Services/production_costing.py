@@ -468,19 +468,19 @@ def _insert_stock_move(
     cost_price: float,
     note: str,
 ):
-    cursor.execute(
-        """
-        INSERT INTO stock_moves (
-            product_id, date, type, type1, ref_type, ref_id, ref_document,
-            quantity, cost_price, note
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            product_id, when, move_type, type1, REF_TYPE, ref_id, voucher_no,
-            quantity, cost_price, note,
-        ),
-    )
-    return cursor.lastrowid
+    from Services.stock_move_write import insert_stock_move
+    return insert_stock_move(cursor, {
+        'product_id': product_id,
+        'date': when,
+        'type': move_type,
+        'type1': type1,
+        'ref_type': REF_TYPE,
+        'ref_id': ref_id,
+        'ref_document': voucher_no,
+        'quantity': quantity,
+        'cost_price': cost_price,
+        'note': note,
+    })
 
 
 def _ensure_finished_product_codes(cursor, finished_product_id: int) -> tuple[str, str]:

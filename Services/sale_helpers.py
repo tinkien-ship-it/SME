@@ -16,33 +16,56 @@ def table_has_column(cursor, table, column):
 def fetch_product_for_checkout(cursor, product_id, warehouse_codes=None):
     """Lấy thông tin SP + tồn kho cho checkout POS (ưu tiên sổ cái).
 
-    warehouse_codes: nếu chỉ định, chỉ tính stock/avg_cost trong các kho này.
+    warehouse_codes: nếu chỉ định, chỉ tính stock trong các kho này (qua stock_moves).
+    Bảng inventory thường không có warehouse_code (1 dòng / SP) — không lọc theo kho trên inventory.
     """
-    if warehouse_codes:
+    has_sm_wh = table_has_column(cursor, 'stock_moves', 'warehouse_code')
+    has_inv_wh = table_has_column(cursor, 'inventory', 'warehouse_code')
+    filter_wh = bool(warehouse_codes) and (has_sm_wh or has_inv_wh)
+
+    if filter_wh:
         ph = ','.join('?' * len(warehouse_codes))
+        params: list = []
+        if has_sm_wh:
+            stock_expr = (
+                f"(SELECT SUM(sm.quantity) FROM stock_moves sm "
+                f"WHERE sm.product_id = p.id AND sm.warehouse_code IN ({ph}))"
+            )
+            params.extend(warehouse_codes)
+        else:
+            stock_expr = (
+                "(SELECT SUM(sm.quantity) FROM stock_moves sm WHERE sm.product_id = p.id)"
+            )
+
+        if has_inv_wh:
+            inv_fallback = (
+                f"(SELECT SUM(i2.quantity) FROM inventory i2 "
+                f"WHERE i2.product_id = p.id AND i2.warehouse_code IN ({ph}))"
+            )
+            avg_expr = (
+                f"COALESCE("
+                f"(SELECT AVG(i3.avg_cost) FROM inventory i3 "
+                f"WHERE i3.product_id = p.id AND i3.warehouse_code IN ({ph}) AND i3.quantity > 0), "
+                f"COALESCE(i.avg_cost, 0))"
+            )
+            params.extend(warehouse_codes)
+            params.extend(warehouse_codes)
+        else:
+            inv_fallback = "i.quantity"
+            avg_expr = "COALESCE(i.avg_cost, 0)"
+
+        params.append(product_id)
         cursor.execute(f"""
             SELECT
                 p.id, p.name, p.unit, p.unit1, p.unit_ratio,
                 COALESCE(p.product_type, 'goods') AS product_type,
                 p.hkd_sector_code,
-                COALESCE(
-                    (SELECT SUM(sm.quantity) FROM stock_moves sm
-                     WHERE sm.product_id = p.id AND sm.warehouse_code IN ({ph})),
-                    COALESCE(
-                        (SELECT SUM(i2.quantity) FROM inventory i2
-                         WHERE i2.product_id = p.id AND i2.warehouse_code IN ({ph})),
-                        0
-                    )
-                ) AS stock,
-                COALESCE(
-                    (SELECT AVG(i3.avg_cost) FROM inventory i3
-                     WHERE i3.product_id = p.id AND i3.warehouse_code IN ({ph}) AND i3.quantity > 0),
-                    COALESCE(i.avg_cost, 0)
-                ) AS avg_cost
+                COALESCE({stock_expr}, COALESCE({inv_fallback}, 0)) AS stock,
+                {avg_expr} AS avg_cost
             FROM products p
             LEFT JOIN inventory i ON p.id = i.product_id
             WHERE p.id = ?
-        """, warehouse_codes + warehouse_codes + warehouse_codes + [product_id])
+        """, params)
     else:
         cursor.execute("""
             SELECT
@@ -106,8 +129,19 @@ def _ensure_inventory_avg_cost(cursor, product_id, avg_cost):
         )
 
 
-def deduct_inventory_for_sale(cursor, product_id, deduct_qty, avg_cost, sale_id, sale_date, ref_doc):
+def deduct_inventory_for_sale(
+    cursor,
+    product_id,
+    deduct_qty,
+    avg_cost,
+    sale_id,
+    sale_date,
+    ref_doc,
+    warehouse_code=None,
+):
     """Trừ kho: WAC hoặc FIFO, ghi stock_moves, sync quantity."""
+    from Services.stock_move_write import insert_stock_move, resolve_posting_warehouse_code
+
     deduct_qty = float(deduct_qty)
     conn = cursor.connection
     cost_used = cost_snapshot_for_sale(cursor, product_id, conn=conn)
@@ -118,18 +152,23 @@ def deduct_inventory_for_sale(cursor, product_id, deduct_qty, avg_cost, sale_id,
         cursor, product_id, deduct_qty, cost_used,
         ref_type='sale', ref_id=sale_id, conn=conn,
     )
-    cursor.execute("""
-        INSERT INTO stock_moves
-        (product_id, date, type, ref_id, quantity, cost_price, ref_document, ref_type, type1, note)
-        VALUES (?, ?, 'SALE', ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        product_id, sale_date, sale_id, -deduct_qty, cost_used,
-        ref_doc, 'export', 'Bán', 'Bán hàng cho khách',
-    ))
-    move_id = cursor.lastrowid
+    wh = resolve_posting_warehouse_code(conn, warehouse_code)
+    move_id = insert_stock_move(cursor, {
+        'product_id': product_id,
+        'date': sale_date,
+        'type': 'SALE',
+        'ref_id': sale_id,
+        'quantity': -deduct_qty,
+        'cost_price': cost_used,
+        'ref_document': ref_doc,
+        'ref_type': 'export',
+        'type1': 'Bán',
+        'note': 'Bán hàng cho khách',
+        'warehouse_code': wh,
+    })
     for det in fifo_details or []:
         cid = det.get('consumption_id')
-        if cid:
+        if cid and move_id:
             cursor.execute(
                 'UPDATE inventory_lot_consumptions SET stock_move_id = ? WHERE id = ?',
                 (move_id, cid),

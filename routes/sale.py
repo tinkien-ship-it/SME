@@ -635,8 +635,8 @@ def register_sale_routes(app):
                         "status": existing.get('status') or status,
                         "deduped": True,
                     }), 200
-        except Exception:
-            pass
+        except Exception as offline_exc:
+            logging.warning('POS offline dedupe pre-check failed: %s', offline_exc, exc_info=True)
         finally:
             conn.close()
 
@@ -1045,8 +1045,8 @@ def register_sale_routes(app):
                         "status": existing.get('status') or data.get('status', 'draft'),
                         "deduped": True,
                     }), 200
-        except Exception:
-            pass
+        except Exception as offline_exc:
+            logging.warning('POS update_item offline dedupe failed: %s', offline_exc, exc_info=True)
         finally:
             conn_pre.close()
 
@@ -2207,11 +2207,20 @@ def register_sale_routes(app):
                 VALUES (?, 'import', 'Khách Trả', ?, ?, ?, 'sale_return', ?, ?)
             """, (product_id, real_qty_in, cost_price_base, sale_id, f"Hoàn hàng đơn {sale_master['sale_no']}", return_date))
 
-            c.execute("""
-                INSERT INTO stock_moves (product_id, date, type, ref_id, quantity, cost_price, note, ref_document, ref_type, type1)
-                VALUES (?, ?, 'RETURN_SALE', ?, ?, ?, ?, ?, 'import', 'Khách Trả')
-            """, (product_id, return_date, sale_id, real_qty_in, cost_price_base,
-                  f"Trả đơn {sale_master['sale_no']} - {reason}", sale_master['sale_no']))
+            from Services.stock_move_write import insert_stock_move, resolve_posting_warehouse_code
+            insert_stock_move(c, {
+                'product_id': product_id,
+                'date': return_date,
+                'type': 'RETURN_SALE',
+                'ref_id': sale_id,
+                'quantity': real_qty_in,
+                'cost_price': cost_price_base,
+                'note': f"Trả đơn {sale_master['sale_no']} - {reason}",
+                'ref_document': sale_master['sale_no'],
+                'ref_type': 'import',
+                'type1': 'Khách Trả',
+                'warehouse_code': resolve_posting_warehouse_code(conn),
+            })
 
             sync_inventory_quantity_from_moves(c, product_id)
 
@@ -2300,8 +2309,11 @@ def register_sale_routes(app):
                     customer_name=sale_master['customer_name'],
                     created_by=session.get('user_name'),
                 )
-            except Exception:
-                pass
+            except Exception as ret_j_exc:
+                logging.warning(
+                    'sync_return_sale_journals return %s sale %s: %s',
+                    return_sales_id, sale_id, ret_j_exc, exc_info=True,
+                )
             sqlite_commit(conn, label='sale')
             return jsonify({
                 "success": True,
