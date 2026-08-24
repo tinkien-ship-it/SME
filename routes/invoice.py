@@ -38,7 +38,7 @@ from requests.auth import HTTPBasicAuth
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from db_utils import BASE_DIR, get_db_connection
+from db_utils import BASE_DIR, get_db_connection, sqlite_commit
 from Services.invoice_buyer import (
     DEFAULT_RETAIL_BUYER_NAME,
     enrich_sale_buyer_identity,
@@ -74,6 +74,56 @@ VIETTEL_CONFIG = {
 }
 
 _invoice_scheduler_started = False
+_invoice_scheduler = None
+_batch_invoice_job_fn = None
+
+
+def start_invoice_batch_scheduler():
+    """Chỉ gọi từ scheduler.init_schedulers (process leader) — tránh N worker cùng chạy."""
+    global _invoice_scheduler_started, _invoice_scheduler
+    if _invoice_scheduler_started:
+        return
+    if _batch_invoice_job_fn is None:
+        logger.warning('start_invoice_batch_scheduler: routes chưa đăng ký job')
+        return
+
+    from Services.invoice_schedule import (
+        SCHEDULE_HOUR,
+        SCHEDULE_MINUTE,
+        SCHEDULE_TZ,
+        SCHEDULE_TZ_NAME,
+    )
+
+    inv_scheduler = BackgroundScheduler(daemon=True, timezone=SCHEDULE_TZ)
+    inv_scheduler.add_job(
+        _batch_invoice_job_fn,
+        CronTrigger(
+            hour=SCHEDULE_HOUR,
+            minute=SCHEDULE_MINUTE,
+            second=0,
+            timezone=SCHEDULE_TZ,
+        ),
+        id="batch_invoice_job",
+        name="Xuất hóa đơn tự động 17:00",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=3600,
+    )
+    inv_scheduler.start()
+    _invoice_scheduler = inv_scheduler
+    _invoice_scheduler_started = True
+    logger.info(
+        "APScheduler batch invoice job started (%02d:%02d %s) pid=%s",
+        SCHEDULE_HOUR, SCHEDULE_MINUTE, SCHEDULE_TZ_NAME, os.getpid(),
+    )
+
+    def _shutdown_invoice_scheduler():
+        if _invoice_scheduler is not None and _invoice_scheduler.running:
+            _invoice_scheduler.shutdown(wait=False)
+            logger.info("APScheduler invoice scheduler stopped.")
+
+    atexit.register(_shutdown_invoice_scheduler)
 
 
 def _so_thanh_chu(amount):
@@ -85,7 +135,7 @@ def _so_thanh_chu(amount):
 
 def register_invoice_routes(app):
     """Đăng ký route hóa đơn điện tử (giữ nguyên URL/endpoint)."""
-    global _invoice_scheduler_started
+    global _batch_invoice_job_fn
 
     class ViettelService:
         @staticmethod
@@ -316,7 +366,7 @@ def register_invoice_routes(app):
                 "UPDATE sale SET signed_mock = 1 WHERE id = ?",
                 (sale_id,),
             )
-            conn.commit()
+            sqlite_commit(conn, label='invoice')
             sh_don = prepared["sh_don"]
             return jsonify({
                 "success": True,
@@ -399,6 +449,10 @@ def register_invoice_routes(app):
                         sale_id = row['id']
 
                         try:
+                            if worker_conn is None:
+                                worker_conn = get_db_connection()
+                                worker_conn.row_factory = sqlite3.Row
+                                worker_cur = worker_conn.cursor()
 
                             # Lấy thông tin đơn hàng
                             sale_row = worker_cur.execute(
@@ -436,6 +490,9 @@ def register_invoice_routes(app):
                                 logging.error("Worker: Không đăng nhập được provider %s", provider_key)
                                 break
 
+                            worker_conn.close()
+                            worker_conn = None
+
                             # Gọi API xuất hóa đơn chính thức (giống luồng Mắt Bão)
                             result = service.issue(sale, items, loai_hdon=1)
 
@@ -447,29 +504,36 @@ def register_invoice_routes(app):
                                 invoice_date = _resolve_invoice_date(sale, result)
                                 tax_auth_status = result.get('tax_authority_status')
 
-                                # Update DB
-                                worker_cur.execute("""
-                                    UPDATE sale
-                                    SET invoice_number = ?,
-                                        invoice_status = 'issued',
-                                        invoice_pdf_url = ?,
-                                        invoice_xml_file = ?,
-                                        invoice_provider = ?,
-                                        invoice_date = ?,
-                                        tax_authority_status = ?,
-                                        updated_at = CURRENT_TIMESTAMP
-                                    WHERE id = ?
-                                """, (
-                                    invoice_no,
-                                    pdf_url,
-                                    xml_url,
-                                    provider_key,
-                                    invoice_date,
-                                    tax_auth_status,
-                                    sale_id,
-                                ))
+                                from db_utils import begin_immediate, sqlite_write_retry
+                                worker_conn = get_db_connection()
+                                worker_conn.row_factory = sqlite3.Row
+                                worker_cur = worker_conn.cursor()
 
-                                worker_conn.commit()
+                                def _worker_persist():
+                                    begin_immediate(worker_conn, label='auto_issue_persist')
+                                    worker_cur.execute("""
+                                        UPDATE sale
+                                        SET invoice_number = ?,
+                                            invoice_status = 'issued',
+                                            invoice_pdf_url = ?,
+                                            invoice_xml_file = ?,
+                                            invoice_provider = ?,
+                                            invoice_date = ?,
+                                            tax_authority_status = ?,
+                                            updated_at = CURRENT_TIMESTAMP
+                                        WHERE id = ?
+                                    """, (
+                                        invoice_no,
+                                        pdf_url,
+                                        xml_url,
+                                        provider_key,
+                                        invoice_date,
+                                        tax_auth_status,
+                                        sale_id,
+                                    ))
+                                    sqlite_commit(worker_conn, label='auto_issue_persist')
+
+                                sqlite_write_retry(_worker_persist, label='auto_issue_persist')
 
                                 logging.info(
                                     f"Worker: Đã xuất hóa đơn {invoice_no} cho sale {sale_id}"
@@ -572,31 +636,53 @@ def register_invoice_routes(app):
             self._token = None
 
         def _get_token(self):
-            """Lấy Token định danh từ hệ thống Mắt Bão"""
+            """Lấy Token từ API-Proxy-HDDT: POST /api/auth/login {MST, TDNhap, MKhau}."""
             if self._token:
                 return True
-            
+
+            if not self.base_url or not self.tax_code or not self.username or not self.password:
+                logging.error(
+                    "❌ Matbao Login: thiếu api_url / tax_code (MST) / username (TDNhap) / password (MKhau)"
+                )
+                return False
+
             url = f"{self.base_url}/api/auth/login"
             payload = {
                 "MST": self.tax_code,
                 "TDNhap": self.username,
-                "MKhau": self.password
+                "MKhau": self.password,
             }
-        
+
             try:
-                # verify=False nếu bạn đang ở môi trường dev hoặc server dùng self-signed cert
                 response = requests.post(url, json=payload, timeout=20, verify=False)
-                res_data = response.json()
-            
+                res_data = response.json() if response.content else {}
+
+                success = res_data.get('Success')
+                if success is None:
+                    success = res_data.get('success')
                 error_code = res_data.get('errorCode') or res_data.get('ErrorCode')
-                if error_code == 200:
+                # Tài liệu: Success=true; một số bản trả ErrorCode=200
+                ok = bool(success) or str(error_code) in ('200', '0')
+                if ok:
                     data_obj = res_data.get('data') or res_data.get('Data')
-                    # Xử lý trường hợp accessToken nằm trong dict hoặc trả về trực tiếp
-                    self._token = data_obj.get('accessToken') if isinstance(data_obj, dict) else data_obj
-                    logging.info(f"✅ Matbao: Đăng nhập thành công cho MST {self.tax_code}")
-                    return True
-                
-                logging.error(f"❌ Matbao Login thất bại: {res_data.get('message') or res_data.get('Message')}")
+                    if isinstance(data_obj, dict):
+                        self._token = (
+                            data_obj.get('accessToken')
+                            or data_obj.get('AccessToken')
+                            or data_obj.get('token')
+                            or data_obj.get('Token')
+                        )
+                    else:
+                        self._token = data_obj
+                    if self._token:
+                        logging.info(f"✅ Matbao: Đăng nhập thành công cho MST {self.tax_code}")
+                        return True
+                    logging.error("❌ Matbao Login: Success nhưng không có token trong Data")
+                    return False
+
+                logging.error(
+                    f"❌ Matbao Login thất bại: {res_data.get('message') or res_data.get('Message') or res_data}"
+                )
                 return False
             except Exception as e:
                 logging.error(f"❌ Lỗi kết nối Login Matbao: {str(e)}")
@@ -609,6 +695,202 @@ def register_invoice_routes(app):
             return {
                 "Authorization": f"Bearer {self._token}",
                 "Content-Type": "application/json"
+            }
+
+        def test_connection(self):
+            """
+            Kiểm tra sâu API phát hành HĐ bán (API-Proxy-HDDT):
+            1) POST /api/auth/login {MST, TDNhap, MKhau}
+            2) GET /api/invoice/templates?year=… (xác nhận Bearer token)
+            """
+            from datetime import datetime as _dt
+
+            missing = []
+            if not self.base_url:
+                missing.append('API Endpoint (api_url) — vd https://api-hddt.matbao.in:11443')
+            if not self.tax_code:
+                missing.append('Mã số thuế (MST)')
+            if not self.username:
+                missing.append('Tên đăng nhập (TDNhap)')
+            if not self.password:
+                missing.append('Mật khẩu (MKhau)')
+            if missing:
+                return {
+                    'success': False,
+                    'error': 'Mắt Bão HĐ bán — thiếu: ' + '; '.join(missing),
+                    'steps': [{'step': 'validate', 'ok': False, 'detail': missing}],
+                }
+
+            steps = []
+            login_url = f'{self.base_url}/api/auth/login'
+            payload = {
+                'MST': self.tax_code,
+                'TDNhap': self.username,
+                'MKhau': self.password,
+            }
+            try:
+                response = requests.post(login_url, json=payload, timeout=20, verify=False)
+            except requests.exceptions.Timeout:
+                return {
+                    'success': False,
+                    'error': f'Mắt Bão: hết thời gian chờ khi gọi {login_url}',
+                    'steps': [{'step': 'login', 'ok': False, 'detail': 'timeout'}],
+                }
+            except requests.exceptions.RequestException as exc:
+                return {
+                    'success': False,
+                    'error': f'Mắt Bão: không kết nối được API phát hành — {exc}',
+                    'steps': [{'step': 'login', 'ok': False, 'detail': str(exc)}],
+                }
+
+            try:
+                res_data = response.json() if response.content else {}
+            except ValueError:
+                return {
+                    'success': False,
+                    'error': (
+                        f'Mắt Bão login HTTP {response.status_code}: '
+                        f'phản hồi không phải JSON — {(response.text or "")[:200]}'
+                    ),
+                    'steps': [{'step': 'login', 'ok': False, 'http': response.status_code}],
+                }
+
+            success = res_data.get('Success')
+            if success is None:
+                success = res_data.get('success')
+            error_code = res_data.get('errorCode') or res_data.get('ErrorCode')
+            ok_login = bool(success) or str(error_code) in ('200', '0')
+            data_obj = res_data.get('data') or res_data.get('Data')
+            token = None
+            if isinstance(data_obj, dict):
+                token = (
+                    data_obj.get('accessToken')
+                    or data_obj.get('AccessToken')
+                    or data_obj.get('token')
+                    or data_obj.get('Token')
+                )
+            elif data_obj:
+                token = data_obj
+
+            if not ok_login or not token:
+                msg = (
+                    res_data.get('message')
+                    or res_data.get('Message')
+                    or res_data.get('Data')
+                    or f'HTTP {response.status_code}'
+                )
+                return {
+                    'success': False,
+                    'error': f'Mắt Bão đăng nhập thất bại: {msg}',
+                    'steps': [{
+                        'step': 'login',
+                        'ok': False,
+                        'http': response.status_code,
+                        'error_code': error_code,
+                        'detail': str(msg)[:300],
+                    }],
+                }
+
+            self._token = token
+            steps.append({
+                'step': 'login',
+                'ok': True,
+                'url': login_url,
+                'detail': f'Đăng nhập OK (MST={self.tax_code})',
+            })
+
+            year = _dt.now().year
+            templates_url = f'{self.base_url}/api/invoice/templates'
+            try:
+                t_resp = requests.get(
+                    templates_url,
+                    params={'year': year},
+                    headers={
+                        'Authorization': f'Bearer {token}',
+                        'Content-Type': 'application/json',
+                    },
+                    timeout=20,
+                    verify=False,
+                )
+            except requests.exceptions.RequestException as exc:
+                return {
+                    'success': False,
+                    'error': (
+                        f'Mắt Bão: login OK nhưng không gọi được templates — {exc}. '
+                        'Kiểm tra URL/firewall.'
+                    ),
+                    'steps': steps + [{'step': 'templates', 'ok': False, 'detail': str(exc)}],
+                }
+
+            try:
+                t_data = t_resp.json() if t_resp.content else {}
+            except ValueError:
+                t_data = {}
+
+            t_success = t_data.get('Success')
+            if t_success is None:
+                t_success = t_data.get('success')
+            t_err = t_data.get('ErrorCode') or t_data.get('errorCode')
+            templates_ok = t_resp.status_code == 200 and (
+                bool(t_success) or str(t_err) in ('200', '0', 'None', '') or t_success is None
+            )
+            # Một số bản trả Success=true; nếu 401 thì token sai
+            if t_resp.status_code in (401, 403):
+                return {
+                    'success': False,
+                    'error': (
+                        f'Mắt Bão: login có token nhưng templates trả HTTP {t_resp.status_code} '
+                        '(Bearer không hợp lệ hoặc BaseUrl sai).'
+                    ),
+                    'steps': steps + [{
+                        'step': 'templates',
+                        'ok': False,
+                        'http': t_resp.status_code,
+                        'detail': (t_resp.text or '')[:200],
+                    }],
+                }
+
+            if t_resp.status_code >= 500:
+                return {
+                    'success': False,
+                    'error': f'Mắt Bão templates lỗi server HTTP {t_resp.status_code}',
+                    'steps': steps + [{'step': 'templates', 'ok': False, 'http': t_resp.status_code}],
+                }
+
+            # 200 + body lỗi rõ ràng
+            if t_success is False and str(t_err) not in ('200', '0'):
+                err_msg = t_data.get('Message') or t_data.get('message') or t_data.get('Data') or t_err
+                return {
+                    'success': False,
+                    'error': f'Mắt Bão templates thất bại: {err_msg}',
+                    'steps': steps + [{
+                        'step': 'templates',
+                        'ok': False,
+                        'http': t_resp.status_code,
+                        'detail': str(err_msg)[:300],
+                    }],
+                }
+
+            tmpl_count = 0
+            raw_list = t_data.get('Data') or t_data.get('data')
+            if isinstance(raw_list, list):
+                tmpl_count = len(raw_list)
+            steps.append({
+                'step': 'templates',
+                'ok': True,
+                'http': t_resp.status_code,
+                'detail': f'Mẫu HĐ năm {year}: {tmpl_count} bản ghi' if tmpl_count else f'Templates HTTP {t_resp.status_code} OK',
+            })
+
+            return {
+                'success': True,
+                'message': (
+                    f'Mắt Bão HĐ bán: kết nối thành công — '
+                    f'login + templates ({self.base_url})'
+                    + (f', {tmpl_count} mẫu năm {year}' if tmpl_count else '')
+                ),
+                'steps': steps,
+                'channel': 'sales',
             }
 
         def _prepare_dsh_hd_vu(self, items):
@@ -1223,15 +1505,25 @@ def register_invoice_routes(app):
             items = prepare_invoice_items_for_sale(sale, items)
 
             service = create_einvoice_service(config, matbao_cls=MatbaoProvider)
+            from db_utils import close_request_db, begin_immediate, sqlite_write_retry
+            close_request_db()
             result = service.issue(sale, items, loai_hdon=loai, replace_unpublished=replace_unpublished)
             if not result.get('success'):
                 return {"success": False, "error": result.get('error', 'Lỗi xuất hóa đơn')}
 
             is_draft = loai == 0 or result.get('is_draft')
-            _persist_invoice_result(
-                cursor, sale_id, sale, result, is_draft=is_draft, provider=provider_key,
-            )
-            conn.commit()
+            conn = get_db_connection()
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            def _save_invoice():
+                begin_immediate(conn, label='issue_invoice_persist')
+                _persist_invoice_result(
+                    cursor, sale_id, sale, result, is_draft=is_draft, provider=provider_key,
+                )
+                sqlite_commit(conn, label='invoice')
+
+            sqlite_write_retry(_save_invoice, label='issue_invoice_persist')
 
             customer_email = (sale.get('email') or '').strip()
             if customer_email and not is_draft:
@@ -1299,6 +1591,7 @@ def register_invoice_routes(app):
             config = dict(config_row)
             provider_key = (config.get('provider_name') or 'matbao').strip().lower()
             service = create_einvoice_service(config, matbao_cls=MatbaoProvider)
+            items = None
             if provider_key == 'vnpt':
                 items = _fetch_sale_invoice_items(cursor, sale_id)
                 if not items:
@@ -1314,6 +1607,12 @@ def register_invoice_routes(app):
                     return {"success": False, "error": err_xk}
                 sale = enrich_sale_for_einvoice(sale)
                 items = prepare_invoice_items_for_sale(sale, items)
+
+            from db_utils import close_request_db, begin_immediate, sqlite_write_retry
+            close_request_db()
+            conn = None
+
+            if provider_key == 'vnpt':
                 if hasattr(service, 'publish_draft'):
                     result = service.publish_draft(sale, items)
                 else:
@@ -1351,34 +1650,38 @@ def register_invoice_routes(app):
             xml_url = result.get('xml_url') or ''
             invoice_date = _resolve_invoice_date(sale, result)
             tax_auth_status = result.get('tax_authority_status') or 'Chưa Gửi CQT'
-            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-            _upsert_outward_invoice(
-                cursor, sale_id, sale,
-                invoice_no=invoice_no,
-                invoice_id=result.get('invoice_id') or invoice_id,
-                pdf_url=pdf_url,
-                xml_url=xml_url,
-                invoice_date=invoice_date,
-                status='issued',
-                fkey=result.get('invoice_id') or invoice_id,
-            )
+            conn = get_db_connection()
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
-            cursor.execute("""
-                UPDATE sale SET invoice_number = ?, invoice_id = ?, invoice_status = 'issued',
-                    invoice_pdf_url = ?, invoice_xml_file = ?, invoice_provider = ?,
-                    invoice_date = ?, tax_authority_status = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            """, (
-                invoice_no, result.get('invoice_id') or invoice_id,
-                pdf_url, xml_url, provider_key,
-                invoice_date, tax_auth_status, sale_id,
-            ))
+            def _save_draft_publish():
+                begin_immediate(conn, label='publish_draft_persist')
+                _upsert_outward_invoice(
+                    cursor, sale_id, sale,
+                    invoice_no=invoice_no,
+                    invoice_id=result.get('invoice_id') or invoice_id,
+                    pdf_url=pdf_url,
+                    xml_url=xml_url,
+                    invoice_date=invoice_date,
+                    status='issued',
+                    fkey=result.get('invoice_id') or invoice_id,
+                )
+                cursor.execute("""
+                    UPDATE sale SET invoice_number = ?, invoice_id = ?, invoice_status = 'issued',
+                        invoice_pdf_url = ?, invoice_xml_file = ?, invoice_provider = ?,
+                        invoice_date = ?, tax_authority_status = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (
+                    invoice_no, result.get('invoice_id') or invoice_id,
+                    pdf_url, xml_url, provider_key,
+                    invoice_date, tax_auth_status, sale_id,
+                ))
+                if provider_key == 'vnpt':
+                    _repair_vnpt_outward_invoices(cursor, config)
+                sqlite_commit(conn, label='invoice')
 
-            if provider_key == 'vnpt':
-                _repair_vnpt_outward_invoices(cursor, config)
-
-            conn.commit()
+            sqlite_write_retry(_save_draft_publish, label='publish_draft_persist')
 
             customer_email = (sale.get('email') or '').strip()
             if customer_email:
@@ -1798,7 +2101,8 @@ def register_invoice_routes(app):
                 """, (customer_name, company_name, address, tax_code, '131', '511', 
                       move_date, total_amount, sale_id, ref_doc))
 
-            conn.commit()
+            from db_utils import sqlite_commit
+            sqlite_commit(conn, label='update_replacement_sale')
             return jsonify({"success": True, "message": "Cập nhật đơn hàng thay thế thành công."}), 200
 
         except Exception as e:
@@ -1953,6 +2257,9 @@ def register_invoice_routes(app):
                     "error": "Số hóa đơn gốc không hợp lệ để phát hành.",
                 }), 400
 
+            from db_utils import close_request_db, begin_immediate, sqlite_write_retry
+            close_request_db()
+            conn = None
             result = service.issue_replacement(sale_data, items, replacement_info)
             if not result.get('success'):
                 return jsonify({"success": False, "error": result.get('error')}), 400
@@ -1968,55 +2275,59 @@ def register_invoice_routes(app):
             }
             current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-            # Cập nhật bảng SALE
-            cursor.execute("""
-                UPDATE sale SET invoice_number=?, invoice_id=?, invoice_status='issued', 
-                invoice_pdf_url=?, invoice_xml_file=?, invoice_date=?, tax_authority_status=?, 
-                replacement_invoice_no=?, updated_at=CURRENT_TIMESTAMP WHERE id=?
-            """, (res_data["no"], res_data["id"], res_data["pdf"], res_data["xml"], res_data["date"], res_data["status"], invoice_number, sale_id))
+            conn = get_db_connection()
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
-            # Chỉ HĐ thay thế khóa HĐ gốc; điều chỉnh giữ HĐ gốc còn hiệu lực
-            if tchdon == 1:
+            def _save_replacement():
+                begin_immediate(conn, label='issue_replacement_persist')
                 cursor.execute("""
-                    UPDATE outward_invoices
-                    SET note = CASE
-                            WHEN COALESCE(note, '') LIKE '%Đã bị thay thế bởi HĐ%' THEN note
-                            ELSE TRIM(COALESCE(note, '') || ' | Đã bị thay thế bởi HĐ ' || ?)
-                        END,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE invoice_no = ? AND sale_id = ?
-                """, (str(res_data["no"]), invoice_number, sale_id))
-            else:
+                    UPDATE sale SET invoice_number=?, invoice_id=?, invoice_status='issued', 
+                    invoice_pdf_url=?, invoice_xml_file=?, invoice_date=?, tax_authority_status=?, 
+                    replacement_invoice_no=?, updated_at=CURRENT_TIMESTAMP WHERE id=?
+                """, (res_data["no"], res_data["id"], res_data["pdf"], res_data["xml"], res_data["date"], res_data["status"], invoice_number, sale_id))
+
+                if tchdon == 1:
+                    cursor.execute("""
+                        UPDATE outward_invoices
+                        SET note = CASE
+                                WHEN COALESCE(note, '') LIKE '%Đã bị thay thế bởi HĐ%' THEN note
+                                ELSE TRIM(COALESCE(note, '') || ' | Đã bị thay thế bởi HĐ ' || ?)
+                            END,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE invoice_no = ? AND sale_id = ?
+                    """, (str(res_data["no"]), invoice_number, sale_id))
+                else:
+                    cursor.execute("""
+                        UPDATE outward_invoices
+                        SET note = CASE
+                                WHEN COALESCE(note, '') LIKE '%Đã bị điều chỉnh bởi HĐ%' THEN note
+                                ELSE TRIM(COALESCE(note, '') || ' | Đã bị điều chỉnh bởi HĐ ' || ?)
+                            END,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE invoice_no = ? AND sale_id = ?
+                    """, (str(res_data["no"]), invoice_number, sale_id))
+
+                new_note = (
+                    f"{tchdon_label} cho HĐ {invoice_number} (Fkey gốc: {replacement_info.get('old_fkey')})"
+                    if provider_key == 'vnpt'
+                    else f"{tchdon_label} cho {invoice_number}"
+                )
                 cursor.execute("""
-                    UPDATE outward_invoices
-                    SET note = CASE
-                            WHEN COALESCE(note, '') LIKE '%Đã bị điều chỉnh bởi HĐ%' THEN note
-                            ELSE TRIM(COALESCE(note, '') || ' | Đã bị điều chỉnh bởi HĐ ' || ?)
-                        END,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE invoice_no = ? AND sale_id = ?
-                """, (str(res_data["no"]), invoice_number, sale_id))
+                    INSERT INTO outward_invoices (
+                        sale_id, sale_no, invoice_no, invoice_id, customer_name, customer_tax_code, customer_address,
+                        total, pdf_url, xml_file, invoice_date, created_at, updated_at, note
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    sale_id, sale.get('sale_no'), res_data["no"], res_data["id"],
+                    sale_data["company_name"] or sale_data["customer_name"], sale_data.get("tax_code"), sale_data.get("address"),
+                    sale.get('total_amount'), res_data["pdf"], res_data["xml"],
+                    res_data["date"], current_time, current_time,
+                    new_note,
+                ))
+                sqlite_commit(conn, label='invoice')
 
-            new_note = (
-                f"{tchdon_label} cho HĐ {invoice_number} (Fkey gốc: {replacement_info.get('old_fkey')})"
-                if provider_key == 'vnpt'
-                else f"{tchdon_label} cho {invoice_number}"
-            )
-            # Cập nhật bảng OUTWARD_INVOICES (Đã fix thứ tự 12 cột)
-            cursor.execute("""
-                INSERT INTO outward_invoices (
-                    sale_id, sale_no, invoice_no, invoice_id, customer_name, customer_tax_code, customer_address,
-                    total, pdf_url, xml_file, invoice_date, created_at, updated_at, note
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                sale_id, sale.get('sale_no'), res_data["no"], res_data["id"],
-                sale_data["company_name"] or sale_data["customer_name"], sale_data.get("tax_code"), sale_data.get("address"),
-                sale.get('total_amount'), res_data["pdf"], res_data["xml"],
-                res_data["date"], current_time, current_time,
-                new_note,
-            ))
-
-            conn.commit()
+            sqlite_write_retry(_save_replacement, label='issue_replacement_persist')
             return jsonify({
                 "success": True,
                 "invoice_no": res_data["no"],
@@ -2035,17 +2346,23 @@ def register_invoice_routes(app):
     @tenant_settings_required
     def test_invoice_connection():
         try:
+            from db_utils import close_request_db
             from Services.einvoice_factory import test_einvoice_connection
             data = request.get_json() or {}
+            close_request_db()
             result = test_einvoice_connection(data, matbao_cls=MatbaoProvider)
             if result.get('success'):
                 return jsonify({
                     'success': True,
                     'message': result.get('message') or 'Kết nối thành công',
+                    'steps': result.get('steps') or [],
+                    'sales_ok': result.get('sales_ok'),
+                    'purchase_ok': result.get('purchase_ok'),
                 })
             return jsonify({
                 'success': False,
                 'error': result.get('error') or 'Kiểm tra kết nối thất bại',
+                'steps': result.get('steps') or [],
             })
         except Exception as e:
             logging.exception('test_invoice_connection: %s', e)
@@ -2123,7 +2440,9 @@ def register_invoice_routes(app):
                         stats["failed"] += 1
                         continue
 
-                    # 3. Gọi Matbao Provider xuất hóa đơn
+                    # 3. Gọi Matbao Provider xuất hóa đơn (đóng DB trước HTTP dài)
+                    from db_utils import close_request_db, begin_immediate, sqlite_write_retry
+                    close_request_db()
                     result = service.issue(sale, items)
 
                     if result.get('success'):
@@ -2132,11 +2451,19 @@ def register_invoice_routes(app):
                             logging.warning("Batch sale %s trả về nháp — bỏ qua.", sale_id)
                             continue
 
-                        _persist_invoice_result(
-                            cursor, sale_id, sale, result,
-                            is_draft=False, provider=provider_key,
-                        )
-                        conn.commit()
+                        conn = get_db_connection()
+                        conn.row_factory = sqlite3.Row
+                        cursor = conn.cursor()
+
+                        def _save_batch():
+                            begin_immediate(conn, label='batch_issue_persist')
+                            _persist_invoice_result(
+                                cursor, sale_id, sale, result,
+                                is_draft=False, provider=provider_key,
+                            )
+                            sqlite_commit(conn, label='invoice')
+
+                        sqlite_write_retry(_save_batch, label='batch_issue_persist')
                         stats["success"] += 1
 
                         customer_email = (sale.get('email') or '').strip()
@@ -2164,6 +2491,9 @@ def register_invoice_routes(app):
                     logging.error(f"❌ Lỗi xử lý đơn hàng {sale_id} trong batch: {str(e)}")
 
             # 7. Cập nhật số lượng còn lại cuối cùng
+            conn = get_db_connection()
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
             row_rem = cursor.execute("""
                 SELECT COUNT(*) as cnt FROM sale
                 WHERE status = 'completed'
@@ -2340,6 +2670,7 @@ def register_invoice_routes(app):
 
     def _sync_vnpt_outward_invoices(from_date, to_date, config, merge_local=True):
         from Services.einvoice_adapters import VNPTInvoiceAdapter
+        from db_utils import close_request_db, sqlite_commit
 
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
@@ -2348,10 +2679,18 @@ def register_invoice_routes(app):
         try:
             adapter = VNPTInvoiceAdapter(config)
             _repair_vnpt_outward_invoices(cursor, config)
+            sqlite_commit(conn, label='vnpt_repair_outward')
+            close_request_db()
+            conn = None
+
             sync = adapter.list_invoices(from_date, to_date)
             formatted = list(sync.get('data') or [])
             portal_warning = sync.get('warning')
             portal_details = sync.get('details') or []
+
+            conn = get_db_connection()
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
             for inv in formatted:
                 fkey = str(inv.get('invoice_id') or inv.get('fkey') or '').strip()
@@ -2459,7 +2798,7 @@ def register_invoice_routes(app):
             formatted = _attach_local_outward_notes(cursor, formatted)
             formatted = _attach_provider_labels(formatted)
             formatted.sort(key=lambda x: (x.get('invoice_date', ''), x.get('invoice_no', '')), reverse=True)
-            conn.commit()
+            sqlite_commit(conn, label='sync_vnpt_outward')
 
             if portal_warning and not sync.get('source'):
                 message = portal_warning
@@ -2995,7 +3334,8 @@ def register_invoice_routes(app):
                     "provider": "matbao",
                 })
      
-            conn.commit()
+            from db_utils import sqlite_commit
+            sqlite_commit(conn, label='sync_matbao_outward')
 
             if merge_local:
                 formatted = _merge_local_outward_invoices(cursor, formatted, from_date, to_date, 'matbao')
@@ -3177,7 +3517,7 @@ def register_invoice_routes(app):
             """, (invoice_no, status_text, ma_tham_chieu.upper()))
         
             row_affected = cursor.rowcount
-            conn.commit()
+            sqlite_commit(conn, label='invoice')
             conn.close()
 
             if row_affected > 0:
@@ -3940,7 +4280,7 @@ def register_invoice_routes(app):
                 WHERE id = ?
             """, (invoice_number, invoice_date, sale_id))
 
-            conn.commit()
+            sqlite_commit(conn, label='invoice')
 
             return jsonify({
                 "message": "Xuất hóa đơn thành công",
@@ -4194,7 +4534,7 @@ def register_invoice_routes(app):
                     )
                 except sqlite3.OperationalError:
                     pass
-                conn.commit()
+                sqlite_commit(conn, label='invoice')
 
             return jsonify({
                 "success": True,
@@ -4319,41 +4659,7 @@ def register_invoice_routes(app):
         )
         return jsonify(result)
 
-    if not _invoice_scheduler_started:
-        from Services.invoice_schedule import (
-            SCHEDULE_HOUR,
-            SCHEDULE_MINUTE,
-            SCHEDULE_TZ,
-            SCHEDULE_TZ_NAME,
-        )
-
-        inv_scheduler = BackgroundScheduler(daemon=True, timezone=SCHEDULE_TZ)
-        inv_scheduler.add_job(
-            run_scheduled_batch_invoice,
-            CronTrigger(
-                hour=SCHEDULE_HOUR,
-                minute=SCHEDULE_MINUTE,
-                second=0,
-                timezone=SCHEDULE_TZ,
-            ),
-            id="batch_invoice_job",
-            name="Xuất hóa đơn tự động 17:00",
-            replace_existing=True,
-            max_instances=1,
-            coalesce=True,
-            misfire_grace_time=3600,
-        )
-        inv_scheduler.start()
-        _invoice_scheduler_started = True
-        logger.info(
-            "APScheduler batch invoice job started (%02d:%02d %s)",
-            SCHEDULE_HOUR, SCHEDULE_MINUTE, SCHEDULE_TZ_NAME,
-        )
-
-        def _shutdown_invoice_scheduler():
-            if inv_scheduler.running:
-                inv_scheduler.shutdown(wait=False)
-                logger.info("APScheduler invoice scheduler stopped.")
-
-        atexit.register(_shutdown_invoice_scheduler)
+    # Job 17:00 — không start ở đây (mọi Gunicorn worker sẽ nhân đôi).
+    # init_schedulers() gọi start_invoice_batch_scheduler() sau khi giành leadership.
+    _batch_invoice_job_fn = run_scheduled_batch_invoice
 

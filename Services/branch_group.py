@@ -20,7 +20,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
-from db_utils import REGISTRY_PATH, open_sqlite, BASE_DIR
+from db_utils import REGISTRY_PATH, open_sqlite, BASE_DIR, sqlite_commit
 
 
 def ensure_branch_group_schema() -> None:
@@ -42,7 +42,7 @@ def ensure_branch_group_schema() -> None:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_tbl_parent ON tenant_branch_links(parent_tenant_id)"
         )
-        conn.commit()
+        sqlite_commit(conn, label='branch_group')
 
 
 def create_independent_branch(
@@ -85,7 +85,7 @@ def create_independent_branch(
             """,
             (parent_tenant_id, child_tenant_id, tax_code, branch_name, notes, datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
         )
-        conn.commit()
+        sqlite_commit(conn, label='branch_group')
 
     return {
         'parent_tenant_id': parent_tenant_id,
@@ -130,7 +130,7 @@ def deactivate_child_branch(parent_tenant_id: str, child_tenant_id: str) -> bool
             "UPDATE tenant_branch_links SET is_active = 0 WHERE parent_tenant_id = ? AND child_tenant_id = ?",
             (parent_tenant_id, child_tenant_id),
         )
-        conn.commit()
+        sqlite_commit(conn, label='branch_group')
     return True
 
 

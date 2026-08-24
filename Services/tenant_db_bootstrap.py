@@ -6,6 +6,7 @@ liệu kinh doanh hoặc thông tin tích hợp từ database.db mẫu.
 from __future__ import annotations
 
 import sqlite3
+from db_utils import sqlite_commit
 
 
 # Chỉ gồm dữ liệu nghiệp vụ / cấu hình riêng của tenant. Các bảng tham chiếu
@@ -109,7 +110,7 @@ def clear_trial_business_data(conn: sqlite3.Connection) -> list[str]:
     cursor = conn.cursor()
     # PRAGMA foreign_keys chỉ có hiệu lực ngoài transaction — commit trước khi tắt FK.
     try:
-        conn.commit()
+        sqlite_commit(conn, label='tenant_db_bootstrap')
     except sqlite3.Error:
         pass
     cursor.execute('PRAGMA foreign_keys=OFF')

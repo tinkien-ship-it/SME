@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.sme.export_clearance import (
     DOC_TYPES_ALL,
     DOC_TYPES_CLEARANCE,
@@ -227,7 +228,7 @@ def confirm_export_clearance(
             pass
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='export_sale')
 
     out = get_export_sale(conn, sale_id) or {'id': sale_id}
     return {
@@ -657,7 +658,7 @@ def create_or_update_export_sale(
     )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='export_sale')
 
     return {
         'success': True,

@@ -1,13 +1,14 @@
 """Ánh xạ Chủ hộ kinh doanh từ business_info → nhân viên trên bảng lương."""
 import re
 import unicodedata
+from db_utils import sqlite_commit
 
 
 def ensure_is_chu_ho_column(conn):
     cols = {row[1] for row in conn.execute('PRAGMA table_info(employees)').fetchall()}
     if 'is_chu_ho' not in cols:
         conn.execute('ALTER TABLE employees ADD COLUMN is_chu_ho INTEGER DEFAULT 0')
-        conn.commit()
+        sqlite_commit(conn, label='chu_ho_helpers')
 
 
 def normalize_person_name(name):
@@ -101,5 +102,5 @@ def sync_chu_ho_from_business_info(conn, commit=True):
             matched_ids.append(int(row['id']))
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='chu_ho_helpers')
     return matched_ids, owner_name

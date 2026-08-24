@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+from db_utils import sqlite_commit
 
 
 def _cols(conn: sqlite3.Connection, table: str) -> set[str]:
@@ -26,7 +27,7 @@ def ensure_pos_offline_schema(conn: sqlite3.Connection, *, commit: bool = False)
     except sqlite3.OperationalError:
         pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='pos_offline_schema')
 
 
 def find_sale_by_client_uuid(conn: sqlite3.Connection, client_uuid: str) -> dict | None:

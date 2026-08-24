@@ -31,7 +31,7 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, get_db_connection
+from db_utils import BASE_DIR, MAIN_DB_PATH, get_db_connection, sqlite_commit
 from Services.invoice_buyer import DEFAULT_RETAIL_BUYER_NAME, normalize_retail_buyer_name
 from Services.hkd_sector import resolve_item_hkd_sector
 from Services.sale_helpers import insert_sale_item_with_sector
@@ -50,7 +50,7 @@ def complete_rental_bank_payment(sale_id):
         if not sale:
             return {"success": False, "error": "Không tìm thấy hóa đơn"}
         if sale['status'] == 'completed':
-            conn.commit()
+            sqlite_commit(conn, label='rental')
             return {"success": True, "already_completed": True}
 
         meta = {}
@@ -104,7 +104,7 @@ def complete_rental_bank_payment(sale_id):
             """, (pt_vno, customer_name, address, tax_code, total_amount, payment_method, reason, sale_no, sale_id, sale_date))
 
         cursor.execute("UPDATE sale SET status = 'completed', note = ? WHERE id = ?", (user_note, sale_id))
-        conn.commit()
+        sqlite_commit(conn, label='rental')
         return {"success": True, "sale_id": sale_id}
     except Exception as e:
         if conn:
@@ -197,7 +197,7 @@ def register_rental_routes(app):
                 WHERE room_no = ?
             ''', (float(data.get('rental_price') or 0), room_no))
 
-            conn.commit()
+            sqlite_commit(conn, label='rental')
             return jsonify({'success': True, 'message': 'Đã tạo hợp đồng và cập nhật trạng thái phòng thành công'})
     
         except Exception as e:
@@ -287,7 +287,7 @@ def register_rental_routes(app):
                 WHERE room_no = ?
             ''', (float(new_price or 0), room_no))
 
-            conn.commit()
+            sqlite_commit(conn, label='rental')
             return jsonify({'success': True, 'message': f'Cập nhật phòng {room_no} thành công!'})
 
         except Exception as e:
@@ -478,7 +478,7 @@ def register_rental_routes(app):
                         VALUES (?, ?, ?, ?, '131', '511', ?, ?, ?, ?)
                     """, (customer_name, company_name, address, tax_code, sale_date, total_amount, sale_id, sale_no))
 
-            conn.commit()
+            sqlite_commit(conn, label='rental')
             return jsonify({
                 "success": True,
                 "sale_id": sale_id,
@@ -566,7 +566,7 @@ def register_rental_routes(app):
                         note = excluded.note
                 ''', (room_no, price, status, note))
         
-            conn.commit()
+            sqlite_commit(conn, label='rental')
             return jsonify({'success': True, 'message': f'Đã cập nhật thành công {len(df)} phòng vào hệ thống!'})
 
         except Exception as e:
@@ -665,7 +665,7 @@ def register_rental_routes(app):
                 (room_no,)
             )
         
-            conn.commit()
+            sqlite_commit(conn, label='rental')
             return jsonify({"success": True, "message": "Trả phòng thành công"})
         
         except Exception as e:

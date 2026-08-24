@@ -5,7 +5,7 @@ import io
 from flask import Response, jsonify, render_template, request
 
 from auth import login_required
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit
 from Services.attendance_helpers import (
     build_daily_summary,
     ensure_attendance_schema,
@@ -117,7 +117,7 @@ def register_attendance_routes(app):
                     skipped += 1
                 else:
                     errors.append(f'Dòng {idx}: {err}')
-            conn.commit()
+            sqlite_commit(conn, label='attendance')
             return jsonify({
                 'success': True,
                 'imported': ok,
@@ -182,7 +182,7 @@ def register_attendance_routes(app):
                 success, _ = upsert_attendance_log(conn, rec, source='import_csv', device_sn='CSV')
                 if success:
                     ok += 1
-            conn.commit()
+            sqlite_commit(conn, label='attendance')
             return jsonify({'success': True, 'imported': ok, 'total_rows': len(records)})
         finally:
             conn.close()
@@ -196,7 +196,7 @@ def register_attendance_routes(app):
             success, err = upsert_attendance_log(conn, data, source='manual', device_sn='MANUAL')
             if not success:
                 return jsonify({'error': err or 'Không lưu được'}), 400
-            conn.commit()
+            sqlite_commit(conn, label='attendance')
             return jsonify({'success': True})
         finally:
             conn.close()
@@ -223,7 +223,7 @@ def register_attendance_routes(app):
                 """,
                 (employee_id, attendance_code),
             )
-            conn.commit()
+            sqlite_commit(conn, label='attendance')
             return jsonify({'success': True})
         finally:
             conn.close()
@@ -241,7 +241,7 @@ def register_attendance_routes(app):
             touch_device(conn, serial, ip)
 
             if request.method == 'GET':
-                conn.commit()
+                sqlite_commit(conn, label='attendance')
                 return Response(
                     f"GET OPTION FROM: {serial}\n"
                     "Stamp=9999\nOpStamp=9999\nErrorDelay=60\nDelay=30\n"
@@ -257,7 +257,7 @@ def register_attendance_routes(app):
                     if not parsed:
                         continue
                     upsert_attendance_log(conn, parsed, source='adms', device_sn=serial)
-            conn.commit()
+            sqlite_commit(conn, label='attendance')
             return Response('OK', mimetype='text/plain')
         except Exception:
             conn.rollback()
@@ -271,7 +271,7 @@ def register_attendance_routes(app):
         conn = get_db_connection()
         try:
             touch_device(conn, serial, request.remote_addr)
-            conn.commit()
+            sqlite_commit(conn, label='attendance')
         finally:
             conn.close()
         return Response('OK', mimetype='text/plain')

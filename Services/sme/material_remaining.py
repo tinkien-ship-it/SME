@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 FORM_CODE = '04-VT'
@@ -64,7 +65,7 @@ def ensure_sme_material_remaining_schema(conn: sqlite3.Connection, *, commit: bo
             except sqlite3.OperationalError:
                 pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='material_remaining')
 
 
 def _next_no(conn: sqlite3.Connection) -> str:
@@ -168,7 +169,7 @@ def create_material_remaining(
             ),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='material_remaining')
     return get_material_remaining(conn, doc_id)
 
 
@@ -227,5 +228,5 @@ def void_material_remaining(
         ((doc.get('notes') or '') + f' | {reason}', doc_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='material_remaining')
     return get_material_remaining(conn, doc_id)

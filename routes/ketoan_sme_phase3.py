@@ -7,7 +7,7 @@ from datetime import datetime
 
 from flask import Response, jsonify, render_template, request, session
 
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit
 
 logger = logging.getLogger(__name__)
 
@@ -279,7 +279,7 @@ def register_sme_phase3_routes(app, *, login_required, require_sme_regime):
                 "UPDATE sme_cash_counts SET form_code = '08b-TT' WHERE id = ?",
                 (doc['id'],),
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_phase3')
             doc = {**doc, 'form_code': '08b-TT', 'counted_fc': counted_fc, 'rate': rate}
             return jsonify({'success': True, 'data': doc})
         except ValueError as e:

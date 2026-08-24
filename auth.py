@@ -203,10 +203,17 @@ def admin_or_master_required(f):
 def _settings_forbidden_redirect():
     try:
         if session.get('firm_tenant_id'):
-            flash(
-                'Cài đặt HĐĐT và thông tin đơn vị DVKT do Master thiết lập từ «Thiết lập tổng quản trị».',
-                'info',
-            )
+            if session.get('firm_viewing_client'):
+                flash(
+                    'Cấu hình Hóa đơn điện tử chỉ do tài khoản Master thiết lập — '
+                    'đơn vị DVKT không có quyền truy cập trang Cài đặt.',
+                    'info',
+                )
+            else:
+                flash(
+                    'Cài đặt HĐĐT và thông tin đơn vị DVKT do Master thiết lập từ «Thiết lập tổng quản trị».',
+                    'info',
+                )
             return redirect(url_for('firm_portal'))
     except Exception:
         pass
@@ -230,8 +237,23 @@ def user_can_access_tenant_settings() -> bool:
     return True
 
 
+def is_master_configuring_firm_client() -> bool:
+    """Master đang cấu hình HĐĐT trên sổ doanh nghiệp thuê DVKT."""
+    if _session_role() != 'master':
+        return False
+    if not (session.get('master_viewing_firm_client_id') or '').strip():
+        return False
+    tid = (session.get('master_viewing_tenant') or '').strip()
+    if not tid:
+        return False
+    from Services.firm_tenant import is_firm_tenant
+    return is_firm_tenant(tid)
+
+
 def is_master_configuring_firm_tenant() -> bool:
     """Master đang vào tenant DVKT từ Thiết lập tổng quản trị — chỉ được dùng /settings."""
+    if is_master_configuring_firm_client():
+        return False
     if _session_role() != 'master':
         return False
     tid = (session.get('master_viewing_tenant') or '').strip()
@@ -239,6 +261,22 @@ def is_master_configuring_firm_tenant() -> bool:
         return False
     from Services.firm_tenant import is_firm_tenant
     return is_firm_tenant(tid)
+
+
+MASTER_FIRM_CLIENT_EINVOICE_ENDPOINTS = frozenset({
+    'settings_page',
+    'logout',
+    'static',
+    'api_master_leave_tenant',
+    'api_save_business',
+    'api_upload_business_logo',
+    'api_delete_business_logo',
+    'save_esign_settings',
+    'get_esign_settings',
+    'test_invoice_connection',
+    'api_invoice_schedule_status',
+    'api_invoice_schedule_toggle',
+})
 
 
 MASTER_FIRM_SETTINGS_ENDPOINTS = frozenset({
@@ -275,6 +313,14 @@ def tenant_settings_required(f):
     def decorated_function(*args, **kwargs):
         if not user_can_access_tenant_settings():
             if request.path.startswith('/api/'):
+                if session.get('firm_tenant_id') or session.get('firm_user_id'):
+                    return jsonify({
+                        "success": False,
+                        "error": (
+                            "Cấu hình Hóa đơn điện tử chỉ do tài khoản Master thực hiện. "
+                            "Đơn vị DVKT không có quyền này."
+                        ),
+                    }), 403
                 return jsonify({"success": False, "error": "Forbidden"}), 403
             return _settings_forbidden_redirect()
         return f(*args, **kwargs)

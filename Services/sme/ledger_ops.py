@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.sme.journal_engine import (
     ensure_sme_journal_ready,
     post_journal_entry,
@@ -76,7 +77,7 @@ def ensure_ledger_ops_schema(conn: sqlite3.Connection, *, commit: bool = False) 
         'CREATE INDEX IF NOT EXISTS idx_sme_ledger_ops_type ON sme_ledger_ops(op_type, doc_date)'
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='ledger_ops')
 
 
 def _next_no(conn: sqlite3.Connection, prefix: str) -> str:
@@ -174,7 +175,7 @@ def post_sales_allowance(
         entry_id=entry['id'], notes=desc, created_by=created_by, branch=branch,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='ledger_ops')
     return {'id': oid, 'doc_no': doc_no, 'journal_entry_id': entry['id'], 'account_521': debit_521}
 
 
@@ -232,7 +233,7 @@ def post_provision(
         entry_id=entry['id'], notes=desc, created_by=created_by, branch=branch,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='ledger_ops')
     return {'id': oid, 'doc_no': doc_no, 'journal_entry_id': entry['id']}
 
 
@@ -281,7 +282,7 @@ def accrue_other_tax(
         entry_id=entry['id'], notes=desc, created_by=created_by, branch=branch,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='ledger_ops')
     return {'id': oid, 'doc_no': doc_no, 'journal_entry_id': entry['id']}
 
 
@@ -317,7 +318,7 @@ def pay_other_tax(
         commit=False,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='ledger_ops')
     return {'voucher': voucher, 'tax_account': tax_acc}
 
 

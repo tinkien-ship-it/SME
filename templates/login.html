@@ -322,7 +322,8 @@
                         <h3 class="fw-bold text-primary">ĐĂNG NHẬP</h3>
                         <p class="text-muted">Hệ thống quản lý bán hàng & kế toán</p>
                     </div>
-                    <form method="POST">
+                    <form method="POST" id="loginForm">
+                        <input type="hidden" name="device_signal" id="deviceSignal" value="">
                         <div class="mb-4">
                             <label class="form-label fw-medium">Tên đăng nhập</label>
                             <input type="text" name="username" id="loginUsername" class="form-control form-control-lg" required{% if not google_visible and not request.args.get('trial_google') %} autofocus{% endif %}>
@@ -494,6 +495,25 @@ https://www.ketoshop.pro.vn/login/google/2fa</pre>
         const passwordInput = document.getElementById('password');
         const togglePassword = document.getElementById('togglePassword');
         const eyeIcon = document.getElementById('eyeIcon');
+        const deviceSignal = document.getElementById('deviceSignal');
+        if (deviceSignal) {
+            try {
+                const payload = {
+                    platform: navigator.platform || '',
+                    screen: [
+                        window.screen && screen.width,
+                        window.screen && screen.height,
+                        window.screen && screen.colorDepth
+                    ].join('x'),
+                    timezone: (Intl.DateTimeFormat().resolvedOptions().timeZone) || '',
+                    cores: String(navigator.hardwareConcurrency || ''),
+                    memory: String(navigator.deviceMemory || ''),
+                    touch: String(navigator.maxTouchPoints || 0),
+                    lang: (navigator.language || navigator.userLanguage || '')
+                };
+                deviceSignal.value = JSON.stringify(payload);
+            } catch (e) { /* ignore */ }
+        }
 
         if (togglePassword && eyeIcon && passwordInput) {
             const toggleFn = function() {

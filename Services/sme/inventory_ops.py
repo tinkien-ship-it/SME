@@ -13,6 +13,7 @@ from Services.inventory_stock_helpers import (
     sync_inventory_quantity_from_moves,
 )
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -141,7 +142,7 @@ def ensure_sme_inventory_ops_schema(conn: sqlite3.Connection, *, commit: bool = 
                 except sqlite3.OperationalError:
                     pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='inventory_ops')
 
 
 def _next_no(conn: sqlite3.Connection, table: str, col: str, prefix: str) -> str:
@@ -330,7 +331,7 @@ def post_stock_count(
             )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='inventory_ops')
     return get_stock_count(conn, count_id)
 
 
@@ -486,7 +487,7 @@ def create_stock_transfer(
         conn.execute('DELETE FROM sme_stock_transfers WHERE id = ?', (tid,))
         raise ValueError('Không có dòng hợp lệ')
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='inventory_ops')
     row = conn.execute('SELECT * FROM sme_stock_transfers WHERE id = ?', (tid,)).fetchone()
     d = dict(row)
     d['lines'] = [dict(x) for x in conn.execute(
@@ -604,7 +605,7 @@ def void_stock_transfer(
         ((doc.get('notes') or '') + f' | {reason}', transfer_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='inventory_ops')
     return get_stock_transfer(conn, transfer_id)
 
 
@@ -757,7 +758,7 @@ def allocate_materials(
         (entry['id'], aid),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='inventory_ops')
     row = conn.execute('SELECT * FROM sme_material_allocations WHERE id = ?', (aid,)).fetchone()
     d = dict(row)
     d['lines'] = [dict(x) for x in conn.execute(
@@ -869,7 +870,7 @@ def void_material_allocation(
         (f' | VOID: {reason}', alloc_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='inventory_ops')
     return get_material_allocation(conn, alloc_id)
 
 
@@ -998,5 +999,5 @@ def void_stock_count(
         ((doc.get('notes') or '') + f' | {reason}', count_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='inventory_ops')
     return get_stock_count(conn, count_id)

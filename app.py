@@ -356,7 +356,7 @@ with app.app_context():
         app.logger.error('ensure_registry_tables: %s', exc)
     try:
         from Services.master_account import count_masters, ensure_master_from_env, ensure_users_table
-        from db_utils import get_main_db_connection
+        from db_utils import get_main_db_connection, sqlite_commit
         _mc = get_main_db_connection()
         try:
             ensure_users_table(_mc)
@@ -366,7 +366,7 @@ with app.app_context():
                     app.logger.warning('Main DB journal_mode=%s (mong doi WAL)', mode)
             except Exception:
                 pass
-            _mc.commit()
+            sqlite_commit(_mc, label='ensure_master_bootstrap')
             if count_masters(_mc) == 0:
                 action = ensure_master_from_env(_mc)
                 if action:
@@ -555,7 +555,11 @@ register_scale_routes(app)
 from routes.firm_portal import register_firm_portal_routes
 register_firm_portal_routes(app)
 
-init_schedulers(app, BACKUP_DIR)
+# Scheduler: KHÔNG gọi khi import dưới Flask reloader parent (app.debug còn False).
+# - Gunicorn/waitress: __name__ != '__main__' → start + file lock (1 worker thắng).
+# - python app.py + reloader: chỉ process con (WERKZEUG_RUN_MAIN=true) trong khối __main__.
+if __name__ != '__main__':
+    init_schedulers(app, BACKUP_DIR)
 
 
 # === LOG LỖI RA FILE + TRANG LỖI THÂN THIỆN (không lộ nội dung cảnh báo kỹ thuật) ===
@@ -625,14 +629,25 @@ def _handle_internal_error(error):
 if __name__ == '__main__':
     # Localhost HTTP: cookie Secure=True sẽ bị trình duyệt bỏ → mất OTP / Google OAuth.
     app.config['SESSION_COOKIE_SECURE'] = False
+
+    # Mặc định TẮT reloader — tránh 2 process Python + scheduler lock / database locked.
+    # Bật lại: set SME_USE_RELOADER=1
+    use_reloader = (os.environ.get('SME_USE_RELOADER') or '').strip().lower() in ('1', 'true', 'yes')
+    run_main = os.environ.get('WERKZEUG_RUN_MAIN')
+    if run_main == 'true' or (not use_reloader and run_main != 'false'):
+        init_schedulers(app, BACKUP_DIR)
+
     print("POS System & Scheduler đã sẵn sàng.")
     print("Server running: http://127.0.0.1:5000")
     print("SESSION_COOKIE_SECURE=False (localhost HTTP)")
+    if not use_reloader:
+        print("SME_USE_RELOADER=0 — một process (khuyến nghị cho SQLite)")
 
     app.run(
         host='0.0.0.0',
         port=5000,
         debug=True,
         threaded=True,
+        use_reloader=use_reloader,
     )
 

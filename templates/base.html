@@ -318,8 +318,39 @@
     {% block head_extra %}{% endblock %}
     {% block extra_style %}{% endblock %}
 </head>
-<body{% if request.endpoint in ('login', 'keto_pos_intro') and not (request.endpoint == 'keto_pos_intro' and session.get('user')) %} class="page-login"{% elif master_viewing_firm|default(false) %} class="page-firm-master-settings"{% endif %}>
-    {% if master_viewing_firm and request.endpoint != 'login' %}
+<body{% if request.endpoint in ('login', 'keto_pos_intro') and not (request.endpoint == 'keto_pos_intro' and session.get('user')) %} class="page-login"{% elif master_viewing_firm_client|default(false) %} class="page-firm-master-einvoice"{% elif master_viewing_firm|default(false) %} class="page-firm-master-settings"{% endif %}>
+    {% if master_viewing_firm_client and request.endpoint != 'login' %}
+    <header class="firm-master-topbar bg-danger text-white shadow-sm">
+        <div class="container-fluid py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex flex-column flex-md-row align-items-md-center gap-1 gap-md-3">
+                <span class="fw-bold"><i class="fas fa-file-invoice-dollar me-2"></i>Cấu hình HĐĐT (Master)</span>
+                <span class="small opacity-90">
+                    DVKT {{ master_viewing_tenant }} · DN thuê <strong>{{ master_firm_client_name }}</strong>
+                </span>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-light" onclick="leaveMasterTenant()">
+                    <i class="fas fa-arrow-left me-1"></i>Về Master Settings
+                </button>
+                <a href="{{ url_for('logout') }}" class="btn btn-sm btn-light">
+                    <i class="fas fa-sign-out-alt me-1"></i>Thoát
+                </a>
+            </div>
+        </div>
+    </header>
+    <script>
+    async function leaveMasterTenant() {
+        try {
+            const res = await fetch('/api/master/leave_tenant', { method: 'POST' });
+            const data = await res.json();
+            if (data.redirect) window.location.href = data.redirect;
+            else window.location.href = '/master/settings';
+        } catch (e) {
+            window.location.href = '/master/settings';
+        }
+    }
+    </script>
+    {% elif master_viewing_firm and request.endpoint != 'login' %}
     <header class="firm-master-topbar bg-dark text-white shadow-sm">
         <div class="container-fluid py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div class="d-flex flex-column flex-md-row align-items-md-center gap-1 gap-md-3">
@@ -429,7 +460,7 @@
 
     {% set vn_flag_url = default_business_logo_url() %}
     {% set _intro_guest = request.endpoint == 'keto_pos_intro' and not session.get('user') %}
-    {% if request.endpoint != 'login' and not _intro_guest and not master_viewing_firm|default(false) %}
+    {% if request.endpoint != 'login' and not _intro_guest and not master_viewing_firm|default(false) and not master_viewing_firm_client|default(false) %}
     <!-- Navbar chính -->
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background: linear-gradient(135deg, #1e3a8a, #1e40af);">
         <div class="container-fluid">
@@ -498,7 +529,7 @@
                     {% endif %}
 
                     <!-- Thiết lập tổng quản trị -->
-                    {% if current_user.role == 'master' and not master_viewing_firm|default(false) %}
+                    {% if current_user.role == 'master' and not master_viewing_firm|default(false) and not master_viewing_firm_client|default(false) %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'master_settings' %}active{% endif %}" href="{{ url_for('master_settings') }}">
                             <i class="fas fa-tools"></i> Thiết lập tổng quản trị
@@ -531,7 +562,7 @@
     {% endif %}
 
     {% if request.endpoint != 'login' %}
-    <div class="container-fluid {% if master_viewing_firm|default(false) %}mt-3{% else %}mt-3 mt-lg-4{% endif %} flex-grow-1">
+    <div class="container-fluid {% if master_viewing_firm|default(false) or master_viewing_firm_client|default(false) %}mt-3{% else %}mt-3 mt-lg-4{% endif %} flex-grow-1">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -550,7 +581,7 @@
     </div>
     {% endif %}
 
-    {% if request.endpoint != 'login' and not master_viewing_firm|default(false) %}
+    {% if request.endpoint != 'login' and not master_viewing_firm|default(false) and not master_viewing_firm_client|default(false) %}
     <footer class="footer text-center">
         <div class="container">
             © Hệ Thống Bán Hàng & Kế Toán HKD và Doanh Nghiệp | © 2026 | Phát triển bởi <strong>Kiên Trung Tín</strong>

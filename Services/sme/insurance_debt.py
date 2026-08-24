@@ -14,6 +14,7 @@ from typing import Any
 
 from Services.chu_ho_helpers import employee_is_chu_ho, sync_chu_ho_from_business_info
 from Services.insurance_debt_helpers import INS_LABELS, INS_TYPES, _load_rates, _status
+from db_utils import sqlite_commit
 
 # TK hạch toán SME (TT99)
 ACCOUNT_BY_TYPE = {
@@ -64,7 +65,7 @@ def ensure_insurance_alloc_schema(conn: sqlite3.Connection, *, commit: bool = Fa
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='insurance_debt')
 
 
 def _salary_rows(conn: sqlite3.Connection, month: int, year: int) -> list[dict]:
@@ -592,7 +593,7 @@ def pay_insurance_item(
     )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='insurance_debt')
     return {
         **result,
         'ins_type': ins,
@@ -702,7 +703,7 @@ def pay_insurance_period(
         )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='insurance_debt')
 
     return {
         'month': int(month),

@@ -116,7 +116,7 @@ def clear_sample_journals(conn: sqlite3.Connection, *, commit: bool = False) -> 
             conn.execute('DELETE FROM sme_journal_entries WHERE id=?', (r[0],))
             ids.append(r[0])
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='sample_data')
     return len(ids)
 
 
@@ -921,14 +921,14 @@ def seed_sample_journals(
         closed.append({'period': m, 'posted': clo.get('posted'), 'entry_ids': clo.get('entry_ids'), 'reason': clo.get('reason')})
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='sample_data')
 
     inv_check = verify_inventory_vs_moves(conn)
     if not inv_check['ok']:
         _reconcile_inventory(conn)
         inv_check = verify_inventory_vs_moves(conn)
         if commit:
-            conn.commit()
+            sqlite_commit(conn, label='sample_data')
 
     return {
         'fiscal_year': year,
@@ -972,7 +972,7 @@ def register_demo_tenant(
     close_through: int | None = None,
 ) -> dict[str, Any]:
     """Tạo tenant demo SME (TT99), seed sổ/báo cáo, map user đăng nhập."""
-    from db_utils import BASE_DIR
+    from db_utils import BASE_DIR, sqlite_commit
     from tenant_middleware import init_tenant_database, add_user_to_mapping
     from Services.tenant_profile import update_registry_settings
 
@@ -1003,9 +1003,9 @@ def register_demo_tenant(
         },
     )
 
-    conn = sqlite3.connect(abs_db)
-    conn.row_factory = sqlite3.Row
-    try:
+    from db_utils import open_sqlite
+
+    with open_sqlite(abs_db) as conn:
         # Cho phép đăng nhập ngay (không bắt đổi MK)
         try:
             conn.execute(
@@ -1037,9 +1037,7 @@ def register_demo_tenant(
                 'Nguyễn Văn Demo',
             ),
         )
-        conn.commit()
-    finally:
-        conn.close()
+        sqlite_commit(conn, label='sample_data')
 
     add_user_to_mapping(username, 'ketoan@demosme.vn', tenant_id)
     update_registry_settings(

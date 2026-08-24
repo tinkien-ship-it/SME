@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.sme.journal_engine import (
     ensure_sme_journal_ready,
     post_journal_entry,
@@ -486,7 +487,7 @@ def sell_foreign_currency(
     )
     voucher_id = cur_db.lastrowid
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fx_cash')
 
     return {
         'id': voucher_id,

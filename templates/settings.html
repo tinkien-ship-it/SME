@@ -89,9 +89,9 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-primary mb-1">
-                <i class="fas fa-cog me-2"></i>Cài Đặt Hệ Thống
+                <i class="fas fa-cog me-2"></i>{% if is_master_firm_client_einvoice|default(false) %}Cấu Hình HĐĐT Doanh Nghiệp Thuê{% else %}Cài Đặt Hệ Thống{% endif %}
             </h2>
-            <p class="text-muted mb-0">Quản lý thông tin cửa hàng, nhân viên, phân quyền & cấu hình nâng cao</p>
+            <p class="text-muted mb-0">{% if is_master_firm_client_einvoice|default(false) %}Chỉ tài khoản Master được cấu hình Hóa đơn điện tử cho DN thuê DVKT{% else %}Quản lý thông tin cửa hàng, nhân viên, phân quyền & cấu hình nâng cao{% endif %}</p>
         </div>
         <div class="badge bg-light text-success border px-3 py-2">
             <span class="status-dot bg-success"></span>
@@ -103,9 +103,16 @@
         <div class="col-lg-3 mb-4">
             <div class="card setting-card sticky-top" style="top: 80px;">
                 <div class="nav flex-column nav-pills p-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                    {% if is_master_firm_client_einvoice|default(false) %}
+                    <div class="alert alert-warning small py-2 mb-2">
+                        <i class="fas fa-user-shield me-1"></i>
+                        Đơn vị DVKT <strong>không có quyền</strong> trang này — chỉ Master cấu hình.
+                    </div>
+                    {% endif %}
                     <button class="nav-link text-start mb-2" data-bs-toggle="pill" data-bs-target="#tab-business">
-                        <i class="fas fa-store me-2"></i> Cửa hàng, VietQR & Ngân hàng ĐT
+                        <i class="fas fa-store me-2"></i> {% if is_master_firm_client_einvoice|default(false) %}MST & Thông tin DN{% else %}Cửa hàng, VietQR & Ngân hàng ĐT{% endif %}
                     </button>
+                    {% if not is_master_firm_client_einvoice|default(false) %}
                     <button class="nav-link text-start mb-2" data-bs-toggle="pill" data-bs-target="#tab-users">
                         <i class="fas fa-users-cog me-2"></i> Nhân viên & Phân quyền
                     </button>
@@ -120,6 +127,11 @@
                     <button class="nav-link active text-start" data-bs-toggle="pill" data-bs-target="#tab-esign">
                         <i class="fas fa-file-invoice-dollar me-2"></i> Hóa đơn điện tử & eSign
                     </button>
+                    {% else %}
+                    <button class="nav-link active text-start" data-bs-toggle="pill" data-bs-target="#tab-esign">
+                        <i class="fas fa-file-invoice-dollar me-2"></i> Hóa đơn điện tử & eSign
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -705,296 +717,288 @@
                     </div>
                 </div>
 
-                <!-- Tab 4: Hóa đơn điện tử & eSign (đã bổ sung 3 trường eTax) -->
+                <!-- Tab 4: Hóa đơn điện tử — tách Đầu ra / Đầu vào -->
                 <div class="tab-pane fade show active" id="tab-esign">
-                    <div class="card setting-card shadow-sm p-4 border-top border-danger border-4 border-top-0">
-                        <h5 class="section-header text-danger">Cấu hình Hóa Đơn Điện Tử & Chữ ký số</h5>
-                        <div class="info-box mb-4">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Chọn nhà cung cấp và nhập đầy đủ thông tin tài khoản/chứng thư số. Hỗ trợ tất cả nhà cung cấp uy tín tại Việt Nam. Sau khi lưu, POS sẽ tự động xuất & ký HĐĐT khi thanh toán hoàn tất (nếu bật).
-                        </div>
-                        <div class="alert alert-security mb-4">
-                            <i class="fas fa-shield-alt me-2"></i>
-                            <strong>Cảnh báo bảo mật:</strong> Mật khẩu, App Secret, PIN chữ ký số sẽ được lưu an toàn trong cơ sở dữ liệu. Không chia sẻ trang này cho người không có quyền admin.
-                        </div>
-                        <form id="esignForm">
-                            <div class="row g-3">
-                                <!-- Nhà cung cấp -->
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold required">Nhà cung cấp dịch vụ</label>
-                                    <select name="provider_name" class="form-select" required id="einvoiceProviderSelect">
-                                        <option value="">-- Chọn nhà cung cấp --</option>
-                                        {% for p in invoice_providers %}
-                                        <option value="{{ p.code }}"
-                                            data-default-url="{{ p.default_api_url }}"
-                                            data-purchase-url="{{ p.default_purchase_api_url or '' }}"
-                                            data-purchase-sync="{{ '1' if p.supports_purchase_sync else '0' }}"
-                                            data-status="{{ p.status }}"
-                                            data-draft="{{ '1' if p.supports_draft else '0' }}"
-                                            {% if esign.provider_name == p.code %}selected{% endif %}>
-                                            {{ p.label }}
-                                            {% if p.status == 'ready' %} ✓{% elif p.status == 'beta' %} (beta){% else %} (sắp có){% endif %}
-                                        </option>
-                                        {% endfor %}
-                                    </select>
-                                    <small class="text-muted" id="einvoiceProviderHint">Chọn provider → nhập API URL tương ứng. HĐ bán hàng và đồng bộ HĐ mua hàng đều dùng provider đang lưu (is_active). Mắt Bão: hỗ trợ đầy đủ nháp + portal + HĐ đầu vào.</small>
-                                </div>
-                                <!-- API URL -->
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold required" id="labelApiUrl">API Endpoint (URL)</label>
-                                    <input type="url" name="api_url" id="inputApiUrl" class="form-control" value="{{ esign.api_url or '' }}" placeholder="Ví dụ: https://testapi.meinvoice.vn/api/v3" required>
-                                    <small class="form-text text-muted" id="hintApiUrl">Dùng URL test khi thử nghiệm (nếu có)</small>
-                                </div>
-                                <div class="col-md-6" id="wrapPurchaseApiUrl" style="display:none;">
-                                    <label class="form-label fw-bold">API Hóa đơn đầu vào (Purchase)</label>
-                                    <input type="url" name="purchase_api_url" id="inputPurchaseApiUrl" class="form-control"
-                                           value="{{ esign.purchase_api_url or '' }}"
-                                           placeholder="https://api-hoadondauvao.matbao.in">
-                                    <small class="form-text text-muted">Mắt Bão: để trống nếu cùng host phát hành; demo thường dùng api-hoadondauvao riêng.</small>
-                                </div>
-                                <!-- Mã số thuế -->
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold required">Mã số thuế doanh nghiệp</label>
-                                    <input type="text" name="tax_code" id="inputTaxCode" class="form-control" value="{{ esign.tax_code or '' }}" placeholder="0101234567" maxlength="14" required>
-                                </div>
-                                <!-- Tên đăng nhập -->
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold required">Tên đăng nhập / Username</label>
-                                    <input type="text" name="username" id="inputUsername" class="form-control" value="{{ esign.username or '' }}" placeholder="Tài khoản đăng nhập nhà cung cấp" required>
-                                    <small class="form-text text-muted" id="hintUsername"></small>
-                                </div>
-                                <!-- Mật khẩu -->
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Mật khẩu</label>
-                                    <input type="password" name="password" class="form-control" value="" placeholder="{% if esign.has_password %}******** (Đã lưu, nhập mới để thay đổi){% else %}Chưa có dữ liệu{% endif %}" autocomplete="new-password">
-                                    <small class="form-text text-muted">Chỉ nhập khi cần thay đổi hoặc lần đầu</small>
-                                </div>
-                                <!-- Api Key (Token) -->
-                                <div class="col-md-6" id="wrapApiKey">
-                                    <label class="form-label fw-bold required" id="labelApiKey">Api Key (Token)</label>
-                                    <input type="text" name="api_key" id="inputApiKey" class="form-control" value="{{ esign.api_key or '' }}" placeholder="Lấy từ nhà cung cấp">
-                                    <small class="form-text text-muted" id="hintApiKey"></small>
-                                </div>
-                                <!-- App Secret -->
-                                <div class="col-md-6" id="wrapAppSecret">
-                                    <label class="form-label fw-bold" id="labelAppSecret">App Secret / Client Secret</label>
-                                    <input type="password" name="app_secret" id="inputAppSecret" class="form-control" value="" placeholder="{% if esign.has_app_secret %}******** (Đã lưu, nhập mới để thay đổi){% else %}Lấy từ portal nhà cung cấp{% endif %}" autocomplete="new-password">
-                                    <small class="form-text text-muted" id="hintAppSecret">Để trống nếu không thay đổi</small>
-                                </div>
-                                <!-- Serial chứng thư số -->
-                                <div class="col-md-6" id="wrapSerialNumber">
-                                    <label class="form-label fw-bold text-danger" id="labelSerialNumber">Serial chứng thư số eSign</label>
-                                    <input type="text" name="serial_number" id="inputSerialNumber" class="form-control border-danger" value="{{ esign.serial_number or '' }}" placeholder="Ví dụ: 1234567890ABCDEF">
-                                    <small class="form-text text-danger" id="hintSerialNumber">Lấy từ chứng thư số đã đăng ký</small>
-                                </div>
-                                <!-- PIN chữ ký số -->
-                                <div class="col-md-6" id="wrapEsignPin">
-                                    <label class="form-label fw-bold text-danger" id="labelEsignPin">PIN chữ ký số</label>
-                                    <input type="password" name="esign_pin" id="inputEsignPin" class="form-control border-danger" value="" placeholder="{% if esign.has_esign_pin %}******** (Đã lưu, nhập mới để thay đổi){% else %}Mã PIN chứng thư số{% endif %}" autocomplete="new-password">
-                                    <small class="form-text text-danger" id="hintEsignPin">Bắt buộc để ký tự động</small>
-                                </div>
-
-                                <!-- Cấu hình bổ sung MISA meInvoice -->
-                                <div class="col-12 d-none" id="misaExtraBlock">
-                                    <div class="row g-3 mt-1 p-3 bg-primary-subtle rounded border border-primary-subtle">
-                                        <div class="col-12">
-                                            <h6 class="fw-bold text-primary mb-0">
-                                                <i class="fas fa-plug me-2"></i>Cấu hình MISA meInvoice
-                                            </h6>
-                                            <small class="text-muted">Tài liệu: <a href="https://doc.meinvoice.vn/" target="_blank" rel="noopener">doc.meinvoice.vn</a></small>
-                                        </div>
-                                        <div class="col-md-8">
-                                            <label class="form-label fw-bold">URL MISA SignedService</label>
-                                            <input type="url" name="sign_service_url" id="inputSignServiceUrl" class="form-control"
-                                                   value="{{ esign.sign_service_url or '' }}"
-                                                   placeholder="http://127.0.0.1:12019">
-                                            <small class="form-text text-muted">
-                                                Máy cài USB token + MISA SignedService. Port thường 12019–12023.
-                                            </small>
-                                        </div>
-                                        <div class="col-md-4 d-flex align-items-center pt-2">
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" name="misa_has_code" id="misaHasCode" value="1"
-                                                       {% if esign.misa_has_code in ('1', 1, True) %}checked{% endif %}>
-                                                <label class="form-check-label fw-bold" for="misaHasCode">
-                                                    Doanh nghiệp có mã CQT
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Cấu hình bổ sung VNPT Invoice (demo) -->
-                                <div class="col-12 d-none" id="vnptExtraBlock">
-                                    <div class="row g-3 mt-1 p-3 bg-warning-subtle rounded border border-warning-subtle">
-                                        <div class="col-12">
-                                            <h6 class="fw-bold text-warning-emphasis mb-0">
-                                                <i class="fas fa-flask me-2"></i>Tài khoản test VNPT (HCM demo TT78)
-                                            </h6>
-                                            <small class="text-muted">
-                                                Portal:
-                                                <a href="https://vnpthcmc-tt78admindemo.vnpt-invoice.com.vn/" target="_blank" rel="noopener">
-                                                    vnpthcmc-tt78admindemo.vnpt-invoice.com.vn
-                                                </a>
-                                            </small>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="small">
-                                                <strong>cAdmin</strong> (quản trị portal web — không dùng cho SOAP):<br>
-                                                User: <code>vnpthcmcadmin_demo</code> · Pass: <code>Admin@1234</code>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="small">
-                                                <strong>Account phát hành</strong> (Api Key / ACPass — khác ServiceRole):<br>
-                                                Demo: <code>vnpthcmcadmin_demo</code> / <code>Admin@1234</code><br>
-                                                Nhân viên <code>phanquyen</code> cần mật khẩu riêng (không phải Admin@1234 nếu chưa reset).
-                                            </div>
-                                        </div>
-                                        <div class="col-12">
-                                            <div class="small text-muted mb-0">
-                                                MST demo: <code>8334913444</code> ·
-                                                API URL: <code>…/PublishService.asmx</code> trên cùng host portal (không dùng tt78api generic).
-                                                Account/ACPass = nhân viên phát hành trên portal (vd. <code>phanquyen</code>, <code>minhnh</code>).
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Cấu hình bổ sung M-Invoice (Mobifone) -->
-                                <div class="col-12 d-none" id="mobifoneExtraBlock">
-                                    <div class="row g-3 mt-1 p-3 bg-success-subtle rounded border border-success-subtle">
-                                        <div class="col-12">
-                                            <h6 class="fw-bold text-success mb-0">
-                                                <i class="fas fa-mobile-alt me-2"></i>Cấu hình M-Invoice (Mobifone)
-                                            </h6>
-                                            <small class="text-muted">
-                                                Tài liệu:
-                                                <a href="https://wiki.minvoice.com.vn/" target="_blank" rel="noopener">wiki.minvoice.com.vn</a>
-                                                ·
-                                                <a href="https://support-minvoice.tawk.help/category/tai-lieu-tich-hop-m-invoice" target="_blank" rel="noopener">Hướng dẫn tích hợp</a>
-                                            </small>
-                                        </div>
-                                        <div class="col-md-8">
-                                            <label class="form-label fw-bold">ID dải ký hiệu (cctbao_id / qlkhsdung_id)</label>
-                                            <input type="text" name="minvoice_cctbao_id" id="inputMinvoiceCctbaoId" class="form-control"
-                                                   value="{{ esign.minvoice_cctbao_id or '' }}"
-                                                   placeholder="Để trống — hệ thống tự tra theo Ký hiệu HĐ">
-                                            <small class="form-text text-muted">
-                                                Lấy từ API GetDataReferencesByRefId (RF00059) hoặc portal M-Invoice.
-                                            </small>
-                                        </div>
-                                        <div class="col-md-4 d-flex align-items-center pt-2">
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" name="minvoice_has_code" id="minvoiceHasCode" value="1"
-                                                       {% if esign.minvoice_has_code is not defined or esign.minvoice_has_code in ('1', 1, True) %}checked{% endif %}>
-                                                <label class="form-check-label fw-bold" for="minvoiceHasCode">
-                                                    Hóa đơn có mã CQT
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- === BỔ SUNG: Thông tin đăng nhập eTax === -->
-                                <div class="col-12 mt-4">
-                                    <h6 class="fw-bold text-danger"><i class="fas fa-shield-virus me-2"></i>Thông tin đăng nhập eTax (Cổng thuế điện tử)</h6>
-                                    <small class="text-muted d-block mb-3">Dùng đồng bộ HĐ mua từ CQT / tra cứu. Xuất XML tờ khai GTGT·TNDN trên menu Thuế; nộp chính thức qua HTKK / eTax của cơ quan thuế.</small>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold text-danger">Mật khẩu tài khoản eTax</label>
-                                    <input type="password" name="etax_password" class="form-control border-danger" value=""
-                                           placeholder="{% if esign.has_etax_password %}******** (Đã lưu, nhập mới để thay đổi){% else %}Mật khẩu https://thuedientu.gdt.gov.vn{% endif %}"
-                                           autocomplete="new-password">
-                                    <small class="form-text text-danger">Dùng để đồng bộ HĐ đầu vào qua cổng CQT (captcha) và tra cứu thuế — chưa nộp tờ khai trực tiếp từ phần mềm</small>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Mã đọc Captcha (cvalue)</label>
-                                    <input type="text" name="etax_cvalue" class="form-control"
-                                           value="{{ esign.etax_cvalue or '' }}"
-                                           placeholder="Giá trị captcha đã giải (thường 4-6 ký tự)">
-                                    <small class="form-text text-muted">Có thể để trống nếu hệ thống tự động giải captcha</small>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Mã key Captcha (ckey)</label>
-                                    <input type="text" name="etax_ckey" class="form-control"
-                                           value="{{ esign.etax_ckey or '' }}"
-                                           placeholder="Session key hoặc captcha token">
-                                    <small class="form-text text-muted">Thường được cung cấp kèm captcha từ cổng thuế</small>
-                                </div>
-
-                                <!-- Series & Loại hóa đơn (nâng cao) -->
-                                <div class="col-md-6 mt-3">
-                                    <label class="form-label" id="labelInvoiceSeries">Series hóa đơn (nếu có)</label>
-                                    <input type="text" name="invoice_series" id="inputInvoiceSeries" class="form-control" value="{{ esign.invoice_series or 'AA/26E' }}" placeholder="AA/26E">
-                                    <small class="form-text text-muted" id="hintInvoiceSeries"></small>
-                                </div>
-                                <div class="col-md-6 mt-3">
-                                    <label class="form-label" id="labelInvoiceType">Loại hóa đơn</label>
-                                    <input type="text" name="invoice_type" id="inputInvoiceType" class="form-control" value="{{ esign.invoice_type or '01GTKT0/001' }}" placeholder="01GTKT0/001">
-                                    <small class="form-text text-muted" id="hintInvoiceType"></small>
-                                </div>
-                                <!-- Tự động phát hành -->
-                                <div class="col-12 mt-3">
-                                    <div class="form-check form-switch p-3 bg-danger-subtle rounded border border-danger-subtle">
-                                        <input class="form-check-input" type="checkbox" name="auto_issue_invoice" id="auto_issue" {% if esign.auto_issue_invoice == '1' %}checked{% endif %}>
-                                        <label class="form-check-label fw-bold text-danger" for="auto_issue">Tự động xuất & ký HĐĐT khi hoàn tất thanh toán</label>
-                                    </div>
-                                </div>
-                                <!-- Xuất hóa đơn theo giờ -->
-                                <div class="col-12 mt-3">
-                                    <div class="p-3 bg-primary-subtle rounded border border-primary-subtle">
-                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                            <div class="form-check form-switch mb-0">
-                                                <input class="form-check-input" type="checkbox" name="auto_issue_schedule" id="auto_issue_schedule">
-                                                <label class="form-check-label fw-bold text-primary" for="auto_issue_schedule">
-                                                    <i class="fas fa-clock me-1"></i>Xuất hóa đơn tự động theo giờ
-                                                </label>
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-primary" id="btnToggleInvoiceSchedule" onclick="toggleInvoiceSchedule()">
-                                                <i class="fas fa-power-off me-1"></i>Áp dụng ngay
-                                            </button>
-                                        </div>
-                                        <div class="small text-muted mt-2" id="invoiceScheduleHint">
-                                            Hệ thống sẽ tự quét các đơn đã hoàn tất nhưng chưa có số hóa đơn và xuất
-                                            <strong>17:00 hằng ngày (giờ Việt Nam)</strong>. Cần bật sẵn công tắc tự động xuất ở trên.
-                                        </div>
-                                        <div class="small mt-1" id="invoiceScheduleLastRun"></div>
-                                    </div>
-                                </div>
-                                <div class="col-12 mt-3" id="wrapAutoSyncPurchase" style="display:none;">
-                                    <div class="form-check form-switch p-3 bg-success-subtle rounded border border-success-subtle">
-                                        <input class="form-check-input" type="checkbox" name="auto_sync_purchase" id="auto_sync_purchase"
-                                               {% if esign.auto_sync_purchase is not defined or esign.auto_sync_purchase in ('1', 1, True) %}checked{% endif %}>
-                                        <label class="form-check-label fw-bold text-success" for="auto_sync_purchase">
-                                            <i class="fas fa-cloud-download-alt me-1"></i>Tự đồng bộ hóa đơn mua hàng (9h · 15h · 24h)
-                                        </label>
-                                        <div class="small text-muted mt-1">
-                                            Lấy HĐ đầu vào qua kênh HĐĐT Mắt Bảo lúc <strong>09:00, 15:00 và 00:00</strong> (giờ Việt Nam). Không cần captcha. Đồng bộ cổng CQT vẫn thao tác thủ công trên trang HĐ mua.
-                                        </div>
-                                    </div>
-                                </div>
+                    <form id="esignForm">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                            <div>
+                                <h5 class="section-header text-danger mb-1">Cấu hình Hóa đơn điện tử</h5>
+                                <p class="text-muted small mb-0">
+                                    Hai kênh API độc lập: <strong>đầu ra</strong> (phát hành HĐ bán) và <strong>đầu vào</strong> (đồng bộ HĐ mua).
+                                    Mắt Bão dùng hai Base URL khác nhau — điền đúng từng bảng.
+                                    Portal demo quản trị:
+                                    <a href="https://demo.matbao.in/" target="_blank" rel="noopener">demo.matbao.in</a>
+                                    (<code>demo</code> / <code>demo@123!</code>) — khác username/password API phát hành.
+                                </p>
                             </div>
-                            <div class="alert alert-info mt-4 small">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Sau khi lưu, hệ thống sẽ tự động sử dụng cấu hình này để xuất hóa đơn điện tử. Bạn có thể kiểm tra kết nối ngay bằng nút bên dưới.
-                            </div>
-                            <div class="text-end mt-4">
-                                <button type="button" class="btn btn-info" onclick="testConnection()">
-                                    <i class="fas fa-sync"></i>Kiểm tra kết nối
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="testConnection('all')">
+                                    <i class="fas fa-plug me-1"></i>Kiểm tra cả hai
                                 </button>
-                                <audio id="error-sound" preload="auto">
-                                    <source src="/static/sounds/error.mp3" type="audio/mpeg">
-                                </audio>
-                                <button type="button" onclick="saveSettings('/api/settings/esign', 'esignForm')" class="btn btn-danger px-5 py-2">
-                                    <i class="fas fa-save me-2"></i>Lưu cấu hình
+                                <button type="button" onclick="saveSettings('/api/settings/esign', 'esignForm')" class="btn btn-danger btn-sm px-3">
+                                    <i class="fas fa-save me-1"></i>Lưu toàn bộ
                                 </button>
                             </div>
-                        </form>
-                    </div>
+                        </div>
+
+                        <div class="alert alert-security py-2 small mb-3">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Mật khẩu / Token / PIN được lưu trong DB tenant. Không chia sẻ trang này.
+                        </div>
+
+                        <!-- Provider chung -->
+                        <div class="card setting-card shadow-sm mb-3 border-0">
+                            <div class="card-body py-3">
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-lg-6">
+                                        <label class="form-label fw-bold required mb-1">Nhà cung cấp dịch vụ</label>
+                                        <select name="provider_name" class="form-select" required id="einvoiceProviderSelect">
+                                            <option value="">-- Chọn nhà cung cấp --</option>
+                                            {% for p in invoice_providers %}
+                                            <option value="{{ p.code }}"
+                                                data-default-url="{{ p.default_api_url }}"
+                                                data-purchase-url="{{ p.default_purchase_api_url or '' }}"
+                                                data-purchase-sync="{{ '1' if p.supports_purchase_sync else '0' }}"
+                                                data-status="{{ p.status }}"
+                                                data-draft="{{ '1' if p.supports_draft else '0' }}"
+                                                {% if esign.provider_name == p.code %}selected{% endif %}>
+                                                {{ p.label }}
+                                                {% if p.status == 'ready' %} ✓{% elif p.status == 'beta' %} (beta){% else %} (sắp có){% endif %}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <small class="text-muted" id="einvoiceProviderHint">Chọn provider → điền bảng Đầu ra / Đầu vào bên dưới.</small>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <label class="form-label fw-bold required mb-1">Mã số thuế doanh nghiệp (MST)</label>
+                                        <input type="text" name="tax_code" id="inputTaxCode" class="form-control" value="{{ esign.tax_code or '' }}" placeholder="0101234567" maxlength="14" required>
+                                        <small class="form-text text-muted" id="hintTaxCode">Dùng chung cho đăng nhập HĐ bán (MST) và username CQT khi đồng bộ HĐ mua.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <!-- ========== BẢNG ĐẦU RA ========== -->
+                            <div class="col-xl-6">
+                                <div class="card setting-card shadow-sm h-100 border-top border-danger border-4 border-top-0">
+                                    <div class="card-header bg-danger text-white py-3 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0 fw-bold"><i class="fas fa-file-export me-2"></i>Hóa đơn đầu ra (bán hàng)</h6>
+                                            <small class="opacity-75">API phát hành &amp; ký số khi thanh toán</small>
+                                        </div>
+                                        <span class="badge bg-light text-danger">Sales / HDDT</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label fw-bold required" id="labelApiUrl">API Endpoint phát hành (URL)</label>
+                                                <input type="url" name="api_url" id="inputApiUrl" class="form-control" value="{{ esign.api_url or '' }}" placeholder="https://api-hddt.matbao.in:11443" required>
+                                                <small class="form-text text-muted" id="hintApiUrl">Mắt Bão Prod: api-hddt…:11443 · Demo: demo-api-hddt…:11443</small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-bold required">Tên đăng nhập (TDNhap)</label>
+                                                <input type="text" name="username" id="inputUsername" class="form-control" value="{{ esign.username or '' }}" placeholder="Tài khoản API phát hành" required>
+                                                <small class="form-text text-muted" id="hintUsername"></small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-bold">Mật khẩu (MKhau)</label>
+                                                <input type="password" name="password" id="inputPassword" class="form-control" value="" placeholder="{% if esign.has_password %}******** (đã lưu){% else %}Mật khẩu API phát hành{% endif %}" autocomplete="new-password">
+                                                <small class="form-text text-muted" id="hintPassword">Chỉ nhập khi đổi / lần đầu</small>
+                                            </div>
+                                            <div class="col-md-6" id="salesApiKeySlot"></div>
+                                            <div class="col-md-6" id="wrapAppSecret">
+                                                <label class="form-label fw-bold" id="labelAppSecret">App Secret / Client Secret</label>
+                                                <input type="password" name="app_secret" id="inputAppSecret" class="form-control" value="" placeholder="{% if esign.has_app_secret %}******** (đã lưu){% else %}Nếu NCC yêu cầu{% endif %}" autocomplete="new-password">
+                                                <small class="form-text text-muted" id="hintAppSecret">Để trống nếu không đổi</small>
+                                            </div>
+                                            <div class="col-md-6" id="wrapSerialNumber">
+                                                <label class="form-label fw-bold text-danger" id="labelSerialNumber">Serial chứng thư số eSign</label>
+                                                <input type="text" name="serial_number" id="inputSerialNumber" class="form-control border-danger" value="{{ esign.serial_number or '' }}" placeholder="Serial CKS">
+                                                <small class="form-text text-danger" id="hintSerialNumber">Lấy từ chứng thư số đã đăng ký</small>
+                                            </div>
+                                            <div class="col-md-6" id="wrapEsignPin">
+                                                <label class="form-label fw-bold text-danger" id="labelEsignPin">PIN chữ ký số</label>
+                                                <input type="password" name="esign_pin" id="inputEsignPin" class="form-control border-danger" value="" placeholder="{% if esign.has_esign_pin %}******** (đã lưu){% else %}PIN CKS{% endif %}" autocomplete="new-password">
+                                                <small class="form-text text-danger" id="hintEsignPin">Bắt buộc nếu ký USB Token</small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label" id="labelInvoiceSeries">Ký hiệu HĐ (series)</label>
+                                                <input type="text" name="invoice_series" id="inputInvoiceSeries" class="form-control" value="{{ esign.invoice_series or 'AA/26E' }}" placeholder="C25TAT">
+                                                <small class="form-text text-muted" id="hintInvoiceSeries"></small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label" id="labelInvoiceType">Mẫu số / loại HĐ</label>
+                                                <input type="text" name="invoice_type" id="inputInvoiceType" class="form-control" value="{{ esign.invoice_type or '01GTKT0/001' }}" placeholder="1">
+                                                <small class="form-text text-muted" id="hintInvoiceType"></small>
+                                            </div>
+
+                                            <div class="col-12 d-none" id="misaExtraBlock">
+                                                <div class="row g-3 p-3 bg-primary-subtle rounded border border-primary-subtle">
+                                                    <div class="col-12">
+                                                        <h6 class="fw-bold text-primary mb-0"><i class="fas fa-plug me-2"></i>MISA meInvoice</h6>
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        <label class="form-label fw-bold">URL MISA SignedService</label>
+                                                        <input type="url" name="sign_service_url" id="inputSignServiceUrl" class="form-control"
+                                                               value="{{ esign.sign_service_url or '' }}" placeholder="http://127.0.0.1:12019">
+                                                    </div>
+                                                    <div class="col-md-4 d-flex align-items-center pt-2">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" name="misa_has_code" id="misaHasCode" value="1"
+                                                                   {% if esign.misa_has_code in ('1', 1, True) %}checked{% endif %}>
+                                                            <label class="form-check-label fw-bold" for="misaHasCode">DN có mã CQT</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 d-none" id="vnptExtraBlock">
+                                                <div class="p-3 bg-warning-subtle rounded border border-warning-subtle small">
+                                                    <strong>VNPT demo:</strong> Account/ACPass = nhân viên phát hành · ServiceRole = username/password.
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 d-none" id="mobifoneExtraBlock">
+                                                <div class="row g-3 p-3 bg-success-subtle rounded border border-success-subtle">
+                                                    <div class="col-md-8">
+                                                        <label class="form-label fw-bold">ID dải ký hiệu (cctbao_id)</label>
+                                                        <input type="text" name="minvoice_cctbao_id" id="inputMinvoiceCctbaoId" class="form-control"
+                                                               value="{{ esign.minvoice_cctbao_id or '' }}">
+                                                    </div>
+                                                    <div class="col-md-4 d-flex align-items-center pt-2">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" name="minvoice_has_code" id="minvoiceHasCode" value="1"
+                                                                   {% if esign.minvoice_has_code is not defined or esign.minvoice_has_code in ('1', 1, True) %}checked{% endif %}>
+                                                            <label class="form-check-label fw-bold" for="minvoiceHasCode">HĐ có mã CQT</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <div class="form-check form-switch p-3 bg-danger-subtle rounded border border-danger-subtle">
+                                                    <input class="form-check-input" type="checkbox" name="auto_issue_invoice" id="auto_issue" {% if esign.auto_issue_invoice == '1' %}checked{% endif %}>
+                                                    <label class="form-check-label fw-bold text-danger" for="auto_issue">Tự động xuất &amp; ký khi thanh toán</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-12">
+                                                <div class="p-3 bg-primary-subtle rounded border border-primary-subtle">
+                                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                                        <div class="form-check form-switch mb-0">
+                                                            <input class="form-check-input" type="checkbox" name="auto_issue_schedule" id="auto_issue_schedule">
+                                                            <label class="form-check-label fw-bold text-primary" for="auto_issue_schedule">
+                                                                <i class="fas fa-clock me-1"></i>Xuất theo giờ (17:00 VN)
+                                                            </label>
+                                                        </div>
+                                                        <button type="button" class="btn btn-sm btn-primary" id="btnToggleInvoiceSchedule" onclick="toggleInvoiceSchedule()">Áp dụng</button>
+                                                    </div>
+                                                    <div class="small text-muted mt-2" id="invoiceScheduleHint">Quét đơn hoàn tất chưa có số HĐ lúc 17:00 hằng ngày.</div>
+                                                    <div class="small mt-1" id="invoiceScheduleLastRun"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white d-flex flex-wrap gap-2 justify-content-end">
+                                        <button type="button" class="btn btn-outline-danger" onclick="testConnection('sales')">
+                                            <i class="fas fa-plug me-1"></i>Kiểm tra HĐ đầu ra
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ========== BẢNG ĐẦU VÀO ========== -->
+                            <div class="col-xl-6" id="panelPurchaseInvoice">
+                                <div class="card setting-card shadow-sm h-100 border-top border-success border-4 border-top-0">
+                                    <div class="card-header bg-success text-white py-3 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0 fw-bold"><i class="fas fa-file-import me-2"></i>Hóa đơn đầu vào (mua hàng)</h6>
+                                            <small class="opacity-75">Đồng bộ HĐ mua từ portal NCC / cổng CQT</small>
+                                        </div>
+                                        <span class="badge bg-light text-success">Purchase / Inward</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="purchaseUnsupportedHint" class="alert alert-secondary small mb-3 d-none">
+                                            Provider đang chọn chưa hỗ trợ đồng bộ HĐ mua trong KETO. Chọn <strong>Mắt Bão</strong> để cấu hình kênh này.
+                                        </div>
+                                        <div id="purchaseFieldsBlock" class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label fw-bold" id="labelPurchaseApiUrl">API Hóa đơn đầu vào (URL)</label>
+                                                <input type="url" name="purchase_api_url" id="inputPurchaseApiUrl" class="form-control"
+                                                       value="{{ esign.purchase_api_url or '' }}"
+                                                       placeholder="https://api-hoadondauvao.matbao.in">
+                                                <small class="form-text text-muted" id="hintPurchaseApiUrl">
+                                                    Mắt Bão Prod: <code>https://api-hoadondauvao.matbao.in</code> ·
+                                                    Demo: <code>https://demo-api-hoadondauvao.matbao.in</code>
+                                                    — <strong>khác</strong> URL phát hành HĐ bán.
+                                                </small>
+                                            </div>
+                                            <div class="col-12" id="purchaseApiKeyHost">
+                                                <div class="col-12 p-0" id="wrapApiKey">
+                                                    <label class="form-label fw-bold" id="labelApiKey">Token HĐ đầu vào (Api Key)</label>
+                                                    <input type="text" name="api_key" id="inputApiKey" class="form-control" value="{{ esign.api_key or '' }}" placeholder="UUID token từ portal HĐ đầu vào">
+                                                    <small class="form-text text-muted" id="hintApiKey">
+                                                        Portal → Quản lý HĐ đầu vào → Tạo token. Gọi <code>POST /auth/token</code> với body <code>{"token":"…"}</code>.
+                                                    </small>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12 mt-1">
+                                                <div class="border rounded p-3 bg-light">
+                                                    <h6 class="fw-bold text-danger mb-1"><i class="fas fa-landmark me-1"></i>Cổng CQT (tuỳ chọn — kênh TCT)</h6>
+                                                    <small class="text-muted d-block mb-2">
+                                                        Username CQT = <strong>MST</strong> ở trên. Portal:
+                                                        <a href="https://hoadondientu.gdt.gov.vn" target="_blank" rel="noopener">hoadondientu.gdt.gov.vn</a>.
+                                                        Captcha thường lấy lúc đồng bộ thủ công trên trang HĐ mua.
+                                                    </small>
+                                                    <div class="row g-2">
+                                                        <div class="col-12">
+                                                            <label class="form-label fw-bold text-danger small mb-0">Mật khẩu CQT (etax_password)</label>
+                                                            <input type="password" name="etax_password" class="form-control form-control-sm border-danger" value=""
+                                                                   placeholder="{% if esign.has_etax_password %}******** (đã lưu){% else %}Mật khẩu hoadondientu.gdt.gov.vn{% endif %}"
+                                                                   autocomplete="new-password">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label small mb-0">Captcha cvalue</label>
+                                                            <input type="text" name="etax_cvalue" class="form-control form-control-sm"
+                                                                   value="{{ esign.etax_cvalue or '' }}" placeholder="Mã đọc từ SVG">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label small mb-0">Captcha ckey</label>
+                                                            <input type="text" name="etax_ckey" class="form-control form-control-sm"
+                                                                   value="{{ esign.etax_ckey or '' }}" placeholder="key từ get-captcha">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-12" id="wrapAutoSyncPurchase">
+                                                <div class="form-check form-switch p-3 bg-success-subtle rounded border border-success-subtle">
+                                                    <input class="form-check-input" type="checkbox" name="auto_sync_purchase" id="auto_sync_purchase"
+                                                           {% if esign.auto_sync_purchase is not defined or esign.auto_sync_purchase in ('1', 1, True) %}checked{% endif %}>
+                                                    <label class="form-check-label fw-bold text-success" for="auto_sync_purchase">
+                                                        <i class="fas fa-cloud-download-alt me-1"></i>Tự đồng bộ HĐ mua (0h · 9h · 15h)
+                                                    </label>
+                                                    <div class="small text-muted mt-1 mb-0">
+                                                        Kênh portal Mắt Bão (Token) — không cần captcha. Đồng bộ CQT vẫn thao tác trên trang HĐ mua.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-white d-flex flex-wrap gap-2 justify-content-end">
+                                        <button type="button" class="btn btn-outline-success" id="btnTestPurchase" onclick="testConnection('purchase')">
+                                            <i class="fas fa-plug me-1"></i>Kiểm tra HĐ đầu vào
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <audio id="error-sound" preload="auto">
+                            <source src="/static/sounds/error.mp3" type="audio/mpeg">
+                        </audio>
+                    </form>
                 </div>
             </div>
         </div>
@@ -1102,18 +1106,42 @@ async function saveSettings(url, formId) {
     }
 }
 
-async function testConnection() {
+async function testConnection(channel) {
     const form = document.getElementById('esignForm');
     if (!form) return;
-
-    Swal.fire({ title: 'Đang kết nối...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    channel = (channel || 'all').toLowerCase();
+    const titles = {
+        sales: 'Đang kiểm tra HĐ đầu ra…',
+        purchase: 'Đang kiểm tra HĐ đầu vào…',
+        all: 'Đang kiểm tra cả hai kênh…',
+    };
+    Swal.fire({ title: titles[channel] || titles.all, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     try {
-        const res = await postSettingsJSON('/api/settings/test_invoice_connection', collectFormData(form));
+        const payload = collectFormData(form);
+        payload.test_channel = channel;
+        const res = await postSettingsJSON('/api/settings/test_invoice_connection', payload);
+        const steps = Array.isArray(res.steps) ? res.steps : [];
+        const stepsHtml = steps.length
+            ? '<ul class="text-start small mb-0 mt-2">' + steps.map(s => {
+                const icon = s.ok ? '✅' : '❌';
+                const label = s.step || '';
+                const detail = s.detail || s.error || (s.http != null ? `HTTP ${s.http}` : '');
+                return `<li>${icon} <strong>${label}</strong>${detail ? ': ' + detail : ''}</li>`;
+            }).join('') + '</ul>'
+            : '';
         if (res.success) {
-            Swal.fire('Thành công', res.message, 'success');
+            Swal.fire({
+                icon: 'success',
+                title: 'Kết nối thành công',
+                html: `<div class="text-start">${res.message || ''}${stepsHtml}</div>`,
+            });
         } else {
-            Swal.fire('Thất bại', res.error || res.message, 'error');
+            Swal.fire({
+                icon: 'error',
+                title: 'Kết nối thất bại',
+                html: `<div class="text-start">${res.error || res.message || ''}${stepsHtml}</div>`,
+            });
             playNotificationSound();
         }
     } catch (err) {
@@ -1431,9 +1459,27 @@ const EINVOICE_PROVIDER_UI = {
         showMisaExtra: true,
     },
     matbao: {
-        apiKeyLabel: 'Api Key / Token Mắt Bão',
-        apiUrlPlaceholder: 'https://api.matbao.net',
+        apiKeyLabel: 'Token HĐ đầu vào (Api Key Purchase)',
+        apiKeyHint: 'Lấy tại portal → Quản lý HĐ đầu vào → Tạo token. Dùng POST /auth/token. Không dùng cho phát hành HĐ bán.',
+        apiKeyRequired: false,
+        apiUrlPlaceholder: 'https://api-hddt.matbao.in:11443',
+        apiUrlHint: 'HĐ bán (API-Proxy-HDDT). Demo: https://demo-api-hddt.matbao.in:11443 · Prod: https://api-hddt.matbao.in:11443',
+        usernamePlaceholder: 'admin (TDNhap)',
+        usernameHint: 'TDNhap — tài khoản API phát hành trên cấu hình API portal Mắt Bão (demo HĐ bán: admin).',
+        taxCodePlaceholder: '0302712571-999',
+        taxCodeHint: 'MST đăng nhập API phát hành (field MST trong /api/auth/login).',
+        passwordHint: 'MKhau — mật khẩu API phát hành (demo HĐ bán: Gtybf@12sd). Khác mật khẩu portal demo/demo@123!.',
+        invoiceSeriesLabel: 'Ký hiệu hóa đơn (KHHDon)',
+        invoiceSeriesPlaceholder: 'C25TAT',
+        invoiceSeriesHint: 'Ký hiệu đã đăng ký trên Mắt Bão (vd demo: C25TAT).',
+        invoiceTypeLabel: 'Ký hiệu mẫu số (KHMSHDon)',
+        invoiceTypePlaceholder: '1',
+        invoiceTypeHint: 'Mẫu số HĐ theo TT78 (vd: 1).',
+        serialLabel: 'Serial chứng thư số eSign',
+        serialHint: 'Chuỗi serial CKS trên portal (demo: 5401184DBB6A0C257B52225920364BCB). Có thể để trống nếu ký HSM phía MB.',
         serialRequired: false,
+        pinRequired: false,
+        showAppSecret: false,
         showMisaExtra: false,
     },
     easyinvoice: {
@@ -1513,11 +1559,15 @@ function applyEinvoiceProviderUi(code, opt) {
     setText('labelApiKey', cfg.apiKeyLabel);
     setPlaceholder('inputApiKey', cfg.apiKeyPlaceholder);
     setText('hintApiKey', cfg.apiKeyHint || '');
+    setRequired('labelApiKey', cfg.apiKeyRequired !== false);
 
     setPlaceholder('inputUsername', cfg.usernamePlaceholder || 'Tài khoản đăng nhập nhà cung cấp');
     setText('hintUsername', cfg.usernameHint || '');
 
     setPlaceholder('inputTaxCode', cfg.taxCodePlaceholder || '0101234567');
+    setText('hintTaxCode', cfg.taxCodeHint || '');
+
+    setText('hintPassword', cfg.passwordHint || 'Chỉ nhập khi cần thay đổi hoặc lần đầu');
 
     setPlaceholder('inputApiUrl', cfg.apiUrlPlaceholder || (opt && opt.dataset.defaultUrl) || '');
     setText('hintApiUrl', cfg.apiUrlHint || 'Dùng URL test khi thử nghiệm (nếu có)');
@@ -1546,13 +1596,39 @@ function applyEinvoiceProviderUi(code, opt) {
     setVisible('vnptExtraBlock', !!cfg.showVnptExtra);
 
     const purchaseSync = !!(opt && opt.dataset.purchaseSync === '1') || code === 'matbao';
-    const wrapPurchase = document.getElementById('wrapPurchaseApiUrl');
-    const wrapAutoSync = document.getElementById('wrapAutoSyncPurchase');
-    if (wrapPurchase) wrapPurchase.style.display = purchaseSync ? '' : 'none';
-    if (wrapAutoSync) wrapAutoSync.style.display = purchaseSync ? '' : 'none';
+    const purchaseBlock = document.getElementById('purchaseFieldsBlock');
+    const unsupported = document.getElementById('purchaseUnsupportedHint');
+    const btnPurchase = document.getElementById('btnTestPurchase');
+    if (purchaseBlock) purchaseBlock.classList.toggle('d-none', !purchaseSync);
+    if (unsupported) unsupported.classList.toggle('d-none', purchaseSync);
+    if (btnPurchase) btnPurchase.disabled = !purchaseSync;
+
     const purchaseInput = document.getElementById('inputPurchaseApiUrl');
-    if (purchaseInput && !purchaseInput.value && opt && opt.dataset.purchaseUrl) {
+    if (purchaseInput && opt && opt.dataset.purchaseUrl) {
         purchaseInput.placeholder = opt.dataset.purchaseUrl;
+        if (!purchaseInput.value && purchaseSync) {
+            // Gợi ý URL demo nếu đang để trống và chọn Mắt Bão
+            if (code === 'matbao' && (opt.dataset.defaultUrl || '').includes('demo')) {
+                purchaseInput.placeholder = 'https://demo-api-hoadondauvao.matbao.in';
+            }
+        }
+    }
+
+    // Matbao: Api Key thuộc bảng đầu vào; provider khác (MISA, VNPT…): thuộc bảng đầu ra
+    const wrapApiKey = document.getElementById('wrapApiKey');
+    const salesSlot = document.getElementById('salesApiKeySlot');
+    const purchaseHost = document.getElementById('purchaseApiKeyHost');
+    if (wrapApiKey) {
+        if (code === 'matbao' && purchaseHost) {
+            purchaseHost.appendChild(wrapApiKey);
+        } else if (salesSlot) {
+            salesSlot.appendChild(wrapApiKey);
+            wrapApiKey.classList.remove('col-12');
+            wrapApiKey.classList.add('col-12', 'p-0', 'w-100');
+        }
+    }
+    if (code === 'matbao') {
+        setRequired('labelApiKey', false);
     }
 }
 

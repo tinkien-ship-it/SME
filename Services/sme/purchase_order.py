@@ -6,6 +6,7 @@ import sqlite3
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 STATUSES = ('draft', 'confirmed', 'partial', 'received', 'cancelled')
@@ -82,7 +83,7 @@ def ensure_purchase_order_schema(conn: sqlite3.Connection, *, commit: bool = Tru
     except sqlite3.Error:
         pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='purchase_order')
 
 
 def _next_po_no(conn: sqlite3.Connection, po_date: str) -> str:

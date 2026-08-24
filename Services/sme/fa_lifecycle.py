@@ -21,6 +21,7 @@ from Services.sme.auto_posting import (
     ensure_auto_posting_schema,
 )
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 FORM_DISPOSAL = '02-TSCD'
@@ -72,7 +73,7 @@ def ensure_sme_fa_lifecycle_schema(conn: sqlite3.Connection, *, commit: bool = T
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fa_lifecycle')
 
 
 def _next_disposal_no(conn: sqlite3.Connection) -> str:
@@ -189,7 +190,7 @@ def update_asset_depreciation_period(
         params,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fa_lifecycle')
     row2 = conn.execute(
         f'SELECT * FROM {FIXED_ASSETS_TABLE} WHERE id = ?', (asset_id,)
     ).fetchone()
@@ -366,7 +367,7 @@ def dispose_fixed_asset(
         (STATUS_DISPOSED, int(asset_id)),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fa_lifecycle')
     return get_disposal(conn, disposal_id)
 
 
@@ -443,7 +444,7 @@ def void_disposal(
         ((doc.get('reason') or '') + f' | {reason}', _now(), disposal_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fa_lifecycle')
     return get_disposal(conn, disposal_id)
 
 
@@ -615,7 +616,7 @@ def ensure_sme_fa_docs_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         except sqlite3.OperationalError:
             pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fa_lifecycle')
 
 
 def _next_fa_doc_no(conn: sqlite3.Connection, prefix: str) -> str:
@@ -669,7 +670,7 @@ def create_fa_handover(
             (STATUS_ACTIVE, date_s, asset_id),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fa_lifecycle')
     _stamp_fa_doc_branch(conn, cur.lastrowid, asset)
     return get_fa_doc(conn, cur.lastrowid)
 
@@ -735,7 +736,7 @@ def create_fa_upgrade(
         ),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fa_lifecycle')
     _stamp_fa_doc_branch(conn, cur.lastrowid, asset)
     return get_fa_doc(conn, cur.lastrowid)
 
@@ -818,7 +819,7 @@ def create_fa_revaluation(
         ),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fa_lifecycle')
     _stamp_fa_doc_branch(conn, cur.lastrowid, asset)
     return get_fa_doc(conn, cur.lastrowid)
 
@@ -884,7 +885,7 @@ def create_fa_inventory(
             ),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fa_lifecycle')
     _stamp_fa_doc_branch(conn, doc_id, None)
     return get_fa_doc(conn, doc_id)
 
@@ -967,7 +968,7 @@ def void_fa_doc(
         ((doc.get('content') or '') + f' | {reason}', doc_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fa_lifecycle')
     return get_fa_doc(conn, doc_id)
 
 

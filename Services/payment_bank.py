@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import requests
 
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit
 from helpers import get_setting
 
 logger = logging.getLogger(__name__)
@@ -252,7 +252,7 @@ def save_payment_settings(data):
             if val:
                 conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, val))
 
-        conn.commit()
+        sqlite_commit(conn, label='payment_bank')
         return True
     finally:
         conn.close()
@@ -277,7 +277,7 @@ def _record_bank_match(sale_id, provider, external_id, amount, content):
             VALUES (?, ?, ?, ?, ?, ?)
         """, (sale_id, provider, str(external_id or ''), float(amount or 0), str(content or '')[:500],
               datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-        conn.commit()
+        sqlite_commit(conn, label='payment_bank')
     finally:
         conn.close()
 
@@ -310,7 +310,7 @@ def ensure_bank_transactions_table(conn=None):
         )
     """)
     if own:
-        conn.commit()
+        sqlite_commit(conn, label='payment_bank')
         conn.close()
 
 
@@ -399,7 +399,7 @@ def ingest_bank_transaction(provider, txn, source='webhook'):
             ))
             txn_id = cur.lastrowid
             is_new = True
-        conn.commit()
+        sqlite_commit(conn, label='payment_bank')
         return {'id': txn_id, 'is_new': is_new, 'external_id': external_id}
     finally:
         conn.close()
@@ -423,7 +423,7 @@ def _update_transaction_match(provider, external_id, sale_id, match_status, matc
             provider,
             str(external_id),
         ))
-        conn.commit()
+        sqlite_commit(conn, label='payment_bank')
     finally:
         conn.close()
 

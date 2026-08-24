@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+from db_utils import sqlite_commit
 
 _CANONICAL_USE_UNIT = 'use_sale_unit'
 _LEGACY_USE_UNIT = 'UseSaleUnit'
@@ -177,7 +178,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             pass
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='schema_compat')
     return changed
 
 

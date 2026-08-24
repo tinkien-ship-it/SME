@@ -31,7 +31,7 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, get_db_connection
+from db_utils import BASE_DIR, MAIN_DB_PATH, get_db_connection, sqlite_commit, begin_immediate, locked_user_message, _is_locked_error
 
 logger = logging.getLogger(__name__)
 
@@ -1135,7 +1135,7 @@ def register_ketoan_sme_routes(app):
             try:
                 ensure_cong_no_schema(conn, commit=True)
                 sync_remaining_from_unpaid(conn)
-                conn.commit()
+                sqlite_commit(conn, label='sme_write')
             except sqlite3.Error:
                 pass
             branch = request_branch_filter()
@@ -1181,7 +1181,7 @@ def register_ketoan_sme_routes(app):
             try:
                 ensure_cong_no_schema(conn, commit=True)
                 sync_remaining_from_unpaid(conn)
-                conn.commit()
+                sqlite_commit(conn, label='sme_write')
             except sqlite3.Error:
                 pass
             branch = request_branch_filter()
@@ -2700,11 +2700,11 @@ def register_ketoan_sme_routes(app):
         mode = (payload.get('mode') or request.args.get('mode') or 'stock').strip().lower()
 
         conn = get_db_connection()
-        conn.execute('BEGIN IMMEDIATE')
+        begin_immediate(conn, label='sme_begin')
         c = conn.cursor()
         try:
             next_no = _next_import_no_from_db(c, mode)
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'next_no': next_no})
         except Exception as e:
             conn.rollback()
@@ -3928,7 +3928,7 @@ def register_ketoan_sme_routes(app):
                     conn, po_id, receipt_lines, import_id=import_id,
                 )
 
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({
                 "success": True,
                 "edited": bool(edit_id),
@@ -4417,7 +4417,7 @@ def register_ketoan_sme_routes(app):
             from Services.inward_invoice_helpers import create_manual_supplier_invoice
             data = request.get_json() or {}
             created = create_manual_supplier_invoice(conn, data)
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'data': created})
         except Exception as e:
             conn.rollback()
@@ -4840,7 +4840,7 @@ def register_ketoan_sme_routes(app):
                 created_by=actor,
                 lines=lines,
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'data': entry})
         except ValueError as e:
             conn.rollback()
@@ -4894,7 +4894,7 @@ def register_ketoan_sme_routes(app):
                 updated_by=actor,
                 reason=(payload.get('reason') or 'Sửa bút toán từ nhật ký'),
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             write_audit(
                 'update',
                 'sme_journal',
@@ -4936,7 +4936,7 @@ def register_ketoan_sme_routes(app):
                 reason=(payload.get('reason') or 'Xóa bút toán từ nhật ký'),
                 deleted_by=actor,
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             snap = result.get('snapshot') or {}
             write_audit(
                 'delete',
@@ -4980,7 +4980,7 @@ def register_ketoan_sme_routes(app):
                 reason=(payload.get('reason') or 'Đảo bút toán'),
                 require_locked=True,
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             write_audit(
                 'reverse',
                 'sme_journal',
@@ -5313,6 +5313,7 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         try:
             from Services.sme.dashboard_metrics import dashboard_metrics
+            from db_utils import _is_locked_error
             year = request.args.get('year', type=int) or datetime.now().year
             period_to = request.args.get('period_to', type=int) or datetime.now().month
             data = dashboard_metrics(conn, fiscal_year=year, period_to=period_to, branch_code=_sme_branch_arg())
@@ -5320,6 +5321,13 @@ def register_ketoan_sme_routes(app):
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
+            from db_utils import _is_locked_error
+            if _is_locked_error(e):
+                return jsonify({
+                    'success': False,
+                    'error': 'Database đang bận (đồng bộ HĐ / ghi sổ). Thử lại sau vài giây.',
+                }), 503
+            logging.exception('api_sme_dashboard_metrics')
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
@@ -5678,7 +5686,7 @@ def register_ketoan_sme_routes(app):
                 migrated_by=session.get('username') or session.get('user'),
                 force_coa_refresh=bool(payload.get('force_coa_refresh')),
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({
                 'success': bool(result.get('synced') or result.get('ok')),
                 'integrity_ok': bool(result.get('integrity_ok')),
@@ -5737,7 +5745,7 @@ def register_ketoan_sme_routes(app):
                     conn, tenant_id=tenant_id, fiscal_year=year,
                     settings=settings, persist=True,
                 )
-                conn.commit()
+                sqlite_commit(conn, label='sme_write')
                 try:
                     g.tenant_profile = load_tenant_profile(tenant_id)
                 except Exception:
@@ -5826,7 +5834,7 @@ def register_ketoan_sme_routes(app):
                 items,
                 updated_by=session.get('user_name') or session.get('username'),
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'saved': n})
         except Exception as e:
             conn.rollback()
@@ -5876,7 +5884,7 @@ def register_ketoan_sme_routes(app):
                 lines=payload.get('lines') or [],
                 created_by=session.get('user_name') or session.get('username'),
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             conn.rollback()
@@ -5930,7 +5938,7 @@ def register_ketoan_sme_routes(app):
                 status=payload.get('status'),
                 lines=payload.get('lines'),
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             conn.rollback()
@@ -5952,7 +5960,7 @@ def register_ketoan_sme_routes(app):
             assert_row_in_branch(conn, 'sme_purchase_orders', po_id, label='Đơn mua hàng')
             payload = request.get_json(silent=True) or {}
             data = set_purchase_order_status(conn, po_id, payload.get('status') or '')
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'data': data})
         except ValueError as e:
             conn.rollback()
@@ -6431,7 +6439,7 @@ def register_ketoan_sme_routes(app):
                 replace_existing=replace_existing,
                 auto_activate=bool(auto_activate),
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'data': result})
         except ValueError as e:
             conn.rollback()
@@ -6465,7 +6473,7 @@ def register_ketoan_sme_routes(app):
                 created_by=session.get('user_name') or session.get('username'),
                 replace_existing=bool(payload.get('replace_existing')),
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'data': result})
         except ValueError as e:
             conn.rollback()
@@ -6498,7 +6506,7 @@ def register_ketoan_sme_routes(app):
                 created_by=session.get('user_name') or session.get('username'),
                 replace_existing=bool(payload.get('replace_existing')),
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'data': result})
         except ValueError as e:
             conn.rollback()
@@ -6582,7 +6590,7 @@ def register_ketoan_sme_routes(app):
                     conn, fiscal_year=year, unlocked_by=actor, reason=reason,
                     clear_filing=True,
                 )
-                conn.commit()
+                sqlite_commit(conn, label='sme_write')
                 write_audit(
                     'unlock', 'sme_period_lock',
                     f'Mở lại sổ năm {year} (gỡ khóa + chốt kê khai): {reason}',
@@ -6599,7 +6607,7 @@ def register_ketoan_sme_routes(app):
                 if not reason:
                     raise ValueError('Cần nhập lý do mở khóa kỳ.')
                 ok = unlock_period(conn, fiscal_year=year, period=period)
-                conn.commit()
+                sqlite_commit(conn, label='sme_write')
                 write_audit(
                     'unlock', 'sme_period_lock',
                     f'Mở khóa kỳ {period:02d}/{year}: {reason}',
@@ -6619,7 +6627,7 @@ def register_ketoan_sme_routes(app):
                     cleared_by=actor,
                     reason=reason,
                 )
-                conn.commit()
+                sqlite_commit(conn, label='sme_write')
                 write_audit(
                     'unlock', 'sme_filing_close',
                     f'Mở lại kỳ kê khai (tháng {period}/{year}): {reason}',
@@ -6644,7 +6652,7 @@ def register_ketoan_sme_routes(app):
                 locked_by=actor,
                 reason=reason or 'Khóa sổ năm thủ công',
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_write')
             write_audit(
                 'lock', 'sme_period_lock',
                 f'Khóa sổ năm {year}',

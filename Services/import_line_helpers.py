@@ -1,5 +1,6 @@
 """Mã sản phẩm theo loại hàng (HKD import)."""
 import sqlite3
+from db_utils import sqlite_commit
 
 # Tiền tố mã khi nhập kho / tạo danh mục:
 #   Hàng hóa (mua để bán) → HH    Thành phẩm → SP
@@ -347,7 +348,7 @@ def ensure_warehouse_schema(conn):
             pass
 
     try:
-        conn.commit()
+        sqlite_commit(conn, label='import_line_helpers')
     except Exception:
         pass
     _warehouse_schema_ready[db_key] = _WAREHOUSE_SCHEMA_VERSION
@@ -401,7 +402,7 @@ def create_warehouse(
         vals,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='import_line_helpers')
     row = conn.execute(
         'SELECT * FROM warehouses WHERE code = ?', (code,)
     ).fetchone()
@@ -468,7 +469,7 @@ def update_warehouse(
         conn.execute(f"UPDATE warehouses SET {ph} WHERE UPPER(code)=?", vals + [code])
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='import_line_helpers')
 
     r = conn.execute('SELECT * FROM warehouses WHERE UPPER(code) = ?', (code,)).fetchone()
     return dict(r) if r and hasattr(r, 'keys') else {'code': code}

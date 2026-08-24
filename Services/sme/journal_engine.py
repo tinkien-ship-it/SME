@@ -29,7 +29,7 @@ def ensure_sme_journal_ready(
     *,
     commit: bool = True,
 ) -> dict[str, Any]:
-    from db_utils import sqlite_is_ready, sqlite_mark_ready
+    from db_utils import sqlite_is_ready, sqlite_mark_ready, sqlite_commit
 
     flag = f'posting_rules:{RULES_SEED_VERSION}'
     if sqlite_is_ready(conn, flag):
@@ -281,7 +281,7 @@ def renumber_journal_entries(
         )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='journal_engine')
     count = len(rows)
     return {
         'count': count,

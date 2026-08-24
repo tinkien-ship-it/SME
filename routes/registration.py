@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from flask import jsonify, redirect, render_template, request, session, url_for
 
 from auth import login_required
-from db_utils import BASE_DIR, get_main_db_connection, open_sqlite
+from db_utils import BASE_DIR, get_main_db_connection, open_sqlite, sqlite_commit
 from Services.login_service import verify_google_credential
 from Services.payment_bank import get_sale_payment_status
 from Services.subscription_service import (
@@ -359,7 +359,7 @@ def register_registration_routes(app):
                 "UPDATE tenants SET settings = ? WHERE tenant_id = ?",
                 (json.dumps(settings, ensure_ascii=False), tenant_id),
             )
-            main.commit()
+            sqlite_commit(main, label='onboarding_complete')
         finally:
             main.close()
 
@@ -414,7 +414,7 @@ def register_registration_routes(app):
                 vals = [v for v in biz_fields.values() if v is not None]
                 if sets:
                     cur.execute(f"UPDATE business_info SET {sets} WHERE id = ?", vals + [row['id']])
-            conn.commit()
+            sqlite_commit(conn, label='registration')
         finally:
             conn.close()
 

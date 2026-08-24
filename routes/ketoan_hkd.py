@@ -31,7 +31,7 @@ from flask_login import login_required, current_user
 
 from Services.invoice_buyer import DEFAULT_RETAIL_BUYER_NAME
 from Services.profit_report_helpers import compute_cogs, get_days_in_quarter
-from db_utils import get_db_connection, open_sqlite
+from db_utils import get_db_connection, open_sqlite, sqlite_commit
 
 logger = logging.getLogger(__name__)
 import openpyxl
@@ -405,7 +405,7 @@ def register_ketoan_hkd_routes(app):
                     WHERE sale_no = ?
                 """, [amount, new_voucher_no, date_input, reference_document])
 
-            db.commit()
+            sqlite_commit(db, label='hkd')
             return jsonify({"success": True, "id": new_id, "voucher_no": new_voucher_no}), 201
 
         except Exception as e:
@@ -522,7 +522,7 @@ def register_ketoan_hkd_routes(app):
                 id
             ))
 
-            db.commit()
+            sqlite_commit(db, label='hkd')
 
             return jsonify({
                 "success": True,
@@ -576,7 +576,7 @@ def register_ketoan_hkd_routes(app):
                 WHERE name = 'phieu_thu'
             """)
         
-            db.commit()
+            sqlite_commit(db, label='hkd')
         
             return jsonify({
                 "success": True,
@@ -626,7 +626,7 @@ def register_ketoan_hkd_routes(app):
                     WHERE id = ?
                 """, (new_voucher_no, row['id']))
 
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             count = len(rows)
         
             conn.close()
@@ -858,7 +858,7 @@ def register_ketoan_hkd_routes(app):
                 sql_update = f"UPDATE phieu_chi SET {', '.join(fields)} WHERE id = ?"
             
                 cursor.execute(sql_update, values)
-                db.commit()
+                sqlite_commit(db, label='hkd')
             
                 return jsonify({"success": True, "message": "Cập nhật thành công!"})
 
@@ -956,7 +956,7 @@ def register_ketoan_hkd_routes(app):
         
             cursor.execute(sql, params)
             new_id = cursor.lastrowid
-            db.commit()
+            sqlite_commit(db, label='hkd')
 
             return jsonify({"success": True, "id": new_id, "voucher_no": new_voucher_no})
         except Exception as e:
@@ -1055,7 +1055,7 @@ def register_ketoan_hkd_routes(app):
                 date_input
             ))
 
-            db.commit()
+            sqlite_commit(db, label='hkd')
             new_id = cursor.lastrowid
 
             return jsonify(
@@ -1261,7 +1261,7 @@ def register_ketoan_hkd_routes(app):
                     VALUES (?, ?, ?, ?)
                 """, (ref_id, expense_id, amount, date_input))
 
-            db.commit()
+            sqlite_commit(db, label='hkd')
             return jsonify({"success": True, "id": expense_id, "voucher_no": voucher_no})
 
         except Exception as e:
@@ -1434,7 +1434,7 @@ def register_ketoan_hkd_routes(app):
                     WHERE name = ?
                 """, (table,))
 
-            db.commit()
+            sqlite_commit(db, label='hkd')
             return jsonify({"success": True, "message": message})
 
         except Exception as e:
@@ -1487,7 +1487,7 @@ def register_ketoan_hkd_routes(app):
                     WHERE id = ?
                 """, (new_voucher_no, row['id']))
 
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             conn.close()
 
             return jsonify({
@@ -2179,7 +2179,7 @@ def register_ketoan_hkd_routes(app):
                   allowance_fund, allowance_other, default_bonus, department))
             matched_ids, owner_name = sync_chu_ho_from_business_info(conn)
             new_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             return jsonify({
                 "success": True,
                 "message": "Thêm nhân viên thành công",
@@ -2268,7 +2268,7 @@ def register_ketoan_hkd_routes(app):
                 WHERE id = ?
             """, fields)
             matched_ids, owner_name = sync_chu_ho_from_business_info(conn)
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             emp_row = conn.execute(
                 'SELECT COALESCE(is_chu_ho, 0) AS is_chu_ho FROM employees WHERE id = ?',
                 (emp_id,),
@@ -2490,7 +2490,7 @@ def register_ketoan_hkd_routes(app):
                     rate_bhtn_chu = ?
             """, (region, base_salary, r_bhxh, r_bhyt, r_bhtn, 
                   r_bhxh_chu, r_bhyt_chu, r_bhtn_chu))
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             flash("Cấu hình lương và tỷ lệ bảo hiểm đã được cập nhật thành công!", "success")
         except Exception as e:
             conn.rollback()
@@ -2570,7 +2570,7 @@ def register_ketoan_hkd_routes(app):
                     date_input
                 ))
 
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             total_amount = round(total_amount, 0)
             return jsonify(
                 success=True,
@@ -3438,7 +3438,7 @@ def register_ketoan_hkd_routes(app):
                     reason, ref_key, pay_date, session.get('user_name', 'Admin'),
                 ),
             )
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             return jsonify({
                 'success': True,
                 'message': 'Đã lập phiếu chi nộp thuế',
@@ -3472,7 +3472,7 @@ def register_ketoan_hkd_routes(app):
             rate_bhxh_chu=?, rate_bhyt_chu=?, rate_bhtn_chu=?
         """, (data['rate_bhxh'], data['rate_bhyt'], data['rate_bhtn'],
               data['rate_bhxh_chu'], data['rate_bhyt_chu'], data['rate_bhtn_chu']))
-        conn.commit()
+        sqlite_commit(conn, label='hkd')
         conn.close()
     
         flash("Đã cập nhật tỷ lệ bảo hiểm mới!", "success")
@@ -4251,7 +4251,7 @@ def register_ketoan_hkd_routes(app):
                     session.get('user_name', 'Admin'),
                 ),
             )
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             return jsonify({
                 'success': True,
                 'message': f'Đã lập phiếu chi nộp {labels[ins_type]}',
@@ -4337,7 +4337,7 @@ def register_ketoan_hkd_routes(app):
             if not vouchers:
                 return jsonify({'success': False, 'error': 'Kỳ này không còn khoản BH phải nộp'}), 400
 
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             return jsonify({
                 'success': True,
                 'message': f'Đã lập {len(vouchers)} phiếu chi nộp bảo hiểm',
@@ -4477,7 +4477,7 @@ def register_ketoan_hkd_routes(app):
                     reason, ref_key, pay_date, session.get('user_name', 'Admin'),
                 ),
             )
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             return jsonify({
                 'success': True,
                 'message': f'Đã lập phiếu chi trả lương cả kỳ T{month}/{year}',
@@ -4568,7 +4568,7 @@ def register_ketoan_hkd_routes(app):
                     session.get('user_name', 'Admin'),
                 ),
             )
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             return jsonify({
                 'success': True,
                 'message': f'Đã lập phiếu chi trả lương lẻ — {emp_name}',
@@ -4868,7 +4868,7 @@ def register_ketoan_hkd_routes(app):
                     WHERE id = ?
                 """, (STATUS_ACTIVE, ngay_xuat, months, 1 if is_khau_tru else 0, final_nguyen_gia, asset['id']))
 
-                conn.commit()
+                sqlite_commit(conn, label='hkd')
                 return jsonify({
                     'success': True,
                     'ma_ts': asset['ma_tai_san'],
@@ -4935,7 +4935,7 @@ def register_ketoan_hkd_routes(app):
                 VALUES (?, 'export', 'Xuất dùng TSCĐ', -1, ?, ?)
             """, (p_id, move_id, now_str))
 
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             return jsonify({
                 'success': True,
                 'ma_ts': ma_ts,
@@ -5104,7 +5104,7 @@ def register_ketoan_hkd_routes(app):
             """, (STATUS_ACTIVE, ngay_sd, months, product_id, STATUS_IN_STOCK))
             if c.rowcount == 0:
                 return jsonify({'success': False, 'error': 'Không tìm thấy CCDC chờ kích hoạt'}), 404
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             return jsonify({'success': True})
         except Exception as e:
             conn.rollback()
@@ -5178,7 +5178,7 @@ def register_ketoan_hkd_routes(app):
                 VALUES (?, 'export', 'Xuất vật tư', ?, ?, ?)
             """, (p_id, -qty, move_id, now_str))
 
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
             return jsonify({
                 "success": True, 
                 "px_no": new_px_no, 
@@ -5289,7 +5289,7 @@ def register_ketoan_hkd_routes(app):
                 int(data['term_months']),
                 data.get('start_date', datetime.now().strftime('%Y-%m-%d'))
             ))
-            db.commit()
+            sqlite_commit(db, label='hkd')
             return jsonify({"success": True})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -5315,7 +5315,7 @@ def register_ketoan_hkd_routes(app):
                 WHERE id = ?
             """, (pay_amount, loan_id))
         
-            db.commit()
+            sqlite_commit(db, label='hkd')
             return jsonify({"success": True})
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
@@ -5368,7 +5368,7 @@ def register_ketoan_hkd_routes(app):
                       (new_pc, loan['lender_name'], amount, data.get('payment_method'), 
                        debit_acc, reason, expense_type, loan_id, selected_date))
         
-            db.commit()
+            sqlite_commit(db, label='hkd')
             return jsonify({"success": True, "voucher": new_pc})
         except Exception as e:
             db.rollback()
@@ -5404,7 +5404,7 @@ def register_ketoan_hkd_routes(app):
                 float(data.get('amount_paid', 0)), # Trường mới bổ sung
                 loan_id
             ))
-            db.commit()
+            sqlite_commit(db, label='hkd')
             return jsonify({"success": True})
         except Exception as e:
             db.rollback()
@@ -5540,7 +5540,7 @@ def register_ketoan_hkd_routes(app):
             )
         
             cursor.execute(query, params)
-            db.commit()
+            sqlite_commit(db, label='hkd')
             return jsonify({"success": True, "message": "Thành công"})
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
@@ -5622,7 +5622,7 @@ def register_ketoan_hkd_routes(app):
             # 4. Cập nhật lại tổng số tiền đã nộp vào bảng thue_khac
             c.execute("UPDATE thue_khac SET paid_amount = ? WHERE id = ?", (new_paid, row_id))
 
-            db.commit()
+            sqlite_commit(db, label='hkd')
             return jsonify({
                 "success": True, 
                 "message": "Đã lập phiếu chi thành công", 
@@ -5660,7 +5660,7 @@ def register_ketoan_hkd_routes(app):
                 data.get('id')
             )
             cursor.execute(query, params)
-            db.commit()
+            sqlite_commit(db, label='hkd')
             return jsonify({"success": True})
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
@@ -5785,7 +5785,7 @@ def register_ketoan_hkd_routes(app):
             # Reset AUTOINCREMENT
             cursor.execute("DELETE FROM sqlite_sequence")
 
-            conn.commit()
+            sqlite_commit(conn, label='hkd')
 
             # Logging (an toàn, không phụ thuộc current_user)
             username = getattr(current_user, 'username', 'Unknown')

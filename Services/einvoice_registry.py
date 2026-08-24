@@ -10,9 +10,17 @@ EINVOICE_PROVIDERS = {
         'supports_replacement': True,
         'supports_portal_sync': True,
         'supports_purchase_sync': True,
-        'default_api_url': 'https://api.matbao.net',
+        # API-Proxy-HDDT (phát hành HĐ bán): /api/auth/login {MST, TDNhap, MKhau}
+        'default_api_url': 'https://api-hddt.matbao.in:11443',
+        'demo_api_url': 'https://demo-api-hddt.matbao.in:11443',
+        # Purchase Inv API (HĐ đầu vào): /auth/token {token: ApiKey}
         'default_purchase_api_url': 'https://api-hoadondauvao.matbao.in',
-        'doc_hint': 'Portal Mắt Bão → Tích hợp API. HĐ đầu vào: purchase API (api-hoadondauvao) hoặc cùng host nếu MB gộp.',
+        'demo_purchase_api_url': 'https://demo-api-hoadondauvao.matbao.in',
+        'doc_hint': (
+            'HĐ bán: api-hddt.matbao.in:11443 (MST + TDNhap + MKhau). '
+            'HĐ mua: api-hoadondauvao.matbao.in (Api Key/Token → /auth/token). '
+            'CQT: MST + mật khẩu hoadondientu.gdt.gov.vn + captcha.'
+        ),
     },
     'misa': {
         'code': 'misa',

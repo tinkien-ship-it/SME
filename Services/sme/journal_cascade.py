@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import sqlite3
 from typing import Any
+from db_utils import sqlite_commit
 
 
 # Bút toán gắn phiếu xuất kho 02-VT (phieu_xuat_kho.sale_id = document_id)
@@ -465,7 +466,7 @@ def delete_stock_out_voucher(
     conn.execute('DELETE FROM phieu_xuat_kho WHERE id = ?', (int(voucher_id),))
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='journal_cascade')
 
     return {
         'success': True,

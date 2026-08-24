@@ -7,7 +7,7 @@ from datetime import datetime
 
 from flask import jsonify, render_template, request, session
 
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +205,7 @@ def register_sme_phase7_routes(app, *, login_required, require_sme_regime):
         conn.row_factory = sqlite3.Row
         try:
             data = list_bank_payment_accounts(conn)
-            conn.commit()
+            sqlite_commit(conn, label='sme_phase7')
             return jsonify({'success': True, **data})
         except Exception as e:
             logger.exception('api_sme_bank_payment_accounts')

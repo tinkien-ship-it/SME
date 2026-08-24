@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Authenticator | Master</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .otp-card {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 36px;
+        }
+        .icon-box {
+            width: 70px; height: 70px;
+            background: #eef2ff; color: #4f46e5;
+            border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; margin: 0 auto 20px;
+        }
+        .otp-input {
+            letter-spacing: 10px; font-weight: 700;
+            border: 2px solid #e5e7eb; border-radius: 12px; padding: 14px;
+            text-align: center; font-size: 1.5rem;
+        }
+        .otp-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 4px rgba(79,70,229,.12); }
+        .qr-box { max-width: 200px; margin: 0 auto; }
+        .secret-code {
+            font-family: ui-monospace, monospace; font-size: 0.85rem;
+            word-break: break-all; background: #f8fafc; border-radius: 8px; padding: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+            <div class="otp-card">
+                <div class="icon-box"><i class="fas fa-mobile-screen-button"></i></div>
+                <h4 class="text-center mb-2">
+                    {% if setup_mode %}Thiết lập Google Authenticator{% else %}Xác thực Master{% endif %}
+                </h4>
+                <p class="text-muted text-center small mb-4">
+                    {% if setup_mode %}
+                    Quét mã QR bằng ứng dụng Google Authenticator / Microsoft Authenticator, rồi nhập mã 6 số để hoàn tất.
+                    {% else %}
+                    Thiết bị này chưa được tin cậy. Nhập mã 6 số từ Google Authenticator.
+                    {% endif %}
+                </p>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="mb-3">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'message' else 'info' }} small py-2">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                {% if setup_mode and setup %}
+                <div class="text-center mb-3">
+                    <img class="qr-box img-fluid border rounded p-2 bg-white" src="{{ setup.qr_data_url }}" alt="QR TOTP">
+                    <p class="small text-muted mt-2 mb-1">Hoặc nhập khóa thủ công:</p>
+                    <div class="secret-code">{{ setup.secret }}</div>
+                </div>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('verify_totp_page') }}">
+                    <label class="form-label fw-semibold">Mã Authenticator (6 số)</label>
+                    <input type="text" name="totp_code" class="form-control otp-input mb-3"
+                           inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" required autofocus>
+                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                        {% if setup_mode %}Xác nhận &amp; kích hoạt{% else %}Xác thực &amp; đăng nhập{% endif %}
+                    </button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('login') }}" class="text-muted small text-decoration-none">
+                        <i class="fa-solid fa-chevron-left me-1"></i> Quay lại đăng nhập
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

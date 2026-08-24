@@ -7,7 +7,7 @@ from datetime import datetime
 
 from flask import jsonify, redirect, render_template, request, session, url_for
 
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +250,7 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
                     created_by=_user(),
                     commit=False,
                 )
-            conn.commit()
+            sqlite_commit(conn, label='sme_phase0')
             return jsonify({'success': True, 'data': doc})
         except ValueError as e:
             conn.rollback()
@@ -353,7 +353,7 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
                     created_by=_user(),
                     commit=False,
                 )
-            conn.commit()
+            sqlite_commit(conn, label='sme_phase0')
             return jsonify({'success': True, 'data': doc})
         except ValueError as e:
             conn.rollback()

@@ -3,7 +3,9 @@ import logging
 import os
 import random
 import sqlite3
+import threading
 import time
+from contextlib import contextmanager
 
 from flask import g, has_request_context, session
 
@@ -14,7 +16,7 @@ MAIN_DB_PATH = os.path.join(BASE_DIR, "database.db")
 # Alias tương thích code cũ (registry / master DB)
 REGISTRY_PATH = MAIN_DB_PATH
 
-# Gunicorn nhiều worker ghi cùng 1 file SQLite → cần chờ lâu hơn khi locked.
+# Gunicorn nhiều worker ghi cùng 1 file SQLite → cần chờ lâu hơn khi mở file.
 # Có thể ghi đè: export SME_SQLITE_TIMEOUT=60
 try:
     SQLITE_TIMEOUT_SEC = float(os.environ.get('SME_SQLITE_TIMEOUT', '60') or 60)
@@ -26,10 +28,51 @@ try:
 except ValueError:
     SQLITE_WRITE_RETRIES = 12
 
+# PRAGMA busy_timeout (ms) — tách khỏi timeout mở file; mặc định 10s.
+try:
+    SQLITE_BUSY_TIMEOUT_MS = int(os.environ.get('SME_SQLITE_BUSY_TIMEOUT_MS', '10000') or 10000)
+except ValueError:
+    SQLITE_BUSY_TIMEOUT_MS = 10000
+
+try:
+    SQLITE_FILE_WRITE_LOCK_SEC = float(os.environ.get('SME_SQLITE_WRITE_LOCK_SEC', '30') or 30)
+except ValueError:
+    SQLITE_FILE_WRITE_LOCK_SEC = 30.0
+
+# Single-writer trong cùng process (RLock — cho phép with_sqlite_write lồng nhau).
+_WRITE_LOCKS_GUARD = threading.Lock()
+_WRITE_LOCKS: dict[str, threading.RLock] = {}
+
 # Đã bật WAL theo đường dẫn — tránh PRAGMA journal_mode lặp lại mỗi lần mở
 _wal_ready_paths: set[str] = set()
 # Schema/seed đã xong trong process này (key = đường dẫn file DB)
 _process_ready: dict[str, set[str]] = {}
+
+
+def _write_lock_for_db(path: str | None) -> threading.RLock:
+    key = os.path.abspath(path) if path else '__anonymous__'
+    with _WRITE_LOCKS_GUARD:
+        if key not in _WRITE_LOCKS:
+            _WRITE_LOCKS[key] = threading.RLock()
+        return _WRITE_LOCKS[key]
+
+
+@contextmanager
+def sqlite_file_write_lock(conn_or_path, *, timeout: float | None = None):
+    """Khóa ghi theo file DB trong process (single-writer pattern, thread-safe)."""
+    if isinstance(conn_or_path, str):
+        path = _normalize_db_path(conn_or_path) or conn_or_path
+    else:
+        path = sqlite_db_file(conn_or_path)
+    lock = _write_lock_for_db(path)
+    wait = SQLITE_FILE_WRITE_LOCK_SEC if timeout is None else timeout
+    acquired = lock.acquire(timeout=max(0.1, wait))
+    if not acquired:
+        raise sqlite3.OperationalError('database is locked (write lock timeout)')
+    try:
+        yield
+    finally:
+        lock.release()
 
 
 def _is_locked_error(exc: BaseException) -> bool:
@@ -232,9 +275,8 @@ def locked_user_message() -> str:
 def _configure_sqlite_connection(conn: sqlite3.Connection, db_path: str | None = None) -> sqlite3.Connection:
     """WAL + busy_timeout giúp đọc/ghi song song ổn định hơn trên SQLite file."""
     conn.row_factory = sqlite3.Row
-    busy_ms = int(max(SQLITE_TIMEOUT_SEC, 1) * 1000)
     try:
-        conn.execute(f'PRAGMA busy_timeout = {busy_ms}')
+        conn.execute(f'PRAGMA busy_timeout = {SQLITE_BUSY_TIMEOUT_MS}')
     except sqlite3.Error:
         pass
     key = os.path.abspath(db_path) if db_path else None
@@ -318,7 +360,8 @@ def sqlite_write_retry(fn, *, retries: int | None = None, label: str = 'sqlite_w
             if not _is_locked_error(exc) or attempt >= total - 1:
                 raise
             sleep_s = min(0.08 * (2 ** attempt) + random.uniform(0, 0.08), 2.5)
-            logger.warning(
+            log_fn = logger.warning if attempt >= total - 2 else logger.debug
+            log_fn(
                 '%s locked (lần %s/%s), chờ %.2fs: %s',
                 label, attempt + 1, total, sleep_s, exc,
             )
@@ -374,30 +417,33 @@ def sqlite_table_exists(conn, name: str) -> bool:
 
 
 def with_sqlite_write(conn, fn, *, commit: bool = True, label: str = 'sqlite_write'):
-    """Chạy ``fn(target)`` có retry khi locked.
+    """Chạy ``fn(target)`` có retry khi locked + khóa ghi theo file + BEGIN IMMEDIATE.
 
     ``commit=False`` (đọc sổ / cùng transaction nghiệp vụ): ghi DDL/seed trên
-    **connection riêng** rồi commit ngay — không giữ khóa trên conn request,
-    không bị teardown rollback xóa seed.
+    **connection riêng** rồi commit ngay — không giữ khóa trên conn request.
     ``commit=True``: ghi trên đúng ``conn`` rồi commit.
     """
     def _run():
         own = None
         target = conn
+        lock_key = sqlite_db_file(conn)
         try:
             if not commit:
                 path = sqlite_db_file(conn)
                 if path:
-                    own = open_sqlite(path)
+                    own = open_sqlite(path, timeout=5.0)
                     target = own
-            fn(target)
-            try:
-                target.commit()
-            except sqlite3.Error:
-                pass
+                    lock_key = path
+            with sqlite_file_write_lock(lock_key or conn):
+                begin_immediate(target, label=label)
+                fn(target)
+                try:
+                    target.commit()
+                except sqlite3.Error:
+                    pass
         except Exception:
             try:
-                target.rollback()
+                rollback_quietly(target)
             except Exception:
                 pass
             raise
@@ -409,6 +455,30 @@ def with_sqlite_write(conn, fn, *, commit: bool = True, label: str = 'sqlite_wri
                     pass
 
     return sqlite_write_retry(_run, label=label)
+
+
+def sqlite_run_write(conn, fn, *, label: str = 'sqlite_write'):
+    """Chạy ``fn(conn)`` trong giao dịch ghi ngắn (file lock + BEGIN IMMEDIATE + commit + retry).
+
+    Dùng khi route/service đã có ``conn`` từ ``get_db_connection()`` — tránh nhiều ``commit()`` rời rạc.
+    """
+    out: list = []
+
+    def _wrapper(target):
+        out.append(fn(target))
+
+    with_sqlite_write(conn, _wrapper, commit=True, label=label)
+    return out[0] if out else None
+
+
+def sqlite_commit(conn, *, label: str = 'sqlite_commit') -> None:
+    """Commit giao dịch hiện tại với ``BEGIN IMMEDIATE`` + retry (route đã ghi xong)."""
+
+    def _do():
+        begin_immediate(conn, label=label)
+        conn.commit()
+
+    sqlite_write_retry(_do, label=label)
 
 
 def paths_same_db(a, b) -> bool:

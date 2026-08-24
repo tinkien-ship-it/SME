@@ -12,6 +12,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.inventory_stock_helpers import sync_inventory_quantity_from_moves
 from Services.sme.cogs_accounts import cogs_accounts_for_line, cogs_spoilage_account
 from Services.sme.journal_engine import (
@@ -124,7 +125,7 @@ def ensure_consignment_schema(conn: sqlite3.Connection, *, commit: bool = True) 
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, 'sme_agent_deliveries')
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='consignment')
 
 
 def _avg_cost(conn: sqlite3.Connection, product_id: int) -> float:
@@ -585,7 +586,7 @@ def send_consignment_voucher_email(
             ((err or 'Gửi email thất bại')[:500], delivery_id),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='consignment')
     if not ok:
         raise ValueError(err or 'Gửi email thất bại')
     return {'success': True, 'email': email, 'sent_at': when}
@@ -787,7 +788,7 @@ def ship_consignment(
             )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='consignment')
     out = get_consignment(conn, did)
     out['email_sent'] = bool(email_info)
     out['email_error'] = email_err
@@ -1053,13 +1054,13 @@ def confirm_consignment_sale(
             notes=notes,
         )
         # Commit đơn bán để provider HĐĐT đọc được (mở connection riêng)
-        conn.commit()
+        sqlite_commit(conn, label='consignment')
         try:
             invoice_info = _issue_einvoice_for_sale(sale_id, loai_hdon=loai_hdon)
         except Exception as exc:
             try:
                 _cancel_orphan_consign_sale(conn, sale_id, str(exc))
-                conn.commit()
+                sqlite_commit(conn, label='consignment')
             except Exception:
                 conn.rollback()
             raise ValueError(
@@ -1176,7 +1177,7 @@ def confirm_consignment_sale(
         )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='consignment')
     out = get_consignment(conn, delivery_id)
     out['last_event'] = {
         'type': 'sale',
@@ -1336,7 +1337,7 @@ def return_consignment(
             )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='consignment')
     out = get_consignment(conn, delivery_id)
     out['last_event'] = {'type': 'return', 'journal_entry_id': ret_je['id']}
     return out
@@ -1404,5 +1405,5 @@ def void_consignment(
         (((doc.get('notes') or '') + f' | {reason}').strip(' |'), delivery_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='consignment')
     return get_consignment(conn, delivery_id)

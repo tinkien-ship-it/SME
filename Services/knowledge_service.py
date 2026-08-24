@@ -11,7 +11,7 @@ from typing import Any
 
 import requests
 
-from db_utils import get_main_db_connection
+from db_utils import get_main_db_connection, sqlite_commit
 from Services.tenant_profile import normalize_accounting_regime
 
 KNOWLEDGE_CATEGORIES = {
@@ -279,7 +279,7 @@ def ensure_knowledge_schema(conn=None):
         WHERE source_id IS NOT NULL AND source_id != ''
     """)
     _migrate_audience_on_existing(conn)
-    conn.commit()
+    sqlite_commit(conn, label='knowledge_service')
     if own:
         conn.close()
 
@@ -429,7 +429,7 @@ def seed_default_articles(conn=None):
             item['category'], item['audience'], item['source_type'],
             item['is_pinned'], now, now, now,
         ))
-    conn.commit()
+    sqlite_commit(conn, label='knowledge_service')
     if own:
         conn.close()
     return len(defaults)
@@ -526,7 +526,7 @@ def create_article(data: dict, created_by: str = ''):
         now,
         now,
     ))
-    conn.commit()
+    sqlite_commit(conn, label='knowledge_service')
     new_id = cur.lastrowid
     conn.close()
     return get_article(new_id)
@@ -570,7 +570,7 @@ def update_article(article_id: int, data: dict):
         now,
         article_id,
     ))
-    conn.commit()
+    sqlite_commit(conn, label='knowledge_service')
     conn.close()
     return get_article(article_id)
 
@@ -592,7 +592,7 @@ def publish_article(article_id: int):
             updated_at = ?
         WHERE id = ?
     """, (now, now, article_id))
-    conn.commit()
+    sqlite_commit(conn, label='knowledge_service')
     conn.close()
     return get_article(article_id)
 
@@ -601,7 +601,7 @@ def delete_article(article_id: int) -> bool:
     conn = get_main_db_connection()
     ensure_knowledge_schema(conn)
     cur = conn.execute('DELETE FROM knowledge_articles WHERE id = ?', (article_id,))
-    conn.commit()
+    sqlite_commit(conn, label='knowledge_service')
     deleted = cur.rowcount > 0
     conn.close()
     return deleted
@@ -709,7 +709,7 @@ def sync_rss_feeds(*, created_by: str = 'rss_sync', max_per_feed: int = 25, as_d
 
     _set_sync_meta(conn, 'last_rss_sync', now)
     _set_sync_meta(conn, 'last_rss_inserted', str(inserted))
-    conn.commit()
+    sqlite_commit(conn, label='knowledge_service')
     conn.close()
     return {
         'inserted': inserted,

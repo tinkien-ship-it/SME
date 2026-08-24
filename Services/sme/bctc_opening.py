@@ -17,6 +17,7 @@ from typing import Any
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 DK_DOC_TYPE = 'DK'
@@ -75,7 +76,7 @@ def ensure_bctc_opening_schema(conn: sqlite3.Connection, *, commit: bool = False
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bctc_opening')
 
 
 def _line_defs(conn: sqlite3.Connection, report: str) -> list[dict]:
@@ -215,7 +216,7 @@ def save_opening_lines(
             (year, rep, code, float(amt), source, now, updated_by),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bctc_opening')
     return {
         'saved': len(items),
         'skipped': skipped,
@@ -244,7 +245,7 @@ def clear_opening_lines(
             (int(fiscal_year),),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bctc_opening')
     return int(cur.rowcount or 0)
 
 
@@ -682,5 +683,5 @@ def apply_excel_import(
             conn, fiscal_year=year, lines=trial, created_by=created_by,
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bctc_opening')
     return result

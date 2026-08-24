@@ -866,7 +866,7 @@ async function startSync(forceLogin) {
 
     Swal.fire({
         title: 'Đang đồng bộ...',
-        html: `Nguồn <b>${source}</b> · tháng <b>${monthValue}</b>`,
+        html: `Nguồn <b>${source}</b> · tháng <b>${monthValue}</b><br><small class="text-muted">Tải trọn 1 tháng (đầu → cuối tháng)</small>`,
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
     });
@@ -883,8 +883,20 @@ async function startSync(forceLogin) {
                 ? res.summary.new_inserted
                 : (res.count || 0);
             const skip = (res.summary && res.summary.duplicates_skipped) || 0;
-            Swal.fire('Thành công!', `Đã thêm ${n} hóa đơn mới` + (skip ? ` (bỏ trùng ${skip})` : '') + '.', 'success')
-                .then(() => {
+            const phasesOk = res.phases_ok;
+            const phasesTotal = res.phases_total;
+            let detail = `Đã thêm ${n} hóa đơn mới` + (skip ? ` (bỏ trùng ${skip})` : '');
+            if (phasesTotal) {
+                detail += `<br><small class="text-muted">Khoảng tải: trọn tháng (${phasesOk}/${phasesTotal})</small>`;
+            }
+            if (res.partial || (res.warnings && res.warnings.length)) {
+                detail += `<br><small class="text-warning">Một số phase lỗi — đã lưu phần tải được.</small>`;
+            }
+            Swal.fire({
+                icon: res.partial ? 'warning' : 'success',
+                title: res.partial ? 'Đồng bộ một phần' : 'Thành công!',
+                html: detail,
+            }).then(() => {
                     bootstrap.Modal.getInstance(document.getElementById('syncModal'))?.hide();
                     loadInvoices();
                 });

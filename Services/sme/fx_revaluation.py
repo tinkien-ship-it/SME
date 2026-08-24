@@ -7,6 +7,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -65,7 +66,7 @@ def ensure_sme_fx_schema(conn: sqlite3.Connection, *, commit: bool = True) -> No
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fx_revaluation')
 
 
 def revalue_foreign_currency(
@@ -228,7 +229,7 @@ def revalue_foreign_currency(
             (rid, d['account_code'], d['balance_fc'], d['book_vnd'], d['revalued_vnd'], d['difference']),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fx_revaluation')
     return get_fx_revaluation(conn, rid)
 
 
@@ -289,5 +290,5 @@ def void_fx_revaluation(
         ((doc.get('notes') or '') + f' | {reason}', reval_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fx_revaluation')
     return get_fx_revaluation(conn, reval_id)

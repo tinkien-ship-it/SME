@@ -87,6 +87,235 @@ class MatbaoAdapterWrapper(BaseEInvoiceAdapter):
     def issue_replacement(self, sale_data, items, replacement_info):
         return self._inner.issue_replacement(sale_data, items, replacement_info)
 
+    def test_connection(self, channel='all'):
+        """
+        channel: sales | purchase | all
+        - sales: chỉ API phát hành HĐ bán
+        - purchase: chỉ Token HĐ đầu vào (bắt buộc có api_key)
+        - all: bán + mua (mua bỏ qua nếu chưa cấu hình)
+        """
+        channel = (channel or 'all').strip().lower()
+        if channel not in ('sales', 'purchase', 'all'):
+            channel = 'all'
+
+        if channel == 'purchase':
+            api_key = (self.config.get('api_key') or '').strip()
+            purchase_url = (self.config.get('purchase_api_url') or '').strip().rstrip('/')
+            if not api_key and not purchase_url:
+                return {
+                    'success': False,
+                    'error': (
+                        'Chưa nhập Token HĐ đầu vào và/hoặc purchase_api_url. '
+                        'Demo: https://demo-api-hoadondauvao.matbao.in + Token từ portal HĐ đầu vào.'
+                    ),
+                    'steps': [{'step': 'purchase_validate', 'ok': False, 'detail': 'missing fields'}],
+                }
+            return self._test_purchase_token(purchase_url, api_key)
+
+        sales = self._inner.test_connection() if hasattr(self._inner, 'test_connection') else None
+        if not isinstance(sales, dict):
+            sales = {
+                'success': False,
+                'error': 'Mắt Bão: provider không hỗ trợ test_connection',
+            }
+        if channel == 'sales':
+            return sales
+        if not sales.get('success'):
+            return sales
+
+        steps = list(sales.get('steps') or [])
+        messages = [sales.get('message') or 'HĐ bán OK']
+
+        api_key = (self.config.get('api_key') or '').strip()
+        purchase_url = (self.config.get('purchase_api_url') or '').strip().rstrip('/')
+        if api_key or purchase_url:
+            purchase_result = self._test_purchase_token(purchase_url, api_key)
+            steps.extend(purchase_result.get('steps') or [])
+            if not purchase_result.get('success'):
+                return {
+                    'success': False,
+                    'error': (
+                        f"{sales.get('message') or 'HĐ bán OK'}. "
+                        f"Nhưng HĐ mua thất bại: {purchase_result.get('error')}"
+                    ),
+                    'steps': steps,
+                    'sales_ok': True,
+                    'purchase_ok': False,
+                }
+            messages.append(purchase_result.get('message') or 'HĐ mua OK')
+        else:
+            steps.append({
+                'step': 'purchase_skip',
+                'ok': True,
+                'detail': 'Bỏ qua HĐ mua (chưa nhập Token / purchase_api_url) — dùng nút «Kiểm tra HĐ đầu vào» sau khi điền',
+            })
+            messages.append('HĐ mua: chưa cấu hình (tuỳ chọn)')
+
+        return {
+            'success': True,
+            'message': ' · '.join(messages),
+            'steps': steps,
+            'sales_ok': True,
+            'purchase_ok': bool(api_key or purchase_url),
+        }
+
+    def _test_purchase_token(self, purchase_url: str, api_key: str) -> dict:
+        """POST {base}/auth/token với body {token: ApiKey} theo Purchase Inv API."""
+        from Services.einvoice_registry import get_provider_meta
+
+        meta = get_provider_meta('matbao') or {}
+        base = purchase_url or (meta.get('default_purchase_api_url') or '').rstrip('/')
+        if not base:
+            return {
+                'success': False,
+                'error': 'Thiếu API Hóa đơn đầu vào (purchase_api_url)',
+                'steps': [{'step': 'purchase_token', 'ok': False, 'detail': 'missing url'}],
+            }
+        if not api_key:
+            return {
+                'success': False,
+                'error': 'Thiếu Token HĐ đầu vào (api_key)',
+                'steps': [{'step': 'purchase_token', 'ok': False, 'detail': 'missing api_key'}],
+            }
+
+        url = f'{base}/auth/token'
+        try:
+            resp = requests.post(
+                url,
+                json={'token': api_key},
+                timeout=20,
+                verify=False,
+            )
+        except requests.exceptions.Timeout:
+            return {
+                'success': False,
+                'error': f'Hết thời gian chờ {url}',
+                'steps': [{'step': 'purchase_token', 'ok': False, 'detail': 'timeout'}],
+            }
+        except requests.exceptions.RequestException as exc:
+            return {
+                'success': False,
+                'error': f'Không kết nối được {url}: {exc}',
+                'steps': [{'step': 'purchase_token', 'ok': False, 'detail': str(exc)}],
+            }
+
+        try:
+            data = resp.json() if resp.content else {}
+        except ValueError:
+            return {
+                'success': False,
+                'error': f'Purchase auth HTTP {resp.status_code}: không phải JSON',
+                'steps': [{'step': 'purchase_token', 'ok': False, 'http': resp.status_code}],
+            }
+
+        ok = bool(data.get('Success') or data.get('success')) and bool(data.get('Data') or data.get('data'))
+        if not ok:
+            err = data.get('Data') or data.get('Message') or data.get('ErrorCode') or f'HTTP {resp.status_code}'
+            return {
+                'success': False,
+                'error': f'Token HĐ đầu vào bị từ chối: {err}',
+                'steps': [{
+                    'step': 'purchase_token',
+                    'ok': False,
+                    'http': resp.status_code,
+                    'detail': str(err)[:300],
+                }],
+            }
+
+        bearer = data.get('Data') or data.get('data')
+        steps = [{
+            'step': 'purchase_token',
+            'ok': True,
+            'url': url,
+            'detail': 'Bearer token cấp thành công',
+        }]
+
+        # Probe load-data nhẹ (7 ngày gần nhất, typeDataPDF=0) — token OK chưa đủ
+        # vì lỗi thực tế thường nằm ở /hoa-don-dau-vao/load-data (timeout).
+        try:
+            from datetime import datetime, timedelta
+            today = datetime.now()
+            from_d = (today - timedelta(days=7)).strftime('%Y-%m-%d')
+            to_d = today.strftime('%Y-%m-%d 23:59:59')
+            load_url = f'{base}/hoa-don-dau-vao/load-data'
+            payload = {
+                'comName': '',
+                'comTaxCode': '',
+                'no': 0,
+                'fromDateYMD': from_d,
+                'toDateYMD': to_d,
+                'trangthai': -1,
+                'pattern': '',
+                'serial': '',
+                'typeSearchDate': 2,
+                'typeDataPDF': 0,
+            }
+            load_resp = requests.request(
+                'GET',
+                load_url,
+                json=payload,
+                headers={
+                    'Authorization': f'Bearer {bearer}',
+                    'Content-Type': 'application/json',
+                },
+                timeout=45,
+                verify=False,
+            )
+            try:
+                load_data = load_resp.json() if load_resp.content else {}
+            except ValueError:
+                load_data = {}
+            if load_resp.status_code == 200 and load_data.get('Success'):
+                n = len(load_data.get('Data') or []) if isinstance(load_data.get('Data'), list) else 0
+                steps.append({
+                    'step': 'purchase_load_data',
+                    'ok': True,
+                    'url': load_url,
+                    'detail': f'load-data OK ({from_d}→{to_d[:10]}, {n} HĐ)',
+                })
+                return {
+                    'success': True,
+                    'message': f'HĐ mua: Token + load-data OK ({base})',
+                    'steps': steps,
+                }
+            err = load_data.get('Data') or load_data.get('Message') or f'HTTP {load_resp.status_code}'
+            steps.append({
+                'step': 'purchase_load_data',
+                'ok': False,
+                'http': load_resp.status_code,
+                'detail': str(err)[:300],
+            })
+            return {
+                'success': False,
+                'error': f'Token OK nhưng load-data lỗi: {err}',
+                'steps': steps,
+            }
+        except requests.exceptions.Timeout:
+            steps.append({
+                'step': 'purchase_load_data',
+                'ok': False,
+                'detail': 'timeout — demo API chậm; thử lại hoặc dùng URL Prod',
+            })
+            return {
+                'success': False,
+                'error': (
+                    'Token OK nhưng /hoa-don-dau-vao/load-data hết thời gian chờ. '
+                    'Demo Matbao thường chậm — thử lại hoặc chuyển URL Prod.'
+                ),
+                'steps': steps,
+            }
+        except requests.exceptions.RequestException as exc:
+            steps.append({
+                'step': 'purchase_load_data',
+                'ok': False,
+                'detail': str(exc)[:300],
+            })
+            return {
+                'success': False,
+                'error': f'Token OK nhưng không gọi được load-data: {exc}',
+                'steps': steps,
+            }
+
 
 class PendingProviderAdapter(BaseEInvoiceAdapter):
     """Provider chưa có tài liệu API đầy đủ — báo lỗi rõ ràng, không trả số HĐ giả."""

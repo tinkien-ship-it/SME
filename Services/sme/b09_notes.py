@@ -8,6 +8,7 @@ from typing import Any
 from Services.sme.bctc_report import _closing_balances, _period_activity
 from Services.sme.general_ledger import period_bounds
 from Services.sme.journal_engine import ensure_sme_journal_ready
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -202,7 +203,7 @@ def ensure_b09_narrative_schema(conn: sqlite3.Connection, *, commit: bool = True
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='b09_notes')
 
 
 def list_b09_narrative_overrides(conn: sqlite3.Connection) -> dict[str, str]:

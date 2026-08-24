@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 from typing import Any
+from db_utils import sqlite_commit
 
 DEFAULT_BRANCH_CODE = 'HQ'
 
@@ -90,7 +91,7 @@ def ensure_sme_branches_schema(conn: sqlite3.Connection, *, commit: bool = True)
 
     # Luôn commit schema để nhả write-lock — không giữ transaction xuyên suốt render HTML
     try:
-        conn.commit()
+        sqlite_commit(conn, label='branches')
     except sqlite3.Error:
         pass
     _branches_schema_ready[db_key] = _BRANCH_SCHEMA_VERSION
@@ -185,7 +186,7 @@ def create_branch(
          notes or '', _now(), _now()),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='branches')
     return get_branch(conn, code_s)
 
 
@@ -232,7 +233,7 @@ def update_branch(
         ),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='branches')
     return get_branch(conn, code_s)
 
 
@@ -278,7 +279,7 @@ def set_warehouse_branch(
         (bc, wh),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='branches')
 
 
 def request_branch_filter() -> str:
@@ -337,7 +338,7 @@ def backfill_asset_branches_from_warehouse(
             )
             updated += conn.total_changes
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='branches')
     return updated
 
 

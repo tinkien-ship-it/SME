@@ -8,6 +8,7 @@ from typing import Any
 
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
 from Services.sme.vouchers import create_payment, create_receipt, ensure_sme_voucher_schema
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -94,7 +95,7 @@ def ensure_sme_advance_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         'CREATE INDEX IF NOT EXISTS idx_sme_advance_docs_emp ON sme_advance_docs(employee_id)'
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='advances')
 
 
 def _prefix_for(doc_type: str) -> str:
@@ -249,7 +250,7 @@ def create_advance_request(
     doc_id = cur.lastrowid
     _stamp_advance_branch(conn, doc_id)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='advances')
     return get_advance_doc(conn, doc_id)
 
 
@@ -318,7 +319,7 @@ def disburse_advance(
         (voucher['id'], voucher.get('journal_entry_id'), _now(), doc_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='advances')
     out = get_advance_doc(conn, doc_id)
     out['voucher'] = voucher
     return out
@@ -390,7 +391,7 @@ def create_payment_request(
             ),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='advances')
     return get_advance_doc(conn, doc_id)
 
 
@@ -435,7 +436,7 @@ def pay_payment_request(
         (voucher['id'], voucher.get('journal_entry_id'), _now(), doc_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='advances')
     out = get_advance_doc(conn, doc_id)
     out['voucher'] = voucher
     return out
@@ -652,7 +653,7 @@ def settle_advance(
     )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='advances')
     out = get_advance_doc(conn, settle_id)
     out['cash_return_voucher'] = cash_return_voucher
     out['additional_voucher'] = additional_voucher
@@ -770,5 +771,5 @@ def void_advance_doc(
         (reason, _now(), doc_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='advances')
     return get_advance_doc(conn, doc_id)

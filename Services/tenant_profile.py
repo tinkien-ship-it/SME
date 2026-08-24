@@ -674,7 +674,7 @@ def load_profile_from_tenant_db(db_path, tenant_id=None):
     """Đọc profile từ DB tenant (business_info) — dùng khi firm xem sổ DN thuê."""
     if not db_path or not os.path.exists(db_path):
         return _empty_profile()
-    from db_utils import open_sqlite
+    from db_utils import open_sqlite, sqlite_commit
 
     business = {}
     settings = {}
@@ -892,7 +892,7 @@ def update_registry_settings(tenant_id, settings_patch, conn=None):
             (json.dumps(current, ensure_ascii=False), tenant_id),
         )
         if own_conn:
-            conn.commit()
+            sqlite_commit(conn, label='tenant_profile')
         try:
             invalidate_tenant_profile_cache(tenant_id)
         except Exception:

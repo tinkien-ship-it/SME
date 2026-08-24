@@ -8,6 +8,7 @@ from typing import Any
 
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry
 from Services.sme.vouchers import _cash_account, ensure_sme_voucher_schema, list_vouchers
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -78,7 +79,7 @@ def ensure_sme_cash_extras_schema(conn: sqlite3.Connection, *, commit: bool = Tr
     ensure_branch_column(conn, 'sme_cash_listings')
     ensure_branch_column(conn, 'sme_gold_sheets')
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cash_extras')
 
 
 def _next_bl_no(conn: sqlite3.Connection) -> str:
@@ -172,7 +173,7 @@ def create_temp_receipt(
         ),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cash_extras')
     return {
         'id': cur.lastrowid,
         'voucher_no': vno,
@@ -290,7 +291,7 @@ def build_payment_listing(
     from Services.sme.branch_filter import stamp_row_branch
     stamp_row_branch(conn, 'sme_cash_listings', lid, branch_code=branch_code)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cash_extras')
     return get_cash_listing(conn, lid)
 
 
@@ -403,7 +404,7 @@ def create_gold_sheet(
     from Services.sme.branch_filter import stamp_row_branch
     stamp_row_branch(conn, 'sme_gold_sheets', sid, branch_code=branch_code)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cash_extras')
     return get_gold_sheet(conn, sid)
 
 
@@ -457,7 +458,7 @@ def void_gold_sheet(
         ((doc.get('notes') or '') + f' | {reason}', sheet_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cash_extras')
     return get_gold_sheet(conn, sheet_id)
 
 
@@ -480,5 +481,5 @@ def void_cash_listing(
         ((doc.get('notes') or '') + f' | {reason}', doc_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cash_extras')
     return get_cash_listing(conn, doc_id)

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from typing import Any
+from db_utils import sqlite_commit
 
 
 def ensure_phieu_xuat_kho_schema(conn: sqlite3.Connection, *, commit: bool = False) -> None:
@@ -33,7 +34,7 @@ def ensure_phieu_xuat_kho_schema(conn: sqlite3.Connection, *, commit: bool = Fal
             except sqlite3.OperationalError:
                 pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='stock_vouchers')
 
 
 def _next_px_voucher_no(conn: sqlite3.Connection) -> str:

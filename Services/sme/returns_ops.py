@@ -7,6 +7,7 @@ from typing import Any
 
 from Services.inventory_stock_helpers import sync_inventory_quantity_from_moves
 from Services.sme.return_import_journal import reverse_return_import_journals
+from db_utils import sqlite_commit
 
 
 def _now() -> str:
@@ -193,7 +194,7 @@ def void_return_import(
         (return_id,),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='returns_ops')
     out = dict(conn.execute(
         'SELECT * FROM return_import WHERE id = ?', (return_id,)
     ).fetchone())
@@ -284,7 +285,7 @@ def void_return_sale(
         (return_id,),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='returns_ops')
     out = dict(conn.execute(
         'SELECT * FROM return_sales WHERE id = ?', (return_id,)
     ).fetchone())

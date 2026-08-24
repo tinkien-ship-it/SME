@@ -112,7 +112,11 @@ def iter_purchase_sync_targets() -> list[dict]:
 
 
 def sync_tenant_db(db_path: str, config: dict, months: list[str] | None = None) -> dict:
-    """Đồng bộ portal cho một DB tenant (không cần Flask request)."""
+    """Đồng bộ portal cho một DB tenant (không cần Flask request).
+
+    Quan trọng: KHÔNG giữ connection SQLite trong lúc gọi HTTP Matbao (timeout 90s)
+    — đó là nguyên nhân chính ``database is locked`` khi user lưu HĐĐT / seed roles.
+    """
     from Services.purchase_invoice_sync import SOURCE_PORTAL, MatbaoPurchaseProvider, persist_invoices
 
     months = months or _months_to_sync()
@@ -120,20 +124,29 @@ def sync_tenant_db(db_path: str, config: dict, months: list[str] | None = None) 
     totals = {'new_inserted': 0, 'duplicates_skipped': 0, 'total_received': 0, 'months': []}
     errors = []
 
-    conn = open_sqlite(db_path)
-    try:
-        for month in months:
-            result = provider.fetch_invoices(month, source=SOURCE_PORTAL)
-            if not result.get('success'):
-                errors.append(f'{month}: {result.get("error")}')
+    for month in months:
+        # 1) HTTP ngoài — không mở DB
+        result = provider.fetch_invoices(month, source=SOURCE_PORTAL)
+        if not result.get('success'):
+            errors.append(f'{month}: {result.get("error")}')
+            continue
+        invoices = result.get('invoices') or []
+        # 2) Chỉ mở DB khi ghi — timeout ngắn, nhường user nếu đang bận
+        try:
+            conn = open_sqlite(db_path, timeout=5.0)
+        except sqlite3.OperationalError as exc:
+            if 'locked' in str(exc).lower():
+                errors.append(f'{month}: database is locked — thử lại sau')
                 continue
-            summary = persist_invoices(conn, result.get('invoices') or [])
+            raise
+        try:
+            summary = persist_invoices(conn, invoices)
             totals['new_inserted'] += summary['new_inserted']
             totals['duplicates_skipped'] += summary['duplicates_skipped']
             totals['total_received'] += summary['total_received']
             totals['months'].append({'month': month, **summary})
-    finally:
-        conn.close()
+        finally:
+            conn.close()
 
     ok = totals['new_inserted'] > 0 or not errors or totals['total_received'] > 0
     if errors and totals['total_received'] == 0 and totals['new_inserted'] == 0:

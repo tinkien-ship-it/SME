@@ -26,7 +26,7 @@ from flask import (
 )
 from flask_login import login_required
 
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit, begin_immediate
 from helpers import format_price
 from Services.inventory_stock_helpers import (
     apply_wac_inbound,
@@ -760,7 +760,7 @@ def register_inventory_routes(app):
             ensure_import_service_schema(conn)
             ensure_warehouse_schema(conn)
             ensure_fixed_assets_schema(conn)
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
 
             data = request.get_json()
             if not data:
@@ -1065,7 +1065,7 @@ def register_inventory_routes(app):
                 from Services.sme.auto_posting import auto_activate_idle_assets
                 auto_activate_idle_assets(conn)
 
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({
                 "success": True,
                 "import_id": import_id,
@@ -1101,7 +1101,7 @@ def register_inventory_routes(app):
 
         try:
             ensure_import_service_schema(conn)
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
 
             if not import_details_allows_null_product_id(conn):
                 return jsonify({
@@ -1279,7 +1279,7 @@ def register_inventory_routes(app):
                 payment_method=payment_method,
             )
 
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({
                 'success': True,
                 'import_id': import_id,
@@ -1636,7 +1636,7 @@ def register_inventory_routes(app):
         c = conn.cursor()
         try:
             c.execute("UPDATE import_sequence SET current_seq = 0 WHERE id = 1")
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({"success": True, "message": "Đã reset số phiếu nhập về NK000001"})
         except Exception as e:
             conn.rollback()
@@ -1827,7 +1827,7 @@ def register_inventory_routes(app):
                 reason=reason,
             )
 
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({
                 "success": True, 
                 "px_voucher": px_voucher_no,
@@ -1883,7 +1883,7 @@ def register_inventory_routes(app):
                 created_by=session.get('user_name') or session.get('username'),
                 reason=data.get('reason') or 'Trả hàng NCC',
             )
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
 
             invoice_result = None
             if data.get('issue_invoice'):
@@ -2663,7 +2663,7 @@ def register_inventory_routes(app):
                 payment_method=payment_method,
             )
 
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({
                 "success": True,
                 "message": "Cập nhật phiếu nhập và cân đối dòng tiền thành công!",
@@ -2830,7 +2830,7 @@ def register_inventory_routes(app):
                     WHERE name = ?
                 """, (table,))
 
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({"success": True, "message": "Đã hủy phiếu nhập, hoàn kho và cập nhật giá vốn thành công!"})
 
         except Exception as e:
@@ -2868,12 +2868,12 @@ def register_inventory_routes(app):
         mode = (payload.get('mode') or request.args.get('mode') or 'stock').strip().lower()
 
         conn = get_db_connection()
-        conn.execute("BEGIN IMMEDIATE")
+        begin_immediate(conn, label='inventory_begin')
         c = conn.cursor()
 
         try:
             next_no = _next_import_no_from_db(c, mode)
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({"success": True, "next_no": next_no})
         except Exception as e:
             conn.rollback()
@@ -3153,7 +3153,7 @@ def register_inventory_routes(app):
                 sync_inventory_quantity_from_moves(c, pid)
                 inserted += 1
 
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({
                 "success": True,
                 "message": f"Nhập kho thành công {inserted} sản phẩm!",
@@ -3244,7 +3244,7 @@ def register_inventory_routes(app):
                         )
                     sync_inventory_quantity_from_moves(c, pid)
 
-                conn.commit()
+                sqlite_commit(conn, label='inventory')
                 return jsonify({"success": True, "message": "Kiểm kê thành công", "redirect": "/inventory/moves"})
             except Exception as e:
                 conn.rollback()
@@ -3491,7 +3491,7 @@ def register_inventory_routes(app):
             # Cập nhật tổng tiền
             c.execute("UPDATE phieu_nhap_kho SET total_amount = ? WHERE id = ?", (float(total_value_all), import_id))
 
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({
                 "success": True, 
                 "message": f"Đã nhập thành công {imported_count} mặt hàng.",
@@ -3654,7 +3654,7 @@ def register_inventory_routes(app):
             conn = get_db_connection()
             c = conn.cursor()
             fixes = reconcile_all_inventory(c)
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({
                 "success": True,
                 "fixed_count": len(fixes),
@@ -3680,7 +3680,7 @@ def register_inventory_routes(app):
             c = conn.cursor()
             qty_fixes = reconcile_all_inventory(c)
             wac_fixes = rebuild_all_wac_from_moves(c)
-            conn.commit()
+            sqlite_commit(conn, label='inventory')
             return jsonify({
                 'success': True,
                 'qty_fixed_count': len(qty_fixes),

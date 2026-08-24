@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
-from db_utils import BASE_DIR, get_main_db_connection
+from db_utils import BASE_DIR, get_main_db_connection, sqlite_commit
 
 ASSISTANT_SETTING_KEYS = (
     'assistant_ai_mode',
@@ -82,7 +82,7 @@ def ensure_assistant_schema(conn=None) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_assist_health_created ON assistant_health_runs(created_at DESC);
     """)
-    conn.commit()
+    sqlite_commit(conn, label='assistant_store')
     if own:
         conn.close()
     _SCHEMA_READY = True
@@ -123,7 +123,7 @@ def save_assistant_settings(payload: dict[str, Any]) -> dict[str, str]:
         if key in ('zalo_oa_secret', 'zalo_oa_refresh_token', 'zalo_oa_access_token') and str(val).strip() == '':
             continue
         _set_setting(conn, key, str(val).strip())
-    conn.commit()
+    sqlite_commit(conn, label='assistant_store')
     result = get_assistant_settings()
     conn.close()
     return result
@@ -133,7 +133,7 @@ def save_zalo_tokens(access_token: str, expires_at: str) -> None:
     conn = get_main_db_connection()
     _set_setting(conn, 'zalo_oa_access_token', access_token)
     _set_setting(conn, 'zalo_oa_token_expires', expires_at)
-    conn.commit()
+    sqlite_commit(conn, label='assistant_store')
     conn.close()
 
 
@@ -173,7 +173,7 @@ def log_chat(
         ),
     )
     log_id = cur.lastrowid
-    conn.commit()
+    sqlite_commit(conn, label='assistant_store')
     conn.close()
     return log_id
 
@@ -237,7 +237,7 @@ def approve_faq_from_log(
         'UPDATE assistant_chat_logs SET needs_review = 0 WHERE id = ?',
         (log_id,),
     )
-    conn.commit()
+    sqlite_commit(conn, label='assistant_store')
     faq_id = cur.lastrowid
     row = conn.execute('SELECT * FROM assistant_faq_dynamic WHERE id = ?', (faq_id,)).fetchone()
     conn.close()
@@ -250,7 +250,7 @@ def dismiss_review(log_id: int) -> bool:
         'UPDATE assistant_chat_logs SET needs_review = 0 WHERE id = ?',
         (log_id,),
     )
-    conn.commit()
+    sqlite_commit(conn, label='assistant_store')
     ok = cur.rowcount > 0
     conn.close()
     return ok
@@ -262,7 +262,7 @@ def bump_faq_hit(faq_id: int) -> None:
         'UPDATE assistant_faq_dynamic SET hit_count = hit_count + 1 WHERE id = ?',
         (faq_id,),
     )
-    conn.commit()
+    sqlite_commit(conn, label='assistant_store')
     conn.close()
 
 
@@ -279,7 +279,7 @@ def touch_zalo_session(zalo_user_id: str, *, display_name: str | None = None) ->
              message_count = assistant_zalo_sessions.message_count + 1""",
         (zalo_user_id, display_name or '', now),
     )
-    conn.commit()
+    sqlite_commit(conn, label='assistant_store')
     conn.close()
 
 
@@ -289,7 +289,7 @@ def set_zalo_escalated(zalo_user_id: str) -> None:
         'UPDATE assistant_zalo_sessions SET escalated = 1 WHERE zalo_user_id = ?',
         (zalo_user_id,),
     )
-    conn.commit()
+    sqlite_commit(conn, label='assistant_store')
     conn.close()
 
 
@@ -331,7 +331,7 @@ def log_health_run(report: dict[str, Any]) -> int:
         ),
     )
     run_id = cur.lastrowid
-    conn.commit()
+    sqlite_commit(conn, label='assistant_store')
     conn.close()
     return run_id
 

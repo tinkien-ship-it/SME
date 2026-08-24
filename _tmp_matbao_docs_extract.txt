@@ -1,0 +1,1015 @@
+================================================================================
+FILE: c:\Laptop Dell's Files\Dell's Laptop\Mắt Bảo\HoaDonMuaVao\Matbao - Purchase Inv API.docx
+exists: True
+TÀI LIỆU KỸ THUẬT API HÓA ĐƠN ĐẦU VÀO
+MATBAO PURCHASE INVOICE API DOCUMENT
+Hàm lấy token – Get token function
+Action:  “api_url_base/auth/token”.
+Method: POST
+Params Input:
+{
+"token": "token"
+}
+Mô tả - Description:
+token: mã token – token parameter
+Kết quả trả về - return parameter:
+Thành công  - Success
+{
+"Success": true,
+"CustomData": null,
+"Data": "chuỗi token",
+"ErrorCode": null
+}
+Thất bại - Fail:
+{
+"Success": false,
+"CustomData": null,
+"Data": "Không có quyền truy cập..",
+"ErrorCode": "-102"
+}
+Hàm lấy danh sách hóa đơn đầu vào – Purchase invoice function
+Action:  “api_url_base/hoa-don-dau-vao/load-data”.
+Method: GET
+Params Input:
+{
+"comName": "Tên công ty xuất hóa đơn",
+"comTaxCode": "Mã số thuế công ty xuất hóa đơn",
+"no": Số hóa đơn - number invoice,
+"fromDateYMD": "2023-03-01 ",
+"toDateYMD": "2023-04-01",
+"trangthai": -1,
+"pattern": "Mẫu số hóa đơn",
+"serial": "Ký hiệu hóa đơn",
+"typeSearchDate": "Loại ngày search" ,
+"typeDataPDF": 0
+}
+Mô tả - Description:
+comName: Tên doanh nghiệp xuất hóa đơn – Company name that have published invoice (string)
+comTaxCode: mã số thuế doanh nghiệp xuất hóa đơn – Tax code of company have published invoice (string)
+no: số hóa đơn – Invoice number (int)
+fromDateYMD: ngày tạo từ ngày – From date (datetime)
+toDateYMD: ngày tạo đến ngày – To date (datetime)
+trangthai: trạng thái hóa đơn – status (-1: chọn tất cả;  0: hóa đơn hợp lệ ; 1: hóa đơn không hợp lệ; 2: hóa đơn trùng) – Invoice status (-1: all; 0: legal invoice; 1: illegal invoice; 2: duplicate invoice)
+pattern: mẫu số hóa đơn - pattern invoice (string)
+serial: ký hiệu hóa đơn – serial invoice (string)
+typeSearchDate: loại ngày tìm kiếm (0: tìm theo ngày ký nếu không có ngày ký thì tìm theo ngày lập; 1: tìm theo ngày khởi tạo; 2: tìm theo ngày lập; 3: tìm theo ngày ký) (int)
+typeDataPDF: lấy dữ liệu hóa đơn PDF Base64 (0: không hiển thị dữ liệu HĐ PDF Base64, 1: hiển thị dữ liệu HĐ PDF Base64) (int)
+Thẻ HDon\DLHDon\TTChung chứa thông tin chung của hóa đơn – Include gerneral invoice information
+PBan: Phiên bản XML – xml version (Trong Quy định này có giá trị là 2.0.1 - In this regulation, the value is 2.0.1)
+THDon: Tên hóa đơn	 - Invoive Name
+KHMSHDon: Ký hiệu mẫu số hóa đơn - Pattern invoice
+KHHDon: Ký hiệu hóa đơn - serial invoice
+SHDon: Số hóa đơn – invoice number
+MHSo: Mã hồ sơ - profile code
+NLap: Ngày lập – arising date
+DVTTe: Đơn vị tiền tệ - currency unit
+TGia: Tỷ giá – exchange rate
+HTTToan: Hình thức thanh toán - Payment Method
+MSTTCGP: Mã số thuế tổ chức cung cấp giải pháp hóa đơn điện tử - Tax code of TVAN (Tech Valley Angel Network)
+MSTDVNUNLHDon: Mã số thuế đơn vị nhận ủy nhiệm lập hóa đơn – Tax code of delegated organization
+TDVNUNLHDon: Tên đơn vị nhận ủy nhiệm lập hóa đơn - Delegated organization Name
+DCDVNUNLHDon: Địa chỉ đơn vị nhận ủy nhiệm lập hóa đơn - Delegated organization address.
+Thẻ HDon\DLHDon\TTChung\TTHDLQuan chứa thông tin hóa đơn liên quan trong trường hợp là hóa đơn điều chỉnh hoặc thay thế - Include related invoice information for case adjust or replace
+TCHDon: Tính chất hóa đơn - Invoice properties
+LHDCLQuan: Loại hóa đơn có liên quan – Invoice type have been related (Loại hóa đơn bị thay thế/điều chỉnh – been adjusted/replaced type)
+KHMSHDCLQuan: Ký hiệu mẫu số hóa đơn có liên quan - Pattern invoice have been related (Ký hiệu mẫu số hóa đơn bị thay thế/điều chỉnh – Pattern invoice have been adjusted/replaced)
+KHHDCLQuan: Ký hiệu hóa đơn có liên quan – Serial invoice have been related (Ký hiệu hóa đơn bị thay thế/điều chỉnh - Serial invoice have been adjusted/replaced).
+SHDCLQuan: Số hóa đơn có liên quan – Invoice number have been related (Số hóa đơn bị thay thế/điều chỉnh - Invoice number have been adjusted/replaced)
+NLHDCLQuan: Ngày lập hóa đơn có liên quan – Arised date of invoice have been related (Ngày lập hóa đơn bị thay thế/điều chỉnh - Arised date of invoice have been adjusted/replaced).
+GChu: Ghi chú - Note
+TTKhac: chứa thông tin khác - other information
+Thẻ HDon\DCHDon\NDHDon chứa nội dung hóa đơn, bao gồm: Thông tin người bán, người mua, danh sách hàng hóa, dịch vụ và thông tin thanh toán của hóa đơn – Include invoice information, such as: Buyer, seller, products/services list and payment of invoice
+Thẻ HDon\DLHDon\NDHDon\NBan chứa tên, địa chỉ, MST của người bán – Include name, address, tax code of Seller
+Ten: Tên – Organization Name
+MST: Mã số thuế - Tax Code
+DChi: Địa chỉ	- Address
+SDThoai: Số điện thoại – Phone number
+DCTDTu: Địa chỉ thư điện tử - email
+STKNHang: Số tài khoản ngân hàng  - Bank Account
+TNHang: Tên ngân hàng – Bank name
+Fax: Fax
+Website: Website
+TTKhac: chứa thông tin khác – other information
+Thẻ HDon\DLHDon\NDHDon\NMua chứa tên, địa chỉ, MST của người mua – Include name, address, tax code of Buyer
+Ten: Tên – Organization Name
+MST: Mã số thuế - Tax code
+DChi: Địa chỉ	- Address
+MKHang: Mã khách hàng – Customer ID
+SDThoai: Số điện thoại – Phone number
+DCTDTu: Địa chỉ thư điện tử - email
+HVTNMHang: Họ và tên người mua hàng – Fullname buyer
+STKNHang: Số tài khoản ngân hàng  - Bank account
+TNHang: Tên ngân hàng – Bank name
+TTKhac: chứa thông tin khác – other information
+Thẻ HDon\DLHDon\NDHDon\DSHHDVu chứa danh sách hàng hóa/dịch vụ - products/ services list (không bắt buộc trong trường hợp hóa đơn điều chỉnh không điều chỉnh thông tin hàng hóa, dịch vụ - not mandatory in case of invoice adjust products, services information)
+Thẻ HDon\DLHDon\NDHDon\DSHHDVu\HHDVu chứa chi tiết 01 dòng hàng hóa dịch vụ - include  (Thẻ này có thể lặp lại nhiều lần tương ứng với số lượng hàng hóa, dịch vụ - this tag can repeat multi times corresponding each product, serviecs quatity)
+TChat: Tính chất - Property
+STT: Số thứ tự - ordinal number
+MHHDVu: Mã hàng hóa, dịch vụ - Product/Service ID
+THHDVu: Tên hàng hóa, dịch vụ Product/Service name
+DVTinh: Đơn vị tính - Unit
+SLuong: Số lượng - Quatity
+DGia: Đơn giá – price
+TLCKhau: Tỷ lệ % chiết khấu - % discount (Trong trường hợp thể hiện thông tin chiết khấu cho từng hàng hóa, dịch vụ - In case of each product/service)
+STCKhau: Số tiền chiết khấu – Discount amount (Trong trường hợp thể hiện thông tin chiết khấu cho từng hàng hóa, dịch vụ - In case of each product/service)
+ThTien: Thành tiền – Before tax amount (Thành tiền chưa có thuế GTGT)
+TSuat: Thuế suất – Tax rate (Thuế suất thuế GTGT – VAT Tax rate)
+TTKhac: chứa thông tin khác – other information
+Thẻ HDon\DLHDon\NDHDon\TToan chứa thông tin thanh toán của hóa đơn – Include invoice of payment information (Trường hợp hóa đơn điều chỉnh không làm thay đổi thông tin thanh toán của hóa đơn không bắt buộc phải có thẻ này và các chỉ tiêu liên quan – In case of adjusted invoice don’t make to change payment of invoice information that is not mandatory to have this tag and related targets)
+Thẻ HDon\DLHDon\NDHDon\TToan\THTTLTSuat chứa thông tin tổng hợp theo từng loại thuế suất – Include general information according to each tax rate type
+Thẻ HDonVDLHDon\NDHDon\TToan\THTTLTSuat\LTSuat chứa chi tiết thông tin tổng hợp của mỗi loại thuế suất – Include detail information according to each tax rate type
+TSuat: Thuế suất – tax rate (Thuế suất thuế GTGT)
+ThTien: Thành tiền – Amount (Thành tiền chưa có thuế GTGT – before tax amout)
+TThue: Tiền thuế - Tax amount (Tiền thuế GTGT)
+Thẻ HDon\DLHDon\NDHDon\TToan chứa thông tin về số tiền thanh toán, số tiền thuế trên hóa đơn – Include information about the payment amount, tax amount.
+TgTCThue: Tổng tiền chưa thuế (Tổng cộng thành tiền chưa có thuế GTGT) – Before tax total amount
+TGTKCThue: Tổng giảm trừ không chịu thuế - Before tax total amount
+TgTThue: Tổng tiền thuế - tax total (Tổng cộng tiền thuế GTGT)
+Thẻ HDon\DLHDon\NDHDon\TToan\DSLPhi chứa danh sách các loại tiền phí, lệ phí – Inlude fees, charges type list
+Thẻ HDon\DLHDon\NDHDon\TToan\DSLPhi\LPhi chứa chi tiết từng loại tiền phí, lệ phí – include detail information according to each of fees, charges type (Thẻ này có thể lặp lại nhiều lần tương ứng với số loại phí, lệ phí – tag can repeate multi times with according to each of fees, charges type)
+TLPhi: Tên loại phí - fees, charges name
+TPhi: Tiền phí - fees, charges amount
+Thẻ HDon\DLHDon\NDHDon\Ttoan
+TTCKTMai: Tổng tiền chiết khấu thương mại – trade discounts total amount
+TGTKhac: Tổng giảm trừ khác – Other reduce total
+TgTTTBSo: Tổng tiền thanh toán bằng số - Payment total
+TgTTTBChu: Tổng tiền thanh toán bằng chữ - Payment total in words
+TTKhac: chứa thông tin khác – other information
+Thẻ HDon\DLHDon\TTKhac chứa thông tin khác – Other information
+DLQRCode: chứa dữ liệu QR Code – QR Code data
+MCCQT: Mã của cơ quan thuế - Code Authority of Tax(Mã của cơ quan thuế trên hóa đơn điện tử - in E-invoice) -
+Thẻ HDon\DSCKS chứa thông tin chữ ký số, bao gồm chữ ký số của người bán hoặc chữ ký số của đơn vị nhận ủy nhiệm, người mua (nếu có), cơ quan thuế và các chữ ký số khác (nếu có) – include digital signatures information, such as digital signature whose seller or delegated organization, buyer (if any), tax authorities and others (if any).
+Thẻ HDon\DSCKS\NBan chứa thông tin chữ ký số người bán hoặc chữ ký số của đơn vị nhận ủy nhiệm – include seller or delegated organization digital signature (ký trên thẻ - sign on tag HDon\DLHDon và thẻ HDon\DSCKS\NBan\Signature\Object)
+Signature: Chữ ký số người bán – Seller digital signature
+Thẻ HDon\DSCKS\NMua chứa thông tin chữ ký số người mua – include buyer digital signature (nếu có – if any) (ký trên thẻ - sign on tag HDon\DLHDon và thẻ HDon\DSCKS\NMua\Signature\Object (nếu cần))
+Signature: Chữ ký số người mua – Buyer digital signature
+Thẻ HDon\DSCKS\CQT chứa thông tin chữ ký số của cơ quan thuế - include Tax Authority digital signature.
+Signature: Chữ ký số cơ quan thuế - Tax Authority digital signature
+Thẻ HDon\DSCKS\CCKSKhac chứa các chữ ký số khác – other digital signature
+Thẻ KTra chứa các thông tin kiểm tra tính hợp lệ - Include legal information
+TrangThai: trạng thái hóa đơn hợp lệ - Legal status
+NgayLap: Ngày lập hóa đơn – Arised date
+Ngayky: Ngày ký hóa đơn – Signed date
+NguyenVen: Kiểm tra hóa đơn nguyên vẹn - Checking invoice integrit
+ThoiDiemKy: Kiểm tra trùng thời điểm ký trùng và thời điểm lập – Checking the same of signed date and arised date
+MCCQT: Mã của cơ quan thuế - Tax authoritiescode
+NBanTen: Kiểm tra trùng tên người bán - Checking the same of seller name
+NBanMST: Kiểm tra trùng mã số thuế người bán - Checking the same of seller tax code.
+NBanTrangThaiHDMST: Kiểm tra trạng thái hoạt động thông tin người bán – Checking the seller activity status
+NBanNDTrangThaiHDMST: Nội dung trạng thái hoạt động thông tin người bán – Content of seller activity status.
+NBanDChi: Kiểm tra trùng địa chỉ người bán – Checking the same of seller address
+NMuaTen: Kiểm tra trùng tên người mua – Checking the same of buyer name
+NMuaMST: Kiểm tra trùng mã số thuế người mua – Checking the same of buyer tax code.
+NMuaDChi: Kiểm tra trùng địa người mua – Checking the same of buyer address.
+NMuaTrangThaiHDMST: Kiểm tra trạng thái hoạt động thông tin người mua. – Checking the buyer activity status.
+NMuaNDTrangThaiHDMST: Nội dung trạng thái hoạt động thông tin người mua – content of the buyer activity buyer information
+TgTCThue: Kiểm tra chênh lệch tổng tiền chưa thuế - Checking the difference in the total amount before tax
+TgTThue: Kiểm tra chênh lệch tổng tiền thuế - Checking the difference in the tax total amount
+TgTPhi: Kiểm tra chênh lệch tổng tiền phí - Checking the difference in fees, charges total amount
+TTCKTMai: Kiểm tra chênh lệch tổng tiền khuyến mãi – Checking the difference in trade discounts total amount.
+TgTTTBSo: Kiểm tra chênh lệch tổng tiền bằng số - Checkingdifferences in Total amount .
+ChuKyNhaCCCA: Tên nhà cung cấp chữ ký số cho bên bán – Seller digital signature supplier name
+ChuKyTGianHieuLuc: Ngày bắt đầu có hiệu lực và ngày hết hiệu lực của chữ ký số - Effective starting and ending date of digital signature
+ChuKyMST: Kiểm tra thông tin Mã số thuế trong chữ ký – Checking tax code information in digital signature
+ChuKyHieuLuc: Kiểm tra hiệu lực của chữ ký số tại thời điểm ký – Checking digital signature effetive status at signed time
+LinkDownloadXML: Link download file XML.
+LinkDownloadPDF: Link download file PDF.
+ChuKySoSerial: Số seri của chữ ký số - Serial number of digital signature.
+DataPDFBase64 : dữ liệu hóa đơn PDF Base64
+Thẻ KTra\DSHHDVu chứa danh sách hàng hóa dịch vụ - include products/serviecs list
+THHDVu: Tên hàng hóa dịch vụ - Product/service name
+ThTien: Thành tiền tự tính – Self-calculated amount
+ChenhLech: Kiểm tra chênh lệch thành tiền từ XML và thành tiền tự tính – Checking Amount from xml and self-calculated amount
+Kết quả trả về - return parameter:
+{
+"Success": true,
+"CustomData": null,
+"Data": [],
+"ErrorCode": "200"
+}
+Hàm lấy danh sách hóa đơn đầu vào v2
+Action:  “api_url_base/hoa-don-dau-vao/load-data-tct”.
+Method: GET
+Params Input:
+{
+"comName": "Tên công ty xuất hóa đơn",
+"comTaxCode": "Mã số thuế công ty xuất hóa đơn",
+"no": 0,
+"fromDateYMD": "2023-03-01",
+"toDateYMD": "2023-08-22 23:59:59",
+"trangthai": -1,
+"loaihoadon": -1,
+"pattern": "Mẫu số hóa đơn",
+"serial": "Ký hiệu hóa đơn",
+"typeDataPDF": 0
+}
+Mô tả - Description:
+comName: Tên doanh nghiệp xuất hóa đơn – Company name that have published invoice (string)
+comTaxCode: mã số thuế doanh nghiệp xuất hóa đơn – Tax code of company have published invoice (string)
+no: số hóa đơn – Invoice number (int)
+fromDateYMD: ngày lập từ ngày – From date (datetime)
+toDateYMD: ngày lập đến ngày – To date (datetime)
+trangthai: trạng thái hóa đơn – status (-1: chọn tất cả;  0: hóa đơn hợp lệ - ; 1: hóa đơn không hợp lệ; 2: hóa đơn trùng) – Invoice status (-1: all; 0: legal invoice; 1: illegal invoice; 2: duplicate invoice)
+loaihoadon: trạng thái hóa đơn (-1: chọn tất cả;  1: hóa đơn có mã; 2: không mã; 3: máy tính tiền)
+pattern: mẫu số hóa đơn - pattern invoice (string)
+serial: ký hiệu hóa đơn – serial invoice (string)
+typeDataPDF: lấy dữ liệu hóa đơn PDF Base64 (0: không hiển thị dữ liệu HĐ PDF Base64, 1: hiển thị dữ liệu HĐ PDF Base64) (int)
+THDon: Tên hóa đơn	 - Invoive Name
+KHMSHDon: Ký hiệu mẫu số hóa đơn - Pattern invoice
+KHHDon: Ký hiệu hóa đơn - serial invoice
+SHDon: Số hóa đơn – invoice number
+MHSo: Mã hồ sơ - profile code
+NLap: Ngày lập – arising date
+DVTTe: Đơn vị tiền tệ - currency unit
+TGia: Tỷ giá – exchange rate
+HTTToan: Hình thức thanh toán - Payment Method
+MSTTCGP: Mã số thuế tổ chức cung cấp giải pháp hóa đơn điện tử - Tax code of TVAN (Tech Valley Angel Network)
+MSTDVNUNLHDon: Mã số thuế đơn vị nhận ủy nhiệm lập hóa đơn – Tax code of delegated organization
+TDVNUNLHDon: Tên đơn vị nhận ủy nhiệm lập hóa đơn - Delegated organization Name
+DCDVNUNLHDon: Địa chỉ đơn vị nhận ủy nhiệm lập hóa đơn - Delegated organization address.
+TCHDon: Tính chất hóa đơn - Invoice properties
+LHDCLQuan: Loại hóa đơn có liên quan – Invoice type have been related (Loại hóa đơn bị thay thế/điều chỉnh – been adjusted/replaced type)
+KHMSHDCLQuan: Ký hiệu mẫu số hóa đơn có liên quan - Pattern invoice have been related (Ký hiệu mẫu số hóa đơn bị thay thế/điều chỉnh – Pattern invoice have been adjusted/replaced)
+KHHDCLQuan: Ký hiệu hóa đơn có liên quan – Serial invoice have been related (Ký hiệu hóa đơn bị thay thế/điều chỉnh - Serial invoice have been adjusted/replaced).
+SHDCLQuan: Số hóa đơn có liên quan – Invoice number have been related (Số hóa đơn bị thay thế/điều chỉnh - Invoice number have been adjusted/replaced)
+NLHDCLQuan: Ngày lập hóa đơn có liên quan – Arised date of invoice have been related (Ngày lập hóa đơn bị thay thế/điều chỉnh - Arised date of invoice have been adjusted/replaced).
+GChu: Ghi chú - Note
+NBanTen: Tên người bán– Organization Name
+NBanMST: Mã số thuế người bán - Tax Code
+NBanDChi: Địa chỉ người bán	- Address
+NBanSDThoai: Số điện thoại người bán – Phone number
+NBanDCTDTu: Địa chỉ thư điện tử người bán - email
+NBanSTKNHang: Số tài khoản ngân hàng người bán	 - Bank Account
+NBanTNHang: Tên ngân hàng người bán – Bank name
+NBanFax: Fax người bán
+NBanWebsite: Website người bán
+NMuaTen: Tên người mua – Organization Name
+NMuaMST: Mã số thuế người mua - Tax code
+NMuaDChi: Địa chỉ người mua	- Address
+NMuaMKHang: Mã khách hàng người mua – Customer ID
+NMuaSDThoai: Số điện thoại người mua – Phone number
+NMuaDCTDTu: Địa chỉ thư điện tử người mua - email
+NMuaHVTNMHang: Họ và tên người mua hàng – Fullname buyer
+NMuaSTKNHang: Số tài khoản ngân hàng người mua	 - Bank account
+NMuaTNHang: Tên ngân hàng người mua – Bank name
+DSHHDVu chứa danh sách hàng hóa/dịch vụ - products/ services list (không bắt buộc trong trường hợp hóa đơn điều chỉnh không điều chỉnh thông tin hàng hóa, dịch vụ - not mandatory in case of invoice adjust products, services information)
+TChat: Tính chất - Property
+STT: Số thứ tự - ordinal number
+MHHDVu: Mã hàng hóa, dịch vụ - Product/Service ID
+THHDVu: Tên hàng hóa, dịch vụ Product/Service name
+DVTinh: Đơn vị tính - Unit
+SLuong: Số lượng - Quatity
+DGia: Đơn giá – price
+TLCKhau: Tỷ lệ % chiết khấu - % discount (Trong trường hợp thể hiện thông tin chiết khấu cho từng hàng hóa, dịch vụ - In case of each product/service)
+STCKhau: Số tiền chiết khấu – Discount amount (Trong trường hợp thể hiện thông tin chiết khấu cho từng hàng hóa, dịch vụ - In case of each product/service)
+ThTien: Thành tiền – Before tax amount (Thành tiền chưa có thuế GTGT)
+TSuat: Thuế suất – Tax rate (Thuế suất thuế GTGT - VAT)
+TTKhac: chứa thông tin khác – other information
+THTTLTSuat chứa thông tin tổng hợp theo từng loại thuế suất – Include general information according to each tax rate type
+TSuat: Thuế suất – tax rate (Thuế suất thuế GTGT)
+ThTien: Thành tiền – Amount (Thành tiền chưa có thuế GTGT – before tax amout)
+TThue: Tiền thuế - Tax amount (Tiền thuế GTGT)
+TgTCThue: Tổng tiền chưa thuế (Tổng cộng thành tiền chưa có thuế GTGT) – Before tax total amount
+TGTKCThue: Tổng giảm trừ không chịu thuế - Before tax total amount
+TgTThue: Tổng tiền thuế - tax total (Tổng cộng tiền thuế GTGT)
+DSLPhi: chứa danh sách các loại tiền phí, lệ phí – Inlude fees, charges type list
+TLPhi: Tên loại phí - fees, charges name
+TPhi: Tiền phí - fees, charges amount
+TTCKTMai: Tổng tiền chiết khấu thương mại – trade discounts total amount
+TGTKhac: Tổng giảm trừ khác – Other reduce total
+TgTTTBSo: Tổng tiền thanh toán bằng số - Payment total
+TgTTTBChu: Tổng tiền thanh toán bằng chữ - Payment total in words
+MCCQT: Mã của cơ quan thuế - Code Authority of Tax(Mã của cơ quan thuế trên hóa đơn điện tử - in E-invoice) -
+TThai: Trạng thái hóa đơn
+LoaiHoaDon: Loại hóa đơn
+TenTThai: Tên trạng thái
+TenLoaiHoaDon: Tên loại hóa đơn
+NKy: Ngày ký hóa đơn – Signed date
+LinkDownloadXML: Link download file XML.
+LinkDownloadPDF: Link download file PDF
+DataPDFBase64 : dữ liệu hóa đơn PDF Base64
+Kết quả trả về - return parameter:
+{
+"Success": true,
+"CustomData": null,
+"Data": [],
+"ErrorCode": "200"
+}
+Lấy thông tin chi tiết từ XML
+Action:  “api_url_base/hoa-don-dau-vao/detail-by-xml”.
+Method: GET
+Params Input:
+{
+"data" : "<Dữ liệu XML>",
+"kiem_tra_hop_le" : 0
+}
+Mô tả - Description:
+data: Dữ liệu XML đã mã hóa Base64
+kiem_tra_hop_le: kiểm tra tính hợp lệ của xml (0: không kiểm tra , 1: có kiểm tra )
+Kết quả trả về - return parameter:
+{
+"Success": true,
+"CustomData": null,
+"Data": {},
+"ErrorCode": "200"
+}
+Data: thông tin chi tiết hóa đơn đầu vào đọc từ XML
+Lấy thông tin chi tiết từ URL
+Action:  “api_url_base/hoa-don-dau-vao/detail-by-url”.
+Method: GET
+Params Input:
+{
+"url_xml" : "<Link download XML>",
+"kiem_tra_hop_le" :0
+}
+Mô tả - Description:
+url_xml: Link download XML
+kiem_tra_hop_le: kiểm tra tính hợp lệ của xml (0: không kiểm tra , 1: có kiểm tra )
+Kết quả trả về - return parameter:
+{
+"Success": true,
+"CustomData": null,
+"Data": {},
+"ErrorCode": "200"
+}
+Data: thông tin chi tiết hóa đơn đầu vào đọc từ url XML
+Hàm lấy Captcha (sử dụng cho hàm đăng nhập từ TCT)
+Action:  “api_url_base/hoa-don-dau-vao/get-captcha”.
+Method: GET
+Kết quả trả về - return parameter:
+{
+"Success": true,
+"CustomData": null,
+"Data": {
+"key": "65dd44ff0554826134f535c4",
+"content": "<svg>……</svg>"
+},
+"ErrorCode": "200"
+}
+key: mã key captcha
+content: chứa nội dung hình captcha
+Hàm đăng nhập từ TCT
+Action:  “api_url_base/hoa-don-dau-vao/login-tct”.
+Method: POST
+Params Input:
+{
+"username":"0302712571",
+"password":"DFKGNI23",
+"cvalue": "K598HN",
+"ckey": "65dd44ff0554826134f535c4"
+}
+Mô tả - Description:
+username: tên đăng nhập hệ thống hóa đơn điện tử TCT
+password: mật khẩu đăng nhập hệ thống hóa đơn điện tử TCT
+cvalue: mã đọc được từ content (svg) captcha
+ckey: mã key captcha (lấy từ api lấy captcha)
+Kết quả trả về - return parameter:
+{
+"Success": true,
+"CustomData": null,
+"Data": "Đăng nhập thành công!",
+"ErrorCode": "200"
+}
+Data: kết quả đăng nhập
+Thông tin tài khoản – information:
+Thông tin api demo:
+Base url api: https://demo-api-hoadondauvao.matbao.in
+Api_key (Token): 86be8a82-7769-4998-ad77-767d603b50d2
+Thông tin trang xuất hóa đơn demo
+Link web quản lý hóa đơn - admin link: https://demo.matbao.in/
+Username: demo
+Password: demo@123!
+Thông tin api chính:
+Base url api: https://api-hoadondauvao.matbao.in
+HƯỚNG DẪN LẤY TOKEN - INSTRUCT GETTING TOKEN
+Bước 1: Tại mục Quản lý Hóa đơn, anh/chị chọn Quản lý hóa đơn đầu vào, khi đó giao diện sẽ hiển thị như sau:
+Trường hợp đã có token thì bỏ qua bước 2 và bước 3
+Bước 2: Nhấn chọn Tạo mới nếu chưa có token.
+Bước 3:
+Chọn Đọc hóa đơn từ tài khoản CQT
+Nhập:
+Tên đăng nhập là MST
+Mật khẩu của trang hoadondientu.gdt.gov.vn
+Mã captcha
+Chọn Kích hoạt
+Nhấn Lưu cấu hình.
+Khi đó hệ thống sẽ tại token:
+
+================================================================================
+FILE: c:\Laptop Dell's Files\Dell's Laptop\Mắt Bảo\API-Proxy-HDDT-v1.0.1.docx
+exists: True
+API Hóa đơn điện tử Matbao-Invoice
+Danh sách chi tiết các API
+Đăng nhập
+URL
+POST <BaseUrl>/api/auth/login
+Request body
+{
+"MST": "string",
+"TDNhap": "string",
+"MKhau": "string"
+}
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Trống hoặc Mã lỗi>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+**** Token sẽ được truyền vào các hàm mục 2 (Hóa đơn) ****
+Hóa đơn
+Danh sách mẫu hóa đơn
+URL
+GET <BaseUrl>/api/invoice/templates?year=<year>
+Request body
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Trống hoặc Mã lỗi>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+Tạo mới hóa đơn
+URL
+POST <BaseUrl>/api/invoice/create-invoice
+Request body
+[
+{
+"KHMSHDon": "string",
+"KHHDon": "string",
+"NLap": "2024-04-11T06:46:41.850Z",
+"DVTTe": "string",
+"TGia": 0,
+"HTTToan": "string",
+"MaTraCuu": "string",
+"MTChieu": "string",
+"GChu": "string",
+"TCHDon": 0,
+"MSHDonDCLQuan": "string",
+"KHMSHDCLQuan": "string",
+"KHHDCLQuan": "string",
+"SHDCLQuan": "string",
+"NLHDCLQuan": "2024-04-11T06:46:41.850Z",
+"NMua_Ten": "string",
+"NMua_MST": "string",
+"NMua_DChi": "string",
+"NMua_MKHang": "string",
+"NMua_SDThoai": "string",
+"NMua_DCTDTu": "string",
+"NMua_HVTNMHang": "string",
+"NMua_STKNHang": "string",
+"NMua_TNHang": "string",
+"NBan_MCHang": "string",
+"NBan_TCHang": "string",
+"NMua_CCCDan": "string",
+"NMua_MDVQHNSach": "string",
+"NMua_SHChieu": "string",
+"DSHHDVu": [
+{
+"TChat": 1,
+"STT": 0,
+"MHHDVu": "string",
+"THHDVu": "string",
+"DVTinh": "string",
+"SLuong": 0,
+"DGia": 0,
+"ThTienChuaCK": 0,
+"TLCKhau": 0,
+"STCKhau": 0,
+"ThTien": 0,
+"TSuat": 0,
+"TThue": 0,
+"TgTien": 0,
+"MoRong1": "string",
+"MoRong2": "string",
+"MoRong3": "string",
+"MoRong4": "string",
+"MoRong5": "string",
+"MoRong6": "string",
+"MoRong7": "string",
+"MoRong8": "string",
+"MoRong9": "string",
+"MoRong10": "string"
+},
+{
+"TChat": 5,
+"STT": 0,
+"MHHDVu": "string",
+"THHDVu": "string",
+"DVTinh": "string",
+"SLuong": 0,
+"DGia": 0,
+"ThTienChuaCK": 0,
+"TLCKhau": 0,
+"STCKhau": 0,
+"ThTien": 0,
+"TSuat": 0,
+"TThue": 0,
+"TgTien": 0,
+"MoRong1": "string",
+"MoRong2": "string",
+"MoRong3": "string",
+"MoRong4": "string",
+"MoRong5": "string",
+"MoRong6": "string",
+"MoRong7": "string",
+"MoRong8": "string",
+"MoRong9": "string",
+"MoRong10": "string",
+"DSHHDTrung": [
+{
+"STT": 1,
+"LHHDTrung": 1,
+"TTruong": "TTruong1",
+"DLieu": "DLieu1"
+},
+{
+"STT": 2,
+"LHHDTrung": 2,
+"TTruong": "TTruong2",
+"DLieu": "12121"
+}
+]
+}
+],
+"DSLPhi": [
+{
+"TLPhi": "string",
+"TPhi": 0
+}
+],
+"TgThTien": 0,
+"TgTThue ": 0,
+"TTCKTMai": 0,
+"TGTKhac": 0,
+"TgTTTBSo": 0,
+"TgTTTBChu": "string",
+"MoRong1": "string",
+"MoRong2": "string",
+"MoRong3": "string",
+"MoRong4": "string",
+"MoRong5": "string",
+"MoRong6": "string",
+"MoRong7": "string",
+"MoRong8": "string",
+"MoRong9": "string",
+"MoRong10": "string"
+}
+]
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Trống hoặc Mã lỗi>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+Xóa bỏ hóa đơn
+URL
+POST <BaseUrl>/api/invoice/cancel-invoice
+Request body
+{
+"MaSoHDon": "string"
+}
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Trống hoặc Mã lỗi>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+Tạo thông báo hóa đơn sai sót (mẫu 04)
+URL
+POST <BaseUrl>/api/invoice/create-template-04
+Request body
+{
+"Loai": 0,
+"So": "string",
+"NTBCCQT": "2024-04-11T07:02:10.643Z",
+"DSHDon": [
+{
+"STT": 0,
+"MaSoHDon": "string",
+"KHMSHDon": "string",
+"KHHDon": "string",
+"SHDon": "string",
+"LADHDDT": 0,
+"TCTBao": 0,
+"LDo": "string"
+}
+]
+}
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Trống hoặc Mã lỗi>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+Tải file XML và PDF của hóa đơn
+URL
+POST <BaseUrl>/api/invoice/download-invoice
+Request body
+{
+"MaTraCuu": "string",
+"MaSoHDon": "string
+}
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Trống hoặc Mã lỗi>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+Lấy danh sách chi tiết hóa đơn
+URL
+POST <BaseUrl>/api/invoice/invoice-detail
+Request body
+{
+"KHMSHDon": "string",
+"KHHDon": "string",
+"SHDon": 0,
+"TNLap": "yyyy-MM-dd", /* Từ ngày lập */
+"DNLap": "yyyy-MM-dd", /* Đến ngày lập */
+"LoaiHDon": 0,
+"TThaiHDon": 0,
+"TTKhachHang": "string",
+"MaSoHDon": "string"
+}
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Trống hoặc Mã lỗi>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+Ký hóa đơn nháp
+URL
+POST <BaseUrl>/api/invoice/sign-invoice
+Request body
+{
+"MaSoHDon": "string"
+}
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Trống hoặc Mã lỗi>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+Lấy XML hóa đơn chưa ký
+URL
+GET <BaseUrl>/api/invoice/get-xml-not-sign?MaSoHDon=<MaSoHDon>
+Request body
+{
+"MaSoHDon": "string"
+}
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Dữ liệu XML Base64>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+Ký XML
+URL
+POST <BaseUrl>/api/invoice/sign-xml
+Request body
+{
+"XmlMaHoa64": "<Dữ liệu XML Base64>",
+"MaVungKy": "SigningData",
+"DuongDanChuKy": "HDon/DSCKS/NBan"
+}
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Dữ liệu XML Base64>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+JSON hóa đơn trả về từ Webhook
+Link API callback sẽ gửi cho Mắt Bão cấu hình
+{
+"InvID": "QVh5dWZsYksyS0pyY0QvMit1MHNRRUFyT05nbmNFVEF2NWFDSS9yUFJyMGNmRDVFM2hDV1I0Y1ZkQVVrT213UA==",
+"No": 36245,
+"Pattern": "1",
+"Serial": "C25TAT",
+"SO": "BH250024422",
+"Fkey": "7B164DE80848001",
+"ArisingDate": "2025-05-16T00:00:00",
+"MCCQT": "007865BA205F284530AA353E42B75820B9",
+"MLTDiep": "0",
+"MaTTHDon": 3,
+"TenTTHDon": "Chưa gửi CQT",
+"GhiChuCQT": "",
+"Loai": 3,
+}
+Xóa hóa đơn nháp
+URL
+POST <BaseUrl>/api/invoice/delete-invoice
+Request body
+{
+"MaSoHDon": "string"
+}
+Response
+{
+"Success": <false/true>,
+"Data": "<Dữ liệu api trả về>",
+"ErrorCode": "<Trống hoặc Mã lỗi>",
+"Message": "<Thông báo thành công hoặc thất bại>"
+}
+Thông tin định nghĩa dữ liệu
+Phụ lục
+Định nghĩa mã lỗi
+Danh mục ký hiệu mẫu số hóa đơn, chứng từ
+Danh mục ký hiệu hóa đơn, chứng từ
+Hóa đơn
+Ký hiệu hóa đơn điện tử là nhóm 6 ký tự gồm cả chữ viết và chữ số thể hiện ký hiệu hóa đơn điện tử để phản ánh các thông tin về loại hóa đơn điện tử có mã của cơ quan thuế hoặc hóa đơn điện tử không mã, năm lập hóa đơn, loại hóa đơn điện tử được sử dụng:
++ Ký tự đầu tiên là một (01) chữ cái được quy định là C hoặc K như sau: C thể hiện hóa đơn điện tử có mã của cơ quan thuế, K thể hiện hóa đơn điện tử không có mã;
++ Hai ký tự tiếp theo là hai (02) chữ số Ả rập thể hiện năm lập hóa đơn điện tử được xác định theo 2 chữ số cuối của năm dương lịch. Ví dụ: Năm lập hóa đơn điện tử là năm 2022 thì thể hiện là số 22.
++ Một ký tự tiếp theo là một (01) chữ cái được quy định là T, D, L, M, N, B, G, H thể hiện loại hóa đơn điện tử được sử dụng, cụ thể:
+Chữ T: Áp dụng đối với hóa đơn điện tử do các doanh nghiệp, tổ chức, hộ, cá nhân kinh doanh đăng ký sử dụng với cơ quan thuế;
+Chữ D: Áp dụng đối với hóa đơn bán tài sản công và hóa đơn bán hàng dự trữ quốc gia hoặc hóa đơn điện tử đặc thù không nhất thiết phải có một số tiêu thức do các doanh nghiệp, tổ chức đăng ký sử dụng;
+Chữ L: Áp dụng đối với hóa đơn điện tử của cơ quan thuế cấp theo từng lần phát sinh;
+Chữ M: Áp dụng đối với hóa đơn điện tử được khởi tạo từ máy tính tiền;
+Chữ N: Áp dụng đối với phiếu xuất kho kiêm vận chuyển nội bộ điện tử;
+Chữ B: Áp dụng đối với phiếu xuất kho hàng gửi bán đại lý điện tử;
+Chữ G: Áp dụng đối với tem, vé, thẻ điện tử là hóa đơn giá trị gia tăng;
+Chữ H: Áp dụng đối với tem, vé, thẻ điện tử là hóa đơn bán hàng.
++ Hai ký tự cuối là chữ viết do người bán tự xác định căn cứ theo nhu cầu quản lý. Trường hợp người bán sử dụng nhiều mẫu hóa đơn điện tử trong cùng một loại hóa đơn thì sử dụng hai ký tự cuối nêu trên để phân biệt các mẫu hóa đơn khác nhau trong cùng một loại hóa đơn. Trường hợp không có nhu cầu quản lý thì để là YY;
++ Tại bản thể hiện, ký hiệu hóa đơn điện tử và ký hiệu mẫu số hóa đơn điện tử được thể hiện ở phía trên bên phải của hóa đơn (hoặc ở vị trí dễ nhận biết).
+Chứng từ
+Ký hiệu chứng từ khấu trừ thuế thu nhập cá nhân gồm 06 ký tự gồm cả chữ viết và chữ số được quy định như sau:
++ Hai chữ đầu “CT/” là chữ viết tắt của chứng từ;
++ Hai ký tự tiếp theo là hai (02) chữ số Ả rập thể hiện năm lập chứng từ khấu trừ thuế TNCN điện tử được xác định theo 2 chữ số cuối của năm dương lịch.
++ Chữ cuối là chữ “E” thể hiện hình thức chứng từ là điện tử
+Ví dụ: CT/25E: Chứng từ khấu trừ thuế TNCN điện tử lập và cấp cho NNT trong năm 2025.
+- Số chứng từ khấu trừ thuế thu nhập cá nhân điện tử là số thứ tự được thể hiện trên chứng từ khấu trừ thuế thu nhập cá nhân điện tử. Số chứng từ khấu trừ thuế thu nhập cá nhân điện tử được ghi bằng chữ số Ả-rập có tối đa 7 chữ số bắt đầu từ số 1 vào ngày 01 tháng 01 hoặc ngày bắt đầu sử dụng chứng từ khấu trừ thuế thu nhập cá nhân điện tử và kết thúc vào ngày 31 tháng 12 hàng năm.
+Thông tin demo
+Link api <BaseUrl>: https://demo-api-hddt.matbao.in:11443
+MST: 0302712571-999
+TDNhap: admin
+MKhau: Gtybf@12sd
+eSign Serial_number: 5401184DBB6A0C257B52225920364BCB
+Link quản lý hóa đơn: https://demo.matbao.in
+Tên đăng nhập: demo
+Mật khẩu: demo@123!
+Thông tin Production
+Link api <BaseUrl>: https://api-hddt.matbao.in:11443
+MST: Xem trên mục cấu hình API trang quản lý hóa đơn
+TDNhap: Xem trên mục cấu hình API trang quản lý hóa đơn
+MKhau: Xem trên mục cấu hình API trang quản lý hóa đơn
+
+--- TABLE 1 ---
+Tên field | Định nghĩa | Độ dài tối đa | Kiểu dữ liệu | Ràng buộc
+Thông tin API đăng nhập: api/auth/login | Thông tin API đăng nhập: api/auth/login | Thông tin API đăng nhập: api/auth/login | Thông tin API đăng nhập: api/auth/login | Thông tin API đăng nhập: api/auth/login
+MST | Mã số thuế đăng nhập | 20 | Chuỗi ký tự | Bắt buộc
+TDNhap | Tên đăng nhập | 50 | Chuỗi ký tự | Bắt buộc
+MKhau | Mật khẩu đăng nhập | 50 | Chuỗi ký tự | Bắt buộc
+ |  |  |  | 
+Thông tin API lấy danh sách mẫu hóa đơn: api/Invoice/templates | Thông tin API lấy danh sách mẫu hóa đơn: api/Invoice/templates | Thông tin API lấy danh sách mẫu hóa đơn: api/Invoice/templates | Thông tin API lấy danh sách mẫu hóa đơn: api/Invoice/templates | Thông tin API lấy danh sách mẫu hóa đơn: api/Invoice/templates
+Year | Năm lấy mẫu hóa đơn | 4 | Số | Bắt buộc
+KHMSHDon | Mẫu số ký hiệu hóa đơn | 6 | Chuỗi ký tự | 
+KHHDon | Ký hiệu hóa đơn | 6 | Chuỗi ký tự | 
+SLuong | Tổng số lượng hóa đơn | 21 | Số | 
+CLai | Số lượng hóa đơn còn lại | 21 | Số | 
+ |  |  |  | 
+Thông tin API tạo mới hóa đơn: api/Invoice/create-invoice | Thông tin API tạo mới hóa đơn: api/Invoice/create-invoice | Thông tin API tạo mới hóa đơn: api/Invoice/create-invoice | Thông tin API tạo mới hóa đơn: api/Invoice/create-invoice | Thông tin API tạo mới hóa đơn: api/Invoice/create-invoice
+LoaiHDon | Loại hóa đơn 0: Tạo hóa đơn nháp 1: Tạo hóa đơn và phát hành | 10 | Số | 
+TCHDon | Tính chất hóa đơn 0: Hóa đơn mới 1: Thay thế 2: Điều chỉnh tăng 3: Điều chỉnh giảm 4: Điều chỉnh thông tin  5: Điều chỉnh tăng và giảm | 5 | Số | Bắt buộc
+KTraMTChieuTrung | Kiểm tra MTChieu trùng 0: Không kiểm tra 1: Trùng thì không import 2: Trùng thì ktra hóa đơn chưa phát hành thì xóa, ngược lại hóa đơn đã phát hành thì không import | 1 | Số | 
+KTraMaTraCuuTrung | Kiểm tra MaTraCuu trùng 0: Trùng thì không import 1: Trùng thì ktra hóa đơn chưa phát hành thì xóa, ngược lại hóa đơn đã phát hành thì không import | 1 | Số | 
+KHMSHDon | Mẫu số ký hiệu hóa đơn (Chi tiết Phần III mục 1) | 6 | Chuỗi ký tự | 
+KHHDon | Ký hiệu hóa đơn (Chi tiết Phần III mục 2) | 6 | Chuỗi ký tự | 
+NLap | Ngày lập hóa đơn |  | Ngày | 
+DVTTe | Đơn vị tiền tệ  704: VND 124: Dollar Canada 840: Dollar My | 3 | Số | Bắt buộc
+TGia | Tỷ giá | 7,2 | Số | Bắt buộc
+MaTraCuu | Mã tra cứu | 100 | Chuỗi ký tự | 
+MTChieu | Mã tham chiếu | 20 | Chuỗi ký tự | 
+GChu | Ghi chú | 255 | Chuỗi ký tự | 
+MSHDonDCLQuan | Mã số hóa đơn (INVID mã hóa liên quan) | 50 | Chuỗi ký tự | 
+KHMSHDCLQuan | Mẫu số ký hiệu hóa đơn liên quan | 6 | Chuỗi ký tự | 
+KHHDCLQuan | Ký hiệu hóa đơn liên quan | 6 | Chuỗi ký tự | 
+SHDCLQuan | Số hóa đơn liên quan | 8 | Số | 
+NLHDCLQuan | Ngày lập hóa đơn liên quan |  | Ngày | 
+NBan_MCHang | Mã cửa hàng | 50 | Chuỗi ký tự | 
+NBan_TCHang | Tên cửa hàng | 400 | Chuỗi ký tự | 
+NMua_Ten | Tên khách hàng hoặc tên đơn vị mua hàng | 100 | Chuỗi ký tự | 
+NMua_MST | Mã số thuế người mua hàng | 14 | Chuỗi ký tự | 
+NMua_DChi | Địa chỉ người mua hàng | 400 | Chuỗi ký tự | 
+NMua_MKHang | Mã người mua hàng | 100 | Chuỗi ký tự | 
+NMua_SDThoai | Số điện thoại người mua hàng | 20 | Chuỗi ký tự | 
+NMua_DCTDTu | Địa chỉ thư điện tử | 50 | Chuỗi ký tự | 
+NMua_HVTNMHang | Họ và tên người mua hàng | 100 | Chuỗi ký tự | 
+NMua_CCCDan | Căn cước công dân (Số CC/CCCD/số định danh) | 12 | Chuỗi ký tự | 
+NMua_MDVQHNSach | Mã đơn vị quan hệ ngân sách (Mã số đơn vị có quan hệ với ngân sách) | 7 | Chuỗi ký tự | 
+NMua_SHChieu | Số hộ chiếu (Số hộ chiếu/Giấy tờ nhập xuất cảnh) | 20 | Chuỗi ký tự | 
+ |  |  |  | 
+TgThTien | Tổng tiền trước thuế | 21,6 | Số | Bắt buộc
+TTCKTMai | Tổng tiền chiết khấu thương mại | 21,6 | Số | Bắt buộc
+TGTKhac | Tổng giảm trừ khác | 21,6 | Số | Bắt buộc
+TgTThue | Tổng tiền thuế | 21,6 | Số | Bắt buộc
+TgTTTBSo | Tổng tiền thanh toán bằng số | 21,6 | Số | Bắt buộc
+TgTTTBChu | Tổng tiền thanh toán bằng chữ | 255 | Chuỗi ký tự | 
+MoRong1 | Dữ liệu mở rộng 1 | 500 | Chuỗi ký tự | 
+MoRong2 | Dữ liệu mở rộng 2 | 500 | Chuỗi ký tự | 
+MoRong3 | Dữ liệu mở rộng 3 | 500 | Chuỗi ký tự | 
+MoRong4 | Dữ liệu mở rộng 4 | 500 | Chuỗi ký tự | 
+MoRong5 | Dữ liệu mở rộng 5 | 500 | Chuỗi ký tự | 
+MoRong6 | Dữ liệu mở rộng 6 | 500 | Chuỗi ký tự | 
+MoRong7 | Dữ liệu mở rộng 7 | 500 | Chuỗi ký tự | 
+MoRong8 | Dữ liệu mở rộng 8 | 500 | Chuỗi ký tự | 
+MoRong9 | Dữ liệu mở rộng 9 | 500 | Chuỗi ký tự | 
+MoRong10 | Dữ liệu mở rộng 10 | 500 | Chuỗi ký tự | 
+TenTuyen | Tên tuyến | 500 | Chuỗi ký tự | (loại vé xe)
+NoiDi | Nơi đi | 500 | Chuỗi ký tự | (loại vé xe)
+NoiDen | Nơi đến | 500 | Chuỗi ký tự | (loại vé xe)
+NgayGioDi | Ngày giờ đi | 500 | Chuỗi ký tự | (loại vé xe)
+SoGhe | Số ghế | 500 | Chuỗi ký tự | (loại vé xe)
+SoXe | Số xe | 500 | Chuỗi ký tự | (loại vé xe)
+LoaiXe | Loại xe | 500 | Chuỗi ký tự | (loại vé xe)
+MaTai | Mã tài | 500 | Chuỗi ký tự | (loại vé xe)
+TotalService | Tiền phí khác | 21,6 | Số | (loại vé máy bay)
+VatRateService | Thuế suất phí khác: "-2": KKKNT "-1": KCT "0": 0% "5": 5% "8": 8% "10": 10% | 500 | Chuỗi ký tự | (loại vé máy bay)
+TotalThuHo | Tiền phí thu hộ khác | 21,6 | Số | (loại vé máy bay)
+TotalThueThuHo | Tiền thuế thu hộ khác | 21,6 | Số | (loại vé máy bay)
+VatRateThuHo | Thuế suất thu hộ: "-2": KKKNT "-1": KCT "0": 0% "5": 5% "8": 8% "10": 10% | 500 | Chuỗi ký tự | (loại vé máy bay)
+NDHang | Ngày đơn hàng (yyyy-MM-ddTHH:mm:ss) |  | Ngày giờ | 
+NMua_QTich | Quốc tịch | 400 | Chuỗi ký tự | (loại CT khấu trừ thuế TNCN)
+NMua_CNCTru | Cá nhân cư trú | 20 | Chuỗi ký tự | Bắt buộc (loại CT khấu trừ thuế TNCN)
+NMua_NgCCCDan | Ngày cấp CCCD |  | Ngày | (loại CT khấu trừ thuế TNCN)
+NMua_NCCCCDan | Nơi cấp CCCD | 400 | Chuỗi ký tự | (loại CT khấu trừ thuế TNCN)
+TThang | Từ tháng (Tháng bắt đầu trả thu nhập) | 2 | Số | Bắt buộc (loại CT khấu trừ thuế TNCN)
+DThang | Đến Tháng (Tháng cuối cùng trả thu nhập) | 2 | Số | Bắt buộc (loại CT khấu trừ thuế TNCN)
+Nam | Năm (Thời điểm trả thu nhập) | 4 | Số | Bắt buộc (loại CT khấu trừ thuế TNCN)
+KTNhap | Khoản thu nhập | 250 | Chuỗi ký tự | Bắt buộc (loại CT khấu trừ thuế TNCN)
+TTNhap | Tổng thu nhập | 21,6 | Số | (loại CT khấu trừ thuế TNCN)
+TgThTien | Tổng thu nhập chịu thuế (Tổng thu nhập chịu thuế phải khấu trừ) | 21,6 | Số | Bắt buộc (loại CT khấu trừ thuế TNCN)
+BHiem | Bảo hiểm (Khoản đóng bảo hiểm bắt buộc) | 21,6 | Số | Bắt buộc (loại CT khấu trừ thuế TNCN)
+TTNTThue | Tổng thu nhập tính thuế | 21,6 | Số | Bắt buộc (loại CT khấu trừ thuế TNCN)
+SThue | Số thuế (Số thuế thu nhập cá nhân đã khấu trừ) | 21,6 | Số | Bắt buộc (loại CT khấu trừ thuế TNCN)
+TThien | Khoản từ thiện, nhân đạo, khuyến học | 21,6 | Số | Bắt buộc (loại CT khấu trừ thuế TNCN)
+ |  |  |  | 
+HDKTSo | Hợp đồng kinh tế số | 255 | Chuỗi ký tự | Bắt buộc (PXK hàng gửi bán đại lý)
+HDKTNgay | Hợp đồng kinh tế ngày |  | Ngày | Bắt buộc (PXK hàng gửi bán đại lý)
+LDDNBo | Lệnh điều động nội bộ | 255 | Chuỗi ký tự | Bắt buộc (PXK  kiêm vận chuyển nội bộ)
+Cua | Của |  | Chuỗi ký tự | (PXK)
+VeViec | Về việc |  | Chuỗi ký tự | (PXK kiêm vận chuyển nội bộ)
+TNVChuyen | Tên người vận chuyển | 100 | Chuỗi ký tự | (PXK)
+HDSo | Hợp đồng số (Hợp đồng vận chuyển) | 255 | Chuỗi ký tự | (PXK)
+PTVChuyen | Phương tiện vận chuyển | 50 | Chuỗi ký tự | Bắt buộc(PXK)
+XuatKhoTai | Xuất kho tại | 400 | Chuỗi ký tự | (PXK)
+NMua_DChi | Nhập kho tại | 400 | Chuỗi ký tự | (PXK)
+NgayXuat | Ngày xuất kho |  | Ngày | (PXK)
+NgayNhap | Ngày nhập kho |  | Ngày | (PXK)
+TongSoLuong | Tổng số lương | 21,6 | Số | (PXK)
+PXKTLChietKhau | Tỷ lệ chiếc khấu | 21,6 | Số | (PXK)
+PXKTChietKhau | Tiền chiếc khấu | 21,6 | Số | (PXK)
+ |  |  |  | 
+DSHHDVu | Danh sách hàng hóa dịch vụ |  | Danh sách | Bắt buộc
+DSHHDVu/TChat | Tính chất 1: Hàng hóa/dịch vụ 2: Khuyến mãi 3: Chiết khấu  4: Ghi chú 5: Hàng hóa đặc trưng 801: Hàng hóa, dịch vụ 1% -> 0.8%  161:  Hàng hóa, dịch vụ 2% -> 1.6% 241: Hàng hóa, dịch vụ 3% -> 2.4% 401: Hàng hóa, dịch vụ 5% -> 4% | 1 | Số | Bắt buộc  (Lưu ý: Các tính chất 161, 241, 401, 801 Chỉ áp dụng cho hóa đơn bán hàng)
+DSHHDVu/STT | Số thứ tự | 4 | Số | Bắt buộc
+DSHHDVu/MHHDVu | Mã hàng hóa, dịch vụ | 50 | Chuỗi ký tự | 
+DSHHDVu/THHDVu | Tên hàng hóa, dịch vụ | 500 | Chuỗi ký tự | Bắt buộc
+DSHHDVu/DVTinh | Đơn vị tính | 50 | Chuỗi ký tự | 
+DSHHDVu/SLuong | Số lượng | 21,6 | Số | Bắt buộc
+DSHHDVu/DGia | Đơn giá | 21,6 | Số | Bắt buộc
+DSHHDVu/ThTienChuaCK | Thành tiền trước thuế trước chiếc khấu | 21,6 | Số | Bắt buộc
+DSHHDVu/TLCKhau | Tỷ lệ % chiết khấu | 6,4 | Số | Bắt buộc
+DSHHDVu/STCKhau | Số tiền chiết khấu | 21,6 | Số | Bắt buộc
+DSHHDVu/ThTien | Thành tiền trước thuế sau chiếc khấu | 21,6 | Số | Bắt buộc
+DSHHDVu/TSuat | Thuế suất  -2: KKKNT -1: KCT 0: 0% 5: 5% 8: 8% 10: 10% 3.5: Khác | 6,4 | Số | Bắt buộc
+DSHHDVu/TThue | Tiền thuế | 21,6 | Số | Bắt buộc
+DSHHDVu/TgTien | Tiền sau thuế | 21,6 | Số | Bắt buộc
+DSHHDVu/MoRong1 | Dữ liệu mở rộng 1 | 500 | Chuỗi ký tự | 
+DSHHDVu/MoRong2 | Dữ liệu mở rộng 2 | 500 | Chuỗi ký tự | 
+DSHHDVu/MoRong3 | Dữ liệu mở rộng 3 | 500 | Chuỗi ký tự | 
+DSHHDVu/MoRong4 | Dữ liệu mở rộng 4 | 500 | Chuỗi ký tự | 
+DSHHDVu/MoRong5 | Dữ liệu mở rộng 5 | 500 | Chuỗi ký tự | 
+DSHHDVu/MoRong6 | Dữ liệu mở rộng 6 | 500 | Chuỗi ký tự | 
+DSHHDVu/MoRong7 | Dữ liệu mở rộng 7 | 500 | Chuỗi ký tự | 
+DSHHDVu/MoRong8 | Dữ liệu mở rộng 8 | 500 | Chuỗi ký tự | 
+DSHHDVu/MoRong9 | Dữ liệu mở rộng 9 | 500 | Chuỗi ký tự | 
+DSHHDVu/MoRong10 | Dữ liệu mở rộng 10 | 500 | Chuỗi ký tự | 
+DSHHDVu/SLo | Số lô | 200 | Chuỗi ký tự | 
+DSHHDVu/NgHHan | Ngày hết hạn (Hạn dùng) | 200 | Chuỗi ký tự | 
+DSHHDVu/DSHHDTrung | Danh sách thông tin hàng hóa đặc trưng (bắt buộc nếu thẻ TChat có giá trị là “5”) |  | Danh sách | Bắt buộc (trường hợp TChat=5)
+DSHHDTrung/LHHDTrung | Loại hàng hóa đặc trưng | 1 | Số | 
+DSHHDTrung/TTruong | Tên trường | 20 | Chuỗi ký tự | 
+DSHHDTrung/DLieu | Dữ liệu | 200 | Chuỗi ký tự | 
+ |  |  |  | 
+ | Loại hàng hóa đặc trưng (LHHDTrung) | Tên trường  (TTruong) | Tên trường  (TTruong) | Tên trường  (TTruong)
+Hàng hóa là xe ô tô, xe mô tô | 1 | SKhung: Số khung  SMay: Số máy | SKhung: Số khung  SMay: Số máy | SKhung: Số khung  SMay: Số máy
+Dịch vụ vận chuyển | 2 | BKSPTVChuyen : Biển kiểm soát phương tiện vận chuyển | BKSPTVChuyen : Biển kiểm soát phương tiện vận chuyển | BKSPTVChuyen : Biển kiểm soát phương tiện vận chuyển
+Dịch vụ vận chuyển trên nền tảng số, TMĐT | 3 | TNGHang: Tên người gửi hàng  DCNGHang: Địa chỉ người gửi hàng  MSTNGHang: MST người gửi hàng  MDDNGHang: Số định danh người gửi hàng | TNGHang: Tên người gửi hàng  DCNGHang: Địa chỉ người gửi hàng  MSTNGHang: MST người gửi hàng  MDDNGHang: Số định danh người gửi hàng | TNGHang: Tên người gửi hàng  DCNGHang: Địa chỉ người gửi hàng  MSTNGHang: MST người gửi hàng  MDDNGHang: Số định danh người gửi hàng
+ |  |  |  | 
+DSLPhi | Danh sách loại phí |  | Danh sách | 
+LPhiModel/TLPhi | Tên lệ phí | 100 | Chuỗi ký tự | 
+LPhiModel/TPhi | Tiền phí | 21,6 | Số | 
+SHDon | Số hóa đơn | 8 | Số | 
+MaTraCuu | Mã tra cứu | 100 | Chuỗi ký tự | 
+ |  |  |  | 
+Thông tin API xóa bỏ hóa đơn: api/Invoice/cancel-invoice | Thông tin API xóa bỏ hóa đơn: api/Invoice/cancel-invoice | Thông tin API xóa bỏ hóa đơn: api/Invoice/cancel-invoice | Thông tin API xóa bỏ hóa đơn: api/Invoice/cancel-invoice | Thông tin API xóa bỏ hóa đơn: api/Invoice/cancel-invoice
+MaSoHDon | Mã số hóa đơn (INVID mã hóa) | 50 | Chuỗi ký tự | 
+ |  |  |  | 
+Thông tin API tạo thông báo hóa đơn sai sót: api/Invoice/create-template-04 | Thông tin API tạo thông báo hóa đơn sai sót: api/Invoice/create-template-04 | Thông tin API tạo thông báo hóa đơn sai sót: api/Invoice/create-template-04 | Thông tin API tạo thông báo hóa đơn sai sót: api/Invoice/create-template-04 | Thông tin API tạo thông báo hóa đơn sai sót: api/Invoice/create-template-04
+Loai | Loại thông báo 1: Thông báo hủy/giải trình của NNT 2: Thông báo hủy/giải trình của NNT theo thông báo của CQT | 10 | Số | Bắt buộc
+So | Số thông báo của CQT | 30 |  | Bắt buộc (trường hợp Loai=2)
+NTBCCQT | Ngày thông báo của CQT |  | Ngày | Bắt buộc (trường hợp Loai=2)
+DSHDon | Danh sách hóa đơn |  | Danh sách | Bắt buộc
+DSHDon/STT | Số thứ tự | 4 | Số | Bắt buộc
+DSHDon/MaSoHDon | Mã số hóa đơn (INVID mã hóa) | 50 | Chuỗi ký tự | 
+DSHDon/KHMSHDon | Mẫu số ký hiệu hóa đơn | 6 | Chuỗi ký tự | 
+DSHDon/KHHDon | Ký hiệu hóa đơn | 6 | Chuỗi ký tự | 
+DSHDon/SHDon | Số hóa đơn | 8 | Số | 
+DSHDon/LADHDDT | Loại áp dụng hóa đơn điện tử | 1 | Số | Bắt buộc
+DSHDon/TCTBao | Tính chất thông báo (Hủy/Điều chỉnh/Thay thế/Giải trình) | 1 | Số | Bắt buộc
+DSHDon/LDo | Lý do | 255 | Chuỗi ký tự | 
+MaSoTBSSot | Mã số thông báo sai sót(TBSSID mã hóa) | 50 | Chuỗi ký tự | 
+ |  |  |  | 
+Hàm API tải XML và PDF: api/Invoice/download-invoice | Hàm API tải XML và PDF: api/Invoice/download-invoice | Hàm API tải XML và PDF: api/Invoice/download-invoice | Hàm API tải XML và PDF: api/Invoice/download-invoice | Hàm API tải XML và PDF: api/Invoice/download-invoice
+MaSoHDon | Mã số hóa đơn (INVID mã hóa) | 50 | Chuỗi ký tự | Bắt buộc
+MaTraCuu | Mã tra cứu | 100 | Chuỗi ký tự | Bắt buộc
+ |  |  |  | 
+Thông tin API lấy danh sách chi tiết hóa đơn: api/Invoice/invoice-detail | Thông tin API lấy danh sách chi tiết hóa đơn: api/Invoice/invoice-detail | Thông tin API lấy danh sách chi tiết hóa đơn: api/Invoice/invoice-detail | Thông tin API lấy danh sách chi tiết hóa đơn: api/Invoice/invoice-detail | Thông tin API lấy danh sách chi tiết hóa đơn: api/Invoice/invoice-detail
+KHMSHDon | Mẫu số ký hiệu hóa đơn | 6 | Chuỗi ký tự | Bắt buộc
+KHHDon | Ký hiệu hóa đơn | 6 | Chuỗi ký tự | Bắt buộc
+SHDon | Số hóa đơn | 8 | Số | 
+TNLap | Từ ngày lập |  | Ngày (yyyy-MM-dd) | Bắt buộc
+DNLap | Đến ngày lập |  | Ngày (yyyy-MM-dd) | Bắt buộc
+LoaiHDon | Loại hóa đơn: -1: Tất cả (Bao gồm hóa đơn nháp)  0: Tất cả (Không lấy hóa đơn nháp)  1: Nháp  2: Hóa đơn mới  3: Hóa đơn xóa bỏ  4: Hóa đơn thay thế  5: Hóa đơn bị thay thế 6: Hóa đơn điều chỉnh tăng  7: Hóa đơn điều chỉnh giảm  8: Hóa đơn điều chỉnh thông tin  9: Hóa đơn điều chỉnh tăng/giảm  10: Hóa đơn bị điều chỉnh | 2 | Số | 
+TThaiHDon | Trạng thái hóa đơn -1: Tất cả (Bao gồm hóa đơn nháp) 0: Tất cả (Không lấy hóa đơn nháp) 1: Nháp  2: Lỗi ký 3: Chưa gửi CQT 4: Đã cấp mã/tiếp nhận 5: CQT chưa phản hồi 6: Không đủ đk cấp mã/tiếp nhận | 2 | Số | 
+TTKhachHang | Tìm theo thông tin khách hàng, nhận trong 1 các giá trị sau: NMua_Ten NMua_MST NMua_HVTNMHang MTChieu | 200 | Chuổi ký tự | 
+MaSoHDon | Mã số hóa đơn (INVID mã hóa) | 50 | Chuỗi ký tự | 
+ |  |  |  | 
+Hàm API ký hóa đơn nháp: api/invoice/sign-invoice | Hàm API ký hóa đơn nháp: api/invoice/sign-invoice | Hàm API ký hóa đơn nháp: api/invoice/sign-invoice | Hàm API ký hóa đơn nháp: api/invoice/sign-invoice | Hàm API ký hóa đơn nháp: api/invoice/sign-invoice
+MaSoHDon | Mã số hóa đơn (INVID mã hóa) | 50 | Chuỗi ký tự | Bắt buộc
+ |  |  |  | 
+Hàm API lấy XML hóa đơn chưa ký: api/invoice/get-xml-not-sign | Hàm API lấy XML hóa đơn chưa ký: api/invoice/get-xml-not-sign | Hàm API lấy XML hóa đơn chưa ký: api/invoice/get-xml-not-sign | Hàm API lấy XML hóa đơn chưa ký: api/invoice/get-xml-not-sign | Hàm API lấy XML hóa đơn chưa ký: api/invoice/get-xml-not-sign
+MaSoHDon | Mã số hóa đơn (INVID mã hóa) | 50 | Chuỗi ký tự | Bắt buộc
+ |  |  |  | 
+Hàm API tải XML và PDF: api/invoice/sign-xml | Hàm API tải XML và PDF: api/invoice/sign-xml | Hàm API tải XML và PDF: api/invoice/sign-xml | Hàm API tải XML và PDF: api/invoice/sign-xml | Hàm API tải XML và PDF: api/invoice/sign-xml
+XmlMaHoa64 | Dữ liệu XML có mã hóa Base64 |  | Chuỗi ký tự | Bắt buộc
+MaVungKy | Id vùng cần ký |  | Chuỗi ký tự | Bắt buộc
+DuongDanChuKy | Đường dẫn chứa vùng ký |  | Chuỗi ký tự | Bắt buộc
+ |  |  |  | 
+JSON hóa đơn trả về từ Webhook | JSON hóa đơn trả về từ Webhook | JSON hóa đơn trả về từ Webhook | JSON hóa đơn trả về từ Webhook | JSON hóa đơn trả về từ Webhook
+InvID | Mã số hóa đơn (INVID mã hóa) |  | Chuỗi ký tự | 
+No | Số hóa dơn |  | Số | 
+Pattern | Ký hiệu mẫu số |  | Chuỗi ký tự | 
+Serial | Ký hiệu |  | Chuỗi ký tự | 
+SO | Mã tham chiếu |  | Chuỗi ký tự | 
+Fkey | Mã tra cứu |  | Chuỗi ký tự | 
+ArisingDate | Ngày ký |  | Ngày | 
+MCCQT | Mã cơ quan thuế cấp |  | Chuỗi ký tự | 
+MLTDiep | Mã loại thông điệp |  | Chuỗi ký tự | 
+GhiChuCQT | Ghi chú cơ quan thuế |  | Chuỗi ký tự | 
+MaTTHDon | Mã trạng thái hóa đơn 1: Nháp 2: Lỗi ký 3: Chưa gửi CQT 4: Đã cấp mã/tiếp nhận 5: CQT chưa phản hồi 6: Không đủ đk cấp mã/tiếp nhận 7: [Mẫu 04/SS] Chưa tạo tờ khai 8: [Mẫu 04/SS] CQT chưa tiếp nhận 9: [Mẫu 04/SS] CQT đã phê duyệt |  | Số | 
+TenTTHDon | Tên trạng thái hóa đơn (Tên ở trên mục MaTTHDon) |  |  | 
+Loai | Loại callback: 1: Tạo nháp 2: Ký 3: CQT phản hồi 4: Xóa nháp |  |  | 
+ |  |  |  | 
+Thông tin API xóa hóa đơn nháp: api/Invoice/delete-invoice | Thông tin API xóa hóa đơn nháp: api/Invoice/delete-invoice | Thông tin API xóa hóa đơn nháp: api/Invoice/delete-invoice | Thông tin API xóa hóa đơn nháp: api/Invoice/delete-invoice | Thông tin API xóa hóa đơn nháp: api/Invoice/delete-invoice
+MaSoHDon | Mã số hóa đơn (INVID mã hóa) | 50 | Chuỗi ký tự | 
+ |  |  |  | 
+ |  |  |  | 
+
+--- TABLE 2 ---
+STT | Mã lỗi | Mô tả
+1 | 200 | Thành công
+2 | 10 | Tham số INPUT không được để trống. Xem thêm nội dung trả về trong field Message.
+3 | 201 | Không tìm thấy dữ liệu. Xem thêm nội dung trả về trong field Message.
+4 | 202 | Không tìm thấy email
+5 | 203 | Tài khoản không tồn tại
+6 | 204 | Dữ liệu không hợp lệ
+7 |  | 
+8 | 300 | Phát hành không thành công (Hóa đơn nháp đã được tạo)
+9 | 301 | Không tìm thấy hóa đơn
+10 | 302 | Hóa đơn đã phát hành
+11 | 303 | Phát hành không thành công
+12 | 304 | Trùng mã tra cứu
+13 | 305 | Trùng mã tham chiếu
+14 | 306 | Hóa đơn gốc không tồn tại
+15 | 307 | Không tìm thấy thông tin tờ khai đăng ký
+16 | 308 | Không tìm thấy mẫu số kí hiệu
+17 |  | 
+18 | 401 | Xác thực tài khoản không hợp lệ
+19 | 402 | Tạo token không thành công
+20 | 403 | Tài khoản không có quyền
+21 | 405 | Không có quyền kết nối dữ liệu
+22 |  | 
+23 | 500 | Lỗi hệ thống. Xem thêm nội dung trả về trong field Message.
+24 | 501 | Ngày đơn hàng không hợp lệ
+25 | 502 | Gửi mail không thành công
+26 |  | 
+
+--- TABLE 3 ---
+STT | Ký hiệu mẫu số hóa đơn | Tên/Mô tả
+1 | 1 | Phản ánh loại Hóa đơn điện tử giá trị gia tăng
+2 | 2 | Phản ánh loại Hóa đơn điện tử bán hàng
+3 | 3 | Phản ánh loại Hóa đơn điện tử bán tài sản công
+4 | 4 | Phản ánh loại Hóa đơn điện tử bán hàng dự trữ quốc gia
+5 | 5 | Phản ánh các loại hóa đơn điện tử khác là tem điện tử, vé điện tử, thẻ điện tử, phiếu thu điện tử hoặc các chứng từ điện tử có tên gọi khác nhưng có nội dung của hóa đơn điện tử theo quy định tại Nghị định 123/2020/NĐ-CP
+6 | 6 | Phản ánh các chứng từ điện tử được sử dụng và quản lý như hóa đơn gồm phiếu xuất kho kiêm vận chuyển nội bộ điện tử, phiếu xuất kho hàng gửi bán đại lý điện tử
+7 | 7 | Phản ánh loại Hóa đơn thương mại
+8 | 8 | Phản ánh loại Hóa đơn giá trị gia tăng tích hợp biên lai thu thuế, phí, lệ phí
+9 | 9 | Phản ánh loại Hóa đơn bán hàng tích hợp biên lai thu thuế, phí, lệ phí
+10 | 03/TNCN | Chứng từ khấu trừ thuế Thu nhập cá nhân

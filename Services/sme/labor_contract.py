@@ -8,6 +8,7 @@ from typing import Any
 
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
 from Services.sme.vouchers import create_payment
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 FORM_CONTRACT = '05-LĐTL'
@@ -86,7 +87,7 @@ def ensure_sme_labor_contract_schema(conn: sqlite3.Connection, *, commit: bool =
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, 'sme_labor_contracts')
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='labor_contract')
 
 
 def _next_no(conn: sqlite3.Connection, table: str, col: str, prefix: str) -> str:
@@ -165,7 +166,7 @@ def create_labor_contract(
     from Services.sme.branch_filter import stamp_row_branch
     stamp_row_branch(conn, 'sme_labor_contracts', cid)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='labor_contract')
     return get_labor_contract(conn, cid)
 
 
@@ -294,7 +295,7 @@ def settle_labor_contract(
         (_now(), contract_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='labor_contract')
     out = get_settlement(conn, settle_id)
     out['contract'] = get_labor_contract(conn, contract_id)
     out['payment_voucher'] = payment_voucher
@@ -398,5 +399,5 @@ def void_labor_contract(
         ((doc.get('notes') or '') + f' | {reason}', _now(), contract_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='labor_contract')
     return get_labor_contract(conn, contract_id)

@@ -310,7 +310,7 @@ def migrate_tt58_to_tt99_if_needed(
     if old_r != 'SME_MICRO_TT58' and not str(old_r).upper().startswith('SME'):
         return None
 
-    from db_utils import get_tenant_db_connection
+    from db_utils import get_tenant_db_connection, sqlite_commit
     conn = get_tenant_db_connection(tenant_id)
     if not conn:
         return {'ok': False, 'error': f'Không mở được DB tenant {tenant_id}'}
@@ -325,7 +325,7 @@ def migrate_tt58_to_tt99_if_needed(
             update_registry=True,
             migrated_by=migrated_by,
         )
-        conn.commit()
+        sqlite_commit(conn, label='migrate_tt58_to_tt99')
         return result
     except Exception as exc:
         conn.rollback()

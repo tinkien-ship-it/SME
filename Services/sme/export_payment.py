@@ -11,6 +11,7 @@ from __future__ import annotations
 import sqlite3
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 FX_Q = Decimal('0.0001')
@@ -234,7 +235,7 @@ def ensure_export_sale_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         pass
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='export_payment')
 
     _export_schema_ready[db_key] = _EXPORT_SCHEMA_VERSION
 
@@ -623,7 +624,7 @@ def replace_sale_advances(
             'amount_vnd': float(vnd),
         })
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='export_payment')
     return saved
 
 

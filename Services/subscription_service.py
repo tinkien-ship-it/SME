@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 
 from flask_bcrypt import generate_password_hash
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, get_main_db_connection, open_sqlite
+from db_utils import BASE_DIR, MAIN_DB_PATH, get_main_db_connection, open_sqlite, sqlite_commit
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ def set_trial_months(months, conn=None):
             (TRIAL_MONTHS_SETTING_KEY, str(months)),
         )
         if own:
-            conn.commit()
+            sqlite_commit(conn, label='subscription_service')
         return {'success': True, 'trial_months': months}
     except sqlite3.Error as exc:
         return {'success': False, 'error': str(exc)}
@@ -136,7 +136,7 @@ def adjust_tenant_expiry_months(tenant_id, delta_months):
                 tenant_id,
             ),
         )
-        conn.commit()
+        sqlite_commit(conn, label='subscription_service')
         return {
             'success': True,
             'tenant_id': tenant_id,
@@ -400,7 +400,7 @@ def ensure_subscription_products(conn=None):
         # Đã đủ gói và không còn mã mặc định chưa gắn cờ → không ghi gì thêm
         if sub_count >= len(DEFAULT_SUBSCRIPTION_PLANS) and legacy_unflagged == 0:
             if changed and own_conn:
-                conn.commit()
+                sqlite_commit(conn, label='subscription_service')
             return
 
         if legacy_unflagged:
@@ -462,7 +462,7 @@ def ensure_subscription_products(conn=None):
             sub_count += 1
 
         if own_conn and changed:
-            conn.commit()
+            sqlite_commit(conn, label='subscription_service')
         elif own_conn:
             # Không có thay đổi — đảm bảo không để transaction treo
             conn.rollback()
@@ -728,7 +728,7 @@ def create_renewal_checkout(tenant_id, plan_code, years=1, customer=None):
                 product['unit'] or 'Gói/năm',
             ),
         )
-        conn.commit()
+        sqlite_commit(conn, label='subscription_service')
         return {
             'success': True,
             'sale_id': sale_id,
@@ -783,7 +783,7 @@ def activate_tenant_after_renewal(tenant_id, years, plan_code):
             """,
             (new_expiry.strftime('%Y-%m-%d'), json.dumps(settings, ensure_ascii=False), tenant_id),
         )
-        conn.commit()
+        sqlite_commit(conn, label='subscription_service')
         return True, new_expiry.strftime('%Y-%m-%d')
     finally:
         conn.close()

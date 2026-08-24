@@ -8,6 +8,7 @@ from typing import Any
 
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
 from Services.sme.vouchers import create_payment
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -79,7 +80,7 @@ def ensure_sme_labor_sheets_schema(conn: sqlite3.Connection, *, commit: bool = T
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, 'sme_labor_sheets')
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='labor_sheets')
 
 
 def _next_no(conn: sqlite3.Connection, prefix: str) -> str:
@@ -236,7 +237,7 @@ def create_labor_sheet(
             ),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='labor_sheets')
     return get_labor_sheet(conn, sid)
 
 
@@ -313,5 +314,5 @@ def void_labor_sheet(
         (f' | VOID: {reason}', sheet_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='labor_sheets')
     return get_labor_sheet(conn, sheet_id)

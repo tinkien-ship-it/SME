@@ -44,6 +44,10 @@ from db_utils import (
     get_main_db_connection,
     open_sqlite,
     resolve_db_path,
+    sqlite_commit,
+    begin_immediate,
+    locked_user_message,
+    _is_locked_error,
 )
 from Services.email_service import get_smtp_config, send_email
 from Services.subscription_service import get_subscription_plans
@@ -130,19 +134,34 @@ def add_trusted_device(username, fingerprint):
 
     def _write():
         with get_main_db_connection() as conn:
+            from db_utils import begin_immediate
+            begin_immediate(conn, label='add_trusted_device')
             conn.execute("""
                 INSERT OR IGNORE INTO user_trusted_devices (username, device_fingerprint, last_login)
                 VALUES (?, ?, ?)
             """, (username, fingerprint, datetime.now()))
-            conn.commit()
+            sqlite_commit(conn, label='settings')
 
     sqlite_write_retry(_write, label='add_trusted_device')
 
 def get_device_fingerprint():
-    """Tạo dấu vân tay thiết bị từ User-Agent và IP"""
+    """Vân tay trình duyệt (UA + IP) — dùng cho tenant / legacy OTP email."""
     ua = request.headers.get('User-Agent', '')
-    ip = request.remote_addr
+    ip = get_client_ip()
     return hashlib.sha256(f"{ua}{ip}".encode()).hexdigest()
+
+
+def get_master_device_fingerprint(signal: dict | None = None):
+    """Vân tay máy cho Master — ổn định giữa các trình duyệt trên cùng thiết bị."""
+    from Services.totp_auth import fingerprint_from_request, parse_device_signal
+
+    if signal is None:
+        raw = request.form.get('device_signal') or request.args.get('device_signal')
+        if not raw and request.is_json:
+            body = request.get_json(silent=True) or {}
+            raw = body.get('device_signal')
+        signal = parse_device_signal(raw)
+    return fingerprint_from_request(request, signal)
 
 def finalize_login_process(user_row, tenant_id, db_path):
     new_session_token = str(uuid.uuid4())
@@ -151,7 +170,7 @@ def finalize_login_process(user_row, tenant_id, db_path):
     g.db_path = db_path
     conn = get_db_connection()
     conn.execute("UPDATE users SET last_session_id = ? WHERE id = ?", (new_session_token, user_row['id']))
-    conn.commit()
+    sqlite_commit(conn, label='settings')
     conn.close()
 
     # Thiết lập Session Flask
@@ -216,7 +235,7 @@ def log_login_attempt(user_id, username, tenant_id, status='Thành công'):
                 INSERT INTO login_history (tenant_id, user_id, username, ip_address, location, device_info, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (tenant_id, user_id, username, ip, loc, ua, status))
-            conn.commit()
+            sqlite_commit(conn, label='settings')
 
     _defer_login_db_write(_write, label='log_login_attempt')
 
@@ -237,19 +256,29 @@ def _persist_successful_login(user_id, username, tenant_id, db_to_open, new_sess
 
     def _write_session_critical():
         with open_sqlite(db_to_open) as conn_target:
+            from db_utils import begin_immediate, sqlite_commit
+            begin_immediate(conn_target, label='login_session')
             conn_target.execute(
                 "UPDATE users SET last_session_id = ? WHERE id = ?",
                 (new_session_id, user_id),
             )
-            conn_target.commit()
+            sqlite_commit(conn_target, label='login_session')
+
+    def _write_trusted_device_sync():
+        """Ghi thiết bị tin cậy đồng bộ — tránh OTP/TOTP lặp do thread nền thất bại."""
+        if not fingerprint:
+            return
+        with get_main_db_connection() as conn_m:
+            from db_utils import begin_immediate, sqlite_commit
+            from Services.totp_auth import remember_trusted_device
+            begin_immediate(conn_m, label='login_trusted_device')
+            remember_trusted_device(conn_m, username, fingerprint)
+            sqlite_commit(conn_m, label='login_trusted_device')
 
     def _write_main_extras():
         with get_main_db_connection() as conn_m:
-            conn_m.execute(
-                """INSERT OR REPLACE INTO user_trusted_devices
-                   (username, device_fingerprint, last_login) VALUES (?, ?, ?)""",
-                (username, fingerprint, now_str),
-            )
+            from db_utils import begin_immediate, sqlite_commit
+            begin_immediate(conn_m, label='login_main_extras')
             try:
                 conn_m.execute(
                     """INSERT INTO login_history
@@ -259,7 +288,7 @@ def _persist_successful_login(user_id, username, tenant_id, db_to_open, new_sess
                 )
             except Exception:
                 pass
-            conn_m.commit()
+            sqlite_commit(conn_m, label='login_main_extras')
 
     def _write_audit_deferred():
         from Services.audit_log import write_audit
@@ -280,6 +309,14 @@ def _persist_successful_login(user_id, username, tenant_id, db_to_open, new_sess
             current_app.logger.error('login session write: %s', e)
         except Exception:
             print(f'login session write: {e}')
+
+    try:
+        sqlite_write_retry(_write_trusted_device_sync, label='login_trusted_device', retries=login_retries)
+    except Exception as e:
+        try:
+            current_app.logger.error('login trusted device: %s', e)
+        except Exception:
+            print(f'login trusted device: {e}')
 
     _defer_login_db_write(_write_main_extras, label='login_main_writes')
     _defer_login_db_write(_write_audit_deferred, label='login_audit')
@@ -526,68 +563,127 @@ def register_settings_routes(app):
             else:
                 is_2fa_enabled = bool(user.get('is_2fa_enabled', 0))
 
+            user_role = str(user.get('role', '')).strip()
+            is_master_login = user_role == 'master' and current_tenant_id is None
+
             # ==================== 5. Xử lý 2FA ====================
             if is_2fa_enabled:
-                fingerprint = get_device_fingerprint()
-                try:
-                    conn_m = get_main_db_connection()
-                    device_record = conn_m.execute(
-                        "SELECT last_login FROM user_trusted_devices WHERE username=? AND device_fingerprint=?",
-                        (username, fingerprint)
-                    ).fetchone()
-                    conn_m.close()
-                except Exception as e:
-                    current_app.logger.error(f"Lỗi truy vấn thiết bị tin cậy tại DB tổng: {e}")
-                    device_record = None
+                from Services.totp_auth import (
+                    MASTER_TRUST_DAYS,
+                    get_user_totp_secret,
+                    is_device_trusted as totp_device_trusted,
+                    parse_device_signal,
+                )
 
-                should_ask_2fa = False
-                if not device_record:
-                    should_ask_2fa = True
-                else:
-                    last_login_val = device_record['last_login']
-                    if last_login_val:
-                        try:
-                            last_login_dt = datetime.strptime(last_login_val, '%Y-%m-%d %H:%M:%S')
-                            if datetime.now() - last_login_dt > timedelta(days=3):
-                                should_ask_2fa = True
-                        except:
-                            should_ask_2fa = True
-                    else:
-                        should_ask_2fa = True
-
-                if should_ask_2fa:
-                    # Lưu thông tin tạm thời vào session để xử lý ở trang xác thực OTP
-                    session.permanent = True
-                    session['pending_auth'] = {
-                        'user': {
-                            'id': int(user['id']),
-                            'username': str(user['username']),
-                            'role': str(user.get('role', '')).strip(),
-                            'full_name': str(user.get('full_name') or username),
-                            'permissions': str(user.get('permissions') or '')
-                        },
-                        'last_tenant_id': current_tenant_id,
-                        'db_path': db_to_open,
-                        'email': user.get('email'),
-                        'phone': user.get('phone') or username,
-                        'fingerprint': fingerprint,
-                        'google_allowed': google_login_enabled(),
-                    }
-                    session.modified = True
+                if is_master_login:
+                    device_signal = parse_device_signal(request.form.get('device_signal'))
+                    fingerprint = get_master_device_fingerprint(device_signal)
+                    trusted = False
+                    totp_ready = False
                     try:
-                        return redirect(url_for('login_2fa'))
-                    except Exception:
-                        return redirect('/login_2fa')
+                        conn_m = get_main_db_connection()
+                        try:
+                            trusted = totp_device_trusted(
+                                conn_m, username, fingerprint, trust_days=MASTER_TRUST_DAYS,
+                            )
+                            totp_ready = bool(get_user_totp_secret(conn_m, int(user['id'])))
+                        finally:
+                            conn_m.close()
+                    except Exception as e:
+                        current_app.logger.error(f"Lỗi thiết bị tin cậy master: {e}")
+                        trusted = False
+
+                    if not trusted:
+                        session.permanent = True
+                        session['pending_auth'] = {
+                            'user': {
+                                'id': int(user['id']),
+                                'username': str(user['username']),
+                                'role': user_role,
+                                'full_name': str(user.get('full_name') or username),
+                                'permissions': str(user.get('permissions') or ''),
+                            },
+                            'last_tenant_id': current_tenant_id,
+                            'db_path': db_to_open,
+                            'email': user.get('email'),
+                            'phone': user.get('phone') or username,
+                            'fingerprint': fingerprint,
+                            'device_signal': device_signal,
+                            'auth_method': 'totp',
+                            'totp_ready': totp_ready,
+                            'google_allowed': google_login_enabled(),
+                        }
+                        session.modified = True
+                        try:
+                            return redirect(url_for('verify_totp_page'))
+                        except Exception:
+                            return redirect('/verify-totp')
+                else:
+                    fingerprint = get_device_fingerprint()
+                    try:
+                        conn_m = get_main_db_connection()
+                        device_record = conn_m.execute(
+                            "SELECT last_login FROM user_trusted_devices WHERE username=? AND device_fingerprint=?",
+                            (username, fingerprint)
+                        ).fetchone()
+                        conn_m.close()
+                    except Exception as e:
+                        current_app.logger.error(f"Lỗi truy vấn thiết bị tin cậy tại DB tổng: {e}")
+                        device_record = None
+
+                    should_ask_2fa = False
+                    if not device_record:
+                        should_ask_2fa = True
+                    else:
+                        last_login_val = device_record['last_login']
+                        if last_login_val:
+                            try:
+                                last_login_dt = datetime.strptime(last_login_val, '%Y-%m-%d %H:%M:%S')
+                                if datetime.now() - last_login_dt > timedelta(days=3):
+                                    should_ask_2fa = True
+                            except Exception:
+                                should_ask_2fa = True
+                        else:
+                            should_ask_2fa = True
+
+                    if should_ask_2fa:
+                        session.permanent = True
+                        session['pending_auth'] = {
+                            'user': {
+                                'id': int(user['id']),
+                                'username': str(user['username']),
+                                'role': str(user.get('role', '')).strip(),
+                                'full_name': str(user.get('full_name') or username),
+                                'permissions': str(user.get('permissions') or '')
+                            },
+                            'last_tenant_id': current_tenant_id,
+                            'db_path': db_to_open,
+                            'email': user.get('email'),
+                            'phone': user.get('phone') or username,
+                            'fingerprint': fingerprint,
+                            'auth_method': 'email_otp',
+                            'google_allowed': google_login_enabled(),
+                        }
+                        session.modified = True
+                        try:
+                            return redirect(url_for('login_2fa'))
+                        except Exception:
+                            return redirect('/login_2fa')
 
             # ====================== ĐĂNG NHẬP THÀNH CÔNG ======================
         
             # Làm sạch chuỗi quyền phòng hờ khoảng trắng trong DB phá vỡ cấu hình điều hướng
             user_role = str(user.get('role', '')).strip()
             new_session_id = str(uuid.uuid4())
+            if is_master_login:
+                from Services.totp_auth import parse_device_signal as _parse_ds
+                login_fp = get_master_device_fingerprint(_parse_ds(request.form.get('device_signal')))
+            else:
+                login_fp = get_device_fingerprint()
 
             _persist_successful_login(
                 user['id'], username, current_tenant_id, db_to_open,
-                new_session_id, get_device_fingerprint(), status='Thành công',
+                new_session_id, login_fp, status='Thành công',
             )
 
             # Khởi tạo và thiết lập Flask Session thuần sạch sẽ
@@ -767,6 +863,8 @@ def register_settings_routes(app):
     
         # Hiển thị giao diện chọn phương thức xác thực (Email/SMS OTP / Google)
         auth = dict(session['pending_auth'])
+        if str((auth.get('user') or {}).get('role') or '').strip() == 'master' or auth.get('auth_method') == 'totp':
+            return redirect(url_for('verify_totp_page'))
         auth['google_allowed'] = google_login_visible()
         auth['google_ready'] = google_login_enabled()
         auth['google_client_id'] = get_google_client_id()
@@ -976,6 +1074,115 @@ def register_settings_routes(app):
             localhost_otp=otp.get('code') if _otp_onscreen_allowed() else None,
         )
 
+    @app.route('/verify-totp', methods=['GET', 'POST'])
+    def verify_totp_page():
+        """Xác thực TOTP (Google Authenticator) cho tài khoản Master trên thiết bị mới."""
+        auth = session.get('pending_auth')
+        if not auth:
+            flash('Phiên xác thực đã hết hạn. Vui lòng đăng nhập lại.', 'danger')
+            return redirect(url_for('login'))
+
+        user = auth.get('user') or {}
+        if str(user.get('role') or '').strip() != 'master':
+            flash('Luồng TOTP chỉ dành cho tài khoản Master.', 'warning')
+            return redirect(url_for('login_2fa'))
+
+        setup_mode = not bool(auth.get('totp_ready'))
+        setup_payload = None
+
+        if request.method == 'GET' and setup_mode:
+            from Services.totp_auth import (
+                generate_totp_secret,
+                provisioning_uri,
+                qr_png_data_url,
+            )
+            secret = session.get('pending_totp_secret') or generate_totp_secret()
+            session['pending_totp_secret'] = secret
+            session.modified = True
+            uri = provisioning_uri(secret, user.get('username') or 'master')
+            setup_payload = {
+                'secret': secret,
+                'otpauth_uri': uri,
+                'qr_data_url': qr_png_data_url(uri),
+            }
+
+        if request.method == 'POST':
+            code = (request.form.get('totp_code') or '').strip()
+            from Services.totp_auth import (
+                get_user_totp_secret,
+                save_totp_secret,
+                verify_totp_code,
+            )
+            from db_utils import sqlite_commit
+
+            secret = None
+            if setup_mode:
+                secret = session.get('pending_totp_secret')
+            else:
+                try:
+                    with get_main_db_connection() as conn:
+                        secret = get_user_totp_secret(conn, int(user['id']))
+                except Exception as exc:
+                    current_app.logger.error('verify_totp load secret: %s', exc)
+
+            if not secret or not verify_totp_code(secret, code):
+                flash('Mã Authenticator không đúng hoặc đã hết hạn.', 'danger')
+                if setup_mode and not setup_payload:
+                    from Services.totp_auth import (
+                        generate_totp_secret,
+                        provisioning_uri,
+                        qr_png_data_url,
+                    )
+                    secret_show = session.get('pending_totp_secret') or generate_totp_secret()
+                    session['pending_totp_secret'] = secret_show
+                    uri = provisioning_uri(secret_show, user.get('username') or 'master')
+                    setup_payload = {
+                        'secret': secret_show,
+                        'otpauth_uri': uri,
+                        'qr_data_url': qr_png_data_url(uri),
+                    }
+                return render_template(
+                    'verify_totp.html',
+                    auth=auth,
+                    setup_mode=setup_mode,
+                    setup=setup_payload,
+                )
+
+            if setup_mode:
+                try:
+                    with get_main_db_connection() as conn:
+                        from db_utils import begin_immediate
+                        begin_immediate(conn, label='save_master_totp')
+                        save_totp_secret(conn, int(user['id']), secret)
+                        sqlite_commit(conn, label='save_master_totp')
+                except Exception as exc:
+                    current_app.logger.error('save totp: %s', exc)
+                    flash('Không lưu được cấu hình Authenticator.', 'danger')
+                    return redirect(url_for('verify_totp_page'))
+                session.pop('pending_totp_secret', None)
+
+            db_to_open = auth.get('db_path')
+            if db_to_open and not os.path.isabs(db_to_open):
+                db_to_open = os.path.join(BASE_DIR, db_to_open)
+            fingerprint = auth.get('fingerprint') or get_master_device_fingerprint(
+                auth.get('device_signal')
+            )
+            session.pop('otp_check', None)
+            session.pop('pending_auth', None)
+            return _finalize_login_from_dict(
+                auth['user'],
+                db_to_open,
+                auth.get('last_tenant_id'),
+                fingerprint,
+            )
+
+        return render_template(
+            'verify_totp.html',
+            auth=auth,
+            setup_mode=setup_mode,
+            setup=setup_payload,
+        )
+
     def _google_login_by_email(email):
         """
         Đăng nhập bằng Google: email đã xác minh bởi Google và khớp email đăng ký → vào thẳng.
@@ -1154,51 +1361,105 @@ def register_settings_routes(app):
             username = user['username']
             tenant_2fa_enabled = account.get('tenant_2fa_enabled', False)
             is_2fa_enabled = tenant_2fa_enabled if current_tenant_id else bool(user.get('is_2fa_enabled', 0))
+            user_role = str(user.get('role', '')).strip()
+            is_master_login = user_role == 'master' and current_tenant_id is None
 
             if is_2fa_enabled:
-                fingerprint = get_device_fingerprint()
-                device_record = None
-                try:
-                    with get_main_db_connection() as conn_m:
-                        device_record = conn_m.execute(
-                            "SELECT last_login FROM user_trusted_devices WHERE username=? AND device_fingerprint=?",
-                            (username, fingerprint),
-                        ).fetchone()
-                except Exception as exc:
-                    current_app.logger.error("Lỗi thiết bị tin cậy: %s", exc)
+                from Services.totp_auth import (
+                    MASTER_TRUST_DAYS,
+                    get_user_totp_secret,
+                    is_device_trusted as totp_device_trusted,
+                    parse_device_signal,
+                )
 
-                should_ask_2fa = not device_record
-                if device_record and device_record['last_login']:
+                if is_master_login:
+                    device_signal = parse_device_signal(request.args.get('device_signal'))
+                    fingerprint = get_master_device_fingerprint(device_signal)
+                    trusted = False
+                    totp_ready = False
                     try:
-                        last_login_dt = datetime.strptime(device_record['last_login'], '%Y-%m-%d %H:%M:%S')
-                        should_ask_2fa = (datetime.now() - last_login_dt) > timedelta(days=3)
-                    except ValueError:
-                        should_ask_2fa = True
+                        with get_main_db_connection() as conn_m:
+                            trusted = totp_device_trusted(
+                                conn_m, username, fingerprint, trust_days=MASTER_TRUST_DAYS,
+                            )
+                            totp_ready = bool(get_user_totp_secret(conn_m, int(user['id'])))
+                    except Exception as exc:
+                        current_app.logger.error("Lỗi thiết bị tin cậy master (Google): %s", exc)
 
-                if should_ask_2fa:
-                    session.permanent = True
-                    session['pending_auth'] = {
-                        'user': {
-                            'id': int(user['id']),
-                            'username': str(user['username']),
-                            'role': str(user.get('role', '')).strip(),
-                            'full_name': str(user.get('full_name') or username),
-                            'permissions': str(user.get('permissions') or ''),
-                        },
-                        'last_tenant_id': current_tenant_id,
-                        'db_path': db_to_open,
-                        'email': user.get('email') or email,
-                        'phone': user.get('phone') or username,
-                        'fingerprint': fingerprint,
-                        'google_allowed': google_login_enabled(),
-                    }
-                    session.modified = True
-                    session.pop('oauth_mode', None)
-                    flash("Thiết bị mới — vui lòng xác minh OTP.", "info")
-                    return redirect(url_for('login_2fa'))
+                    if not trusted:
+                        session.permanent = True
+                        session['pending_auth'] = {
+                            'user': {
+                                'id': int(user['id']),
+                                'username': str(user['username']),
+                                'role': user_role,
+                                'full_name': str(user.get('full_name') or username),
+                                'permissions': str(user.get('permissions') or ''),
+                            },
+                            'last_tenant_id': current_tenant_id,
+                            'db_path': db_to_open,
+                            'email': user.get('email') or email,
+                            'phone': user.get('phone') or username,
+                            'fingerprint': fingerprint,
+                            'device_signal': device_signal,
+                            'auth_method': 'totp',
+                            'totp_ready': totp_ready,
+                            'google_allowed': google_login_enabled(),
+                        }
+                        session.modified = True
+                        session.pop('oauth_mode', None)
+                        flash("Thiết bị mới — nhập mã Google Authenticator.", "info")
+                        return redirect(url_for('verify_totp_page'))
+                else:
+                    fingerprint = get_device_fingerprint()
+                    device_record = None
+                    try:
+                        with get_main_db_connection() as conn_m:
+                            device_record = conn_m.execute(
+                                "SELECT last_login FROM user_trusted_devices WHERE username=? AND device_fingerprint=?",
+                                (username, fingerprint),
+                            ).fetchone()
+                    except Exception as exc:
+                        current_app.logger.error("Lỗi thiết bị tin cậy: %s", exc)
+
+                    should_ask_2fa = not device_record
+                    if device_record and device_record['last_login']:
+                        try:
+                            last_login_dt = datetime.strptime(device_record['last_login'], '%Y-%m-%d %H:%M:%S')
+                            should_ask_2fa = (datetime.now() - last_login_dt) > timedelta(days=3)
+                        except ValueError:
+                            should_ask_2fa = True
+
+                    if should_ask_2fa:
+                        session.permanent = True
+                        session['pending_auth'] = {
+                            'user': {
+                                'id': int(user['id']),
+                                'username': str(user['username']),
+                                'role': user_role,
+                                'full_name': str(user.get('full_name') or username),
+                                'permissions': str(user.get('permissions') or ''),
+                            },
+                            'last_tenant_id': current_tenant_id,
+                            'db_path': db_to_open,
+                            'email': user.get('email') or email,
+                            'phone': user.get('phone') or username,
+                            'fingerprint': fingerprint,
+                            'auth_method': 'email_otp',
+                            'google_allowed': google_login_enabled(),
+                        }
+                        session.modified = True
+                        session.pop('oauth_mode', None)
+                        flash("Thiết bị mới — vui lòng xác minh OTP.", "info")
+                        return redirect(url_for('login_2fa'))
 
             # Đăng nhập trực tiếp (thiết bị tin cậy / không bật 2FA)
-            return _finalize_login_from_dict(user, db_to_open, current_tenant_id, get_device_fingerprint())
+            fp_final = (
+                get_master_device_fingerprint()
+                if is_master_login
+                else get_device_fingerprint()
+            )
+            return _finalize_login_from_dict(user, db_to_open, current_tenant_id, fp_final)
 
         except Exception as exc:
             current_app.logger.error("Google login lỗi: %s", exc, exc_info=True)
@@ -1406,12 +1667,8 @@ def register_settings_routes(app):
 
     #=== HÀM LƯU THIẾT BỊ ĐÃ ĐĂNG NHẬP ===#
     def mark_device_trusted(username, fingerprint):
-        g.db_path = None # Master
-        conn = get_db_connection()
-        conn.execute("INSERT OR IGNORE INTO user_trusted_devices (username, device_fingerprint, last_login) VALUES (?, ?, ?)",
-                    (username, fingerprint, datetime.datetime.now()))
-        conn.commit()
-        conn.close()
+        g.db_path = None  # Master
+        add_trusted_device(username, fingerprint)
 
     @app.route('/logout')
     def logout():
@@ -1512,7 +1769,7 @@ Trân trọng,
                     conn = get_db_connection()
                     conn.execute("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE username = ?", 
                                  (token, expiry, target_username))
-                    conn.commit()
+                    sqlite_commit(conn, label='settings')
                     conn.close()
 
                     # 3. Tạo link và GỬI MAIL THẬT
@@ -1574,7 +1831,7 @@ Trân trọng,
                     UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL 
                     WHERE id = ?
                 """, (hashed_pw, user_row['id']))
-                conn.commit()
+                sqlite_commit(conn, label='settings')
                 conn.close()
             
                 flash("Đặt lại mật khẩu thành công!", "success")
@@ -1764,9 +2021,21 @@ Trân trọng,
                     new_data={'username': username, 'full_name': full_name, 'email': email, 'role': role},
                 )
 
-            conn.commit()
+            from db_utils import begin_immediate, sqlite_write_retry, locked_user_message, _is_locked_error
+
+            def _commit_user():
+                begin_immediate(conn, label='save_user')
+                sqlite_commit(conn, label='settings')
+
+            sqlite_write_retry(_commit_user, label='save_user')
             return jsonify({"success": True, "message": "Đã lưu thông tin nhân viên thành công"})
 
+        except sqlite3.OperationalError as e:
+            if conn:
+                conn.rollback()
+            if _is_locked_error(e):
+                return jsonify({"success": False, "error": locked_user_message()}), 503
+            return jsonify({"success": False, "error": "Lỗi hệ thống: " + str(e)}), 500
         except Exception as e:
             if conn:
                 conn.rollback()
@@ -1791,14 +2060,20 @@ Trân trọng,
 
         conn = get_db_connection()
         try:
+            from db_utils import begin_immediate, sqlite_write_retry, locked_user_message, _is_locked_error
             from Services.audit_log import write_audit
             old_row = conn.execute(
                 "SELECT id, username, full_name, role, email FROM users WHERE id = ?",
                 (user_id,),
             ).fetchone()
             old_data = dict(old_row) if old_row else None
-            conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-            conn.commit()
+
+            def _delete_user():
+                begin_immediate(conn, label='delete_user')
+                conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+                sqlite_commit(conn, label='settings')
+
+            sqlite_write_retry(_delete_user, label='delete_user')
             if old_data:
                 write_audit(
                     'delete', 'users',
@@ -1808,6 +2083,10 @@ Trân trọng,
                     old_data=old_data,
                 )
             return jsonify({"success": True, "message": "Đã xóa nhân viên"})
+        except sqlite3.OperationalError as e:
+            if _is_locked_error(e):
+                return jsonify({"success": False, "error": locked_user_message()}), 503
+            return jsonify({"success": False, "error": str(e)}), 500
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
         finally:
@@ -2023,7 +2302,7 @@ Trân trọng,
                         "UPDATE users SET is_2fa_enabled = ?",
                         (is_2fa_enabled,),
                     )
-                    conn.commit()
+                    sqlite_commit(conn, label='settings')
 
             sqlite_write_retry(_write, label='toggle_main_2fa')
 
@@ -2043,6 +2322,86 @@ Trân trọng,
                 "success": False, 
                 "error": f"Lỗi hệ thống: {str(e)}"
             }), 500
+
+    @app.route('/api/master/totp/status', methods=['GET'])
+    @login_required
+    def api_master_totp_status():
+        if session.get('role') != 'master':
+            return jsonify({'success': False, 'error': 'Chỉ Master'}), 403
+        from Services.totp_auth import MASTER_TRUST_DAYS, totp_status_for_user
+        try:
+            with get_main_db_connection() as conn:
+                status = totp_status_for_user(conn, int(session.get('user_id') or 0))
+            status['success'] = True
+            status['trust_days'] = MASTER_TRUST_DAYS
+            return jsonify(status)
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/master/totp/setup', methods=['POST'])
+    @login_required
+    def api_master_totp_setup():
+        if session.get('role') != 'master':
+            return jsonify({'success': False, 'error': 'Chỉ Master'}), 403
+        from Services.totp_auth import generate_totp_secret, provisioning_uri, qr_png_data_url
+        secret = generate_totp_secret()
+        session['master_totp_setup_secret'] = secret
+        session.modified = True
+        username = (session.get('user') or {}).get('username') or session.get('username') or 'master'
+        uri = provisioning_uri(secret, username)
+        return jsonify({
+            'success': True,
+            'secret': secret,
+            'otpauth_uri': uri,
+            'qr_data_url': qr_png_data_url(uri),
+        })
+
+    @app.route('/api/master/totp/confirm', methods=['POST'])
+    @login_required
+    def api_master_totp_confirm():
+        if session.get('role') != 'master':
+            return jsonify({'success': False, 'error': 'Chỉ Master'}), 403
+        data = request.get_json(silent=True) or {}
+        code = data.get('code') or data.get('totp_code') or ''
+        secret = session.get('master_totp_setup_secret')
+        from Services.totp_auth import save_totp_secret, verify_totp_code
+        if not secret or not verify_totp_code(secret, code):
+            return jsonify({'success': False, 'error': 'Mã xác nhận không đúng'}), 400
+        try:
+            with get_main_db_connection() as conn:
+                from db_utils import begin_immediate, sqlite_commit
+                begin_immediate(conn, label='master_totp_confirm')
+                save_totp_secret(conn, int(session.get('user_id') or 0), secret)
+                sqlite_commit(conn, label='master_totp_confirm')
+            session.pop('master_totp_setup_secret', None)
+            return jsonify({'success': True, 'message': 'Đã bật Google Authenticator cho Master'})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/master/totp/disable', methods=['POST'])
+    @login_required
+    def api_master_totp_disable():
+        if session.get('role') != 'master':
+            return jsonify({'success': False, 'error': 'Chỉ Master'}), 403
+        data = request.get_json(silent=True) or {}
+        code = data.get('code') or ''
+        from Services.totp_auth import clear_totp_secret, get_user_totp_secret, verify_totp_code
+        try:
+            with get_main_db_connection() as conn:
+                secret = get_user_totp_secret(conn, int(session.get('user_id') or 0))
+                if secret and not verify_totp_code(secret, code):
+                    return jsonify({'success': False, 'error': 'Mã Authenticator không đúng'}), 400
+                from db_utils import begin_immediate, sqlite_commit
+                begin_immediate(conn, label='master_totp_disable')
+                clear_totp_secret(conn, int(session.get('user_id') or 0))
+                conn.execute(
+                    'UPDATE users SET is_2fa_enabled = 0 WHERE id = ?',
+                    (int(session.get('user_id') or 0),),
+                )
+                sqlite_commit(conn, label='master_totp_disable')
+            return jsonify({'success': True, 'message': 'Đã tắt Authenticator'})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
 
     def _master_auth_settings_payload(cfg):
         db_cfg = cfg if "google_client_secret" in cfg else get_auth_settings_db()
@@ -2166,7 +2525,7 @@ Trân trọng,
                         SET is_2fa_enabled = ?
                         WHERE tenant_id = ?
                     """, (is_2fa_enabled, tenant_id))
-                    conn.commit()
+                    sqlite_commit(conn, label='settings')
 
             sqlite_write_retry(_write, label='toggle_tenant_2fa')
             if missing['v']:
@@ -2547,7 +2906,8 @@ Trân trọng,
                     conn.close()
                     return jsonify({"success": False, "error": "Không cập nhật được cấu hình tenant"}), 500
 
-            conn.commit()
+            from db_utils import sqlite_commit, locked_user_message, _is_locked_error
+            sqlite_commit(conn, label='master_tenant_update')
             conn.close()
             conn = None
 
@@ -2649,7 +3009,8 @@ Trân trọng,
                 migrated_by=session.get('username') or session.get('user'),
                 force_coa_refresh=bool(data.get('force_coa_refresh')),
             )
-            conn.commit()
+            from db_utils import sqlite_commit
+            sqlite_commit(conn, label='master_sync_tt99')
             return jsonify({'success': True, 'data': result})
         except Exception as e:
             conn.rollback()
@@ -2803,6 +3164,98 @@ Trân trọng,
             'message': message,
         })
 
+    @app.route('/api/master/firm/<firm_tenant_id>/clients', methods=['GET'])
+    @login_required
+    @master_required
+    def api_master_firm_clients(firm_tenant_id):
+        """Master: danh sách DN thuê DVKT để cấu hình HĐĐT."""
+        from Services.firm_tenant import is_firm_tenant, list_clients_for_master
+        tid = firm_tenant_id.strip()
+        if not is_firm_tenant(tid):
+            return jsonify({'success': False, 'error': 'Tenant không phải đơn vị DVKT'}), 400
+        clients = list_clients_for_master(tid)
+        return jsonify({'success': True, 'firm_tenant_id': tid, 'clients': clients, 'count': len(clients)})
+
+    @app.route('/api/master/firm/<firm_tenant_id>/enter_client/<client_id>', methods=['POST'])
+    @login_required
+    @master_required
+    def api_master_enter_firm_client(firm_tenant_id, client_id):
+        """Master vào sổ DN thuê DVKT — chỉ cấu hình HĐĐT & MST."""
+        from Services.firm_tenant import (
+            client_db_abs,
+            get_client_record,
+            is_firm_tenant,
+        )
+        from auth import User
+        from flask_login import login_user
+
+        firm_tid = firm_tenant_id.strip()
+        cid = client_id.strip()
+        if not is_firm_tenant(firm_tid):
+            return jsonify({'success': False, 'error': 'Tenant không phải đơn vị DVKT'}), 400
+        client = get_client_record(firm_tid, cid)
+        if not client:
+            return jsonify({'success': False, 'error': 'Không tìm thấy doanh nghiệp thuê'}), 404
+
+        abs_db = client_db_abs(client.get('db_path') or '')
+        if not abs_db or not os.path.exists(abs_db):
+            return jsonify({'success': False, 'error': 'File sổ kế toán không tồn tại'}), 400
+
+        try:
+            from db.init import ensure_invoice_settings_schema
+            from db_utils import open_sqlite, sqlite_write_retry
+
+            def _prep_client_db():
+                with open_sqlite(abs_db) as conn:
+                    ensure_invoice_settings_schema(conn)
+                    sqlite_commit(conn, label='settings')
+
+            sqlite_write_retry(_prep_client_db, label='master_enter_client_schema')
+        except Exception as exc:
+            return jsonify({
+                'success': False,
+                'error': f'Không chuẩn bị được sổ DN thuê: {exc}',
+            }), 500
+
+        session.setdefault('master_home_db_path', session.get('db_path'))
+        session.setdefault('master_home_tenant_id', session.get('last_tenant_id'))
+        session['master_viewing_tenant'] = firm_tid
+        session['master_viewing_firm_client_id'] = cid
+        session['master_viewing_firm_client_name'] = client.get('client_name') or cid
+        session['last_tenant_id'] = f'{firm_tid}:{cid}'
+        session['db_path'] = abs_db
+        for key in (
+            'firm_tenant_id', 'firm_user_id', 'firm_viewing_client', 'firm_viewing_own_books',
+            'firm_active_client_id', 'firm_client_name', 'firm_client_tax_code', 'firm_access_role',
+        ):
+            session.pop(key, None)
+        if session.get('user'):
+            session['user'] = dict(session['user'])
+            session['user']['role'] = 'master'
+        session['role'] = 'master'
+
+        u = session.get('user') or {}
+        login_user(User(
+            id=u.get('id'),
+            username=u.get('username', 'master'),
+            role='master',
+            db_path=abs_db,
+            tenant_id=f'{firm_tid}:{cid}',
+            full_name=u.get('full_name') or 'Master',
+            permissions=u.get('permissions', ''),
+        ), remember=True)
+        session.modified = True
+
+        redirect_to = url_for('settings_page') + '#tab-esign'
+        return jsonify({
+            'success': True,
+            'firm_tenant_id': firm_tid,
+            'client_id': cid,
+            'client_name': client.get('client_name'),
+            'redirect': redirect_to,
+            'message': f'Đã mở cấu hình HĐĐT: {client.get("client_name") or cid}',
+        })
+
     @app.route('/api/master/leave_tenant', methods=['POST'])
     @login_required
     @master_required
@@ -2814,6 +3267,8 @@ Trân trọng,
         home_db = session.pop('master_home_db_path', None) or MAIN_DB_PATH
         home_tenant = session.pop('master_home_tenant_id', None)
         session.pop('master_viewing_tenant', None)
+        session.pop('master_viewing_firm_client_id', None)
+        session.pop('master_viewing_firm_client_name', None)
         session['last_tenant_id'] = home_tenant
         session['db_path'] = home_db
         if session.get('user'):
@@ -2942,7 +3397,8 @@ Trân trọng,
             except Exception as audit_err:
                 print(f'--- [WARN] audit delete_tenant skipped: {audit_err} ---')
 
-            conn.commit()
+            from db_utils import sqlite_commit
+            sqlite_commit(conn, label='delete_tenant')
 
             # Nếu master đang xem tenant vừa xóa — thoát về MAIN
             if session.get('master_viewing_tenant') == tenant_id:
@@ -3059,7 +3515,7 @@ Trân trọng,
         except Exception:
             tt58_ctx = None
 
-        from auth import is_master_configuring_firm_tenant
+        from auth import is_master_configuring_firm_tenant, is_master_configuring_firm_client
 
         return render_template('settings.html', 
                                info=info, 
@@ -3070,7 +3526,8 @@ Trân trọng,
                                has_sepay_key=bool(_get_setting('sepay_api_key', '')),
                                has_casso_key=bool(_get_setting('casso_api_key', '')),
                                tt58=tt58_ctx,
-                               is_firm_tenant_settings=is_master_configuring_firm_tenant())
+                               is_firm_tenant_settings=is_master_configuring_firm_tenant(),
+                               is_master_firm_client_einvoice=is_master_configuring_firm_client())
 
     @app.route('/api/settings/business', methods=['POST'])
     @admin_or_store_setup_required
@@ -3115,51 +3572,42 @@ Trân trọng,
 
         conn = None
         try:
+            from db_utils import sqlite_run_write, locked_user_message, _is_locked_error
             conn = get_db_connection()
             cursor = conn.cursor()
             old_row = cursor.execute("SELECT * FROM business_info LIMIT 1").fetchone()
             old_data = dict(old_row) if old_row else None
-            cursor.execute("SELECT id FROM business_info LIMIT 1")
-            existing = cursor.fetchone()
 
-            if existing:
-                # ==================== UPDATE ====================
-                set_clause = ", ".join([f"{field} = ?" for field in allowed_fields])
-                sql = f"""
-                    UPDATE business_info 
-                    SET {set_clause}
-                    WHERE id = ?
-                """
-                params = list(values.values()) + [existing['id']]
-                cursor.execute(sql, params)
-                message = "Cập nhật thông tin thành công"
-            else:
-                # ==================== INSERT ====================
-                columns = ", ".join(allowed_fields)
-                placeholders = ", ".join(["?"] * len(allowed_fields))
-                sql = f"""
-                    INSERT INTO business_info ({columns}) 
-                    VALUES ({placeholders})
-                """
-                params = list(values.values())
-                cursor.execute(sql, params)
-                message = "Tạo thông tin kinh doanh thành công"
+            def _save_business(cn):
+                cur = cn.cursor()
+                cur.execute("SELECT id FROM business_info LIMIT 1")
+                existing = cur.fetchone()
+                if existing:
+                    set_clause = ", ".join([f"{field} = ?" for field in allowed_fields])
+                    sql = f"UPDATE business_info SET {set_clause} WHERE id = ?"
+                    params = list(values.values()) + [existing['id']]
+                    cur.execute(sql, params)
+                    msg = "Cập nhật thông tin thành công"
+                else:
+                    columns = ", ".join(allowed_fields)
+                    placeholders = ", ".join(["?"] * len(allowed_fields))
+                    sql = f"INSERT INTO business_info ({columns}) VALUES ({placeholders})"
+                    cur.execute(sql, list(values.values()))
+                    msg = "Tạo thông tin kinh doanh thành công"
+                try:
+                    from Services.tenant_profile import is_sme_regime
+                    from Services.sme.bank_accounts import sync_default_bank_from_qr
+                    from flask import g
+                    profile = getattr(g, 'tenant_profile', None) or {}
+                    if is_sme_regime(profile.get('accounting_regime')):
+                        sync_default_bank_from_qr(cn, commit=False)
+                except Exception:
+                    pass
+                from Services.chu_ho_helpers import sync_chu_ho_from_business_info
+                matched, rep_name = sync_chu_ho_from_business_info(cn, commit=False)
+                return msg, matched, rep_name
 
-            conn.commit()
-
-            # SME: STK VietQR = TK ngân hàng mặc định trên chứng từ
-            try:
-                from Services.tenant_profile import is_sme_regime
-                from Services.sme.bank_accounts import sync_default_bank_from_qr
-                from flask import g
-                profile = getattr(g, 'tenant_profile', None) or {}
-                if is_sme_regime(profile.get('accounting_regime')):
-                    sync_default_bank_from_qr(conn, commit=True)
-            except Exception:
-                pass
-
-            from Services.chu_ho_helpers import sync_chu_ho_from_business_info
-            matched, rep_name = sync_chu_ho_from_business_info(conn)
+            message, matched, rep_name = sqlite_run_write(conn, _save_business, label='save_business_info')
             sync_msg = ''
             if rep_name:
                 if matched:
@@ -3184,6 +3632,16 @@ Trân trọng,
                 "chu_ho_matched": len(matched) if rep_name else 0,
             })
 
+        except sqlite3.OperationalError as e:
+            if conn:
+                conn.rollback()
+            from db_utils import locked_user_message, _is_locked_error
+            if _is_locked_error(e):
+                return jsonify({"success": False, "error": locked_user_message()}), 503
+            return jsonify({
+                "success": False,
+                "error": f"Lỗi database: {str(e)}"
+            }), 500
         except Exception as e:
             if conn:
                 conn.rollback()
@@ -3208,22 +3666,29 @@ Trân trọng,
 
         conn = None
         try:
+            from db_utils import sqlite_run_write
             conn = get_db_connection()
             cur = conn.cursor()
             ensure_business_logo_column(cur)
             row = cur.execute('SELECT id FROM business_info LIMIT 1').fetchone()
             logo_path = result['logo_path']
-            if row:
-                cur.execute(
-                    'UPDATE business_info SET logo_path = ? WHERE id = ?',
-                    (logo_path, row['id'] if hasattr(row, 'keys') else row[0]),
-                )
-            else:
-                cur.execute(
-                    'INSERT INTO business_info (business_name, logo_path) VALUES (?, ?)',
-                    ('', logo_path),
-                )
-            conn.commit()
+
+            def _save_logo(cn):
+                c = cn.cursor()
+                ensure_business_logo_column(c)
+                r = c.execute('SELECT id FROM business_info LIMIT 1').fetchone()
+                if r:
+                    c.execute(
+                        'UPDATE business_info SET logo_path = ? WHERE id = ?',
+                        (logo_path, r['id'] if hasattr(r, 'keys') else r[0]),
+                    )
+                else:
+                    c.execute(
+                        'INSERT INTO business_info (business_name, logo_path) VALUES (?, ?)',
+                        ('', logo_path),
+                    )
+
+            sqlite_run_write(conn, _save_logo, label='save_business_logo')
             return jsonify({
                 'success': True,
                 'message': 'Đã lưu logo',
@@ -3245,6 +3710,7 @@ Trân trọng,
 
         conn = None
         try:
+            from db_utils import sqlite_run_write
             conn = get_db_connection()
             cur = conn.cursor()
             ensure_business_logo_column(cur)
@@ -3253,8 +3719,11 @@ Trân trọng,
                 old_path = row['logo_path'] if hasattr(row, 'keys') else row[1]
                 remove_business_logo_file(old_path)
                 bid = row['id'] if hasattr(row, 'keys') else row[0]
-                cur.execute('UPDATE business_info SET logo_path = NULL WHERE id = ?', (bid,))
-            conn.commit()
+
+                def _clear_logo(cn):
+                    cn.execute('UPDATE business_info SET logo_path = NULL WHERE id = ?', (bid,))
+
+                sqlite_run_write(conn, _clear_logo, label='delete_business_logo')
             from Services.business_branding import default_business_logo_url
             return jsonify({
                 'success': True,
@@ -3316,38 +3785,40 @@ Trân trọng,
 
         conn = None
         try:
+            from db_utils import sqlite_run_write
             conn = get_db_connection()
             cursor = conn.cursor()
             old_row = cursor.execute("SELECT * FROM business_info LIMIT 1").fetchone()
             old_data = dict(old_row) if old_row else None
-            cursor.execute("SELECT id FROM business_info LIMIT 1")
-            existing = cursor.fetchone()
-            if existing:
-                set_clause = ", ".join([f"{f} = ?" for f in allowed_business])
-                cursor.execute(
-                    f"UPDATE business_info SET {set_clause} WHERE id = ?",
-                    list(values.values()) + [existing['id']]
-                )
-            else:
-                cols = ", ".join(allowed_business)
-                ph = ", ".join(["?"] * len(allowed_business))
-                cursor.execute(f"INSERT INTO business_info ({cols}) VALUES ({ph})", list(values.values()))
 
-            conn.commit()
+            def _save_payment_business(cn):
+                cur = cn.cursor()
+                cur.execute("SELECT id FROM business_info LIMIT 1")
+                existing = cur.fetchone()
+                if existing:
+                    set_clause = ", ".join([f"{f} = ?" for f in allowed_business])
+                    cur.execute(
+                        f"UPDATE business_info SET {set_clause} WHERE id = ?",
+                        list(values.values()) + [existing['id']]
+                    )
+                else:
+                    cols = ", ".join(allowed_business)
+                    ph = ", ".join(["?"] * len(allowed_business))
+                    cur.execute(f"INSERT INTO business_info ({cols}) VALUES ({ph})", list(values.values()))
+                try:
+                    from Services.tenant_profile import is_sme_regime
+                    from Services.sme.bank_accounts import sync_default_bank_from_qr
+                    from flask import g
+                    profile = getattr(g, 'tenant_profile', None) or {}
+                    if is_sme_regime(profile.get('accounting_regime')):
+                        sync_default_bank_from_qr(cn, commit=False)
+                except Exception:
+                    pass
+                from Services.chu_ho_helpers import sync_chu_ho_from_business_info
+                sync_chu_ho_from_business_info(cn, commit=False)
+
+            sqlite_run_write(conn, _save_payment_business, label='save_payment_bank')
             save_payment_settings(data)
-
-            try:
-                from Services.tenant_profile import is_sme_regime
-                from Services.sme.bank_accounts import sync_default_bank_from_qr
-                from flask import g
-                profile = getattr(g, 'tenant_profile', None) or {}
-                if is_sme_regime(profile.get('accounting_regime')):
-                    sync_default_bank_from_qr(conn, commit=True)
-            except Exception:
-                pass
-
-            from Services.chu_ho_helpers import sync_chu_ho_from_business_info
-            sync_chu_ho_from_business_info(conn)
 
             from Services.audit_log import write_audit
             write_audit(
@@ -3381,8 +3852,10 @@ Trân trọng,
     @tenant_settings_required
     def api_test_payment_connection():
         from Services.payment_bank import test_provider_connection
+        from db_utils import close_request_db
         data = request.get_json(silent=True) or {}
         provider = data.get('payment_provider') or data.get('provider')
+        close_request_db()
         result = test_provider_connection(provider)
         code = 200 if result.get('success') else 400
         return jsonify(result), code
@@ -3394,6 +3867,7 @@ Trân trọng,
         data = request.json
         conn = get_db_connection()
         try:
+            from db_utils import sqlite_commit
             for key in ['auto_print', 'auto_backup', 'printer_vendor_id', 'printer_product_id', 'low_stock_alert',
                         'scale_enabled', 'scale_protocol', 'scale_auto_add', 'scale_stable_reads',
                         'scale_decimal_places', 'scale_barcode_prefix']:
@@ -3402,7 +3876,7 @@ Trân trọng,
                     if key in ('scale_enabled', 'scale_auto_add'):
                         val = '1' if str(val) in ('1', 'true', 'True', True) else '0'
                     conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(val)))
-            conn.commit()
+            sqlite_commit(conn, label='save_system_settings')
             return jsonify({"success": True, "message": "Đã lưu cài đặt!"})
         except Exception as e:
             return jsonify({"success": False, "error": str(e)})
@@ -3613,124 +4087,148 @@ Trân trọng,
         conn = None
         cursor = None
         try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            from db.init import ensure_invoice_settings_schema
-            ensure_invoice_settings_schema(conn)
-
-            # Lấy bản ghi hiện tại (nếu có) theo provider_name
-            cursor.execute("""
-                SELECT username, password, api_key, app_secret, serial_number, 
-                       tax_code, invoice_series, invoice_type, 
-                       etax_password, etax_cvalue, etax_ckey,
-                       api_url, sign_service_url, misa_has_code,
-                       minvoice_cctbao_id, minvoice_has_code,
-                       auto_issue_schedule, auto_sync_purchase, purchase_api_url
-                FROM invoice_settings 
-                WHERE provider_name = ?
-            """, (provider_name,))
-        
-            row = cursor.fetchone()
-            old = dict(zip([
-                'username', 'password', 'api_key', 'app_secret', 'serial_number',
-                'tax_code', 'invoice_series', 'invoice_type',
-                'etax_password', 'etax_cvalue', 'etax_ckey', 'api_url',
-                'sign_service_url', 'misa_has_code',
-                'minvoice_cctbao_id', 'minvoice_has_code',
-                'auto_issue_schedule', 'auto_sync_purchase', 'purchase_api_url',
-            ], row)) if row else {}
-
-            # Form khác (vd. POS) có thể lưu cấu hình mà không gửi cờ lịch → giữ nguyên
-            if 'auto_issue_schedule' in data:
-                auto_issue_schedule = 1 if data.get('auto_issue_schedule') in (True, 'true', '1', 1) else 0
-            else:
-                auto_issue_schedule = 1 if str(old.get('auto_issue_schedule') or '0') in ('1', 'True', 'true') else 0
-            if not auto_issue_invoice:
-                auto_issue_schedule = 0
-
-            if 'auto_sync_purchase' in data:
-                auto_sync_purchase = 1 if data.get('auto_sync_purchase') in (True, 'true', '1', 1) else 0
-            else:
-                # Mặc định bật khi dùng Mắt Bão (đường truyền HĐĐT đã cho phép HĐ đầu vào)
-                default_sync = '1' if provider_name == 'matbao' else '0'
-                auto_sync_purchase = 1 if str(old.get('auto_sync_purchase', default_sync) or default_sync) in ('1', 'True', 'true') else 0
-
-            purchase_api_url = (data.get('purchase_api_url') or '').strip().rstrip('/')
-            if not purchase_api_url:
-                purchase_api_url = (old.get('purchase_api_url') or '').strip().rstrip('/')
-
-            # Xây dựng giá trị cuối cùng: nếu field gửi lên rỗng → giữ nguyên cũ (đặc biệt password)
-            values = {
-                'provider_name': provider_name,
-                'api_url': api_url if api_url else old.get('api_url', ''),
-                'purchase_api_url': purchase_api_url,
-                'username': data.get('username', old.get('username', '')),
-                'api_key': data.get('api_key', old.get('api_key', '')),
-                'serial_number': data.get('serial_number', old.get('serial_number', '')),
-                'tax_code': str(data.get('tax_code', old.get('tax_code', '')) or '').strip(),
-                'invoice_series': str(data.get('invoice_series', old.get('invoice_series', 'C26MES')) or '').strip() or 'C26MES',
-                'invoice_type': str(data.get('invoice_type', old.get('invoice_type', '2')) or '').strip() or '2',
-                'sign_service_url': data.get('sign_service_url', old.get('sign_service_url', '')),
-                'misa_has_code': 1 if data.get('misa_has_code') in (True, 'true', '1', 1) else 0,
-                'minvoice_cctbao_id': data.get('minvoice_cctbao_id', old.get('minvoice_cctbao_id', '')),
-                'minvoice_has_code': 1 if data.get('minvoice_has_code') in (True, 'true', '1', 1) else 0,
-                'etax_cvalue': data.get('etax_cvalue', old.get('etax_cvalue', '')),
-                'etax_ckey': data.get('etax_ckey', old.get('etax_ckey', '')),
-                'auto_issue_invoice': auto_issue_invoice,
-                'auto_issue_schedule': auto_issue_schedule,
-                'auto_sync_purchase': auto_sync_purchase,
-                'is_active': 1,
-                'updated_at': 'datetime("now")'
-            }
-
-            # Xử lý đặc biệt cho các trường nhạy cảm (password): chỉ cập nhật nếu có giá trị mới
-            for field in sensitive_fields:
-                new_val = data.get(field)
-                # Nếu frontend gửi chuỗi rỗng hoặc không gửi → giữ nguyên giá trị cũ
-                if new_val is not None and str(new_val).strip() != "":
-                    values[field] = str(new_val).strip()
-                else:
-                    values[field] = old.get(field, '')
-
-            # Chuẩn bị câu lệnh SQL
-            sql = """
-                INSERT OR REPLACE INTO invoice_settings (
-                    provider_name, api_url, purchase_api_url, username, password, api_key, app_secret,
-                    serial_number, tax_code, invoice_series, invoice_type,
-                    sign_service_url, misa_has_code,
-                    minvoice_cctbao_id, minvoice_has_code,
-                    etax_password, etax_cvalue, etax_ckey,
-                    auto_issue_invoice, auto_issue_schedule, auto_sync_purchase,
-                    is_active, updated_at
-                ) VALUES (
-                    :provider_name, :api_url, :purchase_api_url, :username, :password, :api_key, :app_secret,
-                    :serial_number, :tax_code, :invoice_series, :invoice_type,
-                    :sign_service_url, :misa_has_code,
-                    :minvoice_cctbao_id, :minvoice_has_code,
-                    :etax_password, :etax_cvalue, :etax_ckey,
-                    :auto_issue_invoice, :auto_issue_schedule, :auto_sync_purchase,
-                    :is_active, datetime('now')
-                )
-            """
-
-            # Tắt tất cả các cấu hình khác (chỉ giữ active 1 provider)
-            cursor.execute(
-                "UPDATE invoice_settings SET is_active = 0, auto_issue_schedule = 0 WHERE provider_name != ?",
-                (provider_name,),
+            from db_utils import (
+                begin_immediate,
+                locked_user_message,
+                sqlite_write_retry,
+                _is_locked_error,
             )
+            from db.init import ensure_invoice_settings_schema
 
-            # Insert hoặc Replace
-            cursor.execute(sql, values)
-            conn.commit()
+            def _persist():
+                nonlocal conn, cursor
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                ensure_invoice_settings_schema(conn)
+
+                cursor.execute("""
+                    SELECT username, password, api_key, app_secret, serial_number, 
+                           tax_code, invoice_series, invoice_type, 
+                           etax_password, etax_cvalue, etax_ckey,
+                           api_url, sign_service_url, misa_has_code,
+                           minvoice_cctbao_id, minvoice_has_code,
+                           auto_issue_schedule, auto_sync_purchase, purchase_api_url
+                    FROM invoice_settings 
+                    WHERE provider_name = ?
+                """, (provider_name,))
+            
+                row = cursor.fetchone()
+                old = dict(zip([
+                    'username', 'password', 'api_key', 'app_secret', 'serial_number',
+                    'tax_code', 'invoice_series', 'invoice_type',
+                    'etax_password', 'etax_cvalue', 'etax_ckey', 'api_url',
+                    'sign_service_url', 'misa_has_code',
+                    'minvoice_cctbao_id', 'minvoice_has_code',
+                    'auto_issue_schedule', 'auto_sync_purchase', 'purchase_api_url',
+                ], row)) if row else {}
+
+                if 'auto_issue_schedule' in data:
+                    auto_issue_schedule = 1 if data.get('auto_issue_schedule') in (True, 'true', '1', 1) else 0
+                else:
+                    auto_issue_schedule = 1 if str(old.get('auto_issue_schedule') or '0') in ('1', 'True', 'true') else 0
+                if not auto_issue_invoice:
+                    auto_issue_schedule = 0
+
+                if 'auto_sync_purchase' in data:
+                    auto_sync_purchase = 1 if data.get('auto_sync_purchase') in (True, 'true', '1', 1) else 0
+                else:
+                    default_sync = '1' if provider_name == 'matbao' else '0'
+                    auto_sync_purchase = 1 if str(old.get('auto_sync_purchase', default_sync) or default_sync) in ('1', 'True', 'true') else 0
+
+                purchase_api_url = (data.get('purchase_api_url') or '').strip().rstrip('/')
+                if not purchase_api_url:
+                    purchase_api_url = (old.get('purchase_api_url') or '').strip().rstrip('/')
+
+                values = {
+                    'provider_name': provider_name,
+                    'api_url': api_url if api_url else old.get('api_url', ''),
+                    'purchase_api_url': purchase_api_url,
+                    'username': data.get('username', old.get('username', '')),
+                    'api_key': data.get('api_key', old.get('api_key', '')),
+                    'serial_number': data.get('serial_number', old.get('serial_number', '')),
+                    'tax_code': str(data.get('tax_code', old.get('tax_code', '')) or '').strip(),
+                    'invoice_series': str(data.get('invoice_series', old.get('invoice_series', 'C26MES')) or '').strip() or 'C26MES',
+                    'invoice_type': str(data.get('invoice_type', old.get('invoice_type', '2')) or '').strip() or '2',
+                    'sign_service_url': data.get('sign_service_url', old.get('sign_service_url', '')),
+                    'misa_has_code': 1 if data.get('misa_has_code') in (True, 'true', '1', 1) else 0,
+                    'minvoice_cctbao_id': data.get('minvoice_cctbao_id', old.get('minvoice_cctbao_id', '')),
+                    'minvoice_has_code': 1 if data.get('minvoice_has_code') in (True, 'true', '1', 1) else 0,
+                    'etax_cvalue': data.get('etax_cvalue', old.get('etax_cvalue', '')),
+                    'etax_ckey': data.get('etax_ckey', old.get('etax_ckey', '')),
+                    'auto_issue_invoice': auto_issue_invoice,
+                    'auto_issue_schedule': auto_issue_schedule,
+                    'auto_sync_purchase': auto_sync_purchase,
+                    'is_active': 1,
+                    'updated_at': 'datetime("now")'
+                }
+
+                for field in sensitive_fields:
+                    new_val = data.get(field)
+                    if new_val is not None and str(new_val).strip() != "":
+                        values[field] = str(new_val).strip()
+                    else:
+                        values[field] = old.get(field, '')
+
+                sql = """
+                    INSERT OR REPLACE INTO invoice_settings (
+                        provider_name, api_url, purchase_api_url, username, password, api_key, app_secret,
+                        serial_number, tax_code, invoice_series, invoice_type,
+                        sign_service_url, misa_has_code,
+                        minvoice_cctbao_id, minvoice_has_code,
+                        etax_password, etax_cvalue, etax_ckey,
+                        auto_issue_invoice, auto_issue_schedule, auto_sync_purchase,
+                        is_active, updated_at
+                    ) VALUES (
+                        :provider_name, :api_url, :purchase_api_url, :username, :password, :api_key, :app_secret,
+                        :serial_number, :tax_code, :invoice_series, :invoice_type,
+                        :sign_service_url, :misa_has_code,
+                        :minvoice_cctbao_id, :minvoice_has_code,
+                        :etax_password, :etax_cvalue, :etax_ckey,
+                        :auto_issue_invoice, :auto_issue_schedule, :auto_sync_purchase,
+                        :is_active, datetime('now')
+                    )
+                """
+
+                begin_immediate(conn, label='save_esign_settings')
+                cursor.execute(
+                    "UPDATE invoice_settings SET is_active = 0, auto_issue_schedule = 0 WHERE provider_name != ?",
+                    (provider_name,),
+                )
+                cursor.execute(sql, values)
+                sqlite_commit(conn, label='settings')
+
+            sqlite_write_retry(_persist, label='save_esign_settings')
 
             return jsonify({
                 "success": True,
                 "message": f"Đã lưu cấu hình cho nhà cung cấp {provider_name} thành công"
             })
 
+        except sqlite3.OperationalError as e:
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            from db_utils import locked_user_message, _is_locked_error
+            if _is_locked_error(e):
+                logging.warning("save_esign_settings locked: %s", e)
+                return jsonify({
+                    "success": False,
+                    "error": locked_user_message(),
+                }), 503
+            logging.error(f"Lỗi khi lưu cấu hình eSign: {str(e)}", exc_info=True)
+            return jsonify({
+                "success": False,
+                "error": f"Lỗi hệ thống: {str(e)}"
+            }), 500
+
         except Exception as e:
             if conn:
-                conn.rollback()
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             logging.error(f"Lỗi khi lưu cấu hình eSign: {str(e)}", exc_info=True)
             return jsonify({
                 "success": False,
@@ -3739,9 +4237,15 @@ Trân trọng,
 
         finally:
             if cursor:
-                cursor.close()
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
             if conn:
-                conn.close()
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     @app.route('/api/settings/esign', methods=['GET'])
     @login_required

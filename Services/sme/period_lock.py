@@ -26,6 +26,7 @@ from typing import Any
 
 from Services.sme.filing_period import resolve_filing_window
 from Services.tenant_profile import normalize_vat_filing_period
+from db_utils import sqlite_commit
 
 
 def ensure_period_lock_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
@@ -70,7 +71,7 @@ def ensure_period_lock_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='period_lock')
 
 
 # ---------------------------------------------------------------------------

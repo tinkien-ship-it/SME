@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 from typing import Any
+from db_utils import sqlite_commit
 
 
 def _now() -> str:
@@ -53,7 +54,7 @@ def ensure_sme_stock_inspection_schema(conn: sqlite3.Connection, *, commit: bool
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, 'sme_stock_inspections')
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='stock_inspection')
 
 
 def _next_no(conn: sqlite3.Connection) -> str:
@@ -162,7 +163,7 @@ def create_stock_inspection(
     from Services.sme.branch_filter import stamp_row_branch
     stamp_row_branch(conn, 'sme_stock_inspections', iid)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='stock_inspection')
     return get_stock_inspection(conn, iid)
 
 
@@ -216,5 +217,5 @@ def void_stock_inspection(
         ((doc.get('notes') or '') + f' | {reason}', doc_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='stock_inspection')
     return get_stock_inspection(conn, doc_id)

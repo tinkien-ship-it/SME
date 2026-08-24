@@ -6,6 +6,7 @@ khi deploy / migrate. Idempotent.
 from __future__ import annotations
 
 import sqlite3
+from db_utils import sqlite_commit
 
 _FB_TABLES = {
     'areas': """
@@ -160,5 +161,5 @@ def ensure_fb_schema(conn: sqlite3.Connection, *, commit: bool = True) -> list[s
         print('[MIGRATE] sale_items canonical: %s' % exc)
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='fb_schema')
     return changed

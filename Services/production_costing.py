@@ -12,6 +12,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 
+from db_utils import sqlite_commit
 from Services.inventory_stock_helpers import (
     apply_wac_inbound,
     apply_wac_outbound,
@@ -134,7 +135,7 @@ def ensure_production_schema(conn: sqlite3.Connection) -> None:
             ON production_fg_receipts(order_id);
         """
     )
-    conn.commit()
+    sqlite_commit(conn, label='production_costing')
 
 
 def _qty_f(val) -> float:
@@ -395,14 +396,14 @@ def save_bom(
             """,
             (bom_id, it['material_product_id'], it['qty_per_unit'], it['note']),
         )
-    conn.commit()
+    sqlite_commit(conn, label='production_costing')
     return get_bom(conn, finished_product_id)
 
 
 def delete_bom(conn: sqlite3.Connection, finished_product_id: int) -> None:
     c = conn.cursor()
     c.execute("DELETE FROM product_bom WHERE finished_product_id = ?", (finished_product_id,))
-    conn.commit()
+    sqlite_commit(conn, label='production_costing')
 
 
 def preview_materials(
@@ -672,7 +673,7 @@ def create_production_order(
                 pass
             sync_inventory_quantity_from_moves(c, finished_product_id)
 
-        conn.commit()
+        sqlite_commit(conn, label='production_costing')
         return get_production_order(conn, order_id)
     except Exception:
         conn.rollback()
@@ -900,7 +901,7 @@ def receive_finished_goods(
             """,
             (new_received, new_status, order_id),
         )
-        conn.commit()
+        sqlite_commit(conn, label='production_costing')
 
         conn.row_factory = sqlite3.Row
         receipt_row = conn.execute(
@@ -1029,7 +1030,7 @@ def cancel_production_order(
             """,
             (STATUS_CANCELLED, when, (cancel_note or '').strip(), order_id),
         )
-        conn.commit()
+        sqlite_commit(conn, label='production_costing')
         return get_production_order(conn, order_id)
     except Exception:
         conn.rollback()

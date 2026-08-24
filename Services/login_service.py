@@ -8,7 +8,7 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, get_main_db_connection, open_sqlite, sqlite_write_retry
+from db_utils import BASE_DIR, MAIN_DB_PATH, get_main_db_connection, open_sqlite, sqlite_write_retry, sqlite_commit
 
 REGISTRY_PATH = MAIN_DB_PATH
 _BASE_DIR = Path(__file__).resolve().parent.parent
@@ -47,7 +47,7 @@ def _set_main_setting(key, value):
                 "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
                 (key, str(value)),
             )
-            conn.commit()
+            sqlite_commit(conn, label='login_service')
 
     sqlite_write_retry(_write, label='set_main_setting')
 

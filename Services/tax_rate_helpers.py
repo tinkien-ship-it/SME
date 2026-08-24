@@ -8,7 +8,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
-from db_utils import get_main_db_connection
+from db_utils import get_main_db_connection, sqlite_commit
 
 # scope: loại thuế | revenue_tier | nn_code (nullable)
 DEFAULT_TAX_RATES = (
@@ -54,7 +54,7 @@ def ensure_tax_rate_schema(conn=None) -> None:
         "CREATE INDEX IF NOT EXISTS idx_tax_rate_lookup "
         "ON tax_rate_schedules(scope, revenue_tier, nn_code, effective_from)"
     )
-    conn.commit()
+    sqlite_commit(conn, label='tax_rate_helpers')
     _seed_defaults(conn)
     if own:
         conn.close()
@@ -75,7 +75,7 @@ def _seed_defaults(conn: sqlite3.Connection) -> None:
             """,
             (item['scope'], item['revenue_tier'], item['nn_code'], item['rate_pct']),
         )
-    conn.commit()
+    sqlite_commit(conn, label='tax_rate_helpers')
 
 
 def list_tax_rate_schedules(active_only: bool = False) -> list[dict]:
@@ -129,7 +129,7 @@ def add_tax_rate_schedule(payload: dict[str, Any], created_by: str = 'master') -
             """,
             (scope, tier, nn, rate, eff_from, note, created_by),
         )
-        conn.commit()
+        sqlite_commit(conn, label='tax_rate_helpers')
         row = conn.execute(
             "SELECT * FROM tax_rate_schedules WHERE id = ?",
             (cur.lastrowid,),

@@ -9,6 +9,7 @@ from typing import Any
 
 from Services.sme.cash_books import cash_account_book
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 FORM_CASH_COUNT = '08a-TT'
@@ -64,7 +65,7 @@ def ensure_sme_cash_count_schema(conn: sqlite3.Connection, *, commit: bool = Tru
         except Exception:
             pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cash_count')
 
 
 def _next_doc_no(conn: sqlite3.Connection) -> str:
@@ -210,7 +211,7 @@ def create_cash_count(
         )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cash_count')
     return get_cash_count(conn, doc_id)
 
 
@@ -294,5 +295,5 @@ def void_cash_count(
         ((doc.get('notes') or '') + f' | {reason}', _now(), doc_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cash_count')
     return get_cash_count(conn, doc_id)

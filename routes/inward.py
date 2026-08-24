@@ -223,9 +223,13 @@ def register_inward_routes(app):
                         'username': data.get('username'),
                     }
 
-            conn = get_db_connection()
+            # Đóng connection request-scoped TRƯỚC khi gọi Matbao (timeout ~90s).
+            # Giữ SQLite mở suốt lúc chờ HTTP → database is locked trên /api/settings/esign.
+            from db_utils import close_request_db
+            close_request_db()
+            conn = None
             result = sync_month_to_db(
-                conn,
+                None,
                 config,
                 month_str,
                 source=source,
@@ -246,6 +250,10 @@ def register_inward_routes(app):
                 "summary": summary,
                 "sources_ok": result.get('sources_ok') or [],
                 "warnings": result.get('warnings') or [],
+                "phases": result.get('phases') or [],
+                "phases_ok": result.get('phases_ok'),
+                "phases_total": result.get('phases_total'),
+                "partial": bool(result.get('partial')),
             })
 
         except Exception as e:
@@ -253,7 +261,12 @@ def register_inward_routes(app):
             return jsonify({"success": False, "error": str(e)}), 500
         finally:
             if conn:
-                conn.close()
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            from db_utils import close_request_db
+            close_request_db()
 
     @app.route('/api/invoices/inward/<int:invoice_id>/pdf')
     @login_required
@@ -300,8 +313,12 @@ def register_inward_routes(app):
             c = conn.cursor()
 
             from Services.inward_invoice_helpers import ensure_import_service_schema
-            ensure_import_service_schema(conn)
-            conn.commit()
+            from db_utils import sqlite_run_write
+
+            def _ensure_schema(cn):
+                ensure_import_service_schema(cn)
+
+            sqlite_run_write(conn, _ensure_schema, label='inward_schema')
 
             # Query chính (giữ nguyên cấu trúc code cũ của bạn)
             query = """

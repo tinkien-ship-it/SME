@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from typing import Any
+from db_utils import sqlite_commit
 
 _VI_FOLD = str.maketrans(
     'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ'
@@ -118,7 +119,7 @@ def ensure_product_aliases_schema(conn: sqlite3.Connection, *, commit: bool = Fa
     except sqlite3.OperationalError:
         pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='product_match')
 
 
 def save_product_alias(
@@ -168,7 +169,7 @@ def save_product_alias(
             (pid, name, sid, sku, bc, norm),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='product_match')
 
 
 def list_product_aliases(
@@ -270,7 +271,7 @@ def update_product_alias(
     except sqlite3.IntegrityError as exc:
         raise ValueError('Tên trên hóa đơn này đã được liên kết rồi') from exc
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='product_match')
     for item in list_product_aliases(conn, limit=2000):
         if int(item.get('id') or 0) == aid:
             return item
@@ -284,7 +285,7 @@ def delete_product_alias(conn: sqlite3.Connection, alias_id: int, *, commit: boo
         return False
     cur = conn.execute('DELETE FROM product_aliases WHERE id = ?', (aid,))
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='product_match')
     return cur.rowcount > 0
 
 

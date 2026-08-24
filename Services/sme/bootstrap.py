@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 from typing import Any
+from db_utils import sqlite_commit
 
 # Cache theo đường dẫn DB — tránh chạy lại hàng chục ensure_* mỗi request (gây load chậm).
 _BOOTSTRAP_VERSION = '2026-08-21congno-settle-partner'
@@ -188,7 +189,7 @@ def ensure_sme_accounting_ready(
         pass
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bootstrap')
 
     _sme_bootstrapped[db_key] = _BOOTSTRAP_VERSION
     return {'coa': coa, 'rules': rules, 'ledger_profile': profile, 'accounting_regime': regime}

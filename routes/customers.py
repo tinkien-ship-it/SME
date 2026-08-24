@@ -4,7 +4,7 @@ import sqlite3
 from flask import jsonify, render_template, request
 
 from auth import login_required
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit
 
 
 def register_customers_routes(app):
@@ -65,7 +65,7 @@ def register_customers_routes(app):
                         (data.get('passport_no') or '').strip(),
                     ),
                 )
-                conn.commit()
+                sqlite_commit(conn, label='customers')
                 new_id = c.lastrowid
                 return jsonify({'success': True, 'id': new_id})
 
@@ -96,7 +96,7 @@ def register_customers_routes(app):
                         id_,
                     ),
                 )
-                conn.commit()
+                sqlite_commit(conn, label='customers')
                 return jsonify({'success': True})
 
             c.execute('SELECT COUNT(*) FROM sale WHERE customer_id = ?', (id_,))
@@ -105,7 +105,7 @@ def register_customers_routes(app):
                     'error': 'Không thể xóa: khách hàng đã có đơn hàng liên kết',
                 }), 400
             c.execute('DELETE FROM customers WHERE id = ?', (id_,))
-            conn.commit()
+            sqlite_commit(conn, label='customers')
             return jsonify({'success': True})
 
         except sqlite3.IntegrityError:

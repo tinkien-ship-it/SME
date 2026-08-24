@@ -14,6 +14,7 @@ from Services.sme.journal_engine import (
     reverse_journal_entry,
 )
 from Services.sme.vouchers import create_payment
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -128,7 +129,7 @@ def ensure_sme_payroll_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         pass
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='payroll')
 
 
 def _working_days_exclude_sunday(month: int, year: int) -> int:
@@ -244,7 +245,7 @@ def update_salary_insurance_config(
         ),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='payroll')
     return get_salary_insurance_config(conn)
 
 
@@ -943,7 +944,7 @@ def accrue_payroll(
     )
     run_id = cur.lastrowid
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='payroll')
 
     return {
         'id': run_id,
@@ -1037,7 +1038,7 @@ def void_payroll_run(
     if mode == 'hard_delete' or not sealed:
         conn.execute('DELETE FROM sme_payroll_runs WHERE id = ?', (run_id,))
         if commit:
-            conn.commit()
+            sqlite_commit(conn, label='payroll')
         return {
             'id': run_id,
             'month': month,
@@ -1059,7 +1060,7 @@ def void_payroll_run(
         (run_id,),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='payroll')
     return {
         'id': run_id,
         'month': month,
@@ -1143,7 +1144,7 @@ def pay_payroll_period(
         commit=False,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='payroll')
     return {
         **result,
         'month': month,
@@ -1241,7 +1242,7 @@ def pay_payroll_employee(
         commit=False,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='payroll')
     return {
         **result,
         'employee_id': emp_id,
@@ -1305,7 +1306,7 @@ def pay_insurance(
     except sqlite3.Error:
         pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='payroll')
     return {**result, 'form_code': '07-LĐTL', 'account_code': acc, 'voucher_date': date_s}
 
 
@@ -1527,7 +1528,7 @@ def post_payroll_allocation(
         (entry['id'], run['id']),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='payroll')
     out = payroll_allocation_summary(conn, month=month, year=year)
     out['allocation_journal_id'] = entry['id']
     out['allocated'] = {k: float(v) for k, v in buckets.items()}

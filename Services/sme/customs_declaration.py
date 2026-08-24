@@ -16,6 +16,7 @@ import sqlite3
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 FX_Q = Decimal('0.0001')
@@ -113,7 +114,7 @@ def ensure_customs_declaration_schema(conn: sqlite3.Connection, *, commit: bool 
     )
     if commit:
         try:
-            conn.commit()
+            sqlite_commit(conn, label='customs_declaration')
         except sqlite3.Error:
             pass
     _schema_ready[key] = _SCHEMA_VERSION
@@ -267,7 +268,7 @@ def upsert_declaration(
         decl_id = int(conn.execute('SELECT last_insert_rowid()').fetchone()[0])
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='customs_declaration')
     return get_declaration(conn, decl_id)
 
 
@@ -323,7 +324,7 @@ def import_declarations_bulk(
         except Exception as exc:
             errors.append({'index': i, 'error': str(exc)})
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='customs_declaration')
     return {'success': True, 'imported': len(ok), 'ids': ok, 'errors': errors}
 
 
@@ -387,7 +388,7 @@ def apply_declaration_to_export_sale(
         (int(sale_id), _now(), int(declaration_id)),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='customs_declaration')
     return {
         'success': True,
         'sale_id': int(sale_id),
@@ -439,7 +440,7 @@ def apply_declaration_to_import(
         (int(import_id), _now(), int(declaration_id)),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='customs_declaration')
     return {
         'success': True,
         'import_id': int(import_id),

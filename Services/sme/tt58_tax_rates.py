@@ -10,6 +10,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 from typing import Any
+from db_utils import sqlite_commit
 
 OFFICIAL_EFFECTIVE_FROM = '2026-07-01'
 SEED_NOTE = 'TT58/2026/TT-BTC — bảng 4 trường hợp DNSN'
@@ -188,7 +189,7 @@ def ensure_tt58_tax_rates_schema(conn: sqlite3.Connection, *, commit: bool = Tru
     # Seed phải commit ngay — GET thường close() không commit, rollback sẽ mất dữ liệu
     # rồi cache _SCHEMA_READY khiến lần sau không seed nữa.
     if wrote or commit:
-        conn.commit()
+        sqlite_commit(conn, label='tt58_tax_rates')
     _SCHEMA_READY.add(key)
 
 
@@ -503,7 +504,7 @@ def save_tt58_tax_rates(
         )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='tt58_tax_rates')
     return get_tt58_tax_rates(conn, as_of=day)
 
 

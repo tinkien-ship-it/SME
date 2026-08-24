@@ -198,25 +198,34 @@ def _now() -> str:
 
 
 def ensure_account_roles_ready(conn: sqlite3.Connection, *, commit: bool = True) -> dict[str, Any]:
-    from db_utils import sqlite_is_ready
-    from Services.sme.schema import ensure_sme_coa_schema
+    from db_utils import sqlite_is_ready, sqlite_mark_ready, sqlite_table_exists
 
     flag = f'account_roles:{ROLES_SEED_VERSION}'
     if sqlite_is_ready(conn, flag):
         return {'seeded': False, 'cached': True, 'roles_version': ROLES_SEED_VERSION}
+
+    # Fast path: đã seed trên disk — tránh mở connection phụ song song (gây database is locked)
+    if sqlite_table_exists(conn, 'sme_account_roles_meta'):
+        try:
+            row = conn.execute(
+                "SELECT value FROM sme_account_roles_meta WHERE key = 'roles_version'"
+            ).fetchone()
+            current = row[0] if row else None
+            count = conn.execute('SELECT COUNT(*) FROM sme_account_roles').fetchone()[0]
+            if current == ROLES_SEED_VERSION and count > 0:
+                sqlite_mark_ready(conn, flag)
+                return {
+                    'seeded': False,
+                    'cached': True,
+                    'roles_version': ROLES_SEED_VERSION,
+                    'count': count,
+                }
+        except sqlite3.Error:
+            pass
+
+    from Services.sme.schema import ensure_sme_coa_schema
     ensure_sme_coa_schema(conn, commit=False)
     return seed_account_roles(conn, commit=commit)
-
-
-def _raw_account_postable_active(c: sqlite3.Cursor, code: str) -> bool:
-    row = c.execute(
-        """
-        SELECT is_active, is_postable FROM sme_chart_of_accounts
-        WHERE code = ?
-        """,
-        (str(code or '').strip(),),
-    ).fetchone()
-    return bool(row and int(row[0] or 0) == 1 and int(row[1] or 0) == 1)
 
 
 def seed_account_roles(
@@ -225,7 +234,14 @@ def seed_account_roles(
     force: bool = False,
     commit: bool = True,
 ) -> dict[str, Any]:
-    from db_utils import sqlite_is_ready, sqlite_mark_ready, sqlite_table_exists, with_sqlite_write
+    from db_utils import (
+        _is_locked_error,
+        sqlite_is_ready,
+        sqlite_mark_ready,
+        sqlite_table_exists,
+        with_sqlite_write,
+    sqlite_commit,
+)
 
     flag = f'account_roles:{ROLES_SEED_VERSION}'
     if not force and sqlite_is_ready(conn, flag):
@@ -245,14 +261,31 @@ def seed_account_roles(
             pass
 
     result: dict[str, Any] = {}
+    try:
+        def _write(target):
+            nonlocal result
+            result = _apply_account_roles(target, force=force)
 
-    def _write(target):
-        nonlocal result
-        result = _apply_account_roles(target, force=force)
+        with_sqlite_write(conn, _write, commit=commit, label='seed_account_roles')
+        sqlite_mark_ready(conn, flag)
+        return result or {'seeded': True, 'roles_version': ROLES_SEED_VERSION}
+    except sqlite3.OperationalError as exc:
+        if _is_locked_error(exc):
+            if sqlite_is_ready(conn, flag):
+                return {'seeded': False, 'cached': True, 'roles_version': ROLES_SEED_VERSION}
+            return {'seeded': False, 'skipped': True, 'reason': 'seed_busy'}
+        raise
 
-    with_sqlite_write(conn, _write, commit=commit, label='seed_account_roles')
-    sqlite_mark_ready(conn, flag)
-    return result or {'seeded': True, 'roles_version': ROLES_SEED_VERSION}
+
+def _raw_account_postable_active(c: sqlite3.Cursor, code: str) -> bool:
+    row = c.execute(
+        """
+        SELECT is_active, is_postable FROM sme_chart_of_accounts
+        WHERE code = ?
+        """,
+        (str(code or '').strip(),),
+    ).fetchone()
+    return bool(row and int(row[0] or 0) == 1 and int(row[1] or 0) == 1)
 
 
 def _apply_account_roles(conn: sqlite3.Connection, *, force: bool = False) -> dict[str, Any]:
@@ -483,7 +516,7 @@ def set_role_default(
         (code, _now(), role_key),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='account_roles')
     return get_role(conn, role_key) or role
 
 
@@ -551,7 +584,7 @@ def set_default_posting_flag(
         )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='account_roles')
     return get_account(conn, code_s, commit=False) or acc
 
 
@@ -618,7 +651,7 @@ def on_child_account_created(
                 pass
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='account_roles')
     return touched
 
 
@@ -664,7 +697,7 @@ def on_account_deactivated(conn: sqlite3.Connection, code: str, *, commit: bool 
             except sqlite3.OperationalError:
                 pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='account_roles')
 
 
 def resolve_posting_account(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from db_utils import sqlite_commit
 
 
 def _cols(conn: sqlite3.Connection) -> set[str]:
@@ -84,7 +85,7 @@ def ensure_cong_no_schema(conn: sqlite3.Connection, *, commit: bool = False) -> 
             pass
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cong_no_ops')
 
 
 def remaining_sql(alias: str = 'cn', conn: sqlite3.Connection | None = None) -> str:

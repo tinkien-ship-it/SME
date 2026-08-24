@@ -7,6 +7,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -81,7 +82,7 @@ def ensure_sme_voucher_schema(conn: sqlite3.Connection, *, commit: bool = True) 
             except sqlite3.OperationalError:
                 pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='vouchers')
 
 
 def _voucher_prefix(voucher_type: str) -> str:
@@ -178,7 +179,7 @@ def renumber_vouchers(
         count += 1
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='vouchers')
     return {
         'voucher_type': vtype,
         'count': count,
@@ -564,7 +565,7 @@ def create_receipt(
             pass
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='vouchers')
 
     return {
         'id': voucher_id,
@@ -898,7 +899,7 @@ def create_payment(
             pass
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='vouchers')
 
     return {
         'id': voucher_id,
@@ -1020,7 +1021,7 @@ def void_voucher(
     still = get_voucher(conn, voucher_id)
     if not still and mode == 'hard_delete':
         if commit:
-            conn.commit()
+            sqlite_commit(conn, label='vouchers')
         return {
             'id': voucher_id,
             'voucher_no': voucher.get('voucher_no'),
@@ -1074,7 +1075,7 @@ def void_voucher(
         # Xóa chứng từ — cho phép lập phiếu / bút toán mới trong kỳ mở
         conn.execute('DELETE FROM sme_vouchers WHERE id = ?', (voucher_id,))
         if commit:
-            conn.commit()
+            sqlite_commit(conn, label='vouchers')
         return {
             'id': voucher_id,
             'voucher_no': voucher.get('voucher_no'),
@@ -1102,7 +1103,7 @@ def void_voucher(
         ),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='vouchers')
     out = get_voucher(conn, voucher_id) or dict(voucher)
     out['reversal'] = rev
     out['mode'] = mode

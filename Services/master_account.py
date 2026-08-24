@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS users (
     is_2fa_enabled INTEGER DEFAULT 0,
     google_login_allowed INTEGER DEFAULT 1,
     must_change_password INTEGER DEFAULT 0,
-    is_support_account INTEGER DEFAULT 0
+    is_support_account INTEGER DEFAULT 0,
+    totp_secret TEXT,
+    totp_confirmed_at TEXT
 )
 """
 
@@ -38,6 +40,8 @@ EXTRA_COLUMNS = {
     'permissions': "TEXT DEFAULT ''",
     'full_name': 'TEXT',
     'created_at': "TEXT DEFAULT (datetime('now'))",
+    'totp_secret': 'TEXT',
+    'totp_confirmed_at': 'TEXT',
 }
 
 
@@ -145,7 +149,7 @@ def ensure_master(
 
 def ensure_master_from_env(conn: sqlite3.Connection | None = None) -> str | None:
     """Nếu thiếu master và có MASTER_PASSWORD trong env → tạo. Trả action hoặc None."""
-    from db_utils import get_main_db_connection
+    from db_utils import get_main_db_connection, sqlite_commit
 
     own = conn is None
     conn = conn or get_main_db_connection()
@@ -165,7 +169,7 @@ def ensure_master_from_env(conn: sqlite3.Connection | None = None) -> str | None
             disable_2fa=True,
             force_password=True,
         )
-        conn.commit()
+        sqlite_commit(conn, label='master_account')
         return action
     finally:
         if own:

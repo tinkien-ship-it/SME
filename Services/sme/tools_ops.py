@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.fixed_assets_helpers import (
     STATUS_ACTIVE,
     STATUS_DISPOSED,
@@ -93,7 +94,7 @@ def activate_tool(
         params,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='tools_ops')
     return dict(conn.execute(f'SELECT * FROM {TOOLS_TABLE} WHERE id = ?', (tool_id,)).fetchone())
 
 
@@ -138,7 +139,7 @@ def update_tool_allocation_period(
         params,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='tools_ops')
     return dict(conn.execute(f'SELECT * FROM {TOOLS_TABLE} WHERE id = ?', (tool_id,)).fetchone())
 
 
@@ -177,5 +178,5 @@ def scrap_tool(
             (STATUS_DISPOSED, tool_id),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='tools_ops')
     return dict(conn.execute(f'SELECT * FROM {TOOLS_TABLE} WHERE id = ?', (tool_id,)).fetchone())

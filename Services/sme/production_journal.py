@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.sme.journal_engine import (
     ensure_sme_journal_ready,
     post_journal_entry,
@@ -30,7 +31,7 @@ def ensure_production_journal_column(conn: sqlite3.Connection, *, commit: bool =
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='production_journal')
 
 
 def _link_step(conn: sqlite3.Connection, order_id: int, step: str, journal_entry_id: int) -> None:
@@ -117,7 +118,7 @@ def post_production_journal(
         (result['journal_entry_id'], mode, order_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='production_journal')
     result['costing_mode'] = mode
     result['voucher_no'] = voucher_no
     result['total_cost'] = total
@@ -197,7 +198,7 @@ def post_fg_receipt_journal(
         (entry['id'], receipt_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='production_journal')
     return {
         'journal_entry_id': entry['id'],
         'entry_no': entry.get('entry_no'),

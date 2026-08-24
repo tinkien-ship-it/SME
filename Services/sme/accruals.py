@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.sme.journal_engine import (
     ensure_sme_journal_ready,
     post_journal_entry,
@@ -55,7 +56,7 @@ def ensure_accrual_schema(conn: sqlite3.Connection, *, commit: bool = False) -> 
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, TABLE)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='accruals')
 
 
 def _next_no(conn: sqlite3.Connection, prefix: str) -> str:
@@ -198,7 +199,7 @@ def create_accrual(
     rid = int(cur.lastrowid)
     stamp_row_branch(conn, TABLE, rid, branch)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='accruals')
     return get_accrual(conn, rid) or {'id': rid}
 
 
@@ -265,7 +266,7 @@ def settle_accrual(
         (settle_id, int(doc_id)),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='accruals')
     return get_accrual(conn, doc_id) or row
 
 
@@ -292,5 +293,5 @@ def void_accrual(
         reverse_journal_entry(conn, int(jid), created_by=created_by, reason=reason)
     conn.execute(f"UPDATE {TABLE} SET status = 'void' WHERE id = ?", (int(doc_id),))
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='accruals')
     return get_accrual(conn, doc_id) or row

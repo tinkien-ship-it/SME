@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import sqlite3
 from typing import Any
+from db_utils import sqlite_commit
 
 DEFAULT_BANK_SETTING_KEY = 'sme_default_bank_account'
 DEFAULT_FX_BANK_SETTING_KEY = 'sme_default_fx_bank_account'
@@ -104,7 +105,7 @@ def set_default_bank_account(conn: sqlite3.Connection, code: str, *, commit: boo
         raise ValueError(f'Tài khoản {code_s} không ghi sổ được — chọn TK chi tiết')
     _setting_set(conn, DEFAULT_BANK_SETTING_KEY, code_s)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bank_accounts')
     return code_s
 
 
@@ -138,7 +139,7 @@ def sync_default_bank_from_qr(conn: sqlite3.Connection, *, commit: bool = False)
         fx_code = fx_cur
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bank_accounts')
 
     vnd_list = _list_postable_under(conn, '1121')
     fx_list = _list_postable_under(conn, '1122')

@@ -13,6 +13,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.sme.journal_engine import (
     ensure_sme_journal_ready,
     post_journal_entry,
@@ -88,7 +89,7 @@ def ensure_import_settle_schema(conn: sqlite3.Connection, *, commit: bool = True
                 except sqlite3.OperationalError:
                     pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='import_settle')
 
 
 def _supplier_name(conn: sqlite3.Connection, supplier_id) -> str:
@@ -472,7 +473,7 @@ def settle_import_supplier_ap(
     conn.execute(f'UPDATE "import" SET {", ".join(sets)} WHERE id = ?', vals)
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='import_settle')
 
     return {
         'import_id': import_id,
@@ -744,7 +745,7 @@ def settle_import_by_lc(
     bal_after = get_lc_balance(conn, lc_id)
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='import_settle')
 
     return {
         'import_id': import_id,

@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.sme.tt58_tax_methods import (
     get_tt58_tax_method_def,
     list_tt58_tax_methods,
@@ -65,7 +66,7 @@ def set_tt58_tax_method(
         ('tt58_tax_method_user_set', '1', now),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='regime_profile')
     return get_tt58_tax_method_def(code)
 
 

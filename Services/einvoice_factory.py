@@ -91,9 +91,14 @@ def merge_esign_config_from_request(data):
 
 def test_einvoice_connection(config, matbao_cls=None):
     cfg = normalize_invoice_config(merge_esign_config_from_request(config or {}))
+    channel = str((config or {}).get('test_channel') or 'all').strip().lower()
     service = create_einvoice_service(cfg, matbao_cls=matbao_cls)
     if hasattr(service, 'test_connection') and callable(service.test_connection):
-        return service.test_connection()
+        try:
+            return service.test_connection(channel=channel)
+        except TypeError:
+            # Adapter cũ không nhận channel
+            return service.test_connection()
     provider = (cfg.get('provider_name') or cfg.get('provider') or '').strip()
     meta = get_provider_meta(provider) or {}
     label = meta.get('label', provider or 'HĐĐT')

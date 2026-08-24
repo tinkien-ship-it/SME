@@ -11,7 +11,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
-from db_utils import BASE_DIR, MAIN_DB_PATH, open_sqlite
+from db_utils import BASE_DIR, MAIN_DB_PATH, open_sqlite, sqlite_commit
 
 logger = logging.getLogger(__name__)
 
@@ -372,7 +372,7 @@ def _enable_wal_on_path(db_path: str) -> bool:
     try:
         with open_sqlite(db_path) as conn:
             mode = conn.execute('PRAGMA journal_mode=WAL').fetchone()
-            conn.commit()
+            sqlite_commit(conn, label='assistant_learning_machine')
         return bool(mode and str(mode[0]).lower() == 'wal')
     except Exception as exc:
         logger.warning('enable_wal %s: %s', db_path, exc)

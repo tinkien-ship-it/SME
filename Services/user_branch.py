@@ -12,6 +12,7 @@ import sqlite3
 from typing import Any
 
 from flask import g, session
+from db_utils import sqlite_commit
 
 
 def ensure_user_branch_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
@@ -29,7 +30,7 @@ def ensure_user_branch_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         "CREATE INDEX IF NOT EXISTS idx_user_branches_user ON user_branches(user_id)"
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='user_branch')
 
 
 def assign_user_branch(
@@ -56,7 +57,7 @@ def assign_user_branch(
                 (user_id, branch_code.strip()),
             )
         if commit:
-            conn.commit()
+            sqlite_commit(conn, label='user_branch')
         return True
     except sqlite3.Error:
         return False
@@ -75,7 +76,7 @@ def remove_user_branch(
         (user_id, branch_code.strip()),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='user_branch')
     return True
 
 
@@ -100,7 +101,7 @@ def set_user_branches(
             (user_id, code, is_def),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='user_branch')
 
 
 def get_user_branches(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:

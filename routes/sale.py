@@ -25,7 +25,7 @@ from flask import (
 )
 from flask_login import login_required
 
-from db_utils import begin_immediate, get_db_connection, rollback_quietly, _is_locked_error
+from db_utils import begin_immediate, get_db_connection, rollback_quietly, _is_locked_error, sqlite_run_write, sqlite_write_retry, locked_user_message, sqlite_commit
 from Services.customer_utils import normalize_tax_code_digits, tax_code_validation_message
 from Services.invoice_buyer import DEFAULT_RETAIL_BUYER_NAME, is_retail_buyer_name, normalize_retail_buyer_name
 from Services.hkd_sector import requires_stock_check
@@ -373,7 +373,7 @@ def complete_pos_bank_payment(sale_id):
         if not sale:
             return {"success": False, "error": "Không tìm thấy hóa đơn"}
         if sale['status'] == 'completed':
-            conn.commit()
+            sqlite_commit(conn, label='sale')
             return {"success": True, "already_completed": True}
         if sale['status'] != 'pending':
             return {"success": False, "error": "Đơn không ở trạng thái chờ thanh toán"}
@@ -487,7 +487,7 @@ def complete_pos_bank_payment(sale_id):
                 pass
 
         cursor.execute("UPDATE sale SET status = 'completed', date = ? WHERE id = ?", (sale_date, sale_id))
-        conn.commit()
+        sqlite_commit(conn, label='sale')
         enqueue_accounting_job(
             conn,
             sale_id,
@@ -838,7 +838,7 @@ def register_sale_routes(app):
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (customer_name, company_name, address, tax_code, '131', '511', sale_date, total_amount, sale_id, ref_doc))
 
-            conn.commit()
+            sqlite_commit(conn, label='sale')
             if status == 'completed' or old_status == 'completed':
                 enqueue_accounting_job(
                     conn,
@@ -901,7 +901,7 @@ def register_sale_routes(app):
             except sqlite3.OperationalError:
                 pass
 
-            conn.commit()
+            sqlite_commit(conn, label='sale')
 
             return jsonify({
                 'success': True,
@@ -1154,7 +1154,7 @@ def register_sale_routes(app):
                          date_of_debt, unpaid_amount, sale_id, sale_no)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (customer_name, company_name, address, tax_code, '131', '511', sale_date, total_amount, sale_id, ref_doc))
-            conn.commit()
+            sqlite_commit(conn, label='sale')
             enqueue_accounting_job(
                 conn,
                 sale_id,
@@ -1701,18 +1701,24 @@ def register_sale_routes(app):
             conn = get_db_connection()
             c = conn.cursor()
 
-            c.execute("""
-                UPDATE sale
-                SET customer_name = ?, 
-                    company_name  = ?, 
-                    tax_code      = ?, 
-                    address       = ?
-                WHERE id = ?
-            """, (customer_name, company_name, tax_code, address, sale_id))
+            def _update_customer(cn):
+                cn.execute("""
+                    UPDATE sale
+                    SET customer_name = ?, 
+                        company_name  = ?, 
+                        tax_code      = ?, 
+                        address       = ?
+                    WHERE id = ?
+                """, (customer_name, company_name, tax_code, address, sale_id))
 
-            conn.commit()
+            sqlite_run_write(conn, _update_customer, label='update_sale_customer')
             return jsonify({"success": True}), 200
     
+        except sqlite3.OperationalError as e:
+            if _is_locked_error(e):
+                return jsonify({"success": False, "message": locked_user_message()}), 503
+            print("Lỗi cập nhật khách hàng:", e)
+            return jsonify({"success": False, "message": "Lỗi server"}), 500
         except Exception as e:
             print("Lỗi cập nhật khách hàng:", e)
             return jsonify({"success": False, "message": "Lỗi server"}), 500
@@ -1879,21 +1885,28 @@ def register_sale_routes(app):
         address       = data.get('address', '').strip()
 
         try:
-            # 1. Tạo đơn bán hàng mới (bảng sale)
-            cursor.execute("""
-                INSERT INTO sale (date, total_amount, customer_name, company_name, tax_code, address, status)
-                VALUES (CURDATE(), 0, ?, ?, ?, ?, 'completed')
-            """, (customer_name, company_name or None, tax_code or None, address or None))
-            sale_id = cursor.lastrowid
-            db.commit()
+            db = get_db_connection()
+            cursor = db.cursor()
+
+            def _create_sale(cn):
+                cur = cn.execute("""
+                    INSERT INTO sale (date, total_amount, customer_name, company_name, tax_code, address, status)
+                    VALUES (datetime('now','localtime'), 0, ?, ?, ?, ?, 'completed')
+                """, (customer_name, company_name or None, tax_code or None, address or None))
+                return cur.lastrowid
+
+            sale_id = sqlite_run_write(db, _create_sale, label='create_sale_with_customer')
 
             return jsonify({
                 "success": True,
-                "order_id": sale_id,  # vẫn trả về để hiển thị ĐH000123
+                "order_id": sale_id,
                 "message": "Tạo đơn bán hàng thành công!"
             })
+        except sqlite3.OperationalError as e:
+            if _is_locked_error(e):
+                return jsonify({"success": False, "message": locked_user_message()}), 503
+            return jsonify({"success": False, "message": str(e)}), 500
         except Exception as e:
-            db.rollback()
             return jsonify({"success": False, "message": str(e)}), 500
 
     #==== API XÓA ĐƠN HÀNG BÁN ====#
@@ -1955,7 +1968,7 @@ def register_sale_routes(app):
             _delete_sale_child_rows(c, sale_id_db)
             c.execute("DELETE FROM sale WHERE id = ?", (sale_id_db,))
 
-            conn.commit()
+            sqlite_commit(conn, label='sale')
         
             from Services.audit_log import write_audit
             write_audit(
@@ -2204,7 +2217,7 @@ def register_sale_routes(app):
                 )
             except Exception:
                 pass
-            conn.commit()
+            sqlite_commit(conn, label='sale')
             return jsonify({
                 "success": True,
                 "import_no": import_no,
@@ -2226,25 +2239,31 @@ def register_sale_routes(app):
         db = get_db_connection()
     
         try:
-            cur = db.cursor()
-            cur.execute("""
-                UPDATE sale SET
-                    customer_name = ?,
-                    company_name = ?,
-                    tax_code = ?,
-                    address = ?
-                WHERE id = ?
-            """, (
-                data.get('customer_name', '').strip(),
-                data.get('company_name', '').strip() or None,
-                data.get('tax_code', '').strip() or None,
-                data.get('address', '').strip() or None,
-                order_id
-            ))
-            db.commit()
+            def _update_order(cn):
+                cur = cn.cursor()
+                cur.execute("""
+                    UPDATE sale SET
+                        customer_name = ?,
+                        company_name = ?,
+                        tax_code = ?,
+                        address = ?
+                    WHERE id = ?
+                """, (
+                    data.get('customer_name', '').strip(),
+                    data.get('company_name', '').strip() or None,
+                    data.get('tax_code', '').strip() or None,
+                    data.get('address', '').strip() or None,
+                    order_id
+                ))
+
+            sqlite_run_write(db, _update_order, label='sale_update')
             return jsonify({"success": True, "message": "Cập nhật thành công"})
+        except sqlite3.OperationalError as e:
+            if _is_locked_error(e):
+                return jsonify({"error": locked_user_message()}), 503
+            return jsonify({"error": str(e)}), 500
         except Exception as e:
-            db.rollback()
+            rollback_quietly(db)
             return jsonify({"error": str(e)}), 500
 
     @app.route('/sale')

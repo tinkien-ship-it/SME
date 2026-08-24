@@ -69,7 +69,7 @@ def ensure_sme_coa_ready(
     commit: bool = True,
 ) -> dict[str, Any]:
     """Đảm bảo schema + seed TT99/recommended đã có trên DB tenant."""
-    from db_utils import sqlite_is_ready, sqlite_mark_ready
+    from db_utils import sqlite_is_ready, sqlite_mark_ready, sqlite_commit
 
     flag = f'coa_seed:{SEED_VERSION}'
     if not force_reseed and sqlite_is_ready(conn, flag):
@@ -173,7 +173,7 @@ def ensure_sme_coa_ready(
     from Services.sme.account_roles import ensure_account_roles_ready
     ensure_account_roles_ready(conn, commit=False)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='coa_service')
     sqlite_mark_ready(conn, flag)
     count = c.execute("SELECT COUNT(*) FROM sme_chart_of_accounts").fetchone()[0]
     return {
@@ -638,7 +638,7 @@ def create_child_account(
         set_as_default=bool(set_as_default),
         commit=False,
     )
-    conn.commit()
+    sqlite_commit(conn, label='coa_service')
     created = get_account(conn, code, commit=False) or created
     if automation:
         created = dict(created)
@@ -700,7 +700,7 @@ def deactivate_account(conn: sqlite3.Connection, code: str) -> dict:
             )
     from Services.sme.account_roles import on_account_deactivated
     on_account_deactivated(conn, code, commit=False)
-    conn.commit()
+    sqlite_commit(conn, label='coa_service')
     return get_account(conn, code) or acc
 
 
@@ -751,7 +751,7 @@ def update_account_meta(
         f"UPDATE sme_chart_of_accounts SET {', '.join(fields)} WHERE code = ?",
         params,
     )
-    conn.commit()
+    sqlite_commit(conn, label='coa_service')
     return get_account(conn, code) or acc
 
 

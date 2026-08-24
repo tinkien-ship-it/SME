@@ -11,6 +11,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.inventory_stock_helpers import apply_wac_value_adjustment, ledger_quantity
 from Services.sme.journal_engine import (
     post_journal_entry,
@@ -128,7 +129,7 @@ def ensure_sme_landed_cost_schema(conn: sqlite3.Connection, *, commit: bool = Tr
     except Exception:
         pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='landed_cost')
 
 
 def repair_landed_cost_stock_capital(
@@ -215,7 +216,7 @@ def repair_landed_cost_stock_capital(
             )
         repaired += 1
     if commit and repaired:
-        conn.commit()
+        sqlite_commit(conn, label='landed_cost')
     return {'repaired': repaired}
 
 
@@ -1250,7 +1251,7 @@ def allocate_landed_cost(
     )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='landed_cost')
 
     return {
         'success': True,
@@ -1430,7 +1431,7 @@ def reverse_landed_cost(
     )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='landed_cost')
 
     return {
         'success': True,

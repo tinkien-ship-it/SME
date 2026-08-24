@@ -15,6 +15,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.sme.journal_engine import (
     ensure_sme_journal_ready,
     post_journal_entry,
@@ -74,7 +75,7 @@ def ensure_import_transit_schema(conn: sqlite3.Connection, *, commit: bool = Tru
         except sqlite3.OperationalError:
             pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='import_transit')
 
 
 def default_receipt_stage(import_type: str) -> str:
@@ -411,7 +412,7 @@ def receive_import_to_warehouse(
     conn.execute(f'UPDATE "import" SET {", ".join(sets)} WHERE id = ?', vals)
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='import_transit')
     return {
         'import_id': import_id,
         'receipt_stage': STAGE_RECEIVED,

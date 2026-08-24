@@ -61,6 +61,7 @@ from db_utils import (
     get_db_connection,
     locked_user_message,
     rollback_quietly,
+    sqlite_commit,
     sqlite_write_retry,
 )
 
@@ -402,7 +403,7 @@ def complete_fb_bank_payment(sale_id):
         if not sale:
             return {"success": False, "error": "Không tìm thấy hóa đơn"}
         if sale['status'] == 'completed':
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return {"success": True, "already_completed": True}
 
         meta = {}
@@ -441,7 +442,7 @@ def complete_fb_bank_payment(sale_id):
         _fb_finalize_checkout(
             cursor, sale_id, table_id, customer_name, payment_method, sale_date, is_einvoice, items
         )
-        conn.commit()
+        sqlite_commit(conn, label='fb_write')
         return {"success": True, "sale_id": sale_id}
 
     try:
@@ -679,7 +680,7 @@ def register_fb_routes(app):
             if cursor.rowcount == 0:
                 return jsonify({"success": False, "message": "Không tìm thấy món trong đơn hàng"}), 404
 
-            db.commit()
+            sqlite_commit(db, label='fb_write')
 
             return jsonify({
                 "success": True,
@@ -824,7 +825,7 @@ def register_fb_routes(app):
                     "SELECT status FROM sale WHERE id = ?", (sale_id,),
                 ).fetchone()
                 if row_sale and str(row_sale['status'] or '').lower() == 'completed':
-                    conn.commit()
+                    sqlite_commit(conn, label='fb_write')
                     return {
                         "success": True,
                         "sale_id": sale_id,
@@ -863,7 +864,7 @@ def register_fb_routes(app):
                         UPDATE sale SET status = 'pending', total_amount = ?, payment_method = ?, customer_name = ?,
                         business_line = 'fb_service', date = ?, sale_no = ?, note = ? WHERE id = ?
                     """, (final_total, payment_method, customer_name, sale_date, sale_no, note_payload, sale_id))
-                    conn.commit()
+                    sqlite_commit(conn, label='fb_write')
                     return {
                         "success": True,
                         "sale_id": sale_id,
@@ -886,7 +887,7 @@ def register_fb_routes(app):
                     except sqlite3.OperationalError:
                         pass
 
-                conn.commit()
+                sqlite_commit(conn, label='fb_write')
                 return {
                     "success": True,
                     "sale_id": sale_id,
@@ -934,7 +935,7 @@ def register_fb_routes(app):
 
             cursor.execute(
                 "UPDATE menu SET is_active = ? WHERE id = ?", (new_status, menu_id))
-            db.commit()
+            sqlite_commit(db, label='fb_write')
 
             status_text = "Đang kinh doanh" if new_status == 1 else "Tạm ngừng bán"
 
@@ -1068,7 +1069,7 @@ def register_fb_routes(app):
                     WHERE id = ?
                 """, (sale_id, sale_id))
 
-                db.commit()
+                sqlite_commit(db, label='fb_write')
                 return {
                     "success": True,
                     "sale_id": sale_id,
@@ -1220,7 +1221,7 @@ def register_fb_routes(app):
                     message = "Cập nhật số lượng thành công"
                     is_empty = False
 
-                db.commit()
+                sqlite_commit(db, label='fb_write')
                 return {"success": True, "message": message, "is_empty": is_empty}, 200
 
             payload, status = sqlite_write_retry(_update_qty, label='fb_update_item_qty')
@@ -1309,7 +1310,7 @@ def register_fb_routes(app):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             """, (item_code, name, unit, unit1, base_price, price, category, product_type, image_path))
 
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({"success": True, "message": f"Đã thêm món '{name}' thành công với Mã món: {item_code}."}), 200
 
         except Exception as e:
@@ -1410,7 +1411,7 @@ def register_fb_routes(app):
             WHERE item_code = ?
             """, (name, category, unit, unit1, base_price, price, product_type, image_path, item_code))
 
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({"success": True, "message": f"Đã cập nhật thông tin món '{name}' thành công."}), 200
 
         except sqlite3.Error as e:
@@ -1471,7 +1472,7 @@ def register_fb_routes(app):
                 INSERT OR REPLACE INTO menu_recipes (menu_id, product_id, quantity)
                 VALUES (?, ?, ?)
             """, (menu_id, product_id, quantity))
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({"success": True, "message": "Đã cập nhật định mức nguyên vật liệu"})
         except Exception as e:
             conn.rollback()
@@ -1492,7 +1493,7 @@ def register_fb_routes(app):
         try:
             cursor.execute(
                 "DELETE FROM menu_recipes WHERE menu_id = ? AND product_id = ?", (menu_id, product_id))
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({"success": True, "message": "Đã xóa thành phần định mức thành công"})
         except Exception as e:
             conn.rollback()
@@ -1586,7 +1587,7 @@ def register_fb_routes(app):
                     base_price, price, product_type, p_id, img
                 ))
 
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({"success": True, "message": "Import và cập nhật danh sách thực đơn thành công!"}), 200
 
         except Exception as e:
@@ -1873,7 +1874,7 @@ def register_fb_routes(app):
                         """, (table_name, area_id))
                         tables_count += 1
 
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({
                 "success": True,
                 "message": f"Đồng bộ thành công {areas_count} khu vực và {tables_count} bàn vào hệ thống!",
@@ -1917,7 +1918,7 @@ def register_fb_routes(app):
             if dup:
                 return jsonify({"success": False, "message": f"Khu vực '{name}' đã tồn tại"}), 400
             cursor.execute("INSERT INTO areas (name) VALUES (?)", (name,))
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({"success": True, "status": "success", "message": f"Đã thêm khu vực '{name}'"})
         except Exception as e:
             conn.rollback()
@@ -1961,7 +1962,7 @@ def register_fb_routes(app):
                 "INSERT INTO tables (name, area_id, status) VALUES (?, ?, 'Available')",
                 (name, area_id),
             )
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({
                 "success": True,
                 "status": "success",
@@ -1985,7 +1986,7 @@ def register_fb_routes(app):
         conn = get_db_connection()
         try:
             warehouses = list_active_warehouses(conn)
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
         finally:
             conn.close()
 
@@ -2011,7 +2012,7 @@ def register_fb_routes(app):
                 insert_import_detail_row,
             )
             ensure_warehouse_schema(conn)
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
 
             data = request.get_json()
             if not data:
@@ -2241,7 +2242,7 @@ def register_fb_routes(app):
             if bill_no_clean and bill_no_clean.lower() not in ['none', 'nan']:
                 c.execute("UPDATE supplier_invoice SET status = 'imported' WHERE invoice_no = ? AND seller_tax_code = ? AND status != 'imported'", (bill_no_clean, tax_code))
 
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({"success": True, "import_id": import_id, "voucher_no": import_no})
         except Exception as e:
             conn.rollback()
@@ -2490,7 +2491,7 @@ def register_fb_routes(app):
                 update_values.append(import_id)
                 c.execute(f"UPDATE import SET {', '.join(update_fields)} WHERE id=?", tuple(update_values))
 
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({"success": True, "message": "Cập nhật phiếu nhập và cân đối dòng tiền thành công!"})
         except Exception as e:
             conn.rollback()
@@ -2567,7 +2568,7 @@ def register_fb_routes(app):
             ensure_fb_schema(conn, commit=False)
             ensure_products_schema(conn)
             _ensure_draft_inventory_table(cursor)
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
 
             rows = cursor.execute("""
                 SELECT p.id AS product_id, p.product_code, p.name, p.unit,
@@ -2699,7 +2700,7 @@ def register_fb_routes(app):
                     "skipped": skipped,
                 }), 400
 
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({
                 "success": True,
                 "message": f"Đã ghi nhận kiểm kê {len(saved)} NVL. Cuối ngày bấm Chốt để lập 1 phiếu xuất kho.",
@@ -2756,7 +2757,7 @@ def register_fb_routes(app):
                 VALUES (?, ?, ?, 0)
             """, (product_id, qty, note))
 
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({"success": True, "status": "success", "message": "Ghi nhận xuất kho nháp thành công"})
 
         except Exception as e:
@@ -2775,7 +2776,7 @@ def register_fb_routes(app):
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             _ensure_draft_inventory_table(cursor)
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
         
             query = """
                 SELECT 
@@ -2844,7 +2845,7 @@ def register_fb_routes(app):
                     "message": f"Không tìm thấy phiếu nháp có ID {draft_id} hoặc phiếu đã bị xóa trước đó."
                 }), 404
             
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             return jsonify({
                 "status": "success", 
                 "message": "Xóa mục nháp thành công"
@@ -2971,7 +2972,7 @@ def register_fb_routes(app):
 
             cursor.execute("UPDATE draft_inventory SET is_processed = 1 WHERE is_processed = 0")
 
-            conn.commit()
+            sqlite_commit(conn, label='fb_write')
             msg = f"Đã chốt kho và lập phiếu xuất {px_vno} ({len(px_items)} NVL)" if px_vno else "Đã chốt kho (không có xuất NVL)"
             return jsonify({
                 "success": True,

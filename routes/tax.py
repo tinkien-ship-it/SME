@@ -12,7 +12,7 @@ import requests
 from flask import jsonify, render_template, request, send_file
 
 from auth import login_required
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit
 from Services.payment_bank import get_tax_default_bank_accounts
 from helpers import parse_number_vn
 from Services.hkd_sector import (
@@ -1386,7 +1386,7 @@ def register_tax_routes(app):
 
             _persist_tax_profile_settings(c, data)
 
-            conn.commit()
+            sqlite_commit(conn, label='tax')
             conn.close()
 
             return jsonify({"success": True})

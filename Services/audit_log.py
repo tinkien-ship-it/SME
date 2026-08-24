@@ -6,7 +6,7 @@ from datetime import datetime
 
 from flask import g, has_request_context, request, session
 
-from db_utils import get_db_connection, get_main_db_connection, get_tenant_db_connection
+from db_utils import get_db_connection, get_main_db_connection, get_tenant_db_connection, sqlite_commit
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,7 @@ def write_audit(
                     """,
                     row,
                 )
-                conn.commit()
+                sqlite_commit(conn, label='audit_log')
             finally:
                 conn.close()
 

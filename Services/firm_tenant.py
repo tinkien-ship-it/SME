@@ -27,6 +27,7 @@ from db_utils import (
     sqlite_write_retry,
     _is_locked_error,
     _normalize_db_path,
+    sqlite_commit,
 )
 
 logger = logging.getLogger(__name__)
@@ -266,7 +267,7 @@ def ensure_firm_schema(conn: sqlite3.Connection | None = None) -> None:
                 created_at TEXT
             )
         """)
-        conn.commit()
+        sqlite_commit(conn, label='firm_tenant')
         if own:
             _FIRM_SCHEMA_READY = True
     finally:
@@ -305,7 +306,7 @@ def _exclusive_tenant_db_write(abs_path: str, label: str, fn) -> None:
     def _run():
         with open_sqlite(abs_path) as conn:
             fn(conn)
-            conn.commit()
+            sqlite_commit(conn, label='firm_tenant')
 
     sqlite_write_retry(_run, label=label)
 
@@ -369,7 +370,7 @@ def purge_firm_tenant_registry(firm_tenant_id: str, conn: sqlite3.Connection | N
         conn.execute("DELETE FROM firm_clients WHERE firm_tenant_id = ?", (firm_tenant_id,))
         conn.execute("DELETE FROM firm_audit_log WHERE firm_tenant_id = ?", (firm_tenant_id,))
         if own:
-            conn.commit()
+            sqlite_commit(conn, label='firm_tenant')
         return {'success': True, 'firm_tenant_id': firm_tenant_id}
     except Exception as exc:
         if own:
@@ -443,7 +444,7 @@ def cleanup_orphan_firm_registry(firm_tenant_id: str) -> bool:
         if not orphan:
             return False
         purge_firm_tenant_registry(firm_tenant_id, conn=conn)
-        conn.commit()
+        sqlite_commit(conn, label='firm_tenant')
         logger.info('cleanup_orphan_firm_registry: %s', firm_tenant_id)
         return True
 
@@ -560,7 +561,7 @@ def init_firm_meta_database(firm_tenant_id: str, business_name: str, phone: str,
         clear_trial_business_data(conn)
         ensure_audit_table(conn)
         conn.execute('PRAGMA foreign_keys=ON')
-        conn.commit()
+        sqlite_commit(conn, label='firm_tenant')
     return db_path
 
 
@@ -583,7 +584,7 @@ def _mark_firm_own_books_ready(firm_tenant_id: str) -> None:
                 "UPDATE tenants SET settings = ? WHERE tenant_id = ?",
                 (json.dumps(settings, ensure_ascii=False), firm_tenant_id.strip()),
             )
-            conn.commit()
+            sqlite_commit(conn, label='firm_tenant')
 
     sqlite_write_retry(_write, label='mark_firm_own_books_ready')
 
@@ -857,7 +858,7 @@ def provision_firm_tenant(
                 (firm_tenant_id, login_email, password_hash, full_name, firm_role, is_active, created_at, updated_at)
                 VALUES (?, ?, ?, ?, 'owner', 1, ?, ?)
             """, (firm_tenant_id, owner_email, pw_hash, owner_name or firm_name, now, now))
-            conn.commit()
+            sqlite_commit(conn, label='firm_tenant')
 
     try:
         sqlite_write_retry(_write, label='provision_firm_tenant')
@@ -1003,7 +1004,7 @@ def add_firm_client(
                     (firm_user_id, firm_tenant_id, client_id, access_role, is_active, granted_at)
                     VALUES (?, ?, ?, 'accounting', 1, ?)
                 """, (uid, firm_tenant_id, client_id, now))
-            conn.commit()
+            sqlite_commit(conn, label='firm_tenant')
 
     sqlite_write_retry(_write, label='add_firm_client')
     return {'success': True, 'client_id': client_id, 'db_path': db_rel}
@@ -1111,6 +1112,46 @@ def get_client_record(firm_tenant_id: str, client_id: str) -> dict | None:
             (firm_tenant_id, client_id),
         ).fetchone()
     return dict(row) if row else None
+
+
+def client_has_active_einvoice(db_rel: str) -> bool:
+    """Kiểm tra sổ DN thuê đã có cấu hình HĐĐT active chưa."""
+    abs_db = client_db_abs(db_rel or '')
+    if not abs_db or not os.path.exists(abs_db):
+        return False
+    try:
+        from db_utils import open_sqlite
+
+        with open_sqlite(abs_db) as conn:
+            from db.init import ensure_invoice_settings_schema
+            ensure_invoice_settings_schema(conn)
+            row = conn.execute("""
+                SELECT 1 FROM invoice_settings
+                WHERE is_active = 1
+                  AND provider_name IS NOT NULL
+                  AND TRIM(provider_name) != ''
+                LIMIT 1
+            """).fetchone()
+            return bool(row)
+    except Exception:
+        return False
+
+
+def list_clients_for_master(firm_tenant_id: str) -> list[dict]:
+    """Danh sách doanh nghiệp thuê DVKT — dùng cho Master cấu hình HĐĐT."""
+    ensure_firm_schema()
+    firm_tenant_id = firm_tenant_id.strip()
+    with get_main_db_connection() as conn:
+        rows = conn.execute("""
+            SELECT client_id, client_name, tax_code, accounting_regime, db_path, created_at
+            FROM firm_clients
+            WHERE firm_tenant_id = ? AND status = 'active'
+            ORDER BY client_name COLLATE NOCASE
+        """, (firm_tenant_id,)).fetchall()
+    clients = [dict(r) for r in rows]
+    for c in clients:
+        c['einvoice_configured'] = client_has_active_einvoice(c.get('db_path'))
+    return clients
 
 
 def user_can_manage_firm_clients(firm_tenant_id: str, firm_user_id: int) -> bool:
@@ -1374,7 +1415,7 @@ def update_firm_client(
                     firm_tenant_id, client_id,
                 ),
             )
-            conn.commit()
+            sqlite_commit(conn, label='firm_tenant')
 
     sqlite_write_retry(_write, label='update_firm_client')
     updated = {**client, 'client_name': client_name, 'tax_code': tax_code, 'address': address,
@@ -1412,7 +1453,7 @@ def delete_firm_client(firm_tenant_id: str, client_id: str, caller_user_id: int)
                 """,
                 (firm_tenant_id, client_id),
             )
-            conn.commit()
+            sqlite_commit(conn, label='firm_tenant')
 
     sqlite_write_retry(_write, label='delete_firm_client')
     return {'success': True, 'client_id': client_id}
@@ -1471,7 +1512,7 @@ def set_client_staff_access(
                         """,
                         (uid, firm_tenant_id, client_id),
                     )
-            conn.commit()
+            sqlite_commit(conn, label='firm_tenant')
 
     sqlite_write_retry(_write, label='set_client_staff_access')
     return {'success': True, 'staff_access': get_client_staff_access(firm_tenant_id, client_id)}
@@ -1526,7 +1567,7 @@ def finalize_firm_login(firm_user: dict) -> str:
                 "UPDATE firm_users SET last_session_id = ?, updated_at = ? WHERE id = ?",
                 (token, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), firm_user['id']),
             )
-            conn.commit()
+            sqlite_commit(conn, label='firm_tenant')
 
     sqlite_write_retry(_write, label='firm_login_session')
 
@@ -1783,7 +1824,7 @@ def add_firm_staff_user(
                 (firm_tenant_id, login_email, password_hash, full_name, firm_role, is_active, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, 1, ?, ?)
             """, (firm_tenant_id, login_email, pw_hash, full_name or login_email, firm_role, now, now))
-            conn.commit()
+            sqlite_commit(conn, label='firm_tenant')
 
     sqlite_write_retry(_write, label='add_firm_staff_user')
     return {'success': True, 'login_email': login_email, 'firm_role': firm_role}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 from typing import Any
+from db_utils import sqlite_commit
 
 
 def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
@@ -167,7 +168,7 @@ def ensure_agent_delivery_schema(conn: sqlite3.Connection, *, commit: bool = Tru
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, 'sme_agent_deliveries')
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='sale_forms')
 
 
 def _next_delivery_no(conn: sqlite3.Connection) -> str:
@@ -238,7 +239,7 @@ def create_agent_delivery(
     from Services.sme.branch_filter import stamp_row_branch
     stamp_row_branch(conn, 'sme_agent_deliveries', did, branch_code=branch_code)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='sale_forms')
     return get_agent_delivery(conn, did)
 
 
@@ -296,7 +297,7 @@ def void_agent_delivery(
         ((doc.get('notes') or '') + f' | {reason}', delivery_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='sale_forms')
     return get_agent_delivery(conn, delivery_id)
 
 

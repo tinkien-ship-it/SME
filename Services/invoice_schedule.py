@@ -13,7 +13,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from db_utils import MAIN_DB_PATH, _normalize_db_path, get_main_db_connection, open_sqlite
+from db_utils import MAIN_DB_PATH, _normalize_db_path, get_main_db_connection, open_sqlite, sqlite_commit
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ def claim_job_run(job_id: str = BATCH_INVOICE_JOB_ID, run_key: str | None = None
         )
         cutoff = (now_vn() - timedelta(days=LOCK_RETENTION_DAYS)).strftime('%Y-%m-%d')
         conn.execute("DELETE FROM scheduler_runs WHERE job_id = ? AND run_key < ?", (job_id, cutoff))
-        conn.commit()
+        sqlite_commit(conn, label='invoice_schedule')
         return True
     except sqlite3.IntegrityError:
         return False
@@ -121,7 +121,7 @@ def finish_job_run(summary: str, job_id: str = BATCH_INVOICE_JOB_ID, run_key: st
             "UPDATE scheduler_runs SET finished_at = ?, summary = ? WHERE job_id = ? AND run_key = ?",
             (now_vn().isoformat(timespec='seconds'), summary[:2000], job_id, key),
         )
-        conn.commit()
+        sqlite_commit(conn, label='invoice_schedule')
     except sqlite3.Error as exc:
         logger.warning('finish_job_run(%s, %s): %s', job_id, key, exc)
     finally:
@@ -270,7 +270,7 @@ def set_schedule_enabled(conn: sqlite3.Connection, enabled: bool) -> dict:
             "UPDATE invoice_settings SET auto_issue_schedule = 0 WHERE provider_name != ?",
             (provider,),
         )
-    conn.commit()
+    sqlite_commit(conn, label='invoice_schedule')
     return {
         'success': True,
         'schedule_enabled': bool(value),

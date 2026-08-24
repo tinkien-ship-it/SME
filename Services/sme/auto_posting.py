@@ -59,7 +59,7 @@ def ensure_auto_posting_schema(conn: sqlite3.Connection, *, commit: bool = True)
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='auto_posting')
 
 
 def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
@@ -849,7 +849,7 @@ def run_sme_automation_for_all_tenants(
     period: int | None = None,
 ) -> dict[str, Any]:
     """Job lịch: chạy kỳ trước cho mọi tenant SME đang active."""
-    from db_utils import get_main_db_connection, get_tenant_db_connection
+    from db_utils import get_main_db_connection, get_tenant_db_connection, sqlite_commit
     from Services.subscription_service import parse_tenant_settings
     from Services.tenant_profile import normalize_accounting_regime, resolve_features
 
@@ -911,7 +911,7 @@ def run_sme_automation_for_all_tenants(
                     conn, tenant_id=tid, fiscal_year=fiscal_year,
                     settings=settings, persist=True,
                 )
-            conn.commit()
+            sqlite_commit(conn, label='auto_posting')
             results.append({
                 'tenant_id': tid,
                 **{k: out[k] for k in out if k != 'depreciation' and k != 'tools'},

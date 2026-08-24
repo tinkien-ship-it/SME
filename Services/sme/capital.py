@@ -7,6 +7,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -45,7 +46,7 @@ def ensure_sme_capital_schema(conn: sqlite3.Connection, *, commit: bool = True) 
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, 'sme_capital_docs')
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='capital')
 
 
 def _next_no(conn: sqlite3.Connection, prefix: str) -> str:
@@ -113,7 +114,7 @@ def contribute_capital(
         (doc_no, date_s, party_name or '', float(amt), eq, cash, entry['id'], notes or '', created_by, _now(), branch),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='capital')
     return get_capital_doc(conn, cur.lastrowid)
 
 
@@ -170,7 +171,7 @@ def declare_dividend(
         (doc_no, date_s, party_name or '', float(amt), eq, pay, entry['id'], notes or '', created_by, _now(), branch),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='capital')
     return get_capital_doc(conn, cur.lastrowid)
 
 
@@ -224,7 +225,7 @@ def pay_dividend(
         ),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='capital')
     out = get_capital_doc(conn, cur.lastrowid)
     out['voucher'] = voucher
     return out
@@ -283,7 +284,7 @@ def distribute_profit(
         (doc_no, date_s, party_name or '', float(amt), eq, dest, entry['id'], notes or '', created_by, _now(), branch),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='capital')
     return get_capital_doc(conn, cur.lastrowid)
 
 
@@ -336,5 +337,5 @@ def void_capital_doc(
         ((doc.get('notes') or '') + f' | {reason}', doc_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='capital')
     return get_capital_doc(conn, doc_id)

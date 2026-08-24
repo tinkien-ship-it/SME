@@ -8,6 +8,7 @@ from typing import Any
 
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
 from Services.sme.vouchers import create_payment, create_receipt
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -101,7 +102,7 @@ def ensure_sme_loans_schema(conn: sqlite3.Connection, *, commit: bool = True) ->
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='loans_deposits')
 
 
 def _next_loan_no(conn: sqlite3.Connection) -> str:
@@ -179,7 +180,7 @@ def disburse_loan(
         ),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='loans_deposits')
     return get_loan(conn, cur.lastrowid)
 
 
@@ -245,7 +246,7 @@ def accrue_loan_interest(
         (loan_id, year, month, date_s, float(interest), entry['id']),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='loans_deposits')
     return {'id': cur.lastrowid, 'amount': float(interest), 'journal_entry_id': entry['id'], 'loan_no': loan['loan_no']}
 
 
@@ -326,7 +327,7 @@ def accrue_period_loan_interest(
             skipped.append(f"{loan.get('loan_no')}: {e}")
     total = sum(float(x.get('amount') or 0) for x in posted)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='loans_deposits')
     return {
         'posted': bool(posted),
         'loans': len(posted),
@@ -392,7 +393,7 @@ def repay_loan(
     if principal_pay >= _money(loan['principal']) - Decimal('1'):
         conn.execute("UPDATE sme_loans SET status = 'closed' WHERE id = ?", (loan_id,))
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='loans_deposits')
     return {'journal_entry_id': entry['id'], 'amount': float(total), 'loan': get_loan(conn, loan_id)}
 
 
@@ -502,7 +503,7 @@ def post_deposit(
         (doc_no, date_s, d, name, float(amt), deposit_account, cash, entry['id'], notes or '', created_by, _now(), branch),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='loans_deposits')
     return dict(conn.execute('SELECT * FROM sme_deposits WHERE id = ?', (cur.lastrowid,)).fetchone())
 
 
@@ -685,7 +686,7 @@ def update_loan(
         ),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='loans_deposits')
     return get_loan(conn, loan_id)
 
 
@@ -763,7 +764,7 @@ def void_loan(
         ((loan.get('notes') or '') + f' | {reason}', loan_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='loans_deposits')
     return get_loan(conn, loan_id)
 
 
@@ -794,6 +795,6 @@ def void_deposit(
         ((doc.get('notes') or '') + f' | {reason}', deposit_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='loans_deposits')
     row2 = conn.execute('SELECT * FROM sme_deposits WHERE id = ?', (deposit_id,)).fetchone()
     return dict(row2) if row2 else doc

@@ -13,6 +13,7 @@ from Services.inventory_stock_helpers import (
 )
 from Services.sme.import_journal import IMPORT_DOCUMENT_TYPE, reverse_journal_entry
 from Services.sme.import_transit import DOC_TYPE_RECEIVE, DOC_TYPE_TAX, DOC_TYPE_TRANSIT
+from db_utils import sqlite_commit
 
 # Bút toán gắn phiếu nhập (G1 / nộp thuế / nhập kho / quyết toán)
 _IMPORT_DOC_TYPES = (
@@ -524,7 +525,7 @@ def void_import(
         deleted['stock_pids'] = sorted(sync_pids)
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='import_ops')
 
     return {
         'id': import_id,

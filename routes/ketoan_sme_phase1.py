@@ -8,7 +8,7 @@ from datetime import datetime
 
 from flask import jsonify, render_template, request, session
 
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit
 
 logger = logging.getLogger(__name__)
 
@@ -374,7 +374,7 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
                 purchase_place=place,
                 branch_code=resolve_branch_for_write(branch_raw),
             )
-            conn.commit()
+            sqlite_commit(conn, label='sme_phase1')
             return jsonify({
                 'success': True,
                 'saved': n,
@@ -534,7 +534,7 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
                     purchase_place=place,
                     branch_code=resolve_branch_for_write(request_branch_filter()),
                 )
-                conn.commit()
+                sqlite_commit(conn, label='sme_phase1')
         except ValueError as e:
             try:
                 conn.rollback()

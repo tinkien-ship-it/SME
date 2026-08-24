@@ -5,7 +5,7 @@ import sqlite3
 from flask import jsonify, render_template, request
 from flask_login import login_required
 
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit
 from Services.hkd_sector import HKD_SECTORS, normalize_nn_code, resolve_hkd_sector
 
 
@@ -244,7 +244,7 @@ def register_products_routes(app):
                 external_barcode=barcode or None,
                 external_barcode1=barcode1,
             )
-            conn.commit()
+            sqlite_commit(conn, label='products')
             return jsonify({
                 "success": True,
                 "product_id": product_id,
@@ -353,7 +353,7 @@ def register_products_routes(app):
                     code, barcode = _assign_service_codes(
                         c, new_id, external_barcode=(data.get('barcode') or '').strip() or None,
                     )
-                    conn.commit()
+                    sqlite_commit(conn, label='products')
                     return jsonify({"success": True, "id": new_id, "product_code": code, "barcode": barcode})
 
                 unit1 = data.get('unit1') or None
@@ -379,7 +379,7 @@ def register_products_routes(app):
                         external_barcode=(data.get('barcode') or '').strip() or None,
                         external_barcode1=(data.get('barcode1') or '').strip() or None,
                     )
-                    conn.commit()
+                    sqlite_commit(conn, label='products')
                     return jsonify({"success": True, "id": new_id, "product_code": code, "barcode": barcode})
 
                 c.execute("""
@@ -398,7 +398,7 @@ def register_products_routes(app):
                     external_barcode=(data.get('barcode') or '').strip() or None,
                     external_barcode1=(data.get('barcode1') or '').strip() or None,
                 )
-                conn.commit()
+                sqlite_commit(conn, label='products')
                 return jsonify({"success": True, "id": new_id, "product_code": code, "barcode": barcode})
 
             # ==================== PUT: CẬP NHẬT ====================
@@ -496,7 +496,7 @@ def register_products_routes(app):
                             external_barcode=(data.get('barcode') or '').strip() or None,
                             external_barcode1=(data.get('barcode1') or '').strip() or None,
                         )
-                conn.commit()
+                sqlite_commit(conn, label='products')
                 return jsonify({"success": True, "id": product_id})
 
             # ==================== DELETE: XÓA SẢN PHẨM ====================
@@ -539,7 +539,7 @@ def register_products_routes(app):
                     new_max = c.fetchone()[0] or 0
                     c.execute("UPDATE sqlite_sequence SET seq = ? WHERE name = 'products'", (new_max,))
 
-                conn.commit()
+                sqlite_commit(conn, label='products')
 
                 from Services.audit_log import write_audit
                 if prod:
@@ -584,7 +584,7 @@ def register_products_routes(app):
                     UPDATE products SET base_price=?, price=?, unit1=?, unit_ratio=?
                     WHERE id=?
                 """, (base_price, price, unit1, unit_ratio, pid))
-            conn.commit()
+            sqlite_commit(conn, label='products')
             return jsonify({"success": True})
         except Exception as e:
             conn.rollback()
@@ -637,7 +637,7 @@ def register_products_routes(app):
 
                 c.execute(sql, tuple(params))
 
-            conn.commit()
+            sqlite_commit(conn, label='products')
             return jsonify({'success': True})
 
 
@@ -793,7 +793,7 @@ def register_products_routes(app):
                 if product_type not in ('service', 'fixed_asset', 'tools'):
                     c.execute("INSERT OR IGNORE INTO inventory (product_id, quantity, avg_cost) VALUES (?, 0, 0)", (product_id,))
 
-            conn.commit()
+            sqlite_commit(conn, label='products')
 
             # Lấy lại dữ liệu sau khi update/insert để trả về client
             c.execute("SELECT * FROM products WHERE id = ?", (product_id,))

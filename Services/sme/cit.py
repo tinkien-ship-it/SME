@@ -8,6 +8,7 @@ from typing import Any
 
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
 from Services.sme.vouchers import create_payment
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -48,7 +49,7 @@ def ensure_sme_cit_schema(conn: sqlite3.Connection, *, commit: bool = True) -> N
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cit')
 
 
 def accrue_cit_provisional(
@@ -132,7 +133,7 @@ def accrue_cit_provisional(
          entry['id'], notes or '', created_by, _now()),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cit')
     return get_cit_provision(conn, year, per)
 
 
@@ -181,7 +182,7 @@ def pay_cit(
         (voucher['id'], prov['id']),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cit')
     out = get_cit_provision(conn, int(fiscal_year), int(period))
     out['voucher'] = voucher
     return out
@@ -322,7 +323,7 @@ def accrue_period_cit(
         commit=False,
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='cit')
     return {
         'posted': True,
         'period': per,

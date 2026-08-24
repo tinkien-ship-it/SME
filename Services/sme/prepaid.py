@@ -13,6 +13,7 @@ from Services.sme.journal_engine import (
     reverse_journal_entry,
 )
 from Services.profit_report_helpers import depreciation_for_month
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 TABLE = 'sme_prepaid_expenses'
@@ -74,7 +75,7 @@ def ensure_prepaid_schema(conn: sqlite3.Connection, *, commit: bool = False) -> 
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, TABLE)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='prepaid')
 
 
 def _next_no(conn: sqlite3.Connection) -> str:
@@ -265,7 +266,7 @@ def create_prepaid(
     rid = int(cur.lastrowid)
     stamp_row_branch(conn, TABLE, rid, branch)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='prepaid')
     return get_prepaid(conn, rid) or {'id': rid}
 
 
@@ -298,7 +299,7 @@ def void_prepaid(
         (int(doc_id),),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='prepaid')
     return get_prepaid(conn, doc_id) or row
 
 

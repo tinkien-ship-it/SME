@@ -9,6 +9,7 @@ from __future__ import annotations
 import sqlite3
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 FX_Q = Decimal('0.0001')
@@ -77,7 +78,7 @@ def ensure_import_payment_schema(conn: sqlite3.Connection, *, commit: bool = Tru
         'ON sme_import_advances(import_id)'
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='import_payment')
 
 
 def normalize_payment_mode(raw, *, import_type: str = 'DOMESTIC') -> str:
@@ -567,7 +568,7 @@ def replace_import_advances(
             'amount_vnd': float(vnd),
         })
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='import_payment')
     return saved
 
 

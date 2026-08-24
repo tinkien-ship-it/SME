@@ -8,16 +8,20 @@ Cơ chế: bảng `accounting_jobs` trong tenant DB làm queue.
 """
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
-import time
 from datetime import datetime
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = 5
-BATCH_SIZE = 20
+BATCH_SIZE = 5  # Giữ batch nhỏ — background worker không giữ khóa SQLite lâu
+
+_SKIP_REASONS = frozenset({
+    'not_sme', 'journal_posting_disabled', 'already_posted',
+    'sale_not_completed', 'return_import_sale',
+})
 
 
 def ensure_accounting_queue_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
@@ -44,7 +48,13 @@ def ensure_accounting_queue_schema(conn: sqlite3.Connection, *, commit: bool = T
         ON accounting_jobs(status, created_at)
     """)
     if commit:
-        conn.commit()
+        from db_utils import begin_immediate, sqlite_write_retry, sqlite_commit
+
+        def _commit_schema():
+            begin_immediate(conn, label='acct_queue_schema')
+            sqlite_commit(conn, label='accounting_queue')
+
+        sqlite_write_retry(_commit_schema, label='acct_queue_schema')
 
 
 def enqueue_accounting_job(
@@ -62,9 +72,40 @@ def enqueue_accounting_job(
     Thêm job kế toán vào queue. Nếu đã có job pending/processing cho sale_id thì bỏ qua.
     Trả về job_id hoặc None nếu đã tồn tại.
     """
-    import json
-
     ensure_accounting_queue_schema(conn, commit=False)
+
+    def _enqueue():
+        from db_utils import begin_immediate
+
+        begin_immediate(conn, label='enqueue_accounting_job')
+
+        existing = conn.execute(
+            "SELECT id FROM accounting_jobs WHERE sale_id = ? AND job_type = ? AND status IN ('pending', 'processing')",
+            (sale_id, job_type),
+        ).fetchone()
+        if existing:
+            if replace_existing:
+                conn.execute(
+                    "UPDATE accounting_jobs SET status = 'cancelled' WHERE id = ?",
+                    (existing[0] if not isinstance(existing, sqlite3.Row) else existing['id'],),
+                )
+            else:
+                return None
+
+        features_json = json.dumps(features) if features else None
+        cursor = conn.execute(
+            """
+            INSERT INTO accounting_jobs (sale_id, job_type, status, accounting_regime, created_by, replace_existing, features_json)
+            VALUES (?, ?, 'pending', ?, ?, ?, ?)
+            """,
+            (sale_id, job_type, accounting_regime, created_by, 1 if replace_existing else 0, features_json),
+        )
+        sqlite_commit(conn, label='accounting_queue')
+        return cursor.lastrowid
+
+    if commit:
+        from db_utils import sqlite_write_retry
+        return sqlite_write_retry(_enqueue, label='enqueue_accounting_job')
 
     existing = conn.execute(
         "SELECT id FROM accounting_jobs WHERE sale_id = ? AND job_type = ? AND status IN ('pending', 'processing')",
@@ -87,10 +128,7 @@ def enqueue_accounting_job(
         """,
         (sale_id, job_type, accounting_regime, created_by, 1 if replace_existing else 0, features_json),
     )
-    job_id = cursor.lastrowid
-    if commit:
-        conn.commit()
-    return job_id
+    return cursor.lastrowid
 
 
 def get_sale_accounting_status(conn: sqlite3.Connection, sale_id: int) -> dict:
@@ -118,12 +156,56 @@ def get_sale_accounting_status(conn: sqlite3.Connection, sale_id: int) -> dict:
     }
 
 
+def _process_one_job(conn: sqlite3.Connection, job: sqlite3.Row) -> str:
+    """Xử lý 1 job trong **một** transaction (BEGIN IMMEDIATE → ghi sổ → cập nhật status → COMMIT)."""
+    from db_utils import begin_immediate, rollback_quietly
+    from Services.sme.sale_journal import sync_sale_journals
+
+    job_id = job['id']
+    sale_id = job['sale_id']
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    begin_immediate(conn, label='accounting_job')
+    conn.execute(
+        "UPDATE accounting_jobs SET status = 'processing', started_at = ?, attempts = attempts + 1 WHERE id = ?",
+        (now, job_id),
+    )
+
+    features = None
+    if job['features_json']:
+        features = json.loads(job['features_json'])
+
+    result = sync_sale_journals(
+        conn,
+        sale_id,
+        accounting_regime=job['accounting_regime'],
+        created_by=job['created_by'],
+        replace_existing=bool(job['replace_existing']),
+        features=features,
+    )
+
+    if result.get('posted') or result.get('reason') in _SKIP_REASONS:
+        conn.execute(
+            "UPDATE accounting_jobs SET status = 'completed', completed_at = ?, last_error = NULL WHERE id = ?",
+            (now, job_id),
+        )
+        sqlite_commit(conn, label='accounting_queue')
+        return 'processed'
+
+    conn.execute(
+        "UPDATE accounting_jobs SET status = 'retry', last_error = ? WHERE id = ?",
+        (str(result)[:500], job_id),
+    )
+    sqlite_commit(conn, label='accounting_queue')
+    return 'skipped'
+
+
 def process_accounting_jobs(conn: sqlite3.Connection, *, batch_size: int = BATCH_SIZE) -> dict:
     """
     Xử lý batch jobs pending. Gọi từ background worker.
-    Trả về { processed, failed, skipped }.
+    Mỗi job = 1 transaction ngắn (không commit rời từng bước).
     """
-    import json
+    from db_utils import _is_locked_error, rollback_quietly, sqlite_write_retry
 
     ensure_accounting_queue_schema(conn, commit=False)
     conn.row_factory = sqlite3.Row
@@ -147,64 +229,35 @@ def process_accounting_jobs(conn: sqlite3.Connection, *, batch_size: int = BATCH
         job_id = job['id']
         sale_id = job['sale_id']
 
-        conn.execute(
-            "UPDATE accounting_jobs SET status = 'processing', started_at = ?, attempts = attempts + 1 WHERE id = ?",
-            (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), job_id),
-        )
-        conn.commit()
-
         try:
-            from Services.sme.sale_journal import sync_sale_journals
+            def _run():
+                return _process_one_job(conn, job)
 
-            features = None
-            if job['features_json']:
-                features = json.loads(job['features_json'])
-
-            result = sync_sale_journals(
-                conn,
-                sale_id,
-                accounting_regime=job['accounting_regime'],
-                created_by=job['created_by'],
-                replace_existing=bool(job['replace_existing']),
-                features=features,
-            )
-            conn.commit()
-
-            if result.get('posted') or result.get('reason') in (
-                'not_sme', 'journal_posting_disabled', 'already_posted',
-                'sale_not_completed', 'return_import_sale',
-            ):
-                conn.execute(
-                    "UPDATE accounting_jobs SET status = 'completed', completed_at = ? WHERE id = ?",
-                    (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), job_id),
-                )
-                conn.commit()
+            outcome = sqlite_write_retry(_run, label=f'accounting_job_{job_id}')
+            if outcome == 'processed':
                 processed += 1
             else:
-                conn.execute(
-                    "UPDATE accounting_jobs SET status = 'retry', last_error = ? WHERE id = ?",
-                    (str(result), job_id),
-                )
-                conn.commit()
                 skipped += 1
-
         except Exception as e:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
+            rollback_quietly(conn)
             error_msg = str(e)[:500]
             attempts = (job['attempts'] or 0) + 1
             new_status = 'failed' if attempts >= MAX_ATTEMPTS else 'retry'
             try:
-                conn.execute(
-                    "UPDATE accounting_jobs SET status = ?, last_error = ? WHERE id = ?",
-                    (new_status, error_msg, job_id),
-                )
-                conn.commit()
+                def _fail():
+                    from db_utils import begin_immediate
+                    begin_immediate(conn, label='accounting_job_fail')
+                    conn.execute(
+                        "UPDATE accounting_jobs SET status = ?, last_error = ?, attempts = ? WHERE id = ?",
+                        (new_status, error_msg, attempts, job_id),
+                    )
+                    sqlite_commit(conn, label='accounting_queue')
+
+                sqlite_write_retry(_fail, label=f'accounting_job_fail_{job_id}')
             except Exception:
                 pass
             failed += 1
-            logger.warning('accounting_job #%d sale=%d failed: %s', job_id, sale_id, error_msg)
+            if not _is_locked_error(e):
+                logger.warning('accounting_job #%d sale=%d failed: %s', job_id, sale_id, error_msg)
 
     return {'processed': processed, 'failed': failed, 'skipped': skipped}

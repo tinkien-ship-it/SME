@@ -13,6 +13,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from Services.sme.journal_engine import ensure_sme_journal_ready, post_journal_entry, reverse_journal_entry
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 FX_Q = Decimal('0.0001')
@@ -133,7 +134,7 @@ def ensure_sme_lc_schema(conn: sqlite3.Connection, *, commit: bool = True) -> No
         'CREATE INDEX IF NOT EXISTS idx_sme_lc_settle_lc ON sme_lc_settlements(lc_id)'
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='letter_of_credit')
 
 
 def get_lc_balance(conn: sqlite3.Connection, lc_id: int) -> dict[str, Any]:
@@ -267,7 +268,7 @@ def refresh_lc_status_from_balance(
             (new_status, _now(), lc_id),
         )
         if commit:
-            conn.commit()
+            sqlite_commit(conn, label='letter_of_credit')
     return new_status
 
 
@@ -628,7 +629,7 @@ def open_letter_of_credit(
     except sqlite3.OperationalError:
         pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='letter_of_credit')
     return get_lc(conn, lc_id)
 
 
@@ -702,7 +703,7 @@ def open_export_letter_of_credit(
     )
     lc_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='letter_of_credit')
     return get_lc(conn, int(lc_id))
 
 
@@ -856,5 +857,5 @@ def void_lc(
         except sqlite3.OperationalError:
             pass
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='letter_of_credit')
     return {'id': lc_id, 'status': 'void', 'reversal': rev}

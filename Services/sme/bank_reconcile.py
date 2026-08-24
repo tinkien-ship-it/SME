@@ -8,6 +8,7 @@ from typing import Any
 
 from Services.sme.cash_books import cash_account_book
 from Services.sme.journal_engine import ensure_sme_journal_ready
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -86,7 +87,7 @@ def ensure_sme_bank_reconcile_schema(conn: sqlite3.Connection, *, commit: bool =
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, 'sme_bank_reconciliations')
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bank_reconcile')
 
 
 def book_bank_balance(
@@ -266,7 +267,7 @@ def create_reconciliation(
     from Services.sme.branch_filter import stamp_row_branch
     stamp_row_branch(conn, 'sme_bank_reconciliations', rid, br)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bank_reconcile')
     return get_reconciliation(conn, rid)
 
 
@@ -329,7 +330,7 @@ def match_lines(
     )
     _refresh_totals(conn, reconcile_id)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bank_reconcile')
     return get_reconciliation(conn, reconcile_id)
 
 
@@ -363,7 +364,7 @@ def unmatch(
     conn.execute('DELETE FROM sme_bank_reconcile_matches WHERE id = ?', (match_id,))
     _refresh_totals(conn, rid)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bank_reconcile')
     return get_reconciliation(conn, rid)
 
 
@@ -420,7 +421,7 @@ def close_reconciliation(
         (_now(), reconcile_id),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bank_reconcile')
     return get_reconciliation(conn, reconcile_id)
 
 
@@ -580,7 +581,7 @@ def create_receipt_from_bank_txn(
         pass
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='bank_reconcile')
     return {
         'voucher': voucher,
         'bank_txn_id': int(bank_txn_id),

@@ -17,6 +17,8 @@ from db_utils import (
     get_main_db_connection,
     open_sqlite,
     sqlite_write_retry,
+    sqlite_commit,
+    begin_immediate,
 )
 
 from Services.firm_tenant import is_firm_tenant  # noqa: E402 — dùng trong middleware onboarding
@@ -217,11 +219,11 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
         from db.init import ensure_tenant_db_schema
         ensure_tenant_db_schema(conn_tenant)
 
-        conn_tenant.commit()
+        sqlite_commit(conn_tenant, label='init_tenant_schema')
 
         from Services.audit_log import ensure_audit_table
         ensure_audit_table(conn_tenant)
-        conn_tenant.commit()
+        sqlite_commit(conn_tenant, label='init_tenant_audit')
     except Exception as e:
         conn_tenant.rollback()
         if os.path.exists(tenant_db_path):
@@ -269,7 +271,7 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
                 (username, email, tenant_id, twofa_type, is_active, business_type)
                 VALUES (?, ?, ?, 1, 1, ?)
             """, (support_username, '', tenant_id, business_line))
-            conn_registry.commit()
+            sqlite_commit(conn_registry, label='init_tenant_registry')
 
     try:
         sqlite_write_retry(_write_registry, label='init_tenant_registry')
@@ -398,7 +400,7 @@ def add_user_to_mapping(username: str, email: str, tenant_id: str):
                     (username, email, tenant_id)
                     VALUES (?, ?, ?)
                 """, (username.strip(), email.strip() if email else None, tenant_id))
-                conn.commit()
+                sqlite_commit(conn, label='add_user_to_mapping')
 
         sqlite_write_retry(_write, label='add_user_to_mapping', retries=4)
         print(f"DEBUG: Đã thêm/cập nhật mapping → username='{username}' | email='{email}' | tenant='{tenant_id}'")
@@ -434,7 +436,7 @@ def update_user_email_in_mapping(old_email: str, new_email: str, username: str, 
                         INSERT INTO user_tenant_mapping (username, email, tenant_id)
                         VALUES (?, ?, ?)
                     """, (username.strip(), new_email.strip(), tenant_id))
-                conn.commit()
+                sqlite_commit(conn, label='update_user_email_mapping')
 
         sqlite_write_retry(_write, label='update_user_email_in_mapping')
         print(f"DEBUG: Cập nhật email mapping thành công → username='{username}' | email='{new_email}' | tenant={tenant_id}")
@@ -468,7 +470,7 @@ def init_tenant(app):
     @app.context_processor
     def inject_tenant():
         from flask import session
-        from auth import build_template_user, user_can_access_tenant_settings, is_master_configuring_firm_tenant
+        from auth import build_template_user, user_can_access_tenant_settings, is_master_configuring_firm_tenant, is_master_configuring_firm_client
         from Services.tenant_profile import is_sme_regime
         from Services.hkd_menu import user_can_access_hub, user_can_see_sme_nav
         profile = getattr(g, 'tenant_profile', None) or {}
@@ -487,6 +489,8 @@ def init_tenant(app):
             'tenant_profile': profile,
             'master_viewing_tenant': session.get('master_viewing_tenant'),
             'master_viewing_firm': is_master_configuring_firm_tenant(),
+            'master_viewing_firm_client': is_master_configuring_firm_client(),
+            'master_firm_client_name': session.get('master_viewing_firm_client_name') or '',
             'firm_viewing_client': is_firm_viewing_client(),
             'firm_viewing_own_books': is_firm_viewing_own_books(),
             'firm_viewing_accounting': is_firm_using_accounting(),
@@ -614,7 +618,21 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
                     }), 403
                 return redirect(url_for('firm_portal'))
 
-        from auth import is_master_configuring_firm_tenant, MASTER_FIRM_SETTINGS_ENDPOINTS
+        from auth import (
+            is_master_configuring_firm_tenant,
+            is_master_configuring_firm_client,
+            MASTER_FIRM_SETTINGS_ENDPOINTS,
+            MASTER_FIRM_CLIENT_EINVOICE_ENDPOINTS,
+        )
+        if is_master_configuring_firm_client():
+            ep = request.endpoint or ''
+            if ep not in MASTER_FIRM_CLIENT_EINVOICE_ENDPOINTS and not path.startswith('/static/'):
+                if request.path.startswith('/api/'):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Chế độ cấu hình HĐĐT DN thuê — chỉ được dùng trang Cài đặt (HĐĐT & MST)',
+                    }), 403
+                return redirect(url_for('settings_page'))
         if is_master_configuring_firm_tenant():
             ep = request.endpoint or ''
             if ep not in MASTER_FIRM_SETTINGS_ENDPOINTS and not path.startswith('/static/'):

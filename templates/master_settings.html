@@ -216,6 +216,39 @@
                     </form>
                 </div>
             </div>
+
+            <div class="card master-card mt-4">
+                <div class="card-header master-header py-3">
+                    <h5 class="mb-0"><i class="fas fa-mobile-screen-button me-2"></i>Google Authenticator (Master)</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small mb-3">
+                        Master dùng <strong>TOTP</strong> khi đăng nhập từ <strong>thiết bị mới</strong>.
+                        Cùng máy (Chrome / Edge / Firefox) trong khoảng 30 ngày sẽ không hỏi lại mã.
+                        Tenant vẫn dùng OTP email/SMS như cũ.
+                    </p>
+                    <div id="totpStatusBox" class="alert alert-secondary small mb-3">Đang kiểm tra trạng thái…</div>
+                    <div id="totpSetupBox" class="d-none">
+                        <div class="text-center mb-3">
+                            <img id="totpQrImg" alt="QR TOTP" class="border rounded p-2 bg-white" style="max-width:200px">
+                            <div class="small text-muted mt-2">Khóa thủ công</div>
+                            <code id="totpSecretText" class="small"></code>
+                        </div>
+                        <div class="input-group mb-3" style="max-width:320px;margin:0 auto">
+                            <input type="text" id="totpConfirmCode" class="form-control text-center" maxlength="6" placeholder="Mã 6 số">
+                            <button type="button" class="btn btn-primary" onclick="confirmMasterTotp()">Xác nhận</button>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="setupMasterTotp()">
+                            <i class="fas fa-qrcode me-1"></i>Thiết lập / Đổi Authenticator
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="disableMasterTotp()">
+                            Tắt Authenticator
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="tab-pane fade" id="history-content" role="tabpanel">
@@ -622,7 +655,10 @@ async function loadTenants() {
                         </button>
                     </td>
                     <td class="text-end">
-                        <button class="btn btn-sm ${isFirm ? 'btn-success' : 'btn-primary'} me-1" onclick="enterTenant('${t.tenant_id}')" title="${isFirm ? 'Cài đặt HĐĐT & thông tin DVKT' : 'Vào tenant test'}">
+                        ${isFirm ? `<button class="btn btn-sm btn-danger me-1" onclick="openFirmClientEinvoice('${t.tenant_id}')" title="Cấu hình HĐĐT doanh nghiệp thuê (chỉ Master)">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </button>` : ''}
+                        <button class="btn btn-sm ${isFirm ? 'btn-success' : 'btn-primary'} me-1" onclick="enterTenant('${t.tenant_id}')" title="${isFirm ? 'Cài đặt đơn vị DVKT (không phải HĐĐT DN thuê)' : 'Vào tenant test'}">
                             <i class="fas ${isFirm ? 'fa-cog' : 'fa-sign-in-alt'}"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-warning me-1" onclick="fetchAndEditTenant('${t.tenant_id}')">
@@ -911,6 +947,87 @@ async function enterTenant(tenantId) {
             window.location.href = data.redirect;
         } else {
             Swal.fire('Lỗi', data.error || `Không vào được tenant (HTTP ${res.status})`, 'error');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không kết nối server: ' + (e.message || e), 'error');
+    }
+}
+
+async function openFirmClientEinvoice(firmTenantId) {
+    try {
+        const res = await fetch(`/api/master/firm/${encodeURIComponent(firmTenantId)}/clients`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' },
+        });
+        const data = await res.json();
+        if (!data.success) {
+            Swal.fire('Lỗi', data.error || 'Không tải được danh sách DN thuê', 'error');
+            return;
+        }
+        const clients = data.clients || [];
+        if (!clients.length) {
+            Swal.fire('Chưa có DN thuê', 'Đơn vị DVKT này chưa có doanh nghiệp thuê dịch vụ trên cổng /firm.', 'info');
+            return;
+        }
+        const rows = clients.map(c => {
+            const badge = c.einvoice_configured
+                ? '<span class="badge bg-success">Đã cấu HĐĐT</span>'
+                : '<span class="badge bg-secondary">Chưa cấu HĐĐT</span>';
+            const mst = c.tax_code ? `MST: ${c.tax_code}` : 'Chưa có MST';
+            return `<tr>
+                <td><strong>${c.client_name || c.client_id}</strong><br><small class="text-muted">${mst}</small></td>
+                <td class="text-center">${badge}</td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-danger" data-firm="${firmTenantId}" data-client="${c.client_id}">
+                        <i class="fas fa-cog me-1"></i>Cấu hình
+                    </button>
+                </td>
+            </tr>`;
+        }).join('');
+        const html = `
+            <div class="text-start small text-muted mb-2">
+                Chỉ <strong>tài khoản Master</strong> được cấu hình Hóa đơn điện tử. Đơn vị DVKT không có quyền này.
+            </div>
+            <div class="table-responsive" style="max-height:360px;overflow:auto">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light"><tr><th>Doanh nghiệp thuê</th><th class="text-center">HĐĐT</th><th></th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        await Swal.fire({
+            title: `HĐĐT — DN thuê (${firmTenantId})`,
+            html,
+            width: 720,
+            showConfirmButton: false,
+            showCloseButton: true,
+            didOpen: () => {
+                const popup = Swal.getHtmlContainer();
+                popup.querySelectorAll('button[data-client]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const fid = btn.getAttribute('data-firm');
+                        const cid = btn.getAttribute('data-client');
+                        Swal.close();
+                        await enterFirmClientEinvoice(fid, cid);
+                    });
+                });
+            },
+        });
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không kết nối server: ' + (e.message || e), 'error');
+    }
+}
+
+async function enterFirmClientEinvoice(firmTenantId, clientId) {
+    try {
+        const res = await fetch(
+            `/api/master/firm/${encodeURIComponent(firmTenantId)}/enter_client/${encodeURIComponent(clientId)}`,
+            { method: 'POST', credentials: 'same-origin', headers: { 'Accept': 'application/json' } }
+        );
+        const data = await res.json();
+        if (data.success && data.redirect) {
+            window.location.href = data.redirect;
+        } else {
+            Swal.fire('Lỗi', data.error || 'Không mở được cấu hình HĐĐT', 'error');
         }
     } catch (e) {
         Swal.fire('Lỗi', 'Không kết nối server: ' + (e.message || e), 'error');
@@ -1644,6 +1761,106 @@ async function saveTaxRate(e) {
     }
 }
 
+/** --- GOOGLE AUTHENTICATOR (MASTER) --- **/
+async function loadMasterTotpStatus() {
+    const box = document.getElementById('totpStatusBox');
+    if (!box) return;
+    try {
+        const res = await fetch('/api/master/totp/status');
+        const data = await res.json();
+        if (!data.success) {
+            box.className = 'alert alert-warning small mb-3';
+            box.textContent = data.error || 'Không đọc được trạng thái TOTP';
+            return;
+        }
+        const days = data.trust_days || 30;
+        if (data.configured) {
+            box.className = 'alert alert-success small mb-3';
+            box.innerHTML = `<i class="fas fa-check-circle me-1"></i>Authenticator đã kích hoạt`
+                + (data.confirmed_at ? ` (từ ${data.confirmed_at})` : '')
+                + `. Thiết bị tin cậy trong <strong>${days} ngày</strong>.`;
+        } else {
+            box.className = 'alert alert-warning small mb-3';
+            box.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>Chưa gắn Authenticator — lần đăng nhập thiết bị mới sẽ yêu cầu thiết lập QR.`;
+        }
+    } catch (e) {
+        box.className = 'alert alert-danger small mb-3';
+        box.textContent = 'Lỗi kết nối TOTP';
+    }
+}
+
+async function setupMasterTotp() {
+    try {
+        const res = await fetch('/api/master/totp/setup', { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) {
+            Swal.fire('Lỗi', data.error || 'Không tạo được mã', 'error');
+            return;
+        }
+        document.getElementById('totpSetupBox').classList.remove('d-none');
+        document.getElementById('totpQrImg').src = data.qr_data_url;
+        document.getElementById('totpSecretText').textContent = data.secret;
+        document.getElementById('totpConfirmCode').value = '';
+        document.getElementById('totpConfirmCode').focus();
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không kết nối server', 'error');
+    }
+}
+
+async function confirmMasterTotp() {
+    const code = (document.getElementById('totpConfirmCode').value || '').trim();
+    if (!code) {
+        Swal.fire('Thiếu mã', 'Nhập mã 6 số từ Authenticator', 'warning');
+        return;
+    }
+    try {
+        const res = await fetch('/api/master/totp/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if (!data.success) {
+            Swal.fire('Lỗi', data.error || 'Mã không đúng', 'error');
+            return;
+        }
+        document.getElementById('totpSetupBox').classList.add('d-none');
+        await loadMasterTotpStatus();
+        Swal.fire('Thành công', data.message || 'Đã bật Authenticator', 'success');
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không kết nối server', 'error');
+    }
+}
+
+async function disableMasterTotp() {
+    const { value: code } = await Swal.fire({
+        title: 'Tắt Authenticator?',
+        input: 'text',
+        inputLabel: 'Nhập mã Authenticator hiện tại',
+        inputAttributes: { maxlength: 6 },
+        showCancelButton: true,
+        confirmButtonText: 'Tắt'
+    });
+    if (!code) return;
+    try {
+        const res = await fetch('/api/master/totp/disable', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if (!data.success) {
+            Swal.fire('Lỗi', data.error || 'Không tắt được', 'error');
+            return;
+        }
+        document.getElementById('totpSetupBox').classList.add('d-none');
+        await loadMasterTotpStatus();
+        Swal.fire('Đã tắt', data.message || '', 'success');
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không kết nối server', 'error');
+    }
+}
+
 /** --- KHỞI TẠO --- **/
 document.addEventListener('DOMContentLoaded', () => {
     loadFirmPackages();
@@ -1655,9 +1872,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const authTab = document.getElementById('auth-tab');
     if (authTab) {
-        authTab.addEventListener('shown.bs.tab', () => loadAuthSettings());
+        authTab.addEventListener('shown.bs.tab', () => {
+            loadAuthSettings();
+            loadMasterTotpStatus();
+        });
         if (authTab.classList.contains('active')) {
             loadAuthSettings();
+            loadMasterTotpStatus();
         }
     }
 });

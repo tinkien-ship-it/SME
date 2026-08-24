@@ -1,7 +1,7 @@
 """Đọc mã vạch cân / cấu hình cân điện tử cho POS."""
 import re
 
-from db_utils import get_db_connection
+from db_utils import get_db_connection, sqlite_commit
 from helpers import get_setting
 
 WEIGHT_UNIT_ALIASES = {'kg', 'kilogram', 'kilograms', 'g', 'gram', 'grams', 'gr'}
@@ -31,7 +31,7 @@ def save_scale_settings(data):
     try:
         for key, val in mapping.items():
             conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, val))
-        conn.commit()
+        sqlite_commit(conn, label='scale_service')
     finally:
         conn.close()
     return mapping

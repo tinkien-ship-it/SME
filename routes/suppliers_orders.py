@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import jsonify, render_template, request
 
 from auth import admin_or_master_required, login_required
-from db_utils import MAIN_DB_PATH, get_db_connection, open_sqlite, sqlite_write_retry
+from db_utils import MAIN_DB_PATH, get_db_connection, open_sqlite, sqlite_write_retry, sqlite_commit
 
 
 def register_suppliers_orders_routes(app):
@@ -72,7 +72,7 @@ def register_suppliers_orders_routes(app):
                 """, (default_name, tax_code))
 
                 new_id = c.lastrowid
-                conn.commit()
+                sqlite_commit(conn, label='suppliers_orders')
 
                 # Lấy lại thông tin vừa tạo
                 c.execute("""
@@ -139,7 +139,7 @@ def register_suppliers_orders_routes(app):
                 code = data.get('code', '').strip() or f"NCC{count + 1:06d}"
                 c.execute("INSERT INTO suppliers (code, name, phone, email, address, note, tax_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
                           (code, name, data.get('phone',''), data.get('email',''), data.get('address',''), data.get('note',''), data.get('tax_code','')))
-                conn.commit()
+                sqlite_commit(conn, label='suppliers_orders')
                 return jsonify({"success": True, "code": code})
             if request.method in ['PUT', 'DELETE']:
                 id_ = data.get('id')
@@ -149,7 +149,7 @@ def register_suppliers_orders_routes(app):
                               (data.get('code',''), data.get('name',''), data.get('phone',''), data.get('email',''), data.get('address',''), data.get('note',''), data.get('tax_code',''), id_))
                 else:
                     c.execute("DELETE FROM suppliers WHERE id=?", (id_,))
-                conn.commit()
+                sqlite_commit(conn, label='suppliers_orders')
                 return jsonify({"success": True})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -202,7 +202,7 @@ def register_suppliers_orders_routes(app):
                 """, (code, name, tax_code, address, phone))
                 supplier_id = c.lastrowid
 
-            conn.commit()
+            sqlite_commit(conn, label='suppliers_orders')
             return jsonify({"success": True, "supplier_id": supplier_id})
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
@@ -238,7 +238,7 @@ def register_suppliers_orders_routes(app):
                     errors.append({"item": item, "error": "Mã NCC hoặc trường UNIQUE đã tồn tại"})
                 except Exception as e:
                     errors.append({"item": item, "error": str(e)})
-            conn.commit()
+            sqlite_commit(conn, label='suppliers_orders')
             return jsonify({"success": True, "count": imported_count, "errors": errors})
         except Exception as e:
             conn.rollback()
@@ -286,7 +286,7 @@ def register_suppliers_orders_routes(app):
 
             try:
                 c.execute(sql, params)
-                conn.commit()
+                sqlite_commit(conn, label='suppliers_orders')
                 return jsonify({"success": True, "id": c.lastrowid}), 201
             except Exception as e:
                 conn.rollback()
@@ -316,7 +316,7 @@ def register_suppliers_orders_routes(app):
 
             try:
                 c.execute(sql, params)
-                conn.commit()
+                sqlite_commit(conn, label='suppliers_orders')
                 return jsonify({"success": True}), 200
             except Exception as e:
                 conn.rollback()
@@ -407,7 +407,7 @@ def register_suppliers_orders_routes(app):
             # 3. Cập nhật cột total_amount (theo tên cột CSDL của bạn) vào bảng sale
             c.execute("UPDATE sale SET total_amount=? WHERE id=?", (grand_total, order_id))
 
-            conn.commit()
+            sqlite_commit(conn, label='suppliers_orders')
             return jsonify({"success": True, "total_amount": grand_total}), 200
 
         except Exception as e:
@@ -427,7 +427,7 @@ def register_suppliers_orders_routes(app):
             INSERT INTO orders (customer_name, customer_phone, note, total, status)
             VALUES (?, ?, ?, 0, 'pending')
         """, (data['customer_name'], data.get('customer_phone'), data.get('note')))
-        conn.commit()
+        sqlite_commit(conn, label='suppliers_orders')
         conn.close()
         return jsonify({'success': True})
 
@@ -501,7 +501,7 @@ def register_suppliers_orders_routes(app):
                     c = conn.cursor()
                     c.execute("DELETE FROM sale WHERE id = ?", (id,))
                     deleted['n'] = c.rowcount
-                    conn.commit()
+                    sqlite_commit(conn, label='suppliers_orders')
 
             sqlite_write_retry(_write, label='delete_order')
             if deleted['n'] == 0:
@@ -537,7 +537,7 @@ def register_suppliers_orders_routes(app):
                         VALUES (?, ?, DATE('now'), 0, 'Nháp')
                     """, (None, customer_name))
                     new_id['v'] = c.lastrowid
-                    conn.commit()
+                    sqlite_commit(conn, label='suppliers_orders')
 
             sqlite_write_retry(_write, label='upsert_order')
             return jsonify({"success": True, "id": new_id['v']})
@@ -560,7 +560,7 @@ def register_suppliers_orders_routes(app):
             SET customer_name=?, customer_phone=?, note=?
             WHERE id=?
         """, (data['customer_name'], data.get('customer_phone'), data.get('note'), data['id']))
-        conn.commit()
+        sqlite_commit(conn, label='suppliers_orders')
         conn.close()
         return jsonify({'success': True})
 
@@ -570,7 +570,7 @@ def register_suppliers_orders_routes(app):
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE orders SET invoice_number=? WHERE id=?", (data['invoice_number'], data['id']))
-        conn.commit()
+        sqlite_commit(conn, label='suppliers_orders')
         conn.close()
         return jsonify({'success': True})
 
@@ -602,7 +602,7 @@ def register_suppliers_orders_routes(app):
             if c.rowcount == 0:
                  return jsonify({"success": False, "error": "Không tìm thấy đơn hàng để cập nhật"}), 404
 
-            conn.commit()
+            sqlite_commit(conn, label='suppliers_orders')
             return jsonify({"success": True, "id": order_id}), 200
         except Exception as e:
             conn.rollback()

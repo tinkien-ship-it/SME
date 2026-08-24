@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
+from db_utils import sqlite_commit
 from Services.sme.export_payment import ensure_export_sale_schema, _money, _fx
 from Services.sme.journal_engine import (
     ensure_sme_journal_ready,
@@ -314,7 +315,7 @@ def settle_export_ar(
         )
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='export_settle')
     return {
         'success': True,
         'journal_entry_id': entry['id'],
@@ -438,7 +439,7 @@ def create_doc_discount(
             (disc_id, 'doc_discount', sale_id),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='export_settle')
     return {
         'success': True,
         'id': disc_id,
@@ -557,7 +558,7 @@ def settle_doc_discount(
             (entry['id'], int(s['id'])),
         )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='export_settle')
     return {'success': True, 'journal_entry_id': entry['id'], 'fx_diff': float(fx)}
 
 
@@ -656,7 +657,7 @@ def post_export_cost(
         ),
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='export_settle')
     return {
         'success': True,
         'journal_entry_id': entry['id'],

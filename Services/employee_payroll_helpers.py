@@ -1,3 +1,4 @@
+from db_utils import sqlite_commit
 """Cột phụ cấp / thưởng mặc định — đồng bộ mẫu 05-LĐTL in."""
 
 # Bộ phận → TK chi phí (PA A hạch toán lương + BH DN)
@@ -47,7 +48,7 @@ def ensure_employee_allowance_columns(conn, commit=False):
         'department': "TEXT DEFAULT 'ADMIN'",
     })
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='employee_payroll_helpers')
 
 
 def ensure_salary_detail_allowance_columns(conn, commit=False):
@@ -58,14 +59,14 @@ def ensure_salary_detail_allowance_columns(conn, commit=False):
         'expense_account': 'TEXT',
     })
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='employee_payroll_helpers')
 
 
 def ensure_payroll_schema(conn, commit=False):
     ensure_employee_allowance_columns(conn, commit=False)
     ensure_salary_detail_allowance_columns(conn, commit=False)
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='employee_payroll_helpers')
 
 
 def normalize_department(raw) -> str:

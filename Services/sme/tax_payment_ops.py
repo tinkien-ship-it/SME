@@ -17,6 +17,7 @@ import sqlite3
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
+from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 
@@ -122,7 +123,7 @@ def ensure_tax_payment_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         """
     )
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='tax_payment_ops')
 
 
 def _paid_map(
@@ -463,7 +464,7 @@ def pay_selected_taxes(
         _sync_export_tax_flags(conn, sale_id, voucher)
 
     if commit:
-        conn.commit()
+        sqlite_commit(conn, label='tax_payment_ops')
 
     refreshed = (
         list_import_tax_obligations(conn, source_id)
