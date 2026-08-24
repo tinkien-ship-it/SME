@@ -43,6 +43,10 @@ _SQLITE_MASTER_EXISTS = re.compile(
     r"SELECT\s+1\s+FROM\s+sqlite_master\s+WHERE\s+type\s*=\s*['\"]table['\"]\s+AND\s+name\s*=\s*\?\s+LIMIT\s+1",
     re.IGNORECASE,
 )
+_SQLITE_MASTER_EXISTS_NO_LIMIT = re.compile(
+    r"SELECT\s+1\s+FROM\s+sqlite_master\s+WHERE\s+type\s*=\s*['\"]table['\"]\s+AND\s+name\s*=\s*['\"]([^'\"]+)['\"]",
+    re.IGNORECASE,
+)
 _SQLITE_MASTER_LIST = re.compile(
     r"SELECT\s+name\s+FROM\s+sqlite_master\s+WHERE\s+type\s*=\s*['\"]table['\"]"
     r"(?:\s+AND\s+name\s+NOT\s+LIKE\s+['\"]sqlite_%['\"])?",
@@ -101,8 +105,13 @@ def _quote_ident(name: str) -> str:
     return f'"{n}"'
 
 
+def _quote_literal(value: str) -> str:
+    v = str(value or '').replace("'", "''")
+    return f"'{v}'"
+
+
 def _pragma_table_info_sql(table: str, schema: str) -> str:
-    sch = _quote_ident(schema)
+    sch = _quote_literal(schema)
     tbl = _quote_ident(table)
     return f"""
         SELECT
@@ -180,13 +189,21 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
 
     # sqlite_master → information_schema
     if _SQLITE_MASTER_EXISTS.search(text):
-        sch = _quote_ident(schema)
+        sch = _quote_literal(schema)
         return (
             f'SELECT 1 FROM information_schema.tables '
             f'WHERE table_schema = {sch} AND table_name = %s LIMIT 1'
         )
+    m = _SQLITE_MASTER_EXISTS_NO_LIMIT.search(text)
+    if m:
+        sch = _quote_literal(schema)
+        table_name = _quote_literal(m.group(1))
+        return (
+            f'SELECT 1 FROM information_schema.tables '
+            f'WHERE table_schema = {sch} AND table_name = {table_name}'
+        )
     if _SQLITE_MASTER_LIST.search(text):
-        sch = _quote_ident(schema)
+        sch = _quote_literal(schema)
         return (
             f"SELECT table_name AS name FROM information_schema.tables "
             f"WHERE table_schema = {sch} AND table_type = 'BASE TABLE' "

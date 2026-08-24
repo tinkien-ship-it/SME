@@ -106,6 +106,14 @@ class PgCursor:
             return self._cur.execute(sql)
         return self._cur.execute(sql, params)
 
+    def executescript(self, script: str):
+        for stmt in str(script or '').split(';'):
+            sql = stmt.strip()
+            if not sql:
+                continue
+            self.execute(sql)
+        return self
+
     def __getattr__(self, name):
         return getattr(self._cur, name)
 
@@ -147,6 +155,14 @@ class PgConnection:
         if params is None:
             return self._conn.execute(sql)
         return self._conn.execute(sql, params)
+
+    def executescript(self, script: str):
+        for stmt in str(script or '').split(';'):
+            sql = stmt.strip()
+            if not sql:
+                continue
+            self.execute(sql)
+        return self
 
     def cursor(self):
         return PgCursor(self._conn.cursor(), self._schema)
