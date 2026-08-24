@@ -92,6 +92,18 @@ def enqueue_accounting_job(
             else:
                 return None
 
+        # Đã ghi sổ xong trước đó → không tạo job mới trừ khi replace
+        done = conn.execute(
+            """
+            SELECT id FROM accounting_jobs
+            WHERE sale_id = ? AND job_type = ? AND status = 'completed'
+            ORDER BY id DESC LIMIT 1
+            """,
+            (sale_id, job_type),
+        ).fetchone()
+        if done and not replace_existing:
+            return None
+
         features_json = json.dumps(features) if features else None
         cursor = conn.execute(
             """
@@ -129,6 +141,102 @@ def enqueue_accounting_job(
         (sale_id, job_type, accounting_regime, created_by, 1 if replace_existing else 0, features_json),
     )
     return cursor.lastrowid
+
+
+def ensure_sale_accounting_posted(
+    conn: sqlite3.Connection,
+    sale_id: int,
+    *,
+    accounting_regime: str | None = None,
+    features: dict | None = None,
+    created_by: str | None = None,
+    replace_existing: bool = False,
+    sync_now: bool = True,
+) -> dict:
+    """Đảm bảo đơn completed có job kế toán; mặc định ghi sổ ngay (không chờ scheduler).
+
+    Dùng sau checkout / đồng bộ offline / dedupe client_uuid — tránh đơn đã lưu
+    mà chưa có bút toán vì enqueue lỗi hoặc worker chưa chạy.
+    """
+    from db_utils import begin_immediate, rollback_quietly, sqlite_commit
+
+    out: dict = {'sale_id': sale_id, 'enqueued': False, 'posted': False}
+    try:
+        job_id = enqueue_accounting_job(
+            conn,
+            sale_id,
+            accounting_regime=accounting_regime,
+            features=features,
+            created_by=created_by,
+            replace_existing=replace_existing,
+            commit=True,
+        )
+        out['enqueued'] = job_id is not None
+        out['job_id'] = job_id
+    except Exception as exc:
+        logger.warning('enqueue_accounting_job sale %s: %s', sale_id, exc)
+        out['enqueue_error'] = str(exc)
+
+    if not sync_now:
+        return out
+
+    try:
+        from Services.sme.sale_journal import sync_sale_journals
+
+        begin_immediate(conn, label='ensure_sale_acct')
+        result = sync_sale_journals(
+            conn,
+            sale_id,
+            accounting_regime=accounting_regime,
+            created_by=created_by,
+            replace_existing=replace_existing,
+            features=features,
+        )
+        out.update(result or {})
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        ensure_accounting_queue_schema(conn, commit=False)
+        if result.get('posted') or result.get('reason') in _SKIP_REASONS:
+            conn.execute(
+                """
+                UPDATE accounting_jobs
+                SET status = 'completed', completed_at = ?, last_error = NULL
+                WHERE sale_id = ? AND job_type = 'sale_journal'
+                  AND status IN ('pending', 'processing', 'retry')
+                """,
+                (now, sale_id),
+            )
+        elif result.get('error') or result.get('reason'):
+            conn.execute(
+                """
+                UPDATE accounting_jobs
+                SET status = 'retry', last_error = ?
+                WHERE sale_id = ? AND job_type = 'sale_journal'
+                  AND status IN ('pending', 'processing')
+                """,
+                (str(result.get('error') or result.get('reason') or '')[:500], sale_id),
+            )
+        sqlite_commit(conn, label='ensure_sale_acct')
+    except Exception as exc:
+        rollback_quietly(conn)
+        logger.warning('ensure_sale_accounting_posted sale %s: %s', sale_id, exc, exc_info=True)
+        out['posted'] = False
+        out['error'] = str(exc)
+        try:
+            ensure_accounting_queue_schema(conn, commit=False)
+            begin_immediate(conn, label='ensure_sale_acct_err')
+            conn.execute(
+                """
+                UPDATE accounting_jobs
+                SET status = 'retry', last_error = ?
+                WHERE sale_id = ? AND job_type = 'sale_journal'
+                  AND status IN ('pending', 'processing')
+                """,
+                (str(exc)[:500], sale_id),
+            )
+            sqlite_commit(conn, label='ensure_sale_acct_err')
+        except Exception:
+            rollback_quietly(conn)
+    return out
 
 
 def get_sale_accounting_status(conn: sqlite3.Connection, sale_id: int) -> dict:

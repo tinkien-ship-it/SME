@@ -42,7 +42,7 @@ from Services.sale_helpers import (
     table_has_column,
 )
 from Services.sme.sale_journal import sync_sale_journals
-from Services.accounting_queue import enqueue_accounting_job
+from Services.accounting_queue import ensure_sale_accounting_posted, enqueue_accounting_job
 from Services.sme.hkd_side_effects import write_hkd_cash_vouchers
 from Services.tenant_profile import get_current_tenant_profile
 from Services.pos_offline_schema import ensure_pos_offline_schema, find_sale_by_client_uuid
@@ -488,13 +488,18 @@ def complete_pos_bank_payment(sale_id):
 
         cursor.execute("UPDATE sale SET status = 'completed', date = ? WHERE id = ?", (sale_date, sale_id))
         sqlite_commit(conn, label='sale')
-        enqueue_accounting_job(
-            conn,
-            sale_id,
-            accounting_regime=get_current_tenant_profile().get('accounting_regime'),
-            features=get_current_tenant_profile().get('features'),
-            created_by=session.get('user_name'),
-        )
+        try:
+            profile = get_current_tenant_profile()
+            ensure_sale_accounting_posted(
+                conn,
+                sale_id,
+                accounting_regime=profile.get('accounting_regime'),
+                features=profile.get('features'),
+                created_by=session.get('user_name'),
+                sync_now=True,
+            )
+        except Exception as acct_exc:
+            logging.warning('ensure_sale_accounting_posted bank pay sale %s: %s', sale_id, acct_exc)
         return {"success": True, "sale_id": sale_id}
     except Exception as e:
         if conn:
@@ -604,6 +609,26 @@ def register_sale_routes(app):
             if client_uuid and not sale_id:
                 existing = find_sale_by_client_uuid(conn, client_uuid)
                 if existing:
+                    existing_status = str(existing.get('status') or status or '').lower()
+                    # Đơn offline đã tạo trước đó (dedupe) — vẫn phải đảm bảo có bút toán.
+                    if existing_status == 'completed':
+                        try:
+                            profile = get_current_tenant_profile()
+                            ensure_sale_accounting_posted(
+                                conn,
+                                int(existing['id']),
+                                accounting_regime=profile.get('accounting_regime'),
+                                features=profile.get('features'),
+                                created_by=session.get('user_name'),
+                                replace_existing=False,
+                                sync_now=True,
+                            )
+                        except Exception as acct_exc:
+                            logging.warning(
+                                'ensure_sale_accounting_posted dedupe sale %s: %s',
+                                existing.get('id'),
+                                acct_exc,
+                            )
                     return jsonify({
                         "success": True,
                         "sale_id": existing['id'],
@@ -840,14 +865,23 @@ def register_sale_routes(app):
 
             sqlite_commit(conn, label='sale')
             if status == 'completed' or old_status == 'completed':
-                enqueue_accounting_job(
-                    conn,
-                    sale_id,
-                    accounting_regime=get_current_tenant_profile().get('accounting_regime'),
-                    features=get_current_tenant_profile().get('features'),
-                    created_by=session.get('user_name'),
-                    replace_existing=old_status == 'completed',
-                )
+                try:
+                    profile = get_current_tenant_profile()
+                    ensure_sale_accounting_posted(
+                        conn,
+                        sale_id,
+                        accounting_regime=profile.get('accounting_regime'),
+                        features=profile.get('features'),
+                        created_by=session.get('user_name'),
+                        replace_existing=old_status == 'completed',
+                        sync_now=True,
+                    )
+                except Exception as acct_exc:
+                    logging.warning(
+                        'ensure_sale_accounting_posted checkout sale %s: %s',
+                        sale_id,
+                        acct_exc,
+                    )
             return jsonify({"success": True, "sale_id": sale_id, "status": status}), 200
 
         except Exception as e:
@@ -857,6 +891,43 @@ def register_sale_routes(app):
             return jsonify({"success": False, "error": str(e)}), 500
         finally:
             if conn: conn.close()
+
+    @app.route('/api/sale/<int:sale_id>/ensure-accounting', methods=['POST'])
+    @login_required
+    def api_sale_ensure_accounting(sale_id):
+        """Ghi bút toán cho đơn đã completed (bù sau đồng bộ offline / job treo)."""
+        conn = None
+        try:
+            conn = get_db_connection()
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                'SELECT id, status FROM sale WHERE id = ?', (sale_id,)
+            ).fetchone()
+            if not row:
+                return jsonify({'success': False, 'error': 'Không tìm thấy đơn'}), 404
+            if str(row['status'] or '').lower() != 'completed':
+                return jsonify({
+                    'success': False,
+                    'error': 'Chỉ ghi sổ cho đơn đã completed',
+                    'status': row['status'],
+                }), 400
+            profile = get_current_tenant_profile()
+            result = ensure_sale_accounting_posted(
+                conn,
+                sale_id,
+                accounting_regime=profile.get('accounting_regime'),
+                features=profile.get('features'),
+                created_by=session.get('user_name'),
+                replace_existing=bool((request.get_json(silent=True) or {}).get('replace_existing')),
+                sync_now=True,
+            )
+            return jsonify({'success': True, **result}), 200
+        except Exception as e:
+            logging.error('api_sale_ensure_accounting %s: %s', sale_id, e, exc_info=True)
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if conn:
+                conn.close()
 
     @app.route('/api/sale/delete_pending/<int:sale_id>', methods=['POST'])
     @login_required
@@ -1155,14 +1226,23 @@ def register_sale_routes(app):
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (customer_name, company_name, address, tax_code, '131', '511', sale_date, total_amount, sale_id, ref_doc))
             sqlite_commit(conn, label='sale')
-            enqueue_accounting_job(
-                conn,
-                sale_id,
-                accounting_regime=get_current_tenant_profile().get('accounting_regime'),
-                features=get_current_tenant_profile().get('features'),
-                created_by=session.get('user_name'),
-                replace_existing=old_status != 'draft',
-            )
+            try:
+                profile = get_current_tenant_profile()
+                ensure_sale_accounting_posted(
+                    conn,
+                    sale_id,
+                    accounting_regime=profile.get('accounting_regime'),
+                    features=profile.get('features'),
+                    created_by=session.get('user_name'),
+                    replace_existing=old_status != 'draft',
+                    sync_now=True,
+                )
+            except Exception as acct_exc:
+                logging.warning(
+                    'ensure_sale_accounting_posted update_item sale %s: %s',
+                    sale_id,
+                    acct_exc,
+                )
             return jsonify({"success": True, "sale_id": sale_id, "status": new_status}), 200
         except Exception as e:
             conn.rollback()

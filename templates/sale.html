@@ -418,7 +418,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
-<script src="{{ url_for('static', filename='js/pos-offline.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='js/pos-offline.js') }}?v=4"></script>
 <script>
     let cart = [];
     let editingOrderId = null;
@@ -700,6 +700,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const n = detail.processed || 0;
             const items = detail.items || [];
             const errs = detail.errors || [];
+            // Bù ghi sổ cho từng đơn vừa sync (tránh thiếu bút toán khi job queue lỗi trước đó)
+            items.forEach(function (it) {
+                const sid = it.sale_id || (it.side_effects && it.side_effects.pending_qr);
+                if (!sid) return;
+                fetch('/api/sale/' + sid + '/ensure-accounting', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: '{}',
+                }).catch(function () {});
+            });
             if (n > 0 && typeof Swal !== 'undefined') {
                 let html = 'Đã đồng bộ <b>' + n + '</b> đơn lên server và ghi sổ kế toán.';
                 const qrItems = items.filter(function (it) {
