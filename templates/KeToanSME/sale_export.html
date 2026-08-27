@@ -1,70 +1,128 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}Bán hàng xuất khẩu{% endblock %}
+{% block title %}Xuất kho ra cảng{% endblock %}
 
 {% block sme_head %}
 <style>
-.xk-card { border: 0; box-shadow: 0 1px 3px rgba(15,23,42,.08); }
+.xk-card { border: 0; box-shadow: 0 1px 3px rgba(15,23,42,.08); border-radius: 12px; }
 .xk-table td, .xk-table th { font-size: .875rem; vertical-align: middle; }
 .hidden-field { display: none !important; }
 .format-input { font-variant-numeric: tabular-nums; }
+.xk-step-badge {
+  width: 1.75rem; height: 1.75rem; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: .85rem; flex-shrink: 0;
+}
+.xk-guide {
+  border-left: 4px solid #0d6efd;
+  background: #f0f7ff;
+  border-radius: 0 10px 10px 0;
+  padding: .85rem 1rem;
+}
+.xk-guide.xk-guide-warn {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+.xk-guide.xk-guide-ok {
+  border-left-color: #10b981;
+  background: #ecfdf5;
+}
+.xk-phase-nav .nav-link {
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 600;
+  padding: .35rem .9rem;
+  color: #64748b;
+}
+.xk-phase-nav .nav-link.active {
+  background: #0d6efd;
+  color: #fff;
+}
+.xk-phase-nav .nav-link.done {
+  background: #d1fae5;
+  color: #047857;
+}
 </style>
 {% endblock %}
 
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
   <div>
-    <h4 class="fw-bold mb-1"><i class="fas fa-plane-departure text-primary me-2"></i>Bán hàng xuất khẩu</h4>
-    <p class="text-muted small mb-0">
-      <strong>Bước 1</strong> — Xuất kho ra cảng: Nợ <b>157</b> / Có <b>155·156</b> (chờ thông quan).
-      <strong>Bước 2</strong> — Thông quan (TKHQ + B/L): Nợ <b>632</b>/Có <b>157</b> + Nợ <b>131</b>/Có <b>511</b>·<b>3333</b> → rồi xuất HĐĐT (trong 01 ngày làm việc).
-    </p>
+    <h4 class="fw-bold mb-1" id="pageTitle">
+      <i class="fas fa-warehouse text-primary me-2"></i>Tạo phiếu xuất kho ra cảng
+    </h4>
+    <nav class="xk-phase-nav mt-2" aria-label="Các bước xuất khẩu">
+      <ul class="nav gap-2 flex-wrap">
+        <li class="nav-item"><span class="nav-link active" id="navStep1">1. Xuất kho ra cảng</span></li>
+        <li class="nav-item"><span class="nav-link" id="navStep2">2. Thông quan</span></li>
+        <li class="nav-item"><span class="nav-link" id="navStep3">3. Xuất HĐĐT</span></li>
+      </ul>
+    </nav>
   </div>
   <div class="d-flex gap-2 flex-wrap">
-    <a href="{{ url_for('SME_sale_export_list') }}" class="btn btn-outline-secondary btn-sm">Danh sách XK</a>
-    <a href="{{ url_for('SME_customs_declarations') }}" class="btn btn-outline-secondary btn-sm">Tờ khai HQ</a>
-    <a href="{{ url_for('SME_DanhSachPhieuThu') }}" class="btn btn-outline-primary btn-sm" target="_blank">Lập PT tạm ứng KH</a>
-    <button type="button" class="btn btn-primary btn-sm" id="btnSaveExport"><i class="fas fa-warehouse me-1"></i> Lưu xuất kho ra cảng</button>
-    <button type="button" class="btn btn-success btn-sm" id="btnClearance" disabled><i class="fas fa-ship me-1"></i> Xác nhận thông quan</button>
+    <a href="{{ url_for('SME_sale_export_list') }}" class="btn btn-outline-secondary btn-sm">Danh sách phiếu XK</a>
+    <a href="{{ url_for('SME_customs_declarations') }}" class="btn btn-outline-secondary btn-sm d-none" id="linkCustomsList">Tờ khai HQ</a>
+    <a href="{{ url_for('SME_DanhSachPhieuThu') }}" class="btn btn-outline-primary btn-sm d-none" id="linkAdvances" target="_blank">Lập PT tạm ứng KH</a>
   </div>
 </div>
 
-<div class="alert alert-info py-2 small" id="exportPhaseBanner">
-  <strong>Giai đoạn:</strong> <span id="exportPhaseLabel">Chưa lưu</span>
-  <span id="stockOutVoucherLink" class="ms-2"></span>
-  <span class="text-muted ms-2">Số lượng trên phiếu xuất kho vận chuyển nội bộ phải khớp tờ khai HQ.</span>
-</div>
-
-<div class="alert alert-warning py-2 small d-none" id="officialInvoiceLock">
-  Phiếu đã xuất <strong>HĐĐT chính thức</strong>. Không sửa trực tiếp —
-  dùng <a href="#" id="linkReplaceInvoice" class="alert-link">hóa đơn thay thế / điều chỉnh</a>
-  (cùng rule POS; payload tự theo dữ liệu xuất khẩu).
-</div>
-
-<div class="card xk-card mb-3" id="invoiceActionsCard">
-  <div class="card-body py-2">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-      <div>
-        <strong class="small">Hóa đơn điện tử xuất khẩu</strong>
-        <div class="text-muted small" id="invoiceStatusText">Sau thông quan (có TKHQ + B/L) mới xuất nháp / chính thức.</div>
-      </div>
-      <div class="d-flex gap-2 flex-wrap">
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnIssueDraft" disabled>
-          <i class="fas fa-file-alt me-1"></i> Xuất nháp
-        </button>
-        <button type="button" class="btn btn-success btn-sm" id="btnIssueOfficial" disabled>
-          <i class="fas fa-file-invoice me-1"></i> Xuất chính thức
-        </button>
-        <a class="btn btn-outline-warning btn-sm d-none" id="btnGoReplace" href="#">
-          <i class="fas fa-exchange-alt me-1"></i> Thay thế / Điều chỉnh
-        </a>
-      </div>
+<!-- Hướng dẫn theo bước -->
+<div class="xk-guide mb-3" id="guideShip">
+  <div class="d-flex gap-2 align-items-start">
+    <span class="xk-step-badge bg-primary text-white">1</span>
+    <div>
+      <div class="fw-bold mb-1">Tạo phiếu xuất kho ra cảng</div>
+      <p class="small mb-0 text-secondary">
+        Hãy nhập thông tin hàng hóa cần xuất ra cảng. Hệ thống sẽ tự tạo
+        <strong>Phiếu xuất kho kiêm vận chuyển nội bộ</strong>,
+        <strong>Lệnh Điều Động</strong>
+        (nếu có đăng ký sử dụng với dịch vụ cung cấp hóa đơn điện tử).
+      </p>
     </div>
   </div>
 </div>
 
+<div class="xk-guide xk-guide-warn mb-3 d-none" id="guideClearance">
+  <div class="d-flex gap-2 align-items-start">
+    <span class="xk-step-badge bg-warning text-dark">2</span>
+    <div>
+      <div class="fw-bold mb-1">Chờ thông quan hải quan</div>
+      <p class="small mb-1 text-secondary">
+        Sau khi đã hoàn thành thủ tục hải quan, điền các thông tin trên tờ khai và nhấn nút
+        <strong>Xác nhận đã thông quan</strong> để hệ thống hạch toán.
+      </p>
+      <p class="small mb-0 text-muted" id="stockOutVoucherLink"></p>
+    </div>
+  </div>
+</div>
+
+<div class="xk-guide xk-guide-ok mb-3 d-none" id="guideInvoice">
+  <div class="d-flex gap-2 align-items-start">
+    <span class="xk-step-badge bg-success text-white">3</span>
+    <div>
+      <div class="fw-bold mb-1">Xuất hóa đơn điện tử</div>
+      <p class="small mb-0 text-secondary">
+        Sau khi xác nhận đã thông quan thì hãy xuất hóa đơn điện tử
+        (trong 01 ngày làm việc theo quy định).
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="alert alert-warning py-2 small d-none" id="officialInvoiceLock">
+  Phiếu đã xuất <strong>HĐĐT chính thức</strong>. Không sửa trực tiếp —
+  dùng <a href="#" id="linkReplaceInvoice" class="alert-link">hóa đơn thay thế / điều chỉnh</a>.
+</div>
+
 <input type="hidden" id="editSaleId" value="">
 
-<div class="card xk-card mb-3">
+<!-- ===== BƯỚC 1: Xuất kho ra cảng ===== -->
+<div class="card xk-card mb-3" id="cardShip">
+  <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <strong><i class="fas fa-box-open text-primary me-2"></i>Thông tin phiếu xuất kho ra cảng</strong>
+    <button type="button" class="btn btn-primary btn-sm" id="btnSaveExport">
+      <i class="fas fa-warehouse me-1"></i> Lưu phiếu xuất kho ra cảng
+    </button>
+  </div>
   <div class="card-body">
     <div class="row g-2">
       <div class="col-md-2">
@@ -72,14 +130,42 @@
         <input type="text" class="form-control form-control-sm" id="saleNo" placeholder="Tự sinh ĐH…">
       </div>
       <div class="col-md-2">
-        <label class="form-label small fw-bold">Ngày chứng từ</label>
+        <label class="form-label small fw-bold">Ngày xuất kho</label>
         <input type="date" class="form-control form-control-sm" id="saleDate">
       </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold text-primary">Ngày thông quan</label>
-        <input type="date" class="form-control form-control-sm" id="riskDate" title="Ngày TKHQ thông quan / B/L">
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-primary">Khách hàng nước ngoài *</label>
+        <input type="text" class="form-control form-control-sm" id="customerName" required placeholder="Tên người mua nước ngoài">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-bold">Địa chỉ</label>
+        <input type="text" class="form-control form-control-sm" id="address" placeholder="Địa chỉ giao / cảng đến">
       </div>
       <div class="col-md-2">
+        <label class="form-label small fw-bold">Kho xuất *</label>
+        <select class="form-select form-select-sm" id="warehouseCode">
+          {% for wh in warehouses or [] %}
+          <option value="{{ wh.code }}">{{ wh.code }} — {{ wh.name }}</option>
+          {% else %}
+          <option value="KHO_001">KHO_001</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Ngoại tệ</label>
+        <select class="form-select form-select-sm" id="currency">
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+          <option value="JPY">JPY</option>
+          <option value="CNY">CNY</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Tỷ giá (ghi DT)</label>
+        <input type="text" class="form-control form-control-sm text-end format-input" id="revenueFx" value="25000">
+      </div>
+      <div class="col-md-3">
         <label class="form-label small fw-bold">Incoterms</label>
         <select class="form-select form-select-sm" id="incoterms">
           <option value="FOB">FOB</option>
@@ -90,112 +176,61 @@
           <option value="DDP">DDP</option>
         </select>
       </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold text-primary">Số B/L *</label>
-        <input type="text" class="form-control form-control-sm" id="blNo" placeholder="Bắt buộc khi thông quan">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold text-primary">Tờ khai HQ *</label>
-        <input type="text" class="form-control form-control-sm" id="customsDeclNo" placeholder="Bắt buộc khi thông quan">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold">Mã PXK nội bộ (CQT)</label>
-        <input type="text" class="form-control form-control-sm" id="internalTransferDocNo"
-               placeholder="Sau phát hành Mắt Bão" title="Số PXK điện tử mẫu 6 ký hiệu N (có mã CQT)">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold">Lệnh điều động (LDDNBo)</label>
-        <input type="text" class="form-control form-control-sm" id="internalDispatchNo"
-               placeholder="Bắt buộc khi xuất PXK-N">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold">PT vận chuyển</label>
-        <input type="text" class="form-control form-control-sm" id="transportVehicle"
-               placeholder="Xe tải / biển số" value="Xe tải">
-      </div>
-
-      <div class="col-md-3">
-        <label class="form-label small fw-bold text-primary">Khách hàng nước ngoài</label>
-        <input type="text" class="form-control form-control-sm" id="customerName" required>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold">Địa chỉ</label>
-        <input type="text" class="form-control form-control-sm" id="address">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold">Kho xuất</label>
-        <select class="form-select form-select-sm" id="warehouseCode">
-          {% for wh in warehouses or [] %}
-          <option value="{{ wh.code }}">{{ wh.code }} — {{ wh.name }}</option>
-          {% else %}
-          <option value="KHO_001">KHO_001</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-1">
-        <label class="form-label small fw-bold">NT</label>
-        <select class="form-select form-select-sm" id="currency">
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-          <option value="JPY">JPY</option>
-          <option value="CNY">CNY</option>
-        </select>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold text-success">TG mua NH (ghi DT)</label>
-        <input type="text" class="form-control form-control-sm text-end format-input" id="revenueFx" value="25000">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold">TG tờ khai (thuế XK)</label>
-        <input type="text" class="form-control form-control-sm text-end format-input" id="customsFx" value="25000">
-      </div>
-
-      <div class="col-md-3">
-        <label class="form-label small fw-bold text-primary">Phương thức thanh toán</label>
-        <select class="form-select form-select-sm fw-bold" id="paymentMode" onchange="togglePayMode()">
-          <option value="unpaid">Thanh toán sau (T/T) — không L/C</option>
-          <option value="prepaid_full">Khách thanh toán trước đủ</option>
-          <option value="prepaid_partial">Khách tạm ứng một phần</option>
-          <option value="lc">L/C trả ngay (sight) — gắn thư tín dụng</option>
-          <option value="lc_usance">L/C trả chậm / nhờ thu (Usance · D/A · D/P)</option>
-          <option value="doc_discount">Chiết khấu bộ CT (sau khi xuất)</option>
-        </select>
-        <div class="form-text small" id="payModeHint">
-          T/T: xuất hàng → Nợ 131, thu tiền sau (CLTG khi tiền về). L/C sight: cùng ghi 131 nhưng bắt buộc chọn L/C để trừ hạn mức.
-        </div>
-      </div>
-      <div class="col-md-4 hidden-field" id="advanceWrap">
-        <label class="form-label small fw-bold">PT tạm ứng KH (Có 131)</label>
-        <select class="form-select form-select-sm" id="advanceIds" multiple size="3" onchange="syncAdvance()"></select>
-        <div class="row g-1 mt-1">
-          <div class="col-4"><input type="text" class="form-control form-control-sm text-end format-input" id="advanceFc" value="0" onchange="onAdvanceEdited()"></div>
-          <div class="col-4"><input type="text" class="form-control form-control-sm text-end format-input" id="advanceRate" value="1" readonly></div>
-          <div class="col-4"><input type="text" class="form-control form-control-sm text-end format-input" id="advanceVnd" value="0" readonly></div>
-        </div>
-        <div class="form-text small">NT · TG ngày ứng · VND — phần thừa PC dùng đợt sau</div>
-      </div>
-      <div class="col-md-3 hidden-field" id="lcWrap">
-        <label class="form-label small fw-bold">L/C xuất</label>
-        <select class="form-select form-select-sm" id="lcId">
-          <option value="">— Chọn L/C xuất còn dư —</option>
-        </select>
-        <button type="button" class="btn btn-link btn-sm px-0" data-bs-toggle="modal" data-bs-target="#modalNewLc">+ Đăng ký L/C xuất</button>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small fw-bold">Thuế XK (NT)</label>
-        <input type="text" class="form-control form-control-sm text-end format-input" id="exportTaxFc" value="0">
-      </div>
-      <div class="col-md-3">
+      <div class="col-md-5">
         <label class="form-label small fw-bold">Ghi chú</label>
-        <input type="text" class="form-control form-control-sm" id="note">
+        <input type="text" class="form-control form-control-sm" id="note" placeholder="Ghi chú nội bộ (tuỳ chọn)">
       </div>
     </div>
+
+    <!-- Tuỳ chọn nâng cao — mặc định thu gọn -->
+    <details class="mt-3" id="shipAdvanced">
+      <summary class="small fw-bold text-muted" style="cursor:pointer">Tuỳ chọn thanh toán / thuế XK (nâng cao)</summary>
+      <div class="row g-2 mt-2 pt-2 border-top">
+        <div class="col-md-4">
+          <label class="form-label small fw-bold">Phương thức thanh toán</label>
+          <select class="form-select form-select-sm" id="paymentMode" onchange="togglePayMode()">
+            <option value="unpaid">Thanh toán sau (T/T)</option>
+            <option value="prepaid_full">Khách thanh toán trước đủ</option>
+            <option value="prepaid_partial">Khách tạm ứng một phần</option>
+            <option value="lc">L/C trả ngay (sight)</option>
+            <option value="lc_usance">L/C trả chậm / nhờ thu</option>
+            <option value="doc_discount">Chiết khấu bộ CT (sau khi xuất)</option>
+          </select>
+          <div class="form-text small" id="payModeHint">Mặc định: xuất hàng rồi thu tiền sau.</div>
+        </div>
+        <div class="col-md-4 hidden-field" id="advanceWrap">
+          <label class="form-label small fw-bold">PT tạm ứng KH</label>
+          <select class="form-select form-select-sm" id="advanceIds" multiple size="3" onchange="syncAdvance()"></select>
+          <div class="row g-1 mt-1">
+            <div class="col-4"><input type="text" class="form-control form-control-sm text-end format-input" id="advanceFc" value="0" onchange="onAdvanceEdited()"></div>
+            <div class="col-4"><input type="text" class="form-control form-control-sm text-end format-input" id="advanceRate" value="1" readonly></div>
+            <div class="col-4"><input type="text" class="form-control form-control-sm text-end format-input" id="advanceVnd" value="0" readonly></div>
+          </div>
+        </div>
+        <div class="col-md-3 hidden-field" id="lcWrap">
+          <label class="form-label small fw-bold">L/C xuất</label>
+          <select class="form-select form-select-sm" id="lcId">
+            <option value="">— Chọn L/C xuất còn dư —</option>
+          </select>
+          <button type="button" class="btn btn-link btn-sm px-0" data-bs-toggle="modal" data-bs-target="#modalNewLc">+ Đăng ký L/C xuất</button>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-bold">Thuế XK (NT)</label>
+          <input type="text" class="form-control form-control-sm text-end format-input" id="exportTaxFc" value="0">
+        </div>
+        <!-- Trường PXK điện tử — hệ thống tự xử lý; giữ hidden để JS/API vẫn gửi được -->
+        <input type="hidden" id="internalTransferDocNo" value="">
+        <input type="hidden" id="internalDispatchNo" value="">
+        <input type="hidden" id="transportVehicle" value="Xe tải">
+        <input type="hidden" id="customsFx" value="25000">
+      </div>
+    </details>
   </div>
 </div>
 
-<div class="card xk-card mb-3">
+<div class="card xk-card mb-3" id="cardItems">
   <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
-    <strong>Chi tiết hàng xuất</strong>
+    <strong>Chi tiết hàng xuất ra cảng</strong>
     <button type="button" class="btn btn-sm btn-outline-primary" onclick="addRow()"><i class="fas fa-plus"></i> Thêm dòng</button>
   </div>
   <div class="table-responsive">
@@ -228,7 +263,63 @@
   </div>
 </div>
 
-<div class="card xk-card mb-3 {% if not edit_id %}d-none{% endif %}" id="postActions">
+<!-- ===== BƯỚC 2: Thông quan ===== -->
+<div class="card xk-card mb-3 d-none" id="cardClearance">
+  <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <strong><i class="fas fa-ship text-warning me-2"></i>Thông tin tờ khai / thông quan</strong>
+    <button type="button" class="btn btn-success btn-sm" id="btnClearance" disabled>
+      <i class="fas fa-check-circle me-1"></i> Xác nhận đã thông quan
+    </button>
+  </div>
+  <div class="card-body">
+    <div class="row g-2">
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-primary">Số tờ khai HQ *</label>
+        <input type="text" class="form-control form-control-sm" id="customsDeclNo" placeholder="Số TKHQ đã thông quan">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-primary">Số B/L *</label>
+        <input type="text" class="form-control form-control-sm" id="blNo" placeholder="Bill of Lading">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-primary">Ngày thông quan *</label>
+        <input type="date" class="form-control form-control-sm" id="riskDate" title="Ngày TKHQ thông quan / B/L">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-bold">TG tờ khai (thuế XK)</label>
+        <input type="text" class="form-control form-control-sm text-end format-input" id="customsFxVisible" value="25000">
+      </div>
+    </div>
+    <p class="small text-muted mt-2 mb-0">
+      Số lượng trên phiếu xuất kho vận chuyển nội bộ phải khớp tờ khai hải quan.
+    </p>
+  </div>
+</div>
+
+<!-- ===== BƯỚC 3: HĐĐT ===== -->
+<div class="card xk-card mb-3 d-none" id="invoiceActionsCard">
+  <div class="card-body py-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <div>
+        <strong>Hóa đơn điện tử xuất khẩu</strong>
+        <div class="text-muted small" id="invoiceStatusText">Sau khi xác nhận đã thông quan thì hãy xuất hóa đơn điện tử.</div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnIssueDraft" disabled>
+          <i class="fas fa-file-alt me-1"></i> Xuất nháp
+        </button>
+        <button type="button" class="btn btn-success btn-sm" id="btnIssueOfficial" disabled>
+          <i class="fas fa-file-invoice me-1"></i> Xuất chính thức
+        </button>
+        <a class="btn btn-outline-warning btn-sm d-none" id="btnGoReplace" href="#">
+          <i class="fas fa-exchange-alt me-1"></i> Thay thế / Điều chỉnh
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card xk-card mb-3 d-none" id="postActions">
   <div class="card-header bg-white py-2"><strong>Nghiệp vụ sau xuất</strong></div>
   <div class="card-body">
     <div class="row g-3">
@@ -530,8 +621,9 @@ function collectItems() {
 document.getElementById('btnSaveExport').addEventListener('click', async () => {
   try {
     const json = await saveExportSale();
-    toast(json.message || ('Đã xuất kho ra cảng ' + (document.getElementById('saleNo').value || '')), 'success');
+    toast(json.message || ('Đã tạo phiếu xuất kho ra cảng ' + (document.getElementById('saleNo').value || '')), 'success');
     refreshPhaseUi(json.export_status || 'shipped', json);
+    document.getElementById('cardClearance')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (e) {
     toast(e.message, 'error');
   }
@@ -551,32 +643,88 @@ function setStockOutVoucherLink(d) {
   const id = d && (d.stock_out_voucher_id || d.px_id);
   const no = d && (d.stock_out_voucher_no || d.px_voucher_no);
   if (id && no) {
-    el.innerHTML = `· Phiếu xuất kho <a href="/SME_PhieuXuatKho/in/${id}" target="_blank" class="fw-bold">02-VT ${no}</a>`;
+    el.innerHTML = `Phiếu xuất kho 02-VT: <a href="/SME_PhieuXuatKho/in/${id}" target="_blank" class="fw-bold">${no}</a>`;
   } else if (no) {
-    el.innerHTML = `· Phiếu xuất kho <strong>02-VT ${no}</strong>`;
+    el.innerHTML = `Phiếu xuất kho 02-VT: <strong>${no}</strong>`;
   } else {
     el.innerHTML = '';
   }
 }
 
+function syncCustomsFxFields() {
+  const vis = document.getElementById('customsFxVisible');
+  const hid = document.getElementById('customsFx');
+  if (vis && hid) hid.value = vis.value;
+}
+
+function setNavStep(step) {
+  // step: 1 | 2 | 3
+  ['navStep1', 'navStep2', 'navStep3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('active', 'done');
+    if (i + 1 < step) el.classList.add('done');
+    else if (i + 1 === step) el.classList.add('active');
+  });
+}
+
 function refreshPhaseUi(status, d) {
   d = d || {};
   const st = String(status || d.export_status || '').toLowerCase();
-  const label = document.getElementById('exportPhaseLabel');
   const btnSave = document.getElementById('btnSaveExport');
   const btnClear = document.getElementById('btnClearance');
   const hasSale = !!document.getElementById('editSaleId').value;
+  const title = document.getElementById('pageTitle');
+  const guideShip = document.getElementById('guideShip');
+  const guideClearance = document.getElementById('guideClearance');
+  const guideInvoice = document.getElementById('guideInvoice');
+  const cardClearance = document.getElementById('cardClearance');
+  const cardInvoice = document.getElementById('invoiceActionsCard');
+  const postActions = document.getElementById('postActions');
+  const linkCustoms = document.getElementById('linkCustomsList');
+  const linkAdvances = document.getElementById('linkAdvances');
+
   setStockOutVoucherLink(d);
+
+  const show = (el, on) => { if (el) el.classList.toggle('d-none', !on); };
+
   if (st === 'cleared') {
-    if (label) label.innerHTML = '<span class="text-success">Đã thông quan</span> — có thể xuất HĐĐT';
+    if (title) title.innerHTML = '<i class="fas fa-file-invoice text-success me-2"></i>Đã thông quan — xuất hóa đơn điện tử';
+    setNavStep(3);
+    show(guideShip, false);
+    show(guideClearance, false);
+    show(guideInvoice, true);
+    show(cardClearance, true);
+    show(cardInvoice, true);
+    show(postActions, true);
+    show(linkCustoms, true);
+    show(linkAdvances, true);
     if (btnSave) btnSave.disabled = true;
     if (btnClear) btnClear.disabled = true;
   } else if (hasSale || st === 'shipped') {
-    if (label) label.innerHTML = '<span class="text-warning">Chờ thông quan</span> — hàng đang ở TK 157';
+    if (title) title.innerHTML = '<i class="fas fa-ship text-warning me-2"></i>Chờ thông quan hải quan';
+    setNavStep(2);
+    show(guideShip, false);
+    show(guideClearance, true);
+    show(guideInvoice, false);
+    show(cardClearance, true);
+    show(cardInvoice, false);
+    show(postActions, false);
+    show(linkCustoms, true);
+    show(linkAdvances, true);
     if (btnSave) btnSave.disabled = false;
     if (btnClear) btnClear.disabled = !hasSale;
   } else {
-    if (label) label.textContent = 'Chưa lưu — lập phiếu xuất kho ra cảng';
+    if (title) title.innerHTML = '<i class="fas fa-warehouse text-primary me-2"></i>Tạo phiếu xuất kho ra cảng';
+    setNavStep(1);
+    show(guideShip, true);
+    show(guideClearance, false);
+    show(guideInvoice, false);
+    show(cardClearance, false);
+    show(cardInvoice, false);
+    show(postActions, false);
+    show(linkCustoms, false);
+    show(linkAdvances, false);
     if (btnSave) btnSave.disabled = false;
     if (btnClear) btnClear.disabled = true;
   }
@@ -584,18 +732,22 @@ function refreshPhaseUi(status, d) {
 
 async function confirmClearance() {
   const saleId = document.getElementById('editSaleId').value;
-  if (!saleId) throw new Error('Hãy lưu xuất kho ra cảng trước');
+  if (!saleId) throw new Error('Hãy lưu phiếu xuất kho ra cảng trước');
+  syncCustomsFxFields();
   const customs = document.getElementById('customsDeclNo').value.trim();
   const bl = document.getElementById('blNo').value.trim();
   if (!customs) throw new Error('Nhập số tờ khai hải quan đã thông quan');
   if (!bl) throw new Error('Nhập số Bill of Lading (B/L)');
+  const customsFx = parseNumber(
+    document.getElementById('customsFxVisible')?.value
+    || document.getElementById('customsFx')?.value
+  );
   const payload = {
     customs_decl_no: customs,
     bl_no: bl,
     risk_transfer_date: document.getElementById('riskDate').value || document.getElementById('saleDate').value,
-    customs_fx_rate: parseNumber(document.getElementById('customsFx').value),
-    exchange_rate: parseNumber(document.getElementById('customsFx').value)
-      || parseNumber(document.getElementById('revenueFx').value),
+    customs_fx_rate: customsFx,
+    exchange_rate: customsFx || parseNumber(document.getElementById('revenueFx').value),
     export_tax_fc: parseNumber(document.getElementById('exportTaxFc').value),
     incoterms: document.getElementById('incoterms').value,
   };
@@ -633,7 +785,11 @@ async function saveExportSale() {
     warehouse_code: document.getElementById('warehouseCode').value,
     currency: document.getElementById('currency').value,
     exchange_rate: parseNumber(document.getElementById('revenueFx').value),
-    customs_fx_rate: parseNumber(document.getElementById('customsFx').value),
+    customs_fx_rate: parseNumber(
+      document.getElementById('customsFxVisible')?.value
+      || document.getElementById('customsFx')?.value
+      || document.getElementById('revenueFx').value
+    ),
     payment_mode: mode,
     advances: advDetails,
     linked_lc_id: document.getElementById('lcId').value || null,
@@ -661,7 +817,6 @@ async function saveExportSale() {
     try {
       history.replaceState(null, '', '/SME_sale_export?sale_id=' + json.sale_id);
     } catch (_e) {}
-    document.getElementById('postActions')?.classList.remove('d-none');
   }
   refreshPhaseUi(json.export_status || 'shipped', json);
   refreshInvoiceUi({
@@ -697,6 +852,9 @@ function refreshInvoiceUi(d) {
   const linkReplace = document.getElementById('linkReplaceInvoice');
   const btnSave = document.getElementById('btnSaveExport');
 
+  if (exportStatus === 'cleared') {
+    document.getElementById('invoiceActionsCard')?.classList.remove('d-none');
+  }
   if (isOfficial) {
     statusEl.innerHTML = `Đã xuất chính thức: <strong>${invNo}</strong>`;
     btnDraft.disabled = true;
@@ -721,9 +879,9 @@ function refreshInvoiceUi(d) {
       ? (exportStatus !== 'cleared'
         ? 'Chưa thông quan — xác nhận TKHQ + B/L trước khi xuất HĐĐT.'
         : (customs
-          ? 'Đã thông quan — sẵn sàng xuất HĐĐT (VAT 0%, NT, tỷ giá).'
+          ? 'Sau khi xác nhận đã thông quan thì hãy xuất hóa đơn điện tử.'
           : 'Nhập số tờ khai hải quan trước khi xuất HĐ.'))
-      : 'Lưu xuất kho ra cảng → thông quan → xuất HĐĐT.';
+      : 'Lưu phiếu xuất kho ra cảng → thông quan → xuất HĐĐT.';
     btnDraft.disabled = !canInvoice;
     btnOfficial.disabled = !canInvoice;
     btnReplace.classList.add('d-none');
@@ -898,9 +1056,18 @@ async function loadWarehouses(selected) {
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('saleDate').value = todayIso();
   document.getElementById('riskDate').value = todayIso();
+  const cfv = document.getElementById('customsFxVisible');
+  if (cfv) {
+    cfv.value = document.getElementById('customsFx')?.value || '25000';
+    cfv.addEventListener('input', syncCustomsFxFields);
+    cfv.addEventListener('change', syncCustomsFxFields);
+  }
   document.getElementById('settleDate') && (document.getElementById('settleDate').value = todayIso());
   document.getElementById('discDate') && (document.getElementById('discDate').value = todayIso());
   document.getElementById('newLcDate') && (document.getElementById('newLcDate').value = todayIso());
+
+  // Trạng thái mặc định: bước 1 tạo phiếu
+  refreshPhaseUi('', {});
 
   const params = new URLSearchParams(location.search);
   const editId = params.get('sale_id') || params.get('id');
@@ -931,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   document.getElementById('editSaleId').value = editId;
-  document.getElementById('postActions')?.classList.remove('d-none');
+  // postActions hiện sau khi đã thông quan (refreshPhaseUi)
   try {
     const [json] = await Promise.all([
       fetch('/api/sme/export-sale/' + editId).then(r => r.json()),
@@ -948,6 +1115,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('currency').value = d.currency || 'USD';
     document.getElementById('revenueFx').value = d.exchange_rate || 1;
     document.getElementById('customsFx').value = d.customs_fx_rate || d.exchange_rate || 1;
+    const cfv = document.getElementById('customsFxVisible');
+    if (cfv) cfv.value = d.customs_fx_rate || d.exchange_rate || 1;
     document.getElementById('paymentMode').value = d.payment_mode || 'unpaid';
     document.getElementById('exportTaxFc').value = d.export_tax_fc || 0;
     document.getElementById('incoterms').value = d.incoterms || 'FOB';

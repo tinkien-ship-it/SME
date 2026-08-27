@@ -25,7 +25,7 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'sale', 'label': 'Điểm bán hàng', 'icon': 'fas fa-cash-register'},
             {'endpoint': 'SME_consignment', 'label': 'Hàng gửi đi bán (TK 157)', 'icon': 'fas fa-truck'},
-            {'endpoint': 'SME_sale_export', 'label': 'Bán hàng xuất khẩu', 'icon': 'fas fa-plane-departure'},
+            {'endpoint': 'SME_sale_export', 'label': 'Xuất kho ra cảng', 'icon': 'fas fa-warehouse'},
             {'endpoint': 'SME_sale_export_list', 'label': 'Danh sách xuất khẩu', 'icon': 'fas fa-list'},
             {'endpoint': 'SME_customs_declarations', 'label': 'Tờ khai hải quan điện tử', 'icon': 'fas fa-passport'},
             {'endpoint': 'SME_order', 'label': 'Danh sách đơn hàng', 'icon': 'fas fa-list'},
