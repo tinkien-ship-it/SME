@@ -371,6 +371,13 @@ POS_HKD_MENU = [
                 'roles': ('accountant', 'manager', 'admin', 'master'),
             },
             {
+                'endpoint': 'kpi_settings_page',
+                'label': 'Thiết Lập KPI Phòng Ban & Nhân Sự',
+                'icon': 'fas fa-bullseye text-warning',
+                'perm': 'view_employees',
+                'roles': ('accountant', 'manager', 'admin', 'master'),
+            },
+            {
                 'endpoint': 'salary_create',
                 'label': 'Lập Bảng Lương',
                 'icon': 'fas fa-calculator text-primary',

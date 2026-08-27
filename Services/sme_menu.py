@@ -178,6 +178,7 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'SME_employees', 'label': 'Danh sách nhân viên', 'icon': 'fas fa-users'},
             {'endpoint': 'SME_attendance', 'label': 'Bảng chấm công', 'icon': 'fas fa-fingerprint'},
+            {'endpoint': 'SME_kpi_settings', 'label': 'Thiết lập KPI phòng ban & nhân sự', 'icon': 'fas fa-bullseye'},
             {'endpoint': 'SME_salary_create', 'label': 'Lập bảng lương — mẫu 01-LĐTL', 'icon': 'fas fa-calculator'},
             {'endpoint': 'SME_PhaiTraCongNhanVien', 'label': 'Công nợ phải trả nhân viên', 'icon': 'fas fa-hand-holding-usd'},
             {'endpoint': 'SME_labor_sheets', 'label': 'Thưởng, ngoài giờ và thuê ngoài — mẫu 02 đến 04', 'icon': 'fas fa-gift'},

@@ -527,6 +527,11 @@ register_employees_routes(app)
 # === ATTENDANCE routes → routes/attendance.py ===
 from routes.attendance import register_attendance_routes
 register_attendance_routes(app)
+
+# === HR KPI settings → routes/hr_kpi.py ===
+from routes.hr_kpi import register_hr_kpi_routes
+register_hr_kpi_routes(app)
+
 # === CORE routes → routes/core.py ===
 from routes.core import register_core_routes
 register_core_routes(app)

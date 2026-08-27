@@ -1,0 +1,393 @@
+{# Nội dung + script trang thiết lập KPI — include từ SME hoặc HKD layout #}
+<style>
+.kpi-panel { border-radius: 12px; }
+.kpi-def-item { cursor: pointer; border-left: 3px solid transparent; }
+.kpi-def-item.active, .kpi-def-item:hover { border-left-color: #0d6efd; background: #f8fafc; }
+.kpi-def-item.inactive { opacity: .55; }
+.kpi-sticky-bar { position: sticky; top: 0; z-index: 5; background: #fff; }
+</style>
+
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3 gap-2">
+  <div>
+    <h3 class="fw-bold text-primary mb-1">Thiết lập KPI</h3>
+    <p class="text-muted mb-0 small">Định nghĩa chỉ tiêu và giao mục tiêu theo bộ phận / nhân sự trong từng phòng ban</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2 align-items-end kpi-sticky-bar py-1">
+    <div>
+      <label class="form-label small mb-0">Năm</label>
+      <input type="number" id="kpiYear" class="form-control form-control-sm" style="width:100px" min="2000" max="2100">
+    </div>
+    <div>
+      <label class="form-label small mb-0">Tháng</label>
+      <select id="kpiMonth" class="form-select form-select-sm" style="width:120px">
+        <option value="0">Cả năm</option>
+        <option value="1">01</option><option value="2">02</option><option value="3">03</option>
+        <option value="4">04</option><option value="5">05</option><option value="6">06</option>
+        <option value="7">07</option><option value="8">08</option><option value="9">09</option>
+        <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label small mb-0">Bộ phận</label>
+      <select id="kpiDept" class="form-select form-select-sm" style="min-width:180px"></select>
+    </div>
+    <button type="button" class="btn btn-outline-primary btn-sm" id="btnKpiReload">Tải lại</button>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card shadow-sm border-0 kpi-panel h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong>Danh mục KPI</strong>
+        <button type="button" class="btn btn-sm btn-primary" id="btnKpiAdd"><i class="fas fa-plus me-1"></i>Thêm</button>
+      </div>
+      <div class="list-group list-group-flush" id="kpiDefList" style="max-height:520px;overflow:auto"></div>
+      <div class="card-body border-top" id="kpiDefFormWrap">
+        <div class="small text-muted mb-2" id="kpiDefFormTitle">Thêm / sửa KPI</div>
+        <input type="hidden" id="kpiEditId">
+        <div class="mb-2">
+          <label class="form-label small mb-0">Mã</label>
+          <input type="text" class="form-control form-control-sm" id="kpiCode" placeholder="VD: SALES_REV">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small mb-0">Tên chỉ tiêu</label>
+          <input type="text" class="form-control form-control-sm" id="kpiName" placeholder="Tên KPI">
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label small mb-0">Đơn vị</label>
+            <input type="text" class="form-control form-control-sm" id="kpiUnit" placeholder="%, VNĐ, điểm…">
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-0">Hướng tốt</label>
+            <select class="form-select form-select-sm" id="kpiDirection">
+              <option value="higher">Càng cao càng tốt</option>
+              <option value="lower">Càng thấp càng tốt</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small mb-0">Mô tả</label>
+          <textarea class="form-control form-control-sm" id="kpiDesc" rows="2"></textarea>
+        </div>
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" id="kpiActive" checked>
+          <label class="form-check-label small" for="kpiActive">Đang dùng</label>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-success" id="btnKpiSaveDef">Lưu KPI</button>
+          <button type="button" class="btn btn-sm btn-outline-danger" id="btnKpiDelDef">Ngưng dùng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0 kpi-panel">
+      <div class="card-header bg-white">
+        <ul class="nav nav-tabs card-header-tabs" role="tablist">
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabDept" type="button">Chỉ tiêu theo bộ phận</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabEmp" type="button">Chỉ tiêu theo nhân viên</button></li>
+        </ul>
+      </div>
+      <div class="card-body tab-content">
+        <div class="tab-pane fade show active" id="tabDept">
+          <p class="small text-muted" id="deptHint">Chọn bộ phận ở trên, nhập chỉ tiêu / trọng số (%) rồi lưu.</p>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-2">
+              <thead class="table-light">
+                <tr>
+                  <th>KPI</th><th>Đơn vị</th>
+                  <th class="text-end" style="width:140px">Chỉ tiêu</th>
+                  <th class="text-end" style="width:110px">Trọng số %</th>
+                  <th>Ghi chú</th>
+                </tr>
+              </thead>
+              <tbody id="deptTargetBody"></tbody>
+            </table>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btnSaveDept">Lưu chỉ tiêu bộ phận</button>
+        </div>
+        <div class="tab-pane fade" id="tabEmp">
+          <div class="mb-2">
+            <label class="form-label small mb-0">Nhân viên trong bộ phận</label>
+            <select id="kpiEmployee" class="form-select form-select-sm" style="max-width:360px"></select>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-2">
+              <thead class="table-light">
+                <tr>
+                  <th>KPI</th><th>Đơn vị</th>
+                  <th class="text-end" style="width:140px">Chỉ tiêu</th>
+                  <th class="text-end" style="width:110px">Trọng số %</th>
+                  <th>Ghi chú</th>
+                </tr>
+              </thead>
+              <tbody id="empTargetBody"></tbody>
+            </table>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" id="btnSaveEmp">Lưu chỉ tiêu nhân viên</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const state = { kpis: [], departments: [], employees: [], deptTargets: [], empTargets: [], selectedKpiId: null };
+
+  const el = (id) => document.getElementById(id);
+  const fmtErr = (j) => (j && j.error) || 'Lỗi hệ thống';
+
+  function periodParams() {
+    const year = +el('kpiYear').value;
+    const month = +el('kpiMonth').value;
+    const department = el('kpiDept').value || '';
+    const q = new URLSearchParams({ year: String(year) });
+    if (month > 0) q.set('month', String(month));
+    else q.set('month', '0');
+    if (department) q.set('department', department);
+    return { year, month: month || null, department, q };
+  }
+
+  function resetDefForm() {
+    el('kpiEditId').value = '';
+    el('kpiCode').value = '';
+    el('kpiName').value = '';
+    el('kpiUnit').value = '';
+    el('kpiDirection').value = 'higher';
+    el('kpiDesc').value = '';
+    el('kpiActive').checked = true;
+    el('kpiDefFormTitle').textContent = 'Thêm KPI mới';
+    state.selectedKpiId = null;
+    renderDefList();
+  }
+
+  function fillDefForm(k) {
+    el('kpiEditId').value = k.id;
+    el('kpiCode').value = k.code || '';
+    el('kpiName').value = k.name || '';
+    el('kpiUnit').value = k.unit || '';
+    el('kpiDirection').value = k.direction || 'higher';
+    el('kpiDesc').value = k.description || '';
+    el('kpiActive').checked = !!k.is_active;
+    el('kpiDefFormTitle').textContent = 'Sửa KPI · ' + (k.code || '');
+    state.selectedKpiId = k.id;
+    renderDefList();
+  }
+
+  function renderDefList() {
+    const box = el('kpiDefList');
+    if (!state.kpis.length) {
+      box.innerHTML = '<div class="list-group-item text-muted small">Chưa có KPI</div>';
+      return;
+    }
+    box.innerHTML = state.kpis.map((k) => {
+      const active = state.selectedKpiId === k.id ? ' active' : '';
+      const inactive = k.is_active ? '' : ' inactive';
+      return `<button type="button" class="list-group-item list-group-item-action kpi-def-item${active}${inactive}" data-id="${k.id}">
+        <div class="d-flex justify-content-between"><strong>${k.name || ''}</strong><span class="badge bg-light text-dark">${k.unit || '—'}</span></div>
+        <div class="small text-muted">${k.code || ''}${k.is_active ? '' : ' · ngưng'}</div>
+      </button>`;
+    }).join('');
+    box.querySelectorAll('[data-id]').forEach((btn) => {
+      btn.onclick = () => {
+        const k = state.kpis.find((x) => String(x.id) === btn.getAttribute('data-id'));
+        if (k) fillDefForm(k);
+      };
+    });
+  }
+
+  function targetMap(list, keyFn) {
+    const m = {};
+    (list || []).forEach((t) => { m[keyFn(t)] = t; });
+    return m;
+  }
+
+  function renderDeptTargets() {
+    const dept = el('kpiDept').value;
+    const body = el('deptTargetBody');
+    const active = state.kpis.filter((k) => k.is_active);
+    if (!dept) {
+      body.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Chọn bộ phận để nhập chỉ tiêu</td></tr>';
+      return;
+    }
+    const map = targetMap(state.deptTargets, (t) => String(t.kpi_id));
+    if (!active.length) {
+      body.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Chưa có KPI đang dùng</td></tr>';
+      return;
+    }
+    body.innerHTML = active.map((k) => {
+      const t = map[String(k.id)] || {};
+      return `<tr data-kpi="${k.id}">
+        <td><div class="fw-semibold">${k.name}</div><div class="small text-muted">${k.code}</div></td>
+        <td>${k.unit || '—'}</td>
+        <td><input type="number" class="form-control form-control-sm text-end kpi-tv" step="any" value="${t.target_value ?? ''}"></td>
+        <td><input type="number" class="form-control form-control-sm text-end kpi-w" step="any" min="0" max="100" value="${t.weight ?? ''}"></td>
+        <td><input type="text" class="form-control form-control-sm kpi-n" value="${(t.notes || '').replace(/"/g, '&quot;')}"></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderEmpSelect() {
+    const sel = el('kpiEmployee');
+    const prev = sel.value;
+    const emps = state.employees || [];
+    sel.innerHTML = emps.length
+      ? emps.map((e) => `<option value="${e.id}">${e.fullname || ''} — ${e.position || ''}</option>`).join('')
+      : '<option value="">Không có nhân viên trong bộ phận</option>';
+    if (prev && [...sel.options].some((o) => o.value === prev)) sel.value = prev;
+  }
+
+  function renderEmpTargets() {
+    const empId = el('kpiEmployee').value;
+    const body = el('empTargetBody');
+    const active = state.kpis.filter((k) => k.is_active);
+    if (!empId) {
+      body.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Chọn nhân viên</td></tr>';
+      return;
+    }
+    const map = targetMap(
+      (state.empTargets || []).filter((t) => String(t.employee_id) === String(empId)),
+      (t) => String(t.kpi_id)
+    );
+    if (!active.length) {
+      body.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Chưa có KPI đang dùng</td></tr>';
+      return;
+    }
+    body.innerHTML = active.map((k) => {
+      const t = map[String(k.id)] || {};
+      return `<tr data-kpi="${k.id}">
+        <td><div class="fw-semibold">${k.name}</div><div class="small text-muted">${k.code}</div></td>
+        <td>${k.unit || '—'}</td>
+        <td><input type="number" class="form-control form-control-sm text-end kpi-tv" step="any" value="${t.target_value ?? ''}"></td>
+        <td><input type="number" class="form-control form-control-sm text-end kpi-w" step="any" min="0" max="100" value="${t.weight ?? ''}"></td>
+        <td><input type="text" class="form-control form-control-sm kpi-n" value="${(t.notes || '').replace(/"/g, '&quot;')}"></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function fillDeptSelect(departments) {
+    const sel = el('kpiDept');
+    const prev = sel.value;
+    sel.innerHTML = (departments || []).map((d) =>
+      `<option value="${d.code}">${d.label} (${d.code})</option>`
+    ).join('');
+    if (prev && [...sel.options].some((o) => o.value === prev)) sel.value = prev;
+    else if (sel.options.length) sel.selectedIndex = 0;
+  }
+
+  async function loadBundle() {
+    const { q } = periodParams();
+    const res = await fetch('/api/hr/kpi/bundle?' + q.toString());
+    const json = await res.json();
+    if (!json.success) return alert(fmtErr(json));
+    const d = json.data || {};
+    state.kpis = d.kpis || [];
+    state.departments = d.departments || [];
+    state.employees = d.employees || [];
+    state.deptTargets = d.dept_targets || [];
+    state.empTargets = d.employee_targets || [];
+    fillDeptSelect(state.departments);
+    renderDefList();
+    renderEmpSelect();
+    renderDeptTargets();
+    renderEmpTargets();
+    const lab = (state.departments.find((x) => x.code === el('kpiDept').value) || {}).label || '';
+    el('deptHint').textContent = lab
+      ? `Bộ phận: ${lab}. Nhập chỉ tiêu / trọng số (%) rồi lưu.`
+      : 'Chọn bộ phận ở trên, nhập chỉ tiêu / trọng số (%) rồi lưu.';
+  }
+
+  function collectRows(tbodyId) {
+    return [...document.querySelectorAll('#' + tbodyId + ' tr[data-kpi]')].map((tr) => ({
+      kpi_id: +tr.getAttribute('data-kpi'),
+      target_value: parseFloat(tr.querySelector('.kpi-tv').value) || 0,
+      weight: parseFloat(tr.querySelector('.kpi-w').value) || 0,
+      notes: (tr.querySelector('.kpi-n').value || '').trim(),
+    }));
+  }
+
+  el('kpiYear').value = new Date().getFullYear();
+  el('kpiMonth').value = String(new Date().getMonth() + 1);
+
+  el('btnKpiReload').onclick = () => loadBundle();
+  el('kpiYear').onchange = () => loadBundle();
+  el('kpiMonth').onchange = () => loadBundle();
+  el('kpiDept').onchange = async () => { await loadBundle(); };
+  el('kpiEmployee').onchange = () => renderEmpTargets();
+
+  el('btnKpiAdd').onclick = () => resetDefForm();
+
+  el('btnKpiSaveDef').onclick = async () => {
+    const payload = {
+      id: el('kpiEditId').value ? +el('kpiEditId').value : null,
+      code: el('kpiCode').value,
+      name: el('kpiName').value,
+      unit: el('kpiUnit').value,
+      direction: el('kpiDirection').value,
+      description: el('kpiDesc').value,
+      is_active: el('kpiActive').checked ? 1 : 0,
+    };
+    const res = await fetch('/api/hr/kpi/definitions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (!json.success) return alert(fmtErr(json));
+    await loadBundle();
+    if (json.data) fillDefForm(json.data);
+  };
+
+  el('btnKpiDelDef').onclick = async () => {
+    const id = el('kpiEditId').value;
+    if (!id) return alert('Chọn KPI cần ngưng');
+    if (!confirm('Ngưng sử dụng KPI này?')) return;
+    const res = await fetch('/api/hr/kpi/definitions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', id: +id, soft: true }),
+    });
+    const json = await res.json();
+    if (!json.success) return alert(fmtErr(json));
+    resetDefForm();
+    await loadBundle();
+  };
+
+  el('btnSaveDept').onclick = async () => {
+    const dept = el('kpiDept').value;
+    if (!dept) return alert('Chọn bộ phận');
+    const { year, month } = periodParams();
+    const items = collectRows('deptTargetBody').map((x) => ({ ...x, department_code: dept }));
+    const res = await fetch('/api/hr/kpi/targets', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'department', year, month, items }),
+    });
+    const json = await res.json();
+    if (!json.success) return alert(fmtErr(json));
+    alert('Đã lưu ' + (json.data.saved || 0) + ' chỉ tiêu bộ phận');
+    await loadBundle();
+  };
+
+  el('btnSaveEmp').onclick = async () => {
+    const empId = el('kpiEmployee').value;
+    const dept = el('kpiDept').value;
+    if (!empId) return alert('Chọn nhân viên');
+    const { year, month } = periodParams();
+    const items = collectRows('empTargetBody').map((x) => ({
+      ...x, employee_id: +empId, department_code: dept,
+    }));
+    const res = await fetch('/api/hr/kpi/targets', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'employee', year, month, items }),
+    });
+    const json = await res.json();
+    if (!json.success) return alert(fmtErr(json));
+    alert('Đã lưu ' + (json.data.saved || 0) + ' chỉ tiêu nhân viên');
+    await loadBundle();
+  };
+
+  loadBundle();
+})();
+</script>
