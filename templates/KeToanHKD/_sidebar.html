@@ -79,7 +79,7 @@
 
                 <a class="nav-link-sub hkd-menu-item {% if request.endpoint == item['endpoint'] %}active{% endif %}"
 
-                   href="{{ url_for(item['endpoint']) }}"
+                   href="{{ safe_url_for(item['endpoint']) }}"
 
                    data-label="{{ item['label'] | lower }}">
 

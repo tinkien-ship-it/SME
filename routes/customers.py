@@ -47,12 +47,20 @@ def register_customers_routes(app):
                 name = (data.get('name') or '').strip()
                 if not name:
                     return jsonify({'error': 'Tên khách hàng không được để trống'}), 400
+                try:
+                    from Services.crm_schema import ensure_crm_schema
+                    ensure_crm_schema(conn, commit=False)
+                except Exception:
+                    pass
                 c.execute(
                     """
                     INSERT INTO customers
                         (name, company_name, phone, email, address,
-                         tax_code, budget_unit_code, passport_no)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                         tax_code, budget_unit_code, passport_no,
+                         crm_source, crm_owner, crm_segment, crm_lifecycle,
+                         crm_notes, crm_tags, crm_created_at, crm_updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                            datetime('now','localtime'), datetime('now','localtime'))
                     """,
                     (
                         name,
@@ -63,6 +71,12 @@ def register_customers_routes(app):
                         (data.get('tax_code') or '').strip(),
                         (data.get('budget_unit_code') or '').strip(),
                         (data.get('passport_no') or '').strip(),
+                        (data.get('crm_source') or '').strip() or None,
+                        (data.get('crm_owner') or '').strip() or None,
+                        (data.get('crm_segment') or 'standard').strip(),
+                        (data.get('crm_lifecycle') or 'active').strip(),
+                        (data.get('crm_notes') or '').strip() or None,
+                        (data.get('crm_tags') or '').strip() or None,
                     ),
                 )
                 sqlite_commit(conn, label='customers')
@@ -77,11 +91,21 @@ def register_customers_routes(app):
                 name = (data.get('name') or '').strip()
                 if not name:
                     return jsonify({'error': 'Tên khách hàng không được để trống'}), 400
+                try:
+                    from Services.crm_schema import ensure_crm_schema
+                    ensure_crm_schema(conn, commit=False)
+                except Exception:
+                    pass
                 c.execute(
                     """
                     UPDATE customers
                     SET name = ?, company_name = ?, phone = ?, email = ?,
-                        address = ?, tax_code = ?, budget_unit_code = ?, passport_no = ?
+                        address = ?, tax_code = ?, budget_unit_code = ?, passport_no = ?,
+                        crm_source = COALESCE(?, crm_source),
+                        crm_owner = COALESCE(?, crm_owner),
+                        crm_segment = COALESCE(?, crm_segment),
+                        crm_lifecycle = COALESCE(?, crm_lifecycle),
+                        crm_updated_at = datetime('now','localtime')
                     WHERE id = ?
                     """,
                     (
@@ -93,6 +117,10 @@ def register_customers_routes(app):
                         (data.get('tax_code') or '').strip(),
                         (data.get('budget_unit_code') or '').strip(),
                         (data.get('passport_no') or '').strip(),
+                        (data.get('crm_source') or '').strip() or None,
+                        (data.get('crm_owner') or '').strip() or None,
+                        (data.get('crm_segment') or '').strip() or None,
+                        (data.get('crm_lifecycle') or '').strip() or None,
                         id_,
                     ),
                 )

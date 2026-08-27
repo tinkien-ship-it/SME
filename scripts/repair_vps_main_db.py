@@ -85,6 +85,11 @@ def main():
     parser.add_argument('--email', default=os.environ.get('MASTER_EMAIL', ''))
     parser.add_argument('--full-name', default=os.environ.get('MASTER_FULL_NAME', 'Master'))
     parser.add_argument('--schema-from', default='')
+    parser.add_argument(
+        '--keep-totp',
+        action='store_true',
+        help='Giữ secret Authenticator cũ (mặc định: xóa để lần đăng nhập sau hiện QR mới)',
+    )
     args = parser.parse_args()
 
     py = sys.executable
@@ -153,10 +158,15 @@ def main():
                 full_name=(args.full_name or 'Master').strip(),
                 disable_2fa=False,
                 force_password=True,
-                reset_totp=False,
+                # Mặc định reset TOTP để VPS hiện QR setup lại (tránh kẹt Authenticator cũ).
+                reset_totp=not bool(args.keep_totp),
             )
             conn.commit()
-            print('Master: %s (%s)' % (action, args.username))
+            print('Master: %s (%s) — TOTP %s' % (
+                action,
+                args.username,
+                'giữ cũ' if args.keep_totp else 'đã xóa (sẽ hiện QR khi đăng nhập)',
+            ))
             print('Đăng nhập /login — username=%s (Authenticator bật; thiết bị mới sẽ hiện QR nếu chưa quét)' % args.username)
         conn.close()
 

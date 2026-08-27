@@ -1,0 +1,283 @@
+{% extends "crm/_layout.html" %}
+
+{% block crm_page_id %}dashboard{% endblock %}
+
+{% block title %}CRM — Tổng quan{% endblock %}
+{% block crm_title %}Tổng quan & Analytics CRM{% endblock %}
+{% block crm_desc %}KPI vận hành + biểu đồ Marketing / Sales / CSKH để ra quyết định.{% endblock %}
+
+{% block crm_tip_title %}Đọc dashboard thế nào?{% endblock %}
+{% block crm_tip_body %}
+  Funnel cho thấy nghẽn bán hàng · Pie nguồn cho biết kênh hiệu quả · Gauge so KPI tháng ·
+  Leaderboard thi đua sales · CPL / Retention / Ticket SLA nằm phía dưới.
+{% endblock %}
+
+{% block crm_actions %}
+<a class="crm-btn crm-btn-ghost" href="{{ url_for('crm_settings_page') }}"><i class="fas fa-cog"></i> Cấu hình</a>
+<a class="crm-btn crm-btn-primary" href="{{ url_for('crm_leads_page') }}"><i class="fas fa-user-plus"></i> Thêm lead</a>
+{% endblock %}
+
+{% block crm_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.crm-chart-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-bottom:1rem; }
+.crm-chart-box { min-height:280px; }
+.crm-chart-box canvas { max-height:260px; }
+.crm-funnel { display:flex; flex-direction:column; gap:.35rem; padding:.5rem 0; }
+.crm-funnel-row { display:flex; align-items:center; gap:.6rem; }
+.crm-funnel-bar {
+  height:28px; border-radius:8px; background:linear-gradient(90deg,#0f766e,#2dd4bf);
+  color:#fff; font-size:.78rem; font-weight:700; display:flex; align-items:center;
+  padding:0 .65rem; min-width:2rem; transition:width .4s;
+}
+.crm-gauge-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:240px; }
+.crm-gauge-pct { font-size:2rem; font-weight:800; color:var(--crm-accent-2); margin-top:-.5rem; }
+.crm-cohort { overflow:auto; }
+.crm-cohort table { font-size:.75rem; }
+.crm-cohort td { text-align:center; min-width:48px; }
+@media (max-width: 1000px) { .crm-chart-grid { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block crm_content %}
+<div class="crm-stat-grid">
+  <div class="crm-stat"><div class="label">Leads mở</div><div class="value" id="sLeads">—</div></div>
+  <div class="crm-stat"><div class="label">Cơ hội mở</div><div class="value" id="sOpp">—</div></div>
+  <div class="crm-stat"><div class="label">Giá trị pipeline</div><div class="value" id="sAmt" style="font-size:1.2rem">—</div></div>
+  <div class="crm-stat"><div class="label">Báo giá đang xử lý</div><div class="value" id="sQuotes">—</div></div>
+</div>
+
+<div class="crm-chart-grid">
+  <div class="crm-panel crm-chart-box">
+    <div class="crm-panel-hd"><h2>Phễu bán hàng (Funnel)</h2></div>
+    <div class="crm-panel-bd"><div class="crm-funnel" id="funnelBox"></div></div>
+  </div>
+  <div class="crm-panel crm-chart-box">
+    <div class="crm-panel-hd"><h2>Doanh thu vs KPI tháng</h2></div>
+    <div class="crm-panel-bd crm-gauge-wrap">
+      <canvas id="chartKpi" height="160"></canvas>
+      <div class="crm-gauge-pct" id="kpiPct">—%</div>
+      <div class="small text-muted" id="kpiDetail"></div>
+    </div>
+  </div>
+  <div class="crm-panel crm-chart-box">
+    <div class="crm-panel-hd"><h2>Nguồn khách (Marketing)</h2></div>
+    <div class="crm-panel-bd"><canvas id="chartSource"></canvas></div>
+  </div>
+  <div class="crm-panel crm-chart-box">
+    <div class="crm-panel-hd"><h2>Leaderboard sales</h2></div>
+    <div class="crm-panel-bd"><canvas id="chartLeaders"></canvas></div>
+  </div>
+  <div class="crm-panel crm-chart-box">
+    <div class="crm-panel-hd"><h2>CPL theo tháng</h2></div>
+    <div class="crm-panel-bd"><canvas id="chartCpl"></canvas></div>
+  </div>
+  <div class="crm-panel crm-chart-box">
+    <div class="crm-panel-hd"><h2>Ticket SLA (giờ TB)</h2></div>
+    <div class="crm-panel-bd"><canvas id="chartSla"></canvas></div>
+  </div>
+</div>
+
+<div class="crm-panel mb-3">
+  <div class="crm-panel-hd"><h2>Retention cohort (% quay lại mua)</h2></div>
+  <div class="crm-panel-bd crm-cohort" id="cohortBox"></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-7">
+    <div class="crm-panel h-100">
+      <div class="crm-panel-hd"><h2>Nhắc liên hệ (7 ngày)</h2>
+        <span class="small text-muted" id="notifBadge"></span>
+      </div>
+      <div class="crm-panel-bd p-0">
+        <table class="table crm-table mb-0"><thead><tr><th>Khách</th><th>Hẹn</th><th>Phụ trách</th><th></th></tr></thead>
+        <tbody id="tbCustFollow"></tbody></table>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="crm-panel h-100">
+      <div class="crm-panel-hd"><h2>Thông báo CRM</h2>
+        <button class="crm-btn crm-btn-ghost btn-sm" onclick="scanReminders()">Quét nhắc</button>
+      </div>
+      <div class="crm-panel-bd p-0" id="ulNotifs" style="max-height:360px;overflow:auto"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block crm_scripts %}
+<script>
+const money = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+const COLORS = ['#0f766e','#0284c7','#ca8a04','#dc2626','#7c3aed','#ea580c','#059669','#64748b'];
+let charts = {};
+
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+async function loadDash() {
+  const [d, a, n] = await Promise.all([
+    fetch('/api/crm/dashboard').then(r => r.json()),
+    fetch('/api/crm/analytics').then(r => r.json()),
+    fetch('/api/crm/notifications?unread=1').then(r => r.json()),
+  ]);
+  if (d.error) { alert(d.error); return; }
+  document.getElementById('sLeads').textContent = d.leads_open;
+  document.getElementById('sOpp').textContent = d.opportunities_open;
+  document.getElementById('sAmt').textContent = money(d.pipeline_amount) + ' đ';
+  document.getElementById('sQuotes').textContent = d.quotes_open;
+
+  const rows = d.customer_followups || [];
+  document.getElementById('tbCustFollow').innerHTML = rows.length ? rows.map(c => `<tr>
+    <td><div class="fw-semibold">${c.company_name||c.name||''}</div></td>
+    <td class="small">${c.crm_next_contact_at||''}</td>
+    <td class="small">${c.crm_owner||'—'}</td>
+    <td><a class="crm-btn crm-btn-ghost btn-sm py-1" href="/crm/customer/${c.id}">360°</a></td>
+  </tr>`).join('') : '<tr><td colspan="4" class="crm-empty">Không có lịch hẹn</td></tr>';
+
+  const notifs = Array.isArray(n) ? n : [];
+  document.getElementById('notifBadge').textContent = notifs.length ? `${notifs.length} chưa đọc` : '';
+  document.getElementById('ulNotifs').innerHTML = notifs.length ? notifs.map(x => `
+    <div class="crm-act-item">
+      <span class="crm-badge me-1">${x.notif_type}</span>
+      <strong>${x.title||''}</strong>
+      <div class="small text-muted">${x.body||''}</div>
+      <button class="btn btn-link btn-sm p-0" onclick="readNotif(${x.id})">Đã đọc</button>
+    </div>`).join('') : '<div class="crm-empty">Không có thông báo mới</div>';
+
+  if (a.error) return;
+  renderFunnel(a.funnel);
+  renderKpi(a.kpi);
+  renderPie('chartSource', a.source_pie);
+  renderLeaders(a.leaderboard);
+  renderCpl(a.cpl);
+  renderSla(a.ticket_sla);
+  renderCohort(a.retention);
+}
+
+function renderFunnel(f) {
+  const box = document.getElementById('funnelBox');
+  const counts = f.counts || [];
+  const max = Math.max(...counts, 1);
+  box.innerHTML = (f.labels||[]).map((lb, i) => {
+    const w = Math.max(8, Math.round(100 * counts[i] / max));
+    return `<div class="crm-funnel-row">
+      <div style="width:110px" class="small fw-semibold">${lb}</div>
+      <div class="crm-funnel-bar" style="width:${w}%">${counts[i]} · ${money(f.amounts[i])}đ</div>
+    </div>`;
+  }).join('');
+}
+
+function renderKpi(k) {
+  destroyChart('kpi');
+  const pct = Math.min(100, k.percent || 0);
+  charts.kpi = new Chart(document.getElementById('chartKpi'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Đạt', 'Còn lại'],
+      datasets: [{ data: [pct, Math.max(0, 100 - pct)], backgroundColor: ['#0f766e', '#e2e8f0'], borderWidth: 0 }]
+    },
+    options: { cutout: '72%', plugins: { legend: { display: false } } }
+  });
+  document.getElementById('kpiPct').textContent = (k.percent || 0) + '%';
+  const srcMap = {
+    hr_kpi_department: 'HR KPI',
+    hr_kpi_employee: 'HR KPI',
+    hr_kpi_employee_sum: 'HR KPI',
+    hr_sales_rev: 'HR KPI',
+    crm_targets: 'CRM local',
+    none: ''
+  };
+  const src = srcMap[k.target_source] || '';
+  document.getElementById('kpiDetail').textContent =
+    `${money(k.actual)} / ${money(k.target)} đ · kỳ ${k.period_key}` +
+    (src ? ` · ${src}` : '') +
+    (k.target ? '' : ' (chưa đặt KPI — HR SALES_REV hoặc Cấu hình CRM)');
+}
+
+function renderPie(canvasId, pie) {
+  destroyChart(canvasId);
+  charts[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'doughnut',
+    data: {
+      labels: pie.labels || ['Chưa có'],
+      datasets: [{ data: (pie.values && pie.values.length) ? pie.values : [1], backgroundColor: COLORS }]
+    },
+    options: { plugins: { legend: { position: 'right' } } }
+  });
+}
+
+function renderLeaders(lb) {
+  destroyChart('leaders');
+  const items = (lb.items || []).slice(0, 8);
+  charts.leaders = new Chart(document.getElementById('chartLeaders'), {
+    type: 'bar',
+    data: {
+      labels: items.map(i => i.owner),
+      datasets: [{ label: 'Doanh thu', data: items.map(i => i.revenue), backgroundColor: '#0f766e' }]
+    },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: v => money(v) } } } }
+  });
+}
+
+function renderCpl(cpl) {
+  destroyChart('cpl');
+  charts.cpl = new Chart(document.getElementById('chartCpl'), {
+    type: 'bar',
+    data: {
+      labels: cpl.labels || [],
+      datasets: [
+        { label: 'CPL', data: cpl.cpl || [], backgroundColor: '#0284c7' },
+        { label: 'Leads', data: cpl.leads || [], backgroundColor: '#99f6e4', yAxisID: 'y1' },
+      ]
+    },
+    options: {
+      scales: {
+        y: { position: 'left', title: { display: true, text: 'CPL (đ)' } },
+        y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Số lead' } }
+      }
+    }
+  });
+}
+
+function renderSla(sla) {
+  destroyChart('sla');
+  charts.sla = new Chart(document.getElementById('chartSla'), {
+    type: 'line',
+    data: {
+      labels: sla.labels || [],
+      datasets: [{ label: 'Giờ TB', data: sla.avg_hours || [], borderColor: '#ea580c', tension: .3, fill: false }]
+    },
+    options: { plugins: { legend: { display: false } } }
+  });
+}
+
+function renderCohort(ret) {
+  const box = document.getElementById('cohortBox');
+  if (!(ret.cohorts||[]).length) {
+    box.innerHTML = '<div class="crm-empty">Chưa đủ dữ liệu đơn hàng gắn customer_id</div>';
+    return;
+  }
+  let head = '<tr><th>Cohort</th><th>Size</th>' + (ret.months||[]).map(m => `<th>M+${m}</th>`).join('') + '</tr>';
+  let body = (ret.cohorts||[]).map((c, i) => {
+    const cells = (ret.matrix[i]||[]).map(v => {
+      if (v == null) return '<td>—</td>';
+      const bg = `rgba(15,118,110,${Math.min(0.85, v/100)})`;
+      return `<td style="background:${bg};color:${v>45?'#fff':'#0f172a'}">${v}%</td>`;
+    }).join('');
+    return `<tr><td class="fw-semibold">${c}</td><td>${ret.sizes[i]}</td>${cells}</tr>`;
+  }).join('');
+  box.innerHTML = `<table class="table table-sm table-bordered mb-0"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+async function readNotif(id) {
+  await fetch(`/api/crm/notifications/${id}/read`, {method:'POST'});
+  loadDash();
+}
+async function scanReminders() {
+  const d = await (await fetch('/api/crm/reminders/scan', {method:'POST'})).json();
+  alert(d.error || `Đã tạo ${d.created||0} nhắc`);
+  loadDash();
+}
+loadDash();
+</script>
+{% endblock %}

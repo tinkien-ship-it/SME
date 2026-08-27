@@ -1,0 +1,191 @@
+{% extends "crm/_layout.html" %}
+
+{% block crm_page_id %}leads{% endblock %}
+
+{% block title %}CRM — Leads{% endblock %}
+{% block crm_title %}Leads — tiềm năng{% endblock %}
+{% block crm_desc %}Thu thập liên hệ mới, theo dõi trạng thái và chuyển thành khách hàng + cơ hội bán.{% endblock %}
+
+{% block crm_tip_title %}Cách dùng Leads{% endblock %}
+{% block crm_tip_body %}
+  Thêm lead → gọi / Zalo và cập nhật trạng thái → khi đủ điều kiện bấm
+  <b>Chuyển KH</b>. Hệ thống tạo hồ sơ khách và đưa deal vào Pipeline.
+{% endblock %}
+
+{% block crm_actions %}
+<button type="button" class="crm-btn crm-btn-primary" data-bs-toggle="modal"
+        data-bs-target="#leadModal" onclick="openLead()">
+  <i class="fas fa-plus"></i> Thêm lead
+</button>
+{% endblock %}
+
+{% block crm_content %}
+<div class="crm-toolbar">
+  <input id="qSearch" class="form-control form-control-sm" placeholder="Tìm tên, SĐT, công ty...">
+  <select id="qStatus" class="form-select form-select-sm" style="max-width:180px">
+    <option value="">Tất cả trạng thái</option>
+    <option value="new">Mới</option>
+    <option value="contacting">Đang liên hệ</option>
+    <option value="qualified">Đủ điều kiện</option>
+    <option value="converted">Đã chuyển</option>
+    <option value="lost">Mất</option>
+  </select>
+  <button type="button" class="crm-btn crm-btn-ghost" onclick="loadLeads()">
+    <i class="fas fa-search"></i> Lọc
+  </button>
+</div>
+
+<div class="crm-panel">
+  <div class="crm-panel-hd">
+    <h2>Danh sách leads</h2>
+    <span class="small text-muted">Bấm <b>Chuyển KH</b> khi lead sẵn sàng mua</span>
+  </div>
+  <div class="crm-panel-bd p-0">
+    <div class="table-responsive">
+      <table class="table crm-table mb-0">
+        <thead>
+          <tr>
+            <th>Tiêu đề</th><th>Liên hệ</th><th>SĐT</th><th>Nguồn</th><th>TT</th>
+            <th class="text-end">Giá trị DK</th><th>Hẹn</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tbLeads"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block crm_modals %}
+<div class="modal fade" id="leadModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-0 shadow">
+    <div class="modal-header border-0 pb-0">
+      <h5 class="modal-title fw-bold" id="leadTitle">Thêm lead</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="leadId">
+      <div class="row g-2">
+        <div class="col-md-6"><label class="form-label small">Tiêu đề</label><input id="fTitle" class="form-control form-control-sm"></div>
+        <div class="col-md-6"><label class="form-label small">Tên liên hệ *</label><input id="fContact" class="form-control form-control-sm" required></div>
+        <div class="col-md-6"><label class="form-label small">Công ty</label><input id="fCompany" class="form-control form-control-sm"></div>
+        <div class="col-md-3"><label class="form-label small">SĐT</label><input id="fPhone" class="form-control form-control-sm"></div>
+        <div class="col-md-3"><label class="form-label small">Email</label><input id="fEmail" class="form-control form-control-sm"></div>
+        <div class="col-md-3"><label class="form-label small">Nguồn</label>
+          <select id="fSource" class="form-select form-select-sm">
+            <option value="">—</option>
+            <option>Facebook</option><option>Google</option><option>TikTok</option>
+            <option>Zalo</option><option>Website</option><option>Hotline</option>
+            <option>Giới thiệu</option><option>Triển lãm</option><option>Khác</option>
+          </select>
+        </div>
+        <div class="col-md-3"><label class="form-label small">Trạng thái</label>
+          <select id="fStatus" class="form-select form-select-sm">
+            <option value="new">Mới</option><option value="contacting">Đang liên hệ</option>
+            <option value="qualified">Đủ điều kiện</option><option value="lost">Mất</option>
+          </select>
+        </div>
+        <div class="col-md-3"><label class="form-label small">Giá trị dự kiến</label><input id="fValue" type="number" class="form-control form-control-sm" value="0"></div>
+        <div class="col-md-3"><label class="form-label small">Hẹn liên hệ</label><input id="fNext" type="datetime-local" class="form-control form-control-sm"></div>
+        <div class="col-12"><label class="form-label small">Ghi chú</label><textarea id="fNotes" class="form-control form-control-sm" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer border-0">
+      <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Đóng</button>
+      <button class="crm-btn crm-btn-primary" onclick="saveLead()">Lưu lead</button>
+    </div>
+  </div></div>
+</div>
+{% endblock %}
+
+{% block crm_scripts %}
+<script>
+const money = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+const ST = {new:'Mới',contacting:'Đang LH',qualified:'Đủ ĐK',converted:'Đã chuyển',lost:'Mất'};
+const ST_CLS = {new:'crm-badge-new',contacting:'crm-badge-contacting',qualified:'crm-badge-qualified',converted:'crm-badge-converted',lost:'crm-badge-lost'};
+
+function openLead(row) {
+  document.getElementById('leadId').value = row?.id || '';
+  document.getElementById('leadTitle').textContent = row ? 'Sửa lead' : 'Thêm lead';
+  document.getElementById('fTitle').value = row?.title || '';
+  document.getElementById('fContact').value = row?.contact_name || '';
+  document.getElementById('fCompany').value = row?.company_name || '';
+  document.getElementById('fPhone').value = row?.phone || '';
+  document.getElementById('fEmail').value = row?.email || '';
+  document.getElementById('fSource').value = row?.source || '';
+  document.getElementById('fStatus').value = row?.status || 'new';
+  document.getElementById('fValue').value = row?.expected_value || 0;
+  document.getElementById('fNext').value = (row?.next_contact_at || '').replace(' ','T').slice(0,16);
+  document.getElementById('fNotes').value = row?.notes || '';
+}
+
+async function loadLeads() {
+  const q = document.getElementById('qSearch').value.trim();
+  const st = document.getElementById('qStatus').value;
+  const url = `/api/crm/leads?q=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}`;
+  const rows = await (await fetch(url)).json();
+  const tb = document.getElementById('tbLeads');
+  if (!Array.isArray(rows) || !rows.length) {
+    tb.innerHTML = '<tr><td colspan="8" class="crm-empty">Chưa có lead — bấm <b>+ Thêm lead</b> để bắt đầu.</td></tr>';
+    return;
+  }
+  tb.innerHTML = rows.map(r => `<tr>
+    <td class="fw-semibold">${r.title || ''}</td>
+    <td>${r.contact_name || ''}<div class="small text-muted">${r.company_name||''}</div></td>
+    <td>${r.phone || '—'}</td>
+    <td>${r.source || '—'}</td>
+    <td><span class="crm-badge ${ST_CLS[r.status]||''}">${ST[r.status]||r.status}</span></td>
+    <td class="text-end">${money(r.expected_value)}</td>
+    <td class="small">${r.next_contact_at || '—'}</td>
+    <td class="text-nowrap">
+      <button class="btn btn-sm btn-outline-secondary" onclick='openLead(${JSON.stringify(r).replace(/'/g,"&#39;")}); new bootstrap.Modal("#leadModal").show()'>Sửa</button>
+      ${r.status !== 'converted' ? `<button class="btn btn-sm btn-success" onclick="convertLead(${r.id})">Chuyển KH</button>` : ''}
+      ${r.customer_id ? `<a class="btn btn-sm btn-outline-primary" href="/crm/customer/${r.customer_id}">360°</a>` : ''}
+      <button class="btn btn-sm btn-outline-danger" onclick="delLead(${r.id})">Xóa</button>
+    </td>
+  </tr>`).join('');
+}
+
+async function saveLead() {
+  const id = document.getElementById('leadId').value;
+  const body = {
+    title: document.getElementById('fTitle').value,
+    contact_name: document.getElementById('fContact').value,
+    company_name: document.getElementById('fCompany').value,
+    phone: document.getElementById('fPhone').value,
+    email: document.getElementById('fEmail').value,
+    source: document.getElementById('fSource').value,
+    status: document.getElementById('fStatus').value,
+    expected_value: document.getElementById('fValue').value,
+    next_contact_at: (document.getElementById('fNext').value || '').replace('T',' '),
+    notes: document.getElementById('fNotes').value,
+  };
+  const r = await fetch(id ? `/api/crm/leads/${id}` : '/api/crm/leads', {
+    method: id ? 'PUT' : 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  });
+  const d = await r.json();
+  if (!r.ok || d.error) { alert(d.error || 'Lỗi'); return; }
+  bootstrap.Modal.getInstance(document.getElementById('leadModal'))?.hide();
+  loadLeads();
+}
+
+async function convertLead(id) {
+  if (!confirm('Chuyển lead thành khách hàng + tạo cơ hội bán trên Pipeline?')) return;
+  const d = await (await fetch(`/api/crm/leads/${id}/convert`, {method:'POST'})).json();
+  if (d.error) { alert(d.error); return; }
+  if (d.customer_id) location.href = `/crm/customer/${d.customer_id}`;
+  else loadLeads();
+}
+
+async function delLead(id) {
+  if (!confirm('Xóa lead này?')) return;
+  await fetch(`/api/crm/leads/${id}`, {method:'DELETE'});
+  loadLeads();
+}
+
+document.getElementById('qSearch').addEventListener('keydown', e => { if (e.key === 'Enter') loadLeads(); });
+loadLeads();
+</script>
+{% endblock %}

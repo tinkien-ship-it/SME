@@ -1098,7 +1098,7 @@ def register_settings_routes(app):
                 generate_totp_secret,
                 get_user_totp_secret_any,
                 provisioning_uri,
-                qr_png_data_url,
+                safe_qr_data_url,
                 save_totp_draft,
             )
             secret = session.get('pending_totp_secret')
@@ -1121,16 +1121,18 @@ def register_settings_routes(app):
             session['pending_totp_secret'] = secret
             session.modified = True
             uri = provisioning_uri(secret, user.get('username') or 'master')
-            try:
-                qr_url = qr_png_data_url(uri)
-            except Exception as exc:
-                current_app.logger.error('totp QR generate: %s', exc)
+            qr_url = safe_qr_data_url(uri)
+            if not qr_url:
+                current_app.logger.error(
+                    'totp QR generate failed (thiếu qrcode/Pillow?). '
+                    'Fallback client-side sẽ dùng otpauth_uri.'
+                )
                 flash(
-                    'Không tạo được mã QR (thiếu thư viện qrcode/Pillow?). '
-                    'Vẫn có thể nhập khóa thủ công bên dưới.',
+                    'Máy chủ chưa tạo được ảnh QR — dùng QR dự phòng trên trang '
+                    'hoặc nhập khóa thủ công bên dưới. '
+                    "Trên VPS chạy: pip install 'qrcode[pil]==8.2' pillow",
                     'warning',
                 )
-                qr_url = ''
             setup_payload = {
                 'secret': secret,
                 'otpauth_uri': uri,
@@ -1169,7 +1171,7 @@ def register_settings_routes(app):
                     from Services.totp_auth import (
                         get_user_totp_secret_any,
                         provisioning_uri,
-                        qr_png_data_url,
+                        safe_qr_data_url,
                     )
                     secret_show = (
                         session.get('pending_totp_secret')
@@ -1189,7 +1191,7 @@ def register_settings_routes(app):
                     setup_payload = {
                         'secret': secret_show,
                         'otpauth_uri': uri,
-                        'qr_data_url': qr_png_data_url(uri),
+                        'qr_data_url': safe_qr_data_url(uri),
                     }
                 return render_template(
                     'verify_totp.html',
@@ -2394,7 +2396,7 @@ Trân trọng,
     def api_master_totp_setup():
         if session.get('role') != 'master':
             return jsonify({'success': False, 'error': 'Chỉ Master'}), 403
-        from Services.totp_auth import generate_totp_secret, provisioning_uri, qr_png_data_url
+        from Services.totp_auth import generate_totp_secret, provisioning_uri, safe_qr_data_url
         secret = generate_totp_secret()
         session['master_totp_setup_secret'] = secret
         session.modified = True
@@ -2404,7 +2406,7 @@ Trân trọng,
             'success': True,
             'secret': secret,
             'otpauth_uri': uri,
-            'qr_data_url': qr_png_data_url(uri),
+            'qr_data_url': safe_qr_data_url(uri),
         })
 
     @app.route('/api/master/totp/confirm', methods=['POST'])

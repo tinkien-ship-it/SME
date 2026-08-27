@@ -1,0 +1,85 @@
+{% extends "crm/_layout.html" %}
+{% block crm_page_id %}campaigns{% endblock %}
+{% block title %}CRM — Chiến dịch{% endblock %}
+{% block crm_title %}Chiến dịch Marketing{% endblock %}
+{% block crm_desc %}Theo dõi ngân sách / chi tiêu → CPL trên dashboard. Gắn nguồn lead (Facebook, Google…).{% endblock %}
+{% block crm_tip_title %}CPL{% endblock %}
+{% block crm_tip_body %}Nhập <b>Chi tiêu (spend)</b> theo chiến dịch. Dashboard tính CPL = spend / số lead tạo trong tháng.{% endblock %}
+{% block crm_actions %}
+<button class="crm-btn crm-btn-primary" onclick="openCamp()"><i class="fas fa-plus"></i> Chiến dịch</button>
+{% endblock %}
+{% block crm_content %}
+<div class="crm-panel"><div class="crm-panel-bd p-0">
+<table class="table crm-table mb-0"><thead><tr>
+  <th>Tên</th><th>Kênh</th><th>TT</th><th class="text-end">Ngân sách</th><th class="text-end">Chi tiêu</th><th>Thời gian</th><th></th>
+</tr></thead><tbody id="tb"></tbody></table>
+</div></div>
+{% endblock %}
+{% block crm_modals %}
+<div class="modal fade" id="m"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow">
+  <div class="modal-header border-0"><h5 class="modal-title fw-bold" id="mt">Chiến dịch</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="id">
+    <div class="mb-2"><label class="form-label small">Tên *</label><input id="name" class="form-control form-control-sm"></div>
+    <div class="row g-2">
+      <div class="col-6"><label class="form-label small">Kênh</label>
+        <select id="channel" class="form-select form-select-sm">
+          <option>Facebook</option><option>Google</option><option>TikTok</option><option>Zalo</option>
+          <option>Website</option><option>Hotline</option><option>Khác</option>
+        </select>
+      </div>
+      <div class="col-6"><label class="form-label small">Trạng thái</label>
+        <select id="status" class="form-select form-select-sm">
+          <option value="active">Active</option><option value="paused">Paused</option>
+          <option value="ended">Ended</option><option value="draft">Draft</option>
+        </select>
+      </div>
+      <div class="col-6"><label class="form-label small">Bắt đầu</label><input type="date" id="start" class="form-control form-control-sm"></div>
+      <div class="col-6"><label class="form-label small">Kết thúc</label><input type="date" id="end" class="form-control form-control-sm"></div>
+      <div class="col-6"><label class="form-label small">Ngân sách</label><input type="number" id="budget" class="form-control form-control-sm" value="0"></div>
+      <div class="col-6"><label class="form-label small">Chi tiêu (spend)</label><input type="number" id="spend" class="form-control form-control-sm" value="0"></div>
+      <div class="col-12"><label class="form-label small">Ghi chú</label><input id="notes" class="form-control form-control-sm"></div>
+    </div>
+  </div>
+  <div class="modal-footer border-0">
+    <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Đóng</button>
+    <button class="crm-btn crm-btn-primary" onclick="save()">Lưu</button>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block crm_scripts %}
+<script>
+const money = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+function openCamp(r){
+  document.getElementById('id').value=r?.id||'';
+  document.getElementById('name').value=r?.name||'';
+  document.getElementById('channel').value=r?.channel||'Facebook';
+  document.getElementById('status').value=r?.status||'active';
+  document.getElementById('start').value=(r?.start_date||'').slice(0,10);
+  document.getElementById('end').value=(r?.end_date||'').slice(0,10);
+  document.getElementById('budget').value=r?.budget||0;
+  document.getElementById('spend').value=r?.spend||0;
+  document.getElementById('notes').value=r?.notes||'';
+  new bootstrap.Modal('#m').show();
+}
+async function load(){
+  const rows=await(await fetch('/api/crm/campaigns')).json();
+  document.getElementById('tb').innerHTML = (rows||[]).length ? rows.map(r=>`<tr>
+    <td class="fw-semibold">${r.name}</td><td>${r.channel||''}</td><td>${r.status}</td>
+    <td class="text-end">${money(r.budget)}</td><td class="text-end">${money(r.spend)}</td>
+    <td class="small">${(r.start_date||'').slice(0,10)} → ${(r.end_date||'').slice(0,10)}</td>
+    <td><button class="btn btn-sm btn-outline-secondary" onclick='openCamp(${JSON.stringify(r).replace(/'/g,"&#39;")})'>Sửa</button>
+    <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button></td>
+  </tr>`).join('') : '<tr><td colspan="7" class="crm-empty">Chưa có chiến dịch</td></tr>';
+}
+async function save(){
+  const id=document.getElementById('id').value;
+  const body={name:name.value,channel:channel.value,status:status.value,start_date:start.value,end_date:end.value,budget:budget.value,spend:spend.value,notes:notes.value};
+  const r=await fetch(id?`/api/crm/campaigns/${id}`:'/api/crm/campaigns',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json(); if(d.error) return alert(d.error);
+  bootstrap.Modal.getInstance(document.getElementById('m'))?.hide(); load();
+}
+async function del(id){ if(!confirm('Xóa?'))return; await fetch('/api/crm/campaigns/'+id,{method:'DELETE'}); load(); }
+load();
+</script>
+{% endblock %}

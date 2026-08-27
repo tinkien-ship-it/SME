@@ -23,7 +23,7 @@
                 {% set collapse_id = 'sme-group-' ~ group['id'] %}
                 <div class="hkd-menu-group sme-menu-group" data-group="{{ group['id'] }}">
                     {% if not group['items'] %}
-                    <a href="{{ url_for(group['endpoint']) }}"
+                    <a href="{{ safe_url_for(group['endpoint']) }}"
                        class="group-toggle group-toggle-direct text-decoration-none sme-menu-item {% if group_is_active %}active{% endif %}"
                        data-label="{{ group['label'] | lower }}">
                         <i class="{{ group['icon'] }} me-2"></i>{{ group['label'] }}
@@ -38,14 +38,14 @@
                     <div class="collapse {% if group_is_active %}show{% endif %}" id="{{ collapse_id }}">
                         {% if group.get('endpoint') and group['endpoint'] not in item_endpoints %}
                         <a class="nav-link-sub sme-menu-item {% if sme_active == group['endpoint'] %}active{% endif %}"
-                           href="{{ url_for(group['endpoint']) }}" data-label="tổng quan {{ group['label'] | lower }}">
+                           href="{{ safe_url_for(group['endpoint']) }}" data-label="tổng quan {{ group['label'] | lower }}">
                             <i class="fas fa-chart-pie"></i>
                             <span>Tổng quan {{ group['label'] }}</span>
                         </a>
                         {% endif %}
                         {% for item in group['items'] %}
                         <a class="nav-link-sub sme-menu-item {% if sme_active == item['endpoint'] %}active{% endif %}"
-                           href="{{ url_for(item['endpoint']) }}" data-label="{{ item['label'] | lower }}">
+                           href="{{ safe_url_for(item['endpoint']) }}" data-label="{{ item['label'] | lower }}">
                             <i class="{{ item['icon'] }}"></i>
                             <span>{{ item['label'] }}</span>
                         </a>

@@ -92,11 +92,22 @@ def fingerprint_from_request(request, signal: dict | None = None) -> str:
 
 
 def ensure_totp_columns(conn: sqlite3.Connection) -> None:
-    cols = {r[1] for r in conn.execute('PRAGMA table_info(users)')}
-    if 'totp_secret' not in cols:
-        conn.execute('ALTER TABLE users ADD COLUMN totp_secret TEXT')
-    if 'totp_confirmed_at' not in cols:
-        conn.execute('ALTER TABLE users ADD COLUMN totp_confirmed_at TEXT')
+    """Thêm cột TOTP nếu thiếu — dùng chung SQLite / PostgreSQL."""
+    try:
+        from db.schema_helpers import add_column_if_missing
+        add_column_if_missing(conn, 'users', 'totp_secret', 'TEXT')
+        add_column_if_missing(conn, 'users', 'totp_confirmed_at', 'TEXT')
+        return
+    except Exception:
+        pass
+    try:
+        cols = {r[1] for r in conn.execute('PRAGMA table_info(users)')}
+        if 'totp_secret' not in cols:
+            conn.execute('ALTER TABLE users ADD COLUMN totp_secret TEXT')
+        if 'totp_confirmed_at' not in cols:
+            conn.execute('ALTER TABLE users ADD COLUMN totp_confirmed_at TEXT')
+    except Exception:
+        pass
 
 
 def get_user_totp_secret(conn: sqlite3.Connection, user_id: int) -> str | None:
@@ -153,6 +164,7 @@ def provisioning_uri(secret: str, username: str) -> str:
 
 
 def qr_png_data_url(otpauth_uri: str) -> str:
+    """Tạo data-URL QR (PNG ưu tiên; SVG nếu thiếu Pillow — hay gặp trên VPS)."""
     try:
         import qrcode
     except ImportError as exc:
@@ -160,11 +172,44 @@ def qr_png_data_url(otpauth_uri: str) -> str:
             "Thiếu thư viện qrcode. Chạy: pip install 'qrcode[pil]==8.2'"
         ) from exc
 
-    img = qrcode.make(otpauth_uri)
-    buf = io.BytesIO()
-    img.save(buf, format='PNG')
-    b64 = base64.b64encode(buf.getvalue()).decode('ascii')
-    return f'data:image/png;base64,{b64}'
+    uri = (otpauth_uri or '').strip()
+    if not uri:
+        raise ValueError('otpauth_uri trống')
+
+    # 1) PNG qua Pillow (nếu có)
+    try:
+        from qrcode.image.pil import PilImage
+        img = qrcode.make(uri, image_factory=PilImage)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+        return f'data:image/png;base64,{b64}'
+    except Exception:
+        pass
+
+    # 2) Fallback SVG — không cần Pillow (phù hợp VPS tối giản)
+    try:
+        from qrcode.image.svg import SvgPathImage
+        img = qrcode.make(uri, image_factory=SvgPathImage)
+        buf = io.BytesIO()
+        img.save(buf)
+        raw = buf.getvalue()
+        if isinstance(raw, str):
+            raw = raw.encode('utf-8')
+        b64 = base64.b64encode(raw).decode('ascii')
+        return f'data:image/svg+xml;base64,{b64}'
+    except Exception as exc:
+        raise RuntimeError(
+            "Không tạo được QR. Cài: pip install 'qrcode[pil]==8.2' pillow"
+        ) from exc
+
+
+def safe_qr_data_url(otpauth_uri: str) -> str:
+    """Không ném lỗi — trả '' nếu tạo QR thất bại."""
+    try:
+        return qr_png_data_url(otpauth_uri) or ''
+    except Exception:
+        return ''
 
 
 def verify_totp_code(secret: str, code: str, *, window: int = 1) -> bool:

@@ -1,0 +1,108 @@
+{% extends "crm/_layout.html" %}
+{% block crm_page_id %}tickets{% endblock %}
+{% block title %}CRM — Helpdesk{% endblock %}
+{% block crm_title %}Ticket / Helpdesk{% endblock %}
+{% block crm_desc %}Tiếp nhận khiếu nại, theo dõi SLA — biểu đồ thời gian xử lý trên Tổng quan.{% endblock %}
+{% block crm_tip_title %}SLA{% endblock %}
+{% block crm_tip_body %}Mở ticket → In progress khi phản hồi → Resolved/Closed. Ticket mở > 2 ngày sẽ có thông báo nhắc.{% endblock %}
+{% block crm_actions %}
+<button class="crm-btn crm-btn-primary" onclick="openT()"><i class="fas fa-plus"></i> Ticket mới</button>
+{% endblock %}
+{% block crm_content %}
+<div class="crm-toolbar">
+  <select id="st" class="form-select form-select-sm" style="max-width:160px" onchange="load()">
+    <option value="">Tất cả TT</option>
+    <option value="open">Open</option><option value="in_progress">In progress</option>
+    <option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option>
+  </select>
+</div>
+<div class="crm-panel"><div class="crm-panel-bd p-0">
+<table class="table crm-table mb-0"><thead><tr>
+  <th>Số</th><th>Tiêu đề</th><th>KH</th><th>Ưu tiên</th><th>TT</th><th>Phụ trách</th><th>Mở</th><th></th>
+</tr></thead><tbody id="tb"></tbody></table>
+</div></div>
+{% endblock %}
+{% block crm_modals %}
+<div class="modal fade" id="m"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-0 shadow">
+  <div class="modal-header border-0"><h5 class="fw-bold" id="mt">Ticket</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="id">
+    <div class="row g-2">
+      <div class="col-md-3"><label class="form-label small">KH ID</label><input id="cust" class="form-control form-control-sm" list="cl"><datalist id="cl"></datalist></div>
+      <div class="col-md-9"><label class="form-label small">Tiêu đề *</label><input id="subject" class="form-control form-control-sm"></div>
+      <div class="col-12"><label class="form-label small">Mô tả</label><textarea id="desc" class="form-control form-control-sm" rows="3"></textarea></div>
+      <div class="col-md-3"><label class="form-label small">Ưu tiên</label>
+        <select id="priority" class="form-select form-select-sm">
+          <option value="low">Low</option><option value="normal" selected>Normal</option>
+          <option value="high">High</option><option value="urgent">Urgent</option>
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label small">Trạng thái</label>
+        <select id="status" class="form-select form-select-sm">
+          <option value="open">Open</option><option value="in_progress">In progress</option>
+          <option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option>
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label small">Phụ trách</label><input id="assignee" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">CSAT (1-5)</label><input type="number" id="csat" class="form-control form-control-sm" min="1" max="5"></div>
+      <div class="col-12" id="evtWrap" style="display:none">
+        <label class="form-label small">Thêm phản hồi</label>
+        <div class="input-group input-group-sm">
+          <input id="evt" class="form-control" placeholder="Nội dung xử lý...">
+          <button class="btn btn-outline-primary" type="button" onclick="addEvt()">Gửi</button>
+        </div>
+        <ul class="small mt-2 mb-0" id="evtList"></ul>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer border-0">
+    <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Đóng</button>
+    <button class="crm-btn crm-btn-primary" onclick="save()">Lưu</button>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block crm_scripts %}
+<script>
+function openT(r){
+  id.value=r?.id||''; cust.value=r?.customer_id||''; subject.value=r?.subject||'';
+  desc.value=r?.description||''; priority.value=r?.priority||'normal';
+  status.value=r?.status||'open'; assignee.value=r?.assignee||''; csat.value=r?.csat_score||'';
+  evtWrap.style.display=r?.id?'':'none';
+  evtList.innerHTML=(r?.events||[]).map(e=>`<li>${e.created_at}: ${e.content||''}</li>`).join('');
+  mt.textContent=r?.ticket_no||'Ticket mới';
+  new bootstrap.Modal('#m').show();
+}
+async function load(){
+  const q=st.value?('?status='+encodeURIComponent(st.value)):'';
+  const rows=await(await fetch('/api/crm/tickets'+q)).json();
+  tb.innerHTML=(rows||[]).length?rows.map(r=>`<tr>
+    <td class="fw-semibold">${r.ticket_no||''}</td><td>${r.subject||''}</td>
+    <td>${r.customer_name||(r.customer_id?('#'+r.customer_id):'—')}</td>
+    <td>${r.priority}</td><td><span class="crm-badge">${r.status}</span></td>
+    <td>${r.assignee||''}</td><td class="small">${(r.opened_at||'').slice(0,16)}</td>
+    <td><button class="btn btn-sm btn-outline-secondary" onclick="edit(${r.id})">Mở</button>
+    <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button></td>
+  </tr>`).join(''):'<tr><td colspan="8" class="crm-empty">Chưa có ticket</td></tr>';
+}
+async function edit(i){ const d=await(await fetch('/api/crm/tickets/'+i)).json(); if(d.error)return alert(d.error); openT(d); }
+async function save(){
+  if(!subject.value.trim()) return alert('Nhập tiêu đề');
+  const body={customer_id:cust.value||null,subject:subject.value,description:desc.value,priority:priority.value,status:status.value,assignee:assignee.value,csat_score:csat.value||null};
+  const i=id.value;
+  const r=await fetch(i?`/api/crm/tickets/${i}`:'/api/crm/tickets',{method:i?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json(); if(d.error) return alert(d.error);
+  bootstrap.Modal.getInstance(document.getElementById('m'))?.hide(); load();
+}
+async function addEvt(){
+  if(!id.value||!evt.value.trim()) return;
+  await fetch(`/api/crm/tickets/${id.value}/events`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:evt.value})});
+  edit(+id.value);
+}
+async function del(i){ if(!confirm('Xóa ticket?'))return; await fetch('/api/crm/tickets/'+i,{method:'DELETE'}); load(); }
+(async()=>{
+  const cs=await(await fetch('/api/customers')).json();
+  cl.innerHTML=(cs||[]).map(c=>`<option value="${c.id}">${c.company_name||c.name||''}</option>`).join('');
+  load();
+})();
+</script>
+{% endblock %}

@@ -202,6 +202,16 @@ _TENANT_TABLE_EXTRAS = [
     ('customers', 'email', 'TEXT'),
     ('customers', 'budget_unit_code', 'TEXT'),
     ('customers', 'passport_no', 'TEXT'),
+    ('customers', 'crm_source', 'TEXT'),
+    ('customers', 'crm_owner', 'TEXT'),
+    ('customers', 'crm_segment', "TEXT DEFAULT 'standard'"),
+    ('customers', 'crm_lifecycle', "TEXT DEFAULT 'active'"),
+    ('customers', 'crm_notes', 'TEXT'),
+    ('customers', 'crm_next_contact_at', 'TEXT'),
+    ('customers', 'crm_tags', 'TEXT'),
+    ('customers', 'crm_created_at', 'TEXT'),
+    ('customers', 'crm_updated_at', 'TEXT'),
+    ('sale', 'customer_id', 'INTEGER'),
     ('business_info', 'email', 'TEXT'),
     ('business_info', 'accounting_regime', "TEXT DEFAULT 'HKD'"),
     ('business_info', 'revenue_tier_declared', 'TEXT'),
@@ -306,6 +316,11 @@ def apply_schema_migrations(conn):
         ensure_user_branch_schema(conn, commit=False)
     except Exception as e:
         print(f'[MIGRATE] user_branch: {e}')
+    try:
+        from Services.crm_schema import ensure_crm_schema
+        ensure_crm_schema(conn, commit=False)
+    except Exception as e:
+        print(f'[MIGRATE] crm: {e}')
     try:
         from db.dialect import is_postgres
         if not is_postgres():

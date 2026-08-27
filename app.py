@@ -152,14 +152,37 @@ init_tenant_middleware(app, get_db_connection)
 
 # Tự động thêm tenant_id vào tất cả url_for
 from flask import url_for as original_url_for
+from werkzeug.routing.exceptions import BuildError as _UrlBuildError
 
 def url_for(endpoint, **values):
     tenant_id = getattr(g, 'tenant_id', None)
+    injected = False
     if tenant_id and endpoint != 'static' and 'tenant_id' not in values:
-        values.setdefault('tenant_id', tenant_id)
-    return original_url_for(endpoint, **values)
+        values = dict(values)
+        values['tenant_id'] = tenant_id
+        injected = True
+    try:
+        return original_url_for(endpoint, **values)
+    except _UrlBuildError:
+        # Endpoint chưa đăng ký, hoặc rule không nhận tenant_id — thử lại không inject
+        if injected:
+            values.pop('tenant_id', None)
+            try:
+                return original_url_for(endpoint, **values)
+            except _UrlBuildError:
+                pass
+        raise
 
 app.add_template_global(url_for, 'url_for')
+
+def safe_url_for(endpoint, **values):
+    """url_for không ném BuildError — dùng cho menu/sidebar khi route mới chưa reload."""
+    try:
+        return url_for(endpoint, **values)
+    except _UrlBuildError:
+        return '#'
+
+app.add_template_global(safe_url_for, 'safe_url_for')
 
 from Services.business_branding import default_business_logo_url as _default_business_logo_url
 
@@ -519,6 +542,9 @@ register_suppliers_orders_routes(app)
 # === CUSTOMERS routes → routes/customers.py ===
 from routes.customers import register_customers_routes
 register_customers_routes(app)
+
+from routes.crm import register_crm_routes
+register_crm_routes(app)
 
 # === EMPLOYEES routes → routes/employees.py ===
 from routes.employees import register_employees_routes

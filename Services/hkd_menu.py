@@ -198,6 +198,77 @@ POS_HKD_MENU = [
         ],
     },
     {
+        'id': 'pos_crm',
+        'section': 'sales',
+        'label': 'CRM & Chăm Sóc KH',
+        'icon': 'fas fa-handshake',
+        'color': 'primary',
+        'description': 'Lead, pipeline, báo giá và hồ sơ khách hàng 360°',
+        'items': [
+            {
+                'endpoint': 'crm_dashboard',
+                'label': 'Tổng quan CRM',
+                'icon': 'fas fa-gauge text-primary',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+            {
+                'endpoint': 'crm_leads_page',
+                'label': 'Leads tiềm năng',
+                'icon': 'fas fa-user-plus text-primary',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+            {
+                'endpoint': 'crm_pipeline_page',
+                'label': 'Pipeline bán hàng',
+                'icon': 'fas fa-filter text-primary',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+            {
+                'endpoint': 'crm_quotes_page',
+                'label': 'Báo giá CRM',
+                'icon': 'fas fa-file-invoice-dollar text-primary',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+            {
+                'endpoint': 'crm_contracts_page',
+                'label': 'Hợp đồng',
+                'icon': 'fas fa-file-contract text-primary',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+            {
+                'endpoint': 'crm_campaigns_page',
+                'label': 'Chiến dịch Marketing',
+                'icon': 'fas fa-bullhorn text-primary',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+            {
+                'endpoint': 'crm_tickets_page',
+                'label': 'Ticket / Helpdesk',
+                'icon': 'fas fa-headset text-primary',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+            {
+                'endpoint': 'crm_loyalty_page',
+                'label': 'Loyalty & CSAT/NPS',
+                'icon': 'fas fa-gift text-primary',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+            {
+                'endpoint': 'crm_settings_page',
+                'label': 'Cấu hình CRM',
+                'icon': 'fas fa-cog text-primary',
+                'roles': ('accountant', 'manager', 'admin', 'adminFB', 'master'),
+            },
+            {
+                'endpoint': 'customers_page',
+                'label': 'Danh mục khách hàng',
+                'icon': 'fas fa-users text-info',
+                'perm': 'view_customers',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+        ],
+    },
+    {
         'id': 'pos_danh_muc',
         'section': 'sales',
         'label': 'Danh Mục',
@@ -231,6 +302,12 @@ POS_HKD_MENU = [
                 'label': 'Khách Hàng',
                 'icon': 'fas fa-users text-info',
                 'perm': 'view_customers',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+            {
+                'endpoint': 'crm_dashboard',
+                'label': 'CRM & chăm sóc KH',
+                'icon': 'fas fa-handshake text-primary',
                 'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
             },
         ],
@@ -533,6 +610,14 @@ def _tenant_is_sme(tenant_profile) -> bool:
 def user_can_access_item(user, item, tenant_profile=None):
     if not user:
         return False
+    ep = item.get('endpoint')
+    if ep:
+        try:
+            from flask import current_app, has_app_context
+            if has_app_context() and ep not in current_app.view_functions:
+                return False
+        except Exception:
+            pass
     if tenant_profile is not None:
         from Services.tenant_profile import is_master_session
         if not is_master_session():

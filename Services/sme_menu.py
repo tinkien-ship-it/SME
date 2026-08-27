@@ -72,6 +72,23 @@ SME_MENU_GROUPS = (
         ),
     },
     {
+        'id': 'crm', 'section': 'operations', 'label': 'CRM & chăm sóc KH',
+        'icon': 'fas fa-handshake', 'color': 'primary', 'endpoint': 'crm_dashboard',
+        'description': 'Lead, pipeline, báo giá, nhật ký chăm sóc và hồ sơ khách hàng 360°',
+        'items': (
+            {'endpoint': 'crm_dashboard', 'label': 'Tổng quan CRM', 'icon': 'fas fa-gauge'},
+            {'endpoint': 'crm_leads_page', 'label': 'Leads tiềm năng', 'icon': 'fas fa-user-plus'},
+            {'endpoint': 'crm_pipeline_page', 'label': 'Pipeline bán hàng', 'icon': 'fas fa-filter'},
+            {'endpoint': 'crm_quotes_page', 'label': 'Báo giá CRM', 'icon': 'fas fa-file-invoice-dollar'},
+            {'endpoint': 'crm_contracts_page', 'label': 'Hợp đồng', 'icon': 'fas fa-file-contract'},
+            {'endpoint': 'crm_campaigns_page', 'label': 'Chiến dịch Marketing', 'icon': 'fas fa-bullhorn'},
+            {'endpoint': 'crm_tickets_page', 'label': 'Ticket / Helpdesk', 'icon': 'fas fa-headset'},
+            {'endpoint': 'crm_loyalty_page', 'label': 'Loyalty & CSAT/NPS', 'icon': 'fas fa-gift'},
+            {'endpoint': 'crm_settings_page', 'label': 'Cấu hình CRM', 'icon': 'fas fa-cog'},
+            {'endpoint': 'customers_page', 'label': 'Danh mục khách hàng', 'icon': 'fas fa-users'},
+        ),
+    },
+    {
         'id': 'catalog', 'section': 'operations', 'label': 'Danh mục',
         'icon': 'fas fa-box', 'color': 'info', 'endpoint': 'products',
         'description': 'Sản phẩm, nhà cung cấp và khách hàng',
@@ -80,6 +97,7 @@ SME_MENU_GROUPS = (
             {'endpoint': 'product_aliases', 'label': 'Tên hàng đã liên kết', 'icon': 'fas fa-link'},
             {'endpoint': 'suppliers_page', 'label': 'Nhà cung cấp', 'icon': 'fas fa-truck'},
             {'endpoint': 'customers_page', 'label': 'Khách hàng', 'icon': 'fas fa-users'},
+            {'endpoint': 'crm_dashboard', 'label': 'CRM & chăm sóc KH', 'icon': 'fas fa-handshake'},
         ),
     },
     {
@@ -248,11 +266,26 @@ def _normalize_menu_regime(regime: str | None) -> str:
     return r or 'SME_TT99'
 
 
+def _endpoint_registered(endpoint: str | None) -> bool:
+    """Ẩn mục menu nếu route chưa có trên app đang chạy (tránh BuildError)."""
+    if not endpoint:
+        return True
+    try:
+        from flask import current_app, has_app_context
+        if not has_app_context():
+            return True
+        return endpoint in current_app.view_functions
+    except Exception:
+        return True
+
+
 def _item_allowed(item: dict, regime: str, *, show_bctc: bool = True) -> bool:
     allowed = item.get('regimes')
     if allowed and regime not in allowed:
         return False
     if item.get('requires_bctc') and not show_bctc:
+        return False
+    if not _endpoint_registered(item.get('endpoint')):
         return False
     return True
 
@@ -295,6 +328,10 @@ def get_sme_menu_groups(accounting_regime: str | None = None):
                 i for i in (g.get('items') or ())
                 if _item_allowed(i, regime, show_bctc=show_bctc)
             )
+            # Ẩn nhóm nếu endpoint hub chưa đăng ký
+            if g.get('endpoint') and not _endpoint_registered(g.get('endpoint')):
+                if not items:
+                    continue
             g['items'] = items
             g_regimes = g.get('regimes')
             if g_regimes and regime not in g_regimes:
@@ -367,6 +404,8 @@ def is_sme_endpoint(endpoint):
     if not endpoint:
         return False
     if endpoint.startswith('SME_'):
+        return True
+    if endpoint.startswith('crm_'):
         return True
     return any(
         endpoint == item['endpoint']

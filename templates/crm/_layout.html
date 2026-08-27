@@ -1,0 +1,159 @@
+{# Layout CRM full-màn hình — trang con ghi đè block crm_page_id / crm_title / ... #}
+{% extends "base.html" %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/crm.css') }}?v=20260827c">
+{% block crm_head %}{% endblock %}
+<script>
+document.documentElement.classList.add('crm-html');
+document.addEventListener('DOMContentLoaded', function () {
+  document.body.classList.add('crm-workspace');
+});
+</script>
+{% endblock %}
+
+{% block content %}
+{% set crm_page %}{% block crm_page_id %}dashboard{% endblock %}{% endset %}
+{% set crm_page = crm_page|trim %}
+<script>document.body.classList.add('crm-workspace');</script>
+
+<div class="crm-sidebar-backdrop" id="crmSidebarBackdrop" onclick="crmCloseSidebar()"></div>
+
+<div class="crm-shell">
+  <aside class="crm-sidebar" id="crmSidebar">
+    <div class="crm-sidebar-brand">
+      <div class="mark"><i class="fas fa-handshake"></i></div>
+      <div>
+        <div class="title">CRM</div>
+        <div class="sub">Chăm sóc & bán hàng</div>
+      </div>
+    </div>
+
+    <div class="crm-nav-label">Làm việc</div>
+    <a class="crm-nav-link {% if crm_page == 'dashboard' %}active{% endif %}"
+       href="{{ safe_url_for('crm_dashboard') }}">
+      <i class="fas fa-gauge-high"></i> Tổng quan
+    </a>
+    <a class="crm-nav-link {% if crm_page == 'leads' %}active{% endif %}"
+       href="{{ safe_url_for('crm_leads_page') }}">
+      <i class="fas fa-user-plus"></i> Leads
+    </a>
+    <a class="crm-nav-link {% if crm_page == 'pipeline' %}active{% endif %}"
+       href="{{ safe_url_for('crm_pipeline_page') }}">
+      <i class="fas fa-filter"></i> Pipeline
+    </a>
+    <a class="crm-nav-link {% if crm_page == 'quotes' %}active{% endif %}"
+       href="{{ safe_url_for('crm_quotes_page') }}">
+      <i class="fas fa-file-invoice-dollar"></i> Báo giá
+    </a>
+    <a class="crm-nav-link {% if crm_page == 'contracts' %}active{% endif %}"
+       href="{{ safe_url_for('crm_contracts_page') }}">
+      <i class="fas fa-file-contract"></i> Hợp đồng
+    </a>
+
+    <div class="crm-nav-label">Marketing &amp; CSKH</div>
+    <a class="crm-nav-link {% if crm_page == 'campaigns' %}active{% endif %}"
+       href="{{ safe_url_for('crm_campaigns_page') }}">
+      <i class="fas fa-bullhorn"></i> Chiến dịch
+    </a>
+    <a class="crm-nav-link {% if crm_page == 'tickets' %}active{% endif %}"
+       href="{{ safe_url_for('crm_tickets_page') }}">
+      <i class="fas fa-headset"></i> Ticket / Helpdesk
+    </a>
+    <a class="crm-nav-link {% if crm_page == 'loyalty' %}active{% endif %}"
+       href="{{ safe_url_for('crm_loyalty_page') }}">
+      <i class="fas fa-gift"></i> Loyalty &amp; CSAT
+    </a>
+
+    <div class="crm-nav-label">Danh mục</div>
+    <a class="crm-nav-link {% if crm_page == 'customer360' %}active{% endif %}"
+       href="{{ safe_url_for('customers_page') }}">
+      <i class="fas fa-address-book"></i> Danh mục KH
+    </a>
+    <a class="crm-nav-link {% if crm_page == 'settings' %}active{% endif %}"
+       href="{{ safe_url_for('crm_settings_page') }}">
+      <i class="fas fa-cog"></i> Cấu hình CRM
+    </a>
+    <a class="crm-nav-link" href="{{ safe_url_for('sale') }}">
+      <i class="fas fa-cash-register"></i> Điểm bán hàng
+    </a>
+
+    <div class="crm-sidebar-foot">
+      <div class="flow-title"><i class="fas fa-route me-1"></i> Luồng chuẩn</div>
+      <ol>
+        <li>Thu thập Lead</li>
+        <li>Chuyển thành KH + cơ hội</li>
+        <li>Tư vấn trên Pipeline</li>
+        <li>Lập báo giá → tạo đơn bán</li>
+        <li>Chăm sóc trên hồ sơ 360°</li>
+      </ol>
+    </div>
+  </aside>
+
+  <div class="crm-main">
+    <header class="crm-topbar">
+      <div class="d-flex align-items-start gap-2">
+        <button type="button" class="crm-btn crm-btn-ghost crm-mobile-toggle"
+                onclick="crmOpenSidebar()" aria-label="Mở menu CRM">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div>
+          <h1>{% block crm_title %}CRM{% endblock %}</h1>
+          <p class="crm-desc">{% block crm_desc %}{% endblock %}</p>
+        </div>
+      </div>
+      <div class="crm-topbar-actions">
+        <button type="button" class="crm-btn crm-btn-guide"
+                data-bs-toggle="offcanvas" data-bs-target="#crmGuidePanel">
+          <i class="fas fa-book-open"></i> Hướng dẫn sử dụng
+        </button>
+        {% block crm_actions %}{% endblock %}
+      </div>
+    </header>
+
+    {% block crm_tip %}
+    <div class="crm-tip" id="crmTipBox">
+      <div class="tip-icon"><i class="fas fa-lightbulb"></i></div>
+      <div class="flex-grow-1">
+        <strong>{% block crm_tip_title %}Mẹo nhanh{% endblock %}</strong>
+        <p>{% block crm_tip_body %}Dùng nút <b>Hướng dẫn sử dụng</b> để xem luồng chi tiết từng màn hình.{% endblock %}</p>
+      </div>
+      <button type="button" class="tip-dismiss" title="Ẩn" onclick="crmDismissTip()" aria-label="Ẩn mẹo">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    {% endblock %}
+
+    {% block crm_content %}{% endblock %}
+  </div>
+</div>
+
+{% include 'crm/_guide_panel.html' %}
+
+{% block crm_modals %}{% endblock %}
+
+<script>
+function crmOpenSidebar() {
+  document.getElementById('crmSidebar')?.classList.add('open');
+  document.getElementById('crmSidebarBackdrop')?.classList.add('show');
+}
+function crmCloseSidebar() {
+  document.getElementById('crmSidebar')?.classList.remove('open');
+  document.getElementById('crmSidebarBackdrop')?.classList.remove('show');
+}
+function crmDismissTip() {
+  const tip = document.getElementById('crmTipBox');
+  if (tip) tip.style.display = 'none';
+  try { localStorage.setItem('crm_tip_hide_{{ crm_page }}', '1'); } catch (e) {}
+}
+(function () {
+  try {
+    if (localStorage.getItem('crm_tip_hide_{{ crm_page }}') === '1') {
+      const tip = document.getElementById('crmTipBox');
+      if (tip) tip.style.display = 'none';
+    }
+  } catch (e) {}
+})();
+</script>
+{% block crm_scripts %}{% endblock %}
+{% endblock %}

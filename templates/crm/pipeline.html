@@ -1,0 +1,160 @@
+{% extends "crm/_layout.html" %}
+
+{% block crm_page_id %}pipeline{% endblock %}
+
+{% block title %}CRM — Pipeline{% endblock %}
+{% block crm_title %}Pipeline bán hàng{% endblock %}
+{% block crm_desc %}Theo dõi cơ hội qua các giai đoạn: Lead → Tư vấn → Báo giá → Chốt / Thua.{% endblock %}
+
+{% block crm_tip_title %}Cách dùng Pipeline{% endblock %}
+{% block crm_tip_body %}
+  Bấm thẻ cơ hội để đổi giai đoạn. Khi đã gửi báo giá, chuyển cột <b>Báo giá</b>
+  và lập BG tại menu Báo giá (có thể gắn ID cơ hội).
+{% endblock %}
+
+{% block crm_actions %}
+<button type="button" class="crm-btn crm-btn-primary" data-bs-toggle="modal"
+        data-bs-target="#oppModal" onclick="openOpp()">
+  <i class="fas fa-plus"></i> Cơ hội mới
+</button>
+{% endblock %}
+
+{% block crm_content %}
+<div class="crm-kanban" id="kanban"></div>
+{% endblock %}
+
+{% block crm_modals %}
+<div class="modal fade" id="oppModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow">
+    <div class="modal-header border-0 pb-0">
+      <h5 class="modal-title fw-bold" id="oppTitle">Cơ hội mới</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="oppId">
+      <div class="mb-2"><label class="form-label small">Tiêu đề *</label><input id="oTitle" class="form-control form-control-sm"></div>
+      <div class="mb-2"><label class="form-label small">Khách hàng</label>
+        <div class="input-group input-group-sm">
+          <input id="oCustId" class="form-control" placeholder="ID KH" style="max-width:90px">
+          <input id="oCustName" class="form-control" placeholder="Gõ tên để chọn..." list="custList">
+          <datalist id="custList"></datalist>
+        </div>
+      </div>
+      <div class="row g-2">
+        <div class="col-6"><label class="form-label small">Giai đoạn</label>
+          <select id="oStage" class="form-select form-select-sm">
+            <option value="approach">Tiếp cận</option>
+            <option value="consulting">Đang tư vấn</option>
+            <option value="quoting">Gửi báo giá</option>
+            <option value="negotiate">Đàm phán</option>
+            <option value="won">Chốt thành công</option>
+            <option value="lost">Thất bại</option>
+          </select>
+        </div>
+        <div class="col-6"><label class="form-label small">Giá trị</label><input id="oAmount" type="number" class="form-control form-control-sm" value="0"></div>
+        <div class="col-6"><label class="form-label small">Xác suất %</label><input id="oProb" type="number" class="form-control form-control-sm" value="20"></div>
+        <div class="col-6"><label class="form-label small">Dự kiến chốt</label><input id="oClose" type="date" class="form-control form-control-sm"></div>
+        <div class="col-12"><label class="form-label small">Ghi chú / lý do thua</label><textarea id="oNotes" class="form-control form-control-sm" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer border-0">
+      <button class="btn btn-sm btn-outline-danger me-auto" id="btnDelOpp" style="display:none" onclick="delOpp()">Xóa</button>
+      <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Đóng</button>
+      <button class="crm-btn crm-btn-primary" onclick="saveOpp()">Lưu</button>
+    </div>
+  </div></div>
+</div>
+{% endblock %}
+
+{% block crm_scripts %}
+<script>
+const money = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+let labels = {};
+
+async function loadCustomers() {
+  const rows = await (await fetch('/api/customers')).json();
+  const dl = document.getElementById('custList');
+  dl.innerHTML = (rows||[]).map(c =>
+    `<option value="${(c.company_name||c.name||'').replace(/"/g,'')}" data-id="${c.id}">`
+  ).join('');
+  document.getElementById('oCustName').onchange = function() {
+    const opt = [...dl.options].find(o => o.value === this.value);
+    if (opt) document.getElementById('oCustId').value = opt.dataset.id || '';
+  };
+}
+
+async function loadPipe() {
+  const d = await (await fetch('/api/crm/pipeline')).json();
+  labels = d.labels || {};
+  const box = document.getElementById('kanban');
+  const stages = d.stages || [];
+  box.innerHTML = stages.map(st => {
+    const col = (d.by_stage||{})[st] || {count:0,amount:0,items:[]};
+    const cards = (col.items||[]).map(it => `
+      <div class="crm-card" onclick='openOpp(${JSON.stringify(it).replace(/'/g,"&#39;")})'>
+        <div class="title">${it.title||''}</div>
+        <div class="meta">${it.customer_name||'— chưa gắn KH'}</div>
+        <div class="d-flex justify-content-between mt-2">
+          <span class="fw-semibold" style="color:var(--crm-accent-2)">${money(it.amount)} đ</span>
+          <span class="meta">${it.owner||''}</span>
+        </div>
+      </div>`).join('') || '<div class="crm-empty py-4">Trống</div>';
+    return `<div class="crm-col">
+      <h6><span>${labels[st]||st} · ${col.count}</span><span class="amt">${money(col.amount)}</span></h6>
+      ${cards}
+    </div>`;
+  }).join('');
+}
+
+function openOpp(row) {
+  document.getElementById('oppId').value = row?.id || '';
+  document.getElementById('oppTitle').textContent = row?.id ? 'Sửa cơ hội' : 'Cơ hội mới';
+  document.getElementById('btnDelOpp').style.display = row?.id ? '' : 'none';
+  document.getElementById('oTitle').value = row?.title || '';
+  document.getElementById('oCustId').value = row?.customer_id || '';
+  document.getElementById('oCustName').value = row?.customer_name || '';
+  document.getElementById('oStage').value = row?.stage || 'approach';
+  document.getElementById('oAmount').value = row?.amount || 0;
+  document.getElementById('oProb').value = row?.probability || 20;
+  document.getElementById('oClose').value = (row?.expected_close_date || '').slice(0,10);
+  document.getElementById('oNotes').value = row?.notes || row?.lost_reason || '';
+  if (row?.id) new bootstrap.Modal(document.getElementById('oppModal')).show();
+}
+
+async function saveOpp() {
+  const id = document.getElementById('oppId').value;
+  const stage = document.getElementById('oStage').value;
+  const notes = document.getElementById('oNotes').value;
+  const body = {
+    title: document.getElementById('oTitle').value,
+    customer_id: document.getElementById('oCustId').value || null,
+    stage,
+    amount: document.getElementById('oAmount').value,
+    probability: document.getElementById('oProb').value,
+    expected_close_date: document.getElementById('oClose').value,
+    notes: stage === 'lost' ? '' : notes,
+    lost_reason: stage === 'lost' ? notes : '',
+  };
+  const r = await fetch(id ? `/api/crm/opportunities/${id}` : '/api/crm/opportunities', {
+    method: id ? 'PUT' : 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  });
+  const d = await r.json();
+  if (!r.ok || d.error) { alert(d.error || 'Lỗi'); return; }
+  bootstrap.Modal.getInstance(document.getElementById('oppModal'))?.hide();
+  loadPipe();
+}
+
+async function delOpp() {
+  const id = document.getElementById('oppId').value;
+  if (!id || !confirm('Xóa cơ hội?')) return;
+  await fetch(`/api/crm/opportunities/${id}`, {method:'DELETE'});
+  bootstrap.Modal.getInstance(document.getElementById('oppModal'))?.hide();
+  loadPipe();
+}
+
+loadCustomers();
+loadPipe();
+</script>
+{% endblock %}

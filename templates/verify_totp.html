@@ -35,7 +35,8 @@
             text-align: center; font-size: 1.5rem;
         }
         .otp-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 4px rgba(79,70,229,.12); }
-        .qr-box { max-width: 200px; margin: 0 auto; }
+        .qr-box { max-width: 200px; margin: 0 auto; display: block; }
+        #totpQrCanvas { max-width: 200px; margin: 0 auto; display: none; }
         .secret-code {
             font-family: ui-monospace, monospace; font-size: 0.85rem;
             word-break: break-all; background: #f8fafc; border-radius: 8px; padding: 10px;
@@ -59,6 +60,8 @@
                     {% else %}
                     Thiết bị này chưa được tin cậy. Nhập mã 6 số đang hiện trên Authenticator
                     (mã tự đổi mỗi 30 giây; không phải tin nhắn / email).
+                    <br><span class="text-secondary">Không hiện QR vì Authenticator đã được kích hoạt trước đó.
+                    Nếu mất điện thoại / app, trên VPS chạy reset TOTP rồi đăng nhập lại để quét QR mới.</span>
                     {% endif %}
                 </p>
 
@@ -73,12 +76,18 @@
                 {% endwith %}
 
                 {% if setup_mode and setup %}
-                <div class="text-center mb-3">
+                <div class="text-center mb-3" id="totpSetupBox"
+                     data-otpauth="{{ setup.otpauth_uri|e }}">
                     {% if setup.qr_data_url %}
-                    <img class="qr-box img-fluid border rounded p-2 bg-white" src="{{ setup.qr_data_url }}" alt="QR TOTP">
+                    <img id="totpQrImg" class="qr-box img-fluid border rounded p-2 bg-white"
+                         src="{{ setup.qr_data_url }}" alt="QR TOTP"
+                         onerror="this.style.display='none'; window.__totpNeedClientQr=true;">
                     {% else %}
-                    <div class="alert alert-warning small py-2">Không hiển thị được QR — dùng khóa thủ công.</div>
+                    <div id="totpQrMissing" class="alert alert-warning small py-2">
+                        Đang tạo QR dự phòng trên trình duyệt…
+                    </div>
                     {% endif %}
+                    <canvas id="totpQrCanvas" class="border rounded p-2 bg-white"></canvas>
                     <p class="small text-muted mt-2 mb-1">Hoặc nhập khóa thủ công:</p>
                     <div class="secret-code">{{ setup.secret }}</div>
                 </div>
@@ -102,5 +111,36 @@
         </div>
     </div>
 </div>
+{% if setup_mode and setup and setup.otpauth_uri %}
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script>
+(function () {
+  var box = document.getElementById('totpSetupBox');
+  var canvas = document.getElementById('totpQrCanvas');
+  var img = document.getElementById('totpQrImg');
+  var miss = document.getElementById('totpQrMissing');
+  if (!box || !canvas || typeof QRCode === 'undefined') return;
+  var uri = box.getAttribute('data-otpauth') || '';
+  if (!uri) return;
+  var need = window.__totpNeedClientQr || !img || !(img.getAttribute('src') || '').trim();
+  function draw() {
+    QRCode.toCanvas(canvas, uri, { width: 200, margin: 1 }, function (err) {
+      if (err) {
+        if (miss) miss.textContent = 'Không tạo được QR — dùng khóa thủ công bên dưới.';
+        return;
+      }
+      canvas.style.display = 'block';
+      if (img) img.style.display = 'none';
+      if (miss) miss.style.display = 'none';
+    });
+  }
+  if (need) {
+    draw();
+  } else if (img) {
+    img.addEventListener('error', function () { draw(); });
+  }
+})();
+</script>
+{% endif %}
 </body>
 </html>

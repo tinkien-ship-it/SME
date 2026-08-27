@@ -7,6 +7,9 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Quản Lý Khách Hàng</h3>
         <div class="d-flex gap-2">
+            <a class="btn btn-outline-primary" href="{{ url_for('crm_dashboard') }}">
+                <i class="fas fa-handshake"></i> CRM
+            </a>
             <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;" onchange="importCustomers(event)">
             <button class="btn btn-info text-white" onclick="document.getElementById('importFile').click()">
                 <i class="bi bi-upload"></i> Nhập Excel
@@ -141,6 +144,7 @@ function renderCustomerRows(data, tbody) {
             <td class="text-center small">${escHtml(c.budget_unit_code || '—')}</td>
             <td class="text-center small">${escHtml(c.passport_no || '—')}</td>
             <td class="text-center">
+                <a class="btn btn-sm btn-outline-primary me-1" href="/crm/customer/${c.id}" title="Hồ sơ CRM 360°">360°</a>
                 <button class="btn btn-sm btn-warning me-1" onclick="editCustomer(${c.id})">Sửa</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteCustomer(${c.id})">Xóa</button>
             </td>
@@ -172,7 +176,7 @@ function initCustomerTable() {
               getValue: c => c.budget_unit_code || '' },
             { key: 'passport_no', label: 'Hộ chiếu', filterType: 'text', width: '100px', align: 'center',
               getValue: c => c.passport_no || '' },
-            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '140px', align: 'center' },
+            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '200px', align: 'center' },
         ],
         renderRows: renderCustomerRows,
     });

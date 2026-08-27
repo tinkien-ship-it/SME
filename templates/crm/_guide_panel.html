@@ -1,0 +1,107 @@
+{# Panel hướng dẫn CRM — nội dung đầy đủ, highlight theo crm_page #}
+<div class="offcanvas offcanvas-end crm-guide-panel" tabindex="-1" id="crmGuidePanel"
+     style="width:min(440px,100vw)">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title mb-0">
+      <i class="fas fa-book-open me-2"></i>Hướng dẫn CRM
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body bg-light">
+    <div class="crm-guide-highlight">
+      <strong>Mục tiêu:</strong> CRM đầy đủ 4 khối — Lead/Pipeline, Sales Automation,
+      Helpdesk &amp; Loyalty, Analytics (funnel, nguồn, CPL, KPI, leaderboard, retention, SLA).
+    </div>
+
+    <div class="crm-guide-section" id="guide-overview"
+         {% if crm_page and crm_page != 'dashboard' %}style="opacity:.85"{% endif %}>
+      <h3><i class="fas fa-diagram-project me-1"></i> Luồng tổng thể (A → Z)</h3>
+      <div class="crm-guide-step">
+        <span class="num">1</span>
+        <div><b>Leads</b> — nhập liên hệ mới (Zalo, web, giới thiệu…). Ghi nguồn, SĐT, giá trị dự kiến, lịch hẹn.</div>
+      </div>
+      <div class="crm-guide-step">
+        <span class="num">2</span>
+        <div><b>Chuyển KH</b> — khi lead đủ điều kiện, bấm <em>Chuyển KH</em>: hệ thống tạo khách hàng + cơ hội bán (pipeline).</div>
+      </div>
+      <div class="crm-guide-step">
+        <span class="num">3</span>
+        <div><b>Pipeline</b> — kéo giai giai đoạn: Lead → Tư vấn → Báo giá → Chốt / Thua. Cập nhật giá trị & ngày dự kiến chốt.</div>
+      </div>
+      <div class="crm-guide-step">
+        <span class="num">4</span>
+        <div><b>Báo giá</b> — lập BG gắn KH (và cơ hội nếu có). Khi khách chấp nhận → <em>Tạo đơn bán</em> sang điểm bán hàng.</div>
+      </div>
+      <div class="crm-guide-step">
+        <span class="num">5</span>
+        <div><b>Hồ sơ 360°</b> — nhật ký gọi/Zalo/email, phân khúc, hẹn lại; xem đơn hàng, HĐ, công nợ cùng một chỗ.</div>
+      </div>
+    </div>
+
+    <div class="crm-guide-section" {% if crm_page == 'dashboard' %}style="border-color:#5eead4;box-shadow:0 0 0 2px #ccfbf1"{% endif %}>
+      <h3><i class="fas fa-gauge-high me-1"></i> Tổng quan</h3>
+      <ul>
+        <li>Xem nhanh số lead / cơ hội mở, giá trị pipeline, báo giá đang xử lý.</li>
+        <li><b>Nhắc liên hệ</b>: khách có lịch hẹn trong 7 ngày — bấm <b>360°</b> để ghi nhận cuộc gọi.</li>
+        <li><b>Hoạt động gần đây</b>: kiểm tra đội ngũ đã chăm sóc đúng chưa.</li>
+        <li>Mỗi buổi sáng nên mở trang này trước khi gọi khách.</li>
+      </ul>
+    </div>
+
+    <div class="crm-guide-section" {% if crm_page == 'leads' %}style="border-color:#5eead4;box-shadow:0 0 0 2px #ccfbf1"{% endif %}>
+      <h3><i class="fas fa-user-plus me-1"></i> Leads — tiềm năng</h3>
+      <ol>
+        <li>Bấm <b>+ Thêm lead</b> → nhập tên liên hệ (bắt buộc), công ty, SĐT, nguồn.</li>
+        <li>Đặt trạng thái: <em>Mới</em> → <em>Đang liên hệ</em> → <em>Đủ điều kiện</em>.</li>
+        <li>Điền <b>Hẹn liên hệ</b> để xuất hiện trên Tổng quan.</li>
+        <li>Khi sẵn sàng bán: <b>Chuyển KH</b> → tự mở hồ sơ 360° và tạo cơ hội trên Pipeline.</li>
+        <li>Lead không còn nhu cầu: đặt <em>Mất</em> (giữ lịch sử, không xóa vội).</li>
+      </ol>
+      <p class="small text-muted mb-0 mt-2">Mẹo: luôn ghi nguồn (Zalo / web / giới thiệu) để đánh giá kênh hiệu quả.</p>
+    </div>
+
+    <div class="crm-guide-section" {% if crm_page == 'pipeline' %}style="border-color:#5eead4;box-shadow:0 0 0 2px #ccfbf1"{% endif %}>
+      <h3><i class="fas fa-filter me-1"></i> Pipeline bán hàng</h3>
+      <ol>
+        <li>Mỗi cột là một giai đoạn. Bấm thẻ để sửa giai đoạn / giá trị / ngày chốt.</li>
+        <li><b>Tư vấn</b>: đang trao đổi nhu cầu — ghi chú nội dung quan trọng.</li>
+        <li><b>Báo giá</b>: đã gửi / đang soạn BG (nên tạo Báo giá CRM và gắn ID cơ hội).</li>
+        <li><b>Chốt</b>: đã có đơn — thường tự cập nhật khi chuyển BG → đơn bán.</li>
+        <li><b>Thua</b>: ghi rõ lý do trong ô ghi chú để rút kinh nghiệm.</li>
+      </ol>
+      <p class="small text-muted mb-0 mt-2">Không để cơ hội “kẹt” quá lâu ở Tư vấn mà không có lịch hẹn tiếp theo.</p>
+    </div>
+
+    <div class="crm-guide-section" {% if crm_page == 'quotes' %}style="border-color:#5eead4;box-shadow:0 0 0 2px #ccfbf1"{% endif %}>
+      <h3><i class="fas fa-file-invoice-dollar me-1"></i> Báo giá → đơn bán</h3>
+      <ol>
+        <li>Bấm <b>+ Báo giá</b> → chọn <b>ID khách hàng</b> (xem trong Danh mục KH hoặc hồ sơ 360°).</li>
+        <li>Thêm dòng hàng: tên, SL, đơn giá, VAT% — hệ thống tính tổng.</li>
+        <li>Trạng thái: Nháp → Đã gửi → Chấp nhận (khi khách đồng ý).</li>
+        <li>Bấm <b>→ Đơn bán</b> / <b>Tạo đơn bán</b>: tạo phiếu bán gắn <code>customer_id</code>, mở điểm bán hàng.</li>
+        <li>Sau đó hoàn tất thanh toán / xuất HĐ trên phân hệ bán hàng như bình thường.</li>
+      </ol>
+      <p class="small text-muted mb-0 mt-2">BG đã chuyển đơn không xóa được — giữ làm lịch sử thương thảo.</p>
+    </div>
+
+    <div class="crm-guide-section" {% if crm_page == 'customer360' %}style="border-color:#5eead4;box-shadow:0 0 0 2px #ccfbf1"{% endif %}>
+      <h3><i class="fas fa-circle-user me-1"></i> Hồ sơ khách 360°</h3>
+      <ol>
+        <li>Mở từ danh mục KH (nút <b>360°</b>), từ lead đã chuyển, hoặc từ nhắc liên hệ.</li>
+        <li>Cập nhật vòng đời, phân khúc (VIP/sỉ/đại lý), phụ trách, tags.</li>
+        <li><b>+ Ghi nhận</b>: gọi / Zalo / email / gặp mặt — đặt hẹn tiếp theo nếu cần.</li>
+        <li>Tab Cơ hội / Báo giá / Đơn hàng / Hóa đơn: xem toàn bộ lịch sử giao dịch.</li>
+        <li>Ô công nợ: ước tính phải thu — đối chiếu sổ 131 khi cần chi tiết.</li>
+      </ol>
+    </div>
+
+    <div class="crm-guide-section">
+      <h3><i class="fas fa-triangle-exclamation me-1"></i> Lưu ý quan trọng</h3>
+      <ul>
+        <li>CRM <b>không thay</b> điểm bán hàng / hóa đơn / kho — chỉ bổ sung trước và sau giao dịch.</li>
+        <li>Nên gắn đúng <b>khách hàng</b> (có ID) để đơn hàng, công nợ và 360° khớp nhau.</li>
+        <li>Một lead chỉ nên <b>Chuyển KH</b> một lần; sau đó làm việc trên Pipeline + 360°.</li>
+      </ul>
+    </div>
+  </div>
+</div>

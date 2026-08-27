@@ -1,0 +1,231 @@
+{% extends "crm/_layout.html" %}
+
+{% block crm_page_id %}quotes{% endblock %}
+
+{% block title %}CRM — Báo giá{% endblock %}
+{% block crm_title %}Báo giá CRM{% endblock %}
+{% block crm_desc %}Lập báo giá theo khách hàng, gửi / chấp nhận, rồi tạo đơn bán hàng một cú click.{% endblock %}
+
+{% block crm_tip_title %}Từ báo giá đến đơn bán{% endblock %}
+{% block crm_tip_body %}
+  Chọn đúng <b>ID khách hàng</b> → thêm dòng hàng → khi khách đồng ý đặt trạng thái
+  <b>Chấp nhận</b> và bấm <b>→ Đơn bán</b>. Đơn sẽ mở tại điểm bán hàng.
+{% endblock %}
+
+{% block crm_actions %}
+<button type="button" class="crm-btn crm-btn-primary" onclick="openQuote()">
+  <i class="fas fa-plus"></i> Báo giá mới
+</button>
+{% endblock %}
+
+{% block crm_content %}
+<div class="crm-panel">
+  <div class="crm-panel-hd">
+    <h2>Danh sách báo giá</h2>
+    <span class="small text-muted">BG đã tạo đơn không xóa được (giữ lịch sử)</span>
+  </div>
+  <div class="crm-panel-bd p-0">
+    <div class="table-responsive">
+      <table class="table crm-table mb-0">
+        <thead>
+          <tr>
+            <th>Số BG</th><th>Ngày</th><th>Khách hàng</th><th>TT</th>
+            <th class="text-end">Tổng</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tbQuotes"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block crm_modals %}
+<div class="modal fade" id="quoteModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content border-0 shadow">
+    <div class="modal-header border-0 pb-0">
+      <h5 class="modal-title fw-bold" id="qTitle">Báo giá</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="quoteId">
+      <div class="row g-2 mb-2">
+        <div class="col-md-3"><label class="form-label small">Khách hàng ID *</label>
+          <input id="qCustId" class="form-control form-control-sm" list="qCustList" placeholder="Chọn ID">
+          <datalist id="qCustList"></datalist>
+        </div>
+        <div class="col-md-3"><label class="form-label small">Ngày BG</label><input id="qDate" type="date" class="form-control form-control-sm"></div>
+        <div class="col-md-3"><label class="form-label small">Hiệu lực đến</label><input id="qValid" type="date" class="form-control form-control-sm"></div>
+        <div class="col-md-3"><label class="form-label small">Trạng thái</label>
+          <select id="qStatus" class="form-select form-select-sm">
+            <option value="draft">Nháp</option><option value="sent">Đã gửi</option>
+            <option value="accepted">Chấp nhận</option><option value="rejected">Từ chối</option>
+          </select>
+        </div>
+        <div class="col-md-3"><label class="form-label small">Cơ hội ID</label><input id="qOppId" class="form-control form-control-sm" placeholder="Tuỳ chọn"></div>
+        <div class="col-md-9"><label class="form-label small">Ghi chú</label><input id="qNotes" class="form-control form-control-sm"></div>
+      </div>
+      <div class="table-responsive border rounded">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light"><tr><th>Tên hàng</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>VAT%</th><th></th></tr></thead>
+          <tbody id="qItems"></tbody>
+        </table>
+      </div>
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <button class="crm-btn crm-btn-ghost" type="button" onclick="addItemRow()">
+          <i class="fas fa-plus"></i> Dòng hàng
+        </button>
+        <div class="fw-bold">Tổng ước tính: <span id="qTotalPreview" style="color:var(--crm-accent-2)">0</span> đ</div>
+      </div>
+    </div>
+    <div class="modal-footer border-0">
+      <button class="crm-btn crm-btn-primary me-auto" id="btnConvert" style="display:none;background:#15803d"
+              onclick="convertQuote()">
+        <i class="fas fa-cart-plus"></i> Tạo đơn bán
+      </button>
+      <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Đóng</button>
+      <button class="crm-btn crm-btn-primary" onclick="saveQuote()">Lưu báo giá</button>
+    </div>
+  </div></div>
+</div>
+{% endblock %}
+
+{% block crm_scripts %}
+<script>
+const money = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+const QST = {draft:'Nháp',sent:'Đã gửi',accepted:'Chấp nhận',rejected:'Từ chối',converted:'Đã tạo ĐH'};
+const QCLS = {draft:'crm-badge-draft',sent:'crm-badge-sent',accepted:'crm-badge-accepted',rejected:'crm-badge-rejected',converted:'crm-badge-converted-q'};
+let customers = [];
+
+function addItemRow(it={}) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input class="form-control form-control-sm i-name" value="${it.product_name||''}" list="prodList"></td>
+    <td><input class="form-control form-control-sm i-unit" value="${it.unit||''}" style="width:70px"></td>
+    <td><input type="number" class="form-control form-control-sm i-qty" value="${it.qty||1}" style="width:80px" oninput="previewTotal()"></td>
+    <td><input type="number" class="form-control form-control-sm i-price" value="${it.unit_price||0}" style="width:110px" oninput="previewTotal()"></td>
+    <td><input type="number" class="form-control form-control-sm i-tax" value="${it.tax_rate||0}" style="width:70px" oninput="previewTotal()"></td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove();previewTotal()">×</button></td>`;
+  document.getElementById('qItems').appendChild(tr);
+  previewTotal();
+}
+
+function previewTotal() {
+  let t = 0;
+  document.querySelectorAll('#qItems tr').forEach(tr => {
+    const q = +tr.querySelector('.i-qty').value||0;
+    const p = +tr.querySelector('.i-price').value||0;
+    const tax = +tr.querySelector('.i-tax').value||0;
+    t += q*p*(1+tax/100);
+  });
+  document.getElementById('qTotalPreview').textContent = money(t);
+}
+
+function collectItems() {
+  return [...document.querySelectorAll('#qItems tr')].map(tr => ({
+    product_name: tr.querySelector('.i-name').value,
+    unit: tr.querySelector('.i-unit').value,
+    qty: tr.querySelector('.i-qty').value,
+    unit_price: tr.querySelector('.i-price').value,
+    tax_rate: tr.querySelector('.i-tax').value,
+  })).filter(x => x.product_name);
+}
+
+async function loadQuotes() {
+  const rows = await (await fetch('/api/crm/quotes')).json();
+  const tb = document.getElementById('tbQuotes');
+  if (!Array.isArray(rows) || !rows.length) {
+    tb.innerHTML = '<tr><td colspan="6" class="crm-empty">Chưa có báo giá — bấm <b>+ Báo giá mới</b>.</td></tr>';
+    return;
+  }
+  tb.innerHTML = rows.map(r => `<tr>
+    <td class="fw-semibold">${r.quote_no||''}</td>
+    <td>${(r.quote_date||'').slice(0,10)}</td>
+    <td>${r.customer_name||('#'+r.customer_id)}</td>
+    <td><span class="crm-badge ${QCLS[r.status]||''}">${QST[r.status]||r.status}</span></td>
+    <td class="text-end fw-semibold">${money(r.total)}</td>
+    <td class="text-nowrap">
+      <button class="btn btn-sm btn-outline-secondary" onclick="editQuote(${r.id})">Sửa</button>
+      ${r.status!=='converted'?`<button class="btn btn-sm btn-success" onclick="convertQuote(${r.id})">→ Đơn bán</button>`:''}
+      ${r.sale_id?`<a class="btn btn-sm btn-outline-primary" href="/sale?order_id=${r.sale_id}">ĐH#${r.sale_id}</a>`:''}
+      ${r.status!=='converted'?`<button class="btn btn-sm btn-outline-danger" onclick="delQuote(${r.id})">Xóa</button>`:''}
+    </td>
+  </tr>`).join('');
+}
+
+async function openQuote(data) {
+  document.getElementById('quoteId').value = data?.id || '';
+  document.getElementById('qTitle').textContent = data?.quote_no ? `Báo giá ${data.quote_no}` : 'Báo giá mới';
+  document.getElementById('qCustId').value = data?.customer_id || '';
+  document.getElementById('qDate').value = (data?.quote_date || new Date().toISOString().slice(0,10)).slice(0,10);
+  document.getElementById('qValid').value = (data?.valid_until || '').slice(0,10);
+  document.getElementById('qStatus').value = (data?.status && data.status!=='converted') ? data.status : 'draft';
+  document.getElementById('qOppId').value = data?.opportunity_id || '';
+  document.getElementById('qNotes').value = data?.notes || '';
+  document.getElementById('qItems').innerHTML = '';
+  (data?.items?.length ? data.items : [{}]).forEach(addItemRow);
+  document.getElementById('btnConvert').style.display = data?.id && data.status!=='converted' ? '' : 'none';
+  new bootstrap.Modal(document.getElementById('quoteModal')).show();
+}
+
+async function editQuote(id) {
+  const d = await (await fetch(`/api/crm/quotes/${id}`)).json();
+  if (d.error) { alert(d.error); return; }
+  openQuote(d);
+}
+
+async function saveQuote() {
+  const id = document.getElementById('quoteId').value;
+  const body = {
+    customer_id: document.getElementById('qCustId').value,
+    quote_date: document.getElementById('qDate').value,
+    valid_until: document.getElementById('qValid').value,
+    status: document.getElementById('qStatus').value,
+    opportunity_id: document.getElementById('qOppId').value || null,
+    notes: document.getElementById('qNotes').value,
+    items: collectItems(),
+  };
+  if (!body.customer_id) { alert('Chọn khách hàng (ID)'); return; }
+  const r = await fetch(id ? `/api/crm/quotes/${id}` : '/api/crm/quotes', {
+    method: id ? 'PUT' : 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  });
+  const d = await r.json();
+  if (!r.ok || d.error) { alert(d.error || 'Lỗi'); return; }
+  bootstrap.Modal.getInstance(document.getElementById('quoteModal'))?.hide();
+  loadQuotes();
+}
+
+async function convertQuote(id) {
+  id = id || document.getElementById('quoteId').value;
+  if (!id || !confirm('Tạo đơn bán hàng từ báo giá này?')) return;
+  const d = await (await fetch(`/api/crm/quotes/${id}/convert-sale`, {method:'POST'})).json();
+  if (d.error) { alert(d.error); return; }
+  location.href = '/sale?order_id=' + d.sale_id;
+}
+
+async function delQuote(id) {
+  if (!confirm('Xóa báo giá?')) return;
+  const d = await (await fetch(`/api/crm/quotes/${id}`, {method:'DELETE'})).json();
+  if (d.error) alert(d.error);
+  loadQuotes();
+}
+
+(async () => {
+  customers = await (await fetch('/api/customers')).json();
+  const dl = document.getElementById('qCustList');
+  dl.innerHTML = (customers||[]).map(c =>
+    `<option value="${c.id}">${c.company_name||c.name||''}</option>`
+  ).join('');
+  const prods = await (await fetch('/api/products')).json().catch(()=>[]);
+  const pd = document.createElement('datalist');
+  pd.id = 'prodList';
+  pd.innerHTML = (Array.isArray(prods)?prods:[]).slice(0,500).map(p =>
+    `<option value="${(p.name||'').replace(/"/g,'')}" data-unit="${p.unit||''}" data-price="${p.price||0}">`
+  ).join('');
+  document.body.appendChild(pd);
+  loadQuotes();
+})();
+</script>
+{% endblock %}

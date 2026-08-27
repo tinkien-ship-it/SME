@@ -1,0 +1,144 @@
+{% extends "crm/_layout.html" %}
+{% block crm_page_id %}settings{% endblock %}
+{% block title %}CRM — Cấu hình{% endblock %}
+{% block crm_title %}Cấu hình CRM{% endblock %}
+{% block crm_desc %}Webhook inbound lead, chia sales round-robin, KPI doanh số (ưu tiên HR SALES_REV).{% endblock %}
+{% block crm_tip_title %}Inbound{% endblock %}
+{% block crm_tip_body %}
+  Website/Facebook/Hotline POST JSON tới <code>/api/crm/inbound-lead</code> kèm header
+  <code>X-CRM-Token</code>. Hệ thống tạo lead và tự chia nhân viên theo danh sách bên dưới.
+{% endblock %}
+{% block crm_content %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="crm-panel mb-3">
+      <div class="crm-panel-hd"><h2>Webhook inbound lead</h2></div>
+      <div class="crm-panel-bd">
+        <label class="form-label small">Endpoint</label>
+        <input class="form-control form-control-sm mb-2" id="url" readonly>
+        <label class="form-label small">Token</label>
+        <div class="input-group input-group-sm mb-2">
+          <input class="form-control" id="token" readonly>
+          <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(token.value)">Copy</button>
+        </div>
+        <button class="crm-btn crm-btn-ghost" onclick="rotateToken()">Đổi token mới</button>
+        <pre class="small bg-light p-2 mt-3 rounded" style="white-space:pre-wrap">POST /api/crm/inbound-lead
+Header: X-CRM-Token: &lt;token&gt;
+Body JSON: {
+  "contact_name": "Nguyen A",
+  "phone": "09...",
+  "email": "...",
+  "source": "Facebook",
+  "utm_source": "fb",
+  "utm_campaign": "spring",
+  "notes": "Form website"
+}</pre>
+      </div>
+    </div>
+    <div class="crm-panel">
+      <div class="crm-panel-hd"><h2>Chia lead (round-robin)</h2></div>
+      <div class="crm-panel-bd">
+        <label class="form-label small">Danh sách sales (username, cách nhau bằng dấu phẩy)</label>
+        <textarea id="owners" class="form-control form-control-sm" rows="3" placeholder="sales1, sales2, sales3"></textarea>
+        <button class="crm-btn crm-btn-primary mt-2" onclick="saveOwners()">Lưu danh sách</button>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="crm-panel mb-3">
+      <div class="crm-panel-hd"><h2>Nguồn KPI gauge (HR ↔ CRM)</h2></div>
+      <div class="crm-panel-bd">
+        <p class="small text-muted mb-2">
+          Gauge Dashboard ưu tiên chỉ tiêu <strong>SALES_REV</strong> từ Thiết lập KPI nhân sự.
+          Bảng KPI cục bộ bên dưới chỉ dùng khi HR chưa có chỉ tiêu kỳ này.
+        </p>
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" id="preferHr" checked>
+          <label class="form-check-label" for="preferHr">Ưu tiên HR KPI (SALES_REV)</label>
+        </div>
+        <div id="bridgeStatus" class="small mb-3 p-2 rounded bg-light"></div>
+        <a id="kpiLink" class="crm-btn crm-btn-ghost btn-sm" href="/kpi_settings" target="_blank" rel="noopener">
+          Mở Thiết lập KPI nhân sự
+        </a>
+        <button class="crm-btn crm-btn-primary btn-sm ms-1" onclick="savePreferHr()">Lưu tùy chọn</button>
+      </div>
+    </div>
+    <div class="crm-panel">
+      <div class="crm-panel-hd"><h2>KPI cục bộ (fallback)</h2>
+        <button class="crm-btn crm-btn-ghost btn-sm" onclick="addTarget()">+ KPI</button>
+      </div>
+      <div class="crm-panel-bd">
+        <div class="row g-2 mb-3" id="targetForm" style="display:none">
+          <div class="col-4"><input id="tpKey" class="form-control form-control-sm" placeholder="2026-08"></div>
+          <div class="col-3">
+            <select id="tpType" class="form-select form-select-sm"><option value="month">Tháng</option><option value="quarter">Quý</option></select>
+          </div>
+          <div class="col-5"><input id="tpOwner" class="form-control form-control-sm" placeholder="Owner (trống = cả công ty)"></div>
+          <div class="col-6"><input type="number" id="tpAmt" class="form-control form-control-sm" placeholder="Mục tiêu (đ)"></div>
+          <div class="col-6"><button class="crm-btn crm-btn-primary w-100" onclick="saveTarget()">Lưu KPI</button></div>
+        </div>
+        <table class="table crm-table mb-0"><thead><tr><th>Kỳ</th><th>Loại</th><th>Owner</th><th class="text-end">Mục tiêu</th><th></th></tr></thead>
+        <tbody id="tbT"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block crm_scripts %}
+<script>
+const money=n=>new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+const SRC={
+  hr_kpi_department:'HR · tổng phòng ban',
+  hr_kpi_employee:'HR · nhân viên',
+  hr_kpi_employee_sum:'HR · tổng nhân viên',
+  hr_sales_rev:'HR · SALES_REV',
+  crm_targets:'KPI cục bộ CRM',
+  none:'Chưa có mục tiêu'
+};
+function renderBridge(b){
+  if(!b){ bridgeStatus.textContent='—'; return; }
+  const g=b.gauge||{}, hr=b.hr_sales_rev||{};
+  kpiLink.href=b.kpi_settings_url||'/kpi_settings';
+  bridgeStatus.innerHTML=`
+    <div><b>Gauge tháng ${g.period_key||'—'}:</b> ${money(g.actual)} / ${money(g.target)} đ
+      (${g.percent||0}%) — nguồn: ${SRC[g.target_source]||g.target_source||'—'}</div>
+    <div class="text-muted mt-1">${g.target_detail||hr.detail||''}</div>
+    <div class="mt-1">HR SALES_REV kỳ này: ${hr.found?money(hr.target)+' đ':'chưa đặt'}</div>`;
+}
+async function load(){
+  const s=await(await fetch('/api/crm/settings')).json();
+  token.value=s.inbound_token||'';
+  url.value=location.origin+(s.inbound_url||'/api/crm/inbound-lead');
+  owners.value=(s.assign_owners||[]).join(', ');
+  preferHr.checked=s.kpi_prefer_hr!==false && s.kpi_prefer_hr!==0 && s.kpi_prefer_hr!=='0';
+  renderBridge(s.kpi_bridge);
+  const ts=await(await fetch('/api/crm/targets')).json();
+  tbT.innerHTML=(ts||[]).length?ts.map(t=>`<tr>
+    <td>${t.period_key}</td><td>${t.period_type}</td><td>${t.owner||'(công ty)'}</td>
+    <td class="text-end">${money(t.target_amount)}</td>
+    <td><button class="btn btn-sm btn-outline-danger" onclick="delT(${t.id})">Xóa</button></td>
+  </tr>`).join(''):'<tr><td colspan="5" class="crm-empty">Chưa có KPI cục bộ</td></tr>';
+}
+async function saveOwners(){
+  const d=await(await fetch('/api/crm/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({assign_owners:owners.value})})).json();
+  if(d.error) alert(d.error); else alert('Đã lưu');
+}
+async function savePreferHr(){
+  const d=await(await fetch('/api/crm/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({kpi_prefer_hr:preferHr.checked})})).json();
+  if(d.error) alert(d.error);
+  else { renderBridge(d.kpi_bridge); alert('Đã lưu tùy chọn KPI'); }
+}
+async function rotateToken(){
+  if(!confirm('Đổi token? Webhook cũ sẽ hết hiệu lực.')) return;
+  await fetch('/api/crm/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({rotate_token:true})});
+  load();
+}
+function addTarget(){ targetForm.style.display=''; const d=new Date(); tpKey.value=d.toISOString().slice(0,7); }
+async function saveTarget(){
+  const d=await(await fetch('/api/crm/targets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({period_key:tpKey.value,period_type:tpType.value,owner:tpOwner.value,target_amount:tpAmt.value})})).json();
+  if(d.error) alert(d.error); else load();
+}
+async function delT(id){ await fetch('/api/crm/targets/'+id,{method:'DELETE'}); load(); }
+load();
+</script>
+{% endblock %}

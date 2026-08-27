@@ -1,0 +1,226 @@
+{% extends "crm/_layout.html" %}
+
+{% block crm_page_id %}customer360{% endblock %}
+
+{% block title %}CRM — Hồ sơ 360°{% endblock %}
+{% block crm_title %}<span id="custName">Hồ sơ khách hàng 360°</span>{% endblock %}
+{% block crm_desc %}<span id="custSub">Hồ sơ chăm sóc, nhật ký và lịch sử giao dịch.</span>{% endblock %}
+
+{% block crm_tip_title %}Làm việc trên hồ sơ 360°{% endblock %}
+{% block crm_tip_body %}
+  Cập nhật phân khúc / phụ trách bên trái → ghi nhật ký gọi / Zalo → đặt
+  <b>hẹn tiếp theo</b> để hiện trên Tổng quan. Tab bên phải gom đơn hàng &amp; hóa đơn.
+{% endblock %}
+
+{% block crm_actions %}
+<a class="crm-btn crm-btn-ghost" href="{{ url_for('crm_dashboard') }}">
+  <i class="fas fa-arrow-left"></i> Tổng quan
+</a>
+<a class="crm-btn crm-btn-ghost" href="{{ url_for('crm_quotes_page') }}">
+  <i class="fas fa-file-invoice-dollar"></i> Báo giá
+</a>
+{% endblock %}
+
+{% block crm_content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="crm-panel h-100">
+      <div class="crm-panel-hd"><h2>Hồ sơ CRM</h2></div>
+      <div class="crm-panel-bd">
+        <div class="mb-2"><label class="form-label small">Vòng đời</label>
+          <select id="pLifecycle" class="form-select form-select-sm">
+            <option value="prospect">Tiềm năng</option>
+            <option value="active">Đang giao dịch</option>
+            <option value="inactive">Ngưng</option>
+            <option value="churned">Rời bỏ</option>
+          </select>
+        </div>
+        <div class="mb-2"><label class="form-label small">Phân khúc</label>
+          <select id="pSegment" class="form-select form-select-sm">
+            <option value="standard">Thường</option>
+            <option value="vip">VIP</option>
+            <option value="wholesale">Sỉ</option>
+            <option value="retail">Lẻ</option>
+            <option value="agency">Đại lý</option>
+          </select>
+        </div>
+        <div class="mb-2"><label class="form-label small">Nguồn</label><input id="pSource" class="form-control form-control-sm"></div>
+        <div class="mb-2"><label class="form-label small">Phụ trách</label><input id="pOwner" class="form-control form-control-sm"></div>
+        <div class="mb-2"><label class="form-label small">Hẹn liên hệ</label><input id="pNext" type="datetime-local" class="form-control form-control-sm"></div>
+        <div class="mb-2"><label class="form-label small">Tags</label><input id="pTags" class="form-control form-control-sm" placeholder="vip, export..."></div>
+        <div class="mb-2"><label class="form-label small">Ghi chú</label><textarea id="pNotes" class="form-control form-control-sm" rows="3"></textarea></div>
+        <button class="crm-btn crm-btn-primary w-100" onclick="saveProfile()">
+          <i class="fas fa-save"></i> Lưu hồ sơ CRM
+        </button>
+        <hr>
+        <div class="small mb-1"><strong>MST:</strong> <span id="iTax"></span></div>
+        <div class="small mb-1"><strong>SĐT:</strong> <span id="iPhone"></span></div>
+        <div class="small mb-1"><strong>Email:</strong> <span id="iEmail"></span></div>
+        <div class="small mb-2"><strong>Địa chỉ:</strong> <span id="iAddr"></span></div>
+        <div class="p-3 rounded-3" style="background:var(--crm-accent-soft)">
+          <div class="small text-muted">Công nợ phải thu (ước tính)</div>
+          <div class="fs-4 fw-bold" style="color:var(--crm-accent-2)" id="iDebt">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="crm-panel mb-3">
+      <div class="crm-panel-hd">
+        <h2>Nhật ký chăm sóc</h2>
+        <button class="crm-btn crm-btn-ghost" data-bs-toggle="modal" data-bs-target="#actModal">
+          <i class="fas fa-plus"></i> Ghi nhận
+        </button>
+      </div>
+      <div class="crm-panel-bd p-0" id="ulActs" style="max-height:280px;overflow:auto"></div>
+    </div>
+
+    <div class="crm-panel">
+      <div class="crm-panel-hd p-0 border-0">
+        <ul class="nav nav-tabs border-0 px-2 pt-2 w-100" role="tablist">
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tOpp">Cơ hội</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tQuotes">Báo giá</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tSales">Đơn hàng</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tInv">Hóa đơn</button></li>
+        </ul>
+      </div>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="tOpp">
+          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>Tiêu đề</th><th>GĐ</th><th class="text-end">Giá trị</th></tr></thead><tbody id="tbOpp"></tbody></table></div>
+        </div>
+        <div class="tab-pane fade" id="tQuotes">
+          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>Số</th><th>TT</th><th class="text-end">Tổng</th></tr></thead><tbody id="tbQ"></tbody></table></div>
+        </div>
+        <div class="tab-pane fade" id="tSales">
+          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>ID/Số</th><th>Ngày</th><th>TT</th><th class="text-end">Tổng</th></tr></thead><tbody id="tbS"></tbody></table></div>
+        </div>
+        <div class="tab-pane fade" id="tInv">
+          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>Số HĐ</th><th>Ngày</th><th class="text-end">Tổng</th></tr></thead><tbody id="tbI"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block crm_modals %}
+<div class="modal fade" id="actModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow">
+    <div class="modal-header border-0 pb-0">
+      <h5 class="modal-title fw-bold">Ghi nhận hoạt động</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div class="mb-2"><label class="form-label small">Loại</label>
+        <select id="aType" class="form-select form-select-sm">
+          <option value="call">Gọi điện</option><option value="zalo">Zalo</option>
+          <option value="email">Email</option><option value="meeting">Gặp mặt</option>
+          <option value="note">Ghi chú</option><option value="task">Công việc</option>
+        </select>
+      </div>
+      <div class="mb-2"><label class="form-label small">Tiêu đề</label><input id="aSubj" class="form-control form-control-sm"></div>
+      <div class="mb-2"><label class="form-label small">Nội dung</label><textarea id="aContent" class="form-control form-control-sm" rows="3"></textarea></div>
+      <div class="mb-2"><label class="form-label small">Trạng thái</label>
+        <select id="aStatus" class="form-select form-select-sm">
+          <option value="done">Đã làm</option><option value="planned">Kế hoạch</option>
+        </select>
+      </div>
+      <div class="mb-2"><label class="form-label small">Hẹn tiếp theo</label><input id="aNext" type="datetime-local" class="form-control form-control-sm"></div>
+    </div>
+    <div class="modal-footer border-0">
+      <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Đóng</button>
+      <button class="crm-btn crm-btn-primary" onclick="saveAct()">Lưu</button>
+    </div>
+  </div></div>
+</div>
+{% endblock %}
+
+{% block crm_scripts %}
+<script>
+const CID = {{ customer_id|int }};
+const money = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+
+async function load360() {
+  const d = await (await fetch(`/api/crm/customers/${CID}/360`)).json();
+  if (d.error) { alert(d.error); return; }
+  const c = d.customer || {};
+  document.getElementById('custName').textContent = c.company_name || c.name || ('KH #' + CID);
+  document.getElementById('custSub').textContent = `Mã #${c.id} · ${(c.crm_lifecycle||'')} · ${(c.crm_segment||'')}`;
+  document.getElementById('pLifecycle').value = c.crm_lifecycle || 'active';
+  document.getElementById('pSegment').value = c.crm_segment || 'standard';
+  document.getElementById('pSource').value = c.crm_source || '';
+  document.getElementById('pOwner').value = c.crm_owner || '';
+  document.getElementById('pNext').value = (c.crm_next_contact_at||'').replace(' ','T').slice(0,16);
+  document.getElementById('pTags').value = c.crm_tags || '';
+  document.getElementById('pNotes').value = c.crm_notes || '';
+  document.getElementById('iTax').textContent = c.tax_code || '—';
+  document.getElementById('iPhone').textContent = c.phone || '—';
+  document.getElementById('iEmail').textContent = c.email || '—';
+  document.getElementById('iAddr').textContent = c.address || '—';
+  document.getElementById('iDebt').textContent = money((d.debt||{}).balance) + ' đ';
+
+  document.getElementById('ulActs').innerHTML = (d.activities||[]).length
+    ? d.activities.map(a => `<div class="crm-act-item">
+        <span class="crm-badge me-1">${a.activity_type}</span>
+        <strong>${a.subject||''}</strong>
+        <div class="text-muted small mt-1">${a.content||''}</div>
+        <div class="text-muted small">${a.activity_at||a.created_at||''} · ${a.owner||''}</div>
+      </div>`).join('')
+    : '<div class="crm-empty">Chưa có hoạt động — bấm Ghi nhận sau mỗi lần gọi/Zalo.</div>';
+
+  document.getElementById('tbOpp').innerHTML = (d.opportunities||[]).map(o =>
+    `<tr><td>${o.title}</td><td>${o.stage_label||o.stage}</td><td class="text-end">${money(o.amount)}</td></tr>`
+  ).join('') || '<tr><td colspan="3" class="crm-empty">—</td></tr>';
+
+  document.getElementById('tbQ').innerHTML = (d.quotes||[]).map(q =>
+    `<tr><td>${q.quote_no}</td><td>${q.status}</td><td class="text-end">${money(q.total)}</td></tr>`
+  ).join('') || '<tr><td colspan="3" class="crm-empty">—</td></tr>';
+
+  document.getElementById('tbS').innerHTML = (d.sales||[]).map(s =>
+    `<tr><td><a href="/sale?order_id=${s.id}">${s.sale_no||('#'+s.id)}</a></td>
+     <td>${(s.date||'').slice(0,10)}</td><td>${s.status||''}</td>
+     <td class="text-end">${money(s.total_amount)}</td></tr>`
+  ).join('') || '<tr><td colspan="4" class="crm-empty">—</td></tr>';
+
+  document.getElementById('tbI').innerHTML = (d.invoices||[]).map(i =>
+    `<tr><td>${i.invoice_number||i.id}</td><td>${(i.invoice_date||'').slice(0,10)}</td>
+     <td class="text-end">${money(i.total_amount)}</td></tr>`
+  ).join('') || '<tr><td colspan="3" class="crm-empty">—</td></tr>';
+}
+
+async function saveProfile() {
+  const body = {
+    crm_lifecycle: document.getElementById('pLifecycle').value,
+    crm_segment: document.getElementById('pSegment').value,
+    crm_source: document.getElementById('pSource').value,
+    crm_owner: document.getElementById('pOwner').value,
+    crm_next_contact_at: (document.getElementById('pNext').value||'').replace('T',' '),
+    crm_tags: document.getElementById('pTags').value,
+    crm_notes: document.getElementById('pNotes').value,
+  };
+  const d = await (await fetch(`/api/crm/customers/${CID}/profile`, {
+    method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+  })).json();
+  if (d.error) alert(d.error); else load360();
+}
+
+async function saveAct() {
+  const body = {
+    customer_id: CID,
+    activity_type: document.getElementById('aType').value,
+    subject: document.getElementById('aSubj').value,
+    content: document.getElementById('aContent').value,
+    status: document.getElementById('aStatus').value,
+    next_contact_at: (document.getElementById('aNext').value||'').replace('T',' '),
+  };
+  const d = await (await fetch('/api/crm/activities', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+  })).json();
+  if (d.error) { alert(d.error); return; }
+  bootstrap.Modal.getInstance(document.getElementById('actModal'))?.hide();
+  load360();
+}
+
+load360();
+</script>
+{% endblock %}

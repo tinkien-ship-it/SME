@@ -295,6 +295,19 @@ def _job_accounting_queue():
         _queue_tick_lock.release()
 
 
+def _job_crm_reminders():
+    """07:30 mỗi ngày: nhắc liên hệ đến hạn, sinh nhật KH, ticket quá SLA."""
+    try:
+        from Services.crm_ops import run_reminders_all_tenants
+        result = run_reminders_all_tenants()
+        logger.info(
+            'CRM reminders: scanned=%s created=%s',
+            result.get('scanned'), result.get('created'),
+        )
+    except Exception as exc:
+        logger.warning('CRM reminders failed: %s', exc)
+
+
 def check_tenant_expirations():
     today = datetime.now().strftime('%Y-%m-%d')
 
@@ -504,6 +517,17 @@ def init_schedulers(app, backup_root):
         seconds=max(5, _DEFAULT_QUEUE_SEC),
         id='accounting_queue_worker',
         name='accounting_queue_worker',
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    backup_scheduler.add_job(
+        func=_job_crm_reminders,
+        trigger='cron',
+        hour=7,
+        minute=30,
+        id='crm_reminders_daily',
+        name='crm_reminders_daily',
         max_instances=1,
         coalesce=True,
         replace_existing=True,

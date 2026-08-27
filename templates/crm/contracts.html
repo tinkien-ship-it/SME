@@ -1,0 +1,80 @@
+{% extends "crm/_layout.html" %}
+{% block crm_page_id %}contracts{% endblock %}
+{% block title %}CRM — Hợp đồng{% endblock %}
+{% block crm_title %}Hợp đồng{% endblock %}
+{% block crm_desc %}Lưu hợp đồng gắn khách hàng / báo giá / đơn bán (file_path tùy chọn).{% endblock %}
+{% block crm_tip_title %}Luồng{% endblock %}
+{% block crm_tip_body %}Sau khi báo giá được chấp nhận, tạo hợp đồng draft → signed → active. Có thể ghi sale_id khi đã phát sinh đơn.{% endblock %}
+{% block crm_actions %}
+<button class="crm-btn crm-btn-primary" onclick="openC()"><i class="fas fa-plus"></i> Hợp đồng</button>
+{% endblock %}
+{% block crm_content %}
+<div class="crm-panel"><div class="crm-panel-bd p-0">
+<table class="table crm-table mb-0"><thead><tr>
+  <th>Số HĐ</th><th>Tiêu đề</th><th>Khách</th><th>TT</th><th class="text-end">Giá trị</th><th>Ký</th><th></th>
+</tr></thead><tbody id="tb"></tbody></table>
+</div></div>
+{% endblock %}
+{% block crm_modals %}
+<div class="modal fade" id="m"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-0 shadow">
+  <div class="modal-header border-0"><h5 class="fw-bold">Hợp đồng</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="id">
+    <div class="row g-2">
+      <div class="col-md-4"><label class="form-label small">KH ID *</label><input id="cust" class="form-control form-control-sm" list="cl"><datalist id="cl"></datalist></div>
+      <div class="col-md-8"><label class="form-label small">Tiêu đề</label><input id="title" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">Trạng thái</label>
+        <select id="status" class="form-select form-select-sm">
+          <option value="draft">Draft</option><option value="sent">Sent</option>
+          <option value="signed">Signed</option><option value="active">Active</option>
+          <option value="expired">Expired</option><option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label small">Giá trị</label><input type="number" id="amount" class="form-control form-control-sm" value="0"></div>
+      <div class="col-md-3"><label class="form-label small">Ngày ký</label><input type="date" id="signed" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">Quote ID</label><input id="quote" class="form-control form-control-sm"></div>
+      <div class="col-md-6"><label class="form-label small">File path / link</label><input id="file" class="form-control form-control-sm"></div>
+      <div class="col-md-6"><label class="form-label small">Ghi chú</label><input id="notes" class="form-control form-control-sm"></div>
+    </div>
+  </div>
+  <div class="modal-footer border-0">
+    <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Đóng</button>
+    <button class="crm-btn crm-btn-primary" onclick="save()">Lưu</button>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block crm_scripts %}
+<script>
+const money=n=>new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+function openC(r){
+  id.value=r?.id||''; cust.value=r?.customer_id||''; title.value=r?.title||'';
+  status.value=r?.status||'draft'; amount.value=r?.amount||0;
+  signed.value=(r?.signed_date||'').slice(0,10); quote.value=r?.quote_id||'';
+  file.value=r?.file_path||''; notes.value=r?.notes||'';
+  new bootstrap.Modal('#m').show();
+}
+async function load(){
+  const rows=await(await fetch('/api/crm/contracts')).json();
+  tb.innerHTML=(rows||[]).length?rows.map(r=>`<tr>
+    <td class="fw-semibold">${r.contract_no||''}</td><td>${r.title||''}</td><td>${r.customer_name||('#'+r.customer_id)}</td>
+    <td>${r.status}</td><td class="text-end">${money(r.amount)}</td><td>${(r.signed_date||'').slice(0,10)}</td>
+    <td><button class="btn btn-sm btn-outline-secondary" onclick='openC(${JSON.stringify(r).replace(/'/g,"&#39;")})'>Sửa</button>
+    <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button></td>
+  </tr>`).join(''):'<tr><td colspan="7" class="crm-empty">Chưa có hợp đồng</td></tr>';
+}
+async function save(){
+  if(!cust.value) return alert('Nhập ID khách hàng');
+  const body={customer_id:cust.value,title:title.value,status:status.value,amount:amount.value,signed_date:signed.value,quote_id:quote.value||null,file_path:file.value,notes:notes.value};
+  const i=id.value;
+  const r=await fetch(i?`/api/crm/contracts/${i}`:'/api/crm/contracts',{method:i?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json(); if(d.error) return alert(d.error);
+  bootstrap.Modal.getInstance(document.getElementById('m'))?.hide(); load();
+}
+async function del(i){ if(!confirm('Xóa?'))return; await fetch('/api/crm/contracts/'+i,{method:'DELETE'}); load(); }
+(async()=>{
+  const cs=await(await fetch('/api/customers')).json();
+  cl.innerHTML=(cs||[]).map(c=>`<option value="${c.id}">${c.company_name||c.name||''}</option>`).join('');
+  load();
+})();
+</script>
+{% endblock %}
