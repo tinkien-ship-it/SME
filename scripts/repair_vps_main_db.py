@@ -151,12 +151,13 @@ def main():
                 password=args.password,
                 email=(args.email or '').strip(),
                 full_name=(args.full_name or 'Master').strip(),
-                disable_2fa=True,
+                disable_2fa=False,
                 force_password=True,
+                reset_totp=False,
             )
             conn.commit()
             print('Master: %s (%s)' % (action, args.username))
-            print('Đăng nhập /login — username=%s (2FA tạm TẮT)' % args.username)
+            print('Đăng nhập /login — username=%s (Authenticator bật; thiết bị mới sẽ hiện QR nếu chưa quét)' % args.username)
         conn.close()
 
         try:

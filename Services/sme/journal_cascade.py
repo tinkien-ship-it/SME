@@ -19,9 +19,162 @@ EXPORT_CLEARANCE_TYPES = frozenset({
     'EXPORT_REVENUE', 'EXPORT_COGS', 'EXPORT_TAX',
 })
 
+# Nhóm hạch toán bán hàng / XK — xóa 1 → xóa cả nhóm (trừ PT thu riêng)
+SALE_ACCOUNTING_TYPES = frozenset({
+    'SALE', 'SALE_REVENUE', 'SALE_COGS',
+})
+EXPORT_ACCOUNTING_TYPES = frozenset({
+    'EXPORT_SHIP', 'EXPORT_REVENUE', 'EXPORT_COGS', 'EXPORT_TAX',
+})
+INVOICE_PROTECTED_JOURNAL_TYPES = SALE_ACCOUNTING_TYPES | EXPORT_ACCOUNTING_TYPES
+
 
 def _row(r) -> dict[str, Any]:
     return dict(r) if r is not None else {}
+
+
+def assert_can_delete_sale_related_journal(
+    conn: sqlite3.Connection,
+    entry: sqlite3.Row | dict,
+) -> None:
+    """Chặn xóa bút toán bán/XK khi đơn đã xuất HĐĐT chính thức."""
+    e = dict(entry) if not isinstance(entry, dict) else entry
+    dtype = str(e.get('document_type') or '').upper()
+    if dtype not in INVOICE_PROTECTED_JOURNAL_TYPES:
+        return
+    try:
+        doc_id = int(e['document_id']) if e.get('document_id') not in (None, '', 0, '0') else None
+    except (TypeError, ValueError):
+        doc_id = None
+    if not doc_id or not _table_exists(conn, 'sale'):
+        return
+    sale = conn.execute('SELECT * FROM sale WHERE id = ?', (doc_id,)).fetchone()
+    if not sale:
+        return
+    from Services.einvoice_export import sale_has_official_invoice
+    sd = dict(sale)
+    if sale_has_official_invoice(sd):
+        inv = str(sd.get('invoice_number') or '').strip() or '—'
+        raise ValueError(
+            f'Không được xóa bút toán bán hàng/XK của đơn đã xuất hóa đơn ({inv}). '
+            'Dùng hóa đơn thay thế/điều chỉnh; nếu thiếu bút toán hãy «Hạch toán lại» trên trang HĐ bán hàng.'
+        )
+
+
+def related_accounting_entry_ids(
+    conn: sqlite3.Connection,
+    entry: sqlite3.Row | dict,
+) -> list[int]:
+    """Các bút toán cùng đơn hàng cần xóa cùng nhóm (không gồm PT thu)."""
+    e = dict(entry) if not isinstance(entry, dict) else entry
+    dtype = str(e.get('document_type') or '').upper()
+    try:
+        doc_id = int(e['document_id']) if e.get('document_id') not in (None, '', 0, '0') else None
+    except (TypeError, ValueError):
+        doc_id = None
+    if not doc_id:
+        return [int(e['id'])]
+
+    if dtype in EXPORT_ACCOUNTING_TYPES:
+        group = EXPORT_ACCOUNTING_TYPES
+        # Clearance trước, ship sau (thứ tự xóa an toàn)
+        order = ('EXPORT_TAX', 'EXPORT_REVENUE', 'EXPORT_COGS', 'EXPORT_SHIP')
+    elif dtype in SALE_ACCOUNTING_TYPES:
+        group = SALE_ACCOUNTING_TYPES
+        order = ('SALE_REVENUE', 'SALE_COGS', 'SALE')
+    else:
+        return [int(e['id'])]
+
+    ids = _remaining_journals(conn, doc_id, group)
+    # Đảm bảo entry hiện tại có trong list (kể cả status khác posted)
+    eid = int(e['id'])
+    if eid not in ids:
+        ids.append(eid)
+
+    rank = {t: i for i, t in enumerate(order)}
+    typed: list[tuple[int, int]] = []
+    for jid in ids:
+        row = conn.execute(
+            'SELECT document_type FROM sme_journal_entries WHERE id = ?', (jid,),
+        ).fetchone()
+        dt = str(row[0] if row and not isinstance(row, sqlite3.Row) else (row['document_type'] if row else '')).upper()
+        typed.append((rank.get(dt, 99), jid))
+    typed.sort()
+    return [jid for _, jid in typed]
+
+
+def sale_has_revenue_journal(conn: sqlite3.Connection, sale_id: int) -> bool:
+    """Đã có bút toán doanh thu (nội địa hoặc XK) còn hiệu lực."""
+    if not sale_id:
+        return False
+    row = conn.execute(
+        """
+        SELECT 1 FROM sme_journal_entries
+        WHERE document_id = ?
+          AND status = 'posted'
+          AND reverses_id IS NULL
+          AND UPPER(COALESCE(document_type,'')) IN ('SALE_REVENUE', 'EXPORT_REVENUE', 'SALE')
+        LIMIT 1
+        """,
+        (int(sale_id),),
+    ).fetchone()
+    return bool(row)
+
+
+def sale_needs_journal_repost(conn: sqlite3.Connection, sale_id: int) -> bool:
+    """HĐ đã có (nháp/chính thức) nhưng thiếu bút toán DT → cần hạch toán lại."""
+    if not sale_id or not _table_exists(conn, 'sale'):
+        return False
+    sale = conn.execute('SELECT * FROM sale WHERE id = ?', (int(sale_id),)).fetchone()
+    if not sale:
+        return False
+    from Services.einvoice_export import sale_has_draft_invoice, sale_has_official_invoice
+    sd = dict(sale)
+    if not (sale_has_official_invoice(sd) or sale_has_draft_invoice(sd)):
+        # Vẫn cho phép nếu có dòng outward_invoices
+        if _table_exists(conn, 'outward_invoices'):
+            oi = conn.execute(
+                'SELECT 1 FROM outward_invoices WHERE sale_id = ? LIMIT 1',
+                (int(sale_id),),
+            ).fetchone()
+            if not oi:
+                return False
+        else:
+            return False
+    return not sale_has_revenue_journal(conn, int(sale_id))
+
+
+def repost_sale_journals(
+    conn: sqlite3.Connection,
+    sale_id: int,
+    *,
+    created_by: str | None = None,
+) -> dict[str, Any]:
+    """Hạch toán lại bút toán bán/XK cho đơn đã có HĐ nhưng thiếu journal."""
+    sale = conn.execute('SELECT * FROM sale WHERE id = ?', (int(sale_id),)).fetchone()
+    if not sale:
+        raise ValueError(f'Không tìm thấy đơn hàng #{sale_id}')
+    sd = dict(sale)
+    st = str(sd.get('sale_type') or '').upper()
+    if st == 'EXPORT' or str(sd.get('business_line') or '').lower() == 'export':
+        from Services.sme.export_clearance import sync_export_clearance_journals
+        from Services.sme.export_sale import sync_export_ship_journals
+        ship = sync_export_ship_journals(
+            conn, int(sale_id), created_by=created_by, replace_existing=False,
+        )
+        clr = sync_export_clearance_journals(
+            conn, int(sale_id), created_by=created_by, replace_existing=False,
+        )
+        return {'success': True, 'sale_id': int(sale_id), 'ship': ship, 'clearance': clr}
+    from Services.sme.sale_journal import sync_sale_journals
+    result = sync_sale_journals(
+        conn,
+        int(sale_id),
+        accounting_regime='SME',
+        created_by=created_by,
+        replace_existing=False,
+    )
+    return {'success': True, 'sale_id': int(sale_id), 'journals': result}
 
 
 def _table_cols(conn: sqlite3.Connection, table: str) -> set[str]:
@@ -377,6 +530,23 @@ def cleanup_documents_for_deleted_journal(
                     )
                 except sqlite3.Error:
                     pass
+            # Gỡ công nợ phụ thuộc bút toán thông quan (tránh mồ côi như XK000001)
+            if _table_exists(conn, 'cong_no'):
+                try:
+                    conn.execute('DELETE FROM cong_no WHERE sale_id = ?', (doc_id,))
+                except sqlite3.Error:
+                    pass
+
+    # Xóa nhóm DT bán nội địa → gỡ cong_no nếu hết bút toán DT
+    if dtype in SALE_ACCOUNTING_TYPES and doc_id:
+        left_sale = _remaining_journals(
+            conn, doc_id, SALE_ACCOUNTING_TYPES, exclude_entry_id=eid,
+        )
+        if not left_sale and _table_exists(conn, 'cong_no'):
+            try:
+                conn.execute('DELETE FROM cong_no WHERE sale_id = ?', (doc_id,))
+            except sqlite3.Error:
+                pass
 
     return result
 
@@ -419,12 +589,18 @@ def delete_stock_out_voucher(
                 'hoặc hủy thông quan rồi mới xóa phiếu xuất kho 02-VT.'
             )
 
-        # Xóa bút toán xuất kho / GV·DT bán gắn sale
+        # Xóa bút toán xuất kho / GV·DT bán gắn sale (cascade nhóm trong delete_journal_entry)
         jids = _remaining_journals(conn, sale_id, STOCK_OUT_JOURNAL_TYPES)
-        for jid in jids:
+        for jid in list(jids):
+            still = conn.execute(
+                'SELECT 1 FROM sme_journal_entries WHERE id = ?', (jid,),
+            ).fetchone()
+            if not still:
+                continue
             try:
                 jr = delete_journal_entry(
                     conn, jid, reason=reason, deleted_by=deleted_by,
+                    cascade_related=True,
                 )
                 journals_deleted.append({
                     'id': jid,
@@ -432,7 +608,6 @@ def delete_stock_out_voucher(
                     'mode': jr.get('mode'),
                 })
             except ValueError as exc:
-                # Kỳ khóa → không xóa cứng
                 raise ValueError(
                     f'Không xóa được bút toán #{jid} liên quan phiếu xuất: {exc}'
                 ) from exc

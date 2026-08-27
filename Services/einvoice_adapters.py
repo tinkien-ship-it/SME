@@ -81,6 +81,9 @@ class MatbaoAdapterWrapper(BaseEInvoiceAdapter):
             sale_data, items, loai_hdon=loai_hdon, replace_unpublished=replace_unpublished,
         )
 
+    def issue_pxk(self, payload):
+        return self._inner.issue_pxk(payload)
+
     def sign_draft(self, invoice_id):
         return self._inner.sign_draft(invoice_id)
 

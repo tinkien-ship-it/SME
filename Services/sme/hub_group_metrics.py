@@ -80,11 +80,21 @@ def _endpoint_metric(
         'SME_PhaiTraCongNhanVien',
         'SME_dashboard_debt',
     ):
-        d = _debt()
         if endpoint == 'SME_SoCongNoPhaiThu':
-            return _metric(d.get('receivable'), detail='Số dư tài khoản 131')
+            from Services.sme.debt_ledger import ledger_open_totals
+            t = _cached(
+                'ledger_open',
+                lambda: ledger_open_totals(conn, branch=branch_code),
+            )
+            return _metric(t.get('ar'), detail='Còn phải thu (chứng từ mở · TK 131)')
         if endpoint == 'SME_SoCongNoPhaiTra':
-            return _metric(d.get('payable'), detail='Số dư tài khoản 331')
+            from Services.sme.debt_ledger import ledger_open_totals
+            t = _cached(
+                'ledger_open',
+                lambda: ledger_open_totals(conn, branch=branch_code),
+            )
+            return _metric(t.get('ap'), detail='Còn phải trả (phiếu nhập mở · TK 331)')
+        d = _debt()
         if endpoint == 'SME_PhaiThuCongNhanVien':
             return _metric(d.get('employee_advance'), detail='Số dư tài khoản 141')
         if endpoint == 'SME_PhaiTraCongNhanVien':

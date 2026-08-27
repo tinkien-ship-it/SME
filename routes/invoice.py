@@ -993,6 +993,39 @@ def register_invoice_routes(app):
                 result['is_draft'] = (loai == 0)
             return result
 
+        def issue_pxk(self, payload: dict):
+            """Phát hành PXK điện tử (KHMSHDon=6, ký hiệu N hoặc B) qua create-invoice."""
+            if not self._token and not self._get_token():
+                return {"success": False, "error": "Không thể xác thực với hệ thống Mắt Bão."}
+            if not isinstance(payload, dict):
+                return {"success": False, "error": "Payload PXK không hợp lệ."}
+            khms = str(payload.get('KHMSHDon') or '6').strip() or '6'
+            khh = str(payload.get('KHHDon') or '').strip()
+            if khms != '6':
+                return {"success": False, "error": f"PXK phải dùng KHMSHDon=6 (hiện {khms})."}
+            if len(khh) < 4 or khh[3].upper() not in ('N', 'B'):
+                return {
+                    "success": False,
+                    "error": (
+                        f"Ký hiệu PXK «{khh}» không hợp lệ — ký tự thứ 4 phải là N "
+                        "(vận chuyển nội bộ) hoặc B (gửi đại lý)."
+                    ),
+                }
+            url_create = f"{self.base_url}/api/invoice/create-invoice"
+            logging.info(
+                "Matbao create-invoice PXK: LoaiHDon=%s KHMSHDon=%s KHHDon=%s MTChieu=%s LDDNBo=%s HDKTSo=%s",
+                payload.get('LoaiHDon'), khms, khh,
+                payload.get('MTChieu'), payload.get('LDDNBo'), payload.get('HDKTSo'),
+            )
+            body = dict(payload)
+            body['KHMSHDon'] = '6'
+            body['KHHDon'] = khh
+            result = self._send_request(url_create, [body])
+            if result.get('success'):
+                result['is_draft'] = int(payload.get('LoaiHDon') or 1) == 0
+                result['doc_kind'] = 'pxk'
+            return result
+
         def sign_draft(self, invoice_id):
             """Ký / phát hành hóa đơn nháp đã tạo (POST sign-invoice)."""
             if not invoice_id:
@@ -1713,6 +1746,174 @@ def register_invoice_routes(app):
                 conn.close()
 
     app.config['issue_invoice_for_sale'] = issue_invoice_for_sale
+    app.config['MatbaoProvider'] = MatbaoProvider
+
+    @app.route('/api/pxk/issue', methods=['POST'])
+    @login_required
+    def api_pxk_issue():
+        """Phát hành PXK điện tử Mắt Bão (mẫu 6).
+
+        Body:
+          kind: internal | agency
+          loai_hdon: 0=nháp, 1=chính thức
+          sale_id: (internal) đơn XK / bán
+          delivery_id: (agency) phiếu gửi đại lý
+          header: override LDDNBo / HDKTSo / PTVChuyen…
+          items: optional nếu không lấy từ DB
+        """
+        from flask import session
+        from Services.matbao_pxk import (
+            build_agency_header_from_delivery,
+            build_internal_header_from_sale,
+            delivery_items_as_pxk_lines,
+            ensure_pxk_schema,
+            issue_and_persist_pxk,
+            sale_items_as_pxk_lines,
+        )
+
+        data = request.get_json(silent=True) or {}
+        kind = str(data.get('kind') or '').strip().lower()
+        if kind not in ('internal', 'agency'):
+            return jsonify({
+                'success': False,
+                'error': 'kind phải là internal (N — VC nội bộ) hoặc agency (B — gửi đại lý)',
+            }), 400
+        try:
+            loai = int(data.get('loai_hdon') if data.get('loai_hdon') is not None else 1)
+        except (TypeError, ValueError):
+            loai = 1
+        loai = 0 if loai == 0 else 1
+        extra = data.get('header') if isinstance(data.get('header'), dict) else {}
+        actor = (
+            (session.get('user') or {}).get('username')
+            or session.get('user_name')
+            or session.get('username')
+        )
+
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            ensure_pxk_schema(conn, commit=False)
+            source_id = None
+            source_type = kind
+            if kind == 'internal':
+                sale_id = data.get('sale_id')
+                if not sale_id:
+                    return jsonify({'success': False, 'error': 'Thiếu sale_id'}), 400
+                sale = conn.execute(
+                    'SELECT * FROM sale WHERE id = ?', (int(sale_id),)
+                ).fetchone()
+                if not sale:
+                    return jsonify({'success': False, 'error': 'Không tìm thấy đơn hàng'}), 404
+                sd = dict(sale)
+                header = build_internal_header_from_sale(sd, extra)
+                items = data.get('items') if isinstance(data.get('items'), list) else None
+                if not items:
+                    items = sale_items_as_pxk_lines(conn, int(sale_id))
+                source_id = int(sale_id)
+                source_type = 'export_sale' if str(sd.get('sale_type') or '').upper() == 'EXPORT' else 'sale'
+                result = issue_and_persist_pxk(
+                    conn,
+                    kind='internal',
+                    header=header,
+                    items=items,
+                    source_type=source_type,
+                    source_id=source_id,
+                    loai_hdon=loai,
+                    created_by=actor,
+                )
+                if result.get('success'):
+                    inv_no = result.get('invoice_no') or ''
+                    # Lưu số PXK CQT vào đơn (trường mã PXK nội bộ)
+                    try:
+                        cols = {r[1] for r in conn.execute('PRAGMA table_info(sale)').fetchall()}
+                        if 'internal_transfer_doc_no' in cols and inv_no:
+                            conn.execute(
+                                'UPDATE sale SET internal_transfer_doc_no = ? WHERE id = ?',
+                                (inv_no, source_id),
+                            )
+                    except sqlite3.Error:
+                        pass
+            else:
+                delivery_id = data.get('delivery_id')
+                if not delivery_id:
+                    return jsonify({'success': False, 'error': 'Thiếu delivery_id'}), 400
+                row = conn.execute(
+                    'SELECT * FROM sme_agent_deliveries WHERE id = ?', (int(delivery_id),)
+                ).fetchone()
+                if not row:
+                    return jsonify({'success': False, 'error': 'Không tìm thấy phiếu gửi đại lý'}), 404
+                dd = dict(row)
+                header = build_agency_header_from_delivery(dd, extra)
+                items = data.get('items') if isinstance(data.get('items'), list) else None
+                if not items:
+                    items = delivery_items_as_pxk_lines(conn, int(delivery_id))
+                source_id = int(delivery_id)
+                source_type = 'consign_delivery'
+                result = issue_and_persist_pxk(
+                    conn,
+                    kind='agency',
+                    header=header,
+                    items=items,
+                    source_type=source_type,
+                    source_id=source_id,
+                    loai_hdon=loai,
+                    created_by=actor,
+                )
+                if result.get('success'):
+                    try:
+                        from Services.sme.consignment import ensure_consignment_schema
+                        ensure_consignment_schema(conn, commit=False)
+                        for col, decl in (
+                            ('pxk_invoice_no', 'TEXT'),
+                            ('pxk_invoice_id', 'TEXT'),
+                            ('pxk_pdf_url', 'TEXT'),
+                        ):
+                            try:
+                                cols = {r[1] for r in conn.execute(
+                                    'PRAGMA table_info(sme_agent_deliveries)'
+                                ).fetchall()}
+                                if col not in cols:
+                                    conn.execute(
+                                        f'ALTER TABLE sme_agent_deliveries ADD COLUMN {col} {decl}'
+                                    )
+                            except sqlite3.Error:
+                                pass
+                        conn.execute(
+                            """
+                            UPDATE sme_agent_deliveries
+                            SET pxk_invoice_no = ?, pxk_invoice_id = ?, pxk_pdf_url = ?
+                            WHERE id = ?
+                            """,
+                            (
+                                result.get('invoice_no') or '',
+                                result.get('invoice_id') or '',
+                                result.get('pdf_url') or '',
+                                source_id,
+                            ),
+                        )
+                    except sqlite3.Error as exc:
+                        logging.warning('persist consign pxk fields: %s', exc)
+
+            from db_utils import sqlite_commit
+            sqlite_commit(conn, label='pxk_issue')
+            if not result.get('success'):
+                return jsonify(result), 400
+            return jsonify({
+                'success': True,
+                'message': (
+                    f"Đã phát hành PXK {'nội bộ' if kind == 'internal' else 'đại lý'} "
+                    f"{result.get('invoice_no') or '(nháp)'}"
+                ),
+                **{k: v for k, v in result.items() if k != 'payload'},
+            })
+        except ValueError as ve:
+            return jsonify({'success': False, 'error': str(ve)}), 400
+        except Exception as e:
+            logging.exception('api_pxk_issue')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
     app.config['publish_draft_invoice_for_sale'] = publish_draft_invoice_for_sale
 
     @app.route('/api/invoice/providers', methods=['GET'])
@@ -2894,6 +3095,21 @@ def register_invoice_routes(app):
             formatted = _dedupe_outward_formatted(formatted)
             formatted = _attach_local_outward_notes(cursor, formatted)
             formatted = _attach_provider_labels(formatted)
+            try:
+                from Services.sme.journal_cascade import sale_needs_journal_repost
+                for item in formatted:
+                    sid = item.get('sale_id')
+                    try:
+                        sid_i = int(sid) if sid not in (None, '', 0, '0') else None
+                    except (TypeError, ValueError):
+                        sid_i = None
+                    item['needs_repost'] = bool(
+                        sid_i and sale_needs_journal_repost(conn, sid_i)
+                    )
+            except Exception as enrich_err:
+                logging.warning('outward needs_repost enrich: %s', enrich_err)
+                for item in formatted:
+                    item.setdefault('needs_repost', False)
             formatted.sort(key=lambda x: (x.get('invoice_date', ''), x.get('invoice_no', '')), reverse=True)
         finally:
             conn.close()

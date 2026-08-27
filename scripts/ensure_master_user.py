@@ -42,7 +42,12 @@ def main():
     parser.add_argument('--password', default=os.environ.get('MASTER_PASSWORD', ''))
     parser.add_argument('--email', default=os.environ.get('MASTER_EMAIL', ''))
     parser.add_argument('--full-name', default=os.environ.get('MASTER_FULL_NAME', 'Master'))
-    parser.add_argument('--keep-2fa', action='store_true')
+    parser.add_argument('--keep-2fa', action='store_true',
+                        help='(tương thích cũ) giữ 2FA — giờ là mặc định')
+    parser.add_argument('--disable-2fa', action='store_true',
+                        help='Tắt 2FA tạm (khôi phục khẩn cấp)')
+    parser.add_argument('--reset-totp', action='store_true',
+                        help='Xóa secret Authenticator để lần đăng nhập sau hiện lại QR')
     args = parser.parse_args()
 
     if not os.path.exists(args.main):
@@ -88,12 +93,18 @@ def main():
         password=args.password,
         email=(args.email or '').strip(),
         full_name=(args.full_name or 'Master').strip(),
-        disable_2fa=not args.keep_2fa,
+        disable_2fa=bool(args.disable_2fa),
         force_password=True,
+        reset_totp=bool(args.reset_totp),
     )
     conn.commit()
-    print('\nKết quả: %s user %r (2FA %s)' % (
-        action, args.username, 'giữ' if args.keep_2fa else 'TẮT để vào được ngay'))
+    if args.disable_2fa:
+        tfa_msg = 'TẮT'
+    elif args.reset_totp:
+        tfa_msg = 'bật — sẽ hiện QR mới'
+    else:
+        tfa_msg = 'bật (giữ Authenticator nếu đã có)'
+    print('\nKết quả: %s user %r (2FA %s)' % (action, args.username, tfa_msg))
     print('Đăng nhập tại /login với username=%s' % args.username)
     conn.close()
     return 0

@@ -482,7 +482,7 @@
 
     async function deleteCurrent() {
         if (!currentId) return;
-        if (!confirm('Xóa hoàn toàn bút toán này? Không tạo bút toán đảo — bạn sẽ hạch toán lại nếu cần. Thao tác được ghi nhật ký truy vết.')) return;
+        if (!confirm('Xóa bút toán này? Các bút toán/chứng từ cùng đơn (bán/XK) cũng sẽ bị xóa theo. Không tạo bút toán đảo — hạch toán lại nếu cần. Đơn đã xuất HĐĐT chính thức thì không được xóa.')) return;
         const reason = prompt('Lý do xóa:', 'Xóa bút toán từ nhật ký') || 'Xóa bút toán từ nhật ký';
         try {
             const res = await fetch('/api/sme/journal/' + currentId, {

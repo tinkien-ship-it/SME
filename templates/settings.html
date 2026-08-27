@@ -883,6 +883,54 @@
                                                 <small class="form-text text-muted" id="hintInvoiceType"></small>
                                             </div>
 
+                                            <div class="col-12 d-none" id="matbaoPxkBlock">
+                                                <div class="row g-3 p-3 bg-info-subtle rounded border border-info-subtle">
+                                                    <div class="col-12">
+                                                        <h6 class="fw-bold text-info mb-1">
+                                                            <i class="fas fa-warehouse me-2"></i>PXK điện tử Mắt Bão (mẫu số 6 — TT78)
+                                                        </h6>
+                                                        <small class="text-muted">
+                                                            Ký tự thứ 4 của ký hiệu: <strong>N</strong> = vận chuyển nội bộ,
+                                                            <strong>B</strong> = hàng gửi bán đại lý. Phải đăng ký trên portal Mắt Bão trước.
+                                                        </small>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-bold">Ký hiệu PXK nội bộ (N)</label>
+                                                        <input type="text" name="pxk_internal_series" id="inputPxkInternalSeries"
+                                                               class="form-control" value="{{ esign.pxk_internal_series or '' }}"
+                                                               placeholder="C26NYY">
+                                                        <small class="form-text text-muted">Bắt buộc khi phát hành phiếu XK kiêm VC nội bộ</small>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-bold">Ký hiệu PXK đại lý (B)</label>
+                                                        <input type="text" name="pxk_agency_series" id="inputPxkAgencySeries"
+                                                               class="form-control" value="{{ esign.pxk_agency_series or '' }}"
+                                                               placeholder="C26BYY">
+                                                        <small class="form-text text-muted">Bắt buộc khi phát hành phiếu XK gửi bán đại lý</small>
+                                                    </div>
+                                                    <div class="col-md-6 d-flex align-items-center">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" name="auto_issue_pxk_internal"
+                                                                   id="autoIssuePxkInternal" value="1"
+                                                                   {% if esign.auto_issue_pxk_internal in ('1', 1, True) %}checked{% endif %}>
+                                                            <label class="form-check-label" for="autoIssuePxkInternal">
+                                                                Tự phát hành PXK nội bộ khi xuất kho XK / điều chuyển
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6 d-flex align-items-center">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" name="auto_issue_pxk_agency"
+                                                                   id="autoIssuePxkAgency" value="1"
+                                                                   {% if esign.auto_issue_pxk_agency in ('1', 1, True) %}checked{% endif %}>
+                                                            <label class="form-check-label" for="autoIssuePxkAgency">
+                                                                Tự phát hành PXK đại lý khi gửi hàng đại lý
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <div class="col-12 d-none" id="misaExtraBlock">
                                                 <div class="row g-3 p-3 bg-primary-subtle rounded border border-primary-subtle">
                                                     <div class="col-12">
@@ -1642,6 +1690,7 @@ function applyEinvoiceProviderUi(code, opt) {
     setText('labelAppSecret', cfg.labelAppSecret || 'App Secret / Client Secret');
     setText('hintAppSecret', cfg.hintAppSecret || 'Để trống nếu không thay đổi');
     setVisible('misaExtraBlock', !!cfg.showMisaExtra);
+    setVisible('matbaoPxkBlock', code === 'matbao');
     setVisible('mobifoneExtraBlock', !!cfg.showMobifoneExtra);
     setVisible('vnptExtraBlock', !!cfg.showVnptExtra);
 
@@ -1712,6 +1761,8 @@ async function loadInvoiceSettings() {
         setField('serial_number', data.serial_number || '');
         setField('invoice_series', data.invoice_series || 'AA/26E');
         setField('invoice_type', data.invoice_type || '01GTKT0/001');
+        setField('pxk_internal_series', data.pxk_internal_series || '');
+        setField('pxk_agency_series', data.pxk_agency_series || '');
         setField('sign_service_url', data.sign_service_url || '');
         setField('etax_cvalue', data.etax_cvalue || '');
         setField('etax_ckey', data.etax_ckey || '');
@@ -1721,6 +1772,10 @@ async function loadInvoiceSettings() {
         if (minvoiceCctbao) minvoiceCctbao.value = data.minvoice_cctbao_id || '';
         const minvoiceHasCode = form.querySelector('#minvoiceHasCode');
         if (minvoiceHasCode) minvoiceHasCode.checked = data.minvoice_has_code != 0;
+        const autoPxkN = form.querySelector('#autoIssuePxkInternal');
+        if (autoPxkN) autoPxkN.checked = data.auto_issue_pxk_internal == 1;
+        const autoPxkB = form.querySelector('#autoIssuePxkAgency');
+        if (autoPxkB) autoPxkB.checked = data.auto_issue_pxk_agency == 1;
 
         const autoCheckbox = document.getElementById('auto_issue');
         if (autoCheckbox) autoCheckbox.checked = data.auto_issue_invoice == 1;

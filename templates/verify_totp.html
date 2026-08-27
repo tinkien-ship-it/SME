@@ -74,7 +74,11 @@
 
                 {% if setup_mode and setup %}
                 <div class="text-center mb-3">
+                    {% if setup.qr_data_url %}
                     <img class="qr-box img-fluid border rounded p-2 bg-white" src="{{ setup.qr_data_url }}" alt="QR TOTP">
+                    {% else %}
+                    <div class="alert alert-warning small py-2">Không hiển thị được QR — dùng khóa thủ công.</div>
+                    {% endif %}
                     <p class="small text-muted mt-2 mb-1">Hoặc nhập khóa thủ công:</p>
                     <div class="secret-code">{{ setup.secret }}</div>
                 </div>

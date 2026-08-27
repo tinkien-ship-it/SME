@@ -102,10 +102,15 @@ def ensure_master(
     password: str,
     email: str = '',
     full_name: str = 'Master',
-    disable_2fa: bool = True,
+    disable_2fa: bool = False,
     force_password: bool = True,
+    reset_totp: bool = False,
 ) -> str:
-    """Trả 'created' | 'updated' | 'password_reset'."""
+    """Trả 'created' | 'updated' | 'password_reset'.
+
+    Mặc định giữ / bật 2FA (Authenticator). Chỉ tắt khi disable_2fa=True
+    (vd. khôi phục khẩn cấp). reset_totp=True xóa secret để lần đăng nhập sau hiện lại QR.
+    """
     ensure_users_table(conn)
     row = conn.execute(
         "SELECT id, role FROM users WHERE username = ?", (username,)
@@ -125,16 +130,42 @@ def ensure_master(
         return 'created'
 
     if force_password:
-        conn.execute(
-            """
-            UPDATE users SET password = ?, role = 'master',
-                full_name = COALESCE(NULLIF(?, ''), full_name),
-                email = CASE WHEN ? != '' THEN ? ELSE email END,
-                is_2fa_enabled = ?, must_change_password = 0, last_session_id = NULL
-            WHERE username = ?
-            """,
-            (pwd_hash, full_name, email, email or None, tfa, username),
-        )
+        if disable_2fa:
+            # Reset mật khẩu khẩn cấp: tắt 2FA + xóa TOTP để tránh kẹt Authenticator cũ
+            conn.execute(
+                """
+                UPDATE users SET password = ?, role = 'master',
+                    full_name = COALESCE(NULLIF(?, ''), full_name),
+                    email = CASE WHEN ? != '' THEN ? ELSE email END,
+                    is_2fa_enabled = 0,
+                    totp_secret = NULL, totp_confirmed_at = NULL,
+                    must_change_password = 0, last_session_id = NULL
+                WHERE username = ?
+                """,
+                (pwd_hash, full_name, email, email or None, username),
+            )
+        else:
+            # Giữ cấu hình Authenticator hiện có (không tắt 2FA)
+            conn.execute(
+                """
+                UPDATE users SET password = ?, role = 'master',
+                    full_name = COALESCE(NULLIF(?, ''), full_name),
+                    email = CASE WHEN ? != '' THEN ? ELSE email END,
+                    is_2fa_enabled = 1,
+                    must_change_password = 0, last_session_id = NULL
+                WHERE username = ?
+                """,
+                (pwd_hash, full_name, email, email or None, username),
+            )
+            if reset_totp:
+                conn.execute(
+                    """
+                    UPDATE users
+                    SET totp_secret = NULL, totp_confirmed_at = NULL
+                    WHERE username = ?
+                    """,
+                    (username,),
+                )
         return 'password_reset'
 
     conn.execute(
@@ -142,11 +173,20 @@ def ensure_master(
         UPDATE users SET role = 'master',
             full_name = COALESCE(NULLIF(?, ''), full_name),
             email = CASE WHEN ? != '' THEN ? ELSE email END,
-            is_2fa_enabled = CASE WHEN ? THEN 0 ELSE is_2fa_enabled END
+            is_2fa_enabled = CASE WHEN ? THEN 0 ELSE 1 END
         WHERE username = ?
         """,
         (full_name, email, email or None, 1 if disable_2fa else 0, username),
     )
+    if disable_2fa or reset_totp:
+        conn.execute(
+            """
+            UPDATE users
+            SET totp_secret = NULL, totp_confirmed_at = NULL
+            WHERE username = ?
+            """,
+            (username,),
+        )
     return 'updated'
 
 
@@ -169,7 +209,7 @@ def ensure_master_from_env(conn: sqlite3.Connection | None = None) -> str | None
             password=password,
             email=(os.environ.get('MASTER_EMAIL') or '').strip(),
             full_name=(os.environ.get('MASTER_FULL_NAME') or 'Master').strip(),
-            disable_2fa=True,
+            disable_2fa=False,
             force_password=True,
         )
         sqlite_commit(conn, label='master_account')

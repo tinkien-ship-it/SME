@@ -123,6 +123,11 @@ _INVOICE_SETTINGS_COLS = [
     ('purchase_api_url', 'TEXT'),
     ('is_active', 'INTEGER DEFAULT 0'),
     ('updated_at', 'TEXT'),
+    # PXK điện tử Mắt Bão (mẫu số 6) — ký hiệu ký tự thứ 4 = N hoặc B
+    ('pxk_internal_series', 'TEXT'),
+    ('pxk_agency_series', 'TEXT'),
+    ('auto_issue_pxk_internal', 'INTEGER DEFAULT 0'),
+    ('auto_issue_pxk_agency', 'INTEGER DEFAULT 0'),
 ]
 
 

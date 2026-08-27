@@ -95,50 +95,8 @@ def remaining_sql(alias: str = 'cn', conn: sqlite3.Connection | None = None) -> 
     return f'(COALESCE({a}.unpaid_amount, 0) - COALESCE({a}.paid_amount, 0))'
 
 
-def apply_ar_receipt(conn: sqlite3.Connection, sale_id: int, amount: float) -> None:
-    """Thu tiền giảm nợ (phiếu thu / settle)."""
-    if not sale_id or amount is None:
-        return
-    amt = abs(float(amount))
-    if amt <= 0:
-        return
-    ensure_cong_no_schema(conn, commit=False)
-    cols = _cols(conn)
-    if not cols or 'unpaid_amount' not in cols:
-        return
-
-    # unpaid ↓, paid ↑ → remaining GENERATED tự cập nhật
-    sets = [
-        """unpaid_amount = CASE
-            WHEN COALESCE(unpaid_amount, 0) - ? < 0 THEN 0
-            ELSE COALESCE(unpaid_amount, 0) - ?
-        END"""
-    ]
-    params: list = [amt, amt]
-
-    if 'paid_amount' in cols:
-        sets.append('paid_amount = COALESCE(paid_amount, 0) + ?')
-        params.append(amt)
-
-    # Chỉ ghi remaining nếu là cột thường (không GENERATED)
-    if 'remaining_amount' in cols and not _remaining_is_generated(conn):
-        sets.append(
-            """remaining_amount = CASE
-                WHEN COALESCE(remaining_amount, unpaid_amount, 0) - ? < 0 THEN 0
-                ELSE COALESCE(remaining_amount, unpaid_amount, 0) - ?
-            END"""
-        )
-        params.extend([amt, amt])
-
-    params.append(int(sale_id))
-    conn.execute(
-        f"UPDATE cong_no SET {', '.join(sets)} WHERE sale_id = ?",
-        params,
-    )
-
-
 def reverse_ar_receipt(conn: sqlite3.Connection, sale_id: int, amount: float) -> None:
-    """Hoàn tác khi hủy phiếu thu."""
+    """Hoàn tác khi hủy phiếu thu — chỉ giảm paid_amount (khớp apply_ar_receipt)."""
     if not sale_id or amount is None:
         return
     amt = abs(float(amount))
@@ -149,29 +107,68 @@ def reverse_ar_receipt(conn: sqlite3.Connection, sale_id: int, amount: float) ->
     if not cols or 'unpaid_amount' not in cols:
         return
 
-    sets = ['unpaid_amount = COALESCE(unpaid_amount, 0) + ?']
-    params: list = [amt]
-
     if 'paid_amount' in cols:
-        sets.append(
-            """paid_amount = CASE
+        conn.execute(
+            """
+            UPDATE cong_no
+            SET paid_amount = CASE
                 WHEN COALESCE(paid_amount, 0) - ? < 0 THEN 0
                 ELSE COALESCE(paid_amount, 0) - ?
-            END"""
+            END
+            WHERE sale_id = ?
+            """,
+            (amt, amt, int(sale_id)),
         )
-        params.extend([amt, amt])
-
-    if 'remaining_amount' in cols and not _remaining_is_generated(conn):
-        sets.append(
-            'remaining_amount = COALESCE(remaining_amount, unpaid_amount, 0) + ?'
+    else:
+        conn.execute(
+            """
+            UPDATE cong_no
+            SET unpaid_amount = COALESCE(unpaid_amount, 0) + ?
+            WHERE sale_id = ?
+            """,
+            (amt, int(sale_id)),
         )
-        params.append(amt)
+    sync_remaining_from_unpaid(conn, sale_id=int(sale_id))
 
-    params.append(int(sale_id))
-    conn.execute(
-        f"UPDATE cong_no SET {', '.join(sets)} WHERE sale_id = ?",
-        params,
-    )
+
+def apply_ar_receipt(conn: sqlite3.Connection, sale_id: int, amount: float) -> None:
+    """Thu tiền giảm nợ (phiếu thu / settle).
+
+    Nguồn sự thật: remaining = unpaid_amount − paid_amount.
+    Chỉ tăng paid_amount (không giảm unpaid) — tránh trừ nợ 2 lần.
+    """
+    if not sale_id or amount is None:
+        return
+    amt = abs(float(amount))
+    if amt <= 0:
+        return
+    ensure_cong_no_schema(conn, commit=False)
+    cols = _cols(conn)
+    if not cols or 'unpaid_amount' not in cols:
+        return
+
+    if 'paid_amount' in cols:
+        conn.execute(
+            """
+            UPDATE cong_no
+            SET paid_amount = COALESCE(paid_amount, 0) + ?
+            WHERE sale_id = ?
+            """,
+            (amt, int(sale_id)),
+        )
+    else:
+        conn.execute(
+            """
+            UPDATE cong_no
+            SET unpaid_amount = CASE
+                WHEN COALESCE(unpaid_amount, 0) - ? < 0 THEN 0
+                ELSE COALESCE(unpaid_amount, 0) - ?
+            END
+            WHERE sale_id = ?
+            """,
+            (amt, amt, int(sale_id)),
+        )
+    sync_remaining_from_unpaid(conn, sale_id=int(sale_id))
 
 
 def apply_ar_credit_note(
@@ -212,12 +209,24 @@ def apply_ar_credit_note(
             f"UPDATE cong_no SET {', '.join(sets)} WHERE sale_id = ?",
             params,
         )
+        sync_remaining_from_unpaid(conn, sale_id=int(sale_id))
     elif sale_no:
         params.append(str(sale_no))
         conn.execute(
             f"UPDATE cong_no SET {', '.join(sets)} WHERE sale_no = ?",
             params,
         )
+        # sync theo sale_id nếu có
+        row = conn.execute(
+            'SELECT sale_id FROM cong_no WHERE sale_no = ? LIMIT 1', (str(sale_no),)
+        ).fetchone()
+        sid = None
+        if row:
+            sid = row['sale_id'] if hasattr(row, 'keys') else row[0]
+        if sid:
+            sync_remaining_from_unpaid(conn, sale_id=int(sid))
+        else:
+            sync_remaining_from_unpaid(conn)
 
 
 def sync_remaining_from_unpaid(conn: sqlite3.Connection, sale_id: int | None = None) -> int:

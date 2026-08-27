@@ -70,6 +70,13 @@ def ensure_consignment_schema(conn: sqlite3.Connection, *, commit: bool = True) 
         ('agent_email', 'TEXT'),
         ('email_sent_at', 'TEXT'),
         ('email_error', 'TEXT'),
+        ('contract_no', 'TEXT'),
+        ('contract_date', 'TEXT'),
+        ('transport_vehicle', 'TEXT'),
+        ('transporter_name', 'TEXT'),
+        ('pxk_invoice_no', 'TEXT'),
+        ('pxk_invoice_id', 'TEXT'),
+        ('pxk_pdf_url', 'TEXT'),
     ):
         _ensure_col(conn, 'sme_agent_deliveries', col, decl)
     for col, decl in (
@@ -609,6 +616,11 @@ def ship_consignment(
     agent_email: str = '',
     send_email_to_agent: bool = True,
     commit: bool = False,
+    contract_no: str = '',
+    contract_date: str = '',
+    transport_vehicle: str = '',
+    transporter_name: str = '',
+    issue_pxk: bool | None = None,
 ) -> dict[str, Any]:
     """Bước 1: Nợ 157 / Có 155|156 + trừ tồn + (tuỳ chọn) email phiếu XK cho đại lý."""
     from Services.sme.sale_forms import _next_delivery_no
@@ -692,14 +704,19 @@ def ship_consignment(
         INSERT INTO sme_agent_deliveries
             (form_code, doc_no, delivery_date, agent_name, notes, status,
              created_by, created_at, warehouse_code, customer_id, total_cost,
-             agent_address, agent_tax_code, agent_phone, agent_email)
-        VALUES ('01-BH', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             agent_address, agent_tax_code, agent_phone, agent_email,
+             contract_no, contract_date, transport_vehicle, transporter_name)
+        VALUES ('01-BH', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             doc_no, date_s, agent, notes or '', STATUS_SHIPPED,
             created_by, when, wh, cid,
             float(sum(p['amount'] for p in prepared)),
             contact['address'], contact['tax_code'], contact['phone'], contact['email'],
+            (contract_no or '').strip(),
+            str(contract_date or date_s)[:10],
+            (transport_vehicle or '').strip() or 'Xe tải',
+            (transporter_name or '').strip(),
         ),
     )
     did = int(cur.lastrowid)
@@ -775,6 +792,78 @@ def ship_consignment(
         (posted['id'], did),
     )
 
+    pxk_info = None
+    try:
+        from Services.invoice_config import get_active_invoice_config
+        from Services.matbao_pxk import (
+            build_agency_header_from_delivery,
+            delivery_items_as_pxk_lines,
+            maybe_auto_issue_pxk,
+        )
+        cfg = get_active_invoice_config() or {}
+        do_pxk = issue_pxk if issue_pxk is not None else bool(int(cfg.get('auto_issue_pxk_agency') or 0))
+        if do_pxk:
+            doc_row = get_consignment(conn, did) or {}
+            # get_consignment may nest; flatten header fields
+            header_src = dict(doc_row)
+            if 'delivery' in doc_row and isinstance(doc_row['delivery'], dict):
+                header_src = {**doc_row['delivery'], **header_src}
+            header_src.setdefault('delivery_no', doc_no)
+            header_src.setdefault('doc_no', doc_no)
+            header_src['agent_name'] = agent
+            header_src['agent_address'] = contact['address']
+            header_src['agent_tax_code'] = contact['tax_code']
+            header_src['agent_phone'] = contact['phone']
+            header_src['agent_email'] = contact['email']
+            header_src['warehouse_code'] = wh
+            header_src['delivery_date'] = date_s
+            header_src['contract_no'] = (contract_no or '').strip()
+            header_src['contract_date'] = str(contract_date or date_s)[:10]
+            header_src['transport_vehicle'] = (transport_vehicle or '').strip() or 'Xe tải'
+            header_src['transporter_name'] = (transporter_name or '').strip()
+            header = build_agency_header_from_delivery(header_src)
+            items = delivery_items_as_pxk_lines(conn, did)
+            pxk_info = maybe_auto_issue_pxk(
+                conn,
+                kind='agency',
+                header=header,
+                items=items,
+                source_type='consign_delivery',
+                source_id=did,
+                created_by=created_by,
+            )
+            # maybe_auto returns None if flag off — force issue if issue_pxk=True
+            if issue_pxk and pxk_info is None:
+                from Services.matbao_pxk import issue_and_persist_pxk
+                pxk_info = issue_and_persist_pxk(
+                    conn,
+                    kind='agency',
+                    header=header,
+                    items=items,
+                    source_type='consign_delivery',
+                    source_id=did,
+                    loai_hdon=1,
+                    created_by=created_by,
+                )
+            if pxk_info and pxk_info.get('success'):
+                conn.execute(
+                    """
+                    UPDATE sme_agent_deliveries
+                    SET pxk_invoice_no = ?, pxk_invoice_id = ?, pxk_pdf_url = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        pxk_info.get('invoice_no') or '',
+                        pxk_info.get('invoice_id') or '',
+                        pxk_info.get('pdf_url') or '',
+                        did,
+                    ),
+                )
+    except Exception as pxk_exc:
+        logger = __import__('logging').getLogger(__name__)
+        logger.warning('PXK agency after ship: %s', pxk_exc)
+        pxk_info = {'success': False, 'error': str(pxk_exc)}
+
     email_info = None
     email_err = None
     if send_email_to_agent:
@@ -794,6 +883,8 @@ def ship_consignment(
     out['email_error'] = email_err
     if email_info:
         out['email_to'] = email_info.get('email')
+    if pxk_info is not None:
+        out['pxk'] = {k: v for k, v in pxk_info.items() if k != 'payload'}
     return out
 
 

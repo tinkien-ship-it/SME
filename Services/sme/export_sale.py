@@ -64,7 +64,8 @@ def _cols(conn: sqlite3.Connection, table: str) -> set[str]:
     return {r[1] for r in conn.execute(f'PRAGMA table_info("{table}")').fetchall()}
 
 
-def _next_sale_no(conn: sqlite3.Connection, prefix: str = 'XK') -> str:
+def _next_sale_no(conn: sqlite3.Connection, prefix: str = 'ĐH') -> str:
+    """Số đơn hàng (ĐH…) — không dùng XK; XK/PX chỉ trên phiếu xuất kho."""
     row = conn.execute(
         """
         SELECT sale_no FROM sale
@@ -78,7 +79,15 @@ def _next_sale_no(conn: sqlite3.Connection, prefix: str = 'XK') -> str:
         digits = ''.join(ch for ch in str(row[0]) if ch.isdigit())
         if digits:
             n = int(digits) + 1
-    return f'{prefix}{n:06d}'
+    # Tránh trùng id-based ĐH của bán nội địa (ĐH + id zero-pad)
+    while True:
+        candidate = f'{prefix}{n:06d}'
+        exists = conn.execute(
+            'SELECT 1 FROM sale WHERE sale_no = ? LIMIT 1', (candidate,)
+        ).fetchone()
+        if not exists:
+            return candidate
+        n += 1
 
 
 def _active_export_entries(conn: sqlite3.Connection, sale_id: int) -> list[int]:
@@ -661,6 +670,50 @@ def create_or_update_export_sale(
         conn, sale_id, created_by=created_by, replace_existing=bool(edit_id),
     )
 
+    pxk_info = None
+    try:
+        from Services.matbao_pxk import (
+            build_internal_header_from_sale,
+            maybe_auto_issue_pxk,
+            sale_items_as_pxk_lines,
+        )
+        sale_row = conn.execute('SELECT * FROM sale WHERE id = ?', (sale_id,)).fetchone()
+        if sale_row:
+            sd = dict(sale_row)
+            extra = {
+                'LDDNBo': (data.get('LDDNBo') or data.get('internal_dispatch_no') or '').strip()
+                or (sd.get('internal_transfer_doc_no') or '')
+                or f'LĐĐ-{sale_no}',
+                'PTVChuyen': (data.get('PTVChuyen') or data.get('transport_vehicle') or '').strip() or 'Xe tải',
+                'TNVChuyen': (data.get('TNVChuyen') or data.get('transporter_name') or '').strip(),
+                'XuatKhoTai': warehouse_code,
+                'VeViec': f'Xuất kho ra cảng / VC nội bộ {sale_no}',
+            }
+            header = build_internal_header_from_sale(sd, extra)
+            items = sale_items_as_pxk_lines(conn, sale_id)
+            pxk_info = maybe_auto_issue_pxk(
+                conn,
+                kind='internal',
+                header=header,
+                items=items,
+                source_type='export_sale',
+                source_id=sale_id,
+                created_by=created_by,
+            )
+            if pxk_info and pxk_info.get('success') and pxk_info.get('invoice_no'):
+                try:
+                    if 'internal_transfer_doc_no' in scols:
+                        conn.execute(
+                            'UPDATE sale SET internal_transfer_doc_no = ? WHERE id = ?',
+                            (pxk_info.get('invoice_no'), sale_id),
+                        )
+                except sqlite3.Error:
+                    pass
+    except Exception as pxk_exc:
+        logger = __import__('logging').getLogger(__name__)
+        logger.warning('PXK internal after export ship: %s', pxk_exc)
+        pxk_info = {'success': False, 'error': str(pxk_exc)}
+
     if commit:
         sqlite_commit(conn, label='export_sale')
 
@@ -678,10 +731,16 @@ def create_or_update_export_sale(
         'form_code': '02-VT',
         'journal': journal,
         'split': split,
+        'pxk': ({k: v for k, v in pxk_info.items() if k != 'payload'} if pxk_info else None),
         'message': (
             f'Đã xuất kho ra cảng {sale_no}: phiếu xuất kho 02-VT '
             f'{px_voucher.get("voucher_no")} + Nợ 157 / Có kho. '
             'Chờ thông quan (TKHQ + B/L) để ghi DT/GV và xuất HĐĐT.'
+            + (
+                f' PXK điện tử: {pxk_info.get("invoice_no")}.'
+                if pxk_info and pxk_info.get('success') and pxk_info.get('invoice_no')
+                else ''
+            )
         ),
     }
 

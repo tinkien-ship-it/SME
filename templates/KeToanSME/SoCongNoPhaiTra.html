@@ -19,6 +19,7 @@
     .form-label-bold { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #64748b; }
     .flatpickr-calendar { z-index: 10060 !important; }
     @media print { .no-print { display: none !important; } }
+    a.doc-ref-link:hover { text-decoration: underline !important; }
 </style>
 {% endblock %}
 
@@ -27,7 +28,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="fw-bold text-primary mb-1">📘 CHI TIẾT CÔNG NỢ PHẢI TRẢ</h3>
-            <p class="text-muted small">Theo dõi và thanh toán công nợ nhà cung cấp</p>
+            <p class="text-muted small">Theo dõi công nợ nhà cung cấp theo TK <strong>331</strong> và tên NCC (Kế toán SME)</p>
         </div>
         <button class="btn btn-outline-primary px-4 fw-bold" onclick="printLedger()">
             <i class="bi bi-printer me-2"></i>IN SỔ CÔNG NỢ
@@ -37,7 +38,7 @@
     <div class="row mb-4 g-3">
         <div class="col-md-4">
             <div class="card p-4 bg-white text-center">
-                <div class="form-label-bold mb-2">Tổng nợ phát sinh</div>
+                <div class="form-label-bold mb-2">Tổng nợ phát sinh (TK 331 — Có)</div>
                 <div id="totalReceivable" class="money-lg debt">0 ₫</div>
             </div>
         </div>
@@ -51,6 +52,7 @@
             <div class="card p-4 bg-primary text-white text-center">
                 <div class="text-white-50 small fw-bold text-uppercase mb-2">Còn phải trả hiện tại</div>
                 <div id="remainingDebt" class="money-lg fw-bold">0 ₫</div>
+                <small id="summaryHint" class="text-white-50 d-none"></small>
             </div>
         </div>
     </div>
@@ -87,14 +89,14 @@
                         <th class="text-center" style="width:2.5rem"><input type="checkbox" id="chkAllAp"></th>
                         <th class="text-center">Số Đơn Nhập</th>
                         <th class="text-center">Ngày Nhập</th>
-                        <th class="text-end">Tổng Nợ</th>
+                        <th class="text-end">Tổng Nợ (331)</th>
                         <th class="text-end">Đã Trả</th>
                         <th class="text-end">Còn Nợ</th>
                         <th class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody id="debtTableBody">
-                    <tr><td colspan="6" class="text-center p-5 text-muted">Vui lòng chọn một nhà cung cấp...</td></tr>
+                    <tr><td colspan="7" class="text-center p-5 text-muted">Vui lòng chọn một nhà cung cấp...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -218,7 +220,12 @@ async function loadSupplierDropdown() {
         const suppliers = await fetchJSON('/api/sme/debt/suppliers');
         const $select = $('#supplierFilter');
         $select.html('<option value="">-- Chọn nhà cung cấp cần xem nợ --</option>');
-        suppliers.forEach(name => $select.append(new Option(name, name)));
+        suppliers.forEach(item => {
+            const name = (typeof item === 'string') ? item : (item.supplier_name || '');
+            const bal = (typeof item === 'object' && item.balance) ? formatDebtMoney(item.balance) : '';
+            const label = bal ? `${name} — còn ${bal}` : name;
+            $select.append(new Option(label, name));
+        });
     } catch (err) { console.error("Lỗi tải NCC:", err); }
 }
 
@@ -238,6 +245,14 @@ async function loadDebtData() {
         $('#totalReceivable').text(formatDebtMoney(data.summary.total));
         $('#totalPaid').text(formatDebtMoney(data.summary.paid));
         $('#remainingDebt').text(formatDebtMoney(data.summary.remaining));
+        const impRem = Number(data.summary.import_remaining ?? 0);
+        const dispRem = Number(data.summary.remaining ?? 0);
+        const $hint = $('#summaryHint');
+        if (Math.abs(impRem - dispRem) > 0.5 && impRem > 0.5) {
+            $hint.text(`Giá trị phiếu nhập (có thuế): ${formatDebtMoney(impRem)}`).removeClass('d-none');
+        } else {
+            $hint.text('').addClass('d-none');
+        }
 
         if (!data.records || data.records.length === 0) {
             $tbody.html('<tr><td colspan="7" class="text-center p-5 text-success fw-bold">Không còn nợ đọng.</td></tr>');
@@ -246,15 +261,23 @@ async function loadDebtData() {
         }
 
         debtRecordsCache = {};
+        let sumTotal = 0, sumPaid = 0, sumRem = 0;
         const rows = data.records.map(r => {
             debtRecordsCache[r.id] = r;
+            sumTotal += parseFloat(r.total_value) || 0;
+            sumPaid += parseFloat(r.paid_amount) || 0;
+            sumRem += parseFloat(r.remaining_amount) || 0;
             const dateStr = r.date ? flatpickr.formatDate(new Date(r.date), "d/m/Y") : '—';
             return `
                 <tr>
                     <td class="text-center">
                         <input type="checkbox" class="ap-chk" data-id="${r.id}" data-remaining="${r.remaining_amount || 0}">
                     </td>
-                    <td class="text-center fw-bold text-primary">${escapeHtml(r.import_no)}</td>
+                    <td class="text-center fw-bold">
+                        <a href="/SME_import/view/${r.id}" target="_blank" rel="noopener"
+                           class="text-primary text-decoration-none doc-ref-link"
+                           title="Xem phiếu nhập ${escapeHtml(r.import_no)}">${escapeHtml(r.import_no)}</a>
+                    </td>
                     <td class="text-center small">${dateStr}</td>
                     <td class="text-end fw-bold">${formatDebtMoney(r.total_value)}</td>
                     <td class="text-end text-success">${formatDebtMoney(r.paid_amount)}</td>
@@ -268,6 +291,14 @@ async function loadDebtData() {
                     </td>
                 </tr>`;
         });
+        rows.push(`
+                <tr class="table-light fw-bold">
+                    <td colspan="3" class="text-end">Tổng cộng (${data.records.length} phiếu)</td>
+                    <td class="text-end">${formatDebtMoney(sumTotal)}</td>
+                    <td class="text-end text-success">${formatDebtMoney(sumPaid)}</td>
+                    <td class="text-end text-danger">${formatDebtMoney(sumRem)}</td>
+                    <td></td>
+                </tr>`);
         $tbody.html(rows.join(''));
         $('#btnBatchApPay').prop('disabled', false);
         $('#chkAllAp').off('change').on('change', function() {

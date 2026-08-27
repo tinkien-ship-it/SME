@@ -832,12 +832,16 @@ def delete_journal_entry(
     *,
     reason: str = 'Xóa bút toán',
     deleted_by: str | None = None,
+    cascade_related: bool = True,
 ) -> dict:
     """
     Xóa hoàn toàn bút toán khi kỳ đang mở (kể cả sau «Mở lại sổ/kỳ kê khai»).
     Kỳ đã chốt/khóa: bắt buộc dùng reverse_journal_entry.
     Khi kỳ mở: được xóa cả chứng từ đảo / bút toán đã đảo để hạch toán lại cho đúng
     (phục vụ kê khai bổ sung / sửa BCTC).
+
+    cascade_related=True: xóa cả nhóm bút toán bán/XK cùng đơn (trừ PT thu).
+    Đơn đã xuất HĐĐT chính thức: không cho xóa nhóm hạch toán bán/XK.
     """
     ensure_sme_journal_ready(conn, commit=False)
     conn.row_factory = sqlite3.Row
@@ -870,7 +874,41 @@ def delete_journal_entry(
 
     assert_period_open(conn, fy, per, action='xóa bút toán')
 
-    from Services.sme.journal_cascade import cleanup_documents_for_deleted_journal
+    from Services.sme.journal_cascade import (
+        assert_can_delete_sale_related_journal,
+        cleanup_documents_for_deleted_journal,
+        related_accounting_entry_ids,
+    )
+
+    assert_can_delete_sale_related_journal(conn, entry)
+
+    related_deleted: list[dict] = []
+    if cascade_related:
+        siblings = related_accounting_entry_ids(conn, entry)
+        for sid in siblings:
+            if int(sid) == int(entry_id):
+                continue
+            # Tái kiểm tra kỳ/HĐ từng sibling
+            related_deleted.append(
+                delete_journal_entry(
+                    conn,
+                    int(sid),
+                    reason=f'{reason} (cascade cùng đơn)',
+                    deleted_by=deleted_by,
+                    cascade_related=False,
+                )
+            )
+        # Reload entry — có thể đã bị xóa nếu gọi nhầm; vẫn còn vì ta bỏ qua entry_id
+        entry = conn.execute(
+            "SELECT * FROM sme_journal_entries WHERE id = ?", (entry_id,)
+        ).fetchone()
+        if not entry:
+            return {
+                'deleted': True,
+                'entry_id': entry_id,
+                'mode': 'cascade_already_removed',
+                'related_deleted': related_deleted,
+            }
 
     # Kỳ mở (sau mở sổ): gỡ cặp đảo trước khi xóa gốc
     if str(entry['document_type'] or '').startswith('REV_'):
@@ -891,6 +929,7 @@ def delete_journal_entry(
         result['restored_original_id'] = orig_id
         result['mode'] = 'delete_reverse_restore_original'
         result['cascade'] = cascade
+        result['related_deleted'] = related_deleted
         return result
 
     if entry['reversed_by_id']:
@@ -923,6 +962,7 @@ def delete_journal_entry(
     )
     result['mode'] = 'hard_delete'
     result['cascade'] = cascade
+    result['related_deleted'] = related_deleted
     return result
 
 def update_journal_entry(

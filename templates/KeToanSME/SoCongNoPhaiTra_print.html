@@ -88,9 +88,7 @@
                 <td class="text-end format-money">{{ totals.opening }}</td>
             </tr>
 
-            {% set running_bal = totals.opening %}
             {% for r in rows %}
-                {% set running_bal = running_bal + r.no - r.co %}
                 <tr>
                     <td class="text-center">{{ r.purchase_no }}</td>
                     <td class="text-center">{{ r.date.split(' ')[0] if r.date else '—' }}</td>
@@ -99,7 +97,7 @@
                     <td class="text-end format-money">{{ r.no }}</td>
                     <td class="text-end format-money">{{ r.co }}</td>
                     <td class="text-end format-money fw-bold">
-                        {{ running_bal if running_bal > 0.5 else 0 }}
+                        {{ r.running_balance if r.running_balance > 0.5 else 0 }}
                     </td>
                 </tr>
             {% endfor %}

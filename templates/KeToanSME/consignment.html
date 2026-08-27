@@ -43,10 +43,19 @@
       <div class="col-md-4"><label class="form-label small">Email *</label><input id="fEmail" type="email" class="form-control form-control-sm" placeholder="email@domain.com"></div>
       <div class="col-md-2"><label class="form-label small">Kho xuất *</label><select id="fWh" class="form-select form-select-sm"></select></div>
       <div class="col-md-8"><label class="form-label small">Ghi chú</label><input id="fNotes" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">HĐ đại lý số (HDKTSo)</label><input id="fContractNo" class="form-control form-control-sm" placeholder="Bắt buộc khi xuất PXK-B"></div>
+      <div class="col-md-2"><label class="form-label small">Ngày HĐ</label><input id="fContractDate" type="date" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">PT vận chuyển</label><input id="fTransport" class="form-control form-control-sm" value="Xe tải" placeholder="Xe tải / biển số"></div>
       <div class="col-md-2 d-flex align-items-end">
         <div class="form-check mb-1">
           <input class="form-check-input" type="checkbox" id="fSendEmail" checked>
           <label class="form-check-label small" for="fSendEmail">Gửi email phiếu XK</label>
+        </div>
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <div class="form-check mb-1">
+          <input class="form-check-input" type="checkbox" id="fIssuePxk">
+          <label class="form-check-label small" for="fIssuePxk">Xuất PXK điện tử (B)</label>
         </div>
       </div>
       <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary btn-sm w-100" id="btnShip">Xuất gửi (Nợ 157)</button></div>
@@ -166,6 +175,7 @@
     return i>0 && e.includes('.', i+1);
   };
   fDate.value=today(); sDate.value=today(); rDate.value=today();
+  if (typeof fContractDate !== 'undefined' && fContractDate) fContractDate.value = today();
   let activeDoc=null, customers=[];
   let searchTimer=null;
   let suggestSeq=0;
@@ -453,6 +463,10 @@
       warehouse_code: fWh.value,
       notes: fNotes.value,
       send_email: sendMail,
+      contract_no: (document.getElementById('fContractNo')?.value || '').trim(),
+      contract_date: document.getElementById('fContractDate')?.value || fDate.value,
+      transport_vehicle: (document.getElementById('fTransport')?.value || 'Xe tải').trim(),
+      issue_pxk: !!document.getElementById('fIssuePxk')?.checked,
       items,
     };
     if(fCustomerId.value) payload.customer_id=parseInt(fCustomerId.value,10);

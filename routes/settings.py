@@ -568,7 +568,9 @@ def register_settings_routes(app):
             is_master_login = user_role == 'master' and current_tenant_id is None
 
             # ==================== 5. Xử lý 2FA ====================
-            if is_2fa_enabled:
+            # Master luôn dùng Google Authenticator (không phụ thuộc is_2fa_enabled).
+            # Flag is_2fa_enabled chỉ áp dụng cho user/tenant thường.
+            if is_master_login or is_2fa_enabled:
                 from Services.totp_auth import (
                     MASTER_TRUST_DAYS,
                     get_user_totp_secret,
@@ -619,7 +621,7 @@ def register_settings_routes(app):
                             return redirect(url_for('verify_totp_page'))
                         except Exception:
                             return redirect('/verify-totp')
-                else:
+                elif is_2fa_enabled:
                     fingerprint = get_device_fingerprint()
                     try:
                         conn_m = get_main_db_connection()
@@ -1119,10 +1121,20 @@ def register_settings_routes(app):
             session['pending_totp_secret'] = secret
             session.modified = True
             uri = provisioning_uri(secret, user.get('username') or 'master')
+            try:
+                qr_url = qr_png_data_url(uri)
+            except Exception as exc:
+                current_app.logger.error('totp QR generate: %s', exc)
+                flash(
+                    'Không tạo được mã QR (thiếu thư viện qrcode/Pillow?). '
+                    'Vẫn có thể nhập khóa thủ công bên dưới.',
+                    'warning',
+                )
+                qr_url = ''
             setup_payload = {
                 'secret': secret,
                 'otpauth_uri': uri,
-                'qr_data_url': qr_png_data_url(uri),
+                'qr_data_url': qr_url,
             }
 
         if request.method == 'POST':
@@ -1402,7 +1414,8 @@ def register_settings_routes(app):
             user_role = str(user.get('role', '')).strip()
             is_master_login = user_role == 'master' and current_tenant_id is None
 
-            if is_2fa_enabled:
+            # Master luôn TOTP; tenant/user thường theo is_2fa_enabled
+            if is_master_login or is_2fa_enabled:
                 from Services.totp_auth import (
                     MASTER_TRUST_DAYS,
                     get_user_totp_secret,
@@ -1448,7 +1461,7 @@ def register_settings_routes(app):
                         session.pop('oauth_mode', None)
                         flash("Thiết bị mới — nhập mã Google Authenticator.", "info")
                         return redirect(url_for('verify_totp_page'))
-                else:
+                elif is_2fa_enabled:
                     fingerprint = get_device_fingerprint()
                     device_record = None
                     try:
@@ -4019,6 +4032,109 @@ Trân trọng,
                 except Exception:
                     pass
 
+    @app.route('/api/database/reset', methods=['POST'])
+    @login_required
+    @tenant_settings_required
+    @admin_or_master_required
+    def api_database_reset():
+        """Xóa toàn bộ dữ liệu nghiệp vụ tenant (giữ users, business_info, danh mục tham chiếu)."""
+        import logging
+        import shutil
+        from flask import g
+        from db_utils import db_path_available
+
+        data = request.get_json() or {}
+        confirm_password = (data.get('password') or '').strip()
+        reset_password = os.environ.get('DATABASE_RESET_PASSWORD', 'RESET123').strip()
+
+        if confirm_password != reset_password:
+            return jsonify({
+                'success': False,
+                'error': 'Mật khẩu xác nhận không đúng.',
+            }), 403
+
+        tenant_id = getattr(g, 'tenant_id', None) or 'main'
+        db_path = resolve_db_path()
+        if not db_path_available(db_path):
+            return jsonify({
+                'success': False,
+                'error': f'Không tìm thấy database tại: {db_path}',
+            }), 404
+
+        backup_filename = None
+        try:
+            tenant_backup_dir = os.path.join(BACKUP_ROOT, str(tenant_id))
+            os.makedirs(tenant_backup_dir, exist_ok=True)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_filename = f'{tenant_id}_pre_reset_{timestamp}.db'
+            shutil.copy2(db_path, os.path.join(tenant_backup_dir, backup_filename))
+        except Exception as backup_err:
+            current_app.logger.error('backup before reset failed: %s', backup_err)
+            return jsonify({
+                'success': False,
+                'error': f'Không sao lưu được trước khi xóa: {backup_err}',
+            }), 500
+
+        conn = None
+        try:
+            conn = get_db_connection()
+            begin_immediate(conn, label='tenant_reset_data')
+
+            from Services.tenant_db_bootstrap import (
+                purge_tenant_business_data,
+                reseed_tenant_defaults,
+            )
+            cleared = purge_tenant_business_data(conn)
+            reseed_tenant_defaults(conn)
+
+            username = getattr(current_user, 'username', None) or session.get('username') or 'Unknown'
+            logging.warning(
+                'Tenant database purged by %s (tenant=%s, tables=%s, ip=%s)',
+                username, tenant_id, len(cleared), request.remote_addr,
+            )
+
+            try:
+                from Services.audit_log import write_audit
+                write_audit(
+                    'purge',
+                    'settings',
+                    f'Đã xóa {len(cleared)} bảng nghiệp vụ (backup: {backup_filename})',
+                    entity_type='database',
+                    entity_id=str(tenant_id),
+                    entity_label=f'Xóa dữ liệu tenant {tenant_id}',
+                    status='success',
+                    tenant_id=tenant_id,
+                    username=username,
+                )
+            except Exception as audit_err:
+                current_app.logger.warning('audit purge skipped: %s', audit_err)
+
+            sqlite_commit(conn, label='tenant_reset_data')
+
+            return jsonify({
+                'success': True,
+                'message': 'Đã sao lưu và xóa toàn bộ dữ liệu nghiệp vụ thành công.',
+                'backup_file': backup_filename,
+                'cleared_tables': len(cleared),
+            })
+        except Exception as e:
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            current_app.logger.exception('api_database_reset')
+            return jsonify({
+                'success': False,
+                'error': f'Lỗi hệ thống: {e}',
+            }), 500
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
     @app.route('/api/settings/list_backups', methods=['GET'])
     @login_required
     @tenant_settings_required
@@ -4244,7 +4360,9 @@ Trân trọng,
                            etax_password, etax_cvalue, etax_ckey,
                            api_url, sign_service_url, misa_has_code,
                            minvoice_cctbao_id, minvoice_has_code,
-                           auto_issue_schedule, auto_sync_purchase, purchase_api_url
+                           auto_issue_schedule, auto_sync_purchase, purchase_api_url,
+                           pxk_internal_series, pxk_agency_series,
+                           auto_issue_pxk_internal, auto_issue_pxk_agency
                     FROM invoice_settings 
                     WHERE provider_name = ?
                 """, (provider_name,))
@@ -4257,6 +4375,8 @@ Trân trọng,
                     'sign_service_url', 'misa_has_code',
                     'minvoice_cctbao_id', 'minvoice_has_code',
                     'auto_issue_schedule', 'auto_sync_purchase', 'purchase_api_url',
+                    'pxk_internal_series', 'pxk_agency_series',
+                    'auto_issue_pxk_internal', 'auto_issue_pxk_agency',
                 ], row)) if row else {}
 
                 if 'auto_issue_schedule' in data:
@@ -4275,6 +4395,11 @@ Trân trọng,
                 purchase_api_url = (data.get('purchase_api_url') or '').strip().rstrip('/')
                 if not purchase_api_url:
                     purchase_api_url = (old.get('purchase_api_url') or '').strip().rstrip('/')
+
+                def _flag(key, default_old='0'):
+                    if key in data:
+                        return 1 if data.get(key) in (True, 'true', '1', 1) else 0
+                    return 1 if str(old.get(key) or default_old) in ('1', 'True', 'true') else 0
 
                 values = {
                     'provider_name': provider_name,
@@ -4295,6 +4420,14 @@ Trân trọng,
                     'auto_issue_invoice': auto_issue_invoice,
                     'auto_issue_schedule': auto_issue_schedule,
                     'auto_sync_purchase': auto_sync_purchase,
+                    'pxk_internal_series': str(
+                        data.get('pxk_internal_series', old.get('pxk_internal_series', '')) or ''
+                    ).strip(),
+                    'pxk_agency_series': str(
+                        data.get('pxk_agency_series', old.get('pxk_agency_series', '')) or ''
+                    ).strip(),
+                    'auto_issue_pxk_internal': _flag('auto_issue_pxk_internal'),
+                    'auto_issue_pxk_agency': _flag('auto_issue_pxk_agency'),
                     'is_active': 1,
                     'updated_at': 'datetime("now")'
                 }
@@ -4314,6 +4447,8 @@ Trân trọng,
                         minvoice_cctbao_id, minvoice_has_code,
                         etax_password, etax_cvalue, etax_ckey,
                         auto_issue_invoice, auto_issue_schedule, auto_sync_purchase,
+                        pxk_internal_series, pxk_agency_series,
+                        auto_issue_pxk_internal, auto_issue_pxk_agency,
                         is_active, updated_at
                     ) VALUES (
                         :provider_name, :api_url, :purchase_api_url, :username, :password, :api_key, :app_secret,
@@ -4322,6 +4457,8 @@ Trân trọng,
                         :minvoice_cctbao_id, :minvoice_has_code,
                         :etax_password, :etax_cvalue, :etax_ckey,
                         :auto_issue_invoice, :auto_issue_schedule, :auto_sync_purchase,
+                        :pxk_internal_series, :pxk_agency_series,
+                        :auto_issue_pxk_internal, :auto_issue_pxk_agency,
                         :is_active, datetime('now')
                     )
                 """
@@ -4404,7 +4541,9 @@ Trân trọng,
                        minvoice_cctbao_id, minvoice_has_code,
                        password, app_secret, esign_pin, auto_issue_invoice,
                        auto_issue_schedule, auto_sync_purchase,
-                       etax_password, etax_cvalue, etax_ckey, api_key
+                       etax_password, etax_cvalue, etax_ckey, api_key,
+                       pxk_internal_series, pxk_agency_series,
+                       auto_issue_pxk_internal, auto_issue_pxk_agency
                 FROM invoice_settings
                 ORDER BY is_active DESC, updated_at DESC
                 LIMIT 1
@@ -4428,6 +4567,10 @@ Trân trọng,
             res_data['auto_sync_purchase'] = int(res_data.get('auto_sync_purchase') if res_data.get('auto_sync_purchase') is not None else 1)
             res_data['misa_has_code'] = int(res_data.get('misa_has_code') or 0)
             res_data['minvoice_has_code'] = int(res_data.get('minvoice_has_code') if res_data.get('minvoice_has_code') is not None else 1)
+            res_data['auto_issue_pxk_internal'] = int(res_data.get('auto_issue_pxk_internal') or 0)
+            res_data['auto_issue_pxk_agency'] = int(res_data.get('auto_issue_pxk_agency') or 0)
+            res_data['pxk_internal_series'] = res_data.get('pxk_internal_series') or ''
+            res_data['pxk_agency_series'] = res_data.get('pxk_agency_series') or ''
 
             # Bảo mật
             sensitive_fields = ['password', 'app_secret', 'esign_pin', 'etax_password', 'etax_cvalue', 'etax_ckey']

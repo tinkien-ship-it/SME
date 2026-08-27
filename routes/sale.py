@@ -14,6 +14,7 @@ import requests
 from flask import (
     Response,
     abort,
+    current_app,
     flash,
     jsonify,
     make_response,
@@ -314,6 +315,9 @@ def _delete_sale_child_rows(cursor, sale_id: int) -> None:
         ("DELETE FROM phieu_xuat_kho WHERE sale_id = ?", (sid,)),
         ("DELETE FROM phieu_thu WHERE sale_id = ?", (sid,)),
         ("DELETE FROM cong_no WHERE sale_id = ?", (sid,)),
+        ("DELETE FROM sme_export_costs WHERE sale_id = ?", (sid,)),
+        ("DELETE FROM sme_export_doc_discounts WHERE sale_id = ?", (sid,)),
+        ("DELETE FROM sme_sale_advances WHERE sale_id = ?", (sid,)),
         (
             """
             DELETE FROM sme_vouchers
@@ -1884,8 +1888,8 @@ def register_sale_routes(app):
                 bf, bp = sale_branch_filter_sql(conn, br, alias='s')
                 where_sql = where_sql + bf
                 params_list.extend(bp)
-        except Exception:
-            pass
+        except Exception as branch_exc:
+            current_app.logger.warning('api_sale_list branch filter: %s', branch_exc)
 
         # 3. LẤY TỔNG SỐ BẢN GHI (Cho phân trang)
         c.execute(f"SELECT COUNT(*) FROM sale s WHERE {where_sql}", params_list)
@@ -2006,26 +2010,32 @@ def register_sale_routes(app):
                 rollback_quietly(conn)
                 return jsonify({"success": False, "error": str(ve)}), 403
 
-            # 1. Kiểm tra đơn hàng tồn tại và chưa xuất hóa đơn
-            c.execute("""
-                SELECT id, invoice_number, status 
-                FROM sale 
-                WHERE id = ?
-            """, (sale_id,))
+            # 1. Kiểm tra đơn hàng tồn tại và chưa xuất hóa đơn chính thức
+            c.execute("SELECT * FROM sale WHERE id = ?", (sale_id,))
             sale_row = c.fetchone()
         
             if not sale_row:
                 rollback_quietly(conn)
                 return jsonify({"success": False, "error": "Đơn hàng không tồn tại"}), 404
-        
-            if sale_row["invoice_number"]:
-                rollback_quietly(conn)
-                return jsonify({"success": False, "error": "Không thể xóa đơn hàng đã xuất hóa đơn"}), 403
-        
-            # (Tùy chọn) Kiểm tra thêm trạng thái nếu bạn có cột status
-            # if sale_row["status"] in ["completed", "locked"]: ...
 
-            sale_id_db = sale_row["id"]
+            from Services.einvoice_export import sale_has_official_invoice
+            sale_dict = dict(sale_row)
+            if sale_has_official_invoice(sale_dict):
+                rollback_quietly(conn)
+                return jsonify({
+                    "success": False,
+                    "error": "Không thể xóa đơn hàng đã bán và đã xuất hóa đơn",
+                }), 403
+            inv_no = str(sale_dict.get('invoice_number') or '').strip()
+            if inv_no and inv_no not in ('0',):
+                # Hóa đơn có số (kể cả trạng thái lạ) — không xóa đơn
+                rollback_quietly(conn)
+                return jsonify({
+                    "success": False,
+                    "error": "Không thể xóa đơn hàng đã xuất hóa đơn",
+                }), 403
+        
+            sale_id_db = sale_row["id"] if isinstance(sale_row, sqlite3.Row) else sale_row[0]
 
             # 2. Lấy chi tiết đơn hàng để hoàn kho
             c.execute("""
@@ -2074,6 +2084,76 @@ def register_sale_routes(app):
                 "error": "Lỗi hệ thống khi xóa đơn hàng. Vui lòng thử lại sau."
             }), 500
         
+        finally:
+            conn.close()
+
+    @app.route('/api/sale/<int:sale_id>/repost-journals', methods=['POST'])
+    @login_required
+    def api_sale_repost_journals(sale_id):
+        """Hạch toán lại khi HĐ còn nhưng bút toán bán/XK đã bị xóa."""
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            from db_utils import begin_immediate, sqlite_commit
+            from Services.sme.journal_cascade import (
+                repost_sale_journals,
+                sale_needs_journal_repost,
+            )
+            begin_immediate(conn, label='sale_repost_journals')
+            sale = conn.execute('SELECT * FROM sale WHERE id = ?', (sale_id,)).fetchone()
+            if not sale:
+                return jsonify({'success': False, 'error': 'Không tìm thấy đơn hàng'}), 404
+            if not sale_needs_journal_repost(conn, sale_id):
+                if conn.execute(
+                    """
+                    SELECT 1 FROM sme_journal_entries
+                    WHERE document_id = ? AND status = 'posted' AND reverses_id IS NULL
+                      AND UPPER(COALESCE(document_type,'')) IN (
+                          'SALE_REVENUE', 'EXPORT_REVENUE', 'SALE'
+                      )
+                    LIMIT 1
+                    """,
+                    (sale_id,),
+                ).fetchone():
+                    return jsonify({
+                        'success': True,
+                        'message': 'Đơn hàng đã có bút toán doanh thu — không cần hạch toán lại.',
+                        'already_posted': True,
+                    })
+            actor = (
+                (session.get('user') or {}).get('username')
+                or session.get('user_name')
+                or session.get('username')
+            )
+            result = repost_sale_journals(conn, sale_id, created_by=actor)
+            sqlite_commit(conn, label='sale_repost_journals')
+            try:
+                from Services.audit_log import write_audit
+                write_audit(
+                    'create', 'sale_journal',
+                    f'Hạch toán lại đơn #{sale_id}',
+                    entity_type='sale', entity_id=sale_id,
+                    new_data=result,
+                )
+            except Exception:
+                pass
+            return jsonify({
+                'success': True,
+                'message': 'Đã hạch toán lại bút toán cho đơn hàng.',
+                **result,
+            })
+        except ValueError as ve:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return jsonify({'success': False, 'error': str(ve)}), 400
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
 

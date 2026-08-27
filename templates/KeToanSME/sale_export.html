@@ -68,8 +68,8 @@
   <div class="card-body">
     <div class="row g-2">
       <div class="col-md-2">
-        <label class="form-label small fw-bold">Số phiếu</label>
-        <input type="text" class="form-control form-control-sm" id="saleNo" placeholder="Tự sinh">
+        <label class="form-label small fw-bold">Số đơn hàng</label>
+        <input type="text" class="form-control form-control-sm" id="saleNo" placeholder="Tự sinh ĐH…">
       </div>
       <div class="col-md-2">
         <label class="form-label small fw-bold">Ngày chứng từ</label>
@@ -101,7 +101,17 @@
       <div class="col-md-2">
         <label class="form-label small fw-bold">Mã PXK nội bộ (CQT)</label>
         <input type="text" class="form-control form-control-sm" id="internalTransferDocNo"
-               placeholder="PXK kiêm VC nội bộ điện tử" title="Phiếu xuất kho kiêm vận chuyển nội bộ điện tử có mã CQT">
+               placeholder="Sau phát hành Mắt Bão" title="Số PXK điện tử mẫu 6 ký hiệu N (có mã CQT)">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Lệnh điều động (LDDNBo)</label>
+        <input type="text" class="form-control form-control-sm" id="internalDispatchNo"
+               placeholder="Bắt buộc khi xuất PXK-N">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">PT vận chuyển</label>
+        <input type="text" class="form-control form-control-sm" id="transportVehicle"
+               placeholder="Xe tải / biển số" value="Xe tải">
       </div>
 
       <div class="col-md-3">
@@ -632,6 +642,10 @@ async function saveExportSale() {
     bl_no: document.getElementById('blNo').value,
     customs_decl_no: document.getElementById('customsDeclNo').value,
     internal_transfer_doc_no: document.getElementById('internalTransferDocNo')?.value || '',
+    LDDNBo: document.getElementById('internalDispatchNo')?.value || '',
+    PTVChuyen: document.getElementById('transportVehicle')?.value || 'Xe tải',
+    internal_dispatch_no: document.getElementById('internalDispatchNo')?.value || '',
+    transport_vehicle: document.getElementById('transportVehicle')?.value || 'Xe tải',
     note: document.getElementById('note').value,
     items,
   };

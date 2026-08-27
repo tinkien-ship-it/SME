@@ -298,6 +298,11 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
                 agent_phone=data.get('agent_phone') or data.get('phone') or '',
                 agent_email=data.get('agent_email') or data.get('email') or '',
                 send_email_to_agent=data.get('send_email', True) not in (False, 0, '0', 'false'),
+                contract_no=data.get('contract_no') or data.get('HDKTSo') or '',
+                contract_date=data.get('contract_date') or data.get('HDKTNgay') or '',
+                transport_vehicle=data.get('transport_vehicle') or data.get('PTVChuyen') or '',
+                transporter_name=data.get('transporter_name') or data.get('TNVChuyen') or '',
+                issue_pxk=data.get('issue_pxk'),
                 commit=True,
             )
             return jsonify({
@@ -486,6 +491,11 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
                     agent_phone=data.get('agent_phone') or data.get('phone') or '',
                     agent_email=data.get('agent_email') or data.get('email') or '',
                     send_email_to_agent=data.get('send_email', True) not in (False, 0, '0', 'false'),
+                    contract_no=data.get('contract_no') or data.get('HDKTSo') or '',
+                    contract_date=data.get('contract_date') or data.get('HDKTNgay') or '',
+                    transport_vehicle=data.get('transport_vehicle') or data.get('PTVChuyen') or '',
+                    transporter_name=data.get('transporter_name') or data.get('TNVChuyen') or '',
+                    issue_pxk=data.get('issue_pxk'),
                     commit=True,
                 )
                 return jsonify({

@@ -1044,7 +1044,7 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_SoCongNoPhaiTra_in():
-        """In sổ công nợ phải trả SME (không dùng template HKD)."""
+        """In sổ công nợ phải trả SME theo TK 331 + tên NCC."""
         supplier_name = request.args.get('supplier')
         start = request.args.get('start')
         end = request.args.get('end')
@@ -1053,64 +1053,22 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
-            from Services.sme.branches import import_branch_filter_sql, request_branch_filter
-            branch = request_branch_filter()
-            ibf, ibp = import_branch_filter_sql(conn, branch, alias='i')
-            supplier_data = conn.execute(
-                'SELECT id, name, address FROM suppliers WHERE name = ?', (supplier_name,)
-            ).fetchone()
-            if not supplier_data:
-                return 'Lỗi: Nhà cung cấp không tồn tại!', 404
-            s_id = supplier_data['id']
-            opening_balance = 0
-            if start:
-                res_opening = conn.execute(
-                    f"""
-                    SELECT (COALESCE(SUM(COALESCE(total_value,0)),0)
-                            - COALESCE(SUM(COALESCE(paid_amount,0)),0)) AS balance
-                    FROM import i WHERE supplier_id = ? AND date(date) < date(?)
-                    {ibf}
-                    """,
-                    (s_id, start, *ibp),
-                ).fetchone()
-                opening_balance = round(float(res_opening['balance'] or 0), 0)
-                if opening_balance < 1:
-                    opening_balance = 0
-            sql_main = f"""
-                SELECT id, COALESCE(import_no, 'PN'||id) AS purchase_no,
-                       date AS date,
-                       'Nợ tiền mua hàng' AS dien_giai,
-                       COALESCE(total_value, 0) AS no,
-                       COALESCE(paid_amount, 0) AS co
-                FROM import i WHERE supplier_id = ?
-                {ibf}
-            """
-            params: list = [s_id, *ibp]
-            if start:
-                sql_main += ' AND date(date) >= date(?)'
-                params.append(start)
-            if end:
-                sql_main += ' AND date(date) <= date(?)'
-                params.append(end)
-            sql_main += ' ORDER BY date ASC, id ASC'
-            rows = []
-            for r in conn.execute(sql_main, params).fetchall():
-                item = dict(r)
-                item['no'] = round(float(item['no'] or 0), 0)
-                item['co'] = round(float(item['co'] or 0), 0)
-                rows.append(item)
-            total_no = sum(r['no'] for r in rows)
-            total_co = sum(r['co'] for r in rows)
-            closing = opening_balance + total_no - total_co
-            if closing < 1:
-                closing = 0
-            info = conn.execute('SELECT * FROM business_info LIMIT 1').fetchone()
+            from Services.sme.branches import request_branch_filter
+            from Services.sme.debt_ledger import ap_print_ledger
+            data = ap_print_ledger(
+                conn,
+                supplier_name,
+                start=start or None,
+                end=end or None,
+                branch=request_branch_filter(),
+            )
             return render_template(
                 'KeToanSME/SoCongNoPhaiTra_print.html',
-                rows=rows,
-                totals={'opening': opening_balance, 'no': total_no, 'co': total_co, 'closing': closing},
-                start=start, end=end, supplier=supplier_name,
-                info=dict(info) if info else {},
+                rows=data['rows'],
+                totals=data['totals'],
+                start=start, end=end, supplier=data['supplier'],
+                info=data.get('info') or {},
+                account_code=data.get('account_code') or '331',
             )
         finally:
             conn.close()
@@ -1119,46 +1077,25 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_SoCongNoPhaiThu():
-        """Công nợ phải thu SME — lọc theo chi nhánh qua /api/sme/debt/customers."""
+        """Công nợ phải thu SME — TK 131 theo tên khách hàng."""
         return render_template('KeToanSME/SME_SoCongNoPhaiThu.html')
 
     @app.route('/api/sme/debt/customers')
     @login_required
     @require_sme_regime
     def api_sme_debt_customers():
-        from Services.sme.branches import request_branch_filter, sale_branch_filter_sql
-        from Services.sme.cong_no_ops import (
-            ensure_cong_no_schema,
-            remaining_sql,
-            sync_remaining_from_unpaid,
-        )
+        from Services.sme.branches import request_branch_filter
+        from Services.sme.debt_ledger import list_ar_customers
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
-            try:
-                ensure_cong_no_schema(conn, commit=True)
-                sync_remaining_from_unpaid(conn)
-                sqlite_commit(conn, label='sme_write')
-            except sqlite3.Error:
-                pass
-            branch = request_branch_filter()
-            rem = remaining_sql('cn', conn)
-            sql = f"""
-                SELECT DISTINCT cn.customer_name, s.company_name
-                FROM cong_no cn
-                LEFT JOIN sale s ON cn.sale_id = s.id
-                WHERE ({rem}) <> 0
-            """
-            params: list = []
-            bf, bp = sale_branch_filter_sql(conn, branch, alias='s')
-            sql += bf
-            params.extend(bp)
-            sql += ' ORDER BY s.company_name COLLATE NOCASE, cn.customer_name COLLATE NOCASE'
-            rows = conn.execute(sql, params).fetchall()
+            rows = list_ar_customers(conn, branch=request_branch_filter())
             return jsonify([
                 {
                     'customer_name': r['customer_name'],
-                    'company_name': r['company_name'] or '',
+                    'company_name': r.get('company_name') or '',
+                    'account_code': r.get('account_code') or '131',
+                    'balance': r.get('balance'),
                 }
                 for r in rows
             ])
@@ -1172,61 +1109,17 @@ def register_ketoan_sme_routes(app):
         customer_name = request.args.get('customer')
         if not customer_name:
             return jsonify(success=False, error='Thiếu tên khách hàng'), 400
-        from Services.sme.branches import request_branch_filter, sale_branch_filter_sql
-        from Services.sme.cong_no_ops import (
-            ensure_cong_no_schema,
-            remaining_sql,
-            sync_remaining_from_unpaid,
-        )
+        from Services.sme.branches import request_branch_filter
+        from Services.sme.debt_ledger import ar_customer_detail
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
-            try:
-                ensure_cong_no_schema(conn, commit=True)
-                sync_remaining_from_unpaid(conn)
-                sqlite_commit(conn, label='sme_write')
-            except sqlite3.Error:
-                pass
-            branch = request_branch_filter()
-            bf, bp = sale_branch_filter_sql(conn, branch, alias='s')
-            rem = remaining_sql('cn', conn)
-            sql_records = f"""
-                SELECT
-                    cn.debt_id,
-                    cn.sale_no,
-                    cn.date_of_debt,
-                    cn.customer_name,
-                    cn.sale_id,
-                    s.company_name,
-                    cn.unpaid_amount     AS total_debt,
-                    COALESCE(cn.paid_amount, 0) AS paid_amount,
-                    ({rem}) AS remaining
-                FROM cong_no cn
-                LEFT JOIN sale s ON cn.sale_id = s.id
-                WHERE cn.customer_name = ?
-                  AND ({rem}) > 0
-                  {bf}
-                ORDER BY cn.date_of_debt ASC, cn.debt_id ASC
-            """
-            records = [dict(r) for r in conn.execute(sql_records, [customer_name, *bp]).fetchall()]
-            sql_summary = f"""
-                SELECT
-                    COALESCE(SUM(cn.unpaid_amount), 0)    AS total_debt_all,
-                    COALESCE(SUM(COALESCE(cn.paid_amount, 0)), 0) AS total_paid_all,
-                    COALESCE(SUM({rem}), 0)  AS current_remaining
-                FROM cong_no cn
-                LEFT JOIN sale s ON cn.sale_id = s.id
-                WHERE cn.customer_name = ?
-                  {bf}
-            """
-            summary_row = conn.execute(sql_summary, [customer_name, *bp]).fetchone()
-            summary = {
-                'total': float(summary_row['total_debt_all']),
-                'paid': float(summary_row['total_paid_all']),
-                'remaining': float(summary_row['current_remaining']),
-            }
-            return jsonify(success=True, summary=summary, records=records)
+            data = ar_customer_detail(
+                conn, customer_name, branch=request_branch_filter(),
+            )
+            return jsonify(success=True, summary=data['summary'], records=data['records'])
         except Exception as e:
+            logger.exception('api_sme_debt_customer_detail')
             return jsonify(success=False, error=str(e)), 500
         finally:
             conn.close()
@@ -1373,21 +1266,11 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def api_sme_debt_suppliers():
-        from Services.sme.branches import import_branch_filter_sql, request_branch_filter
+        from Services.sme.branches import request_branch_filter
+        from Services.sme.debt_ledger import list_ap_suppliers
         conn = get_db_connection()
         try:
-            branch = request_branch_filter()
-            bf, bp = import_branch_filter_sql(conn, branch, alias='i')
-            sql = f"""
-                SELECT DISTINCT s.name
-                FROM suppliers s
-                JOIN import i ON s.id = i.supplier_id
-                WHERE (COALESCE(i.total_value, 0) - COALESCE(i.paid_amount, 0)) > 0
-                {bf}
-                ORDER BY s.name
-            """
-            rows = conn.execute(sql, bp).fetchall()
-            return jsonify([r[0] for r in rows])
+            return jsonify(list_ap_suppliers(conn, branch=request_branch_filter()))
         finally:
             conn.close()
 
@@ -1398,58 +1281,22 @@ def register_ketoan_sme_routes(app):
         supplier_name = request.args.get('supplier')
         if not supplier_name:
             return jsonify({'success': False, 'error': 'Thiếu tên nhà cung cấp'}), 400
-        from Services.sme.branches import import_branch_filter_sql, request_branch_filter
+        from Services.sme.branches import request_branch_filter
+        from Services.sme.debt_ledger import ap_supplier_detail
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
-            branch = request_branch_filter()
-            bf, bp = import_branch_filter_sql(conn, branch, alias='i')
-            summary = conn.execute(
-                f"""
-                SELECT
-                    COALESCE(SUM(COALESCE(i.total_value, 0)), 0) AS total,
-                    COALESCE(SUM(COALESCE(i.paid_amount, 0)), 0) AS paid,
-                    COALESCE(SUM(
-                        COALESCE(i.total_value, 0) - COALESCE(i.paid_amount, 0)
-                    ), 0) AS remaining
-                FROM import i
-                JOIN suppliers s ON i.supplier_id = s.id
-                WHERE s.name = ?
-                {bf}
-                """,
-                (supplier_name, *bp),
-            ).fetchone()
-            records = conn.execute(
-                f"""
-                SELECT
-                    i.id,
-                    i.import_no,
-                    i.bill_no,
-                    i.date,
-                    i.total_value,
-                    i.paid_amount,
-                    (COALESCE(i.total_value, 0) - COALESCE(i.paid_amount, 0))
-                        AS remaining_amount,
-                    s.address AS supplier_address,
-                    s.name AS supplier_name
-                FROM import i
-                JOIN suppliers s ON i.supplier_id = s.id
-                WHERE s.name = ?
-                  AND (COALESCE(i.total_value, 0) - COALESCE(i.paid_amount, 0)) > 0
-                {bf}
-                ORDER BY i.date DESC
-                """,
-                (supplier_name, *bp),
-            ).fetchall()
+            data = ap_supplier_detail(
+                conn, supplier_name, branch=request_branch_filter(),
+            )
             return jsonify({
                 'success': True,
-                'summary': {
-                    'total': summary['total'],
-                    'paid': summary['paid'],
-                    'remaining': summary['remaining'],
-                },
-                'records': [dict(row) for row in records],
+                'summary': data['summary'],
+                'records': data['records'],
             })
+        except Exception as e:
+            logger.exception('api_sme_debt_supplier_detail')
+            return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
 
@@ -1457,7 +1304,7 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_SoCongNoPhaiThu_in():
-        """In sổ công nợ phải thu SME."""
+        """In sổ công nợ phải thu SME theo TK 131 + tên khách hàng."""
         customer = request.args.get('customer')
         start = request.args.get('start')
         end = request.args.get('end')
@@ -1466,61 +1313,34 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
-            from Services.sme.branches import request_branch_filter, sale_branch_filter_sql
-            branch = request_branch_filter()
-            sbf, sbp = sale_branch_filter_sql(conn, branch, alias='s')
-            opening = 0.0
-            if start:
-                row = conn.execute(
-                    f"""
-                    SELECT COALESCE(SUM(cn.unpaid_amount),0) - COALESCE(SUM(cn.paid_amount),0) AS bal
-                    FROM cong_no cn
-                    LEFT JOIN sale s ON cn.sale_id = s.id
-                    WHERE cn.customer_name = ? AND date(cn.date_of_debt) < date(?)
-                    {sbf}
-                    """,
-                    (customer, start, *sbp),
-                ).fetchone()
-                opening = round(float(row['bal'] or 0), 0)
-                if opening < 1:
-                    opening = 0
-            sql = f"""
-                SELECT cn.sale_no AS doc_no, cn.date_of_debt AS date,
-                       'Phải thu bán hàng' AS dien_giai,
-                       COALESCE(cn.unpaid_amount,0) AS no,
-                       COALESCE(cn.paid_amount,0) AS co,
-                       (COALESCE(cn.unpaid_amount,0) - COALESCE(cn.paid_amount,0)) AS remaining
-                FROM cong_no cn
-                LEFT JOIN sale s ON cn.sale_id = s.id
-                WHERE cn.customer_name = ?
-                {sbf}
-            """
-            params: list = [customer, *sbp]
-            if start:
-                sql += ' AND date(cn.date_of_debt) >= date(?)'
-                params.append(start)
-            if end:
-                sql += ' AND date(cn.date_of_debt) <= date(?)'
-                params.append(end)
-            sql += ' ORDER BY cn.date_of_debt ASC, cn.debt_id ASC'
+            from Services.sme.branches import request_branch_filter
+            from Services.sme.debt_ledger import ar_print_ledger
+            data = ar_print_ledger(
+                conn,
+                customer,
+                start=start or None,
+                end=end or None,
+                branch=request_branch_filter(),
+            )
+            # Template print dùng doc_no/date hoặc sale_no/safe_date — chuẩn hóa
             rows = []
-            for r in conn.execute(sql, params).fetchall():
-                item = dict(r)
-                item['no'] = round(float(item['no'] or 0), 0)
-                item['co'] = round(float(item['co'] or 0), 0)
-                rows.append(item)
-            total_no = sum(r['no'] for r in rows)
-            total_co = sum(r['co'] for r in rows)
-            closing = opening + total_no - total_co
-            if closing < 1:
-                closing = 0
-            info = conn.execute('SELECT * FROM business_info LIMIT 1').fetchone()
+            for r in data['rows']:
+                rows.append({
+                    'doc_no': r.get('sale_no') or '',
+                    'date': r.get('safe_date') or '',
+                    'dien_giai': r.get('dien_giai') or '',
+                    'no': r.get('no') or 0,
+                    'co': r.get('co') or 0,
+                    'remaining': r.get('running_balance') or 0,
+                })
             return render_template(
                 'KeToanSME/SoCongNoPhaiThu_print.html',
                 rows=rows,
-                totals={'opening': opening, 'no': total_no, 'co': total_co, 'closing': closing},
-                start=start, end=end, customer=customer,
-                info=dict(info) if info else {},
+                totals=data['totals'],
+                start=start, end=end,
+                customer=data.get('customer') or customer,
+                info=data.get('info') or {},
+                account_code=data.get('account_code') or '131',
             )
         finally:
             conn.close()
