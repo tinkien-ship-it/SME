@@ -752,11 +752,13 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
                 g.tenant_settings = {}
 
         if tenant_id and request.endpoint not in onboarding_ok:
+            from Services.hrm.ess_access import is_ess_portal_only_user
             skip_onboarding = (
                 (session.get('master_viewing_tenant') and session.get('role') == 'master')
                 or session.get('firm_viewing_client')
                 or session.get('firm_viewing_own_books')
                 or is_firm_tenant(tenant_id)
+                or is_ess_portal_only_user(session.get('role') or (user_data or {}).get('role'))
             )
             if not skip_onboarding:
                 try:
@@ -770,6 +772,20 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
                         return redirect(url_for('onboarding_page'))
                 except Exception:
                     pass
+
+        # Role employee (Cổng ESS) — không được vào POS / sale / dashboard
+        from Services.hrm.ess_access import ess_portal_path_allowed, is_ess_portal_only_user
+        ess_role = str(session.get('role') or (user_data or {}).get('role') or '').strip()
+        if is_ess_portal_only_user(ess_role):
+            req_path = request.path or ''
+            if req_path.startswith('/api/'):
+                if not ess_portal_path_allowed(req_path):
+                    return jsonify({'success': False, 'error': 'Forbidden'}), 403
+            elif not ess_portal_path_allowed(req_path):
+                try:
+                    return redirect(url_for('hrm_ess_portal'))
+                except Exception:
+                    return redirect('/hrm/ess')
 
         # ==================== 3. Kiểm tra Single Session (Đá thiết bị cũ) ====================
         try:

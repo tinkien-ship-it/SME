@@ -169,6 +169,23 @@ def hr_may_manage_ess_link(role, permissions=None) -> bool:
     return False
 
 
+def is_ess_portal_only_user(role) -> bool:
+    """User chỉ được dùng Cổng ESS (role Settings: Nhân viên — Cổng ESS)."""
+    from Services.sme_roles import ESS_PORTAL_ROLE
+    return str(role or '').strip() == ESS_PORTAL_ROLE
+
+
+def ess_portal_path_allowed(path: str) -> bool:
+    """Route được phép khi đăng nhập role employee."""
+    p = (path or '').split('?', 1)[0].rstrip('/') or '/'
+    if p.startswith('/static') or p in ('/favicon.ico',):
+        return True
+    for pref in ('/hrm/ess', '/api/hrm/ess', '/logout'):
+        if p == pref or p.startswith(pref + '/'):
+            return True
+    return False
+
+
 def session_may_manage_ess_link() -> bool:
     from flask import session
     user = session.get('user') or {}
@@ -178,7 +195,6 @@ def session_may_manage_ess_link() -> bool:
         return False
     r = str(session.get('role') or user.get('role') or '').strip()
     perms = user.get('permissions')
-    # Chỉ chặn role portal NV thuần (không có quyền HR)
     if r == 'employee':
         return False
     if r in ESS_EMPLOYEE_ROLES:

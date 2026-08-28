@@ -353,6 +353,7 @@ def register_settings_routes(app):
         google_login_visible,
         google_oauth_callback_error_message,
         login_redirect_target,
+        login_redirect_fallback_path,
         normalize_vn_phone,
         resolve_user_phone,
         save_auth_settings,
@@ -424,6 +425,14 @@ def register_settings_routes(app):
   </div>
 </div>
 </body></html>"""
+
+    def _redirect_after_login(user_role, tenant_id):
+        target = login_redirect_target(user_role, tenant_id)
+        try:
+            return redirect(url_for(target))
+        except Exception as redirect_err:
+            current_app.logger.error(f"Lỗi redirect sau login: {redirect_err}")
+            return redirect(login_redirect_fallback_path(user_role, tenant_id, target))
 
     def _render_login_page():
         try:
@@ -719,31 +728,7 @@ def register_settings_routes(app):
             login_user(user_obj, remember=True)
 
             flash(f"Chào mừng bạn quay lại, {user_obj.full_name}!", "success")
-
-            # ==================== LOGIC ĐIỀU HƯỚNG PHÂN QUYỀN AN TOÀN ====================
-            from Services.sme_roles import is_sme_role
-            try:
-                if user_role in ('admin*', 'manager*') and current_tenant_id is not None:
-                    return redirect(url_for('rental_service'))
-                if user_role in ('adminFB', 'managerFB') and current_tenant_id is not None:
-                    return redirect(url_for('F_and_B_service'))
-                if is_sme_role(user_role) and current_tenant_id is not None:
-                    return redirect(url_for('SME_dashboard'))
-                elif user_role == 'master' and current_tenant_id is None:
-                    return redirect(url_for('master_settings'))
-                return redirect(url_for('sale'))
-            
-            except Exception as redirect_err:
-                current_app.logger.error(f"Lỗi Build URL động thông qua url_for: {redirect_err}")
-                if user_role in ('admin*', 'manager*'):
-                    return redirect('/rental_service')
-                if user_role in ('adminFB', 'managerFB'):
-                    return redirect('/F_and_B_service')
-                if is_sme_role(user_role):
-                    return redirect('/SME_dashboard')
-                elif user_role == 'master' and current_tenant_id is None:
-                    return redirect('/master_settings')
-                return redirect('/sale')
+            return _redirect_after_login(user_role, current_tenant_id)
 
         # Xử lý phương thức GET: Hiển thị giao diện form đăng nhập thông thường
         return _render_login_page()
@@ -1278,10 +1263,10 @@ def register_settings_routes(app):
         )
         redirect_url = getattr(resp, 'location', None)
         if not redirect_url:
-            if current_tenant_id is None and str(user.get('role', '')).strip() == 'master':
-                redirect_url = url_for('master_settings')
-            else:
-                redirect_url = url_for('sale')
+            redirect_url = url_for(login_redirect_target(
+                str(user.get('role', '')).strip(),
+                current_tenant_id,
+            ))
         return {'success': True, 'redirect': redirect_url}
 
     @app.route('/login/google/credential', methods=['POST'])
@@ -1333,7 +1318,12 @@ def register_settings_routes(app):
         session.pop('pending_auth', None)
         session.pop('otp_check', None)
         resp = _finalize_login_from_dict(user, db_path, tenant_id, fingerprint)
-        return jsonify({'success': True, 'redirect': getattr(resp, 'location', None) or url_for('sale')})
+        return jsonify({
+            'success': True,
+            'redirect': getattr(resp, 'location', None) or url_for(
+                login_redirect_target(str(user.get('role', '')).strip(), tenant_id)
+            ),
+        })
 
     # --- ĐĂNG NHẬP GOOGLE (OAuth redirect — dự phòng) ---
     @app.route('/login/google')
@@ -1657,24 +1647,18 @@ def register_settings_routes(app):
         flash(f"Chào mừng bạn quay lại, {user_obj.full_name}!", "success")
 
         if current_tenant_id:
+            from Services.hrm.ess_access import is_ess_portal_only_user
             from Services.subscription_service import get_tenant_record, parse_tenant_settings
-            rec = get_tenant_record(current_tenant_id, include_inactive=True)
-            settings = parse_tenant_settings(rec.get('settings') if rec else {})
-            if not settings.get('onboarding_completed'):
-                try:
-                    return redirect(url_for('onboarding_page'))
-                except Exception:
-                    return redirect('/onboarding')
+            if not is_ess_portal_only_user(user_role):
+                rec = get_tenant_record(current_tenant_id, include_inactive=True)
+                settings = parse_tenant_settings(rec.get('settings') if rec else {})
+                if not settings.get('onboarding_completed'):
+                    try:
+                        return redirect(url_for('onboarding_page'))
+                    except Exception:
+                        return redirect('/onboarding')
 
-        target = login_redirect_target(user_role, current_tenant_id)
-        try:
-            return redirect(url_for(target))
-        except Exception:
-            fallbacks = {
-                'rental_service': '/rental_service',
-                'master_settings': '/master_settings',
-            }
-            return redirect(fallbacks.get(target, '/sale'))
+        return _redirect_after_login(user_role, current_tenant_id)
 
     @app.route('/authorize-google-2fa')
     def authorize_google_2fa():

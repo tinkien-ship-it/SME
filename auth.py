@@ -195,6 +195,12 @@ def ess_portal_required(f):
                     'error': 'Tài khoản chưa được cấp quyền Cổng nhân viên (ess_portal).',
                 }), 403
             flash('Tài khoản chưa được cấp quyền Cổng nhân viên (ess_portal).', 'warning')
+            from Services.hrm.ess_access import is_ess_portal_only_user
+            if is_ess_portal_only_user(session.get('role')):
+                try:
+                    return redirect(url_for('hrm_ess_portal'))
+                except Exception:
+                    return redirect('/hrm/ess')
             try:
                 return redirect(url_for('SME_dashboard'))
             except Exception:
@@ -429,11 +435,14 @@ def require_permission(target_perm):
             # Điều hướng trang chủ mặc định tùy theo Role
             flash(msg, "danger")
             
-            # Fix: Nếu user là admin* thì mặc định về trang rental
             if role == 'admin*':
                 return redirect(url_for('rental_service'))
-            
-            # Các trường hợp khác về trang sale
+            from Services.hrm.ess_access import is_ess_portal_only_user
+            if is_ess_portal_only_user(role):
+                try:
+                    return redirect(url_for('hrm_ess_portal'))
+                except Exception:
+                    return redirect('/hrm/ess')
             return redirect(url_for('sale'))
 
         return decorated
