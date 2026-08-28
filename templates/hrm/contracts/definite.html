@@ -1,0 +1,45 @@
+{% extends "hrm/contracts/base_print.html" %}
+
+{% block doc_title %}Hợp đồng lao động xác định thời hạn{% endblock %}
+
+{% block article1_title %}Điều 1. Công việc, địa điểm làm việc và thời hạn của Hợp đồng{% endblock %}
+
+{% block article1_term %}
+<p class="sub">
+  Loại hợp đồng:
+  {% if contract_duration_months %}<strong>{{ contract_duration_months }} tháng</strong>{% else %}<strong>…………</strong>{% endif %}
+  — Ký lần thứ: <strong>1</strong>.
+</p>
+<p class="sub">
+  Từ ngày: <strong>{{ start_date_vi }}</strong>
+  — Đến ngày:
+  {% if c.end_date %}<strong>{{ end_date_vi }}</strong>{% else %}<strong>…………</strong>{% endif %}.
+</p>
+{% endblock %}
+
+{% block articles_after_salary %}
+<div class="article">
+  <p class="article-title">Điều 3. Thời giờ làm việc, nghỉ ngơi, bảo hộ lao động, BHXH, BHYT, BHTN</p>
+  {% include "hrm/contracts/_article3_work.html" %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 4. Đào tạo, bồi dưỡng, các quyền lợi và nghĩa vụ liên quan của người lao động</p>
+  {% include "hrm/contracts/_article4_employee_definite.html" %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 5. Nghĩa vụ và quyền lợi của Người sử dụng lao động</p>
+  {% include "hrm/contracts/_article5_employer.html" %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 6. Những thỏa thuận khác</p>
+  {% include "hrm/contracts/_article_other.html" %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 7. Điều khoản thi hành</p>
+  {% include "hrm/contracts/_article_execution.html" %}
+</div>
+{% endblock %}

@@ -123,12 +123,47 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Lương cơ bản (tháng)</label>
+                                <label class="form-label">Lương chính HĐLĐ (tháng)</label>
                                 <input type="number" class="form-control" id="baseSalary" min="0" step="1000">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
+                                <label class="form-label">Mã NV</label>
+                                <input type="text" class="form-control" id="employeeCode" placeholder="NV00001 (tự sinh nếu để trống)">
+                            </div>
+                            <div class="col-md-3">
                                 <label class="form-label">Hệ số lương</label>
                                 <input type="number" class="form-control" id="salaryRate" min="0" step="0.01">
+                            </div>
+                            <div class="col-12">
+                                <div class="border rounded p-2 bg-light">
+                                    <div class="small fw-semibold mb-2">Phụ cấp theo mẫu bảng lương chuẩn pháp lý VN</div>
+                                    <div class="row g-2">
+                                        <div class="col-md-4">
+                                            <label class="form-label small">PC chức vụ (chịu BH)</label>
+                                            <input type="number" class="form-control form-control-sm" id="allowancePosition" min="0" step="1000" value="0">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small">PC trách nhiệm (chịu BH)</label>
+                                            <input type="number" class="form-control form-control-sm" id="allowanceResponsibility" min="0" step="1000" value="0">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small">PC thâm niên (chịu BH)</label>
+                                            <input type="number" class="form-control form-control-sm" id="allowanceSeniority" min="0" step="1000" value="0">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small">PC ăn trưa (≤730k miễn thuế)</label>
+                                            <input type="number" class="form-control form-control-sm" id="allowanceLunch" min="0" step="1000" value="0">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small">PC trang phục (≤5tr/năm)</label>
+                                            <input type="number" class="form-control form-control-sm" id="allowanceUniform" min="0" step="1000" value="0">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small">PC điện thoại</label>
+                                            <input type="number" class="form-control form-control-sm" id="allowancePhone" min="0" step="1000" value="0">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Giảm trừ bản thân</label>
@@ -367,6 +402,13 @@ function addEmployee() {
     document.getElementById('dependents').value = '0';
     document.getElementById('status').value = '1';
     document.getElementById('department').value = 'ADMIN';
+    document.getElementById('employeeCode').value = '';
+    document.getElementById('allowancePosition').value = '0';
+    document.getElementById('allowanceResponsibility').value = '0';
+    document.getElementById('allowanceSeniority').value = '0';
+    document.getElementById('allowanceLunch').value = '0';
+    document.getElementById('allowanceUniform').value = '0';
+    document.getElementById('allowancePhone').value = '0';
     document.getElementById('tabHistoryWrap').style.display = 'none';
     joinDatePicker?.setDate(new Date());
     empModal.show();
@@ -385,7 +427,14 @@ function editEmployee(id) {
     document.getElementById('address').value = e.address || '';
     document.getElementById('attendanceCode').value = e.attendance_code || '';
     document.getElementById('baseSalary').value = e.base_salary || 0;
+    document.getElementById('employeeCode').value = e.employee_code || '';
     document.getElementById('salaryRate').value = e.salary_rate ?? '';
+    document.getElementById('allowancePosition').value = e.allowance_position || 0;
+    document.getElementById('allowanceResponsibility').value = e.allowance_responsibility || 0;
+    document.getElementById('allowanceSeniority').value = e.allowance_seniority || 0;
+    document.getElementById('allowanceLunch').value = e.allowance_lunch || 0;
+    document.getElementById('allowanceUniform').value = e.allowance_uniform || 0;
+    document.getElementById('allowancePhone').value = e.allowance_phone || 0;
     document.getElementById('dependents').value = e.dependents ?? 0;
     document.getElementById('selfDeduction').value = e.self_deduction ?? 11000000;
     document.getElementById('dependentDeduction').value = e.dependent_deduction ?? 4400000;
@@ -439,8 +488,15 @@ async function saveEmployee() {
         attendance_code: document.getElementById('attendanceCode').value.trim(),
         join_date: toIsoDate(document.getElementById('joinDate').value),
         base_salary: parseFloat(document.getElementById('baseSalary').value || 0),
+        employee_code: document.getElementById('employeeCode').value.trim(),
         salary_rate: document.getElementById('salaryRate').value.trim()
             ? parseFloat(document.getElementById('salaryRate').value) : null,
+        allowance_position: parseFloat(document.getElementById('allowancePosition').value || 0),
+        allowance_responsibility: parseFloat(document.getElementById('allowanceResponsibility').value || 0),
+        allowance_seniority: parseFloat(document.getElementById('allowanceSeniority').value || 0),
+        allowance_lunch: parseFloat(document.getElementById('allowanceLunch').value || 0),
+        allowance_uniform: parseFloat(document.getElementById('allowanceUniform').value || 0),
+        allowance_phone: parseFloat(document.getElementById('allowancePhone').value || 0),
         dependents: parseInt(document.getElementById('dependents').value || 0, 10),
         self_deduction: parseFloat(document.getElementById('selfDeduction').value || 11000000),
         dependent_deduction: parseFloat(document.getElementById('dependentDeduction').value || 4400000),

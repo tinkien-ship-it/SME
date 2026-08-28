@@ -1,0 +1,13 @@
+<p class="sub"><strong>1. Nghĩa vụ</strong></p>
+<p class="sub-item">- Thực hiện đầy đủ những điều kiện cần thiết đã cam kết trong Hợp đồng lao động để Người lao động đạt hiệu quả công việc cao. Bảo đảm việc làm cho Người lao động theo Hợp đồng đã ký.</p>
+<p class="sub-item">- Thanh toán đầy đủ, đúng hạn các chế độ và quyền lợi cho người lao động theo Hợp đồng lao động, thỏa ước lao động tập thể (nếu có).</p>
+
+<p class="sub"><strong>2. Quyền lợi</strong></p>
+<p class="sub-item">a) Điều hành Người lao động hoàn thành công việc theo Hợp đồng (bố trí, điều chuyển công việc cho Người lao động theo đúng chức năng chuyên môn).</p>
+<p class="sub-item">b) Có quyền chuyển tạm thời lao động, ngừng việc, thay đổi{% if employer_rights_mid %}, tạm thời chấm dứt{% else %}, tạm hoãn, chấm dứt{% endif %} Hợp đồng lao động và áp dụng các biện pháp kỷ luật theo quy định của Pháp luật hiện hành và theo nội quy của Công ty trong thời gian Hợp đồng còn giá trị.</p>
+{% if employer_rights_mid %}
+<p class="sub-item">c) Tạm hoãn, chấm dứt Hợp đồng, kỷ luật người lao động theo đúng quy định của Pháp luật và nội quy lao động của Công ty.</p>
+<p class="sub-item">d) Có quyền đòi bồi thường, khiếu nại với cơ quan liên đới để bảo vệ quyền lợi của mình nếu Người lao động vi phạm Pháp luật hay các điều khoản của Hợp đồng lao động.</p>
+{% else %}
+<p class="sub-item">c) Có quyền đòi bồi thường, khiếu nại với cơ quan liên đới để bảo vệ quyền lợi của mình nếu Người lao động vi phạm Pháp luật hay các điều khoản của Hợp đồng lao động.</p>
+{% endif %}

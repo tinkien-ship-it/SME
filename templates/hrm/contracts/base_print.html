@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Hợp đồng lao động — {{ contract_no_display }}</title>
+  {% include "hrm/contracts/_styles.html" %}
+</head>
+<body>
+  <div class="no-print" style="margin-bottom:12px">
+    <button type="button" onclick="window.print()">In / PDF</button>
+    <a href="/hrm/contracts">← Danh sách HĐ</a>
+  </div>
+
+  <p class="center upper">Cộng hòa xã hội chủ nghĩa Việt Nam</p>
+  <p class="center"><strong>Độc lập – Tự do – Hạnh phúc</strong></p>
+  <p class="center muted">------------------------------------</p>
+
+  <h1 class="doc-title">{% block doc_title %}Hợp đồng lao động{% endblock %}</h1>
+  <p class="doc-no">
+    Số: <strong>{{ contract_no_display }}</strong>
+    {% if type_label %}&nbsp;|&nbsp; Loại: <strong>{{ type_label }}</strong>{% endif %}
+  </p>
+
+  <p class="intro">Căn cứ Bộ luật Lao động ngày 20 tháng 11 năm 2019;</p>
+  <p class="intro">Căn cứ vào nhu cầu của các Bên.</p>
+  <p class="intro">
+    Hôm nay, ngày <strong>{{ sign_day }}</strong> tháng <strong>{{ sign_month }}</strong> năm <strong>{{ sign_year }}</strong>,
+    tại <strong>{{ sign_place }}</strong>, chúng tôi gồm:
+  </p>
+
+  <div class="party">
+    <p class="party-title">Bên A — Người sử dụng lao động:</p>
+    <p class="sub">
+      Tên doanh nghiệp: <strong>{{ company_name or '……………………………………………………' }}</strong><br>
+      Địa chỉ trụ sở: {{ company_address or '……………………………………………………' }}<br>
+      Điện thoại: {{ company_phone or '……………………' }}{% if company_email %} — Email: {{ company_email }}{% endif %}<br>
+      Mã số thuế: {{ company_tax_code or '……………………' }}<br>
+      Số tài khoản: {{ company_bank_account or '……………………' }}<br>
+      Đại diện: {{ representative_honorific }} <strong>{{ representative or '……………………' }}</strong>
+      — Chức vụ: {{ representative_title }} — Quốc tịch: Việt Nam
+    </p>
+  </div>
+
+  <div class="party">
+    <p class="party-title">Bên B — Người lao động:</p>
+    <p class="sub">
+      {{ employee_honorific }}: <strong>{{ c.employee_name or '……………………' }}</strong>
+      {% if c.employee_code %} (Mã NV: <strong>{{ c.employee_code }}</strong>){% endif %}<br>
+      Sinh ngày: {{ employee_birth_date_vi or employee_birth_year or '…………' }} — Quốc tịch: {{ employee_nationality or 'Việt Nam' }}<br>
+      Nghề nghiệp: {{ c.position or '……………………' }}<br>
+      Địa chỉ thường trú: {{ c.employee_address or '………………………………' }}<br>
+      Số CCCD/CMND: {{ c.employee_id_card or '……………………' }}<br>
+      Điện thoại: {{ c.employee_phone or '……………………' }}
+    </p>
+  </div>
+
+  <p class="intro">
+    Cùng thỏa thuận ký kết Hợp đồng lao động (HĐLĐ) và cam kết làm đúng những điều khoản sau đây:
+  </p>
+
+  <div class="article">
+    <p class="article-title">{% block article1_title %}Điều 1. Điều khoản chung{% endblock %}</p>
+    {% block article1_term %}{% endblock %}
+    {% block article1_job %}{% include "hrm/contracts/_article1_job_common.html" %}{% endblock %}
+  </div>
+
+  <div class="article">
+    <p class="article-title">Điều 2. Tiền lương và các khoản phụ cấp (theo HĐLĐ)</p>
+    {% include "hrm/contracts/_salary_table.html" %}
+    {% block article2_salary_extra %}{% endblock %}
+    <p class="sub">
+      Thực hiện đóng bảo hiểm xã hội, bảo hiểm y tế, bảo hiểm thất nghiệp và khấu trừ thuế TNCN
+      theo quy định pháp luật trên mức lương đóng BH <strong>{{ insurance_display }}</strong> VNĐ/tháng.
+    </p>
+  </div>
+
+  {% block articles_after_salary %}{% endblock %}
+
+  <div class="sign-row">
+    <div class="sign-col">
+      <strong>NGƯỜI LAO ĐỘNG</strong><br>
+      <span class="muted">(Ký, ghi rõ họ tên)</span>
+      <div class="sign-space"></div>
+      {{ c.employee_name or '' }}
+    </div>
+    <div class="sign-col">
+      <strong>NGƯỜI SỬ DỤNG LAO ĐỘNG</strong><br>
+      <span class="muted">(Ký, ghi rõ họ tên)</span>
+      <div class="sign-space"></div>
+      {{ representative or '' }}
+    </div>
+  </div>
+</body>
+</html>

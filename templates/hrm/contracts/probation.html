@@ -1,0 +1,45 @@
+{% extends "hrm/contracts/base_print.html" %}
+
+{% block article1_title %}Điều 1. Thời hạn thử việc{% endblock %}
+
+{% block article1_term %}
+<p class="sub">Loại hợp đồng lao động: <strong>Thử việc</strong>.</p>
+<p class="sub">
+  Thời điểm bắt đầu: <strong>{{ start_date_vi }}</strong>
+  {% if c.probation_end_date %}
+  — Hết thử việc: <strong>{{ probation_end_vi }}</strong>
+  {% elif c.end_date %}
+  — Hết thử việc: <strong>{{ end_date_vi }}</strong>
+  {% endif %}
+</p>
+{% endblock %}
+
+{% block article2_salary_extra %}
+<p class="sub">
+  Trong thời gian thử việc: mức lương = <strong>{{ probation_salary_rate }}%</strong> × Lương chính (HĐLĐ) ghi trên bảng trên.
+</p>
+{% endblock %}
+
+{% block articles_after_salary %}
+<div class="article">
+  <p class="article-title">Điều 3. Chế độ làm việc</p>
+  {% include "hrm/contracts/_article3_work.html" %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 4. Quyền lợi và nghĩa vụ của người lao động</p>
+  <p class="sub">1. Thời hạn trả lương: vào ngày cuối tháng hoặc theo quy chế lương công ty.</p>
+  <p class="sub">2. Hình thức trả lương: chuyển khoản ngân hàng hoặc tiền mặt theo thỏa thuận.</p>
+  <p class="sub">3. Hoàn thành công việc, chấp hành nội quy, an toàn lao động và bảo mật theo quy định.</p>
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 5. Nghĩa vụ và quyền hạn của người sử dụng lao động</p>
+  {% include "hrm/contracts/_article5_employer.html" %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 6. Điều khoản thi hành</p>
+  {% include "hrm/contracts/_article_execution.html" %}
+</div>
+{% endblock %}

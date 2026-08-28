@@ -1,0 +1,34 @@
+{# Bảng lương & phụ cấp — 7 khoản từ modal HĐLĐ #}
+<table class="pay">
+  <thead>
+    <tr>
+      <th>Khoản mục</th>
+      <th>Tính chất</th>
+      <th class="num">Số tiền (VNĐ/tháng)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in salary_rows %}
+    <tr>
+      <td>{{ row.label }}</td>
+      <td>{{ row.nature_display }}</td>
+      <td class="num">{{ row.amount_display }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="summary">
+      <td><strong>Cộng lương + PC chịu BH</strong></td>
+      <td>Căn cứ đóng BH (trước trần)</td>
+      <td class="num"><strong>{{ si_base_display }}</strong></td>
+    </tr>
+    <tr class="summary">
+      <td><strong>Mức lương đóng BHXH đăng ký</strong></td>
+      <td>Ghi nhận trên HĐ</td>
+      <td class="num"><strong>{{ insurance_display }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+<p class="note">
+  Ngày công chuẩn: <strong>{{ work_days_month_display }}</strong> ngày/tháng
+  · Giờ công/ngày: <strong>{{ work_hours_day_display }}</strong> giờ
+  · Làm thêm giờ: {{ ot_rates_text }}.
+</p>

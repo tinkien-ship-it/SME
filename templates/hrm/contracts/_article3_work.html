@@ -1,0 +1,42 @@
+<p class="sub">1) Thời giờ làm việc:</p>
+<p class="sub-item">
+  - <strong>{{ work_hours_day_display }}</strong> giờ/ngày;
+  nghỉ hàng tuần: <strong>{{ work_weekdays_display or 'theo lịch công ty' }}</strong>.
+</p>
+<p class="sub-item">
+  - Từ ngày <strong>{{ work_weekdays_display or 'Thứ Hai' }}</strong> đến ngày cuối tuần làm việc hàng tuần:
+</p>
+<p class="bullet">+ Buổi sáng: <strong>{{ work_start_time }}–{{ work_lunch_start }}</strong></p>
+<p class="bullet">+ Buổi chiều: <strong>{{ work_lunch_end }}–{{ work_end_time }}</strong></p>
+<p class="sub-item">
+  - Công chuẩn tháng {{ standard_month }}/{{ standard_year }}:
+  <strong>{{ work_days_month_display }}</strong> ngày/tháng theo lịch làm việc đã thiết lập.
+</p>
+<p class="sub-item">
+  - Có thời gian làm việc tăng ca theo tính chất công việc của Công ty và vẫn đảm bảo theo đúng
+  quy định của pháp luật hiện hành về việc làm thêm giờ ({{ ot_rates_text }}).
+</p>
+
+<p class="sub">2) Chế độ nghỉ ngơi các ngày lễ, Tết, phép năm:</p>
+<p class="bullet">
+  + Người lao động được nghỉ lễ, Tết theo luật định; các ngày nghỉ lễ nếu trùng với ngày nghỉ
+  hàng tuần thì sẽ được nghỉ bù vào ngày trước hoặc ngày kế tiếp tùy theo tình hình cụ thể mà
+  Ban lãnh đạo Công ty sẽ chỉ đạo trực tiếp.
+</p>
+<p class="bullet">
+  + Người lao động đã ký HĐLĐ chính thức và có thâm niên công tác 12 tháng thì sẽ được nghỉ phép
+  năm có hưởng lương (01 ngày phép/01 tháng, 12 ngày phép/01 năm); trường hợp có thâm niên làm
+  việc dưới 12 tháng thì thời gian nghỉ hằng năm được tính theo tỷ lệ tương ứng với số thời gian
+  làm việc.
+</p>
+
+<p class="sub">3) Thiết bị, công cụ và điều kiện lao động:</p>
+<p class="sub-item">
+  - Thiết bị và công cụ làm việc sẽ được Công ty cấp phát tùy theo nhu cầu của công việc.
+</p>
+<p class="sub-item">
+  - Điều kiện an toàn và vệ sinh lao động tại nơi làm việc theo quy định của pháp luật hiện hành.
+</p>
+
+<p class="sub">4) Bảo hiểm xã hội, bảo hiểm y tế và bảo hiểm thất nghiệp:</p>
+<p class="sub-item">- Theo quy định của pháp luật trên mức lương đóng BH ghi tại Điều 2.</p>

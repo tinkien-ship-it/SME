@@ -308,6 +308,34 @@ def _job_crm_reminders():
         logger.warning('CRM reminders failed: %s', exc)
 
 
+def _job_hrm_compliance():
+    """07:45 mỗi ngày: quét tuân thủ LĐ trên từng tenant SME."""
+    try:
+        from pathlib import Path
+        from db_utils import open_sqlite
+        from Services.hrm.compliance import scan_compliance
+
+        root = Path(__file__).resolve().parent / 'tenants'
+        if not root.is_dir():
+            return
+        total = 0
+        for db in root.glob('*.db'):
+            if db.name.lower() in ('registry.db',):
+                continue
+            try:
+                conn = open_sqlite(str(db))
+                try:
+                    result = scan_compliance(conn)
+                    total += int(result.get('count') or 0)
+                finally:
+                    conn.close()
+            except Exception as exc:
+                logger.debug('HRM compliance skip %s: %s', db.name, exc)
+        logger.info('HRM compliance scan events=%s', total)
+    except Exception as exc:
+        logger.warning('HRM compliance failed: %s', exc)
+
+
 def check_tenant_expirations():
     today = datetime.now().strftime('%Y-%m-%d')
 
@@ -528,6 +556,17 @@ def init_schedulers(app, backup_root):
         minute=30,
         id='crm_reminders_daily',
         name='crm_reminders_daily',
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    backup_scheduler.add_job(
+        func=_job_hrm_compliance,
+        trigger='cron',
+        hour=7,
+        minute=45,
+        id='hrm_compliance_daily',
+        name='hrm_compliance_daily',
         max_instances=1,
         coalesce=True,
         replace_existing=True,

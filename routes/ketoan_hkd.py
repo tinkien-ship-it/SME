@@ -2151,6 +2151,18 @@ def register_ketoan_hkd_routes(app):
         allowance_fund = float(data.get('allowance_fund') or 0)
         allowance_other = float(data.get('allowance_other') or 0)
         default_bonus = float(data.get('default_bonus') or data.get('bonus') or 0)
+        employee_code = (data.get('employee_code') or '').strip() or None
+        allowance_position = float(data.get('allowance_position') or 0)
+        allowance_responsibility = float(data.get('allowance_responsibility') or 0)
+        allowance_seniority = float(data.get('allowance_seniority') or 0)
+        allowance_lunch = float(data.get('allowance_lunch') or 0)
+        allowance_uniform = float(data.get('allowance_uniform') or 0)
+        allowance_phone = float(data.get('allowance_phone') or 0)
+        # Đồng bộ quỹ PC cũ từ PC chịu BH / miễn thuế nếu FE chưa gửi
+        if allowance_fund <= 0:
+            allowance_fund = allowance_position + allowance_responsibility + allowance_seniority
+        if allowance_other <= 0:
+            allowance_other = allowance_lunch + allowance_uniform + allowance_phone
 
         if not fullname or not id_card:
             return jsonify({"success": False, "message": "Họ tên và CCCD là bắt buộc"})
@@ -2171,14 +2183,21 @@ def register_ketoan_hkd_routes(app):
                     phone, join_date, address, dependents,
                     self_deduction, dependent_deduction, attendance_code,
                     allowance_fund, allowance_other, default_bonus, department,
+                    employee_code, allowance_position, allowance_responsibility,
+                    allowance_seniority, allowance_lunch, allowance_uniform, allowance_phone,
                     status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
             """, (fullname, position, id_card, base_salary, salary_rate_val,
                   phone, join_date, address, dependents,
                   self_deduction, dependent_deduction, attendance_code,
-                  allowance_fund, allowance_other, default_bonus, department))
+                  allowance_fund, allowance_other, default_bonus, department,
+                  employee_code, allowance_position, allowance_responsibility,
+                  allowance_seniority, allowance_lunch, allowance_uniform, allowance_phone))
             matched_ids, owner_name = sync_chu_ho_from_business_info(conn)
             new_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+            if not employee_code:
+                from Services.hrm.employee_codes import ensure_employee_code
+                employee_code = ensure_employee_code(conn, int(new_id), commit=False)
             sqlite_commit(conn, label='hkd')
             return jsonify({
                 "success": True,
@@ -2213,6 +2232,17 @@ def register_ketoan_hkd_routes(app):
         allowance_fund = float(data.get('allowance_fund') or 0)
         allowance_other = float(data.get('allowance_other') or 0)
         default_bonus = float(data.get('default_bonus') or data.get('bonus') or 0)
+        employee_code = (data.get('employee_code') or '').strip() or None
+        allowance_position = float(data.get('allowance_position') or 0)
+        allowance_responsibility = float(data.get('allowance_responsibility') or 0)
+        allowance_seniority = float(data.get('allowance_seniority') or 0)
+        allowance_lunch = float(data.get('allowance_lunch') or 0)
+        allowance_uniform = float(data.get('allowance_uniform') or 0)
+        allowance_phone = float(data.get('allowance_phone') or 0)
+        if allowance_fund <= 0:
+            allowance_fund = allowance_position + allowance_responsibility + allowance_seniority
+        if allowance_other <= 0:
+            allowance_other = allowance_lunch + allowance_uniform + allowance_phone
 
         conn = get_db_connection()
         try:
@@ -2243,6 +2273,13 @@ def register_ketoan_hkd_routes(app):
                 allowance_other,
                 default_bonus,
                 department,
+                employee_code,
+                allowance_position,
+                allowance_responsibility,
+                allowance_seniority,
+                allowance_lunch,
+                allowance_uniform,
+                allowance_phone,
                 int(status),
                 emp_id
             )
@@ -2264,7 +2301,10 @@ def register_ketoan_hkd_routes(app):
                     salary_rate = ?, phone = ?, join_date = ?, address = ?, dependents = ?,
                     self_deduction = ?, dependent_deduction = ?, attendance_code = ?,
                     allowance_fund = ?, allowance_other = ?, default_bonus = ?,
-                    department = ?, status = ?
+                    department = ?,
+                    employee_code = ?, allowance_position = ?, allowance_responsibility = ?,
+                    allowance_seniority = ?, allowance_lunch = ?, allowance_uniform = ?,
+                    allowance_phone = ?, status = ?
                 WHERE id = ?
             """, fields)
             matched_ids, owner_name = sync_chu_ho_from_business_info(conn)

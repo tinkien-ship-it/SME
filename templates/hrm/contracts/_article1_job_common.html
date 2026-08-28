@@ -1,0 +1,14 @@
+<p class="sub">- Địa điểm làm việc: <strong>{{ company_address or '……………………………………………………' }}</strong></p>
+<p class="sub">
+  - Bộ phận công tác: Phòng <strong>{{ department_label or c.department or '…………' }}</strong>
+  — Chức danh chuyên môn (vị trí công tác): <strong>{{ c.position or '……………………' }}</strong>
+</p>
+<p class="sub">- Nhiệm vụ công việc như sau:</p>
+<p class="bullet">+ Thực hiện công việc theo đúng chức danh chuyên môn của mình dưới sự quản lý, điều hành của Ban Giám đốc (và các cá nhân được bổ nhiệm hoặc ủy quyền phụ trách).</p>
+<p class="bullet">+ Phối hợp cùng với các bộ phận, phòng ban khác trong Công ty để phát huy tối đa hiệu quả công việc.</p>
+<p class="bullet">+ Hoàn thành những công việc khác tùy thuộc theo yêu cầu kinh doanh của Công ty và theo quyết định của Ban Giám đốc (và các cá nhân được bổ nhiệm hoặc ủy quyền phụ trách).</p>
+{% if job_duties %}
+{% for duty in job_duties %}
+<p class="bullet">+ {{ duty }}</p>
+{% endfor %}
+{% endif %}

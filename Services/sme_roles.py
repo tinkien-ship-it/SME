@@ -35,6 +35,7 @@ PERMISSION_BYPASS_ROLES = frozenset({
 
 POS_HKD_ASSIGNABLE_ROLES = (
     'staff', 'staff*', 'staff**',
+    'employee',
     'accountant',
     'manager', 'manager*', 'managerFB',
     'admin', 'admin*', 'adminFB',

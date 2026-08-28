@@ -617,7 +617,33 @@ def hr_hub_metrics(
         'salary_paid_ytd': _f(max(Decimal('0'), salary_paid)),
         'employee_count': emp_count,
         'monthly': monthly,
+        'compliance_alerts': _hrm_compliance_summary(conn),
     }
+
+
+def _hrm_compliance_summary(conn: sqlite3.Connection) -> dict:
+    try:
+        from Services.hrm.compliance import list_open_events, scan_compliance
+        from Services.hrm.schema import ensure_hrm_schema
+        ensure_hrm_schema(conn)
+        events = list_open_events(conn, limit=20)
+        if not events:
+            # lazy scan once if empty
+            scan_compliance(conn)
+            events = list_open_events(conn, limit=20)
+        return {
+            'count': len(events),
+            'items': [
+                {
+                    'title': e.get('title'),
+                    'severity': e.get('severity'),
+                    'event_type': e.get('event_type'),
+                }
+                for e in events[:8]
+            ],
+        }
+    except Exception:
+        return {'count': 0, 'items': []}
 
 
 def sales_hub_metrics(

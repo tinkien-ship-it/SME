@@ -363,9 +363,46 @@ class BusinessInfo(db.Model):
 with app.app_context():
     db.create_all()
 
-with app.app_context():
-    init_db_columns()
+
+def _dev_server_port_taken(port: int = 5000) -> bool:
+    from Services.runtime_guard import dev_server_port_taken
+    return dev_server_port_taken(port)
+
+
+if __name__ == '__main__' and _dev_server_port_taken():
+    print('LỖI: Port 5000 đang được dùng — đã có app.py chạy.')
+    print('→ Đóng cửa sổ terminal cũ (Ctrl+C) rồi chạy lại.')
+    raise SystemExit(1)
+
+_startup_migrations_done = False
+
+
+def _run_startup_migrations() -> None:
+    """Migrate schema một lần / process — tránh khóa SQLite khi import lại app."""
+    global _startup_migrations_done
+    if _startup_migrations_done:
+        return
+    skip = (os.environ.get('SME_SKIP_RUNTIME_MIGRATE') or '').strip().lower()
+    if skip in ('1', 'true', 'yes', 'on'):
+        _startup_migrations_done = True
+        return
     migrate_database()
+    _startup_migrations_done = True
+
+
+with app.app_context():
+    _run_startup_migrations()
+    try:
+        from db.dialect import is_postgres
+        if not is_postgres():
+            from db.sqlite_wal import ensure_all_sqlite_wal
+            wal_ok, wal_fail = ensure_all_sqlite_wal(verbose=False)
+            if wal_fail:
+                app.logger.warning('SQLite WAL: %s file(s) failed to enable WAL', wal_fail)
+            elif wal_ok:
+                app.logger.info('SQLite WAL enabled on %s database file(s)', wal_ok)
+    except Exception as exc:
+        app.logger.warning('ensure_all_sqlite_wal: %s', exc)
     # Registry (tenants / user_tenant_mapping): thieu bang thi moi request deu 500
     try:
         from db.init import ensure_registry_tables
@@ -557,6 +594,33 @@ register_attendance_routes(app)
 # === HR KPI settings → routes/hr_kpi.py ===
 from routes.hr_kpi import register_hr_kpi_routes
 register_hr_kpi_routes(app)
+
+from routes.hrm import register_hrm_routes
+register_hrm_routes(app)
+
+if 'SME_hrm_contracts' not in app.view_functions:
+    from auth import login_required as _hrm_lr
+    from Services.tenant_profile import require_sme_regime as _hrm_rsr
+    from flask import render_template as _render_template
+
+    @_hrm_lr
+    @_hrm_rsr
+    def SME_hrm_contracts():
+        return _render_template('hrm/contracts.html')
+
+    app.add_url_rule('/SME_hrm_contracts', 'SME_hrm_contracts', SME_hrm_contracts)
+    app.add_url_rule('/hrm/contracts', 'hrm_contracts_page', SME_hrm_contracts)
+
+# API lịch làm việc & ngày lễ — đăng ký dự phòng (tránh 404 khi process Flask chưa reload ketoan_sme)
+if 'api_sme_payroll_work_calendar' not in app.view_functions:
+    from auth import login_required as _wc_login_required
+    from Services.tenant_profile import require_sme_regime as _wc_require_sme_regime
+    from Services.hrm.work_calendar_routes import register_work_calendar_routes
+    register_work_calendar_routes(
+        app,
+        login_required=_wc_login_required,
+        require_sme_regime=_wc_require_sme_regime,
+    )
 
 # === CORE routes → routes/core.py ===
 from routes.core import register_core_routes

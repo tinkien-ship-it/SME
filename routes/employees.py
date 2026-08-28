@@ -40,9 +40,16 @@ def register_employees_routes(app):
             sql = """
                 SELECT
                     id, fullname, position, id_card, base_salary, salary_rate,
-                    status, phone, join_date, created_at, address,
+                    status, phone, join_date, birth_date, created_at, address,
                     dependents, self_deduction, dependent_deduction, attendance_code,
-                    COALESCE(department, 'ADMIN') AS department
+                    COALESCE(department, 'ADMIN') AS department,
+                    COALESCE(employee_code, '') AS employee_code,
+                    COALESCE(allowance_position, 0) AS allowance_position,
+                    COALESCE(allowance_responsibility, 0) AS allowance_responsibility,
+                    COALESCE(allowance_seniority, 0) AS allowance_seniority,
+                    COALESCE(allowance_lunch, 0) AS allowance_lunch,
+                    COALESCE(allowance_uniform, 0) AS allowance_uniform,
+                    COALESCE(allowance_phone, 0) AS allowance_phone
                 FROM employees
                 WHERE 1=1
             """
@@ -63,9 +70,10 @@ def register_employees_routes(app):
                         OR COALESCE(position, '') LIKE ?
                         OR COALESCE(address, '') LIKE ?
                         OR COALESCE(department, '') LIKE ?
+                        OR COALESCE(employee_code, '') LIKE ?
                     )
                 """
-                params.extend([like] * 6)
+                params.extend([like] * 7)
             sql += ' ORDER BY id ASC'
             rows = conn.execute(sql, params).fetchall()
             out = []

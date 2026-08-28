@@ -57,6 +57,7 @@
   </div>
   <div class="mt-3 text-muted small"><span id="m4sub"></span></div>
 </div></div></div></div>
+    <div id="complianceBox" class="alert alert-warning d-none mb-4"></div>
     <div class="row g-4">
       <div class="col-lg-8"><div class="card shadow-sm border-0 h-100">
         <div class="card-header bg-white border-0 pt-3"><h6 class="fw-bold mb-0">Ghi nhận & chi trả lương theo tháng</h6></div>
@@ -74,6 +75,11 @@
       <div class="card-body d-flex flex-wrap gap-2">
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_employees') }}">Nhân viên</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_attendance') }}">Chấm công</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ safe_url_for('SME_hrm_contracts') }}">HĐLĐ</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_hrm_shifts') }}">Ca &amp; tăng ca</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_hrm_formulas') }}">Công thức lương</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_hrm_compliance') }}">Tuân thủ LĐ</a>
+<a class="btn btn-outline-primary btn-sm" href="{{ url_for('hrm_ess_portal') }}">ESS</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_kpi_settings') }}">Thiết lập KPI</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_salary_create') }}">Lập lương</a>
 <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_PhaiThuCongNhanVien') }}">Phải thu nhân viên</a>
@@ -105,6 +111,17 @@ async function loadDash(){
   document.getElementById('m3').textContent=money(d.employee_advance);
   document.getElementById('m4').textContent=String(d.employee_count||0);
   document.getElementById('m4sub').textContent='Ghi nhận lương từ đầu năm '+money(d.salary_accrued_ytd)+' · bảo hiểm xã hội '+money(d.social_insurance);
+  const alerts=(d.compliance_alerts&&d.compliance_alerts.items)||[];
+  const box=document.getElementById('complianceBox');
+  if(alerts.length){
+    box.classList.remove('d-none');
+    box.innerHTML='<strong>Cảnh báo tuân thủ ('+alerts.length+'):</strong> '
+      +alerts.map(a=>a.title).join(' · ')
+      +' <a href="/hrm/compliance" class="alert-link ms-2">Xem chi tiết</a>';
+  } else {
+    box.classList.add('d-none');
+    box.innerHTML='';
+  }
   const months=d.monthly||[];
   if(trendChart) trendChart.destroy();
   trendChart=new Chart(document.getElementById('hrTrend').getContext('2d'),{type:'bar',data:{labels:months.map(x=>x.label),datasets:[

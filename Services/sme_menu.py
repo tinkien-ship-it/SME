@@ -196,6 +196,11 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'SME_employees', 'label': 'Danh sách nhân viên', 'icon': 'fas fa-users'},
             {'endpoint': 'SME_attendance', 'label': 'Bảng chấm công', 'icon': 'fas fa-fingerprint'},
+            {'endpoint': 'SME_hrm_contracts', 'label': 'Hợp đồng lao động (HĐLĐ)', 'icon': 'fas fa-file-signature'},
+            {'endpoint': 'SME_hrm_shifts', 'label': 'Ca làm việc & tăng ca', 'icon': 'fas fa-clock'},
+            {'endpoint': 'SME_hrm_formulas', 'label': 'Công thức lương động', 'icon': 'fas fa-flask'},
+            {'endpoint': 'SME_hrm_compliance', 'label': 'Cảnh báo tuân thủ LĐ', 'icon': 'fas fa-exclamation-triangle'},
+            {'endpoint': 'hrm_ess_portal', 'label': 'Cổng nhân viên (ESS)', 'icon': 'fas fa-mobile-alt'},
             {'endpoint': 'SME_kpi_settings', 'label': 'Thiết lập KPI phòng ban & nhân sự', 'icon': 'fas fa-bullseye'},
             {'endpoint': 'SME_salary_create', 'label': 'Lập bảng lương — mẫu 01-LĐTL', 'icon': 'fas fa-calculator'},
             {'endpoint': 'SME_PhaiTraCongNhanVien', 'label': 'Công nợ phải trả nhân viên', 'icon': 'fas fa-hand-holding-usd'},

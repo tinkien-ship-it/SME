@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Tuân thủ LĐ{% endblock %}
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between mb-3">
+    <div><h4 class="mb-0">Cảnh báo tuân thủ</h4>
+      <div class="text-muted small">Thử việc quá hạn · HĐ sắp hết · tăng ca vượt trần · Lương &lt; LTT vùng</div></div>
+    <div>
+      <a class="btn btn-sm btn-outline-secondary" id="btnExport" href="#">Xuất BHXH CSV</a>
+      <button class="btn btn-sm btn-primary" onclick="scan()">Quét lại</button>
+    </div>
+  </div>
+  <div id="list" class="list-group"></div>
+</div>
+<script>
+const now=new Date();
+btnExport.href=`/api/hrm/export/bhxh.csv?month=${now.getMonth()+1}&year=${now.getFullYear()}`;
+async function load(){
+  const d=await(await fetch('/api/hrm/compliance')).json();
+  const ev=d.events||[];
+  list.innerHTML=ev.length?ev.map(e=>`<div class="list-group-item list-group-item-${e.severity==='danger'?'danger':'warning'}">
+    <div class="fw-semibold">${e.title}</div><div class="small">${e.detail||''}</div>
+    <div class="small text-muted">${e.event_type} · ${e.period_key||''}</div>
+  </div>`).join(''):'<div class="text-muted">Không có cảnh báo mở.</div>';
+}
+async function scan(){
+  await fetch('/api/hrm/compliance',{method:'POST'});
+  load();
+}
+load();
+</script>
+{% endblock %}

@@ -27,6 +27,12 @@
 # Sau khi cấu hình Postgres lần đầu:
 #   python scripts/migrate_sqlite_to_postgres.py
 #
+# Gunicorn (systemd unit pos.service — ExecStart):
+#   gunicorn -c gunicorn.conf.py app:app
+#   Hoặc: gunicorn -w ${GUNICORN_WORKERS:-4} -b 127.0.0.1:8000 app:app
+#
+# SQLite dev — bật WAL mọi file DB:
+#   python scripts/ensure_sqlite_wal.py
 # Offline POS: trang /sale cache qua service worker; đơn offline lưu IndexedDB
 # và đồng bộ khi có mạng (client_uuid chống trùng).
 
@@ -80,6 +86,8 @@ keys = (
     'SME_ACCT_QUEUE_PROBE_TIMEOUT', 'SME_ACCT_QUEUE_MAX_DBS',
     'SME_CANONICAL_HOST', 'SME_SESSION_COOKIE_DOMAIN', 'PUBLIC_BASE_URL',
     'SME_DB_BACKEND', 'DATABASE_URL', 'SME_PG_URL',
+    'GUNICORN_BIND', 'GUNICORN_WORKERS', 'GUNICORN_THREADS', 'GUNICORN_TIMEOUT',
+    'GUNICORN_PRELOAD',
     'SME_PG_POOL_MIN', 'SME_PG_POOL_MAX', 'SME_PG_REGISTRY_SCHEMA',
 )
 for k in keys:
@@ -255,6 +263,19 @@ else:
 PY
 
 python scripts/migrate_all_dbs.py || echo "  ! Migrate co DB loi — xem log phia tren"
+
+python - <<'PY'
+import os, subprocess, sys
+backend = (os.environ.get('SME_DB_BACKEND') or '').strip().lower()
+db_url = (os.environ.get('DATABASE_URL') or '').strip().lower()
+is_pg = backend in ('postgres', 'postgresql', 'pg') or db_url.startswith('postgres')
+if is_pg:
+    print('  -> PostgreSQL: bo qua ensure_sqlite_wal')
+else:
+    rc = subprocess.call([sys.executable, 'scripts/ensure_sqlite_wal.py'])
+    if rc != 0:
+        print('  ! ensure_sqlite_wal co loi (rc=%s)' % rc)
+PY
 
 python - <<'PY'
 import glob, os, sqlite3, subprocess, sys

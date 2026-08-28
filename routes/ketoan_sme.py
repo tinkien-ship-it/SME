@@ -1894,6 +1894,11 @@ def register_ketoan_sme_routes(app):
                 rate_bhxh_chu=request.form.get('rate_bhxh_chu'),
                 rate_bhyt_chu=request.form.get('rate_bhyt_chu'),
                 rate_bhtn_chu=request.form.get('rate_bhtn_chu'),
+                bhxh_ref_salary=request.form.get('bhxh_ref_salary'),
+                bhxh_cap_multiplier=request.form.get('bhxh_cap_multiplier'),
+                bhtn_cap_multiplier=request.form.get('bhtn_cap_multiplier'),
+                ot_cap_month_hours=request.form.get('ot_cap_month_hours'),
+                ot_cap_year_hours=request.form.get('ot_cap_year_hours'),
                 commit=True,
             )
             flash('Cấu hình lương và tỷ lệ bảo hiểm đã được cập nhật thành công!', 'success')
@@ -1933,6 +1938,11 @@ def register_ketoan_sme_routes(app):
                 rate_bhxh_chu=data.get('rate_bhxh_chu'),
                 rate_bhyt_chu=data.get('rate_bhyt_chu'),
                 rate_bhtn_chu=data.get('rate_bhtn_chu'),
+                bhxh_ref_salary=data.get('bhxh_ref_salary'),
+                bhxh_cap_multiplier=data.get('bhxh_cap_multiplier'),
+                bhtn_cap_multiplier=data.get('bhtn_cap_multiplier'),
+                ot_cap_month_hours=data.get('ot_cap_month_hours'),
+                ot_cap_year_hours=data.get('ot_cap_year_hours'),
                 commit=True,
             )
             return jsonify({'success': True, 'data': cfg, 'message': 'Đã lưu cấu hình lương & BH'})
@@ -1941,6 +1951,35 @@ def register_ketoan_sme_routes(app):
         except Exception as e:
             conn.rollback()
             logger.exception('api_sme_payroll_config')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    from Services.hrm.work_calendar_routes import register_work_calendar_routes
+    register_work_calendar_routes(
+        app,
+        login_required=login_required,
+        require_sme_regime=require_sme_regime,
+        bootstrap=_bootstrap_sme_db,
+    )
+
+    @app.route('/api/sme/payroll/ot-from-attendance', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_payroll_ot_from_attendance():
+        from Services.hrm.work_calendar import aggregate_ot_hours_map, get_work_calendar_config
+        month = request.args.get('month', type=int)
+        year = request.args.get('year', type=int)
+        if not month or not year:
+            return jsonify({'success': False, 'error': 'Thiếu month/year'}), 400
+        conn = get_db_connection()
+        try:
+            _bootstrap_sme_db()
+            cfg = get_work_calendar_config(conn)
+            ot_map = aggregate_ot_hours_map(conn, month, year, config=cfg)
+            return jsonify({'success': True, 'data': ot_map, 'work_calendar': cfg})
+        except Exception as e:
+            logger.exception('api_sme_payroll_ot_from_attendance')
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
@@ -2154,6 +2193,7 @@ def register_ketoan_sme_routes(app):
                 'records': result['data'],
                 'standard_days': result['standard_days'],
                 'config': result.get('config'),
+                'work_calendar': result.get('work_calendar'),
             })
         except Exception as e:
             logger.exception('api_sme_payroll_preview')

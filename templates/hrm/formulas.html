@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Công thức lương{% endblock %}
+{% block content %}
+<div class="container-fluid py-3">
+  <h4>Dynamic Formula Builder</h4>
+  <p class="text-muted small">Biến: Gross_Salary, Base_Salary, Actual_Working_Days, Standard_Days, KPI_Score, OT_Hours_Night, Allowance_*, Bonus, Dependents. Hàm: IF, MAX, MIN, ROUND.</p>
+  <div class="row g-3">
+    <div class="col-lg-5">
+      <div class="card"><div class="card-body">
+        <input id="code" class="form-control form-control-sm mb-2" placeholder="CODE">
+        <input id="name" class="form-control form-control-sm mb-2" placeholder="Tên">
+        <textarea id="expr" class="form-control form-control-sm mb-2" rows="3" placeholder="Gross_Salary * (KPI_Score/100) * 0.1"></textarea>
+        <select id="outf" class="form-select form-select-sm mb-2">
+          <option value="bonus">→ bonus</option>
+          <option value="allowance_other">→ allowance_other</option>
+        </select>
+        <button class="btn btn-sm btn-outline-secondary" onclick="testF()">Test</button>
+        <button class="btn btn-sm btn-primary" onclick="saveF()">Lưu</button>
+        <div id="msg" class="small mt-2"></div>
+      </div></div>
+    </div>
+    <div class="col-lg-7">
+      <table class="table table-sm bg-white border"><thead><tr><th>Mã</th><th>Tên</th><th>Biểu thức</th><th>Output</th></tr></thead>
+      <tbody id="tb"></tbody></table>
+    </div>
+  </div>
+</div>
+<script>
+async function load(){
+  const d=await(await fetch('/api/hrm/formulas')).json();
+  tb.innerHTML=(d.items||[]).map(f=>`<tr><td>${f.code}</td><td>${f.name}</td><td><code>${f.expression}</code></td><td>${f.output_field}</td></tr>`).join('');
+}
+async function testF(){
+  const r=await(await fetch('/api/hrm/formulas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    test_only:true, expression:expr.value,
+    variables:{Gross_Salary:10000000,KPI_Score:80,Actual_Working_Days:22,Standard_Days:26}
+  })})).json();
+  msg.textContent=r.success?('Kết quả test: '+r.value):(r.error||'Lỗi');
+}
+async function saveF(){
+  const r=await(await fetch('/api/hrm/formulas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    code:code.value,name:name.value,expression:expr.value,output_field:outf.value
+  })})).json();
+  msg.textContent=r.success?'Đã lưu':(r.error||'Lỗi');
+  if(r.success) load();
+}
+load();
+</script>
+{% endblock %}

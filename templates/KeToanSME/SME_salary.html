@@ -3,7 +3,7 @@
 {% block sme_content %}
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
   <div>
-    <h4 class="fw-bold mb-1">Bảng lương <span class="badge bg-primary">Thông tư 99 / Thông tư 58</span></h4>
+    <h4 class="fw-bold mb-1">Bảng lương <span class="badge bg-primary">Chuẩn pháp lý VN</span></h4>
     <p class="text-muted small mb-0">
       Chốt → Nợ 622/627/641/642 theo bộ phận NV · Có 3341 / 3383 / 3384 / 3385 ·
       <span class="ms-1">BH NLĐ:
@@ -19,6 +19,9 @@
     </p>
   </div>
   <div class="d-flex gap-2 flex-wrap">
+    <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#workCalendarModal">
+      <i class="fas fa-calendar-week me-1"></i>LỊCH LÀM VIỆC &amp; NGÀY LỄ
+    </button>
     <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#configModal">
       <i class="fas fa-cog me-1"></i>CẤU HÌNH LƯƠNG &amp; TỶ LỆ BẢO HIỂM
     </button>
@@ -49,6 +52,7 @@
     </div>
     <div class="col-md-4 d-flex gap-2 flex-wrap">
       <button class="btn btn-dark" id="btnLoad">Tải NV</button>
+      <button class="btn btn-outline-dark" id="btnFetchOt" title="Lấy giờ tăng ca từ chấm công">TC từ CC</button>
       <button class="btn btn-danger" id="btnAccrue">Chốt &amp; ghi sổ</button>
       <a class="btn btn-success" id="btnPay"
          href="{{ url_for('SME_PhaiTraCongNhanVien') }}">Trả lương</a>
@@ -56,37 +60,47 @@
     </div>
   </div>
   <div class="card-footer bg-white small text-muted">
-    Công thức: Lương TG = Lương CB ÷ công chuẩn × ngày công ·
-    BH NLĐ = Lương TG × tỷ lệ ·
-    TNCN = biểu lũy tiến (TN − BH − GT bản thân − NPT) ·
-    Chủ hộ: không tính BHTN.
-    Bộ phận NV gắn trên hồ sơ nhân sự → TK chi phí khi chốt.
+    Công thức chuẩn pháp lý VN (mẫu Bang_Luong_Chi_Tiet): 
+    Lương công = (Lương chính + PC chức vụ/trách nhiệm/thâm niên) ÷ công chuẩn × ngày công ·
+    Tăng ca: thường ×<span id="hintMultN">1.5</span> · T7 (nghỉ) ×<span id="hintMultSat">1.5</span> · CN ×<span id="hintMultWe">2</span> · lễ ×<span id="hintMultHol">3</span>.
+    Ngày lễ không chấm công → tự cộng công hưởng lương; có chấm công ngày lễ → TC lễ ×300%.
     <span id="stdDaysHint"></span>
   </div>
 </div>
 
 <div class="card shadow-sm border-0 mb-3">
-  <div class="table-responsive">
-    <table class="table table-sm table-hover align-middle mb-0" id="tbl">
-      <thead class="table-light">
+  <div class="table-responsive" style="max-height:70vh">
+    <table class="table table-sm table-hover align-middle mb-0" id="tbl" style="min-width:2100px;font-size:11px">
+      <thead class="table-light sticky-top">
         <tr>
-          <th>Nhân viên</th>
-          <th>Bộ phận</th>
-          <th class="text-end">Công</th>
-          <th class="text-end">Lương TG</th>
-          <th class="text-end">PC quỹ</th>
-          <th class="text-end">PC khác</th>
-          <th class="text-end">Thưởng</th>
-          <th class="text-end">BHXH <span class="text-muted fw-normal" id="hdrBhxh">{{ info.rate_bhxh|default(8) }}%</span></th>
-          <th class="text-end">BHYT <span class="text-muted fw-normal" id="hdrBhyt">{{ info.rate_bhyt|default(1.5) }}%</span></th>
-          <th class="text-end">BHTN <span class="text-muted fw-normal" id="hdrBhtn">{{ info.rate_bhtn|default(1) }}%</span></th>
+          <th>Mã / NV</th>
+          <th>Lương HĐ</th>
+          <th class="text-end" title="Chịu BH & thuế">PC CV</th>
+          <th class="text-end" title="Chịu BH & thuế">PC TN</th>
+          <th class="text-end" title="Chịu BH & thuế">PC Thâm niên</th>
+          <th class="text-end" title="Miễn thuế ≤730k">PC Ăn</th>
+          <th class="text-end" title="≤5tr/năm">PC Trang phục</th>
+          <th class="text-end">PC ĐT</th>
+          <th class="text-end" title="Ngày công + nghỉ lễ hưởng lương (tự cộng nếu không quét thẻ ngày lễ)">Công</th>
+          <th class="text-end" title="150%">Giờ TC thường</th>
+          <th class="text-end" title="150% khi T7 là ngày nghỉ">Giờ TC T7</th>
+          <th class="text-end" title="200%">Giờ TC CN</th>
+          <th class="text-end" title="300%">Giờ TC lễ</th>
+          <th class="text-end">Lương công</th>
+          <th class="text-end">Tổng TC</th>
+          <th class="text-end">KPI</th>
+          <th class="text-end">Tổng TN</th>
+          <th class="text-end">Lương BH</th>
+          <th class="text-end">BHXH</th>
+          <th class="text-end">BHYT</th>
+          <th class="text-end">BHTN</th>
           <th class="text-end">TNCN</th>
-          <th class="text-end">Thực lĩnh</th>
+          <th class="text-end">Thực nhận</th>
         </tr>
       </thead>
-      <tbody id="tbody"><tr><td colspan="12" class="text-center text-muted py-4">Chọn kỳ và tải</td></tr></tbody>
+      <tbody id="tbody"><tr><td colspan="24" class="text-center text-muted py-4">Chọn kỳ và tải</td></tr></tbody>
       <tfoot><tr class="fw-bold table-secondary">
-        <td colspan="11" class="text-end">Tổng thực lĩnh</td>
+        <td colspan="23" class="text-end">Tổng thực nhận</td>
         <td class="text-end" id="sumNet">0</td>
       </tr></tfoot>
     </table>
@@ -103,6 +117,75 @@
       </tr></thead>
       <tbody id="runsBody"><tr><td colspan="7" class="text-muted text-center py-3">…</td></tr></tbody>
     </table>
+  </div>
+</div>
+
+{# Modal lịch làm việc & ngày lễ #}
+<div class="modal fade" id="workCalendarModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title fw-bold"><i class="fas fa-calendar-week me-2"></i>Lịch làm việc &amp; ngày lễ</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">
+          Chọn <strong>ngày làm việc</strong> của công ty. NV làm ngày nghỉ tuần được tính tăng ca:
+          T7 (nghỉ) ×150% · CN/nghỉ khác ×200% · ngày lễ ×300%.
+          Công ty làm T7 → tick Thứ 7; khi đó làm T7 tính lương ngày thường, chỉ giờ vượt chuẩn mới là TC thường.
+        </p>
+        <div class="border rounded p-2 mb-3">
+          <div class="fw-semibold small mb-2">Ngày làm việc trong tuần</div>
+          <div class="d-flex flex-wrap gap-2" id="workDayChecks">
+            <label class="form-check form-check-inline"><input class="form-check-input wd-chk" type="checkbox" value="0" checked> T2</label>
+            <label class="form-check form-check-inline"><input class="form-check-input wd-chk" type="checkbox" value="1" checked> T3</label>
+            <label class="form-check form-check-inline"><input class="form-check-input wd-chk" type="checkbox" value="2" checked> T4</label>
+            <label class="form-check form-check-inline"><input class="form-check-input wd-chk" type="checkbox" value="3" checked> T5</label>
+            <label class="form-check form-check-inline"><input class="form-check-input wd-chk" type="checkbox" value="4" checked> T6</label>
+            <label class="form-check form-check-inline"><input class="form-check-input wd-chk" type="checkbox" value="5"> T7</label>
+            <label class="form-check form-check-inline"><input class="form-check-input wd-chk" type="checkbox" value="6"> CN</label>
+          </div>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-md-2"><label class="small fw-bold">Giờ bắt đầu</label>
+            <input type="time" id="wcWorkStart" class="form-control form-control-sm" value="08:00"></div>
+          <div class="col-md-2"><label class="small fw-bold">Nghỉ trưa từ</label>
+            <input type="time" id="wcLunchStart" class="form-control form-control-sm" value="12:00"></div>
+          <div class="col-md-2"><label class="small fw-bold">Nghỉ trưa đến</label>
+            <input type="time" id="wcLunchEnd" class="form-control form-control-sm" value="13:00"></div>
+          <div class="col-md-2"><label class="small fw-bold">Giờ kết thúc</label>
+            <input type="time" id="wcWorkEnd" class="form-control form-control-sm" value="17:00"></div>
+          <div class="col-md-2"><label class="small fw-bold">Giờ/ngày</label>
+            <input type="number" step="0.5" id="wcHoursDay" class="form-control form-control-sm" value="8"></div>
+          <div class="col-md-2"><label class="small fw-bold">TC thường ×</label>
+            <input type="number" step="0.1" id="wcMultNormal" class="form-control form-control-sm" value="1.5"></div>
+          <div class="col-md-2"><label class="small fw-bold">TC T7 ×</label>
+            <input type="number" step="0.1" id="wcMultSat" class="form-control form-control-sm" value="1.5"></div>
+          <div class="col-md-2"><label class="small fw-bold">TC CN ×</label>
+            <input type="number" step="0.1" id="wcMultWeekend" class="form-control form-control-sm" value="2"></div>
+          <div class="col-md-2"><label class="small fw-bold">TC lễ ×</label>
+            <input type="number" step="0.1" id="wcMultHoliday" class="form-control form-control-sm" value="3"></div>
+          <div class="col-md-2"><label class="small fw-bold">Năm lễ</label>
+            <input type="number" id="wcHolidayYear" class="form-control form-control-sm"></div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold small">Ngày nghỉ lễ hưởng lương (<span id="holidayCount">0</span> ngày/năm)</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="btnAddHoliday">+ Thêm ngày</button>
+        </div>
+        <p class="small text-muted mb-2">Mặc định theo Điều 112 BLĐ 2019: 12 ngày/năm (2026 gồm Ngày Văn hóa VN 24/11).</p>
+        <div class="table-responsive" style="max-height:220px">
+          <table class="table table-sm table-bordered mb-0">
+            <thead class="table-light"><tr><th>Ngày</th><th>Tên</th><th></th></tr></thead>
+            <tbody id="holidayBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnSeedHolidays">Nạp lễ VN (12 ngày/năm)</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-success" id="btnSaveWorkCalendar">Lưu &amp; tải lại bảng lương</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -176,10 +259,41 @@
             </div>
           </div>
         </div>
+        <div class="row mb-3">
+          <div class="col-12">
+            <h6 class="fw-bold mb-3" style="font-size:0.9rem;color:#495057;background:#f8f9fa;padding:5px 10px;border-radius:4px;">4. Trần đóng BH &amp; tăng ca (theo luật)</h6>
+          </div>
+          <div class="col-md-3">
+            <label class="small fw-bold">Mức tham chiếu / lương cơ sở</label>
+            <input type="number" name="bhxh_ref_salary" class="form-control form-control-sm"
+                   value="{{ info.bhxh_ref_salary|default(2340000) }}">
+          </div>
+          <div class="col-md-2">
+            <label class="small fw-bold">Trần BHXH/BHYT (×)</label>
+            <input type="number" step="0.1" name="bhxh_cap_multiplier" class="form-control form-control-sm"
+                   value="{{ info.bhxh_cap_multiplier|default(20) }}">
+          </div>
+          <div class="col-md-2">
+            <label class="small fw-bold">Trần BHTN (× LTT vùng)</label>
+            <input type="number" step="0.1" name="bhtn_cap_multiplier" class="form-control form-control-sm"
+                   value="{{ info.bhtn_cap_multiplier|default(20) }}">
+          </div>
+          <div class="col-md-2">
+            <label class="small fw-bold">Trần giờ tăng ca/tháng</label>
+            <input type="number" step="1" name="ot_cap_month_hours" class="form-control form-control-sm"
+                   value="{{ info.ot_cap_month_hours|default(40) }}">
+          </div>
+          <div class="col-md-3">
+            <label class="small fw-bold">Trần giờ tăng ca/năm</label>
+            <input type="number" step="1" name="ot_cap_year_hours" class="form-control form-control-sm"
+                   value="{{ info.ot_cap_year_hours|default(200) }}">
+          </div>
+        </div>
         <div class="alert alert-warning small mb-0">
           <i class="fas fa-info-circle me-1"></i>
           Tỷ lệ nhập dạng số thực (VD: 8 hoặc 17.5). Hệ thống tự chia 100 khi tính.
-          Sau khi lưu, bấm <strong>Tải NV</strong> để áp dụng công thức mới.
+          <strong>Trần BH:</strong> mức đóng = min(căn cứ NV, mức tham chiếu × hệ số) cho BHXH/BHYT;
+          BHTN chặn theo LTT vùng × hệ số. Sau khi lưu, bấm <strong>Tải NV</strong> để áp dụng.
         </div>
       </div>
       <div class="modal-footer bg-light">
@@ -199,23 +313,77 @@ if (!document.getElementById('m').value) document.getElementById('m').value = no
 if (!document.getElementById('y').value) document.getElementById('y').value = now.getFullYear();
 document.getElementById('postDate').value = today();
 
+const elM = document.getElementById('m');
+const elY = document.getElementById('y');
+const elPostDate = document.getElementById('postDate');
+
 // Tỷ lệ BH từ cấu hình (cùng nguồn HKD / business_info)
 let RATES = {
-  bhxh: parseFloat("{{ info.rate_bhxh|default(8) }}") / 100,
-  bhyt: parseFloat("{{ info.rate_bhyt|default(1.5) }}") / 100,
-  bhtn: parseFloat("{{ info.rate_bhtn|default(1) }}") / 100,
+  bhxh: parseFloat({{ info.rate_bhxh|default(8)|tojson }}) / 100,
+  bhyt: parseFloat({{ info.rate_bhyt|default(1.5)|tojson }}) / 100,
+  bhtn: parseFloat({{ info.rate_bhtn|default(1)|tojson }}) / 100,
 };
 let RATES_CHU = {
-  bhxh: parseFloat("{{ info.rate_bhxh_chu|default(17.5) }}") / 100,
-  bhyt: parseFloat("{{ info.rate_bhyt_chu|default(3) }}") / 100,
-  bhtn: parseFloat("{{ info.rate_bhtn_chu|default(1) }}") / 100,
+  bhxh: parseFloat({{ info.rate_bhxh_chu|default(17.5)|tojson }}) / 100,
+  bhyt: parseFloat({{ info.rate_bhyt_chu|default(3)|tojson }}) / 100,
+  bhtn: parseFloat({{ info.rate_bhtn_chu|default(1)|tojson }}) / 100,
+};
+let CAP = {
+  ref: parseFloat({{ info.bhxh_ref_salary|default(2340000)|tojson }}) || 2340000,
+  bhxhMult: parseFloat({{ info.bhxh_cap_multiplier|default(20)|tojson }}) || 20,
+  bhtnMult: parseFloat({{ info.bhtn_cap_multiplier|default(20)|tojson }}) || 20,
+  regionMin: parseFloat({{ info.base_salary_insurance|default(0)|tojson }}) || 0,
 };
 let standardDays = 0;
 let rows = [];
+let WORK_CAL = {
+  hours_per_day: 8,
+  mult_normal: 1.5,
+  mult_sat: 1.5,
+  mult_weekend: 2.0,
+  mult_holiday: 3.0,
+  work_weekdays: [0,1,2,3,4],
+};
+
+function applyWorkCalendar(wc) {
+  if (!wc) return;
+  WORK_CAL = {
+    hours_per_day: parseFloat(wc.hours_per_day) || 8,
+    mult_normal: parseFloat(wc.mult_normal) || 1.5,
+    mult_sat: parseFloat(wc.mult_sat) || 1.5,
+    mult_weekend: parseFloat(wc.mult_weekend) || 2.0,
+    mult_holiday: parseFloat(wc.mult_holiday) || 3.0,
+    work_weekdays: wc.work_weekdays || [0,1,2,3,4],
+  };
+}
+
+function otTaxExempt(amount, mult) {
+  const m = Math.max(parseFloat(mult) || 1, 1);
+  const a = Math.max(parseFloat(amount) || 0, 0);
+  if (m <= 1 || a <= 0) return 0;
+  return Math.round(a * (m - 1) / m);
+}
+
+function calcOtBreakdown(E, std, hN, hSat, hWe, hHol) {
+  const rate = E > 0 ? E / Math.max(std, 1) / Math.max(WORK_CAL.hours_per_day, 1) : 0;
+  const amtN = Math.round(rate * hN * WORK_CAL.mult_normal);
+  const amtSat = Math.round(rate * hSat * WORK_CAL.mult_sat);
+  const amtWe = Math.round(rate * hWe * WORK_CAL.mult_weekend);
+  const amtHol = Math.round(rate * hHol * WORK_CAL.mult_holiday);
+  const total = amtN + amtSat + amtWe + amtHol;
+  const taxFree = otTaxExempt(amtN, WORK_CAL.mult_normal)
+    + otTaxExempt(amtSat, WORK_CAL.mult_sat)
+    + otTaxExempt(amtWe, WORK_CAL.mult_weekend)
+    + otTaxExempt(amtHol, WORK_CAL.mult_holiday);
+  return { amtN, amtSat, amtWe, amtHol, total, taxFree };
+}
 
 document.getElementById('regionSelect')?.addEventListener('change', function() {
   const minSalary = this.options[this.selectedIndex]?.getAttribute('data-val');
-  if (minSalary) document.getElementById('baseSalaryInput').value = minSalary;
+  if (minSalary) {
+    document.getElementById('baseSalaryInput').value = minSalary;
+    CAP.regionMin = parseFloat(minSalary) || 0;
+  }
 });
 
 function applyConfig(cfg) {
@@ -230,6 +398,10 @@ function applyConfig(cfg) {
     bhyt: (parseFloat(cfg.rate_bhyt_chu) || 3) / 100,
     bhtn: (parseFloat(cfg.rate_bhtn_chu) || 1) / 100,
   };
+  CAP.ref = parseFloat(cfg.bhxh_ref_salary) || CAP.ref;
+  CAP.bhxhMult = parseFloat(cfg.bhxh_cap_multiplier) || CAP.bhxhMult;
+  CAP.bhtnMult = parseFloat(cfg.bhtn_cap_multiplier) || CAP.bhtnMult;
+  CAP.regionMin = parseFloat(cfg.base_salary_insurance) || CAP.regionMin;
   const pct = r => {
     const v = r * 100;
     return Number.isInteger(v) ? String(v) : v.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
@@ -238,6 +410,19 @@ function applyConfig(cfg) {
   set('hdrBhxh', pct(RATES.bhxh) + '%');
   set('hdrBhyt', pct(RATES.bhyt) + '%');
   set('hdrBhtn', pct(RATES.bhtn) + '%');
+}
+
+const LUNCH_TAX_FREE = 730000;
+const UNIFORM_TAX_FREE = 416667;
+
+function insuranceBases(siComponents) {
+  const raw = Number(siComponents) || 0;
+  const bhxhCap = CAP.ref * CAP.bhxhMult;
+  const bhtnCap = (CAP.regionMin > 0 ? CAP.regionMin : CAP.ref) * CAP.bhtnMult;
+  return {
+    bhxh: Math.min(raw, bhxhCap || raw),
+    bhtn: Math.min(raw, bhtnCap || raw),
+  };
 }
 
 function getStandardWorkingDays(month, year) {
@@ -261,61 +446,93 @@ function calculateTNCN(income) {
 }
 
 function num(el){ return parseFloat(String(el?.value||'0').replace(/,/g,''))||0; }
+function setVal(tr, f, v){ const el = tr.querySelector(`[data-f=${f}]`); if (el) el.value = Math.round(v); }
+function setTxt(tr, f, v){ const el = tr.querySelector(`[data-f=${f}]`); if (el) el.textContent = fmt(v); }
 
-function calcFromInputs(tr, {recomputeTime=false} = {}) {
-  const days = num(tr.querySelector('[data-f=actual_working_days]'));
-  const base = parseFloat(tr.dataset.base || 0) || 0;
-  const std = standardDays || getStandardWorkingDays(
+/** Công thức mẫu Bang_Luong_Chi_Tiet_Chuan_Phap_Ly_VN */
+function calcFromInputs(tr) {
+  const std = Math.max(standardDays || getStandardWorkingDays(
     parseInt(document.getElementById('m').value, 10),
     parseInt(document.getElementById('y').value, 10)
-  );
-  let time;
-  if (recomputeTime && std > 0) {
-    time = Math.round((base / std) * days);
-    const timeEl = tr.querySelector('[data-f=time_salary]');
-    if (timeEl) timeEl.value = time;
-  } else {
-    time = num(tr.querySelector('[data-f=time_salary]'));
-  }
-  const af = num(tr.querySelector('[data-f=allowance_fund]'));
-  const ao = num(tr.querySelector('[data-f=allowance_other]'));
-  const bonus = num(tr.querySelector('[data-f=bonus]'));
+  ), 1);
+  const E = num(tr.querySelector('[data-f=contract_salary]'));
+  const F = num(tr.querySelector('[data-f=allowance_position]'));
+  const G = num(tr.querySelector('[data-f=allowance_responsibility]'));
+  const H = num(tr.querySelector('[data-f=allowance_seniority]'));
+  const I = num(tr.querySelector('[data-f=allowance_lunch]'));
+  const J = num(tr.querySelector('[data-f=allowance_uniform]'));
+  const K = num(tr.querySelector('[data-f=allowance_phone]'));
+  const M = num(tr.querySelector('[data-f=actual_working_days]'));
+  const hN = num(tr.querySelector('[data-f=ot_hours]'));
+  const hSat = num(tr.querySelector('[data-f=ot_hours_weekend_sat]'));
+  const hWe = num(tr.querySelector('[data-f=ot_hours_weekend]'));
+  const hHol = num(tr.querySelector('[data-f=ot_hours_holiday]'));
+  const T = num(tr.querySelector('[data-f=bonus]'));
   const chuHo = tr.dataset.chuho === '1';
-  const bhxh = Math.round(time * RATES.bhxh);
-  const bhyt = Math.round(time * RATES.bhyt);
-  const bhtn = chuHo ? 0 : Math.round(time * RATES.bhtn);
-  const income = time + af + ao + bonus;
+
+  const si = E + F + G + H;
+  const time = Math.round(si / std * M);
+  const lunchAmt = Math.round(I / std * M);
+  const uniAmt = Math.round(J / std * M);
+  const phoneAmt = Math.round(K / std * M);
+  const ot = calcOtBreakdown(E, std, hN, hSat, hWe, hHol);
+  const otAmt = ot.total;
+  const income = time + lunchAmt + uniAmt + phoneAmt + otAmt + T;
+
+  const bases = insuranceBases(si);
+  const bhxh = Math.round(bases.bhxh * RATES.bhxh);
+  const bhyt = Math.round(bases.bhxh * RATES.bhyt);
+  const bhtn = chuHo ? 0 : Math.round(bases.bhtn * RATES.bhtn);
+  const bhTotal = bhxh + bhyt + bhtn;
+
   const selfDed = parseFloat(tr.dataset.selfded || 11000000) || 11000000;
   const deps = parseInt(tr.dataset.deps || 0, 10) || 0;
   const depDed = parseFloat(tr.dataset.depded || 4400000) || 4400000;
-  const taxable = income - (bhxh + bhyt + bhtn) - (selfDed + deps * depDed);
+  const family = selfDed + deps * depDed;
+  const taxFree = Math.min(lunchAmt, LUNCH_TAX_FREE)
+    + Math.min(uniAmt, UNIFORM_TAX_FREE)
+    + phoneAmt
+    + ot.taxFree;
+  const taxable = Math.max(0, income - taxFree - bhTotal - family);
   const tncn = Math.max(0, Math.round(calculateTNCN(taxable)));
-
-  tr.querySelector('[data-f=bhxh]').value = bhxh;
-  tr.querySelector('[data-f=bhyt]').value = bhyt;
-  tr.querySelector('[data-f=bhtn]').value = bhtn;
-  tr.querySelector('[data-f=tncn_tax]').value = tncn;
-
-  const deduct = bhxh + bhyt + bhtn + tncn;
+  const deduct = bhTotal + tncn;
   const net = income - deduct;
-  tr.querySelector('[data-f=final_amount]').textContent = fmt(net);
+
+  setVal(tr, 'time_salary', time);
+  setTxt(tr, 'ot_amount', otAmt);
+  setTxt(tr, 'total_income', income);
+  setTxt(tr, 'insurance_salary_base', bases.bhxh);
+  setVal(tr, 'bhxh', bhxh);
+  setVal(tr, 'bhyt', bhyt);
+  setVal(tr, 'bhtn', bhtn);
+  setVal(tr, 'tncn_tax', tncn);
+  setTxt(tr, 'final_amount', net);
+
+  tr.dataset.base = String(E);
   tr.dataset.net = String(net);
   tr.dataset.income = String(income);
   tr.dataset.deduct = String(deduct);
-  // BH DN tham chiếu
-  const empBh = Math.round(time * RATES_CHU.bhxh)
-    + Math.round(time * RATES_CHU.bhyt)
-    + (chuHo ? 0 : Math.round(time * RATES_CHU.bhtn));
+  tr.dataset.std = String(std);
+  tr.dataset.lunchAmt = String(lunchAmt);
+  tr.dataset.uniAmt = String(uniAmt);
+  tr.dataset.phoneAmt = String(phoneAmt);
+  tr.dataset.otAmt = String(otAmt);
+  tr.dataset.otAmtNormal = String(ot.amtN);
+  tr.dataset.otAmtSat = String(ot.amtSat);
+  tr.dataset.otAmtWe = String(ot.amtWe);
+  tr.dataset.otAmtHol = String(ot.amtHol);
+  tr.dataset.taxExemptOt = String(ot.taxFree);
+  tr.dataset.insBase = String(bases.bhxh);
+  tr.dataset.taxable = String(taxable);
+  tr.dataset.family = String(family);
+  const empBh = Math.round(bases.bhxh * RATES_CHU.bhxh)
+    + Math.round(bases.bhxh * RATES_CHU.bhyt)
+    + (chuHo ? 0 : Math.round(bases.bhtn * RATES_CHU.bhtn));
   tr.dataset.employer = String(empBh);
   sumAll();
 }
 
-function recalcRow(tr, src){
-  const f = src?.getAttribute?.('data-f');
-  // Đổi công → tính lại lương TG theo công thức; đổi lương TG/PC → tính BH & TNCN
-  const recomputeTime = f === 'actual_working_days';
-  calcFromInputs(tr, { recomputeTime });
-}
+function recalcRow(tr){ calcFromInputs(tr); }
 
 function sumAll(){
   let t = 0;
@@ -326,7 +543,7 @@ function sumAll(){
 function render(){
   const tbody = document.getElementById('tbody');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-4">Không có nhân viên đang làm việc</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="24" class="text-center text-muted py-4">Không có nhân viên đang làm việc</td></tr>';
     sumAll(); return;
   }
   tbody.innerHTML = rows.map(r => {
@@ -337,27 +554,43 @@ function render(){
     const name = (r.fullname||'').replace(/"/g,'&quot;');
     const badge = chu === '1' ? ' <span class="badge bg-warning text-dark" style="font-size:9px">Chủ hộ</span>' : '';
     const dept = r.department || 'ADMIN';
-    const deptLbl = (r.department_label || dept) + (r.expense_account ? ` · ${r.expense_account}` : '');
+    const code = r.employee_code || '';
+    const contract = r.contract_salary || r.base_salary || 0;
     return `<tr data-eid="${r.employee_id}" data-name="${name}" data-net="${net}" data-income="${income}" data-deduct="${deduct}"
-      data-base="${r.base_salary||0}" data-chuho="${chu}" data-dept="${dept}"
+      data-base="${contract}" data-chuho="${chu}" data-dept="${dept}"
       data-selfded="${r.self_deduction||11000000}" data-deps="${r.dependents||0}" data-depded="${r.dependent_deduction||4400000}"
-      data-employer="${r.employer_insurance||0}">
-      <td class="fw-semibold">${r.fullname||''}${badge}</td>
-      <td class="small text-nowrap">${deptLbl}</td>
+      data-employer="${r.employer_insurance||0}"
+      data-lunchAmt="${r.lunch_amount||0}" data-uniAmt="${r.uniform_amount||0}" data-phoneAmt="${r.phone_amount||0}"
+      data-otAmt="${r.ot_amount||0}" data-insBase="${r.insurance_salary_base||0}" data-taxable="${r.taxable_income||0}"
+      data-family="${r.family_relief||0}" data-std="${r.standard_days||standardDays||0}">
+      <td class="small"><div class="fw-semibold">${code?code+' · ':''}${r.fullname||''}${badge}</div>
+        <div class="text-muted" style="font-size:10px">${r.department_label||dept}${r.expense_account?' · '+r.expense_account:''}</div></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="contract_salary" value="${contract}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_position" value="${r.allowance_position||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_responsibility" value="${r.allowance_responsibility||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_seniority" value="${r.allowance_seniority||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_lunch" value="${r.allowance_lunch||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_uniform" value="${r.allowance_uniform||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_phone" value="${r.allowance_phone||0}"></td>
       <td><input class="form-control form-control-sm text-end" data-f="actual_working_days" value="${r.actual_working_days||0}"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="time_salary" value="${r.time_salary||0}"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_fund" value="${r.allowance_fund||0}"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="allowance_other" value="${r.allowance_other||0}"></td>
+      <td><input class="form-control form-control-sm text-end ot-inp" data-f="ot_hours" value="${r.ot_hours||0}"></td>
+      <td><input class="form-control form-control-sm text-end ot-inp" data-f="ot_hours_weekend_sat" value="${r.ot_hours_weekend_sat||0}"></td>
+      <td><input class="form-control form-control-sm text-end ot-inp" data-f="ot_hours_weekend" value="${r.ot_hours_weekend||0}"></td>
+      <td><input class="form-control form-control-sm text-end ot-inp" data-f="ot_hours_holiday" value="${r.ot_hours_holiday||0}"></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="time_salary" value="${r.time_salary||0}" readonly></td>
+      <td class="text-end" data-f="ot_amount">${fmt(r.ot_amount||0)}</td>
       <td><input class="form-control form-control-sm text-end money-input" data-f="bonus" value="${r.bonus||0}"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="bhxh" value="${r.bhxh||0}" readonly title="Tự tính theo tỷ lệ"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="bhyt" value="${r.bhyt||0}" readonly title="Tự tính theo tỷ lệ"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="bhtn" value="${r.bhtn||0}" readonly title="Tự tính theo tỷ lệ"></td>
-      <td><input class="form-control form-control-sm text-end money-input" data-f="tncn_tax" value="${r.tncn_tax||0}" readonly title="Tự tính theo biểu lũy tiến"></td>
+      <td class="text-end fw-semibold" data-f="total_income">${fmt(income)}</td>
+      <td class="text-end" data-f="insurance_salary_base">${fmt(r.insurance_salary_base||0)}</td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="bhxh" value="${r.bhxh||0}" readonly></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="bhyt" value="${r.bhyt||0}" readonly></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="bhtn" value="${r.bhtn||0}" readonly></td>
+      <td><input class="form-control form-control-sm text-end money-input" data-f="tncn_tax" value="${r.tncn_tax||0}" readonly></td>
       <td class="text-end fw-bold text-primary" data-f="final_amount">${fmt(net)}</td>
     </tr>`;
   }).join('');
   tbody.querySelectorAll('input:not([readonly])').forEach(inp => {
-    inp.addEventListener('input', () => recalcRow(inp.closest('tr'), inp));
+    inp.addEventListener('input', () => recalcRow(inp.closest('tr')));
   });
   sumAll();
 }
@@ -365,25 +598,286 @@ function render(){
 function collectRecords(){
   return [...document.querySelectorAll('#tbody tr[data-eid]')].map(tr => {
     const g = f => num(tr.querySelector(`[data-f=${f}]`));
-    const time = g('time_salary'), af=g('allowance_fund'), ao=g('allowance_other'), bonus=g('bonus');
+    const E = g('contract_salary');
+    const F = g('allowance_position'), G = g('allowance_responsibility'), H = g('allowance_seniority');
+    const I = g('allowance_lunch'), J = g('allowance_uniform'), K = g('allowance_phone');
+    const time = g('time_salary'), bonus = g('bonus');
+    const lunchAmt = parseFloat(tr.dataset.lunchAmt||0)||0;
+    const uniAmt = parseFloat(tr.dataset.uniAmt||0)||0;
+    const phoneAmt = parseFloat(tr.dataset.phoneAmt||0)||0;
+    const otAmt = parseFloat(tr.dataset.otAmt||0)||0;
     const bhxh=g('bhxh'), bhyt=g('bhyt'), bhtn=g('bhtn'), tncn=g('tncn_tax');
-    const income = time+af+ao+bonus;
-    const deduct = bhxh+bhyt+bhtn+tncn;
+    const income = parseFloat(tr.dataset.income||0)|| (time+lunchAmt+uniAmt+phoneAmt+otAmt+bonus);
+    const deduct = parseFloat(tr.dataset.deduct||0)|| (bhxh+bhyt+bhtn+tncn);
     return {
       employee_id: parseInt(tr.dataset.eid,10),
       fullname: tr.dataset.name,
-      base_salary: parseFloat(tr.dataset.base||0)||time,
+      base_salary: E,
+      contract_salary: E,
       is_chu_ho: tr.dataset.chuho === '1' ? 1 : 0,
       department: tr.dataset.dept || 'ADMIN',
       actual_working_days: g('actual_working_days'),
+      standard_days: parseFloat(tr.dataset.std||0)||standardDays,
+      ot_hours: g('ot_hours'),
+      ot_hours_weekend_sat: g('ot_hours_weekend_sat'),
+      ot_hours_weekend: g('ot_hours_weekend'),
+      ot_hours_holiday: g('ot_hours_holiday'),
       time_salary: time,
-      allowance_fund: af, allowance_other: ao, bonus,
+      allowance_position: F, allowance_responsibility: G, allowance_seniority: H,
+      allowance_lunch: I, allowance_uniform: J, allowance_phone: K,
+      allowance_fund: F+G+H,
+      allowance_other: lunchAmt+uniAmt+phoneAmt,
+      lunch_amount: lunchAmt, uniform_amount: uniAmt, phone_amount: phoneAmt,
+      ot_amount: otAmt,
+      ot_amount_normal: parseFloat(tr.dataset.otAmtNormal||0)||0,
+      ot_amount_weekend_sat: parseFloat(tr.dataset.otAmtSat||0)||0,
+      ot_amount_weekend: parseFloat(tr.dataset.otAmtWe||0)||0,
+      ot_amount_holiday: parseFloat(tr.dataset.otAmtHol||0)||0,
+      tax_exempt_ot: parseFloat(tr.dataset.taxExemptOt||0)||0,
+      bonus,
+      insurance_salary_base: parseFloat(tr.dataset.insBase||0)||0,
+      taxable_income: parseFloat(tr.dataset.taxable||0)||0,
+      family_relief: parseFloat(tr.dataset.family||0)||0,
       bhxh, bhyt, bhtn, tncn_tax: tncn,
       total_income: income, total_deduct: deduct, final_amount: income-deduct,
       employer_insurance: parseFloat(tr.dataset.employer||0)||0,
     };
   });
 }
+
+function updateOtHints() {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('hintMultN', WORK_CAL.mult_normal);
+  set('hintMultSat', WORK_CAL.mult_sat);
+  set('hintMultWe', WORK_CAL.mult_weekend);
+  set('hintMultHol', WORK_CAL.mult_holiday);
+}
+
+async function parseApiJson(res) {
+  const text = await res.text();
+  if (!text) throw new Error(res.ok ? 'Phản hồi trống' : ('HTTP ' + res.status));
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    const preview = text.replace(/\s+/g, ' ').slice(0, 80);
+    throw new Error((res.ok ? 'JSON không hợp lệ' : ('HTTP ' + res.status)) + ': ' + preview);
+  }
+}
+
+const WORK_CALENDAR_URLS = ['/api/sme/payroll/work-calendar', '/api/hrm/work-calendar'];
+
+async function fetchWorkCalendar(pathSuffix, options) {
+  let lastErr;
+  for (const base of WORK_CALENDAR_URLS) {
+    try {
+      const res = await fetch(base + (pathSuffix || ''), options);
+      if (res.status === 404) {
+        lastErr = new Error('HTTP 404: ' + base);
+        continue;
+      }
+      return await parseApiJson(res);
+    } catch (err) {
+      lastErr = err;
+      if (String(err.message || '').includes('404')) continue;
+      throw err;
+    }
+  }
+  throw lastErr || new Error('Không tìm thấy API lịch làm việc — hãy khởi động lại server Flask');
+}
+
+function renderHolidayRows(list) {
+  const tb = document.getElementById('holidayBody');
+  if (!tb) return;
+  const items = Array.isArray(list) ? list : [];
+  const hc = document.getElementById('holidayCount');
+  if (hc) hc.textContent = items.length;
+  tb.replaceChildren();
+  if (!items.length) {
+    const tr = document.createElement('tr');
+    tr.className = 'hol-placeholder';
+    const td = document.createElement('td');
+    td.colSpan = 3;
+    td.className = 'text-muted small text-center';
+    td.textContent = 'Chưa có — bấm "Nạp lễ VN" hoặc "Thêm ngày"';
+    tr.appendChild(td);
+    tb.appendChild(tr);
+    return;
+  }
+  items.forEach((h) => {
+    const tr = document.createElement('tr');
+    const tdDate = document.createElement('td');
+    const inpDate = document.createElement('input');
+    inpDate.type = 'date';
+    inpDate.className = 'form-control form-control-sm hol-date';
+    inpDate.value = String(h.holiday_date || h.date || '').slice(0, 10);
+    tdDate.appendChild(inpDate);
+    const tdName = document.createElement('td');
+    const inpName = document.createElement('input');
+    inpName.type = 'text';
+    inpName.className = 'form-control form-control-sm hol-name';
+    inpName.value = h.name || '';
+    tdName.appendChild(inpName);
+    const tdAct = document.createElement('td');
+    const btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'btn btn-sm btn-outline-danger hol-del';
+    btnDel.textContent = '\u00D7';
+    btnDel.addEventListener('click', () => {
+      tr.remove();
+      const n = tb.querySelectorAll('.hol-date').length;
+      if (hc) hc.textContent = n;
+      if (!n) renderHolidayRows([]);
+    });
+    tdAct.appendChild(btnDel);
+    tr.append(tdDate, tdName, tdAct);
+    tb.appendChild(tr);
+  });
+}
+
+function collectHolidayRows() {
+  return [...document.querySelectorAll('#holidayBody tr')]
+    .filter(tr => tr.querySelector('.hol-date'))
+    .map(tr => ({
+      holiday_date: tr.querySelector('.hol-date')?.value || '',
+      name: tr.querySelector('.hol-name')?.value || 'Ngày lễ',
+    }))
+    .filter(h => h.holiday_date);
+}
+
+async function loadWorkCalendar() {
+  const yy = parseInt(elY?.value, 10) || now.getFullYear();
+  const hy = document.getElementById('wcHolidayYear');
+  if (hy) hy.value = yy;
+  try {
+    const json = await fetchWorkCalendar('?year=' + yy);
+    if (!json.success) {
+      console.warn('loadWorkCalendar', json.error || json);
+      return;
+    }
+    applyWorkCalendar(json.data);
+    updateOtHints();
+    document.querySelectorAll('.wd-chk').forEach(ch => {
+      ch.checked = (json.data.work_weekdays || []).includes(parseInt(ch.value, 10));
+    });
+    document.getElementById('wcHoursDay').value = json.data.hours_per_day || 8;
+    const setTime=(id,v)=>{const el=document.getElementById(id); if(el&&v) el.value=String(v).slice(0,5);};
+    setTime('wcWorkStart', json.data.work_start);
+    setTime('wcLunchStart', json.data.lunch_start);
+    setTime('wcLunchEnd', json.data.lunch_end);
+    setTime('wcWorkEnd', json.data.work_end);
+    document.getElementById('wcMultNormal').value = json.data.mult_normal || 1.5;
+    document.getElementById('wcMultSat').value = json.data.mult_sat || 1.5;
+    document.getElementById('wcMultWeekend').value = json.data.mult_weekend || 2;
+    document.getElementById('wcMultHoliday').value = json.data.mult_holiday || 3;
+    renderHolidayRows(json.holidays || []);
+  } catch (err) {
+    console.error('loadWorkCalendar', err);
+  }
+}
+
+document.getElementById('workCalendarModal')?.addEventListener('show.bs.modal', loadWorkCalendar);
+
+document.getElementById('btnAddHoliday')?.addEventListener('click', () => {
+  const tb = document.getElementById('holidayBody');
+  const ph = tb.querySelector('.hol-placeholder');
+  if (ph) ph.remove();
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><input type="date" class="form-control form-control-sm hol-date"></td>
+    <td><input type="text" class="form-control form-control-sm hol-name" placeholder="Tên ngày lễ"></td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger hol-del">×</button></td>`;
+  tr.querySelector('.hol-del').addEventListener('click', () => tr.remove());
+  tb.appendChild(tr);
+});
+
+document.getElementById('btnSeedHolidays')?.addEventListener('click', async () => {
+  const yy = parseInt(document.getElementById('wcHolidayYear')?.value, 10) || now.getFullYear();
+  const btn = document.getElementById('btnSeedHolidays');
+  if (btn) btn.disabled = true;
+  try {
+    const json = await fetchWorkCalendar('', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ year: yy, seed_holidays: true }),
+    });
+    if (!json.success) return alert(json.error || 'Không nạp được lễ VN');
+    renderHolidayRows(json.holidays || []);
+    alert('Đã nạp ' + (json.paid_holiday_count || (json.holidays || []).length) + ' ngày lễ năm ' + yy);
+  } catch (err) {
+    alert('Lỗi: ' + (err.message || err));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+});
+
+document.getElementById('btnSaveWorkCalendar')?.addEventListener('click', async () => {
+  const btn = document.getElementById('btnSaveWorkCalendar');
+  const work_weekdays = [...document.querySelectorAll('.wd-chk:checked')].map(ch => parseInt(ch.value, 10));
+  if (!work_weekdays.length) return alert('Chọn ít nhất 1 ngày làm việc');
+  const holidays = collectHolidayRows();
+  const yy = parseInt(document.getElementById('wcHolidayYear')?.value, 10) || now.getFullYear();
+  const body = {
+    year: yy,
+    work_weekdays,
+    hours_per_day: document.getElementById('wcHoursDay')?.value,
+    work_start: document.getElementById('wcWorkStart')?.value,
+    lunch_start: document.getElementById('wcLunchStart')?.value,
+    lunch_end: document.getElementById('wcLunchEnd')?.value,
+    work_end: document.getElementById('wcWorkEnd')?.value,
+    mult_normal: document.getElementById('wcMultNormal')?.value,
+    mult_sat: document.getElementById('wcMultSat')?.value,
+    mult_weekend: document.getElementById('wcMultWeekend')?.value,
+    mult_holiday: document.getElementById('wcMultHoliday')?.value,
+  };
+  if (holidays.length) {
+    body.holidays = holidays;
+    body.replace_holidays = true;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Đang lưu…'; }
+  try {
+    const json = await fetchWorkCalendar('', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
+    });
+    if (!json.success) return alert(json.error || 'Lưu thất bại');
+    applyWorkCalendar(json.data);
+    updateOtHints();
+    renderHolidayRows(json.holidays || holidays);
+    const modalEl = document.getElementById('workCalendarModal');
+    const inst = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+    if (inst) inst.hide();
+    alert(json.message || ('Đã lưu — ' + (json.paid_holiday_count || holidays.length) + ' ngày lễ'));
+    if (typeof document.getElementById('btnLoad')?.onclick === 'function') {
+      document.getElementById('btnLoad').onclick();
+    }
+  } catch (err) {
+    alert('Lỗi: ' + (err.message || err));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Lưu & tải lại bảng lương'; }
+  }
+});
+
+async function applyOtFromAttendance(otMap) {
+  document.querySelectorAll('#tbody tr[data-eid]').forEach(tr => {
+    const eid = parseInt(tr.dataset.eid, 10);
+    const o = otMap[eid];
+    if (!o) return;
+    const set = (f, v) => { const el = tr.querySelector(`[data-f=${f}]`); if (el) el.value = v; };
+    set('ot_hours', o.ot_hours || 0);
+    set('ot_hours_weekend_sat', o.ot_hours_weekend_sat || 0);
+    set('ot_hours_weekend', o.ot_hours_weekend || 0);
+    set('ot_hours_holiday', o.ot_hours_holiday || 0);
+    const days = o.actual_working_days ?? o.work_days;
+    if (days > 0) set('actual_working_days', days);
+    recalcRow(tr);
+  });
+}
+
+document.getElementById('btnFetchOt')?.addEventListener('click', async () => {
+  const q = new URLSearchParams({ month: elM.value, year: elY.value });
+  const res = await fetch('/api/sme/payroll/ot-from-attendance?' + q);
+  const json = await res.json();
+  if (!json.success) return alert(json.error || 'Không lấy được từ chấm công');
+  if (json.work_calendar) applyWorkCalendar(json.work_calendar);
+  await applyOtFromAttendance(json.data || {});
+});
 
 async function loadRuns(){
   const res = await fetch('/api/sme/payroll/runs');
@@ -414,29 +908,36 @@ async function voidRun(month, year){
 }
 
 document.getElementById('btnLoad').onclick = async () => {
-  const q = new URLSearchParams({month: m.value, year: y.value});
+  const q = new URLSearchParams({month: elM.value, year: elY.value});
   const res = await fetch('/api/sme/payroll/preview?'+q);
   const json = await res.json();
   if (json.success === false) {
     return alert(json.error || json.message || 'Không tải được');
   }
   if (json.config) applyConfig(json.config);
-  standardDays = json.standard_days || getStandardWorkingDays(parseInt(m.value,10), parseInt(y.value,10));
-  document.getElementById('stdDaysHint').textContent = ` Công chuẩn kỳ: ${standardDays} ngày (trừ CN).`;
-  document.getElementById('cfgMonth').value = m.value;
-  document.getElementById('cfgYear').value = y.value;
+  if (json.work_calendar) applyWorkCalendar(json.work_calendar);
+  else if (json.config?.work_calendar) applyWorkCalendar(json.config.work_calendar);
+  updateOtHints();
+  standardDays = json.standard_days || getStandardWorkingDays(parseInt(elM.value,10), parseInt(elY.value,10));
+  const paidHol = json.paid_holidays_in_month || 0;
+  let hint = ` Công chuẩn kỳ: ${standardDays} ngày (theo lịch DN).`;
+  if (paidHol > 0) hint += ` Tháng này có ${paidHol} ngày lễ hưởng lương (tự cộng công nếu không quét thẻ).`;
+  document.getElementById('stdDaysHint').textContent = hint;
+  document.getElementById('cfgMonth').value = elM.value;
+  document.getElementById('cfgYear').value = elY.value;
   rows = json.records || json.data || [];
   render();
+  document.querySelectorAll('#tbody tr[data-eid]').forEach(tr => recalcRow(tr));
 };
 document.getElementById('btnAccrue').onclick = async () => {
   const records = collectRecords();
   if (!records.length) return alert('Chưa có dòng lương');
-  if (!confirm(`Chốt bảng lương T${m.value}/${y.value} và ghi sổ kép?`)) return;
+  if (!confirm(`Chốt bảng lương T${elM.value}/${elY.value} và ghi sổ kép?`)) return;
   const res = await fetch('/api/sme/payroll/accrue', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
-      month: parseInt(m.value,10), year: parseInt(y.value,10),
-      date: postDate.value, records
+      month: parseInt(elM.value,10), year: parseInt(elY.value,10),
+      date: elPostDate.value, records
     })
   });
   const json = await res.json();
@@ -445,24 +946,25 @@ document.getElementById('btnAccrue').onclick = async () => {
   loadRuns();
 };
 function syncPayLink(){
-  const mm=document.getElementById('m').value, yy=document.getElementById('y').value;
+  const mm=elM.value, yy=elY.value;
   const pay=document.getElementById('btnPay');
   if(pay) pay.href='{{ url_for("SME_PhaiTraCongNhanVien") }}?month='+mm+'&year='+yy;
 }
-{% if focus == 'payable' %}
-document.getElementById('btnPay').classList.add('btn-lg');
-{% endif %}
 function syncPrint(){
-  const m=document.getElementById('m').value, y=document.getElementById('y').value;
-  document.getElementById('btnPrint').href='/SME_salary/in?month='+m+'&year='+y;
-  document.getElementById('cfgMonth').value = m;
-  document.getElementById('cfgYear').value = y;
+  const mm=elM.value, yy=elY.value;
+  document.getElementById('btnPrint').href='/SME_salary/in?month='+mm+'&year='+yy;
+  document.getElementById('cfgMonth').value = mm;
+  document.getElementById('cfgYear').value = yy;
   syncPayLink();
 }
 document.getElementById('m').addEventListener('change', syncPrint);
 document.getElementById('y').addEventListener('change', syncPrint);
+{% if focus == 'payable' %}
+document.getElementById('btnPay').classList.add('btn-lg');
+{% endif %}
 syncPrint();
 loadRuns();
+loadWorkCalendar().catch(() => {});
 document.getElementById('btnLoad').click();
 </script>
 {% endblock %}

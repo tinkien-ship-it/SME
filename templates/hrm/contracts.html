@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+{% block title %}HĐLĐ — Nhân sự{% endblock %}
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-0">Hợp đồng lao động (chuẩn pháp lý VN)</h4>
+      <div class="text-muted small">Mã NV <strong>NV00001</strong> · Số HĐ <strong>HĐLĐ-000001</strong> — tự sinh khi tạo HĐLĐ</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openForm()">+ Hợp đồng</button>
+  </div>
+  <div class="table-responsive bg-white border rounded">
+    <table class="table table-sm mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Số HĐ</th><th>Mã/NV</th><th>Loại</th><th>Bắt đầu</th><th>Kết thúc</th>
+        <th class="text-end">Lương chính</th><th class="text-end">PC chịu BH</th>
+        <th class="text-end">PC miễn thuế</th><th></th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+</div>
+<div class="modal fade" id="md"><div class="modal-dialog modal-lg"><form class="modal-content" onsubmit="return save(event)">
+  <div class="modal-header"><h5 class="modal-title" id="mdTitle">Hợp đồng lao động</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="contract_id">
+    <div class="border rounded p-2 mb-3">
+      <div class="fw-semibold small mb-2">Nhân viên</div>
+      <div id="empModeSwitch" class="mb-2">
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="empMode" id="empModeExisting" value="existing" checked>
+          <label class="form-check-label small" for="empModeExisting">Chọn NV có sẵn</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="empMode" id="empModeNew" value="new">
+          <label class="form-check-label small" for="empModeNew">Tạo NV mới (mã tự sinh)</label>
+        </div>
+      </div>
+      <div id="empExistingBox" class="row g-2 mb-2">
+        <div class="col-md-8">
+          <label class="small">Nhân viên *</label>
+          <select id="employee_pick" class="form-select form-select-sm">
+            <option value="">— Chọn nhân viên —</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="small">Mã NV</label>
+          <input id="employee_code_show" class="form-control form-control-sm" readonly placeholder="—">
+        </div>
+      </div>
+      <div class="row g-2" id="empFieldsRow">
+        <div class="col-md-4">
+          <label class="small">Họ tên *</label>
+          <input id="fullname" class="form-control form-control-sm" placeholder="Nguyễn Văn A">
+        </div>
+        <div class="col-md-3">
+          <label class="small">CCCD/CMND</label>
+          <input id="id_card" class="form-control form-control-sm" placeholder="Có thể sửa nếu nhập sai">
+        </div>
+        <div class="col-md-3">
+          <label class="small">Điện thoại</label>
+          <input id="phone" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <label class="small">Ngày sinh</label>
+          <input type="date" id="birth_date" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2" id="nextCodeCol">
+          <label class="small">Mã NV (dự kiến)</label>
+          <input id="next_code_preview" class="form-control form-control-sm bg-light" readonly>
+        </div>
+        <div class="col-md-12">
+          <label class="small">Địa chỉ</label>
+          <input id="address" class="form-control form-control-sm" placeholder="Địa chỉ liên hệ / HKTT">
+        </div>
+      </div>
+      <input type="hidden" id="employee_id">
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-3">
+        <label class="small">Số HĐ</label>
+        <input id="contract_no" class="form-control form-control-sm bg-light" readonly placeholder="HĐLĐ-000001">
+      </div>
+      <div class="col-md-3"><label class="small">Loại HĐ</label>
+        <select id="contract_type" class="form-select form-select-sm">
+          <option value="probation">Thử việc</option>
+          <option value="definite">Xác định thời hạn</option>
+          <option value="indefinite" selected>Không xác định thời hạn</option>
+          <option value="apprentice">Học việc</option>
+        </select>
+      </div>
+      <div class="col-md-3"><label class="small">Chức vụ</label><input id="position" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="small">Bắt đầu *</label><input type="date" id="start_date" class="form-control form-control-sm" required></div>
+      <div class="col-md-3"><label class="small">Kết thúc</label><input type="date" id="end_date" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="small">Hết thử việc</label><input type="date" id="probation_end_date" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="small">Bộ phận</label><input id="department" class="form-control form-control-sm" placeholder="ADMIN/SALES/…"></div>
+    </div>
+    <div class="border rounded p-2 mb-2">
+      <div class="fw-semibold small mb-2">Lương &amp; phụ cấp chịu BH/thuế</div>
+      <div class="row g-2">
+        <div class="col-md-3"><label class="small">Lương chính (HĐLĐ)</label><input type="number" id="base_salary" class="form-control form-control-sm" value="0"></div>
+        <div class="col-md-3"><label class="small">Mức lương đóng BHXH</label><input type="number" id="insurance_salary" class="form-control form-control-sm" value="0" placeholder="Tự tính nếu 0"></div>
+        <div class="col-md-3"><label class="small">PC chức vụ</label><input type="number" id="allowance_position" class="form-control form-control-sm" value="0"></div>
+        <div class="col-md-3"><label class="small">PC trách nhiệm</label><input type="number" id="allowance_responsibility" class="form-control form-control-sm" value="0"></div>
+        <div class="col-md-3"><label class="small">PC thâm niên</label><input type="number" id="allowance_seniority" class="form-control form-control-sm" value="0"></div>
+      </div>
+    </div>
+    <div class="border rounded p-2 mb-2">
+      <div class="fw-semibold small mb-2">Phụ cấp hỗ trợ (miễn thuế / khoán)</div>
+      <div class="row g-2">
+        <div class="col-md-4"><label class="small">PC ăn trưa (≤730k miễn thuế)</label><input type="number" id="allowance_lunch" class="form-control form-control-sm" value="730000"></div>
+        <div class="col-md-4"><label class="small">PC trang phục (≤5tr/năm)</label><input type="number" id="allowance_uniform" class="form-control form-control-sm" value="416667"></div>
+        <div class="col-md-4"><label class="small">PC điện thoại</label><input type="number" id="allowance_phone" class="form-control form-control-sm" value="0"></div>
+      </div>
+    </div>
+    <div class="border rounded p-2 mb-2">
+      <div class="fw-semibold small mb-2">Thời giờ làm việc <span class="text-muted fw-normal">(chuẩn công ty — 08:00–12:00, 13:00–17:00)</span></div>
+      <div class="row g-2 mb-1">
+        <div class="col-md-12">
+          <label class="small">Ngày làm việc trong tuần</label>
+          <input id="work_weekdays_display" class="form-control form-control-sm bg-light" readonly>
+          <input type="hidden" id="work_weekdays_str">
+        </div>
+        <div class="col-md-2"><label class="small">Giờ bắt đầu</label><input type="time" id="work_start_time" class="form-control form-control-sm bg-light" value="08:00" readonly tabindex="-1"></div>
+        <div class="col-md-2"><label class="small">Nghỉ trưa từ</label><input type="time" id="work_lunch_start" class="form-control form-control-sm bg-light" value="12:00" readonly tabindex="-1"></div>
+        <div class="col-md-2"><label class="small">Nghỉ trưa đến</label><input type="time" id="work_lunch_end" class="form-control form-control-sm bg-light" value="13:00" readonly tabindex="-1"></div>
+        <div class="col-md-2"><label class="small">Giờ kết thúc</label><input type="time" id="work_end_time" class="form-control form-control-sm bg-light" value="17:00" readonly tabindex="-1"></div>
+        <div class="col-md-2"><label class="small">Giờ/ngày</label><input type="number" step="0.5" id="work_hours_day" class="form-control form-control-sm bg-light" value="8" readonly tabindex="-1"></div>
+        <div class="col-md-2"><label class="small">Công chuẩn/tháng</label><input type="number" id="work_days_month" class="form-control form-control-sm" title="Theo ngày làm việc trong tuần"></div>
+      </div>
+      <div class="small text-muted" id="workDefaultsHint"></div>
+    </div>
+    <div class="row g-2">
+      <div class="col-md-12"><label class="small">Mô tả công việc (Điều 1 — mỗi dòng hoặc dấu ; 1 ý)</label><textarea id="notes" class="form-control form-control-sm" rows="2" placeholder="VD: Hạch toán chứng từ&#10;Lập báo cáo thuế…"></textarea></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="submit" class="btn btn-primary">Lưu &amp; đồng bộ hồ sơ NV</button>
+  </div>
+</form></div></div>
+<script>
+const money=n=>new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+const TYPES={};
+let ITEMS=[];
+let EMPLOYEES=[];
+
+let EDITING=false;
+let _skipEmpPickSync=false;
+
+function empMode(){
+  return document.querySelector('input[name="empMode"]:checked')?.value || 'existing';
+}
+
+function syncEmployeeFieldsFromPick(){
+  const eid = employee_pick.value;
+  const emp = EMPLOYEES.find(x => String(x.id) === String(eid));
+  if (!emp) return;
+  fullname.value = emp.fullname || '';
+  id_card.value = emp.id_card || '';
+  phone.value = emp.phone || '';
+  address.value = emp.address || '';
+  document.getElementById('birth_date').value = (emp.birth_date || '').slice(0, 10);
+}
+
+function setEmpFieldsReadonly(readonly){
+  fullname.readOnly = readonly;
+  phone.readOnly = false;
+  address.readOnly = false;
+  id_card.readOnly = false;
+  document.getElementById('birth_date').readOnly = false;
+  const bd = document.getElementById('birth_date');
+  if (readonly) {
+    fullname.classList.add('bg-light');
+  } else {
+    fullname.classList.remove('bg-light');
+  }
+  id_card.classList.remove('bg-light');
+  phone.classList.remove('bg-light');
+  address.classList.remove('bg-light');
+  bd.classList.remove('bg-light');
+}
+
+function toggleEmpMode(){
+  const isNew = empMode() === 'new';
+  document.getElementById('empExistingBox').classList.toggle('d-none', isNew);
+  document.getElementById('nextCodeCol').classList.toggle('d-none', !isNew);
+  setEmpFieldsReadonly(EDITING ? false : !isNew);
+  if (isNew) {
+    fullname.value = '';
+    id_card.value = '';
+    phone.value = '';
+    address.value = '';
+    document.getElementById('birth_date').value = '';
+    refreshNextCode();
+  } else if (employee_pick.value) {
+    syncEmployeeFieldsFromPick();
+  }
+}
+
+function setEditMode(on){
+  EDITING = !!on;
+  document.getElementById('empModeSwitch').classList.toggle('d-none', EDITING);
+  employee_pick.disabled = EDITING;
+  if (EDITING) setEmpFieldsReadonly(false);
+  else toggleEmpMode();
+}
+
+async function loadEmployees(){
+  try {
+    const rows = await (await fetch('/api/employees/manage?status=1')).json();
+    EMPLOYEES = Array.isArray(rows) ? rows : (rows.data || []);
+  } catch (_) { EMPLOYEES = []; }
+  const sel = document.getElementById('employee_pick');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Chọn nhân viên —</option>' + EMPLOYEES.map(e =>
+    `<option value="${e.id}" data-code="${e.employee_code||''}">${e.employee_code?e.employee_code+' · ':''}${e.fullname||('#'+e.id)}</option>`
+  ).join('');
+}
+
+async function refreshNextContractNo(){
+  try {
+    const j = await (await fetch('/api/hrm/contracts/next-no')).json();
+    const el = document.getElementById('contract_no');
+    if (el && j.success) el.value = j.contract_no || '';
+  } catch (_) {}
+}
+
+async function refreshNextCode(){
+  try {
+    const j = await (await fetch('/api/hrm/employees/next-code')).json();
+    const el = document.getElementById('next_code_preview');
+    if (el && j.success) el.value = j.employee_code || '';
+  } catch (_) {}
+}
+
+document.getElementById('employee_pick')?.addEventListener('change', function(){
+  if (_skipEmpPickSync || EDITING) return;
+  const opt = this.selectedOptions[0];
+  document.getElementById('employee_id').value = this.value || '';
+  document.getElementById('employee_code_show').value = opt?.dataset.code || '';
+  syncEmployeeFieldsFromPick();
+});
+
+function toTimeInput(v){
+  if(!v) return '';
+  const s=String(v).trim();
+  if(/^\d{1,2}:\d{2}$/.test(s)) return s.length===4?'0'+s:s;
+  if(/^\d{1,2}:\d{2}:\d{2}$/.test(s)) return s.slice(0,5);
+  return s;
+}
+
+async function loadWorkDefaults(startDate){
+  const sd = startDate || document.getElementById('start_date')?.value || '';
+  const q = sd ? ('?start_date='+encodeURIComponent(sd)) : '';
+  try{
+    const j = await (await fetch('/api/hrm/contracts/work-defaults'+q)).json();
+    if(!j.success) return;
+    applyWorkDefaults(j.data, {onlyIfEmpty: false});
+  }catch(_){}
+}
+
+function applyWorkDefaults(d, opts={}){
+  if(!d) return;
+  const onlyEmpty = !!opts.onlyIfEmpty;
+  const set=(id,val)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    if(onlyEmpty && el.value && el.value!=='0') return;
+    el.value = val ?? '';
+  };
+  set('work_weekdays_display', d.work_weekdays_display || '');
+  set('work_weekdays_str', d.work_weekdays_str || '');
+  set('work_start_time', toTimeInput(d.work_start_time || d.work_start));
+  set('work_lunch_start', toTimeInput(d.work_lunch_start || d.lunch_start));
+  set('work_lunch_end', toTimeInput(d.work_lunch_end || d.lunch_end));
+  set('work_end_time', toTimeInput(d.work_end_time || d.work_end));
+  set('work_hours_day', d.work_hours_day ?? 8);
+  set('work_days_month', d.work_days_month ?? '');
+  const hint=document.getElementById('workDefaultsHint');
+  if(hint){
+    hint.textContent = 'Công chuẩn tháng '+(d.standard_month||'')+'/'+(d.standard_year||'')+
+      ': '+d.work_days_month+' ngày (theo ngày làm việc: '+ (d.work_weekdays_display||'') +').';
+  }
+}
+
+function applyEmployeeFields(c){
+  if(!c) return;
+  document.getElementById('fullname').value = c.employee_name || c.fullname || '';
+  document.getElementById('id_card').value = c.employee_id_card || c.id_card || '';
+  document.getElementById('phone').value = c.employee_phone || c.phone || '';
+  document.getElementById('address').value = c.employee_address || c.address || '';
+  document.getElementById('birth_date').value = (c.employee_birth_date || c.birth_date || '').slice(0, 10);
+}
+
+function fillContractForm(c){
+  if(!c) return;
+  document.getElementById('contract_id').value=c.id||'';
+  contract_no.value=c.contract_no||'';
+  contract_type.value=c.contract_type||'indefinite';
+  position.value=c.position||'';
+  start_date.value=c.start_date||'';
+  end_date.value=c.end_date||'';
+  probation_end_date.value=c.probation_end_date||'';
+  department.value=c.department||'';
+  base_salary.value=c.base_salary??0;
+  insurance_salary.value=c.insurance_salary??0;
+  allowance_position.value=c.allowance_position??0;
+  allowance_responsibility.value=c.allowance_responsibility??0;
+  allowance_seniority.value=c.allowance_seniority??0;
+  allowance_lunch.value=c.allowance_lunch??730000;
+  allowance_uniform.value=c.allowance_uniform??416667;
+  allowance_phone.value=c.allowance_phone??0;
+  work_days_month.value=c.work_days_month??'';
+  notes.value=c.notes||'';
+  applyEmployeeFields(c);
+  document.getElementById('employee_id').value = c.employee_id || '';
+  loadWorkDefaults(c.start_date).then(()=>{
+    if (c.work_days_month) work_days_month.value = c.work_days_month;
+  });
+}
+
+document.getElementById('start_date')?.addEventListener('change', ()=> loadWorkDefaults(start_date.value));
+document.querySelectorAll('input[name="empMode"]').forEach(r => r.addEventListener('change', () => {
+  toggleEmpMode();
+  if (empMode() === 'new') refreshNextCode();
+}));
+
+async function load(){
+  const d=await(await fetch('/api/hrm/contracts?status=all')).json();
+  Object.assign(TYPES,d.types||{});
+  ITEMS=d.items||[];
+  tb.innerHTML=ITEMS.map(c=>{
+    const si=(+c.allowance_position||0)+(+c.allowance_responsibility||0)+(+c.allowance_seniority||0);
+    const free=(+c.allowance_lunch||0)+(+c.allowance_uniform||0)+(+c.allowance_phone||0);
+    return `<tr>
+      <td>${c.contract_no||('#'+c.id)}</td>
+      <td>${c.employee_code?c.employee_code+' · ':''}${c.employee_name||c.employee_id}</td>
+      <td>${TYPES[c.contract_type]||c.contract_type}</td>
+      <td>${c.start_date||''}</td><td>${c.end_date||'—'}</td>
+      <td class="text-end">${money(c.base_salary)}</td>
+      <td class="text-end">${money(si)}</td>
+      <td class="text-end">${money(free)}</td>
+      <td class="text-nowrap">
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="edit(${c.id})">Sửa</button>
+        <a class="btn btn-sm btn-outline-secondary" href="/hrm/contracts/${c.id}/print" target="_blank">In</a>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="delContract(${c.id})">Xóa</button>
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="9" class="text-center text-muted">Chưa có HĐ</td></tr>';
+}
+function openForm(){
+  setEditMode(false);
+  document.getElementById('mdTitle').textContent = 'Tạo hợp đồng lao động';
+  document.getElementById('contract_id').value='';
+  document.getElementById('empModeExisting').checked = true;
+  toggleEmpMode();
+  ['position','start_date','end_date','probation_end_date','department','notes','fullname','id_card','phone','address','birth_date','insurance_salary'].forEach(k=>{
+    const el=document.getElementById(k); if(el) el.value='';
+  });
+  document.getElementById('contract_no').value = '';
+  employee_pick.disabled = false;
+  employee_pick.value = '';
+  employee_id.value = '';
+  employee_code_show.value = '';
+  base_salary.value=0; allowance_position.value=0; allowance_responsibility.value=0; allowance_seniority.value=0;
+  allowance_lunch.value=730000; allowance_uniform.value=416667; allowance_phone.value=0;
+  contract_type.value='indefinite';
+  start_date.value = new Date().toISOString().slice(0,10);
+  loadEmployees().then(()=>{
+    refreshNextCode();
+    refreshNextContractNo();
+    loadWorkDefaults(start_date.value);
+  });
+  new bootstrap.Modal(md).show();
+}
+function edit(cid){
+  const c=ITEMS.find(x=>x.id==cid); if(!c) return;
+  setEditMode(true);
+  document.getElementById('mdTitle').textContent = 'Sửa hợp đồng lao động';
+  document.getElementById('empModeExisting').checked = true;
+  toggleEmpMode();
+  fillContractForm(c);
+  loadEmployees().then(()=>{
+    _skipEmpPickSync = true;
+    employee_pick.value = String(c.employee_id||'');
+    _skipEmpPickSync = false;
+    employee_code_show.value = c.employee_code || '';
+    document.getElementById('employee_id').value = String(c.employee_id||'');
+    applyEmployeeFields(c);
+  });
+  new bootstrap.Modal(md).show();
+}
+async function delContract(cid){
+  if(!confirm('Xóa hợp đồng lao động này? Hành động không thể hoàn tác.')) return;
+  const r=await(await fetch('/api/hrm/contracts/'+cid,{method:'DELETE'})).json();
+  if(r.error||r.success===false) alert(r.error||'Không xóa được');
+  else load();
+}
+async function save(e){
+  e.preventDefault();
+  const contractId = document.getElementById('contract_id').value.trim();
+  let employeeId = document.getElementById('employee_id').value || employee_pick.value;
+  if (!employeeId && contractId) {
+    const row = ITEMS.find(x => String(x.id) === String(contractId));
+    if (row) employeeId = String(row.employee_id || '');
+  }
+  const body={
+    id: contractId || null,
+    employee_id: employeeId || null,
+    contract_no:contract_no.value,
+    contract_type:contract_type.value, start_date:start_date.value, end_date:end_date.value,
+    probation_end_date:probation_end_date.value, position:position.value, department:department.value,
+    base_salary:base_salary.value, insurance_salary:insurance_salary.value,
+    allowance_position:allowance_position.value, allowance_responsibility:allowance_responsibility.value,
+    allowance_seniority:allowance_seniority.value, allowance_lunch:allowance_lunch.value,
+    allowance_uniform:allowance_uniform.value, allowance_phone:allowance_phone.value,
+    work_days_month:work_days_month.value, work_hours_day:work_hours_day.value,
+    work_start_time:work_start_time.value, work_lunch_start:work_lunch_start.value,
+    work_lunch_end:work_lunch_end.value, work_end_time:work_end_time.value,
+    work_weekdays_str:work_weekdays_str.value,
+    notes:notes.value, status:'active', sync_employee:true
+  };
+  if (empMode() === 'new') {
+    body.create_employee = true;
+    body.employee_id = null;
+    body.fullname = document.getElementById('fullname').value.trim();
+    body.id_card = document.getElementById('id_card').value.trim();
+    body.phone = document.getElementById('phone').value.trim();
+    body.address = document.getElementById('address').value.trim();
+    body.birth_date = document.getElementById('birth_date').value.trim();
+    if (!body.fullname) return alert('Nhập họ tên nhân viên mới');
+  } else {
+    if (!body.employee_id) return alert('Chọn nhân viên');
+    body.fullname = document.getElementById('fullname').value.trim();
+    body.id_card = document.getElementById('id_card').value.trim();
+    body.phone = document.getElementById('phone').value.trim();
+    body.address = document.getElementById('address').value.trim();
+    body.birth_date = document.getElementById('birth_date').value.trim();
+    if (!body.fullname) return alert('Nhập họ tên nhân viên');
+  }
+  if (!body.id) {
+    body.contract_no = '';
+  }
+  const r=await(await fetch('/api/hrm/contracts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  if(r.error||r.success===false) alert(r.error||'Lỗi');
+  else {
+    const code = r.item?.employee_code || r.item?.employee_code_assigned;
+    if (code && empMode() === 'new') alert('Đã tạo NV mã ' + code);
+    if (r.item) {
+      const idx = ITEMS.findIndex(x => String(x.id) === String(r.item.id));
+      if (idx >= 0) ITEMS[idx] = r.item;
+    }
+    bootstrap.Modal.getInstance(md).hide();
+    setEditMode(false);
+    loadEmployees().then(load);
+  }
+  return false;
+}
+loadEmployees();
+load();
+toggleEmpMode();
+</script>
+{% endblock %}

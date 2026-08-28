@@ -139,6 +139,30 @@ def _working_days_exclude_sunday(month: int, year: int) -> int:
     )
 
 
+def _standard_days_for_month(conn: sqlite3.Connection, month: int, year: int) -> int:
+    try:
+        from Services.hrm.work_calendar import (
+            count_standard_work_days,
+            get_work_calendar_config,
+            holiday_dates_set,
+        )
+        cfg = get_work_calendar_config(conn)
+        hol = holiday_dates_set(conn, year)
+        return count_standard_work_days(month, year, cfg['work_weekdays'], hol)
+    except Exception:
+        return _working_days_exclude_sunday(month, year)
+
+
+def _ot_calc_kwargs(calendar_cfg: dict[str, Any]) -> dict[str, float]:
+    return {
+        'mult_normal': float(calendar_cfg.get('mult_normal') or 1.5),
+        'mult_sat': float(calendar_cfg.get('mult_sat') or 1.5),
+        'mult_weekend': float(calendar_cfg.get('mult_weekend') or 2.0),
+        'mult_holiday': float(calendar_cfg.get('mult_holiday') or 3.0),
+        'hours_per_day': float(calendar_cfg.get('hours_per_day') or 8.0),
+    }
+
+
 DEFAULT_SELF_DEDUCTION = 11_000_000
 DEFAULT_DEPENDENT_DEDUCTION = 4_400_000
 
@@ -164,6 +188,11 @@ def get_salary_insurance_config(conn: sqlite3.Connection) -> dict[str, Any]:
         'rate_bhxh_chu': float(info.get('rate_bhxh_chu') or 17.5),
         'rate_bhyt_chu': float(info.get('rate_bhyt_chu') or 3),
         'rate_bhtn_chu': float(info.get('rate_bhtn_chu') or 1),
+        'bhxh_ref_salary': float(info.get('bhxh_ref_salary') or 2_340_000),
+        'bhxh_cap_multiplier': float(info.get('bhxh_cap_multiplier') or 20),
+        'bhtn_cap_multiplier': float(info.get('bhtn_cap_multiplier') or 20),
+        'ot_cap_month_hours': float(info.get('ot_cap_month_hours') or 40),
+        'ot_cap_year_hours': float(info.get('ot_cap_year_hours') or 200),
         'representative_name': info.get('representative_name') or '',
         'regions': regions,
         'rates_frac': {
@@ -207,10 +236,20 @@ def update_salary_insurance_config(
     rate_bhxh_chu: float | int | str | None = None,
     rate_bhyt_chu: float | int | str | None = None,
     rate_bhtn_chu: float | int | str | None = None,
+    bhxh_ref_salary: float | int | str | None = None,
+    bhxh_cap_multiplier: float | int | str | None = None,
+    bhtn_cap_multiplier: float | int | str | None = None,
+    ot_cap_month_hours: float | int | str | None = None,
+    ot_cap_year_hours: float | int | str | None = None,
     commit: bool = True,
 ) -> dict[str, Any]:
-    """Lưu cấu hình lương & tỷ lệ BH (business_info) — dùng chung SME/HKD."""
+    """Lưu cấu hình lương & tỷ lệ BH + trần (business_info) — dùng chung SME/HKD."""
     ensure_salary_insurance_columns(conn)
+    try:
+        from Services.hrm.schema import ensure_hrm_schema
+        ensure_hrm_schema(conn)
+    except Exception:
+        pass
     row = conn.execute('SELECT id FROM business_info LIMIT 1').fetchone()
     if not row:
         raise ValueError('Chưa có business_info — cấu hình doanh nghiệp trước.')
@@ -231,7 +270,12 @@ def update_salary_insurance_config(
             rate_bhtn = ?,
             rate_bhxh_chu = ?,
             rate_bhyt_chu = ?,
-            rate_bhtn_chu = ?
+            rate_bhtn_chu = ?,
+            bhxh_ref_salary = ?,
+            bhxh_cap_multiplier = ?,
+            bhtn_cap_multiplier = ?,
+            ot_cap_month_hours = ?,
+            ot_cap_year_hours = ?
         """,
         (
             region if region is not None else current['salary_region'],
@@ -242,6 +286,11 @@ def update_salary_insurance_config(
             _num(rate_bhxh_chu, current['rate_bhxh_chu']),
             _num(rate_bhyt_chu, current['rate_bhyt_chu']),
             _num(rate_bhtn_chu, current['rate_bhtn_chu']),
+            _num(bhxh_ref_salary, current.get('bhxh_ref_salary') or 2_340_000),
+            _num(bhxh_cap_multiplier, current.get('bhxh_cap_multiplier') or 20),
+            _num(bhtn_cap_multiplier, current.get('bhtn_cap_multiplier') or 20),
+            _num(ot_cap_month_hours, current.get('ot_cap_month_hours') or 40),
+            _num(ot_cap_year_hours, current.get('ot_cap_year_hours') or 200),
         ),
     )
     if commit:
@@ -283,13 +332,15 @@ def compute_payroll_line(
     dependents: int = 0,
     dependent_deduction: float = DEFAULT_DEPENDENT_DEDUCTION,
     time_salary_override: float | None = None,
+    insurance_salary: float | None = None,
+    tax_exempt_ot: float = 0.0,
+    conn: sqlite3.Connection | None = None,
 ) -> dict[str, float]:
     """
-    Công thức (khớp Hộ Kinh Doanh):
+    Công thức (khớp Hộ Kinh Doanh + trần BH + miễn thuế phần chênh OT):
     - Lương TG = base_salary / công chuẩn × ngày công (hoặc override)
-    - BHXH/BHYT/BHTN NLĐ = lương TG × tỷ lệ (Chủ hộ: BHTN = 0)
-    - TNCN = biểu lũy tiến trên (thu nhập − BH NLĐ − GT bản thân − NPT×GT)
-    - Thực lĩnh = thu nhập − BH − TNCN
+    - BH = mức đóng sau trần × tỷ lệ (Chủ hộ: BHTN = 0)
+    - TNCN = biểu lũy tiến trên (thu nhập − BH − GTGC − phần OT miễn thuế)
     """
     std = max(int(standard_days or 0), 0)
     days = float(actual_working_days or 0)
@@ -309,24 +360,50 @@ def compute_payroll_line(
     r_bhyt = float(rf.get('nld_bhyt') or 0.015)
     r_bhtn = 0.0 if is_chu_ho else float(rf.get('nld_bhtn') or 0.01)
 
-    bhxh = round(time_salary * r_bhxh)
-    bhyt = round(time_salary * r_bhyt)
-    bhtn = round(time_salary * r_bhtn)
+    # Mức đóng BH sau trần (nếu có conn); fallback = lương TG như trước
+    bhxh_base = time_salary
+    bhyt_base = time_salary
+    bhtn_base = time_salary
+    cap_meta = {
+        'raw_base': time_salary,
+        'bhxh_bhyt_cap': 0.0,
+        'bhtn_cap': 0.0,
+        'capped_bhxh': False,
+        'capped_bhtn': False,
+    }
+    if conn is not None:
+        try:
+            from Services.hrm.insurance_cap import apply_insurance_caps
+            cap_meta = apply_insurance_caps(
+                conn,
+                insurance_salary=insurance_salary,
+                base_salary=base,
+                time_salary=time_salary,
+            )
+            bhxh_base = float(cap_meta['bhxh_base'])
+            bhyt_base = float(cap_meta['bhyt_base'])
+            bhtn_base = float(cap_meta['bhtn_base'])
+        except Exception:
+            pass
+
+    bhxh = round(bhxh_base * r_bhxh)
+    bhyt = round(bhyt_base * r_bhyt)
+    bhtn = round(bhtn_base * r_bhtn)
     bh_total = bhxh + bhyt + bhtn
 
     gt = float(self_deduction or 0) + int(dependents or 0) * float(dependent_deduction or 0)
-    taxable = total_income - bh_total - gt
+    ot_exempt = max(0.0, float(tax_exempt_ot or 0))
+    taxable = total_income - bh_total - gt - ot_exempt
     tncn_tax = max(0, round(calculate_tncn_progressive(taxable)))
     total_deduct = bh_total + tncn_tax
     final_amount = total_income - total_deduct
 
-    # BH phía DN (Chủ / người SDLĐ)
     r_chu_bhxh = float(rf.get('chu_bhxh') or 0.175)
     r_chu_bhyt = float(rf.get('chu_bhyt') or 0.03)
     r_chu_bhtn = 0.0 if is_chu_ho else float(rf.get('chu_bhtn') or 0.01)
-    employer_bhxh = round(time_salary * r_chu_bhxh)
-    employer_bhyt = round(time_salary * r_chu_bhyt)
-    employer_bhtn = round(time_salary * r_chu_bhtn)
+    employer_bhxh = round(bhxh_base * r_chu_bhxh)
+    employer_bhyt = round(bhyt_base * r_chu_bhyt)
+    employer_bhtn = round(bhtn_base * r_chu_bhtn)
 
     return {
         'time_salary': float(time_salary),
@@ -345,6 +422,11 @@ def compute_payroll_line(
         'employer_bhtn': float(employer_bhtn),
         'employer_insurance': float(employer_bhxh + employer_bhyt + employer_bhtn),
         'is_chu_ho': 1.0 if is_chu_ho else 0.0,
+        'insurance_base_bhxh': float(bhxh_base),
+        'insurance_base_bhtn': float(bhtn_base),
+        'tax_exempt_ot': float(ot_exempt),
+        'bhxh_capped': 1.0 if cap_meta.get('capped_bhxh') else 0.0,
+        'bhtn_capped': 1.0 if cap_meta.get('capped_bhtn') else 0.0,
     }
 
 
@@ -359,9 +441,32 @@ def preview_payroll_grid(
     )
 
     ensure_payroll_schema(conn, commit=False)
-    standard_days = _working_days_exclude_sunday(month, year)
+    standard_days = _standard_days_for_month(conn, month, year)
     config = get_salary_insurance_config(conn)
     rates_frac = config['rates_frac']
+
+    calendar_cfg: dict[str, Any] = {}
+    ot_auto_map: dict[int, dict[str, float]] = {}
+    paid_holidays_month = 0
+    try:
+        from Services.hrm.work_calendar import (
+            attendance_breakdown_map,
+            get_work_calendar_config,
+            holiday_dates_set,
+            paid_holidays_in_month,
+            seed_default_holidays,
+        )
+        seed_default_holidays(conn, year, commit=False)
+        calendar_cfg = get_work_calendar_config(conn)
+        hol = holiday_dates_set(conn, year)
+        paid_holidays_month = len(
+            paid_holidays_in_month(month, year, calendar_cfg['work_weekdays'], hol)
+        )
+        ot_auto_map = attendance_breakdown_map(conn, month, year, config=calendar_cfg)
+        config = {**config, 'work_calendar': calendar_cfg}
+    except Exception:
+        calendar_cfg = {}
+    ot_kw = _ot_calc_kwargs(calendar_cfg) if calendar_cfg else _ot_calc_kwargs({})
 
     from Services.attendance_helpers import get_monthly_work_days_map
     from Services.chu_ho_helpers import (
@@ -376,11 +481,47 @@ def preview_payroll_grid(
     except Exception:
         pass
 
+    hours_map: dict = {}
+    apply_formulas_to_line = None
+    kpi_map: dict[int, float] = {}
+    try:
+        from Services.hrm.schema import ensure_hrm_schema
+        from Services.hrm.shifts import monthly_hours_from_punches
+        from Services.hrm.formula_engine import apply_formulas_to_line as _apply_f
+        ensure_hrm_schema(conn)
+        hours_map = monthly_hours_from_punches(conn, month, year)
+        apply_formulas_to_line = _apply_f
+    except Exception:
+        pass
+    try:
+        for r in conn.execute(
+            """
+            SELECT employee_id, COALESCE(weight, target_value, 0) AS score
+            FROM hr_kpi_targets
+            WHERE scope='employee' AND period_year=?
+              AND IFNULL(period_month,0) IN (0, ?)
+              AND employee_id IS NOT NULL
+            """,
+            (year, month),
+        ).fetchall():
+            eid = int(r['employee_id'] if hasattr(r, 'keys') else r[0])
+            kpi_map[eid] = min(100.0, float(r['score'] if hasattr(r, 'keys') else r[1] or 0))
+    except Exception:
+        pass
+
     attendance_days = get_monthly_work_days_map(conn, month, year)
 
     query = """
         SELECT
             e.id as employee_id, e.fullname, e.salary_rate, e.base_salary,
+            COALESCE(e.insurance_salary, 0) AS insurance_salary,
+            COALESCE(e.employee_code, '') AS employee_code,
+            COALESCE(e.allowance_position, 0) AS allowance_position,
+            COALESCE(e.allowance_responsibility, 0) AS allowance_responsibility,
+            COALESCE(e.allowance_seniority, 0) AS allowance_seniority,
+            COALESCE(e.allowance_lunch, 0) AS allowance_lunch,
+            COALESCE(e.allowance_uniform, 0) AS allowance_uniform,
+            COALESCE(e.allowance_phone, 0) AS allowance_phone,
             e.position, e.is_chu_ho, e.department,
             COALESCE(e.allowance_fund, 0) AS emp_allowance_fund,
             COALESCE(e.allowance_other, 0) AS emp_allowance_other,
@@ -391,7 +532,13 @@ def preview_payroll_grid(
             s.id as salary_id, s.actual_working_days, s.time_salary,
             s.allowance_fund, s.allowance_other, s.bonus,
             s.bhxh, s.bhyt, s.bhtn, s.tncn_tax, s.total_income,
-            s.total_deduct, s.final_amount, s.date as record_date
+            s.total_deduct, s.final_amount, s.date as record_date,
+            COALESCE(s.ot_hours, 0) AS ot_hours,
+            COALESCE(s.ot_hours_weekend_sat, 0) AS ot_hours_weekend_sat,
+            COALESCE(s.ot_hours_weekend, 0) AS ot_hours_weekend,
+            COALESCE(s.ot_hours_holiday, 0) AS ot_hours_holiday,
+            COALESCE(s.ot_amount, 0) AS ot_amount,
+            COALESCE(s.contract_salary, 0) AS sd_contract_salary
         FROM employees e
         LEFT JOIN salary_detail s ON e.id = s.employee_id AND s.month = ? AND s.year = ?
         WHERE e.status = 1
@@ -399,8 +546,17 @@ def preview_payroll_grid(
     try:
         rows = conn.execute(query, (month, year)).fetchall()
     except sqlite3.OperationalError:
-        # DB thiếu cột GT/TNCN — fallback tối thiểu
-        rows = conn.execute(
+        query = query.replace(
+            'COALESCE(s.ot_hours_weekend_sat, 0) AS ot_hours_weekend_sat,\n'
+            '            COALESCE(s.ot_hours_weekend, 0) AS ot_hours_weekend,\n'
+            '            COALESCE(s.ot_hours_holiday, 0) AS ot_hours_holiday,\n',
+            '',
+        )
+        try:
+            rows = conn.execute(query, (month, year)).fetchall()
+        except sqlite3.OperationalError:
+            # DB thiếu cột GT/TNCN — fallback tối thiểu
+            rows = conn.execute(
             """
             SELECT
                 e.id as employee_id, e.fullname, e.salary_rate, e.base_salary,
@@ -420,45 +576,118 @@ def preview_payroll_grid(
 
     data: list[dict[str, Any]] = []
     numeric_fields = [
-        'actual_working_days', 'time_salary', 'base_salary',
+        'actual_working_days', 'time_salary', 'base_salary', 'contract_salary',
         'allowance_fund', 'allowance_other', 'bonus',
+        'allowance_position', 'allowance_responsibility', 'allowance_seniority',
+        'allowance_lunch', 'allowance_uniform', 'allowance_phone',
+        'lunch_amount', 'uniform_amount', 'phone_amount',
+        'ot_hours', 'ot_hours_weekend_sat', 'ot_hours_weekend', 'ot_hours_holiday',
+        'ot_amount', 'ot_amount_normal', 'ot_amount_weekend_sat',
+        'ot_amount_weekend', 'ot_amount_holiday', 'tax_exempt_ot',
+        'insurance_salary_base', 'taxable_income', 'family_relief', 'standard_days',
         'bhxh', 'bhyt', 'bhtn', 'tncn_tax',
         'total_income', 'total_deduct', 'final_amount',
         'self_deduction', 'dependent_deduction', 'dependents',
         'employer_bhxh', 'employer_bhyt', 'employer_bhtn', 'employer_insurance',
     ]
+    from Services.hrm.legal_payroll import compute_legal_payroll_line
+
     for row in rows:
         item = dict(row)
         emp_id = item.get('employee_id')
         work_days = attendance_days.get(emp_id, 0) if emp_id else 0
         item['attendance_work_days'] = work_days
         item['base_salary'] = float(item.get('base_salary') or item.get('salary_rate') or 0)
+        item['contract_salary'] = float(
+            item.get('sd_contract_salary') or item.get('contract_salary') or item['base_salary'] or 0
+        )
         is_chu = bool(employee_is_chu_ho(item, conn))
         item['is_chu_ho'] = 1 if is_chu else 0
+        pos = float(item.get('allowance_position') or 0)
+        resp = float(item.get('allowance_responsibility') or 0)
+        sen = float(item.get('allowance_seniority') or 0)
+        if pos + resp + sen <= 0 and float(item.get('emp_allowance_fund') or 0) > 0:
+            pos = float(item.get('emp_allowance_fund') or 0)
+        lunch = float(item.get('allowance_lunch') or 0)
+        uni = float(item.get('allowance_uniform') or 0)
+        phone = float(item.get('allowance_phone') or 0)
+        if lunch + uni + phone <= 0 and float(item.get('emp_allowance_other') or 0) > 0:
+            lunch = float(item.get('emp_allowance_other') or 0)
 
         if item.get('salary_id') is None:
-            item['actual_working_days'] = work_days if work_days > 0 else standard_days
-            item['allowance_fund'] = float(item.get('emp_allowance_fund') or 0)
-            item['allowance_other'] = float(item.get('emp_allowance_other') or 0)
-            item['bonus'] = float(item.get('emp_default_bonus') or 0)
-            calc = compute_payroll_line(
-                base_salary=item['base_salary'],
-                actual_working_days=float(item['actual_working_days'] or 0),
+            auto = ot_auto_map.get(int(emp_id or 0), {})
+            if auto.get('has_attendance'):
+                item['actual_working_days'] = auto.get('actual_working_days', auto.get('work_days', 0))
+                item['paid_holiday_days'] = float(auto.get('paid_holiday_days') or 0)
+                item['holiday_work_days'] = float(auto.get('holiday_work_days') or 0)
+            elif work_days > 0:
+                item['actual_working_days'] = work_days
+                item['paid_holiday_days'] = float(paid_holidays_month)
+            else:
+                item['actual_working_days'] = standard_days
+                item['paid_holiday_days'] = float(paid_holidays_month)
+            item['bonus'] = float(item.get('emp_default_bonus') or item.get('bonus') or 0)
+            # Tự động lấy giờ TC từ chấm công khi chưa chốt kỳ
+            if auto.get('has_attendance') and not any(float(item.get(k) or 0) for k in (
+                'ot_hours', 'ot_hours_weekend_sat', 'ot_hours_weekend', 'ot_hours_holiday',
+            )):
+                item['ot_hours'] = auto.get('ot_hours', 0)
+                item['ot_hours_weekend_sat'] = auto.get('ot_hours_weekend_sat', 0)
+                item['ot_hours_weekend'] = auto.get('ot_hours_weekend', 0)
+                item['ot_hours_holiday'] = auto.get('ot_hours_holiday', 0)
+            else:
+                item['ot_hours'] = float(item.get('ot_hours') or 0)
+                item['ot_hours_weekend_sat'] = float(item.get('ot_hours_weekend_sat') or 0)
+                item['ot_hours_weekend'] = float(item.get('ot_hours_weekend') or 0)
+                item['ot_hours_holiday'] = float(item.get('ot_hours_holiday') or 0)
+            if apply_formulas_to_line:
+                tmp = apply_formulas_to_line(
+                    conn,
+                    {
+                        **item,
+                        'base_salary': item['contract_salary'],
+                        'allowance_fund': pos + resp + sen,
+                        'allowance_other': lunch + uni + phone,
+                    },
+                    standard_days=standard_days,
+                    kpi_score=kpi_map.get(int(emp_id or 0), 0),
+                    ot_hours=float(item.get('ot_hours') or 0),
+                    ot_hours_night=0,
+                )
+                item['bonus'] = float(tmp.get('bonus') or item['bonus'])
+            calc = compute_legal_payroll_line(
+                contract_salary=item['contract_salary'],
+                allowance_position=pos,
+                allowance_responsibility=resp,
+                allowance_seniority=sen,
+                allowance_lunch=lunch,
+                allowance_uniform=uni,
+                allowance_phone=phone,
                 standard_days=standard_days,
-                allowance_fund=item['allowance_fund'],
-                allowance_other=item['allowance_other'],
-                bonus=item['bonus'],
-                rates_frac=rates_frac,
-                is_chu_ho=is_chu,
-                self_deduction=float(item.get('self_deduction') or DEFAULT_SELF_DEDUCTION),
+                actual_days=float(item['actual_working_days'] or 0),
+                ot_hours=float(item.get('ot_hours') or 0),
+                ot_hours_weekend_sat=float(item.get('ot_hours_weekend_sat') or 0),
+                ot_hours_weekend=float(item.get('ot_hours_weekend') or 0),
+                ot_hours_holiday=float(item.get('ot_hours_holiday') or 0),
+                bonus_kpi=float(item.get('bonus') or 0),
                 dependents=int(item.get('dependents') or 0),
+                self_deduction=float(item.get('self_deduction') or DEFAULT_SELF_DEDUCTION),
                 dependent_deduction=float(
                     item.get('dependent_deduction') or DEFAULT_DEPENDENT_DEDUCTION
                 ),
+                rates_frac=rates_frac,
+                is_chu_ho=is_chu,
+                conn=conn,
+                **ot_kw,
             )
             item.update(calc)
+            item['allowance_position'] = pos
+            item['allowance_responsibility'] = resp
+            item['allowance_seniority'] = sen
+            item['allowance_lunch'] = lunch
+            item['allowance_uniform'] = uni
+            item['allowance_phone'] = phone
         else:
-            # Đã chốt: giữ số liệu đã lưu; vẫn bổ sung BH chủ theo tỷ lệ hiện tại để tham chiếu
             for field in (
                 'actual_working_days', 'time_salary', 'allowance_fund',
                 'allowance_other', 'bonus', 'bhxh', 'bhyt', 'bhtn', 'tncn_tax',
@@ -468,26 +697,46 @@ def preview_payroll_grid(
                     item[field] = float(item[field] or 0)
                 except (TypeError, ValueError):
                     item[field] = 0.0
-            calc = compute_payroll_line(
-                base_salary=item['base_salary'],
-                actual_working_days=item['actual_working_days'],
+            calc = compute_legal_payroll_line(
+                contract_salary=item['contract_salary'] or item['base_salary'],
+                allowance_position=pos,
+                allowance_responsibility=resp,
+                allowance_seniority=sen,
+                allowance_lunch=lunch,
+                allowance_uniform=uni,
+                allowance_phone=phone,
                 standard_days=standard_days,
-                allowance_fund=item['allowance_fund'],
-                allowance_other=item['allowance_other'],
-                bonus=item['bonus'],
-                rates_frac=rates_frac,
-                is_chu_ho=is_chu,
-                self_deduction=float(item.get('self_deduction') or DEFAULT_SELF_DEDUCTION),
+                actual_days=float(item['actual_working_days'] or 0),
+                ot_hours=float(item.get('ot_hours') or 0),
+                ot_hours_weekend_sat=float(item.get('ot_hours_weekend_sat') or 0),
+                ot_hours_weekend=float(item.get('ot_hours_weekend') or 0),
+                ot_hours_holiday=float(item.get('ot_hours_holiday') or 0),
+                bonus_kpi=float(item.get('bonus') or 0),
                 dependents=int(item.get('dependents') or 0),
+                self_deduction=float(item.get('self_deduction') or DEFAULT_SELF_DEDUCTION),
                 dependent_deduction=float(
                     item.get('dependent_deduction') or DEFAULT_DEPENDENT_DEDUCTION
                 ),
-                time_salary_override=item['time_salary'],
+                rates_frac=rates_frac,
+                is_chu_ho=is_chu,
+                conn=conn,
+                **ot_kw,
             )
             item['employer_bhxh'] = calc['employer_bhxh']
             item['employer_bhyt'] = calc['employer_bhyt']
             item['employer_bhtn'] = calc['employer_bhtn']
             item['employer_insurance'] = calc['employer_insurance']
+            for k in (
+                'insurance_salary_base', 'taxable_income', 'family_relief',
+                'lunch_amount', 'uniform_amount', 'phone_amount', 'ot_amount',
+                'ot_amount_normal', 'ot_amount_weekend_sat', 'ot_amount_weekend',
+                'ot_amount_holiday', 'tax_exempt_ot',
+                'ot_hours_weekend_sat', 'ot_hours_weekend', 'ot_hours_holiday',
+                'standard_days', 'contract_salary', 'allowance_position',
+                'allowance_responsibility', 'allowance_seniority',
+            ):
+                if not item.get(k):
+                    item[k] = calc.get(k)
 
         for field in numeric_fields:
             if item.get(field) is None:
@@ -506,7 +755,10 @@ def preview_payroll_grid(
     return {
         'data': data,
         'standard_days': standard_days,
+        'paid_holidays_in_month': paid_holidays_month,
         'config': config,
+        'work_calendar': calendar_cfg,
+        'payroll_mode': 'legal_vn',
     }
 
 
@@ -750,7 +1002,7 @@ def accrue_payroll(
             r.get('employee_id'),
             r.get('fullname') or r.get('fullname'),
             month, year,
-            _f(r.get('base_salary') or r.get('salary_rate') or 0),
+            _f(r.get('base_salary') or r.get('salary_rate') or r.get('contract_salary') or 0),
             _f(r.get('actual_working_days') or 0),
             _f(r.get('time_salary') or 0),
             _f(r.get('allowance_fund') or 0),
@@ -765,6 +1017,43 @@ def accrue_payroll(
             _f(net),
             date_s,
         ]
+        extra_map = {
+            'contract_salary': _f(r.get('contract_salary') or r.get('base_salary') or 0),
+            'allowance_position': _f(r.get('allowance_position') or 0),
+            'allowance_responsibility': _f(r.get('allowance_responsibility') or 0),
+            'allowance_seniority': _f(r.get('allowance_seniority') or 0),
+            'allowance_lunch': _f(r.get('allowance_lunch') or 0),
+            'allowance_uniform': _f(r.get('allowance_uniform') or 0),
+            'allowance_phone': _f(r.get('allowance_phone') or 0),
+            'standard_days': _f(r.get('standard_days') or 0),
+            'ot_hours': _f(r.get('ot_hours') or 0),
+            'ot_hours_weekend_sat': _f(r.get('ot_hours_weekend_sat') or 0),
+            'ot_hours_weekend': _f(r.get('ot_hours_weekend') or 0),
+            'ot_hours_holiday': _f(r.get('ot_hours_holiday') or 0),
+            'lunch_amount': _f(r.get('lunch_amount') or 0),
+            'uniform_amount': _f(r.get('uniform_amount') or 0),
+            'phone_amount': _f(r.get('phone_amount') or 0),
+            'ot_amount': _f(r.get('ot_amount') or 0),
+            'ot_amount_normal': _f(r.get('ot_amount_normal') or 0),
+            'ot_amount_weekend_sat': _f(r.get('ot_amount_weekend_sat') or 0),
+            'ot_amount_weekend': _f(r.get('ot_amount_weekend') or 0),
+            'ot_amount_holiday': _f(r.get('ot_amount_holiday') or 0),
+            'tax_exempt_ot': _f(r.get('tax_exempt_ot') or 0),
+            'insurance_salary_base': _f(r.get('insurance_salary_base') or 0),
+            'taxable_income': _f(r.get('taxable_income') or 0),
+            'family_relief': _f(r.get('family_relief') or 0),
+            'employer_bhxh': _f(r.get('employer_bhxh') or emp_parts_one['bhxh']),
+            'employer_bhyt': _f(r.get('employer_bhyt') or emp_parts_one['bhyt']),
+            'employer_bhtn': _f(r.get('employer_bhtn') or emp_parts_one['bhtn']),
+            'employer_insurance': _f(
+                r.get('employer_insurance')
+                or (emp_parts_one['bhxh'] + emp_parts_one['bhyt'] + emp_parts_one['bhtn'])
+            ),
+        }
+        for col, val in extra_map.items():
+            if col in sd_cols:
+                insert_cols.append(col)
+                insert_vals.append(val)
         if 'branch_code' in sd_cols:
             insert_cols.append('branch_code')
             insert_vals.append(branch)

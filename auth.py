@@ -177,6 +177,27 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+def ess_portal_required(f):
+    """Trang ESS — cần đăng nhập + permission ess_portal (hoặc role NV)."""
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        from Services.hrm.ess_access import session_may_use_ess
+        if not session_may_use_ess():
+            if request.path.startswith('/api/'):
+                return jsonify({
+                    'success': False,
+                    'error': 'Tài khoản chưa được cấp quyền Cổng nhân viên (ess_portal).',
+                }), 403
+            flash('Tài khoản chưa được cấp quyền Cổng nhân viên (ess_portal).', 'warning')
+            try:
+                return redirect(url_for('SME_dashboard'))
+            except Exception:
+                return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 def master_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):

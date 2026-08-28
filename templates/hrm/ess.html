@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}ESS — Cổng nhân viên{% endblock %}
+{% block content %}
+<div class="container-fluid py-3" style="max-width:720px">
+  <h4>Employee Self-Service</h4>
+  <p class="text-muted small">Payslip · Xin nghỉ · Check-in GPS. Cần permission <code>ess_portal</code>, liên kết <code>employees.user_id</code> và <code>ess_enabled=1</code> (HR bật qua API <code>/api/hrm/ess/link</code>).</p>
+  <div id="info" class="alert alert-light border mb-3">Đang tải…</div>
+  <div class="card mb-3"><div class="card-header">Bảng lương gần đây</div>
+    <ul class="list-group list-group-flush" id="pays"></ul></div>
+  <div class="card mb-3"><div class="card-header">Xin nghỉ phép</div>
+    <div class="card-body row g-2">
+      <div class="col-4"><input type="date" id="ls" class="form-control form-control-sm"></div>
+      <div class="col-4"><input type="date" id="le" class="form-control form-control-sm"></div>
+      <div class="col-4"><input id="lr" class="form-control form-control-sm" placeholder="Lý do"></div>
+      <div class="col-12"><button class="btn btn-sm btn-primary" onclick="leave()">Gửi đơn</button></div>
+    </div></div>
+  <div class="card"><div class="card-header">Check-in GPS</div>
+    <div class="card-body">
+      <button class="btn btn-success btn-sm" onclick="checkin('in')">Check-in</button>
+      <button class="btn btn-outline-secondary btn-sm" onclick="checkin('out')">Check-out</button>
+      <span id="cin" class="small ms-2"></span>
+    </div></div>
+</div>
+<script>
+const money=n=>new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+let EMP=null;
+async function load(){
+  const d=await(await fetch('/api/hrm/ess/me')).json();
+  if(!d.success){ info.className='alert alert-warning'; info.textContent=d.error||'Lỗi'; return; }
+  EMP=d.employee; info.className='alert alert-success';
+  info.textContent=`Xin chào ${EMP.fullname} · ${EMP.position||''} · ${EMP.department||''}`;
+  pays.innerHTML=(d.payslips||[]).map(p=>`<li class="list-group-item d-flex justify-content-between">
+    <span>T${p.month}/${p.year}</span><strong>${money(p.final_amount)} đ</strong></li>`).join('')
+    ||'<li class="list-group-item text-muted">Chưa có phiếu lương</li>';
+}
+async function leave(){
+  const r=await(await fetch('/api/hrm/ess/leave',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    start_date:ls.value,end_date:le.value||ls.value,reason:lr.value,leave_type:'annual',employee_id:EMP&&EMP.id
+  })})).json();
+  alert(r.success?'Đã gửi đơn':(r.error||'Lỗi')); if(r.success) load();
+}
+function checkin(type){
+  if(!navigator.geolocation){ cin.textContent='Trình duyệt không hỗ trợ GPS'; return; }
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const r=await(await fetch('/api/hrm/ess/checkin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      check_type:type, lat:pos.coords.latitude, lng:pos.coords.longitude, accuracy:pos.coords.accuracy,
+      employee_id:EMP&&EMP.id, device_info:navigator.userAgent.slice(0,120)
+    })})).json();
+    cin.textContent=r.success?`OK ${type} @ ${pos.coords.latitude.toFixed(5)},${pos.coords.longitude.toFixed(5)}`:(r.error||'Lỗi');
+  }, err=>{ cin.textContent=err.message; }, {enableHighAccuracy:true,timeout:10000});
+}
+load();
+</script>
+{% endblock %}

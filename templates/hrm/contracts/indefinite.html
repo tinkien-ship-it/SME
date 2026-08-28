@@ -1,0 +1,44 @@
+{% extends "hrm/contracts/base_print.html" %}
+
+{% block doc_title %}Hợp đồng lao động không xác định thời hạn{% endblock %}
+
+{% block article1_title %}Điều 1. Điều khoản chung{% endblock %}
+
+{% block article1_term %}
+<p class="sub">Loại Hợp đồng lao động: <strong>Không xác định thời hạn</strong>.</p>
+<p class="sub">Thời điểm bắt đầu: <strong>{{ start_date_vi }}</strong>.</p>
+{% endblock %}
+
+{% block articles_after_salary %}
+<div class="article">
+  <p class="article-title">Điều 3. Chế độ làm việc</p>
+  {% include "hrm/contracts/_article3_work.html" %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 4. Nghĩa vụ và quyền lợi của người lao động</p>
+  {% include "hrm/contracts/_article4_employee_indefinite.html" %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 5. Nghĩa vụ và quyền hạn của người sử dụng lao động</p>
+  {% with employer_rights_mid=true %}
+  {% include "hrm/contracts/_article5_employer.html" %}
+  {% endwith %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 6. Đơn phương chấm dứt hợp đồng</p>
+  {% include "hrm/contracts/_article6_termination_indefinite.html" %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 7. Những thỏa thuận khác</p>
+  {% include "hrm/contracts/_article_other.html" %}
+</div>
+
+<div class="article">
+  <p class="article-title">Điều 8. Điều khoản thi hành</p>
+  {% include "hrm/contracts/_article_execution.html" %}
+</div>
+{% endblock %}
