@@ -90,7 +90,7 @@
         <a class="crm-btn crm-btn-ghost btn-sm" href="{{ url_for('crm_visits_page') }}">Chi tiết</a>
       </div>
       <div class="crm-panel-bd p-0">
-        <table class="table crm-table mb-0"><thead><tr><th>Khách</th><th>NV</th><th>Vào</th><th>Ra</th><th>Nội dung gặp</th></tr></thead>
+        <table class="table crm-table mb-0"><thead><tr><th>Tên Công Ty / KH</th><th>NV</th><th>Vào</th><th>Ra</th><th>Nội dung gặp</th></tr></thead>
         <tbody id="tbVisitsToday"></tbody></table>
       </div>
     </div>
@@ -137,7 +137,7 @@ async function loadDash() {
 
   const visits = d.visit_sessions_today || [];
   document.getElementById('tbVisitsToday').innerHTML = visits.length ? visits.map(s => `<tr>
-    <td><a href="/crm/customer/${s.customer_id}">${s.customer_label||''}</a></td>
+    <td><a href="/crm/customer/${s.customer_id}">${s.customer_label||''}</a>${s.representative?`<div class="small text-muted">${s.representative}</div>`:''}</td>
     <td class="small">${s.owner||'—'}</td>
     <td class="small">${(s.check_in_at||'').slice(11,16)}</td>
     <td class="small">${(s.check_out_at||'').slice(11,16)||'—'}</td>

@@ -30,7 +30,7 @@
   <div class="crm-panel-bd p-0">
     <table class="table crm-table mb-0">
       <thead><tr>
-        <th>Khách hàng</th><th>NV</th><th>Check-in</th><th>Check-out</th><th>Nội dung gặp</th><th>TT</th>
+        <th>Tên Công Ty / Khách hàng</th><th>Người đại diện</th><th>NV</th><th>Check-in</th><th>Check-out</th><th>Nội dung gặp</th><th>TT</th>
       </tr></thead>
       <tbody id="tbSessions"></tbody>
     </table>
@@ -42,7 +42,7 @@
   <div class="crm-panel-bd p-0">
     <table class="table crm-table mb-0">
       <thead><tr>
-        <th>Giờ</th><th>Loại</th><th>Khách</th><th>NV</th><th>Ghi chú</th>
+        <th>Giờ</th><th>Loại</th><th>Tên Công Ty / Khách hàng</th><th>Người đại diện</th><th>NV</th><th>Ghi chú</th>
       </tr></thead>
       <tbody id="tbVisits"></tbody>
     </table>
@@ -70,21 +70,23 @@ async function loadVisits(){
   tbSessions.innerHTML=sessions.length?sessions.map(s=>`<tr>
     <td><a href="/crm/customer/${s.customer_id}">${esc(s.customer_label)}</a>
       ${s.customer_phone?`<div class="small text-muted">${esc(s.customer_phone)}</div>`:''}</td>
+    <td class="small">${esc(s.representative||'—')}</td>
     <td>${esc(s.owner)}</td>
     <td>${esc((s.check_in_at||'').slice(11,16))}</td>
     <td>${esc((s.check_out_at||'').slice(11,16)||'—')}</td>
     <td class="small">${esc(s.meeting_note||'—')}</td>
     <td>${s.status==='done'?'<span class="badge bg-success">Đã gặp</span>':'<span class="badge bg-warning text-dark">Đang gặp</span>'}</td>
-  </tr>`).join(''):'<tr><td colspan="6" class="crm-empty">Không có phiên gặp trong ngày</td></tr>';
+  </tr>`).join(''):'<tr><td colspan="7" class="crm-empty">Không có phiên gặp trong ngày</td></tr>';
 
   const items=d.items||[];
   tbVisits.innerHTML=items.length?items.map(v=>`<tr>
     <td>${esc((v.punched_at||'').slice(0,16))}</td>
     <td>${v.check_type==='in'?'<span class="badge bg-success">Vào</span>':'<span class="badge bg-secondary">Ra</span>'}</td>
     <td><a href="/crm/customer/${v.customer_id}">${esc(v.customer_label)}</a></td>
+    <td class="small">${esc(v.representative||'—')}</td>
     <td>${esc(v.owner)}</td>
     <td class="small">${esc(v.note||'—')}</td>
-  </tr>`).join(''):'<tr><td colspan="5" class="crm-empty">—</td></tr>';
+  </tr>`).join(''):'<tr><td colspan="6" class="crm-empty">—</td></tr>';
 }
 
 document.getElementById('fDate').value=todayIso();

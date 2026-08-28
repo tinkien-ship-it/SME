@@ -36,11 +36,18 @@ def _rows(cur) -> list[dict]:
 
 
 def _customer_label(c: dict) -> str:
-    company = str(c.get('company_name') or '').strip()
-    name = str(c.get('name') or '').strip()
-    if company and name and company.lower() != name.lower():
-        return company
-    return company or name or f"KH #{c.get('id')}"
+    """Tên công ty nếu có; không thì họ tên khách cá nhân."""
+    company = str(c.get('company_name') or c.get('customer_company') or '').strip()
+    name = str(c.get('name') or c.get('customer_name') or '').strip()
+    return company or name or f"KH #{c.get('id') or c.get('customer_id') or ''}"
+
+
+def _customer_representative(c: dict) -> str:
+    """Người đại diện / liên hệ — chỉ khi là công ty, tổ chức."""
+    company = str(c.get('company_name') or c.get('customer_company') or '').strip()
+    if not company:
+        return ''
+    return str(c.get('name') or c.get('customer_name') or '').strip()
 
 
 def _customer_summary(c: dict) -> str:
@@ -200,6 +207,7 @@ def list_visit_customers(
         items.append({
             'id': cid,
             'label': _customer_label(c),
+            'representative': _customer_representative(c),
             'name': c.get('name'),
             'company_name': c.get('company_name'),
             'phone': c.get('phone'),
@@ -380,6 +388,7 @@ def list_visits(
     out: list[dict] = []
     for r in _rows(conn.execute(sql, params)):
         r['customer_label'] = _customer_label(r)
+        r['representative'] = _customer_representative(r)
         out.append(r)
     return out
 
@@ -420,6 +429,7 @@ def list_visit_sessions_today(
     sessions: list[dict] = []
     for s in _rows(conn.execute(sql, params)):
         s['customer_label'] = _customer_label(s)
+        s['representative'] = _customer_representative(s)
         s['customer_phone'] = str(s.get('customer_phone') or '').strip()
         s['meeting_note'] = str(s.get('meeting_note') or '').strip()
         s['status'] = 'done' if s.get('check_out_at') else 'open'

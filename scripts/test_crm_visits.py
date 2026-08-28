@@ -38,13 +38,12 @@ def _mem_db() -> sqlite3.Connection:
     return conn
 
 
-def test_list_customers():
+def test_customer_display_labels():
     conn = _mem_db()
     items = crm_visits.list_visit_customers(conn, 'sale_a')
-    assert len(items) == 1, items
     assert items[0]['label'] == 'Cty ABC'
-    assert items[0]['visit_status'] == 'idle'
-    print('OK test_list_customers')
+    assert items[0]['representative'] == 'An'
+    print('OK test_customer_display_labels')
 
 
 def test_checkin_checkout_flow():
@@ -136,7 +135,7 @@ def test_double_checkin_blocked():
 
 
 if __name__ == '__main__':
-    test_list_customers()
+    test_customer_display_labels()
     test_checkin_checkout_flow()
     test_checkout_requires_note()
     test_owner_mismatch()

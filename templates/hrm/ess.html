@@ -117,8 +117,9 @@ function renderVisitCustomers(items){
     const canOut=c.visit_status==='open';
     return `<div class="list-group-item">
       <div class="d-flex justify-content-between align-items-start gap-2">
-        <div class="flex-grow-1 min-width-0">
+                        <div class="flex-grow-1 min-width-0">
           <div class="fw-semibold">${esc(c.label)}</div>
+          ${c.representative?`<div class="text-muted" style="font-size:.75rem">Đại diện: ${esc(c.representative)}</div>`:''}
           <div class="text-muted" style="font-size:.75rem">SĐT: ${esc(c.phone||'—')}</div>
           <div class="text-muted" style="font-size:.75rem">Địa chỉ: ${esc(c.address||'—')}</div>
           ${appt?`<div class="text-muted" style="font-size:.75rem">Hẹn: ${esc(appt)}</div>`:''}
@@ -199,8 +200,9 @@ function prepVisitCheckout(customerId){
   PENDING_CHECKOUT={customerId, sessionId:c.open_session_id, label:c.label};
   document.getElementById('visitCheckoutTitle').textContent='Check-out — '+c.label;
   document.getElementById('visitCustomerInfo').innerHTML=
-    `<div><strong>${esc(c.label)}</strong></div>
-     <div>SĐT: ${esc(c.phone||'—')}</div>
+    `<div><strong>${esc(c.label)}</strong></div>`
+    +(c.representative?`<div>Đại diện: ${esc(c.representative)}</div>`:'')
+    +`<div>SĐT: ${esc(c.phone||'—')}</div>
      <div>Địa chỉ: ${esc(c.address||'—')}</div>
      <div class="text-success">Check-in lúc: ${esc((c.checked_in_at||'').slice(11,16)||'—')}</div>`;
   document.getElementById('visitNote').value='';

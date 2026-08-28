@@ -14,7 +14,7 @@ let customerModal = null;
 })();
 
 function customerColSpan() {
-    return window.__CRM_CUSTOMERS_UI ? 10 : 9;
+    return window.__CRM_CUSTOMERS_UI ? 11 : 10;
 }
 
 function customerDisplayPrimary(c) {
@@ -23,15 +23,20 @@ function customerDisplayPrimary(c) {
     return company || name || '';
 }
 
-function formatCustomerNameCell(c) {
+function customerRepresentative(c) {
     const company = (c.company_name || '').trim();
     const name = (c.name || '').trim();
-    const primary = company || name || '—';
-    let html = `<strong>${escHtml(primary)}</strong>`;
-    if (company && name && company !== name) {
-        html += `<div class="small text-muted">${escHtml(name)}</div>`;
-    }
-    return html;
+    return company ? name : '';
+}
+
+function formatCustomerNameCell(c) {
+    const primary = customerDisplayPrimary(c) || '—';
+    return `<strong>${escHtml(primary)}</strong>`;
+}
+
+function formatRepresentativeCell(c) {
+    const rep = customerRepresentative(c);
+    return rep ? escHtml(rep) : '<span class="text-muted">—</span>';
 }
 
 function escHtml(s) {
@@ -101,6 +106,7 @@ function renderCustomerRows(data, tbody) {
         <tr data-id="${c.id}">
             <td class="text-center small">${escHtml(c.id)}</td>
             <td class="text-start">${formatCustomerNameCell(c)}</td>
+            <td class="text-start small">${formatRepresentativeCell(c)}</td>
             <td class="text-center small">${escHtml(c.tax_code || '—')}</td>
             <td class="text-center small">${escHtml(c.phone || '—')}</td>
             ${ownerCol}
@@ -120,6 +126,9 @@ function buildCustomerColumns() {
         { key: 'customer_label', label: 'Tên Công Ty/ Khách Hàng', sortable: true, filterType: 'text', width: '220px',
           getValue: c => customerDisplayPrimary(c) || (c.name || ''),
           sortValue: c => customerDisplayPrimary(c).toLowerCase() },
+        { key: 'representative', label: 'Người đại diện', sortable: true, filterType: 'text', width: '150px',
+          getValue: c => customerRepresentative(c),
+          sortValue: c => customerRepresentative(c).toLowerCase() },
         { key: 'tax_code', label: 'Mã số thuế', filterType: 'text', width: '110px', align: 'center',
           getValue: c => c.tax_code || '' },
         { key: 'phone', label: 'Điện thoại', filterType: 'text', width: '110px', align: 'center',
@@ -277,6 +286,7 @@ function exportCustomers() {
         const row = {
             'Mã KH': c.id,
             'Tên Công Ty/ Khách Hàng': customerDisplayPrimary(c) || c.name || '',
+            'Người đại diện': customerRepresentative(c) || '',
             'Mã số thuế': c.tax_code || '',
             'Điện thoại': c.phone || '',
         };
@@ -324,7 +334,10 @@ async function importCustomers(event) {
         const headers = rows[0].map(h => String(h).trim().toUpperCase());
         const headerMap = {
             'TÊN': 'name',
+            'HỌ TÊN': 'name',
+            'NGƯỜI ĐẠI DIỆN': 'name',
             'TÊN CÔNG TY': 'company_name',
+            'TÊN CÔNG TY/ KHÁCH HÀNG': 'company_name',
             'MÃ SỐ THUẾ': 'tax_code',
             'ĐIỆN THOẠI': 'phone',
             'EMAIL': 'email',
