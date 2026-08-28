@@ -7,6 +7,8 @@ import sqlite3
 from db.schema_helpers import add_column_if_missing, table_exists
 
 
+_CRM_SCHEMA_FLAG = 'crm_schema_visit_checkins_v1'
+
 CUSTOMER_CRM_COLS = (
     ('crm_source', 'TEXT'),
     ('crm_owner', 'TEXT'),
@@ -300,6 +302,11 @@ def _migrate_stages(conn: sqlite3.Connection) -> None:
 
 
 def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
+    from db_utils import is_postgres, sqlite_is_ready, sqlite_mark_ready
+
+    if not is_postgres() and sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
+        return
+
     conn.executescript(_DDL)
     if table_exists(conn, 'customers'):
         for col, col_type in CUSTOMER_CRM_COLS:
@@ -322,3 +329,5 @@ def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
         pass
     if commit:
         conn.commit()
+    if not is_postgres():
+        sqlite_mark_ready(conn, _CRM_SCHEMA_FLAG)

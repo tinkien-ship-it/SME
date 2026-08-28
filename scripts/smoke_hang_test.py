@@ -114,6 +114,16 @@ def test_parallel_schema_reads():
             f.result(timeout=TIMEOUT_SEC)
 
 
+def test_crm_schema():
+    from Services.crm_schema import ensure_crm_schema
+    conn = _conn_rw()
+    try:
+        ensure_crm_schema(conn)
+        ensure_crm_schema(conn)
+    finally:
+        conn.close()
+
+
 def test_port_guard():
     from Services.runtime_guard import dev_server_port_taken
     dev_server_port_taken(5000)
@@ -136,6 +146,7 @@ def main() -> int:
     tests = [
         ('work_calendar schema (×2)', test_work_calendar_schema),
         ('hrm schema (×2)', test_hrm_schema),
+        ('crm schema (×2)', test_crm_schema),
         ('contracts list/get', test_contracts_crud),
         ('contract print context', test_contract_print),
         ('apply_schema_migrations 1 DB', test_single_db_migrate),

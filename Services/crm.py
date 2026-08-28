@@ -68,7 +68,16 @@ def _rows(cur) -> list[dict]:
 
 
 def ready(conn: sqlite3.Connection) -> None:
-    ensure_crm_schema(conn, commit=True)
+    from db_utils import _raw_sqlite_conn, is_postgres
+    commit = True
+    if not is_postgres():
+        try:
+            raw = _raw_sqlite_conn(conn)
+            if getattr(raw, 'in_transaction', False):
+                commit = False
+        except Exception:
+            pass
+    ensure_crm_schema(conn, commit=commit)
 
 
 def next_quote_no(conn: sqlite3.Connection) -> str:

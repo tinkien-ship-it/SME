@@ -9,7 +9,6 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from Services.crm_schema import ensure_crm_schema
-from Services.crm_geocode import location_label
 from Services import crm_visits
 
 
@@ -117,8 +116,23 @@ def test_checkout_requires_note():
     print('OK test_checkout_requires_note')
 
 
-def test_location_label():
-    print('OK test_location_label (skipped geocode)')
+def test_crm_visit_schema_twice():
+    from Services.crm_schema import ensure_crm_schema
+    conn = _mem_db()
+    ensure_crm_schema(conn)
+    ensure_crm_schema(conn)
+    print('OK test_crm_visit_schema_twice')
+
+
+def test_double_checkin_blocked():
+    conn = _mem_db()
+    crm_visits.visit_checkin(conn, {'customer_id': 1, 'check_type': 'in'}, owner='sale_a')
+    try:
+        crm_visits.visit_checkin(conn, {'customer_id': 1, 'check_type': 'in'}, owner='sale_a')
+        assert False, 'expected ValueError'
+    except ValueError as e:
+        assert 'check-out' in str(e).lower() or 'check-in' in str(e).lower()
+    print('OK test_double_checkin_blocked')
 
 
 if __name__ == '__main__':
@@ -126,5 +140,6 @@ if __name__ == '__main__':
     test_checkin_checkout_flow()
     test_checkout_requires_note()
     test_owner_mismatch()
-    test_location_label()
+    test_crm_visit_schema_twice()
+    test_double_checkin_blocked()
     print('All CRM visit tests passed.')

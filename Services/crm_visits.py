@@ -95,6 +95,53 @@ def _open_session(
     return rows[0] if rows else None
 
 
+def _visit_status_maps(
+    conn: sqlite3.Connection,
+    owner: str,
+    customer_ids: list[int],
+) -> tuple[dict[int, dict], set[int]]:
+    """Batch: phiên đang mở + KH đã check-out hôm nay."""
+    if not customer_ids:
+        return {}, set()
+    owner = str(owner or '').strip()
+    placeholders = ','.join('?' * len(customer_ids))
+    open_map: dict[int, dict] = {}
+    for r in _rows(conn.execute(
+        f"""
+        SELECT v.customer_id, v.visit_session_id, v.punched_at
+        FROM crm_visit_checkins v
+        WHERE LOWER(TRIM(v.owner)) = LOWER(TRIM(?))
+          AND date(v.punched_at) = date('now', 'localtime')
+          AND v.check_type = 'in'
+          AND v.customer_id IN ({placeholders})
+          AND NOT EXISTS (
+            SELECT 1 FROM crm_visit_checkins o
+            WHERE o.visit_session_id = v.visit_session_id
+              AND o.check_type = 'out'
+          )
+        ORDER BY v.punched_at DESC
+        """,
+        [owner, *customer_ids],
+    )):
+        cid = int(r['customer_id'])
+        if cid not in open_map:
+            open_map[cid] = r
+
+    done_ids: set[int] = set()
+    for r in conn.execute(
+        f"""
+        SELECT DISTINCT customer_id FROM crm_visit_checkins
+        WHERE LOWER(TRIM(owner)) = LOWER(TRIM(?))
+          AND date(punched_at) = date('now', 'localtime')
+          AND check_type = 'out'
+          AND customer_id IN ({placeholders})
+        """,
+        [owner, *customer_ids],
+    ).fetchall():
+        done_ids.add(int(r[0] if not hasattr(r, 'keys') else r['customer_id']))
+    return open_map, done_ids
+
+
 def list_visit_customers(
     conn: sqlite3.Connection,
     owner: str,
@@ -102,7 +149,7 @@ def list_visit_customers(
     include_all: bool = True,
 ) -> list[dict]:
     """KH phụ trách cho ESS — ưu tiên hẹn hôm nay."""
-    ensure_crm_schema(conn)
+    ensure_crm_schema(conn, commit=False)
     owner = str(owner or '').strip()
     if not owner:
         return []
@@ -136,24 +183,20 @@ def list_visit_customers(
           c.id
         LIMIT 120
     """
+    rows = _rows(conn.execute(sql, params))
+    cids = [int(c['id']) for c in rows]
+    open_map, done_ids = _visit_status_maps(conn, owner, cids)
+
     items: list[dict] = []
-    for c in _rows(conn.execute(sql, params)):
+    for c in rows:
         cid = int(c['id'])
-        open_sess = _open_session(conn, customer_id=cid, owner=owner)
-        visit_status = 'open' if open_sess else 'idle'
-        if not open_sess:
-            done = conn.execute(
-                """
-                SELECT 1 FROM crm_visit_checkins
-                WHERE customer_id = ? AND LOWER(TRIM(owner)) = LOWER(TRIM(?))
-                  AND date(punched_at) = date('now', 'localtime')
-                  AND check_type = 'out'
-                LIMIT 1
-                """,
-                (cid, owner),
-            ).fetchone()
-            if done:
-                visit_status = 'done_today'
+        open_sess = open_map.get(cid)
+        if open_sess:
+            visit_status = 'open'
+        elif cid in done_ids:
+            visit_status = 'done_today'
+        else:
+            visit_status = 'idle'
         items.append({
             'id': cid,
             'label': _customer_label(c),
@@ -175,8 +218,19 @@ def visit_checkin(
     *,
     owner: str,
     employee_id: int | None = None,
+    commit: bool = True,
 ) -> dict:
-    ensure_crm_schema(conn)
+    if commit:
+        from db_utils import sqlite_run_write
+        return sqlite_run_write(
+            conn,
+            lambda c: visit_checkin(
+                c, data, owner=owner, employee_id=employee_id, commit=False,
+            ),
+            label='crm_visit_checkin',
+        )
+
+    ensure_crm_schema(conn, commit=False)
     owner = str(owner or '').strip()
     if not owner:
         raise ValueError('Thiếu thông tin NV phụ trách')
@@ -298,7 +352,7 @@ def list_visits(
     visit_date: str | None = None,
     limit: int = 100,
 ) -> list[dict]:
-    ensure_crm_schema(conn)
+    ensure_crm_schema(conn, commit=False)
     sql = """
         SELECT v.*,
                c.name AS customer_name,
@@ -337,23 +391,27 @@ def list_visit_sessions_today(
     limit: int = 50,
 ) -> list[dict]:
     """Gom phiên in+out trong ngày cho dashboard."""
-    ensure_crm_schema(conn)
+    ensure_crm_schema(conn, commit=False)
     sql = """
-        SELECT visit_session_id,
-               MAX(customer_id) AS customer_id,
-               MAX(owner) AS owner,
-               MIN(CASE WHEN check_type = 'in' THEN punched_at END) AS check_in_at,
-               MAX(CASE WHEN check_type = 'out' THEN punched_at END) AS check_out_at,
-               MAX(CASE WHEN check_type = 'out' THEN note END) AS meeting_note
-        FROM crm_visit_checkins
-        WHERE date(punched_at) = date('now', 'localtime')
+        SELECT v.visit_session_id,
+               MAX(v.customer_id) AS customer_id,
+               MAX(v.owner) AS owner,
+               MIN(CASE WHEN v.check_type = 'in' THEN v.punched_at END) AS check_in_at,
+               MAX(CASE WHEN v.check_type = 'out' THEN v.punched_at END) AS check_out_at,
+               MAX(CASE WHEN v.check_type = 'out' THEN v.note END) AS meeting_note,
+               MAX(c.name) AS customer_name,
+               MAX(c.company_name) AS customer_company,
+               MAX(c.phone) AS customer_phone
+        FROM crm_visit_checkins v
+        LEFT JOIN customers c ON c.id = v.customer_id
+        WHERE date(v.punched_at) = date('now', 'localtime')
     """
     params: list[Any] = []
     if owner:
-        sql += ' AND LOWER(TRIM(owner)) = LOWER(TRIM(?))'
+        sql += ' AND LOWER(TRIM(v.owner)) = LOWER(TRIM(?))'
         params.append(owner.strip())
     sql += """
-        GROUP BY visit_session_id
+        GROUP BY v.visit_session_id
         ORDER BY check_in_at DESC
         LIMIT ?
     """
@@ -361,13 +419,8 @@ def list_visit_sessions_today(
 
     sessions: list[dict] = []
     for s in _rows(conn.execute(sql, params)):
-        cid = int(s.get('customer_id') or 0)
-        cust = _row(conn.execute(
-            'SELECT id, name, company_name, phone FROM customers WHERE id = ?',
-            (cid,),
-        ).fetchone()) if cid else {}
-        s['customer_label'] = _customer_label(cust) if cust else f'KH #{cid}'
-        s['customer_phone'] = (cust.get('phone') if cust else '') or ''
+        s['customer_label'] = _customer_label(s)
+        s['customer_phone'] = str(s.get('customer_phone') or '').strip()
         s['meeting_note'] = str(s.get('meeting_note') or '').strip()
         s['status'] = 'done' if s.get('check_out_at') else 'open'
         sessions.append(s)

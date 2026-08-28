@@ -460,7 +460,6 @@ def register_hrm_routes(app):
     def api_hrm_ess_visit_checkin():
         from Services.crm_visits import visit_checkin
         from Services.hrm.ess_access import EssAccessDenied, resolve_ess_employee
-        from db_utils import sqlite_commit
         data = request.get_json(silent=True) or {}
         conn = _conn()
         try:
@@ -479,7 +478,6 @@ def register_hrm_routes(app):
                 owner=owner,
                 employee_id=int(emp.get('id') or 0) or None,
             )
-            sqlite_commit(conn, label='crm_visit_checkin')
             return jsonify({'success': True, 'item': item})
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400

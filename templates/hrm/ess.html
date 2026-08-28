@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}ESS — Cổng nhân viên{% endblock %}
 {% block content %}
+<style>
+.ess-visit-actions { display:flex; gap:.35rem; flex-wrap:wrap; }
+.ess-visit-actions .btn { min-width:5.5rem; }
+</style>
 <div class="container-fluid py-3" style="max-width:720px">
   <h4>Cổng nhân viên (ESS)</h4>
   <div class="alert alert-light border small mb-3">
@@ -14,30 +18,36 @@
   <div class="card mb-3 border-success">
     <div class="card-header bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
       <span><i class="fas fa-handshake me-1"></i> Gặp khách hàng</span>
-      <button class="btn btn-outline-success btn-sm" type="button" onclick="loadVisitCustomers()">Tải lại</button>
+      <button class="btn btn-outline-success btn-sm" type="button" onclick="loadVisitBoard()">Tải lại</button>
     </div>
     <div class="card-body">
       <p class="small text-muted mb-2">
-        <strong>Check-in</strong> khi đến khách → <strong>Check-out</strong> khi rời đi và ghi rõ nội dung đã trao đổi.
-        Dùng mạng 3G/Wi‑Fi tại chỗ khách để đồng bộ lên CRM.
+        Mỗi khách có <strong>hai nút riêng</strong>: <span class="badge bg-success">Check-in</span> khi đến,
+        <span class="badge bg-primary">Check-out</span> khi rời (bắt buộc ghi nội dung gặp).
+        Dùng mạng 3G/Wi‑Fi tại chỗ khách.
       </p>
       <div class="form-check form-switch mb-2">
-        <input class="form-check-input" type="checkbox" id="visitTodayOnly" onchange="loadVisitCustomers()">
+        <input class="form-check-input" type="checkbox" id="visitTodayOnly" onchange="loadVisitBoard()">
         <label class="form-check-label small" for="visitTodayOnly">Chỉ KH hẹn hôm nay</label>
       </div>
-      <div id="visitList" class="list-group list-group-flush border rounded mb-3" style="max-height:340px;overflow:auto">
+      <div id="visitList" class="list-group list-group-flush border rounded mb-3" style="max-height:360px;overflow:auto">
         <div class="list-group-item text-muted small">Đang tải danh sách…</div>
       </div>
 
-      <div id="visitCheckoutBox" class="border rounded p-3 mb-2 d-none bg-light">
-        <div class="fw-semibold mb-2" id="visitCheckoutTitle">Check-out</div>
+      <div id="visitCheckoutBox" class="border rounded p-3 mb-2 d-none bg-light border-primary">
+        <div class="fw-semibold mb-2 text-primary" id="visitCheckoutTitle">Check-out</div>
         <div id="visitCustomerInfo" class="small border rounded bg-white p-2 mb-2 text-muted"></div>
         <label class="form-label small mb-1">Nội dung gặp khách <span class="text-danger">*</span></label>
         <textarea id="visitNote" class="form-control form-control-sm mb-2" rows="3"
           placeholder="VD: Gặp chị Lan — báo giá SP A, khách hẹn gọi lại tuần sau…"></textarea>
         <label class="form-label small mb-1">Hẹn liên hệ lần sau (tùy chọn)</label>
         <input type="datetime-local" id="visitNext" class="form-control form-control-sm mb-2">
-        <button class="btn btn-primary btn-sm w-100" type="button" onclick="doVisitCheckout()">Xác nhận Check-out</button>
+        <div class="ess-visit-actions">
+          <button class="btn btn-primary btn-sm flex-grow-1" type="button" onclick="doVisitCheckout()">
+            <i class="fas fa-sign-out-alt"></i> Xác nhận Check-out
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" onclick="cancelVisitCheckout()">Hủy</button>
+        </div>
       </div>
 
       <div id="visitStatus" class="small text-muted"></div>
@@ -56,11 +66,13 @@
       <div class="col-4"><input id="lr" class="form-control form-control-sm" placeholder="Lý do"></div>
       <div class="col-12"><button class="btn btn-sm btn-primary" onclick="leave()">Gửi đơn</button></div>
     </div></div>
-  <div class="card"><div class="card-header">Chấm công (văn phòng)</div>
+  <div class="card"><div class="card-header">Chấm công văn phòng (GPS)</div>
     <div class="card-body">
-      <button class="btn btn-success btn-sm" onclick="checkin('in')">Check-in</button>
-      <button class="btn btn-outline-secondary btn-sm" onclick="checkin('out')">Check-out</button>
-      <span id="cin" class="small ms-2"></span>
+      <div class="ess-visit-actions mb-1">
+        <button class="btn btn-success btn-sm" onclick="checkin('in')">Check-in</button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="checkin('out')">Check-out</button>
+      </div>
+      <span id="cin" class="small text-muted d-block mt-1"></span>
     </div></div>
 </div>
 <script>
@@ -77,48 +89,10 @@ function visitBadge(st){
   return '<span class="badge bg-secondary">Chưa gặp</span>';
 }
 
-async function loadVisitCustomers(){
-  const todayOnly=document.getElementById('visitTodayOnly').checked;
-  visitList.innerHTML='<div class="list-group-item text-muted small">Đang tải…</div>';
-  const r=await(await fetch('/api/hrm/ess/visit-customers?today_only='+(todayOnly?'1':'0'))).json();
-  if(!r.success){
-    visitList.innerHTML=`<div class="list-group-item text-warning small">${esc(r.error||'Lỗi')}</div>`;
-    return;
-  }
-  VISIT_CUSTOMERS=r.items||[];
-  if(!VISIT_CUSTOMERS.length){
-    visitList.innerHTML='<div class="list-group-item text-muted small">Chưa có khách phụ trách — Quản lý gán <em>NV phụ trách</em> trên CRM.</div>';
-    return;
-  }
-  visitList.innerHTML=VISIT_CUSTOMERS.map(c=>{
-    const appt=(c.crm_next_contact_at||'').slice(0,16).replace('T',' ');
-    const btnIn=c.visit_status==='open'
-      ? ''
-      : `<button class="btn btn-success btn-sm" onclick="doVisitCheckin(${c.id},'in')"><i class="fas fa-sign-in-alt"></i> Check-in</button>`;
-    const btnOut=c.visit_status==='open'
-      ? `<button class="btn btn-primary btn-sm" onclick="prepVisitCheckout(${c.id})"><i class="fas fa-sign-out-alt"></i> Check-out</button>`
-      : '';
-    return `<div class="list-group-item">
-      <div class="d-flex justify-content-between align-items-start gap-2">
-        <div class="flex-grow-1 min-width-0">
-          <div class="fw-semibold">${esc(c.label)}</div>
-          <div class="text-muted" style="font-size:.75rem">SĐT: ${esc(c.phone||'—')}</div>
-          <div class="text-muted" style="font-size:.75rem">Địa chỉ: ${esc(c.address||'—')}</div>
-          ${appt?`<div class="text-muted" style="font-size:.75rem">Hẹn: ${esc(appt)}</div>`:''}
-        </div>
-        <div class="text-end">${visitBadge(c.visit_status)}</div>
-      </div>
-      <div class="mt-2 d-flex gap-1 flex-wrap">${btnIn}${btnOut}</div>
-    </div>`;
-  }).join('');
-  loadVisitLog();
-}
-
-async function loadVisitLog(){
-  const r=await(await fetch('/api/hrm/ess/visit-log?limit=30')).json();
+function renderVisitLog(items){
   const today=new Date().toISOString().slice(0,10);
   const bySession={};
-  (r.items||[]).filter(x=>(x.punched_at||'').slice(0,10)===today).forEach(v=>{
+  (items||[]).filter(x=>(x.punched_at||'').slice(0,10)===today).forEach(v=>{
     const sid=v.visit_session_id||String(v.id);
     if(!bySession[sid]) bySession[sid]={customer_label:v.customer_label,customer_id:v.customer_id,in:null,out:null,note:''};
     if(v.check_type==='in') bySession[sid].in=v.punched_at;
@@ -127,69 +101,119 @@ async function loadVisitLog(){
   const rows=Object.values(bySession).sort((a,b)=>(b.out||b.in||'').localeCompare(a.out||a.in||''));
   visitLog.innerHTML=rows.length?rows.map(s=>`<li class="list-group-item py-2">
     <div class="fw-semibold">${esc(s.customer_label||('#'+s.customer_id))}</div>
-    <div class="text-muted">${s.in?`Vào ${esc(s.in.slice(11,16))}`:''}${s.out?' · Ra '+esc(s.out.slice(11,16)):''}</div>
+    <div class="text-muted">${s.in?`Check-in ${esc(s.in.slice(11,16))}`:''}${s.out?' · Check-out '+esc(s.out.slice(11,16)):''}</div>
     ${s.note?`<div class="mt-1">${esc(s.note)}</div>`:'<div class="text-warning small mt-1">Chưa check-out / chưa ghi nội dung</div>'}
   </li>`).join(''):'<li class="list-group-item text-muted py-1">Chưa gặp khách hôm nay</li>';
 }
 
-function tryGetGeo(){
-  return new Promise(resolve=>{
-    if(!navigator.geolocation){ resolve(null); return; }
-    navigator.geolocation.getCurrentPosition(
-      pos=>resolve(pos.coords),
-      ()=>resolve(null),
-      {enableHighAccuracy:false,timeout:8000,maximumAge:60000}
-    );
-  });
+function renderVisitCustomers(items){
+  if(!items.length){
+    visitList.innerHTML='<div class="list-group-item text-muted small">Chưa có khách phụ trách — Quản lý gán <em>NV phụ trách</em> trên CRM.</div>';
+    return;
+  }
+  visitList.innerHTML=items.map(c=>{
+    const appt=(c.crm_next_contact_at||'').slice(0,16).replace('T',' ');
+    const canIn=c.visit_status==='idle';
+    const canOut=c.visit_status==='open';
+    return `<div class="list-group-item">
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="flex-grow-1 min-width-0">
+          <div class="fw-semibold">${esc(c.label)}</div>
+          <div class="text-muted" style="font-size:.75rem">SĐT: ${esc(c.phone||'—')}</div>
+          <div class="text-muted" style="font-size:.75rem">Địa chỉ: ${esc(c.address||'—')}</div>
+          ${appt?`<div class="text-muted" style="font-size:.75rem">Hẹn: ${esc(appt)}</div>`:''}
+          ${c.checked_in_at?`<div class="text-success" style="font-size:.75rem">Check-in: ${esc(c.checked_in_at.slice(11,16))}</div>`:''}
+        </div>
+        <div class="text-end">${visitBadge(c.visit_status)}</div>
+      </div>
+      <div class="ess-visit-actions mt-2">
+        <button type="button" class="btn btn-success btn-sm" ${canIn?'':'disabled'}
+          onclick="doVisitCheckin(${c.id},'in')"><i class="fas fa-sign-in-alt"></i> Check-in</button>
+        <button type="button" class="btn btn-primary btn-sm" ${canOut?'':'disabled'}
+          onclick="prepVisitCheckout(${c.id})"><i class="fas fa-sign-out-alt"></i> Check-out</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadVisitBoard(){
+  const todayOnly=document.getElementById('visitTodayOnly').checked;
+  visitList.innerHTML='<div class="list-group-item text-muted small">Đang tải…</div>';
+  try{
+    const [cr, lr]=await Promise.all([
+      fetch('/api/hrm/ess/visit-customers?today_only='+(todayOnly?'1':'0')).then(r=>r.json()),
+      fetch('/api/hrm/ess/visit-log?limit=30').then(r=>r.json()),
+    ]);
+    if(!cr.success){
+      visitList.innerHTML=`<div class="list-group-item text-warning small">${esc(cr.error||'Lỗi tải danh sách')}</div>`;
+      return;
+    }
+    VISIT_CUSTOMERS=cr.items||[];
+    renderVisitCustomers(VISIT_CUSTOMERS);
+    if(lr.success) renderVisitLog(lr.items||[]);
+  }catch(e){
+    visitList.innerHTML=`<div class="list-group-item text-danger small">${esc(e.message||'Lỗi mạng')}</div>`;
+  }
 }
 
 async function doVisitCheckin(customerId, type, extra={}){
   const c=VISIT_CUSTOMERS.find(x=>x.id===customerId)||{};
-  visitStatus.textContent=type==='in'?'Đang check-in…':'Đang check-out…';
-  const coords=await tryGetGeo();
+  visitStatus.textContent=type==='in'?'Đang ghi nhận Check-in…':'Đang ghi nhận Check-out…';
   const body={
     customer_id:customerId,
     check_type:type,
-    lat:coords?coords.latitude:null,
-    lng:coords?coords.longitude:null,
-    accuracy:coords?coords.accuracy:null,
     visit_session_id:c.open_session_id||extra.visit_session_id,
     note:extra.note||'',
     next_contact_at:extra.next_contact_at||'',
     device_info:navigator.userAgent.slice(0,120)
   };
-  const r=await(await fetch('/api/hrm/ess/visit-checkin',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(body)
-  })).json();
+  let r;
+  try{
+    r=await(await fetch('/api/hrm/ess/visit-checkin',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    })).json();
+  }catch(e){
+    visitStatus.textContent='Lỗi mạng — thử lại ('+(e.message||'')+')';
+    return;
+  }
   if(!r.success){
     visitStatus.textContent=r.error||'Lỗi';
     return;
   }
   const label=c.label||('KH #'+customerId);
   visitStatus.innerHTML=type==='in'
-    ? `<span class="text-success">✓ Check-in — <strong>${esc(label)}</strong> lúc ${new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</span>`
+    ? `<span class="text-success">✓ Check-in — <strong>${esc(label)}</strong></span>`
     : `<span class="text-success">✓ Check-out — đã lưu nội dung gặp <strong>${esc(label)}</strong></span>`;
-  document.getElementById('visitCheckoutBox').classList.add('d-none');
-  PENDING_CHECKOUT=null;
-  loadVisitCustomers();
+  cancelVisitCheckout();
+  loadVisitBoard();
 }
 
 function prepVisitCheckout(customerId){
   const c=VISIT_CUSTOMERS.find(x=>x.id===customerId);
-  if(!c||!c.open_session_id){ visitStatus.textContent='Chưa check-in tại khách này'; return; }
+  if(!c||c.visit_status!=='open'||!c.open_session_id){
+    visitStatus.textContent='Cần Check-in trước khi Check-out';
+    return;
+  }
   PENDING_CHECKOUT={customerId, sessionId:c.open_session_id, label:c.label};
   document.getElementById('visitCheckoutTitle').textContent='Check-out — '+c.label;
   document.getElementById('visitCustomerInfo').innerHTML=
     `<div><strong>${esc(c.label)}</strong></div>
      <div>SĐT: ${esc(c.phone||'—')}</div>
-     <div>Địa chỉ: ${esc(c.address||'—')}</div>`;
+     <div>Địa chỉ: ${esc(c.address||'—')}</div>
+     <div class="text-success">Check-in lúc: ${esc((c.checked_in_at||'').slice(11,16)||'—')}</div>`;
   document.getElementById('visitNote').value='';
   document.getElementById('visitNext').value='';
   document.getElementById('visitCheckoutBox').classList.remove('d-none');
   document.getElementById('visitNote').focus();
-  visitStatus.textContent='Ghi rõ nội dung đã trao đổi với khách, rồi bấm Xác nhận Check-out';
+  visitStatus.textContent='Ghi rõ nội dung đã trao đổi, rồi bấm Xác nhận Check-out';
+  document.getElementById('visitCheckoutBox').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function cancelVisitCheckout(){
+  PENDING_CHECKOUT=null;
+  document.getElementById('visitCheckoutBox').classList.add('d-none');
 }
 
 function doVisitCheckout(){
@@ -216,7 +240,7 @@ async function load(){
   pays.innerHTML=(d.payslips||[]).map(p=>`<li class="list-group-item d-flex justify-content-between">
     <span>T${p.month}/${p.year}</span><strong>${money(p.final_amount)} đ</strong></li>`).join('')
     ||'<li class="list-group-item text-muted">Chưa có phiếu lương</li>';
-  loadVisitCustomers();
+  loadVisitBoard();
 }
 async function leave(){
   const r=await(await fetch('/api/hrm/ess/leave',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
@@ -226,6 +250,7 @@ async function leave(){
 }
 function checkin(type){
   if(!navigator.geolocation){ cin.textContent='Trình duyệt không hỗ trợ GPS'; return; }
+  cin.textContent='Đang lấy vị trí…';
   navigator.geolocation.getCurrentPosition(async pos=>{
     const r=await(await fetch('/api/hrm/ess/checkin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       check_type:type, lat:pos.coords.latitude, lng:pos.coords.longitude, accuracy:pos.coords.accuracy,
