@@ -1,0 +1,244 @@
+{# Modal + JS liên kết ESS (dùng chung HĐLĐ & Danh sách NV) #}
+<script>
+if (typeof window.__CAN_MANAGE_ESS_LINK === 'undefined') {
+  window.__CAN_MANAGE_ESS_LINK = {{ can_manage_ess_link|default(true)|tojson }};
+}
+</script>
+<div class="modal fade" id="essLinkMd"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header">
+    <h5 class="modal-title">Thiết lập Cổng nhân viên (ESS)</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  </div>
+  <div class="modal-body">
+    <p class="small text-muted mb-3" id="essLinkEmpLabel">—</p>
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">Tài khoản đăng nhập</label>
+      <select id="ess_link_user" class="form-select form-select-sm">
+        <option value="">— Chọn Nhân viên Cổng ESS —</option>
+      </select>
+      <div id="essLinkUserEmpty" class="alert alert-warning py-2 small d-none mt-2 mb-0">
+        Chưa có tài khoản <strong>Nhân viên — Cổng ESS</strong>. Quản trị tạo tại
+        <strong>Settings → Users</strong> (role <em>Nhân viên — Cổng ESS (HRM)</em>).
+      </div>
+      <div class="form-text">Chỉ hiển thị user role <strong>Nhân viên — Cổng ESS</strong> (không gồm staff/admin/kế toán). User đã gán NV khác hiển thị xám.</div>
+    </div>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="ess_link_enable" checked>
+      <label class="form-check-label small" for="ess_link_enable">Bật ESS (nhân viên truy cập <code>/hrm/ess</code>)</label>
+    </div>
+    <div id="essLinkCurrent" class="alert alert-info py-2 small d-none mb-3"></div>
+    <div class="border rounded p-2 bg-light small" id="essLoginGuide">
+      <div class="fw-semibold mb-1"><i class="fas fa-sign-in-alt me-1"></i> Hướng dẫn nhân viên đăng nhập ESS</div>
+      <ol class="mb-0 ps-3">
+        <li>Mở trang đăng nhập: <a href="/login" target="_blank">/login</a></li>
+        <li><strong>Tên đăng nhập</strong>: số điện thoại hoặc username Quản trị đã tạo (xem cột bên trên sau khi chọn)</li>
+        <li><strong>Mật khẩu</strong>: do Quản trị đặt khi tạo user tại Settings → Users</li>
+        <li>Sau đăng nhập vào: <a href="/hrm/ess" target="_blank">/hrm/ess</a> (Cổng nhân viên)</li>
+      </ol>
+      <div class="mt-2 text-muted" id="essLoginPreview"></div>
+    </div>
+  </div>
+  <div class="modal-footer flex-wrap">
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+    <button type="button" class="btn btn-outline-danger btn-sm d-none" id="essUnlinkBtn">Gỡ liên kết</button>
+    <button type="button" class="btn btn-primary btn-sm" id="essLinkSaveBtn">Lưu thiết lập</button>
+  </div>
+</div></div></div>
+<script>
+window.HrmEssLink = (function () {
+  let canManage = !!window.__CAN_MANAGE_ESS_LINK;
+  let employeeId = null;
+  let onSaved = null;
+  let onRefresh = null;
+
+  function setCanManage(v) {
+    const next = !!v;
+    const changed = next !== canManage;
+    canManage = next;
+    window.__CAN_MANAGE_ESS_LINK = canManage;
+    if (changed && onRefresh) onRefresh();
+  }
+  function setOnSaved(fn) { onSaved = typeof fn === 'function' ? fn : null; }
+  function setOnRefresh(fn) { onRefresh = typeof fn === 'function' ? fn : null; }
+
+  function statusBadge(row) {
+    if (row.ess_user_id) {
+      if (+row.ess_enabled) {
+        const who = row.ess_username || row.ess_user_fullname || ('#' + row.ess_user_id);
+        return `<span class="badge bg-success" title="${String(who).replace(/"/g, '&quot;')}">ESS</span>`;
+      }
+      return '<span class="badge bg-warning text-dark" title="Đã gán user, ESS đang tắt">ESS tắt</span>';
+    }
+    return '<span class="badge bg-secondary">Chưa</span>';
+  }
+
+  function linkButtonHtml(employeeId, linked) {
+    if (!employeeId) return '';
+    const label = linked ? 'Đổi ESS' : 'Thiết lập ESS';
+    const cls = linked ? 'btn-outline-success' : 'btn-outline-info';
+    return `<button type="button" class="btn btn-sm ${cls} ess-link-btn ms-1" data-employee-id="${employeeId}" title="${label}">${label}</button>`;
+  }
+
+  function updateLoginPreview() {
+    const sel = document.getElementById('ess_link_user');
+    const preview = document.getElementById('essLoginPreview');
+    if (!sel || !preview) return;
+    const opt = sel.selectedOptions[0];
+    if (!opt || !opt.value) {
+      preview.textContent = '';
+      return;
+    }
+    const text = opt.textContent || '';
+    preview.innerHTML = 'Tài khoản sẽ dùng: <strong>' + text.replace(/</g, '&lt;') + '</strong>';
+  }
+
+  async function loadUsers(eid) {
+    const sel = document.getElementById('ess_link_user');
+    const empty = document.getElementById('essLinkUserEmpty');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Đang tải…</option>';
+    empty?.classList.add('d-none');
+    try {
+      const j = await (await fetch('/api/hrm/ess/linkable-users?employee_id=' + encodeURIComponent(eid))).json();
+      if (!j.success) {
+        sel.innerHTML = '<option value="">Không có quyền tải danh sách</option>';
+        return;
+      }
+      const items = j.items || [];
+      if (!items.length) {
+        sel.innerHTML = '<option value="">— Chưa có user —</option>';
+        empty?.classList.remove('d-none');
+      } else {
+        const selectable = items.filter(u => u.selectable !== false);
+        sel.innerHTML = '<option value="">— Chọn tài khoản ESS (' + items.length + ') —</option>'
+          + items.map(u => {
+            const name = u.full_name ? u.full_name + ' · ' : '';
+            const login = u.username || ('#' + u.id);
+            const role = u.role_label || 'NV ESS';
+            let linkNote = '';
+            if (u.linked_employee_name && !u.is_current) {
+              const code = u.linked_employee_code ? u.linked_employee_code + ' · ' : '';
+              linkNote = ' · đã gán ' + code + u.linked_employee_name;
+            }
+            const disabled = u.selectable === false;
+            const selected = u.is_current ? ' selected' : '';
+            const label = name + login + ' (' + role + ')' + linkNote;
+            return `<option value="${u.id}" data-username="${String(u.username || '').replace(/"/g, '&quot;')}"${disabled ? ' disabled' : ''}${selected}>${label.replace(/</g, '&lt;')}</option>`;
+          }).join('');
+        if (!selectable.length && items.length) {
+          empty?.classList.remove('d-none');
+          empty.textContent = 'Chưa có user Nhân viên — Cổng ESS, hoặc tất cả đã gán cho NV khác.';
+        }
+        const current = items.find(u => u.is_current);
+        if (current && current.selectable !== false) sel.value = String(current.id);
+      }
+      updateLoginPreview();
+    } catch (_) {
+      sel.innerHTML = '<option value="">Không tải được danh sách user</option>';
+    }
+  }
+
+  async function open(row) {
+    if (!row) return;
+    employeeId = row.id || row.employee_id;
+    if (!employeeId) return;
+    if (!canManage) {
+      try {
+        const chk = await fetch('/api/hrm/ess/linkable-users?employee_id=' + encodeURIComponent(employeeId));
+        if (chk.status === 403) {
+          alert('Tài khoản chưa có quyền thiết lập ESS. Dùng tài khoản Quản trị/HR hoặc user có quyền sửa dữ liệu.');
+          return;
+        }
+      } catch (_) { /* mở modal thử tiếp */ }
+    }
+    const code = row.employee_code || '';
+    const name = row.fullname || row.employee_name || '';
+    const currentUserId = row.ess_user_id || 0;
+    const essEnabled = (+row.ess_enabled || 0) ? 1 : 0;
+
+    const label = document.getElementById('essLinkEmpLabel');
+    if (label) label.textContent = (code ? code + ' · ' : '') + (name || ('NV #' + employeeId));
+
+    document.getElementById('ess_link_enable').checked = !!essEnabled || !currentUserId;
+
+    const cur = document.getElementById('essLinkCurrent');
+    const unlinkBtn = document.getElementById('essUnlinkBtn');
+    if (currentUserId) {
+      const who = row.ess_username || row.ess_user_fullname || ('user #' + currentUserId);
+      cur.classList.remove('d-none');
+      cur.textContent = essEnabled
+        ? ('Đang liên kết: ' + who + '. Có thể đổi user, tắt ESS (bỏ tick), hoặc gỡ liên kết.')
+        : ('Đã gán ' + who + ' nhưng ESS đang tắt. Tick "Bật ESS" và lưu để mở lại.');
+      unlinkBtn?.classList.remove('d-none');
+    } else {
+      cur?.classList.add('d-none');
+      unlinkBtn?.classList.add('d-none');
+    }
+
+    await loadUsers(employeeId);
+    new bootstrap.Modal(document.getElementById('essLinkMd')).show();
+  }
+
+  async function save(unlink) {
+    if (!employeeId) return;
+    const body = { employee_id: employeeId };
+    if (unlink) {
+      if (!confirm('Gỡ liên kết ESS? Nhân viên sẽ không đăng nhập ESS được nữa.')) return;
+      body.unlink = true;
+    } else {
+      const sel = document.getElementById('ess_link_user');
+      const uid = sel?.value;
+      if (!uid) return alert('Chọn tài khoản đăng nhập (hoặc nhờ Quản trị tạo user trước).');
+      body.user_id = uid;
+      body.ess_enabled = document.getElementById('ess_link_enable').checked;
+      const opt = sel.selectedOptions[0];
+      body._preview_username = opt?.dataset?.username || opt?.textContent || '';
+    }
+    const r = await (await fetch('/api/hrm/ess/link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })).json();
+    if (r.error || r.success === false) return alert(r.error || 'Không lưu được');
+    bootstrap.Modal.getInstance(document.getElementById('essLinkMd'))?.hide();
+    if (onSaved) onSaved();
+    if (!unlink && r.username) {
+      alert(
+        'Đã lưu thiết lập ESS.\n\n' +
+        'Hướng dẫn nhân viên đăng nhập:\n' +
+        '• Trang: /login\n' +
+        '• Tên đăng nhập: ' + r.username + '\n' +
+        '• Mật khẩu: do Quản trị đặt tại Settings → Users\n' +
+        '• Sau đăng nhập vào: /hrm/ess'
+      );
+    } else if (unlink) {
+      alert('Đã gỡ liên kết ESS.');
+    }
+  }
+
+  document.getElementById('ess_link_user')?.addEventListener('change', updateLoginPreview);
+  document.getElementById('essUnlinkBtn')?.addEventListener('click', () => save(true));
+  document.getElementById('essLinkSaveBtn')?.addEventListener('click', () => save(false));
+
+  document.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.ess-link-btn');
+    if (!btn) return;
+    const eid = btn.dataset.employeeId;
+    if (!eid) return;
+    const finder = window.__hrmEssLinkRowFinder;
+    const row = finder ? finder(eid) : null;
+    if (row) open(row);
+    else alert('Không tìm thấy hồ sơ nhân viên #' + eid);
+  });
+
+  return {
+    setCanManage,
+    setOnSaved,
+    setOnRefresh,
+    statusBadge,
+    linkButtonHtml,
+    open,
+    save,
+  };
+})();
+</script>

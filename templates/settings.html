@@ -391,6 +391,9 @@
                                             <option value="staff*">Nhân Viên Dịch Vụ Lưu Trú</option>
                                             <option value="staff**">Nhân Viên Dịch Vụ Ăn Uống</option>
                                             </optgroup>
+                                            <optgroup label="Cổng nhân viên (ESS)">
+                                            <option value="employee">Nhân viên — Cổng ESS (HRM)</option>
+                                            </optgroup>
                                             <optgroup label="POS / Hộ kinh doanh">
                                             <option value="accountant">Kế Toán</option>
                                             <option value="manager">Quản Lý Cửa Hàng POS</option>
@@ -428,6 +431,12 @@
                                         {% elif _is_tt99 %}
                                         <div class="form-text">User TT99 dùng đầy đủ mẫu chứng từ Thông tư 99 (03–09-TT, XK/HQ, L/C, ngoại tệ…). Không có menu sổ DNSN (framework TT58).</div>
                                         {% endif %}
+                                        <div class="form-text text-info d-none" id="essRoleHint">
+                                            <i class="fas fa-mobile-alt me-1"></i>
+                                            Tài khoản ESS: bật quyền <strong>Cổng nhân viên (ess_portal)</strong> — role
+                                            <strong>Nhân viên ESS</strong> tự bật quyền này; role <strong>staff</strong> cần tick thủ công.
+                                            HR liên kết user ↔ nhân viên tại <strong>Danh sách nhân viên</strong> hoặc <strong>Hợp đồng lao động</strong> (nút Thiết lập ESS).
+                                        </div>
                                     </div>
                                     <div class="perm-group">
                                         <p class="small fw-bold text-primary mb-3">PHÂN QUYỀN CHI TIẾT</p>
@@ -458,6 +467,15 @@
                                         <div class="perm-check form-check">
                                             <input class="form-check-input perm-cb" type="checkbox" value="view_reports" id="p_rep">
                                             <label class="form-check-label" for="p_rep">Xem báo cáo & doanh thu</label>
+                                        </div>
+                                        <hr class="my-3">
+                                        <p class="small fw-bold text-secondary mb-2">NHÂN SỰ / ESS</p>
+                                        <div class="perm-check form-check border border-info rounded p-2 bg-info bg-opacity-10">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="ess_portal" id="p_ess">
+                                            <label class="form-check-label fw-semibold" for="p_ess">
+                                                Cổng nhân viên (ESS)
+                                                <span class="text-muted fw-normal d-block small">Xem payslip, xin nghỉ, check-in GPS tại <code>/ess</code></span>
+                                            </label>
                                         </div>
                                         <hr class="my-3">
                                         <div class="perm-check form-check text-warning">
@@ -1258,6 +1276,10 @@ const playNotificationSound = () => {
 // =============================================
 const ROLE_LABELS = {
     master: ['bg-danger', 'Master'],
+    employee: ['bg-info', 'NV ESS'],
+    staff: ['bg-secondary', 'NV Bán hàng'],
+    'staff*': ['bg-secondary', 'NV Lưu trú'],
+    'staff**': ['bg-secondary', 'NV F&B'],
     admin: ['bg-danger', 'Quản Trị Viên'],
     'admin*': ['bg-danger', 'Quản Trị Viên'],
     adminFB: ['bg-danger', 'Quản Trị Viên'],
@@ -1303,6 +1325,9 @@ async function loadUsers() {
             const roleMap = u.is_firm_user ? FIRM_ROLE_LABELS : ROLE_LABELS;
             const roleLabel = u.role_label || (roleMap[u.role] || ['bg-secondary', 'Nhân viên'])[1];
             const roleBadge = (roleMap[u.role] || ['bg-secondary', roleLabel])[0];
+            const essBadge = (u.has_ess_portal || (u.permissions || '').split(',').includes('ess_portal'))
+                ? ' <span class="badge bg-info text-dark ms-1" title="Cổng nhân viên ESS">ESS</span>'
+                : '';
             const canDelete = !IS_FIRM_TENANT_SETTINGS && !SME_PROTECTED_ROLES.includes(u.role);
             const statusBadge = (u.is_active === 0 || u.is_active === false)
                 ? '<span class="badge bg-secondary">Ngưng</span>'
@@ -1329,7 +1354,7 @@ async function loadUsers() {
                         <small class="text-muted">${escapeHtml(u.phone)}</small>`}
                     </td>
                     <td>${escapeHtml(u.branch_names) || '<span class="text-muted">—</span>'}</td>
-                    <td><span class="badge ${roleBadge}">${escapeHtml(roleLabel)}</span></td>
+                    <td><span class="badge ${roleBadge}">${escapeHtml(roleLabel)}</span>${essBadge}</td>
                     <td>${statusBadge}</td>
                     ${actionCell}
                 </tr>`;
@@ -1347,7 +1372,7 @@ function editUserById(id) {
 }
 
 function editUser(user) {
-    resetUserForm();
+    resetUserForm(false);
     document.getElementById('userFormTitle').textContent = `Chỉnh sửa: ${user.username}`;
     document.getElementById('u_id').value = user.id;
     document.getElementById('u_username').value = user.username;
@@ -1364,9 +1389,31 @@ function editUser(user) {
         cb.checked = perms.includes(cb.value);
     });
     document.getElementById('u_password').placeholder = 'Nhập mật khẩu mới nếu muốn thay đổi';
+    syncEssRoleHint();
 }
 
-function resetUserForm() {
+function syncEssRoleHint() {
+    const role = document.getElementById('u_role')?.value || '';
+    const hint = document.getElementById('essRoleHint');
+    const essCb = document.getElementById('p_ess');
+    if (hint) {
+        hint.classList.toggle('d-none', role !== 'employee' && !(essCb && essCb.checked));
+    }
+}
+
+function applyEssEmployeePreset() {
+    const role = document.getElementById('u_role')?.value || '';
+    const essCb = document.getElementById('p_ess');
+    if (role !== 'employee' || !essCb) return;
+    essCb.checked = true;
+    ['p_edit', 'p_del'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = false;
+    });
+    syncEssRoleHint();
+}
+
+function resetUserForm(clearHint = true) {
     document.getElementById('userForm').reset();
     document.getElementById('u_id').value = '';
     document.getElementById('userFormTitle').textContent = 'Thêm nhân viên mới';
@@ -1374,6 +1421,7 @@ function resetUserForm() {
     document.querySelectorAll('.perm-cb').forEach(cb => { cb.checked = false; });
     const legacyGroup = document.getElementById('legacySmeRoleGroup');
     if (legacyGroup) legacyGroup.hidden = true;
+    if (clearHint) syncEssRoleHint();
 }
 
 async function saveUser() {
@@ -1383,8 +1431,18 @@ async function saveUser() {
         return;
     }
 
+    const role = document.getElementById('u_role').value;
+    if (role === 'employee') {
+        applyEssEmployeePreset();
+    }
+
     const perms = [];
     document.querySelectorAll('.perm-cb:checked').forEach(cb => perms.push(cb.value));
+
+    if (role === 'employee' && !perms.includes('ess_portal')) {
+        Swal.fire('Cảnh báo', 'Role Nhân viên ESS cần quyền Cổng nhân viên (ess_portal).', 'warning');
+        return;
+    }
 
     try {
         const res = await postSettingsJSON('/api/settings/save_user', {
@@ -1394,7 +1452,7 @@ async function saveUser() {
             email: document.getElementById('u_email').value.trim(),
             phone: document.getElementById('u_phone').value.trim(),
             password: document.getElementById('u_password').value,
-            role: document.getElementById('u_role').value,
+            role,
             permissions: perms.join(','),
         });
         if (res.success) {
@@ -2152,6 +2210,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeTab?.getAttribute('data-bs-target') === '#tab-esign') {
             ensureEsignLoaded();
         }
+    }
+
+    const uRole = document.getElementById('u_role');
+    if (uRole) {
+        uRole.addEventListener('change', () => {
+            applyEssEmployeePreset();
+            syncEssRoleHint();
+        });
+    }
+    const pEss = document.getElementById('p_ess');
+    if (pEss) {
+        pEss.addEventListener('change', syncEssRoleHint);
     }
 
     const autoPrintCheckbox = document.getElementById('auto_print');

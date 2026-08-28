@@ -28,6 +28,11 @@ def _actor():
     )
 
 
+def _can_manage_ess_link() -> bool:
+    from Services.hrm.ess_access import session_may_manage_ess_link
+    return session_may_manage_ess_link()
+
+
 def register_hrm_routes(app):
     try:
         from Services.tenant_profile import require_sme_regime
@@ -136,6 +141,7 @@ def register_hrm_routes(app):
                     'success': True,
                     'types': CONTRACT_TYPES,
                     'items': list_contracts(conn, status=status),
+                    'can_manage_ess_link': _can_manage_ess_link(),
                 })
             data = request.get_json(silent=True) or request.form.to_dict()
             item = upsert_contract(conn, data)
@@ -429,30 +435,69 @@ def register_hrm_routes(app):
     @login_required
     def api_hrm_ess_link():
         """HR gán user ↔ NV và bật ESS (ess_enabled)."""
-        from Services.hrm.ess_access import link_employee_ess
-        from Services.sme_roles import ADMIN_OR_MASTER_ROLES, SME_MANAGER_ROLES
-        role = (session.get('role') or '').strip()
-        if role not in ADMIN_OR_MASTER_ROLES and role not in SME_MANAGER_ROLES:
+        from Services.hrm.ess_access import (
+            link_employee_ess,
+            session_may_manage_ess_link,
+            unlink_employee_ess,
+        )
+        if not session_may_manage_ess_link():
             return jsonify({'success': False, 'error': 'Forbidden'}), 403
         data = request.get_json(silent=True) or {}
         try:
             employee_id = int(data.get('employee_id') or 0)
-            user_id = int(data.get('user_id') or 0)
         except (TypeError, ValueError):
-            return jsonify({'success': False, 'error': 'Thiếu employee_id / user_id'}), 400
-        if not employee_id or not user_id:
-            return jsonify({'success': False, 'error': 'Thiếu employee_id / user_id'}), 400
+            return jsonify({'success': False, 'error': 'Thiếu employee_id'}), 400
+        if not employee_id:
+            return jsonify({'success': False, 'error': 'Thiếu employee_id'}), 400
         conn = _conn()
         try:
+            if data.get('unlink'):
+                unlink_employee_ess(conn, employee_id)
+                return jsonify({'success': True, 'message': 'Đã gỡ liên kết ESS'})
+            try:
+                user_id = int(data.get('user_id') or 0)
+            except (TypeError, ValueError):
+                return jsonify({'success': False, 'error': 'Thiếu user_id'}), 400
+            if not user_id:
+                return jsonify({'success': False, 'error': 'Chọn tài khoản đăng nhập'}), 400
             link_employee_ess(
                 conn,
                 employee_id,
                 user_id,
                 enable=bool(data.get('ess_enabled', True)),
             )
-            return jsonify({'success': True})
+            urow = conn.execute(
+                'SELECT username, full_name FROM users WHERE id = ?',
+                (user_id,),
+            ).fetchone()
+            username = ''
+            if urow:
+                username = (urow['username'] if hasattr(urow, 'keys') else urow[0]) or ''
+            return jsonify({
+                'success': True,
+                'message': 'Đã lưu thiết lập ESS',
+                'username': username,
+                'ess_url': '/hrm/ess',
+                'ess_enabled': bool(data.get('ess_enabled', True)),
+            })
         except Exception as e:
             return _api_error(e)
+        finally:
+            conn.close()
+
+    @app.route('/api/hrm/ess/linkable-users', methods=['GET'])
+    @login_required
+    def api_hrm_ess_linkable_users():
+        from Services.hrm.ess_access import list_ess_linkable_users, session_may_manage_ess_link
+        if not session_may_manage_ess_link():
+            return jsonify({'success': False, 'error': 'Forbidden'}), 403
+        employee_id = request.args.get('employee_id', type=int)
+        conn = _conn()
+        try:
+            return jsonify({
+                'success': True,
+                'items': list_ess_linkable_users(conn, employee_id=employee_id),
+            })
         finally:
             conn.close()
 

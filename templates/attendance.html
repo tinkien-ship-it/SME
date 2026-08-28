@@ -371,7 +371,8 @@ function initTables() {
 
 async function loadEmployees() {
     const res = await fetch('/api/employees/manage?status=1');
-    employees = await res.json();
+    const data = await res.json();
+    employees = Array.isArray(data) ? data : (data.items || data.data || []);
     const sel = document.getElementById('filterEmployee');
     const manualSel = document.getElementById('manualEmployee');
     const opts = employees.map(e =>

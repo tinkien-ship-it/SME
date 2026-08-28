@@ -169,11 +169,14 @@ def list_contracts(conn: sqlite3.Connection, *, status: str | None = 'active') -
     ensure_legal_payroll_columns(conn)
     sql = """
         SELECT c.*, e.fullname AS employee_name, e.employee_code,
+               e.user_id AS ess_user_id, e.ess_enabled,
+               u.username AS ess_username, u.full_name AS ess_user_fullname,
                COALESCE(NULLIF(TRIM(c.employee_id_card), ''), e.id_card) AS employee_id_card,
                e.phone AS employee_phone, e.address AS employee_address,
                COALESCE(NULLIF(TRIM(c.employee_birth_date), ''), e.birth_date) AS employee_birth_date
         FROM hrm_employment_contracts c
         LEFT JOIN employees e ON e.id = c.employee_id
+        LEFT JOIN users u ON u.id = e.user_id
     """
     params: list[Any] = []
     if status:

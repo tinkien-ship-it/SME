@@ -42,6 +42,18 @@ POS_HKD_ASSIGNABLE_ROLES = (
 )
 
 ROLE_LABELS = {
+    'employee': 'Nhân viên (ESS)',
+    'staff': 'NV Bán hàng',
+    'staff*': 'NV Lưu trú',
+    'staff**': 'NV F&B',
+    'accountant': 'Kế toán',
+    'manager': 'Quản lý POS',
+    'manager*': 'Quản lý Lưu trú',
+    'managerFB': 'Quản lý F&B',
+    'admin': 'Quản trị POS',
+    'admin*': 'Quản trị Lưu trú',
+    'adminFB': 'Quản trị F&B',
+    'master': 'Master',
     'accountantSME': 'Kế toán SME',
     'managerSME': 'Quản lý SME',
     'adminSME': 'Quản trị SME',
@@ -52,6 +64,11 @@ ROLE_LABELS = {
     'managerSME99': 'Quản lý SME (TT99)',
     'adminSME99': 'Quản trị SME (TT99)',
 }
+
+# Permission bổ sung (POS/HRM) — lưu CSV trong users.permissions
+ESS_PORTAL_PERMISSION = 'ess_portal'
+# Role Settings → "Nhân viên — Cổng ESS (HRM)" — duy nhất được gán ESS link
+ESS_PORTAL_ROLE = 'employee'
 
 # Chính sách: DN siêu nhỏ (TT58) có thể phát sinh mọi nghiệp vụ như DN TT99.
 # Do đó TT58 được mở đầy đủ nghiệp vụ mua/bán/kế toán; khác biệt chỉ ở framework

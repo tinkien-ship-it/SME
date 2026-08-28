@@ -13,6 +13,7 @@
     <table class="table table-sm mb-0 align-middle">
       <thead class="table-light"><tr>
         <th>Số HĐ</th><th>Mã/NV</th><th>Loại</th><th>Bắt đầu</th><th>Kết thúc</th>
+        <th>ESS</th>
         <th class="text-end">Lương chính</th><th class="text-end">PC chịu BH</th>
         <th class="text-end">PC miễn thuế</th><th></th>
       </tr></thead>
@@ -139,11 +140,29 @@
     <button type="submit" class="btn btn-primary">Lưu &amp; đồng bộ hồ sơ NV</button>
   </div>
 </form></div></div>
+{% include 'partials/hrm_ess_link_assets.html' %}
 <script>
 const money=n=>new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
 const TYPES={};
 let ITEMS=[];
 let EMPLOYEES=[];
+
+window.__hrmEssLinkRowFinder = (eid) => {
+  const c = ITEMS.find(x => String(x.employee_id) === String(eid));
+  if (!c) return null;
+  return {
+    id: c.employee_id,
+    employee_code: c.employee_code,
+    fullname: c.employee_name,
+    ess_user_id: c.ess_user_id,
+    ess_enabled: c.ess_enabled,
+    ess_username: c.ess_username,
+    ess_user_fullname: c.ess_user_fullname,
+  };
+};
+HrmEssLink.setOnSaved(() => load());
+HrmEssLink.setOnRefresh(() => { if (ITEMS.length) load(); });
+HrmEssLink.setCanManage(!!window.__CAN_MANAGE_ESS_LINK);
 
 let EDITING=false;
 let _skipEmpPickSync=false;
@@ -209,7 +228,7 @@ function setEditMode(on){
 async function loadEmployees(){
   try {
     const rows = await (await fetch('/api/employees/manage?status=1')).json();
-    EMPLOYEES = Array.isArray(rows) ? rows : (rows.data || []);
+    EMPLOYEES = Array.isArray(rows) ? rows : (rows.items || rows.data || []);
   } catch (_) { EMPLOYEES = []; }
   const sel = document.getElementById('employee_pick');
   if (!sel) return;
@@ -329,25 +348,29 @@ document.querySelectorAll('input[name="empMode"]').forEach(r => r.addEventListen
 async function load(){
   const d=await(await fetch('/api/hrm/contracts?status=all')).json();
   Object.assign(TYPES,d.types||{});
+  HrmEssLink.setCanManage(!!(d.can_manage_ess_link ?? window.__CAN_MANAGE_ESS_LINK));
   ITEMS=d.items||[];
   tb.innerHTML=ITEMS.map(c=>{
     const si=(+c.allowance_position||0)+(+c.allowance_responsibility||0)+(+c.allowance_seniority||0);
     const free=(+c.allowance_lunch||0)+(+c.allowance_uniform||0)+(+c.allowance_phone||0);
+    const essLinked = c.employee_id && !!c.ess_user_id;
     return `<tr>
       <td>${c.contract_no||('#'+c.id)}</td>
       <td>${c.employee_code?c.employee_code+' · ':''}${c.employee_name||c.employee_id}</td>
       <td>${TYPES[c.contract_type]||c.contract_type}</td>
       <td>${c.start_date||''}</td><td>${c.end_date||'—'}</td>
+      <td>${HrmEssLink.statusBadge(c)}</td>
       <td class="text-end">${money(c.base_salary)}</td>
       <td class="text-end">${money(si)}</td>
       <td class="text-end">${money(free)}</td>
       <td class="text-nowrap">
         <button type="button" class="btn btn-sm btn-outline-primary" onclick="edit(${c.id})">Sửa</button>
         <a class="btn btn-sm btn-outline-secondary" href="/hrm/contracts/${c.id}/print" target="_blank">In</a>
+        ${HrmEssLink.linkButtonHtml(c.employee_id, essLinked)}
         <button type="button" class="btn btn-sm btn-outline-danger" onclick="delContract(${c.id})">Xóa</button>
       </td>
     </tr>`;
-  }).join('')||'<tr><td colspan="9" class="text-center text-muted">Chưa có HĐ</td></tr>';
+  }).join('')||'<tr><td colspan="10" class="text-center text-muted">Chưa có HĐ</td></tr>';
 }
 function openForm(){
   setEditMode(false);

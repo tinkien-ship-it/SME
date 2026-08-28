@@ -9,6 +9,8 @@ from flask import session
 
 ESS_PERMISSION = 'ess_portal'
 
+from Services.sme_roles import ESS_PORTAL_ROLE
+
 # Role NV thường được cấp ESS (kèm permission ess_portal khuyến nghị)
 ESS_EMPLOYEE_ROLES = frozenset({
     'employee',
@@ -97,6 +99,20 @@ def link_employee_ess(
 
     ensure_hrm_schema(conn)
     eid, uid = int(employee_id), int(user_id)
+
+    urow = conn.execute(
+        'SELECT role, username FROM users WHERE id = ?',
+        (uid,),
+    ).fetchone()
+    if not urow:
+        raise ValueError('Tài khoản đăng nhập không tồn tại')
+    urole = str(urow['role'] if hasattr(urow, 'keys') else urow[0] or '').strip()
+    if urole != ESS_PORTAL_ROLE:
+        raise ValueError(
+            'Chỉ gán user role Nhân viên — Cổng ESS (employee). '
+            'Tạo user đúng role tại Settings → Users.'
+        )
+
     dup = conn.execute(
         'SELECT id, fullname FROM employees WHERE user_id = ? AND id != ? LIMIT 1',
         (uid, eid),
@@ -109,5 +125,164 @@ def link_employee_ess(
         'UPDATE employees SET user_id = ?, ess_enabled = ? WHERE id = ?',
         (uid, 1 if enable else 0, eid),
     )
+    if enable:
+        ensure_user_ess_portal(conn, uid)
     if commit:
         sqlite_commit(conn, label='ess_link')
+
+
+def unlink_employee_ess(
+    conn: sqlite3.Connection,
+    employee_id: int,
+    *,
+    commit: bool = True,
+) -> None:
+    """HR gỡ liên kết user ↔ NV."""
+    from db_utils import sqlite_commit
+    from Services.hrm.schema import ensure_hrm_schema
+
+    ensure_hrm_schema(conn)
+    conn.execute(
+        'UPDATE employees SET user_id = NULL, ess_enabled = 0 WHERE id = ?',
+        (int(employee_id),),
+    )
+    if commit:
+        sqlite_commit(conn, label='ess_unlink')
+
+
+def hr_may_manage_ess_link(role, permissions=None) -> bool:
+    from auth import normalize_permissions
+    from Services.sme_roles import (
+        ADMIN_OR_MASTER_ROLES,
+        SME_ACCOUNTANT_ROLES,
+        SME_MANAGER_ROLES,
+    )
+    r = str(role or '').strip()
+    if r in ADMIN_OR_MASTER_ROLES or r in SME_MANAGER_ROLES or r in SME_ACCOUNTANT_ROLES:
+        return True
+    # Quản lý POS / lưu trú / F&B / kế toán POS
+    if r in {'manager', 'manager*', 'managerFB', 'accountant'}:
+        return True
+    # HR có quyền sửa dữ liệu (thường thao tác danh sách NV / HĐLĐ)
+    if 'edit_data' in normalize_permissions(permissions):
+        return True
+    return False
+
+
+def session_may_manage_ess_link() -> bool:
+    from flask import session
+    user = session.get('user') or {}
+    uid = session.get('user_id') or user.get('id')
+    username = user.get('username') or session.get('username')
+    if not uid and not username:
+        return False
+    r = str(session.get('role') or user.get('role') or '').strip()
+    perms = user.get('permissions')
+    # Chỉ chặn role portal NV thuần (không có quyền HR)
+    if r == 'employee':
+        return False
+    if r in ESS_EMPLOYEE_ROLES:
+        from auth import normalize_permissions
+        return 'edit_data' in normalize_permissions(perms)
+    return True
+
+
+def ensure_user_ess_portal(conn: sqlite3.Connection, user_id: int) -> bool:
+    """Bổ sung permission ess_portal khi HR gán ESS (nếu chưa có)."""
+    from auth import normalize_permissions
+    row = conn.execute(
+        'SELECT permissions FROM users WHERE id = ?',
+        (int(user_id),),
+    ).fetchone()
+    if not row:
+        return False
+    raw = row['permissions'] if hasattr(row, 'keys') else row[0]
+    perms = normalize_permissions(raw)
+    if ESS_PERMISSION in perms:
+        return False
+    perms.append(ESS_PERMISSION)
+    conn.execute(
+        'UPDATE users SET permissions = ? WHERE id = ?',
+        (','.join(perms), int(user_id)),
+    )
+    return True
+
+
+def list_ess_linkable_users(
+    conn: sqlite3.Connection,
+    *,
+    employee_id: int | None = None,
+) -> list[dict]:
+    """User role employee (Cổng ESS) từ Settings — HR chọn gán NV."""
+    from auth import normalize_permissions
+    from Services.hrm.schema import ensure_hrm_schema
+    from Services.sme_roles import ESS_PORTAL_ROLE, ROLE_LABELS
+
+    ensure_hrm_schema(conn)
+    eid = int(employee_id) if employee_id else None
+
+    current_uid = None
+    if eid:
+        row = conn.execute(
+            'SELECT user_id FROM employees WHERE id = ? LIMIT 1',
+            (eid,),
+        ).fetchone()
+        if row:
+            raw = row['user_id'] if hasattr(row, 'keys') else row[0]
+            if raw:
+                current_uid = int(raw)
+
+    linked_by_user: dict[int, dict] = {}
+    for r in conn.execute(
+        'SELECT id, user_id, fullname, employee_code FROM employees WHERE user_id IS NOT NULL'
+    ).fetchall():
+        emp = dict(r) if hasattr(r, 'keys') else {
+            'id': r[0], 'user_id': r[1], 'fullname': r[2], 'employee_code': r[3],
+        }
+        uid = int(emp.get('user_id') or 0)
+        if uid:
+            linked_by_user[uid] = {
+                'employee_id': int(emp['id']),
+                'fullname': emp.get('fullname') or '',
+                'employee_code': emp.get('employee_code') or '',
+            }
+
+    out: list[dict] = []
+    for r in conn.execute(
+        """
+        SELECT id, username, full_name, role, email, phone, permissions
+        FROM users
+        WHERE TRIM(COALESCE(role, '')) = ?
+        ORDER BY COALESCE(NULLIF(TRIM(full_name), ''), username), username
+        """,
+        (ESS_PORTAL_ROLE,),
+    ).fetchall():
+        u = dict(r) if hasattr(r, 'keys') else {
+            'id': r[0], 'username': r[1], 'full_name': r[2], 'role': r[3],
+            'email': r[4], 'phone': r[5], 'permissions': r[6],
+        }
+        uid = int(u['id'])
+        role = str(u.get('role') or '').strip()
+        perms = normalize_permissions(u.get('permissions'))
+        link = linked_by_user.get(uid)
+        linked_elsewhere = bool(
+            link and (not eid or int(link['employee_id']) != int(eid))
+        )
+        ess_ready = ESS_PERMISSION in perms or role == ESS_PORTAL_ROLE
+        out.append({
+            'id': uid,
+            'username': u.get('username') or '',
+            'full_name': u.get('full_name') or '',
+            'email': u.get('email') or '',
+            'phone': u.get('phone') or '',
+            'role': role,
+            'role_label': ROLE_LABELS.get(role, role),
+            'has_ess_portal': ESS_PERMISSION in perms,
+            'ess_ready': ess_ready,
+            'selectable': not linked_elsewhere,
+            'linked_employee_id': link['employee_id'] if link else None,
+            'linked_employee_name': link['fullname'] if link else None,
+            'linked_employee_code': link.get('employee_code', '') if link else None,
+            'is_current': uid == current_uid,
+        })
+    return out

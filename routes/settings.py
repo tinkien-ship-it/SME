@@ -1907,8 +1907,9 @@ Trân trọng,
             return jsonify(list_firm_users_for_settings(tid))
 
         from Services.sme.branches import ensure_sme_branches_schema
-        from Services.sme_roles import PERMISSION_BYPASS_ROLES
+        from Services.sme_roles import PERMISSION_BYPASS_ROLES, ROLE_LABELS, ESS_PORTAL_PERMISSION
         from Services.user_branch import ensure_user_branch_schema
+        from auth import normalize_permissions
 
         db = get_db_connection()
         try:
@@ -1955,6 +1956,8 @@ Trân trọng,
         for u in users:
             uid = int(u.get("id") or 0)
             role = str(u.get("role") or '').strip()
+            u['role_label'] = ROLE_LABELS.get(role, role)
+            u['has_ess_portal'] = ESS_PORTAL_PERMISSION in normalize_permissions(u.get('permissions'))
             if role in PERMISSION_BYPASS_ROLES:
                 u["branch_names"] = "Tất cả chi nhánh"
             else:
@@ -2020,6 +2023,15 @@ Trân trọng,
             )
             if not ok:
                 return jsonify({"success": False, "error": err}), 400
+
+            from auth import normalize_permissions
+            from Services.sme_roles import ESS_PORTAL_PERMISSION
+            perm_list = normalize_permissions(permissions)
+            role_str = str(role or '').strip()
+            if role_str == 'employee' and ESS_PORTAL_PERMISSION not in perm_list:
+                perm_list.append(ESS_PORTAL_PERMISSION)
+            permissions = ','.join(perm_list)
+
             if user_id:  # ================== CẬP NHẬT ==================
                 old_row = conn.execute(
                     "SELECT id, username, full_name, email, phone, role, permissions FROM users WHERE id = ?",

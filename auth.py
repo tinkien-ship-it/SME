@@ -60,7 +60,11 @@ def init_auth(app):
 
     @app.context_processor
     def inject_template_user():
-        return {'current_user': build_template_user()}
+        from Services.hrm.ess_access import session_may_manage_ess_link
+        return {
+            'current_user': build_template_user(),
+            'can_manage_ess_link': session_may_manage_ess_link(),
+        }
 
     @login_manager.user_loader
     def load_user(user_id):

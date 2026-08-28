@@ -42,7 +42,7 @@
                 <table class="table table-sm table-hover align-middle" id="employeesTable">
                     <thead><tr></tr></thead>
                     <tbody>
-                        <tr><td colspan="14" class="text-center text-muted py-4">Đang tải...</td></tr>
+                        <tr><td colspan="16" class="text-center text-muted py-4">Đang tải...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -210,6 +210,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script>window.__CAN_MANAGE_ESS_LINK = {{ can_manage_ess_link|default(true)|tojson }};</script>
+{% include 'partials/hrm_ess_link_assets.html' %}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
 <script>
@@ -263,11 +265,27 @@ function statusBadge(status) {
         : '<span class="badge bg-secondary">Nghỉ việc</span>';
 }
 
+function essSetupButton(e) {
+    const hasUser = !!e.ess_user_id;
+    const label = hasUser ? 'Đổi ESS' : 'Thiết lập ESS';
+    const cls = hasUser ? 'btn-outline-success' : 'btn-outline-info';
+    return `<button type="button" class="btn btn-sm ${cls} ess-link-btn ms-1" data-employee-id="${e.id}" title="${label}">${label}</button>`;
+}
+
+function essStatusHtml(e) {
+    if (typeof HrmEssLink !== 'undefined') return HrmEssLink.statusBadge(e);
+    if (e.ess_user_id && (+e.ess_enabled || 0)) {
+        return '<span class="badge bg-success">ESS</span>';
+    }
+    if (e.ess_user_id) return '<span class="badge bg-warning text-dark">ESS tắt</span>';
+    return '<span class="badge bg-secondary">Chưa</span>';
+}
+
 function renderEmployeeRows(data, tbody) {
     const el = tbody || document.querySelector('#employeesTable tbody');
     if (!el) return;
     if (!data.length) {
-        el.innerHTML = '<tr><td colspan="15" class="text-center text-muted py-4">Không có nhân viên.</td></tr>';
+        el.innerHTML = '<tr><td colspan="16" class="text-center text-muted py-4">Không có nhân viên.</td></tr>';
         return;
     }
     el.innerHTML = data.map(e => `
@@ -286,8 +304,10 @@ function renderEmployeeRows(data, tbody) {
             <td class="text-end small">${fmtMoney(e.self_deduction)}</td>
             <td class="text-end small">${fmtMoney(e.dependent_deduction)}</td>
             <td class="text-center">${statusBadge(e.status)}</td>
-            <td class="text-center">
+            <td class="text-center">${essStatusHtml(e)}</td>
+            <td class="text-center text-nowrap">
                 <button class="btn btn-sm btn-warning" onclick="editEmployee(${e.id})">Sửa</button>
+                ${essSetupButton(e)}
             </td>
         </tr>`).join('');
 }
@@ -330,7 +350,8 @@ function initEmployeeTable() {
             { key: 'status', label: 'Trạng thái', filterType: 'select', width: '100px', align: 'center',
               getValue: e => String(e.status),
               filterOptions: [{ value: '1', label: 'Đang làm' }, { value: '0', label: 'Nghỉ việc' }] },
-            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '90px', align: 'center' },
+            { key: 'ess', label: 'ESS', filter: false, sortable: false, width: '70px', align: 'center' },
+            { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '200px', align: 'center' },
         ],
         renderRows: renderEmployeeRows,
     });
@@ -378,7 +399,12 @@ async function loadEmployees() {
         const res = await fetch(`/api/employees/manage?${params}`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Lỗi tải dữ liệu');
-        employees = data;
+        if (Array.isArray(data)) {
+            employees = data;
+        } else {
+            employees = data.items || [];
+        }
+        HrmEssLink.setCanManage(!!(data.can_manage_ess_link ?? window.__CAN_MANAGE_ESS_LINK));
         employeeTableCtrl?.setData(employees);
     } catch (err) {
         alert(err.message);
@@ -525,6 +551,12 @@ async function saveEmployee() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    window.__hrmEssLinkRowFinder = (eid) => employees.find(x => String(x.id) === String(eid)) || null;
+    if (typeof HrmEssLink !== 'undefined') {
+        HrmEssLink.setOnSaved(() => loadEmployees());
+        HrmEssLink.setOnRefresh(() => { if (employees.length) employeeTableCtrl?.setData(employees); });
+        HrmEssLink.setCanManage(true);
+    }
     joinDatePicker = flatpickr('#joinDate', { dateFormat: 'd/m/Y', locale: 'vn', allowInput: true });
     await loadDepartmentOptions();
     initEmployeeTable();

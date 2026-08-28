@@ -2,8 +2,13 @@
 {% block title %}ESS — Cổng nhân viên{% endblock %}
 {% block content %}
 <div class="container-fluid py-3" style="max-width:720px">
-  <h4>Employee Self-Service</h4>
-  <p class="text-muted small">Payslip · Xin nghỉ · Check-in GPS. Cần permission <code>ess_portal</code>, liên kết <code>employees.user_id</code> và <code>ess_enabled=1</code> (HR bật qua API <code>/api/hrm/ess/link</code>).</p>
+  <h4>Cổng nhân viên (ESS)</h4>
+  <div class="alert alert-light border small mb-3">
+    <strong>Đăng nhập:</strong> dùng <em>Tên đăng nhập</em> và <em>Mật khẩu</em> do Quản trị cấp tại Settings → Users
+    (thường là số điện thoại). Trang đăng nhập: <a href="/login">/login</a> → sau đó vào
+    <a href="/hrm/ess">/hrm/ess</a>.
+  </div>
+  <p class="text-muted small">Payslip · Xin nghỉ · Check-in GPS. Cần quyền <code>ess_portal</code> và HR đã liên kết hồ sơ NV với tài khoản.</p>
   <div id="info" class="alert alert-light border mb-3">Đang tải…</div>
   <div class="card mb-3"><div class="card-header">Bảng lương gần đây</div>
     <ul class="list-group list-group-flush" id="pays"></ul></div>
