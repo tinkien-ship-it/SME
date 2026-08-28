@@ -550,6 +550,97 @@ body.crm-workspace > .footer {
   .crm-kanban { grid-template-columns: repeat(5, minmax(200px, 1fr)); }
 }
 
+/* Trang danh mục KH — bảng cao full vùng làm việc */
+.crm-page-fill {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  min-height: calc(100vh - 11.5rem);
+}
+.crm-toolbar-flush { margin-bottom: 0; }
+.crm-panel-flex {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.crm-panel-bd-flex {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.crm-datatable-wrap {
+  flex: 1;
+  overflow: auto;
+  min-height: 320px;
+  max-height: calc(100vh - 15rem);
+}
+.crm-datatable-wrap .crm-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: 0 1px 0 var(--crm-line);
+}
+.crm-panel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .55rem 1rem;
+  border-top: 1px solid var(--crm-line);
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+/* Danh mục KH CRM — layout card như bản cũ, full màn hình */
+.crm-customers-card .crm-panel-bd {
+  padding: 0;
+}
+.crm-customers-search .input-group {
+  border-radius: 10px;
+  overflow: hidden;
+}
+.crm-customers-search .form-control,
+.crm-customers-search .btn {
+  border-color: var(--crm-line);
+}
+.crm-customers-table-wrap {
+  flex: 1;
+  overflow: auto;
+  min-height: 320px;
+  max-height: calc(100vh - 14rem);
+  border-top: 1px solid var(--crm-line);
+}
+.crm-customers-table-wrap .crm-table thead th,
+.crm-customers-table-wrap .enhanced-data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f8fafc;
+  box-shadow: 0 1px 0 var(--crm-line);
+}
+.crm-customers-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .75rem 1rem;
+  border-top: 1px solid var(--crm-line);
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+.crm-customers-foot .enhanced-table-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .65rem;
+  width: 100%;
+  justify-content: space-between;
+}
+
 @media (max-width: 900px) {
   .crm-sidebar {
     position: fixed;

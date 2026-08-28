@@ -20,6 +20,14 @@ def _actor() -> str:
     )
 
 
+def _crm_inbound_url() -> str:
+    from flask import g
+    tid = getattr(g, 'tenant_id', None)
+    if tid:
+        return f'/{tid}/api/crm/inbound-lead'
+    return '/api/crm/inbound-lead'
+
+
 def _conn():
     return get_db_connection()
 
@@ -53,6 +61,11 @@ def register_crm_routes(app):
     def crm_customer_360(customer_id):
         return render_template('crm/customer_360.html', customer_id=customer_id)
 
+    @app.route('/crm/customers')
+    @login_required
+    def crm_customers_page():
+        return render_template('crm/customers.html')
+
     @app.route('/crm/campaigns')
     @login_required
     def crm_campaigns_page():
@@ -77,6 +90,40 @@ def register_crm_routes(app):
     @login_required
     def crm_settings_page():
         return render_template('crm/settings.html')
+
+    @app.route('/crm/visits')
+    @login_required
+    def crm_visits_page():
+        return render_template('crm/visits.html')
+
+    @app.route('/api/crm/visits', methods=['GET'])
+    @login_required
+    def api_crm_visits():
+        from datetime import datetime
+        from Services import crm_visits
+        conn = _conn()
+        try:
+            owner = request.args.get('owner') or None
+            cid = request.args.get('customer_id')
+            vdate = request.args.get('date') or None
+            items = crm_visits.list_visits(
+                conn,
+                owner=owner,
+                customer_id=int(cid) if cid else None,
+                visit_date=vdate,
+                limit=int(request.args.get('limit') or 100),
+            )
+            payload = {'items': items}
+            today = datetime.now().strftime('%Y-%m-%d')
+            if request.args.get('sessions') == '1' and (not vdate or vdate == today):
+                payload['sessions_today'] = crm_visits.list_visit_sessions_today(
+                    conn, owner=owner,
+                )
+            return jsonify(payload)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
 
     # ── Dashboard API ─────────────────────────────────────────────────
 
@@ -657,6 +704,24 @@ def register_crm_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/crm/assignable-users')
+    @login_required
+    def api_crm_assignable_users():
+        """Danh sách NV Bán hàng (Settings → Users, role staff) — read-only."""
+        from Services import crm_ops
+        conn = _conn()
+        try:
+            staff = crm_ops.list_crm_sales_staff(conn)
+            return jsonify({
+                'success': True,
+                'items': staff,
+                'sales_staff': staff,
+            })
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/api/crm/settings', methods=['GET', 'PUT'])
     @login_required
     def api_crm_settings():
@@ -707,20 +772,22 @@ def register_crm_routes(app):
 
             if request.method == 'GET':
                 token = crm_ops.ensure_inbound_token(conn)
+                owners = crm_ops.sync_assign_owners_from_staff(conn)
                 sqlite_commit(conn, label='crm_settings_token')
+                from flask import g
+                tid = getattr(g, 'tenant_id', None)
+                staff = crm_ops.list_crm_sales_staff(conn)
                 return jsonify({
                     'inbound_token': token,
-                    'assign_owners': crm_ops.get_assign_owners(conn),
-                    'inbound_url': '/api/crm/inbound-lead',
+                    'assign_owners': owners,
+                    'sales_staff': staff,
+                    'assignable_users': staff,
+                    'inbound_url': _crm_inbound_url(),
+                    'tenant_id': tid,
                     'kpi_prefer_hr': prefer_hr_kpi(conn),
                     'kpi_bridge': _kpi_bridge_payload(),
                 })
             data = request.get_json() or {}
-            if 'assign_owners' in data:
-                owners = data.get('assign_owners') or []
-                if isinstance(owners, str):
-                    owners = [x.strip() for x in owners.split(',') if x.strip()]
-                crm_ops.set_assign_owners(conn, owners)
             if 'kpi_prefer_hr' in data:
                 from Services.crm_ops import set_setting
                 val = data.get('kpi_prefer_hr')
@@ -730,10 +797,15 @@ def register_crm_routes(app):
                 from Services.crm_ops import set_setting
                 import secrets
                 set_setting(conn, 'inbound_token', secrets.token_urlsafe(24))
+            owners = crm_ops.sync_assign_owners_from_staff(conn)
             sqlite_commit(conn, label='crm_settings')
+            staff = crm_ops.list_crm_sales_staff(conn)
             return jsonify({'success': True, **{
                 'inbound_token': crm_ops.ensure_inbound_token(conn),
-                'assign_owners': crm_ops.get_assign_owners(conn),
+                'assign_owners': owners,
+                'sales_staff': staff,
+                'assignable_users': staff,
+                'inbound_url': _crm_inbound_url(),
                 'kpi_prefer_hr': prefer_hr_kpi(conn),
                 'kpi_bridge': _kpi_bridge_payload(),
             }})
@@ -760,7 +832,8 @@ def register_crm_routes(app):
             conn.close()
 
     @app.route('/api/crm/inbound-lead', methods=['POST'])
-    def api_crm_inbound_lead():
+    @app.route('/<tenant_id>/api/crm/inbound-lead', methods=['POST'])
+    def api_crm_inbound_lead(tenant_id=None):
         """Webhook công khai — xác thực bằng X-CRM-Token hoặc ?token=."""
         from Services import crm_ops
         conn = _conn()

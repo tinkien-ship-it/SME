@@ -835,7 +835,16 @@ def customer_360(conn: sqlite3.Connection, customer_id: int) -> dict:
         'tickets': tickets,
         'contracts': contracts,
         'surveys': surveys,
+        'visits': customer_visits(conn, customer_id),
     }
+
+
+def customer_visits(conn: sqlite3.Connection, customer_id: int, *, limit: int = 30) -> list[dict]:
+    try:
+        from Services import crm_visits
+        return crm_visits.list_visits(conn, customer_id=customer_id, limit=limit)
+    except Exception:
+        return []
 
 
 def dashboard_stats(conn: sqlite3.Connection) -> dict:
@@ -864,6 +873,12 @@ def dashboard_stats(conn: sqlite3.Connection) -> dict:
     )
     recent_acts = list_activities(conn, limit=15)
     pipe = pipeline_summary(conn)
+    visit_sessions_today = []
+    try:
+        from Services import crm_visits
+        visit_sessions_today = crm_visits.list_visit_sessions_today(conn, limit=30)
+    except Exception:
+        pass
     return {
         'leads_open': int(_row(leads_open).get('n') or 0),
         'opportunities_open': int(_row(opp_open).get('n') or 0),
@@ -873,4 +888,5 @@ def dashboard_stats(conn: sqlite3.Connection) -> dict:
         'customer_followups': cust_follow,
         'recent_activities': recent_acts,
         'pipeline': pipe,
+        'visit_sessions_today': visit_sessions_today,
     }

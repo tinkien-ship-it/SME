@@ -1,0 +1,63 @@
+<div class="modal fade" id="customerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalTitle">Thêm Khách Hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="customerForm">
+                    <input type="hidden" id="customerId">
+                    <div class="row g-3">
+                        <div class="col-md-6" id="codeFieldWrap" style="display:none;">
+                            <label class="form-label small">Mã KH</label>
+                            <input type="text" class="form-control form-control-sm bg-light" id="codeDisplay" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Tên <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Tên công ty</label>
+                            <input type="text" class="form-control form-control-sm" id="companyName">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Mã số thuế</label>
+                            <input type="text" class="form-control form-control-sm" id="taxCode" placeholder="VD: 0301234567">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Điện thoại</label>
+                            <input type="text" class="form-control form-control-sm" id="phone">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Email</label>
+                            <input type="email" class="form-control form-control-sm" id="email">
+                        </div>
+                        <div class="col-md-6" id="crmOwnerWrap" style="display:none;">
+                            <label class="form-label small">NV phụ trách</label>
+                            <select class="form-select form-select-sm" id="crmOwner">
+                                <option value="">— Chưa gán —</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small">Địa chỉ</label>
+                            <input type="text" class="form-control form-control-sm" id="address">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Mã đơn vị NSNN</label>
+                            <input type="text" class="form-control form-control-sm" id="budgetUnitCode">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Số hộ chiếu</label>
+                            <input type="text" class="form-control form-control-sm" id="passportNo">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="crm-btn crm-btn-primary btn-sm" onclick="saveCustomer()">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -85,7 +85,7 @@ SME_MENU_GROUPS = (
             {'endpoint': 'crm_tickets_page', 'label': 'Ticket / Helpdesk', 'icon': 'fas fa-headset'},
             {'endpoint': 'crm_loyalty_page', 'label': 'Loyalty & CSAT/NPS', 'icon': 'fas fa-gift'},
             {'endpoint': 'crm_settings_page', 'label': 'Cấu hình CRM', 'icon': 'fas fa-cog'},
-            {'endpoint': 'customers_page', 'label': 'Danh mục khách hàng', 'icon': 'fas fa-users'},
+            {'endpoint': 'crm_customers_page', 'label': 'Danh mục khách hàng', 'icon': 'fas fa-users'},
         ),
     },
     {

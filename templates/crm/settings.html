@@ -5,8 +5,8 @@
 {% block crm_desc %}Webhook inbound lead, chia sales round-robin, KPI doanh số (ưu tiên HR SALES_REV).{% endblock %}
 {% block crm_tip_title %}Inbound{% endblock %}
 {% block crm_tip_body %}
-  Website/Facebook/Hotline POST JSON tới <code>/api/crm/inbound-lead</code> kèm header
-  <code>X-CRM-Token</code>. Hệ thống tạo lead và tự chia nhân viên theo danh sách bên dưới.
+  Website/Facebook/Hotline POST JSON tới endpoint bên dưới kèm header
+  <code>X-CRM-Token</code>. Lead inbound được chia lần lượt cho các <strong>Nhân viên Bán hàng</strong> đã thiết lập trong hệ thống.
 {% endblock %}
 {% block crm_content %}
 <div class="row g-3">
@@ -22,7 +22,8 @@
           <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(token.value)">Copy</button>
         </div>
         <button class="crm-btn crm-btn-ghost" onclick="rotateToken()">Đổi token mới</button>
-        <pre class="small bg-light p-2 mt-3 rounded" style="white-space:pre-wrap">POST /api/crm/inbound-lead
+        <p id="inboundTenantHint" class="small text-muted mt-2 mb-0 d-none"></p>
+        <pre class="small bg-light p-2 mt-3 rounded" id="inboundExample">POST …
 Header: X-CRM-Token: &lt;token&gt;
 Body JSON: {
   "contact_name": "Nguyen A",
@@ -38,9 +39,15 @@ Body JSON: {
     <div class="crm-panel">
       <div class="crm-panel-hd"><h2>Chia lead (round-robin)</h2></div>
       <div class="crm-panel-bd">
-        <label class="form-label small">Danh sách sales (username, cách nhau bằng dấu phẩy)</label>
-        <textarea id="owners" class="form-control form-control-sm" rows="3" placeholder="sales1, sales2, sales3"></textarea>
-        <button class="crm-btn crm-btn-primary mt-2" onclick="saveOwners()">Lưu danh sách</button>
+        <p class="small text-muted mb-2">
+          Danh sách <strong>Nhân viên Bán hàng</strong> lấy tự động từ user role
+          <em>Nhân Viên Bán Hàng</em> đã thiết lập trong hệ thống.
+          Lead inbound được gán lần lượt theo thứ tự bên dưới.
+        </p>
+        <ul id="salesStaffList" class="list-group list-group-flush border rounded mb-2 crm-sales-staff"></ul>
+        <p id="salesStaffEmpty" class="small text-warning mb-0 d-none">
+          Chưa có Nhân viên Bán hàng — lead inbound sẽ không có người phụ trách cho đến khi Quản trị thêm user role <em>Nhân Viên Bán Hàng</em>.
+        </p>
       </div>
     </div>
   </div>
@@ -85,6 +92,13 @@ Body JSON: {
 </div>
 {% endblock %}
 {% block crm_scripts %}
+<style>
+.crm-sales-staff .list-group-item {
+  display: flex; align-items: center; gap: .65rem; padding: .5rem .75rem; font-size: .875rem;
+}
+.crm-sales-staff .staff-meta { flex: 1; min-width: 0; }
+.crm-sales-staff .staff-meta .sub { color: #64748b; font-size: .75rem; }
+</style>
 <script>
 const money=n=>new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
 const SRC={
@@ -95,6 +109,43 @@ const SRC={
   crm_targets:'KPI cục bộ CRM',
   none:'Chưa có mục tiêu'
 };
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+function renderSalesStaff(staff, owners){
+  const order=Array.isArray(owners)?owners:[];
+  const map=Object.fromEntries((staff||[]).map(u=>[u.username,u]));
+  const rows=order.length?order.map(u=>map[u]).filter(Boolean):(staff||[]);
+  if(!rows.length){
+    salesStaffList.innerHTML='';
+    salesStaffEmpty?.classList.remove('d-none');
+    return;
+  }
+  salesStaffEmpty?.classList.add('d-none');
+  salesStaffList.innerHTML=rows.map((u,idx)=>`<li class="list-group-item">
+    <span class="badge bg-secondary">${idx+1}</span>
+    <div class="staff-meta">
+      <div>${esc(u.full_name||u.username)}</div>
+      <div class="sub">${esc(u.username)} · ${esc(u.role_label||'NV Bán hàng')}</div>
+    </div>
+  </li>`).join('');
+}
+
+function updateInboundExample(){
+  const endpoint=url?.value||'/api/crm/inbound-lead';
+  inboundExample.textContent=`POST ${endpoint}
+Header: X-CRM-Token: <token>
+Body JSON: {
+  "contact_name": "Nguyen A",
+  "phone": "09...",
+  "email": "...",
+  "source": "Facebook",
+  "utm_source": "fb",
+  "utm_campaign": "spring",
+  "notes": "Form website"
+}`;
+}
+
 function renderBridge(b){
   if(!b){ bridgeStatus.textContent='—'; return; }
   const g=b.gauge||{}, hr=b.hr_sales_rev||{};
@@ -105,11 +156,20 @@ function renderBridge(b){
     <div class="text-muted mt-1">${g.target_detail||hr.detail||''}</div>
     <div class="mt-1">HR SALES_REV kỳ này: ${hr.found?money(hr.target)+' đ':'chưa đặt'}</div>`;
 }
+
 async function load(){
   const s=await(await fetch('/api/crm/settings')).json();
   token.value=s.inbound_token||'';
   url.value=location.origin+(s.inbound_url||'/api/crm/inbound-lead');
-  owners.value=(s.assign_owners||[]).join(', ');
+  const staff=s.sales_staff||s.assignable_users||[];
+  renderSalesStaff(staff, s.assign_owners||[]);
+  if(s.tenant_id){
+    inboundTenantHint.textContent='Multi-tenant: webhook gọi URL có mã sổ '+s.tenant_id+' (đã hiển thị ở Endpoint).';
+    inboundTenantHint.classList.remove('d-none');
+  } else {
+    inboundTenantHint.classList.add('d-none');
+  }
+  updateInboundExample();
   preferHr.checked=s.kpi_prefer_hr!==false && s.kpi_prefer_hr!==0 && s.kpi_prefer_hr!=='0';
   renderBridge(s.kpi_bridge);
   const ts=await(await fetch('/api/crm/targets')).json();
@@ -119,10 +179,7 @@ async function load(){
     <td><button class="btn btn-sm btn-outline-danger" onclick="delT(${t.id})">Xóa</button></td>
   </tr>`).join(''):'<tr><td colspan="5" class="crm-empty">Chưa có KPI cục bộ</td></tr>';
 }
-async function saveOwners(){
-  const d=await(await fetch('/api/crm/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({assign_owners:owners.value})})).json();
-  if(d.error) alert(d.error); else alert('Đã lưu');
-}
+
 async function savePreferHr(){
   const d=await(await fetch('/api/crm/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({kpi_prefer_hr:preferHr.checked})})).json();
   if(d.error) alert(d.error);

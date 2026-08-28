@@ -241,6 +241,26 @@ CREATE TABLE IF NOT EXISTS crm_settings (
     value TEXT
 );
 
+CREATE TABLE IF NOT EXISTS crm_visit_checkins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    visit_session_id TEXT NOT NULL,
+    customer_id INTEGER NOT NULL,
+    employee_id INTEGER,
+    owner TEXT NOT NULL,
+    check_type TEXT NOT NULL DEFAULT 'in',
+    lat REAL,
+    lng REAL,
+    accuracy REAL,
+    ward TEXT,
+    district TEXT,
+    province TEXT,
+    formatted_address TEXT,
+    note TEXT,
+    crm_activity_id INTEGER,
+    device_info TEXT,
+    punched_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_crm_leads_status ON crm_leads(status);
 CREATE INDEX IF NOT EXISTS idx_crm_leads_customer ON crm_leads(customer_id);
 CREATE INDEX IF NOT EXISTS idx_crm_leads_source ON crm_leads(source);
@@ -255,6 +275,9 @@ CREATE INDEX IF NOT EXISTS idx_crm_tickets_status ON crm_tickets(status);
 CREATE INDEX IF NOT EXISTS idx_crm_tickets_customer ON crm_tickets(customer_id);
 CREATE INDEX IF NOT EXISTS idx_crm_notif_owner ON crm_notifications(owner, is_read);
 CREATE INDEX IF NOT EXISTS idx_crm_campaigns_status ON crm_campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_crm_visit_customer ON crm_visit_checkins(customer_id);
+CREATE INDEX IF NOT EXISTS idx_crm_visit_owner ON crm_visit_checkins(owner, punched_at);
+CREATE INDEX IF NOT EXISTS idx_crm_visit_session ON crm_visit_checkins(visit_session_id);
 """
 
 

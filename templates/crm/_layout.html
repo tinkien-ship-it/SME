@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/crm.css') }}?v=20260827c">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/crm.css') }}?v=20260828b">
 {% block crm_head %}{% endblock %}
 <script>
 document.documentElement.classList.add('crm-html');
@@ -46,6 +46,10 @@ document.addEventListener('DOMContentLoaded', function () {
        href="{{ safe_url_for('crm_quotes_page') }}">
       <i class="fas fa-file-invoice-dollar"></i> Báo giá
     </a>
+    <a class="crm-nav-link {% if crm_page == 'visits' %}active{% endif %}"
+       href="{{ safe_url_for('crm_visits_page') }}">
+      <i class="fas fa-handshake"></i> Gặp khách (ESS)
+    </a>
     <a class="crm-nav-link {% if crm_page == 'contracts' %}active{% endif %}"
        href="{{ safe_url_for('crm_contracts_page') }}">
       <i class="fas fa-file-contract"></i> Hợp đồng
@@ -66,8 +70,8 @@ document.addEventListener('DOMContentLoaded', function () {
     </a>
 
     <div class="crm-nav-label">Danh mục</div>
-    <a class="crm-nav-link {% if crm_page == 'customer360' %}active{% endif %}"
-       href="{{ safe_url_for('customers_page') }}">
+    <a class="crm-nav-link {% if crm_page in ('customers', 'customer360') %}active{% endif %}"
+       href="{{ safe_url_for('crm_customers_page') }}">
       <i class="fas fa-address-book"></i> Danh mục KH
     </a>
     <a class="crm-nav-link {% if crm_page == 'settings' %}active{% endif %}"
@@ -155,5 +159,9 @@ function crmDismissTip() {
   } catch (e) {}
 })();
 </script>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
 {% block crm_scripts %}{% endblock %}
 {% endblock %}

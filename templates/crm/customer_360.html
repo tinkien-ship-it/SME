@@ -13,6 +13,9 @@
 {% endblock %}
 
 {% block crm_actions %}
+<a class="crm-btn crm-btn-ghost" href="{{ safe_url_for('crm_customers_page') }}">
+  <i class="fas fa-address-book"></i> Danh mục KH
+</a>
 <a class="crm-btn crm-btn-ghost" href="{{ url_for('crm_dashboard') }}">
   <i class="fas fa-arrow-left"></i> Tổng quan
 </a>
@@ -66,13 +69,17 @@
   </div>
   <div class="col-lg-8">
     <div class="crm-panel mb-3">
-      <div class="crm-panel-hd">
-        <h2>Nhật ký chăm sóc</h2>
+      <div class="crm-panel-hd"><h2>Nhật ký chăm sóc</h2>
         <button class="crm-btn crm-btn-ghost" data-bs-toggle="modal" data-bs-target="#actModal">
           <i class="fas fa-plus"></i> Ghi nhận
         </button>
       </div>
-      <div class="crm-panel-bd p-0" id="ulActs" style="max-height:280px;overflow:auto"></div>
+      <div class="crm-panel-bd p-0" id="ulActs" style="max-height:220px;overflow:auto"></div>
+    </div>
+
+    <div class="crm-panel mb-3">
+      <div class="crm-panel-hd"><h2>Gặp khách (ESS)</h2></div>
+      <div class="crm-panel-bd p-0" id="ulVisits" style="max-height:200px;overflow:auto"></div>
     </div>
 
     <div class="crm-panel">
@@ -167,6 +174,24 @@ async function load360() {
         <div class="text-muted small">${a.activity_at||a.created_at||''} · ${a.owner||''}</div>
       </div>`).join('')
     : '<div class="crm-empty">Chưa có hoạt động — bấm Ghi nhận sau mỗi lần gọi/Zalo.</div>';
+
+  document.getElementById('ulVisits').innerHTML = (d.visits||[]).length
+    ? (() => {
+        const byS = {};
+        d.visits.forEach(v => {
+          const sid = v.visit_session_id || String(v.id);
+          if (!byS[sid]) byS[sid] = { in: null, out: null, note: '' };
+          if (v.check_type === 'in') byS[sid].in = v.punched_at;
+          if (v.check_type === 'out') { byS[sid].out = v.punched_at; byS[sid].note = v.note || ''; }
+        });
+        return Object.values(byS).sort((a,b)=>(b.out||b.in||'').localeCompare(a.out||a.in||'')).map(s =>
+          `<div class="crm-act-item">
+            <strong>${(s.in||'').slice(0,16)}${s.out?' → '+s.out.slice(11,16):''}</strong>
+            <div class="text-muted small mt-1">${s.note || (s.out ? '—' : 'Đang gặp / chưa check-out')}</div>
+          </div>`
+        ).join('');
+      })()
+    : '<div class="crm-empty">Chưa có gặp khách qua ESS — NV dùng /hrm/ess trên điện thoại.</div>';
 
   document.getElementById('tbOpp').innerHTML = (d.opportunities||[]).map(o =>
     `<tr><td>${o.title}</td><td>${o.stage_label||o.stage}</td><td class="text-end">${money(o.amount)}</td></tr>`

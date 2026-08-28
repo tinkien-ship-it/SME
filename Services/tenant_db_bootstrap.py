@@ -149,6 +149,7 @@ TRIAL_BUSINESS_TABLES = (
     'crm_campaigns',
     'crm_assign_state',
     'crm_settings',
+    'crm_visit_checkins',
     'crm_quote_items',
     'crm_quotes',
     'crm_activities',

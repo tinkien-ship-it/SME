@@ -622,6 +622,7 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             'api_onboarding_skip',
             'webhook_sepay',
             'webhook_casso',
+            'api_crm_inbound_lead',
             'keto_pos_intro',
         ]
         

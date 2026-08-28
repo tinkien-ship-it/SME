@@ -75,8 +75,46 @@ def ensure_inbound_token(conn: sqlite3.Connection) -> str:
 
 # ── Assignment ─────────────────────────────────────────────────────────
 
-def get_assign_owners(conn: sqlite3.Connection) -> list[str]:
+CRM_SALES_ROLE = 'staff'  # Settings → Users: Nhân Viên Bán Hàng
+
+
+def list_crm_sales_staff(conn: sqlite3.Connection) -> list[dict]:
+    """NV Bán hàng đã thiết lập tại Settings → Users (role staff)."""
     ready(conn)
+    from Services.sme_roles import ROLE_LABELS
+
+    rows = conn.execute(
+        """
+        SELECT id, username, full_name, role
+        FROM users
+        WHERE COALESCE(TRIM(username), '') != ''
+          AND TRIM(COALESCE(role, '')) = ?
+        ORDER BY COALESCE(NULLIF(TRIM(full_name), ''), username), username
+        """,
+        (CRM_SALES_ROLE,),
+    )
+    out: list[dict] = []
+    for r in _rows(rows):
+        username = str(r.get('username') or '').strip()
+        if not username:
+            continue
+        full_name = str(r.get('full_name') or '').strip()
+        out.append({
+            'id': int(r.get('id') or 0),
+            'username': username,
+            'full_name': full_name,
+            'role': CRM_SALES_ROLE,
+            'role_label': ROLE_LABELS.get(CRM_SALES_ROLE, CRM_SALES_ROLE),
+        })
+    return out
+
+
+def list_crm_assignable_users(conn: sqlite3.Connection) -> list[dict]:
+    """Alias — danh sách sales CRM = NV Bán hàng (Settings)."""
+    return list_crm_sales_staff(conn)
+
+
+def _stored_assign_owners(conn: sqlite3.Connection) -> list[str]:
     raw = get_setting(conn, 'assign_owners')
     if raw.strip():
         return [x.strip() for x in raw.split(',') if x.strip()]
@@ -85,8 +123,19 @@ def get_assign_owners(conn: sqlite3.Connection) -> list[str]:
     return [x.strip() for x in csv.split(',') if x.strip()]
 
 
-def set_assign_owners(conn: sqlite3.Connection, owners: list[str]) -> None:
-    owners = [o.strip() for o in owners if o and str(o).strip()]
+def resolve_assign_owners(conn: sqlite3.Connection) -> list[str]:
+    """Round-robin: mọi NV Bán hàng (staff), giữ thứ tự đã lưu nếu còn hợp lệ."""
+    staff_users = list_crm_sales_staff(conn)
+    staff_names = [u['username'] for u in staff_users]
+    staff_set = set(staff_names)
+    ordered = [x for x in _stored_assign_owners(conn) if x in staff_set]
+    for name in staff_names:
+        if name not in ordered:
+            ordered.append(name)
+    return ordered
+
+
+def _persist_assign_owners(conn: sqlite3.Connection, owners: list[str]) -> None:
     csv = ','.join(owners)
     set_setting(conn, 'assign_owners', csv)
     conn.execute(
@@ -97,12 +146,48 @@ def set_assign_owners(conn: sqlite3.Connection, owners: list[str]) -> None:
     )
 
 
+def sync_assign_owners_from_staff(conn: sqlite3.Connection) -> list[str]:
+    """Đồng bộ danh sách chia lead theo NV Bán hàng hiện có trong Settings."""
+    ready(conn)
+    owners = resolve_assign_owners(conn)
+    _persist_assign_owners(conn, owners)
+    return owners
+
+
+def get_assign_owners(conn: sqlite3.Connection) -> list[str]:
+    ready(conn)
+    return resolve_assign_owners(conn)
+
+
+def set_assign_owners(conn: sqlite3.Connection, owners: list[str]) -> None:
+    """Giữ API cũ — chỉ chấp nhận username NV Bán hàng (staff)."""
+    ready(conn)
+    allowed = {u['username'] for u in list_crm_sales_staff(conn)}
+    seen: set[str] = set()
+    cleaned: list[str] = []
+    for raw in owners or []:
+        o = str(raw or '').strip()
+        if not o or o not in allowed or o in seen:
+            continue
+        cleaned.append(o)
+        seen.add(o)
+    for u in list_crm_sales_staff(conn):
+        if u['username'] not in seen:
+            cleaned.append(u['username'])
+            seen.add(u['username'])
+    _persist_assign_owners(conn, cleaned)
+
+
 def next_assignee(conn: sqlite3.Connection) -> str | None:
     owners = get_assign_owners(conn)
     if not owners:
         return None
     row = conn.execute('SELECT last_owner_index FROM crm_assign_state WHERE id = 1').fetchone()
-    idx = int(_row(row).get('last_owner_index') or -1)
+    raw_idx = _row(row).get('last_owner_index')
+    try:
+        idx = int(raw_idx) if raw_idx is not None else -1
+    except (TypeError, ValueError):
+        idx = -1
     idx = (idx + 1) % len(owners)
     conn.execute(
         'UPDATE crm_assign_state SET last_owner_index = ?, updated_at = ? WHERE id = 1',

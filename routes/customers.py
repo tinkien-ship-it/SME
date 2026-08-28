@@ -33,9 +33,10 @@ def register_customers_routes(app):
                            OR COALESCE(phone, '') LIKE ?
                            OR COALESCE(tax_code, '') LIKE ?
                            OR COALESCE(email, '') LIKE ?
+                           OR COALESCE(crm_owner, '') LIKE ?
                         ORDER BY id ASC
                         """,
-                        (like, like, like, like, like, like),
+                        (like, like, like, like, like, like, like),
                     )
                 else:
                     c.execute("SELECT * FROM customers ORDER BY id ASC")

@@ -431,6 +431,89 @@ def register_hrm_routes(app):
         finally:
             conn.close()
 
+    @app.route('/api/hrm/ess/visit-customers', methods=['GET'])
+    @ess_portal_required
+    def api_hrm_ess_visit_customers():
+        from Services.crm_visits import list_visit_customers
+        from Services.hrm.ess_access import EssAccessDenied, resolve_ess_employee
+        conn = _conn()
+        try:
+            try:
+                resolve_ess_employee(conn, user_id=session.get('user_id'))
+            except EssAccessDenied as exc:
+                return jsonify({'success': False, 'error': str(exc)}), 403
+            owner = (
+                session.get('username')
+                or (session.get('user') or {}).get('username')
+                or ''
+            ).strip()
+            if not owner:
+                return jsonify({'success': False, 'error': 'Không xác định tài khoản'}), 400
+            today_only = request.args.get('today_only') == '1'
+            items = list_visit_customers(conn, owner, include_all=not today_only)
+            return jsonify({'success': True, 'owner': owner, 'items': items})
+        finally:
+            conn.close()
+
+    @app.route('/api/hrm/ess/visit-checkin', methods=['POST'])
+    @ess_portal_required
+    def api_hrm_ess_visit_checkin():
+        from Services.crm_visits import visit_checkin
+        from Services.hrm.ess_access import EssAccessDenied, resolve_ess_employee
+        from db_utils import sqlite_commit
+        data = request.get_json(silent=True) or {}
+        conn = _conn()
+        try:
+            try:
+                emp = resolve_ess_employee(conn, user_id=session.get('user_id'))
+            except EssAccessDenied as exc:
+                return jsonify({'success': False, 'error': str(exc)}), 403
+            owner = (
+                session.get('username')
+                or (session.get('user') or {}).get('username')
+                or ''
+            ).strip()
+            item = visit_checkin(
+                conn,
+                data,
+                owner=owner,
+                employee_id=int(emp.get('id') or 0) or None,
+            )
+            sqlite_commit(conn, label='crm_visit_checkin')
+            return jsonify({'success': True, 'item': item})
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/hrm/ess/visit-log', methods=['GET'])
+    @ess_portal_required
+    def api_hrm_ess_visit_log():
+        from Services.crm_visits import list_visits
+        from Services.hrm.ess_access import EssAccessDenied, resolve_ess_employee
+        conn = _conn()
+        try:
+            try:
+                resolve_ess_employee(conn, user_id=session.get('user_id'))
+            except EssAccessDenied as exc:
+                return jsonify({'success': False, 'error': str(exc)}), 403
+            owner = (
+                session.get('username')
+                or (session.get('user') or {}).get('username')
+                or ''
+            ).strip()
+            items = list_visits(
+                conn,
+                owner=owner,
+                visit_date=request.args.get('date') or None,
+                limit=int(request.args.get('limit') or 30),
+            )
+            return jsonify({'success': True, 'items': items})
+        finally:
+            conn.close()
+
     @app.route('/api/hrm/ess/link', methods=['POST'])
     @login_required
     def api_hrm_ess_link():

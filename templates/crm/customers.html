@@ -1,0 +1,85 @@
+{% extends "crm/_layout.html" %}
+
+{% block crm_page_id %}customers{% endblock %}
+
+{% block title %}CRM — Quản lý khách hàng{% endblock %}
+{% block crm_title %}Quản lý khách hàng{% endblock %}
+{% block crm_desc %}Danh mục khách hàng — tìm kiếm, thêm/sửa, xuất Excel và mở hồ sơ CRM 360°.{% endblock %}
+
+{% block crm_head %}
+{% include 'partials/data_list_table_assets.html' %}
+{% endblock %}
+
+{% block crm_tip_title %}Danh mục khách hàng{% endblock %}
+{% block crm_tip_body %}
+  Dùng <b>360°</b> để chăm sóc chi tiết (nhật ký, hẹn, đơn hàng). Cột <b>NV phụ trách</b> là nhân viên bán hàng được gán chăm sóc KH.
+{% endblock %}
+
+{% block crm_actions %}
+<input type="file" id="importFile" accept=".xlsx,.xls" class="d-none" onchange="importCustomers(event)">
+<button type="button" class="crm-btn crm-btn-ghost" onclick="document.getElementById('importFile').click()">
+  <i class="fas fa-file-import"></i> Nhập Excel
+</button>
+<button type="button" class="crm-btn crm-btn-ghost" onclick="exportCustomers()">
+  <i class="fas fa-file-export"></i> Xuất Excel
+</button>
+<button type="button" class="crm-btn crm-btn-primary" data-bs-toggle="modal" data-bs-target="#customerModal" onclick="addCustomer()">
+  <i class="fas fa-plus"></i> Thêm khách hàng
+</button>
+{% endblock %}
+
+{% block crm_content %}
+<div class="crm-page-fill">
+  <div class="crm-panel crm-panel-flex crm-customers-card">
+    <div class="crm-panel-bd crm-panel-bd-flex">
+      <div class="crm-customers-search px-3 pt-3 pb-2">
+        <div class="input-group input-group-sm">
+          <input type="text" class="form-control" placeholder="Tìm theo mã, tên, SĐT, MST, email, NV phụ trách..." id="searchInput">
+          <button class="btn btn-outline-secondary" type="button" onclick="searchCustomers()">Tìm</button>
+          <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('searchInput').value=''; loadCustomers();">Xóa tìm</button>
+        </div>
+      </div>
+
+      <div class="crm-datatable-wrap crm-customers-table-wrap">
+        <table class="table table-sm table-hover align-middle crm-table enhanced-data-table mb-0" id="customersTable">
+          <thead>
+            <tr>
+              <th class="text-center" style="width:80px">Mã KH</th>
+              <th style="width:220px">Tên Công Ty/ Khách Hàng</th>
+              <th class="text-center" style="width:110px">Mã số thuế</th>
+              <th class="text-center" style="width:110px">Điện thoại</th>
+              <th style="width:130px">NV phụ trách</th>
+              <th style="width:140px">Email</th>
+              <th style="width:180px">Địa chỉ</th>
+              <th class="text-center" style="width:100px">Mã ĐV NSNN</th>
+              <th class="text-center" style="width:100px">Hộ chiếu</th>
+              <th class="text-center no-filter no-resize" style="width:200px">Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="10" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="crm-customers-foot">
+        <div class="enhanced-table-toolbar">
+          <span class="text-muted small">Hiển thị <strong id="customerTableCount">0</strong> khách hàng</span>
+          <span id="customerColFilters" class="active-filters-badge d-none"></span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearCustomerColFilters">Xóa lọc cột</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block crm_modals %}
+{% include 'partials/customers_manage_modal.html' %}
+{% endblock %}
+
+{% block crm_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+{% set crm_ui = true %}
+{% include 'partials/customers_manage_scripts.html' %}
+{% endblock %}

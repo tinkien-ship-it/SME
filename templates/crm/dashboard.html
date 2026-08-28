@@ -85,6 +85,15 @@
 
 <div class="row g-3">
   <div class="col-xl-7">
+    <div class="crm-panel h-100 mb-3">
+      <div class="crm-panel-hd"><h2>Gặp khách hôm nay (ESS)</h2>
+        <a class="crm-btn crm-btn-ghost btn-sm" href="{{ url_for('crm_visits_page') }}">Chi tiết</a>
+      </div>
+      <div class="crm-panel-bd p-0">
+        <table class="table crm-table mb-0"><thead><tr><th>Khách</th><th>NV</th><th>Vào</th><th>Ra</th><th>Nội dung gặp</th></tr></thead>
+        <tbody id="tbVisitsToday"></tbody></table>
+      </div>
+    </div>
     <div class="crm-panel h-100">
       <div class="crm-panel-hd"><h2>Nhắc liên hệ (7 ngày)</h2>
         <span class="small text-muted" id="notifBadge"></span>
@@ -125,6 +134,15 @@ async function loadDash() {
   document.getElementById('sOpp').textContent = d.opportunities_open;
   document.getElementById('sAmt').textContent = money(d.pipeline_amount) + ' đ';
   document.getElementById('sQuotes').textContent = d.quotes_open;
+
+  const visits = d.visit_sessions_today || [];
+  document.getElementById('tbVisitsToday').innerHTML = visits.length ? visits.map(s => `<tr>
+    <td><a href="/crm/customer/${s.customer_id}">${s.customer_label||''}</a></td>
+    <td class="small">${s.owner||'—'}</td>
+    <td class="small">${(s.check_in_at||'').slice(11,16)}</td>
+    <td class="small">${(s.check_out_at||'').slice(11,16)||'—'}</td>
+    <td class="small">${s.meeting_note||'—'}</td>
+  </tr>`).join('') : '<tr><td colspan="5" class="crm-empty">Chưa có gặp khách ESS hôm nay</td></tr>';
 
   const rows = d.customer_followups || [];
   document.getElementById('tbCustFollow').innerHTML = rows.length ? rows.map(c => `<tr>

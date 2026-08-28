@@ -260,7 +260,7 @@ POS_HKD_MENU = [
                 'roles': ('accountant', 'manager', 'admin', 'adminFB', 'master'),
             },
             {
-                'endpoint': 'customers_page',
+                'endpoint': 'crm_customers_page',
                 'label': 'Danh mục khách hàng',
                 'icon': 'fas fa-users text-info',
                 'perm': 'view_customers',
