@@ -7,7 +7,7 @@ import sqlite3
 from db.schema_helpers import add_column_if_missing, table_exists
 
 
-_CRM_SCHEMA_FLAG = 'crm_schema_visit_checkins_v1'
+_CRM_SCHEMA_FLAG = 'crm_schema_inbound_e2e_v2'
 
 CUSTOMER_CRM_COLS = (
     ('crm_source', 'TEXT'),
@@ -263,6 +263,21 @@ CREATE TABLE IF NOT EXISTS crm_visit_checkins (
     punched_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS crm_inbound_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel TEXT NOT NULL,
+    source TEXT,
+    status TEXT DEFAULT 'ok',
+    lead_id INTEGER,
+    owner TEXT,
+    external_id TEXT,
+    contact_name TEXT,
+    phone TEXT,
+    error TEXT,
+    payload_preview TEXT,
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_crm_leads_status ON crm_leads(status);
 CREATE INDEX IF NOT EXISTS idx_crm_leads_customer ON crm_leads(customer_id);
 CREATE INDEX IF NOT EXISTS idx_crm_leads_source ON crm_leads(source);
@@ -280,6 +295,8 @@ CREATE INDEX IF NOT EXISTS idx_crm_campaigns_status ON crm_campaigns(status);
 CREATE INDEX IF NOT EXISTS idx_crm_visit_customer ON crm_visit_checkins(customer_id);
 CREATE INDEX IF NOT EXISTS idx_crm_visit_owner ON crm_visit_checkins(owner, punched_at);
 CREATE INDEX IF NOT EXISTS idx_crm_visit_session ON crm_visit_checkins(visit_session_id);
+CREATE INDEX IF NOT EXISTS idx_crm_inbound_logs_created ON crm_inbound_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_crm_inbound_logs_channel ON crm_inbound_logs(channel);
 """
 
 
@@ -316,6 +333,12 @@ def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
     if table_exists(conn, 'crm_leads'):
         for col, col_type in LEAD_EXTRA_COLS:
             add_column_if_missing(conn, 'crm_leads', col, col_type)
+        try:
+            conn.execute(
+                'CREATE INDEX IF NOT EXISTS idx_crm_leads_external_id ON crm_leads(external_id)'
+            )
+        except sqlite3.Error:
+            pass
     if table_exists(conn, 'crm_opportunities'):
         for col, col_type in OPP_EXTRA_COLS:
             add_column_if_missing(conn, 'crm_opportunities', col, col_type)

@@ -212,19 +212,75 @@ def assign_lead(conn: sqlite3.Connection, lead_id: int, owner: str | None = None
 
 # ── Inbound lead ───────────────────────────────────────────────────────
 
+def _find_lead_by_external_id(conn: sqlite3.Connection, external_id: str) -> dict | None:
+    eid = (external_id or '').strip()
+    if not eid:
+        return None
+    row = conn.execute(
+        'SELECT * FROM crm_leads WHERE external_id = ? ORDER BY id DESC LIMIT 1',
+        (eid,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
 def create_inbound_lead(conn: sqlite3.Connection, data: dict, auto_assign: bool = True) -> dict:
+    from Services.crm_inbound import normalize_inbound_payload
+    from Services.crm import add_activity
+
     ready(conn)
+    norm = normalize_inbound_payload(data)
+    existing = _find_lead_by_external_id(conn, norm.get('external_id') or '')
+    if existing:
+        # Webhook retry / Ads gửi lại cùng lead id → không tạo trùng
+        lid = int(existing['id'])
+        conn.execute(
+            """
+            UPDATE crm_leads SET
+                contact_name = COALESCE(NULLIF(?, ''), contact_name),
+                phone = COALESCE(NULLIF(?, ''), phone),
+                email = COALESCE(NULLIF(?, ''), email),
+                company_name = COALESCE(NULLIF(?, ''), company_name),
+                notes = COALESCE(NULLIF(?, ''), notes),
+                utm_source = COALESCE(?, utm_source),
+                utm_medium = COALESCE(?, utm_medium),
+                utm_campaign = COALESCE(?, utm_campaign),
+                channel = COALESCE(?, channel),
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                norm.get('contact_name'),
+                norm.get('phone'),
+                norm.get('email'),
+                norm.get('company_name'),
+                norm.get('notes'),
+                norm.get('utm_source'),
+                norm.get('utm_medium'),
+                norm.get('utm_campaign'),
+                norm.get('channel') or norm.get('source'),
+                _now(),
+                lid,
+            ),
+        )
+        return {
+            'id': lid,
+            'owner': existing.get('owner'),
+            'source': existing.get('source') or norm.get('source'),
+            'contact_name': norm.get('contact_name') or existing.get('contact_name'),
+            'deduped': True,
+        }
+
     payload = {
-        'title': data.get('title') or data.get('contact_name') or 'Lead inbound',
-        'contact_name': (data.get('contact_name') or data.get('name') or '').strip() or 'Khách mới',
-        'company_name': data.get('company_name') or data.get('company'),
-        'phone': data.get('phone'),
-        'email': data.get('email'),
-        'source': data.get('source') or data.get('utm_source') or data.get('channel') or 'Website',
+        'title': norm.get('title') or 'Lead inbound',
+        'contact_name': norm.get('contact_name') or 'Khách mới',
+        'company_name': norm.get('company_name'),
+        'phone': norm.get('phone'),
+        'email': norm.get('email'),
+        'source': norm.get('source') or 'Website',
         'status': 'new',
-        'expected_value': data.get('expected_value') or 0,
-        'notes': data.get('notes') or data.get('message'),
-        'owner': data.get('owner'),
+        'expected_value': norm.get('expected_value') or 0,
+        'notes': norm.get('notes'),
+        'owner': norm.get('owner'),
     }
     lid = upsert_lead(conn, payload)
     # extra fields
@@ -241,13 +297,13 @@ def create_inbound_lead(conn: sqlite3.Connection, data: dict, auto_assign: bool 
         WHERE id = ?
         """,
         (
-            data.get('campaign_id'),
-            data.get('utm_source'),
-            data.get('utm_medium'),
-            data.get('utm_campaign'),
-            data.get('channel') or data.get('source'),
-            data.get('external_id'),
-            data.get('score'),
+            norm.get('campaign_id'),
+            norm.get('utm_source'),
+            norm.get('utm_medium'),
+            norm.get('utm_campaign'),
+            norm.get('channel') or norm.get('source'),
+            norm.get('external_id'),
+            norm.get('score'),
             lid,
         ),
     )
@@ -256,7 +312,45 @@ def create_inbound_lead(conn: sqlite3.Connection, data: dict, auto_assign: bool 
         owner = assign_lead(conn, lid)
     elif owner:
         assign_lead(conn, lid, owner)
-    return {'id': lid, 'owner': owner}
+
+    src = payload.get('source') or 'Website'
+    phone = payload.get('phone') or ''
+    try:
+        add_activity(conn, {
+            'lead_id': lid,
+            'activity_type': 'note',
+            'subject': f'Lead inbound · {src}',
+            'content': (
+                f"Nguồn {src}"
+                + (f' · SĐT {phone}' if phone else '')
+                + (f" · {norm.get('notes')}" if norm.get('notes') else '')
+            ),
+            'status': 'done',
+            'owner': owner,
+            'created_by': 'inbound',
+        })
+    except Exception:
+        pass
+
+    if owner:
+        try:
+            add_notification(conn, {
+                'notif_type': 'inbound_lead',
+                'title': f'Lead mới · {src}',
+                'body': f"{payload.get('contact_name') or 'Khách'} · {phone or 'không SĐT'} → Leads #{lid}",
+                'owner': owner,
+                'lead_id': lid,
+            })
+        except Exception:
+            pass
+
+    return {
+        'id': lid,
+        'owner': owner,
+        'source': src,
+        'contact_name': payload.get('contact_name'),
+        'deduped': False,
+    }
 
 
 # ── Campaigns ──────────────────────────────────────────────────────────

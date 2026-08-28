@@ -150,6 +150,7 @@ TRIAL_BUSINESS_TABLES = (
     'crm_assign_state',
     'crm_settings',
     'crm_visit_checkins',
+    'crm_inbound_logs',
     'crm_quote_items',
     'crm_quotes',
     'crm_activities',

@@ -24,7 +24,8 @@ OPP_STAGE_LABELS = {
     'quote': 'Gửi báo giá',
 }
 LEAD_SOURCES = (
-    'Facebook', 'Google', 'TikTok', 'Zalo', 'Website', 'Hotline',
+    'Website', 'Facebook', 'Zalo', 'Google', 'TikTok',
+    'WhatsApp', 'Viber', 'Hotline',
     'Giới thiệu', 'Triển lãm', 'Khác',
 )
 ACTIVITY_TYPES = ('call', 'zalo', 'email', 'meeting', 'note', 'task', 'birthday', 'survey')
@@ -99,20 +100,29 @@ def next_quote_no(conn: sqlite3.Connection) -> str:
 
 # ── Leads ──────────────────────────────────────────────────────────────
 
-def list_leads(conn: sqlite3.Connection, status: str | None = None, q: str = '') -> list[dict]:
+def list_leads(
+    conn: sqlite3.Connection,
+    status: str | None = None,
+    q: str = '',
+    source: str | None = None,
+) -> list[dict]:
     ready(conn)
     sql = 'SELECT * FROM crm_leads WHERE 1=1'
     params: list[Any] = []
     if status:
         sql += ' AND status = ?'
         params.append(status)
+    if source:
+        sql += ' AND source = ?'
+        params.append(source.strip())
     if q:
         like = f'%{q.strip()}%'
         sql += (
             ' AND (COALESCE(contact_name,"") LIKE ? OR COALESCE(company_name,"") LIKE ?'
-            ' OR COALESCE(phone,"") LIKE ? OR COALESCE(title,"") LIKE ?)'
+            ' OR COALESCE(phone,"") LIKE ? OR COALESCE(title,"") LIKE ?'
+            ' OR COALESCE(owner,"") LIKE ?)'
         )
-        params.extend([like, like, like, like])
+        params.extend([like, like, like, like, like])
     sql += ' ORDER BY COALESCE(next_contact_at, created_at) ASC, id DESC'
     return _rows(conn.execute(sql, params))
 
@@ -888,6 +898,23 @@ def dashboard_stats(conn: sqlite3.Connection) -> dict:
         visit_sessions_today = crm_visits.list_visit_sessions_today(conn, limit=30)
     except Exception:
         pass
+    inbound_today = conn.execute(
+        """
+        SELECT COUNT(*) AS n FROM crm_leads
+        WHERE date(created_at) = date('now','localtime')
+          AND COALESCE(channel, source, '') != ''
+        """
+    ).fetchone()
+    recent_inbound = _rows(
+        conn.execute(
+            """
+            SELECT id, contact_name, phone, source, channel, owner, created_at, status
+            FROM crm_leads
+            WHERE date(created_at) = date('now','localtime')
+            ORDER BY id DESC LIMIT 12
+            """
+        )
+    )
     return {
         'leads_open': int(_row(leads_open).get('n') or 0),
         'opportunities_open': int(_row(opp_open).get('n') or 0),
@@ -898,4 +925,6 @@ def dashboard_stats(conn: sqlite3.Connection) -> dict:
         'recent_activities': recent_acts,
         'pipeline': pipe,
         'visit_sessions_today': visit_sessions_today,
+        'inbound_today': int(_row(inbound_today).get('n') or 0),
+        'recent_inbound': recent_inbound,
     }

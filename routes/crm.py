@@ -96,6 +96,85 @@ def register_crm_routes(app):
     def crm_visits_page():
         return render_template('crm/visits.html')
 
+    @app.route('/crm/inbound')
+    @login_required
+    def crm_inbound_page():
+        return render_template('crm/inbound.html')
+
+    # ── Public lead form (Website phase — không lộ Token) ─────────────
+
+    def _public_lead_form_page():
+        from Services.crm_inbound import get_public_form_settings
+        from Services.crm_ops import ensure_inbound_token
+        conn = _conn()
+        try:
+            ensure_inbound_token(conn)
+            sqlite_commit(conn, label='crm_public_form_token')
+            cfg = get_public_form_settings(conn)
+            if not cfg.get('enabled'):
+                return render_template(
+                    'crm/public_lead_form.html',
+                    form_disabled=True,
+                    form_cfg=cfg,
+                )
+            # UTM từ query → hidden fields
+            utm = {
+                'utm_source': request.args.get('utm_source') or '',
+                'utm_medium': request.args.get('utm_medium') or '',
+                'utm_campaign': request.args.get('utm_campaign') or '',
+                'source': request.args.get('source') or 'Website',
+            }
+            return render_template(
+                'crm/public_lead_form.html',
+                form_disabled=False,
+                form_cfg=cfg,
+                utm=utm,
+            )
+        finally:
+            conn.close()
+
+    @app.route('/lead', methods=['GET'])
+    @app.route('/<tenant_id>/lead', methods=['GET'])
+    def crm_public_lead_form(tenant_id=None):
+        return _public_lead_form_page()
+
+    @app.route('/api/crm/public-lead', methods=['POST'])
+    @app.route('/<tenant_id>/api/crm/public-lead', methods=['POST'])
+    def api_crm_public_lead(tenant_id=None):
+        """Form website công khai — Token chỉ dùng phía server."""
+        from Services.crm_inbound import get_public_form_settings, process_channel_inbound
+        conn = _conn()
+        try:
+            cfg = get_public_form_settings(conn)
+            if not cfg.get('enabled'):
+                return jsonify({'success': False, 'error': 'Form công khai đang tắt'}), 403
+            data = request.get_json(silent=True) or {}
+            if not data:
+                data = {k: request.form.get(k) for k in request.form}
+            # Honeypot chống bot
+            if (data.get('website_url') or data.get('hp_company') or '').strip():
+                return jsonify({'success': True, 'id': 0, 'owner': None})
+            if cfg.get('require_phone') and not (data.get('phone') or '').strip():
+                return jsonify({'success': False, 'error': 'Vui lòng nhập số điện thoại'}), 400
+            if not (data.get('contact_name') or data.get('name') or '').strip():
+                return jsonify({'success': False, 'error': 'Vui lòng nhập họ tên'}), 400
+            data.setdefault('source', 'Website')
+            result = process_channel_inbound(
+                conn, 'website', data, require_phone=bool(cfg.get('require_phone')),
+            )
+            sqlite_commit(conn, label='crm_public_lead')
+            return jsonify({
+                'success': True,
+                'id': result.get('id'),
+                'message': cfg.get('success_message'),
+            })
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
     @app.route('/api/crm/visits', methods=['GET'])
     @login_required
     def api_crm_visits():
@@ -169,6 +248,7 @@ def register_crm_routes(app):
                     conn,
                     status=request.args.get('status') or None,
                     q=request.args.get('q') or '',
+                    source=request.args.get('source') or None,
                 ))
             data = request.get_json() or {}
             if not data.get('owner'):
@@ -831,27 +911,275 @@ def register_crm_routes(app):
         finally:
             conn.close()
 
-    @app.route('/api/crm/inbound-lead', methods=['POST'])
-    @app.route('/<tenant_id>/api/crm/inbound-lead', methods=['POST'])
-    def api_crm_inbound_lead(tenant_id=None):
-        """Webhook công khai — xác thực bằng X-CRM-Token hoặc ?token=."""
+    @app.route('/api/crm/inbound-hub', methods=['GET'])
+    @login_required
+    def api_crm_inbound_hub():
+        from flask import g
+        from Services.crm_inbound import inbound_hub_payload
         from Services import crm_ops
         conn = _conn()
         try:
-            expected = crm_ops.ensure_inbound_token(conn)
-            got = (
-                request.headers.get('X-CRM-Token')
-                or request.args.get('token')
-                or (request.get_json(silent=True) or {}).get('token')
-                or ''
-            ).strip()
-            if not got or got != expected:
+            token = crm_ops.ensure_inbound_token(conn)
+            sqlite_commit(conn, label='crm_inbound_hub_token')
+            base = request.host_url.rstrip('/')
+            tid = getattr(g, 'tenant_id', None)
+            endpoint = base + _crm_inbound_url()
+            if tid:
+                public_form_url = f'{base}/{tid}/lead'
+                public_api = f'{base}/{tid}/api/crm/public-lead'
+            else:
+                public_form_url = f'{base}/lead'
+                public_api = f'{base}/api/crm/public-lead'
+            hub = inbound_hub_payload(
+                conn, endpoint=endpoint, token=token, base_url=base, tenant_id=tid,
+            )
+            hub['token'] = token
+            hub['public_form_url'] = public_form_url
+            hub['public_api_url'] = public_api
+            return jsonify(hub)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/inbound-hub/phase', methods=['POST'])
+    @login_required
+    def api_crm_inbound_phase():
+        from Services.crm_inbound import set_phase_done
+        data = request.get_json(silent=True) or {}
+        conn = _conn()
+        try:
+            status = set_phase_done(
+                conn,
+                str(data.get('phase_id') or ''),
+                bool(data.get('done')),
+            )
+            sqlite_commit(conn, label='crm_inbound_phase')
+            return jsonify({'success': True, 'phases': status})
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/inbound-hub/public-form', methods=['PUT'])
+    @login_required
+    def api_crm_inbound_public_form():
+        from Services.crm_inbound import set_public_form_settings
+        conn = _conn()
+        try:
+            cfg = set_public_form_settings(conn, request.get_json(silent=True) or {})
+            sqlite_commit(conn, label='crm_public_form_cfg')
+            return jsonify({'success': True, 'public_form': cfg})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/inbound-hub/test', methods=['POST'])
+    @login_required
+    def api_crm_inbound_test():
+        """Tạo lead thử theo nguồn/kênh (session đăng nhập, không cần Token)."""
+        from Services.crm_inbound import process_channel_inbound
+        from Services.crm_inbound_adapters import CHANNEL_TO_SOURCE
+        data = request.get_json(silent=True) or {}
+        conn = _conn()
+        try:
+            source = (data.get('source') or 'Website').strip()
+            channel = (data.get('channel') or '').strip().lower()
+            if not channel:
+                rev = {v: k for k, v in CHANNEL_TO_SOURCE.items()}
+                channel = rev.get(source, 'website')
+            payload = {
+                'contact_name': data.get('contact_name') or f'Lead thử {source}',
+                'phone': data.get('phone') or '0900000000',
+                'email': data.get('email') or '',
+                'source': source,
+                'notes': data.get('notes') or f'Test inbound Hub — {source}',
+                'utm_source': data.get('utm_source') or 'test',
+                'utm_medium': data.get('utm_medium') or 'crm_hub',
+                'utm_campaign': data.get('utm_campaign') or 'inbound_test',
+                'external_id': data.get('external_id') or f'test_{channel}_{int(__import__("time").time())}',
+            }
+            # Sample native shapes for adapters
+            if data.get('native'):
+                if channel == 'facebook':
+                    payload = {
+                        'field_data': [
+                            {'name': 'full_name', 'values': [payload['contact_name']]},
+                            {'name': 'phone_number', 'values': [payload['phone']]},
+                        ],
+                        'leadgen_id': payload['external_id'],
+                    }
+                elif channel == 'tiktok':
+                    payload = {
+                        'data': [{'leads': [{
+                            'lead_id': payload['external_id'],
+                            'name': payload['contact_name'],
+                            'phone_number': payload['phone'],
+                        }]}],
+                    }
+                elif channel == 'zalo':
+                    payload = {
+                        'sender': {'id': payload['external_id'], 'name': payload['contact_name']},
+                        'message': {'text': payload['notes']},
+                        'phone': payload['phone'],
+                    }
+                elif channel == 'google':
+                    payload = {
+                        'user_column_data': [
+                            {'column_id': 'FULL_NAME', 'string_value': payload['contact_name']},
+                            {'column_id': 'PHONE_NUMBER', 'string_value': payload['phone']},
+                        ],
+                        'lead_id': payload['external_id'],
+                    }
+                elif channel == 'whatsapp':
+                    payload = {
+                        'entry': [{'changes': [{'value': {
+                            'contacts': [{'wa_id': payload['phone'], 'profile': {'name': payload['contact_name']}}],
+                            'messages': [{'id': payload['external_id'], 'from': payload['phone'],
+                                         'text': {'body': payload['notes']}}],
+                        }}]}],
+                    }
+                elif channel == 'viber':
+                    payload = {
+                        'sender': {'name': payload['contact_name'], 'id': payload['external_id']},
+                        'message': {'text': payload['notes']},
+                        'phone': payload['phone'],
+                    }
+                elif channel == 'hotline':
+                    payload = {
+                        'contact_name': payload['contact_name'],
+                        'phone': payload['phone'],
+                        'call_id': payload['external_id'],
+                        'notes': payload['notes'],
+                    }
+            result = process_channel_inbound(conn, channel, payload)
+            sqlite_commit(conn, label='crm_inbound_test')
+            return jsonify({'success': True, **result})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/inbound-hub/logs', methods=['GET'])
+    @login_required
+    def api_crm_inbound_logs():
+        from Services.crm_inbound import list_inbound_logs
+        conn = _conn()
+        try:
+            return jsonify({
+                'items': list_inbound_logs(
+                    conn,
+                    limit=int(request.args.get('limit') or 50),
+                    channel=request.args.get('channel') or None,
+                ),
+            })
+        finally:
+            conn.close()
+
+    def _check_inbound_token(conn) -> bool:
+        from Services import crm_ops
+        expected = crm_ops.ensure_inbound_token(conn)
+        got = (
+            request.headers.get('X-CRM-Token')
+            or request.args.get('token')
+            or (request.get_json(silent=True) or {}).get('token')
+            or ''
+        ).strip()
+        return bool(got and got == expected)
+
+    @app.route('/api/crm/inbound/<channel>', methods=['GET', 'POST'])
+    @app.route('/<tenant_id>/api/crm/inbound/<channel>', methods=['GET', 'POST'])
+    def api_crm_inbound_channel(channel, tenant_id=None):
+        """Webhook theo kênh: facebook, zalo, google, tiktok, whatsapp, viber, hotline, website.
+
+        GET (Facebook/Meta): hub.mode=subscribe + hub.verify_token + hub.challenge
+        POST: JSON nền tảng hoặc Make — Header X-CRM-Token
+        """
+        from Services.crm_inbound import (
+            get_channel_verify_token,
+            process_channel_inbound,
+        )
+        from Services.crm_inbound_adapters import CHANNEL_SLUGS
+
+        slug = (channel or '').strip().lower()
+        if slug not in CHANNEL_SLUGS:
+            return jsonify({'error': f'Kênh không hỗ trợ: {channel}'}), 404
+
+        conn = _conn()
+        try:
+            if request.method == 'GET':
+                # Meta webhook verification
+                mode = request.args.get('hub.mode') or request.args.get('hub_mode')
+                verify = (
+                    request.args.get('hub.verify_token')
+                    or request.args.get('hub_verify_token')
+                    or request.args.get('verify_token')
+                    or ''
+                ).strip()
+                challenge = (
+                    request.args.get('hub.challenge')
+                    or request.args.get('hub_challenge')
+                    or request.args.get('challenge')
+                    or ''
+                )
+                expected = get_channel_verify_token(conn, slug)
+                if mode == 'subscribe' and verify and verify == expected:
+                    return challenge, 200, {'Content-Type': 'text/plain'}
+                # health ping
+                if request.args.get('ping') == '1':
+                    return jsonify({'ok': True, 'channel': slug})
+                return jsonify({'error': 'Forbidden'}), 403
+
+            if not _check_inbound_token(conn):
                 return jsonify({'error': 'Unauthorized'}), 401
             data = request.get_json(silent=True) or {}
-            # also accept form fields
+            if not data:
+                data = {k: request.form.get(k) for k in request.form}
+            result = process_channel_inbound(conn, slug, data)
+            sqlite_commit(conn, label=f'crm_inbound_{slug}')
+            return jsonify({'success': True, **{
+                k: result[k] for k in ('id', 'owner', 'source', 'contact_name', 'channel', 'deduped')
+                if k in result
+            }})
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/inbound-lead', methods=['POST'])
+    @app.route('/<tenant_id>/api/crm/inbound-lead', methods=['POST'])
+    def api_crm_inbound_lead(tenant_id=None):
+        """Webhook công khai chung — xác thực Token; tự nhận diện source."""
+        from Services.crm_inbound import mark_phase_for_source, log_inbound
+        from Services import crm_ops
+        from Services.crm_inbound import normalize_inbound_payload
+        conn = _conn()
+        try:
+            if not _check_inbound_token(conn):
+                return jsonify({'error': 'Unauthorized'}), 401
+            data = request.get_json(silent=True) or {}
             if not data:
                 data = {k: request.form.get(k) for k in request.form}
             result = crm_ops.create_inbound_lead(conn, data, auto_assign=True)
+            norm = normalize_inbound_payload(data)
+            log_inbound(
+                conn,
+                channel='generic',
+                status='ok',
+                lead_id=result.get('id'),
+                owner=result.get('owner'),
+                source=result.get('source') or norm.get('source'),
+                external_id=norm.get('external_id'),
+                contact_name=result.get('contact_name'),
+                phone=norm.get('phone'),
+                payload=data,
+            )
+            mark_phase_for_source(conn, result.get('source') or '')
             sqlite_commit(conn, label='crm_inbound')
             return jsonify({'success': True, **result})
         except ValueError as e:

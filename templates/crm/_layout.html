@@ -38,6 +38,10 @@ document.addEventListener('DOMContentLoaded', function () {
        href="{{ safe_url_for('crm_leads_page') }}">
       <i class="fas fa-user-plus"></i> Leads
     </a>
+    <a class="crm-nav-link {% if crm_page == 'inbound' %}active{% endif %}"
+       href="{{ safe_url_for('crm_inbound_page') }}">
+      <i class="fas fa-plug"></i> Hub inbound
+    </a>
     <a class="crm-nav-link {% if crm_page == 'pipeline' %}active{% endif %}"
        href="{{ safe_url_for('crm_pipeline_page') }}">
       <i class="fas fa-filter"></i> Pipeline

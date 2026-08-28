@@ -218,6 +218,12 @@ POS_HKD_MENU = [
                 'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
             },
             {
+                'endpoint': 'crm_inbound_page',
+                'label': 'Hub inbound lead',
+                'icon': 'fas fa-plug text-primary',
+                'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
+            },
+            {
                 'endpoint': 'crm_pipeline_page',
                 'label': 'Pipeline bán hàng',
                 'icon': 'fas fa-filter text-primary',

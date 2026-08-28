@@ -5,8 +5,12 @@
 {% block crm_desc %}Webhook inbound lead, chia sales round-robin, KPI doanh số (ưu tiên HR SALES_REV).{% endblock %}
 {% block crm_tip_title %}Inbound{% endblock %}
 {% block crm_tip_body %}
-  Website/Facebook/Hotline POST JSON tới endpoint bên dưới kèm header
-  <code>X-CRM-Token</code>. Lead inbound được chia lần lượt cho các <strong>Nhân viên Bán hàng</strong> đã thiết lập trong hệ thống.
+  Triển khai Website / Facebook / Zalo / Google… tại
+  <a href="{{ url_for('crm_inbound_page') }}"><strong>Hub inbound lead</strong></a>.
+  Token + Endpoint bên dưới dùng cho Make/n8n. Form công khai: <code>/lead</code>.
+{% endblock %}
+{% block crm_actions %}
+<a class="crm-btn crm-btn-primary" href="{{ url_for('crm_inbound_page') }}"><i class="fas fa-plug"></i> Hub inbound</a>
 {% endblock %}
 {% block crm_content %}
 <div class="row g-3">

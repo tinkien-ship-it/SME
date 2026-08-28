@@ -95,6 +95,25 @@
       </ol>
     </div>
 
+    <div class="crm-guide-section" {% if crm_page == 'inbound' %}style="border-color:#5eead4;box-shadow:0 0 0 2px #ccfbf1"{% endif %}>
+      <h3><i class="fas fa-plug me-1"></i> Hub inbound — kết nối MXH</h3>
+      <p class="small mb-2">SME <b>không tự kéo</b> fanpage. Bạn copy <b>URL webhook theo kênh</b> trên Hub rồi dán vào Ads / OA / Make để nền tảng <b>đẩy lead</b> về CRM.</p>
+      <ol>
+        <li>Copy <b>Token</b> + URL dòng kênh (facebook, zalo, google…).</li>
+        <li><b>Facebook/TikTok/Google Lead Ads</b>: Make = Watch Lead → HTTP POST URL kênh + header <code>X-CRM-Token</code>.</li>
+        <li><b>Meta webhook trực tiếp</b>: Callback URL = URL <code>facebook</code>; Verify Token = Token Hub.</li>
+        <li><b>Zalo OA</b>: bot/form bắt SĐT → webhook hoặc Make POST URL <code>zalo</code>.</li>
+        <li><b>WhatsApp / Viber</b>: flow thu SĐT → POST đúng URL kênh.</li>
+        <li><b>Website</b>: bật form <code>/lead</code> hoặc nhúng snippet; Ads gắn UTM mẫu trên Hub.</li>
+        <li><b>Hotline</b>: form nhập tay trên Hub (không cần Make).</li>
+        <li>Kiểm tra: <b>Lead thử</b> → Nhật ký → Leads (lọc nguồn) → Thông báo NV.</li>
+      </ol>
+      <p class="small text-muted mb-0 mt-2">
+        Chi tiết từng nền tảng: tài liệu <code>docs/crm_inbound_mxh_guide.md</code>
+        (hoặc panel «Cách lấy link kênh MXH» trên trang Hub).
+      </p>
+    </div>
+
     <div class="crm-guide-section">
       <h3><i class="fas fa-triangle-exclamation me-1"></i> Lưu ý quan trọng</h3>
       <ul>

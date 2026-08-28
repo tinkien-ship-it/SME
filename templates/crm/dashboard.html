@@ -42,6 +42,7 @@
 {% block crm_content %}
 <div class="crm-stat-grid">
   <div class="crm-stat"><div class="label">Leads mở</div><div class="value" id="sLeads">—</div></div>
+  <div class="crm-stat"><div class="label">Inbound hôm nay</div><div class="value" id="sInbound">—</div></div>
   <div class="crm-stat"><div class="label">Cơ hội mở</div><div class="value" id="sOpp">—</div></div>
   <div class="crm-stat"><div class="label">Giá trị pipeline</div><div class="value" id="sAmt" style="font-size:1.2rem">—</div></div>
   <div class="crm-stat"><div class="label">Báo giá đang xử lý</div><div class="value" id="sQuotes">—</div></div>
@@ -85,6 +86,16 @@
 
 <div class="row g-3">
   <div class="col-xl-7">
+    <div class="crm-panel h-100 mb-3">
+      <div class="crm-panel-hd"><h2>Lead inbound hôm nay</h2>
+        <a class="crm-btn crm-btn-ghost btn-sm" href="{{ url_for('crm_inbound_page') }}">Hub</a>
+        <a class="crm-btn crm-btn-ghost btn-sm" href="{{ url_for('crm_leads_page') }}">Leads</a>
+      </div>
+      <div class="crm-panel-bd p-0">
+        <table class="table crm-table mb-0"><thead><tr><th>Liên hệ</th><th>Nguồn</th><th>NV</th><th>Giờ</th></tr></thead>
+        <tbody id="tbInboundToday"></tbody></table>
+      </div>
+    </div>
     <div class="crm-panel h-100 mb-3">
       <div class="crm-panel-hd"><h2>Gặp khách hôm nay (ESS)</h2>
         <a class="crm-btn crm-btn-ghost btn-sm" href="{{ url_for('crm_visits_page') }}">Chi tiết</a>
@@ -131,6 +142,7 @@ async function loadDash() {
   ]);
   if (d.error) { alert(d.error); return; }
   document.getElementById('sLeads').textContent = d.leads_open;
+  document.getElementById('sInbound').textContent = d.inbound_today != null ? d.inbound_today : '—';
   document.getElementById('sOpp').textContent = d.opportunities_open;
   document.getElementById('sAmt').textContent = money(d.pipeline_amount) + ' đ';
   document.getElementById('sQuotes').textContent = d.quotes_open;
@@ -143,6 +155,14 @@ async function loadDash() {
     <td class="small">${(s.check_out_at||'').slice(11,16)||'—'}</td>
     <td class="small">${s.meeting_note||'—'}</td>
   </tr>`).join('') : '<tr><td colspan="5" class="crm-empty">Chưa có gặp khách ESS hôm nay</td></tr>';
+
+  const inbound = d.recent_inbound || [];
+  document.getElementById('tbInboundToday').innerHTML = inbound.length ? inbound.map(r => `<tr>
+    <td><a href="/crm/leads">${r.contact_name||'#'+r.id}</a><div class="small text-muted">${r.phone||''}</div></td>
+    <td>${r.source||r.channel||'—'}</td>
+    <td class="small">${r.owner||'—'}</td>
+    <td class="small">${(r.created_at||'').slice(11,16)}</td>
+  </tr>`).join('') : '<tr><td colspan="4" class="crm-empty">Chưa có lead inbound hôm nay</td></tr>';
 
   const rows = d.customer_followups || [];
   document.getElementById('tbCustFollow').innerHTML = rows.length ? rows.map(c => `<tr>

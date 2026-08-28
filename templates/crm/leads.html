@@ -21,8 +21,8 @@
 
 {% block crm_content %}
 <div class="crm-toolbar">
-  <input id="qSearch" class="form-control form-control-sm" placeholder="Tìm tên, SĐT, công ty...">
-  <select id="qStatus" class="form-select form-select-sm" style="max-width:180px">
+  <input id="qSearch" class="form-control form-control-sm" placeholder="Tìm tên, SĐT, công ty, NV...">
+  <select id="qStatus" class="form-select form-select-sm" style="max-width:160px">
     <option value="">Tất cả trạng thái</option>
     <option value="new">Mới</option>
     <option value="contacting">Đang liên hệ</option>
@@ -30,9 +30,17 @@
     <option value="converted">Đã chuyển</option>
     <option value="lost">Mất</option>
   </select>
+  <select id="qSource" class="form-select form-select-sm" style="max-width:150px">
+    <option value="">Tất cả nguồn</option>
+    <option>Website</option><option>Facebook</option><option>Zalo</option>
+    <option>Google</option><option>TikTok</option><option>WhatsApp</option>
+    <option>Viber</option><option>Hotline</option>
+    <option>Giới thiệu</option><option>Triển lãm</option><option>Khác</option>
+  </select>
   <button type="button" class="crm-btn crm-btn-ghost" onclick="loadLeads()">
     <i class="fas fa-search"></i> Lọc
   </button>
+  <a class="crm-btn crm-btn-ghost btn-sm" href="{{ url_for('crm_inbound_page') }}">Hub inbound</a>
 </div>
 
 <div class="crm-panel">
@@ -45,7 +53,7 @@
       <table class="table crm-table mb-0">
         <thead>
           <tr>
-            <th>Tiêu đề</th><th>Liên hệ</th><th>SĐT</th><th>Nguồn</th><th>TT</th>
+            <th>Tiêu đề</th><th>Liên hệ</th><th>SĐT</th><th>Nguồn</th><th>NV</th><th>TT</th>
             <th class="text-end">Giá trị DK</th><th>Hẹn</th><th></th>
           </tr>
         </thead>
@@ -75,7 +83,8 @@
           <select id="fSource" class="form-select form-select-sm">
             <option value="">—</option>
             <option>Facebook</option><option>Google</option><option>TikTok</option>
-            <option>Zalo</option><option>Website</option><option>Hotline</option>
+            <option>Zalo</option><option>WhatsApp</option><option>Viber</option>
+            <option>Website</option><option>Hotline</option>
             <option>Giới thiệu</option><option>Triển lãm</option><option>Khác</option>
           </select>
         </div>
@@ -122,18 +131,20 @@ function openLead(row) {
 async function loadLeads() {
   const q = document.getElementById('qSearch').value.trim();
   const st = document.getElementById('qStatus').value;
-  const url = `/api/crm/leads?q=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}`;
+  const src = document.getElementById('qSource').value;
+  const url = `/api/crm/leads?q=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}&source=${encodeURIComponent(src)}`;
   const rows = await (await fetch(url)).json();
   const tb = document.getElementById('tbLeads');
   if (!Array.isArray(rows) || !rows.length) {
-    tb.innerHTML = '<tr><td colspan="8" class="crm-empty">Chưa có lead — bấm <b>+ Thêm lead</b> để bắt đầu.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="9" class="crm-empty">Chưa có lead — bấm <b>+ Thêm lead</b> hoặc mở <b>Hub inbound</b>.</td></tr>';
     return;
   }
   tb.innerHTML = rows.map(r => `<tr>
     <td class="fw-semibold">${r.title || ''}</td>
     <td>${r.contact_name || ''}<div class="small text-muted">${r.company_name||''}</div></td>
     <td>${r.phone || '—'}</td>
-    <td>${r.source || '—'}</td>
+    <td>${r.source || '—'}${r.channel&&r.channel!==r.source?`<div class="small text-muted">${r.channel}</div>`:''}</td>
+    <td class="small">${r.owner || '—'}</td>
     <td><span class="crm-badge ${ST_CLS[r.status]||''}">${ST[r.status]||r.status}</span></td>
     <td class="text-end">${money(r.expected_value)}</td>
     <td class="small">${r.next_contact_at || '—'}</td>

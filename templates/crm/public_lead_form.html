@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ form_cfg.title if form_cfg else 'Liên hệ' }}{% endblock %}
+{% block head_extra %}
+<style>
+  body { background: linear-gradient(160deg, #0f766e 0%, #134e4a 45%, #0c4a6e 100%); min-height: 100vh; }
+  .lead-wrap { max-width: 480px; margin: 2.5rem auto; padding: 0 1rem; }
+  .lead-card { background: #fff; border-radius: 16px; padding: 1.75rem; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  .lead-brand { font-weight: 800; font-size: 1.35rem; color: #0f766e; margin-bottom: .35rem; }
+  .lead-sub { color: #64748b; font-size: .9rem; margin-bottom: 1.25rem; }
+  .hp-field { position: absolute; left: -9999px; opacity: 0; height: 0; overflow: hidden; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="lead-wrap">
+  <div class="lead-card">
+    {% if form_disabled %}
+      <div class="lead-brand">Form tạm đóng</div>
+      <p class="lead-sub mb-0">Form nhận lead công khai đang tắt. Liên hệ quản trị hoặc dùng kênh khác.</p>
+    {% else %}
+      <div class="lead-brand">{{ form_cfg.title }}</div>
+      <p class="lead-sub">{{ form_cfg.subtitle }}</p>
+      <div id="leadOk" class="alert alert-success d-none"></div>
+      <form id="publicLeadForm" autocomplete="on">
+        <div class="hp-field" aria-hidden="true">
+          <label>Website</label>
+          <input type="text" name="website_url" id="hp_website" tabindex="-1" autocomplete="off">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Họ tên <span class="text-danger">*</span></label>
+          <input class="form-control" name="contact_name" id="plName" required maxlength="120" placeholder="Nguyễn Văn A">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Số điện thoại {% if form_cfg.require_phone %}<span class="text-danger">*</span>{% endif %}</label>
+          <input class="form-control" name="phone" id="plPhone" {% if form_cfg.require_phone %}required{% endif %} maxlength="30" placeholder="090…">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Email</label>
+          <input type="email" class="form-control" name="email" id="plEmail" maxlength="120" placeholder="email@…">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Công ty / Tổ chức</label>
+          <input class="form-control" name="company_name" id="plCompany" maxlength="160" placeholder="Tùy chọn">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Nhu cầu / ghi chú</label>
+          <textarea class="form-control" name="notes" id="plNotes" rows="3" maxlength="1000" placeholder="Mô tả ngắn…"></textarea>
+        </div>
+        <input type="hidden" name="source" value="{{ utm.source|default('Website') }}">
+        <input type="hidden" name="utm_source" value="{{ utm.utm_source|default('') }}">
+        <input type="hidden" name="utm_medium" value="{{ utm.utm_medium|default('') }}">
+        <input type="hidden" name="utm_campaign" value="{{ utm.utm_campaign|default('') }}">
+        <button type="submit" class="btn btn-success w-100 fw-semibold" id="plBtn">Gửi thông tin</button>
+        <p id="plErr" class="small text-danger mt-2 mb-0 d-none"></p>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% if not form_disabled %}
+<script>
+(function(){
+  const form = document.getElementById('publicLeadForm');
+  if (!form) return;
+  const api = location.pathname.replace(/\/?lead\/?$/, '') + '/api/crm/public-lead';
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = document.getElementById('plErr');
+    const ok = document.getElementById('leadOk');
+    err.classList.add('d-none');
+    const btn = document.getElementById('plBtn');
+    btn.disabled = true;
+    const fd = new FormData(form);
+    const body = Object.fromEntries(fd.entries());
+    try {
+      const r = await fetch(api, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error || 'Gửi thất bại');
+      form.classList.add('d-none');
+      ok.textContent = j.message || 'Cảm ơn bạn!';
+      ok.classList.remove('d-none');
+    } catch (ex) {
+      err.textContent = ex.message || String(ex);
+      err.classList.remove('d-none');
+      btn.disabled = false;
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

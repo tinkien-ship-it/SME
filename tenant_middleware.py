@@ -623,6 +623,9 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             'webhook_sepay',
             'webhook_casso',
             'api_crm_inbound_lead',
+            'api_crm_inbound_channel',
+            'crm_public_lead_form',
+            'api_crm_public_lead',
             'keto_pos_intro',
         ]
         
@@ -638,8 +641,33 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             '/trial/google', '/api/trial', '/api/auth/google',
             '/forgot', '/reset', '/static/', '/favicon',
             '/gioi-thieu-keto-pos',
+            '/lead',
+            '/api/crm/inbound-lead',
+            '/api/crm/public-lead',
+            '/api/crm/inbound/',
         )):
             return None
+        # Multi-tenant public lead / webhook: /{tenant}/lead , /{tenant}/api/crm/...
+        if (
+            '/api/crm/inbound-lead' in path
+            or '/api/crm/public-lead' in path
+            or '/api/crm/inbound/' in path
+            or path.rstrip('/').endswith('/lead')
+        ):
+            # Cho phép /lead và /{tenant_id}/lead (không nhầm /crm/...)
+            parts = [p for p in path.split('/') if p]
+            if parts == ['lead'] or (len(parts) == 2 and parts[1] == 'lead'):
+                return None
+            if 'api' in parts and 'crm' in parts:
+                if parts[-1] in ('inbound-lead', 'public-lead'):
+                    return None
+                # /api/crm/inbound/<channel>
+                try:
+                    i = parts.index('inbound')
+                    if i >= 2 and parts[i - 1] == 'crm' and i + 1 < len(parts):
+                        return None
+                except ValueError:
+                    pass
 
         # ==================== 2. Kiểm tra trạng thái Đăng nhập ====================
         user_data = session.get('user')

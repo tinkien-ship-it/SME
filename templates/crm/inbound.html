@@ -1,0 +1,402 @@
+{% extends "crm/_layout.html" %}
+{% block crm_page_id %}inbound{% endblock %}
+{% block title %}CRM — Hub inbound lead{% endblock %}
+{% block crm_title %}Hub inbound lead{% endblock %}
+{% block crm_desc %}End-to-end: Website · Facebook · Zalo · Google · TikTok · WhatsApp · Viber · Hotline — mỗi kênh một endpoint + nhật ký.{% endblock %}
+{% block crm_tip_title %}Kết nối MXH → CRM{% endblock %}
+{% block crm_tip_body %}
+  Copy <b>URL theo kênh</b> + <b>Token</b> trên trang này → dán vào Make/Ads/OA (xem panel
+  <em>Cách lấy link kênh MXH</em> bên dưới hoặc nút <b>Hướng dẫn sử dụng</b>).
+  Form Website dùng <b>/lead</b> (không lộ Token). Meta Verify Token = Token Hub.
+{% endblock %}
+{% block crm_actions %}
+<a class="crm-btn crm-btn-ghost" href="{{ url_for('crm_leads_page') }}"><i class="fas fa-user-plus"></i> Leads</a>
+<a class="crm-btn crm-btn-ghost" href="{{ url_for('crm_settings_page') }}"><i class="fas fa-cog"></i> Cấu hình</a>
+<button type="button" class="crm-btn crm-btn-ghost" onclick="document.getElementById('mxhGuide').scrollIntoView({behavior:'smooth'})">
+  <i class="fas fa-book-open"></i> Hướng dẫn MXH
+</button>
+{% endblock %}
+{% block crm_content %}
+<div class="crm-panel mb-3" id="mxhGuide">
+  <div class="crm-panel-hd" style="cursor:pointer" onclick="document.getElementById('mxhGuideBody').classList.toggle('d-none')">
+    <h2><i class="fas fa-share-nodes me-1"></i> Cách lấy link kênh MXH &amp; thiết lập để CRM nhận lead</h2>
+    <span class="small text-muted">Bấm để thu gọn / mở</span>
+  </div>
+  <div class="crm-panel-bd" id="mxhGuideBody">
+    <p class="mb-3">
+      Mỗi dòng ở bảng <b>Endpoint theo kênh</b> là <em>địa chỉ nhận lead</em> của SME (adapter).
+      Bạn không lấy “link adaptor” từ Facebook/Zalo rồi dán vào SME — mà ngược lại:
+      <strong>copy URL SME → dán vào cấu hình webhook / Make của từng mạng</strong>.
+      Khi khách tương tác (form Ads, OA, chat có SĐT), nền tảng gọi URL đó → CRM tạo lead đúng nguồn.
+    </p>
+    <div class="row g-3 mb-2">
+      <div class="col-md-4">
+        <div class="border rounded p-3 h-100 bg-light">
+          <div class="fw-semibold mb-1">1. Trên Hub này</div>
+          <ul class="small mb-0 ps-3">
+            <li>Copy <b>Token</b></li>
+            <li>Copy URL đúng kênh (facebook, zalo…)</li>
+            <li>Có NV role <em>Nhân Viên Bán Hàng</em></li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="border rounded p-3 h-100 bg-light">
+          <div class="fw-semibold mb-1">2. Trên MXH / Make</div>
+          <ul class="small mb-0 ps-3">
+            <li>Trigger lead / form / tin có SĐT</li>
+            <li>HTTP POST URL kênh + header <code>X-CRM-Token</code></li>
+            <li>Meta: Verify Token = Token Hub</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="border rounded p-3 h-100 bg-light">
+          <div class="fw-semibold mb-1">3. Kiểm tra CRM</div>
+          <ul class="small mb-0 ps-3">
+            <li><b>Lead thử</b> / Payload gốc</li>
+            <li>Nhật ký inbound = ok</li>
+            <li>Leads + thông báo NV + Dashboard</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <details class="mb-2 border rounded p-2">
+      <summary class="fw-semibold">Facebook / Instagram Lead Ads</summary>
+      <ol class="small mb-0 mt-2">
+        <li>Tạo Lead Form trên Fanpage (có trường SĐT).</li>
+        <li><b>Khuyên dùng Make:</b> Watch Facebook Leads → HTTP POST URL dòng <code>facebook</code> + Token.</li>
+        <li><b>Webhook Meta App:</b> Callback URL = URL <code>facebook</code>; Verify Token = Token Hub; subscribe <code>leadgen</code>.</li>
+        <li>CRM gán <code>source=Facebook</code>, lưu <code>leadgen_id</code> để không trùng lead.</li>
+      </ol>
+    </details>
+    <details class="mb-2 border rounded p-2">
+      <summary class="fw-semibold">Zalo Official Account</summary>
+      <ol class="small mb-0 mt-2">
+        <li>Bot/OA phải thu được SĐT (form hoặc kịch bản).</li>
+        <li>Webhook Zalo tool hoặc Make → POST URL dòng <code>zalo</code> + Token.</li>
+        <li>Gửi kèm tên, SĐT, ghi chú ngắn, id user Zalo (external_id).</li>
+      </ol>
+    </details>
+    <details class="mb-2 border rounded p-2">
+      <summary class="fw-semibold">Google Ads</summary>
+      <ol class="small mb-0 mt-2">
+        <li><b>Landing:</b> Final URL = link form <code>/lead</code> + UTM mẫu trên Hub → lead vào CRM.</li>
+        <li><b>Lead Form Google:</b> Make nhận form → POST URL dòng <code>google</code> + Token.</li>
+      </ol>
+    </details>
+    <details class="mb-2 border rounded p-2">
+      <summary class="fw-semibold">TikTok Lead Ads</summary>
+      <ol class="small mb-0 mt-2">
+        <li>Bật Lead Generation trên TikTok Ads.</li>
+        <li>Make: Lead mới → POST URL dòng <code>tiktok</code> + Token (adapter hiểu payload gốc TikTok).</li>
+      </ol>
+    </details>
+    <details class="mb-2 border rounded p-2">
+      <summary class="fw-semibold">WhatsApp Business &amp; Viber</summary>
+      <ol class="small mb-0 mt-2">
+        <li>Flow/bot bắt buộc khách để lại tên + SĐT.</li>
+        <li>POST URL <code>whatsapp</code> hoặc <code>viber</code> + Token (Cloud API / ManyChat / Make).</li>
+      </ol>
+    </details>
+    <details class="mb-2 border rounded p-2">
+      <summary class="fw-semibold">Website &amp; Hotline</summary>
+      <ol class="small mb-0 mt-2">
+        <li><b>Website:</b> bật form công khai / copy snippet nhúng; không đưa Token ra trình duyệt.</li>
+        <li><b>Hotline / giới thiệu:</b> form nhập tay phía dưới trang này — không cần link MXH.</li>
+      </ol>
+    </details>
+
+    <p class="small text-muted mb-0 mt-3">
+      Tài liệu đầy đủ (kỹ thuật + từng bước nền tảng):
+      <code>docs/crm_inbound_mxh_guide.md</code> · endpoint kỹ thuật:
+      <code>docs/crm_inbound_channels.md</code>.
+      SME không thay hộp chat Messenger/Zalo; sau khi có lead, NV làm việc trên Leads → 360°.
+    </p>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="crm-panel h-100">
+      <div class="crm-panel-hd"><h2>Webhook chung + Token</h2></div>
+      <div class="crm-panel-bd">
+        <label class="form-label small">Endpoint chung (mọi nguồn)</label>
+        <div class="input-group input-group-sm mb-2">
+          <input class="form-control" id="hubUrl" readonly>
+          <button class="btn btn-outline-secondary" type="button" onclick="copyEl('hubUrl')">Copy</button>
+        </div>
+        <label class="form-label small">Token (X-CRM-Token / Meta Verify Token)</label>
+        <div class="input-group input-group-sm mb-2">
+          <input class="form-control" id="hubToken" readonly>
+          <button class="btn btn-outline-secondary" type="button" onclick="copyEl('hubToken')">Copy</button>
+        </div>
+        <p class="small text-muted mb-0">Khuyến nghị: dùng endpoint <strong>theo kênh</strong> bên dưới để CRM nhận đúng source &amp; adapter.</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="crm-panel h-100">
+      <div class="crm-panel-hd"><h2>Kênh 1 — Form Website</h2></div>
+      <div class="crm-panel-bd">
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="pfEnabled">
+          <label class="form-check-label" for="pfEnabled">Bật form công khai</label>
+        </div>
+        <label class="form-label small">Tiêu đề form</label>
+        <input class="form-control form-control-sm mb-2" id="pfTitle">
+        <label class="form-label small">Link form</label>
+        <div class="input-group input-group-sm mb-2">
+          <input class="form-control" id="pfUrl" readonly>
+          <button class="btn btn-outline-secondary" type="button" onclick="copyEl('pfUrl')">Copy</button>
+          <a class="btn btn-outline-primary" id="pfOpen" href="/lead" target="_blank" rel="noopener">Mở</a>
+        </div>
+        <label class="form-label small">UTM mẫu (Google Ads)</label>
+        <input class="form-control form-control-sm mb-2" id="pfUtmSample" readonly>
+        <label class="form-label small">Snippet nhúng website</label>
+        <textarea class="form-control form-control-sm font-monospace mb-2" id="pfEmbed" rows="3" readonly style="font-size:.7rem"></textarea>
+        <button class="crm-btn crm-btn-primary btn-sm" type="button" onclick="savePublicForm()">Lưu form</button>
+        <button class="crm-btn crm-btn-ghost btn-sm" type="button" onclick="copyEl('pfEmbed')">Copy snippet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="crm-panel mb-3">
+  <div class="crm-panel-hd"><h2>Endpoint theo kênh (Make / Ads / OA)</h2></div>
+  <div class="crm-panel-bd p-0">
+    <table class="table crm-table mb-0">
+      <thead><tr><th>Kênh</th><th>Source</th><th>URL webhook</th><th></th></tr></thead>
+      <tbody id="tbChannels"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="crm-panel mb-3">
+  <div class="crm-panel-hd"><h2>NV nhận lead (round-robin)</h2></div>
+  <div class="crm-panel-bd">
+    <ul id="hubStaff" class="list-group list-group-flush border rounded mb-0"></ul>
+    <p id="hubStaffEmpty" class="small text-warning mt-2 mb-0 d-none">Chưa có Nhân viên Bán hàng — thêm user role <em>Nhân Viên Bán Hàng</em> tại Settings.</p>
+  </div>
+</div>
+
+<div class="crm-panel mb-3">
+  <div class="crm-panel-hd"><h2>Kênh 8 — Nhập Hotline / nguồn khác (thủ công)</h2></div>
+  <div class="crm-panel-bd">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small">Tên liên hệ *</label>
+        <input class="form-control form-control-sm" id="hlName" placeholder="Nguyễn A">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">SĐT *</label>
+        <input class="form-control form-control-sm" id="hlPhone" placeholder="09...">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">Nguồn</label>
+        <select class="form-select form-select-sm" id="hlSource">
+          <option>Hotline</option><option>Giới thiệu</option><option>Triển lãm</option><option>Khác</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Ghi chú cuộc gọi</label>
+        <input class="form-control form-control-sm" id="hlNotes" placeholder="Quan tâm SP...">
+      </div>
+      <div class="col-md-2">
+        <button type="button" class="crm-btn crm-btn-primary btn-sm w-100" onclick="submitHotline()">Lưu lead</button>
+      </div>
+    </div>
+    <p class="small text-muted mt-2 mb-0">Dùng khi tổng đài / NV ghi nhận SĐT — không cần Make. Tự round-robin + tick kênh Hotline.</p>
+  </div>
+</div>
+
+<div id="phaseList"></div>
+
+<div class="crm-panel mb-3">
+  <div class="crm-panel-hd"><h2>Nhật ký inbound gần đây</h2>
+    <button class="crm-btn crm-btn-ghost btn-sm" type="button" onclick="loadLogs()">Tải lại</button>
+  </div>
+  <div class="crm-panel-bd p-0">
+    <table class="table crm-table mb-0">
+      <thead><tr><th>Giờ</th><th>Kênh</th><th>Source</th><th>Lead</th><th>Owner</th><th>TT</th><th>Liên hệ</th></tr></thead>
+      <tbody id="tbLogs"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block crm_scripts %}
+<style>
+.inbound-phase { border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 1rem; overflow: hidden; }
+.inbound-phase-hd { display:flex; gap:.75rem; align-items:flex-start; padding:.85rem 1rem; background:#f8fafc; }
+.inbound-phase-bd { padding: 0 1rem 1rem; display:none; }
+.inbound-phase.open .inbound-phase-bd { display:block; }
+.inbound-phase pre { font-size:.72rem; max-height:200px; overflow:auto; background:#0f172a; color:#e2e8f0; padding:.75rem; border-radius:8px; }
+</style>
+<script>
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function copyEl(id){ const el=document.getElementById(id); if(!el) return; navigator.clipboard.writeText(el.value||el.textContent||''); }
+function copyText(t){ navigator.clipboard.writeText(t||''); }
+
+let HUB=null;
+const PHASE_CURL={};
+const PHASE_BODY={};
+
+function renderStaff(staff, owners){
+  const order=Array.isArray(owners)?owners:[];
+  const map=Object.fromEntries((staff||[]).map(u=>[u.username,u]));
+  const rows=order.length?order.map(u=>map[u]).filter(Boolean):(staff||[]);
+  if(!rows.length){ hubStaff.innerHTML=''; hubStaffEmpty.classList.remove('d-none'); return; }
+  hubStaffEmpty.classList.add('d-none');
+  hubStaff.innerHTML=rows.map((u,i)=>`<li class="list-group-item d-flex gap-2 align-items-center py-2">
+    <span class="badge bg-secondary">${i+1}</span>
+    <div><div class="fw-semibold">${esc(u.full_name||u.username)}</div>
+    <div class="small text-muted">${esc(u.username)}</div></div>
+  </li>`).join('');
+}
+
+function renderChannels(ch){
+  const entries=Object.entries(ch||{});
+  tbChannels.innerHTML=entries.map(([slug,c])=>`<tr>
+    <td><code>${esc(slug)}</code></td>
+    <td>${esc(c.source)}</td>
+    <td class="small"><input class="form-control form-control-sm" id="churl-${esc(slug)}" value="${esc(c.url)}" readonly></td>
+    <td class="text-nowrap">
+      <button class="btn btn-sm btn-outline-secondary" onclick="copyEl('churl-${esc(slug)}')">Copy</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="testSource('${esc(c.source)}','${esc(slug)}')">Thử</button>
+    </td>
+  </tr>`).join('')||'<tr><td colspan="4" class="crm-empty">—</td></tr>';
+}
+
+function renderPhases(phases){
+  phaseList.innerHTML=(phases||[]).map((p,idx)=>`
+    <div class="inbound-phase ${idx<2?'open':''}" id="phase-${esc(p.id)}">
+      <div class="inbound-phase-hd">
+        <div class="form-check mt-1">
+          <input class="form-check-input" type="checkbox" ${p.done?'checked':''}
+            onchange="togglePhase('${esc(p.id)}', this.checked)" id="chk-${esc(p.id)}">
+        </div>
+        <div class="flex-grow-1" style="cursor:pointer" onclick="toggleOpen('${esc(p.id)}')">
+          <div class="small text-muted">Kênh ${p.phase} · ${esc(p.priority)} · source=<b>${esc(p.source)}</b></div>
+          <div class="fw-bold">${esc(p.title)} ${p.done?'<span class="badge bg-success">Đã chạy</span>':''}</div>
+          <div class="small text-muted">${esc(p.summary)}</div>
+          ${p.channel_url?`<div class="small mt-1"><code>${esc(p.channel_url)}</code></div>`:''}
+        </div>
+        <div class="d-flex flex-column gap-1">
+          <button type="button" class="crm-btn crm-btn-ghost btn-sm" onclick="testSource('${esc(p.source)}','${esc(p.channel_slug||'')}')">Lead thử</button>
+          <button type="button" class="crm-btn crm-btn-ghost btn-sm" onclick="testSource('${esc(p.source)}','${esc(p.channel_slug||'')}','native')">Payload gốc</button>
+        </div>
+      </div>
+      <div class="inbound-phase-bd">
+        <ol class="small mb-2">${(p.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
+        <div class="d-flex gap-2 mb-2 flex-wrap">
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyText(PHASE_CURL['${esc(p.id)}'])">Copy curl kênh</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyText(JSON.stringify(PHASE_BODY['${esc(p.id)}'],null,2))">Copy JSON Make</button>
+        </div>
+        <pre id="pre-${esc(p.id)}"></pre>
+      </div>
+    </div>`).join('');
+  (phases||[]).forEach(p=>{
+    const pre=document.getElementById('pre-'+p.id);
+    if(pre) pre.textContent=(p.template&&(p.template.curl_channel||p.template.curl))||'';
+  });
+}
+
+function renderLogs(items){
+  tbLogs.innerHTML=(items||[]).length?items.map(x=>`<tr>
+    <td class="small">${esc((x.created_at||'').slice(0,16))}</td>
+    <td><code>${esc(x.channel)}</code></td>
+    <td>${esc(x.source||'—')}</td>
+    <td>${x.lead_id?`<a href="/crm/leads">#${x.lead_id}</a>`:'—'}</td>
+    <td class="small">${esc(x.owner||'—')}</td>
+    <td>${x.status==='ok'?'<span class="badge bg-success">ok</span>':(x.status==='dedup'?'<span class="badge bg-secondary">dedup</span>':'<span class="badge bg-danger">err</span>')}</td>
+    <td class="small">${esc(x.contact_name||'')} ${esc(x.phone||'')}${x.error?`<div class="text-danger">${esc(x.error)}</div>`:''}</td>
+  </tr>`).join(''):'<tr><td colspan="7" class="crm-empty">Chưa có log — bấm Lead thử trên từng kênh</td></tr>';
+}
+
+function toggleOpen(id){
+  const el=document.getElementById('phase-'+id);
+  if(el) el.classList.toggle('open');
+}
+
+async function togglePhase(id, done){
+  await fetch('/api/crm/inbound-hub/phase',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({phase_id:id, done:!!done})
+  });
+}
+
+async function savePublicForm(){
+  const d=await(await fetch('/api/crm/inbound-hub/public-form',{
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ enabled: pfEnabled.checked, title: pfTitle.value.trim() })
+  })).json();
+  if(d.error) alert(d.error); else alert('Đã lưu form công khai');
+}
+
+async function submitHotline(){
+  const contact_name=(hlName.value||'').trim();
+  const phone=(hlPhone.value||'').trim();
+  if(!contact_name || !phone){ alert('Nhập tên + SĐT'); return; }
+  const source=hlSource.value||'Hotline';
+  const d=await(await fetch('/api/crm/inbound-hub/test',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      source, channel:'hotline',
+      contact_name, phone,
+      notes: hlNotes.value||('Ghi nhận '+source),
+      external_id: 'manual_'+Date.now(),
+    })
+  })).json();
+  if(d.error) alert(d.error);
+  else {
+    alert('Lead #'+d.id+' · owner: '+(d.owner||'(chưa)'));
+    hlName.value=''; hlPhone.value=''; hlNotes.value='';
+    loadHub();
+  }
+}
+
+async function testSource(source, channel, mode){
+  const body={source, channel: channel||undefined, contact_name:'Lead thử '+source, phone:'0900000000'};
+  if(mode==='native') body.native=true;
+  const d=await(await fetch('/api/crm/inbound-hub/test',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  })).json();
+  if(d.error) alert(d.error);
+  else {
+    alert('Lead #'+d.id+' · owner: '+(d.owner||'(chưa)')+' · source: '+(d.source||source));
+    loadHub();
+  }
+}
+
+async function loadLogs(){
+  const d=await(await fetch('/api/crm/inbound-hub/logs?limit=40')).json();
+  renderLogs(d.items||[]);
+}
+
+async function loadHub(){
+  const d=await(await fetch('/api/crm/inbound-hub')).json();
+  if(d.error){ alert(d.error); return; }
+  HUB=d;
+  hubUrl.value=d.endpoint||'';
+  hubToken.value=d.token||'';
+  pfUrl.value=d.public_form_url||'';
+  pfOpen.href=d.public_form_url||'/lead';
+  const pf=d.public_form||{};
+  pfEnabled.checked=!!pf.enabled;
+  pfTitle.value=pf.title||'';
+  pfUtmSample.value=(d.public_form_url||'/lead')+'?utm_source=google&utm_medium=cpc&utm_campaign=spring&source=Google';
+  pfEmbed.value=d.embed_snippet||'';
+  renderStaff(d.sales_staff, d.assign_owners);
+  renderChannels(d.channels);
+  (d.phases||[]).forEach(p=>{
+    PHASE_CURL[p.id]=(p.template&&(p.template.curl_channel||p.template.curl))||'';
+    PHASE_BODY[p.id]=(p.template&&p.template.body)||{};
+  });
+  renderPhases(d.phases||[]);
+  renderLogs(d.recent_logs||[]);
+}
+loadHub();
+</script>
+{% endblock %}

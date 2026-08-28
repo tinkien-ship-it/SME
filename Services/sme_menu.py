@@ -78,6 +78,7 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'crm_dashboard', 'label': 'Tổng quan CRM', 'icon': 'fas fa-gauge'},
             {'endpoint': 'crm_leads_page', 'label': 'Leads tiềm năng', 'icon': 'fas fa-user-plus'},
+            {'endpoint': 'crm_inbound_page', 'label': 'Hub inbound lead', 'icon': 'fas fa-plug'},
             {'endpoint': 'crm_pipeline_page', 'label': 'Pipeline bán hàng', 'icon': 'fas fa-filter'},
             {'endpoint': 'crm_quotes_page', 'label': 'Báo giá CRM', 'icon': 'fas fa-file-invoice-dollar'},
             {'endpoint': 'crm_contracts_page', 'label': 'Hợp đồng', 'icon': 'fas fa-file-contract'},
