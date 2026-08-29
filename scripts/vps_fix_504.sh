@@ -22,6 +22,8 @@ keys = {
     "GUNICORN_TIMEOUT": "90",
     "SME_CRM_ANALYTICS_BUDGET_SEC": "8",
     "SME_GEOIP": "0",
+    # Deploy đã migrate_all_dbs — tắt migrate lại trên mỗi worker/request (giảm 504)
+    "SME_SKIP_RUNTIME_MIGRATE": "1",
     "SME_SQLITE_BUSY_TIMEOUT_MS": "30000",
     "SME_SQLITE_WRITE_LOCK_SEC": "8",
     "SME_SQLITE_WRITE_RETRIES": "16",
@@ -178,5 +180,6 @@ echo "=== [G] Nginx timeout log (gan day) ==="
 tail -n 40 /var/log/nginx/error.log 2>/dev/null | grep -iE 'upstream timed out|504' | tail -n 8 || echo "  (khong thay timeout moi)"
 
 echo ""
-echo "Xong. Neu code chua moi: bash /root/deploy_pos.sh roi chay lai script nay."
-echo "Sau do thu lai PUT lead — neu con loi xem: journalctl -u pos -n 50 --no-pager"
+echo "Xong. Neu goi tu deploy_pos.sh thi khong can chay lai."
+echo "Thu cong: bash /root/deploy_pos.sh (tu dong goi script nay o buoc cuoi)."
+echo "Sau do thu lai trang — neu con loi xem: journalctl -u pos -n 50 --no-pager"

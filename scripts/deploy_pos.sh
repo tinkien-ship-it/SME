@@ -17,6 +17,7 @@
 #   SME_CANONICAL_HOST=ketoshop.pro.vn          # www → apex (tranh mat OAuth session)
 #   SME_SESSION_COOKIE_DOMAIN=.ketoshop.pro.vn  # cookie chung www + apex
 #   PUBLIC_BASE_URL=https://ketoshop.pro.vn
+#   SKIP_DEPLOY_504_FIX=0             # 1 = bỏ bước vps_fix_504.sh cuối deploy
 #
 # PostgreSQL (production VPS — khuyến nghị thay SQLite khi nhiều user):
 #   SME_DB_BACKEND=postgres
@@ -90,6 +91,7 @@ keys = (
     'GUNICORN_BIND', 'GUNICORN_WORKERS', 'GUNICORN_THREADS', 'GUNICORN_TIMEOUT',
     'GUNICORN_PRELOAD', 'GUNICORN_WORKER_CLASS', 'GUNICORN_MAX_REQUESTS',
     'SME_CRM_ANALYTICS_BUDGET_SEC', 'SME_SQLITE_BUSY_TIMEOUT_MS', 'SME_GEOIP',
+    'SME_SKIP_RUNTIME_MIGRATE', 'SKIP_DEPLOY_504_FIX',
     'SME_PG_POOL_MIN', 'SME_PG_POOL_MAX', 'SME_PG_REGISTRY_SCHEMA',
 )
 for k in keys:
@@ -101,14 +103,14 @@ PY
 
 BRANCH="${DEPLOY_BRANCH:-$BRANCH}"
 
-echo "=== [0/6] Stop $SERVICE (tranh database is locked khi migrate/backup) ==="
+echo "=== [0/7] Stop $SERVICE (tranh database is locked khi migrate/backup) ==="
 systemctl stop "$SERVICE" || true
 sleep 2
 # Gỡ worker treo (neu co)
 pkill -f 'gunicorn.*app:app' 2>/dev/null || true
 sleep 1
 
-echo "=== [1/6] Backup SQLite online ==="
+echo "=== [1/7] Backup SQLite online ==="
 mkdir -p "$DB_BACKUP_DIR"
 STAMP=$(date +%Y%m%d_%H%M%S)
 STAMP="$STAMP" DB_BACKUP_DIR="$DB_BACKUP_DIR" python - <<'PY'
@@ -147,7 +149,7 @@ for old in stamps[14:]:
             except OSError: pass
 PY
 
-echo "=== [2/6] Backup thu muc (khong gom venv) ==="
+echo "=== [2/7] Backup thu muc (khong gom venv) ==="
 tar -czf "/root/pos_backup_${STAMP}.tar.gz" \
   --exclude='pos/venv' \
   --exclude='pos/pos_env' \
@@ -156,7 +158,7 @@ tar -czf "/root/pos_backup_${STAMP}.tar.gz" \
   -C /root pos || echo "  ! Backup tar khong thanh cong, van tiep tuc"
 ls -1t /root/pos_backup_*.tar.gz 2>/dev/null | tail -n +11 | xargs -r rm -f
 
-echo "=== [3/6] Dong bo code tu origin/$BRANCH ==="
+echo "=== [3/7] Dong bo code tu origin/$BRANCH ==="
 [ -d .git ] || fail "/root/pos chua co Git. Chay scripts/setup_git_vps.sh truoc."
 
 # Tranh index.lock / CRLF gay reset fail
@@ -180,12 +182,12 @@ if [ -f scripts/deploy_pos.sh ]; then
   chmod +x /root/deploy_pos.sh scripts/*.sh 2>/dev/null || true
 fi
 
-echo "=== [4/6] Cai dependency (bo pywin32 tren Linux) ==="
+echo "=== [4/7] Cai dependency (bo pywin32 tren Linux) ==="
 grep -v pywin32 requirements.txt | pip install -r /dev/stdin -q \
   || fail "pip install that bai"
 pip install "psycopg[binary]" psycopg-pool -q 2>/dev/null || true
 
-echo "=== [5/6] Kiem tra + migrate + tu sua registry/master (service DANG TAT) ==="
+echo "=== [5/7] Kiem tra + migrate + tu sua registry/master (service DANG TAT) ==="
 python - <<'PY'
 # Sao luu Google OAuth da luu (tranh mat khi repair registry/main DB)
 try:
@@ -343,9 +345,9 @@ except Exception as exc:
     print('  ! Khong restore duoc Google OAuth:', exc)
 PY
 
-echo "=== [6/6] Start $SERVICE ==="
+echo "=== [6/7] Start $SERVICE (tam — se restart lai o buoc 504) ==="
 systemctl start "$SERVICE" || true
-sleep 3
+sleep 2
 
 if systemctl is-active --quiet "$SERVICE"; then
   echo "  -> $SERVICE dang chay"
@@ -354,10 +356,6 @@ else
   journalctl -u "$SERVICE" -n 40 --no-pager -o cat
   exit 1
 fi
-
-HTTP=$(curl -s -m 15 -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/login || echo "000")
-echo "HTTP /login => $HTTP"
-[ "$HTTP" = "200" ] || echo "  ! /login chua tra ve 200 — xem logs/app_error.log"
 
 python - <<'PY'
 import os, sqlite3
@@ -395,5 +393,29 @@ else:
         print('  ! CHUA CO MASTER — them MASTER_PASSWORD vao .env roi:')
         print('    python scripts/ensure_master_user.py --apply')
 PY
+
+echo "=== [7/7] Vá 504 (Gunicorn/SQLite/Nginx) ==="
+SKIP_504="${SKIP_DEPLOY_504_FIX:-0}"
+case "$(echo "$SKIP_504" | tr '[:upper:]' '[:lower:]')" in
+  1|true|yes|on)
+    echo "  -> bo qua (SKIP_DEPLOY_504_FIX=$SKIP_504)"
+    HTTP=$(curl -s -m 15 -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/login || echo "000")
+    echo "HTTP /login => $HTTP"
+    [ "$HTTP" = "200" ] || echo "  ! /login chua tra ve 200 — xem logs/app_error.log"
+    ;;
+  *)
+    FIX504="$APP_DIR/scripts/vps_fix_504.sh"
+    if [ ! -f "$FIX504" ]; then
+      echo "  ! Thieu $FIX504 — chi smoke /login"
+      HTTP=$(curl -s -m 15 -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/login || echo "000")
+      echo "HTTP /login => $HTTP"
+    else
+      sed -i 's/\r$//' "$FIX504" 2>/dev/null || true
+      chmod +x "$FIX504" 2>/dev/null || true
+      # Script tu restart service + smoke curl
+      bash "$FIX504" || echo "  ! vps_fix_504.sh co loi — kiem tra thu cong"
+    fi
+    ;;
+esac
 
 echo "=== Deploy xong ==="
