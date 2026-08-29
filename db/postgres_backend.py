@@ -324,12 +324,29 @@ class PgConnection:
         if self._closed:
             return
         self._closed = True
+        conn = self._conn
+        if self._from_pool:
+            # Trả về pool — KHÔNG conn.close() (sẽ làm cạn pool → getconn treo mãi → 000/504)
+            try:
+                if not getattr(conn, 'closed', False):
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        get_pool().putconn(conn, close=True)
+                        return
+                get_pool().putconn(conn)
+            except Exception:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            return
         try:
-            self._conn.rollback()
+            conn.rollback()
         except Exception:
             pass
         try:
-            self._conn.close()
+            conn.close()
         except Exception:
             pass
 
