@@ -718,7 +718,7 @@ def list_tickets(conn: sqlite3.Connection, status: str | None = None, customer_i
     if customer_id:
         sql += ' AND t.customer_id = ?'
         params.append(customer_id)
-    sql += ' ORDER BY CASE t.status WHEN "closed" THEN 2 WHEN "resolved" THEN 1 ELSE 0 END, t.id DESC'
+    sql += " ORDER BY CASE t.status WHEN 'closed' THEN 2 WHEN 'resolved' THEN 1 ELSE 0 END, t.id DESC"
     return _rows(conn.execute(sql, params))
 
 

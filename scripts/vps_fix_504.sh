@@ -46,7 +46,7 @@ text = p.read_text(encoding="utf-8", errors="replace") if p.exists() else ""
 lines = [ln for ln in text.splitlines() if ln.strip() and not ln.strip().startswith("#")]
 if is_pg:
             keys = {
-        "GUNICORN_WORKERS": "3",
+        "GUNICORN_WORKERS": "2",
         "GUNICORN_THREADS": "1",
         "GUNICORN_WORKER_CLASS": "sync",
         "GUNICORN_TIMEOUT": "90",
@@ -54,10 +54,13 @@ if is_pg:
         "SME_GEOIP": "0",
         "SME_SKIP_RUNTIME_MIGRATE": "1",
         "SME_DB_BACKEND": "postgres",
-        "SME_PG_POOL_MIN": "4",
-        "SME_PG_POOL_MAX": "50",
-        "SME_PG_POOL_TIMEOUT": "15",
-        "SME_ACCOUNTING_QUEUE_SEC": "60",
+        "SME_PG_POOL_MIN": "2",
+        "SME_PG_POOL_MAX": "30",
+        "SME_PG_POOL_TIMEOUT": "10",
+        "SME_ACCOUNTING_QUEUE_SEC": "120",
+        "SME_ACCT_QUEUE_MAX_DBS": "3",
+        # Tạm giảm tải pool — bật lại =0 khi ổn định
+        "SME_DISABLE_SCHEDULERS": "0",
     }
     print("  mode=PostgreSQL")
 else:

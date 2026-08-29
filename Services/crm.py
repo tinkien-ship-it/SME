@@ -503,7 +503,7 @@ def list_opportunities(
     if customer_id:
         sql += ' AND o.customer_id = ?'
         params.append(customer_id)
-    sql += ' ORDER BY CASE o.stage WHEN "won" THEN 2 WHEN "lost" THEN 2 ELSE 0 END, o.id DESC'
+    sql += " ORDER BY CASE o.stage WHEN 'won' THEN 2 WHEN 'lost' THEN 2 ELSE 0 END, o.id DESC"
     rows = _rows(conn.execute(sql, params))
     for r in rows:
         r['stage_label'] = OPP_STAGE_LABELS.get(r.get('stage') or '', r.get('stage'))

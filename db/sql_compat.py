@@ -445,6 +445,9 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
     text = _DATETIME_NOW.sub('CURRENT_TIMESTAMP', text)
     text = _rewrite_date_fn_calls(text)
     text = _rewrite_group_concat(text)
+    # SQLite: "won" có thể là chuỗi; Postgres: "won" = tên cột → lỗi column does not exist
+    text = re.sub(r'\bWHEN\s+"([^"]+)"', r"WHEN '\1'", text, flags=re.IGNORECASE)
+    text = re.sub(r'\bLIKE\s+"([^"]+)"', r"LIKE '\1'", text, flags=re.IGNORECASE)
 
     text = _adapt_params(text)
 

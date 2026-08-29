@@ -7,6 +7,7 @@ import random
 import re
 import threading
 import time
+import weakref
 from contextlib import contextmanager
 from typing import Any
 
@@ -261,12 +262,31 @@ class PgCursor:
         return getattr(self._cur, name)
 
 
+def _pool_putconn_finalizer(conn_obj) -> None:
+    """Safety net: nếu quên close() vẫn trả connection về pool khi GC."""
+    try:
+        if conn_obj is None:
+            return
+        if getattr(conn_obj, 'closed', False):
+            return
+        try:
+            conn_obj.rollback()
+        except Exception:
+            pass
+        get_pool().putconn(conn_obj)
+    except Exception:
+        try:
+            conn_obj.close()
+        except Exception:
+            pass
+
+
 class PgConnection:
     """Wrapper psycopg với ``execute()`` kiểu SQLite và search_path theo tenant."""
 
     __slots__ = (
         '_conn', '_schema', '_sme_backend', '_sme_pg_schema', '_closed', '_from_pool',
-        'lastrowid', 'row_factory',
+        '_finalizer', 'lastrowid', 'row_factory',
     )
 
     def __init__(self, conn, schema: str, *, from_pool: bool = True):
@@ -276,9 +296,12 @@ class PgConnection:
         self._sme_pg_schema = self._schema
         self._closed = False
         self._from_pool = from_pool
+        self._finalizer = None
         self.lastrowid = 0
         self.row_factory = None
         self._set_search_path()
+        if from_pool:
+            self._finalizer = weakref.finalize(self, _pool_putconn_finalizer, conn)
 
     def _set_search_path(self) -> None:
         reg = (os.environ.get('SME_PG_REGISTRY_SCHEMA') or 'public').strip() or 'public'
@@ -342,6 +365,12 @@ class PgConnection:
         if self._closed:
             return
         self._closed = True
+        if self._finalizer is not None:
+            try:
+                self._finalizer.detach()
+            except Exception:
+                pass
+            self._finalizer = None
         conn = self._conn
         if self._from_pool:
             # Luôn rollback trước khi trả pool — tránh connection "aborted" làm hỏng request sau
@@ -427,13 +456,25 @@ def open_pg_request(schema: str):
 def open_pg(schema: str | None = None, *, db_path: str | None = None, tenant_id: str | None = None):
     """Mở connection Postgres với search_path = schema tenant."""
     _require_psycopg()
+    from psycopg_pool import PoolTimeout
+
     sch = schema or pg_schema_from_db_path(db_path, tenant_id=tenant_id)
     pool = get_pool()
-    raw = pool.getconn()
+    try:
+        raw = pool.getconn()
+    except PoolTimeout:
+        # Pool bị leak / connection treo — reset một lần rồi thử lại
+        logger.error('PoolTimeout — reset PostgreSQL pool rồi thử lại (schema=%s)', sch)
+        close_pg_pool()
+        pool = get_pool()
+        raw = pool.getconn()
     try:
         return PgConnection(raw, sch, from_pool=True)
     except Exception:
-        pool.putconn(raw)
+        try:
+            pool.putconn(raw)
+        except Exception:
+            pass
         raise
 
 

@@ -35,6 +35,7 @@ CASES = [
     ("GROUP_CONCAT(x.account_code, ', ')", 'string_agg'),
     ("INSERT OR IGNORE INTO crm_assign_state (id, last_owner_index, owners_csv) VALUES (1, -1, '')", 'ON CONFLICT'),
     ("PRAGMA database_list", 'main'),
+    ('ORDER BY CASE o.stage WHEN "won" THEN 2', "WHEN 'won'"),
 ]
 
 failed = 0
