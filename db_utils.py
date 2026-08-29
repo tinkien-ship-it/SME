@@ -442,12 +442,19 @@ def sqlite_write_retry(fn, *, retries: int | None = None, label: str = 'sqlite_w
 
 def sqlite_db_file(conn) -> str | None:
     """Đường dẫn file SQLite hoặc schema Postgres (khóa ghi / cache)."""
+    # PgConnection gắn flag trên wrapper — không unwrap trước
+    if getattr(conn, '_sme_backend', None) == 'postgres':
+        return getattr(conn, '_sme_pg_schema', None)
+    if hasattr(conn, '_inner'):
+        inner = getattr(conn, '_inner', None)
+        if getattr(inner, '_sme_backend', None) == 'postgres':
+            return getattr(inner, '_sme_pg_schema', None)
     raw = _raw_db_conn(conn)
     if getattr(raw, '_sme_backend', None) == 'postgres':
         return getattr(raw, '_sme_pg_schema', None)
     try:
         if not isinstance(raw, sqlite3.Connection):
-            return getattr(raw, '_sme_pg_schema', None)
+            return getattr(raw, '_sme_pg_schema', None) or getattr(conn, '_sme_pg_schema', None)
         row = raw.execute('PRAGMA database_list').fetchone()
         if not row:
             return None

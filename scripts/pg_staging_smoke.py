@@ -172,14 +172,18 @@ def main():
     for sql, needle in [
         ("SELECT IFNULL(MAX(id),0) FROM sale", 'COALESCE'),
         ("ORDER BY si.rowid", 'si.id'),
-        ("SELECT date('now','localtime')", 'CURRENT_DATE'),
-        ("WHERE date(v.punched_at) = date('now', 'localtime')", '::date'),
+        ("SELECT date('now','localtime')", 'TO_CHAR'),
+        ("WHERE date(v.punched_at) = date('now', 'localtime')", 'TO_CHAR'),
         ("date('now', 'localtime', '-30 day')", 'INTERVAL'),
+        ("AND date(v.punched_at) = date(?)", 'LEFT(BTRIM'),
         ("GROUP_CONCAT(x.account_code, ', ')", 'string_agg'),
     ]:
         out = rewrite_sql_for_postgres(sql)
         if needle.lower() not in out.lower():
             fails.append(f'rewrite {sql!r} -> {out!r} (need {needle})')
+        # Không được nhân đôi placeholder
+        if sql.count('?') and out.count('%s') != sql.count('?'):
+            fails.append(f'placeholder count {sql!r} -> {out!r}')
 
     if args.live or any(
         (os.environ.get(k) or '').startswith(p)

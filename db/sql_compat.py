@@ -296,7 +296,10 @@ _GROUP_CONCAT_1 = re.compile(
 
 
 def _rewrite_date_now_forms(sql: str) -> str:
-    """SQLite date('now', 'localtime', '-30 day') → CURRENT_DATE ± INTERVAL."""
+    """SQLite date('now', …) → text ISO YYYY-MM-DD (cột ngày trong app lưu TEXT).
+
+    Dùng text thay vì CURRENT_DATE để tránh ``text >= date`` / nhân đôi ``?``.
+    """
 
     def _repl(m: re.Match) -> str:
         extras = m.group(1) or ''
@@ -304,16 +307,14 @@ def _rewrite_date_now_forms(sql: str) -> str:
         for em in re.finditer(r"['\"]([+\-]?\d+)\s+days?['\"]", extras, re.I):
             days += int(em.group(1))
         if days == 0:
-            return 'CURRENT_DATE'
-        if days > 0:
-            return f"(CURRENT_DATE + INTERVAL '{days} days')"
-        return f"(CURRENT_DATE + INTERVAL '{days} days')"
+            return "TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')"
+        return f"TO_CHAR(CURRENT_DATE + INTERVAL '{days} days', 'YYYY-MM-DD')"
 
     return _DATE_NOW_MODS.sub(_repl, sql)
 
 
 def _rewrite_date_fn_calls(sql: str) -> str:
-    """date(expr) / date(?) còn lại → (expr)::date (Postgres)."""
+    """date(expr) → LEFT(BTRIM(text), 10) — một lần expr (không nhân đôi placeholder ?)."""
     out: list[str] = []
     i = 0
     n = len(sql)
@@ -338,20 +339,13 @@ def _rewrite_date_fn_calls(sql: str) -> str:
                 depth -= 1
             j += 1
         inner = sql[idx + 5:j - 1].strip()
-        # Đã là CURRENT_DATE / INTERVAL — không bọc lại
-        if inner.upper().startswith('CURRENT_DATE') or 'INTERVAL' in inner.upper():
+        up = inner.upper()
+        # Đã rewrite date('now') → TO_CHAR(...)
+        if up.startswith('TO_CHAR(') or up.startswith('CURRENT_DATE'):
             out.append(inner)
         else:
-            # Chuỗi rỗng / NULL → NULL (tránh ''::timestamp lỗi → abort txn → PoolTimeout)
-            out.append(
-                "("
-                f"CASE WHEN NULLIF(BTRIM(CAST(({inner}) AS text)), '') IS NULL THEN NULL "
-                f"WHEN NULLIF(BTRIM(CAST(({inner}) AS text)), '') "
-                f"~ '^[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}' "
-                f"THEN (NULLIF(BTRIM(CAST(({inner}) AS text)), '')::timestamp)::date "
-                f"ELSE NULL END"
-                ")"
-            )
+            # Một lần duy nhất — trước đây CASE lặp inner 3 lần → 4? / 6? vs 2 params
+            out.append(f"LEFT(BTRIM(CAST(({inner}) AS text)), 10)")
         i = j
     return ''.join(out)
 
@@ -383,8 +377,17 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
     if _PRAGMA_JOURNAL_FETCH.match(text):
         return "SELECT 'wal' AS journal_mode"
 
-    # PRAGMA no-op
-    if text.upper().startswith('PRAGMA') and _PRAGMA_NOOP.match(text):
+    # PRAGMA database_list → giả lập 1 DB (schema hiện tại)
+    if re.match(r'^\s*PRAGMA\s+database_list\s*$', text, re.I):
+        sch = _quote_literal(schema)
+        return (
+            f"SELECT 0 AS seq, 'main' AS name, {sch} AS file"
+        )
+
+    # Mọi PRAGMA còn lại chưa map → no-op (tránh syntax error trên Postgres)
+    if text.upper().startswith('PRAGMA'):
+        if _PRAGMA_NOOP.match(text):
+            return 'SELECT 1 AS _pragma_ok'
         return 'SELECT 1 AS _pragma_ok'
 
     # sqlite_master → information_schema

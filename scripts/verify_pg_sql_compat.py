@@ -29,10 +29,12 @@ CASES = [
     ("COALESCE(s.sale_no, 'DH' || printf('%06d', s.id))", 'lpad'),
     ("ORDER BY s.date DESC, si.rowid", 'si.id'),
     ("ORDER BY fullname COLLATE NOCASE", 'fullname'),
-    ("WHERE date(v.punched_at) = date('now', 'localtime')", 'CURRENT_DATE'),
+    ("WHERE date(v.punched_at) = date('now', 'localtime')", "TO_CHAR"),
     ("date('now', 'localtime', '-30 day')", 'INTERVAL'),
+    ("AND date(v.punched_at) = date(?)", 'LEFT(BTRIM'),
     ("GROUP_CONCAT(x.account_code, ', ')", 'string_agg'),
     ("INSERT OR IGNORE INTO crm_assign_state (id, last_owner_index, owners_csv) VALUES (1, -1, '')", 'ON CONFLICT'),
+    ("PRAGMA database_list", 'main'),
 ]
 
 failed = 0
