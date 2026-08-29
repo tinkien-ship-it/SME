@@ -63,11 +63,13 @@ def _apply_sale_business_line(cursor, update_sql, update_params, ref_doc):
 
 def ensure_customer(cursor, name, company_name, phone, address, tax_code, email,
                     budget_unit_code=None, passport_no=None):
-    """Đảm bảo khách hàng tồn tại trong database."""
+    """Tìm/tạo khách trong danh mục — trả customer_id để liên kết đơn bán ↔ CRM."""
     if is_retail_buyer_name(name):
         return None
 
-    name = name.strip()
+    name = (name or "").strip()
+    if not name:
+        return None
     company_name = (company_name or "").strip()
     phone = (phone or "").strip() or None
     address = (address or "").strip() or None
@@ -78,11 +80,25 @@ def ensure_customer(cursor, name, company_name, phone, address, tax_code, email,
 
     customer_id = None
 
+    def _id(row):
+        if not row:
+            return None
+        return int(row["id"] if hasattr(row, "keys") else row[0])
+
     if tax_code:
         cursor.execute("SELECT id FROM customers WHERE tax_code = ?", (tax_code,))
-        row = cursor.fetchone()
-        if row:
-            customer_id = row["id"]
+        customer_id = _id(cursor.fetchone())
+
+    if not customer_id and phone:
+        cursor.execute(
+            """
+            SELECT id FROM customers
+            WHERE TRIM(COALESCE(phone, '')) = ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (phone,),
+        )
+        customer_id = _id(cursor.fetchone())
 
     if not customer_id:
         cursor.execute(
@@ -90,12 +106,22 @@ def ensure_customer(cursor, name, company_name, phone, address, tax_code, email,
             SELECT id FROM customers
             WHERE name = ?
               AND (phone = ? OR (phone IS NULL AND ? IS NULL))
-        """,
+            ORDER BY id DESC LIMIT 1
+            """,
             (name, phone, phone),
         )
-        row = cursor.fetchone()
-        if row:
-            customer_id = row["id"]
+        customer_id = _id(cursor.fetchone())
+
+    if not customer_id and company_name:
+        cursor.execute(
+            """
+            SELECT id FROM customers
+            WHERE TRIM(COALESCE(company_name, '')) = ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (company_name,),
+        )
+        customer_id = _id(cursor.fetchone())
 
     if customer_id:
         cursor.execute(
@@ -110,22 +136,70 @@ def ensure_customer(cursor, name, company_name, phone, address, tax_code, email,
                 budget_unit_code = ?,
                 passport_no = ?
             WHERE id = ?
-        """,
+            """,
             (name, company_name, phone, address, tax_code, email,
              budget_unit_code, passport_no, customer_id),
         )
         return customer_id
 
-    cursor.execute(
-        """
-        INSERT INTO customers (name, company_name, phone, address, tax_code, email,
-                               budget_unit_code, passport_no)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """,
-        (name, company_name, phone, address, tax_code, email,
-         budget_unit_code, passport_no),
-    )
-    return cursor.lastrowid
+    try:
+        cursor.execute(
+            """
+            INSERT INTO customers (
+                name, company_name, phone, address, tax_code, email,
+                budget_unit_code, passport_no, crm_lifecycle,
+                crm_created_at, crm_updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'prospect',
+                      datetime('now','localtime'), datetime('now','localtime'))
+            """,
+            (name, company_name, phone, address, tax_code, email,
+             budget_unit_code, passport_no),
+        )
+    except sqlite3.Error:
+        cursor.execute(
+            """
+            INSERT INTO customers (name, company_name, phone, address, tax_code, email,
+                                   budget_unit_code, passport_no)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (name, company_name, phone, address, tax_code, email,
+             budget_unit_code, passport_no),
+        )
+    return int(cursor.lastrowid)
+
+
+def mark_customer_purchased(cursor, customer_id) -> None:
+    """Đánh dấu KH «Đang giao dịch» sau khi có đơn bán POS."""
+    if not customer_id:
+        return
+    try:
+        cursor.execute(
+            """
+            UPDATE customers
+            SET crm_lifecycle = 'active',
+                crm_updated_at = datetime('now','localtime')
+            WHERE id = ?
+              AND COALESCE(crm_lifecycle, '') NOT IN ('inactive', 'churned')
+            """,
+            (int(customer_id),),
+        )
+    except sqlite3.Error:
+        pass
+
+
+def link_sale_customer(cursor, sale_id, customer_id) -> None:
+    """Ghi customer_id lên đơn bán (cột có từ CRM schema migrate)."""
+    if not sale_id or not customer_id:
+        return
+    if not table_has_column(cursor, 'sale', 'customer_id'):
+        return
+    try:
+        cursor.execute(
+            'UPDATE sale SET customer_id = ? WHERE id = ?',
+            (int(customer_id), int(sale_id)),
+        )
+    except sqlite3.Error:
+        pass
 
 
 def get_sale_details(order_id, db_session):
@@ -735,14 +809,13 @@ def register_sale_routes(app):
                     "tax_pct": tax_pct
                 })
 
-            # Tạo hoặc cập nhật bảng sale
+            # Tạo hoặc cập nhật bảng sale — liên kết CRM (customer_id + trạng thái mua hàng)
             ref_doc = None
+            crm_customer_id = ensure_customer(
+                cursor, customer_name, company_name, customer_phone, address,
+                tax_code, email, budget_unit_code, passport_no,
+            )
             if not sale_id:
-                ensure_customer(
-                    cursor, customer_name, company_name, customer_phone, address,
-                    tax_code, email, budget_unit_code, passport_no,
-                )
-
                 if table_has_column(cursor, 'sale', 'business_line'):
                     cursor.execute("""
                         INSERT INTO sale 
@@ -797,6 +870,12 @@ def register_sale_routes(app):
                 update_sql += " WHERE id = ?"
                 update_params.append(sale_id)
                 cursor.execute(update_sql, update_params)
+
+            link_sale_customer(cursor, sale_id, crm_customer_id)
+            if crm_customer_id and str(status or '').strip().lower() not in (
+                'cancelled', 'deleted', 'void', 'draft', 'pending',
+            ):
+                mark_customer_purchased(cursor, crm_customer_id)
 
             # Hoàn kho đơn cũ nếu đã completed (trước khi xóa sale_items)
             if sale_id and old_status == 'completed':
