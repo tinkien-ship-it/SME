@@ -45,6 +45,7 @@ CASES = [
     ("date('now', 'localtime', ?)", 'CAST(%s AS interval)'),
     ("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? COLLATE NOCASE LIMIT 1", 'information_schema'),
     ("NOT LIKE 'DV%' AND name = ?", "DV%%"),
+    ("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", "%s"),
 ]
 
 failed = 0
@@ -55,6 +56,29 @@ for sql, needle in CASES:
         failed += 1
     else:
         print(f'OK: {sql[:50]}...')
+
+# Idempotent: rewrite lần 2 không biến %s → %%s (0 placeholders)
+once = rewrite_sql_for_postgres(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+    schema='t_demo',
+)
+twice = rewrite_sql_for_postgres(once, schema='t_demo')
+if twice.count('%s') != once.count('%s') or '%%s' in twice:
+    print(f'FAIL idempotent adapt:\n  once={once!r}\n  twice={twice!r}')
+    failed += 1
+else:
+    print('OK: idempotent rewrite (no %%s)...')
+
+# DECIMAL(18,2) AS generated
+from db.sql_compat import convert_sqlite_ddl
+ddl_out = convert_sqlite_ddl(
+    "remaining_amount DECIMAL(18, 2) AS (unpaid_amount - paid_amount) VIRTUAL"
+)
+if 'GENERATED ALWAYS AS' not in ddl_out.upper():
+    print(f'FAIL DECIMAL AS: {ddl_out!r}')
+    failed += 1
+else:
+    print('OK: DECIMAL(18,2) AS -> GENERATED...')
 
 if failed:
     print(f'\n{failed} failed')

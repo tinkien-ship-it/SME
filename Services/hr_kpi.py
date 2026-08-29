@@ -74,10 +74,10 @@ def ensure_hr_kpi_schema(conn: sqlite3.Connection, *, commit: bool = False) -> N
         CREATE UNIQUE INDEX IF NOT EXISTS ux_hr_kpi_targets
         ON hr_kpi_targets (
             kpi_id, scope,
-            IFNULL(department_code, ''),
-            IFNULL(employee_id, 0),
+            COALESCE(department_code, ''),
+            COALESCE(employee_id, 0),
             period_year,
-            IFNULL(period_month, 0)
+            COALESCE(period_month, 0)
         )
         """
     )

@@ -46,6 +46,8 @@ def convert_sqlite_ddl(sql: str) -> str:
     text = re.sub(r'\s+ON\s+CONFLICT\s+(?:REPLACE|IGNORE|ABORT|FAIL|ROLLBACK)\b', '', text, flags=re.I)
     text = re.sub(r'\bUNIQUE\s*\([^)]+\)\s*ON CONFLICT REPLACE', 'UNIQUE', text, flags=re.I)
     text = re.sub(r'\s+COLLATE\s+NOCASE\b', '', text, flags=re.I)
+    # Index / DDL: IFNULL → COALESCE
+    text = re.sub(r'\bIFNULL\s*\(', 'COALESCE(', text, flags=re.I)
 
     # 3) Cột generated SQLite → Postgres STORED
     #    GENERATED ALWAYS AS (expr) VIRTUAL|STORED
@@ -55,10 +57,11 @@ def convert_sqlite_ddl(sql: str) -> str:
         text,
         flags=re.I,
     )
-    #    Shorthand SQLite: col TYPE AS (expr) [VIRTUAL|STORED]
+    #    Shorthand: col TYPE[(prec)] AS (expr) [VIRTUAL|STORED]
+    #    Hỗ trợ DECIMAL(18,2) / NUMERIC(18,2) / DOUBLE PRECISION / REAL…
     text = re.sub(
-        r'(\b(?:DOUBLE PRECISION|BIGINT|SERIAL|NUMERIC|TEXT|BYTEA|TIMESTAMP|BOOLEAN)\b)'
-        r'\s+AS\s*\(([^)]*)\)\s*(?:VIRTUAL|STORED)?',
+        r'(\b(?:DOUBLE PRECISION|BIGINT|SERIAL|NUMERIC|DECIMAL|REAL|TEXT|BYTEA|TIMESTAMP|BOOLEAN)'
+        r'(?:\s*\([^)]*\))?)\s+AS\s*\(([^)]*)\)\s*(?:VIRTUAL|STORED)?',
         r'\1 GENERATED ALWAYS AS (\2) STORED',
         text,
         flags=re.I,
@@ -71,12 +74,19 @@ _PARAM_RE = re.compile(r'\?(?=(?:[^\']*\'[^\']*\')*[^\']*$)')
 
 
 def _adapt_params(sql: str) -> str:
-    """``?`` → ``%s``; escape ``%`` literal (LIKE 'DV%') thành ``%%`` cho psycopg."""
-    # 1) Đánh dấu placeholder từ ?
+    """``?`` → ``%s``; escape ``%`` literal (LIKE 'DV%') thành ``%%`` cho psycopg.
+
+    Idempotent: SQL đã có ``%s`` (rewrite 2 lần / early-return) không bị thành ``%%s``.
+    """
+    if '?' not in sql:
+        # Đã adapt hoặc không có placeholder — không đụng %s/%b/%t
+        if '%s' in sql or '%b' in sql or '%t' in sql:
+            return sql
+        if '%' in sql:
+            return sql.replace('%', '%%')
+        return sql
     marked = _PARAM_RE.sub('\x00PH\x00', sql)
-    # 2) Mọi % còn lại là literal → %%
     marked = marked.replace('%', '%%')
-    # 3) Khôi phục %s
     return marked.replace('\x00PH\x00', '%s')
 _PRAGMA_TABLE_INFO = re.compile(
     r'PRAGMA\s+table_info\s*\(\s*["`]?([\w]+)["`]?\s*\)',
