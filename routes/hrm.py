@@ -500,7 +500,12 @@ def register_hrm_routes(app):
     @ess_portal_required
     def api_hrm_ess_me():
         from Services.hrm.ess import employee_payslips, list_leave
-        from Services.hrm.ess_access import EssAccessDenied, resolve_ess_employee
+        from Services.hrm.ess_access import (
+            EssAccessDenied,
+            can_ess_customer_visits,
+            is_field_sales_user,
+            resolve_ess_employee,
+        )
         conn = _conn()
         try:
             try:
@@ -518,6 +523,9 @@ def register_hrm_routes(app):
                 },
                 'payslips': employee_payslips(conn, eid),
                 'leaves': list_leave(conn, eid),
+                'role': str(session.get('role') or '').strip(),
+                'can_customer_visits': can_ess_customer_visits(session.get('role')),
+                'is_field_sales': is_field_sales_user(session.get('role')),
             })
         finally:
             conn.close()
@@ -566,7 +574,16 @@ def register_hrm_routes(app):
     @ess_portal_required
     def api_hrm_ess_visit_customers():
         from Services.crm_visits import list_visit_customers
-        from Services.hrm.ess_access import EssAccessDenied, resolve_ess_employee
+        from Services.hrm.ess_access import (
+            EssAccessDenied,
+            can_ess_customer_visits,
+            resolve_ess_employee,
+        )
+        if not can_ess_customer_visits(session.get('role')):
+            return jsonify({
+                'success': False,
+                'error': 'Tài khoản ESS văn phòng không dùng chức năng gặp khách hàng.',
+            }), 403
         conn = _conn()
         try:
             try:
@@ -590,7 +607,16 @@ def register_hrm_routes(app):
     @ess_portal_required
     def api_hrm_ess_visit_checkin():
         from Services.crm_visits import visit_checkin
-        from Services.hrm.ess_access import EssAccessDenied, resolve_ess_employee
+        from Services.hrm.ess_access import (
+            EssAccessDenied,
+            can_ess_customer_visits,
+            resolve_ess_employee,
+        )
+        if not can_ess_customer_visits(session.get('role')):
+            return jsonify({
+                'success': False,
+                'error': 'Tài khoản ESS văn phòng không dùng chức năng gặp khách hàng.',
+            }), 403
         data = request.get_json(silent=True) or {}
         conn = _conn()
         try:
@@ -621,7 +647,16 @@ def register_hrm_routes(app):
     @ess_portal_required
     def api_hrm_ess_visit_log():
         from Services.crm_visits import list_visits
-        from Services.hrm.ess_access import EssAccessDenied, resolve_ess_employee
+        from Services.hrm.ess_access import (
+            EssAccessDenied,
+            can_ess_customer_visits,
+            resolve_ess_employee,
+        )
+        if not can_ess_customer_visits(session.get('role')):
+            return jsonify({
+                'success': False,
+                'error': 'Tài khoản ESS văn phòng không dùng chức năng gặp khách hàng.',
+            }), 403
         conn = _conn()
         try:
             try:

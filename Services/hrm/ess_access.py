@@ -9,12 +9,18 @@ from flask import session
 
 ESS_PERMISSION = 'ess_portal'
 
-from Services.sme_roles import ESS_PORTAL_ROLE
+from Services.sme_roles import (
+    ESS_HOME_ROLES,
+    ESS_LINKABLE_ROLES,
+    ESS_PORTAL_ROLE,
+    FIELD_SALES_ROLE,
+)
 
 # Role NV thường được cấp ESS (kèm permission ess_portal khuyến nghị)
 ESS_EMPLOYEE_ROLES = frozenset({
     'employee',
     'staff',
+    'staff_field',
     'staff*',
     'staff**',
 })
@@ -107,9 +113,10 @@ def link_employee_ess(
     if not urow:
         raise ValueError('Tài khoản đăng nhập không tồn tại')
     urole = str(urow['role'] if hasattr(urow, 'keys') else urow[0] or '').strip()
-    if urole != ESS_PORTAL_ROLE:
+    if urole not in ESS_LINKABLE_ROLES:
         raise ValueError(
-            'Chỉ gán user role Nhân viên — Cổng ESS (employee). '
+            'Chỉ gán user role Nhân viên ESS (employee) hoặc '
+            'NV Bán hàng thị trường (staff_field). '
             'Tạo user đúng role tại Settings → Users.'
         )
 
@@ -170,17 +177,35 @@ def hr_may_manage_ess_link(role, permissions=None) -> bool:
 
 
 def is_ess_portal_only_user(role) -> bool:
-    """User chỉ được dùng Cổng ESS (role Settings: Nhân viên — Cổng ESS)."""
-    from Services.sme_roles import ESS_PORTAL_ROLE
-    return str(role or '').strip() == ESS_PORTAL_ROLE
+    """User home ESS + whitelist path (employee hoặc staff_field) — không vào POS."""
+    return str(role or '').strip() in ESS_HOME_ROLES
 
 
-def ess_portal_path_allowed(path: str) -> bool:
-    """Route được phép khi đăng nhập role employee."""
+def is_field_sales_user(role) -> bool:
+    return str(role or '').strip() == FIELD_SALES_ROLE
+
+
+def can_ess_customer_visits(role) -> bool:
+    """Gặp khách trên ESS: thị trường / quầy — không dành cho employee thuần."""
+    r = str(role or '').strip()
+    if r == ESS_PORTAL_ROLE:
+        return False
+    return r in ESS_EMPLOYEE_ROLES or r == FIELD_SALES_ROLE
+
+
+def ess_portal_path_allowed(path: str, role: str | None = None) -> bool:
+    """Route được phép khi đăng nhập employee / staff_field."""
     p = (path or '').split('?', 1)[0].rstrip('/') or '/'
     if p.startswith('/static') or p in ('/favicon.ico',):
         return True
-    for pref in ('/hrm/ess', '/api/hrm/ess', '/logout'):
+    r = str(role or '').strip()
+    allowed = ['/hrm/ess', '/api/hrm/ess', '/logout', '/login']
+    if r == FIELD_SALES_ROLE:
+        allowed.extend([
+            '/crm', '/api/crm',
+            '/ess',  # alias
+        ])
+    for pref in allowed:
         if p == pref or p.startswith(pref + '/'):
             return True
     return False
@@ -195,7 +220,7 @@ def session_may_manage_ess_link() -> bool:
         return False
     r = str(session.get('role') or user.get('role') or '').strip()
     perms = user.get('permissions')
-    if r == 'employee':
+    if r in ESS_HOME_ROLES:
         return False
     if r in ESS_EMPLOYEE_ROLES:
         from auth import normalize_permissions
@@ -229,10 +254,10 @@ def list_ess_linkable_users(
     *,
     employee_id: int | None = None,
 ) -> list[dict]:
-    """User role employee (Cổng ESS) từ Settings — HR chọn gán NV."""
+    """User role employee / staff_field từ Settings — HR chọn gán NV."""
     from auth import normalize_permissions
     from Services.hrm.schema import ensure_hrm_schema
-    from Services.sme_roles import ESS_PORTAL_ROLE, ROLE_LABELS
+    from Services.sme_roles import ROLE_LABELS
 
     ensure_hrm_schema(conn)
     eid = int(employee_id) if employee_id else None
@@ -263,15 +288,18 @@ def list_ess_linkable_users(
                 'employee_code': emp.get('employee_code') or '',
             }
 
+    placeholders = ','.join('?' for _ in ESS_LINKABLE_ROLES)
     out: list[dict] = []
     for r in conn.execute(
-        """
+        f"""
         SELECT id, username, full_name, role, email, phone, permissions
         FROM users
-        WHERE TRIM(COALESCE(role, '')) = ?
-        ORDER BY COALESCE(NULLIF(TRIM(full_name), ''), username), username
+        WHERE TRIM(COALESCE(role, '')) IN ({placeholders})
+        ORDER BY
+          CASE TRIM(COALESCE(role, '')) WHEN 'staff_field' THEN 0 ELSE 1 END,
+          COALESCE(NULLIF(TRIM(full_name), ''), username), username
         """,
-        (ESS_PORTAL_ROLE,),
+        tuple(ESS_LINKABLE_ROLES),
     ).fetchall():
         u = dict(r) if hasattr(r, 'keys') else {
             'id': r[0], 'username': r[1], 'full_name': r[2], 'role': r[3],
@@ -284,7 +312,7 @@ def list_ess_linkable_users(
         linked_elsewhere = bool(
             link and (not eid or int(link['employee_id']) != int(eid))
         )
-        ess_ready = ESS_PERMISSION in perms or role == ESS_PORTAL_ROLE
+        ess_ready = ESS_PERMISSION in perms or role in ESS_LINKABLE_ROLES
         out.append({
             'id': uid,
             'username': u.get('username') or '',

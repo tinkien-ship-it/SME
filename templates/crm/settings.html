@@ -44,18 +44,63 @@ Body JSON: {
       <div class="crm-panel-hd"><h2>Chia lead (round-robin)</h2></div>
       <div class="crm-panel-bd">
         <p class="small text-muted mb-2">
-          Danh sách <strong>Nhân viên Bán hàng</strong> lấy tự động từ user role
-          <em>Nhân Viên Bán Hàng</em> đã thiết lập trong hệ thống.
-          Lead inbound được gán lần lượt theo thứ tự bên dưới.
+          Danh sách <strong>Nhân viên Bán hàng</strong> lấy từ user role
+          <em>NV Bán hàng thị trường</em> và <em>NV Bán hàng tại quầy</em>
+          (Settings → Users). Lead inbound được gán lần lượt theo thứ tự bên dưới (thị trường ưu tiên).
         </p>
         <ul id="salesStaffList" class="list-group list-group-flush border rounded mb-2 crm-sales-staff"></ul>
         <p id="salesStaffEmpty" class="small text-warning mb-0 d-none">
-          Chưa có Nhân viên Bán hàng — lead inbound sẽ không có người phụ trách cho đến khi Quản trị thêm user role <em>Nhân Viên Bán Hàng</em>.
+          Chưa có NV Bán hàng (thị trường / quầy) — lead inbound sẽ không có người phụ trách cho đến khi Quản trị thêm user role tương ứng tại Settings.
         </p>
       </div>
     </div>
   </div>
   <div class="col-lg-6">
+    <div class="crm-panel mb-3">
+      <div class="crm-panel-hd"><h2>Email doanh nghiệp (SMTP)</h2></div>
+      <div class="crm-panel-bd">
+        <p class="small text-muted mb-2">
+          Cấu hình SMTP riêng để gửi báo giá, hợp đồng và email chiến dịch từ địa chỉ của doanh nghiệp.
+          Dùng <strong>mật khẩu ứng dụng</strong> (Gmail / Outlook), không dùng mật khẩu đăng nhập thường.
+          Nếu tắt hoặc thiếu cấu hình, hệ thống sẽ thử SMTP toàn cục trên VPS (nếu có).
+        </p>
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="smtpEnabled">
+          <label class="form-check-label" for="smtpEnabled">Bật SMTP doanh nghiệp</label>
+        </div>
+        <div class="row g-2">
+          <div class="col-8">
+            <label class="form-label small">SMTP server</label>
+            <input class="form-control form-control-sm" id="smtpServer" placeholder="smtp.gmail.com">
+          </div>
+          <div class="col-4">
+            <label class="form-label small">Cổng</label>
+            <input type="number" class="form-control form-control-sm" id="smtpPort" value="587">
+          </div>
+          <div class="col-6">
+            <label class="form-label small">Email gửi</label>
+            <input type="email" class="form-control form-control-sm" id="smtpSender" placeholder="banhang@congty.vn">
+          </div>
+          <div class="col-6">
+            <label class="form-label small">Tên hiển thị</label>
+            <input class="form-control form-control-sm" id="smtpFromName" placeholder="Công ty ABC">
+          </div>
+          <div class="col-12">
+            <label class="form-label small">Mật khẩu ứng dụng</label>
+            <input type="password" class="form-control form-control-sm" id="smtpPassword" placeholder="Để trống nếu giữ mật khẩu cũ" autocomplete="new-password">
+          </div>
+          <div class="col-8">
+            <label class="form-label small">Gửi thử tới</label>
+            <input type="email" class="form-control form-control-sm" id="smtpTestTo" placeholder="email@…">
+          </div>
+          <div class="col-4 d-flex align-items-end gap-1">
+            <button type="button" class="crm-btn crm-btn-primary btn-sm flex-grow-1" onclick="saveSmtp()">Lưu</button>
+            <button type="button" class="crm-btn crm-btn-ghost btn-sm" onclick="testSmtp()">Thử</button>
+          </div>
+        </div>
+        <p id="smtpStatus" class="small text-muted mt-2 mb-0"></p>
+      </div>
+    </div>
     <div class="crm-panel mb-3">
       <div class="crm-panel-hd"><h2>Nguồn KPI gauge (HR ↔ CRM)</h2></div>
       <div class="crm-panel-bd">
@@ -161,6 +206,21 @@ function renderBridge(b){
     <div class="mt-1">HR SALES_REV kỳ này: ${hr.found?money(hr.target)+' đ':'chưa đặt'}</div>`;
 }
 
+function fillSmtp(s){
+  s=s||{};
+  smtpEnabled.checked=!!s.enabled;
+  smtpServer.value=s.server||'';
+  smtpPort.value=s.port||587;
+  smtpSender.value=s.sender||'';
+  smtpFromName.value=s.from_name||'';
+  smtpPassword.value='';
+  smtpPassword.placeholder=s.password_set?'******** (đã lưu — nhập mới để đổi)':'Mật khẩu ứng dụng';
+  smtpTestTo.value=s.sender||'';
+  smtpStatus.textContent=s.configured
+    ?'SMTP doanh nghiệp sẵn sàng.'
+    :(s.enabled?'Đã bật nhưng thiếu server / email / mật khẩu.':'Chưa bật — sẽ dùng SMTP hệ thống nếu có.');
+}
+
 async function load(){
   const s=await(await fetch('/api/crm/settings')).json();
   token.value=s.inbound_token||'';
@@ -176,6 +236,7 @@ async function load(){
   updateInboundExample();
   preferHr.checked=s.kpi_prefer_hr!==false && s.kpi_prefer_hr!==0 && s.kpi_prefer_hr!=='0';
   renderBridge(s.kpi_bridge);
+  fillSmtp(s.smtp);
   const ts=await(await fetch('/api/crm/targets')).json();
   tbT.innerHTML=(ts||[]).length?ts.map(t=>`<tr>
     <td>${t.period_key}</td><td>${crmLabel('period_type', t.period_type)}</td><td>${t.owner||'(công ty)'}</td>
@@ -184,6 +245,26 @@ async function load(){
   </tr>`).join(''):'<tr><td colspan="5" class="crm-empty">Chưa có KPI cục bộ</td></tr>';
 }
 
+async function saveSmtp(){
+  const body={
+    enabled:smtpEnabled.checked,
+    server:smtpServer.value,
+    port:smtpPort.value,
+    sender:smtpSender.value,
+    from_name:smtpFromName.value,
+  };
+  const pw=(smtpPassword.value||'').trim();
+  if(pw && pw!=='********') body.password=pw;
+  const d=await(await fetch('/api/crm/settings/smtp',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  if(d.error) return alert(d.error);
+  fillSmtp(d.smtp);
+  alert('Đã lưu cấu hình email');
+}
+async function testSmtp(){
+  const d=await(await fetch('/api/crm/settings/smtp/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to_email:smtpTestTo.value})})).json();
+  if(d.error||!d.success) alert(d.error||'Gửi thử thất bại');
+  else alert(d.message||'Đã gửi email thử');
+}
 async function savePreferHr(){
   const d=await(await fetch('/api/crm/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({kpi_prefer_hr:preferHr.checked})})).json();
   if(d.error) alert(d.error);

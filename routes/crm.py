@@ -20,6 +20,19 @@ def _actor() -> str:
     )
 
 
+def _session_role() -> str:
+    return str(
+        session.get('role')
+        or (session.get('user') or {}).get('role')
+        or ''
+    ).strip()
+
+
+def _crm_may_delete_leads() -> bool:
+    from Services.sme_roles import FIELD_SALES_ROLE
+    return _session_role() != FIELD_SALES_ROLE
+
+
 def _crm_inbound_url() -> str:
     from flask import g
     tid = getattr(g, 'tenant_id', None)
@@ -89,6 +102,9 @@ def register_crm_routes(app):
     @app.route('/crm/settings')
     @login_required
     def crm_settings_page():
+        if _session_role() == 'staff_field':
+            from flask import redirect, url_for
+            return redirect(url_for('crm_leads_page'))
         return render_template('crm/settings.html')
 
     @app.route('/crm/visits')
@@ -275,6 +291,10 @@ def register_crm_routes(app):
                     return jsonify({'error': 'Không tìm thấy'}), 404
                 return jsonify(row)
             if request.method == 'DELETE':
+                if not _crm_may_delete_leads():
+                    return jsonify({
+                        'error': 'NV Bán hàng thị trường không được xóa lead. Chỉ tạo / sửa.',
+                    }), 403
                 crm_svc.delete_lead(conn, lead_id)
                 sqlite_commit(conn, label='crm_lead_delete')
                 return jsonify({'success': True})
@@ -1051,6 +1071,7 @@ def register_crm_routes(app):
                 }
 
             if request.method == 'GET':
+                from Services import crm_email as crm_mail
                 token = crm_ops.ensure_inbound_token(conn)
                 owners = crm_ops.sync_assign_owners_from_staff(conn)
                 sqlite_commit(conn, label='crm_settings_token')
@@ -1066,6 +1087,7 @@ def register_crm_routes(app):
                     'tenant_id': tid,
                     'kpi_prefer_hr': prefer_hr_kpi(conn),
                     'kpi_bridge': _kpi_bridge_payload(),
+                    'smtp': crm_mail.get_tenant_smtp_public(conn),
                 })
             data = request.get_json() or {}
             if 'kpi_prefer_hr' in data:
@@ -1079,6 +1101,7 @@ def register_crm_routes(app):
                 set_setting(conn, 'inbound_token', secrets.token_urlsafe(24))
             owners = crm_ops.sync_assign_owners_from_staff(conn)
             sqlite_commit(conn, label='crm_settings')
+            from Services import crm_email as crm_mail
             staff = crm_ops.list_crm_sales_staff(conn)
             return jsonify({'success': True, **{
                 'inbound_token': crm_ops.ensure_inbound_token(conn),
@@ -1088,7 +1111,181 @@ def register_crm_routes(app):
                 'inbound_url': _crm_inbound_url(),
                 'kpi_prefer_hr': prefer_hr_kpi(conn),
                 'kpi_bridge': _kpi_bridge_payload(),
+                'smtp': crm_mail.get_tenant_smtp_public(conn),
             }})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/settings/smtp', methods=['GET', 'PUT'])
+    @login_required
+    def api_crm_settings_smtp():
+        from Services import crm_email as crm_mail
+        conn = _conn()
+        try:
+            if request.method == 'GET':
+                return jsonify(crm_mail.get_tenant_smtp_public(conn))
+            smtp = crm_mail.save_tenant_smtp(conn, request.get_json() or {})
+            sqlite_commit(conn, label='crm_smtp_save')
+            return jsonify({'success': True, 'smtp': smtp})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/settings/smtp/test', methods=['POST'])
+    @login_required
+    def api_crm_settings_smtp_test():
+        from Services import crm_email as crm_mail
+        conn = _conn()
+        try:
+            data = request.get_json() or {}
+            ok, err = crm_mail.test_tenant_smtp(conn, data.get('to_email'))
+            if not ok:
+                return jsonify({'success': False, 'error': err or 'Gửi thử thất bại'}), 400
+            return jsonify({'success': True, 'message': 'Đã gửi email thử'})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/quotes/<int:quote_id>/send-email', methods=['POST'])
+    @login_required
+    def api_crm_quote_send_email(quote_id):
+        from Services import crm_email as crm_mail
+        conn = _conn()
+        try:
+            quote = crm_svc.get_quote(conn, quote_id)
+            if not quote:
+                return jsonify({'error': 'Không tìm thấy báo giá'}), 404
+            data = request.get_json() or {}
+            to_email = (data.get('to_email') or quote.get('customer_email') or '').strip()
+            if not to_email:
+                return jsonify({'error': 'Khách hàng chưa có email. Nhập email nhận hoặc cập nhật hồ sơ KH.'}), 400
+            subject, text, html = crm_mail.build_quote_email(quote)
+            if data.get('subject'):
+                subject = str(data['subject']).strip() or subject
+            ok, err, source = crm_mail.send_tenant_email(
+                conn, to_email, subject, text, html_body=html,
+            )
+            crm_mail.log_crm_email(
+                conn, kind='quote', ref_id=quote_id, to_email=to_email,
+                subject=subject, status='ok' if ok else 'error', error=err,
+            )
+            sqlite_commit(conn, label='crm_quote_email')
+            if not ok:
+                return jsonify({'success': False, 'error': err}), 400
+            return jsonify({'success': True, 'to_email': to_email, 'source': source})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/contracts/<int:cid>/send-email', methods=['POST'])
+    @login_required
+    def api_crm_contract_send_email(cid):
+        from Services import crm_contract_template as tpl
+        from Services import crm_email as crm_mail
+        from Services import crm_ops
+        conn = _conn()
+        try:
+            row = crm_ops.get_contract(conn, cid)
+            if not row:
+                return jsonify({'error': 'Không tìm thấy hợp đồng'}), 404
+            data = request.get_json() or {}
+            to_email = (data.get('to_email') or row.get('customer_email') or '').strip()
+            if not to_email:
+                # fallback customers.email
+                cid_cust = row.get('customer_id')
+                if cid_cust:
+                    er = conn.execute(
+                        'SELECT email FROM customers WHERE id = ?', (int(cid_cust),)
+                    ).fetchone()
+                    if er:
+                        to_email = (er['email'] if hasattr(er, 'keys') else er[0] or '') or ''
+                        to_email = str(to_email).strip()
+            if not to_email:
+                return jsonify({'error': 'Khách hàng chưa có email. Nhập email nhận hoặc cập nhật hồ sơ KH.'}), 400
+            attach_html = data.get('attach_html', True)
+            html_doc = tpl.render_contract_html(conn, row) if attach_html else None
+            subject, text, html = crm_mail.build_contract_email(row, html_doc=html_doc)
+            if data.get('subject'):
+                subject = str(data['subject']).strip() or subject
+            ok, err, source = crm_mail.send_tenant_email(
+                conn, to_email, subject, text, html_body=html,
+            )
+            crm_mail.log_crm_email(
+                conn, kind='contract', ref_id=cid, to_email=to_email,
+                subject=subject, status='ok' if ok else 'error', error=err,
+            )
+            sqlite_commit(conn, label='crm_contract_email')
+            if not ok:
+                return jsonify({'success': False, 'error': err}), 400
+            return jsonify({'success': True, 'to_email': to_email, 'source': source})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/campaigns/<int:cid>/send-email', methods=['POST'])
+    @login_required
+    def api_crm_campaign_send_email(cid):
+        from Services import crm_email as crm_mail
+        from Services import crm_ops
+        conn = _conn()
+        try:
+            camps = crm_ops.list_campaigns(conn)
+            camp = next((c for c in camps if int(c.get('id') or 0) == int(cid)), None)
+            if not camp:
+                return jsonify({'error': 'Không tìm thấy chiến dịch'}), 404
+            data = request.get_json() or {}
+            camp = dict(camp)
+            if data.get('subject'):
+                camp['email_subject'] = str(data['subject']).strip()
+            if data.get('body'):
+                camp['email_body'] = str(data['body'])
+            subject, text, html = crm_mail.build_campaign_email(camp)
+            ids = data.get('customer_ids')
+            if ids is not None and not isinstance(ids, list):
+                ids = None
+            limit = min(int(data.get('limit') or 100), 200)
+            recipients = crm_mail.list_customer_emails(
+                conn, customer_ids=[int(x) for x in ids] if ids else None, limit=limit,
+            )
+            if not recipients:
+                return jsonify({'error': 'Không có khách hàng nào có email'}), 400
+            sent, failed = 0, 0
+            errors = []
+            for r in recipients:
+                to_email = (r.get('email') or '').strip()
+                ok, err, _src = crm_mail.send_tenant_email(
+                    conn, to_email, subject, text, html_body=html,
+                )
+                crm_mail.log_crm_email(
+                    conn, kind='campaign', ref_id=cid, to_email=to_email,
+                    subject=subject, status='ok' if ok else 'error', error=err,
+                )
+                if ok:
+                    sent += 1
+                else:
+                    failed += 1
+                    if len(errors) < 10:
+                        errors.append({'email': to_email, 'error': err})
+            sqlite_commit(conn, label='crm_campaign_email')
+            if sent == 0:
+                return jsonify({
+                    'success': False,
+                    'error': (errors[0]['error'] if errors else 'Gửi thất bại'),
+                    'sent': 0, 'failed': failed, 'errors': errors,
+                }), 400
+            return jsonify({
+                'success': True,
+                'sent': sent,
+                'failed': failed,
+                'total': len(recipients),
+                'errors': errors,
+            })
         except Exception as e:
             return jsonify({'error': str(e)}), 500
         finally:

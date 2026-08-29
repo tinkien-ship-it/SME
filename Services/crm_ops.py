@@ -75,23 +75,29 @@ def ensure_inbound_token(conn: sqlite3.Connection) -> str:
 
 # ── Assignment ─────────────────────────────────────────────────────────
 
-CRM_SALES_ROLE = 'staff'  # Settings → Users: Nhân Viên Bán Hàng
+CRM_SALES_ROLES = ('staff_field', 'staff')  # thị trường trước, quầy sau
 
 
 def list_crm_sales_staff(conn: sqlite3.Connection) -> list[dict]:
-    """NV Bán hàng đã thiết lập tại Settings → Users (role staff)."""
+    """NV bán hàng CRM: staff_field + staff (Settings → Users)."""
     ready(conn)
     from Services.sme_roles import ROLE_LABELS
 
+    placeholders = ','.join('?' for _ in CRM_SALES_ROLES)
+    order_cases = ' '.join(
+        f"WHEN '{r}' THEN {i}" for i, r in enumerate(CRM_SALES_ROLES)
+    )
     rows = conn.execute(
-        """
+        f"""
         SELECT id, username, full_name, role
         FROM users
         WHERE COALESCE(TRIM(username), '') != ''
-          AND TRIM(COALESCE(role, '')) = ?
-        ORDER BY COALESCE(NULLIF(TRIM(full_name), ''), username), username
+          AND TRIM(COALESCE(role, '')) IN ({placeholders})
+        ORDER BY
+          CASE TRIM(COALESCE(role, '')) {order_cases} ELSE 99 END,
+          COALESCE(NULLIF(TRIM(full_name), ''), username), username
         """,
-        (CRM_SALES_ROLE,),
+        CRM_SALES_ROLES,
     )
     out: list[dict] = []
     for r in _rows(rows):
@@ -99,12 +105,13 @@ def list_crm_sales_staff(conn: sqlite3.Connection) -> list[dict]:
         if not username:
             continue
         full_name = str(r.get('full_name') or '').strip()
+        role = str(r.get('role') or '').strip()
         out.append({
             'id': int(r.get('id') or 0),
             'username': username,
             'full_name': full_name,
-            'role': CRM_SALES_ROLE,
-            'role_label': ROLE_LABELS.get(CRM_SALES_ROLE, CRM_SALES_ROLE),
+            'role': role,
+            'role_label': ROLE_LABELS.get(role, role),
         })
     return out
 

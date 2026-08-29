@@ -7,7 +7,7 @@ import sqlite3
 from db.schema_helpers import add_column_if_missing, table_exists
 
 
-_CRM_SCHEMA_FLAG = 'crm_schema_contracts_items_v1'
+_CRM_SCHEMA_FLAG = 'crm_schema_email_smtp_v1'
 
 CONTRACT_EXTRA_COLS = (
     ('subtotal', 'REAL DEFAULT 0'),
@@ -322,6 +322,17 @@ CREATE TABLE IF NOT EXISTS crm_inbound_logs (
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS crm_email_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT,
+    ref_id INTEGER,
+    to_email TEXT,
+    subject TEXT,
+    status TEXT,
+    error TEXT,
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_crm_leads_status ON crm_leads(status);
 CREATE INDEX IF NOT EXISTS idx_crm_leads_customer ON crm_leads(customer_id);
 CREATE INDEX IF NOT EXISTS idx_crm_leads_source ON crm_leads(source);
@@ -343,6 +354,7 @@ CREATE INDEX IF NOT EXISTS idx_crm_inbound_logs_created ON crm_inbound_logs(crea
 CREATE INDEX IF NOT EXISTS idx_crm_inbound_logs_channel ON crm_inbound_logs(channel);
 CREATE INDEX IF NOT EXISTS idx_crm_contract_items_cid ON crm_contract_items(contract_id);
 CREATE INDEX IF NOT EXISTS idx_crm_contracts_customer ON crm_contracts(customer_id);
+CREATE INDEX IF NOT EXISTS idx_crm_email_logs_created ON crm_email_logs(created_at);
 """
 
 

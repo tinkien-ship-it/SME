@@ -387,7 +387,8 @@
                                         <label class="form-label">Vai trò</label>
                                         <select id="u_role" name="role" class="form-select">
                                             <optgroup label="Bán hàng / vận hành">
-                                            <option value="staff">Nhân Viên Bán Hàng</option>
+                                            <option value="staff">Nhân Viên Bán Hàng Tại Quầy</option>
+                                            <option value="staff_field">Nhân Viên Bán Hàng Thị Trường</option>
                                             <option value="staff*">Nhân Viên Dịch Vụ Lưu Trú</option>
                                             <option value="staff**">Nhân Viên Dịch Vụ Ăn Uống</option>
                                             </optgroup>
@@ -433,9 +434,10 @@
                                         {% endif %}
                                         <div class="form-text text-info d-none" id="essRoleHint">
                                             <i class="fas fa-mobile-alt me-1"></i>
-                                            Tài khoản ESS: bật quyền <strong>Cổng nhân viên (ess_portal)</strong> — role
-                                            <strong>Nhân viên ESS</strong> tự bật quyền này; role <strong>staff</strong> cần tick thủ công.
-                                            HR liên kết user ↔ nhân viên tại <strong>Danh sách nhân viên</strong> hoặc <strong>Hợp đồng lao động</strong> (nút Thiết lập ESS).
+                                            <strong>employee</strong>: vào ESS (chấm công) — không gặp KH, không POS.
+                                            <strong>staff_field</strong>: vào ESS + gặp KH + CRM Leads (tạo/sửa, không xóa) — không POS.
+                                            <strong>staff (quầy)</strong>: vào trang bán hàng; ESS cần tick thủ công.
+                                            HR liên kết user ↔ NV tại Danh sách nhân viên / HĐLĐ.
                                         </div>
                                     </div>
                                     <div class="perm-group">
@@ -1277,7 +1279,8 @@ const playNotificationSound = () => {
 const ROLE_LABELS = {
     master: ['bg-danger', 'Master'],
     employee: ['bg-info', 'NV ESS'],
-    staff: ['bg-secondary', 'NV Bán hàng'],
+    staff: ['bg-secondary', 'NV Quầy'],
+    staff_field: ['bg-primary', 'NV Thị trường'],
     'staff*': ['bg-secondary', 'NV Lưu trú'],
     'staff**': ['bg-secondary', 'NV F&B'],
     admin: ['bg-danger', 'Quản Trị Viên'],
@@ -1397,16 +1400,17 @@ function syncEssRoleHint() {
     const hint = document.getElementById('essRoleHint');
     const essCb = document.getElementById('p_ess');
     if (hint) {
-        hint.classList.toggle('d-none', role !== 'employee' && !(essCb && essCb.checked));
+        const show = role === 'employee' || role === 'staff_field' || !!(essCb && essCb.checked);
+        hint.classList.toggle('d-none', !show);
     }
 }
 
 function applyEssEmployeePreset() {
     const role = document.getElementById('u_role')?.value || '';
     const essCb = document.getElementById('p_ess');
-    if (role !== 'employee' || !essCb) return;
+    if ((role !== 'employee' && role !== 'staff_field') || !essCb) return;
     essCb.checked = true;
-    ['p_edit', 'p_del'].forEach(id => {
+    ['p_edit', 'p_del', 'p_sale'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.checked = false;
     });
@@ -1432,15 +1436,15 @@ async function saveUser() {
     }
 
     const role = document.getElementById('u_role').value;
-    if (role === 'employee') {
+    if (role === 'employee' || role === 'staff_field') {
         applyEssEmployeePreset();
     }
 
     const perms = [];
     document.querySelectorAll('.perm-cb:checked').forEach(cb => perms.push(cb.value));
 
-    if (role === 'employee' && !perms.includes('ess_portal')) {
-        Swal.fire('Cảnh báo', 'Role Nhân viên ESS cần quyền Cổng nhân viên (ess_portal).', 'warning');
+    if ((role === 'employee' || role === 'staff_field') && !perms.includes('ess_portal')) {
+        Swal.fire('Cảnh báo', 'Role ESS / thị trường cần quyền Cổng nhân viên (ess_portal).', 'warning');
         return;
     }
 

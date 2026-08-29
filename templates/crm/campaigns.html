@@ -52,7 +52,23 @@
   </div>
   <div class="modal-footer border-0">
     <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Đóng</button>
+    <button class="crm-btn crm-btn-ghost" type="button" id="btnSendCamp" style="display:none" onclick="openSendCamp()">Gửi email QC</button>
     <button class="crm-btn crm-btn-primary" onclick="save()">Lưu</button>
+  </div>
+</div></div></div>
+
+<div class="modal fade" id="sendM"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow">
+  <div class="modal-header border-0"><h5 class="modal-title fw-bold">Gửi email chiến dịch</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="sendCampId">
+    <p class="small text-muted">Gửi tới khách hàng đã có email (tối đa 100/lần). Nội dung lấy từ ghi chú chiến dịch nếu để trống.</p>
+    <div class="mb-2"><label class="form-label small">Tiêu đề email</label><input id="sendSubject" class="form-control form-control-sm"></div>
+    <div class="mb-2"><label class="form-label small">Nội dung</label><textarea id="sendBody" class="form-control form-control-sm" rows="5" placeholder="Để trống = dùng ghi chú chiến dịch"></textarea></div>
+    <div class="mb-0"><label class="form-label small">Giới hạn số người nhận</label><input type="number" id="sendLimit" class="form-control form-control-sm" value="100" min="1" max="200"></div>
+  </div>
+  <div class="modal-footer border-0">
+    <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Hủy</button>
+    <button class="crm-btn crm-btn-primary" onclick="doSendCamp()">Gửi ngay</button>
   </div>
 </div></div></div>
 {% endblock %}
@@ -75,7 +91,34 @@ function openCamp(r){
   document.getElementById('budget').value=r?.budget||0;
   document.getElementById('spend').value=r?.spend||0;
   document.getElementById('notes').value=r?.notes||'';
+  document.getElementById('btnSendCamp').style.display = r?.id ? '' : 'none';
   new bootstrap.Modal('#m').show();
+}
+function openSendCamp(id){
+  id = id || document.getElementById('id').value;
+  if(!id) return alert('Lưu chiến dịch trước');
+  document.getElementById('sendCampId').value=id;
+  const name=document.getElementById('name').value||'Ưu đãi';
+  document.getElementById('sendSubject').value='Thông tin chương trình: '+name;
+  document.getElementById('sendBody').value=document.getElementById('notes').value||'';
+  document.getElementById('sendLimit').value=100;
+  new bootstrap.Modal('#sendM').show();
+}
+async function doSendCamp(){
+  const id=document.getElementById('sendCampId').value;
+  if(!id) return;
+  if(!confirm('Gửi email tới khách hàng có địa chỉ email?')) return;
+  const body={
+    subject:document.getElementById('sendSubject').value,
+    body:document.getElementById('sendBody').value,
+    limit:Number(document.getElementById('sendLimit').value)||100,
+  };
+  const d=await(await fetch(`/api/crm/campaigns/${id}/send-email`,{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
+  })).json();
+  if(d.error && !d.sent) return alert(d.error);
+  alert(`Đã gửi ${d.sent||0}/${d.total||0}`+(d.failed?` · lỗi ${d.failed}`:''));
+  bootstrap.Modal.getInstance(document.getElementById('sendM'))?.hide();
 }
 async function load(){
   const rows=await(await fetch('/api/crm/campaigns')).json();
@@ -89,6 +132,7 @@ async function load(){
     <td class="small">${crmFmtDate(r.end_date)}</td>
     <td class="crm-actions-cell"><div class="crm-actions">
       <button class="btn btn-sm btn-outline-secondary" onclick='openCamp(${JSON.stringify(r).replace(/'/g,"&#39;")})'>Sửa</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="openSendCamp(${r.id})">Gửi email</button>
       <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button>
     </div></td>
   </tr>`).join('') : '<tr><td colspan="8" class="crm-empty">Chưa có chiến dịch</td></tr>';

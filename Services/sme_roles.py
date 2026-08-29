@@ -34,7 +34,7 @@ PERMISSION_BYPASS_ROLES = frozenset({
 }) | SME_ADMIN_ROLES
 
 POS_HKD_ASSIGNABLE_ROLES = (
-    'staff', 'staff*', 'staff**',
+    'staff', 'staff_field', 'staff*', 'staff**',
     'employee',
     'accountant',
     'manager', 'manager*', 'managerFB',
@@ -43,7 +43,8 @@ POS_HKD_ASSIGNABLE_ROLES = (
 
 ROLE_LABELS = {
     'employee': 'Nhân viên (ESS)',
-    'staff': 'NV Bán hàng',
+    'staff': 'NV Bán hàng (quầy)',
+    'staff_field': 'NV Bán hàng thị trường',
     'staff*': 'NV Lưu trú',
     'staff**': 'NV F&B',
     'accountant': 'Kế toán',
@@ -67,8 +68,14 @@ ROLE_LABELS = {
 
 # Permission bổ sung (POS/HRM) — lưu CSV trong users.permissions
 ESS_PORTAL_PERMISSION = 'ess_portal'
-# Role Settings → "Nhân viên — Cổng ESS (HRM)" — duy nhất được gán ESS link
+# Role Settings → "Nhân viên — Cổng ESS (HRM)" — ESS chấm công (không gặp KH)
 ESS_PORTAL_ROLE = 'employee'
+# NV bán hàng thị trường — home ESS + CRM leads (không POS)
+FIELD_SALES_ROLE = 'staff_field'
+# Role đăng nhập vào ESS và bị whitelist path (không vào /sale)
+ESS_HOME_ROLES = frozenset({ESS_PORTAL_ROLE, FIELD_SALES_ROLE})
+# User được HR liên kết ESS (employees.user_id)
+ESS_LINKABLE_ROLES = frozenset({ESS_PORTAL_ROLE, FIELD_SALES_ROLE})
 
 # Chính sách: DN siêu nhỏ (TT58) có thể phát sinh mọi nghiệp vụ như DN TT99.
 # Do đó TT58 được mở đầy đủ nghiệp vụ mua/bán/kế toán; khác biệt chỉ ở framework

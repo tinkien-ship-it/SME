@@ -854,8 +854,8 @@ def send_otp_sms(phone, otp_code):
 
 def login_redirect_target(user_role, tenant_id):
     """Xác định endpoint redirect sau đăng nhập."""
-    from Services.sme_roles import ESS_PORTAL_ROLE, is_sme_role
-    if str(user_role or '').strip() == ESS_PORTAL_ROLE:
+    from Services.sme_roles import ESS_HOME_ROLES, is_sme_role
+    if str(user_role or '').strip() in ESS_HOME_ROLES:
         return 'hrm_ess_portal'
     if user_role in ('admin*', 'manager*') and tenant_id is not None:
         return 'rental_service'
@@ -870,16 +870,16 @@ def login_redirect_target(user_role, tenant_id):
 
 def login_redirect_fallback_path(user_role, tenant_id, target: str | None = None) -> str:
     """URL dự phòng khi url_for thất bại."""
-    from Services.sme_roles import ESS_PORTAL_ROLE
+    from Services.sme_roles import ESS_HOME_ROLES
     target = target or login_redirect_target(user_role, tenant_id)
     fallbacks = {
         'hrm_ess_portal': '/hrm/ess',
         'rental_service': '/rental_service',
         'F_and_B_service': '/F_and_B_service',
         'SME_dashboard': '/SME_dashboard',
-        'master_settings': '/master_settings',
+        'master_settings': '/master/settings',
         'sale': '/sale',
     }
-    if str(user_role or '').strip() == ESS_PORTAL_ROLE:
-        return fallbacks.get(target, '/hrm/ess')
+    if str(user_role or '').strip() in ESS_HOME_ROLES:
+        return fallbacks['hrm_ess_portal']
     return fallbacks.get(target, '/sale')

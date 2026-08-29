@@ -12,10 +12,16 @@
     (thường là số điện thoại). Trang đăng nhập: <a href="/login">/login</a> → sau đó vào
     <a href="/hrm/ess">/hrm/ess</a>.
   </div>
-  <p class="text-muted small">Payslip · Xin nghỉ · Chấm công · <strong>Gặp khách hàng</strong>. Cần quyền <code>ess_portal</code> và HR đã liên kết hồ sơ NV.</p>
+  <p class="text-muted small" id="essDesc">Payslip · Xin nghỉ · Chấm công. Cần quyền <code>ess_portal</code> và HR đã liên kết hồ sơ NV.</p>
+  <div id="fieldCrmBar" class="alert alert-primary border py-2 px-3 mb-3 d-none">
+    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+      <span class="small mb-0">NV thị trường: mở CRM để tạo / sửa lead (không xóa).</span>
+      <a class="btn btn-sm btn-primary" href="/crm/leads"><i class="fas fa-user-plus"></i> Mở Leads CRM</a>
+    </div>
+  </div>
   <div id="info" class="alert alert-light border mb-3">Đang tải…</div>
 
-  <div class="card mb-3 border-success">
+  <div class="card mb-3 border-success d-none" id="visitCard">
     <div class="card-header bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
       <span><i class="fas fa-handshake me-1"></i> Gặp khách hàng</span>
       <button class="btn btn-outline-success btn-sm" type="button" onclick="loadVisitBoard()">Tải lại</button>
@@ -242,7 +248,19 @@ async function load(){
   pays.innerHTML=(d.payslips||[]).map(p=>`<li class="list-group-item d-flex justify-content-between">
     <span>T${p.month}/${p.year}</span><strong>${money(p.final_amount)} đ</strong></li>`).join('')
     ||'<li class="list-group-item text-muted">Chưa có phiếu lương</li>';
-  loadVisitBoard();
+  const canVisit=!!d.can_customer_visits;
+  const isField=!!d.is_field_sales;
+  const visitCard=document.getElementById('visitCard');
+  const fieldBar=document.getElementById('fieldCrmBar');
+  const desc=document.getElementById('essDesc');
+  if(visitCard) visitCard.classList.toggle('d-none', !canVisit);
+  if(fieldBar) fieldBar.classList.toggle('d-none', !isField);
+  if(desc){
+    desc.innerHTML = canVisit
+      ? 'Payslip · Xin nghỉ · Chấm công · <strong>Gặp khách hàng</strong>. Cần quyền <code>ess_portal</code> và HR đã liên kết hồ sơ NV.'
+      : 'Payslip · Xin nghỉ · <strong>Chấm công</strong>. Tài khoản ESS văn phòng không dùng chức năng gặp khách.';
+  }
+  if(canVisit) loadVisitBoard();
 }
 async function leave(){
   const r=await(await fetch('/api/hrm/ess/leave',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({

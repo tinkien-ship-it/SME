@@ -2012,7 +2012,7 @@ Trân trọng,
             from Services.sme_roles import ESS_PORTAL_PERMISSION
             perm_list = normalize_permissions(permissions)
             role_str = str(role or '').strip()
-            if role_str == 'employee' and ESS_PORTAL_PERMISSION not in perm_list:
+            if role_str in ('employee', 'staff_field') and ESS_PORTAL_PERMISSION not in perm_list:
                 perm_list.append(ESS_PORTAL_PERMISSION)
             permissions = ','.join(perm_list)
 

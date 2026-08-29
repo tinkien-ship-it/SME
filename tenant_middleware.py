@@ -808,9 +808,9 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
         if is_ess_portal_only_user(ess_role):
             req_path = request.path or ''
             if req_path.startswith('/api/'):
-                if not ess_portal_path_allowed(req_path):
+                if not ess_portal_path_allowed(req_path, ess_role):
                     return jsonify({'success': False, 'error': 'Forbidden'}), 403
-            elif not ess_portal_path_allowed(req_path):
+            elif not ess_portal_path_allowed(req_path, ess_role):
                 try:
                     return redirect(url_for('hrm_ess_portal'))
                 except Exception:

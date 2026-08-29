@@ -153,7 +153,7 @@ async function loadLeads() {
       <button class="btn btn-sm btn-outline-secondary" onclick='openLead(${JSON.stringify(r).replace(/'/g,"&#39;")}); new bootstrap.Modal("#leadModal").show()'>Sửa</button>
       ${r.status !== 'converted' ? `<button class="btn btn-sm btn-success" onclick="convertLead(${r.id})">Chuyển khách hàng</button>` : ''}
       ${r.customer_id ? `<a class="btn btn-sm btn-outline-primary" href="/crm/customer/${r.customer_id}">Hồ sơ</a>` : ''}
-      <button class="btn btn-sm btn-outline-danger" onclick="delLead(${r.id})">Xóa</button>
+      ${(window.CRM_SESSION && window.CRM_SESSION.can_delete_leads === false) ? '' : `<button class="btn btn-sm btn-outline-danger" onclick="delLead(${r.id})">Xóa</button>`}
       </div>
     </td>
   </tr>`).join('');
@@ -193,6 +193,10 @@ async function convertLead(id) {
 }
 
 async function delLead(id) {
+  if (window.CRM_SESSION && window.CRM_SESSION.can_delete_leads === false) {
+    alert('NV Bán hàng thị trường không được xóa lead.');
+    return;
+  }
   if (!confirm('Xóa lead này?')) return;
   await fetch(`/api/crm/leads/${id}`, {method:'DELETE'});
   loadLeads();

@@ -103,6 +103,7 @@
         <i class="fas fa-cart-plus"></i> Tạo đơn bán
       </button>
       <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Đóng</button>
+      <button class="crm-btn crm-btn-ghost" type="button" onclick="sendQuoteEmail()">Gửi email</button>
       <button class="crm-btn crm-btn-primary" onclick="saveQuote()">Lưu báo giá</button>
     </div>
   </div></div>
@@ -309,6 +310,7 @@ async function loadQuotes() {
     <td class="crm-actions-cell">
       <div class="crm-actions">
       <button class="btn btn-sm btn-outline-secondary" onclick="editQuote(${r.id})">Sửa</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="sendQuoteEmail(${r.id})">Gửi email</button>
       ${r.status!=='converted'?`<button class="btn btn-sm btn-success" onclick="convertQuote(${r.id})">Tạo đơn bán</button>`:''}
       ${r.sale_id?`<a class="btn btn-sm btn-outline-primary" href="/sale?order_id=${r.sale_id}">Đơn hàng #${r.sale_id}</a>`:''}
       ${r.status!=='converted'?`<button class="btn btn-sm btn-outline-danger" onclick="delQuote(${r.id})">Xóa</button>`:''}
@@ -361,6 +363,24 @@ async function saveQuote() {
   if (!r.ok || d.error) { alert(d.error || 'Lỗi'); return; }
   bootstrap.Modal.getInstance(document.getElementById('quoteModal'))?.hide();
   loadQuotes();
+}
+
+async function sendQuoteEmail(id) {
+  id = id || document.getElementById('quoteId').value;
+  if (!id) { alert('Lưu báo giá trước khi gửi email'); return; }
+  const q = await (await fetch(`/api/crm/quotes/${id}`)).json();
+  if (q.error) { alert(q.error); return; }
+  const def = q.customer_email || '';
+  const to = prompt('Gửi báo giá tới email:', def);
+  if (to === null) return;
+  if (!String(to).trim()) { alert('Email trống'); return; }
+  const d = await (await fetch(`/api/crm/quotes/${id}/send-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to_email: String(to).trim() }),
+  })).json();
+  if (d.error || !d.success) alert(d.error || 'Gửi thất bại');
+  else alert('Đã gửi báo giá tới ' + d.to_email);
 }
 
 async function convertQuote(id) {

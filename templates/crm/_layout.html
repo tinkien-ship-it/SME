@@ -15,7 +15,15 @@ document.addEventListener('DOMContentLoaded', function () {
 {% block content %}
 {% set crm_page %}{% block crm_page_id %}dashboard{% endblock %}{% endset %}
 {% set crm_page = crm_page|trim %}
-<script>document.body.classList.add('crm-workspace');</script>
+<script>
+window.CRM_SESSION = {
+  role: {{ (session.get('role') or (session.get('user') or {}).get('role') or '')|tojson }},
+  can_delete_leads: {{ 'false' if (session.get('role') or (session.get('user') or {}).get('role') or '') == 'staff_field' else 'true' }},
+  is_field_sales: {{ 'true' if (session.get('role') or (session.get('user') or {}).get('role') or '') == 'staff_field' else 'false' }}
+};
+</script>
+{% set _crm_role = session.get('role') or (session.get('user') or {}).get('role') or '' %}
+{% set _is_field = _crm_role == 'staff_field' %}
 
 <div class="crm-sidebar-backdrop" id="crmSidebarBackdrop" onclick="crmCloseSidebar()"></div>
 
@@ -78,12 +86,15 @@ document.addEventListener('DOMContentLoaded', function () {
        href="{{ safe_url_for('crm_customers_page') }}">
       <i class="fas fa-address-book"></i> Danh Mục Khách Hàng
     </a>
-    <a class="crm-nav-link {% if crm_page == 'settings' %}active{% endif %}"
+    <a class="crm-nav-link {% if crm_page == 'settings' %}active{% endif %} {% if _is_field %}d-none{% endif %}"
        href="{{ safe_url_for('crm_settings_page') }}">
       <i class="fas fa-cog"></i> Cấu hình CRM
     </a>
-    <a class="crm-nav-link" href="{{ safe_url_for('sale') }}">
+    <a class="crm-nav-link {% if _is_field %}d-none{% endif %}" href="{{ safe_url_for('sale') }}">
       <i class="fas fa-cash-register"></i> Điểm bán hàng
+    </a>
+    <a class="crm-nav-link {% if not _is_field %}d-none{% endif %}" href="{{ safe_url_for('hrm_ess_portal') }}">
+      <i class="fas fa-mobile-alt"></i> Về cổng ESS
     </a>
 
     <div class="crm-sidebar-foot">
