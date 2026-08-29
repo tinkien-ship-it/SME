@@ -32,7 +32,7 @@
       <div class="crm-panel-bd">
         <div class="mb-2"><label class="form-label small">Vòng đời</label>
           <select id="pLifecycle" class="form-select form-select-sm">
-            <option value="prospect">Tiềm năng</option>
+            <option value="prospect">Đang tiếp cận</option>
             <option value="active">Đang giao dịch</option>
             <option value="inactive">Ngưng</option>
             <option value="churned">Rời bỏ</option>
@@ -154,7 +154,7 @@ async function load360() {
   document.getElementById('custName').textContent = c.company_name || c.name || ('Khách hàng #' + CID);
   document.getElementById('custSub').textContent =
     `Mã #${c.id} · ${crmLabel('lifecycle', c.crm_lifecycle, c.crm_lifecycle||'')} · ${crmLabel('segment', c.crm_segment, c.crm_segment||'')}`;
-  document.getElementById('pLifecycle').value = c.crm_lifecycle || 'active';
+  document.getElementById('pLifecycle').value = c.crm_lifecycle || 'prospect';
   document.getElementById('pSegment').value = c.crm_segment || 'standard';
   document.getElementById('pSource').value = c.crm_source || '';
   document.getElementById('pOwner').value = c.crm_owner || '';

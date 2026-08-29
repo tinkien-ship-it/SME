@@ -29,7 +29,7 @@ CUSTOMER_CRM_COLS = (
     ('crm_source', 'TEXT'),
     ('crm_owner', 'TEXT'),
     ('crm_segment', "TEXT DEFAULT 'standard'"),
-    ('crm_lifecycle', "TEXT DEFAULT 'active'"),
+    ('crm_lifecycle', "TEXT DEFAULT 'prospect'"),
     ('crm_notes', 'TEXT'),
     ('crm_next_contact_at', 'TEXT'),
     ('crm_tags', 'TEXT'),

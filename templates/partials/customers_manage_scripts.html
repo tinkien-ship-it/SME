@@ -14,7 +14,38 @@ let customerModal = null;
 })();
 
 function customerColSpan() {
-    return window.__CRM_CUSTOMERS_UI ? 11 : 10;
+    return window.__CRM_CUSTOMERS_UI ? 10 : 9;
+}
+
+const CUSTOMER_LIFECYCLE_VI = {
+    prospect: 'Đang tiếp cận',
+    active: 'Đang giao dịch',
+    inactive: 'Ngưng',
+    churned: 'Rời bỏ',
+};
+const CUSTOMER_LIFECYCLE_CLS = {
+    prospect: 'crm-badge-draft',
+    active: 'crm-badge-accepted',
+    inactive: 'crm-badge-rejected',
+    churned: 'crm-badge-lost',
+};
+
+function customerLifecycleLabel(c) {
+    const raw = String(c?.crm_lifecycle || '').trim() || 'prospect';
+    if (typeof crmLabel === 'function') {
+        return crmLabel('lifecycle', raw, CUSTOMER_LIFECYCLE_VI[raw] || raw);
+    }
+    return CUSTOMER_LIFECYCLE_VI[raw] || raw;
+}
+
+function formatCustomerStatusCell(c) {
+    const raw = String(c?.crm_lifecycle || '').trim() || 'prospect';
+    const label = customerLifecycleLabel(c);
+    if (window.__CRM_CUSTOMERS_UI) {
+        const cls = CUSTOMER_LIFECYCLE_CLS[raw] || '';
+        return `<span class="crm-badge ${cls}">${escHtml(label)}</span>`;
+    }
+    return escHtml(label);
 }
 
 function customerDisplayPrimary(c) {
@@ -84,12 +115,12 @@ function customerActionButtons(c) {
     const canDelete = c.can_delete !== false && !c.delete_block_reason;
     const blockReason = c.delete_block_reason
         ? ('Không xóa được: khách hàng ' + c.delete_block_reason)
-        : 'Không xóa được: khách đã được tiếp cận';
+        : 'Không xóa được: khách đã phát sinh mua hàng';
     const delBtn = canDelete
         ? (window.__CRM_CUSTOMERS_UI
             ? `<button type="button" class="crm-btn crm-btn-ghost btn-sm text-danger crm-cust-del" onclick="deleteCustomer(${id})">Xóa</button>`
             : `<button type="button" class="btn btn-sm btn-danger crm-cust-del" onclick="deleteCustomer(${id})">Xóa</button>`)
-        : `<span class="small text-muted crm-cust-no-del" title="${escHtml(blockReason)}">Đã tiếp cận</span>`;
+        : `<span class="small text-muted crm-cust-no-del" title="${escHtml(blockReason)}">Đã mua hàng</span>`;
     if (window.__CRM_CUSTOMERS_UI) {
         return `<div class="crm-cust-actions">
                 <a class="crm-btn crm-btn-ghost btn-sm" href="/crm/customer/${id}" title="Hồ sơ khách hàng">Hồ sơ</a>
@@ -125,8 +156,7 @@ function renderCustomerRows(data, tbody) {
             ${ownerCol}
             <td class="text-start small">${escHtml(c.email || '—')}</td>
             <td class="text-start small">${escHtml(c.address || '—')}</td>
-            <td class="text-center small">${escHtml(c.budget_unit_code || '—')}</td>
-            <td class="text-center small">${escHtml(c.passport_no || '—')}</td>
+            <td class="text-center small">${formatCustomerStatusCell(c)}</td>
             <td class="text-center crm-cust-actions-cell">${customerActionButtons(c)}</td>
         </tr>`;
     }).join('');
@@ -162,10 +192,9 @@ function buildCustomerColumns() {
           getValue: c => c.email || '' },
         { key: 'address', label: 'Địa chỉ', filterType: 'text', width: '180px',
           getValue: c => c.address || '' },
-        { key: 'budget_unit_code', label: 'Mã đơn vị ngân sách nhà nước', filterType: 'text', width: '140px', align: 'center',
-          getValue: c => c.budget_unit_code || '' },
-        { key: 'passport_no', label: 'Số hộ chiếu', filterType: 'text', width: '110px', align: 'center',
-          getValue: c => c.passport_no || '' },
+        { key: 'crm_lifecycle', label: 'Trạng thái', filterType: 'text', width: '120px', align: 'center',
+          getValue: c => customerLifecycleLabel(c),
+          sortValue: c => String(c.crm_lifecycle || 'prospect').toLowerCase() },
         { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '280px', align: 'center' },
     );
     return cols;
@@ -284,7 +313,7 @@ function saveCustomer() {
 function deleteCustomer(id) {
     const row = (customers || []).find(c => Number(c.id) === Number(id));
     if (row && row.can_delete === false) {
-        alert('Không thể xóa: khách hàng ' + (row.delete_block_reason || 'đã được tiếp cận'));
+        alert('Không thể xóa: khách hàng ' + (row.delete_block_reason || 'đã phát sinh mua hàng'));
         return;
     }
     if (!confirm('Xóa khách hàng này?')) return;
@@ -315,8 +344,7 @@ function exportCustomers() {
         }
         row['Email'] = c.email || '';
         row['Địa chỉ'] = c.address || '';
-        row['Mã đơn vị NSNN'] = c.budget_unit_code || '';
-        row['Số hộ chiếu'] = c.passport_no || '';
+        row['Trạng thái'] = customerLifecycleLabel(c);
         return row;
     });
     if (data.length === 0) return alert('Không có dữ liệu!');
@@ -360,10 +388,12 @@ async function importCustomers(event) {
             'ĐIỆN THOẠI': 'phone',
             'EMAIL': 'email',
             'ĐỊA CHỈ': 'address',
-            'MÃ ĐƠN VỊ NSNN': 'budget_unit_code',
-            'SỐ HỘ CHIẾU': 'passport_no',
+            'TRẠNG THÁI': 'crm_lifecycle',
             'NV PHỤ TRÁCH': 'crm_owner',
             'NV PHU TRACH': 'crm_owner',
+            // Tương thích file Excel cũ
+            'MÃ ĐƠN VỊ NSNN': 'budget_unit_code',
+            'SỐ HỘ CHIẾU': 'passport_no',
         };
 
         let ok = 0;
@@ -376,6 +406,17 @@ async function importCustomers(event) {
                 if (idx !== -1) obj[headerMap[key]] = String(row[idx] || '').trim();
             });
             if (!obj.name) continue;
+            if (obj.crm_lifecycle) {
+                const lv = String(obj.crm_lifecycle).trim().toLowerCase();
+                const mapVi = {
+                    'tiềm năng': 'prospect', 'tiem nang': 'prospect',
+                    'đang tiếp cận': 'prospect', 'dang tiep can': 'prospect', 'prospect': 'prospect',
+                    'đang giao dịch': 'active', 'dang giao dich': 'active', 'active': 'active',
+                    'ngưng': 'inactive', 'ngung': 'inactive', 'inactive': 'inactive',
+                    'rời bỏ': 'churned', 'roi bo': 'churned', 'churned': 'churned',
+                };
+                obj.crm_lifecycle = mapVi[lv] || (['prospect','active','inactive','churned'].includes(lv) ? lv : 'prospect');
+            }
 
             const res = await fetch('/api/customers', {
                 method: 'POST',

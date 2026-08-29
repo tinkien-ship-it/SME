@@ -950,11 +950,83 @@ def convert_quote_to_sale(conn: sqlite3.Connection, quote_id: int) -> dict:
 
 # ── Customer CRM profile / 360 ─────────────────────────────────────────
 
+def customer_has_purchase(conn: sqlite3.Connection, customer_id: int) -> bool:
+    """True nếu KH đã từng có đơn bán (không hủy/xóa).
+
+    Khớp theo customer_id hoặc tên/công ty trên đơn (POS có thể chưa ghi customer_id).
+    """
+    ready(conn)
+    cid = int(customer_id)
+    try:
+        row = conn.execute(
+            """
+            SELECT 1 FROM sale
+            WHERE customer_id = ?
+              AND COALESCE(status, '') NOT IN ('cancelled', 'deleted', 'void')
+            LIMIT 1
+            """,
+            (cid,),
+        ).fetchone()
+        if row:
+            return True
+    except sqlite3.Error:
+        pass
+
+    try:
+        cust = _row(conn.execute(
+            'SELECT name, company_name FROM customers WHERE id = ?', (cid,),
+        ).fetchone())
+    except sqlite3.Error:
+        try:
+            cust = _row(conn.execute(
+                'SELECT name FROM customers WHERE id = ?', (cid,),
+            ).fetchone())
+        except sqlite3.Error:
+            return False
+    if not cust:
+        return False
+    name = (cust.get('name') or '').strip()
+    company = (cust.get('company_name') or '').strip() or name
+    if not name and not company:
+        return False
+    try:
+        row = conn.execute(
+            """
+            SELECT 1 FROM sale
+            WHERE COALESCE(status, '') NOT IN ('cancelled', 'deleted', 'void')
+              AND (
+                (TRIM(COALESCE(customer_name,'')) != '' AND TRIM(customer_name) = ?)
+                OR (TRIM(COALESCE(company_name,'')) != '' AND TRIM(company_name) = ?)
+              )
+            LIMIT 1
+            """,
+            (name or company, company or name),
+        ).fetchone()
+        return bool(row)
+    except sqlite3.Error:
+        return False
+
+
+def effective_crm_lifecycle(conn: sqlite3.Connection, customer_id: int, stored: str | None) -> str:
+    """active (Đang giao dịch) chỉ khi đã mua hàng; chưa mua → prospect (Đang tiếp cận)."""
+    raw = (stored or '').strip() or 'prospect'
+    if raw not in LIFECYCLES:
+        raw = 'prospect'
+    if raw in ('inactive', 'churned'):
+        return raw
+    if customer_has_purchase(conn, int(customer_id)):
+        return 'active'
+    return 'prospect'
+
+
 def update_customer_crm(conn: sqlite3.Connection, customer_id: int, data: dict) -> None:
     ready(conn)
     lifecycle = (data.get('crm_lifecycle') or '').strip() or None
     if lifecycle and lifecycle not in LIFECYCLES:
-        lifecycle = 'active'
+        lifecycle = 'prospect'
+    # «Đang giao dịch» chỉ khi đã từng mua hàng
+    if lifecycle == 'active' and not customer_has_purchase(conn, int(customer_id)):
+        lifecycle = 'prospect'
     segment = (data.get('crm_segment') or '').strip() or None
     if segment and segment not in SEGMENTS:
         segment = 'standard'
@@ -990,6 +1062,10 @@ def customer_360(conn: sqlite3.Connection, customer_id: int) -> dict:
     cust = _row(conn.execute('SELECT * FROM customers WHERE id = ?', (customer_id,)).fetchone())
     if not cust:
         raise ValueError('Không tìm thấy khách hàng')
+    cust['has_purchase'] = customer_has_purchase(conn, int(customer_id))
+    cust['crm_lifecycle'] = effective_crm_lifecycle(
+        conn, int(customer_id), cust.get('crm_lifecycle'),
+    )
 
     sales = []
     try:
