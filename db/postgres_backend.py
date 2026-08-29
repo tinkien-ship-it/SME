@@ -39,6 +39,11 @@ _INSERT_RE = re.compile(
     r'^\s*INSERT\s+(?:OR\s+\w+\s+)?INTO\b',
     re.IGNORECASE,
 )
+# Câu ghi — dùng SAVEPOINT; SELECT không dùng (tránh mất result set sau RELEASE)
+_WRITE_SQL_RE = re.compile(
+    r'^\s*(INSERT|UPDATE|DELETE|REPLACE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|COPY|VACUUM|ANALYZE)\b',
+    re.IGNORECASE,
+)
 
 
 def database_url() -> str:
@@ -145,6 +150,19 @@ class PgCursor:
     def execute(self, query: str, params: Any = None):
         sql = rewrite_sql_for_postgres(query, schema=self._schema)
         want_id = _is_insert(query) and 'RETURNING' not in sql.upper()
+        is_write = want_id or bool(_WRITE_SQL_RE.match(query or ''))
+
+        # SELECT / đọc: không bọc SAVEPOINT — RELEASE sẽ nuốt result → fetchone lỗi
+        # "command status: RELEASE" và worker treo / Nginx 504.
+        if not is_write:
+            if params is None:
+                self._cur.execute(sql)
+            else:
+                self._cur.execute(sql, params)
+            self.description = getattr(self._cur, 'description', None)
+            self.rowcount = getattr(self._cur, 'rowcount', -1)
+            return self
+
         try:
             self._cur.execute('SAVEPOINT sme_stmt')
             used_returning = False

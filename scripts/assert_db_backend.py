@@ -46,15 +46,31 @@ def main() -> int:
 
     if is_postgres():
         try:
-            from db.postgres_backend import open_pg
+            from db.postgres_backend import open_pg, database_url
             from db.dialect import pg_schema_from_db_path
+            # Smoke thô bằng psycopg (không qua PgCursor) — tách lỗi auth vs logic
+            try:
+                import psycopg
+                with psycopg.connect(database_url(), connect_timeout=8) as raw:
+                    with raw.cursor() as cur:
+                        cur.execute('SELECT 1')
+                        assert cur.fetchone()[0] == 1
+                print('  -> psycopg raw OK (auth + network)')
+            except Exception as raw_exc:
+                print('  ! psycopg raw FAIL:', raw_exc)
+                if (os.environ.get('SME_REQUIRE_POSTGRES') or '').strip().lower() in (
+                    '1', 'true', 'yes', 'on',
+                ):
+                    return 1
+                return 0
+
             with open_pg(schema=pg_schema_from_db_path(None)) as conn:
                 n = int(conn.execute('SELECT 1').fetchone()[0] or 0)
                 tenants = 0
                 try:
                     tenants = int(conn.execute('SELECT COUNT(*) FROM tenants').fetchone()[0] or 0)
-                except Exception:
-                    pass
+                except Exception as te:
+                    print('  ! dem tenants:', te)
             print('  -> Postgres OK (SELECT 1=%s, tenants≈%s)' % (n, tenants))
         except Exception as exc:
             print('  ! Postgres KET NOI THAT BAI:', exc)
