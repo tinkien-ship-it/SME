@@ -116,12 +116,25 @@ def _live_tests(tenant_sqlite: Path | None) -> list[str]:
             conn.commit()
 
             ensure_accounting_queue_schema(conn, commit=True)
-            jid = enqueue_accounting_job(conn, sale_id=1, features={'x': 1}, commit=True)
+            # sale_id ngẫu nhiên — tránh None do job pending còn sót từ lần smoke trước
+            import time
+            sid = int(time.time()) % 2_000_000_000
+            jid = enqueue_accounting_job(conn, sale_id=sid, features={'x': 1}, commit=True)
             if jid is None:
-                # may be None if already pending — insert once more with replace
                 jid = enqueue_accounting_job(
-                    conn, sale_id=2, features={'x': 1}, commit=True,
+                    conn, sale_id=sid + 1, features={'x': 1}, commit=True, replace_existing=True,
                 )
+            if not jid:
+                # Phân biệt: lastrowid=0 vs None (đã có pending)
+                try:
+                    row = conn.execute(
+                        "SELECT id FROM accounting_jobs WHERE sale_id IN (?, ?) ORDER BY id DESC LIMIT 1",
+                        (sid, sid + 1),
+                    ).fetchone()
+                    if row:
+                        jid = int(row[0] if not hasattr(row, 'keys') else row['id'])
+                except Exception as qe:
+                    fails.append(f'live: enqueue_accounting_job failed ({qe})')
             if not jid:
                 fails.append('live: enqueue_accounting_job failed')
 

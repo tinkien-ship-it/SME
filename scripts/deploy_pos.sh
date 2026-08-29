@@ -269,7 +269,8 @@ else:
 # Live smoke neu co DATABASE_URL
 rc = subprocess.call([sys.executable, 'scripts/pg_staging_smoke.py', '--live'])
 if rc != 0:
-    print('  ! pg_staging_smoke --live that bai (rc=%s)' % rc)
+    print('  ! pg_staging_smoke --live that bai (rc=%s) — khong chan deploy' % rc)
+    print('    (thuong la smoke schema t_smoke_pg; app van dung Postgres neu assert OK)')
 else:
     print('  -> pg_staging_smoke --live OK')
 PY
