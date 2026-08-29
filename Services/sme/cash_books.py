@@ -290,11 +290,12 @@ def cash_account_book(
             (
                 SELECT GROUP_CONCAT(x.account_code, ', ')
                 FROM (
-                    SELECT DISTINCT other.account_code
+                    SELECT other.account_code, MIN(other.sequence) AS min_seq
                     FROM sme_journal_lines other
                     WHERE other.entry_id = jl.entry_id
                       AND other.id <> jl.id
-                    ORDER BY other.sequence, other.id
+                    GROUP BY other.account_code
+                    ORDER BY min_seq, other.account_code
                 ) x
             ) AS counterpart_accounts
         FROM sme_journal_lines jl

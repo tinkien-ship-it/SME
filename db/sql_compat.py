@@ -274,6 +274,91 @@ def _rewrite_printf(sql: str) -> str:
     return _PRINTF_PAD.sub(_pad, sql)
 
 
+_DATE_NOW_MODS = re.compile(
+    r"date\s*\(\s*['\"]now['\"]\s*"
+    r"(?:,\s*['\"]localtime['\"])?"
+    r"((?:\s*,\s*['\"][+\-]?\d+\s+days?['\"])*)"
+    r"\s*\)",
+    re.IGNORECASE,
+)
+_DATETIME_NOW_RUNTIME = re.compile(
+    r"datetime\s*\(\s*['\"]now['\"]\s*(?:,\s*['\"]localtime['\"])?\s*\)",
+    re.IGNORECASE,
+)
+_GROUP_CONCAT_2 = re.compile(
+    r"GROUP_CONCAT\s*\(\s*([^,]+?)\s*,\s*([^)]+?)\s*\)",
+    re.IGNORECASE,
+)
+_GROUP_CONCAT_1 = re.compile(
+    r"GROUP_CONCAT\s*\(\s*([^)]+?)\s*\)",
+    re.IGNORECASE,
+)
+
+
+def _rewrite_date_now_forms(sql: str) -> str:
+    """SQLite date('now', 'localtime', '-30 day') → CURRENT_DATE ± INTERVAL."""
+
+    def _repl(m: re.Match) -> str:
+        extras = m.group(1) or ''
+        days = 0
+        for em in re.finditer(r"['\"]([+\-]?\d+)\s+days?['\"]", extras, re.I):
+            days += int(em.group(1))
+        if days == 0:
+            return 'CURRENT_DATE'
+        if days > 0:
+            return f"(CURRENT_DATE + INTERVAL '{days} days')"
+        return f"(CURRENT_DATE + INTERVAL '{days} days')"
+
+    return _DATE_NOW_MODS.sub(_repl, sql)
+
+
+def _rewrite_date_fn_calls(sql: str) -> str:
+    """date(expr) / date(?) còn lại → (expr)::date (Postgres)."""
+    out: list[str] = []
+    i = 0
+    n = len(sql)
+    lower = sql.lower()
+    while i < n:
+        idx = lower.find('date(', i)
+        if idx < 0:
+            out.append(sql[i:])
+            break
+        if idx > 0 and (sql[idx - 1].isalnum() or sql[idx - 1] == '_'):
+            out.append(sql[i:idx + 5])
+            i = idx + 5
+            continue
+        out.append(sql[i:idx])
+        depth = 1
+        j = idx + 5
+        while j < n and depth:
+            ch = sql[j]
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth -= 1
+            j += 1
+        inner = sql[idx + 5:j - 1].strip()
+        # Đã là CURRENT_DATE / INTERVAL — không bọc lại
+        if inner.upper().startswith('CURRENT_DATE') or 'INTERVAL' in inner.upper():
+            out.append(inner)
+        else:
+            out.append(f'(({inner})::timestamp)::date')
+        i = j
+    return ''.join(out)
+
+
+def _rewrite_group_concat(sql: str) -> str:
+    text = _GROUP_CONCAT_2.sub(
+        lambda m: f"string_agg(({m.group(1).strip()})::text, {m.group(2).strip()})",
+        sql,
+    )
+    text = _GROUP_CONCAT_1.sub(
+        lambda m: f"string_agg(({m.group(1).strip()})::text, ',')",
+        text,
+    )
+    return text
+
+
 def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
     """Chuyển câu SQL SQLite sang PostgreSQL (placeholder, PRAGMA, upsert, …)."""
     text = (sql or '').strip()
@@ -342,10 +427,14 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
     if _LAST_INSERT_ROWID.search(text):
         return 'SELECT lastval() AS last_insert_rowid'
 
-    text = _adapt_params(text)
-
-    # datetime('now')
+    # SQLite date/datetime TRƯỚC khi đổi ? → %s
+    text = _rewrite_date_now_forms(text)
+    text = _DATETIME_NOW_RUNTIME.sub('CURRENT_TIMESTAMP', text)
     text = _DATETIME_NOW.sub('CURRENT_TIMESTAMP', text)
+    text = _rewrite_date_fn_calls(text)
+    text = _rewrite_group_concat(text)
+
+    text = _adapt_params(text)
 
     # IFNULL / printf / COLLATE / alias.rowid
     text = _rewrite_ifnull(text)

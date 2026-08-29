@@ -161,13 +161,22 @@ class PgCursor:
         # SELECT / đọc: không bọc SAVEPOINT — RELEASE sẽ nuốt result → fetchone lỗi
         # "command status: RELEASE" và worker treo / Nginx 504.
         if not is_write:
-            if params is None:
-                self._cur.execute(sql)
-            else:
-                self._cur.execute(sql, params)
-            self.description = getattr(self._cur, 'description', None)
-            self.rowcount = getattr(self._cur, 'rowcount', -1)
-            return self
+            try:
+                if params is None:
+                    self._cur.execute(sql)
+                else:
+                    self._cur.execute(sql, params)
+                self.description = getattr(self._cur, 'description', None)
+                self.rowcount = getattr(self._cur, 'rowcount', -1)
+                return self
+            except Exception:
+                # Postgres: lỗi 1 câu → abort cả transaction; phải rollback
+                # nếu không request sau báo "current transaction is aborted"
+                try:
+                    self._cur.connection.rollback()
+                except Exception:
+                    pass
+                raise
 
         try:
             self._cur.execute('SAVEPOINT sme_stmt')
@@ -208,7 +217,10 @@ class PgCursor:
             try:
                 self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
             except Exception:
-                pass
+                try:
+                    self._cur.connection.rollback()
+                except Exception:
+                    pass
             raise
 
     def executemany(self, query: str, params_seq):
