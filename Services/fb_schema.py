@@ -173,6 +173,14 @@ def ensure_fb_schema(conn: sqlite3.Connection, *, commit: bool = True) -> list[s
             changed.append(item)
     except Exception as exc:
         print('[MIGRATE] sale_items canonical: %s' % exc)
+        try:
+            from db_utils import rollback_quietly
+            rollback_quietly(conn)
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
 
     if commit:
         sqlite_commit(conn, label='fb_schema')

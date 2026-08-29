@@ -240,14 +240,33 @@ def _ensure_sale_items_id_postgres(conn, cursor, cols: set[str]) -> list[str]:
             mx = int(mx_row[0] if mx_row is not None else 0) or 0
         except (TypeError, ValueError):
             mx = 0
-        cursor.execute('SELECT setval(?, ?)', ('sale_items_id_seq', mx))
+        # PG sequence minvalue=1 — setval(0) bị từ chối và abort transaction
+        if mx < 1:
+            cursor.execute(
+                "SELECT setval('sale_items_id_seq', 1, false)"
+            )
+        else:
+            cursor.execute(
+                "SELECT setval('sale_items_id_seq', ?, true)", (mx,)
+            )
         cursor.execute(
             "UPDATE sale_items SET id = nextval('sale_items_id_seq') WHERE id IS NULL"
         )
-        cursor.execute(
-            "SELECT setval('sale_items_id_seq', "
-            "(SELECT COALESCE(MAX(id), 0) FROM sale_items))"
-        )
+        mx_row2 = cursor.execute(
+            'SELECT COALESCE(MAX(id), 0) FROM sale_items'
+        ).fetchone()
+        try:
+            mx2 = int(mx_row2[0] if mx_row2 is not None else 0) or 0
+        except (TypeError, ValueError):
+            mx2 = 0
+        if mx2 < 1:
+            cursor.execute(
+                "SELECT setval('sale_items_id_seq', 1, false)"
+            )
+        else:
+            cursor.execute(
+                "SELECT setval('sale_items_id_seq', ?, true)", (mx2,)
+            )
         cursor.execute(
             "ALTER TABLE sale_items ALTER COLUMN id "
             "SET DEFAULT nextval('sale_items_id_seq')"
@@ -271,4 +290,12 @@ def _ensure_sale_items_id_postgres(conn, cursor, cols: set[str]) -> list[str]:
         changed.append('repair:sale_items.id:serial')
     except Exception as exc:
         print('[MIGRATE] repair sale_items.id: %s' % exc)
+        try:
+            from db_utils import rollback_quietly
+            rollback_quietly(conn)
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
     return changed

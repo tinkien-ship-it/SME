@@ -129,6 +129,10 @@ _SQLITE_SEQ_INSERT = re.compile(
     r"INSERT\s+INTO\s+sqlite_sequence\s*\(\s*name\s*,\s*seq\s*\)\s*VALUES\s*\(\s*\?\s*,\s*\?\s*\)",
     re.IGNORECASE,
 )
+_SQLITE_SEQ_UPDATE = re.compile(
+    r"UPDATE\s+sqlite_sequence\b",
+    re.IGNORECASE,
+)
 
 # last_insert_rowid() → lastval()
 _LAST_INSERT_ROWID = re.compile(
@@ -696,7 +700,11 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
         )
 
     # sqlite_sequence → no-op (sequence tự quản)
-    if _SQLITE_SEQ_DELETE.match(text) or _SQLITE_SEQ_INSERT.match(text):
+    if (
+        _SQLITE_SEQ_DELETE.match(text)
+        or _SQLITE_SEQ_INSERT.match(text)
+        or _SQLITE_SEQ_UPDATE.match(text)
+    ):
         return 'SELECT 1 AS _seq_ok'
 
     # rowid mirror → no-op trên PostgreSQL

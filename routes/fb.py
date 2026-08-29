@@ -514,6 +514,7 @@ def register_fb_routes(app):
             return jsonify(tables)
         except Exception as e:
             logger.error('get_fb_tables: %s', e)
+            rollback_quietly(conn)
             return jsonify([])
         finally:
             conn.close()
@@ -588,9 +589,20 @@ def register_fb_routes(app):
                 (r[1] or '').lower()
                 for r in db.execute('PRAGMA table_info(sale)')
             }
-            sale_created = 's.created_at' if 'created_at' in sale_cols else 'NULL'
-            if 'date' in sale_cols:
-                sale_created = f'COALESCE({sale_created}, s.date)'
+            # Postgres: COALESCE(timestamp, text) → DatatypeMismatch — luôn CAST AS text
+            if 'created_at' in sale_cols and 'date' in sale_cols:
+                sale_created = (
+                    "COALESCE(CAST(s.created_at AS text), CAST(s.date AS text))"
+                )
+            elif 'created_at' in sale_cols:
+                sale_created = 'CAST(s.created_at AS text)'
+            elif 'date' in sale_cols:
+                sale_created = 'CAST(s.date AS text)'
+            else:
+                sale_created = 'NULL'
+            item_created = (
+                f"COALESCE(CAST(si.created_at AS text), {sale_created})"
+            )
             cursor.execute(f"""
                 SELECT 
                     s.id AS sale_id,
@@ -606,7 +618,7 @@ def register_fb_routes(app):
                     COALESCE(si.quantity_served, 0) AS quantity_served,
                     si.price AS unit_price,
                     si.line_total,
-                    COALESCE(si.created_at, {sale_created}) AS item_created_at,
+                    {item_created} AS item_created_at,
                     si.served_at,
                     m.item_code,
                     m.unit1
@@ -636,10 +648,10 @@ def register_fb_routes(app):
                     minutes_waiting = 0
                     if row['item_created_at']:
                         try:
-                            time_str = str(row['item_created_at'])
-                            if 'Z' in time_str or '+' in time_str:
+                            time_str = str(row['item_created_at'])[:19]
+                            if 'Z' in str(row['item_created_at']) or '+' in str(row['item_created_at']):
                                 created = datetime.fromisoformat(
-                                    time_str.replace('Z', '+00:00')).replace(tzinfo=None)
+                                    str(row['item_created_at']).replace('Z', '+00:00')).replace(tzinfo=None)
                             else:
                                 created = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
                             minutes_waiting = max(
@@ -669,9 +681,11 @@ def register_fb_routes(app):
                     })
             return jsonify({"success": True, "orders": list(orders.values())})
         except sqlite3.Error as e:
+            rollback_quietly(db)
             logger.exception("ERROR active-orders: %s", e)
             return jsonify({"success": True, "orders": [], "message": str(e)})
         except Exception as e:
+            rollback_quietly(db)
             logger.exception("ERROR active-orders: %s", e)
             return jsonify({"success": True, "orders": [], "message": str(e)})
         finally:
@@ -793,6 +807,7 @@ def register_fb_routes(app):
 
         except Exception as e:
             print(f"--- Lỗi nghiêm trọng tại API get-sale: {str(e)} ---")
+            rollback_quietly(db)
             return jsonify({"success": False, "message": f"Lỗi hệ thống: {str(e)}"}), 500
         finally:
             db.close()
@@ -1010,12 +1025,18 @@ def register_fb_routes(app):
         if not table_id or menu_id is None or menu_id == '':
             return jsonify({"success": False, "message": "Thiếu bàn hoặc mã món"}), 400
 
+        try:
+            table_id = int(table_id)
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "message": "Mã bàn không hợp lệ"}), 400
+
         db = get_db_connection()
         db.row_factory = sqlite3.Row
         cursor = db.cursor()
 
         try:
-            ensure_fb_schema(db, commit=False)
+            # Commit schema riêng — tránh repair dở / setval abort làm hỏng txn ghi món
+            ensure_fb_schema(db, commit=True)
 
             def _add():
                 begin_immediate(db, label='fb_add_item')
@@ -1158,7 +1179,7 @@ def register_fb_routes(app):
         pk_col = 'rowid'
 
         try:
-            ensure_fb_schema(db, commit=False)
+            ensure_fb_schema(db, commit=True)
             pk_col = sale_item_pk_column(cursor)
 
             def _update_qty():
@@ -1251,10 +1272,24 @@ def register_fb_routes(app):
                         (table_id,),
                     )
                     cursor.execute("DELETE FROM sale WHERE id = ?", (sale_id,))
-                    max_id_row = cursor.execute("SELECT MAX(id) FROM sale").fetchone()
-                    new_max_id = max_id_row[0] if max_id_row and max_id_row[0] is not None else 0
-                    cursor.execute(
-                        "UPDATE sqlite_sequence SET seq = ? WHERE name = 'sale'", (new_max_id,))
+                    try:
+                        from db.dialect import is_postgres
+                        from db.schema_helpers import reset_auto_increment
+                        if is_postgres():
+                            reset_auto_increment(db, 'sale')
+                        else:
+                            max_id_row = cursor.execute("SELECT MAX(id) FROM sale").fetchone()
+                            new_max_id = (
+                                max_id_row[0]
+                                if max_id_row and max_id_row[0] is not None
+                                else 0
+                            )
+                            cursor.execute(
+                                "UPDATE sqlite_sequence SET seq = ? WHERE name = 'sale'",
+                                (new_max_id,),
+                            )
+                    except Exception:
+                        pass
                     message = "Đơn hàng đã được dọn dẹp, bàn đã trống"
                     is_empty = True
                 else:
@@ -2818,11 +2853,20 @@ def register_fb_routes(app):
             cursor = conn.cursor()
             _ensure_draft_inventory_table(cursor)
             sqlite_commit(conn, label='fb_write')
-        
-            query = """
+
+            from db.dialect import is_postgres
+            if is_postgres():
+                created_expr = (
+                    "COALESCE(CAST(d.created_at AS text), "
+                    "TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))"
+                )
+            else:
+                created_expr = "COALESCE(d.created_at, datetime('now', 'localtime'))"
+
+            query = f"""
                 SELECT 
                     d.id,
-                    COALESCE(d.created_at, datetime('now', 'localtime')) AS created_at,
+                    {created_expr} AS created_at,
                     COALESCE(p.name, 'Hàng hóa/Nguyên liệu đã xóa') AS ingredient_name,
                     d.quantity,
                     COALESCE(p.unit, 'ĐVT') AS unit,
@@ -2857,11 +2901,15 @@ def register_fb_routes(app):
 
         except sqlite3.Error as e:
             print(f"--- Lỗi SQLite get-draft-history: {str(e)} ---")
+            if conn:
+                rollback_quietly(conn)
             # Trả về mảng rỗng kèm mã 200 để Frontend không bị lỗi cú pháp nhận diện JSON
             return jsonify([]), 200
         
         except Exception as e:
             print(f"--- Lỗi hệ thống get-draft-history: {str(e)} ---")
+            if conn:
+                rollback_quietly(conn)
             return jsonify([]), 200
         
         finally:

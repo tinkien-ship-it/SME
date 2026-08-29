@@ -46,6 +46,7 @@ CASES = [
     ("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? COLLATE NOCASE LIMIT 1", 'information_schema'),
     ("NOT LIKE 'DV%' AND name = ?", "DV%%"),
     ("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", "%s"),
+    ("UPDATE sqlite_sequence SET seq = ? WHERE name = 'sale'", "_seq_ok"),
 ]
 
 failed = 0
