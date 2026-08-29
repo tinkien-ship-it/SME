@@ -46,7 +46,7 @@
 
 {% block crm_modals %}
 <div class="modal fade" id="quoteModal" tabindex="-1">
-  <div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content border-0 shadow">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content border-0 shadow">
     <div class="modal-header border-0 pb-0">
       <h5 class="modal-title fw-bold" id="qTitle">Báo giá</h5>
       <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -69,25 +69,33 @@
         <div class="col-md-3"><label class="form-label small">Mã cơ hội</label><input id="qOppId" class="form-control form-control-sm" placeholder="Tuỳ chọn"></div>
         <div class="col-md-9"><label class="form-label small">Ghi chú</label><input id="qNotes" class="form-control form-control-sm"></div>
       </div>
-      <div class="table-responsive border rounded">
-        <table class="table table-sm align-middle mb-0">
+
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <strong class="small">Danh sách hàng hóa</strong>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addItemRow()">+ Dòng hàng</button>
+      </div>
+      <div class="table-responsive border rounded mb-2">
+        <table class="table table-sm mb-0 align-middle">
           <thead class="table-light"><tr>
-            <th>Tên hàng</th>
-            <th>Đơn vị tính</th>
-            <th>Số lượng</th>
-            <th>Đơn giá</th>
-            <th>Thuế VAT (%)</th>
-            <th class="text-center">Hành động</th>
+            <th style="min-width:180px">Tên hàng hóa</th>
+            <th style="width:100px">Đơn vị tính</th>
+            <th style="width:90px" class="text-end">Số lượng</th>
+            <th style="width:110px" class="text-end">Đơn giá</th>
+            <th style="width:110px" class="text-end">Thành tiền</th>
+            <th style="width:90px" class="text-end">%VAT</th>
+            <th style="width:110px" class="text-end">Tiền VAT</th>
+            <th style="width:120px" class="text-end">Sau VAT</th>
+            <th style="width:60px" class="text-center">Xóa</th>
           </tr></thead>
           <tbody id="qItems"></tbody>
         </table>
       </div>
-      <div class="d-flex justify-content-between align-items-center mt-2">
-        <button class="crm-btn crm-btn-ghost" type="button" onclick="addItemRow()">
-          <i class="fas fa-plus"></i> Dòng hàng
-        </button>
-        <div class="fw-bold">Tổng ước tính: <span id="qTotalPreview" style="color:var(--crm-accent-2)">0</span> đ</div>
+      <div class="row g-2 mb-1 small">
+        <div class="col-md-4">Chưa VAT: <b id="qSumSub">0</b></div>
+        <div class="col-md-4">VAT: <b id="qSumVat">0</b></div>
+        <div class="col-md-4">Tổng thanh toán: <b id="qTotalPreview">0</b> đ</div>
       </div>
+      <datalist id="prodList"></datalist>
     </div>
     <div class="modal-footer border-0">
       <button class="crm-btn crm-btn-primary me-auto" id="btnConvert" style="display:none;background:#15803d"
@@ -107,39 +115,182 @@ const money = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)
 const QST = {draft:'Nháp',sent:'Đã gửi',accepted:'Chấp nhận',rejected:'Từ chối',converted:'Đã tạo đơn hàng'};
 const QCLS = {draft:'crm-badge-draft',sent:'crm-badge-sent',accepted:'crm-badge-accepted',rejected:'crm-badge-rejected',converted:'crm-badge-converted-q'};
 let customers = [];
+let PRODS = [];
 
-function addItemRow(it={}) {
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input class="form-control form-control-sm i-name" value="${it.product_name||''}" list="prodList"></td>
-    <td><input class="form-control form-control-sm i-unit" value="${it.unit||''}" style="width:70px"></td>
-    <td><input type="number" class="form-control form-control-sm i-qty" value="${it.qty||1}" style="width:80px" oninput="previewTotal()"></td>
-    <td><input type="number" class="form-control form-control-sm i-price" value="${it.unit_price||0}" style="width:110px" oninput="previewTotal()"></td>
-    <td><input type="number" class="form-control form-control-sm i-tax" value="${it.tax_rate||0}" style="width:70px" oninput="previewTotal()"></td>
-    <td class="crm-actions-cell"><div class="crm-actions"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove();previewTotal()">Xóa</button></div></td>`;
-  document.getElementById('qItems').appendChild(tr);
+function escAttr(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function productUnits(p) {
+  if (!p) return [];
+  const units = [];
+  const uLe = String(p.unit || '').trim();
+  const priceLe = Number(p.base_price) || 0;
+  if (uLe) units.push({ unit: uLe, kind: 'le', price: priceLe, label: `${uLe} (lẻ)` });
+  const uSi = String(p.unit1 || '').trim();
+  if (uSi && uSi.toLowerCase() !== uLe.toLowerCase()) {
+    let priceSi = Number(p.sale_price != null ? p.sale_price : p.price) || 0;
+    if (!priceSi) priceSi = priceLe * (Number(p.unit_ratio) || 1);
+    units.push({ unit: uSi, kind: 'si', price: priceSi, label: `${uSi} (sỉ)` });
+  }
+  if (!units.length) units.push({ unit: 'Cái', kind: 'le', price: priceLe, label: 'Cái (lẻ)' });
+  return units;
+}
+
+function findProduct(nameOrId) {
+  const key = String(nameOrId || '').trim();
+  if (!key) return null;
+  return PRODS.find(x => (x.name || '') === key || String(x.id) === key) || null;
+}
+
+function applyUnitPrice(tr) {
+  const opt = tr.querySelector('.i-unit')?.selectedOptions?.[0];
+  if (!opt) return;
+  const price = opt.getAttribute('data-price');
+  if (price != null && price !== '') tr.querySelector('.i-price').value = price;
   previewTotal();
 }
 
+function fillUnitSelect(tr, p, preferredUnit, keepItemPrice) {
+  const sel = tr.querySelector('.i-unit');
+  const units = productUnits(p);
+  const pref = String(preferredUnit || '').trim();
+  let html = units.map(u =>
+    `<option value="${escAttr(u.unit)}" data-price="${u.price}" data-kind="${u.kind}">${escAttr(u.label)}</option>`
+  ).join('');
+  if (pref && !units.some(u => u.unit.toLowerCase() === pref.toLowerCase())) {
+    html += `<option value="${escAttr(pref)}" data-price="0">${escAttr(pref)}</option>`;
+  }
+  if (!html) html = `<option value="${escAttr(pref || '')}" data-price="0">${escAttr(pref || '—')}</option>`;
+  sel.innerHTML = html;
+  if (pref) {
+    const match = [...sel.options].find(o => o.value.toLowerCase() === pref.toLowerCase());
+    if (match) sel.value = match.value;
+  }
+  if (p?.id) tr.dataset.productId = p.id;
+  else delete tr.dataset.productId;
+  if (!keepItemPrice) applyUnitPrice(tr);
+  else previewTotal();
+}
+
+function getTaxRate(tr) {
+  const sel = tr.querySelector('.i-tax-sel');
+  if (sel && sel.value === '__other__') return +tr.querySelector('.i-tax').value || 0;
+  if (sel) return +sel.value || 0;
+  return +tr.querySelector('.i-tax')?.value || 0;
+}
+
+function onTaxPick(sel) {
+  const tr = sel.closest('tr');
+  const custom = tr.querySelector('.i-tax');
+  if (sel.value === '__other__') {
+    custom.style.display = '';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+    custom.value = sel.value;
+  }
+  previewTotal();
+}
+
+function setTaxRate(tr, rate) {
+  const known = [0, 5, 8, 10];
+  const sel = tr.querySelector('.i-tax-sel');
+  const custom = tr.querySelector('.i-tax');
+  const val = Number.isFinite(Number(rate)) ? Number(rate) : 10;
+  if (known.includes(val)) {
+    sel.value = String(val);
+    custom.value = val;
+    custom.style.display = 'none';
+  } else {
+    sel.value = '__other__';
+    custom.value = val;
+    custom.style.display = '';
+  }
+}
+
+function calcLine(tr) {
+  const q = +tr.querySelector('.i-qty').value || 0;
+  const p = +tr.querySelector('.i-price').value || 0;
+  const tax = getTaxRate(tr);
+  const sub = q * p;
+  const vat = sub * tax / 100;
+  tr.querySelector('.i-sub').textContent = money(sub);
+  tr.querySelector('.i-vat').textContent = money(vat);
+  tr.querySelector('.i-tot').textContent = money(sub + vat);
+}
+
 function previewTotal() {
-  let t = 0;
+  let sub = 0, vat = 0;
   document.querySelectorAll('#qItems tr').forEach(tr => {
-    const q = +tr.querySelector('.i-qty').value||0;
-    const p = +tr.querySelector('.i-price').value||0;
-    const tax = +tr.querySelector('.i-tax').value||0;
-    t += q*p*(1+tax/100);
+    const q = +tr.querySelector('.i-qty').value || 0;
+    const p = +tr.querySelector('.i-price').value || 0;
+    const tax = getTaxRate(tr);
+    const line = q * p;
+    sub += line;
+    vat += line * tax / 100;
+    calcLine(tr);
   });
-  document.getElementById('qTotalPreview').textContent = money(t);
+  document.getElementById('qSumSub').textContent = money(sub);
+  document.getElementById('qSumVat').textContent = money(vat);
+  document.getElementById('qTotalPreview').textContent = money(sub + vat);
+}
+
+function onProdPick(inp) {
+  const p = findProduct(inp.value);
+  const tr = inp.closest('tr');
+  if (!p) {
+    fillUnitSelect(tr, null, tr.querySelector('.i-unit')?.value || '', true);
+    return;
+  }
+  tr.querySelector('.i-name').value = p.name || '';
+  fillUnitSelect(tr, p, p.unit || '', false);
+}
+
+function onUnitPick(sel) {
+  applyUnitPrice(sel.closest('tr'));
+}
+
+function addItemRow(it = {}) {
+  const tr = document.createElement('tr');
+  const keepPrice = it.unit_price != null && it.unit_price !== '';
+  tr.innerHTML = `
+    <td><input class="form-control form-control-sm i-name" list="prodList" value="${escAttr(it.product_name||'')}" onchange="onProdPick(this)"></td>
+    <td><select class="form-select form-select-sm i-unit" onchange="onUnitPick(this)"></select></td>
+    <td><input type="number" class="form-control form-control-sm i-qty text-end" value="${it.qty ?? 1}" oninput="previewTotal()"></td>
+    <td><input type="number" class="form-control form-control-sm i-price text-end" value="${it.unit_price ?? 0}" oninput="previewTotal()"></td>
+    <td class="text-end small i-sub">0</td>
+    <td>
+      <select class="form-select form-select-sm i-tax-sel" onchange="onTaxPick(this)">
+        <option value="0">0%</option>
+        <option value="5">5%</option>
+        <option value="8">8%</option>
+        <option value="10">10%</option>
+        <option value="__other__">Khác…</option>
+      </select>
+      <input type="number" class="form-control form-control-sm i-tax text-end mt-1" value="${it.tax_rate ?? 10}" step="0.1" min="0" style="display:none" placeholder="%VAT" oninput="previewTotal()">
+    </td>
+    <td class="text-end small i-vat">0</td>
+    <td class="text-end small fw-semibold i-tot">0</td>
+    <td class="crm-actions-cell"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove();previewTotal()">×</button></td>`;
+  document.getElementById('qItems').appendChild(tr);
+  const p = it.product_id
+    ? PRODS.find(x => String(x.id) === String(it.product_id))
+    : findProduct(it.product_name);
+  fillUnitSelect(tr, p, it.unit || (p && p.unit) || '', keepPrice);
+  if (it.product_id) tr.dataset.productId = it.product_id;
+  setTaxRate(tr, it.tax_rate ?? 10);
 }
 
 function collectItems() {
   return [...document.querySelectorAll('#qItems tr')].map(tr => ({
+    product_id: tr.dataset.productId || null,
     product_name: tr.querySelector('.i-name').value,
     unit: tr.querySelector('.i-unit').value,
     qty: tr.querySelector('.i-qty').value,
     unit_price: tr.querySelector('.i-price').value,
-    tax_rate: tr.querySelector('.i-tax').value,
-  })).filter(x => x.product_name);
+    tax_rate: getTaxRate(tr),
+  })).filter(x => (x.product_name || '').trim());
 }
 
 async function loadQuotes() {
@@ -189,6 +340,8 @@ async function editQuote(id) {
 
 async function saveQuote() {
   const id = document.getElementById('quoteId').value;
+  const items = collectItems();
+  if (!items.length) { alert('Thêm ít nhất một dòng hàng hóa'); return; }
   const body = {
     customer_id: document.getElementById('qCustId').value,
     quote_date: document.getElementById('qDate').value,
@@ -196,7 +349,7 @@ async function saveQuote() {
     status: document.getElementById('qStatus').value,
     opportunity_id: document.getElementById('qOppId').value || null,
     notes: document.getElementById('qNotes').value,
-    items: collectItems(),
+    items,
   };
   if (!body.customer_id) { alert('Chọn khách hàng (mã khách hàng)'); return; }
   const r = await fetch(id ? `/api/crm/quotes/${id}` : '/api/crm/quotes', {
@@ -227,17 +380,14 @@ async function delQuote(id) {
 
 (async () => {
   customers = await (await fetch('/api/customers')).json();
-  const dl = document.getElementById('qCustList');
-  dl.innerHTML = (customers||[]).map(c =>
+  document.getElementById('qCustList').innerHTML = (customers||[]).map(c =>
     `<option value="${c.id}">${c.company_name||c.name||''}</option>`
   ).join('');
-  const prods = await (await fetch('/api/products')).json().catch(()=>[]);
-  const pd = document.createElement('datalist');
-  pd.id = 'prodList';
-  pd.innerHTML = (Array.isArray(prods)?prods:[]).slice(0,500).map(p =>
-    `<option value="${(p.name||'').replace(/"/g,'')}" data-unit="${p.unit||''}" data-price="${p.price||0}">`
+  const raw = await (await fetch('/api/products/manage')).json().catch(() => []);
+  PRODS = Array.isArray(raw) ? raw : (raw.products || raw.items || raw.data || []);
+  document.getElementById('prodList').innerHTML = PRODS.map(p =>
+    `<option value="${escAttr(p.name || '')}">`
   ).join('');
-  document.body.appendChild(pd);
   loadQuotes();
 })();
 </script>

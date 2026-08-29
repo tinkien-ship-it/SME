@@ -1,0 +1,21 @@
+[Unit]
+Description=SME/KetoShop POS (Gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/pos
+# Bắt buộc: nạp .env để GUNICORN_* / SME_* có hiệu lực
+EnvironmentFile=-/root/pos/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/root/pos/venv/bin/gunicorn -c /root/pos/gunicorn.conf.py app:app
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=3
+# Giới hạn treo: nếu worker không thoát, systemd kill
+TimeoutStopSec=35
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target
