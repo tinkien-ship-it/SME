@@ -88,7 +88,7 @@ Body JSON: {
           <div class="col-6"><input type="number" id="tpAmt" class="form-control form-control-sm" placeholder="Mục tiêu (đ)"></div>
           <div class="col-6"><button class="crm-btn crm-btn-primary w-100" onclick="saveTarget()">Lưu KPI</button></div>
         </div>
-        <table class="table crm-table mb-0"><thead><tr><th>Kỳ</th><th>Loại</th><th>Owner</th><th class="text-end">Mục tiêu</th><th></th></tr></thead>
+        <table class="table crm-table mb-0"><thead><tr><th>Kỳ</th><th>Loại kỳ</th><th>Phụ trách</th><th class="text-end">Mục tiêu</th><th class="text-center">Hành động</th></tr></thead>
         <tbody id="tbT"></tbody></table>
       </div>
     </div>
@@ -130,7 +130,7 @@ function renderSalesStaff(staff, owners){
     <span class="badge bg-secondary">${idx+1}</span>
     <div class="staff-meta">
       <div>${esc(u.full_name||u.username)}</div>
-      <div class="sub">${esc(u.username)} · ${esc(u.role_label||'NV Bán hàng')}</div>
+      <div class="sub">${esc(u.username)} · ${esc(u.role_label||'Nhân viên bán hàng')}</div>
     </div>
   </li>`).join('');
 }
@@ -178,9 +178,9 @@ async function load(){
   renderBridge(s.kpi_bridge);
   const ts=await(await fetch('/api/crm/targets')).json();
   tbT.innerHTML=(ts||[]).length?ts.map(t=>`<tr>
-    <td>${t.period_key}</td><td>${t.period_type}</td><td>${t.owner||'(công ty)'}</td>
+    <td>${t.period_key}</td><td>${crmLabel('period_type', t.period_type)}</td><td>${t.owner||'(công ty)'}</td>
     <td class="text-end">${money(t.target_amount)}</td>
-    <td><button class="btn btn-sm btn-outline-danger" onclick="delT(${t.id})">Xóa</button></td>
+    <td class="crm-actions-cell"><div class="crm-actions"><button class="btn btn-sm btn-outline-danger" onclick="delT(${t.id})">Xóa</button></div></td>
   </tr>`).join(''):'<tr><td colspan="5" class="crm-empty">Chưa có KPI cục bộ</td></tr>';
 }
 

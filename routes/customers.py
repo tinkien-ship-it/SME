@@ -7,6 +7,68 @@ from auth import login_required
 from db_utils import get_db_connection, sqlite_commit
 
 
+def _table_exists(conn, name: str) -> bool:
+    from db_utils import is_postgres
+
+    try:
+        if is_postgres():
+            row = conn.execute(
+                """
+                SELECT 1 FROM information_schema.tables
+                WHERE table_schema = current_schema() AND table_name = %s
+                LIMIT 1
+                """,
+                (name,),
+            ).fetchone()
+            return bool(row)
+    except Exception:
+        pass
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
+            (name,),
+        ).fetchone()
+        return bool(row)
+    except Exception:
+        return False
+
+
+def _customer_approached_reason(conn, customer_id: int) -> str | None:
+    """Khách đã được tiếp cận / có giao dịch CRM → không cho xóa. Trả lý do hoặc None."""
+    checks = (
+        ('sale', 'customer_id', 'đã có đơn hàng liên kết'),
+        ('crm_activities', 'customer_id', 'đã có nhật ký chăm sóc'),
+        ('crm_opportunities', 'customer_id', 'đã có cơ hội bán hàng'),
+        ('crm_quotes', 'customer_id', 'đã có báo giá'),
+        ('crm_visit_checkins', 'customer_id', 'đã có gặp khách (self-service)'),
+        ('crm_tickets', 'customer_id', 'đã có phiếu hỗ trợ'),
+        ('crm_contracts', 'customer_id', 'đã có hợp đồng'),
+        ('crm_leads', 'customer_id', 'đã gắn với lead đã chuyển'),
+    )
+    for table, col, reason in checks:
+        if not _table_exists(conn, table):
+            continue
+        try:
+            row = conn.execute(
+                f'SELECT 1 FROM {table} WHERE {col} = ? LIMIT 1',
+                (customer_id,),
+            ).fetchone()
+            if row:
+                return reason
+        except sqlite3.Error:
+            continue
+    return None
+
+
+def _enrich_customer_row(conn, row) -> dict:
+    d = dict(row)
+    cid = d.get('id')
+    reason = _customer_approached_reason(conn, cid) if cid else 'thiếu mã'
+    d['can_delete'] = reason is None
+    d['delete_block_reason'] = reason
+    return d
+
+
 def register_customers_routes(app):
 
     @app.route('/customers')
@@ -40,7 +102,7 @@ def register_customers_routes(app):
                     )
                 else:
                     c.execute("SELECT * FROM customers ORDER BY id ASC")
-                return jsonify([dict(row) for row in c.fetchall()])
+                return jsonify([_enrich_customer_row(conn, row) for row in c.fetchall()])
 
             data = request.get_json() or {}
 
@@ -128,10 +190,10 @@ def register_customers_routes(app):
                 sqlite_commit(conn, label='customers')
                 return jsonify({'success': True})
 
-            c.execute('SELECT COUNT(*) FROM sale WHERE customer_id = ?', (id_,))
-            if c.fetchone()[0] > 0:
+            reason = _customer_approached_reason(conn, int(id_))
+            if reason:
                 return jsonify({
-                    'error': 'Không thể xóa: khách hàng đã có đơn hàng liên kết',
+                    'error': f'Không thể xóa: khách hàng {reason}',
                 }), 400
             c.execute('DELETE FROM customers WHERE id = ?', (id_,))
             sqlite_commit(conn, label='customers')

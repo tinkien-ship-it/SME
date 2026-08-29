@@ -1,0 +1,61 @@
+# Mẫu Nginx cho ketoshop.pro.vn — copy/merge vào sites-available rồi:
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# Quan trọng: proxy_read_timeout >= GUNICORN_TIMEOUT (mặc định app 90s → Nginx 120s)
+
+upstream sme_app {
+    server 127.0.0.1:8000 fail_timeout=10s max_fails=3;
+    keepalive 8;
+}
+
+# Log có request_time để tìm request chậm
+log_format sme_timed '$remote_addr - $remote_user [$time_local] '
+                     '"$request" $status $body_bytes_sent '
+                     'rt=$request_time urt=$upstream_response_time '
+                     '"$http_referer" "$http_user_agent"';
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ketoshop.pro.vn www.ketoshop.pro.vn;
+    return 301 https://ketoshop.pro.vn$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ketoshop.pro.vn www.ketoshop.pro.vn;
+
+    # ssl_certificate / etc do certbot quản lý — giữ nguyên block SSL hiện có
+
+    access_log /var/log/nginx/ketoshop.access.log sme_timed;
+    error_log  /var/log/nginx/ketoshop.error.log warn;
+
+    client_max_body_size 32m;
+
+    # Static — không đi qua Gunicorn
+    location /static/ {
+        alias /root/pos/static/;
+        expires 7d;
+        add_header Cache-Control "public";
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://sme_app;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 120s;
+        proxy_read_timeout 120s;
+        # Tránh buffer treo lâu khi worker chậm
+        proxy_buffering on;
+        proxy_buffers 16 16k;
+        proxy_busy_buffers_size 32k;
+    }
+}

@@ -3,13 +3,13 @@
 {% block crm_page_id %}pipeline{% endblock %}
 
 {% block title %}CRM — Pipeline{% endblock %}
-{% block crm_title %}Pipeline bán hàng{% endblock %}
-{% block crm_desc %}Theo dõi cơ hội qua các giai đoạn: Lead → Tư vấn → Báo giá → Chốt / Thua.{% endblock %}
+{% block crm_title %}Pipeline — Quy trình bán hàng{% endblock %}
+{% block crm_desc %}Theo dõi cơ hội qua các bước: Tiếp cận → Tư vấn → Báo giá → Chốt / Thua.{% endblock %}
 
-{% block crm_tip_title %}Cách dùng Pipeline{% endblock %}
+{% block crm_tip_title %}Cách dùng quy trình bán hàng{% endblock %}
 {% block crm_tip_body %}
-  Bấm thẻ cơ hội để đổi giai đoạn. Khi đã gửi báo giá, chuyển cột <b>Báo giá</b>
-  và lập BG tại menu Báo giá (có thể gắn ID cơ hội).
+  Bấm thẻ cơ hội để đổi bước. Khi đã gửi báo giá, chuyển cột <b>Báo giá</b>
+  và lập báo giá tại menu Báo giá (có thể gắn mã cơ hội).
 {% endblock %}
 
 {% block crm_actions %}
@@ -35,7 +35,7 @@
       <div class="mb-2"><label class="form-label small">Tiêu đề *</label><input id="oTitle" class="form-control form-control-sm"></div>
       <div class="mb-2"><label class="form-label small">Khách hàng</label>
         <div class="input-group input-group-sm">
-          <input id="oCustId" class="form-control" placeholder="ID KH" style="max-width:90px">
+          <input id="oCustId" class="form-control" placeholder="Mã khách hàng" style="max-width:90px">
           <input id="oCustName" class="form-control" placeholder="Gõ tên để chọn..." list="custList">
           <datalist id="custList"></datalist>
         </div>
@@ -93,7 +93,7 @@ async function loadPipe() {
     const cards = (col.items||[]).map(it => `
       <div class="crm-card" onclick='openOpp(${JSON.stringify(it).replace(/'/g,"&#39;")})'>
         <div class="title">${it.title||''}</div>
-        <div class="meta">${it.customer_name||'— chưa gắn KH'}</div>
+        <div class="meta">${it.customer_name||'— chưa gắn khách hàng'}${it.expected_close_date?` · ${crmFmtDate(it.expected_close_date)}`:''}</div>
         <div class="d-flex justify-content-between mt-2">
           <span class="fw-semibold" style="color:var(--crm-accent-2)">${money(it.amount)} đ</span>
           <span class="meta">${it.owner||''}</span>

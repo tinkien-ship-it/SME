@@ -213,19 +213,19 @@ POS_HKD_MENU = [
             },
             {
                 'endpoint': 'crm_leads_page',
-                'label': 'Leads tiềm năng',
+                'label': 'Leads (KH Tiềm Năng)',
                 'icon': 'fas fa-user-plus text-primary',
                 'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
             },
             {
                 'endpoint': 'crm_inbound_page',
-                'label': 'Hub inbound lead',
+                'label': 'Hub Inbound (Kênh Marketing)',
                 'icon': 'fas fa-plug text-primary',
                 'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
             },
             {
                 'endpoint': 'crm_pipeline_page',
-                'label': 'Pipeline bán hàng',
+                'label': 'Pipeline (Quy Trình Bán Hàng)',
                 'icon': 'fas fa-filter text-primary',
                 'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
             },
@@ -249,13 +249,13 @@ POS_HKD_MENU = [
             },
             {
                 'endpoint': 'crm_tickets_page',
-                'label': 'Ticket / Helpdesk',
+                'label': 'Phiếu hỗ trợ / Helpdesk',
                 'icon': 'fas fa-headset text-primary',
                 'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
             },
             {
                 'endpoint': 'crm_loyalty_page',
-                'label': 'Loyalty & CSAT/NPS',
+                'label': 'Loyalty/CSAT (Trung Thành & Hài Lòng)',
                 'icon': 'fas fa-gift text-primary',
                 'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),
             },
@@ -267,7 +267,7 @@ POS_HKD_MENU = [
             },
             {
                 'endpoint': 'crm_customers_page',
-                'label': 'Danh mục khách hàng',
+                'label': 'Danh Mục Khách Hàng',
                 'icon': 'fas fa-users text-info',
                 'perm': 'view_customers',
                 'roles': ('accountant', 'manager', 'managerFB', 'admin', 'adminFB', 'master', 'staff'),

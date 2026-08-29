@@ -2,16 +2,23 @@
 {% block crm_page_id %}campaigns{% endblock %}
 {% block title %}CRM — Chiến dịch{% endblock %}
 {% block crm_title %}Chiến dịch Marketing{% endblock %}
-{% block crm_desc %}Theo dõi ngân sách / chi tiêu → CPL trên dashboard. Gắn nguồn lead (Facebook, Google…).{% endblock %}
-{% block crm_tip_title %}CPL{% endblock %}
-{% block crm_tip_body %}Nhập <b>Chi tiêu (spend)</b> theo chiến dịch. Dashboard tính CPL = spend / số lead tạo trong tháng.{% endblock %}
+{% block crm_desc %}Theo dõi ngân sách / chi tiêu → chi phí mỗi lead trên Tổng quan. Gắn nguồn lead (Facebook, Google…).{% endblock %}
+{% block crm_tip_title %}Chi phí mỗi lead{% endblock %}
+{% block crm_tip_body %}Nhập <b>Chi tiêu</b> theo chiến dịch. Tổng quan tính chi phí mỗi lead = chi tiêu / số lead tạo trong tháng.{% endblock %}
 {% block crm_actions %}
 <button class="crm-btn crm-btn-primary" onclick="openCamp()"><i class="fas fa-plus"></i> Chiến dịch</button>
 {% endblock %}
 {% block crm_content %}
 <div class="crm-panel"><div class="crm-panel-bd p-0">
 <table class="table crm-table mb-0"><thead><tr>
-  <th>Tên</th><th>Kênh</th><th>TT</th><th class="text-end">Ngân sách</th><th class="text-end">Chi tiêu</th><th>Thời gian</th><th></th>
+  <th>Tên chiến dịch</th>
+  <th>Kênh tiếp cận</th>
+  <th>Trạng thái</th>
+  <th class="text-end">Ngân sách</th>
+  <th class="text-end">Chi tiêu thực tế</th>
+  <th>Ngày bắt đầu</th>
+  <th>Ngày kết thúc</th>
+  <th class="text-center">Hành động</th>
 </tr></thead><tbody id="tb"></tbody></table>
 </div></div>
 {% endblock %}
@@ -20,9 +27,9 @@
   <div class="modal-header border-0"><h5 class="modal-title fw-bold" id="mt">Chiến dịch</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
     <input type="hidden" id="id">
-    <div class="mb-2"><label class="form-label small">Tên *</label><input id="name" class="form-control form-control-sm"></div>
+    <div class="mb-2"><label class="form-label small">Tên chiến dịch *</label><input id="name" class="form-control form-control-sm"></div>
     <div class="row g-2">
-      <div class="col-6"><label class="form-label small">Kênh</label>
+      <div class="col-6"><label class="form-label small">Kênh tiếp cận</label>
         <select id="channel" class="form-select form-select-sm">
           <option>Facebook</option><option>Google</option><option>TikTok</option><option>Zalo</option>
           <option>Website</option><option>Hotline</option><option>Khác</option>
@@ -30,14 +37,16 @@
       </div>
       <div class="col-6"><label class="form-label small">Trạng thái</label>
         <select id="status" class="form-select form-select-sm">
-          <option value="active">Active</option><option value="paused">Paused</option>
-          <option value="ended">Ended</option><option value="draft">Draft</option>
+          <option value="active">Đang chạy</option>
+          <option value="paused">Tạm dừng</option>
+          <option value="ended">Đã kết thúc</option>
+          <option value="draft">Nháp</option>
         </select>
       </div>
-      <div class="col-6"><label class="form-label small">Bắt đầu</label><input type="date" id="start" class="form-control form-control-sm"></div>
-      <div class="col-6"><label class="form-label small">Kết thúc</label><input type="date" id="end" class="form-control form-control-sm"></div>
+      <div class="col-6"><label class="form-label small">Ngày bắt đầu</label><input type="date" id="start" class="form-control form-control-sm"></div>
+      <div class="col-6"><label class="form-label small">Ngày kết thúc</label><input type="date" id="end" class="form-control form-control-sm"></div>
       <div class="col-6"><label class="form-label small">Ngân sách</label><input type="number" id="budget" class="form-control form-control-sm" value="0"></div>
-      <div class="col-6"><label class="form-label small">Chi tiêu (spend)</label><input type="number" id="spend" class="form-control form-control-sm" value="0"></div>
+      <div class="col-6"><label class="form-label small">Chi tiêu thực tế</label><input type="number" id="spend" class="form-control form-control-sm" value="0"></div>
       <div class="col-12"><label class="form-label small">Ghi chú</label><input id="notes" class="form-control form-control-sm"></div>
     </div>
   </div>
@@ -50,6 +59,12 @@
 {% block crm_scripts %}
 <script>
 const money = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
+const CAMP_ST = {draft:'Nháp', active:'Đang chạy', paused:'Tạm dừng', ended:'Đã kết thúc'};
+function statusLabel(s){
+  return (typeof crmLabel === 'function')
+    ? crmLabel('campaign_status', s, CAMP_ST[s] || s || '—')
+    : (CAMP_ST[s] || s || '—');
+}
 function openCamp(r){
   document.getElementById('id').value=r?.id||'';
   document.getElementById('name').value=r?.name||'';
@@ -65,12 +80,18 @@ function openCamp(r){
 async function load(){
   const rows=await(await fetch('/api/crm/campaigns')).json();
   document.getElementById('tb').innerHTML = (rows||[]).length ? rows.map(r=>`<tr>
-    <td class="fw-semibold">${r.name}</td><td>${r.channel||''}</td><td>${r.status}</td>
-    <td class="text-end">${money(r.budget)}</td><td class="text-end">${money(r.spend)}</td>
-    <td class="small">${(r.start_date||'').slice(0,10)} → ${(r.end_date||'').slice(0,10)}</td>
-    <td><button class="btn btn-sm btn-outline-secondary" onclick='openCamp(${JSON.stringify(r).replace(/'/g,"&#39;")})'>Sửa</button>
-    <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button></td>
-  </tr>`).join('') : '<tr><td colspan="7" class="crm-empty">Chưa có chiến dịch</td></tr>';
+    <td class="fw-semibold">${r.name||''}</td>
+    <td>${r.channel||'—'}</td>
+    <td><span class="crm-badge">${statusLabel(r.status)}</span></td>
+    <td class="text-end">${money(r.budget)}</td>
+    <td class="text-end">${money(r.spend)}</td>
+    <td class="small">${crmFmtDate(r.start_date)}</td>
+    <td class="small">${crmFmtDate(r.end_date)}</td>
+    <td class="crm-actions-cell"><div class="crm-actions">
+      <button class="btn btn-sm btn-outline-secondary" onclick='openCamp(${JSON.stringify(r).replace(/'/g,"&#39;")})'>Sửa</button>
+      <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button>
+    </div></td>
+  </tr>`).join('') : '<tr><td colspan="8" class="crm-empty">Chưa có chiến dịch</td></tr>';
 }
 async function save(){
   const id=document.getElementById('id').value;

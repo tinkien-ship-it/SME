@@ -4,7 +4,7 @@
 
 {% block title %}CRM — Quản lý khách hàng{% endblock %}
 {% block crm_title %}Quản lý khách hàng{% endblock %}
-{% block crm_desc %}Danh mục khách hàng — tìm kiếm, thêm/sửa, xuất Excel và mở hồ sơ CRM 360°.{% endblock %}
+{% block crm_desc %}Danh mục khách hàng — tìm kiếm, thêm/sửa, xuất Excel và mở hồ sơ chăm sóc.{% endblock %}
 
 {% block crm_head %}
 {% include 'partials/data_list_table_assets.html' %}
@@ -12,7 +12,7 @@
 
 {% block crm_tip_title %}Danh mục khách hàng{% endblock %}
 {% block crm_tip_body %}
-  Dùng <b>360°</b> để chăm sóc chi tiết (nhật ký, hẹn, đơn hàng). Cột <b>NV phụ trách</b> là nhân viên bán hàng được gán chăm sóc KH.
+  Dùng <b>Hồ sơ</b> để chăm sóc chi tiết (nhật ký, hẹn, đơn hàng). Cột <b>Nhân viên phụ trách</b> là nhân viên bán hàng được gán chăm sóc khách hàng.
 {% endblock %}
 
 {% block crm_actions %}
@@ -34,7 +34,7 @@
     <div class="crm-panel-bd crm-panel-bd-flex">
       <div class="crm-customers-search px-3 pt-3 pb-2">
         <div class="input-group input-group-sm">
-          <input type="text" class="form-control" placeholder="Tìm theo mã, tên, SĐT, MST, email, NV phụ trách..." id="searchInput">
+          <input type="text" class="form-control" placeholder="Tìm theo mã, tên, số điện thoại, mã số thuế, email, nhân viên phụ trách..." id="searchInput">
           <button class="btn btn-outline-secondary" type="button" onclick="searchCustomers()">Tìm</button>
           <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('searchInput').value=''; loadCustomers();">Xóa tìm</button>
         </div>
@@ -44,17 +44,17 @@
         <table class="table table-sm table-hover align-middle crm-table enhanced-data-table mb-0" id="customersTable">
           <thead>
             <tr>
-              <th class="text-center" style="width:80px">Mã KH</th>
-              <th style="width:220px">Tên Công Ty/ Khách Hàng</th>
+              <th class="text-center" style="width:80px">Mã khách hàng</th>
+              <th style="width:220px">Tên công ty / Khách hàng</th>
               <th style="width:150px">Người đại diện</th>
               <th class="text-center" style="width:110px">Mã số thuế</th>
               <th class="text-center" style="width:110px">Điện thoại</th>
-              <th style="width:130px">NV phụ trách</th>
+              <th style="width:130px">Nhân viên phụ trách</th>
               <th style="width:140px">Email</th>
               <th style="width:180px">Địa chỉ</th>
-              <th class="text-center" style="width:100px">Mã ĐV NSNN</th>
-              <th class="text-center" style="width:100px">Hộ chiếu</th>
-              <th class="text-center no-filter no-resize" style="width:200px">Hành động</th>
+              <th class="text-center" style="width:140px">Mã đơn vị ngân sách nhà nước</th>
+              <th class="text-center" style="width:110px">Số hộ chiếu</th>
+              <th class="text-center no-filter no-resize" style="min-width:280px;width:280px">Hành động</th>
             </tr>
           </thead>
           <tbody>

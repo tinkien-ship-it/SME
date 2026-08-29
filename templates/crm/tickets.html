@@ -1,50 +1,55 @@
 {% extends "crm/_layout.html" %}
 {% block crm_page_id %}tickets{% endblock %}
 {% block title %}CRM — Helpdesk{% endblock %}
-{% block crm_title %}Ticket / Helpdesk{% endblock %}
-{% block crm_desc %}Tiếp nhận khiếu nại, theo dõi SLA — biểu đồ thời gian xử lý trên Tổng quan.{% endblock %}
-{% block crm_tip_title %}SLA{% endblock %}
-{% block crm_tip_body %}Mở ticket → In progress khi phản hồi → Resolved/Closed. Ticket mở > 2 ngày sẽ có thông báo nhắc.{% endblock %}
+{% block crm_title %}Phiếu hỗ trợ / Helpdesk{% endblock %}
+{% block crm_desc %}Tiếp nhận khiếu nại, theo dõi cam kết thời gian phản hồi — biểu đồ thời gian xử lý trên Tổng quan.{% endblock %}
+{% block crm_tip_title %}Cam kết thời gian phản hồi{% endblock %}
+{% block crm_tip_body %}Mở phiếu → Đang xử lý khi phản hồi → Đã giải quyết / Đóng. Phiếu mở quá 2 ngày sẽ có thông báo nhắc.{% endblock %}
 {% block crm_actions %}
-<button class="crm-btn crm-btn-primary" onclick="openT()"><i class="fas fa-plus"></i> Ticket mới</button>
+<button class="crm-btn crm-btn-primary" onclick="openT()"><i class="fas fa-plus"></i> Phiếu hỗ trợ mới</button>
 {% endblock %}
 {% block crm_content %}
 <div class="crm-toolbar">
-  <select id="st" class="form-select form-select-sm" style="max-width:160px" onchange="load()">
-    <option value="">Tất cả TT</option>
-    <option value="open">Open</option><option value="in_progress">In progress</option>
-    <option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option>
+  <select id="st" class="form-select form-select-sm" style="max-width:180px" onchange="load()">
+    <option value="">Tất cả trạng thái</option>
+    <option value="open">Mở</option><option value="in_progress">Đang xử lý</option>
+    <option value="waiting">Đang chờ</option><option value="resolved">Đã giải quyết</option><option value="closed">Đóng</option>
   </select>
 </div>
 <div class="crm-panel"><div class="crm-panel-bd p-0">
 <table class="table crm-table mb-0"><thead><tr>
-  <th>Số</th><th>Tiêu đề</th><th>KH</th><th>Ưu tiên</th><th>TT</th><th>Phụ trách</th><th>Mở</th><th></th>
+  <th>Số phiếu</th><th>Tiêu đề</th><th>Khách hàng</th><th>Ưu tiên</th><th>Trạng thái</th><th>Phụ trách</th><th>Ngày mở</th><th class="text-center">Hành động</th>
 </tr></thead><tbody id="tb"></tbody></table>
 </div></div>
 {% endblock %}
 {% block crm_modals %}
 <div class="modal fade" id="m"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-0 shadow">
-  <div class="modal-header border-0"><h5 class="fw-bold" id="mt">Ticket</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-header border-0"><h5 class="fw-bold" id="mt">Phiếu hỗ trợ</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
     <input type="hidden" id="id">
     <div class="row g-2">
-      <div class="col-md-3"><label class="form-label small">KH ID</label><input id="cust" class="form-control form-control-sm" list="cl"><datalist id="cl"></datalist></div>
+      <div class="col-md-3"><label class="form-label small">Mã khách hàng</label><input id="cust" class="form-control form-control-sm" list="cl"><datalist id="cl"></datalist></div>
       <div class="col-md-9"><label class="form-label small">Tiêu đề *</label><input id="subject" class="form-control form-control-sm"></div>
       <div class="col-12"><label class="form-label small">Mô tả</label><textarea id="desc" class="form-control form-control-sm" rows="3"></textarea></div>
       <div class="col-md-3"><label class="form-label small">Ưu tiên</label>
         <select id="priority" class="form-select form-select-sm">
-          <option value="low">Low</option><option value="normal" selected>Normal</option>
-          <option value="high">High</option><option value="urgent">Urgent</option>
+          <option value="low">Thấp</option>
+          <option value="normal" selected>Bình thường</option>
+          <option value="high">Cao</option>
+          <option value="urgent">Khẩn cấp</option>
         </select>
       </div>
       <div class="col-md-3"><label class="form-label small">Trạng thái</label>
         <select id="status" class="form-select form-select-sm">
-          <option value="open">Open</option><option value="in_progress">In progress</option>
-          <option value="waiting">Waiting</option><option value="resolved">Resolved</option><option value="closed">Closed</option>
+          <option value="open">Mở</option>
+          <option value="in_progress">Đang xử lý</option>
+          <option value="waiting">Đang chờ</option>
+          <option value="resolved">Đã giải quyết</option>
+          <option value="closed">Đóng</option>
         </select>
       </div>
       <div class="col-md-3"><label class="form-label small">Phụ trách</label><input id="assignee" class="form-control form-control-sm"></div>
-      <div class="col-md-3"><label class="form-label small">CSAT (1-5)</label><input type="number" id="csat" class="form-control form-control-sm" min="1" max="5"></div>
+      <div class="col-md-3"><label class="form-label small">Điểm hài lòng (1–5)</label><input type="number" id="csat" class="form-control form-control-sm" min="1" max="5"></div>
       <div class="col-12" id="evtWrap" style="display:none">
         <label class="form-label small">Thêm phản hồi</label>
         <div class="input-group input-group-sm">
@@ -68,8 +73,8 @@ function openT(r){
   desc.value=r?.description||''; priority.value=r?.priority||'normal';
   status.value=r?.status||'open'; assignee.value=r?.assignee||''; csat.value=r?.csat_score||'';
   evtWrap.style.display=r?.id?'':'none';
-  evtList.innerHTML=(r?.events||[]).map(e=>`<li>${e.created_at}: ${e.content||''}</li>`).join('');
-  mt.textContent=r?.ticket_no||'Ticket mới';
+  evtList.innerHTML=(r?.events||[]).map(e=>`<li>${crmFmtDateTime(e.created_at)}: ${e.content||''}</li>`).join('');
+  mt.textContent=r?.ticket_no||'Phiếu hỗ trợ mới';
   new bootstrap.Modal('#m').show();
 }
 async function load(){
@@ -78,11 +83,14 @@ async function load(){
   tb.innerHTML=(rows||[]).length?rows.map(r=>`<tr>
     <td class="fw-semibold">${r.ticket_no||''}</td><td>${r.subject||''}</td>
     <td>${r.customer_name||(r.customer_id?('#'+r.customer_id):'—')}</td>
-    <td>${r.priority}</td><td><span class="crm-badge">${r.status}</span></td>
-    <td>${r.assignee||''}</td><td class="small">${(r.opened_at||'').slice(0,16)}</td>
-    <td><button class="btn btn-sm btn-outline-secondary" onclick="edit(${r.id})">Mở</button>
-    <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button></td>
-  </tr>`).join(''):'<tr><td colspan="8" class="crm-empty">Chưa có ticket</td></tr>';
+    <td>${crmLabel('ticket_priority', r.priority)}</td>
+    <td><span class="crm-badge">${crmLabel('ticket_status', r.status)}</span></td>
+    <td>${r.assignee||''}</td><td class="small">${crmFmtDateTime(r.opened_at)}</td>
+    <td class="crm-actions-cell"><div class="crm-actions">
+      <button class="btn btn-sm btn-outline-secondary" onclick="edit(${r.id})">Mở</button>
+      <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button>
+    </div></td>
+  </tr>`).join(''):'<tr><td colspan="8" class="crm-empty">Chưa có phiếu hỗ trợ</td></tr>';
 }
 async function edit(i){ const d=await(await fetch('/api/crm/tickets/'+i)).json(); if(d.error)return alert(d.error); openT(d); }
 async function save(){
@@ -98,7 +106,7 @@ async function addEvt(){
   await fetch(`/api/crm/tickets/${id.value}/events`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:evt.value})});
   edit(+id.value);
 }
-async function del(i){ if(!confirm('Xóa ticket?'))return; await fetch('/api/crm/tickets/'+i,{method:'DELETE'}); load(); }
+async function del(i){ if(!confirm('Xóa phiếu hỗ trợ?'))return; await fetch('/api/crm/tickets/'+i,{method:'DELETE'}); load(); }
 (async()=>{
   const cs=await(await fetch('/api/customers')).json();
   cl.innerHTML=(cs||[]).map(c=>`<option value="${c.id}">${c.company_name||c.name||''}</option>`).join('');

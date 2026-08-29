@@ -93,14 +93,15 @@ body.crm-workspace > .footer {
 
 .crm-nav-link {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: .65rem;
   padding: .62rem .75rem;
   border-radius: 10px;
   color: #cbd5e1;
   text-decoration: none;
   font-weight: 550;
-  font-size: .92rem;
+  font-size: .86rem;
+  line-height: 1.35;
   margin-bottom: .2rem;
   transition: background .15s, color .15s, transform .15s;
 }
@@ -108,6 +109,8 @@ body.crm-workspace > .footer {
   width: 1.15rem;
   text-align: center;
   opacity: .9;
+  margin-top: .15rem;
+  flex-shrink: 0;
 }
 .crm-nav-link:hover {
   background: rgba(255, 255, 255, .08);
@@ -400,6 +403,20 @@ body.crm-workspace > .footer {
   background: #f8fafc;
 }
 
+/* Cột Hành động: canh giữa nút */
+.crm-actions-cell {
+  text-align: center !important;
+  vertical-align: middle;
+}
+.crm-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  max-width: 100%;
+}
+
 .crm-badge {
   display: inline-flex;
   align-items: center;
@@ -620,6 +637,33 @@ body.crm-workspace > .footer {
   z-index: 3;
   background: #f8fafc;
   box-shadow: 0 1px 0 var(--crm-line);
+}
+.crm-cust-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  max-width: 280px;
+}
+.crm-cust-actions-cell {
+  min-width: 280px;
+  text-align: center !important;
+  vertical-align: middle;
+  white-space: normal !important;
+}
+.crm-cust-del {
+  border: 1px solid #fecaca !important;
+  color: #b91c1c !important;
+  background: #fff !important;
+}
+.crm-cust-del:hover {
+  background: #fef2f2 !important;
+}
+.crm-cust-no-del {
+  display: inline-block;
+  max-width: 7.5rem;
+  line-height: 1.2;
 }
 .crm-customers-foot {
   display: flex;

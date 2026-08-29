@@ -81,14 +81,27 @@ function formatOwnerCell(c) {
 
 function customerActionButtons(c) {
     const id = c.id;
+    const canDelete = c.can_delete !== false && !c.delete_block_reason;
+    const blockReason = c.delete_block_reason
+        ? ('Không xóa được: khách hàng ' + c.delete_block_reason)
+        : 'Không xóa được: khách đã được tiếp cận';
+    const delBtn = canDelete
+        ? (window.__CRM_CUSTOMERS_UI
+            ? `<button type="button" class="crm-btn crm-btn-ghost btn-sm text-danger crm-cust-del" onclick="deleteCustomer(${id})">Xóa</button>`
+            : `<button type="button" class="btn btn-sm btn-danger crm-cust-del" onclick="deleteCustomer(${id})">Xóa</button>`)
+        : `<span class="small text-muted crm-cust-no-del" title="${escHtml(blockReason)}">Đã tiếp cận</span>`;
     if (window.__CRM_CUSTOMERS_UI) {
-        return `<a class="crm-btn crm-btn-ghost btn-sm me-1" href="/crm/customer/${id}" title="Hồ sơ 360°">360°</a>
-                <button type="button" class="crm-btn crm-btn-ghost btn-sm me-1" onclick="editCustomer(${id})">Sửa</button>
-                <button type="button" class="crm-btn crm-btn-ghost btn-sm text-danger" onclick="deleteCustomer(${id})">Xóa</button>`;
+        return `<div class="crm-cust-actions">
+                <a class="crm-btn crm-btn-ghost btn-sm" href="/crm/customer/${id}" title="Hồ sơ khách hàng">Hồ sơ</a>
+                <button type="button" class="crm-btn crm-btn-ghost btn-sm" onclick="editCustomer(${id})">Sửa</button>
+                ${delBtn}
+              </div>`;
     }
-    return `<a class="btn btn-sm btn-outline-primary me-1" href="/crm/customer/${id}" title="Hồ sơ CRM 360°">360°</a>
-            <button class="btn btn-sm btn-warning me-1" onclick="editCustomer(${id})">Sửa</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteCustomer(${id})">Xóa</button>`;
+    return `<div class="crm-cust-actions">
+            <a class="btn btn-sm btn-outline-primary" href="/crm/customer/${id}" title="Hồ sơ khách hàng CRM">Hồ sơ</a>
+            <button type="button" class="btn btn-sm btn-warning" onclick="editCustomer(${id})">Sửa</button>
+            ${delBtn}
+          </div>`;
 }
 
 function renderCustomerRows(data, tbody) {
@@ -114,16 +127,16 @@ function renderCustomerRows(data, tbody) {
             <td class="text-start small">${escHtml(c.address || '—')}</td>
             <td class="text-center small">${escHtml(c.budget_unit_code || '—')}</td>
             <td class="text-center small">${escHtml(c.passport_no || '—')}</td>
-            <td class="text-center text-nowrap">${customerActionButtons(c)}</td>
+            <td class="text-center crm-cust-actions-cell">${customerActionButtons(c)}</td>
         </tr>`;
     }).join('');
 }
 
 function buildCustomerColumns() {
     const cols = [
-        { key: 'id', label: 'Mã KH', sortable: true, filterType: 'number', width: '80px', align: 'center',
+        { key: 'id', label: 'Mã khách hàng', sortable: true, filterType: 'number', width: '80px', align: 'center',
           getValue: c => c.id, sortValue: c => Number(c.id) || 0 },
-        { key: 'customer_label', label: 'Tên Công Ty/ Khách Hàng', sortable: true, filterType: 'text', width: '220px',
+        { key: 'customer_label', label: 'Tên công ty / Khách hàng', sortable: true, filterType: 'text', width: '220px',
           getValue: c => customerDisplayPrimary(c) || (c.name || ''),
           sortValue: c => customerDisplayPrimary(c).toLowerCase() },
         { key: 'representative', label: 'Người đại diện', sortable: true, filterType: 'text', width: '150px',
@@ -136,7 +149,7 @@ function buildCustomerColumns() {
     ];
     if (window.__CRM_CUSTOMERS_UI) {
         cols.push({
-            key: 'crm_owner', label: 'NV phụ trách', filterType: 'text', width: '130px',
+            key: 'crm_owner', label: 'Nhân viên phụ trách', filterType: 'text', width: '130px',
             getValue: c => {
                 const o = (c.crm_owner || '').trim();
                 const u = salesStaffMap[o];
@@ -149,11 +162,11 @@ function buildCustomerColumns() {
           getValue: c => c.email || '' },
         { key: 'address', label: 'Địa chỉ', filterType: 'text', width: '180px',
           getValue: c => c.address || '' },
-        { key: 'budget_unit_code', label: 'Mã ĐV NSNN', filterType: 'text', width: '100px', align: 'center',
+        { key: 'budget_unit_code', label: 'Mã đơn vị ngân sách nhà nước', filterType: 'text', width: '140px', align: 'center',
           getValue: c => c.budget_unit_code || '' },
-        { key: 'passport_no', label: 'Hộ chiếu', filterType: 'text', width: '100px', align: 'center',
+        { key: 'passport_no', label: 'Số hộ chiếu', filterType: 'text', width: '110px', align: 'center',
           getValue: c => c.passport_no || '' },
-        { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '200px', align: 'center' },
+        { key: 'actions', label: 'Hành động', filter: false, sortable: false, resizable: false, width: '280px', align: 'center' },
     );
     return cols;
 }
@@ -269,6 +282,11 @@ function saveCustomer() {
 }
 
 function deleteCustomer(id) {
+    const row = (customers || []).find(c => Number(c.id) === Number(id));
+    if (row && row.can_delete === false) {
+        alert('Không thể xóa: khách hàng ' + (row.delete_block_reason || 'đã được tiếp cận'));
+        return;
+    }
     if (!confirm('Xóa khách hàng này?')) return;
     fetch('/api/customers', {
         method: 'DELETE',
@@ -284,7 +302,7 @@ function exportCustomers() {
     if (!window.XLSX) return alert('Thư viện Excel chưa tải!');
     const data = customers.map(c => {
         const row = {
-            'Mã KH': c.id,
+            'Mã khách hàng': c.id,
             'Tên Công Ty/ Khách Hàng': customerDisplayPrimary(c) || c.name || '',
             'Người đại diện': customerRepresentative(c) || '',
             'Mã số thuế': c.tax_code || '',
@@ -293,7 +311,7 @@ function exportCustomers() {
         if (window.__CRM_CUSTOMERS_UI) {
             const o = (c.crm_owner || '').trim();
             const u = salesStaffMap[o];
-            row['NV phụ trách'] = u && u.full_name ? `${u.full_name} (${o})` : o;
+            row['Nhân viên phụ trách'] = u && u.full_name ? `${u.full_name} (${o})` : o;
         }
         row['Email'] = c.email || '';
         row['Địa chỉ'] = c.address || '';

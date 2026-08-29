@@ -2,7 +2,7 @@
 {% extends "base.html" %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/crm.css') }}?v=20260828b">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/crm.css') }}?v=20260829c">
 {% block crm_head %}{% endblock %}
 <script>
 document.documentElement.classList.add('crm-html');
@@ -36,15 +36,15 @@ document.addEventListener('DOMContentLoaded', function () {
     </a>
     <a class="crm-nav-link {% if crm_page == 'leads' %}active{% endif %}"
        href="{{ safe_url_for('crm_leads_page') }}">
-      <i class="fas fa-user-plus"></i> Leads
+      <i class="fas fa-user-plus"></i> Leads (KH Tiềm Năng)
     </a>
     <a class="crm-nav-link {% if crm_page == 'inbound' %}active{% endif %}"
        href="{{ safe_url_for('crm_inbound_page') }}">
-      <i class="fas fa-plug"></i> Hub inbound
+      <i class="fas fa-plug"></i> Hub Inbound (Kênh Marketing)
     </a>
     <a class="crm-nav-link {% if crm_page == 'pipeline' %}active{% endif %}"
        href="{{ safe_url_for('crm_pipeline_page') }}">
-      <i class="fas fa-filter"></i> Pipeline
+      <i class="fas fa-filter"></i> Pipeline (Quy Trình Bán Hàng)
     </a>
     <a class="crm-nav-link {% if crm_page == 'quotes' %}active{% endif %}"
        href="{{ safe_url_for('crm_quotes_page') }}">
@@ -52,31 +52,31 @@ document.addEventListener('DOMContentLoaded', function () {
     </a>
     <a class="crm-nav-link {% if crm_page == 'visits' %}active{% endif %}"
        href="{{ safe_url_for('crm_visits_page') }}">
-      <i class="fas fa-handshake"></i> Gặp khách (ESS)
+      <i class="fas fa-handshake"></i> Gặp khách (Self-service nhân viên)
     </a>
     <a class="crm-nav-link {% if crm_page == 'contracts' %}active{% endif %}"
        href="{{ safe_url_for('crm_contracts_page') }}">
       <i class="fas fa-file-contract"></i> Hợp đồng
     </a>
 
-    <div class="crm-nav-label">Marketing &amp; CSKH</div>
+    <div class="crm-nav-label">Marketing &amp; Chăm sóc khách hàng</div>
     <a class="crm-nav-link {% if crm_page == 'campaigns' %}active{% endif %}"
        href="{{ safe_url_for('crm_campaigns_page') }}">
       <i class="fas fa-bullhorn"></i> Chiến dịch
     </a>
     <a class="crm-nav-link {% if crm_page == 'tickets' %}active{% endif %}"
        href="{{ safe_url_for('crm_tickets_page') }}">
-      <i class="fas fa-headset"></i> Ticket / Helpdesk
+      <i class="fas fa-headset"></i> Phiếu hỗ trợ / Helpdesk
     </a>
     <a class="crm-nav-link {% if crm_page == 'loyalty' %}active{% endif %}"
        href="{{ safe_url_for('crm_loyalty_page') }}">
-      <i class="fas fa-gift"></i> Loyalty &amp; CSAT
+      <i class="fas fa-gift"></i> Loyalty/CSAT (Trung Thành &amp; Hài Lòng)
     </a>
 
     <div class="crm-nav-label">Danh mục</div>
     <a class="crm-nav-link {% if crm_page in ('customers', 'customer360') %}active{% endif %}"
        href="{{ safe_url_for('crm_customers_page') }}">
-      <i class="fas fa-address-book"></i> Danh mục KH
+      <i class="fas fa-address-book"></i> Danh Mục Khách Hàng
     </a>
     <a class="crm-nav-link {% if crm_page == 'settings' %}active{% endif %}"
        href="{{ safe_url_for('crm_settings_page') }}">
@@ -89,11 +89,11 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="crm-sidebar-foot">
       <div class="flow-title"><i class="fas fa-route me-1"></i> Luồng chuẩn</div>
       <ol>
-        <li>Thu thập Lead</li>
-        <li>Chuyển thành KH + cơ hội</li>
-        <li>Tư vấn trên Pipeline</li>
+        <li>Thu thập khách hàng tiềm năng (Leads)</li>
+        <li>Chuyển thành khách hàng + cơ hội</li>
+        <li>Tư vấn trên quy trình bán hàng</li>
         <li>Lập báo giá → tạo đơn bán</li>
-        <li>Chăm sóc trên hồ sơ 360°</li>
+        <li>Chăm sóc trên hồ sơ khách hàng</li>
       </ol>
     </div>
   </aside>
@@ -153,6 +153,96 @@ function crmDismissTip() {
   const tip = document.getElementById('crmTipBox');
   if (tip) tip.style.display = 'none';
   try { localStorage.setItem('crm_tip_hide_{{ crm_page }}', '1'); } catch (e) {}
+}
+/** Định dạng ngày kiểu Việt Nam: dd/mm/yyyy */
+function crmPad2(n){ return String(n).padStart(2,'0'); }
+function crmParseDate(v){
+  if(v == null || v === '') return null;
+  if(v instanceof Date) return isNaN(v.getTime()) ? null : v;
+  const s = String(v).trim();
+  if(!s || s === '—' || s === '-') return null;
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m){
+    return new Date(+m[1], +m[2]-1, +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0));
+  }
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if(dmy){
+    return new Date(+dmy[3], +dmy[2]-1, +dmy[1], +(dmy[4]||0), +(dmy[5]||0));
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+function crmFmtDate(v){
+  const d = crmParseDate(v);
+  if(!d) return (v == null || v === '') ? '—' : String(v);
+  return crmPad2(d.getDate()) + '/' + crmPad2(d.getMonth()+1) + '/' + d.getFullYear();
+}
+function crmFmtDateTime(v){
+  const d = crmParseDate(v);
+  if(!d) return (v == null || v === '') ? '—' : String(v);
+  return crmFmtDate(v) + ' ' + crmPad2(d.getHours()) + ':' + crmPad2(d.getMinutes());
+}
+function crmFmtTime(v){
+  const d = crmParseDate(v);
+  if(!d) return '—';
+  return crmPad2(d.getHours()) + ':' + crmPad2(d.getMinutes());
+}
+/** Nhãn tiếng Việt cho giá trị mã (trạng thái, ưu tiên, …) */
+const CRM_VI = {
+  ticket_priority: {low:'Thấp', normal:'Bình thường', high:'Cao', urgent:'Khẩn cấp'},
+  ticket_status: {
+    open:'Mở', in_progress:'Đang xử lý', waiting:'Đang chờ',
+    resolved:'Đã giải quyết', closed:'Đóng',
+  },
+  campaign_status: {draft:'Nháp', active:'Đang chạy', paused:'Tạm dừng', ended:'Đã kết thúc'},
+  contract_status: {
+    draft:'Nháp', sent:'Đã gửi', signed:'Đã ký', active:'Đang hiệu lực',
+    expired:'Hết hạn', cancelled:'Đã hủy',
+  },
+  quote_status: {
+    draft:'Nháp', sent:'Đã gửi', accepted:'Chấp nhận', rejected:'Từ chối',
+    converted:'Đã tạo đơn hàng',
+  },
+  lead_status: {
+    new:'Mới', contacting:'Đang liên hệ', qualified:'Đủ điều kiện',
+    converted:'Đã chuyển', lost:'Mất',
+  },
+  opp_stage: {
+    approach:'Tiếp cận', consulting:'Đang tư vấn', quoting:'Gửi báo giá',
+    negotiate:'Đàm phán', won:'Chốt thành công', lost:'Thất bại',
+  },
+  lifecycle: {
+    prospect:'Tiềm năng', active:'Đang giao dịch', inactive:'Ngưng', churned:'Rời bỏ',
+  },
+  segment: {
+    standard:'Thường', vip:'VIP', wholesale:'Sỉ', retail:'Lẻ', agency:'Đại lý',
+  },
+  member_tier: {
+    standard:'Tiêu chuẩn', silver:'Bạc', gold:'Vàng', platinum:'Bạch kim',
+  },
+  activity_type: {
+    call:'Gọi điện', zalo:'Zalo', email:'Email', meeting:'Gặp mặt',
+    note:'Ghi chú', task:'Công việc', birthday:'Sinh nhật', survey:'Khảo sát',
+  },
+  inbound_log: {ok:'Thành công', dedup:'Trùng (đã có)', error:'Lỗi'},
+  notif_type: {
+    reminder:'Nhắc liên hệ', birthday:'Sinh nhật', ticket_sla:'Phiếu hỗ trợ',
+    inbound_lead:'Lead inbound',
+  },
+  period_type: {month:'Tháng', quarter:'Quý', year:'Năm', week:'Tuần'},
+  survey_type: {csat:'Điểm hài lòng', nps:'Điểm giới thiệu'},
+  sale_status: {
+    draft:'Nháp', pending:'Chờ xử lý', completed:'Hoàn thành',
+    cancelled:'Đã hủy', paid:'Đã thanh toán',
+  },
+};
+function crmLabel(group, key, fallback){
+  if(key == null || key === '') return fallback != null ? fallback : '—';
+  const k = String(key);
+  const map = CRM_VI[group] || {};
+  if(map[k] != null) return map[k];
+  if(map[k.toLowerCase()] != null) return map[k.toLowerCase()];
+  return fallback != null ? fallback : k;
 }
 (function () {
   try {

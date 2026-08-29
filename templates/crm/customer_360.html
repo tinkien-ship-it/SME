@@ -2,11 +2,11 @@
 
 {% block crm_page_id %}customer360{% endblock %}
 
-{% block title %}CRM — Hồ sơ 360°{% endblock %}
-{% block crm_title %}<span id="custName">Hồ sơ khách hàng 360°</span>{% endblock %}
+{% block title %}CRM — Hồ sơ khách hàng{% endblock %}
+{% block crm_title %}<span id="custName">Hồ sơ khách hàng</span>{% endblock %}
 {% block crm_desc %}<span id="custSub">Hồ sơ chăm sóc, nhật ký và lịch sử giao dịch.</span>{% endblock %}
 
-{% block crm_tip_title %}Làm việc trên hồ sơ 360°{% endblock %}
+{% block crm_tip_title %}Làm việc trên hồ sơ khách hàng{% endblock %}
 {% block crm_tip_body %}
   Cập nhật phân khúc / phụ trách bên trái → ghi nhật ký gọi / Zalo → đặt
   <b>hẹn tiếp theo</b> để hiện trên Tổng quan. Tab bên phải gom đơn hàng &amp; hóa đơn.
@@ -14,7 +14,7 @@
 
 {% block crm_actions %}
 <a class="crm-btn crm-btn-ghost" href="{{ safe_url_for('crm_customers_page') }}">
-  <i class="fas fa-address-book"></i> Danh mục KH
+  <i class="fas fa-address-book"></i> Danh Mục Khách Hàng
 </a>
 <a class="crm-btn crm-btn-ghost" href="{{ url_for('crm_dashboard') }}">
   <i class="fas fa-arrow-left"></i> Tổng quan
@@ -56,8 +56,8 @@
           <i class="fas fa-save"></i> Lưu hồ sơ CRM
         </button>
         <hr>
-        <div class="small mb-1"><strong>MST:</strong> <span id="iTax"></span></div>
-        <div class="small mb-1"><strong>SĐT:</strong> <span id="iPhone"></span></div>
+        <div class="small mb-1"><strong>Mã số thuế:</strong> <span id="iTax"></span></div>
+        <div class="small mb-1"><strong>Số điện thoại:</strong> <span id="iPhone"></span></div>
         <div class="small mb-1"><strong>Email:</strong> <span id="iEmail"></span></div>
         <div class="small mb-2"><strong>Địa chỉ:</strong> <span id="iAddr"></span></div>
         <div class="p-3 rounded-3" style="background:var(--crm-accent-soft)">
@@ -78,7 +78,7 @@
     </div>
 
     <div class="crm-panel mb-3">
-      <div class="crm-panel-hd"><h2>Gặp khách (ESS)</h2></div>
+      <div class="crm-panel-hd"><h2>Gặp khách (Self-service nhân viên)</h2></div>
       <div class="crm-panel-bd p-0" id="ulVisits" style="max-height:200px;overflow:auto"></div>
     </div>
 
@@ -93,16 +93,16 @@
       </div>
       <div class="tab-content">
         <div class="tab-pane fade show active" id="tOpp">
-          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>Tiêu đề</th><th>GĐ</th><th class="text-end">Giá trị</th></tr></thead><tbody id="tbOpp"></tbody></table></div>
+          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>Tiêu đề</th><th>Bước</th><th class="text-end">Giá trị</th></tr></thead><tbody id="tbOpp"></tbody></table></div>
         </div>
         <div class="tab-pane fade" id="tQuotes">
-          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>Số</th><th>TT</th><th class="text-end">Tổng</th></tr></thead><tbody id="tbQ"></tbody></table></div>
+          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>Số báo giá</th><th>Trạng thái</th><th class="text-end">Tổng tiền</th></tr></thead><tbody id="tbQ"></tbody></table></div>
         </div>
         <div class="tab-pane fade" id="tSales">
-          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>ID/Số</th><th>Ngày</th><th>TT</th><th class="text-end">Tổng</th></tr></thead><tbody id="tbS"></tbody></table></div>
+          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>Mã / Số đơn</th><th>Ngày</th><th>Trạng thái</th><th class="text-end">Tổng tiền</th></tr></thead><tbody id="tbS"></tbody></table></div>
         </div>
         <div class="tab-pane fade" id="tInv">
-          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>Số HĐ</th><th>Ngày</th><th class="text-end">Tổng</th></tr></thead><tbody id="tbI"></tbody></table></div>
+          <div class="table-responsive"><table class="table crm-table mb-0"><thead><tr><th>Số hóa đơn</th><th>Ngày</th><th class="text-end">Tổng tiền</th></tr></thead><tbody id="tbI"></tbody></table></div>
         </div>
       </div>
     </div>
@@ -151,8 +151,9 @@ async function load360() {
   const d = await (await fetch(`/api/crm/customers/${CID}/360`)).json();
   if (d.error) { alert(d.error); return; }
   const c = d.customer || {};
-  document.getElementById('custName').textContent = c.company_name || c.name || ('KH #' + CID);
-  document.getElementById('custSub').textContent = `Mã #${c.id} · ${(c.crm_lifecycle||'')} · ${(c.crm_segment||'')}`;
+  document.getElementById('custName').textContent = c.company_name || c.name || ('Khách hàng #' + CID);
+  document.getElementById('custSub').textContent =
+    `Mã #${c.id} · ${crmLabel('lifecycle', c.crm_lifecycle, c.crm_lifecycle||'')} · ${crmLabel('segment', c.crm_segment, c.crm_segment||'')}`;
   document.getElementById('pLifecycle').value = c.crm_lifecycle || 'active';
   document.getElementById('pSegment').value = c.crm_segment || 'standard';
   document.getElementById('pSource').value = c.crm_source || '';
@@ -168,10 +169,10 @@ async function load360() {
 
   document.getElementById('ulActs').innerHTML = (d.activities||[]).length
     ? d.activities.map(a => `<div class="crm-act-item">
-        <span class="crm-badge me-1">${a.activity_type}</span>
+        <span class="crm-badge me-1">${crmLabel('activity_type', a.activity_type)}</span>
         <strong>${a.subject||''}</strong>
         <div class="text-muted small mt-1">${a.content||''}</div>
-        <div class="text-muted small">${a.activity_at||a.created_at||''} · ${a.owner||''}</div>
+        <div class="text-muted small">${crmFmtDateTime(a.activity_at||a.created_at)} · ${a.owner||''}</div>
       </div>`).join('')
     : '<div class="crm-empty">Chưa có hoạt động — bấm Ghi nhận sau mỗi lần gọi/Zalo.</div>';
 
@@ -186,29 +187,29 @@ async function load360() {
         });
         return Object.values(byS).sort((a,b)=>(b.out||b.in||'').localeCompare(a.out||a.in||'')).map(s =>
           `<div class="crm-act-item">
-            <strong>${(s.in||'').slice(0,16)}${s.out?' → '+s.out.slice(11,16):''}</strong>
+            <strong>${crmFmtDateTime(s.in)}${s.out?' → '+crmFmtTime(s.out):''}</strong>
             <div class="text-muted small mt-1">${s.note || (s.out ? '—' : 'Đang gặp / chưa check-out')}</div>
           </div>`
         ).join('');
       })()
-    : '<div class="crm-empty">Chưa có gặp khách qua ESS — NV dùng /hrm/ess trên điện thoại.</div>';
+    : '<div class="crm-empty">Chưa có gặp khách (self-service) — nhân viên dùng trang ESS trên điện thoại.</div>';
 
   document.getElementById('tbOpp').innerHTML = (d.opportunities||[]).map(o =>
-    `<tr><td>${o.title}</td><td>${o.stage_label||o.stage}</td><td class="text-end">${money(o.amount)}</td></tr>`
+    `<tr><td>${o.title}</td><td>${o.stage_label||crmLabel('opp_stage', o.stage)}</td><td class="text-end">${money(o.amount)}</td></tr>`
   ).join('') || '<tr><td colspan="3" class="crm-empty">—</td></tr>';
 
   document.getElementById('tbQ').innerHTML = (d.quotes||[]).map(q =>
-    `<tr><td>${q.quote_no}</td><td>${q.status}</td><td class="text-end">${money(q.total)}</td></tr>`
+    `<tr><td>${q.quote_no}</td><td>${crmLabel('quote_status', q.status)}</td><td class="text-end">${money(q.total)}</td></tr>`
   ).join('') || '<tr><td colspan="3" class="crm-empty">—</td></tr>';
 
   document.getElementById('tbS').innerHTML = (d.sales||[]).map(s =>
     `<tr><td><a href="/sale?order_id=${s.id}">${s.sale_no||('#'+s.id)}</a></td>
-     <td>${(s.date||'').slice(0,10)}</td><td>${s.status||''}</td>
+     <td>${crmFmtDate(s.date)}</td><td>${crmLabel('sale_status', s.status)}</td>
      <td class="text-end">${money(s.total_amount)}</td></tr>`
   ).join('') || '<tr><td colspan="4" class="crm-empty">—</td></tr>';
 
   document.getElementById('tbI').innerHTML = (d.invoices||[]).map(i =>
-    `<tr><td>${i.invoice_number||i.id}</td><td>${(i.invoice_date||'').slice(0,10)}</td>
+    `<tr><td>${i.invoice_number||i.id}</td><td>${crmFmtDate(i.invoice_date)}</td>
      <td class="text-end">${money(i.total_amount)}</td></tr>`
   ).join('') || '<tr><td colspan="3" class="crm-empty">—</td></tr>';
 }

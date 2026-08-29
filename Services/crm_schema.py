@@ -7,7 +7,23 @@ import sqlite3
 from db.schema_helpers import add_column_if_missing, table_exists
 
 
-_CRM_SCHEMA_FLAG = 'crm_schema_inbound_e2e_v2'
+_CRM_SCHEMA_FLAG = 'crm_schema_contracts_items_v1'
+
+CONTRACT_EXTRA_COLS = (
+    ('subtotal', 'REAL DEFAULT 0'),
+    ('tax_amount', 'REAL DEFAULT 0'),
+    ('place', 'TEXT'),
+    ('payment_method', 'TEXT'),
+    ('payment_term', 'TEXT'),
+    ('delivery_place', 'TEXT'),
+    ('delivery_schedule', 'TEXT'),
+    ('shipping_party', 'TEXT'),
+    ('warranty_months', 'TEXT'),
+    ('quality_notes', 'TEXT'),
+    ('packaging_notes', 'TEXT'),
+    ('buyer_rep', 'TEXT'),
+    ('buyer_title', 'TEXT'),
+)
 
 CUSTOMER_CRM_COLS = (
     ('crm_source', 'TEXT'),
@@ -166,12 +182,40 @@ CREATE TABLE IF NOT EXISTS crm_contracts (
     start_date TEXT,
     end_date TEXT,
     amount REAL DEFAULT 0,
+    subtotal REAL DEFAULT 0,
+    tax_amount REAL DEFAULT 0,
     status TEXT DEFAULT 'draft',
     file_path TEXT,
     notes TEXT,
     owner TEXT,
+    place TEXT,
+    payment_method TEXT,
+    payment_term TEXT,
+    delivery_place TEXT,
+    delivery_schedule TEXT,
+    shipping_party TEXT,
+    warranty_months TEXT,
+    quality_notes TEXT,
+    packaging_notes TEXT,
+    buyer_rep TEXT,
+    buyer_title TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS crm_contract_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contract_id INTEGER NOT NULL,
+    product_id INTEGER,
+    product_name TEXT,
+    unit TEXT,
+    qty REAL DEFAULT 1,
+    unit_price REAL DEFAULT 0,
+    tax_rate REAL DEFAULT 0,
+    line_subtotal REAL DEFAULT 0,
+    vat_amount REAL DEFAULT 0,
+    line_total REAL DEFAULT 0,
+    notes TEXT
 );
 
 CREATE TABLE IF NOT EXISTS crm_tickets (
@@ -297,6 +341,8 @@ CREATE INDEX IF NOT EXISTS idx_crm_visit_owner ON crm_visit_checkins(owner, punc
 CREATE INDEX IF NOT EXISTS idx_crm_visit_session ON crm_visit_checkins(visit_session_id);
 CREATE INDEX IF NOT EXISTS idx_crm_inbound_logs_created ON crm_inbound_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_crm_inbound_logs_channel ON crm_inbound_logs(channel);
+CREATE INDEX IF NOT EXISTS idx_crm_contract_items_cid ON crm_contract_items(contract_id);
+CREATE INDEX IF NOT EXISTS idx_crm_contracts_customer ON crm_contracts(customer_id);
 """
 
 
@@ -319,38 +365,56 @@ def _migrate_stages(conn: sqlite3.Connection) -> None:
 
 
 def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
-    from db_utils import is_postgres, sqlite_is_ready, sqlite_mark_ready
+    from db_utils import (
+        is_postgres,
+        sqlite_file_write_lock,
+        sqlite_is_ready,
+        sqlite_mark_ready,
+    )
 
     if not is_postgres() and sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
         return
 
-    conn.executescript(_DDL)
-    if table_exists(conn, 'customers'):
-        for col, col_type in CUSTOMER_CRM_COLS:
-            add_column_if_missing(conn, 'customers', col, col_type)
-    if table_exists(conn, 'sale'):
-        add_column_if_missing(conn, 'sale', 'customer_id', 'INTEGER')
-    if table_exists(conn, 'crm_leads'):
-        for col, col_type in LEAD_EXTRA_COLS:
-            add_column_if_missing(conn, 'crm_leads', col, col_type)
+    def _apply() -> None:
+        if not is_postgres() and sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
+            return
+        conn.executescript(_DDL)
+        if table_exists(conn, 'customers'):
+            for col, col_type in CUSTOMER_CRM_COLS:
+                add_column_if_missing(conn, 'customers', col, col_type)
+        if table_exists(conn, 'sale'):
+            add_column_if_missing(conn, 'sale', 'customer_id', 'INTEGER')
+        if table_exists(conn, 'crm_leads'):
+            for col, col_type in LEAD_EXTRA_COLS:
+                add_column_if_missing(conn, 'crm_leads', col, col_type)
+            try:
+                conn.execute(
+                    'CREATE INDEX IF NOT EXISTS idx_crm_leads_external_id ON crm_leads(external_id)'
+                )
+            except sqlite3.Error:
+                pass
+        if table_exists(conn, 'crm_opportunities'):
+            for col, col_type in OPP_EXTRA_COLS:
+                add_column_if_missing(conn, 'crm_opportunities', col, col_type)
+        if table_exists(conn, 'crm_contracts'):
+            for col, col_type in CONTRACT_EXTRA_COLS:
+                add_column_if_missing(conn, 'crm_contracts', col, col_type)
+        _migrate_stages(conn)
         try:
             conn.execute(
-                'CREATE INDEX IF NOT EXISTS idx_crm_leads_external_id ON crm_leads(external_id)'
+                "INSERT OR IGNORE INTO crm_assign_state (id, last_owner_index, owners_csv) VALUES (1, -1, '')"
             )
         except sqlite3.Error:
             pass
-    if table_exists(conn, 'crm_opportunities'):
-        for col, col_type in OPP_EXTRA_COLS:
-            add_column_if_missing(conn, 'crm_opportunities', col, col_type)
-    _migrate_stages(conn)
-    # seed assign state row
-    try:
-        conn.execute(
-            "INSERT OR IGNORE INTO crm_assign_state (id, last_owner_index, owners_csv) VALUES (1, -1, '')"
-        )
-    except sqlite3.Error:
-        pass
-    if commit:
-        conn.commit()
-    if not is_postgres():
-        sqlite_mark_ready(conn, _CRM_SCHEMA_FLAG)
+        if commit:
+            conn.commit()
+        if not is_postgres():
+            sqlite_mark_ready(conn, _CRM_SCHEMA_FLAG)
+
+    if is_postgres():
+        _apply()
+        return
+
+    # Nhiều worker Gunicorn cùng migrate → database locked / upstream timeout
+    with sqlite_file_write_lock(conn, timeout=45.0):
+        _apply()

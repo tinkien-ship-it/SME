@@ -1,11 +1,11 @@
 {% extends "crm/_layout.html" %}
 {% block crm_page_id %}visits{% endblock %}
 {% block title %}CRM — Gặp khách hàng{% endblock %}
-{% block crm_title %}Nhật ký gặp khách (ESS){% endblock %}
-{% block crm_desc %}NV Bán hàng check-in/check-out trên điện thoại và ghi nội dung gặp khách.{% endblock %}
-{% block crm_tip_title %}ESS{% endblock %}
+{% block crm_title %}Nhật ký gặp khách (Self-service nhân viên){% endblock %}
+{% block crm_desc %}Nhân viên bán hàng check-in/check-out trên điện thoại và ghi nội dung gặp khách.{% endblock %}
+{% block crm_tip_title %}Self-service nhân viên{% endblock %}
 {% block crm_tip_body %}
-  NV dùng <a href="/hrm/ess">/hrm/ess</a> trên điện thoại (3G/Wi‑Fi tại khách). Quản lý theo dõi tại đây và trên hồ sơ 360°.
+  Nhân viên dùng <a href="/hrm/ess">trang ESS</a> trên điện thoại (3G/Wi‑Fi tại khách). Quản lý theo dõi tại đây và trên hồ sơ khách hàng.
 {% endblock %}
 {% block crm_content %}
 <div class="crm-panel mb-3">
@@ -16,8 +16,8 @@
       <input type="date" id="fDate" class="form-control form-control-sm">
     </div>
     <div class="col-md-3">
-      <label class="form-label small">NV phụ trách</label>
-      <input id="fOwner" class="form-control form-control-sm" placeholder="username">
+      <label class="form-label small">Nhân viên phụ trách</label>
+      <input id="fOwner" class="form-control form-control-sm" placeholder="tên đăng nhập">
     </div>
     <div class="col-md-3">
       <button class="crm-btn crm-btn-primary" onclick="loadVisits()"><i class="fas fa-sync"></i> Tải</button>
@@ -30,7 +30,7 @@
   <div class="crm-panel-bd p-0">
     <table class="table crm-table mb-0">
       <thead><tr>
-        <th>Tên Công Ty / Khách hàng</th><th>Người đại diện</th><th>NV</th><th>Check-in</th><th>Check-out</th><th>Nội dung gặp</th><th>TT</th>
+        <th>Tên công ty / Khách hàng</th><th>Người đại diện</th><th>Nhân viên</th><th>Check-in</th><th>Check-out</th><th>Nội dung gặp</th><th>Trạng thái</th>
       </tr></thead>
       <tbody id="tbSessions"></tbody>
     </table>
@@ -42,7 +42,7 @@
   <div class="crm-panel-bd p-0">
     <table class="table crm-table mb-0">
       <thead><tr>
-        <th>Giờ</th><th>Loại</th><th>Tên Công Ty / Khách hàng</th><th>Người đại diện</th><th>NV</th><th>Ghi chú</th>
+        <th>Giờ</th><th>Loại</th><th>Tên công ty / Khách hàng</th><th>Người đại diện</th><th>Nhân viên</th><th>Ghi chú</th>
       </tr></thead>
       <tbody id="tbVisits"></tbody>
     </table>
@@ -72,15 +72,15 @@ async function loadVisits(){
       ${s.customer_phone?`<div class="small text-muted">${esc(s.customer_phone)}</div>`:''}</td>
     <td class="small">${esc(s.representative||'—')}</td>
     <td>${esc(s.owner)}</td>
-    <td>${esc((s.check_in_at||'').slice(11,16))}</td>
-    <td>${esc((s.check_out_at||'').slice(11,16)||'—')}</td>
+    <td>${esc(crmFmtTime(s.check_in_at))}</td>
+    <td>${esc(s.check_out_at ? crmFmtTime(s.check_out_at) : '—')}</td>
     <td class="small">${esc(s.meeting_note||'—')}</td>
     <td>${s.status==='done'?'<span class="badge bg-success">Đã gặp</span>':'<span class="badge bg-warning text-dark">Đang gặp</span>'}</td>
   </tr>`).join(''):'<tr><td colspan="7" class="crm-empty">Không có phiên gặp trong ngày</td></tr>';
 
   const items=d.items||[];
   tbVisits.innerHTML=items.length?items.map(v=>`<tr>
-    <td>${esc((v.punched_at||'').slice(0,16))}</td>
+    <td>${esc(crmFmtDateTime(v.punched_at))}</td>
     <td>${v.check_type==='in'?'<span class="badge bg-success">Vào</span>':'<span class="badge bg-secondary">Ra</span>'}</td>
     <td><a href="/crm/customer/${v.customer_id}">${esc(v.customer_label)}</a></td>
     <td class="small">${esc(v.representative||'—')}</td>

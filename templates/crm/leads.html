@@ -3,13 +3,13 @@
 {% block crm_page_id %}leads{% endblock %}
 
 {% block title %}CRM — Leads{% endblock %}
-{% block crm_title %}Leads — tiềm năng{% endblock %}
+{% block crm_title %}Leads — Khách hàng tiềm năng{% endblock %}
 {% block crm_desc %}Thu thập liên hệ mới, theo dõi trạng thái và chuyển thành khách hàng + cơ hội bán.{% endblock %}
 
 {% block crm_tip_title %}Cách dùng Leads{% endblock %}
 {% block crm_tip_body %}
   Thêm lead → gọi / Zalo và cập nhật trạng thái → khi đủ điều kiện bấm
-  <b>Chuyển KH</b>. Hệ thống tạo hồ sơ khách và đưa deal vào Pipeline.
+  <b>Chuyển khách hàng</b>. Hệ thống tạo hồ sơ khách và đưa deal vào quy trình bán hàng.
 {% endblock %}
 
 {% block crm_actions %}
@@ -21,7 +21,7 @@
 
 {% block crm_content %}
 <div class="crm-toolbar">
-  <input id="qSearch" class="form-control form-control-sm" placeholder="Tìm tên, SĐT, công ty, NV...">
+  <input id="qSearch" class="form-control form-control-sm" placeholder="Tìm tên, số điện thoại, công ty, nhân viên...">
   <select id="qStatus" class="form-select form-select-sm" style="max-width:160px">
     <option value="">Tất cả trạng thái</option>
     <option value="new">Mới</option>
@@ -40,21 +40,21 @@
   <button type="button" class="crm-btn crm-btn-ghost" onclick="loadLeads()">
     <i class="fas fa-search"></i> Lọc
   </button>
-  <a class="crm-btn crm-btn-ghost btn-sm" href="{{ url_for('crm_inbound_page') }}">Hub inbound</a>
+  <a class="crm-btn crm-btn-ghost btn-sm" href="{{ url_for('crm_inbound_page') }}">Hub Inbound</a>
 </div>
 
 <div class="crm-panel">
   <div class="crm-panel-hd">
     <h2>Danh sách leads</h2>
-    <span class="small text-muted">Bấm <b>Chuyển KH</b> khi lead sẵn sàng mua</span>
+    <span class="small text-muted">Bấm <b>Chuyển khách hàng</b> khi lead sẵn sàng mua</span>
   </div>
   <div class="crm-panel-bd p-0">
     <div class="table-responsive">
       <table class="table crm-table mb-0">
         <thead>
           <tr>
-            <th>Tiêu đề</th><th>Liên hệ</th><th>SĐT</th><th>Nguồn</th><th>NV</th><th>TT</th>
-            <th class="text-end">Giá trị DK</th><th>Hẹn</th><th></th>
+            <th>Tiêu đề</th><th>Liên hệ</th><th>Số điện thoại</th><th>Nguồn</th><th>Nhân viên</th><th>Trạng thái</th>
+            <th class="text-end">Giá trị dự kiến</th><th>Hẹn liên hệ</th><th class="text-center">Hành động</th>
           </tr>
         </thead>
         <tbody id="tbLeads"></tbody>
@@ -77,7 +77,7 @@
         <div class="col-md-6"><label class="form-label small">Tiêu đề</label><input id="fTitle" class="form-control form-control-sm"></div>
         <div class="col-md-6"><label class="form-label small">Tên liên hệ *</label><input id="fContact" class="form-control form-control-sm" required></div>
         <div class="col-md-6"><label class="form-label small">Công ty</label><input id="fCompany" class="form-control form-control-sm"></div>
-        <div class="col-md-3"><label class="form-label small">SĐT</label><input id="fPhone" class="form-control form-control-sm"></div>
+        <div class="col-md-3"><label class="form-label small">Số điện thoại</label><input id="fPhone" class="form-control form-control-sm"></div>
         <div class="col-md-3"><label class="form-label small">Email</label><input id="fEmail" class="form-control form-control-sm"></div>
         <div class="col-md-3"><label class="form-label small">Nguồn</label>
           <select id="fSource" class="form-select form-select-sm">
@@ -110,7 +110,7 @@
 {% block crm_scripts %}
 <script>
 const money = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
-const ST = {new:'Mới',contacting:'Đang LH',qualified:'Đủ ĐK',converted:'Đã chuyển',lost:'Mất'};
+const ST = {new:'Mới',contacting:'Đang liên hệ',qualified:'Đủ điều kiện',converted:'Đã chuyển',lost:'Mất'};
 const ST_CLS = {new:'crm-badge-new',contacting:'crm-badge-contacting',qualified:'crm-badge-qualified',converted:'crm-badge-converted',lost:'crm-badge-lost'};
 
 function openLead(row) {
@@ -136,7 +136,7 @@ async function loadLeads() {
   const rows = await (await fetch(url)).json();
   const tb = document.getElementById('tbLeads');
   if (!Array.isArray(rows) || !rows.length) {
-    tb.innerHTML = '<tr><td colspan="9" class="crm-empty">Chưa có lead — bấm <b>+ Thêm lead</b> hoặc mở <b>Hub inbound</b>.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="9" class="crm-empty">Chưa có lead — bấm <b>+ Thêm lead</b> hoặc mở <b>Hub Inbound</b>.</td></tr>';
     return;
   }
   tb.innerHTML = rows.map(r => `<tr>
@@ -145,14 +145,16 @@ async function loadLeads() {
     <td>${r.phone || '—'}</td>
     <td>${r.source || '—'}${r.channel&&r.channel!==r.source?`<div class="small text-muted">${r.channel}</div>`:''}</td>
     <td class="small">${r.owner || '—'}</td>
-    <td><span class="crm-badge ${ST_CLS[r.status]||''}">${ST[r.status]||r.status}</span></td>
+    <td><span class="crm-badge ${ST_CLS[r.status]||''}">${crmLabel('lead_status', r.status, ST[r.status]||r.status)}</span></td>
     <td class="text-end">${money(r.expected_value)}</td>
-    <td class="small">${r.next_contact_at || '—'}</td>
-    <td class="text-nowrap">
+    <td class="small">${crmFmtDateTime(r.next_contact_at)}</td>
+    <td class="crm-actions-cell">
+      <div class="crm-actions">
       <button class="btn btn-sm btn-outline-secondary" onclick='openLead(${JSON.stringify(r).replace(/'/g,"&#39;")}); new bootstrap.Modal("#leadModal").show()'>Sửa</button>
-      ${r.status !== 'converted' ? `<button class="btn btn-sm btn-success" onclick="convertLead(${r.id})">Chuyển KH</button>` : ''}
-      ${r.customer_id ? `<a class="btn btn-sm btn-outline-primary" href="/crm/customer/${r.customer_id}">360°</a>` : ''}
+      ${r.status !== 'converted' ? `<button class="btn btn-sm btn-success" onclick="convertLead(${r.id})">Chuyển khách hàng</button>` : ''}
+      ${r.customer_id ? `<a class="btn btn-sm btn-outline-primary" href="/crm/customer/${r.customer_id}">Hồ sơ</a>` : ''}
       <button class="btn btn-sm btn-outline-danger" onclick="delLead(${r.id})">Xóa</button>
+      </div>
     </td>
   </tr>`).join('');
 }

@@ -1,8 +1,8 @@
 {% extends "crm/_layout.html" %}
 {% block crm_page_id %}inbound{% endblock %}
 {% block title %}CRM — Hub inbound lead{% endblock %}
-{% block crm_title %}Hub inbound lead{% endblock %}
-{% block crm_desc %}End-to-end: Website · Facebook · Zalo · Google · TikTok · WhatsApp · Viber · Hotline — mỗi kênh một endpoint + nhật ký.{% endblock %}
+{% block crm_title %}Hub Inbound — Kênh Marketing{% endblock %}
+{% block crm_desc %}End-to-end: Website · Facebook · Zalo · Google · TikTok · WhatsApp · Viber · Hotline — mỗi kênh một địa chỉ nhận lead + nhật ký.{% endblock %}
 {% block crm_tip_title %}Kết nối MXH → CRM{% endblock %}
 {% block crm_tip_body %}
   Copy <b>URL theo kênh</b> + <b>Token</b> trên trang này → dán vào Make/Ads/OA (xem panel
@@ -167,17 +167,17 @@
   <div class="crm-panel-hd"><h2>Endpoint theo kênh (Make / Ads / OA)</h2></div>
   <div class="crm-panel-bd p-0">
     <table class="table crm-table mb-0">
-      <thead><tr><th>Kênh</th><th>Source</th><th>URL webhook</th><th></th></tr></thead>
+      <thead><tr><th>Kênh</th><th>Nguồn</th><th>Địa chỉ webhook</th><th class="text-center">Hành động</th></tr></thead>
       <tbody id="tbChannels"></tbody>
     </table>
   </div>
 </div>
 
 <div class="crm-panel mb-3">
-  <div class="crm-panel-hd"><h2>NV nhận lead (round-robin)</h2></div>
+  <div class="crm-panel-hd"><h2>Nhân viên nhận lead (luân phiên)</h2></div>
   <div class="crm-panel-bd">
     <ul id="hubStaff" class="list-group list-group-flush border rounded mb-0"></ul>
-    <p id="hubStaffEmpty" class="small text-warning mt-2 mb-0 d-none">Chưa có Nhân viên Bán hàng — thêm user role <em>Nhân Viên Bán Hàng</em> tại Settings.</p>
+    <p id="hubStaffEmpty" class="small text-warning mt-2 mb-0 d-none">Chưa có Nhân viên Bán hàng — thêm người dùng vai trò <em>Nhân Viên Bán Hàng</em> tại Cấu hình.</p>
   </div>
 </div>
 
@@ -219,7 +219,7 @@
   </div>
   <div class="crm-panel-bd p-0">
     <table class="table crm-table mb-0">
-      <thead><tr><th>Giờ</th><th>Kênh</th><th>Source</th><th>Lead</th><th>Owner</th><th>TT</th><th>Liên hệ</th></tr></thead>
+      <thead><tr><th>Thời gian</th><th>Kênh</th><th>Nguồn</th><th>Mã lead</th><th>Nhân viên</th><th>Trạng thái</th><th>Liên hệ</th></tr></thead>
       <tbody id="tbLogs"></tbody>
     </table>
   </div>
@@ -261,9 +261,11 @@ function renderChannels(ch){
     <td><code>${esc(slug)}</code></td>
     <td>${esc(c.source)}</td>
     <td class="small"><input class="form-control form-control-sm" id="churl-${esc(slug)}" value="${esc(c.url)}" readonly></td>
-    <td class="text-nowrap">
+    <td class="crm-actions-cell">
+      <div class="crm-actions">
       <button class="btn btn-sm btn-outline-secondary" onclick="copyEl('churl-${esc(slug)}')">Copy</button>
       <button class="btn btn-sm btn-outline-primary" onclick="testSource('${esc(c.source)}','${esc(slug)}')">Thử</button>
+      </div>
     </td>
   </tr>`).join('')||'<tr><td colspan="4" class="crm-empty">—</td></tr>';
 }
@@ -277,7 +279,7 @@ function renderPhases(phases){
             onchange="togglePhase('${esc(p.id)}', this.checked)" id="chk-${esc(p.id)}">
         </div>
         <div class="flex-grow-1" style="cursor:pointer" onclick="toggleOpen('${esc(p.id)}')">
-          <div class="small text-muted">Kênh ${p.phase} · ${esc(p.priority)} · source=<b>${esc(p.source)}</b></div>
+          <div class="small text-muted">Kênh ${p.phase} · ${esc(p.priority)} · nguồn=<b>${esc(p.source)}</b></div>
           <div class="fw-bold">${esc(p.title)} ${p.done?'<span class="badge bg-success">Đã chạy</span>':''}</div>
           <div class="small text-muted">${esc(p.summary)}</div>
           ${p.channel_url?`<div class="small mt-1"><code>${esc(p.channel_url)}</code></div>`:''}
@@ -304,12 +306,12 @@ function renderPhases(phases){
 
 function renderLogs(items){
   tbLogs.innerHTML=(items||[]).length?items.map(x=>`<tr>
-    <td class="small">${esc((x.created_at||'').slice(0,16))}</td>
+    <td class="small">${esc(crmFmtDateTime(x.created_at))}</td>
     <td><code>${esc(x.channel)}</code></td>
     <td>${esc(x.source||'—')}</td>
     <td>${x.lead_id?`<a href="/crm/leads">#${x.lead_id}</a>`:'—'}</td>
     <td class="small">${esc(x.owner||'—')}</td>
-    <td>${x.status==='ok'?'<span class="badge bg-success">ok</span>':(x.status==='dedup'?'<span class="badge bg-secondary">dedup</span>':'<span class="badge bg-danger">err</span>')}</td>
+    <td>${x.status==='ok'?'<span class="badge bg-success">'+crmLabel('inbound_log','ok')+'</span>':(x.status==='dedup'?'<span class="badge bg-secondary">'+crmLabel('inbound_log','dedup')+'</span>':'<span class="badge bg-danger">'+crmLabel('inbound_log', x.status||'error')+'</span>')}</td>
     <td class="small">${esc(x.contact_name||'')} ${esc(x.phone||'')}${x.error?`<div class="text-danger">${esc(x.error)}</div>`:''}</td>
   </tr>`).join(''):'<tr><td colspan="7" class="crm-empty">Chưa có log — bấm Lead thử trên từng kênh</td></tr>';
 }

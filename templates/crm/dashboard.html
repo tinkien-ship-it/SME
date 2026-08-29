@@ -4,12 +4,12 @@
 
 {% block title %}CRM — Tổng quan{% endblock %}
 {% block crm_title %}Tổng quan & Analytics CRM{% endblock %}
-{% block crm_desc %}KPI vận hành + biểu đồ Marketing / Sales / CSKH để ra quyết định.{% endblock %}
+{% block crm_desc %}Chỉ tiêu vận hành + biểu đồ Marketing / Bán hàng / Chăm sóc khách hàng để ra quyết định.{% endblock %}
 
-{% block crm_tip_title %}Đọc dashboard thế nào?{% endblock %}
+{% block crm_tip_title %}Đọc tổng quan thế nào?{% endblock %}
 {% block crm_tip_body %}
-  Funnel cho thấy nghẽn bán hàng · Pie nguồn cho biết kênh hiệu quả · Gauge so KPI tháng ·
-  Leaderboard thi đua sales · CPL / Retention / Ticket SLA nằm phía dưới.
+  Phễu bán hàng cho thấy nghẽn · Biểu đồ nguồn cho biết kênh hiệu quả · Đồng hồ so chỉ tiêu tháng ·
+  Bảng xếp hạng sales · Chi phí mỗi lead / Tỷ lệ quay lại / Thời gian xử lý phiếu hỗ trợ nằm phía dưới.
 {% endblock %}
 
 {% block crm_actions %}
@@ -54,7 +54,7 @@
     <div class="crm-panel-bd"><div class="crm-funnel" id="funnelBox"></div></div>
   </div>
   <div class="crm-panel crm-chart-box">
-    <div class="crm-panel-hd"><h2>Doanh thu vs KPI tháng</h2></div>
+    <div class="crm-panel-hd"><h2>Doanh thu vs chỉ tiêu tháng</h2></div>
     <div class="crm-panel-bd crm-gauge-wrap">
       <canvas id="chartKpi" height="160"></canvas>
       <div class="crm-gauge-pct" id="kpiPct">—%</div>
@@ -66,21 +66,21 @@
     <div class="crm-panel-bd"><canvas id="chartSource"></canvas></div>
   </div>
   <div class="crm-panel crm-chart-box">
-    <div class="crm-panel-hd"><h2>Leaderboard sales</h2></div>
+    <div class="crm-panel-hd"><h2>Bảng xếp hạng nhân viên bán hàng</h2></div>
     <div class="crm-panel-bd"><canvas id="chartLeaders"></canvas></div>
   </div>
   <div class="crm-panel crm-chart-box">
-    <div class="crm-panel-hd"><h2>CPL theo tháng</h2></div>
+    <div class="crm-panel-hd"><h2>Chi phí mỗi lead theo tháng</h2></div>
     <div class="crm-panel-bd"><canvas id="chartCpl"></canvas></div>
   </div>
   <div class="crm-panel crm-chart-box">
-    <div class="crm-panel-hd"><h2>Ticket SLA (giờ TB)</h2></div>
+    <div class="crm-panel-hd"><h2>Thời gian xử lý phiếu hỗ trợ (giờ trung bình)</h2></div>
     <div class="crm-panel-bd"><canvas id="chartSla"></canvas></div>
   </div>
 </div>
 
 <div class="crm-panel mb-3">
-  <div class="crm-panel-hd"><h2>Retention cohort (% quay lại mua)</h2></div>
+  <div class="crm-panel-hd"><h2>Tỷ lệ quay lại mua theo nhóm tháng</h2></div>
   <div class="crm-panel-bd crm-cohort" id="cohortBox"></div>
 </div>
 
@@ -92,16 +92,16 @@
         <a class="crm-btn crm-btn-ghost btn-sm" href="{{ url_for('crm_leads_page') }}">Leads</a>
       </div>
       <div class="crm-panel-bd p-0">
-        <table class="table crm-table mb-0"><thead><tr><th>Liên hệ</th><th>Nguồn</th><th>NV</th><th>Giờ</th></tr></thead>
+        <table class="table crm-table mb-0"><thead><tr><th>Liên hệ</th><th>Nguồn</th><th>Nhân viên</th><th>Giờ tạo</th></tr></thead>
         <tbody id="tbInboundToday"></tbody></table>
       </div>
     </div>
     <div class="crm-panel h-100 mb-3">
-      <div class="crm-panel-hd"><h2>Gặp khách hôm nay (ESS)</h2>
+      <div class="crm-panel-hd"><h2>Gặp khách hôm nay (Self-service nhân viên)</h2>
         <a class="crm-btn crm-btn-ghost btn-sm" href="{{ url_for('crm_visits_page') }}">Chi tiết</a>
       </div>
       <div class="crm-panel-bd p-0">
-        <table class="table crm-table mb-0"><thead><tr><th>Tên Công Ty / KH</th><th>NV</th><th>Vào</th><th>Ra</th><th>Nội dung gặp</th></tr></thead>
+        <table class="table crm-table mb-0"><thead><tr><th>Tên công ty / Khách hàng</th><th>Nhân viên</th><th>Vào</th><th>Ra</th><th>Nội dung gặp</th></tr></thead>
         <tbody id="tbVisitsToday"></tbody></table>
       </div>
     </div>
@@ -110,7 +110,7 @@
         <span class="small text-muted" id="notifBadge"></span>
       </div>
       <div class="crm-panel-bd p-0">
-        <table class="table crm-table mb-0"><thead><tr><th>Khách</th><th>Hẹn</th><th>Phụ trách</th><th></th></tr></thead>
+        <table class="table crm-table mb-0"><thead><tr><th>Khách hàng</th><th>Hẹn liên hệ</th><th>Phụ trách</th><th class="text-center">Hành động</th></tr></thead>
         <tbody id="tbCustFollow"></tbody></table>
       </div>
     </div>
@@ -151,32 +151,32 @@ async function loadDash() {
   document.getElementById('tbVisitsToday').innerHTML = visits.length ? visits.map(s => `<tr>
     <td><a href="/crm/customer/${s.customer_id}">${s.customer_label||''}</a>${s.representative?`<div class="small text-muted">${s.representative}</div>`:''}</td>
     <td class="small">${s.owner||'—'}</td>
-    <td class="small">${(s.check_in_at||'').slice(11,16)}</td>
-    <td class="small">${(s.check_out_at||'').slice(11,16)||'—'}</td>
+    <td class="small">${crmFmtTime(s.check_in_at)}</td>
+    <td class="small">${s.check_out_at ? crmFmtTime(s.check_out_at) : '—'}</td>
     <td class="small">${s.meeting_note||'—'}</td>
-  </tr>`).join('') : '<tr><td colspan="5" class="crm-empty">Chưa có gặp khách ESS hôm nay</td></tr>';
+  </tr>`).join('') : '<tr><td colspan="5" class="crm-empty">Chưa có gặp khách (self-service) hôm nay</td></tr>';
 
   const inbound = d.recent_inbound || [];
   document.getElementById('tbInboundToday').innerHTML = inbound.length ? inbound.map(r => `<tr>
     <td><a href="/crm/leads">${r.contact_name||'#'+r.id}</a><div class="small text-muted">${r.phone||''}</div></td>
     <td>${r.source||r.channel||'—'}</td>
     <td class="small">${r.owner||'—'}</td>
-    <td class="small">${(r.created_at||'').slice(11,16)}</td>
+    <td class="small">${crmFmtTime(r.created_at)}</td>
   </tr>`).join('') : '<tr><td colspan="4" class="crm-empty">Chưa có lead inbound hôm nay</td></tr>';
 
   const rows = d.customer_followups || [];
   document.getElementById('tbCustFollow').innerHTML = rows.length ? rows.map(c => `<tr>
     <td><div class="fw-semibold">${c.company_name||c.name||''}</div></td>
-    <td class="small">${c.crm_next_contact_at||''}</td>
+    <td class="small">${crmFmtDateTime(c.crm_next_contact_at)}</td>
     <td class="small">${c.crm_owner||'—'}</td>
-    <td><a class="crm-btn crm-btn-ghost btn-sm py-1" href="/crm/customer/${c.id}">360°</a></td>
+    <td class="crm-actions-cell"><div class="crm-actions"><a class="crm-btn crm-btn-ghost btn-sm py-1" href="/crm/customer/${c.id}">Hồ sơ</a></div></td>
   </tr>`).join('') : '<tr><td colspan="4" class="crm-empty">Không có lịch hẹn</td></tr>';
 
   const notifs = Array.isArray(n) ? n : [];
   document.getElementById('notifBadge').textContent = notifs.length ? `${notifs.length} chưa đọc` : '';
   document.getElementById('ulNotifs').innerHTML = notifs.length ? notifs.map(x => `
     <div class="crm-act-item">
-      <span class="crm-badge me-1">${x.notif_type}</span>
+      <span class="crm-badge me-1">${crmLabel('notif_type', x.notif_type)}</span>
       <strong>${x.title||''}</strong>
       <div class="small text-muted">${x.body||''}</div>
       <button class="btn btn-link btn-sm p-0" onclick="readNotif(${x.id})">Đã đọc</button>
@@ -218,18 +218,18 @@ function renderKpi(k) {
   });
   document.getElementById('kpiPct').textContent = (k.percent || 0) + '%';
   const srcMap = {
-    hr_kpi_department: 'HR KPI',
-    hr_kpi_employee: 'HR KPI',
-    hr_kpi_employee_sum: 'HR KPI',
-    hr_sales_rev: 'HR KPI',
-    crm_targets: 'CRM local',
+    hr_kpi_department: 'Chỉ tiêu nhân sự',
+    hr_kpi_employee: 'Chỉ tiêu nhân sự',
+    hr_kpi_employee_sum: 'Chỉ tiêu nhân sự',
+    hr_sales_rev: 'Chỉ tiêu doanh số nhân sự',
+    crm_targets: 'Chỉ tiêu cục bộ CRM',
     none: ''
   };
   const src = srcMap[k.target_source] || '';
   document.getElementById('kpiDetail').textContent =
     `${money(k.actual)} / ${money(k.target)} đ · kỳ ${k.period_key}` +
     (src ? ` · ${src}` : '') +
-    (k.target ? '' : ' (chưa đặt KPI — HR SALES_REV hoặc Cấu hình CRM)');
+    (k.target ? '' : ' (chưa đặt chỉ tiêu — nhân sự hoặc Cấu hình CRM)');
 }
 
 function renderPie(canvasId, pie) {
@@ -264,13 +264,13 @@ function renderCpl(cpl) {
     data: {
       labels: cpl.labels || [],
       datasets: [
-        { label: 'CPL', data: cpl.cpl || [], backgroundColor: '#0284c7' },
-        { label: 'Leads', data: cpl.leads || [], backgroundColor: '#99f6e4', yAxisID: 'y1' },
+        { label: 'Chi phí mỗi lead', data: cpl.cpl || [], backgroundColor: '#0284c7' },
+        { label: 'Số lead', data: cpl.leads || [], backgroundColor: '#99f6e4', yAxisID: 'y1' },
       ]
     },
     options: {
       scales: {
-        y: { position: 'left', title: { display: true, text: 'CPL (đ)' } },
+        y: { position: 'left', title: { display: true, text: 'Chi phí mỗi lead (đ)' } },
         y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Số lead' } }
       }
     }
@@ -283,7 +283,7 @@ function renderSla(sla) {
     type: 'line',
     data: {
       labels: sla.labels || [],
-      datasets: [{ label: 'Giờ TB', data: sla.avg_hours || [], borderColor: '#ea580c', tension: .3, fill: false }]
+      datasets: [{ label: 'Giờ trung bình', data: sla.avg_hours || [], borderColor: '#ea580c', tension: .3, fill: false }]
     },
     options: { plugins: { legend: { display: false } } }
   });
@@ -295,7 +295,7 @@ function renderCohort(ret) {
     box.innerHTML = '<div class="crm-empty">Chưa đủ dữ liệu đơn hàng gắn customer_id</div>';
     return;
   }
-  let head = '<tr><th>Cohort</th><th>Size</th>' + (ret.months||[]).map(m => `<th>M+${m}</th>`).join('') + '</tr>';
+  let head = '<tr><th>Nhóm tháng</th><th>Số khách</th>' + (ret.months||[]).map(m => `<th>Tháng +${m}</th>`).join('') + '</tr>';
   let body = (ret.cohorts||[]).map((c, i) => {
     const cells = (ret.matrix[i]||[]).map(v => {
       if (v == null) return '<td>—</td>';

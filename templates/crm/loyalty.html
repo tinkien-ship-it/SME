@@ -1,22 +1,22 @@
 {% extends "crm/_layout.html" %}
 {% block crm_page_id %}loyalty{% endblock %}
-{% block title %}CRM — Loyalty{% endblock %}
-{% block crm_title %}Loyalty · CSAT / NPS{% endblock %}
-{% block crm_desc %}Thẻ thành viên, điểm, sinh nhật và khảo sát hài lòng.{% endblock %}
+{% block title %}CRM — Trung thành & hài lòng{% endblock %}
+{% block crm_title %}Loyalty/CSAT — Trung thành &amp; hài lòng{% endblock %}
+{% block crm_desc %}Thẻ thành viên, điểm thưởng, sinh nhật và khảo sát mức độ hài lòng / sẵn sàng giới thiệu.{% endblock %}
 {% block crm_tip_title %}Sinh nhật{% endblock %}
-{% block crm_tip_body %}Điền ngày sinh (YYYY-MM-DD). Scheduler mỗi ngày tạo thông báo + hoạt động “birthday” để sales chúc mừng.{% endblock %}
+{% block crm_tip_body %}Điền ngày sinh (ô chọn ngày). Hệ thống mỗi ngày tạo thông báo và hoạt động sinh nhật để nhân viên bán hàng chúc mừng.{% endblock %}
 {% block crm_content %}
 <div class="row g-3">
   <div class="col-lg-5">
     <div class="crm-panel mb-3">
       <div class="crm-panel-hd"><h2>Cập nhật thành viên</h2></div>
       <div class="crm-panel-bd">
-        <div class="mb-2"><label class="form-label small">KH ID</label><input id="cid" class="form-control form-control-sm" list="cl"><datalist id="cl"></datalist></div>
-        <div class="mb-2"><label class="form-label small">Mã TV</label><input id="code" class="form-control form-control-sm"></div>
+        <div class="mb-2"><label class="form-label small">Mã khách hàng</label><input id="cid" class="form-control form-control-sm" list="cl"><datalist id="cl"></datalist></div>
+        <div class="mb-2"><label class="form-label small">Mã thành viên</label><input id="code" class="form-control form-control-sm"></div>
         <div class="mb-2"><label class="form-label small">Hạng</label>
           <select id="tier" class="form-select form-select-sm">
-            <option value="standard">Standard</option><option value="silver">Silver</option>
-            <option value="gold">Gold</option><option value="platinum">Platinum</option>
+            <option value="standard">Tiêu chuẩn</option><option value="silver">Bạc</option>
+            <option value="gold">Vàng</option><option value="platinum">Bạch kim</option>
           </select>
         </div>
         <div class="mb-2"><label class="form-label small">Điểm</label><input type="number" id="pts" class="form-control form-control-sm" value="0"></div>
@@ -25,10 +25,13 @@
       </div>
     </div>
     <div class="crm-panel">
-      <div class="crm-panel-hd"><h2>Ghi CSAT / NPS</h2></div>
+      <div class="crm-panel-hd"><h2>Ghi điểm hài lòng / giới thiệu</h2></div>
       <div class="crm-panel-bd">
         <div class="mb-2"><label class="form-label small">Loại</label>
-          <select id="stype" class="form-select form-select-sm"><option value="csat">CSAT (1-5)</option><option value="nps">NPS (0-10)</option></select>
+          <select id="stype" class="form-select form-select-sm">
+            <option value="csat">Điểm hài lòng CSAT (1–5)</option>
+            <option value="nps">Điểm giới thiệu NPS (0–10)</option>
+          </select>
         </div>
         <div class="mb-2"><label class="form-label small">Điểm</label><input type="number" id="score" class="form-control form-control-sm"></div>
         <div class="mb-2"><label class="form-label small">Nhận xét</label><input id="comment" class="form-control form-control-sm"></div>
@@ -40,7 +43,7 @@
     <div class="crm-panel">
       <div class="crm-panel-hd"><h2>Khảo sát gần đây</h2></div>
       <div class="crm-panel-bd p-0">
-        <table class="table crm-table mb-0"><thead><tr><th>ID</th><th>KH</th><th>Loại</th><th>Điểm</th><th>Ngày</th><th>Ghi chú</th></tr></thead>
+        <table class="table crm-table mb-0"><thead><tr><th>Mã khảo sát</th><th>Khách hàng</th><th>Loại</th><th>Điểm</th><th>Ngày</th><th>Ghi chú</th></tr></thead>
         <tbody id="tb"></tbody></table>
       </div>
     </div>
@@ -50,21 +53,21 @@
 {% block crm_scripts %}
 <script>
 async function saveLoyalty(){
-  if(!cid.value) return alert('Chọn KH');
+  if(!cid.value) return alert('Chọn khách hàng');
   const body={crm_member_code:code.value,crm_member_tier:tier.value,crm_loyalty_points:pts.value,crm_birthday:bday.value};
   const d=await(await fetch(`/api/crm/customers/${cid.value}/profile`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
   if(d.error) alert(d.error); else alert('Đã lưu');
 }
 async function saveSurvey(){
-  if(!cid.value) return alert('Chọn KH');
+  if(!cid.value) return alert('Chọn khách hàng');
   const d=await(await fetch('/api/crm/surveys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:cid.value,survey_type:stype.value,score:score.value,comment:comment.value})})).json();
-  if(d.error) alert(d.error); else { alert('OK'); load(); }
+  if(d.error) alert(d.error); else { alert('Đã lưu'); load(); }
 }
 async function load(){
   const rows=await(await fetch('/api/crm/surveys')).json();
   tb.innerHTML=(rows||[]).length?rows.map(r=>`<tr>
-    <td>${r.id}</td><td>#${r.customer_id||''}</td><td>${r.survey_type}</td>
-    <td class="fw-bold">${r.score}</td><td class="small">${(r.created_at||'').slice(0,16)}</td><td>${r.comment||''}</td>
+    <td>${r.id}</td><td>#${r.customer_id||''}</td><td>${crmLabel('survey_type', r.survey_type)}</td>
+    <td class="fw-bold">${r.score}</td><td class="small">${crmFmtDateTime(r.created_at)}</td><td>${r.comment||''}</td>
   </tr>`).join(''):'<tr><td colspan="6" class="crm-empty">Chưa có khảo sát</td></tr>';
 }
 (async()=>{

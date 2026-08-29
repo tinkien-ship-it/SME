@@ -628,12 +628,172 @@ def register_crm_routes(app):
         finally:
             conn.close()
 
-    @app.route('/api/crm/contracts/<int:cid>', methods=['PUT', 'DELETE'])
+    @app.route('/api/crm/contracts/template', methods=['GET', 'PUT', 'DELETE'])
+    @login_required
+    def api_crm_contract_template():
+        from Services import crm_contract_template as tpl
+        conn = _conn()
+        try:
+            if request.method == 'GET':
+                meta = tpl.get_template_meta(conn)
+                return jsonify({
+                    'html': meta['html'],
+                    'placeholders': tpl.placeholders_guide(),
+                    'used': tpl.extract_placeholders(meta['html']),
+                    'is_custom': meta['is_custom'],
+                    'tenant_scoped': True,
+                    'scope_note': 'Mẫu chỉ lưu trong dữ liệu doanh nghiệp hiện tại; tenant khác không bị ảnh hưởng.',
+                })
+            if request.method == 'DELETE':
+                tpl.reset_template(conn)
+                sqlite_commit(conn, label='crm_contract_tpl_reset')
+                return jsonify({'success': True, 'html': tpl.DEFAULT_TEMPLATE_HTML})
+            data = request.get_json(silent=True) or {}
+            html_body = data.get('html')
+            if html_body is None and request.data:
+                html_body = request.get_data(as_text=True)
+            tpl.set_template_html(conn, html_body or '')
+            sqlite_commit(conn, label='crm_contract_tpl')
+            return jsonify({'success': True})
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/contracts/template/export')
+    @login_required
+    def api_crm_contract_template_export():
+        from flask import Response
+        from Services import crm_contract_template as tpl
+        conn = _conn()
+        try:
+            body = tpl.get_template_html(conn)
+            return Response(
+                body,
+                mimetype='text/html; charset=utf-8',
+                headers={
+                    'Content-Disposition': 'attachment; filename="mau-hop-dong-mua-ban.html"'
+                },
+            )
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/contracts/template/import', methods=['POST'])
+    @login_required
+    def api_crm_contract_template_import():
+        import html as html_mod
+        import re
+
+        from Services import crm_contract_template as tpl
+        conn = _conn()
+        try:
+            f = request.files.get('file')
+            raw = ''
+            if f and f.filename:
+                name = (f.filename or '').lower()
+                data = f.read()
+                if name.endswith(('.html', '.htm', '.txt')):
+                    raw = data.decode('utf-8', errors='replace')
+                elif name.endswith('.docx'):
+                    import io
+                    import zipfile
+                    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                        xml = zf.read('word/document.xml').decode('utf-8', errors='replace')
+                    # Giữ placeholder [[...]] trong text Word
+                    text = re.sub(r'</w:p>', '\n', xml)
+                    text = re.sub(r'<[^>]+>', '', text)
+                    text = html_mod.unescape(text)
+                    # Nếu user lưu từ Word dạng HTML đầy đủ hơn nên ưu tiên .html;
+                    # với docx chỉ nhận nếu còn đủ marker — bọc lại khung HTML tối thiểu
+                    if '[[CONTRACT_NO]]' in text and '[[ITEMS_TABLE]]' in text:
+                        raw = (
+                            '<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"/>'
+                            '<title>Hợp đồng</title></head><body>'
+                            + '<pre style="white-space:pre-wrap;font-family:Times New Roman,serif">'
+                            + html_mod.escape(text)
+                            + '</pre></body></html>'
+                        )
+                        # Không escape placeholders
+                        for k, _ in tpl.KNOWN_PLACEHOLDERS:
+                            raw = raw.replace(html_mod.escape(f'[[{k}]]'), f'[[{k}]]')
+                    else:
+                        return jsonify({
+                            'error': 'File .docx thiếu mã [[CONTRACT_NO]] / [[ITEMS_TABLE]] / [[TOTAL]]. '
+                                     'Nên xuất mẫu HTML, sửa trong Word rồi Lưu dưới dạng Trang web (.html).'
+                        }), 400
+                else:
+                    return jsonify({
+                        'error': 'Chỉ nhận .html / .htm / .txt (khuyến nghị) hoặc .docx có đủ placeholder.'
+                    }), 400
+            else:
+                raw = (request.get_json(silent=True) or {}).get('html') or ''
+            tpl.set_template_html(conn, raw)
+            sqlite_commit(conn, label='crm_contract_tpl_import')
+            return jsonify({
+                'success': True,
+                'placeholders': tpl.extract_placeholders(raw),
+            })
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/contracts/preview', methods=['POST'])
+    @login_required
+    def api_crm_contract_preview():
+        from flask import Response
+        from Services import crm_contract_template as tpl
+        from Services import crm_ops
+        conn = _conn()
+        try:
+            data = request.get_json() or {}
+            items = data.get('items') or []
+            if not isinstance(items, list):
+                items = []
+            subtotal, tax_amount, total = crm_ops._calc_contract_totals(items)
+            data['subtotal'] = subtotal
+            data['tax_amount'] = tax_amount
+            data['amount'] = total if items else data.get('amount') or total
+            data['items'] = items
+            # bổ sung thông tin KH nếu có id
+            cust_id = data.get('customer_id')
+            if cust_id:
+                row = conn.execute(
+                    """
+                    SELECT COALESCE(company_name, name) AS customer_name,
+                           tax_code AS customer_tax_code, address AS customer_address,
+                           phone AS customer_phone, email AS customer_email
+                    FROM customers WHERE id = ?
+                    """,
+                    (cust_id,),
+                ).fetchone()
+                if row:
+                    d = dict(row) if not isinstance(row, dict) else row
+                    data.update(d)
+            if not data.get('contract_no'):
+                data['contract_no'] = 'XEM-TRUOC'
+            html_out = tpl.render_contract_html(conn, data)
+            return Response(html_out, mimetype='text/html; charset=utf-8')
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/contracts/<int:cid>', methods=['GET', 'PUT', 'DELETE'])
     @login_required
     def api_crm_contract_one(cid):
         from Services import crm_ops
         conn = _conn()
         try:
+            if request.method == 'GET':
+                row = crm_ops.get_contract(conn, cid)
+                if not row:
+                    return jsonify({'error': 'Không tìm thấy hợp đồng'}), 404
+                return jsonify(row)
             if request.method == 'DELETE':
                 crm_ops.delete_contract(conn, cid)
                 sqlite_commit(conn, label='crm_contract_del')
@@ -643,6 +803,46 @@ def register_crm_routes(app):
             return jsonify({'success': True, 'id': cid})
         except ValueError as e:
             return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/contracts/<int:cid>/export')
+    @login_required
+    def api_crm_contract_export(cid):
+        from flask import Response
+        from Services import crm_contract_template as tpl
+        from Services import crm_ops
+        conn = _conn()
+        try:
+            row = crm_ops.get_contract(conn, cid)
+            if not row:
+                return jsonify({'error': 'Không tìm thấy hợp đồng'}), 404
+            html_out = tpl.render_contract_html(conn, row)
+            fname = f"hop-dong-{(row.get('contract_no') or cid)}.html"
+            return Response(
+                html_out,
+                mimetype='text/html; charset=utf-8',
+                headers={'Content-Disposition': f'attachment; filename="{fname}"'},
+            )
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/contracts/<int:cid>/print')
+    @login_required
+    def api_crm_contract_print(cid):
+        from flask import Response
+        from Services import crm_contract_template as tpl
+        from Services import crm_ops
+        conn = _conn()
+        try:
+            row = crm_ops.get_contract(conn, cid)
+            if not row:
+                return jsonify({'error': 'Không tìm thấy hợp đồng'}), 404
+            return Response(tpl.render_contract_html(conn, row), mimetype='text/html; charset=utf-8')
         except Exception as e:
             return jsonify({'error': str(e)}), 500
         finally:

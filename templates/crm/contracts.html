@@ -2,78 +2,477 @@
 {% block crm_page_id %}contracts{% endblock %}
 {% block title %}CRM — Hợp đồng{% endblock %}
 {% block crm_title %}Hợp đồng{% endblock %}
-{% block crm_desc %}Lưu hợp đồng gắn khách hàng / báo giá / đơn bán (file_path tùy chọn).{% endblock %}
-{% block crm_tip_title %}Luồng{% endblock %}
-{% block crm_tip_body %}Sau khi báo giá được chấp nhận, tạo hợp đồng draft → signed → active. Có thể ghi sale_id khi đã phát sinh đơn.{% endblock %}
+{% block crm_desc %}Hợp đồng mua bán hàng hóa theo mẫu — bảng hàng hóa, VAT, xuất/nạp mẫu có placeholder [[…]].{% endblock %}
+{% block crm_tip_title %}Mẫu & xuất file{% endblock %}
+{% block crm_tip_body %}Xuất mẫu HTML → chỉnh câu chữ trong Word/trình soạn thảo (giữ mã [[SELLER_NAME]], [[ITEMS_TABLE]]…) → nạp lại. Xuất hợp đồng đã điền để in hoặc lưu hồ sơ.{% endblock %}
 {% block crm_actions %}
-<button class="crm-btn crm-btn-primary" onclick="openC()"><i class="fas fa-plus"></i> Hợp đồng</button>
+<button type="button" class="crm-btn crm-btn-ghost" onclick="openTpl()"><i class="fas fa-file-alt"></i> Mẫu HĐ</button>
+<button type="button" class="crm-btn crm-btn-primary" onclick="openC()"><i class="fas fa-plus"></i> Hợp đồng</button>
 {% endblock %}
 {% block crm_content %}
 <div class="crm-panel"><div class="crm-panel-bd p-0">
 <table class="table crm-table mb-0"><thead><tr>
-  <th>Số HĐ</th><th>Tiêu đề</th><th>Khách</th><th>TT</th><th class="text-end">Giá trị</th><th>Ký</th><th></th>
+  <th>Số hợp đồng</th><th>Khách hàng</th><th>Trạng thái</th><th class="text-end">Giá trị</th><th>Ngày ký</th><th class="text-center">Hành động</th>
 </tr></thead><tbody id="tb"></tbody></table>
 </div></div>
 {% endblock %}
 {% block crm_modals %}
-<div class="modal fade" id="m"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-0 shadow">
-  <div class="modal-header border-0"><h5 class="fw-bold">Hợp đồng</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal fade" id="m"><div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content border-0 shadow">
+  <div class="modal-header border-0"><h5 class="fw-bold">Hợp đồng mua bán hàng hóa</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
     <input type="hidden" id="id">
-    <div class="row g-2">
-      <div class="col-md-4"><label class="form-label small">KH ID *</label><input id="cust" class="form-control form-control-sm" list="cl"><datalist id="cl"></datalist></div>
-      <div class="col-md-8"><label class="form-label small">Tiêu đề</label><input id="title" class="form-control form-control-sm"></div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-3"><label class="form-label small">Mã khách hàng *</label><input id="cust" class="form-control form-control-sm" list="cl"><datalist id="cl"></datalist></div>
       <div class="col-md-3"><label class="form-label small">Trạng thái</label>
         <select id="status" class="form-select form-select-sm">
-          <option value="draft">Draft</option><option value="sent">Sent</option>
-          <option value="signed">Signed</option><option value="active">Active</option>
-          <option value="expired">Expired</option><option value="cancelled">Cancelled</option>
+          <option value="draft">Nháp</option><option value="sent">Đã gửi</option>
+          <option value="signed">Đã ký</option><option value="active">Đang hiệu lực</option>
+          <option value="expired">Hết hạn</option><option value="cancelled">Đã hủy</option>
         </select>
       </div>
-      <div class="col-md-3"><label class="form-label small">Giá trị</label><input type="number" id="amount" class="form-control form-control-sm" value="0"></div>
       <div class="col-md-3"><label class="form-label small">Ngày ký</label><input type="date" id="signed" class="form-control form-control-sm"></div>
-      <div class="col-md-3"><label class="form-label small">Quote ID</label><input id="quote" class="form-control form-control-sm"></div>
-      <div class="col-md-6"><label class="form-label small">File path / link</label><input id="file" class="form-control form-control-sm"></div>
-      <div class="col-md-6"><label class="form-label small">Ghi chú</label><input id="notes" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">Nơi ký</label><input id="place" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">Mã báo giá</label><input id="quote" class="form-control form-control-sm" placeholder="Tùy chọn"><button type="button" class="btn btn-link btn-sm p-0" onclick="loadFromQuote()">Nạp hàng từ báo giá</button></div>
+      <div class="col-md-3"><label class="form-label small">Đại diện bên mua</label><input id="buyer_rep" class="form-control form-control-sm"></div>
+      <div class="col-md-3"><label class="form-label small">Chức vụ bên mua</label><input id="buyer_title" class="form-control form-control-sm"></div>
     </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-1">
+      <strong class="small">Danh sách hàng hóa</strong>
+      <button type="button" class="btn btn-sm btn-outline-primary" onclick="addItemRow()">+ Dòng hàng</button>
+    </div>
+    <div class="table-responsive border rounded mb-2">
+      <table class="table table-sm mb-0 align-middle">
+        <thead class="table-light"><tr>
+          <th style="min-width:180px">Tên hàng hóa</th>
+          <th style="width:80px">ĐVT</th>
+          <th style="width:90px" class="text-end">SL</th>
+          <th style="width:110px" class="text-end">Đơn giá</th>
+          <th style="width:110px" class="text-end">Thành tiền</th>
+          <th style="width:80px" class="text-end">%VAT</th>
+          <th style="width:110px" class="text-end">Tiền VAT</th>
+          <th style="width:120px" class="text-end">Sau VAT</th>
+          <th style="width:60px" class="text-center">Xóa</th>
+        </tr></thead>
+        <tbody id="cItems"></tbody>
+      </table>
+    </div>
+    <div class="row g-2 mb-2 small">
+      <div class="col-md-4">Chưa VAT: <b id="sumSub">0</b></div>
+      <div class="col-md-4">VAT: <b id="sumVat">0</b></div>
+      <div class="col-md-4">Tổng thanh toán: <b id="sumTotal">0</b></div>
+    </div>
+
+    <div class="row g-2">
+      <div class="col-md-4"><label class="form-label small">Hình thức thanh toán</label><input id="payment_method" class="form-control form-control-sm" placeholder="Chuyển khoản / tiền mặt…"></div>
+      <div class="col-md-4"><label class="form-label small">Thời hạn thanh toán</label><input id="payment_term" class="form-control form-control-sm" placeholder="Trong 7 ngày sau giao hàng…"></div>
+      <div class="col-md-4"><label class="form-label small">Bảo hành (tháng)</label><input id="warranty_months" class="form-control form-control-sm" value="12"></div>
+      <div class="col-md-4"><label class="form-label small">Lịch giao hàng</label><input id="delivery_schedule" class="form-control form-control-sm"></div>
+      <div class="col-md-4"><label class="form-label small">Địa điểm giao</label><input id="delivery_place" class="form-control form-control-sm"></div>
+      <div class="col-md-4"><label class="form-label small">Bên chịu phí vận chuyển</label><input id="shipping_party" class="form-control form-control-sm" value="A"></div>
+      <div class="col-md-6"><label class="form-label small">Chất lượng / quy cách</label><textarea id="quality_notes" class="form-control form-control-sm" rows="2"></textarea></div>
+      <div class="col-md-6"><label class="form-label small">Bao bì / đóng gói</label><textarea id="packaging_notes" class="form-control form-control-sm" rows="2"></textarea></div>
+      <div class="col-12"><label class="form-label small">Ghi chú</label><input id="notes" class="form-control form-control-sm"></div>
+    </div>
+    <datalist id="prodList"></datalist>
   </div>
-  <div class="modal-footer border-0">
-    <button class="crm-btn crm-btn-ghost" data-bs-dismiss="modal">Đóng</button>
-    <button class="crm-btn crm-btn-primary" onclick="save()">Lưu</button>
+  <div class="modal-footer border-0 flex-wrap gap-2">
+    <button type="button" class="crm-btn crm-btn-ghost me-auto" data-bs-dismiss="modal">Đóng</button>
+    <button type="button" class="crm-btn crm-btn-ghost" onclick="previewDoc()">Xem / in thử</button>
+    <button type="button" class="crm-btn crm-btn-primary" onclick="save()">Lưu</button>
+  </div>
+</div></div></div>
+
+<div class="modal fade" id="tplM"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-0 shadow">
+  <div class="modal-header border-0"><h5 class="fw-bold">Mẫu hợp đồng (placeholder)</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <p class="small text-muted mb-2">Xuất file HTML để chỉnh nội dung riêng. <b>Giữ nguyên</b> các mã <code>[[…]]</code> — khi nạp lại hệ thống vẫn điền từ form.</p>
+    <p class="small alert alert-light border py-2 mb-2"><i class="fas fa-building me-1 text-primary"></i>
+      Mẫu được lưu <b>riêng theo doanh nghiệp (tenant)</b> bạn đang đăng nhập. Chỉnh sửa hoặc nạp mẫu ở đây <b>không ảnh hưởng</b> các doanh nghiệp/tenant khác.</p>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <a class="crm-btn crm-btn-primary btn-sm" href="/api/crm/contracts/template/export"><i class="fas fa-download"></i> Xuất mẫu</a>
+      <label class="crm-btn crm-btn-ghost btn-sm mb-0" style="cursor:pointer">
+        <i class="fas fa-upload"></i> Nạp mẫu
+        <input type="file" id="tplFile" accept=".html,.htm,.txt,.docx" hidden onchange="importTpl(this)">
+      </label>
+      <button type="button" class="crm-btn crm-btn-ghost btn-sm" onclick="resetTpl()">Khôi phục mẫu mặc định</button>
+    </div>
+    <div class="small" id="tplMeta"></div>
+    <details class="mt-2"><summary class="small">Danh sách mã được hỗ trợ</summary>
+      <ul class="small mb-0" id="tplPh"></ul>
+    </details>
   </div>
 </div></div></div>
 {% endblock %}
 {% block crm_scripts %}
 <script>
-const money=n=>new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
-function openC(r){
-  id.value=r?.id||''; cust.value=r?.customer_id||''; title.value=r?.title||'';
-  status.value=r?.status||'draft'; amount.value=r?.amount||0;
-  signed.value=(r?.signed_date||'').slice(0,10); quote.value=r?.quote_id||'';
-  file.value=r?.file_path||''; notes.value=r?.notes||'';
+const money = n => new Intl.NumberFormat('vi-VN').format(Math.round(Number(n || 0)));
+let PRODS = [];
+
+function escAttr(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+/** Đơn vị lẻ/sỉ + giá bán theo Danh mục hàng hóa */
+function productUnits(p) {
+  if (!p) return [];
+  const units = [];
+  const uLe = String(p.unit || '').trim();
+  const priceLe = Number(p.base_price) || 0;
+  if (uLe) {
+    units.push({ unit: uLe, kind: 'le', price: priceLe, label: `${uLe} (lẻ)` });
+  }
+  const uSi = String(p.unit1 || '').trim();
+  if (uSi && uSi.toLowerCase() !== uLe.toLowerCase()) {
+    let priceSi = Number(p.sale_price != null ? p.sale_price : p.price) || 0;
+    if (!priceSi) {
+      const ratio = Number(p.unit_ratio) || 1;
+      priceSi = priceLe * ratio;
+    }
+    units.push({ unit: uSi, kind: 'si', price: priceSi, label: `${uSi} (sỉ)` });
+  }
+  if (!units.length) {
+    units.push({ unit: 'Cái', kind: 'le', price: priceLe, label: 'Cái (lẻ)' });
+  }
+  return units;
+}
+
+function findProduct(nameOrId) {
+  const key = String(nameOrId || '').trim();
+  if (!key) return null;
+  return PRODS.find(x => (x.name || '') === key || String(x.id) === key) || null;
+}
+
+function applyUnitPrice(tr) {
+  const sel = tr.querySelector('.i-unit');
+  const opt = sel?.selectedOptions?.[0];
+  if (!opt) return;
+  const price = opt.getAttribute('data-price');
+  if (price != null && price !== '') {
+    tr.querySelector('.i-price').value = price;
+  }
+  previewTotals();
+}
+
+function fillUnitSelect(tr, p, preferredUnit, keepItemPrice) {
+  const sel = tr.querySelector('.i-unit');
+  const units = productUnits(p);
+  const pref = String(preferredUnit || '').trim();
+  let html = units.map(u =>
+    `<option value="${escAttr(u.unit)}" data-price="${u.price}" data-kind="${u.kind}">${escAttr(u.label)}</option>`
+  ).join('');
+  if (pref && !units.some(u => u.unit.toLowerCase() === pref.toLowerCase())) {
+    html += `<option value="${escAttr(pref)}" data-price="0">${escAttr(pref)}</option>`;
+  }
+  if (!html) {
+    html = `<option value="${escAttr(pref || '')}" data-price="0">${escAttr(pref || '—')}</option>`;
+  }
+  sel.innerHTML = html;
+  if (pref) {
+    const match = [...sel.options].find(o => o.value.toLowerCase() === pref.toLowerCase());
+    if (match) sel.value = match.value;
+  }
+  if (p?.id) tr.dataset.productId = p.id;
+  else delete tr.dataset.productId;
+  if (!keepItemPrice) applyUnitPrice(tr);
+  else previewTotals();
+}
+
+function getTaxRate(tr) {
+  const sel = tr.querySelector('.i-tax-sel');
+  if (sel && sel.value === '__other__') {
+    return +tr.querySelector('.i-tax').value || 0;
+  }
+  if (sel) return +sel.value || 0;
+  return +tr.querySelector('.i-tax')?.value || 0;
+}
+
+function onTaxPick(sel) {
+  const tr = sel.closest('tr');
+  const custom = tr.querySelector('.i-tax');
+  if (sel.value === '__other__') {
+    custom.style.display = '';
+    custom.focus();
+  } else {
+    custom.style.display = 'none';
+    custom.value = sel.value;
+  }
+  previewTotals();
+}
+
+function setTaxRate(tr, rate) {
+  const r = Number(rate);
+  const known = [0, 5, 8, 10];
+  const sel = tr.querySelector('.i-tax-sel');
+  const custom = tr.querySelector('.i-tax');
+  const val = Number.isFinite(r) ? r : 10;
+  if (known.includes(val)) {
+    sel.value = String(val);
+    custom.value = val;
+    custom.style.display = 'none';
+  } else {
+    sel.value = '__other__';
+    custom.value = val;
+    custom.style.display = '';
+  }
+}
+
+function calcLine(tr) {
+  const q = +tr.querySelector('.i-qty').value || 0;
+  const p = +tr.querySelector('.i-price').value || 0;
+  const tax = getTaxRate(tr);
+  const sub = q * p;
+  const vat = sub * tax / 100;
+  tr.querySelector('.i-sub').textContent = money(sub);
+  tr.querySelector('.i-vat').textContent = money(vat);
+  tr.querySelector('.i-tot').textContent = money(sub + vat);
+}
+
+function previewTotals() {
+  let sub = 0, vat = 0;
+  document.querySelectorAll('#cItems tr').forEach(tr => {
+    const q = +tr.querySelector('.i-qty').value || 0;
+    const p = +tr.querySelector('.i-price').value || 0;
+    const tax = getTaxRate(tr);
+    const line = q * p;
+    sub += line;
+    vat += line * tax / 100;
+    calcLine(tr);
+  });
+  sumSub.textContent = money(sub);
+  sumVat.textContent = money(vat);
+  sumTotal.textContent = money(sub + vat);
+}
+
+function onProdPick(inp) {
+  const p = findProduct(inp.value);
+  const tr = inp.closest('tr');
+  if (!p) {
+    fillUnitSelect(tr, null, tr.querySelector('.i-unit')?.value || '', true);
+    return;
+  }
+  tr.querySelector('.i-name').value = p.name || '';
+  fillUnitSelect(tr, p, p.unit || '', false);
+}
+
+function onUnitPick(sel) {
+  applyUnitPrice(sel.closest('tr'));
+}
+
+function addItemRow(it = {}) {
+  const tr = document.createElement('tr');
+  const keepPrice = it.unit_price != null && it.unit_price !== '';
+  tr.innerHTML = `
+    <td><input class="form-control form-control-sm i-name" list="prodList" value="${escAttr(it.product_name||'')}" onchange="onProdPick(this)"></td>
+    <td><select class="form-select form-select-sm i-unit" onchange="onUnitPick(this)"></select></td>
+    <td><input type="number" class="form-control form-control-sm i-qty text-end" value="${it.qty ?? 1}" oninput="previewTotals()"></td>
+    <td><input type="number" class="form-control form-control-sm i-price text-end" value="${it.unit_price ?? 0}" oninput="previewTotals()"></td>
+    <td class="text-end small i-sub">0</td>
+    <td>
+      <select class="form-select form-select-sm i-tax-sel" onchange="onTaxPick(this)">
+        <option value="0">0%</option>
+        <option value="5">5%</option>
+        <option value="8">8%</option>
+        <option value="10">10%</option>
+        <option value="__other__">Khác…</option>
+      </select>
+      <input type="number" class="form-control form-control-sm i-tax text-end mt-1" value="${it.tax_rate ?? 10}" step="0.1" min="0" style="display:none" placeholder="%VAT" oninput="previewTotals()">
+    </td>
+    <td class="text-end small i-vat">0</td>
+    <td class="text-end small fw-semibold i-tot">0</td>
+    <td class="crm-actions-cell"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove();previewTotals()">×</button></td>`;
+  cItems.appendChild(tr);
+  const p = it.product_id
+    ? PRODS.find(x => String(x.id) === String(it.product_id))
+    : findProduct(it.product_name);
+  fillUnitSelect(tr, p, it.unit || (p && p.unit) || '', keepPrice);
+  if (it.product_id) tr.dataset.productId = it.product_id;
+  setTaxRate(tr, it.tax_rate ?? 10);
+}
+
+function collectItems() {
+  return [...document.querySelectorAll('#cItems tr')].map(tr => ({
+    product_id: tr.dataset.productId || null,
+    product_name: tr.querySelector('.i-name').value,
+    unit: tr.querySelector('.i-unit').value,
+    qty: tr.querySelector('.i-qty').value,
+    unit_price: tr.querySelector('.i-price').value,
+    tax_rate: getTaxRate(tr),
+  })).filter(x => (x.product_name || '').trim());
+}
+
+function collectBody() {
+  const items = collectItems();
+  let sub = 0, vat = 0;
+  items.forEach(it => {
+    const line = (+it.qty || 0) * (+it.unit_price || 0);
+    sub += line;
+    vat += line * (+it.tax_rate || 0) / 100;
+  });
+  return {
+    customer_id: cust.value,
+    title: 'Hợp đồng mua bán hàng hóa',
+    status: status.value,
+    signed_date: signed.value,
+    place: place.value,
+    quote_id: quote.value || null,
+    buyer_rep: buyer_rep.value,
+    buyer_title: buyer_title.value,
+    payment_method: payment_method.value,
+    payment_term: payment_term.value,
+    warranty_months: warranty_months.value,
+    delivery_schedule: delivery_schedule.value,
+    delivery_place: delivery_place.value,
+    shipping_party: shipping_party.value,
+    quality_notes: quality_notes.value,
+    packaging_notes: packaging_notes.value,
+    notes: notes.value,
+    subtotal: sub,
+    tax_amount: vat,
+    amount: sub + vat,
+    items,
+  };
+}
+
+function clearItems() { cItems.innerHTML = ''; }
+
+async function openC(r) {
+  id.value = r?.id || '';
+  if (r?.id && !r.items) {
+    try {
+      const full = await (await fetch('/api/crm/contracts/' + r.id)).json();
+      if (!full.error) r = full;
+    } catch (e) {}
+  }
+  cust.value = r?.customer_id || '';
+  status.value = r?.status || 'draft';
+  signed.value = (r?.signed_date || '').slice(0, 10);
+  place.value = r?.place || '';
+  quote.value = r?.quote_id || '';
+  buyer_rep.value = r?.buyer_rep || '';
+  buyer_title.value = r?.buyer_title || '';
+  payment_method.value = r?.payment_method || '';
+  payment_term.value = r?.payment_term || '';
+  warranty_months.value = r?.warranty_months || '12';
+  delivery_schedule.value = r?.delivery_schedule || '';
+  delivery_place.value = r?.delivery_place || '';
+  shipping_party.value = r?.shipping_party || 'A';
+  quality_notes.value = r?.quality_notes || '';
+  packaging_notes.value = r?.packaging_notes || '';
+  notes.value = r?.notes || '';
+  clearItems();
+  const items = r?.items || [];
+  if (items.length) items.forEach(addItemRow);
+  else addItemRow();
   new bootstrap.Modal('#m').show();
 }
-async function load(){
-  const rows=await(await fetch('/api/crm/contracts')).json();
-  tb.innerHTML=(rows||[]).length?rows.map(r=>`<tr>
-    <td class="fw-semibold">${r.contract_no||''}</td><td>${r.title||''}</td><td>${r.customer_name||('#'+r.customer_id)}</td>
-    <td>${r.status}</td><td class="text-end">${money(r.amount)}</td><td>${(r.signed_date||'').slice(0,10)}</td>
-    <td><button class="btn btn-sm btn-outline-secondary" onclick='openC(${JSON.stringify(r).replace(/'/g,"&#39;")})'>Sửa</button>
-    <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button></td>
-  </tr>`).join(''):'<tr><td colspan="7" class="crm-empty">Chưa có hợp đồng</td></tr>';
+
+async function loadFromQuote() {
+  const qid = (quote.value || '').trim();
+  if (!qid) return alert('Nhập mã báo giá');
+  const d = await (await fetch('/api/crm/quotes/' + qid)).json();
+  if (d.error) return alert(d.error);
+  if (d.customer_id) cust.value = d.customer_id;
+  clearItems();
+  (d.items || []).forEach(it => addItemRow(it));
+  if (!(d.items || []).length) addItemRow();
+  previewTotals();
 }
-async function save(){
-  if(!cust.value) return alert('Nhập ID khách hàng');
-  const body={customer_id:cust.value,title:title.value,status:status.value,amount:amount.value,signed_date:signed.value,quote_id:quote.value||null,file_path:file.value,notes:notes.value};
-  const i=id.value;
-  const r=await fetch(i?`/api/crm/contracts/${i}`:'/api/crm/contracts',{method:i?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const d=await r.json(); if(d.error) return alert(d.error);
-  bootstrap.Modal.getInstance(document.getElementById('m'))?.hide(); load();
+
+async function save() {
+  if (!cust.value) return alert('Chọn mã khách hàng');
+  const body = collectBody();
+  if (!body.items.length) return alert('Thêm ít nhất một dòng hàng hóa');
+  const i = id.value;
+  const r = await fetch(i ? `/api/crm/contracts/${i}` : '/api/crm/contracts', {
+    method: i ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const d = await r.json();
+  if (d.error) return alert(d.error);
+  if (d.id) id.value = d.id;
+  bootstrap.Modal.getInstance(document.getElementById('m'))?.hide();
+  load();
 }
-async function del(i){ if(!confirm('Xóa?'))return; await fetch('/api/crm/contracts/'+i,{method:'DELETE'}); load(); }
-(async()=>{
-  const cs=await(await fetch('/api/customers')).json();
-  cl.innerHTML=(cs||[]).map(c=>`<option value="${c.id}">${c.company_name||c.name||''}</option>`).join('');
+
+async function previewDoc() {
+  const body = collectBody();
+  if (!body.customer_id) return alert('Chọn khách hàng trước');
+  const r = await fetch('/api/crm/contracts/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    return alert(d.error || 'Không xem trước được');
+  }
+  const html = await r.text();
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+async function load() {
+  const rows = await (await fetch('/api/crm/contracts')).json();
+  tb.innerHTML = (rows || []).length ? rows.map(r => `<tr>
+    <td class="fw-semibold">${r.contract_no || ''}</td>
+    <td>${r.customer_name || ('#' + r.customer_id)}</td>
+    <td>${crmLabel('contract_status', r.status)}</td>
+    <td class="text-end">${money(r.amount)}</td>
+    <td>${crmFmtDate(r.signed_date)}</td>
+    <td class="crm-actions-cell"><div class="crm-actions">
+      <button class="btn btn-sm btn-outline-secondary" onclick="openC({id:${r.id}})">Sửa</button>
+      <a class="btn btn-sm btn-outline-primary" target="_blank" href="/api/crm/contracts/${r.id}/print">In</a>
+      <a class="btn btn-sm btn-outline-success" href="/api/crm/contracts/${r.id}/export">Xuất</a>
+      <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button>
+    </div></td>
+  </tr>`).join('') : '<tr><td colspan="6" class="crm-empty">Chưa có hợp đồng</td></tr>';
+}
+
+async function del(i) {
+  if (!confirm('Xóa hợp đồng?')) return;
+  await fetch('/api/crm/contracts/' + i, { method: 'DELETE' });
+  load();
+}
+
+async function openTpl() {
+  const d = await (await fetch('/api/crm/contracts/template')).json();
+  const scope = d.scope_note || 'Mẫu chỉ áp dụng cho doanh nghiệp hiện tại.';
+  tplMeta.innerHTML = (d.is_custom
+    ? '<span class="text-success">Đang dùng mẫu tùy chỉnh của doanh nghiệp này.</span>'
+    : '<span class="text-muted">Đang dùng mẫu mặc định hệ thống (chưa lưu riêng).</span>')
+    + `<div class="text-muted mt-1">${scope}</div>`;
+  tplPh.innerHTML = (d.placeholders || []).map(p => `<li><code>${p.code}</code> — ${p.label}</li>`).join('');
+  new bootstrap.Modal('#tplM').show();
+}
+
+async function importTpl(inp) {
+  const f = inp.files && inp.files[0];
+  if (!f) return;
+  const fd = new FormData();
+  fd.append('file', f);
+  const r = await fetch('/api/crm/contracts/template/import', { method: 'POST', body: fd });
+  const d = await r.json();
+  inp.value = '';
+  if (d.error) return alert(d.error);
+  alert('Đã nạp mẫu. Placeholder nhận diện: ' + (d.placeholders || []).join(', '));
+  openTpl();
+}
+
+async function resetTpl() {
+  if (!confirm('Khôi phục mẫu mặc định?')) return;
+  await fetch('/api/crm/contracts/template', { method: 'DELETE' });
+  openTpl();
+}
+
+(async () => {
+  const cs = await (await fetch('/api/customers')).json();
+  cl.innerHTML = (cs || []).map(c => `<option value="${c.id}">${c.company_name || c.name || ''}</option>`).join('');
+  const raw = await (await fetch('/api/products/manage')).json().catch(() => []);
+  PRODS = Array.isArray(raw) ? raw : (raw.products || raw.items || raw.data || []);
+  prodList.innerHTML = PRODS.map(p => `<option value="${escAttr(p.name || '')}">`).join('');
   load();
 })();
 </script>

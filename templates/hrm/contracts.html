@@ -2,12 +2,16 @@
 {% block title %}HĐLĐ — Nhân sự{% endblock %}
 {% block content %}
 <div class="container-fluid py-3">
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
       <h4 class="mb-0">Hợp đồng lao động (chuẩn pháp lý VN)</h4>
       <div class="text-muted small">Mã NV <strong>NV00001</strong> · Số HĐ <strong>HĐLĐ-000001</strong> — tự sinh khi tạo HĐLĐ</div>
+      <div class="text-muted small mt-1">Người dùng có thể tải mẫu hợp đồng trong hệ thống và điều chỉnh theo mẫu riêng của công ty, doanh nghiệp.</div>
     </div>
-    <button class="btn btn-primary btn-sm" onclick="openForm()">+ Hợp đồng</button>
+    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openTplModal()"><i class="fas fa-file-alt"></i> Mẫu Hợp Đồng</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="openForm()">+ Hợp đồng</button>
+    </div>
   </div>
   <div class="table-responsive bg-white border rounded">
     <table class="table table-sm mb-0 align-middle">
@@ -140,6 +144,42 @@
     <button type="submit" class="btn btn-primary">Lưu &amp; đồng bộ hồ sơ NV</button>
   </div>
 </form></div></div>
+
+<div class="modal fade" id="tplMd"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Mẫu Hợp Đồng (theo loại HĐ)</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="row g-2 mb-3">
+      <div class="col-md-6">
+        <label class="small">Loại hợp đồng</label>
+        <select id="tplType" class="form-select form-select-sm" onchange="loadTplMeta()">
+          <option value="indefinite">Không xác định thời hạn</option>
+          <option value="definite">Xác định thời hạn</option>
+          <option value="probation">Thử việc</option>
+          <option value="apprentice">Học việc</option>
+        </select>
+      </div>
+    </div>
+    <p class="small alert alert-light border py-2 mb-2">
+      <i class="fas fa-building text-primary me-1"></i>
+      Mẫu lưu <b>riêng theo doanh nghiệp (tenant)</b>. Xuất HTML → chỉnh điều khoản → nạp lại.
+      Giữ mã <code>[[…]]</code> để hệ thống điền thông tin từ form HĐLĐ (NV, lương, phụ cấp…).
+    </p>
+    <div class="d-flex flex-wrap gap-2 mb-2">
+      <a class="btn btn-primary btn-sm" id="tplExportLink" href="/api/hrm/contracts/template/export?type=indefinite"><i class="fas fa-download"></i> Xuất mẫu</a>
+      <label class="btn btn-outline-secondary btn-sm mb-0" style="cursor:pointer">
+        <i class="fas fa-upload"></i> Nạp mẫu
+        <input type="file" id="tplFile" accept=".html,.htm,.txt,.docx" hidden onchange="importTpl(this)">
+      </label>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetTpl()">Khôi phục mẫu mặc định hệ thống</button>
+    </div>
+    <div class="small" id="tplMeta"></div>
+    <details class="mt-2"><summary class="small">Danh sách mã placeholder (modal / dữ liệu chuẩn)</summary>
+      <ul class="small mb-0" id="tplPh"></ul>
+    </details>
+  </div>
+</div></div></div>
+
 {% include 'partials/hrm_ess_link_assets.html' %}
 <script>
 const money=n=>new Intl.NumberFormat('vi-VN').format(Math.round(Number(n||0)));
@@ -483,5 +523,50 @@ async function save(e){
 loadEmployees();
 load();
 toggleEmpMode();
+
+function openTplModal() {
+  loadTplMeta();
+  new bootstrap.Modal(document.getElementById('tplMd')).show();
+}
+
+async function loadTplMeta() {
+  const t = document.getElementById('tplType').value || 'indefinite';
+  document.getElementById('tplExportLink').href = '/api/hrm/contracts/template/export?type=' + encodeURIComponent(t);
+  const d = await (await fetch('/api/hrm/contracts/template?type=' + encodeURIComponent(t))).json();
+  if (d.error) return alert(d.error);
+  const scope = d.scope_note || '';
+  document.getElementById('tplMeta').innerHTML =
+    (d.is_custom
+      ? '<span class="text-success">Đang dùng mẫu tùy chỉnh của doanh nghiệp này.</span>'
+      : '<span class="text-muted">Đang dùng mẫu mặc định hệ thống (Jinja chuẩn pháp lý).</span>')
+    + (scope ? '<div class="text-muted mt-1">' + scope + '</div>' : '');
+  document.getElementById('tplPh').innerHTML = (d.placeholders || [])
+    .map(p => '<li><code>' + p.code + '</code> — ' + p.label + '</li>').join('');
+}
+
+async function importTpl(inp) {
+  const f = inp.files && inp.files[0];
+  if (!f) return;
+  const t = document.getElementById('tplType').value || 'indefinite';
+  const fd = new FormData();
+  fd.append('file', f);
+  fd.append('type', t);
+  const r = await fetch('/api/hrm/contracts/template/import?type=' + encodeURIComponent(t), { method: 'POST', body: fd });
+  const d = await r.json();
+  inp.value = '';
+  if (d.error) return alert(d.error);
+  alert('Đã nạp mẫu HĐLĐ (' + t + '). Placeholder: ' + (d.placeholders || []).join(', '));
+  loadTplMeta();
+}
+
+async function resetTpl() {
+  const t = document.getElementById('tplType').value || 'indefinite';
+  if (!confirm('Khôi phục mẫu mặc định hệ thống cho loại HĐ này? Mẫu tùy chỉnh của tenant sẽ bị xóa.')) return;
+  const r = await fetch('/api/hrm/contracts/template?type=' + encodeURIComponent(t), { method: 'DELETE' });
+  const d = await r.json();
+  if (d.error) return alert(d.error);
+  alert(d.message || 'Đã khôi phục mẫu mặc định.');
+  loadTplMeta();
+}
 </script>
 {% endblock %}

@@ -2,6 +2,8 @@
 """Routes HRM modular — contracts, shifts, OT, formulas, ESS, compliance, export."""
 from __future__ import annotations
 
+import re
+
 from flask import Response, flash, jsonify, redirect, render_template, request, session, url_for
 
 from auth import ess_portal_required, login_required
@@ -54,6 +56,7 @@ def register_hrm_routes(app):
     @login_required
     def SME_hrm_contract_print(contract_id):
         from Services.hrm.contract_templates import build_contract_print_context
+        from Services.hrm import contract_template_store as ld_tpl
         conn = _conn()
         try:
             try:
@@ -61,9 +64,137 @@ def register_hrm_routes(app):
             except ValueError:
                 flash('Không tìm thấy hợp đồng', 'warning')
                 return redirect(url_for('SME_hrm_contracts'))
-            resp = app.make_response(render_template(ctx['template_name'], **ctx))
+            html_out = ld_tpl.render_contract_html(conn, ctx, app)
+            resp = app.make_response(html_out)
+            resp.headers['Content-Type'] = 'text/html; charset=utf-8'
             resp.headers['Cache-Control'] = 'no-store'
             return resp
+        finally:
+            conn.close()
+
+    @app.route('/api/hrm/contracts/template', methods=['GET', 'PUT', 'DELETE'])
+    @login_required
+    def api_hrm_contract_template():
+        from Services.hrm import contract_template_store as ld_tpl
+        from Services.hrm.contracts import CONTRACT_TYPES
+        conn = _conn()
+        try:
+            ctype = (request.args.get('type') or 'indefinite').strip()
+            if ctype not in CONTRACT_TYPES:
+                return jsonify({'error': 'Loại HĐ không hợp lệ'}), 400
+            if request.method == 'GET':
+                meta = ld_tpl.template_meta(conn, ctype)
+                custom = ld_tpl.get_custom_template_html(conn, ctype)
+                body = custom or ld_tpl.render_system_default_template(app, ctype)
+                return jsonify({
+                    'contract_type': ctype,
+                    'type_label': CONTRACT_TYPES.get(ctype),
+                    'html': body,
+                    'is_custom': meta['is_custom'],
+                    'tenant_scoped': True,
+                    'scope_note': 'Mẫu chỉ lưu trong dữ liệu doanh nghiệp hiện tại; tenant khác không bị ảnh hưởng.',
+                    'placeholders': ld_tpl.placeholders_guide(),
+                    'used': ld_tpl.extract_placeholders(body),
+                })
+            if request.method == 'DELETE':
+                ld_tpl.reset_custom_template(conn, ctype)
+                sqlite_commit(conn, label='hrm_ld_tpl_reset')
+                return jsonify({
+                    'success': True,
+                    'html': ld_tpl.render_system_default_template(app, ctype),
+                    'message': 'Đã khôi phục mẫu mặc định hệ thống cho loại HĐ này.',
+                })
+            data = request.get_json(silent=True) or {}
+            html_body = data.get('html')
+            if html_body is None and request.data:
+                html_body = request.get_data(as_text=True)
+            ld_tpl.set_custom_template_html(conn, ctype, html_body or '')
+            sqlite_commit(conn, label='hrm_ld_tpl')
+            return jsonify({'success': True})
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/hrm/contracts/template/export')
+    @login_required
+    def api_hrm_contract_template_export():
+        from flask import Response
+        from Services.hrm import contract_template_store as ld_tpl
+        from Services.hrm.contracts import CONTRACT_TYPES
+        conn = _conn()
+        try:
+            ctype = (request.args.get('type') or 'indefinite').strip()
+            if ctype not in CONTRACT_TYPES:
+                return jsonify({'error': 'Loại HĐ không hợp lệ'}), 400
+            custom = ld_tpl.get_custom_template_html(conn, ctype)
+            body = custom or ld_tpl.render_system_default_template(app, ctype)
+            fname = f'mau-hdld-{ctype}.html'
+            return Response(
+                body,
+                mimetype='text/html; charset=utf-8',
+                headers={'Content-Disposition': f'attachment; filename="{fname}"'},
+            )
+        finally:
+            conn.close()
+
+    @app.route('/api/hrm/contracts/template/import', methods=['POST'])
+    @login_required
+    def api_hrm_contract_template_import():
+        import html as html_mod
+        import io
+        import zipfile
+
+        from Services.hrm import contract_template_store as ld_tpl
+        from Services.hrm.contracts import CONTRACT_TYPES
+        conn = _conn()
+        try:
+            ctype = (request.form.get('type') or request.args.get('type') or 'indefinite').strip()
+            if ctype not in CONTRACT_TYPES:
+                return jsonify({'error': 'Loại HĐ không hợp lệ'}), 400
+            f = request.files.get('file')
+            raw = ''
+            if f and f.filename:
+                name = (f.filename or '').lower()
+                data = f.read()
+                if name.endswith(('.html', '.htm', '.txt')):
+                    raw = data.decode('utf-8', errors='replace')
+                elif name.endswith('.docx'):
+                    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                        xml = zf.read('word/document.xml').decode('utf-8', errors='replace')
+                    text = re.sub(r'</w:p>', '\n', xml)
+                    text = re.sub(r'<[^>]+>', '', text)
+                    text = html_mod.unescape(text)
+                    if '[[CONTRACT_NO]]' in text and '[[SALARY_TABLE]]' in text:
+                        raw = (
+                            '<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"/>'
+                            '<title>HĐLĐ</title></head><body><pre style="white-space:pre-wrap;'
+                            'font-family:Times New Roman,serif">'
+                            + html_mod.escape(text) + '</pre></body></html>'
+                        )
+                        for k, _ in ld_tpl.KNOWN_PLACEHOLDERS:
+                            raw = raw.replace(html_mod.escape(f'[[{k}]]'), f'[[{k}]]')
+                    else:
+                        return jsonify({
+                            'error': 'File .docx thiếu mã [[CONTRACT_NO]] / [[SALARY_TABLE]]. '
+                                     'Nên xuất mẫu HTML, sửa rồi Lưu dưới dạng Trang web (.html).',
+                        }), 400
+                else:
+                    return jsonify({'error': 'Chỉ nhận .html / .htm / .txt hoặc .docx có placeholder.'}), 400
+            else:
+                raw = (request.get_json(silent=True) or {}).get('html') or ''
+            ld_tpl.set_custom_template_html(conn, ctype, raw)
+            sqlite_commit(conn, label='hrm_ld_tpl_import')
+            return jsonify({
+                'success': True,
+                'placeholders': ld_tpl.extract_placeholders(raw),
+            })
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
         finally:
             conn.close()
 

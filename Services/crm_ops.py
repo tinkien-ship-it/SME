@@ -480,6 +480,23 @@ def _next_contract_no(conn: sqlite3.Connection) -> str:
     return f'{prefix}{seq:04d}'
 
 
+def _calc_contract_totals(items: list[dict]) -> tuple[float, float, float]:
+    subtotal = 0.0
+    tax = 0.0
+    for it in items:
+        qty = _f(it.get('qty'))
+        price = _f(it.get('unit_price'))
+        rate = _f(it.get('tax_rate'))
+        line = qty * price
+        vat = line * rate / 100.0
+        it['line_subtotal'] = round(line, 2)
+        it['vat_amount'] = round(vat, 2)
+        it['line_total'] = round(line + vat, 2)
+        subtotal += line
+        tax += vat
+    return round(subtotal, 2), round(tax, 2), round(subtotal + tax, 2)
+
+
 def list_contracts(conn: sqlite3.Connection, customer_id: int | None = None) -> list[dict]:
     ready(conn)
     sql = """
@@ -496,6 +513,34 @@ def list_contracts(conn: sqlite3.Connection, customer_id: int | None = None) -> 
     return _rows(conn.execute(sql, params))
 
 
+def get_contract(conn: sqlite3.Connection, cid: int) -> dict | None:
+    ready(conn)
+    row = conn.execute(
+        """
+        SELECT ct.*,
+               COALESCE(c.company_name, c.name) AS customer_name,
+               c.tax_code AS customer_tax_code,
+               c.address AS customer_address,
+               c.phone AS customer_phone,
+               c.email AS customer_email
+        FROM crm_contracts ct
+        LEFT JOIN customers c ON c.id = ct.customer_id
+        WHERE ct.id = ?
+        """,
+        (cid,),
+    ).fetchone()
+    if not row:
+        return None
+    ct = _row(row)
+    ct['items'] = _rows(
+        conn.execute(
+            'SELECT * FROM crm_contract_items WHERE contract_id = ? ORDER BY id',
+            (cid,),
+        )
+    )
+    return ct
+
+
 def upsert_contract(conn: sqlite3.Connection, data: dict, cid: int | None = None) -> int:
     ready(conn)
     status = (data.get('status') or 'draft').strip()
@@ -504,10 +549,34 @@ def upsert_contract(conn: sqlite3.Connection, data: dict, cid: int | None = None
     contract_no = (data.get('contract_no') or '').strip()
     if cid:
         existing = conn.execute('SELECT contract_no FROM crm_contracts WHERE id=?', (cid,)).fetchone()
+        if not existing:
+            raise ValueError('Không tìm thấy hợp đồng')
         if not contract_no:
             contract_no = _row(existing).get('contract_no')
     if not contract_no:
         contract_no = _next_contract_no(conn)
+
+    items = data.get('items')
+    if items is None and cid:
+        items = _rows(
+            conn.execute(
+                'SELECT * FROM crm_contract_items WHERE contract_id = ? ORDER BY id',
+                (cid,),
+            )
+        )
+    if not isinstance(items, list):
+        items = []
+
+    if items:
+        subtotal, tax_amount, total = _calc_contract_totals(items)
+    else:
+        # Cho phép nhập giá trị thủ công khi chưa có dòng hàng
+        subtotal = _f(data.get('subtotal'))
+        tax_amount = _f(data.get('tax_amount'))
+        total = _f(data.get('amount'))
+        if total and not subtotal and not tax_amount:
+            subtotal = total
+
     vals = (
         contract_no,
         data.get('customer_id') or None,
@@ -518,11 +587,24 @@ def upsert_contract(conn: sqlite3.Connection, data: dict, cid: int | None = None
         (data.get('signed_date') or '').strip() or None,
         (data.get('start_date') or '').strip() or None,
         (data.get('end_date') or '').strip() or None,
-        _f(data.get('amount')),
+        total,
+        subtotal,
+        tax_amount,
         status,
         (data.get('file_path') or '').strip() or None,
         (data.get('notes') or '').strip() or None,
         (data.get('owner') or '').strip() or None,
+        (data.get('place') or '').strip() or None,
+        (data.get('payment_method') or '').strip() or None,
+        (data.get('payment_term') or '').strip() or None,
+        (data.get('delivery_place') or '').strip() or None,
+        (data.get('delivery_schedule') or '').strip() or None,
+        (data.get('shipping_party') or '').strip() or None,
+        (data.get('warranty_months') or '').strip() or None,
+        (data.get('quality_notes') or '').strip() or None,
+        (data.get('packaging_notes') or '').strip() or None,
+        (data.get('buyer_rep') or '').strip() or None,
+        (data.get('buyer_title') or '').strip() or None,
         _now(),
     )
     if cid:
@@ -530,28 +612,68 @@ def upsert_contract(conn: sqlite3.Connection, data: dict, cid: int | None = None
             """
             UPDATE crm_contracts SET
                 contract_no=?, customer_id=?, quote_id=?, opportunity_id=?, sale_id=?,
-                title=?, signed_date=?, start_date=?, end_date=?, amount=?, status=?,
-                file_path=?, notes=?, owner=?, updated_at=?
+                title=?, signed_date=?, start_date=?, end_date=?, amount=?,
+                subtotal=?, tax_amount=?, status=?,
+                file_path=?, notes=?, owner=?,
+                place=?, payment_method=?, payment_term=?, delivery_place=?,
+                delivery_schedule=?, shipping_party=?, warranty_months=?,
+                quality_notes=?, packaging_notes=?, buyer_rep=?, buyer_title=?,
+                updated_at=?
             WHERE id=?
             """,
             vals + (cid,),
         )
-        return int(cid)
-    cur = conn.execute(
-        """
-        INSERT INTO crm_contracts (
-            contract_no, customer_id, quote_id, opportunity_id, sale_id, title,
-            signed_date, start_date, end_date, amount, status, file_path, notes,
-            owner, created_at, updated_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """,
-        vals[:-1] + (_now(), _now()),
-    )
-    return int(cur.lastrowid)
+        out_id = int(cid)
+        if 'items' in data:
+            conn.execute('DELETE FROM crm_contract_items WHERE contract_id = ?', (out_id,))
+    else:
+        cur = conn.execute(
+            """
+            INSERT INTO crm_contracts (
+                contract_no, customer_id, quote_id, opportunity_id, sale_id, title,
+                signed_date, start_date, end_date, amount, subtotal, tax_amount, status,
+                file_path, notes, owner,
+                place, payment_method, payment_term, delivery_place, delivery_schedule,
+                shipping_party, warranty_months, quality_notes, packaging_notes,
+                buyer_rep, buyer_title, created_at, updated_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            vals[:-1] + (_now(), _now()),
+        )
+        out_id = int(cur.lastrowid)
+
+    if 'items' in data or not cid:
+        for it in items:
+            name = (it.get('product_name') or '').strip()
+            if not name and not it.get('product_id'):
+                continue
+            conn.execute(
+                """
+                INSERT INTO crm_contract_items (
+                    contract_id, product_id, product_name, unit, qty, unit_price,
+                    tax_rate, line_subtotal, vat_amount, line_total, notes
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    out_id,
+                    it.get('product_id') or None,
+                    name or None,
+                    (it.get('unit') or '').strip() or None,
+                    _f(it.get('qty')) or 1,
+                    _f(it.get('unit_price')),
+                    _f(it.get('tax_rate')),
+                    _f(it.get('line_subtotal')),
+                    _f(it.get('vat_amount')),
+                    _f(it.get('line_total')),
+                    (it.get('notes') or '').strip() or None,
+                ),
+            )
+    return out_id
 
 
 def delete_contract(conn: sqlite3.Connection, cid: int) -> None:
     ready(conn)
+    conn.execute('DELETE FROM crm_contract_items WHERE contract_id = ?', (cid,))
     conn.execute('DELETE FROM crm_contracts WHERE id = ?', (cid,))
 
 

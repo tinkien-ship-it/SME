@@ -78,41 +78,42 @@ def cpl_by_month(conn: sqlite3.Connection, months: int = 6) -> dict:
     spends = []
     leads = []
     cpls = []
+    keys = []
     for i in range(months - 1, -1, -1):
         y = now.year
         m = now.month - i
         while m <= 0:
             m += 12
             y -= 1
-        key = f'{y:04d}-{m:02d}'
-        labels.append(key)
-        spend_row = conn.execute(
-            """
-            SELECT COALESCE(SUM(spend), 0) AS s FROM crm_campaigns
-            WHERE (start_date IS NULL OR start_date <= ?)
-              AND (end_date IS NULL OR end_date >= ?)
-              AND status IN ('active', 'ended', 'paused')
-            """,
-            (f'{key}-31', f'{key}-01'),
-        ).fetchone()
-        # Prefer spend booked in month via updated notes — also sum spend for campaigns
-        # overlapping month. Additionally allow period-tagged spend in period_key style:
-        spend2 = conn.execute(
-            """
-            SELECT COALESCE(SUM(spend), 0) AS s FROM crm_campaigns
-            WHERE substr(COALESCE(start_date, created_at), 1, 7) = ?
-            """,
-            (key,),
-        ).fetchone()
-        spend = max(_f(_row(spend_row).get('s')), _f(_row(spend2).get('s')))
-        lead_n = conn.execute(
-            """
-            SELECT COUNT(*) AS n FROM crm_leads
-            WHERE substr(COALESCE(created_at, ''), 1, 7) = ?
-            """,
-            (key,),
-        ).fetchone()
-        n = int(_row(lead_n).get('n') or 0)
+        keys.append(f'{y:04d}-{m:02d}')
+    labels = list(keys)
+
+    # 1 query spend theo tháng bắt đầu; 1 query lead — tránh 3×N round-trip
+    spend_map: dict[str, float] = {}
+    for r in _rows(conn.execute(
+        """
+        SELECT substr(COALESCE(start_date, created_at), 1, 7) AS ym,
+               COALESCE(SUM(spend), 0) AS s
+        FROM crm_campaigns
+        WHERE status IN ('active', 'ended', 'paused', 'draft')
+        GROUP BY substr(COALESCE(start_date, created_at), 1, 7)
+        """
+    )):
+        spend_map[str(r.get('ym') or '')] = _f(r.get('s'))
+
+    lead_map: dict[str, int] = {}
+    for r in _rows(conn.execute(
+        """
+        SELECT substr(COALESCE(created_at, ''), 1, 7) AS ym, COUNT(*) AS n
+        FROM crm_leads
+        GROUP BY substr(COALESCE(created_at, ''), 1, 7)
+        """
+    )):
+        lead_map[str(r.get('ym') or '')] = int(r.get('n') or 0)
+
+    for key in keys:
+        spend = spend_map.get(key, 0.0)
+        n = lead_map.get(key, 0)
         spends.append(round(spend, 0))
         leads.append(n)
         cpls.append(round(spend / n, 0) if n else 0)
@@ -328,28 +329,38 @@ def ticket_sla_trend(conn: sqlite3.Connection, days: int = 30) -> dict:
 
 
 def retention_cohort(conn: sqlite3.Connection, months: int = 6) -> dict:
-    """Cohort theo tháng đơn đầu; % KH còn mua lại ở tháng +1..+N."""
+    """Cohort theo tháng đơn đầu; % KH còn mua lại ở tháng +1..+N.
+
+    Chỉ quét cửa sổ ~2*months gần nhất — tránh full-scan bảng sale trên VPS lớn.
+    """
     ready(conn)
+    months = max(1, min(int(months or 6), 12))
+    # Cửa sổ: cohort trong N tháng gần + offset tới N-1 → cần ~2N tháng lịch sử
+    lookback = months * 2 + 1
     firsts = _rows(conn.execute(
         """
         SELECT customer_id, substr(MIN(date), 1, 7) AS cohort
         FROM sale
         WHERE customer_id IS NOT NULL AND customer_id > 0
           AND COALESCE(status, '') NOT IN ('cancelled', 'deleted')
+          AND date >= date('now', 'localtime', ?)
         GROUP BY customer_id
-        """
+        """,
+        (f'-{lookback * 31} day',),
     ))
     if not firsts:
-        return {'cohorts': [], 'months': list(range(0, months)), 'matrix': []}
+        return {'cohorts': [], 'months': list(range(0, months)), 'matrix': [], 'sizes': []}
 
-    sales_by_cust = {}
+    sales_by_cust: dict[Any, set] = {}
     for r in _rows(conn.execute(
         """
         SELECT customer_id, substr(date, 1, 7) AS ym
         FROM sale
         WHERE customer_id IS NOT NULL AND customer_id > 0
           AND COALESCE(status, '') NOT IN ('cancelled', 'deleted')
-        """
+          AND date >= date('now', 'localtime', ?)
+        """,
+        (f'-{lookback * 31} day',),
     )):
         sales_by_cust.setdefault(r['customer_id'], set()).add(r['ym'])
 
@@ -364,7 +375,6 @@ def retention_cohort(conn: sqlite3.Connection, months: int = 6) -> dict:
             y -= 1
         return f'{y:04d}-{m:02d}'
 
-    # last N cohort months
     now = datetime.now()
     cohort_keys = []
     for i in range(months - 1, -1, -1):
@@ -392,15 +402,61 @@ def retention_cohort(conn: sqlite3.Connection, months: int = 6) -> dict:
     return {'cohorts': cohort_keys, 'sizes': sizes, 'months': list(range(months)), 'matrix': matrix}
 
 
-def analytics_bundle(conn: sqlite3.Connection) -> dict:
-    ensure_crm_schema(conn, commit=False)
-    return {
-        'source_pie': source_pie(conn),
-        'cpl': cpl_by_month(conn),
-        'funnel': sales_funnel(conn),
-        'kpi': revenue_vs_target(conn, 'month'),
-        'kpi_quarter': revenue_vs_target(conn, 'quarter'),
-        'leaderboard': sales_leaderboard(conn),
-        'ticket_sla': ticket_sla_trend(conn),
-        'retention': retention_cohort(conn),
+def _empty_analytics_section(name: str) -> Any:
+    empties = {
+        'source_pie': {'labels': [], 'values': [], 'percents': [], 'total': 0},
+        'cpl': {'labels': [], 'spend': [], 'leads': [], 'cpl': []},
+        'funnel': {'stages': [], 'labels': [], 'counts': [], 'amounts': [], 'conversions': []},
+        'kpi': {},
+        'kpi_quarter': {},
+        'leaderboard': {'period_key': '', 'period_type': 'month', 'items': []},
+        'ticket_sla': {'labels': [], 'avg_hours': [], 'counts': []},
+        'retention': {'cohorts': [], 'sizes': [], 'months': [], 'matrix': []},
     }
+    return empties.get(name, {})
+
+
+def analytics_bundle(conn: sqlite3.Connection, *, budget_sec: float | None = None) -> dict:
+    """Gói analytics — mỗi phần soft-fail; cắt nếu vượt ngân sách thời gian (VPS)."""
+    import os
+    import time
+
+    ensure_crm_schema(conn, commit=False)
+    if budget_sec is None:
+        try:
+            budget_sec = float(os.environ.get('SME_CRM_ANALYTICS_BUDGET_SEC', '8') or 8)
+        except ValueError:
+            budget_sec = 8.0
+    t0 = time.monotonic()
+    partial = False
+    errors: list[str] = []
+
+    def _run(name: str, fn):
+        nonlocal partial
+        if time.monotonic() - t0 > budget_sec:
+            partial = True
+            return _empty_analytics_section(name)
+        try:
+            return fn()
+        except Exception as exc:
+            partial = True
+            errors.append(f'{name}: {exc}')
+            return _empty_analytics_section(name)
+
+    out = {
+        'source_pie': _run('source_pie', lambda: source_pie(conn)),
+        'cpl': _run('cpl', lambda: cpl_by_month(conn)),
+        'funnel': _run('funnel', lambda: sales_funnel(conn)),
+        'kpi': _run('kpi', lambda: revenue_vs_target(conn, 'month')),
+        'kpi_quarter': _run('kpi_quarter', lambda: revenue_vs_target(conn, 'quarter')),
+        'leaderboard': _run('leaderboard', lambda: sales_leaderboard(conn)),
+        'ticket_sla': _run('ticket_sla', lambda: ticket_sla_trend(conn)),
+        'retention': _run('retention', lambda: retention_cohort(conn)),
+        '_meta': {
+            'elapsed_ms': int((time.monotonic() - t0) * 1000),
+            'budget_sec': budget_sec,
+            'partial': partial,
+            'errors': errors[:5],
+        },
+    }
+    return out

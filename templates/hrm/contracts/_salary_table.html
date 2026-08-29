@@ -1,4 +1,7 @@
 {# Bảng lương & phụ cấp — 7 khoản từ modal HĐLĐ #}
+{% if export_template_mode %}
+[[SALARY_TABLE]]
+{% else %}
 <table class="pay">
   <thead>
     <tr>
@@ -32,3 +35,4 @@
   · Giờ công/ngày: <strong>{{ work_hours_day_display }}</strong> giờ
   · Làm thêm giờ: {{ ot_rates_text }}.
 </p>
+{% endif %}
