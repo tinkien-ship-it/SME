@@ -1096,12 +1096,61 @@ def register_crm_routes(app):
 
             if request.method == 'GET':
                 from Services import crm_email as crm_mail
-                token = crm_ops.ensure_inbound_token(conn)
-                owners = crm_ops.sync_assign_owners_from_staff(conn)
-                sqlite_commit(conn, label='crm_settings_token')
+                try:
+                    token = crm_ops.ensure_inbound_token(conn)
+                except Exception as tok_exc:
+                    app.logger.warning('crm settings token: %s', tok_exc)
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    token = ''
+                try:
+                    owners = crm_ops.sync_assign_owners_from_staff(conn)
+                    sqlite_commit(conn, label='crm_settings_token')
+                except Exception as own_exc:
+                    app.logger.warning('crm settings owners: %s', own_exc)
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    owners = []
                 from flask import g
                 tid = getattr(g, 'tenant_id', None)
-                staff = crm_ops.list_crm_sales_staff(conn)
+                try:
+                    staff = crm_ops.list_crm_sales_staff(conn)
+                except Exception as st_exc:
+                    app.logger.warning('crm settings staff: %s', st_exc)
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+                    staff = []
+                try:
+                    kpi_prefer = prefer_hr_kpi(conn)
+                except Exception:
+                    kpi_prefer = False
+                try:
+                    kpi_bridge = _kpi_bridge_payload()
+                except Exception as kpi_exc:
+                    # KPI SQL lỗi (PG compat) không được chặn danh sách NV bán hàng
+                    app.logger.warning('crm settings kpi_bridge: %s', kpi_exc)
+                    kpi_bridge = {
+                        'prefer_hr': bool(kpi_prefer),
+                        'kpi_settings_url': '/kpi_settings',
+                        'hr_sales_rev': {
+                            'found': False, 'target': 0, 'source': None, 'detail': '',
+                        },
+                        'gauge': {
+                            'period_key': '', 'target': 0, 'actual': 0, 'percent': 0,
+                            'target_source': 'none', 'target_detail': '',
+                        },
+                        'error': str(kpi_exc)[:200],
+                    }
+                try:
+                    smtp = crm_mail.get_tenant_smtp_public(conn)
+                except Exception:
+                    smtp = {}
                 return jsonify({
                     'inbound_token': token,
                     'assign_owners': owners,
@@ -1109,9 +1158,9 @@ def register_crm_routes(app):
                     'assignable_users': staff,
                     'inbound_url': _crm_inbound_url(),
                     'tenant_id': tid,
-                    'kpi_prefer_hr': prefer_hr_kpi(conn),
-                    'kpi_bridge': _kpi_bridge_payload(),
-                    'smtp': crm_mail.get_tenant_smtp_public(conn),
+                    'kpi_prefer_hr': kpi_prefer,
+                    'kpi_bridge': kpi_bridge,
+                    'smtp': smtp,
                 })
             data = request.get_json() or {}
             if 'kpi_prefer_hr' in data:

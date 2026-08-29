@@ -413,8 +413,8 @@ def _employee_status_counts(cursor):
     row = cursor.execute(
         """
         SELECT
-            SUM(CASE WHEN CAST(COALESCE(status, 1) AS TEXT) IN ('0', '0.0') THEN 0 ELSE 1 END) AS active,
-            SUM(CASE WHEN CAST(COALESCE(status, 1) AS TEXT) IN ('0', '0.0') THEN 1 ELSE 0 END) AS inactive,
+            SUM(CASE WHEN CAST(COALESCE(status, '1') AS TEXT) IN ('0', '0.0') THEN 0 ELSE 1 END) AS active,
+            SUM(CASE WHEN CAST(COALESCE(status, '1') AS TEXT) IN ('0', '0.0') THEN 1 ELSE 0 END) AS inactive,
             COUNT(*) AS total
         FROM employees
         """

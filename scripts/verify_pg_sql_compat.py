@@ -31,11 +31,19 @@ CASES = [
     ("ORDER BY fullname COLLATE NOCASE", 'fullname'),
     ("WHERE date(v.punched_at) = date('now', 'localtime')", "TO_CHAR"),
     ("date('now', 'localtime', '-30 day')", 'INTERVAL'),
-    ("AND date(v.punched_at) = date(?)", 'LEFT(BTRIM'),
+    ("AND date(v.punched_at) = date(?)", 'LEFT(CAST'),
     ("GROUP_CONCAT(x.account_code, ', ')", 'string_agg'),
     ("INSERT OR IGNORE INTO crm_assign_state (id, last_owner_index, owners_csv) VALUES (1, -1, '')", 'ON CONFLICT'),
     ("PRAGMA database_list", 'main'),
     ('ORDER BY CASE o.stage WHEN "won" THEN 2', "WHEN 'won'"),
+    ("WHERE code GLOB 'KHO_[0-9]*'", ' ~ '),
+    ("substr(entry_no, 3) GLOB '[0-9]*'", ' ~ '),
+    ("date(?, '-1 day')", 'INTERVAL'),
+    ("CAST(COALESCE(status, 1) AS TEXT)", "CAST(status AS text)"),
+    ("date(COALESCE(NULLIF(TRIM(si.invoice_date), ''), si.date))", "CAST((si.date) AS text)"),
+    ("julianday('now') - julianday(COALESCE(opened_at, created_at))", 'COALESCE(opened_at, created_at)'),
+    ("date('now', 'localtime', ?)", 'CAST(%s AS interval)'),
+    ("INSERT OR REPLACE INTO crm_settings (key, value) VALUES (?, ?)", 'ON CONFLICT'),
 ]
 
 failed = 0

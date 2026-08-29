@@ -58,8 +58,7 @@ def set_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
     ready(conn)
     conn.execute(
         """
-        INSERT INTO crm_settings (key, value) VALUES (?, ?)
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        INSERT OR REPLACE INTO crm_settings (key, value) VALUES (?, ?)
         """,
         (key, value),
     )
@@ -87,18 +86,35 @@ def list_crm_sales_staff(conn: sqlite3.Connection) -> list[dict]:
     order_cases = ' '.join(
         f"WHEN '{r}' THEN {i}" for i, r in enumerate(CRM_SALES_ROLES)
     )
-    rows = conn.execute(
-        f"""
-        SELECT id, username, full_name, role
-        FROM users
-        WHERE COALESCE(TRIM(username), '') != ''
-          AND TRIM(COALESCE(role, '')) IN ({placeholders})
-        ORDER BY
-          CASE TRIM(COALESCE(role, '')) {order_cases} ELSE 99 END,
-          COALESCE(NULLIF(TRIM(full_name), ''), username), username
-        """,
-        CRM_SALES_ROLES,
-    )
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT id, username, full_name, role
+            FROM users
+            WHERE COALESCE(username, '') != ''
+              AND COALESCE(role, '') IN ({placeholders})
+            ORDER BY
+              CASE COALESCE(role, '') {order_cases} ELSE 99 END,
+              COALESCE(full_name, username), username
+            """,
+            CRM_SALES_ROLES,
+        )
+    except Exception:
+        # Schema cũ / thiếu full_name — fallback tối thiểu
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        rows = conn.execute(
+            f"""
+            SELECT id, username, role
+            FROM users
+            WHERE COALESCE(username, '') != ''
+              AND COALESCE(role, '') IN ({placeholders})
+            ORDER BY username
+            """,
+            CRM_SALES_ROLES,
+        )
     out: list[dict] = []
     for r in _rows(rows):
         username = str(r.get('username') or '').strip()

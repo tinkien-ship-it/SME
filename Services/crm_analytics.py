@@ -306,6 +306,9 @@ def sales_leaderboard(conn: sqlite3.Connection, period_type: str = 'month', limi
 
 def ticket_sla_trend(conn: sqlite3.Connection, days: int = 30) -> dict:
     ready(conn)
+    days = max(1, min(int(days or 30), 365))
+    from datetime import timedelta
+    cutoff = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
     rows = _rows(conn.execute(
         """
         SELECT substr(COALESCE(resolved_at, closed_at, ''), 1, 10) AS d,
@@ -315,11 +318,11 @@ def ticket_sla_trend(conn: sqlite3.Connection, days: int = 30) -> dict:
                COUNT(*) AS n
         FROM crm_tickets
         WHERE COALESCE(resolved_at, closed_at) IS NOT NULL
-          AND date(COALESCE(resolved_at, closed_at)) >= date('now', 'localtime', ?)
+          AND date(COALESCE(resolved_at, closed_at)) >= date(?)
         GROUP BY substr(COALESCE(resolved_at, closed_at, ''), 1, 10)
         ORDER BY d
         """,
-        (f'-{int(days)} day',),
+        (cutoff,),
     ))
     return {
         'labels': [r['d'] for r in rows],
@@ -337,16 +340,18 @@ def retention_cohort(conn: sqlite3.Connection, months: int = 6) -> dict:
     months = max(1, min(int(months or 6), 12))
     # Cửa sổ: cohort trong N tháng gần + offset tới N-1 → cần ~2N tháng lịch sử
     lookback = months * 2 + 1
+    from datetime import timedelta
+    cutoff = (datetime.now() - timedelta(days=lookback * 31)).strftime('%Y-%m-%d')
     firsts = _rows(conn.execute(
         """
         SELECT customer_id, substr(MIN(date), 1, 7) AS cohort
         FROM sale
         WHERE customer_id IS NOT NULL AND customer_id > 0
           AND COALESCE(status, '') NOT IN ('cancelled', 'deleted')
-          AND date >= date('now', 'localtime', ?)
+          AND date(date) >= date(?)
         GROUP BY customer_id
         """,
-        (f'-{lookback * 31} day',),
+        (cutoff,),
     ))
     if not firsts:
         return {'cohorts': [], 'months': list(range(0, months)), 'matrix': [], 'sizes': []}
@@ -358,9 +363,9 @@ def retention_cohort(conn: sqlite3.Connection, months: int = 6) -> dict:
         FROM sale
         WHERE customer_id IS NOT NULL AND customer_id > 0
           AND COALESCE(status, '') NOT IN ('cancelled', 'deleted')
-          AND date >= date('now', 'localtime', ?)
+          AND date(date) >= date(?)
         """,
-        (f'-{lookback * 31} day',),
+        (cutoff,),
     )):
         sales_by_cust.setdefault(r['customer_id'], set()).add(r['ym'])
 

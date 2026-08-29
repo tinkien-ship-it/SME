@@ -152,6 +152,7 @@ TABLE_UPSERT_KEYS: dict[str, list[str]] = {
     'accounting_jobs': ['sale_id', 'job_type', 'status'],
     'warehouses': ['code'],
     'crm_assign_state': ['id'],
+    'crm_settings': ['key'],
 }
 
 _IOR_RE = re.compile(
@@ -313,8 +314,118 @@ def _rewrite_date_now_forms(sql: str) -> str:
     return _DATE_NOW_MODS.sub(_repl, sql)
 
 
+def _rewrite_date_now_bound_param(sql: str) -> str:
+    """date('now'[, 'localtime'], ?) → CURRENT_DATE + CAST(? AS interval)."""
+    return re.sub(
+        r"date\s*\(\s*['\"]now['\"]\s*(?:,\s*['\"]localtime['\"])?\s*,\s*\?\s*\)",
+        "TO_CHAR(CURRENT_DATE + CAST(? AS interval), 'YYYY-MM-DD')",
+        sql,
+        flags=re.IGNORECASE,
+    )
+
+
+# date(?, '-1 day') / date(col, '+7 days') — modifier cố định (không phải ? động)
+_DATE_EXPR_DAY_MOD = re.compile(
+    r"date\s*\(\s*([^,]+?)\s*,\s*['\"]([+\-]?\d+)\s+days?['\"]\s*\)",
+    re.IGNORECASE,
+)
+
+
+def _rewrite_date_expr_day_mod(sql: str) -> str:
+    """date(expr, '±N day') → TO_CHAR((CAST(expr AS date) + INTERVAL), …)."""
+
+    def _repl(m: re.Match) -> str:
+        expr = m.group(1).strip()
+        days = int(m.group(2))
+        # Placeholder ? giữ nguyên — CAST(? AS date) hợp lệ trên PG sau adapt
+        return (
+            f"TO_CHAR((CAST(({expr}) AS date) + INTERVAL '{days} days'), 'YYYY-MM-DD')"
+        )
+
+    return _DATE_EXPR_DAY_MOD.sub(_repl, sql)
+
+
+def _extract_fn_arg(sql: str, open_paren_idx: int) -> tuple[str, int] | None:
+    """Từ vị trí '(' trả (inner, index_sau_')')."""
+    n = len(sql)
+    if open_paren_idx >= n or sql[open_paren_idx] != '(':
+        return None
+    depth = 1
+    j = open_paren_idx + 1
+    while j < n and depth:
+        ch = sql[j]
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+        j += 1
+    if depth != 0:
+        return None
+    return sql[open_paren_idx + 1:j - 1].strip(), j
+
+
+def _rewrite_simple_trim(sql: str) -> str:
+    """TRIM(x) / BTRIM(x) 1-arg → BTRIM(CAST(x AS text)) — tránh btrim(date)."""
+    out: list[str] = []
+    i = 0
+    n = len(sql)
+    lower = sql.lower()
+    while i < n:
+        # Tìm TRIM( hoặc BTRIM( (không phải FROM-form)
+        m_trim = None
+        for name in ('btrim(', 'trim('):
+            idx = lower.find(name, i)
+            if idx < 0:
+                continue
+            if idx > 0 and (sql[idx - 1].isalnum() or sql[idx - 1] == '_'):
+                continue
+            if m_trim is None or idx < m_trim[0]:
+                m_trim = (idx, len(name) - 1)  # len without '('
+        if m_trim is None:
+            out.append(sql[i:])
+            break
+        idx, namelen = m_trim
+        out.append(sql[i:idx])
+        extracted = _extract_fn_arg(sql, idx + namelen)
+        if extracted is None:
+            out.append(sql[idx:idx + namelen + 1])
+            i = idx + namelen + 1
+            continue
+        inner, end_j = extracted
+        up = inner.upper().lstrip()
+        # TRIM(BOTH … FROM …) / nhiều arg — bỏ qua
+        if ',' in inner or up.startswith('BOTH') or up.startswith('LEADING') or up.startswith('TRAILING'):
+            out.append(sql[idx:end_j])
+            i = end_j
+            continue
+        # Đã CAST AS text
+        if ' AS TEXT' in up or ' AS VARCHAR' in up:
+            out.append(f'BTRIM({inner})')
+        else:
+            out.append(f'BTRIM(CAST(({inner}) AS text))')
+        i = end_j
+    return ''.join(out)
+
+
+def _rewrite_coalesce_nullif_trim(sql: str) -> str:
+    """COALESCE(NULLIF(BTRIM(CAST((a) AS text)), ''), b) → ép b sang text (tránh text/date).
+
+    Chỉ xử lý định danh đơn giản ``a``/``b`` (vd. ``si.invoice_date``, ``si.date``).
+    """
+    return re.sub(
+        r"COALESCE\s*\(\s*NULLIF\s*\(\s*BTRIM\s*\(\s*CAST\s*\(\s*\(([\w.]+)\)\s*AS\s*text\s*\)\s*\)\s*,\s*''\s*\)\s*,\s*"
+        r"(?!CAST\s*\()([\w.]+)\s*\)",
+        r"COALESCE(NULLIF(BTRIM(CAST((\1) AS text)), ''), CAST((\2) AS text))",
+        sql,
+        flags=re.IGNORECASE,
+    )
+
+
 def _rewrite_date_fn_calls(sql: str) -> str:
-    """date(expr) → LEFT(BTRIM(text), 10) — một lần expr (không nhân đôi placeholder ?)."""
+    """date(expr) → LEFT(CAST(text), 10) — một lần expr (không nhân đôi placeholder ?).
+
+    Không dùng BTRIM bọc ngoài (tránh lỗi kiểu); TRIM bên trong đã ép text.
+    """
     out: list[str] = []
     i = 0
     n = len(sql)
@@ -329,25 +440,165 @@ def _rewrite_date_fn_calls(sql: str) -> str:
             i = idx + 5
             continue
         out.append(sql[i:idx])
-        depth = 1
-        j = idx + 5
-        while j < n and depth:
-            ch = sql[j]
-            if ch == '(':
-                depth += 1
-            elif ch == ')':
-                depth -= 1
-            j += 1
-        inner = sql[idx + 5:j - 1].strip()
+        extracted = _extract_fn_arg(sql, idx + 4)
+        if extracted is None:
+            out.append(sql[idx:idx + 5])
+            i = idx + 5
+            continue
+        inner, j = extracted
         up = inner.upper()
-        # Đã rewrite date('now') → TO_CHAR(...)
+        # Đã rewrite date('now') / date(expr, '±N day') → TO_CHAR(...)
         if up.startswith('TO_CHAR(') or up.startswith('CURRENT_DATE'):
             out.append(inner)
         else:
-            # Một lần duy nhất — trước đây CASE lặp inner 3 lần → 4? / 6? vs 2 params
-            out.append(f"LEFT(BTRIM(CAST(({inner}) AS text)), 10)")
+            # Không split theo ',' — COALESCE/NULLIF bên trong cũng có dấu phẩy
+            out.append(f"LEFT(CAST(({inner}) AS text), 10)")
         i = j
     return ''.join(out)
+
+
+def _glob_pattern_to_regex(pat: str) -> str:
+    """SQLite GLOB → POSIX regex (neo ^$)."""
+    out: list[str] = []
+    i = 0
+    n = len(pat)
+    while i < n:
+        c = pat[i]
+        if c == '*':
+            out.append('.*')
+        elif c == '?':
+            out.append('.')
+        elif c == '[':
+            j = i + 1
+            if j < n and pat[j] in ('!', '^'):
+                j += 1
+            if j < n and pat[j] == ']':
+                j += 1
+            while j < n and pat[j] != ']':
+                j += 1
+            if j >= n:
+                out.append(re.escape(c))
+            else:
+                chunk = pat[i:j + 1]
+                # GLOB [!abc] → regex [^abc]
+                if len(chunk) > 2 and chunk[1] == '!':
+                    chunk = '[^' + chunk[2:]
+                out.append(chunk)
+                i = j
+        else:
+            if c in r'.^$+{}|()\\':
+                out.append('\\' + c)
+            else:
+                out.append(c)
+        i += 1
+    return '^' + ''.join(out) + '$'
+
+
+def _rewrite_glob(sql: str) -> str:
+    """col GLOB 'pat' → col ~ 'regex' (mọi dạng còn sót)."""
+
+    def _repl_sq(m: re.Match) -> str:
+        expr = m.group(1).strip()
+        rx = _glob_pattern_to_regex(m.group(2)).replace("'", "''")
+        return f"{expr} ~ '{rx}'"
+
+    def _repl_dq(m: re.Match) -> str:
+        expr = m.group(1).strip()
+        rx = _glob_pattern_to_regex(m.group(2)).replace("'", "''")
+        return f"{expr} ~ '{rx}'"
+
+    text = re.sub(
+        r"((?:substr|substring)\s*\([^)]+\)|[\w.]+)\s+GLOB\s+'([^']*)'",
+        _repl_sq,
+        sql,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r'((?:substr|substring)\s*\([^)]+\)|[\w.]+)\s+GLOB\s+"([^"]*)"',
+        _repl_dq,
+        text,
+        flags=re.IGNORECASE,
+    )
+    # Safety net nếu còn GLOB 'lit'
+    if re.search(r'\bGLOB\b', text, re.I):
+        text = re.sub(
+            r"\bGLOB\s+'([^']*)'",
+            lambda m: f"~ '{_glob_pattern_to_regex(m.group(1)).replace(chr(39), chr(39) * 2)}'",
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(
+            r'\bGLOB\s+"([^"]*)"',
+            lambda m: f"~ '{_glob_pattern_to_regex(m.group(1)).replace(chr(39), chr(39) * 2)}'",
+            text,
+            flags=re.IGNORECASE,
+        )
+    return text
+
+
+def _rewrite_julianday(sql: str) -> str:
+    """julianday(x) → epoch/86400 (so sánh tương đối vẫn đúng)."""
+    if 'julianday' not in sql.lower():
+        return sql
+    out: list[str] = []
+    i = 0
+    n = len(sql)
+    lower = sql.lower()
+    while i < n:
+        idx = lower.find('julianday(', i)
+        if idx < 0:
+            out.append(sql[i:])
+            break
+        if idx > 0 and (sql[idx - 1].isalnum() or sql[idx - 1] == '_'):
+            out.append(sql[i:idx + 10])
+            i = idx + 10
+            continue
+        out.append(sql[i:idx])
+        extracted = _extract_fn_arg(sql, idx + 9)
+        if extracted is None:
+            out.append(sql[idx:idx + 10])
+            i = idx + 10
+            continue
+        inner, j = extracted
+        low = inner.strip().lower()
+        if low.startswith("'now'") or low.startswith('"now"') or low.startswith('now'):
+            out.append("(EXTRACT(EPOCH FROM CLOCK_TIMESTAMP()) / 86400.0)")
+        else:
+            cleaned = inner.strip()
+            while True:
+                new = re.sub(
+                    r"\s*,\s*['\"](?:localtime|[+\-]?\d+\s+days?)['\"]\s*$",
+                    '',
+                    cleaned,
+                    flags=re.I,
+                )
+                if new == cleaned:
+                    break
+                cleaned = new
+            first = cleaned.strip()
+            out.append(
+                f"(EXTRACT(EPOCH FROM CAST(NULLIF(BTRIM(CAST(({first}) AS text)), '') "
+                f"AS timestamp)) / 86400.0)"
+            )
+        i = j
+    return ''.join(out)
+
+
+def _rewrite_coalesce_status_int(sql: str) -> str:
+    """CAST(COALESCE(status|is_active, 1) AS TEXT) / = 1 → tránh text/int mismatch."""
+    text = re.sub(
+        r"CAST\s*\(\s*COALESCE\s*\(\s*(status|is_active)\s*,\s*1\s*\)\s*AS\s*TEXT\s*\)",
+        r"CAST(COALESCE(CAST(\1 AS text), '1') AS TEXT)",
+        sql,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"COALESCE\s*\(\s*(status|is_active)\s*,\s*1\s*\)\s*=\s*1\b",
+        r"(CAST(COALESCE(CAST(\1 AS text), '1') AS text) IN ('1', 'true', 'True', '1.0'))",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return text
 
 
 def _rewrite_group_concat(sql: str) -> str:
@@ -441,10 +692,18 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
 
     # SQLite date/datetime TRƯỚC khi đổi ? → %s
     text = _rewrite_date_now_forms(text)
+    text = _rewrite_date_now_bound_param(text)
+    text = _rewrite_date_expr_day_mod(text)
     text = _DATETIME_NOW_RUNTIME.sub('CURRENT_TIMESTAMP', text)
     text = _DATETIME_NOW.sub('CURRENT_TIMESTAMP', text)
+    # TRIM/BTRIM 1-arg + COALESCE(NULLIF(TRIM(a),''), b) → text (tránh btrim(date) / text+date)
+    text = _rewrite_simple_trim(text)
+    text = _rewrite_coalesce_nullif_trim(text)
     text = _rewrite_date_fn_calls(text)
     text = _rewrite_group_concat(text)
+    text = _rewrite_glob(text)
+    text = _rewrite_julianday(text)
+    text = _rewrite_coalesce_status_int(text)
     # SQLite: "won" có thể là chuỗi; Postgres: "won" = tên cột → lỗi column does not exist
     text = re.sub(r'\bWHEN\s+"([^"]+)"', r"WHEN '\1'", text, flags=re.IGNORECASE)
     text = re.sub(r'\bLIKE\s+"([^"]+)"', r"LIKE '\1'", text, flags=re.IGNORECASE)

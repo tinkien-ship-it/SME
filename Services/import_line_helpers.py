@@ -484,8 +484,9 @@ def update_warehouse(
 def next_warehouse_code(conn) -> str:
     """Gợi ý mã kho tiếp theo: KHO_004, KHO_005, …"""
     ensure_warehouse_schema(conn)
+    # Không dùng GLOB (Postgres không hỗ trợ) — lọc số trong Python
     rows = conn.execute(
-        "SELECT code FROM warehouses WHERE code GLOB 'KHO_[0-9]*'"
+        "SELECT code FROM warehouses WHERE code LIKE 'KHO_%'"
     ).fetchall()
     max_n = 3
     for r in rows:

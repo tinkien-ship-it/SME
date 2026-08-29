@@ -347,14 +347,19 @@ def register_inward_routes(app):
                 params.extend([f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"])
 
             # Lọc theo ngày chứng từ (invoice_date) hoặc ngày ghi nhận (date)
+            # Ép text trước — Postgres: TRIM(date) / COALESCE(text, date) đều lỗi
+            _inv_day = (
+                "LEFT(COALESCE(NULLIF(BTRIM(CAST(si.invoice_date AS text)), ''), "
+                "CAST(si.date AS text)), 10)"
+            )
             if from_date:
-                query += " AND date(COALESCE(NULLIF(TRIM(si.invoice_date), ''), si.date)) >= date(?)"
+                query += f" AND {_inv_day} >= date(?)"
                 params.append(from_date)
             if to_date:
-                query += " AND date(COALESCE(NULLIF(TRIM(si.invoice_date), ''), si.date)) <= date(?)"
+                query += f" AND {_inv_day} <= date(?)"
                 params.append(to_date)
 
-            query += " ORDER BY date(COALESCE(NULLIF(TRIM(si.invoice_date), ''), si.date)) DESC, si.id DESC"
+            query += f" ORDER BY {_inv_day} DESC, si.id DESC"
 
             c.execute(query, params)
             rows = c.fetchall()

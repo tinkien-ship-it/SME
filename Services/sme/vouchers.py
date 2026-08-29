@@ -97,17 +97,15 @@ def _next_voucher_no(conn: sqlite3.Connection, voucher_type: str) -> str:
         """
         SELECT voucher_no FROM sme_vouchers
         WHERE voucher_type = ?
-          AND voucher_no GLOB ?
+          AND voucher_no LIKE ?
           AND length(voucher_no) = ?
-          AND substr(voucher_no, ?) GLOB '[0-9]*'
         ORDER BY CAST(substr(voucher_no, ?) AS INTEGER) DESC
         LIMIT 1
         """,
         (
             voucher_type,
-            f'{prefix}[0-9]*',
+            f'{prefix}%',
             len(prefix) + width,
-            len(prefix) + 1,
             len(prefix) + 1,
         ),
     ).fetchone()

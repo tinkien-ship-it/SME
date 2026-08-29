@@ -159,6 +159,12 @@ class PgCursor:
         want_id = _is_insert(query) and 'RETURNING' not in sql.upper()
         is_write = want_id or bool(_WRITE_SQL_RE.match(query or ''))
 
+        def _full_rollback():
+            try:
+                self._cur.connection.rollback()
+            except Exception:
+                pass
+
         # SELECT / đọc: không bọc SAVEPOINT — RELEASE sẽ nuốt result → fetchone lỗi
         # "command status: RELEASE" và worker treo / Nginx 504.
         if not is_write:
@@ -173,10 +179,7 @@ class PgCursor:
             except Exception:
                 # Postgres: lỗi 1 câu → abort cả transaction; phải rollback
                 # nếu không request sau báo "current transaction is aborted"
-                try:
-                    self._cur.connection.rollback()
-                except Exception:
-                    pass
+                _full_rollback()
                 raise
 
         try:
@@ -191,8 +194,12 @@ class PgCursor:
                         self._cur.execute(sql_ret, params)
                     used_returning = True
                 except Exception:
-                    self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
-                    self._cur.execute('SAVEPOINT sme_stmt')
+                    try:
+                        self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
+                        self._cur.execute('SAVEPOINT sme_stmt')
+                    except Exception:
+                        _full_rollback()
+                        self._cur.execute('SAVEPOINT sme_stmt')
                     used_returning = False
             if not used_returning:
                 if params is None:
@@ -210,7 +217,12 @@ class PgCursor:
                         )
                 else:
                     self.lastrowid = _read_lastval(self._cur)
-            self._cur.execute('RELEASE SAVEPOINT sme_stmt')
+            try:
+                self._cur.execute('RELEASE SAVEPOINT sme_stmt')
+            except Exception:
+                # Transaction đã abort trước RELEASE — rollback sạch rồi báo lỗi gốc
+                _full_rollback()
+                raise
             self.description = getattr(self._cur, 'description', None)
             self.rowcount = getattr(self._cur, 'rowcount', -1)
             return self
@@ -218,17 +230,21 @@ class PgCursor:
             try:
                 self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
             except Exception:
-                try:
-                    self._cur.connection.rollback()
-                except Exception:
-                    pass
+                _full_rollback()
             raise
 
     def executemany(self, query: str, params_seq):
         sql = rewrite_sql_for_postgres(query, schema=self._schema)
-        self._cur.executemany(sql, params_seq)
-        self.rowcount = getattr(self._cur, 'rowcount', -1)
-        return self
+        try:
+            self._cur.executemany(sql, params_seq)
+            self.rowcount = getattr(self._cur, 'rowcount', -1)
+            return self
+        except Exception:
+            try:
+                self._cur.connection.rollback()
+            except Exception:
+                pass
+            raise
 
     def executescript(self, script: str):
         for stmt in str(script or '').split(';'):

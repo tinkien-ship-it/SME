@@ -902,12 +902,12 @@ def purchase_listing(
     total = Decimal('0.00')
     try:
         sql = """
-            SELECT i.id, i.import_no, i.import_date, i.supplier_name,
+            SELECT i.id, i.import_no, i.date AS import_date, i.supplier_name,
                    COALESCE(i.total_amount, i.grand_total, 0) AS amount,
                    COALESCE(i.vat_amount, i.tax_amount, 0) AS vat
             FROM import i
-            WHERE date(COALESCE(i.import_date, i.date)) >= date(?)
-              AND date(COALESCE(i.import_date, i.date)) <= date(?)
+            WHERE date(COALESCE(i.date, '')) >= date(?)
+              AND date(COALESCE(i.date, '')) <= date(?)
               AND COALESCE(i.doc_type,'') NOT IN ('landed_cost')
         """
         params: list[Any] = [df, dt]
@@ -934,7 +934,7 @@ def purchase_listing(
                         )
                     """
                     params.append(code)
-        sql += ' ORDER BY i.import_date, i.id'
+        sql += ' ORDER BY i.date, i.id'
         rows = conn.execute(sql, params).fetchall()
         for r in rows:
             d = dict(r)

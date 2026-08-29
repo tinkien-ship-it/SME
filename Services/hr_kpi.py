@@ -409,7 +409,7 @@ def list_employees_for_kpi(
         SELECT id, fullname, position, status,
                COALESCE(department, 'ADMIN') AS department
         FROM employees
-        WHERE CAST(COALESCE(status, 1) AS TEXT) IN ('1', 'true', 'True')
+        WHERE CAST(COALESCE(status, '1') AS TEXT) IN ('1', 'true', 'True')
     """
     params: list[Any] = []
     if department:

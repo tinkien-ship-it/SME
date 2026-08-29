@@ -250,9 +250,8 @@ def _next_entry_no(
     row = conn.execute(
         """
         SELECT entry_no FROM sme_journal_entries
-        WHERE entry_no GLOB 'BT[0-9]*'
+        WHERE entry_no LIKE 'BT%'
           AND length(entry_no) = ?
-          AND substr(entry_no, 3) GLOB '[0-9]*'
         ORDER BY CAST(substr(entry_no, 3) AS INTEGER) DESC
         LIMIT 1
         """,
