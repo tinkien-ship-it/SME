@@ -3307,7 +3307,7 @@ def register_invoice_routes(app):
                 FROM outward_invoices o
                 LEFT JOIN sale s ON s.id = o.sale_id
                 WHERE (
-                    (o.invoice_date IS NOT NULL AND o.invoice_date != ''
+                    (o.invoice_date IS NOT NULL
                      AND date(o.invoice_date) BETWEEN date(?) AND date(?))
                     OR (o.created_at IS NOT NULL
                         AND date(o.created_at) BETWEEN date(?) AND date(?))
@@ -3316,8 +3316,12 @@ def register_invoice_routes(app):
                 """,
                 (from_date, to_date, from_date, to_date),
             ).fetchall()
-        except sqlite3.OperationalError as exc:
+        except Exception as exc:
             logging.warning("merge local outward invoices: %s", exc)
+            try:
+                cursor.connection.rollback()
+            except Exception:
+                pass
             return formatted
 
         for row in rows:

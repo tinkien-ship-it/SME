@@ -901,11 +901,14 @@ def purchase_listing(
     lines = []
     total = Decimal('0.00')
     try:
+        # Bảng import: supplier_id + total_value (không có supplier_name / total_amount)
         sql = """
-            SELECT i.id, i.import_no, i.date AS import_date, i.supplier_name,
-                   COALESCE(i.total_amount, i.grand_total, 0) AS amount,
-                   COALESCE(i.vat_amount, i.tax_amount, 0) AS vat
+            SELECT i.id, i.import_no, i.date AS import_date,
+                   COALESCE(s.name, '') AS supplier_name,
+                   COALESCE(i.total_value, 0) AS amount,
+                   0 AS vat
             FROM import i
+            LEFT JOIN suppliers s ON s.id = i.supplier_id
             WHERE date(COALESCE(i.date, '')) >= date(?)
               AND date(COALESCE(i.date, '')) <= date(?)
               AND COALESCE(i.doc_type,'') NOT IN ('landed_cost')
@@ -948,8 +951,11 @@ def purchase_listing(
                 'amount': _f(amt),
                 'vat': _f(d.get('vat')),
             })
-    except sqlite3.Error:
-        pass
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
 
     return {
         'form_code': '06-VT',

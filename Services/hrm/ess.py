@@ -126,8 +126,25 @@ def mobile_checkin(conn: sqlite3.Connection, data: dict, *, commit: bool = True)
     ensure_attendance_schema(conn)
     emp = int(data.get('employee_id') or 0)
     if not emp:
-        raise ValueError('Thiếu employee_id')
+        raise ValueError('Thiếu employee_id — liên kết ESS với hồ sơ nhân viên (user_id)')
+    check_type = (data.get('check_type') or 'in').strip().lower()
+    if check_type not in ('in', 'out'):
+        check_type = 'in'
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    emp_name = ''
+    try:
+        er = conn.execute(
+            'SELECT fullname FROM employees WHERE id = ?',
+            (emp,),
+        ).fetchone()
+        if er:
+            emp_name = str(er['fullname'] if hasattr(er, 'keys') else er[0] or '').strip()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
     cur = conn.execute(
         """
         INSERT INTO hrm_mobile_checkins
@@ -136,7 +153,7 @@ def mobile_checkin(conn: sqlite3.Connection, data: dict, *, commit: bool = True)
         """,
         (
             emp,
-            (data.get('check_type') or 'in').strip(),
+            check_type,
             data.get('lat'),
             data.get('lng'),
             data.get('accuracy'),
@@ -144,23 +161,40 @@ def mobile_checkin(conn: sqlite3.Connection, data: dict, *, commit: bool = True)
             now,
         ),
     )
-    try:
-        upsert_attendance_log(
-            conn,
-            {
-                'employee_id': emp,
-                'device_user_id': f'gps:{emp}',
-                'punch_time': now,
-                'punch_date': now[:10],
-                'punch_type': 1 if (data.get('check_type') or 'in') == 'in' else 0,
-                'verify_mode': 'GPS',
-            },
-            source='mobile_gps',
-            device_sn='MOBILE_GPS',
-        )
-    except Exception:
-        pass
-    return _row(conn.execute(
-        'SELECT * FROM hrm_mobile_checkins WHERE id=?',
-        (cur.lastrowid,),
-    ).fetchone())
+    ok, err = upsert_attendance_log(
+        conn,
+        {
+            'employee_id': emp,
+            'employee_name': emp_name,
+            'device_user_id': f'gps:{emp}',
+            'punch_time': now,
+            'punch_date': now[:10],
+            # Truyền 'in'/'out' — không dùng 0/1 (ZKTeco đảo nghĩa so với ESS)
+            'punch_type': check_type,
+            'verify_mode': 'GPS',
+        },
+        source='mobile_gps',
+        device_sn='MOBILE_GPS',
+    )
+    if not ok:
+        raise RuntimeError(f'Check-in ESS OK nhưng không ghi sổ chấm công: {err}')
+
+    row_id = getattr(cur, 'lastrowid', None) or 0
+    row = None
+    if row_id:
+        row = conn.execute(
+            'SELECT * FROM hrm_mobile_checkins WHERE id=?',
+            (row_id,),
+        ).fetchone()
+    if not row:
+        row = conn.execute(
+            """
+            SELECT * FROM hrm_mobile_checkins
+            WHERE employee_id = ? AND punched_at = ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (emp, now),
+        ).fetchone()
+    out = _row(row)
+    out['attendance_synced'] = True
+    return out

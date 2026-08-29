@@ -1389,8 +1389,16 @@ def register_crm_routes(app):
         from Services import crm_ops
         conn = _conn()
         try:
-            token = crm_ops.ensure_inbound_token(conn)
-            sqlite_commit(conn, label='crm_inbound_hub_token')
+            try:
+                token = crm_ops.ensure_inbound_token(conn)
+                sqlite_commit(conn, label='crm_inbound_hub_token')
+            except Exception as tok_exc:
+                app.logger.warning('crm inbound hub token: %s', tok_exc)
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                token = ''
             base = request.host_url.rstrip('/')
             tid = getattr(g, 'tenant_id', None)
             endpoint = base + _crm_inbound_url()
@@ -1408,6 +1416,10 @@ def register_crm_routes(app):
             hub['public_api_url'] = public_api
             return jsonify(hub)
         except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             return jsonify({'error': str(e)}), 500
         finally:
             conn.close()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from datetime import datetime
 from typing import Any
 
 # Nguồn chuẩn hiển thị trên CRM (Analytics / Leads filter)
@@ -365,7 +366,7 @@ def log_inbound(
         INSERT INTO crm_inbound_logs (
             channel, source, status, lead_id, owner, external_id,
             contact_name, phone, error, payload_preview, created_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?, datetime('now','localtime'))
+        ) VALUES (?,?,?,?,?,?,?,?,?,?, ?)
         """,
         (
             channel,
@@ -378,6 +379,7 @@ def log_inbound(
             phone,
             (error or '')[:500] or None,
             preview or None,
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         ),
     )
 
@@ -520,20 +522,43 @@ def inbound_hub_payload(conn: sqlite3.Connection, *, endpoint: str, token: str, 
     from Services.crm_ops import list_crm_sales_staff, sync_assign_owners_from_staff
     from Services.crm_inbound_adapters import CHANNEL_SLUGS, CHANNEL_TO_SOURCE
 
-    owners = sync_assign_owners_from_staff(conn)
-    staff = list_crm_sales_staff(conn)
+    def _rb():
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+    try:
+        owners = sync_assign_owners_from_staff(conn)
+    except Exception:
+        _rb()
+        owners = []
+    try:
+        staff = list_crm_sales_staff(conn)
+    except Exception:
+        _rb()
+        staff = []
     base = (base_url or '').rstrip('/')
     phases = []
-    status = get_phase_status(conn)
+    try:
+        status = get_phase_status(conn)
+    except Exception:
+        _rb()
+        status = {}
     channel_endpoints = {}
     for slug in CHANNEL_SLUGS:
         path = channel_endpoint_path(slug, tenant_id=tenant_id)
         full = f'{base}{path}' if base else path
+        try:
+            verify_set = bool(get_channel_verify_token(conn, slug))
+        except Exception:
+            _rb()
+            verify_set = False
         channel_endpoints[slug] = {
             'path': path,
             'url': full,
             'source': CHANNEL_TO_SOURCE[slug],
-            'verify_token_set': bool(get_channel_verify_token(conn, slug)),
+            'verify_token_set': verify_set,
         }
     for p in INBOUND_PHASES:
         slug = p['id'] if p['id'] != 'other' else 'hotline'
@@ -555,6 +580,16 @@ def inbound_hub_payload(conn: sqlite3.Connection, *, endpoint: str, token: str, 
             'channel_slug': slug,
             'channel_url': ch_url,
         })
+    try:
+        public_form = get_public_form_settings(conn)
+    except Exception:
+        _rb()
+        public_form = {'enabled': True, 'title': '', 'subtitle': ''}
+    try:
+        recent_logs = list_inbound_logs(conn, limit=25)
+    except Exception:
+        _rb()
+        recent_logs = []
     return {
         'endpoint': endpoint,
         'token_set': bool((token or '').strip()),
@@ -563,8 +598,8 @@ def inbound_hub_payload(conn: sqlite3.Connection, *, endpoint: str, token: str, 
         'channels': channel_endpoints,
         'sales_staff': staff,
         'assign_owners': owners,
-        'public_form': get_public_form_settings(conn),
-        'recent_logs': list_inbound_logs(conn, limit=25),
+        'public_form': public_form,
+        'recent_logs': recent_logs,
         'embed_snippet': _embed_snippet(base, tenant_id),
     }
 

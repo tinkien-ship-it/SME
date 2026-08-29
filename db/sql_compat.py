@@ -84,7 +84,8 @@ _PRAGMA_NOOP = re.compile(
 )
 _PRAGMA_JOURNAL_FETCH = re.compile(r'PRAGMA\s+journal_mode\s*$', re.IGNORECASE)
 _SQLITE_MASTER_EXISTS = re.compile(
-    r"SELECT\s+1\s+FROM\s+sqlite_master\s+WHERE\s+type\s*=\s*['\"]table['\"]\s+AND\s+name\s*=\s*\?(?:\s+LIMIT\s+1)?",
+    r"SELECT\s+1\s+FROM\s+sqlite_master\s+WHERE\s+type\s*=\s*['\"]table['\"]\s+AND\s+name\s*=\s*\?"
+    r"(?:\s+COLLATE\s+NOCASE)?(?:\s+LIMIT\s+1)?",
     re.IGNORECASE,
 )
 _SQLITE_MASTER_EXISTS_NO_LIMIT = re.compile(

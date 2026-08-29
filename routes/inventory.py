@@ -3570,6 +3570,8 @@ def register_inventory_routes(app):
 
         period_start = start_date.replace(hour=0, minute=0, second=0)
         period_end = end_date.replace(hour=23, minute=59, second=59)
+        period_start_s = period_start.strftime('%Y-%m-%d %H:%M:%S')
+        period_end_s = period_end.strftime('%Y-%m-%d %H:%M:%S')
 
         try:
             conn = get_db_connection()
@@ -3626,17 +3628,17 @@ def register_inventory_routes(app):
                 LEFT JOIN stock_moves sm ON p.id = sm.product_id
                 WHERE COALESCE(p.product_type, 'goods') != 'service'
                   AND UPPER(COALESCE(p.product_code, '')) NOT LIKE 'DV%'
-                GROUP BY p.id
+                GROUP BY p.id, p.name, p.product_code, COALESCE(p.unit, 'Cái')
                 ORDER BY p.name
             """, (
-                # Tham số cho Tồn đầu kỳ
-                period_start, period_start,
+                # Tham số cho Tồn đầu kỳ (ISO text — Postgres so sánh ổn với cột TEXT)
+                period_start_s, period_start_s,
                 # Tham số cho Nhập trong kỳ
-                period_start, period_end, period_start, period_end,
-                period_start, period_end, period_start, period_end,
+                period_start_s, period_end_s, period_start_s, period_end_s,
+                period_start_s, period_end_s, period_start_s, period_end_s,
                 # Tham số cho Xuất trong kỳ
-                period_start, period_end, period_start, period_end,
-                period_start, period_end, period_start, period_end
+                period_start_s, period_end_s, period_start_s, period_end_s,
+                period_start_s, period_end_s, period_start_s, period_end_s
             ))
 
             rows = c.fetchall()

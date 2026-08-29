@@ -18,20 +18,34 @@ _COGS_TYPES_SQL = "'SALE', 'SALE_RECIPE', 'RETURN_SALE', 'DELETE_SALE'"
 
 
 def _columns(cursor, table):
-    cursor.execute(f'PRAGMA table_info({table})')
-    return {row[1] for row in cursor.fetchall()}
+    try:
+        cursor.execute(f'PRAGMA table_info({table})')
+        return {row[1] for row in cursor.fetchall()}
+    except Exception:
+        try:
+            cursor.connection.rollback()
+        except Exception:
+            pass
+        return set()
 
 
 def _table_exists(cursor, table_name):
-    row = cursor.execute(
-        """
-        SELECT 1 FROM sqlite_master
-        WHERE type = 'table' AND name = ? COLLATE NOCASE
-        LIMIT 1
-        """,
-        (table_name,),
-    ).fetchone()
-    return row is not None
+    try:
+        row = cursor.execute(
+            """
+            SELECT 1 FROM sqlite_master
+            WHERE type = 'table' AND name = ?
+            LIMIT 1
+            """,
+            (table_name,),
+        ).fetchone()
+        return row is not None
+    except Exception:
+        try:
+            cursor.connection.rollback()
+        except Exception:
+            pass
+        return False
 
 
 def _resolve_salary_detail_table(cursor):

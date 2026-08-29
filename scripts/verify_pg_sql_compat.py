@@ -43,7 +43,7 @@ CASES = [
     ("date(COALESCE(NULLIF(TRIM(si.invoice_date), ''), si.date))", "CAST((si.date) AS text)"),
     ("julianday('now') - julianday(COALESCE(opened_at, created_at))", 'COALESCE(opened_at, created_at)'),
     ("date('now', 'localtime', ?)", 'CAST(%s AS interval)'),
-    ("INSERT OR REPLACE INTO crm_settings (key, value) VALUES (?, ?)", 'ON CONFLICT'),
+    ("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? COLLATE NOCASE LIMIT 1", 'information_schema'),
 ]
 
 failed = 0

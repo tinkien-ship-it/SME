@@ -39,15 +39,35 @@ def ensure_attendance_schema(conn):
         CREATE INDEX IF NOT EXISTS idx_attendance_logs_employee
             ON attendance_logs(employee_id);
     """)
-    cols = {row[1] for row in conn.execute("PRAGMA table_info(employees)").fetchall()}
-    if 'attendance_code' not in cols:
-        conn.execute("ALTER TABLE employees ADD COLUMN attendance_code TEXT")
+    # Bảng cũ (đặc biệt sau migrate PG) có thể thiếu UNIQUE → ON CONFLICT lỗi
+    try:
+        conn.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_logs_device_time_sn
+            ON attendance_logs(device_user_id, punch_time, device_sn)
+            """
+        )
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    try:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(employees)").fetchall()}
+        if 'attendance_code' not in cols:
+            conn.execute("ALTER TABLE employees ADD COLUMN attendance_code TEXT")
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
 
 
 def normalize_punch_type(value):
     if value is None:
         return 'auto'
     s = str(value).strip().lower()
+    # ZKTeco thường: 0 = vào, 1 = ra. ESS/GPS truyền 'in'/'out' trực tiếp.
     if s in ('0', 'in', 'checkin', 'check-in', 'vao', 'vào', 'check in'):
         return 'in'
     if s in ('1', 'out', 'checkout', 'check-out', 'ra', 'check out'):
@@ -146,6 +166,21 @@ def upsert_attendance_log(conn, item, source='import', device_sn=None):
     device_user_id = (item.get('device_user_id') or item.get('pin') or item.get('code') or '').strip()
     employee_name = (item.get('employee_name') or item.get('name') or item.get('fullname') or '').strip()
     employee_id = item.get('employee_id') or resolve_employee_id(conn, device_user_id, employee_name)
+    if employee_id and not employee_name:
+        try:
+            er = conn.execute(
+                'SELECT fullname FROM employees WHERE id = ?',
+                (int(employee_id),),
+            ).fetchone()
+            if er:
+                employee_name = str(
+                    er['fullname'] if hasattr(er, 'keys') else er[0] or ''
+                ).strip()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
     try:
         conn.execute(
             """
@@ -153,14 +188,19 @@ def upsert_attendance_log(conn, item, source='import', device_sn=None):
                 employee_id, device_user_id, employee_name, punch_time, punch_date,
                 punch_type, verify_mode, device_sn, source, raw_line
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(device_user_id, punch_time, device_sn) DO NOTHING
+            ON CONFLICT(device_user_id, punch_time, device_sn) DO UPDATE SET
+                employee_id = COALESCE(EXCLUDED.employee_id, attendance_logs.employee_id),
+                employee_name = COALESCE(EXCLUDED.employee_name, attendance_logs.employee_name),
+                punch_type = EXCLUDED.punch_type,
+                verify_mode = COALESCE(EXCLUDED.verify_mode, attendance_logs.verify_mode),
+                source = EXCLUDED.source
             """,
             (
                 employee_id,
                 device_user_id or None,
                 employee_name or None,
                 punch_time,
-                punch_date,
+                punch_date or str(punch_time)[:10],
                 normalize_punch_type(item.get('punch_type') or item.get('status')),
                 (item.get('verify_mode') or item.get('verify') or '') or None,
                 device_sn,
@@ -169,8 +209,33 @@ def upsert_attendance_log(conn, item, source='import', device_sn=None):
             ),
         )
         return True, None
-    except sqlite3.Error as e:
-        return False, str(e)
+    except Exception as e:
+        # Không conn.rollback() — tránh hủy INSERT hrm_mobile_checkins cùng transaction.
+        # PgCursor đã ROLLBACK TO SAVEPOINT; thử INSERT thường nếu thiếu UNIQUE.
+        try:
+            conn.execute(
+                """
+                INSERT INTO attendance_logs (
+                    employee_id, device_user_id, employee_name, punch_time, punch_date,
+                    punch_type, verify_mode, device_sn, source, raw_line
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    employee_id,
+                    device_user_id or None,
+                    employee_name or None,
+                    punch_time,
+                    punch_date or str(punch_time)[:10],
+                    normalize_punch_type(item.get('punch_type') or item.get('status')),
+                    (item.get('verify_mode') or item.get('verify') or '') or None,
+                    device_sn,
+                    source,
+                    item.get('raw_line'),
+                ),
+            )
+            return True, None
+        except Exception as e2:
+            return False, str(e2) or str(e)
 
 
 def touch_device(conn, serial_no, ip_address=None):

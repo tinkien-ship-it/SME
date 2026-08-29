@@ -45,8 +45,12 @@ def register_reports_routes(app):
             result = compute_profit_report(c, from_date_iso, to_date_iso, tenant_profile=profile)
             return jsonify({"status": "success", **result})
         except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             print(f"Profit Report Error: {str(e)}")
-            return jsonify({"error": "Lỗi hạch toán hệ thống"}), 500
+            return jsonify({"error": "Lỗi hạch toán hệ thống", "detail": str(e)[:300]}), 500
         finally:
             conn.close()
 
