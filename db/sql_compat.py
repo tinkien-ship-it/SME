@@ -71,7 +71,13 @@ _PARAM_RE = re.compile(r'\?(?=(?:[^\']*\'[^\']*\')*[^\']*$)')
 
 
 def _adapt_params(sql: str) -> str:
-    return _PARAM_RE.sub('%s', sql)
+    """``?`` → ``%s``; escape ``%`` literal (LIKE 'DV%') thành ``%%`` cho psycopg."""
+    # 1) Đánh dấu placeholder từ ?
+    marked = _PARAM_RE.sub('\x00PH\x00', sql)
+    # 2) Mọi % còn lại là literal → %%
+    marked = marked.replace('%', '%%')
+    # 3) Khôi phục %s
+    return marked.replace('\x00PH\x00', '%s')
 _PRAGMA_TABLE_INFO = re.compile(
     r'PRAGMA\s+table_info\s*\(\s*["`]?([\w]+)["`]?\s*\)',
     re.IGNORECASE,
@@ -709,14 +715,14 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
     text = re.sub(r'\bWHEN\s+"([^"]+)"', r"WHEN '\1'", text, flags=re.IGNORECASE)
     text = re.sub(r'\bLIKE\s+"([^"]+)"', r"LIKE '\1'", text, flags=re.IGNORECASE)
 
-    text = _adapt_params(text)
-
-    # IFNULL / printf / COLLATE / alias.rowid
+    # IFNULL / printf TRƯỚC khi escape % (printf('%06d') → lpad, không còn %)
     text = _rewrite_ifnull(text)
     text = _rewrite_printf(text)
     text = _COLLATE_NOCASE.sub('', text)
     text = _ROWID_COL.sub(r'\1.id', text)
     text = _BARE_ROWID_ORDER.sub('ORDER BY id', text)
+
+    text = _adapt_params(text)
 
     # CREATE TABLE SQLite DDL
     if _CREATE_TABLE.match(text):

@@ -44,6 +44,7 @@ CASES = [
     ("julianday('now') - julianday(COALESCE(opened_at, created_at))", 'COALESCE(opened_at, created_at)'),
     ("date('now', 'localtime', ?)", 'CAST(%s AS interval)'),
     ("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? COLLATE NOCASE LIMIT 1", 'information_schema'),
+    ("NOT LIKE 'DV%' AND name = ?", "DV%%"),
 ]
 
 failed = 0
