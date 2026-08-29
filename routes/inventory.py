@@ -3568,59 +3568,54 @@ def register_inventory_routes(app):
         except ValueError:
             return jsonify({"success": False, "error": "Định dạng ngày không hợp lệ"}), 400
 
-        period_start = start_date.replace(hour=0, minute=0, second=0)
-        period_end = end_date.replace(hour=23, minute=59, second=59)
-        period_start_s = period_start.strftime('%Y-%m-%d %H:%M:%S')
-        period_end_s = period_end.strftime('%Y-%m-%d %H:%M:%S')
+        # So sánh theo ngày ISO (text) — tránh lệch kiểu date/timestamp trên Postgres
+        d0 = start_date_str[:10]
+        d1 = end_date_str[:10]
+        sm_day = "LEFT(CAST(sm.date AS text), 10)"
 
         try:
             conn = get_db_connection()
             conn.row_factory = sqlite3.Row
             c = conn.cursor()
 
-            # SIÊU TRUY VẤN: Khớp hoàn hảo với dữ liệu xuất kho lưu số ÂM
-            c.execute("""
+            c.execute(f"""
                 SELECT 
                     p.id AS product_id,
                     p.name AS product_name,
                     p.product_code AS product_code,
                     COALESCE(p.unit, 'Cái') AS unit_name,
                 
-                    -- 1. Tính số lượng tồn đầu kỳ (Chỉ cần SUM hết vì xuất đã tự mang dấu âm)
                     COALESCE(SUM(CASE 
-                        WHEN sm.date < ? AND sm.type IN ('import', 'RETURN_SALE', 'DELETE_SALE', 'SALE', 'export', 'RETURN_IMPORT', 'DELETE_IMPORT', 'export_for_use', 'export_material', 'adjustment') THEN sm.quantity
+                        WHEN {sm_day} < ? AND sm.type IN ('import', 'RETURN_SALE', 'DELETE_SALE', 'SALE', 'export', 'RETURN_IMPORT', 'DELETE_IMPORT', 'export_for_use', 'export_material', 'adjustment') THEN sm.quantity
                         ELSE 0 
                     END), 0) AS beginning_quantity,
 
-                    -- 2. Tính giá trị tồn đầu kỳ (SUM hết vì số lượng xuất âm nhân cost_price dương sẽ ra giá trị âm)
                     COALESCE(SUM(CASE 
-                        WHEN sm.date < ? AND sm.type IN ('import', 'RETURN_SALE', 'DELETE_SALE', 'SALE', 'export', 'RETURN_IMPORT', 'DELETE_IMPORT', 'export_for_use', 'export_material', 'adjustment') THEN sm.quantity * sm.cost_price
+                        WHEN {sm_day} < ? AND sm.type IN ('import', 'RETURN_SALE', 'DELETE_SALE', 'SALE', 'export', 'RETURN_IMPORT', 'DELETE_IMPORT', 'export_for_use', 'export_material', 'adjustment') THEN sm.quantity * COALESCE(sm.cost_price, 0)
                         ELSE 0 
                     END), 0) AS beginning_value,
 
-                    -- 3. Phát sinh Nhập trong kỳ (Các loại chứng từ làm tăng kho, quantity dương)
                     COALESCE(SUM(CASE 
-                        WHEN sm.date >= ? AND sm.date <= ? AND sm.type IN ('import', 'RETURN_SALE', 'DELETE_SALE') THEN sm.quantity
-                        WHEN sm.date >= ? AND sm.date <= ? AND sm.type = 'adjustment' AND sm.quantity > 0 THEN sm.quantity
+                        WHEN {sm_day} >= ? AND {sm_day} <= ? AND sm.type IN ('import', 'RETURN_SALE', 'DELETE_SALE') THEN sm.quantity
+                        WHEN {sm_day} >= ? AND {sm_day} <= ? AND sm.type = 'adjustment' AND sm.quantity > 0 THEN sm.quantity
                         ELSE 0 
                     END), 0) AS import_quantity,
                 
                     COALESCE(SUM(CASE 
-                        WHEN sm.date >= ? AND sm.date <= ? AND sm.type IN ('import', 'RETURN_SALE', 'DELETE_SALE') THEN sm.quantity * sm.cost_price
-                        WHEN sm.date >= ? AND sm.date <= ? AND sm.type = 'adjustment' AND sm.quantity > 0 THEN sm.quantity * sm.cost_price
+                        WHEN {sm_day} >= ? AND {sm_day} <= ? AND sm.type IN ('import', 'RETURN_SALE', 'DELETE_SALE') THEN sm.quantity * COALESCE(sm.cost_price, 0)
+                        WHEN {sm_day} >= ? AND {sm_day} <= ? AND sm.type = 'adjustment' AND sm.quantity > 0 THEN sm.quantity * COALESCE(sm.cost_price, 0)
                         ELSE 0 
                     END), 0) AS import_value,
 
-                    -- 4. Phát sinh Xuất trong kỳ (Dùng dấu trừ phía trước để chuyển số ÂM trong DB thành số DƯƠNG hiển thị báo cáo)
                     COALESCE(SUM(CASE 
-                        WHEN sm.date >= ? AND sm.date <= ? AND sm.type IN ('SALE', 'export', 'RETURN_IMPORT', 'DELETE_IMPORT', 'export_for_use', 'export_material') THEN -sm.quantity
-                        WHEN sm.date >= ? AND sm.date <= ? AND sm.type = 'adjustment' AND sm.quantity < 0 THEN -sm.quantity
+                        WHEN {sm_day} >= ? AND {sm_day} <= ? AND sm.type IN ('SALE', 'export', 'RETURN_IMPORT', 'DELETE_IMPORT', 'export_for_use', 'export_material') THEN -sm.quantity
+                        WHEN {sm_day} >= ? AND {sm_day} <= ? AND sm.type = 'adjustment' AND sm.quantity < 0 THEN -sm.quantity
                         ELSE 0 
                     END), 0) AS export_quantity,
 
                     COALESCE(SUM(CASE 
-                        WHEN sm.date >= ? AND sm.date <= ? AND sm.type IN ('SALE', 'export', 'RETURN_IMPORT', 'DELETE_IMPORT', 'export_for_use', 'export_material') THEN -sm.quantity * sm.cost_price
-                        WHEN sm.date >= ? AND sm.date <= ? AND sm.type = 'adjustment' AND sm.quantity < 0 THEN -sm.quantity * sm.cost_price
+                        WHEN {sm_day} >= ? AND {sm_day} <= ? AND sm.type IN ('SALE', 'export', 'RETURN_IMPORT', 'DELETE_IMPORT', 'export_for_use', 'export_material') THEN -sm.quantity * COALESCE(sm.cost_price, 0)
+                        WHEN {sm_day} >= ? AND {sm_day} <= ? AND sm.type = 'adjustment' AND sm.quantity < 0 THEN -sm.quantity * COALESCE(sm.cost_price, 0)
                         ELSE 0 
                     END), 0) AS export_value
 
@@ -3631,14 +3626,11 @@ def register_inventory_routes(app):
                 GROUP BY p.id, p.name, p.product_code, COALESCE(p.unit, 'Cái')
                 ORDER BY p.name
             """, (
-                # Tham số cho Tồn đầu kỳ (ISO text — Postgres so sánh ổn với cột TEXT)
-                period_start_s, period_start_s,
-                # Tham số cho Nhập trong kỳ
-                period_start_s, period_end_s, period_start_s, period_end_s,
-                period_start_s, period_end_s, period_start_s, period_end_s,
-                # Tham số cho Xuất trong kỳ
-                period_start_s, period_end_s, period_start_s, period_end_s,
-                period_start_s, period_end_s, period_start_s, period_end_s
+                d0, d0,
+                d0, d1, d0, d1,
+                d0, d1, d0, d1,
+                d0, d1, d0, d1,
+                d0, d1, d0, d1,
             ))
 
             rows = c.fetchall()
@@ -3649,10 +3641,9 @@ def register_inventory_routes(app):
                 beg_val = float(r['beginning_value'])
                 imp_qty = float(r['import_quantity'])
                 imp_val = float(r['import_value'])
-                exp_qty = float(r['export_quantity']) # Đây là số dương (đã đổi dấu từ SQL)
-                exp_val = float(r['export_value'])    # Đây là số dương (đã đổi dấu từ SQL)
+                exp_qty = float(r['export_quantity'])
+                exp_val = float(r['export_value'])
 
-                # Vì exp_qty thu được từ SQL đã đổi sang số dương, nên công thức tính cuối kỳ sẽ là trừ đi
                 end_qty = beg_qty + imp_qty - exp_qty
                 end_val = beg_val + imp_val - exp_val
 
@@ -3685,7 +3676,16 @@ def register_inventory_routes(app):
             print("LỖI BÁO CÁO TỒN KHO:", e)
             import traceback
             traceback.print_exc()
-            return jsonify({"success": False, "error": "Lỗi hệ thống", "detail": str(e)}), 500
+            try:
+                if 'conn' in locals() and conn:
+                    conn.rollback()
+            except Exception:
+                pass
+            return jsonify({
+                "success": False,
+                "error": "Lỗi hệ thống",
+                "detail": str(e)[:400],
+            }), 500
         finally:
             if 'conn' in locals() and conn:
                 conn.close()

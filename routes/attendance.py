@@ -78,6 +78,12 @@ def register_attendance_routes(app):
         try:
             data = build_daily_summary(conn, start, end, employee_id)
             return jsonify(data)
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return jsonify({'error': str(e)[:400]}), 500
         finally:
             conn.close()
 

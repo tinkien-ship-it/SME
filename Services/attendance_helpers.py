@@ -254,10 +254,12 @@ def touch_device(conn, serial_no, ip_address=None):
 
 def build_daily_summary(conn, start_date, end_date, employee_id=None):
     ensure_attendance_schema(conn)
-    sql = """
+    # Postgres: biểu thức SELECT và GROUP BY phải khớp từng ký tự
+    name_expr = "COALESCE(e.fullname, l.employee_name, l.device_user_id, '—')"
+    sql = f"""
         SELECT
             COALESCE(e.id, 0) AS employee_id,
-            COALESCE(e.fullname, l.employee_name, l.device_user_id, '—') AS fullname,
+            {name_expr} AS fullname,
             l.device_user_id,
             l.punch_date,
             MIN(l.punch_time) AS first_punch,
@@ -271,9 +273,8 @@ def build_daily_summary(conn, start_date, end_date, employee_id=None):
     if employee_id:
         sql += ' AND (l.employee_id = ? OR CAST(l.device_user_id AS TEXT) = ?)'
         params.extend([employee_id, str(employee_id)])
-    sql += """
-        GROUP BY COALESCE(e.id, 0), l.device_user_id, l.punch_date,
-                 COALESCE(e.fullname, l.employee_name, l.device_user_id)
+    sql += f"""
+        GROUP BY COALESCE(e.id, 0), {name_expr}, l.device_user_id, l.punch_date
         ORDER BY l.punch_date DESC, fullname COLLATE NOCASE
     """
     rows = conn.execute(sql, params).fetchall()
@@ -281,8 +282,8 @@ def build_daily_summary(conn, start_date, end_date, employee_id=None):
     for row in rows:
         item = dict(row)
         try:
-            t1 = datetime.strptime(item['first_punch'], '%Y-%m-%d %H:%M:%S')
-            t2 = datetime.strptime(item['last_punch'], '%Y-%m-%d %H:%M:%S')
+            t1 = datetime.strptime(str(item['first_punch'])[:19], '%Y-%m-%d %H:%M:%S')
+            t2 = datetime.strptime(str(item['last_punch'])[:19], '%Y-%m-%d %H:%M:%S')
             item['work_hours'] = round(max(0, (t2 - t1).total_seconds()) / 3600, 2)
         except Exception:
             item['work_hours'] = 0

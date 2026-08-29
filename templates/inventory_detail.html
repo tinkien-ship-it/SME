@@ -384,9 +384,14 @@ function loadReport() {
 
             renderDetailData(data);
         },
-        error: function () {
+        error: function (xhr) {
             $("#loadingIndicator").hide();
-            alert("Lỗi khi kết nối server");
+            let msg = "Lỗi khi kết nối server";
+            try {
+                const j = xhr.responseJSON;
+                if (j && (j.detail || j.error)) msg = j.detail || j.error;
+            } catch (e) {}
+            alert(msg);
         }
     });
 }
