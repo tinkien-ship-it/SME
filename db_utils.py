@@ -43,16 +43,16 @@ try:
 except ValueError:
     SQLITE_WRITE_RETRIES = 12
 
-# PRAGMA busy_timeout (ms) — tách khỏi timeout mở file; mặc định 15s (VPS đa worker).
+# PRAGMA busy_timeout (ms) — tách khỏi timeout mở file; mặc định 30s (VPS đa worker).
 try:
-    SQLITE_BUSY_TIMEOUT_MS = int(os.environ.get('SME_SQLITE_BUSY_TIMEOUT_MS', '15000') or 15000)
+    SQLITE_BUSY_TIMEOUT_MS = int(os.environ.get('SME_SQLITE_BUSY_TIMEOUT_MS', '30000') or 30000)
 except ValueError:
-    SQLITE_BUSY_TIMEOUT_MS = 15000
+    SQLITE_BUSY_TIMEOUT_MS = 30000
 
 try:
-    SQLITE_FILE_WRITE_LOCK_SEC = float(os.environ.get('SME_SQLITE_WRITE_LOCK_SEC', '30') or 30)
+    SQLITE_FILE_WRITE_LOCK_SEC = float(os.environ.get('SME_SQLITE_WRITE_LOCK_SEC', '8') or 8)
 except ValueError:
-    SQLITE_FILE_WRITE_LOCK_SEC = 30.0
+    SQLITE_FILE_WRITE_LOCK_SEC = 8.0
 
 # Single-writer trong cùng process (RLock — cho phép with_sqlite_write lồng nhau).
 _WRITE_LOCKS_GUARD = threading.Lock()

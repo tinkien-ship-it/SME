@@ -29,9 +29,9 @@ if _backend in ('postgres', 'postgresql', 'pg'):
     _default_threads = 1
     _default_class = 'sync'
 else:
-    # SQLite: ít worker, thêm thread — giảm treo khi 1 request CRM nặng
-    _default_workers = min(3, max(2, _cpu))
-    _default_threads = 2
+    # SQLite: ít worker hơn → giảm database is locked / 504
+    _default_workers = min(2, max(2, _cpu))
+    _default_threads = 3
     _default_class = 'gthread'
 
 workers = int(os.getenv('GUNICORN_WORKERS', str(_default_workers)))
@@ -44,8 +44,8 @@ keepalive = int(os.getenv('GUNICORN_KEEPALIVE', '5'))
 graceful_timeout = int(os.getenv('GUNICORN_GRACEFUL_TIMEOUT', '30'))
 
 # Recycle worker định kỳ — tránh memory leak / worker “chết lâm sàng”
-max_requests = int(os.getenv('GUNICORN_MAX_REQUESTS', '800'))
-max_requests_jitter = int(os.getenv('GUNICORN_MAX_REQUESTS_JITTER', '80'))
+max_requests = int(os.getenv('GUNICORN_MAX_REQUESTS', '500'))
+max_requests_jitter = int(os.getenv('GUNICORN_MAX_REQUESTS_JITTER', '50'))
 
 # False: tránh scheduler/APScheduler chạy N lần (app.py đã gate leader)
 preload_app = os.getenv('GUNICORN_PRELOAD', '0').strip().lower() in ('1', 'true', 'yes')

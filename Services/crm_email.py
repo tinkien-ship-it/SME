@@ -347,20 +347,8 @@ def log_crm_email(
 ) -> None:
     ensure_crm_schema(conn, commit=False)
     try:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS crm_email_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                kind TEXT,
-                ref_id INTEGER,
-                to_email TEXT,
-                subject TEXT,
-                status TEXT,
-                error TEXT,
-                created_at TEXT DEFAULT (datetime('now','localtime'))
-            )
-            """
-        )
+        from Services.crm_schema import ensure_crm_email_logs
+        ensure_crm_email_logs(conn)
         conn.execute(
             """
             INSERT INTO crm_email_logs (kind, ref_id, to_email, subject, status, error)

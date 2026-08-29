@@ -141,7 +141,10 @@ def upsert_lead(conn: sqlite3.Connection, data: dict, lead_id: int | None = None
     status = (data.get('status') or 'new').strip()
     if status not in LEAD_STATUSES:
         status = 'new'
-    fields = (
+    owner = data.get('owner')
+    if owner is not None:
+        owner = str(owner).strip() or None
+    fields_common = (
         (data.get('title') or '').strip() or contact,
         contact,
         (data.get('company_name') or '').strip() or None,
@@ -149,7 +152,6 @@ def upsert_lead(conn: sqlite3.Connection, data: dict, lead_id: int | None = None
         (data.get('email') or '').strip() or None,
         (data.get('source') or '').strip() or None,
         status,
-        (data.get('owner') or '').strip() or None,
         data.get('customer_id') or None,
         _f(data.get('expected_value')),
         (data.get('notes') or '').strip() or None,
@@ -157,16 +159,34 @@ def upsert_lead(conn: sqlite3.Connection, data: dict, lead_id: int | None = None
         _now(),
     )
     if lead_id:
-        conn.execute(
-            """
-            UPDATE crm_leads SET
-                title=?, contact_name=?, company_name=?, phone=?, email=?,
-                source=?, status=?, owner=?, customer_id=?, expected_value=?,
-                notes=?, next_contact_at=?, updated_at=?
-            WHERE id=?
-            """,
-            fields + (lead_id,),
-        )
+        # Giữ owner cũ nếu client không gửi (form Sửa lead không có field owner)
+        if 'owner' in data:
+            conn.execute(
+                """
+                UPDATE crm_leads SET
+                    title=?, contact_name=?, company_name=?, phone=?, email=?,
+                    source=?, status=?, owner=?, customer_id=?, expected_value=?,
+                    notes=?, next_contact_at=?, updated_at=?
+                WHERE id=?
+                """,
+                (
+                    fields_common[0], fields_common[1], fields_common[2], fields_common[3],
+                    fields_common[4], fields_common[5], fields_common[6], owner,
+                    fields_common[7], fields_common[8], fields_common[9], fields_common[10],
+                    fields_common[11], lead_id,
+                ),
+            )
+        else:
+            conn.execute(
+                """
+                UPDATE crm_leads SET
+                    title=?, contact_name=?, company_name=?, phone=?, email=?,
+                    source=?, status=?, customer_id=?, expected_value=?,
+                    notes=?, next_contact_at=?, updated_at=?
+                WHERE id=?
+                """,
+                fields_common + (lead_id,),
+            )
         return int(lead_id)
     cur = conn.execute(
         """
@@ -176,7 +196,12 @@ def upsert_lead(conn: sqlite3.Connection, data: dict, lead_id: int | None = None
             created_at, updated_at
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
-        fields[:-1] + (_now(), _now()),
+        (
+            fields_common[0], fields_common[1], fields_common[2], fields_common[3],
+            fields_common[4], fields_common[5], fields_common[6], owner,
+            fields_common[7], fields_common[8], fields_common[9], fields_common[10],
+            _now(), _now(),
+        ),
     )
     return int(cur.lastrowid)
 

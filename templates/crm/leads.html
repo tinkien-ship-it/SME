@@ -178,7 +178,11 @@ async function saveLead() {
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify(body),
   });
-  const d = await r.json();
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 503 || d.retry) {
+    alert(d.error || 'Hệ thống đang bận — thử lại sau vài giây');
+    return;
+  }
   if (!r.ok || d.error) { alert(d.error || 'Lỗi'); return; }
   bootstrap.Modal.getInstance(document.getElementById('leadModal'))?.hide();
   loadLeads();

@@ -45,6 +45,14 @@ def _conn():
     return get_db_connection()
 
 
+def _api_locked(exc: Exception):
+    from db_utils import locked_user_message
+    msg = str(exc or '')
+    if 'locked' in msg.lower():
+        return jsonify({'error': locked_user_message(), 'retry': True}), 503
+    return None
+
+
 def register_crm_routes(app):
 
     # ── Pages ──────────────────────────────────────────────────────────
@@ -275,7 +283,15 @@ def register_crm_routes(app):
             return jsonify({'success': True, 'id': lid, 'owner': data.get('owner')})
         except ValueError as e:
             return jsonify({'error': str(e)}), 400
+        except sqlite3.Error as e:
+            locked = _api_locked(e)
+            if locked:
+                return locked
+            return jsonify({'error': str(e)}), 500
         except Exception as e:
+            locked = _api_locked(e)
+            if locked:
+                return locked
             return jsonify({'error': str(e)}), 500
         finally:
             conn.close()
@@ -304,7 +320,15 @@ def register_crm_routes(app):
             return jsonify({'success': True, 'id': lead_id})
         except ValueError as e:
             return jsonify({'error': str(e)}), 400
+        except sqlite3.Error as e:
+            locked = _api_locked(e)
+            if locked:
+                return locked
+            return jsonify({'error': str(e)}), 500
         except Exception as e:
+            locked = _api_locked(e)
+            if locked:
+                return locked
             return jsonify({'error': str(e)}), 500
         finally:
             conn.close()

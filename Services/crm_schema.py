@@ -7,7 +7,7 @@ import sqlite3
 from db.schema_helpers import add_column_if_missing, table_exists
 
 
-_CRM_SCHEMA_FLAG = 'crm_schema_email_smtp_v1'
+_CRM_SCHEMA_FLAG = 'crm_schema_contracts_items_v1'
 
 CONTRACT_EXTRA_COLS = (
     ('subtotal', 'REAL DEFAULT 0'),
@@ -376,6 +376,30 @@ def _migrate_stages(conn: sqlite3.Connection) -> None:
             pass
 
 
+def ensure_crm_email_logs(conn: sqlite3.Connection) -> None:
+    """Tạo bảng log email — không bump schema flag (tránh storm migrate đa worker)."""
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS crm_email_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                kind TEXT,
+                ref_id INTEGER,
+                to_email TEXT,
+                subject TEXT,
+                status TEXT,
+                error TEXT,
+                created_at TEXT DEFAULT (datetime('now','localtime'))
+            )
+            """
+        )
+        conn.execute(
+            'CREATE INDEX IF NOT EXISTS idx_crm_email_logs_created ON crm_email_logs(created_at)'
+        )
+    except sqlite3.Error:
+        pass
+
+
 def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
     from db_utils import (
         is_postgres,
@@ -385,10 +409,12 @@ def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
     )
 
     if not is_postgres() and sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
+        ensure_crm_email_logs(conn)
         return
 
     def _apply() -> None:
         if not is_postgres() and sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
+            ensure_crm_email_logs(conn)
             return
         conn.executescript(_DDL)
         if table_exists(conn, 'customers'):
@@ -411,6 +437,7 @@ def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
         if table_exists(conn, 'crm_contracts'):
             for col, col_type in CONTRACT_EXTRA_COLS:
                 add_column_if_missing(conn, 'crm_contracts', col, col_type)
+        ensure_crm_email_logs(conn)
         _migrate_stages(conn)
         try:
             conn.execute(
@@ -427,6 +454,13 @@ def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
         _apply()
         return
 
-    # Nhiều worker Gunicorn cùng migrate → database locked / upstream timeout
-    with sqlite_file_write_lock(conn, timeout=45.0):
-        _apply()
+    # Khóa ngắn — không chờ 45s (gây 504 Nginx). Worker khác đang migrate thì bỏ qua.
+    try:
+        with sqlite_file_write_lock(conn, timeout=2.0):
+            _apply()
+    except sqlite3.OperationalError:
+        # Đã có schema sẵn hoặc worker khác đang chạy — cố gắng tạo bảng phụ
+        try:
+            ensure_crm_email_logs(conn)
+        except sqlite3.Error:
+            pass

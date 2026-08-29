@@ -65,11 +65,20 @@ def _maybe_migrate_tenant_db(db_path):
             ensure_tenant_db_schema(conn)
         _tenant_schema_migrated.add(normalized)
     except Exception as e:
+        msg = str(e).lower()
+        # Đang locked — không đánh dấu done; request sau thử lại (tránh 504 chờ lâu)
+        if 'locked' in msg:
+            try:
+                current_app.logger.warning('Tenant schema migrate deferred (locked): %s', normalized)
+            except Exception:
+                pass
+            return
         try:
             current_app.logger.error('Tenant schema migrate failed (%s): %s', normalized, e)
         except Exception:
             print(f'[MIGRATE] tenant DB {normalized}: {e}')
-
+        # Lỗi khác: đánh dấu để không spam mỗi request
+        _tenant_schema_migrated.add(normalized)
 def ensure_tenants_dir():
     tenants_dir = os.path.join(BASE_DIR, 'tenants')
     os.makedirs(tenants_dir, exist_ok=True)
