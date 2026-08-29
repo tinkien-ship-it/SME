@@ -4,10 +4,15 @@ from __future__ import annotations
 import sqlite3
 
 from db.schema_helpers import add_column_if_missing, column_exists, ensure_index, row_to_dict
-from db_utils import sqlite_commit
+from db_utils import sqlite_commit, sqlite_is_ready, sqlite_mark_ready
+
+_POS_OFFLINE_FLAG = 'pos_offline_schema_v1'
 
 
 def ensure_pos_offline_schema(conn: sqlite3.Connection, *, commit: bool = False) -> None:
+    from db.dialect import is_postgres
+    if not is_postgres() and sqlite_is_ready(conn, _POS_OFFLINE_FLAG):
+        return
     if add_column_if_missing(conn, 'sale', 'client_uuid', 'TEXT'):
         pass
     ensure_index(
@@ -18,6 +23,8 @@ def ensure_pos_offline_schema(conn: sqlite3.Connection, *, commit: bool = False)
     )
     if commit:
         sqlite_commit(conn, label='pos_offline_schema')
+    if not is_postgres():
+        sqlite_mark_ready(conn, _POS_OFFLINE_FLAG)
 
 
 def find_sale_by_client_uuid(conn: sqlite3.Connection, client_uuid: str) -> dict | None:

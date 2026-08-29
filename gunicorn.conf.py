@@ -7,10 +7,13 @@ Chạy:
 
 Biến môi trường (.env):
   GUNICORN_BIND=127.0.0.1:8000
-  GUNICORN_WORKERS=3          # SQLite: 2–4; Postgres: 2*CPU+1
-  GUNICORN_THREADS=2          # gthread: xử lý I/O chờ SQLite tốt hơn sync thuần
+  GUNICORN_WORKERS=2          # SQLite: 2; Postgres: 2*CPU+1
+  GUNICORN_THREADS=3          # gthread: I/O chờ SQLite
   GUNICORN_WORKER_CLASS=gthread
   GUNICORN_TIMEOUT=90         # < proxy_read_timeout Nginx (khuyến nghị 120s)
+  SME_SQLITE_BUSY_TIMEOUT_MS=5000
+  SME_SQLITE_WRITE_RETRIES=4
+  SME_SKIP_RUNTIME_MIGRATE=1
   SME_DB_BACKEND=sqlite|postgres
   SME_CRM_ANALYTICS_BUDGET_SEC=8
 """

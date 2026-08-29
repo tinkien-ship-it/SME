@@ -409,12 +409,10 @@ def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
     )
 
     if not is_postgres() and sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
-        ensure_crm_email_logs(conn)
         return
 
     def _apply() -> None:
         if not is_postgres() and sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
-            ensure_crm_email_logs(conn)
             return
         conn.executescript(_DDL)
         if table_exists(conn, 'customers'):

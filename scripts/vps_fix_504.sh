@@ -22,11 +22,13 @@ keys = {
     "GUNICORN_TIMEOUT": "90",
     "SME_CRM_ANALYTICS_BUDGET_SEC": "8",
     "SME_GEOIP": "0",
-    # Deploy đã migrate_all_dbs — tắt migrate lại trên mỗi worker/request (giảm 504)
+    # Deploy đã migrate_all_dbs — tắt migrate/WAL storm lúc import worker
     "SME_SKIP_RUNTIME_MIGRATE": "1",
-    "SME_SQLITE_BUSY_TIMEOUT_MS": "30000",
-    "SME_SQLITE_WRITE_LOCK_SEC": "8",
-    "SME_SQLITE_WRITE_RETRIES": "16",
+    # Fail-fast: không chờ 30s×16 lần (treo worker → Nginx 504)
+    "SME_SQLITE_TIMEOUT": "8",
+    "SME_SQLITE_BUSY_TIMEOUT_MS": "5000",
+    "SME_SQLITE_WRITE_LOCK_SEC": "3",
+    "SME_SQLITE_WRITE_RETRIES": "4",
 }
 kept = []
 seen = set()

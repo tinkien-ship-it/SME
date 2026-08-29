@@ -6,7 +6,9 @@ khi deploy / migrate. Idempotent.
 from __future__ import annotations
 
 import sqlite3
-from db_utils import sqlite_commit
+from db_utils import sqlite_commit, sqlite_is_ready, sqlite_mark_ready
+
+_FB_SCHEMA_FLAG = 'fb_schema_v1'
 
 _FB_TABLES = {
     'areas': """
@@ -148,6 +150,10 @@ def _ensure_extra_cols(conn: sqlite3.Connection, table: str, extras, changed: li
 
 def ensure_fb_schema(conn: sqlite3.Connection, *, commit: bool = True) -> list[str]:
     """Tạo bảng/cột F&B còn thiếu. Trả list mô tả thay đổi."""
+    from db.dialect import is_postgres
+    if not is_postgres() and sqlite_is_ready(conn, _FB_SCHEMA_FLAG):
+        return []
+
     changed: list[str] = []
     c = conn.cursor()
     for name, ddl in _FB_TABLES.items():
@@ -170,4 +176,6 @@ def ensure_fb_schema(conn: sqlite3.Connection, *, commit: bool = True) -> list[s
 
     if commit:
         sqlite_commit(conn, label='fb_schema')
+    if not is_postgres():
+        sqlite_mark_ready(conn, _FB_SCHEMA_FLAG)
     return changed

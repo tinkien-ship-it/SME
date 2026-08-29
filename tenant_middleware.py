@@ -28,6 +28,9 @@ _tenant_schema_migrated = set()
 # Cache kiểm tra single-session — tránh mở SQLite users mỗi request HTML/API
 _session_token_cache: dict[tuple, tuple[float, str | None]] = {}
 _SESSION_TOKEN_CACHE_TTL_SEC = 20.0
+# Cache registry tenant_id → db_path (giảm mở database.db mỗi request)
+_tenant_path_cache: dict[str, tuple[float, dict | None]] = {}
+_TENANT_PATH_CACHE_TTL_SEC = 30.0
 
 
 def _maybe_migrate_tenant_db(db_path):
@@ -365,21 +368,42 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
     return tenant_db_path
 
 def get_tenant_db_path(tenant_id: str):
-    if not tenant_id: return None
+    if not tenant_id:
+        return None
+    now = time.time()
+    cached = _tenant_path_cache.get(tenant_id)
+    if cached and (now - cached[0]) < _TENANT_PATH_CACHE_TTL_SEC:
+        return cached[1]
     with get_main_db_connection() as conn:
         row = conn.execute(
             "SELECT db_path, business_name, phone FROM tenants WHERE tenant_id = ? AND is_active = 1",
             (tenant_id,),
         ).fetchone()
-        return dict(row) if row else None
+        data = dict(row) if row else None
+    _tenant_path_cache[tenant_id] = (now, data)
+    return data
 
 def load_tenant():
-    path = request.path.strip('/')
+    # Asset / SW — không chạm registry SQLite (tránh storm khi nhiều tab poll SW).
+    path_raw = (request.path or '').strip()
+    if (
+        path_raw.startswith('/static/')
+        or path_raw in ('/sw-pos.js', '/favicon.ico', '/favicon.png')
+        or path_raw.endswith('/sw-pos.js')
+    ):
+        g.tenant_id = None
+        g.db_path = MAIN_DB_PATH
+        g.tenant_info = None
+        g.is_main_tenant = True
+        return
+
+    path = path_raw.strip('/')
     parts = path.split('/')
     first_part = parts[0] if parts else ""
     excluded = [
         'static', 'api', 'logout', 'master', 'favicon.ico',
         'F&B_service', 'sale', 'login', 'hkd_accounting', 'onboarding',
+        'sw-pos.js',
     ]
 
     # Trang / API Master luôn dùng database.db (registry). Không lấy
@@ -636,6 +660,7 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             'crm_public_lead_form',
             'api_crm_public_lead',
             'keto_pos_intro',
+            'sw_pos',
         ]
         
         # Phòng hờ request.endpoint bị None khi truy cập file tĩnh lỗi hoặc các route không tồn tại
@@ -654,7 +679,7 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             '/api/crm/inbound-lead',
             '/api/crm/public-lead',
             '/api/crm/inbound/',
-        )):
+        )) or path in ('/sw-pos.js',) or path.endswith('/sw-pos.js'):
             return None
         # Multi-tenant public lead / webhook: /{tenant}/lead , /{tenant}/api/crm/...
         if (

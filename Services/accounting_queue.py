@@ -13,12 +13,20 @@ import logging
 import sqlite3
 from datetime import datetime
 
-from db_utils import begin_immediate, rollback_quietly, sqlite_commit, sqlite_write_retry
+from db_utils import (
+    begin_immediate,
+    rollback_quietly,
+    sqlite_commit,
+    sqlite_is_ready,
+    sqlite_mark_ready,
+    sqlite_write_retry,
+)
 
 logger = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = 5
 BATCH_SIZE = 5  # Giữ batch nhỏ — background worker không giữ khóa SQLite lâu
+_ACCT_QUEUE_FLAG = 'accounting_queue_schema_v1'
 
 _SKIP_REASONS = frozenset({
     'not_sme', 'journal_posting_disabled', 'already_posted',
@@ -27,7 +35,11 @@ _SKIP_REASONS = frozenset({
 
 
 def ensure_accounting_queue_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+    from db.dialect import is_postgres
     from db.schema_helpers import add_column_if_missing, table_exists
+
+    if not is_postgres() and sqlite_is_ready(conn, _ACCT_QUEUE_FLAG):
+        return
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS accounting_jobs (
@@ -74,10 +86,12 @@ def ensure_accounting_queue_schema(conn: sqlite3.Connection, *, commit: bool = T
         """)
     if commit:
         def _commit_schema():
-            begin_immediate(conn, label='acct_queue_schema')
+            begin_immediate(conn, label='acct_queue_schema', retries=1)
             sqlite_commit(conn, label='accounting_queue')
 
         sqlite_write_retry(_commit_schema, label='acct_queue_schema')
+    if not is_postgres():
+        sqlite_mark_ready(conn, _ACCT_QUEUE_FLAG)
 
 
 def enqueue_accounting_job(

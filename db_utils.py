@@ -31,28 +31,29 @@ MAIN_DB_PATH = os.path.join(BASE_DIR, "database.db")
 # Alias tương thích code cũ (registry / master DB)
 REGISTRY_PATH = MAIN_DB_PATH
 
-# Gunicorn nhiều worker ghi cùng 1 file SQLite → cần chờ lâu hơn khi mở file.
-# Có thể ghi đè: export SME_SQLITE_TIMEOUT=60
+# Gunicorn nhiều worker ghi cùng 1 file SQLite → cần chờ, nhưng KHÔNG vượt Nginx.
+# Mặc định fail-fast (~ vài giây) để trả 503 thay vì treo worker → 504.
+# Ghi đè: SME_SQLITE_TIMEOUT / SME_SQLITE_BUSY_TIMEOUT_MS / SME_SQLITE_WRITE_RETRIES
 try:
-    SQLITE_TIMEOUT_SEC = float(os.environ.get('SME_SQLITE_TIMEOUT', '60') or 60)
+    SQLITE_TIMEOUT_SEC = float(os.environ.get('SME_SQLITE_TIMEOUT', '8') or 8)
 except ValueError:
-    SQLITE_TIMEOUT_SEC = 60.0
+    SQLITE_TIMEOUT_SEC = 8.0
 
 try:
-    SQLITE_WRITE_RETRIES = int(os.environ.get('SME_SQLITE_WRITE_RETRIES', '12') or 12)
+    SQLITE_WRITE_RETRIES = int(os.environ.get('SME_SQLITE_WRITE_RETRIES', '4') or 4)
 except ValueError:
-    SQLITE_WRITE_RETRIES = 12
+    SQLITE_WRITE_RETRIES = 4
 
-# PRAGMA busy_timeout (ms) — tách khỏi timeout mở file; mặc định 30s (VPS đa worker).
+# PRAGMA busy_timeout (ms) — mặc định 5s (trước đây 30s × retries → worker treo > Nginx).
 try:
-    SQLITE_BUSY_TIMEOUT_MS = int(os.environ.get('SME_SQLITE_BUSY_TIMEOUT_MS', '30000') or 30000)
+    SQLITE_BUSY_TIMEOUT_MS = int(os.environ.get('SME_SQLITE_BUSY_TIMEOUT_MS', '5000') or 5000)
 except ValueError:
-    SQLITE_BUSY_TIMEOUT_MS = 30000
+    SQLITE_BUSY_TIMEOUT_MS = 5000
 
 try:
-    SQLITE_FILE_WRITE_LOCK_SEC = float(os.environ.get('SME_SQLITE_WRITE_LOCK_SEC', '8') or 8)
+    SQLITE_FILE_WRITE_LOCK_SEC = float(os.environ.get('SME_SQLITE_WRITE_LOCK_SEC', '3') or 3)
 except ValueError:
-    SQLITE_FILE_WRITE_LOCK_SEC = 8.0
+    SQLITE_FILE_WRITE_LOCK_SEC = 3.0
 
 # Single-writer trong cùng process (RLock — cho phép with_sqlite_write lồng nhau).
 _WRITE_LOCKS_GUARD = threading.Lock()
@@ -127,8 +128,12 @@ def _raw_sqlite_conn(conn):
     raise TypeError('Expected sqlite3 connection')
 
 
-def begin_immediate(conn, *, label: str = 'begin_immediate') -> None:
-    """Bắt đầu transaction ghi — SQLite: BEGIN IMMEDIATE; PostgreSQL: BEGIN."""
+def begin_immediate(conn, *, label: str = 'begin_immediate', retries: int | None = None) -> None:
+    """Bắt đầu transaction ghi — SQLite: BEGIN IMMEDIATE; PostgreSQL: BEGIN.
+
+    ``retries``: số lần thử khi locked. Gọi từ ``with_sqlite_write`` nên truyền 1
+    để tránh retry lồng (busy_timeout × retries × retries → 504).
+    """
     if is_postgres():
         def _pg():
             raw = _raw_db_conn(conn)
@@ -165,7 +170,9 @@ def begin_immediate(conn, *, label: str = 'begin_immediate') -> None:
                     return
                 raise
 
-    sqlite_write_retry(_do, label=label)
+    # with_sqlite_write truyền retries=1; gọi độc lập giữ retry bình thường
+    attempt = SQLITE_WRITE_RETRIES if retries is None else retries
+    sqlite_write_retry(_do, label=label, retries=attempt)
 
 
 def rollback_quietly(conn) -> None:
@@ -522,7 +529,8 @@ def with_sqlite_write(conn, fn, *, commit: bool = True, label: str = 'sqlite_wri
                     target = own
                     lock_key = path
             with sqlite_file_write_lock(lock_key or conn):
-                begin_immediate(target, label=label)
+                # retries=1: with_sqlite_write đã có sqlite_write_retry bên ngoài
+                begin_immediate(target, label=label, retries=1)
                 fn(target)
                 try:
                     target.commit()

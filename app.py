@@ -394,13 +394,20 @@ with app.app_context():
     _run_startup_migrations()
     try:
         from db.dialect import is_postgres
-        if not is_postgres():
+        # Deploy đã chạy ensure_sqlite_wal — bỏ qua khi skip runtime migrate
+        # (tránh 2 worker × N tenant DB mở đồng thời → khóa / CPU cao / 504).
+        _skip_wal = (os.environ.get('SME_SKIP_RUNTIME_MIGRATE') or '').strip().lower() in (
+            '1', 'true', 'yes', 'on',
+        )
+        if not is_postgres() and not _skip_wal:
             from db.sqlite_wal import ensure_all_sqlite_wal
             wal_ok, wal_fail = ensure_all_sqlite_wal(verbose=False)
             if wal_fail:
                 app.logger.warning('SQLite WAL: %s file(s) failed to enable WAL', wal_fail)
             elif wal_ok:
                 app.logger.info('SQLite WAL enabled on %s database file(s)', wal_ok)
+        elif not is_postgres() and _skip_wal:
+            app.logger.info('SME_SKIP_RUNTIME_MIGRATE: bỏ qua ensure_all_sqlite_wal lúc import')
     except Exception as exc:
         app.logger.warning('ensure_all_sqlite_wal: %s', exc)
     # Registry (tenants / user_tenant_mapping): thieu bang thi moi request deu 500
