@@ -63,7 +63,10 @@ def _env_truthy(name: str) -> bool:
 
 def _scheduler_lock_path() -> str:
     lock_dir = os.path.join(BASE_DIR, 'logs')
-    os.makedirs(lock_dir, exist_ok=True)
+    try:
+        os.makedirs(lock_dir, exist_ok=True)
+    except OSError as exc:
+        logger.warning('Không tạo được thư mục logs scheduler: %s', exc)
     return os.path.join(lock_dir, 'scheduler.leader.lock')
 
 
@@ -129,10 +132,16 @@ def try_acquire_scheduler_leadership() -> bool:
     cleanup_stale_scheduler_lock()
     path = _scheduler_lock_path()
     try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         fh = open(path, 'a+b')
     except OSError as exc:
-        logger.warning('Không mở được scheduler lock %s: %s', path, exc)
-        return False
+        # Race/missing dir trên VPS — thử tạo lại rồi mở 1 lần nữa
+        try:
+            os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+            fh = open(path, 'a+b')
+        except OSError as exc2:
+            logger.warning('Không mở được scheduler lock %s: %s', path, exc2 or exc)
+            return False
 
     # Nếu PID cũ còn sống mà ta không lấy được lock → bỏ qua.
     # Nếu PID cũ chết → xóa nội dung, thử khóa lại.

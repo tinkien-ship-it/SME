@@ -56,6 +56,7 @@ if [ -f "$APP_DIR/scripts/deploy_pos.sh" ]; then
 fi
 
 cd "$APP_DIR" || fail "khong vao duoc $APP_DIR"
+mkdir -p "$APP_DIR/logs" "$APP_DIR/tenants"
 # shellcheck disable=SC1090
 source "$VENV" || fail "khong activate duoc venv: $VENV"
 
