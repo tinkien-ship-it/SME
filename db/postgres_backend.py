@@ -285,6 +285,7 @@ class PgConnection:
     """Wrapper psycopg với ``execute()`` kiểu SQLite và search_path theo tenant."""
 
     __slots__ = (
+        '__weakref__',
         '_conn', '_schema', '_sme_backend', '_sme_pg_schema', '_closed', '_from_pool',
         '_finalizer', 'lastrowid', 'row_factory',
     )
@@ -301,7 +302,11 @@ class PgConnection:
         self.row_factory = None
         self._set_search_path()
         if from_pool:
-            self._finalizer = weakref.finalize(self, _pool_putconn_finalizer, conn)
+            try:
+                self._finalizer = weakref.finalize(self, _pool_putconn_finalizer, conn)
+            except TypeError:
+                # Class không hỗ trợ weakref — bỏ safety net, vẫn dùng được
+                self._finalizer = None
 
     def _set_search_path(self) -> None:
         reg = (os.environ.get('SME_PG_REGISTRY_SCHEMA') or 'public').strip() or 'public'
