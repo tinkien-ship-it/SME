@@ -198,8 +198,13 @@ def insert_sale_item_with_sector(cursor, columns, values, hkd_sector_code=None):
         cols.append('hkd_sector_code')
         vals.append(hkd_sector_code)
     placeholders = ', '.join(['?'] * len(vals))
+    try:
+        from Services.schema_compat import _sql_ident
+        col_sql = ', '.join(_sql_ident(c) for c in cols)
+    except Exception:
+        col_sql = ', '.join(cols)
     cursor.execute(
-        f"INSERT INTO sale_items ({', '.join(cols)}) VALUES ({placeholders})",
+        f"INSERT INTO sale_items ({col_sql}) VALUES ({placeholders})",
         vals,
     )
     # SQLite: mirror rowid → id. Postgres: no-op (rewriter) — id phải có SERIAL/DEFAULT.

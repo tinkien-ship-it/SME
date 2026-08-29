@@ -520,7 +520,17 @@ async function loadServiceTracking() {
         if (data.success) {
             renderServiceTracking(data.orders || []);
         } else {
+            console.error('active-orders:', data.message || data);
             renderServiceTracking([]);
+            const area = document.getElementById('serviceTrackingArea');
+            if (area && data.message) {
+                area.innerHTML = `
+                    <div class="col-12 text-center py-4 text-danger bg-white rounded-3 shadow-sm border">
+                        <i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>
+                        <span class="fw-medium">Không tải được theo dõi phục vụ</span>
+                        <div class="small text-muted mt-2">${data.message}</div>
+                    </div>`;
+            }
         }
     } catch (e) {
         console.error('Lỗi tải theo dõi phục vụ:', e);

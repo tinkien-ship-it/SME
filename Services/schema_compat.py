@@ -5,7 +5,7 @@ import sqlite3
 
 from db.dialect import is_postgres
 from db.errors import OPERATIONAL_ERROR
-from db.schema_helpers import column_exists, table_cols_lower, table_exists
+from db.schema_helpers import column_exists, table_cols, table_cols_lower, table_exists
 from db_utils import sqlite_commit
 
 _CANONICAL_USE_UNIT = 'use_sale_unit'
@@ -22,19 +22,42 @@ def _col_exists(cols: set[str], name: str) -> bool:
     return (name or '').lower() in cols
 
 
+def _sql_ident(name: str) -> str:
+    """Định danh cột an toàn trên Postgres (giữ nguyên hoa/thường từ information_schema)."""
+    if not name:
+        return name
+    if is_postgres():
+        return '"' + str(name).replace('"', '""') + '"'
+    return str(name)
+
+
+def _find_col_name(cols: set[str], *candidates: str) -> str | None:
+    """Tìm tên cột thật (đúng casing) theo danh sách ứng viên."""
+    by_lower = {(c or '').lower(): c for c in cols if c}
+    for cand in candidates:
+        hit = by_lower.get((cand or '').lower())
+        if hit:
+            return hit
+    return None
+
+
 def use_sale_unit_expr(cursor, alias: str = 'si') -> str:
     """Biểu thức SQL đọc đơn vị sỉ/lẻ — hỗ trợ cả UseSaleUnit và use_sale_unit."""
-    cols = table_cols_lower_cursor(cursor, 'sale_items')
-    a = alias
-    has_upper = _col_exists(cols, _LEGACY_USE_UNIT)
-    has_lower = _col_exists(cols, _CANONICAL_USE_UNIT)
-    if has_upper and has_lower:
-        return f'COALESCE({a}.{_LEGACY_USE_UNIT}, {a}.{_CANONICAL_USE_UNIT}, 0)'
-    if has_upper:
-        return f'COALESCE({a}.{_LEGACY_USE_UNIT}, 0)'
-    if has_lower:
-        return f'COALESCE({a}.{_CANONICAL_USE_UNIT}, 0)'
-    return '0'
+    conn = getattr(cursor, 'connection', None) or cursor
+    cols = table_cols(conn, 'sale_items')
+    a = f'{alias}.' if alias else ''
+    legacy = _find_col_name(cols, _LEGACY_USE_UNIT, 'usesaleunit')
+    canon = _find_col_name(cols, _CANONICAL_USE_UNIT)
+    parts = []
+    if legacy:
+        parts.append(f'{a}{_sql_ident(legacy)}')
+    if canon and canon != legacy:
+        parts.append(f'{a}{_sql_ident(canon)}')
+    if not parts:
+        return '0'
+    if len(parts) == 1:
+        return f'COALESCE({parts[0]}, 0)'
+    return f'COALESCE({parts[0]}, {parts[1]}, 0)'
 
 
 def normalize_use_sale_unit(raw) -> int:
@@ -64,26 +87,21 @@ def sale_item_pk_expr(cursor, alias: str = 'si') -> str:
 def use_sale_unit_where_clause(cursor, alias: str | None = 'si') -> str:
     if alias:
         return f'({use_sale_unit_expr(cursor, alias)}) = ?'
-    cols = table_cols_lower_cursor(cursor, 'sale_items')
-    has_upper = _col_exists(cols, _LEGACY_USE_UNIT)
-    has_lower = _col_exists(cols, _CANONICAL_USE_UNIT)
-    if has_upper and has_lower:
-        return f'(COALESCE({_LEGACY_USE_UNIT}, {_CANONICAL_USE_UNIT}, 0)) = ?'
-    if has_upper:
-        return f'COALESCE({_LEGACY_USE_UNIT}, 0) = ?'
-    if has_lower:
-        return f'COALESCE({_CANONICAL_USE_UNIT}, 0) = ?'
-    return '0 = ?'
+    expr = use_sale_unit_expr(cursor, alias='')
+    return f'({expr}) = ?'
 
 
 def use_sale_unit_insert_columns(cursor) -> list[str]:
     """Tên cột ghi khi INSERT — ghi cả hai nếu tenant có cả hai."""
-    cols = table_cols_lower_cursor(cursor, 'sale_items')
+    conn = getattr(cursor, 'connection', None) or cursor
+    cols = table_cols(conn, 'sale_items')
     names: list[str] = []
-    if _col_exists(cols, _LEGACY_USE_UNIT):
-        names.append(_LEGACY_USE_UNIT)
-    if _col_exists(cols, _CANONICAL_USE_UNIT):
-        names.append(_CANONICAL_USE_UNIT)
+    legacy = _find_col_name(cols, _LEGACY_USE_UNIT, 'usesaleunit')
+    canon = _find_col_name(cols, _CANONICAL_USE_UNIT)
+    if legacy:
+        names.append(legacy)
+    if canon and canon != legacy:
+        names.append(canon)
     return names
 
 

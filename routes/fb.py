@@ -603,6 +603,7 @@ def register_fb_routes(app):
             item_created = (
                 f"COALESCE(CAST(si.created_at AS text), {sale_created})"
             )
+            use_expr = use_sale_unit_expr(cursor, 'si')
             cursor.execute(f"""
                 SELECT 
                     s.id AS sale_id,
@@ -611,7 +612,7 @@ def register_fb_routes(app):
                     t.name AS table_name,
                     {sale_created} AS created_at,
                     si.menu_id,
-                    si.UseSaleUnit,
+                    {use_expr} AS "UseSaleUnit",
                     si.unit,
                     COALESCE(NULLIF(si.product_name, ''), si.item_name) AS product_name,
                     si.quantity,
@@ -626,7 +627,7 @@ def register_fb_routes(app):
                 LEFT JOIN tables t ON t.id = s.table_id
                 LEFT JOIN sale_items si ON si.sale_id = s.id
                 LEFT JOIN menu m ON m.id = si.menu_id
-                WHERE LOWER(COALESCE(s.status, '')) = 'draft'
+                WHERE LOWER(COALESCE(CAST(s.status AS text), '')) = 'draft'
                   AND s.table_id IS NOT NULL
                 ORDER BY t.name, si.created_at ASC
             """)
@@ -648,19 +649,27 @@ def register_fb_routes(app):
                     minutes_waiting = 0
                     if row['item_created_at']:
                         try:
-                            time_str = str(row['item_created_at'])[:19]
-                            if 'Z' in str(row['item_created_at']) or '+' in str(row['item_created_at']):
+                            raw_ts = str(row['item_created_at'])
+                            time_str = raw_ts[:19]
+                            if 'Z' in raw_ts or '+' in raw_ts[10:]:
                                 created = datetime.fromisoformat(
-                                    str(row['item_created_at']).replace('Z', '+00:00')).replace(tzinfo=None)
+                                    raw_ts.replace('Z', '+00:00')).replace(tzinfo=None)
                             else:
                                 created = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
                             minutes_waiting = max(
                                 0, int((now_time - created).total_seconds() / 60))
                         except Exception:
                             pass
+                    use_raw = None
                     try:
-                        use_sale_unit = int(
-                            row['UseSaleUnit'] if row['UseSaleUnit'] is not None else 0)
+                        use_raw = row['UseSaleUnit']
+                    except (KeyError, IndexError, TypeError):
+                        try:
+                            use_raw = row['usesaleunit']
+                        except (KeyError, IndexError, TypeError):
+                            use_raw = 0
+                    try:
+                        use_sale_unit = int(use_raw if use_raw is not None else 0)
                     except (ValueError, TypeError):
                         use_sale_unit = 0
                     display_unit = str(row['unit']).strip() if row['unit'] is not None else ''
@@ -683,11 +692,11 @@ def register_fb_routes(app):
         except sqlite3.Error as e:
             rollback_quietly(db)
             logger.exception("ERROR active-orders: %s", e)
-            return jsonify({"success": True, "orders": [], "message": str(e)})
+            return jsonify({"success": False, "orders": [], "message": str(e)})
         except Exception as e:
             rollback_quietly(db)
             logger.exception("ERROR active-orders: %s", e)
-            return jsonify({"success": True, "orders": [], "message": str(e)})
+            return jsonify({"success": False, "orders": [], "message": str(e)})
         finally:
             db.close()
 
@@ -768,7 +777,7 @@ def register_fb_routes(app):
             SELECT 
                 {pk_expr} AS sale_item_id,
                 si.menu_id,
-                {use_expr} AS UseSaleUnit,
+                {use_expr} AS "UseSaleUnit",
                 si.unit,
                 m.item_code,
                 COALESCE(NULLIF(m.name, ''), si.product_name, si.item_name) AS product_name,
@@ -786,7 +795,8 @@ def register_fb_routes(app):
             for row in rows:
                 item = dict(row)
                 try:
-                    item['UseSaleUnit'] = int(item.get('UseSaleUnit', 0))
+                    use_raw = item.get('UseSaleUnit', item.get('usesaleunit', 0))
+                    item['UseSaleUnit'] = int(use_raw if use_raw is not None else 0)
                 except (ValueError, TypeError):
                     item['UseSaleUnit'] = 0
                 if item.get('unit') is not None:
@@ -1098,8 +1108,9 @@ def register_fb_routes(app):
                     unit_cols = use_sale_unit_insert_columns(cursor)
                     set_parts = ['quantity = ?', 'line_total = ?']
                     params = [new_qty, new_line_total]
+                    from Services.schema_compat import _sql_ident
                     for col in unit_cols:
-                        set_parts.append(f'{col} = ?')
+                        set_parts.append(f'{_sql_ident(col)} = ?')
                         params.append(use_sale_unit)
                     params.extend([sale_id, menu_id, use_sale_unit])
                     where_plain = use_sale_unit_where_clause(cursor, alias=None)
