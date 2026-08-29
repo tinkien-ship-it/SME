@@ -46,7 +46,7 @@ text = p.read_text(encoding="utf-8", errors="replace") if p.exists() else ""
 lines = [ln for ln in text.splitlines() if ln.strip() and not ln.strip().startswith("#")]
 if is_pg:
             keys = {
-        "GUNICORN_WORKERS": "4",
+        "GUNICORN_WORKERS": "3",
         "GUNICORN_THREADS": "1",
         "GUNICORN_WORKER_CLASS": "sync",
         "GUNICORN_TIMEOUT": "90",
@@ -55,8 +55,9 @@ if is_pg:
         "SME_SKIP_RUNTIME_MIGRATE": "1",
         "SME_DB_BACKEND": "postgres",
         "SME_PG_POOL_MIN": "4",
-        "SME_PG_POOL_MAX": "40",
-        "SME_PG_POOL_TIMEOUT": "20",
+        "SME_PG_POOL_MAX": "50",
+        "SME_PG_POOL_TIMEOUT": "15",
+        "SME_ACCOUNTING_QUEUE_SEC": "60",
     }
     print("  mode=PostgreSQL")
 else:

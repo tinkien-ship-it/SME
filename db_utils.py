@@ -650,6 +650,16 @@ def get_db_connection():
         cached_path = getattr(g, '_sme_db_path', None)
         if cached is not None and cached_path == cache_key:
             return cached
+        # Đổi tenant/schema giữa request → trả connection cũ về pool (tránh leak)
+        if cached is not None:
+            try:
+                if hasattr(cached, '_real_close'):
+                    cached._real_close()
+                else:
+                    cached.close()
+            except Exception:
+                pass
+            g._sme_db = None
 
         conn = _open_db_for_path(db_path, request_scoped=True)
         g._sme_db = conn
@@ -664,32 +674,45 @@ def close_request_db():
     """Đóng connection request-scoped (gọi từ teardown)."""
     if not has_request_context():
         return
-    conn = getattr(g, '_sme_db', None)
-    if conn is None:
-        return
-    g._sme_db = None
-    g._sme_db_path = None
-    try:
-        # Gỡ transaction dở (lỗi FK không rollback) — tránh giữ khóa WAL
-        rollback_quietly(conn)
-    except Exception:
-        pass
-    try:
-        if isinstance(conn, _RequestScopedConnection):
-            conn._real_close()
-        elif hasattr(conn, '_real_close'):
-            conn._real_close()
-        else:
-            conn.close()
-    except (sqlite3.Error, Exception):
-        pass
+    for attr in ('_sme_db', '_sme_main_db'):
+        conn = getattr(g, attr, None)
+        if conn is None:
+            continue
+        setattr(g, attr, None)
+        if attr == '_sme_db':
+            g._sme_db_path = None
+        try:
+            rollback_quietly(conn)
+        except Exception:
+            pass
+        try:
+            if isinstance(conn, _RequestScopedConnection):
+                conn._real_close()
+            elif hasattr(conn, '_real_close'):
+                conn._real_close()
+            else:
+                conn.close()
+        except (sqlite3.Error, Exception):
+            pass
 
 
 def get_main_db_connection():
-    """Kết nối main/registry database (tenants, mapping, login history)."""
+    """Kết nối main/registry database (tenants, mapping, login history).
+
+    Trong Flask request: cache trên ``g._sme_main_db`` (teardown trả pool).
+    Ngoài request: caller PHẢI ``with get_main_db_connection()`` hoặc ``.close()``.
+    """
     if is_postgres():
-        from db.postgres_backend import open_pg
-        return open_pg(schema=pg_schema_from_db_path(MAIN_DB_PATH))
+        from db.postgres_backend import open_pg, open_pg_request
+        schema = pg_schema_from_db_path(MAIN_DB_PATH)
+        if has_request_context():
+            cached = getattr(g, '_sme_main_db', None)
+            if cached is not None:
+                return cached
+            conn = open_pg_request(schema)
+            g._sme_main_db = conn
+            return conn
+        return open_pg(schema=schema)
     return open_sqlite(MAIN_DB_PATH)
 
 

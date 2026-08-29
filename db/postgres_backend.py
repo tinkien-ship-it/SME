@@ -76,8 +76,8 @@ def get_pool() -> ConnectionPool:
         if _POOL is None:
             # Gunicorn 4 worker + scheduler + CRM song song — cần pool đủ lớn
             min_size = int(os.environ.get('SME_PG_POOL_MIN', '4') or 4)
-            max_size = int(os.environ.get('SME_PG_POOL_MAX', '40') or 40)
-            timeout = float(os.environ.get('SME_PG_POOL_TIMEOUT', '20') or 20)
+            max_size = int(os.environ.get('SME_PG_POOL_MAX', '50') or 50)
+            timeout = float(os.environ.get('SME_PG_POOL_TIMEOUT', '15') or 15)
             kwargs = {
                 'conninfo': database_url(),
                 'min_size': min_size,
@@ -344,16 +344,21 @@ class PgConnection:
         self._closed = True
         conn = self._conn
         if self._from_pool:
-            # Trả về pool — KHÔNG conn.close() (sẽ làm cạn pool → getconn treo mãi → 000/504)
+            # Luôn rollback trước khi trả pool — tránh connection "aborted" làm hỏng request sau
             try:
                 if not getattr(conn, 'closed', False):
                     try:
                         conn.rollback()
                     except Exception:
+                        pass
+                    get_pool().putconn(conn)
+                else:
+                    try:
                         get_pool().putconn(conn, close=True)
-                        return
-                get_pool().putconn(conn)
-            except Exception:
+                    except TypeError:
+                        get_pool().putconn(conn)
+            except Exception as exc:
+                logger.warning('putconn failed: %s', exc)
                 try:
                     conn.close()
                 except Exception:

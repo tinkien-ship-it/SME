@@ -342,7 +342,16 @@ def _rewrite_date_fn_calls(sql: str) -> str:
         if inner.upper().startswith('CURRENT_DATE') or 'INTERVAL' in inner.upper():
             out.append(inner)
         else:
-            out.append(f'(({inner})::timestamp)::date')
+            # Chuỗi rỗng / NULL → NULL (tránh ''::timestamp lỗi → abort txn → PoolTimeout)
+            out.append(
+                "("
+                f"CASE WHEN NULLIF(BTRIM(CAST(({inner}) AS text)), '') IS NULL THEN NULL "
+                f"WHEN NULLIF(BTRIM(CAST(({inner}) AS text)), '') "
+                f"~ '^[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}' "
+                f"THEN (NULLIF(BTRIM(CAST(({inner}) AS text)), '')::timestamp)::date "
+                f"ELSE NULL END"
+                ")"
+            )
         i = j
     return ''.join(out)
 
