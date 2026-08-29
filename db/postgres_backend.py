@@ -131,13 +131,32 @@ def _is_insert(sql: str) -> bool:
     return bool(_INSERT_RE.match(sql or ''))
 
 
+def _row_first_value(row: Any) -> Any:
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return next(iter(row.values()), None)
+    try:
+        return row[0]
+    except Exception:
+        return None
+
+
+def _coerce_lastrowid(val: Any) -> int:
+    """Ép id sau INSERT — None/invalid → 0 (tránh int(None) crash)."""
+    if val is None:
+        return 0
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _read_lastval(executor) -> int:
     """Đọc sequence vừa dùng sau INSERT (tương đương sqlite lastrowid)."""
     try:
         row = executor.execute('SELECT lastval()').fetchone()
-        if row is None:
-            return 0
-        return int(row[0] if not isinstance(row, dict) else list(row.values())[0])
+        return _coerce_lastrowid(_row_first_value(row))
     except Exception:
         return 0
 
@@ -209,12 +228,11 @@ class PgCursor:
             if _is_insert(query):
                 if used_returning:
                     row = self._cur.fetchone()
-                    if row is None:
-                        self.lastrowid = 0
-                    else:
-                        self.lastrowid = int(
-                            row[0] if not isinstance(row, dict) else list(row.values())[0]
-                        )
+                    rid = _coerce_lastrowid(_row_first_value(row))
+                    # RETURNING id = NULL (cột id không có DEFAULT/SERIAL) → thử lastval
+                    if rid == 0:
+                        rid = _read_lastval(self._cur)
+                    self.lastrowid = rid
                 else:
                     self.lastrowid = _read_lastval(self._cur)
             try:

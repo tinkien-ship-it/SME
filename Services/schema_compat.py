@@ -169,15 +169,16 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             pass
 
     cols = table_cols_lower(conn, 'sale_items')
-    if not _col_exists(cols, 'id'):
+    if is_postgres():
+        changed.extend(_ensure_sale_items_id_postgres(conn, c, cols))
+    elif not _col_exists(cols, 'id'):
         try:
             c.execute('ALTER TABLE sale_items ADD COLUMN id INTEGER')
-            if not is_postgres():
-                c.execute('UPDATE sale_items SET id = rowid WHERE id IS NULL')
+            c.execute('UPDATE sale_items SET id = rowid WHERE id IS NULL')
             changed.append('alter:sale_items.id')
         except OPERATIONAL_ERROR:
             pass
-    elif not is_postgres():
+    else:
         try:
             c.execute('UPDATE sale_items SET id = rowid WHERE id IS NULL')
         except OPERATIONAL_ERROR:
@@ -185,4 +186,89 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
 
     if commit:
         sqlite_commit(conn, label='schema_compat')
+    return changed
+
+
+def _ensure_sale_items_id_postgres(conn, cursor, cols: set[str]) -> list[str]:
+    """Postgres: sale_items.id phải có sequence/DEFAULT — INTEGER trần → RETURNING id = NULL → int(None)."""
+    changed: list[str] = []
+    has_id = _col_exists(cols, 'id')
+    if not has_id:
+        try:
+            # BIGSERIAL: tạo sequence, DEFAULT, backfill hàng cũ, NOT NULL
+            cursor.execute('ALTER TABLE sale_items ADD COLUMN id BIGSERIAL')
+            changed.append('alter:sale_items.id:bigserial')
+            return changed
+        except Exception as exc:
+            print('[MIGRATE] sale_items.id BIGSERIAL: %s' % exc)
+            try:
+                cursor.execute('ALTER TABLE sale_items ADD COLUMN id BIGINT')
+                has_id = True
+                changed.append('alter:sale_items.id:bigint')
+            except Exception as exc2:
+                print('[MIGRATE] sale_items.id BIGINT: %s' % exc2)
+                return changed
+
+    # Cột id đã có (thường INTEGER nullable, không DEFAULT) — gắn sequence + backfill NULL
+    try:
+        needs = False
+        if cursor.execute(
+            'SELECT 1 FROM sale_items WHERE id IS NULL LIMIT 1'
+        ).fetchone():
+            needs = True
+        else:
+            def_row = cursor.execute(
+                """
+                SELECT column_default
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = 'sale_items'
+                  AND column_name = 'id'
+                """
+            ).fetchone()
+            default_val = def_row[0] if def_row is not None else None
+            if not default_val:
+                needs = True
+        if not needs:
+            return changed
+
+        cursor.execute('CREATE SEQUENCE IF NOT EXISTS sale_items_id_seq')
+        mx_row = cursor.execute(
+            'SELECT COALESCE(MAX(id), 0) FROM sale_items'
+        ).fetchone()
+        try:
+            mx = int(mx_row[0] if mx_row is not None else 0) or 0
+        except (TypeError, ValueError):
+            mx = 0
+        cursor.execute('SELECT setval(?, ?)', ('sale_items_id_seq', mx))
+        cursor.execute(
+            "UPDATE sale_items SET id = nextval('sale_items_id_seq') WHERE id IS NULL"
+        )
+        cursor.execute(
+            "SELECT setval('sale_items_id_seq', "
+            "(SELECT COALESCE(MAX(id), 0) FROM sale_items))"
+        )
+        cursor.execute(
+            "ALTER TABLE sale_items ALTER COLUMN id "
+            "SET DEFAULT nextval('sale_items_id_seq')"
+        )
+        try:
+            cursor.execute(
+                'ALTER SEQUENCE sale_items_id_seq OWNED BY sale_items.id'
+            )
+        except Exception:
+            pass
+        try:
+            cursor.execute('ALTER TABLE sale_items ALTER COLUMN id SET NOT NULL')
+        except Exception:
+            pass
+        try:
+            cursor.execute(
+                'CREATE UNIQUE INDEX IF NOT EXISTS ux_sale_items_id ON sale_items (id)'
+            )
+        except Exception:
+            pass
+        changed.append('repair:sale_items.id:serial')
+    except Exception as exc:
+        print('[MIGRATE] repair sale_items.id: %s' % exc)
     return changed

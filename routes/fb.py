@@ -1035,6 +1035,12 @@ def register_fb_routes(app):
                         (table_id, now_str)
                     )
                     sale_id = cursor.lastrowid
+                    if not sale_id:
+                        db.rollback()
+                        return {
+                            "success": False,
+                            "message": "Không tạo được đơn bàn (thiếu id đơn). Kiểm tra schema sale.id trên Postgres.",
+                        }, 500
                     cursor.execute(
                         "UPDATE tables SET current_sale_id = ?, status = 'Busy' WHERE id = ?",
                         (sale_id, table_id),

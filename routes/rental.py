@@ -605,6 +605,10 @@ def register_rental_routes(app):
     @app.route('/api/rental/room/template')
     @login_required
     def download_room_template():
+        import openpyxl
+        from openpyxl.styles import Alignment, Font, PatternFill
+        from openpyxl.utils import get_column_letter
+
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Mau_Nhap_Phong"
@@ -623,7 +627,7 @@ def register_rental_routes(app):
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = header_align
-            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
+            ws.column_dimensions[get_column_letter(col)].width = 20
 
         # ==================== DÒNG HƯỚNG DẪN ====================
         ws.append(["101", "4000000", "available"])
