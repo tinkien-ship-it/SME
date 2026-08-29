@@ -68,6 +68,118 @@ def _rows(cur) -> list[dict]:
     return [_row(r) for r in cur.fetchall()]
 
 
+def normalize_phone_digits(phone: str | None) -> str:
+    """Chuẩn hóa SĐT để so khớp (bỏ ký tự; 84xxxxxxxxx → 0xxxxxxxxx)."""
+    digits = ''.join(c for c in str(phone or '') if c.isdigit())
+    if digits.startswith('84') and len(digits) >= 10:
+        digits = '0' + digits[2:]
+    if digits.startswith('840') and len(digits) >= 11:
+        digits = '0' + digits[3:]
+    return digits
+
+
+def find_matching_customer(
+    conn: sqlite3.Connection,
+    *,
+    phone: str | None = None,
+    email: str | None = None,
+    name: str | None = None,
+) -> int | None:
+    """Tìm KH đã có — ưu tiên SĐT, rồi email, rồi tên (khi không có SĐT/email)."""
+    ready(conn)
+    phone_n = normalize_phone_digits(phone)
+    email_n = (email or '').strip().lower()
+    name_n = (name or '').strip().lower()
+
+    if phone_n and len(phone_n) >= 8:
+        rows = conn.execute(
+            """
+            SELECT id, phone FROM customers
+            WHERE phone IS NOT NULL AND TRIM(phone) != ''
+            ORDER BY id DESC LIMIT 500
+            """
+        ).fetchall()
+        for r in rows:
+            d = _row(r)
+            if normalize_phone_digits(d.get('phone')) == phone_n:
+                return int(d['id'])
+
+    if email_n:
+        row = conn.execute(
+            """
+            SELECT id FROM customers
+            WHERE lower(trim(COALESCE(email, ''))) = ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (email_n,),
+        ).fetchone()
+        if row:
+            return int(_row(row)['id'])
+
+    # Chỉ khớp tên khi không có SĐT/email — tránh gộp nhầm hai KH trùng tên
+    if name_n and not phone_n and not email_n:
+        row = conn.execute(
+            """
+            SELECT id FROM customers
+            WHERE lower(trim(COALESCE(company_name, name, ''))) = ?
+               OR lower(trim(COALESCE(name, ''))) = ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (name_n, name_n),
+        ).fetchone()
+        if row:
+            return int(_row(row)['id'])
+    return None
+
+
+def find_opportunity_for_lead(
+    conn: sqlite3.Connection,
+    lead_id: int,
+    *,
+    include_closed: bool = False,
+) -> dict | None:
+    ready(conn)
+    sql = """
+        SELECT * FROM crm_opportunities
+        WHERE lead_id = ?
+    """
+    if not include_closed:
+        sql += " AND COALESCE(stage, '') NOT IN ('won', 'lost')"
+    sql += ' ORDER BY id DESC LIMIT 1'
+    row = conn.execute(sql, (int(lead_id),)).fetchone()
+    return _row(row) if row else None
+
+
+def sync_customer_from_lead(conn: sqlite3.Connection, customer_id: int, lead: dict) -> None:
+    """Cập nhật thông tin KH từ lead đã liên kết — không tạo bản ghi mới."""
+    if not customer_id:
+        return
+    name = (lead.get('company_name') or lead.get('contact_name') or '').strip()
+    conn.execute(
+        """
+        UPDATE customers SET
+            name = COALESCE(NULLIF(?, ''), name),
+            company_name = COALESCE(NULLIF(?, ''), company_name),
+            phone = COALESCE(NULLIF(?, ''), phone),
+            email = COALESCE(NULLIF(?, ''), email),
+            crm_notes = COALESCE(NULLIF(?, ''), crm_notes),
+            crm_next_contact_at = COALESCE(NULLIF(?, ''), crm_next_contact_at),
+            crm_updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            name or None,
+            (lead.get('company_name') or '').strip() or None,
+            (lead.get('phone') or '').strip() or None,
+            (lead.get('email') or '').strip() or None,
+            (lead.get('notes') or '').strip() or None,
+            (lead.get('next_contact_at') or '').strip() or None,
+            _now(),
+            int(customer_id),
+        ),
+    )
+
+
 def ready(conn: sqlite3.Connection) -> None:
     from db_utils import _raw_sqlite_conn, is_postgres
     commit = True
@@ -141,53 +253,92 @@ def upsert_lead(conn: sqlite3.Connection, data: dict, lead_id: int | None = None
     status = (data.get('status') or 'new').strip()
     if status not in LEAD_STATUSES:
         status = 'new'
-    owner = data.get('owner')
-    if owner is not None:
-        owner = str(owner).strip() or None
-    fields_common = (
-        (data.get('title') or '').strip() or contact,
-        contact,
-        (data.get('company_name') or '').strip() or None,
-        (data.get('phone') or '').strip() or None,
-        (data.get('email') or '').strip() or None,
-        (data.get('source') or '').strip() or None,
-        status,
-        data.get('customer_id') or None,
-        _f(data.get('expected_value')),
-        (data.get('notes') or '').strip() or None,
-        (data.get('next_contact_at') or '').strip() or None,
-        _now(),
-    )
+
+    existing = get_lead(conn, lead_id) if lead_id else None
+
+    # Giữ owner / customer_id khi form không gửi (tránh mất liên kết → tạo KH trùng lúc convert)
+    if 'owner' in data:
+        owner = str(data.get('owner') or '').strip() or None
+    else:
+        owner = (existing or {}).get('owner')
+
+    if 'customer_id' in data and data.get('customer_id') not in (None, '', 0, '0'):
+        try:
+            customer_id = int(data.get('customer_id'))
+        except (TypeError, ValueError):
+            customer_id = (existing or {}).get('customer_id')
+    else:
+        customer_id = (existing or {}).get('customer_id')
+
+    # Đặt status = converted trên form → chạy convert chuẩn (1 KH + 1 cơ hội)
+    if status == 'converted' and lead_id:
+        # Lưu thông tin trước, rồi convert (không INSERT customer rời)
+        conn.execute(
+            """
+            UPDATE crm_leads SET
+                title=?, contact_name=?, company_name=?, phone=?, email=?,
+                source=?, owner=?, expected_value=?, notes=?, next_contact_at=?,
+                updated_at=?
+            WHERE id=?
+            """,
+            (
+                (data.get('title') or '').strip() or contact,
+                contact,
+                (data.get('company_name') or '').strip() or None,
+                (data.get('phone') or '').strip() or None,
+                (data.get('email') or '').strip() or None,
+                (data.get('source') or '').strip() or None,
+                owner,
+                _f(data.get('expected_value')),
+                (data.get('notes') or '').strip() or None,
+                (data.get('next_contact_at') or '').strip() or None,
+                _now(),
+                int(lead_id),
+            ),
+        )
+        convert_lead(conn, int(lead_id), owner=owner or '')
+        return int(lead_id)
+
+    title = (data.get('title') or '').strip() or contact
+    company = (data.get('company_name') or '').strip() or None
+    phone = (data.get('phone') or '').strip() or None
+    email = (data.get('email') or '').strip() or None
+    source = (data.get('source') or '').strip() or None
+    notes = (data.get('notes') or '').strip() or None
+    next_at = (data.get('next_contact_at') or '').strip() or None
+    expected = _f(data.get('expected_value'))
+    now = _now()
+
     if lead_id:
-        # Giữ owner cũ nếu client không gửi (form Sửa lead không có field owner)
-        if 'owner' in data:
-            conn.execute(
-                """
-                UPDATE crm_leads SET
-                    title=?, contact_name=?, company_name=?, phone=?, email=?,
-                    source=?, status=?, owner=?, customer_id=?, expected_value=?,
-                    notes=?, next_contact_at=?, updated_at=?
-                WHERE id=?
-                """,
-                (
-                    fields_common[0], fields_common[1], fields_common[2], fields_common[3],
-                    fields_common[4], fields_common[5], fields_common[6], owner,
-                    fields_common[7], fields_common[8], fields_common[9], fields_common[10],
-                    fields_common[11], lead_id,
-                ),
-            )
-        else:
-            conn.execute(
-                """
-                UPDATE crm_leads SET
-                    title=?, contact_name=?, company_name=?, phone=?, email=?,
-                    source=?, status=?, customer_id=?, expected_value=?,
-                    notes=?, next_contact_at=?, updated_at=?
-                WHERE id=?
-                """,
-                fields_common + (lead_id,),
+        conn.execute(
+            """
+            UPDATE crm_leads SET
+                title=?, contact_name=?, company_name=?, phone=?, email=?,
+                source=?, status=?, owner=?, customer_id=?, expected_value=?,
+                notes=?, next_contact_at=?, updated_at=?
+            WHERE id=?
+            """,
+            (
+                title, contact, company, phone, email, source, status,
+                owner, customer_id, expected, notes, next_at, now, int(lead_id),
+            ),
+        )
+        # Đồng bộ sang Danh mục KH nếu đã liên kết — không tạo dòng mới
+        if customer_id:
+            sync_customer_from_lead(
+                conn,
+                int(customer_id),
+                {
+                    'contact_name': contact,
+                    'company_name': company,
+                    'phone': phone,
+                    'email': email,
+                    'notes': notes,
+                    'next_contact_at': next_at,
+                },
             )
         return int(lead_id)
+
     cur = conn.execute(
         """
         INSERT INTO crm_leads (
@@ -197,13 +348,15 @@ def upsert_lead(conn: sqlite3.Connection, data: dict, lead_id: int | None = None
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
-            fields_common[0], fields_common[1], fields_common[2], fields_common[3],
-            fields_common[4], fields_common[5], fields_common[6], owner,
-            fields_common[7], fields_common[8], fields_common[9], fields_common[10],
-            _now(), _now(),
+            title, contact, company, phone, email, source,
+            'new' if status == 'converted' else status,
+            owner, customer_id, expected, notes, next_at, now, now,
         ),
     )
-    return int(cur.lastrowid)
+    new_id = int(cur.lastrowid)
+    if status == 'converted':
+        convert_lead(conn, new_id, owner=owner or '')
+    return new_id
 
 
 def delete_lead(conn: sqlite3.Connection, lead_id: int) -> None:
@@ -213,17 +366,33 @@ def delete_lead(conn: sqlite3.Connection, lead_id: int) -> None:
 
 
 def convert_lead(conn: sqlite3.Connection, lead_id: int, owner: str = '') -> dict:
-    """Chuyển lead → customer + opportunity (stage lead)."""
+    """Chuyển lead → 1 customer + 1 opportunity (tái sử dụng nếu đã có)."""
     ready(conn)
     lead = get_lead(conn, lead_id)
     if not lead:
         raise ValueError('Không tìm thấy lead')
-    if lead.get('status') == 'converted' and lead.get('customer_id'):
-        return {'customer_id': lead['customer_id'], 'opportunity_id': None, 'already': True}
+
+    owner_final = (owner or lead.get('owner') or '').strip() or None
+    name = (lead.get('company_name') or lead.get('contact_name') or '').strip()
 
     customer_id = lead.get('customer_id')
+    if customer_id:
+        try:
+            customer_id = int(customer_id)
+        except (TypeError, ValueError):
+            customer_id = None
+
+    # Dedup: dùng lại KH theo SĐT / email / tên
     if not customer_id:
-        name = (lead.get('company_name') or lead.get('contact_name') or '').strip()
+        customer_id = find_matching_customer(
+            conn,
+            phone=lead.get('phone'),
+            email=lead.get('email'),
+            name=name,
+        )
+
+    created_customer = False
+    if not customer_id:
         cur = conn.execute(
             """
             INSERT INTO customers (
@@ -238,7 +407,7 @@ def convert_lead(conn: sqlite3.Connection, lead_id: int, owner: str = '') -> dic
                 lead.get('phone'),
                 lead.get('email'),
                 lead.get('source'),
-                owner or lead.get('owner'),
+                owner_final,
                 'prospect',
                 'standard',
                 lead.get('notes'),
@@ -248,27 +417,67 @@ def convert_lead(conn: sqlite3.Connection, lead_id: int, owner: str = '') -> dic
             ),
         )
         customer_id = int(cur.lastrowid)
+        created_customer = True
+    else:
+        sync_customer_from_lead(conn, int(customer_id), lead)
+        # Gắn owner CRM nếu trống
+        conn.execute(
+            """
+            UPDATE customers SET
+                crm_owner = COALESCE(NULLIF(crm_owner, ''), ?),
+                crm_source = COALESCE(NULLIF(crm_source, ''), ?),
+                crm_lifecycle = COALESCE(NULLIF(crm_lifecycle, ''), 'prospect'),
+                crm_updated_at = ?
+            WHERE id = ?
+            """,
+            (owner_final, lead.get('source'), _now(), int(customer_id)),
+        )
 
-    opp_id = upsert_opportunity(
-        conn,
-        {
-            'title': lead.get('title') or f"Cơ hội — {lead.get('contact_name')}",
-            'customer_id': customer_id,
-            'lead_id': lead_id,
-            'stage': 'approach',
-            'amount': lead.get('expected_value') or 0,
-            'owner': owner or lead.get('owner'),
-            'notes': lead.get('notes'),
-        },
-    )
+    # 1 lead → tối đa 1 cơ hội mở
+    existing_opp = find_opportunity_for_lead(conn, int(lead_id), include_closed=True)
+    opp_payload = {
+        'title': lead.get('title') or f"Cơ hội — {lead.get('contact_name')}",
+        'customer_id': customer_id,
+        'lead_id': lead_id,
+        'stage': 'approach',
+        'amount': lead.get('expected_value') or 0,
+        'owner': owner_final,
+        'notes': lead.get('notes'),
+    }
+    if existing_opp and existing_opp.get('id'):
+        # Giữ stage hiện tại nếu đã đi xa hơn approach; chỉ cập nhật thông tin
+        stage = existing_opp.get('stage') or 'approach'
+        if stage in ('won', 'lost'):
+            # Đã đóng — tạo lại chỉ khi convert lại sau khi mở lead
+            opp_id = upsert_opportunity(conn, opp_payload)
+        else:
+            opp_payload['stage'] = stage
+            opp_id = upsert_opportunity(conn, opp_payload, opp_id=int(existing_opp['id']))
+        already_opp = True
+    else:
+        opp_id = upsert_opportunity(conn, opp_payload)
+        already_opp = False
+
     conn.execute(
         """
-        UPDATE crm_leads SET status='converted', customer_id=?, converted_at=?, updated_at=?
+        UPDATE crm_leads SET status='converted', customer_id=?, converted_at=?,
+               owner=COALESCE(?, owner), updated_at=?
         WHERE id=?
         """,
-        (customer_id, _now(), _now(), lead_id),
+        (customer_id, lead.get('converted_at') or _now(), owner_final, _now(), lead_id),
     )
-    return {'customer_id': customer_id, 'opportunity_id': opp_id, 'already': False}
+    already = (
+        lead.get('status') == 'converted'
+        and bool(lead.get('customer_id'))
+        and not created_customer
+        and already_opp
+    )
+    return {
+        'customer_id': customer_id,
+        'opportunity_id': opp_id,
+        'already': already,
+        'reused_customer': not created_customer,
+    }
 
 
 # ── Opportunities ──────────────────────────────────────────────────────
