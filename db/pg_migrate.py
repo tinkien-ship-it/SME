@@ -78,6 +78,20 @@ def _exec(pg, sql: str, params: Any = None) -> None:
         raise
 
 
+def _ddl_fallback_plain_columns(ddl: str) -> str:
+    """Bỏ generated / AFTER — tạo cột thường khi DDL Postgres vẫn lỗi."""
+    text = convert_sqlite_ddl(ddl)
+    # remaining_amount DOUBLE PRECISION GENERATED ALWAYS AS (...) STORED → cột thường
+    text = re.sub(
+        r'GENERATED\s+ALWAYS\s+AS\s*\([^)]*\)\s*STORED',
+        '',
+        text,
+        flags=re.I,
+    )
+    text = re.sub(r'\s+AFTER\s+[`"\']?[\w]+[`"\']?', '', text, flags=re.I)
+    return text
+
+
 def import_sqlite_file(
     sqlite_path: str,
     pg_schema: str,
@@ -114,12 +128,38 @@ def import_sqlite_file(
                     continue
                 try:
                     _exec(pg, f'DROP TABLE IF EXISTS "{table}" CASCADE')
-                    _exec(pg, convert_sqlite_ddl(ddl))
+                    try:
+                        _exec(pg, convert_sqlite_ddl(ddl))
+                    except Exception:
+                        _safe_rollback(pg)
+                        _exec(pg, f'DROP TABLE IF EXISTS "{table}" CASCADE')
+                        _exec(pg, _ddl_fallback_plain_columns(ddl))
                 except Exception as exc:
                     stats['errors'].append(f'{table} DDL: {exc}')
                     continue
 
                 cols = [c[1] for c in src.execute(f'PRAGMA table_info({table})').fetchall()]
+                if not cols:
+                    stats['tables'] += 1
+                    continue
+                # Bỏ cột generated không insert được (PG tự tính); lấy cột thật trên PG
+                try:
+                    pg_cols = [
+                        r[0]
+                        for r in pg.execute(
+                            """
+                            SELECT column_name FROM information_schema.columns
+                            WHERE table_schema = %s AND table_name = %s
+                              AND is_generated = 'NEVER'
+                            ORDER BY ordinal_position
+                            """,
+                            (sch, table),
+                        ).fetchall()
+                    ]
+                    if pg_cols:
+                        cols = [c for c in cols if c in set(pg_cols)]
+                except Exception:
+                    _safe_rollback(pg)
                 if not cols:
                     stats['tables'] += 1
                     continue
@@ -159,13 +199,15 @@ def import_sqlite_file(
                         pg,
                         f"""
                         SELECT setval(
-                            pg_get_serial_sequence('"{table}"', 'id'),
-                            GREATEST(COALESCE((SELECT MAX(id) FROM "{table}"), 1), 1)
+                            pg_get_serial_sequence('"{sch}"."{table}"', 'id'),
+                            COALESCE((SELECT MAX(id) FROM "{table}"), 1),
+                            true
                         )
-                        """,
+                        """
                     )
                 except Exception:
                     _safe_rollback(pg)
     finally:
         src.close()
+
     return stats

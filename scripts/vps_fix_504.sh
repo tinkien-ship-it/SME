@@ -1,35 +1,76 @@
 #!/bin/bash
 # Vá khẩn 504 / database is locked trên VPS
 # Chạy: bash /root/pos/scripts/vps_fix_504.sh
+# Postgres: chỉ sửa unit/Nginx/Gunicorn — bỏ WAL SQLite.
 set -uo pipefail
 APP_DIR="${APP_DIR:-/root/pos}"
 SERVICE="${SERVICE:-pos}"
 UNIT="/etc/systemd/system/${SERVICE}.service"
 cd "$APP_DIR" || exit 1
 
-echo "=== [A] .env VPS (Gunicorn + SQLite) ==="
-touch "$APP_DIR/.env"
-# Ghi/đè các key quan trọng (idempotent)
-python3 - <<'PY'
+# Phát hiện backend từ .env (trước khi ghi đè keys)
+IS_PG=0
+if python3 - <<'PY'
 from pathlib import Path
+import sys
+p = Path("/root/pos/.env")
+vals = {}
+if p.exists():
+    for line in p.read_text(encoding="utf-8", errors="replace").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or "=" not in s:
+            continue
+        k, _, v = s.partition("=")
+        vals[k.strip()] = v.strip().strip('"').strip("'")
+raw = (vals.get("SME_DB_BACKEND") or vals.get("DATABASE_BACKEND") or "").strip().lower()
+url = (vals.get("SME_PG_URL") or vals.get("DATABASE_URL") or "").strip().lower()
+ok = raw in ("postgres", "postgresql", "pg") or url.startswith("postgres")
+if url.startswith("sqlite"):
+    # DATABASE_URL=sqlite ghi đè ý định PG nếu không có SME_PG_URL
+    if not (vals.get("SME_PG_URL") or "").strip().lower().startswith("postgres"):
+        if raw not in ("postgres", "postgresql", "pg"):
+            ok = False
+sys.exit(0 if ok else 1)
+PY
+then
+  IS_PG=1
+fi
+
+echo "=== [A] .env VPS (Gunicorn + DB) ==="
+touch "$APP_DIR/.env"
+python3 - <<PY
+from pathlib import Path
+is_pg = $IS_PG
 p = Path("/root/pos/.env")
 text = p.read_text(encoding="utf-8", errors="replace") if p.exists() else ""
 lines = [ln for ln in text.splitlines() if ln.strip() and not ln.strip().startswith("#")]
-keys = {
-    "GUNICORN_WORKERS": "2",
-    "GUNICORN_THREADS": "3",
-    "GUNICORN_WORKER_CLASS": "gthread",
-    "GUNICORN_TIMEOUT": "90",
-    "SME_CRM_ANALYTICS_BUDGET_SEC": "8",
-    "SME_GEOIP": "0",
-    # Deploy đã migrate_all_dbs — tắt migrate/WAL storm lúc import worker
-    "SME_SKIP_RUNTIME_MIGRATE": "1",
-    # Fail-fast: không chờ 30s×16 lần (treo worker → Nginx 504)
-    "SME_SQLITE_TIMEOUT": "8",
-    "SME_SQLITE_BUSY_TIMEOUT_MS": "5000",
-    "SME_SQLITE_WRITE_LOCK_SEC": "3",
-    "SME_SQLITE_WRITE_RETRIES": "4",
-}
+if is_pg:
+    keys = {
+        "GUNICORN_WORKERS": "4",
+        "GUNICORN_THREADS": "1",
+        "GUNICORN_WORKER_CLASS": "sync",
+        "GUNICORN_TIMEOUT": "90",
+        "SME_CRM_ANALYTICS_BUDGET_SEC": "8",
+        "SME_GEOIP": "0",
+        "SME_SKIP_RUNTIME_MIGRATE": "1",
+        "SME_DB_BACKEND": "postgres",
+    }
+    print("  mode=PostgreSQL")
+else:
+    keys = {
+        "GUNICORN_WORKERS": "2",
+        "GUNICORN_THREADS": "3",
+        "GUNICORN_WORKER_CLASS": "gthread",
+        "GUNICORN_TIMEOUT": "90",
+        "SME_CRM_ANALYTICS_BUDGET_SEC": "8",
+        "SME_GEOIP": "0",
+        "SME_SKIP_RUNTIME_MIGRATE": "1",
+        "SME_SQLITE_TIMEOUT": "8",
+        "SME_SQLITE_BUSY_TIMEOUT_MS": "5000",
+        "SME_SQLITE_WRITE_LOCK_SEC": "3",
+        "SME_SQLITE_WRITE_RETRIES": "4",
+    }
+    print("  mode=SQLite (Postgres chua active trong .env)")
 kept = []
 seen = set()
 for ln in lines:
@@ -137,13 +178,15 @@ else
 fi
 
 echo "=== [D] WAL + checkpoint nhẹ ==="
-if [ -f venv/bin/activate ]; then
-  # shellcheck disable=SC1091
-  source venv/bin/activate
-fi
-python scripts/ensure_sqlite_wal.py 2>/dev/null || true
-# Checkpoint WAL phình to (không block lâu)
-python3 - <<'PY'
+if [ "$IS_PG" = "1" ]; then
+  echo "  -> PostgreSQL: bo qua WAL SQLite"
+else
+  if [ -f venv/bin/activate ]; then
+    # shellcheck disable=SC1091
+    source venv/bin/activate
+  fi
+  python scripts/ensure_sqlite_wal.py 2>/dev/null || true
+  python3 - <<'PY'
 import sqlite3, pathlib
 root = pathlib.Path("/root/pos")
 files = [root / "database.db"] + list((root / "tenants").glob("*.db"))
@@ -152,7 +195,7 @@ for f in files:
         continue
     try:
         c = sqlite3.connect(str(f), timeout=30)
-        c.execute("PRAGMA busy_timeout=30000")
+        c.execute("PRAGMA busy_timeout=5000")
         c.execute("PRAGMA journal_mode=WAL")
         c.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         c.close()
@@ -160,6 +203,7 @@ for f in files:
     except Exception as e:
         print("  wal skip:", f.name, e)
 PY
+fi
 
 echo "=== [E] Restart app sạch ==="
 systemctl stop "$SERVICE" 2>/dev/null || true
@@ -177,6 +221,11 @@ systemctl status "$SERVICE" --no-pager 2>&1 | grep -i 'Assignment outside' && ec
 echo "=== [F] Smoke ==="
 curl -m 15 -o /dev/null -s -w 'localhost /login  %{http_code} ttfb=%{time_starttransfer}s\n' http://127.0.0.1:8000/login || echo 'curl fail'
 curl -m 15 -o /dev/null -s -w 'localhost /       %{http_code} ttfb=%{time_starttransfer}s\n' http://127.0.0.1:8000/ || echo 'curl fail'
+if [ -f venv/bin/activate ]; then
+  # shellcheck disable=SC1091
+  source venv/bin/activate
+fi
+python scripts/assert_db_backend.py 2>/dev/null || true
 
 echo "=== [G] Nginx timeout log (gan day) ==="
 tail -n 40 /var/log/nginx/error.log 2>/dev/null | grep -iE 'upstream timed out|504' | tail -n 8 || echo "  (khong thay timeout moi)"

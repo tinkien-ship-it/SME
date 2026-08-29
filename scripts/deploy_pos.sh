@@ -24,12 +24,18 @@
 # PostgreSQL (production VPS — khuyến nghị thay SQLite khi nhiều user):
 #   SME_DB_BACKEND=postgres
 #   DATABASE_URL=postgresql://sme:SECRET@127.0.0.1:5432/sme
+#   # hoặc SME_PG_URL=postgresql://...  (ưu tiên hơn DATABASE_URL=sqlite)
+#   SME_REQUIRE_POSTGRES=1            # 1 = deploy cảnh báo/exit nếu vẫn SQLite
 #   SME_PG_POOL_MIN=2
 #   SME_PG_POOL_MAX=30
 #   SME_PG_REGISTRY_SCHEMA=public
 # Sau khi cấu hình Postgres lần đầu:
 #   python scripts/migrate_sqlite_to_postgres.py
 #
+# QUAN TRỌNG: cài Postgres trên VPS ≠ app dùng Postgres.
+# App chỉ dùng PG khi .env có SME_DB_BACKEND=postgres + URL postgresql://
+# và pos.service có EnvironmentFile=-/root/pos/.env (deploy/vps_fix đã ghi).
+# Nếu deploy in "wal ok: xxx.db" / journal_mode=wal → vẫn đang SQLite.
 # Gunicorn (systemd unit pos.service — ExecStart):
 #   gunicorn -c gunicorn.conf.py app:app
 #   Hoặc: gunicorn -w ${GUNICORN_WORKERS:-4} -b 127.0.0.1:8000 app:app
@@ -419,5 +425,12 @@ case "$(echo "$SKIP_504" | tr '[:upper:]' '[:lower:]')" in
     fi
     ;;
 esac
+
+echo "=== [verify] Backend DB runtime ==="
+if [ -f "$VENV" ] || [ -f "$APP_DIR/venv/bin/activate" ]; then
+  # shellcheck disable=SC1090
+  source "$APP_DIR/venv/bin/activate" 2>/dev/null || true
+fi
+python scripts/assert_db_backend.py || echo "  ! assert_db_backend co canh bao"
 
 echo "=== Deploy xong ==="

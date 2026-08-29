@@ -8,6 +8,32 @@ from typing import Any
 def convert_sqlite_ddl(sql: str) -> str:
     """Chuyển CREATE TABLE SQLite sang PostgreSQL (cơ bản)."""
     text = sql.strip().rstrip(';')
+
+    # 1) datetime/date('now') TRƯỚC khi đổi kiểu DATETIME → TIMESTAMP
+    #    (nếu đảo thứ tự sẽ thành TIMESTAMP('now') → Postgres syntax error)
+    text = re.sub(
+        r"datetime\s*\(\s*['\"]now['\"]\s*(?:,\s*['\"]localtime['\"])?\s*\)",
+        'CURRENT_TIMESTAMP',
+        text,
+        flags=re.I,
+    )
+    text = re.sub(
+        r"date\s*\(\s*['\"]now['\"]\s*(?:,\s*['\"]localtime['\"])?\s*\)",
+        'CURRENT_DATE',
+        text,
+        flags=re.I,
+    )
+    # Phòng hờ bản đã bị convert nhầm trước đó
+    text = re.sub(
+        r"TIMESTAMP\s*\(\s*['\"]now['\"]\s*(?:,\s*['\"]localtime['\"])?\s*\)",
+        'CURRENT_TIMESTAMP',
+        text,
+        flags=re.I,
+    )
+
+    # 2) MySQL: col ... AFTER other_col — Postgres không hỗ trợ
+    text = re.sub(r'\s+AFTER\s+[`"\']?[\w]+[`"\']?', '', text, flags=re.I)
+
     text = re.sub(r'\bAUTOINCREMENT\b', '', text, flags=re.I)
     text = re.sub(r'INTEGER PRIMARY KEY(?!\s*\()', 'SERIAL PRIMARY KEY', text, flags=re.I)
     text = re.sub(r'\bINTEGER\b', 'BIGINT', text, flags=re.I)
@@ -18,15 +44,26 @@ def convert_sqlite_ddl(sql: str) -> str:
     text = re.sub(r'\bDOUBLE\b(?!\s+PRECISION)', 'DOUBLE PRECISION', text, flags=re.I)
     text = re.sub(r'\s+WITHOUT\s+ROWID\b', '', text, flags=re.I)
     text = re.sub(r'\s+ON\s+CONFLICT\s+(?:REPLACE|IGNORE|ABORT|FAIL|ROLLBACK)\b', '', text, flags=re.I)
+    text = re.sub(r'\bUNIQUE\s*\([^)]+\)\s*ON CONFLICT REPLACE', 'UNIQUE', text, flags=re.I)
+    text = re.sub(r'\s+COLLATE\s+NOCASE\b', '', text, flags=re.I)
+
+    # 3) Cột generated SQLite → Postgres STORED
+    #    GENERATED ALWAYS AS (expr) VIRTUAL|STORED
     text = re.sub(
-        r"datetime\s*\(\s*'now'\s*(?:,\s*'localtime'\s*)?\)",
-        'CURRENT_TIMESTAMP',
+        r'GENERATED\s+ALWAYS\s+AS\s*\(([^)]*)\)\s*(?:VIRTUAL|STORED)?',
+        r'GENERATED ALWAYS AS (\1) STORED',
         text,
         flags=re.I,
     )
-    text = re.sub(r'\bUNIQUE\s*\([^)]+\)\s*ON CONFLICT REPLACE', 'UNIQUE', text, flags=re.I)
-    # SQLite COLLATE NOCASE trong DDL → bỏ (Postgres dùng citext/ilike runtime)
-    text = re.sub(r'\s+COLLATE\s+NOCASE\b', '', text, flags=re.I)
+    #    Shorthand SQLite: col TYPE AS (expr) [VIRTUAL|STORED]
+    text = re.sub(
+        r'(\b(?:DOUBLE PRECISION|BIGINT|SERIAL|NUMERIC|TEXT|BYTEA|TIMESTAMP|BOOLEAN)\b)'
+        r'\s+AS\s*\(([^)]*)\)\s*(?:VIRTUAL|STORED)?',
+        r'\1 GENERATED ALWAYS AS (\2) STORED',
+        text,
+        flags=re.I,
+    )
+
     return text
 
 
