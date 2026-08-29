@@ -372,8 +372,17 @@ def _migrate_stages(conn: sqlite3.Connection) -> None:
                 'UPDATE crm_opportunities SET stage = ? WHERE stage = ?',
                 (new, old),
             )
-        except sqlite3.Error:
-            pass
+        except Exception as exc:
+            # Postgres: deadlock khi nhiều worker CRM cùng migrate — bỏ qua, lần sau/ready flag
+            msg = str(exc).lower()
+            if 'deadlock' in msg or 'locked' in msg:
+                break
+            try:
+                import sqlite3 as _sq
+                if isinstance(exc, _sq.Error):
+                    pass
+            except Exception:
+                pass
 
 
 def ensure_crm_email_logs(conn: sqlite3.Connection) -> None:
@@ -408,11 +417,13 @@ def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
         sqlite_mark_ready,
     )
 
-    if not is_postgres() and sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
+    # Cả SQLite lẫn Postgres: chỉ migrate 1 lần / process / schema
+    # (trước đây Postgres chạy lại mỗi request → deadlock UPDATE stage + PoolTimeout)
+    if sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
         return
 
     def _apply() -> None:
-        if not is_postgres() and sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
+        if sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
             return
         conn.executescript(_DDL)
         if table_exists(conn, 'customers'):
@@ -441,15 +452,31 @@ def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
             conn.execute(
                 "INSERT OR IGNORE INTO crm_assign_state (id, last_owner_index, owners_csv) VALUES (1, -1, '')"
             )
-        except sqlite3.Error:
+        except Exception:
             pass
         if commit:
-            conn.commit()
-        if not is_postgres():
-            sqlite_mark_ready(conn, _CRM_SCHEMA_FLAG)
+            try:
+                conn.commit()
+            except Exception:
+                pass
+        sqlite_mark_ready(conn, _CRM_SCHEMA_FLAG)
 
     if is_postgres():
-        _apply()
+        try:
+            from db.postgres_backend import pg_write_lock
+            from db_utils import sqlite_db_file
+            sch = sqlite_db_file(conn) or 'public'
+            with pg_write_lock(sch, timeout=3.0):
+                if sqlite_is_ready(conn, _CRM_SCHEMA_FLAG):
+                    return
+                _apply()
+        except Exception:
+            # Worker khác đang migrate / deadlock — đánh dấu ready mềm nếu bảng đã có
+            try:
+                if table_exists(conn, 'crm_leads'):
+                    sqlite_mark_ready(conn, _CRM_SCHEMA_FLAG)
+            except Exception:
+                pass
         return
 
     # Khóa ngắn — không chờ 45s (gây 504 Nginx). Worker khác đang migrate thì bỏ qua.
@@ -457,7 +484,6 @@ def ensure_crm_schema(conn: sqlite3.Connection, commit: bool = True) -> None:
         with sqlite_file_write_lock(conn, timeout=2.0):
             _apply()
     except sqlite3.OperationalError:
-        # Đã có schema sẵn hoặc worker khác đang chạy — cố gắng tạo bảng phụ
         try:
             ensure_crm_email_logs(conn)
         except sqlite3.Error:

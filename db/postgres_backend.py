@@ -74,21 +74,27 @@ def get_pool() -> ConnectionPool:
     _require_psycopg()
     with _POOL_GUARD:
         if _POOL is None:
-            min_size = int(os.environ.get('SME_PG_POOL_MIN', '2') or 2)
-            max_size = int(os.environ.get('SME_PG_POOL_MAX', '20') or 20)
-            timeout = float(os.environ.get('SME_PG_POOL_TIMEOUT', '10') or 10)
-            _POOL = ConnectionPool(
-                conninfo=database_url(),
-                min_size=min_size,
-                max_size=max_size,
-                timeout=timeout,
-                kwargs={
+            # Gunicorn 4 worker + scheduler + CRM song song — cần pool đủ lớn
+            min_size = int(os.environ.get('SME_PG_POOL_MIN', '4') or 4)
+            max_size = int(os.environ.get('SME_PG_POOL_MAX', '40') or 40)
+            timeout = float(os.environ.get('SME_PG_POOL_TIMEOUT', '20') or 20)
+            kwargs = {
+                'conninfo': database_url(),
+                'min_size': min_size,
+                'max_size': max_size,
+                'timeout': timeout,
+                'kwargs': {
                     'row_factory': compat_row_factory,
                     'autocommit': False,
                     'connect_timeout': 10,
                 },
-                open=True,
-            )
+                'open': True,
+            }
+            # Kiểm tra connection khi lấy từ pool (psycopg_pool ≥ 3.1)
+            check_fn = getattr(ConnectionPool, 'check_connection', None)
+            if check_fn is not None:
+                kwargs['check'] = check_fn
+            _POOL = ConnectionPool(**kwargs)
         return _POOL
 
 

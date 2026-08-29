@@ -45,7 +45,7 @@ p = Path("/root/pos/.env")
 text = p.read_text(encoding="utf-8", errors="replace") if p.exists() else ""
 lines = [ln for ln in text.splitlines() if ln.strip() and not ln.strip().startswith("#")]
 if is_pg:
-    keys = {
+            keys = {
         "GUNICORN_WORKERS": "4",
         "GUNICORN_THREADS": "1",
         "GUNICORN_WORKER_CLASS": "sync",
@@ -54,6 +54,9 @@ if is_pg:
         "SME_GEOIP": "0",
         "SME_SKIP_RUNTIME_MIGRATE": "1",
         "SME_DB_BACKEND": "postgres",
+        "SME_PG_POOL_MIN": "4",
+        "SME_PG_POOL_MAX": "40",
+        "SME_PG_POOL_TIMEOUT": "20",
     }
     print("  mode=PostgreSQL")
 else:

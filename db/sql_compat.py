@@ -151,6 +151,7 @@ TABLE_UPSERT_KEYS: dict[str, list[str]] = {
     'sme_payroll_runs__mb': ['id'],
     'accounting_jobs': ['sale_id', 'job_type', 'status'],
     'warehouses': ['code'],
+    'crm_assign_state': ['id'],
 }
 
 _IOR_RE = re.compile(
