@@ -45,6 +45,12 @@ def register_reports_routes(app):
             if is_sme_regime(regime):
                 from Services.sme.pos_profit_report import compute_sme_pos_profit_report
                 branch = (request.args.get('branch') or '').strip() or None
+                if branch is None:
+                    try:
+                        from Services.sme.branches import active_report_branch_filter
+                        branch = active_report_branch_filter()
+                    except Exception:
+                        branch = None
                 result = compute_sme_pos_profit_report(
                     conn, from_date_iso, to_date_iso, branch_code=branch,
                 )

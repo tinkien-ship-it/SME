@@ -55,6 +55,17 @@ def run(db_path: str, year: int) -> bool:
         if not c['balanced']:
             ok = False
 
+    tb = recon.get('trial_balance') or {}
+    if tb:
+        print(
+            f"  BCPS: DT thuần={tb.get('revenue_net', 0):,.0f} | "
+            f"CP={tb.get('expense_total', 0):,.0f} | "
+            f"LN gộp={tb.get('profit_before_tax', 0):,.0f}"
+        )
+        unmapped = tb.get('unmapped_accounts') or []
+        if unmapped:
+            print(f"  WARN: TK P&L chưa phân loại: {unmapped[:5]}")
+
     if recon.get('all_balanced') is False:
         ok = False
 

@@ -176,11 +176,9 @@ function loadProfit() {
 function renderSummary(data) {
     const revenue = data.revenue || 0;
     const opExp = data.operating_expenses || {};
-    const opTotal = opExp.total || 0;
-    const cogs = data.cogs || 0;
-    const totalExp = data.report_mode === 'b02'
-        ? cogs + opTotal + (opExp.tax || 0)
-        : cogs + opTotal;
+    const totalExp = data.total_expenses != null
+        ? data.total_expenses
+        : ((data.cogs || 0) + (opExp.total || 0));
     const netProfit = data.net_profit || 0;
     const rate = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
@@ -215,6 +213,22 @@ function renderB02Details(data) {
     const tbody = document.getElementById('detailBody');
     tbody.innerHTML = renderReconciliation(data);
     const rev = data.revenue || 0;
+
+    const detail = data.expense_detail || {};
+    const extra = (detail.rows || []).filter(r => r.source === 'journal' && r.amount > 0);
+    if (extra.length) {
+        tbody.innerHTML += `<tr class="table-secondary"><td colspan="3" class="fw-semibold small">Phân rã chi phí từ sổ nhật ký (lương, KH TSCĐ, CCDC…)</td></tr>`;
+        extra.forEach(row => {
+            tbody.innerHTML += `
+                <tr>
+                    <td class="text-start indent-sub">${row.label}</td>
+                    <td class="text-end text-muted">${formatVND(row.amount)}</td>
+                    <td class="text-end text-muted small">${formatPercent(row.amount, rev)}</td>
+                </tr>`;
+        });
+    }
+
+    tbody.innerHTML += `<tr class="table-secondary"><td colspan="3" class="fw-semibold small">Báo cáo kết quả HĐKD (B02 — TT99/TT58)</td></tr>`;
 
     (data.b02_rows || []).forEach(row => {
         const level = row.level || 0;
