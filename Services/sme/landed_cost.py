@@ -70,6 +70,10 @@ def _table_cols(conn: sqlite3.Connection, table: str) -> set[str]:
 
 
 def ensure_sme_landed_cost_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+    from db_utils import sqlite_is_ready, sqlite_mark_ready
+
+    if sqlite_is_ready(conn, 'landed_cost_schema_v1'):
+        return
     c = conn.cursor()
     c.execute(
         """
@@ -129,6 +133,7 @@ def ensure_sme_landed_cost_schema(conn: sqlite3.Connection, *, commit: bool = Tr
         repair_landed_cost_stock_capital(conn, commit=False)
     except Exception:
         pass
+    sqlite_mark_ready(conn, 'landed_cost_schema_v1')
     if commit:
         sqlite_commit(conn, label='landed_cost')
 
@@ -471,7 +476,8 @@ def list_eligible_target_imports(
 
     sql = f"""
         SELECT i.id, i.import_no, i.date, i.bill_no, i.bill_date,
-               i.supplier_id, COALESCE(s.name, '') AS supplier_name,
+               i.supplier_id,
+               MAX(COALESCE(s.name, '')) AS supplier_name,
                COALESCE(i.doc_type, 'stock') AS doc_type,
                COUNT(d.id) AS line_count,
                SUM(
@@ -484,7 +490,8 @@ def list_eligible_target_imports(
           {type_filter}
           {kw_filter}
           {branch_filter}
-        GROUP BY i.id
+        GROUP BY i.id, i.import_no, i.date, i.bill_no, i.bill_date,
+                 i.supplier_id, i.doc_type
         ORDER BY i.date DESC, i.id DESC
         LIMIT ?
     """

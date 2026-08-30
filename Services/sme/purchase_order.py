@@ -23,6 +23,10 @@ def _f(val) -> float:
 
 
 def ensure_purchase_order_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+    from db_utils import sqlite_is_ready, sqlite_mark_ready
+
+    if sqlite_is_ready(conn, 'purchase_order_schema_v1'):
+        return
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS sme_purchase_orders (
@@ -82,6 +86,7 @@ def ensure_purchase_order_schema(conn: sqlite3.Connection, *, commit: bool = Tru
             conn.execute('ALTER TABLE import ADD COLUMN po_id INTEGER')
     except sqlite3.Error:
         pass
+    sqlite_mark_ready(conn, 'purchase_order_schema_v1')
     if commit:
         sqlite_commit(conn, label='purchase_order')
 

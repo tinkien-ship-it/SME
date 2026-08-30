@@ -148,12 +148,16 @@
 
   async function loadProducts(){
     try{
-      const res=await fetch('/api/products/manage?q=');
-      const rows=await res.json();
-      products=Array.isArray(rows)?rows:(rows.data||[]);
+      const res=await fetch('/api/sme/products/brief?limit=500');
+      const json=await res.json();
+      products=(json.data||[]).map(p=>({
+        ...p,
+        buyprice: Number(p.avg_cost||p.base_price||p.wholesale_price||0),
+      }));
       document.getElementById('prodList').innerHTML=products.slice(0,500).map(p=>{
         const label=(p.product_code?p.product_code+' — ':'')+(p.name||'');
-        return `<option value="${(p.name||'').replace(/"/g,'&quot;')}" label="${label.replace(/"/g,'&quot;')}">`;
+        const buy=p.buyprice||p.avg_cost||p.base_price||0;
+        return `<option value="${(p.name||'').replace(/"/g,'&quot;')}" label="${label.replace(/"/g,'&quot;')}" data-buy="${buy}">`;
       }).join('');
     }catch(e){ products=[]; }
   }

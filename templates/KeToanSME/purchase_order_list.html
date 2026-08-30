@@ -56,6 +56,8 @@
   const label={draft:'Nháp',confirmed:'Đã xác nhận',partial:'Nhận một phần',received:'Đã nhận đủ',cancelled:'Đã hủy'};
   const matchLabel={matched:'Khớp',unbilled:'Chưa có HĐ',qty_short:'Thiếu nhận',amount_diff:'Lệch tiền',open:'Chưa nhận',cancelled:'Đã hủy'};
   async function load(){
+    const tbody=document.getElementById('tbody');
+    tbody.innerHTML='<tr><td colspan="9" class="text-muted text-center py-4">Đang tải…</td></tr>';
     const q=new URLSearchParams({
       date_from:document.getElementById('df').value||'',
       date_to:document.getElementById('dt').value||'',
@@ -96,6 +98,9 @@
       </td>
     </tr>`;}).join('');
   }
+  const y=new Date().getFullYear();
+  document.getElementById('df').value=`${y}-01-01`;
+  document.getElementById('dt').value=new Date().toISOString().slice(0,10);
   document.getElementById('btn').addEventListener('click', load);
   load();
 })();

@@ -536,3 +536,172 @@ def create_manual_supplier_invoice(conn, payload: dict) -> dict:
         'source_type': 'manual',
         'cost_category': cost_category,
     }
+
+
+_INWARD_LIST_SCHEMA_READY = 'inward_list_schema_v1'
+
+
+def ensure_inward_list_schema(conn) -> None:
+    from db_utils import sqlite_is_ready, sqlite_mark_ready
+
+    if sqlite_is_ready(conn, _INWARD_LIST_SCHEMA_READY):
+        return
+    ensure_import_service_schema(conn)
+    sqlite_mark_ready(conn, _INWARD_LIST_SCHEMA_READY)
+
+
+def _inward_invoice_day_sql() -> str:
+    return (
+        "LEFT(COALESCE(NULLIF(BTRIM(CAST(si.invoice_date AS text)), ''), "
+        "CAST(si.date AS text)), 10)"
+    )
+
+
+def _inward_branch_link_sets(conn, branch_code: str | None):
+    if not branch_code or str(branch_code).strip().upper() in ('', 'ALL'):
+        return None
+    from Services.sme.branches import import_branch_filter_sql
+
+    bf, bp = import_branch_filter_sql(conn, branch_code, alias='i')
+    ids: set[int] = set()
+    bills: set[str] = set()
+    for row in conn.execute(
+        f"""
+        SELECT i.from_invoice_id, TRIM(COALESCE(i.bill_no, '')) AS bill_no
+        FROM import i
+        WHERE 1=1 {bf}
+        """,
+        bp,
+    ).fetchall():
+        r = dict(row) if hasattr(row, 'keys') else {
+            'from_invoice_id': row[0], 'bill_no': row[1],
+        }
+        fid = r.get('from_invoice_id')
+        if fid:
+            ids.add(int(fid))
+        bill = (r.get('bill_no') or '').strip()
+        if bill:
+            bills.add(bill)
+    return ids, bills
+
+
+def _inward_visible_for_branch(inv: dict, link_sets) -> bool:
+    if link_sets is None:
+        return True
+    if not inv.get('has_import') and not inv.get('has_accounted'):
+        return True
+    ids, bills = link_sets
+    inv_id = int(inv.get('id') or 0)
+    if inv_id in ids:
+        return True
+    inv_no = (inv.get('invoice_no') or '').strip()
+    return inv_no in bills
+
+
+def list_inward_invoices(
+    conn,
+    *,
+    from_date: str | None = None,
+    to_date: str | None = None,
+    keyword: str | None = None,
+    status: str | None = None,
+    branch_code: str | None = None,
+    limit: int = 800,
+) -> list[dict]:
+    """Danh sách HĐ mua — JOIN thay EXISTS, không SELECT xml_data (nhanh trên PG)."""
+    import logging
+
+    ensure_inward_list_schema(conn)
+    conn.row_factory = sqlite3.Row
+    inv_day = _inward_invoice_day_sql()
+    limit = min(max(int(limit or 800), 1), 2000)
+
+    query = f"""
+        SELECT
+            si.id, si.invoice_no, si.serial, si.invoice_date, si.date,
+            si.seller_name, si.seller_tax_code, si.amount, si.tax_amount,
+            si.total, si.status, si.pdf_url, si.address,
+            CASE WHEN sb.bill_no IS NOT NULL THEN 1 ELSE 0 END AS has_import,
+            CASE WHEN si.status = 'accounted' OR sv.invoice_id IS NOT NULL THEN 1 ELSE 0 END AS has_accounted
+        FROM supplier_invoice si
+        LEFT JOIN (
+            SELECT DISTINCT TRIM(COALESCE(bill_no, '')) AS bill_no
+            FROM import
+            WHERE TRIM(COALESCE(bill_no, '')) != ''
+              AND COALESCE(doc_type, 'stock') NOT IN ('service', 'landed_cost')
+        ) sb ON sb.bill_no = TRIM(COALESCE(si.invoice_no, ''))
+        LEFT JOIN (
+            SELECT DISTINCT from_invoice_id AS invoice_id
+            FROM import
+            WHERE from_invoice_id IS NOT NULL
+            UNION
+            SELECT DISTINCT si2.id AS invoice_id
+            FROM import i
+            INNER JOIN supplier_invoice si2
+                ON TRIM(COALESCE(i.bill_no, '')) = TRIM(COALESCE(si2.invoice_no, ''))
+            WHERE TRIM(COALESCE(i.bill_no, '')) != ''
+              AND COALESCE(i.doc_type, '') IN ('service', 'landed_cost')
+        ) sv ON sv.invoice_id = si.id
+        WHERE 1=1
+    """
+    params: list = []
+
+    kw = (keyword or '').strip()
+    if kw:
+        like = f'%{kw}%'
+        query += ' AND (si.seller_name LIKE ? OR si.seller_tax_code LIKE ? OR si.invoice_no LIKE ?)'
+        params.extend([like, like, like])
+
+    if from_date:
+        query += f' AND {inv_day} >= date(?)'
+        params.append(from_date[:10])
+    if to_date:
+        query += f' AND {inv_day} <= date(?)'
+        params.append(to_date[:10])
+
+    query += f' ORDER BY {inv_day} DESC, si.id DESC LIMIT ?'
+    params.append(limit)
+
+    rows = conn.execute(query, params).fetchall()
+
+    landed_ids: set[int] = set()
+    try:
+        from db_utils import sqlite_table_exists
+        if sqlite_table_exists(conn, 'sme_landed_cost_docs'):
+            for r in conn.execute(
+                """
+                SELECT cost_invoice_id FROM sme_landed_cost_docs
+                WHERE COALESCE(status, 'posted') = 'posted'
+                """
+            ).fetchall():
+                if r[0] is not None:
+                    landed_ids.add(int(r[0]))
+    except Exception:
+        logging.exception('inward landed_cost ids')
+
+    link_sets = _inward_branch_link_sets(conn, branch_code)
+    result: list[dict] = []
+    for row in rows:
+        inv = dict(row)
+        inv['has_hach_toan'] = bool(inv.get('has_accounted'))
+        inv_id = int(inv.get('id') or 0)
+        inv['has_landed_cost'] = 1 if inv_id in landed_ids else 0
+        serial_up = str(inv.get('serial') or '').strip().upper()
+        inv['is_manual'] = 1 if serial_up in ('MANUAL', 'NGOẠI', 'NGOAI', 'FOREIGN') else 0
+        inv['is_foreign'] = 1 if serial_up in ('NGOẠI', 'NGOAI', 'FOREIGN', 'MANUAL') else 0
+        inv['cost_category'] = None
+        if not _inward_visible_for_branch(inv, link_sets):
+            continue
+        result.append(inv)
+
+    st = (status or '').strip().lower()
+    if st == 'imported':
+        result = [x for x in result if x.get('has_import') == 1]
+    elif st == 'hach_toan':
+        result = [x for x in result if x.get('has_accounted') == 1]
+    elif st == 'new':
+        result = [
+            x for x in result
+            if x.get('has_import') == 0 and x.get('has_accounted') == 0
+        ]
+    return result

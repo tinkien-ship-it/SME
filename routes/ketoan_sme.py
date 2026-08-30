@@ -5732,7 +5732,9 @@ def register_ketoan_sme_routes(app):
                 date_to=request.args.get('date_to') or None,
                 branch_code=request_branch_filter(),
             )
-            return jsonify({'success': True, 'data': rows})
+            resp = jsonify({'success': True, 'data': rows})
+            resp.headers['Cache-Control'] = 'private, max-age=15'
+            return resp
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:

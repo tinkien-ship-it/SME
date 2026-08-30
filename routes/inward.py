@@ -309,126 +309,33 @@ def register_inward_routes(app):
         conn = None
         try:
             conn = get_db_connection()
-            conn.row_factory = sqlite3.Row
-            c = conn.cursor()
+            from Services.inward_invoice_helpers import list_inward_invoices
 
-            from Services.inward_invoice_helpers import ensure_import_service_schema
-            from db_utils import sqlite_run_write
-
-            def _ensure_schema(cn):
-                ensure_import_service_schema(cn)
-
-            sqlite_run_write(conn, _ensure_schema, label='inward_schema')
-
-            # Query chính (giữ nguyên cấu trúc code cũ của bạn)
-            query = """
-                SELECT
-                    si.*,
-                    CASE WHEN EXISTS (
-                        SELECT 1 FROM import i_stock
-                        WHERE TRIM(COALESCE(i_stock.bill_no, '')) = TRIM(COALESCE(si.invoice_no, ''))
-                          AND COALESCE(i_stock.doc_type, 'stock') NOT IN ('service', 'landed_cost')
-                    ) THEN 1 ELSE 0 END AS has_import,
-                    CASE WHEN si.status = 'accounted' OR EXISTS (
-                        SELECT 1 FROM import i_svc
-                        WHERE i_svc.from_invoice_id = si.id
-                           OR (
-                               TRIM(COALESCE(i_svc.bill_no, '')) = TRIM(COALESCE(si.invoice_no, ''))
-                               AND COALESCE(i_svc.doc_type, '') IN ('service', 'landed_cost')
-                           )
-                    ) THEN 1 ELSE 0 END AS has_accounted
-                FROM supplier_invoice si
-                WHERE 1=1
-            """
-            params = []
-
-            if keyword:
-                query += " AND (si.seller_name LIKE ? OR si.seller_tax_code LIKE ? OR si.invoice_no LIKE ?)"
-                params.extend([f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"])
-
-            # Lọc theo ngày chứng từ (invoice_date) hoặc ngày ghi nhận (date)
-            # Ép text trước — Postgres: TRIM(date) / COALESCE(text, date) đều lỗi
-            _inv_day = (
-                "LEFT(COALESCE(NULLIF(BTRIM(CAST(si.invoice_date AS text)), ''), "
-                "CAST(si.date AS text)), 10)"
-            )
-            if from_date:
-                query += f" AND {_inv_day} >= date(?)"
-                params.append(from_date)
-            if to_date:
-                query += f" AND {_inv_day} <= date(?)"
-                params.append(to_date)
-
-            query += f" ORDER BY {_inv_day} DESC, si.id DESC"
-
-            c.execute(query, params)
-            rows = c.fetchall()
-
-            result = []
-            # Bảng landed cost chỉ có trên tenant SME đã dùng tính năng
-            has_lcd_table = bool(c.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='sme_landed_cost_docs'"
-            ).fetchone())
-            landed_ids = set()
-            if has_lcd_table:
-                for r in c.execute(
-                    """
-                    SELECT cost_invoice_id FROM sme_landed_cost_docs
-                    WHERE COALESCE(status, 'posted') = 'posted'
-                    """
-                ).fetchall():
-                    if r[0] is not None:
-                        landed_ids.add(int(r[0]))
-
-            for row in rows:
-                inv = dict(row)
-                inv['has_hach_toan'] = bool(inv.get('has_accounted'))
-                inv['has_landed_cost'] = 1 if int(inv.get('id') or 0) in landed_ids else 0
-                inv['is_manual'] = 0
-                inv['is_foreign'] = 0
-                raw = inv.get('xml_data') or ''
-                if isinstance(raw, str) and raw.strip().startswith('{'):
-                    try:
-                        meta = json.loads(raw)
-                        if str(meta.get('SourceType') or '').lower() == 'manual':
-                            inv['is_manual'] = 1
-                        if meta.get('IsForeign') or str(inv.get('serial') or '').upper() in (
-                            'NGOAI', 'FOREIGN', 'MANUAL',
-                        ):
-                            inv['is_foreign'] = 1
-                        inv['cost_category'] = meta.get('CostCategory') or None
-                    except (TypeError, ValueError, json.JSONDecodeError):
-                        pass
-                result.append(inv)
-
-            # SME multi-branch: HĐ đã nhập/hạch toán chỉ hiện nếu PN thuộc CN;
-            # HĐ mới (chưa nhập) vẫn hiện toàn DN để các CN nhận về.
+            branch_code = None
             try:
                 from Services.sme.branches import active_report_branch_filter
                 br = active_report_branch_filter()
                 if br is not None and str(br).strip().upper() not in ('', 'ALL'):
-                    result = [
-                        inv for inv in result
-                        if _inward_invoice_visible_for_branch(conn, inv, br)
-                    ]
+                    branch_code = str(br).strip()
             except Exception:
                 logging.exception('inward branch filter')
 
-            if status == 'imported':
-                result = [inv for inv in result if inv.get('has_import') == 1]
-            elif status == 'hach_toan':
-                result = [inv for inv in result if inv.get('has_accounted') == 1]
-            elif status == 'new':
-                result = [
-                    inv for inv in result
-                    if inv.get('has_import') == 0 and inv.get('has_accounted') == 0
-                ]
+            result = list_inward_invoices(
+                conn,
+                from_date=from_date,
+                to_date=to_date,
+                keyword=keyword or None,
+                status=status,
+                branch_code=branch_code,
+            )
 
-            return jsonify({
+            resp = jsonify({
                 "success": True,
                 "data": result,
-                "total": len(result)
+                "total": len(result),
             })
+            resp.headers['Cache-Control'] = 'private, max-age=15'
+            return resp
 
         except sqlite3.Error as db_err:
             import traceback

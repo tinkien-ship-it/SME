@@ -408,6 +408,13 @@ document.addEventListener('DOMContentLoaded', function() {
         altFormat: "d/m/Y",
         allowInput: true,
     });
+    // Mặc định năm hiện tại — tránh tải toàn bộ HĐ khi mở trang
+    const now = new Date();
+    const y = now.getFullYear();
+    const fpFrom = document.getElementById('from_date')._flatpickr;
+    const fpTo = document.getElementById('to_date')._flatpickr;
+    if (fpFrom && !fpFrom.input.value) fpFrom.setDate(`${y}-01-01`, false);
+    if (fpTo && !fpTo.input.value) fpTo.setDate(now, false);
     flatpickr("#man_date", {
         locale: "vn",
         dateFormat: "Y-m-d",
