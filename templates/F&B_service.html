@@ -502,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDraftHistory();
     fetchMenu();
     setupManualMenuForm();
-    setInterval(loadServiceTracking, 3000);
+    startServiceTrackingPoll();
 
     document.querySelector('[data-bs-target="#draft-inv-pane"]')?.addEventListener('shown.bs.tab', () => {
         loadStocktakeSheet();
@@ -512,6 +512,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ==================== THEO DÕI PHỤC VỤ ====================
+let _serviceTrackingTimer = null;
+
+function startServiceTrackingPoll() {
+    if (_serviceTrackingTimer) clearInterval(_serviceTrackingTimer);
+    loadServiceTracking();
+    _serviceTrackingTimer = setInterval(() => {
+        if (document.hidden) return;
+        loadServiceTracking();
+    }, 5000);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) loadServiceTracking();
+    });
+}
+
 async function loadServiceTracking() {
     try {
         const res = await fetch('/api/fb/active-orders');

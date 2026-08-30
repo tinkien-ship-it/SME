@@ -150,8 +150,8 @@ def _ensure_extra_cols(conn: sqlite3.Connection, table: str, extras, changed: li
 
 def ensure_fb_schema(conn: sqlite3.Connection, *, commit: bool = True) -> list[str]:
     """Tạo bảng/cột F&B còn thiếu. Trả list mô tả thay đổi."""
-    from db.dialect import is_postgres
-    if not is_postgres() and sqlite_is_ready(conn, _FB_SCHEMA_FLAG):
+    # SQLite + Postgres: chỉ migrate 1 lần / worker / schema (tránh chậm khi poll active-orders)
+    if sqlite_is_ready(conn, _FB_SCHEMA_FLAG):
         return []
 
     changed: list[str] = []
@@ -184,6 +184,5 @@ def ensure_fb_schema(conn: sqlite3.Connection, *, commit: bool = True) -> list[s
 
     if commit:
         sqlite_commit(conn, label='fb_schema')
-    if not is_postgres():
-        sqlite_mark_ready(conn, _FB_SCHEMA_FLAG)
+    sqlite_mark_ready(conn, _FB_SCHEMA_FLAG)
     return changed

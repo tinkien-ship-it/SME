@@ -131,15 +131,14 @@ def upsert_stock_out_voucher_for_sale(
     }
 
 
-def list_stock_in(
-    conn: sqlite3.Connection,
-    *,
-    date_from: str | None = None,
-    date_to: str | None = None,
-    branch_code: str | None = None,
-    q: str | None = None,
-    limit: int = 500,
-) -> list[dict[str, Any]]:
+_STOCK_IN_LIST_SCHEMA_READY = 'stock_in_list_schema_v1'
+
+
+def _ensure_stock_in_list_schemas(conn: sqlite3.Connection) -> None:
+    from db_utils import sqlite_is_ready, sqlite_mark_ready
+
+    if sqlite_is_ready(conn, _STOCK_IN_LIST_SCHEMA_READY):
+        return
     try:
         from Services.sme.import_settle import ensure_import_settle_schema
         ensure_import_settle_schema(conn, commit=False)
@@ -165,6 +164,19 @@ def list_stock_in(
         ensure_tax_payment_schema(conn, commit=False)
     except Exception:
         pass
+    sqlite_mark_ready(conn, _STOCK_IN_LIST_SCHEMA_READY)
+
+
+def list_stock_in(
+    conn: sqlite3.Connection,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    branch_code: str | None = None,
+    q: str | None = None,
+    limit: int = 500,
+) -> list[dict[str, Any]]:
+    _ensure_stock_in_list_schemas(conn)
 
     cols = {r[1] for r in conn.execute('PRAGMA table_info("import")').fetchall()}
     env_sel = (

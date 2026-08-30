@@ -7,9 +7,11 @@ from db.dialect import is_postgres
 from db.errors import OPERATIONAL_ERROR
 from db.schema_helpers import column_exists, table_cols, table_cols_lower, table_exists
 from db_utils import sqlite_commit
+from db_utils import sqlite_is_ready, sqlite_mark_ready
 
 _CANONICAL_USE_UNIT = 'use_sale_unit'
 _LEGACY_USE_UNIT = 'UseSaleUnit'
+_SALE_ITEMS_CANONICAL_FLAG = 'sale_items_canonical_v1'
 
 
 def table_cols_lower_cursor(cursor, table: str) -> set[str]:
@@ -114,6 +116,8 @@ def expand_use_sale_unit_values(cursor, value: int) -> list[int]:
 
 def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True) -> list[str]:
     """Đồng bộ UseSaleUnit ↔ use_sale_unit; thêm cột id mirror rowid nếu thiếu."""
+    if sqlite_is_ready(conn, _SALE_ITEMS_CANONICAL_FLAG):
+        return []
     changed: list[str] = []
     if not table_exists(conn, 'sale_items'):
         return changed
@@ -204,6 +208,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
 
     if commit:
         sqlite_commit(conn, label='schema_compat')
+    sqlite_mark_ready(conn, _SALE_ITEMS_CANONICAL_FLAG)
     return changed
 
 

@@ -2,10 +2,11 @@
 import sqlite3
 from datetime import datetime
 
-from flask import jsonify, render_template, request
+from flask import g, jsonify, render_template, request
 
 from auth import login_required
 from db_utils import get_db_connection
+from Services.tenant_profile import is_sme_regime
 
 
 def register_reports_routes(app):
@@ -39,9 +40,17 @@ def register_reports_routes(app):
             return jsonify({"error": "Định dạng ngày không hợp lệ"}), 400
 
         try:
-            from Services.profit_report_helpers import compute_profit_report
-            from flask import g
             profile = getattr(g, 'tenant_profile', None) or {}
+            regime = profile.get('accounting_regime') or profile.get('regime') or ''
+            if is_sme_regime(regime):
+                from Services.sme.pos_profit_report import compute_sme_pos_profit_report
+                branch = (request.args.get('branch') or '').strip() or None
+                result = compute_sme_pos_profit_report(
+                    conn, from_date_iso, to_date_iso, branch_code=branch,
+                )
+                return jsonify(result)
+
+            from Services.profit_report_helpers import compute_profit_report
             result = compute_profit_report(c, from_date_iso, to_date_iso, tenant_profile=profile)
             return jsonify({"status": "success", **result})
         except Exception as e:

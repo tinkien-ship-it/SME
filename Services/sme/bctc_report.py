@@ -135,6 +135,83 @@ def _period_activity(
     }
 
 
+def _date_range_activity(
+    conn: sqlite3.Connection,
+    date_from: str,
+    date_to: str,
+    *,
+    exclude_document_types: tuple[str, ...] = (),
+    branch_code: str | None = None,
+) -> dict[str, dict[str, Decimal]]:
+    """Phát sinh theo posting_date (dùng cho báo cáo lợi nhuận theo khoảng ngày)."""
+    from Services.sme.branches import branch_sql_filter
+
+    sql = """
+        SELECT jl.account_code,
+               SUM(jl.debit) AS debit,
+               SUM(jl.credit) AS credit
+        FROM sme_journal_lines jl
+        JOIN sme_journal_entries je ON je.id = jl.entry_id
+        WHERE je.status IN ('posted', 'reversed')
+          AND je.posting_date >= ? AND je.posting_date <= ?
+    """
+    params: list[Any] = [date_from[:10], date_to[:10]]
+    if exclude_document_types:
+        placeholders = ','.join('?' for _ in exclude_document_types)
+        sql += f' AND je.document_type NOT IN ({placeholders})'
+        params.extend(exclude_document_types)
+    bf, bp = branch_sql_filter(branch_code, alias='je')
+    sql += bf
+    params.extend(bp)
+    sql += ' GROUP BY jl.account_code'
+    rows = conn.execute(sql, params).fetchall()
+    return {
+        r[0]: {'debit': _money(r[1]), 'credit': _money(r[2])}
+        for r in rows
+    }
+
+
+def _monthly_activity_batch(
+    conn: sqlite3.Connection,
+    fiscal_year: int,
+    period_to: int,
+    *,
+    exclude_document_types: tuple[str, ...] = (),
+    branch_code: str | None = None,
+) -> dict[int, dict[str, dict[str, Decimal]]]:
+    """Gom phát sinh theo từng kỳ trong một truy vấn (tránh N+1)."""
+    from Services.sme.branches import branch_sql_filter
+
+    sql = """
+        SELECT je.period, jl.account_code,
+               SUM(jl.debit) AS debit,
+               SUM(jl.credit) AS credit
+        FROM sme_journal_lines jl
+        JOIN sme_journal_entries je ON je.id = jl.entry_id
+        WHERE je.status IN ('posted', 'reversed')
+          AND je.fiscal_year = ?
+          AND je.period >= 1 AND je.period <= ?
+    """
+    params: list[Any] = [fiscal_year, period_to]
+    if exclude_document_types:
+        placeholders = ','.join('?' for _ in exclude_document_types)
+        sql += f' AND je.document_type NOT IN ({placeholders})'
+        params.extend(exclude_document_types)
+    bf, bp = branch_sql_filter(branch_code, alias='je')
+    sql += bf
+    params.extend(bp)
+    sql += ' GROUP BY je.period, jl.account_code'
+    rows = conn.execute(sql, params).fetchall()
+    out: dict[int, dict[str, dict[str, Decimal]]] = {}
+    for r in rows:
+        period = int(r[0])
+        out.setdefault(period, {})[r[1]] = {
+            'debit': _money(r[2]),
+            'credit': _money(r[3]),
+        }
+    return out
+
+
 def _coa_line_map(conn: sqlite3.Connection) -> list[dict]:
     """Mọi TK active; bctc_line_code kế thừa từ cha nếu lá chưa gán."""
     conn.row_factory = sqlite3.Row

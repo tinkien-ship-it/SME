@@ -80,6 +80,32 @@ def _fb_normalize_use_sale_unit(raw) -> int:
     return normalize_use_sale_unit(raw)
 
 
+_sale_created_sql_cache: dict[str, str] = {}
+
+
+def _fb_sale_created_sql(conn) -> str:
+    """Biểu thức created_at cho sale — cache / worker / schema (tránh PRAGMA mỗi 3s)."""
+    from db_utils import sqlite_db_file
+    key = str(sqlite_db_file(conn) or 'default')
+    cached = _sale_created_sql_cache.get(key)
+    if cached is not None:
+        return cached
+    sale_cols = {
+        (r[1] or '').lower()
+        for r in conn.execute('PRAGMA table_info(sale)')
+    }
+    if 'created_at' in sale_cols and 'date' in sale_cols:
+        expr = "COALESCE(CAST(s.created_at AS text), CAST(s.date AS text))"
+    elif 'created_at' in sale_cols:
+        expr = 'CAST(s.created_at AS text)'
+    elif 'date' in sale_cols:
+        expr = 'CAST(s.date AS text)'
+    else:
+        expr = 'NULL'
+    _sale_created_sql_cache[key] = expr
+    return expr
+
+
 def _fb_load_sale_items(cursor, sale_id):
     use_expr = use_sale_unit_expr(cursor, 'si')
     pk_expr = sale_item_pk_expr(cursor, 'si')
@@ -585,24 +611,8 @@ def register_fb_routes(app):
         cursor = db.cursor()
         try:
             ensure_fb_schema(db)
-            sale_cols = {
-                (r[1] or '').lower()
-                for r in db.execute('PRAGMA table_info(sale)')
-            }
-            # Postgres: COALESCE(timestamp, text) → DatatypeMismatch — luôn CAST AS text
-            if 'created_at' in sale_cols and 'date' in sale_cols:
-                sale_created = (
-                    "COALESCE(CAST(s.created_at AS text), CAST(s.date AS text))"
-                )
-            elif 'created_at' in sale_cols:
-                sale_created = 'CAST(s.created_at AS text)'
-            elif 'date' in sale_cols:
-                sale_created = 'CAST(s.date AS text)'
-            else:
-                sale_created = 'NULL'
-            item_created = (
-                f"COALESCE(CAST(si.created_at AS text), {sale_created})"
-            )
+            sale_created = _fb_sale_created_sql(db)
+            item_created = f"COALESCE(CAST(si.created_at AS text), {sale_created})"
             use_expr = use_sale_unit_expr(cursor, 'si')
             cursor.execute(f"""
                 SELECT 

@@ -16,12 +16,15 @@
         .summary-box:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .flatpickr-calendar { z-index: 9999 !important; }
         .indent-sub { padding-left: 2rem !important; font-style: italic; color: #666; }
+        .indent-b02 { padding-left: calc(0.5rem + var(--b02-level, 0) * 1.25rem); }
+        .recon-ok { background: #d1e7dd; color: #0f5132; }
+        .recon-warn { background: #fff3cd; color: #664d03; }
     </style>
 {% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h3 class="mb-4 section-title"><i class="fas fa-chart-line text-primary"></i> Báo Cáo Lợi Nhuận</h3>
+    <h3 class="mb-4 section-title"><i class="fas fa-chart-line text-primary"></i> {% if sme_b02 %}Báo Cáo Lợi Nhuận (B02 — Sổ nhật ký SME){% else %}Báo Cáo Lợi Nhuận{% endif %}</h3>
 
     <div class="card shadow-sm mb-4">
         <div class="card-body">
@@ -172,11 +175,12 @@ function loadProfit() {
 
 function renderSummary(data) {
     const revenue = data.revenue || 0;
-    // Kiểm tra an toàn cho operating_expenses
     const opExp = data.operating_expenses || {};
     const opTotal = opExp.total || 0;
-    
-    const totalExp = (data.cogs || 0) + opTotal;
+    const cogs = data.cogs || 0;
+    const totalExp = data.report_mode === 'b02'
+        ? cogs + opTotal + (opExp.tax || 0)
+        : cogs + opTotal;
     const netProfit = data.net_profit || 0;
     const rate = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
@@ -189,7 +193,48 @@ function renderSummary(data) {
     rateEl.className = netProfit >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
 }
 
+function renderReconciliation(data) {
+    const recon = data.reconciliation;
+    if (!recon || !recon.checks || !recon.checks.length) return '';
+    const allOk = recon.all_balanced === true;
+    let html = `<tr><td colspan="3" class="small ${allOk ? 'recon-ok' : 'recon-warn'} p-2">`;
+    html += allOk
+        ? '<i class="fas fa-check-circle"></i> Đối chiếu B02/B01: khớp sổ nhật ký.'
+        : '<i class="fas fa-exclamation-triangle"></i> Đối chiếu B02/B01:';
+    recon.checks.forEach(c => {
+        const icon = c.balanced ? '✓' : '✗';
+        html += `<div>${icon} ${c.label}: kỳ vọng ${formatVND(c.expected)}, báo cáo ${formatVND(c.actual)}`;
+        if (!c.balanced) html += ` (lệch ${formatVND(c.difference)})`;
+        html += '</div>';
+    });
+    html += '</td></tr>';
+    return html;
+}
+
+function renderB02Details(data) {
+    const tbody = document.getElementById('detailBody');
+    tbody.innerHTML = renderReconciliation(data);
+    const rev = data.revenue || 0;
+
+    (data.b02_rows || []).forEach(row => {
+        const level = row.level || 0;
+        const indentCls = level > 1 ? 'indent-b02' : '';
+        const cls = row.highlight ? 'text-primary fw-bold' : (row.bold ? 'fw-bold' : '');
+        tbody.innerHTML += `
+            <tr class="${row.bold || row.highlight ? 'table-light' : ''}">
+                <td class="text-start ${indentCls}" style="--b02-level:${Math.max(0, level - 1)}">${row.name}</td>
+                <td class="text-end ${cls}">${formatVND(row.amount)}</td>
+                <td class="text-end text-muted small">${formatPercent(row.amount, rev)}</td>
+            </tr>
+        `;
+    });
+}
+
 function renderDetails(data) {
+    if (data.report_mode === 'b02' && data.b02_rows && data.b02_rows.length) {
+        renderB02Details(data);
+        return;
+    }
     const tbody = document.getElementById('detailBody');
     tbody.innerHTML = '';
 

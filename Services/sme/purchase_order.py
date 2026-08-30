@@ -615,7 +615,7 @@ def purchasing_hub_metrics(
 ) -> dict[str, Any]:
     """Chỉ số hub Mua hàng: PS nhập kho, công nợ 331, ĐĐH chờ nhập."""
     from datetime import datetime as _dt
-    from Services.sme.bctc_report import _closing_balances, _period_activity
+    from Services.sme.bctc_report import _closing_balances, _monthly_activity_batch, _period_activity
     from Services.sme.dashboard_metrics import _f, _money, _sum_activity, _sum_balance
     from Services.sme.journal_engine import ensure_sme_journal_ready
 
@@ -670,26 +670,31 @@ def purchasing_hub_metrics(
         """
     ).fetchone()[0]
 
+    monthly_map = _monthly_activity_batch(
+        conn, fiscal_year, period_to, branch_code=branch_code,
+    )
     monthly = []
     for m in range(1, period_to + 1):
-        act = _period_activity(conn, fiscal_year, m, m)
+        act = monthly_map.get(m, {})
         monthly.append({
             'period': m,
             'label': f'Tháng {m}',
             'purchase': _f(_sum_activity(act, ('152', '153', '156'), side='debit')),
         })
 
+    fy_start = f'{fiscal_year}-01-01'
+    fy_end = f'{fiscal_year + 1}-01-01'
     top_rows = conn.execute(
         """
         SELECT supplier_name, SUM(total_amount) AS amt, COUNT(*) AS cnt
         FROM sme_purchase_orders
         WHERE status != 'cancelled'
-          AND strftime('%Y', po_date) = ?
+          AND po_date >= ? AND po_date < ?
         GROUP BY supplier_name
         ORDER BY amt DESC
         LIMIT 6
         """,
-        (str(fiscal_year),),
+        (fy_start, fy_end),
     ).fetchall()
     suppliers = [
         {

@@ -1831,7 +1831,7 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_profit_report():
-        return redirect(url_for('profit'))
+        return render_template('profit.html', sme_b02=True)
 
     @app.route('/SME_employees')
     @login_required
@@ -5876,7 +5876,9 @@ def register_ketoan_sme_routes(app):
                 conn, fiscal_year=year, period_to=period_to,
                 branch_code=_sme_branch_arg(),
             )
-            return jsonify({'success': True, 'data': data})
+            resp = jsonify({'success': True, 'data': data})
+            resp.headers['Cache-Control'] = 'private, max-age=30'
+            return resp
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
