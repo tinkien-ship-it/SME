@@ -261,11 +261,9 @@ def apply_schema_migrations(conn):
     c = conn.cursor()
     ensure_products_schema(conn)
     ensure_invoice_settings_schema(conn)
-    try:
-        from Services.fb_schema import ensure_fb_schema
-        ensure_fb_schema(conn, commit=False)
-    except Exception as e:
-        print(f'[MIGRATE] fb schema: {e}')
+    _migrate_guard(conn, 'fb schema', lambda: __import__(
+        'Services.fb_schema', fromlist=['ensure_fb_schema']
+    ).ensure_fb_schema(conn, commit=False))
     for table, col, col_type in _TENANT_TABLE_EXTRAS:
         if _table_has_column(conn, table, col):
             continue
@@ -274,54 +272,60 @@ def apply_schema_migrations(conn):
             add_column_if_missing(conn, table, col, col_type, cursor=c)
         except sqlite3.OperationalError as e:
             print(f'[MIGRATE] Không thể thêm {table}.{col}: {e}')
+            try:
+                from db_utils import ignore_db_error
+                ignore_db_error(conn)
+            except Exception:
+                pass
     conn.commit()
-    try:
+
+    def _migrate_import_service():
         from Services.inward_invoice_helpers import ensure_import_service_schema
         ensure_import_service_schema(conn)
-    except Exception as e:
-        print(f'[MIGRATE] import service: {e}')
-    try:
+
+    def _migrate_wh_fa():
         from Services.import_line_helpers import ensure_warehouse_schema
         from Services.fixed_assets_helpers import ensure_fixed_assets_schema
         ensure_warehouse_schema(conn)
         ensure_fixed_assets_schema(conn)
-    except Exception as e:
-        print(f'[MIGRATE] warehouse/fixed_assets: {e}')
-    try:
+
+    def _migrate_bank():
         from Services.payment_bank import ensure_bank_transactions_table
         ensure_bank_transactions_table(conn)
-    except Exception as e:
-        print(f'[MIGRATE] bank_transactions: {e}')
-    try:
+
+    def _migrate_attendance():
         from Services.attendance_helpers import ensure_attendance_schema
         ensure_attendance_schema(conn)
-    except Exception as e:
-        print(f'[MIGRATE] attendance: {e}')
-    try:
+
+    def _migrate_payroll():
         from Services.employee_payroll_helpers import ensure_payroll_schema
         ensure_payroll_schema(conn, commit=True)
-    except Exception as e:
-        print(f'[MIGRATE] payroll: {e}')
-    try:
+
+    def _migrate_production():
         from Services.production_costing import ensure_production_schema
         ensure_production_schema(conn)
-    except Exception as e:
-        print(f'[MIGRATE] production: {e}')
-    try:
+
+    def _migrate_pos_offline():
         from Services.pos_offline_schema import ensure_pos_offline_schema
         ensure_pos_offline_schema(conn, commit=False)
-    except Exception as e:
-        print(f'[MIGRATE] pos offline: {e}')
-    try:
+
+    def _migrate_user_branch():
         from Services.user_branch import ensure_user_branch_schema
         ensure_user_branch_schema(conn, commit=False)
-    except Exception as e:
-        print(f'[MIGRATE] user_branch: {e}')
-    try:
+
+    def _migrate_crm():
         from Services.crm_schema import ensure_crm_schema
         ensure_crm_schema(conn, commit=False)
-    except Exception as e:
-        print(f'[MIGRATE] crm: {e}')
+
+    _migrate_guard(conn, 'import service', _migrate_import_service)
+    _migrate_guard(conn, 'warehouse/fixed_assets', _migrate_wh_fa)
+    _migrate_guard(conn, 'bank_transactions', _migrate_bank)
+    _migrate_guard(conn, 'attendance', _migrate_attendance)
+    _migrate_guard(conn, 'payroll', _migrate_payroll)
+    _migrate_guard(conn, 'production', _migrate_production)
+    _migrate_guard(conn, 'pos offline', _migrate_pos_offline)
+    _migrate_guard(conn, 'user_branch', _migrate_user_branch)
+    _migrate_guard(conn, 'crm', _migrate_crm)
     try:
         from db.dialect import is_postgres
         if not is_postgres():
@@ -331,16 +335,27 @@ def apply_schema_migrations(conn):
                 print(f'[MIGRATE] journal_mode={mode} (mong doi WAL)')
     except Exception as e:
         print(f'[MIGRATE] WAL: {e}')
-    try:
-        ensure_query_indexes(conn)
-    except Exception as e:
-        print(f'[MIGRATE] query indexes: {e}')
+    _migrate_guard(conn, 'query indexes', lambda: ensure_query_indexes(conn))
     conn.commit()
+
+
+def _migrate_guard(conn, label: str, fn) -> None:
+    """Chạy bước migrate; lỗi PG thì rollback để bước sau không kẹt INERROR."""
+    try:
+        fn()
+    except Exception as e:
+        print(f'[MIGRATE] {label}: {e}')
+        try:
+            from db_utils import ignore_db_error
+            ignore_db_error(conn)
+        except Exception:
+            pass
 
 
 def ensure_query_indexes(conn) -> None:
     """Index phục vụ list API (HĐ mua, phiếu nhập, danh mục) — idempotent."""
-    from db.schema_helpers import execute_ddl, table_exists
+    from db.schema_helpers import column_exists, execute_ddl, table_exists
+    from db_utils import ignore_db_error
 
     specs = [
         ('idx_import_details_import_id', 'import_details', 'import_id'),
@@ -361,9 +376,12 @@ def ensure_query_indexes(conn) -> None:
     for idx_name, table, column in specs:
         if not table_exists(conn, table):
             continue
+        if not column_exists(conn, table, column):
+            continue
         try:
             execute_ddl(conn, f'CREATE INDEX IF NOT EXISTS {idx_name} ON {table} ({column})')
         except Exception as e:
+            ignore_db_error(conn)
             print(f'[MIGRATE] index {idx_name}: {e}')
 
 

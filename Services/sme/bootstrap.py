@@ -11,6 +11,18 @@ _BOOTSTRAP_VERSION = '2026-08-21congno-settle-partner'
 _sme_bootstrapped: dict[str, str] = {}
 
 
+def _optional_schema(conn, fn, /, **kwargs) -> None:
+    """Gọi ensure_* tùy chọn — PG: rollback nếu lỗi để không kẹt transaction."""
+    try:
+        fn(conn, **kwargs)
+    except Exception:
+        try:
+            from db_utils import ignore_db_error
+            ignore_db_error(conn)
+        except Exception:
+            pass
+
+
 def _conn_db_key(conn: sqlite3.Connection) -> str:
     try:
         row = conn.execute('PRAGMA database_list').fetchone()
@@ -81,6 +93,15 @@ def ensure_sme_accounting_ready(
     from Services.sme.ledger_ops import ensure_ledger_ops_schema
     from Services.sme.prepaid import ensure_prepaid_schema
     from Services.sme.accruals import ensure_accrual_schema
+    from Services.sme.export_payment import ensure_export_sale_schema
+    from Services.sme.customs_declaration import ensure_customs_declaration_schema
+    from Services.sme.cong_no_ops import ensure_cong_no_schema
+    from Services.sme.import_settle import ensure_import_settle_schema
+    from Services.sme.service_costing import ensure_service_costing_schema
+    from Services.sme.period_cost_allocation import ensure_period_cost_allocation_schema
+    from Services.sme.costing_policy import ensure_costing_policy_schema
+    from Services.sme.product_cost_standards import ensure_product_cost_standards_schema
+    from Services.sme.deferred_revenue import ensure_deferred_revenue_schema
     from Services.tenant_profile import is_sme_regime, normalize_accounting_regime
 
     coa = ensure_sme_coa_ready(conn, commit=False)
@@ -111,52 +132,16 @@ def ensure_sme_accounting_ready(
     ensure_sme_labor_sheets_schema(conn, commit=False)
     ensure_sme_stock_inspection_schema(conn, commit=False)
     ensure_sme_material_remaining_schema(conn, commit=False)
-    ensure_sme_cash_extras_schema(conn, commit=False)
-    try:
-        from Services.sme.export_payment import ensure_export_sale_schema
-        ensure_export_sale_schema(conn, commit=False)
-    except Exception:
-        pass
-    try:
-        from Services.sme.customs_declaration import ensure_customs_declaration_schema
-        ensure_customs_declaration_schema(conn, commit=False)
-    except Exception:
-        pass
-    try:
-        from Services.sme.cong_no_ops import ensure_cong_no_schema
-        ensure_cong_no_schema(conn, commit=False)
-    except Exception:
-        pass
-    try:
-        from Services.sme.import_settle import ensure_import_settle_schema
-        ensure_import_settle_schema(conn, commit=False)
-    except Exception:
-        pass
-    try:
-        from Services.sme.service_costing import ensure_service_costing_schema
-        ensure_service_costing_schema(conn, commit=False)
-    except Exception:
-        pass
-    try:
-        from Services.sme.period_cost_allocation import ensure_period_cost_allocation_schema
-        ensure_period_cost_allocation_schema(conn, commit=False)
-    except Exception:
-        pass
-    try:
-        from Services.sme.costing_policy import ensure_costing_policy_schema
-        ensure_costing_policy_schema(conn, commit=False)
-    except Exception:
-        pass
-    try:
-        from Services.sme.product_cost_standards import ensure_product_cost_standards_schema
-        ensure_product_cost_standards_schema(conn, commit=False)
-    except Exception:
-        pass
-    try:
-        from Services.sme.deferred_revenue import ensure_deferred_revenue_schema
-        ensure_deferred_revenue_schema(conn, commit=False)
-    except Exception:
-        pass
+    _optional_schema(conn, ensure_sme_cash_extras_schema, commit=False)
+    _optional_schema(conn, ensure_export_sale_schema, commit=False)
+    _optional_schema(conn, ensure_customs_declaration_schema, commit=False)
+    _optional_schema(conn, ensure_cong_no_schema, commit=False)
+    _optional_schema(conn, ensure_import_settle_schema, commit=False)
+    _optional_schema(conn, ensure_service_costing_schema, commit=False)
+    _optional_schema(conn, ensure_period_cost_allocation_schema, commit=False)
+    _optional_schema(conn, ensure_costing_policy_schema, commit=False)
+    _optional_schema(conn, ensure_product_cost_standards_schema, commit=False)
+    _optional_schema(conn, ensure_deferred_revenue_schema, commit=False)
 
     existing_meta: dict[str, str] = {}
     try:
@@ -178,6 +163,8 @@ def ensure_sme_accounting_ready(
             if k:
                 existing_meta[str(k)] = str(v or '')
     except sqlite3.Error:
+        from db_utils import ignore_db_error
+        ignore_db_error(conn)
         existing_meta = {}
 
     # Không mặc định TT99 khi caller (sale_journal, API…) bỏ trống accounting_regime —

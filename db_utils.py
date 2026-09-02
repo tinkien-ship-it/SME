@@ -190,6 +190,33 @@ def rollback_quietly(conn) -> None:
         pass
 
 
+def recover_pg_transaction(conn) -> bool:
+    """PostgreSQL: rollback khi transaction INERROR (tránh 'commands ignored until end of transaction block')."""
+    try:
+        from db.dialect import is_postgres
+        if not is_postgres():
+            return False
+    except Exception:
+        return False
+    raw = _raw_db_conn(conn)
+    try:
+        import psycopg.pq
+        if hasattr(raw, 'info'):
+            st = raw.info.transaction_status
+            if st == psycopg.pq.TransactionStatus.INERROR:
+                raw.rollback()
+                return True
+    except Exception:
+        rollback_quietly(conn)
+        return True
+    return False
+
+
+def ignore_db_error(conn) -> None:
+    """Sau ``except`` DB khi muốn tiếp tục — PG phải rollback trước câu SQL kế tiếp."""
+    recover_pg_transaction(conn)
+
+
 class _AutoCloseConnection:
     """Proxy: ``with open_sqlite(...)`` / ``close()`` luôn đóng file thật.
 
@@ -656,6 +683,7 @@ def get_db_connection():
         cached = getattr(g, '_sme_db', None)
         cached_path = getattr(g, '_sme_db_path', None)
         if cached is not None and cached_path == cache_key:
+            recover_pg_transaction(cached)
             return cached
         # Đổi tenant/schema giữa request → trả connection cũ về pool (tránh leak)
         if cached is not None:
@@ -689,6 +717,7 @@ def close_request_db():
         if attr == '_sme_db':
             g._sme_db_path = None
         try:
+            recover_pg_transaction(conn)
             rollback_quietly(conn)
         except Exception:
             pass

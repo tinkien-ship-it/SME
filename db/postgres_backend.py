@@ -174,6 +174,8 @@ class PgCursor:
         self.description = None
 
     def execute(self, query: str, params: Any = None):
+        from db_utils import recover_pg_transaction
+        recover_pg_transaction(self._cur.connection)
         sql = rewrite_sql_for_postgres(query, schema=self._schema)
         want_id = _is_insert(query) and 'RETURNING' not in sql.upper()
         is_write = want_id or bool(_WRITE_SQL_RE.match(query or ''))
@@ -252,6 +254,8 @@ class PgCursor:
             raise
 
     def executemany(self, query: str, params_seq):
+        from db_utils import recover_pg_transaction
+        recover_pg_transaction(self._cur.connection)
         sql = rewrite_sql_for_postgres(query, schema=self._schema)
         try:
             self._cur.executemany(sql, params_seq)
@@ -362,6 +366,8 @@ class PgConnection:
 
     def execute(self, query: str, params: Any = None):
         """Tương thích sqlite3: trả cursor; hỗ trợ lastrowid sau INSERT."""
+        from db_utils import recover_pg_transaction
+        recover_pg_transaction(self)
         cur = self.cursor()
         cur.execute(query, params)
         self.lastrowid = cur.lastrowid

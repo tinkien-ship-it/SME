@@ -706,6 +706,11 @@ def _handle_internal_error(error):
     app.logger.error(
         "Lỗi 500 tại %s %s", request.method, request.path, exc_info=error,
     )
+    try:
+        from db_utils import ignore_db_error, get_db_connection
+        ignore_db_error(get_db_connection())
+    except Exception:
+        pass
 
     # Local/debug: giữ traceback của Werkzeug để lập trình viên vẫn debug được
     if app.debug or app.testing:

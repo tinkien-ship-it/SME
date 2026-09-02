@@ -6,7 +6,7 @@ import sqlite3
 from db.dialect import is_postgres
 from db.errors import OPERATIONAL_ERROR
 from db.schema_helpers import column_exists, table_cols, table_cols_lower, table_exists
-from db_utils import sqlite_commit
+from db_utils import ignore_db_error, sqlite_commit
 from db_utils import sqlite_is_ready, sqlite_mark_ready
 
 _CANONICAL_USE_UNIT = 'use_sale_unit'
@@ -135,7 +135,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             changed.append(f'alter:sale_items.{_LEGACY_USE_UNIT}')
             has_upper = True
         except OPERATIONAL_ERROR:
-            pass
+            ignore_db_error(conn)
 
     if not has_lower:
         try:
@@ -145,7 +145,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             changed.append(f'alter:sale_items.{_CANONICAL_USE_UNIT}')
             has_lower = True
         except OPERATIONAL_ERROR:
-            pass
+            ignore_db_error(conn)
 
     if has_upper and has_lower:
         try:
@@ -166,7 +166,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             if c.rowcount:
                 changed.append('sync:sale_items.UseSaleUnit')
         except OPERATIONAL_ERROR:
-            pass
+            ignore_db_error(conn)
     elif has_upper and not has_lower:
         try:
             c.execute(
@@ -177,7 +177,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             """)
             changed.append('backfill:sale_items.use_sale_unit')
         except OPERATIONAL_ERROR:
-            pass
+            ignore_db_error(conn)
     elif has_lower and not has_upper:
         try:
             c.execute(
@@ -188,7 +188,7 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             """)
             changed.append('backfill:sale_items.UseSaleUnit')
         except OPERATIONAL_ERROR:
-            pass
+            ignore_db_error(conn)
 
     cols = table_cols_lower(conn, 'sale_items')
     if is_postgres():
@@ -199,12 +199,12 @@ def ensure_sale_items_canonical(conn: sqlite3.Connection, *, commit: bool = True
             c.execute('UPDATE sale_items SET id = rowid WHERE id IS NULL')
             changed.append('alter:sale_items.id')
         except OPERATIONAL_ERROR:
-            pass
+            ignore_db_error(conn)
     else:
         try:
             c.execute('UPDATE sale_items SET id = rowid WHERE id IS NULL')
         except OPERATIONAL_ERROR:
-            pass
+            ignore_db_error(conn)
 
     if commit:
         sqlite_commit(conn, label='schema_compat')
@@ -224,12 +224,14 @@ def _ensure_sale_items_id_postgres(conn, cursor, cols: set[str]) -> list[str]:
             return changed
         except Exception as exc:
             print('[MIGRATE] sale_items.id BIGSERIAL: %s' % exc)
+            ignore_db_error(conn)
             try:
                 cursor.execute('ALTER TABLE sale_items ADD COLUMN id BIGINT')
                 has_id = True
                 changed.append('alter:sale_items.id:bigint')
             except Exception as exc2:
                 print('[MIGRATE] sale_items.id BIGINT: %s' % exc2)
+                ignore_db_error(conn)
                 return changed
 
     # Cột id đã có (thường INTEGER nullable, không DEFAULT) — gắn sequence + backfill NULL
@@ -299,26 +301,19 @@ def _ensure_sale_items_id_postgres(conn, cursor, cols: set[str]) -> list[str]:
                 'ALTER SEQUENCE sale_items_id_seq OWNED BY sale_items.id'
             )
         except Exception:
-            pass
+            ignore_db_error(conn)
         try:
             cursor.execute('ALTER TABLE sale_items ALTER COLUMN id SET NOT NULL')
         except Exception:
-            pass
+            ignore_db_error(conn)
         try:
             cursor.execute(
                 'CREATE UNIQUE INDEX IF NOT EXISTS ux_sale_items_id ON sale_items (id)'
             )
         except Exception:
-            pass
+            ignore_db_error(conn)
         changed.append('repair:sale_items.id:serial')
     except Exception as exc:
         print('[MIGRATE] repair sale_items.id: %s' % exc)
-        try:
-            from db_utils import rollback_quietly
-            rollback_quietly(conn)
-        except Exception:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
+        ignore_db_error(conn)
     return changed

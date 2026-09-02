@@ -76,6 +76,9 @@ def add_column_if_missing(
         cur.execute(f'ALTER TABLE {table} ADD COLUMN {column} {pg_type}')
         return True
     except _DB_ERROR:
+        if is_postgres():
+            from db_utils import ignore_db_error
+            ignore_db_error(conn)
         return False
 
 
@@ -99,7 +102,13 @@ def _pg_col_type(sqlite_type: str) -> str:
 
 def execute_ddl(conn, ddl: str) -> None:
     sql = convert_sqlite_ddl(ddl) if is_postgres() else ddl
-    conn.execute(sql)
+    try:
+        conn.execute(sql)
+    except _DB_ERROR:
+        if is_postgres():
+            from db_utils import ignore_db_error
+            ignore_db_error(conn)
+        raise
 
 
 def create_table_if_not_exists(conn, ddl: str) -> None:

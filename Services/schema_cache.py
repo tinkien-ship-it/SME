@@ -35,7 +35,15 @@ def ensure_schema_once(
     key = (_conn_key(conn), namespace)
     if _READY.get(key) == version:
         return
-    fn(conn, commit=commit)
+    try:
+        fn(conn, commit=commit)
+    except Exception:
+        try:
+            from db_utils import ignore_db_error
+            ignore_db_error(conn)
+        except Exception:
+            pass
+        raise
     _READY[key] = version
 
 
