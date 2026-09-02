@@ -29,6 +29,17 @@ def _f(val) -> float:
     return float(_money(val))
 
 
+def _num_coalesce(expr: str, default: str = '0') -> str:
+    """COALESCE số — PG: cột TEXT (migrate SQLite) không match literal integer."""
+    from db.dialect import is_postgres
+    if is_postgres():
+        return (
+            f"COALESCE(NULLIF(REGEXP_REPLACE(TRIM(CAST(({expr}) AS text)), ',', '', 'g'), "
+            f"'')::numeric, {default})"
+        )
+    return f"COALESCE({expr}, {default})"
+
+
 def _now() -> str:
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -1616,35 +1627,36 @@ def payroll_allocation_summary(
         except Exception:
             br = None
     run = get_payroll_run(conn, int(month), int(year), branch_code=br)
-    sd_cols = {r[1] for r in conn.execute('PRAGMA table_info(salary_detail)').fetchall()}
+    from db.schema_helpers import table_cols
+    sd_cols = table_cols(conn, 'salary_detail')
     br_sql = ''
     br_params: list[Any] = []
     code = (br or '').strip().upper()
-    if 'branch_code' in sd_cols and code and code != 'ALL':
+    if 'branch_code' in {c.lower() for c in sd_cols} and code and code != 'ALL':
         br_sql = " AND COALESCE(NULLIF(TRIM(s.branch_code), ''), ?) = ?"
         br_params = [code, code]
     dept_select = ''
-    if 'department' in sd_cols:
+    if 'department' in {c.lower() for c in sd_cols}:
         dept_select = ", COALESCE(NULLIF(TRIM(s.department), ''), e.department, 'ADMIN') AS department"
     else:
         dept_select = ", COALESCE(e.department, 'ADMIN') AS department"
     exp_select = ''
-    if 'expense_account' in sd_cols:
+    if 'expense_account' in {c.lower() for c in sd_cols}:
         exp_select = ', s.expense_account'
     rows = conn.execute(
         f"""
         SELECT COALESCE(e.fullname, s.fullname) AS fullname, e.position,
-               COALESCE(s.salary_rate, 0) AS base_salary,
-               COALESCE(s.allowance_fund, 0) + COALESCE(s.allowance_other, 0) AS allowance,
-               COALESCE(s.bonus, 0) AS bonus,
-               COALESCE(s.final_amount, 0) AS net_pay,
-               COALESCE(s.total_income, 0) AS total_income,
-               COALESCE(s.total_deduct, 0) AS total_deduct,
-               COALESCE(s.bhxh, 0) AS bhxh,
-               COALESCE(s.bhyt, 0) AS bhyt,
-               COALESCE(s.bhtn, 0) AS bhtn,
-               COALESCE(s.tncn_tax, 0) AS tncn_tax,
-               COALESCE(s.actual_working_days, 0) AS actual_working_days
+               {_num_coalesce('s.salary_rate')} AS base_salary,
+               {_num_coalesce('s.allowance_fund')} + {_num_coalesce('s.allowance_other')} AS allowance,
+               {_num_coalesce('s.bonus')} AS bonus,
+               {_num_coalesce('s.final_amount')} AS net_pay,
+               {_num_coalesce('s.total_income')} AS total_income,
+               {_num_coalesce('s.total_deduct')} AS total_deduct,
+               {_num_coalesce('s.bhxh')} AS bhxh,
+               {_num_coalesce('s.bhyt')} AS bhyt,
+               {_num_coalesce('s.bhtn')} AS bhtn,
+               {_num_coalesce('s.tncn_tax')} AS tncn_tax,
+               {_num_coalesce('s.actual_working_days')} AS actual_working_days
                {dept_select}
                {exp_select}
         FROM salary_detail s
