@@ -610,19 +610,17 @@ def s2b_pnl_book(
         "(jl.account_code LIKE '511%' OR jl.account_code LIKE '515%' OR jl.account_code LIKE '711%')",
         'credit',
     )
-    # 2. Chi phí — nhóm gần mẫu TT58
+    # 2. Chi phí — 6271/6272 · 641 · 642 (cấp 1)
     cost_buckets = [
         ('materials', 'a) Chi phí NVL, nhiên liệu, hàng hóa',
          "(jl.account_code LIKE '632%' OR jl.account_code LIKE '621%')"),
         ('labor', 'b) Chi phí nhân công / lương',
-         "(jl.account_code LIKE '622%' OR jl.account_code LIKE '6272%' OR jl.account_code LIKE '6411%' OR jl.account_code LIKE '6421%')"),
+         "(jl.account_code LIKE '622%' OR je.document_type IN ('BL','TL','PC02') "
+         "OR je.business_type LIKE '%LUONG%' OR je.business_type LIKE '%PAYROLL%')"),
         ('depreciation', 'c) Chi phí khấu hao TSCĐ',
-         "(jl.account_code LIKE '6273%' OR jl.account_code LIKE '6412%' OR jl.account_code LIKE '6422%')"),
-        ('services', 'd) Chi phí dịch vụ mua ngoài / quản lý, bán hàng khác',
-         """((jl.account_code LIKE '627%' OR jl.account_code LIKE '641%' OR jl.account_code LIKE '642%')
-             AND jl.account_code NOT LIKE '6272%' AND jl.account_code NOT LIKE '6273%'
-             AND jl.account_code NOT LIKE '6411%' AND jl.account_code NOT LIKE '6412%'
-             AND jl.account_code NOT LIKE '6421%' AND jl.account_code NOT LIKE '6422%')"""),
+         "(je.document_type = 'KHTS' OR je.business_type = 'KHAU_HAO_TSCD')"),
+        ('services', 'd) Chi phí SXC / bán hàng / QLDN',
+         "(jl.account_code LIKE '627%' OR jl.account_code LIKE '641%' OR jl.account_code LIKE '642%')"),
         ('interest', 'đ) Chi phí lãi vay',
          "jl.account_code LIKE '635%'"),
         ('other', 'e) Chi phí khác',

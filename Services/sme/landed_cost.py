@@ -41,13 +41,14 @@ VALID_SCOPES = frozenset({
 })
 
 ALLOCATABLE_LINE_TYPES = frozenset({
-    'goods', 'materials', 'fixed_asset', 'tools',
+    'goods', 'materials', 'fixed_asset', 'intangible_asset', 'tools',
 })
 
 DEBIT_ACCOUNT_BY_LINE_TYPE = {
     'goods': '156',
     'materials': '152',
     'fixed_asset': '2112',
+    'intangible_asset': '2133',
     'tools': '153',
 }
 
@@ -462,7 +463,7 @@ def list_eligible_target_imports(
         params.append('tools')
     else:
         type_filter = (
-            f" AND {lt_expr} IN ('goods','materials','fixed_asset','tools')"
+            f" AND {lt_expr} IN ('goods','materials','fixed_asset','intangible_asset','tools')"
         )
 
     kw_filter = ''
@@ -550,6 +551,11 @@ def _fetch_target_lines(
         "COALESCE(d.product_name, p.name, '') AS product_name"
         if has_pname else "COALESCE(p.name, '') AS product_name"
     )
+    has_asset_acct = 'asset_account' in detail_cols
+    select.append(
+        "COALESCE(d.asset_account, '') AS asset_account"
+        if has_asset_acct else "'' AS asset_account"
+    )
 
     ph = ','.join('?' * len(target_import_ids))
     params: list[Any] = list(target_import_ids)
@@ -598,6 +604,12 @@ def _fetch_target_lines(
         base = _money(r['subtotal']) - _money(r['discount'])
         if base <= 0:
             continue
+        asset_acct = (r['asset_account'] or '').strip() if 'asset_account' in r.keys() else ''
+        debit = DEBIT_ACCOUNT_BY_LINE_TYPE.get(lt, '156')
+        if lt in ('fixed_asset', 'intangible_asset') and asset_acct:
+            from Services.fixed_assets_helpers import is_fa_asset_account_code
+            if is_fa_asset_account_code(asset_acct):
+                debit = asset_acct
         result.append({
             'detail_id': int(r['detail_id']),
             'import_id': int(r['import_id']),
@@ -609,7 +621,8 @@ def _fetch_target_lines(
             'warehouse_code': r['warehouse_code'] or 'KHO_001',
             'qty': float(r['qty'] or 0),
             'base_value': float(base),
-            'debit_account': DEBIT_ACCOUNT_BY_LINE_TYPE.get(lt, '156'),
+            'debit_account': debit,
+            'asset_account': asset_acct or None,
         })
     if not result:
         raise ValueError('Không có dòng hàng phù hợp để nhận phân bổ chi phí')
@@ -746,7 +759,7 @@ def _bump_asset_cost(
     amt = float(amount)
     if amt <= 0:
         return
-    if line_type == 'fixed_asset':
+    if line_type in ('fixed_asset', 'intangible_asset'):
         table = 'fixed_assets'
         if not _table_exists(conn, table):
             return
@@ -1153,7 +1166,7 @@ def allocate_landed_cost(
             )
             # Ưu tiên lưu id dòng import đã bump (vốn thực trên sổ)
             move_id = bumped['stock_move_id'] or move_id
-        elif lt in ('fixed_asset', 'tools'):
+        elif lt in ('fixed_asset', 'intangible_asset', 'tools'):
             _bump_asset_cost(
                 conn,
                 line_type=lt,

@@ -18,6 +18,7 @@ _CODE_SPEC = {
     'goods': ('HH', 4),
     'hang_hoa': ('HH', 4),
     'fixed_asset': ('TSCD', 4),
+    'intangible_asset': ('TSCD', 4),
     'tscd': ('TSCD', 4),
     'tools': ('CCDC', 4),
     'tool': ('CCDC', 4),
@@ -97,8 +98,8 @@ def assign_product_codes(c, product_id, product_type, unit1=None,
         else:
             code = _max_seq_with_prefix(c, 'HH', 4)
 
-    gen_bc = code if pt in ('fixed_asset', 'tools', 'service') else f"{code}01"
-    gen_b1 = f"{code}02" if unit1 and pt not in ('fixed_asset', 'tools', 'service') else None
+    gen_bc = code if pt in ('fixed_asset', 'intangible_asset', 'tools', 'service') else f"{code}01"
+    gen_b1 = f"{code}02" if unit1 and pt not in ('fixed_asset', 'intangible_asset', 'tools', 'service') else None
 
     conn = getattr(c, 'connection', None) or c
     ext = canonical_scan_code(external_barcode)
@@ -167,7 +168,7 @@ DEFAULT_WAREHOUSES = (
 INVENTORY_TRACKED_LINE_TYPES = frozenset({'goods', 'materials'})
 
 # TSCĐ / CCDC: sổ riêng, không qua tồn POS
-ASSET_REGISTER_LINE_TYPES = frozenset({'fixed_asset', 'tools'})
+ASSET_REGISTER_LINE_TYPES = frozenset({'fixed_asset', 'intangible_asset', 'tools'})
 
 
 def tracks_retail_inventory(line_type):

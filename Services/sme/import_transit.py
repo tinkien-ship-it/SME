@@ -93,12 +93,25 @@ def is_in_transit_stage(stage: str | None, import_type: str | None = None) -> bo
     return False
 
 
-def final_inventory_account(line_type: str) -> str:
+def final_inventory_account(line_type: str, asset_account: str | None = None) -> str:
+    from Services.fixed_assets_helpers import (
+        DEFAULT_INTANGIBLE_ASSET_ACCOUNT,
+        DEFAULT_TANGIBLE_ASSET_ACCOUNT,
+        is_fa_asset_account_code,
+    )
+
     lt = (line_type or 'goods').strip().lower()
+    acct = (asset_account or '').strip()
+    if lt == 'intangible_asset':
+        if is_fa_asset_account_code(acct) and acct.startswith('213'):
+            return acct
+        return DEFAULT_INTANGIBLE_ASSET_ACCOUNT
     if lt in ('materials', 'raw_materials', 'nvl'):
         return '152'
     if lt in ('fixed_asset', 'fa'):
-        return '2112'
+        if is_fa_asset_account_code(acct) and acct.startswith('211'):
+            return acct
+        return DEFAULT_TANGIBLE_ASSET_ACCOUNT
     if lt in ('tools', 'ccdc'):
         return '153'
     return '156'
@@ -107,7 +120,7 @@ def final_inventory_account(line_type: str) -> str:
 def transit_clearing_account(line_type: str) -> str:
     """TK trung gian khi hàng/TSCĐ đang đi đường (G1)."""
     lt = (line_type or 'goods').strip().lower()
-    if lt in ('fixed_asset', 'fa'):
+    if lt in ('fixed_asset', 'fa', 'intangible_asset'):
         return '2411'
     return '151'
 
@@ -206,6 +219,10 @@ def receive_import_to_warehouse(
     select.append(
         "COALESCE(d.unit, '') AS unit" if 'unit' in detail_cols else "'' AS unit"
     )
+    select.append(
+        "COALESCE(d.asset_account, '') AS asset_account"
+        if 'asset_account' in detail_cols else "'' AS asset_account"
+    )
 
     details = conn.execute(
         f"""
@@ -242,13 +259,17 @@ def receive_import_to_warehouse(
             inv_amt += _money(r.get('tax'))
         if inv_amt <= 0:
             continue
-        final_acct = resolve_postable_account(conn, final_inventory_account(lt))
+        final_acct = resolve_postable_account(
+            conn, final_inventory_account(lt, r.get('asset_account')),
+        )
         clearing_code = transit_clearing_account(lt)
         name = (r.get('pname') or r.get('product_name') or f"SP#{r.get('product_id')}").strip()
-        desc = (
-            f'Đưa TSCĐ vào sử dụng: {name}' if lt in ('fixed_asset', 'fa')
-            else f'Nhập kho thực tế: {name}'
-        )
+        if lt in ('fixed_asset', 'fa'):
+            desc = f'Đưa TSCĐ vào sử dụng: {name}'
+        elif lt == 'intangible_asset':
+            desc = f'Đưa TSCĐ vô hình vào sử dụng: {name}'
+        else:
+            desc = f'Nhập kho thực tế: {name}'
         lines.append({
             'sequence': seq,
             'account_code': final_acct,
@@ -272,7 +293,7 @@ def receive_import_to_warehouse(
                     'name': name,
                     'unit': r.get('unit') or '',
                 })
-        if lt in ('fixed_asset', 'fa') and r.get('product_id'):
+        if lt in ('fixed_asset', 'fa', 'intangible_asset') and r.get('product_id'):
             fa_jobs.append({
                 'detail_id': r.get('id'),
                 'product_id': int(r['product_id']),
@@ -282,6 +303,8 @@ def receive_import_to_warehouse(
                 'warehouse_code': r.get('warehouse_code') or 'KHO_001',
                 'buyprice': float(r.get('buyprice') or 0),
                 'tax': float(r.get('tax') or 0),
+                'line_type': lt,
+                'asset_account': (r.get('asset_account') or '').strip(),
             })
 
     transit_total = sum(clearing_totals.values(), Decimal('0.00'))
@@ -406,6 +429,8 @@ def receive_import_to_warehouse(
                     subtotal=job['amount'],
                     capitalized_cost=job['amount'],
                     ngay_bat_dau_su_dung=date_s,
+                    line_type=job.get('line_type'),
+                    asset_account=job.get('asset_account'),
                 )
         except Exception:
             pass

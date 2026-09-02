@@ -1,0 +1,338 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Gói dịch vụ trả trước (3387){% endblock %}
+{% block sme_content %}
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Gói dịch vụ trả trước — DT hoãn 3387</h4>
+    <p class="text-muted small mb-0">
+      Dịch vụ A (gói phần mềm/năm): thu tiền → <strong>Nợ 112 / Có 3387</strong>.
+      Cuối mỗi tháng hệ thống tự (hoặc thủ công) ghi <strong>Nợ 3387 / Có 5113</strong>.
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <button type="button" class="btn btn-outline-primary btn-sm" id="btnRecognizeMonth">Ghi nhận DT tháng đã chọn</button>
+    <button type="button" class="btn btn-primary btn-sm" id="btnNewContract">+ Hợp đồng / thu trước</button>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <label class="form-label small">Ghi nhận DT — tháng</label>
+    <input type="month" id="recogMonth" class="form-control form-control-sm">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label small">Lọc trạng thái</label>
+    <select id="filterStatus" class="form-select form-select-sm">
+      <option value="">Tất cả</option>
+      <option value="active">Đang phân bổ</option>
+      <option value="completed">Đã phân bổ hết</option>
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label small">Tìm HĐ / khách / gói</label>
+    <input type="text" id="filterQ" class="form-control form-control-sm" placeholder="Số HĐ, tên KH…">
+  </div>
+  <div class="col-md-2 d-flex align-items-end">
+    <button type="button" class="btn btn-sm btn-outline-secondary w-100" onclick="loadContracts()">Tải lại</button>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover table-sm align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Số HĐ</th><th>Ngày</th><th>Gói DV</th><th>Khách hàng</th>
+          <th class="text-end">Tổng 3387</th><th class="text-end">Đã ghi DT</th><th class="text-end">Còn lại</th>
+          <th>PT</th><th>Tiến độ</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="contractBody"><tr><td colspan="10" class="text-muted text-center py-4">Đang tải…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="contractModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Lập hợp đồng — thu trước gói năm</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-md-6 mb-2">
+            <label class="form-label small fw-bold">Gói dịch vụ *</label>
+            <select id="fProduct" class="form-select form-select-sm"></select>
+          </div>
+          <div class="col-md-6 mb-2">
+            <label class="form-label small fw-bold">Khách hàng *</label>
+            <input type="text" id="fCustomer" class="form-control form-control-sm" placeholder="Tên công ty / cá nhân">
+          </div>
+          <div class="col-md-4 mb-2">
+            <label class="form-label small fw-bold">Ngày bắt đầu *</label>
+            <input type="date" id="fStart" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4 mb-2">
+            <label class="form-label small fw-bold">Ngày thu tiền</label>
+            <input type="date" id="fVoucherDate" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4 mb-2">
+            <label class="form-label small fw-bold">Số tháng phân bổ</label>
+            <input type="number" id="fMonths" class="form-control form-control-sm" min="1" max="60" value="12">
+          </div>
+          <div class="col-md-4 mb-2">
+            <label class="form-label small fw-bold">Số tiền (₫) *</label>
+            <input type="number" id="fAmount" class="form-control form-control-sm text-end" min="0" step="1000">
+          </div>
+          <div class="col-md-4 mb-2">
+            <label class="form-label small fw-bold">Hình thức thu</label>
+            <select id="fPay" class="form-select form-select-sm">
+              <option value="bank">Chuyển khoản (112)</option>
+              <option value="cash">Tiền mặt (111)</option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-2">
+            <label class="form-label small fw-bold">MST (tuỳ chọn)</label>
+            <input type="text" id="fTax" class="form-control form-control-sm">
+          </div>
+          <div class="col-12 mb-2">
+            <label class="form-label small fw-bold">Ghi chú</label>
+            <input type="text" id="fNote" class="form-control form-control-sm">
+          </div>
+        </div>
+        <div class="small text-muted mb-1">Xem trước lịch phân bổ DT (Nợ 3387 / Có 5113):</div>
+        <div class="table-responsive border rounded" style="max-height:220px;overflow:auto">
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Tháng</th><th class="text-end">Số tiền DT</th></tr></thead>
+            <tbody id="previewBody"><tr><td colspan="2" class="text-muted text-center">Chọn gói và số tiền</td></tr></tbody>
+          </table>
+        </div>
+        <p class="small text-muted mt-2 mb-0">Khi lưu: lập PT <strong>Nợ 112 / Có 3387</strong> + tạo lịch 12 kỳ. Cuối tháng job tự ghi nhận DT (hoặc bấm «Ghi nhận DT tháng»).</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnSaveContract">Lập HĐ &amp; PT</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="detailModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="detailTitle">Chi tiết hợp đồng</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="detailBody"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block sme_scripts %}
+<script>
+const fmt = n => new Intl.NumberFormat('vi-VN').format(Math.round(n || 0));
+let products = [];
+let contractModal, detailModal;
+
+async function api(url, opts) {
+  const res = await fetch(url, opts);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'Lỗi');
+  return json;
+}
+
+async function loadProducts() {
+  const res = await api('/api/sme/deferred-revenue/products');
+  products = res.data || [];
+  const sel = document.getElementById('fProduct');
+  sel.innerHTML = '<option value="">-- Chọn gói --</option>' +
+    products.map(p =>
+      `<option value="${p.id}" data-price="${p.price}" data-months="${p.deferred_months || 12}">
+        [${p.product_code || ''}] ${p.name} — ${fmt(p.price)} ₫/năm
+      </option>`
+    ).join('');
+}
+
+async function loadContracts() {
+  const st = document.getElementById('filterStatus').value;
+  const q = document.getElementById('filterQ').value.trim();
+  const qs = new URLSearchParams();
+  if (st) qs.set('status', st);
+  if (q) qs.set('q', q);
+  try {
+    const res = await api('/api/sme/deferred-revenue/contracts?' + qs);
+    const rows = res.data || [];
+    const body = document.getElementById('contractBody');
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="10" class="text-muted text-center">Chưa có hợp đồng</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(r => {
+      const pct = r.total_periods ? Math.round((r.posted_periods || 0) * 100 / r.total_periods) : 0;
+      const stBadge = r.status === 'completed'
+        ? '<span class="badge bg-success">Xong</span>'
+        : '<span class="badge bg-primary">Đang PB</span>';
+      return `<tr>
+        <td class="fw-bold">${r.contract_no}</td>
+        <td class="small">${(r.start_date || '').slice(0, 10)}</td>
+        <td class="small">${r.service_name || ''}</td>
+        <td>${r.customer_name || ''}</td>
+        <td class="text-end">${fmt(r.total_amount)}</td>
+        <td class="text-end text-success">${fmt(r.recognized_amount)}</td>
+        <td class="text-end">${fmt(r.remain_amount)}</td>
+        <td class="small">${r.receipt_no || '—'}</td>
+        <td class="small">${r.posted_periods || 0}/${r.total_periods || 0} ${stBadge}</td>
+        <td><button class="btn btn-sm btn-outline-primary" onclick="openDetail(${r.id})">Chi tiết</button></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('contractBody').innerHTML =
+      `<tr><td colspan="10" class="text-danger text-center">${e.message}</td></tr>`;
+  }
+}
+
+async function refreshPreview() {
+  const start = document.getElementById('fStart').value;
+  const amount = parseFloat(document.getElementById('fAmount').value) || 0;
+  const months = parseInt(document.getElementById('fMonths').value, 10) || 12;
+  const body = document.getElementById('previewBody');
+  if (!start || amount <= 0) {
+    body.innerHTML = '<tr><td colspan="2" class="text-muted text-center">Nhập ngày và số tiền</td></tr>';
+    return;
+  }
+  try {
+    const res = await api('/api/sme/deferred-revenue/preview', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ start_date: start, total_amount: amount, period_months: months }),
+    });
+    const lines = res.data.lines || [];
+    body.innerHTML = lines.map(l =>
+      `<tr><td>${String(l.period_month).padStart(2,'0')}/${l.period_year}</td>
+       <td class="text-end">${fmt(l.amount)}</td></tr>`
+    ).join('');
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="2" class="text-danger">${e.message}</td></tr>`;
+  }
+}
+
+function onProductChange() {
+  const sel = document.getElementById('fProduct');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) return;
+  document.getElementById('fAmount').value = opt.dataset.price || 0;
+  document.getElementById('fMonths').value = opt.dataset.months || 12;
+  refreshPreview();
+}
+
+async function openDetail(id) {
+  const res = await api('/api/sme/deferred-revenue/contracts/' + id);
+  const c = res.data;
+  document.getElementById('detailTitle').textContent =
+    `${c.contract_no} · ${c.service_name} · ${c.customer_name}`;
+  const periods = (c.periods || []).map(p => `
+    <tr>
+      <td>${String(p.period_month).padStart(2,'0')}/${p.period_year}</td>
+      <td class="text-end">${fmt(p.amount)}</td>
+      <td>${p.status === 'posted' ? '<span class="badge bg-success">Đã ghi DT</span>' : '<span class="badge bg-warning text-dark">Chờ</span>'}</td>
+      <td class="text-end">
+        ${p.status === 'pending' ? `<button class="btn btn-xs btn-sm btn-outline-success" onclick="recognizePeriod(${p.id})">Ghi DT</button>` : ''}
+      </td>
+    </tr>`).join('');
+  document.getElementById('detailBody').innerHTML = `
+    <div class="row g-2 small mb-3">
+      <div class="col-md-4"><strong>Tổng thu:</strong> ${fmt(c.total_amount)} ₫</div>
+      <div class="col-md-4"><strong>Đã ghi DT:</strong> ${fmt(c.recognized_amount)} ₫</div>
+      <div class="col-md-4"><strong>Còn 3387:</strong> ${fmt(c.remain_amount)} ₫</div>
+      <div class="col-md-6"><strong>PT:</strong> ${c.receipt_no || '—'}</div>
+      <div class="col-md-6"><strong>Bắt đầu:</strong> ${(c.start_date || '').slice(0,10)}</div>
+    </div>
+    <table class="table table-sm">
+      <thead class="table-light"><tr><th>Kỳ</th><th class="text-end">DT</th><th>TT</th><th></th></tr></thead>
+      <tbody>${periods}</tbody>
+    </table>`;
+  detailModal.show();
+}
+
+async function recognizePeriod(periodId) {
+  if (!confirm('Ghi nhận doanh thu kỳ này (Nợ 3387 / Có 5113)?')) return;
+  try {
+    const res = await api('/api/sme/deferred-revenue/recognize', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ period_id: periodId }),
+    });
+    alert(res.message || 'Đã ghi nhận');
+    bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+    loadContracts();
+  } catch (e) { alert(e.message); }
+}
+
+document.getElementById('btnRecognizeMonth').onclick = async () => {
+  const m = document.getElementById('recogMonth').value;
+  if (!m) return alert('Chọn tháng ghi nhận DT');
+  const [y, mo] = m.split('-').map(Number);
+  if (!confirm(`Ghi nhận DT tất cả kỳ pending tháng ${mo}/${y}?`)) return;
+  try {
+    const res = await api('/api/sme/deferred-revenue/recognize', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ fiscal_year: y, period: mo }),
+    });
+    alert(res.message || 'Xong');
+    loadContracts();
+  } catch (e) { alert(e.message); }
+};
+
+document.getElementById('btnNewContract').onclick = () => {
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('fStart').value = today;
+  document.getElementById('fVoucherDate').value = today;
+  contractModal.show();
+};
+
+document.getElementById('btnSaveContract').onclick = async () => {
+  const pid = document.getElementById('fProduct').value;
+  const payload = {
+    service_product_id: parseInt(pid, 10),
+    customer_name: document.getElementById('fCustomer').value.trim(),
+    start_date: document.getElementById('fStart').value,
+    voucher_date: document.getElementById('fVoucherDate').value,
+    period_months: parseInt(document.getElementById('fMonths').value, 10) || 12,
+    total_amount: parseFloat(document.getElementById('fAmount').value) || 0,
+    payment_method: document.getElementById('fPay').value,
+    customer_tax_code: document.getElementById('fTax').value.trim(),
+    note: document.getElementById('fNote').value.trim(),
+  };
+  if (!payload.service_product_id) return alert('Chọn gói dịch vụ');
+  if (!payload.customer_name) return alert('Nhập tên khách hàng');
+  if (!(payload.total_amount > 0)) return alert('Nhập số tiền');
+  try {
+    const res = await api('/api/sme/deferred-revenue/contracts', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    contractModal.hide();
+    alert(res.message || 'Đã lập hợp đồng');
+    loadContracts();
+  } catch (e) { alert(e.message); }
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  contractModal = new bootstrap.Modal(document.getElementById('contractModal'));
+  detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+  const now = new Date();
+  document.getElementById('recogMonth').value =
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  document.getElementById('fProduct').onchange = onProductChange;
+  ['fStart', 'fAmount', 'fMonths'].forEach(id => {
+    document.getElementById(id).addEventListener('input', refreshPreview);
+  });
+  await loadProducts();
+  await loadContracts();
+});
+</script>
+{% endblock %}

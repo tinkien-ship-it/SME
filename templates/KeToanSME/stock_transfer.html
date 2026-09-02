@@ -43,7 +43,7 @@ function updateInter(){
 }
 async function loadProducts(){
   const wh=fFrom.value||'';
-  const res=await fetch('/api/sme/products/brief'+(wh?('?warehouse='+encodeURIComponent(wh)):''));
+  const res=await fetch('/api/sme/products/brief?limit=100'+(wh?('&warehouse='+encodeURIComponent(wh)):''));
   const json=await res.json();
   lines.innerHTML=(json.data||[]).map(p=>`<tr data-id="${p.id}"><td>${p.name}</td><td class="text-end">${p.quantity}</td>
     <td><input type="number" class="form-control form-control-sm text-end qty" min="0" step="any" value="0"></td></tr>`).join('');

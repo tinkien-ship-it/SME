@@ -36,13 +36,19 @@
             </h3>
             <p class="text-muted small mb-0">
                 Định mức BOM → phiếu SX (WAC kho) → <strong>hạch toán sổ kép</strong>:
-                Nợ 155 · Có 152 (+ 3341 NC / 1111 CPSX khác nếu có).
+                Nợ 621/Có 152·155·156 → 154 → nhập TP Nợ 155/Có 154.
+                Bán TP: giá vốn Nợ <strong>6322</strong>/Có 155.
                 Không dùng trang / mẫu HKD.
             </p>
         </div>
-        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_general_ledger') }}">
-            <i class="fas fa-book me-1"></i>Sổ nhật ký
-        </a>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_period_cost_allocation') }}">
+                <i class="fas fa-balance-scale me-1"></i>Phân bổ 622/627
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_general_ledger') }}">
+                <i class="fas fa-book me-1"></i>Sổ nhật ký
+            </a>
+        </div>
     </div>
 
     <div class="alert alert-info small py-2 no-print">
@@ -50,6 +56,9 @@
         <code>SAN_XUAT_TP</code> vào nhật ký kế toán (cột «Sổ» trong danh sách).
         Tenant HKD trên trang riêng chỉ cập nhật tồn WAC, không ghi journal này.
         Cột «Sổ kép» hiển thị ID bút toán sau khi hoàn thành phiếu.
+        Khi bật chốt trước nhập kho: phân bổ <strong>622/627</strong> tại
+        <a href="{{ url_for('SME_period_cost_allocation') }}">Phân bổ giá thành cuối kỳ</a>
+        rồi mới nhập thành phẩm (cột «GT» = đã chốt giá thành).
     </div>
 
     <ul class="nav nav-pills mb-3 gap-2 no-print" id="prodTabs" role="tablist">
@@ -100,12 +109,12 @@
                             <input type="text" id="sxNote" class="form-control" placeholder="Tùy chọn">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label small fw-bold">Nhân công (₫)</label>
-                            <input type="number" id="sxLabor" class="form-control text-end" min="0" step="1000" value="0" onchange="previewProduction()">
+                            <label class="form-label small fw-bold">NCTT định mức (₫)</label>
+                            <input type="number" id="sxLabor" class="form-control text-end" min="0" step="1000" value="0" readonly title="Từ định mức PA đang áp dụng">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label small fw-bold">Chi phí khác (₫)</label>
-                            <input type="number" id="sxOther" class="form-control text-end" min="0" step="1000" value="0" onchange="previewProduction()">
+                            <label class="form-label small fw-bold">CPSXC định mức (₫)</label>
+                            <input type="number" id="sxOther" class="form-control text-end" min="0" step="1000" value="0" readonly title="Từ định mức PA đang áp dụng">
                         </div>
                     </div>
                     <div class="d-flex flex-wrap gap-2 mt-3">
@@ -173,12 +182,13 @@
                                 <th class="text-end">Giá thành ĐV</th>
                                 <th class="text-end">Tổng giá thành</th>
                                 <th>Tình trạng</th>
+                                <th>GT</th>
                                 <th>Sổ kép</th>
                                 <th class="text-end no-print">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="orderTableBody">
-                            <tr><td colspan="10" class="text-center text-muted py-4">Đang tải...</td></tr>
+                            <tr><td colspan="11" class="text-center text-muted py-4">Đang tải...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -222,11 +232,17 @@
                                 <label class="form-label small fw-bold">Ghi chú định mức</label>
                                 <input type="text" id="bomNote" class="form-control" placeholder="Tùy chọn">
                             </div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label class="form-label small fw-bold mb-0">Vật tư (mã VT…) / định mức trên 1 đơn vị TP</label>
-                                <button type="button" class="btn btn-sm btn-outline-success" onclick="addBomRow()">
-                                    <i class="fas fa-plus me-1"></i>Thêm vật tư
-                                </button>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+                                <label class="form-label small fw-bold mb-0">NVL đầu vào / định mức trên 1 đơn vị TP</label>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnToggleBomScope"
+                                            onclick="toggleBomMaterialScope()" title="Thêm thành phẩm (155) và hàng hóa (156)">
+                                        <i class="fas fa-layer-group me-1"></i><span id="bomScopeLabel">Hiện TP/HH (155, 156)</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="addBomRow()">
+                                        <i class="fas fa-plus me-1"></i>Thêm dòng
+                                    </button>
+                                </div>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-sm align-middle">
@@ -291,8 +307,15 @@ const num = (n, d=3) => Number(n || 0).toLocaleString('vi-VN', { maximumFraction
 
 let finishedProducts = [];
 let materialProducts = [];
+let bomMaterialProducts = [];
 let previewLines = [];
-let bomMaterialCache = [];
+let bomIncludeFgGoods = false;
+
+function invAccountBadge(p) {
+    const acc = p.inventory_account || '';
+    if (!acc) return '';
+    return ` · TK ${acc}`;
+}
 
 function isoFromPicker(id) {
     if (window.KetoDatePicker && typeof KetoDatePicker.getIsoValue === 'function') {
@@ -305,6 +328,16 @@ function isoFromPicker(id) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
     return (el.value || '').trim();
+}
+
+function fillSelect(sel, items, placeholder, selectedId) {
+    if (!sel) return;
+    const opts = [`<option value="">${placeholder}</option>`]
+        .concat(items.map(p => {
+            const selAttr = String(p.id) === String(selectedId || '') ? ' selected' : '';
+            return `<option value="${p.id}"${selAttr}>${escapeHtml(productLabel(p))}</option>`;
+        }));
+    sel.innerHTML = opts.join('');
 }
 
 function initPickers() {
@@ -331,41 +364,108 @@ async function api(url, opts) {
     return json;
 }
 
-function productLabel(p) {
-    const code = p.product_code || p.barcode || p.id;
-    const stock = num(p.stock, 2);
-    return `[${code}] ${p.name} · tồn ${stock} · WAC ${money(p.avg_cost)}`;
-}
-
-function fillSelect(sel, items, placeholder, selectedId) {
-    const opts = [`<option value="">${placeholder}</option>`]
-        .concat(items.map(p => {
-            const selAttr = String(p.id) === String(selectedId || '') ? ' selected' : '';
-            return `<option value="${p.id}"${selAttr}>${escapeHtml(productLabel(p))}</option>`;
-        }));
-    sel.innerHTML = opts.join('');
-}
-
 function escapeHtml(s) {
     return String(s ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function productLabel(p) {
+    const code = p.product_code || p.barcode || p.id;
+    const stock = num(p.stock, 2);
+    return `[${code}] ${p.name}${invAccountBadge(p)} · tồn ${stock} · WAC ${money(p.avg_cost)}`;
+}
+
+async function loadMaterialProducts() {
+    const mats = await api('/api/production/materials?include_fg_goods=0');
+    materialProducts = (mats.data || []).filter(p => (p.inventory_account || '') === '152');
+    return materialProducts;
+}
+
+async function loadBomMaterialProducts(includeFgGoods) {
+    const qs = includeFgGoods ? '?include_fg_goods=1' : '?include_fg_goods=0';
+    const mats = await api('/api/production/materials' + qs);
+    const allowed = includeFgGoods ? ['152', '155', '156'] : ['152'];
+    bomMaterialProducts = (mats.data || []).filter(p => allowed.includes(p.inventory_account || ''));
+    return bomMaterialProducts;
+}
+
+function mergeBomItemsIntoPicker(items) {
+    const byId = new Map(bomMaterialProducts.map(p => [String(p.id), p]));
+    (items || []).forEach(it => {
+        const id = String(it.material_product_id);
+        if (!byId.has(id)) {
+            byId.set(id, {
+                id: it.material_product_id,
+                name: it.material_name,
+                product_code: it.material_code,
+                unit: it.material_unit,
+                inventory_account: it.inventory_account || '',
+                stock: it.stock,
+                avg_cost: it.avg_cost,
+            });
+        }
+    });
+    bomMaterialProducts = Array.from(byId.values());
+}
+
+function syncBomScopeToggleUi() {
+    const btn = document.getElementById('btnToggleBomScope');
+    const lbl = document.getElementById('bomScopeLabel');
+    if (bomIncludeFgGoods) {
+        btn?.classList.remove('btn-outline-secondary');
+        btn?.classList.add('btn-secondary');
+        if (lbl) lbl.textContent = 'Chỉ VT (152)';
+    } else {
+        btn?.classList.remove('btn-secondary');
+        btn?.classList.add('btn-outline-secondary');
+        if (lbl) lbl.textContent = 'Hiện TP/HH (155, 156)';
+    }
+}
+
+let _materialsLoaded = false;
+
+async function ensureMaterialsLoaded() {
+    if (_materialsLoaded) return;
+    await loadMaterialProducts();
+    await loadBomMaterialProducts(bomIncludeFgGoods);
+    _materialsLoaded = true;
+}
+
 async function loadProductPickers(selectFinishedId) {
-    const [fg, mats] = await Promise.all([
-        api('/api/production/finished-products'),
-        api('/api/production/materials?code_prefix=VT'),
-    ]);
+    const fg = await api('/api/production/finished-products');
     finishedProducts = fg.data || [];
-    materialProducts = mats.data || [];
-    bomMaterialCache = materialProducts;
     const keepSx = document.getElementById('sxFinished')?.value;
     const keepBom = document.getElementById('bomFinished')?.value;
     fillSelect(document.getElementById('sxFinished'), finishedProducts, '-- Chọn thành phẩm --',
         selectFinishedId || keepSx);
     fillSelect(document.getElementById('bomFinished'), finishedProducts, '-- Chọn thành phẩm --',
         selectFinishedId || keepBom);
+    await ensureMaterialsLoaded();
+}
+
+async function toggleBomMaterialScope() {
+    bomIncludeFgGoods = !bomIncludeFgGoods;
+    syncBomScopeToggleUi();
+    const selected = {};
+    document.querySelectorAll('#bomItemsBody tr').forEach(tr => {
+        const mid = tr.querySelector('.bom-mat')?.value;
+        const qty = tr.querySelector('.bom-qty')?.value;
+        if (mid) selected[mid] = qty;
+    });
+    await loadBomMaterialProducts(bomIncludeFgGoods);
+    if (!bomIncludeFgGoods) {
+        document.querySelectorAll('#bomItemsBody tr').forEach(tr => {
+            const mid = tr.querySelector('.bom-mat')?.value;
+            if (mid && !bomMaterialProducts.some(p => String(p.id) === String(mid))) {
+                tr.remove();
+            }
+        });
+    }
+    document.querySelectorAll('#bomItemsBody tr').forEach(tr => {
+        const mid = tr.querySelector('.bom-mat')?.value;
+        fillSelect(tr.querySelector('.bom-mat'), bomMaterialProducts, '-- Chọn NVL --', mid);
+    });
 }
 
 async function quickAddFinished(selectId) {
@@ -441,22 +541,36 @@ async function previewProduction() {
         return Swal.fire('Thiếu thông tin', 'Chọn thành phẩm và nhập số lượng > 0', 'warning');
     }
     try {
-        const overrides = previewLines.length ? collectOverrides() : null;
-        const res = await api('/api/production/preview', {
+        const res = await api('/api/sme/cost-standards/preview', {
             method: 'POST',
-            body: JSON.stringify({
-                finished_product_id: fg,
-                qty_completed: qty,
-                materials: overrides,
-                labor_cost: Number(document.getElementById('sxLabor').value || 0),
-                other_cost: Number(document.getElementById('sxOther').value || 0),
-            }),
+            body: JSON.stringify({ finished_product_id: fg, qty }),
         });
-        previewLines = res.data.materials || [];
-        renderPreview(res.data);
+        const d = res.data || {};
+        previewLines = d.materials || [];
+        // Áp override SL nếu user đã sửa
+        if (previewLines.length) {
+            previewLines = previewLines.map(l => {
+                const el = document.getElementById(`mat-act-${l.material_product_id}`);
+                if (el) {
+                    const q = Number(el.value || l.qty_actual);
+                    return { ...l, qty_actual: q, line_cost: Math.round(q * Number(l.avg_cost || 0) * 100) / 100 };
+                }
+                return l;
+            });
+        }
+        const mat = previewLines.reduce((s, l) => s + Number(l.line_cost || 0), 0);
+        renderPreview({
+            total_material_cost: mat,
+            labor_cost: d.labor_std,
+            other_cost: d.other_std,
+            total_cost: mat + Number(d.labor_std || 0) + Number(d.other_std || 0),
+            unit_cost: qty ? (mat + Number(d.labor_std || 0) + Number(d.other_std || 0)) / qty : 0,
+        });
+        document.getElementById('sxLabor').value = d.labor_std || 0;
+        document.getElementById('sxOther').value = d.other_std || 0;
         document.getElementById('btnCreateSx').disabled = false;
     } catch (err) {
-        Swal.fire('Lỗi', err.message, 'error');
+        Swal.fire('Lỗi', err.message + '<br><small>Thiết lập định mức tại «Giá thành 3 phương án».</small>', 'error');
     }
 }
 
@@ -476,7 +590,7 @@ function renderPreview(data) {
         return `<tr>
             <td>
                 <div class="fw-semibold">${escapeHtml(l.material_name)}</div>
-                <div class="small text-muted">${escapeHtml(l.material_code || '')} · ${escapeHtml(l.material_unit || '')}</div>
+                <div class="small text-muted">${escapeHtml(l.material_code || '')} · ${escapeHtml(l.material_unit || '')}${l.inventory_account ? ' · TK ' + escapeHtml(l.inventory_account) : ''}</div>
             </td>
             <td class="text-end">${num(l.qty_standard)}</td>
             <td class="text-end">
@@ -508,7 +622,8 @@ async function createProduction() {
     const confirm = await Swal.fire({
         title: 'Lập lệnh sản xuất?',
         html: 'Xuất nguyên vật liệu và ghi sổ <strong>CPSX dở dang (154)</strong>. '
-            + 'Thành phẩm nhập kho sau bằng nút <strong>Nhập kho thành phẩm</strong> trên từng lệnh (theo đợt hoặc đủ lệnh).',
+            + 'Phân bổ nhân công / SX chung (622/627) tại <strong>Phân bổ giá thành cuối kỳ</strong>, '
+            + 'rồi nhập thành phẩm bằng nút <strong>Nhập kho thành phẩm</strong>.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Xác nhận lập lệnh',
@@ -661,7 +776,7 @@ async function loadOrders() {
         const res = await api('/api/production/orders?' + params.toString());
         const rows = res.data || [];
         if (!rows.length) {
-            body.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">Chưa có phiếu</td></tr>`;
+            body.innerHTML = `<tr><td colspan="11" class="text-center text-muted py-4">Chưa có phiếu</td></tr>`;
             return;
         }
         body.innerHTML = rows.map(o => {
@@ -678,6 +793,9 @@ async function loadOrders() {
             const journalBadge = o.journal_entry_id
                 ? `<span class="badge bg-info text-dark" title="Đã ghi sổ CPSX/154">#${o.journal_entry_id}</span>`
                 : '<span class="badge bg-warning text-dark">Chưa sổ</span>';
+            const costBadge = Number(o.cost_finalized)
+                ? '<span class="badge bg-success" title="Đã chốt phân bổ 622/627">Đã chốt</span>'
+                : '<span class="badge bg-warning text-dark" title="Chưa phân bổ 622/627">Chưa chốt</span>';
             const planned = o.qty_planned != null ? o.qty_planned : o.qty_completed;
             const received = o.qty_received != null ? o.qty_received : 0;
             return `<tr>
@@ -692,6 +810,7 @@ async function loadOrders() {
                 <td class="text-end prod-money">${money4(o.unit_cost)}</td>
                 <td class="text-end prod-money">${money(o.total_cost != null ? o.total_cost : o.total_material_cost)}</td>
                 <td>${badge}</td>
+                <td>${costBadge}</td>
                 <td>${journalBadge}</td>
                 <td class="text-end no-print text-nowrap">
                     ${receiveBtn}
@@ -702,7 +821,7 @@ async function loadOrders() {
             </tr>`;
         }).join('');
     } catch (err) {
-        body.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">${escapeHtml(err.message)}</td></tr>`;
+        body.innerHTML = `<tr><td colspan="11" class="text-center text-danger py-4">${escapeHtml(err.message)}</td></tr>`;
     }
 }
 
@@ -738,6 +857,7 @@ async function viewOrder(id) {
                 <div class="col-md-6"><strong>Nhân công:</strong> <span class="prod-money">${money(o.labor_cost)}</span></div>
                 <div class="col-md-6"><strong>Chi phí khác:</strong> <span class="prod-money">${money(o.other_cost)}</span></div>
                 <div class="col-md-6"><strong>Tổng giá thành:</strong> <span class="prod-money">${money(o.total_cost != null ? o.total_cost : o.total_material_cost)}</span></div>
+                <div class="col-md-6"><strong>Chốt GT (622/627):</strong> ${Number(o.cost_finalized) ? '<span class="badge bg-success">Đã chốt</span>' : '<span class="badge bg-warning text-dark">Chưa chốt</span>'}</div>
                 <div class="col-md-6"><strong>Sổ kép (CPSX/154):</strong> ${o.journal_entry_id ? ('#' + o.journal_entry_id) : '<span class="text-warning">Chưa ghi</span>'}</div>
                 <div class="col-md-6"><strong>Tình trạng:</strong> ${statusBadge(o)}</div>
                 <div class="col-12"><strong>Ghi chú:</strong> ${escapeHtml(o.note || '—')}</div>
@@ -802,19 +922,16 @@ async function cancelOrder(id) {
 
 function addBomRow(materialId, qty) {
     const body = document.getElementById('bomItemsBody');
-    const opts = materialProducts.map(p => {
-        const sel = String(p.id) === String(materialId || '') ? ' selected' : '';
-        return `<option value="${p.id}"${sel}>${escapeHtml(productLabel(p))}</option>`;
-    }).join('');
     const tr = document.createElement('tr');
     tr.className = 'bom-item-row';
     tr.innerHTML = `
-        <td><select class="form-select form-select-sm bom-mat">${opts}</select></td>
+        <td><select class="form-select form-select-sm bom-mat"></select></td>
         <td><input type="number" class="form-control form-control-sm text-end bom-qty" min="0.000001" step="any" value="${qty || 1}"></td>
         <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button></td>`;
     body.appendChild(tr);
-    if (!materialProducts.length) {
-        Swal.fire('Chưa có vật tư', 'Hãy tạo sản phẩm loại vật tư (mã bắt đầu VT) trước', 'info');
+    fillSelect(tr.querySelector('.bom-mat'), bomMaterialProducts, '-- Chọn NVL --', materialId);
+    if (!bomMaterialProducts.length) {
+        Swal.fire('Chưa có NVL', 'Hãy tạo vật tư (152) hoặc bật TP/HH nếu cần', 'info');
     }
 }
 
@@ -832,7 +949,7 @@ async function saveBom() {
     const fg = Number(document.getElementById('bomFinished').value || 0);
     if (!fg) return Swal.fire('Thiếu thông tin', 'Chọn thành phẩm', 'warning');
     const items = collectBomItems();
-    if (!items.length) return Swal.fire('Thiếu vật tư', 'Thêm ít nhất 1 vật tư (mã VT…) với SL > 0', 'warning');
+    if (!items.length) return Swal.fire('Thiếu NVL', 'Thêm ít nhất 1 dòng NVL với SL > 0', 'warning');
     try {
         const res = await api('/api/production/bom', {
             method: 'POST',
@@ -870,10 +987,24 @@ async function loadBomList() {
     }
 }
 
+async function ensureBomScopeForItems(items) {
+    const needsExtended = (items || []).some(it => {
+        const acc = it.inventory_account || '';
+        return acc === '155' || acc === '156';
+    });
+    if (needsExtended && !bomIncludeFgGoods) {
+        bomIncludeFgGoods = true;
+        syncBomScopeToggleUi();
+        await loadBomMaterialProducts(true);
+    }
+    mergeBomItemsIntoPicker(items);
+}
+
 async function editBom(fgId) {
     try {
         const res = await api('/api/production/bom/' + fgId);
         const bom = res.data;
+        await ensureBomScopeForItems(bom.items);
         fillSelect(document.getElementById('bomFinished'), finishedProducts, '-- Chọn thành phẩm --', bom.finished_product_id);
         document.getElementById('bomNote').value = bom.note || '';
         document.getElementById('bomItemsBody').innerHTML = '';
@@ -909,28 +1040,51 @@ function resetBomForm() {
     document.getElementById('bomFinished').value = '';
     document.getElementById('bomNote').value = '';
     document.getElementById('bomItemsBody').innerHTML = '';
+    bomIncludeFgGoods = false;
+    syncBomScopeToggleUi();
+    loadBomMaterialProducts(false);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
     initPickers();
+    syncBomScopeToggleUi();
     try {
-        await loadProductPickers();
-        await Promise.all([loadOrders(), loadBomList()]);
+        const fg = await api('/api/production/finished-products');
+        finishedProducts = fg.data || [];
+        fillSelect(document.getElementById('sxFinished'), finishedProducts, '-- Chọn thành phẩm --');
+        fillSelect(document.getElementById('bomFinished'), finishedProducts, '-- Chọn thành phẩm --');
+        await loadOrders();
     } catch (err) {
         Swal.fire('Lỗi tải dữ liệu', err.message, 'error');
     }
+    let bomTabLoaded = false;
+    document.getElementById('tab-bom-btn')?.addEventListener('shown.bs.tab', async () => {
+        if (bomTabLoaded) return;
+        bomTabLoaded = true;
+        try {
+            await ensureMaterialsLoaded();
+            await loadBomList();
+        } catch (e) { console.warn('loadBomList', e); }
+    });
     document.getElementById('bomFinished')?.addEventListener('change', async (e) => {
         const id = Number(e.target.value || 0);
-        if (!id) return;
+        if (!id) {
+            resetBomForm();
+            return;
+        }
         try {
             const res = await api('/api/production/bom/' + id);
             const bom = res.data;
+            await ensureBomScopeForItems(bom.items);
             document.getElementById('bomNote').value = bom.note || '';
             document.getElementById('bomItemsBody').innerHTML = '';
             (bom.items || []).forEach(it => addBomRow(it.material_product_id, it.qty_per_unit));
         } catch (_) {
             document.getElementById('bomItemsBody').innerHTML = '';
             document.getElementById('bomNote').value = '';
+            bomIncludeFgGoods = false;
+            syncBomScopeToggleUi();
+            await loadBomMaterialProducts(false);
         }
     });
 });

@@ -75,7 +75,6 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
-            _bootstrap()
             try:
                 assert_row_in_branch(conn, 'sme_advance_docs', doc_id, label='Chứng từ tạm ứng')
             except ValueError:
@@ -662,11 +661,10 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
     @login_required
     @require_sme_regime
     def api_sme_fa_list():
-        from Services.sme.fa_lifecycle import list_active_assets, asset_book_values
+        from Services.sme.fa_lifecycle import batch_asset_book_values, list_active_assets
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
-            _bootstrap()
             as_of = request.args.get('as_of') or datetime.now().strftime('%Y-%m-%d')
             branch = (
                 request.args.get('branch')
@@ -674,18 +672,37 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
                 or 'ALL'
             )
             status = request.args.get('status') or None
+            try:
+                limit = int(request.args.get('limit') or 200)
+            except (TypeError, ValueError):
+                limit = 200
+            limit = min(max(limit, 1), 500)
+            try:
+                offset = int(request.args.get('offset') or 0)
+            except (TypeError, ValueError):
+                offset = 0
+            offset = max(offset, 0)
             assets = list_active_assets(conn, branch_code=branch, status=status)
+            page = assets[offset:offset + limit]
+            by_id = {int(a['id']): a for a in page if a.get('id')}
+            book = batch_asset_book_values(
+                conn, list(by_id.keys()), as_of=as_of, assets_by_id=by_id,
+            )
             enriched = []
-            for a in assets:
-                try:
-                    vals = asset_book_values(conn, int(a['id']), as_of=as_of)
-                    a['accum_dep'] = vals['accum_dep']
-                    a['net_book'] = vals['net_book']
-                except Exception:
-                    a['accum_dep'] = 0
-                    a['net_book'] = a.get('original_cost') or 0
+            for a in page:
+                aid = int(a.get('id') or 0)
+                vals = book.get(aid, {})
+                a['accum_dep'] = vals.get('accum_dep', 0)
+                a['net_book'] = vals.get('net_book', a.get('original_cost') or 0)
                 enriched.append(a)
-            return jsonify({'success': True, 'data': enriched, 'branch_code': branch})
+            return jsonify({
+                'success': True,
+                'data': enriched,
+                'branch_code': branch,
+                'total': len(assets),
+                'offset': offset,
+                'limit': limit,
+            })
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
@@ -768,6 +785,112 @@ def register_sme_phase0_routes(app, *, login_required, require_sme_regime):
         except Exception as e:
             conn.rollback()
             logger.exception('api_sme_fa_disposal')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/fixed-assets/coa-accounts', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_fa_coa_accounts():
+        """TK 211/213/214 postable — dropdown phiếu nhập & vòng đời TSCĐ."""
+        from Services.fixed_assets_helpers import list_purchase_fa_coa_accounts
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            _bootstrap()
+            return jsonify({'success': True, 'data': list_purchase_fa_coa_accounts(conn)})
+        except Exception as e:
+            logger.exception('api_sme_fa_coa_accounts')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/fa-capital-contribution/accounts', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_fa_capital_contribution_accounts():
+        from Services.sme.fa_lifecycle import list_fa_capital_coa_accounts
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            _bootstrap()
+            return jsonify({'success': True, 'data': list_fa_capital_coa_accounts(conn)})
+        except Exception as e:
+            logger.exception('api_sme_fa_capital_contribution_accounts')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/fa-capital-contribution', methods=['GET', 'POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_fa_capital_contribution():
+        from Services.sme.fa_lifecycle import (
+            contribute_fixed_asset_to_capital,
+            list_capital_contributions,
+        )
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            _bootstrap()
+            if request.method == 'GET':
+                return jsonify({
+                    'success': True,
+                    'data': list_capital_contributions(
+                        conn,
+                        date_from=request.args.get('from'),
+                        date_to=request.args.get('to'),
+                        branch_code=request.args.get('branch')
+                        or session.get('sme_branch_filter')
+                        or 'ALL',
+                    ),
+                })
+            data = request.get_json(silent=True) or {}
+            doc = contribute_fixed_asset_to_capital(
+                conn,
+                asset_id=int(data.get('asset_id') or 0),
+                contribution_date=data.get('date') or data.get('contribution_date'),
+                owner_name=data.get('owner_name') or data.get('party_name') or '',
+                equity_account=data.get('equity_account') or '4111',
+                asset_account=data.get('asset_account'),
+                accum_account=data.get('accum_account'),
+                reason=data.get('reason') or '',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': doc})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logger.exception('api_sme_fa_capital_contribution')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/fa-capital-contribution/<int:doc_id>/void', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_fa_capital_contribution_void(doc_id):
+        from Services.sme.fa_lifecycle import void_capital_contribution
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        try:
+            data = request.get_json(silent=True) or {}
+            doc = void_capital_contribution(
+                conn, doc_id,
+                reason=data.get('reason') or 'Hủy góp vốn TSCĐ',
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': doc})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()

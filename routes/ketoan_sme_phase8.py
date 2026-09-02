@@ -948,3 +948,180 @@ def register_sme_phase8_routes(app, *, login_required, require_sme_regime):
             return _ledger_err(conn, e, 'api_sme_accruals_void')
         finally:
             conn.close()
+
+    @app.route('/SME_deferred_revenue')
+    @login_required
+    @require_sme_regime
+    def SME_deferred_revenue():
+        return render_template('KeToanSME/deferred_revenue.html')
+
+    @app.route('/api/sme/deferred-revenue/products')
+    @login_required
+    @require_sme_regime
+    def api_deferred_revenue_products():
+        from Services.sme.deferred_revenue import (
+            ensure_deferred_revenue_schema,
+            list_deferred_service_products,
+        )
+        conn = get_db_connection()
+        try:
+            ensure_deferred_revenue_schema(conn, commit=True)
+            rows = list_deferred_service_products(conn, request.args.get('q', ''))
+            return jsonify({'success': True, 'data': rows})
+        except Exception as e:
+            logger.exception('api_deferred_revenue_products')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/deferred-revenue/contracts')
+    @login_required
+    @require_sme_regime
+    def api_deferred_revenue_contracts():
+        from Services.sme.deferred_revenue import (
+            ensure_deferred_revenue_schema,
+            list_deferred_contracts,
+        )
+        conn = get_db_connection()
+        try:
+            ensure_deferred_revenue_schema(conn, commit=True)
+            rows = list_deferred_contracts(
+                conn,
+                status=request.args.get('status', ''),
+                q=request.args.get('q', ''),
+            )
+            return jsonify({'success': True, 'data': rows, 'count': len(rows)})
+        except Exception as e:
+            logger.exception('api_deferred_revenue_contracts')
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/deferred-revenue/contracts/<int:contract_id>')
+    @login_required
+    @require_sme_regime
+    def api_deferred_revenue_contract_get(contract_id):
+        from Services.sme.deferred_revenue import (
+            ensure_deferred_revenue_schema,
+            get_deferred_contract,
+        )
+        conn = get_db_connection()
+        try:
+            ensure_deferred_revenue_schema(conn, commit=True)
+            row = get_deferred_contract(conn, contract_id)
+            if not row:
+                return jsonify({'success': False, 'error': 'Không tìm thấy hợp đồng'}), 404
+            return jsonify({'success': True, 'data': row})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/deferred-revenue/preview', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_deferred_revenue_preview():
+        from Services.sme.deferred_revenue import preview_deferred_schedule
+        payload = request.get_json(silent=True) or {}
+        try:
+            prev = preview_deferred_schedule(
+                start_date=payload.get('start_date') or payload.get('date'),
+                total_amount=float(payload.get('total_amount') or payload.get('amount') or 0),
+                period_months=int(payload.get('period_months') or payload.get('months') or 12),
+            )
+            return jsonify({'success': True, 'data': prev})
+        except (TypeError, ValueError) as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+
+    @app.route('/api/sme/deferred-revenue/contracts', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_deferred_revenue_contract_create():
+        from Services.sme.bootstrap import ensure_sme_accounting_ready
+        from Services.sme.deferred_revenue import create_deferred_contract
+        from Services.tenant_profile import get_current_tenant_profile
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        try:
+            profile = get_current_tenant_profile() or {}
+            ensure_sme_accounting_ready(
+                conn, accounting_regime=profile.get('accounting_regime'), commit=False,
+            )
+            data = create_deferred_contract(
+                conn,
+                service_product_id=int(payload.get('service_product_id') or 0),
+                customer_name=payload.get('customer_name') or '',
+                total_amount=payload.get('total_amount') or payload.get('amount'),
+                start_date=payload.get('start_date') or payload.get('date'),
+                period_months=payload.get('period_months') or payload.get('months'),
+                customer_id=payload.get('customer_id'),
+                customer_tax_code=payload.get('customer_tax_code') or '',
+                payment_method=payload.get('payment_method') or 'bank',
+                voucher_date=payload.get('voucher_date'),
+                note=payload.get('note') or '',
+                created_by=_user(),
+                commit=True,
+            )
+            vno = (data.get('receipt_voucher') or {}).get('voucher_no', '')
+            return jsonify({
+                'success': True,
+                'data': data,
+                'message': f"Đã lập {data.get('contract_no')} — PT {vno} (Nợ 112 / Có 3387)",
+            })
+        except (TypeError, ValueError) as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return _ledger_err(conn, e, 'api_deferred_revenue_contract_create')
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/deferred-revenue/recognize', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_deferred_revenue_recognize():
+        from Services.sme.bootstrap import ensure_sme_accounting_ready
+        from Services.sme.deferred_revenue import (
+            recognize_deferred_period,
+            recognize_deferred_period_by_id,
+        )
+        from Services.tenant_profile import get_current_tenant_profile
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        try:
+            profile = get_current_tenant_profile() or {}
+            ensure_sme_accounting_ready(
+                conn, accounting_regime=profile.get('accounting_regime'), commit=False,
+            )
+            period_id = payload.get('period_id')
+            if period_id:
+                data = recognize_deferred_period_by_id(
+                    conn, int(period_id),
+                    posting_date=payload.get('posting_date') or payload.get('date'),
+                    created_by=_user(),
+                    commit=True,
+                )
+                return jsonify({'success': True, 'data': data, 'message': 'Đã ghi nhận doanh thu kỳ'})
+            fy = int(payload.get('fiscal_year') or payload.get('year') or datetime.now().year)
+            pm = int(payload.get('period') or payload.get('month') or datetime.now().month)
+            data = recognize_deferred_period(
+                conn,
+                fiscal_year=fy,
+                period=pm,
+                posting_date=payload.get('posting_date') or payload.get('date'),
+                created_by=_user(),
+                commit=True,
+            )
+            return jsonify({
+                'success': True,
+                'data': data,
+                'message': (
+                    f"Đã ghi nhận {data.get('posted_count', 0)} kỳ — "
+                    f"{data.get('posted_amount', 0):,.0f} ₫"
+                ),
+            })
+        except (TypeError, ValueError) as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            return _ledger_err(conn, e, 'api_deferred_revenue_recognize')
+        finally:
+            conn.close()

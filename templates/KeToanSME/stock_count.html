@@ -60,7 +60,7 @@ async function openNew(){
   fDate.value=today();
   if(!fWh.options.length) await loadWarehouses();
   const wh=fWh.value||'';
-  const res=await fetch('/api/sme/products/brief'+(wh?('?warehouse='+encodeURIComponent(wh)):'')); const json=await res.json();
+  const res=await fetch('/api/sme/products/brief?limit=100'+(wh?('&warehouse='+encodeURIComponent(wh)):'')); const json=await res.json();
   products=json.data||[];
   lines.innerHTML=products.map(p=>`<tr data-id="${p.id}">
     <td>${p.name} <span class="text-muted small">(${p.product_type})</span></td>

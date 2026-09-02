@@ -158,6 +158,9 @@ SME_MENU_GROUPS = (
         'description': 'Lệnh sản xuất, phân bổ nguyên vật liệu và tính giá thành',
         'items': (
             {'endpoint': 'SME_production', 'label': 'Sản xuất', 'icon': 'fas fa-industry'},
+            {'endpoint': 'SME_period_cost_allocation', 'label': 'Giá thành 3 phương án (ĐM & chốt kỳ)', 'icon': 'fas fa-balance-scale'},
+            {'endpoint': 'SME_service_costing', 'label': 'Giá vốn dịch vụ', 'icon': 'fas fa-handshake'},
+            {'endpoint': 'SME_deferred_revenue', 'label': 'Gói DV trả trước (3387)', 'icon': 'fas fa-calendar-alt'},
             {'endpoint': 'SME_costing', 'label': 'Kế toán giá thành', 'icon': 'fas fa-calculator'},
             {'endpoint': 'SME_material_remaining', 'label': 'Vật tư còn lại cuối kỳ — mẫu 04-VT', 'icon': 'fas fa-clipboard-list'},
             {'endpoint': 'SME_material_alloc', 'label': 'Phân bổ nguyên vật liệu — mẫu 07-VT', 'icon': 'fas fa-share'},
@@ -184,7 +187,7 @@ SME_MENU_GROUPS = (
         'description': 'Theo dõi tài sản cố định và công cụ dụng cụ',
         'items': (
             {'endpoint': 'SME_TSCD', 'label': 'Tổng quan tài sản cố định', 'icon': 'fas fa-chart-pie'},
-            {'endpoint': 'SME_fixed_assets', 'label': 'Danh mục tài sản cố định', 'icon': 'fas fa-building'},
+            {'endpoint': 'SME_fixed_assets', 'label': 'Quản lý và khấu hao TSCĐ', 'icon': 'fas fa-building'},
             {'endpoint': 'SME_CCDC', 'label': 'Tổng quan công cụ dụng cụ', 'icon': 'fas fa-chart-pie'},
             {'endpoint': 'SME_tools', 'label': 'Danh mục công cụ dụng cụ', 'icon': 'fas fa-screwdriver-wrench'},
             {'endpoint': 'SME_prepaid', 'label': 'Chi phí trả trước (TK 242)', 'icon': 'fas fa-calendar-check'},

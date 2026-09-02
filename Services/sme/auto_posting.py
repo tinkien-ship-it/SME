@@ -241,15 +241,20 @@ def _build_grouped_expense_lines(
     description: str,
     default_debit: str = '642',
 ) -> list[dict]:
-    by: dict[str, Decimal] = {}
+    debit_by: dict[str, Decimal] = {}
+    credit_by: dict[str, Decimal] = {}
     for it in items:
-        acct = str(it.get('expense_account') or default_debit).strip() or default_debit
-        by[acct] = by.get(acct, Decimal('0.00')) + _money(it.get('amount'))
+        debit_acct = str(it.get('expense_account') or default_debit).strip() or default_debit
+        credit_acct = str(it.get('accum_account') or credit_account).strip() or credit_account
+        amt = _money(it.get('amount'))
+        if amt <= 0:
+            continue
+        debit_by[debit_acct] = debit_by.get(debit_acct, Decimal('0.00')) + amt
+        credit_by[credit_acct] = credit_by.get(credit_acct, Decimal('0.00')) + amt
     lines: list[dict] = []
     seq = 1
-    total = Decimal('0.00')
-    for acct in sorted(by):
-        amt = by[acct]
+    for acct in sorted(debit_by):
+        amt = debit_by[acct]
         if amt <= 0:
             continue
         lines.append({
@@ -260,15 +265,18 @@ def _build_grouped_expense_lines(
             'description': description,
         })
         seq += 1
-        total += amt
-    if total > 0:
+    for acct in sorted(credit_by):
+        amt = credit_by[acct]
+        if amt <= 0:
+            continue
         lines.append({
             'sequence': seq,
-            'account_code': resolve_postable_account(conn, credit_account),
+            'account_code': resolve_postable_account(conn, acct),
             'debit': 0,
-            'credit': total,
+            'credit': amt,
             'description': description,
         })
+        seq += 1
     return lines
 
 
@@ -311,7 +319,12 @@ def _collect_fa_amounts(conn: sqlite3.Connection, year: int, month: int) -> list
     if not _table_exists(conn, FIXED_ASSETS_TABLE):
         return []
     fa_cols = {r[1] for r in conn.execute(f'PRAGMA table_info({FIXED_ASSETS_TABLE})').fetchall()}
-    extra = ', expense_account' if 'expense_account' in fa_cols else ''
+    extra_cols = []
+    if 'expense_account' in fa_cols:
+        extra_cols.append('expense_account')
+    if 'accum_account' in fa_cols:
+        extra_cols.append('accum_account')
+    extra = (', ' + ', '.join(extra_cols)) if extra_cols else ''
     rows = conn.execute(
         f"""
         SELECT id, ma_tai_san, ten_tai_san, nguyen_gia_tinh_khau_hao, thue_gtgt,
@@ -343,6 +356,11 @@ def _collect_fa_amounts(conn: sqlite3.Connection, year: int, month: int) -> list
             'name': row['ten_tai_san'],
             'amount': _money(amount),
             'expense_account': _row_expense_account(row, '642'),
+            'accum_account': (
+                str(row['accum_account']).strip()
+                if 'accum_account' in row.keys() and row['accum_account']
+                else '2141'
+            ),
         })
     return out
 
@@ -698,6 +716,32 @@ def run_period_automation(
     except Exception:
         result['loan_interest'] = {'posted': False, 'amount': 0.0, 'loans': 0, 'reason': 'skip'}
 
+    # --- Phân bổ DT hoãn 3387 (gói DV trả trước / subscription) ---
+    result['deferred_revenue'] = {'posted_count': 0, 'posted_amount': 0.0}
+    try:
+        from Services.sme.deferred_revenue import (
+            ensure_deferred_revenue_schema,
+            recognize_deferred_period,
+        )
+        ensure_deferred_revenue_schema(conn, commit=False)
+        dr = recognize_deferred_period(
+            conn,
+            fiscal_year=fiscal_year,
+            period=period,
+            posting_date=posting_date,
+            created_by=created_by,
+            commit=False,
+        )
+        result['deferred_revenue'] = dr
+        for line in dr.get('lines') or []:
+            jid = line.get('journal_entry_id')
+            if jid:
+                result['entry_ids'].append(jid)
+        if dr.get('posted_count'):
+            result['posted'] = True
+    except Exception:
+        result['deferred_revenue'] = {'posted_count': 0, 'posted_amount': 0.0, 'reason': 'skip'}
+
     # --- Tạm nộp TNDN cuối quý (trước KCKQ để 821 vào kết chuyển) ---
     result['cit'] = {'posted': False, 'amount': 0.0}
     try:
@@ -884,6 +928,16 @@ def run_sme_automation_for_all_tenants(
         if not conn:
             continue
         try:
+            from Services.sme.period_close import catch_up_missing_period_closes
+
+            catch_up = catch_up_missing_period_closes(
+                conn,
+                fiscal_year=today.year,
+                accounting_regime=regime,
+                features=features,
+                created_by='scheduler',
+                replace_existing=False,
+            )
             out = run_period_automation(
                 conn,
                 fiscal_year=fiscal_year,
@@ -894,6 +948,7 @@ def run_sme_automation_for_all_tenants(
                 replace_existing=False,
                 auto_activate=True,
             )
+            out['catch_up'] = catch_up
             from Services.sme.vat_filing_alert import (
                 evaluate_year_end_vat_filing,
                 auto_apply_monthly_filing_if_due,
@@ -936,3 +991,61 @@ def run_sme_automation_for_all_tenants(
         'tenants': len(results),
         'results': results,
     }
+
+
+def run_sme_period_close_catchup_for_all_tenants(
+    *,
+    fiscal_year: int | None = None,
+) -> dict[str, Any]:
+    """Job lịch hàng ngày: bù KCKQ thiếu cho mọi tenant SME."""
+    from db_utils import get_main_db_connection, get_tenant_db_connection, sqlite_commit
+    from Services.subscription_service import parse_tenant_settings
+    from Services.sme.period_close import catch_up_missing_period_closes
+    from Services.tenant_profile import normalize_accounting_regime, resolve_features
+
+    today = datetime.now()
+    fy = fiscal_year or today.year
+
+    main = get_main_db_connection()
+    try:
+        tenants = main.execute(
+            "SELECT tenant_id, settings FROM tenants WHERE is_active = 1"
+        ).fetchall()
+    finally:
+        main.close()
+
+    results = []
+    for row in tenants:
+        tid = row['tenant_id']
+        settings = parse_tenant_settings(row['settings'])
+        if not isinstance(settings, dict):
+            settings = {}
+        regime = normalize_accounting_regime(settings.get('accounting_regime'))
+        if not str(regime).startswith('SME'):
+            continue
+        features = resolve_features(regime, settings.get('revenue_tier') or 'DT1', settings)
+        if not features.get('journal_posting') or features.get('auto_period_close') is False:
+            continue
+        conn = get_tenant_db_connection(tid)
+        if not conn:
+            continue
+        try:
+            out = catch_up_missing_period_closes(
+                conn,
+                fiscal_year=fy,
+                accounting_regime=regime,
+                features=features,
+                created_by='scheduler',
+            )
+            if out.get('posted_count'):
+                sqlite_commit(conn, label='auto_posting')
+            else:
+                conn.rollback()
+            results.append({'tenant_id': tid, **out})
+        except Exception as exc:
+            conn.rollback()
+            results.append({'tenant_id': tid, 'posted_count': 0, 'error': str(exc)})
+        finally:
+            conn.close()
+
+    return {'fiscal_year': fy, 'tenants': len(results), 'results': results}

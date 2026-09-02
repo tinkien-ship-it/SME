@@ -329,6 +329,16 @@ def create_receipt(
     ):
         purpose_s = 'customer_advance'
     if purpose_s in (
+        'service_advance', 'thu_truoc_dv', 'ung_truoc_dv', 'dv_advance',
+        'thu_truoc_dich_vu',
+    ):
+        purpose_s = 'service_advance'
+    if purpose_s in (
+        'deferred_revenue', 'dt_hoan_lai', 'goi_nam', 'thu_truoc_dai_han',
+        'subscription_prepaid',
+    ):
+        purpose_s = 'deferred_revenue'
+    if purpose_s in (
         'tat_toan_113', 'settle_113', 'nhan_tien_nh', 'giai_toa_113',
         'cash_in_transit_in',
     ):
@@ -375,6 +385,14 @@ def create_receipt(
     debit = _resolve_cash_gl(conn, payment_method, currency=cur)
     credit = str(credit_account or '131').strip() or '131'
 
+    # Ứng trước DV: luôn Có 131 (3387 chỉ qua màn DT chưa TH / accruals)
+    if purpose_s == 'service_advance':
+        credit = '131'
+    # Gói DV trả trước dài hạn: Có 3387
+    if purpose_s == 'deferred_revenue':
+        from Services.sme.journal_engine import resolve_postable_account as _rpa
+        credit = _rpa(conn, '3387')
+
     # Tất toán 113: Nợ 1121 (TGNH) / Có 1131 (tiền đang chuyển)
     if purpose_s == 'tat_toan_113':
         cur = 'VND'
@@ -419,6 +437,10 @@ def create_receipt(
     desc = reason or f'Thu tiền {party_name or ""}'.strip()
     if purpose_s == 'customer_advance' and not reason:
         desc = f'Tạm ứng khách hàng XK — Có 131 / Nợ {debit}'
+    if purpose_s == 'service_advance' and not reason:
+        desc = f'Ứng trước dịch vụ — Nợ {debit} / Có 131'
+    if purpose_s == 'deferred_revenue' and not reason:
+        desc = f'Thu trước gói dịch vụ — Nợ {debit} / Có {credit}'
     if purpose_s == 'fx_receipt' and not reason:
         desc = f'Thu ngoại tệ {cur} vào TK {debit}'.strip()
     if purpose_s == 'tat_toan_113' and not reason:
@@ -503,8 +525,10 @@ def create_receipt(
         document_id=source_id or sale_id,
         business_type=(
             'TAM_UNG_KH' if purpose_s == 'customer_advance'
-            else ('THU_NGOAI_TE' if purpose_s == 'fx_receipt'
-                  else ('TAT_TOAN_113' if purpose_s == 'tat_toan_113' else 'THU_TIEN'))
+            else ('THU_TRUOC_DV' if purpose_s == 'service_advance'
+                  else ('THU_DT_HOAN' if purpose_s == 'deferred_revenue'
+                        else ('THU_NGOAI_TE' if purpose_s == 'fx_receipt'
+                        else ('TAT_TOAN_113' if purpose_s == 'tat_toan_113' else 'THU_TIEN'))))
         ),
         currency=cur,
         exchange_rate=float(rate),
@@ -530,10 +554,11 @@ def create_receipt(
         debit, credit, desc, reference_document or None,
         source_type or (
             'customer_advance' if purpose_s == 'customer_advance'
-            else ('fx_receipt' if purpose_s == 'fx_receipt'
-                  else ('tat_toan_113' if purpose_s == 'tat_toan_113'
-                        else ('sale' if sale_id else None)))
-        ),
+            else ('service_advance' if purpose_s == 'service_advance'
+                  else ('deferred_revenue' if purpose_s == 'deferred_revenue'
+                        else ('fx_receipt' if purpose_s == 'fx_receipt'
+                        else ('tat_toan_113' if purpose_s == 'tat_toan_113'
+                              else ('sale' if sale_id else None)))))),
         source_id or sale_id,
         entry['id'], 'posted', created_by, _now(), _now(), branch,
     ]
@@ -550,8 +575,11 @@ def create_receipt(
     )
     voucher_id = cur_db.lastrowid
 
-    # Cập nhật công nợ bán nếu thu theo đơn / phân bổ
-    if credit.startswith('131') and purpose_s != 'customer_advance':
+  # Cập nhật công nợ bán nếu thu theo đơn / phân bổ (không áp dụng thu trước DV / tạm ứng XK)
+    if (
+        credit.startswith('131')
+        and purpose_s not in ('customer_advance', 'service_advance', 'deferred_revenue')
+    ):
         try:
             from Services.sme.cong_no_ops import apply_ar_receipt
             if alloc_rows:

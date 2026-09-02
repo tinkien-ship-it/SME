@@ -420,7 +420,7 @@ async function ensureProductsLoaded() {
   if (_productsLoading) return _productsLoading;
   _productsLoading = (async () => {
     try {
-      const res = await fetch('/api/sme/products/brief');
+      const res = await fetch('/api/sme/products/brief?limit=80');
       const json = await res.json();
       const rows = json.data || json.items || [];
       PRODUCTS.length = 0;
@@ -441,6 +441,12 @@ async function ensureProductsLoaded() {
 }
 
 function addRow(data={}) {
+  ensureProductsLoaded().then(() => {
+    _addRowImpl(data);
+  });
+}
+
+function _addRowImpl(data={}) {
   const tr = document.createElement('tr');
   const opts = productOptionsHtml();
   tr.innerHTML = `
@@ -1079,19 +1085,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('advanceWrap')?.classList.toggle('hidden-field', !(mode === 'prepaid_full' || mode === 'prepaid_partial'));
   document.getElementById('lcWrap')?.classList.toggle('hidden-field', !(mode === 'lc' || mode === 'lc_usance'));
 
-  const productsReady = ensureProductsLoaded().then(() => {
-    document.querySelectorAll('#itemsBody select.prod').forEach(sel => {
-      const cur = sel.value;
-      sel.innerHTML = productOptionsHtml();
-      if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
-      else if (sel.options.length && sel.options[0].value) sel.selectedIndex = 0;
-      sel.dispatchEvent(new Event('change'));
-    });
-  });
-
   if (!editId) {
     try {
-      await Promise.all([productsReady, warehousesReady]);
+      await warehousesReady;
     } catch (_e) {}
     addRow();
     return;
@@ -1102,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const [json] = await Promise.all([
       fetch('/api/sme/export-sale/' + editId).then(r => r.json()),
-      productsReady,
+      ensureProductsLoaded(),
       warehousesReady,
     ]);
     if (!json.success) throw new Error(json.error || 'Không tải được');

@@ -28,8 +28,9 @@ STATUS_PARTIAL = 'partial_received'
 STATUS_COMPLETED = 'completed'
 STATUS_CANCELLED = 'cancelled'
 
-# NVL chấp nhận: materials; goods cũng cho phép (HKD hay dùng hàng mua làm NVL)
-_MATERIAL_TYPES = ('materials', 'goods', 'raw_materials')
+# NVL đầu vào BOM / phiếu SX: VT (152), HH (156), TP (155) khi dùng làm NVL
+_BOM_INPUT_TYPES = ('materials', 'goods', 'raw_materials', 'finished_goods')
+_MATERIAL_TYPES = _BOM_INPUT_TYPES  # alias
 _FINISHED_TYPES = ('finished_goods',)
 
 
@@ -105,6 +106,10 @@ def ensure_production_schema(conn: sqlite3.Connection) -> None:
         ('total_cost', 'REAL DEFAULT 0'),
         ('qty_received', 'REAL DEFAULT 0'),
         ('defer_fg_receipt', 'INTEGER DEFAULT 0'),
+        ('cost_finalized', 'INTEGER DEFAULT 0'),
+        ('allocation_id', 'INTEGER'),
+        ('oh_fixed_cost', 'REAL DEFAULT 0'),
+        ('oh_variable_cost', 'REAL DEFAULT 0'),
     ):
         if col not in cols:
             try:
@@ -196,11 +201,11 @@ def _assert_finished(cursor, product_id: int) -> None:
 
 def _assert_material(cursor, product_id: int, *, require_vt_code: bool = False) -> None:
     pt = _product_type(cursor, product_id)
-    if pt not in _MATERIAL_TYPES:
+    if pt not in _BOM_INPUT_TYPES:
         raise ValueError(
-            f'Sản phẩm #{product_id} không phải vật tư/hàng hóa (loại: {pt})'
+            f'Sản phẩm #{product_id} không phải vật tư/thành phẩm/hàng hóa dùng làm NVL (loại: {pt})'
         )
-    if require_vt_code:
+    if require_vt_code and pt in ('materials', 'raw_materials'):
         cursor.execute(
             "SELECT COALESCE(product_code, '') FROM products WHERE id = ?",
             (product_id,),
@@ -210,6 +215,15 @@ def _assert_material(cursor, product_id: int, *, require_vt_code: bool = False) 
             raise ValueError(
                 f'Mã vật tư phải bắt đầu bằng VT (hiện tại: {code or "trống"})'
             )
+
+
+def _inventory_account_for_type(product_type: str) -> str:
+    pt = (product_type or 'goods').strip().lower()
+    if pt in ('materials', 'material', 'raw_materials', 'nvl'):
+        return '152'
+    if pt in ('finished_goods', 'finished', 'thanh_pham', 'recipe'):
+        return '155'
+    return '156'
 
 
 def next_production_voucher(cursor) -> str:
@@ -255,29 +269,47 @@ def list_material_products(
     q: str = '',
     *,
     code_prefix: str = '',
+    include_fg_goods: bool = False,
 ) -> list[dict]:
+    """Danh sách NVL cho BOM.
+
+    Mặc định chỉ VT (152). ``include_fg_goods=True`` thêm TP (155) và HH (156).
+    """
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    sql = """
+    if include_fg_goods:
+        type_clause = "('materials', 'goods', 'raw_materials', 'finished_goods')"
+    else:
+        type_clause = "('materials', 'raw_materials')"
+    sql = f"""
         SELECT p.id, p.name, p.product_code, p.barcode, p.unit,
                COALESCE(p.product_type, 'goods') AS product_type,
                COALESCE(i.quantity, 0) AS stock,
                COALESCE(i.avg_cost, 0) AS avg_cost
         FROM products p
         LEFT JOIN inventory i ON i.product_id = p.id
-        WHERE LOWER(COALESCE(p.product_type, 'goods')) IN ('materials', 'goods', 'raw_materials')
+        WHERE LOWER(COALESCE(p.product_type, 'goods')) IN {type_clause}
     """
     params: list = []
     prefix = (code_prefix or '').strip().upper()
     if prefix:
         sql += " AND UPPER(COALESCE(p.product_code, '')) LIKE ?"
         params.append(f"{prefix}%")
+    elif not include_fg_goods:
+        sql += " AND UPPER(COALESCE(p.product_code, '')) LIKE 'VT%'"
     if q:
         like = f"%{q.strip()}%"
         sql += " AND (p.name LIKE ? OR p.product_code LIKE ? OR p.barcode LIKE ?)"
         params.extend([like, like, like])
     sql += " ORDER BY p.name COLLATE NOCASE LIMIT 300"
-    return [dict(r) for r in c.execute(sql, params).fetchall()]
+    rows = [dict(r) for r in c.execute(sql, params).fetchall()]
+    for row in rows:
+        row['inventory_account'] = _inventory_account_for_type(row.get('product_type'))
+    if include_fg_goods:
+        rows = [r for r in rows if r['inventory_account'] in ('152', '155', '156')]
+    else:
+        rows = [r for r in rows if r['inventory_account'] == '152']
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -305,6 +337,7 @@ def get_bom(conn: sqlite3.Connection, finished_product_id: int) -> dict | None:
         """
         SELECT bi.*, m.name AS material_name, m.product_code AS material_code,
                m.unit AS material_unit,
+               COALESCE(m.product_type, 'goods') AS material_type,
                COALESCE(inv.quantity, 0) AS stock,
                COALESCE(inv.avg_cost, 0) AS avg_cost
         FROM product_bom_items bi
@@ -316,7 +349,11 @@ def get_bom(conn: sqlite3.Connection, finished_product_id: int) -> dict | None:
         (bom['id'],),
     ).fetchall()
     data = dict(bom)
-    data['items'] = [dict(x) for x in items]
+    data['items'] = []
+    for x in items:
+        row = dict(x)
+        row['inventory_account'] = _inventory_account_for_type(row.get('material_type'))
+        data['items'].append(row)
     return data
 
 
@@ -358,7 +395,7 @@ def save_bom(
             raise ValueError('Không thể dùng chính thành phẩm làm vật tư')
         if mid in seen:
             raise ValueError(f'Vật tư #{mid} bị trùng trong định mức')
-        _assert_material(c, mid, require_vt_code=True)
+        _assert_material(c, mid)
         seen.add(mid)
         cleaned.append({
             'material_product_id': mid,
@@ -435,11 +472,14 @@ def preview_materials(
             raise ValueError(f"SL vật tư thực tế không hợp lệ: {it['material_name']}")
         stock = ledger_quantity(c, mid)
         wac = get_wac(c, mid)
+        mat_type = it.get('material_type') or _product_type(c, mid)
         lines.append({
             'material_product_id': mid,
             'material_name': it['material_name'],
             'material_code': it.get('material_code'),
             'material_unit': it.get('material_unit'),
+            'material_type': mat_type,
+            'inventory_account': _inventory_account_for_type(mat_type),
             'qty_per_unit': float(it['qty_per_unit']),
             'qty_standard': round(std, 6),
             'qty_actual': round(actual, 6),
@@ -525,8 +565,14 @@ def create_production_order(
     created_by: str = '',
     allow_negative_stock: bool = False,
     defer_fg_receipt: bool = False,
+    use_method_standards: bool = False,
 ) -> dict:
     ensure_production_schema(conn)
+    try:
+        from Services.sme.costing_policy import ensure_costing_policy_schema, lock_policy_on_first_order
+        ensure_costing_policy_schema(conn)
+    except Exception:
+        pass
     c = conn.cursor()
     try:
         _assert_finished(c, finished_product_id)
@@ -538,11 +584,45 @@ def create_production_order(
 
         labor = max(0.0, float(labor_cost or 0))
         other = max(0.0, float(other_cost or 0))
+        oh_fixed_std = 0.0
+        oh_var_std = 0.0
+        costing_method = None
+        provisional_unit = 0.0
 
         date_str = (production_date or datetime.now().strftime('%Y-%m-%d')).strip()[:10]
         when = f"{date_str} {datetime.now().strftime('%H:%M:%S')}"
 
-        lines = preview_materials(conn, finished_product_id, qty, material_overrides)
+        if use_method_standards:
+            from Services.sme.costing_policy import get_costing_policy
+            from Services.sme.product_cost_standards import preview_order_from_standard
+            policy = get_costing_policy(conn)
+            costing_method = policy['allocation_method']
+            std_preview = preview_order_from_standard(
+                conn,
+                allocation_method=costing_method,
+                finished_product_id=finished_product_id,
+                qty=qty,
+            )
+            # Áp override SL NVL nếu có
+            if material_overrides:
+                omap = {
+                    int(o.get('material_product_id') or 0): float(o.get('qty_actual') or 0)
+                    for o in material_overrides
+                    if int(o.get('material_product_id') or 0)
+                }
+                for line in std_preview['materials']:
+                    mid = int(line['material_product_id'])
+                    if mid in omap:
+                        line['qty_actual'] = omap[mid]
+                        line['line_cost'] = round(line['qty_actual'] * float(line['avg_cost'] or 0), 2)
+            lines = std_preview['materials']
+            labor = float(std_preview['labor_std'])
+            oh_fixed_std = float(std_preview['oh_fixed_std'])
+            oh_var_std = float(std_preview['oh_variable_std'])
+            other = round(oh_fixed_std + oh_var_std, 2)
+        else:
+            lines = preview_materials(conn, finished_product_id, qty, material_overrides)
+
         if not any(l['qty_actual'] > 0 for l in lines):
             raise ValueError('Không có vật tư nào được xuất (SL thực tế = 0)')
 
@@ -582,29 +662,62 @@ def create_production_order(
             })
 
         material_cost = round(material_cost, 2)
+        # Giá tạm = NVL thực + NCTT/CPSXC định mức (khi dùng standards)
         total_cost = round(material_cost + labor + other, 2)
         unit_cost = round(total_cost / qty, 4) if qty else 0.0
+        provisional_unit = unit_cost
 
         status = STATUS_IN_PROGRESS if defer_fg_receipt else STATUS_COMPLETED
         qty_received = 0.0 if defer_fg_receipt else qty
 
-        c.execute(
-            """
-            INSERT INTO production_orders (
-                voucher_no, production_date, finished_product_id,
-                qty_planned, qty_completed, qty_received, defer_fg_receipt,
-                total_material_cost, labor_cost, other_cost, total_cost, unit_cost,
-                status, note, created_by, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                voucher_no, date_str, finished_product_id,
-                qty, qty, qty_received, 1 if defer_fg_receipt else 0,
-                material_cost, labor, other, total_cost, unit_cost,
-                status, (note or '').strip(), (created_by or '').strip(),
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            ),
-        )
+        cols = {r[1] for r in c.execute('PRAGMA table_info(production_orders)').fetchall()}
+        has_prov = 'provisional_labor' in cols and 'costing_method' in cols
+
+        if has_prov:
+            c.execute(
+                """
+                INSERT INTO production_orders (
+                    voucher_no, production_date, finished_product_id,
+                    qty_planned, qty_completed, qty_received, defer_fg_receipt,
+                    total_material_cost, labor_cost, other_cost, total_cost, unit_cost,
+                    status, note, created_by, created_at,
+                    costing_method, provisional_labor, provisional_oh_fixed,
+                    provisional_oh_variable, provisional_unit_cost, provisional_total_cost,
+                    cost_basis, oh_fixed_cost, oh_variable_cost
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    voucher_no, date_str, finished_product_id,
+                    qty, qty, qty_received, 1 if defer_fg_receipt else 0,
+                    material_cost, labor, other, total_cost, unit_cost,
+                    status, (note or '').strip(), (created_by or '').strip(),
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    costing_method,
+                    labor if use_method_standards else 0,
+                    oh_fixed_std, oh_var_std,
+                    provisional_unit, total_cost,
+                    'provisional' if use_method_standards else 'manual',
+                    oh_fixed_std, oh_var_std,
+                ),
+            )
+        else:
+            c.execute(
+                """
+                INSERT INTO production_orders (
+                    voucher_no, production_date, finished_product_id,
+                    qty_planned, qty_completed, qty_received, defer_fg_receipt,
+                    total_material_cost, labor_cost, other_cost, total_cost, unit_cost,
+                    status, note, created_by, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    voucher_no, date_str, finished_product_id,
+                    qty, qty, qty_received, 1 if defer_fg_receipt else 0,
+                    material_cost, labor, other, total_cost, unit_cost,
+                    status, (note or '').strip(), (created_by or '').strip(),
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                ),
+            )
         order_id = c.lastrowid
 
         for m in material_rows:
@@ -692,6 +805,13 @@ def create_production_order(
                 pass
             sync_inventory_quantity_from_moves(c, finished_product_id)
 
+        if use_method_standards:
+            try:
+                from Services.sme.costing_policy import lock_policy_on_first_order
+                lock_policy_on_first_order(conn, commit=False)
+            except Exception:
+                pass
+
         sqlite_commit(conn, label='production_costing')
         return get_production_order(conn, order_id)
     except Exception:
@@ -717,7 +837,8 @@ def get_production_order(conn: sqlite3.Connection, order_id: int) -> dict | None
     mats = c.execute(
         """
         SELECT m.*, p.name AS material_name, p.product_code AS material_code,
-               p.unit AS material_unit
+               p.unit AS material_unit,
+               COALESCE(p.product_type, 'goods') AS material_type
         FROM production_order_materials m
         JOIN products p ON p.id = m.material_product_id
         WHERE m.order_id = ?
@@ -739,7 +860,11 @@ def get_production_order(conn: sqlite3.Connection, order_id: int) -> dict | None
     data['qty_remaining'] = _qty_remaining(data)
     data['defer_fg_receipt'] = int(data.get('defer_fg_receipt') or 0)
     data['unit_cost'] = float(data.get('unit_cost') or 0)
-    data['materials'] = [dict(x) for x in mats]
+    data['materials'] = []
+    for x in mats:
+        row = dict(x)
+        row['inventory_account'] = _inventory_account_for_type(row.get('material_type'))
+        data['materials'].append(row)
     data['fg_receipts'] = list_fg_receipts(conn, order_id)
     return data
 
@@ -773,12 +898,14 @@ def list_production_orders(
     cols = {r[1] for r in c.execute('PRAGMA table_info(production_orders)').fetchall()}
     qty_recv_sql = 'COALESCE(o.qty_received, 0)' if 'qty_received' in cols else '0'
     defer_sql = 'COALESCE(o.defer_fg_receipt, 0)' if 'defer_fg_receipt' in cols else '0'
+    finalized_sql = 'COALESCE(o.cost_finalized, 0)' if 'cost_finalized' in cols else '0'
     jid_sql = 'o.journal_entry_id,' if 'journal_entry_id' in cols else ''
     sql = f"""
         SELECT o.id, o.voucher_no, o.production_date, o.finished_product_id,
                COALESCE(o.qty_planned, o.qty_completed) AS qty_planned,
                o.qty_completed, {qty_recv_sql} AS qty_received,
                {defer_sql} AS defer_fg_receipt,
+               {finalized_sql} AS cost_finalized,
                o.total_material_cost,
                COALESCE(o.labor_cost, 0) AS labor_cost,
                COALESCE(o.other_cost, 0) AS other_cost,
@@ -833,6 +960,18 @@ def receive_finished_goods(
     if not int(order.get('defer_fg_receipt') or 0):
         raise ValueError('Lệnh này đã nhập thành phẩm ngay khi lập — không dùng nhập theo đợt')
 
+    # TT99 / giá tạm: mặc định không chặn nhập kho; chỉ chặn nếu bật require_finalize
+    try:
+        from Services.sme.period_cost_allocation import require_cost_finalized_for_fg
+        if require_cost_finalized_for_fg(conn) and not int(order.get('cost_finalized') or 0):
+            raise ValueError(
+                'Lệnh chưa chốt giá thành (phân bổ 622/627 cuối kỳ). '
+                'Vào «Phân bổ giá thành cuối kỳ» để phân bổ nhân công / sản xuất chung '
+                'rồi mới nhập kho thành phẩm — hoặc tắt «Chốt trước nhập kho» trong chính sách.'
+            )
+    except ImportError:
+        pass
+
     qty = round(float(qty or 0), 6)
     if qty <= 0:
         raise ValueError('Số lượng nhập kho phải > 0')
@@ -843,10 +982,11 @@ def receive_finished_goods(
             f'Đã nhập {order["qty_received"]} / lệnh { _order_qty_target(order) }.'
         )
 
-    unit_cost = float(order.get('unit_cost') or 0)
+    # Ưu tiên giá tạm (định mức) nếu có
+    unit_cost = float(order.get('provisional_unit_cost') or order.get('unit_cost') or 0)
     if unit_cost <= 0:
         target = _order_qty_target(order)
-        total = float(order.get('total_cost') or 0)
+        total = float(order.get('provisional_total_cost') or order.get('total_cost') or 0)
         unit_cost = round(total / target, 4) if target else 0.0
     amount = round(qty * unit_cost, 2)
     # Đợt cuối: làm tròn phần tiền còn lại trên lệnh để khớp total_cost

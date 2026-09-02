@@ -1240,8 +1240,11 @@ def build_import_stock_lines(
             f"{prefix}: {item.get('product_name') or item.get('product_id')}"
         )
         line_debit = debit_inv
-        override = str(item.get('account_code') or item.get('expense_account') or '').strip()
-        if override:
+        override = str(item.get('account_code') or '').strip()
+        if not override and business_type == 'MUA_DICH_VU':
+            override = str(item.get('expense_account') or '').strip()
+        # Đang đi đường: giữ 2411/151 — không ghi đè bằng TK TSCĐ cuối cùng
+        if override and not (in_transit and business_type == 'MUA_TSCD'):
             line_debit = resolve_postable_account(conn, override)
         lines.append({
             'sequence': seq,

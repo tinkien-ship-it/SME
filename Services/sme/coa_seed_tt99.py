@@ -8,7 +8,14 @@ legal_source:
 """
 from __future__ import annotations
 
-SEED_VERSION = 'tt99_v1_2026-08d'
+SEED_VERSION = 'tt99_v1_2026-08g'
+
+# Tiểu khoản seed 08f đã bỏ (đơn giản hóa): gộp về 6271/6272 · 641 · 642 cấp 1.
+OBSOLETE_SEED_CODES = (
+    '6273', '6274', '6278',
+    '6411', '6412', '6418',
+    '6421', '6422', '6423', '6428',
+)
 
 # account_class: asset | liability | equity | revenue | expense | off_balance | result
 # normal_balance: debit | credit
@@ -278,6 +285,12 @@ SEED_ACCOUNTS: list[dict] = [
     _a('622', 'Chi phí nhân công trực tiếp', cls='expense', bal='debit', tracks=('department',)),
     _a('623', 'Chi phí sử dụng máy thi công', cls='expense', bal='debit', tracks=('project',)),
     _a('627', 'Chi phí sản xuất chung', cls='expense', bal='debit', tracks=('department',)),
+    _a('6271', 'Chi phí sản xuất chung - Định phí', parent='627', cls='expense', bal='debit',
+       source='recommended', recommended=1, tracks=('department',),
+       desc='CPSXC cố định (điện định phí, khấu hao, lương gián tiếp cố định…) — phân bổ theo CS bình thường; phần dưới CS → 632'),
+    _a('6272', 'Chi phí sản xuất chung - Biến phí', parent='627', cls='expense', bal='debit',
+       source='recommended', recommended=1, tracks=('department',),
+       desc='CPSXC biến phí (điện·nước·nhiên liệu biến đổi, SXC khác) — hạch chung vào 6272, không mở thêm TK con'),
     _a('631', 'Giá thành sản xuất', cls='expense', bal='debit', tracks=('product',)),
     _a('632', 'Giá vốn hàng bán', cls='expense', bal='debit', bctc='11'),
     # Mặc định ghi sổ ở cấp 4 số (6321/6322/6323). DN tự mở 63211/63212… khi cần tách ND/XK.
@@ -290,8 +303,10 @@ SEED_ACCOUNTS: list[dict] = [
        desc='Hao hụt / mất mát / hàng hỏng ghi nhận vào giá vốn (không tách bán lẻ–bán buôn)'),
 
     _a('635', 'Chi phí tài chính', cls='expense', bal='debit', bctc='22'),
-    _a('641', 'Chi phí bán hàng', cls='expense', bal='debit', bctc='25', tracks=('department',)),
-    _a('642', 'Chi phí quản lý doanh nghiệp', cls='expense', bal='debit', bctc='26', tracks=('department',)),
+    _a('641', 'Chi phí bán hàng', cls='expense', bal='debit', bctc='25', tracks=('department',),
+       desc='Ghi sổ ở cấp 1 — điện·nước·chi phí BH khác hạch chung 641 (không mở TK con)'),
+    _a('642', 'Chi phí quản lý doanh nghiệp', cls='expense', bal='debit', bctc='26', tracks=('department',),
+       desc='Ghi sổ ở cấp 1 — điện·nước·dịch vụ VP / QLDN hạch chung 642 (không mở TK con)'),
     _a('711', 'Thu nhập khác', cls='revenue', bal='credit', bctc='31'),
     _a('811', 'Chi phí khác', cls='expense', bal='debit', bctc='32'),
     _a('821', 'Chi phí thuế thu nhập doanh nghiệp', cls='expense', bal='debit', bctc='51'),

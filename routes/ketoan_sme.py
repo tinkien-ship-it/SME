@@ -153,9 +153,26 @@ def _sme_build_sale_detail_payload(conn, sale_id):
         """,
         (sale_id,),
     )
+    sale_rows = c.fetchall()
+
+    returned_map: dict[tuple, float] = {}
+    try:
+        for r in c.execute(
+            """
+            SELECT product_id, COALESCE(UseSaleUnit, 0) AS usu,
+                   COALESCE(SUM(quantity), 0) AS qty
+            FROM return_sales
+            WHERE sale_id = ?
+            GROUP BY product_id, COALESCE(UseSaleUnit, 0)
+            """,
+            (sale_id,),
+        ).fetchall():
+            returned_map[(r[0], int(r[1] or 0))] = float(r[2] or 0)
+    except Exception:
+        returned_map = {}
 
     items = []
-    for row in c.fetchall():
+    for row in sale_rows:
         row = dict(row)
         use_sale_unit = int(row.get('UseSaleUnit') or 0)
         product_id = row.get('product_id')
@@ -169,15 +186,7 @@ def _sme_build_sale_detail_payload(conn, sale_id):
             else (row.get('si_unit') or row.get('p_unit') or 'Cái')
         )
 
-        c.execute(
-            """
-            SELECT COALESCE(SUM(quantity), 0)
-            FROM return_sales
-            WHERE sale_id = ? AND product_id = ? AND COALESCE(UseSaleUnit, 0) = ?
-            """,
-            (sale_id, product_id, use_sale_unit),
-        )
-        returned_qty = float(c.fetchone()[0])
+        returned_qty = returned_map.get((product_id, use_sale_unit), 0.0)
         # sale_items.quantity đã trừ trả (legacy) → remaining = quantity hiện tại
         remaining_qty = max(0.0, quantity)
         product_code = row.get('product_code') or (str(product_id) if product_id is not None else '')
@@ -873,20 +882,12 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_purchase_order_create():
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            pass
         return render_template('KeToanSME/purchase_order_create.html')
 
     @app.route('/SME_purchase_order_list')
     @login_required
     @require_sme_regime
     def SME_purchase_order_list():
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            pass
         return render_template('KeToanSME/purchase_order_list.html')
 
     @app.route('/SME_inward_invoice')
@@ -1443,7 +1444,6 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
-            _bootstrap_sme_db()
             try:
                 assert_row_in_branch(
                     conn, 'sme_vouchers', voucher_id, label='Phiếu thu',
@@ -1474,7 +1474,6 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
-            _bootstrap_sme_db()
             try:
                 assert_row_in_branch(
                     conn, 'sme_vouchers', voucher_id, label='Phiếu chi',
@@ -1592,6 +1591,7 @@ def register_ketoan_sme_routes(app):
                 source_id=data.get('source_id'),
                 import_id=data.get('import_id') or data.get('import_ref_id'),
                 allocations=data.get('allocations'),
+                debit_lines=data.get('debit_lines') or data.get('debit_allocations'),
                 currency=data.get('currency') or 'VND',
                 exchange_rate=data.get('exchange_rate') or data.get('fx_rate') or 1,
                 amount_fc=data.get('amount_fc'),
@@ -1856,7 +1856,6 @@ def register_ketoan_sme_routes(app):
         conn = get_db_connection()
         conn.row_factory = sqlite3.Row
         try:
-            _bootstrap_sme_db()
             cfg = get_salary_insurance_config(conn)
         except Exception:
             cfg = {
@@ -2208,6 +2207,20 @@ def register_ketoan_sme_routes(app):
         """Sản xuất & giá thành SME — UI riêng (không dùng KeToanHKD/production)."""
         return render_template('KeToanSME/production.html')
 
+    @app.route('/SME_service_costing')
+    @login_required
+    @require_sme_regime
+    def SME_service_costing():
+        """Giá vốn dịch vụ TT99: tập hợp 154 → nghiệm thu 6323."""
+        return render_template('KeToanSME/service_costing.html')
+
+    @app.route('/SME_period_cost_allocation')
+    @login_required
+    @require_sme_regime
+    def SME_period_cost_allocation():
+        """Giá thành 3 phương án: định mức NVL/NCTT/CPSXC, chốt kỳ, auto/manual."""
+        return render_template('KeToanSME/period_cost_allocation.html')
+
     @app.route('/SME_production/<int:order_id>/print')
     @login_required
     @require_sme_regime
@@ -2265,10 +2278,6 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_PhaiThuCongNhanVien():
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            pass
         return render_template('KeToanSME/employee_receivable.html')
 
     @app.route('/SME_PhaiTraCongNhanVien')
@@ -2276,10 +2285,6 @@ def register_ketoan_sme_routes(app):
     @require_sme_regime
     def SME_PhaiTraCongNhanVien():
         """Phải trả NV SME — số dư TK 334 trên sổ kép."""
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            pass
         return render_template('KeToanSME/employee_payable.html')
 
     @app.route('/SME_dashboard_HRSalary')
@@ -2699,8 +2704,11 @@ def register_ketoan_sme_routes(app):
                 count_active_assets_by_import_id,
                 delete_assets_by_import_id,
                 ensure_fixed_assets_schema,
+                ensure_import_detail_asset_columns,
+                is_fixed_asset_line_type,
                 register_fixed_asset_from_import,
                 register_tool_from_import,
+                resolve_asset_accounts,
             )
             from Services.inventory_cost import apply_cost_inbound, reverse_import_cost
             from Services.inventory_stock_helpers import (
@@ -2738,6 +2746,7 @@ def register_ketoan_sme_routes(app):
             ensure_import_payment_schema(conn, commit=False)
             ensure_warehouse_schema(conn)
             ensure_fixed_assets_schema(conn)
+            ensure_import_detail_asset_columns(conn)
             ensure_sme_journal_ready(conn, commit=False)
 
             data = request.get_json()
@@ -2764,7 +2773,7 @@ def register_ketoan_sme_routes(app):
                 if t in ('ready_made', 'hang_hoa', 'finished_goods'):
                     # finished_goods chỉ qua SX — mua vào = hàng hóa (156)
                     return 'goods'
-                if t in ('goods', 'materials', 'fixed_asset', 'tools', 'service'):
+                if t in ('goods', 'materials', 'fixed_asset', 'intangible_asset', 'tools', 'service'):
                     return t
                 return 'goods'
 
@@ -3298,6 +3307,11 @@ def register_ketoan_sme_routes(app):
                 exp_acct = (item.get('expense_account') or '').strip()
                 if line_type == 'service' and not exp_acct:
                     exp_acct = '642'
+                asset_acct = (item.get('asset_account') or '').strip()
+                if is_fixed_asset_line_type(line_type):
+                    _, asset_acct, _ = resolve_asset_accounts(
+                        line_type, asset_acct, conn=conn,
+                    )
 
                 qty_in = round_money(item.get('qty', 0))
                 if qty_in <= 0:
@@ -3425,6 +3439,7 @@ def register_ketoan_sme_routes(app):
                     'materials': 'NHAP_KHO_NVL',
                     'service': 'MUA_DICH_VU',
                     'fixed_asset': 'MUA_TSCD',
+                    'intangible_asset': 'MUA_TSCD',
                     'tools': 'MUA_CCDC',
                 }
                 desc_label = BUSINESS_TYPE_LABELS.get(
@@ -3541,10 +3556,11 @@ def register_ketoan_sme_routes(app):
                     'line_type': line_type,
                     'warehouse_code': warehouse_code,
                     'expense_account': exp_acct or None,
+                    'asset_account': asset_acct or None,
                 })
                 detail_id = c.lastrowid
 
-                if line_type == 'fixed_asset' and not skip_physical_stock:
+                if is_fixed_asset_line_type(line_type) and not skip_physical_stock:
                     register_fixed_asset_from_import(
                         c,
                         import_id=import_id,
@@ -3564,6 +3580,8 @@ def register_ketoan_sme_routes(app):
                         capitalized_cost=float(line_inventory_value_vnd),
                         so_thang_khau_hao=item.get('so_thang_khau_hao') or item.get('depreciation_months'),
                         ngay_bat_dau_su_dung=item.get('ngay_bat_dau_su_dung') or item.get('start_date') or import_date,
+                        line_type=line_type,
+                        asset_account=asset_acct or None,
                     )
                     fixed_assets_created += 1
                 elif line_type == 'tools' and not skip_physical_stock:
@@ -4323,30 +4341,18 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_chart_of_accounts():
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            logger.exception('SME bootstrap on COA page')
         return render_template('KeToanSME/chart_of_accounts.html')
 
     @app.route('/SME_journal')
     @login_required
     @require_sme_regime
     def SME_journal():
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            logger.exception('SME bootstrap on journal page')
         return render_template('KeToanSME/journal.html')
 
     @app.route('/SME_general_ledger')
     @login_required
     @require_sme_regime
     def SME_general_ledger():
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            logger.exception('SME bootstrap on ledger page')
         return render_template('KeToanSME/general_ledger.html')
 
     @app.route('/api/sme/coa', methods=['GET'])
@@ -5090,40 +5096,24 @@ def register_ketoan_sme_routes(app):
     @login_required
     @require_sme_regime
     def SME_auto_posting():
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            logger.exception('SME bootstrap on auto posting page')
         return render_template('KeToanSME/auto_posting.html')
 
     @app.route('/SME_tax_nsnn')
     @login_required
     @require_sme_regime
     def SME_tax_nsnn():
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            logger.exception('SME bootstrap tax page')
         return render_template('KeToanSME/tax_nsnn.html')
 
     @app.route('/SME_mgmt_report')
     @login_required
     @require_sme_regime
     def SME_mgmt_report():
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            pass
         return render_template('KeToanSME/mgmt_report.html')
 
     @app.route('/SME_costing')
     @login_required
     @require_sme_regime
     def SME_costing():
-        try:
-            _bootstrap_sme_db()
-        except Exception:
-            pass
         return render_template('KeToanSME/costing.html')
 
     @app.route('/SME_utilities')

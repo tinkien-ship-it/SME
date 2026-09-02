@@ -606,7 +606,7 @@ def list_inward_invoices(
     keyword: str | None = None,
     status: str | None = None,
     branch_code: str | None = None,
-    limit: int = 800,
+    limit: int = 120,
 ) -> list[dict]:
     """Danh sách HĐ mua — JOIN thay EXISTS, không SELECT xml_data (nhanh trên PG)."""
     import logging
@@ -614,7 +614,7 @@ def list_inward_invoices(
     ensure_inward_list_schema(conn)
     conn.row_factory = sqlite3.Row
     inv_day = _inward_invoice_day_sql()
-    limit = min(max(int(limit or 800), 1), 2000)
+    limit = min(max(int(limit or 120), 1), 500)
 
     query = f"""
         SELECT

@@ -10,9 +10,43 @@ from db.sql_compat import convert_sqlite_ddl
 
 _DB_ERROR = DB_ERROR
 
+# Cache cột theo (db_key, table) — tránh PRAGMA/information_schema mỗi API request.
+_cols_cache: dict[tuple[str, str], frozenset[str]] = {}
+
+
+def _conn_cache_key(conn) -> str:
+    try:
+        if is_postgres():
+            return str(getattr(conn, '_schema', None) or getattr(conn, '_sme_pg_schema', None) or 'pg')
+        from db_utils import sqlite_db_file
+        return str(sqlite_db_file(conn) or id(conn))
+    except Exception:
+        return str(id(conn))
+
+
+def invalidate_table_cols_cache(*, conn=None, table: str | None = None) -> None:
+    """Xóa cache sau ALTER TABLE (deploy/migrate)."""
+    if conn is None and table is None:
+        _cols_cache.clear()
+        return
+    if conn is not None and table is not None:
+        _cols_cache.pop((_conn_cache_key(conn), table), None)
+        return
+    if conn is not None:
+        prefix = _conn_cache_key(conn)
+        for key in list(_cols_cache):
+            if key[0] == prefix:
+                del _cols_cache[key]
+
 
 def table_cols(conn, table: str) -> set[str]:
-    return _column_names(conn, table)
+    key = (_conn_cache_key(conn), table)
+    cached = _cols_cache.get(key)
+    if cached is not None:
+        return set(cached)
+    cols = frozenset(_column_names(conn, table))
+    _cols_cache[key] = cols
+    return set(cols)
 
 
 def table_cols_lower(conn, table: str) -> set[str]:

@@ -9,6 +9,7 @@
     InStock: 'Trong kho',
     Active: 'Đang sử dụng',
     Disposed: 'Đã thanh lý',
+    CapitalContributed: 'Đã góp vốn',
     posted: 'Đã ghi sổ',
     void: 'Đã hủy',
     draft: 'Nháp',

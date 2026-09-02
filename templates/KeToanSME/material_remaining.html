@@ -60,7 +60,7 @@ async function voidMr(id){
 btnNew.onclick=async()=>{
   if(!fWh.options.length) await loadWh();
   const wh=fWh.value||'';
-  const res=await fetch('/api/sme/products/brief'+(wh?('?warehouse='+encodeURIComponent(wh)):'')); const json=await res.json();
+  const res=await fetch('/api/sme/products/brief?limit=100'+(wh?('&warehouse='+encodeURIComponent(wh)):'')); const json=await res.json();
   lines.innerHTML=(json.data||[]).slice(0,100).map(p=>`<tr data-id="${p.id}" data-name="${(p.name||'').replace(/"/g,'&quot;')}" data-code="${p.code||''}" data-cost="${p.avg_cost||p.cost||0}">
     <td>${p.name}</td>
     <td><input type="number" class="form-control form-control-sm qty" value="0" step="any"></td>

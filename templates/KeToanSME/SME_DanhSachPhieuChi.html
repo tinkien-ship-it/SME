@@ -5,6 +5,8 @@
   #fDebit { font-family: ui-monospace, Consolas, monospace; }
   #fDebit option[disabled] { color: #94a3b8; font-style: italic; }
   .acct-filter-hint { font-size: .78rem; }
+  .debit-alloc-acct { font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }
+  #debitAllocRows .form-control, #debitAllocRows .form-select { min-height: 2rem; }
 </style>
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
@@ -40,7 +42,7 @@
   </div>
 </div>
 
-<div class="modal fade" id="modalNew" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+<div class="modal fade" id="modalNew" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content">
   <div class="modal-header bg-danger text-white"><h5 class="modal-title">Lập phiếu chi (02-TT)</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
     <div class="mb-2"><label class="form-label small fw-semibold">Ngày chi <span class="text-muted">(ngày áp dụng tỷ giá)</span></label><input type="date" id="fDate" class="form-control"></div>
@@ -49,10 +51,20 @@
       <label class="form-label small fw-semibold">Loại nghiệp vụ</label>
       <select id="fPurpose" class="form-select">
         <option value="">Chi tiền thông thường</option>
+        <option value="expense_utilities">Chi phí điện / nước / văn phòng / nhà xưởng (phân bổ nhiều TK)</option>
         <option value="nop_ngan_hang">Nộp tiền mặt vào NH — Nợ 1131 / Có 1111</option>
         <option value="supplier_advance">Tạm ứng NCC (ngoại tệ) — Nợ 331</option>
         <option value="buy_fx">Mua ngoại tệ bằng VND — Nợ 1122/1112</option>
       </select>
+    </div>
+    <div class="mb-2" id="wrapExpenseQuick" style="display:none">
+      <label class="form-label small fw-semibold">Thêm nhanh dòng phân bổ</label>
+      <div class="d-flex flex-wrap gap-2" id="expenseQuickBtns"></div>
+      <div class="form-text">
+        Mỗi nút thêm một dòng Nợ — nhập số tiền phân bổ.
+        Nhà xưởng: <b>6271</b> định phí · <b>6272</b> biến phí (điện·nước·SXC).
+        Bán hàng: <b>641</b> · Văn phòng/QLDN: <b>642</b> (ghi cấp 1, không mở TK con).
+      </div>
     </div>
     <div class="form-check mb-2" id="wrapFxToggle">
       <input class="form-check-input" type="checkbox" id="fUseFx">
@@ -85,6 +97,9 @@
     <div class="mb-2" id="wrapAmountVnd">
       <label class="form-label small fw-semibold">Số tiền (VND)</label>
       <input type="number" id="fAmount" class="form-control" min="0" step="1">
+      <div class="form-text" id="hintAmountAlloc" style="display:none">
+        Khi phân bổ nhiều TK Nợ, tổng tiền = tổng các dòng phân bổ (ô này tự cập nhật).
+      </div>
     </div>
     <div class="mb-2"><label class="form-label small fw-semibold" id="lblPay">Hình thức (TK Có)</label>
       <div id="bankPayWarn" class="alert alert-warning py-2 small mb-2" style="display:none"></div>
@@ -97,19 +112,51 @@
       <div class="text-muted small mt-1" id="hintPay"></div>
       <div class="small mt-1 p-2 rounded border bg-light" id="cashBalHint" style="display:none"></div>
     </div>
-    <div class="mb-2">
+
+    <!-- Phân bổ nhiều TK Nợ + số tiền -->
+    <div class="mb-3" id="wrapDebitAlloc">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+        <label class="form-label small fw-semibold mb-0">Phân bổ tài khoản Nợ <span class="text-danger">*</span></label>
+        <button type="button" class="btn btn-sm btn-outline-danger" id="btnAddDebitRow">
+          <i class="fas fa-plus me-1"></i>Thêm tài khoản Nợ
+        </button>
+      </div>
+      <div class="table-responsive border rounded">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="width:42%">Tài khoản Nợ</th>
+              <th style="width:28%">Số tiền phân bổ (VND)</th>
+              <th>Diễn giải dòng</th>
+              <th style="width:3rem"></th>
+            </tr>
+          </thead>
+          <tbody id="debitAllocRows"></tbody>
+          <tfoot>
+            <tr class="table-light">
+              <td class="text-end fw-semibold">Tổng phân bổ</td>
+              <td class="fw-bold text-danger" id="debitAllocTotal">0</td>
+              <td colspan="2" class="small text-muted" id="hintDebitAlloc">
+                Thêm dòng cho từng bộ phận (điện SX, điện VP, nước…); Có tiền mặt/NH = tổng.
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Một TK Nợ (ngoại tệ / tạm ứng / nộp NH) -->
+    <div class="mb-2" id="wrapDebitSingle" style="display:none">
       <label class="form-label small fw-semibold">TK đối ứng (Nợ) <span class="text-danger">*</span></label>
       <input type="search" id="fDebitFilter" class="form-control form-control-sm mb-1"
              placeholder="Lọc theo mã hoặc tên tài khoản…">
-      <select id="fDebit" class="form-select" size="10" required>
+      <select id="fDebit" class="form-select" size="8">
         <option value="">Đang tải danh mục…</option>
       </select>
-      <div class="text-muted acct-filter-hint mt-1" id="hintDebit">
-        Hiển thị TK cấp 2 · 3 · 4 và cấp 1 không có TK con (kèm tên).
-        TK tổng hợp không chọn được — hãy chọn TK chi tiết.
-      </div>
+      <div class="text-muted acct-filter-hint mt-1" id="hintDebit"></div>
     </div>
-    <div class="mb-2"><label class="form-label small fw-semibold">Lý do</label><input type="text" id="fReason" class="form-control" placeholder="VD: Mua USD nộp TK 1122…"></div>
+
+    <div class="mb-2"><label class="form-label small fw-semibold">Lý do</label><input type="text" id="fReason" class="form-control" placeholder="VD: Thanh toán tiền điện tháng…"></div>
   </div>
   <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button class="btn btn-danger" id="btnSave">Lưu & ghi sổ</button></div>
 </div></div></div>
@@ -125,13 +172,157 @@ document.getElementById('toDate').value = todayISO();
 let counterpartAccounts = [];
 const DEFAULT_DEBIT = '331';
 
+/** Gợi ý nhanh TK Nợ — 627 chỉ 6271/6272; 641 & 642 ghi cấp 1 */
+const EXPENSE_DEBIT_PRESETS = [
+  { code: '6272', label: 'SXC biến phí (6272)', reason: 'Chi điện / nước / SXC biến phí nhà xưởng' },
+  { code: '6271', label: 'SXC định phí (6271)', reason: 'Chi phí sản xuất chung - định phí' },
+  { code: '641', label: 'Chi phí bán hàng (641)', reason: 'Chi điện / nước / chi phí bộ phận bán hàng' },
+  { code: '642', label: 'Chi phí QLDN (642)', reason: 'Chi điện / nước / dịch vụ văn phòng / QLDN' },
+  { code: '811', label: 'Chi phí khác (811)', reason: 'Chi phí khác' },
+];
+
 function padLabel(level) {
   const lv = Number(level || 1);
   return lv <= 2 ? '' : ('\u00A0\u00A0'.repeat(lv - 2));
 }
 
+function expensePresetAvailable(code) {
+  return counterpartAccounts.some(a => a.code === code && Number(a.is_postable) === 1);
+}
+
+function renderExpenseQuickBtns() {
+  const box = document.getElementById('expenseQuickBtns');
+  if (!box) return;
+  box.innerHTML = EXPENSE_DEBIT_PRESETS.map(p => {
+    const ok = expensePresetAvailable(p.code);
+    return `<button type="button" class="btn btn-sm ${ok ? 'btn-outline-danger' : 'btn-outline-secondary'}"
+              data-code="${p.code}" data-reason="${String(p.reason).replace(/"/g, '&quot;')}"
+              ${ok ? '' : 'disabled title="TK chưa có hoặc không ghi sổ được"'}
+              >${p.label}</button>`;
+  }).join('');
+}
+
+/** true = bảng phân bổ nhiều TK Nợ (VND); false = 1 TK (ngoại tệ / tạm ứng / nộp NH) */
+function useDebitAllocMode() {
+  const purpose = fPurpose.value;
+  if (purpose === 'supplier_advance' || purpose === 'buy_fx' || purpose === 'nop_ngan_hang') return false;
+  if (needsFx()) return false;
+  return true;
+}
+
+function accountOptionsHtml(selected) {
+  const sel = selected || '';
+  const opts = counterpartAccounts
+    .filter(a => Number(a.is_postable) === 1)
+    .map(a => {
+      const label = `${padLabel(a.level)}${a.code} — ${a.name || ''}`;
+      const pick = a.code === sel ? ' selected' : '';
+      return `<option value="${a.code}"${pick}>${label}</option>`;
+    });
+  return `<option value="">— Chọn TK Nợ —</option>` + opts.join('');
+}
+
+function addDebitAllocRow(code, amount, description) {
+  const tbody = document.getElementById('debitAllocRows');
+  if (!tbody) return null;
+  const tr = document.createElement('tr');
+  tr.className = 'debit-alloc-row';
+  const amtVal = amount != null && amount !== '' ? amount : '';
+  const descVal = description || '';
+  tr.innerHTML = `
+    <td>
+      <select class="form-select form-select-sm debit-alloc-acct">${accountOptionsHtml(code || '')}</select>
+    </td>
+    <td>
+      <input type="number" class="form-control form-control-sm debit-alloc-amt" min="0" step="1"
+             placeholder="0" value="${amtVal}">
+    </td>
+    <td>
+      <input type="text" class="form-control form-control-sm debit-alloc-desc" placeholder="Tuỳ chọn"
+             value="${String(descVal).replace(/"/g, '&quot;')}">
+    </td>
+    <td class="text-center">
+      <button type="button" class="btn btn-sm btn-outline-secondary btn-rm-debit" title="Xóa dòng">&times;</button>
+    </td>`;
+  tbody.appendChild(tr);
+  const amtEl = tr.querySelector('.debit-alloc-amt');
+  if (amtEl && !amtVal) amtEl.focus();
+  refreshDebitAllocTotal();
+  return tr;
+}
+
+function clearDebitAllocRows() {
+  const tbody = document.getElementById('debitAllocRows');
+  if (tbody) tbody.innerHTML = '';
+  refreshDebitAllocTotal();
+}
+
+function ensureDebitAllocRows(minRows) {
+  const tbody = document.getElementById('debitAllocRows');
+  const n = tbody ? tbody.querySelectorAll('.debit-alloc-row').length : 0;
+  const need = Math.max(0, (minRows || 1) - n);
+  for (let i = 0; i < need; i++) addDebitAllocRow('', '', '');
+}
+
+function refreshDebitAllocTotal() {
+  const rows = document.querySelectorAll('#debitAllocRows .debit-alloc-row');
+  let total = 0;
+  rows.forEach(tr => {
+    total += parseFloat(tr.querySelector('.debit-alloc-amt')?.value) || 0;
+  });
+  const el = document.getElementById('debitAllocTotal');
+  if (el) el.textContent = fmt(total);
+  if (useDebitAllocMode() && !needsFx()) {
+    fAmount.value = total > 0 ? Math.round(total) : '';
+    fAmount.readOnly = true;
+    const hint = document.getElementById('hintAmountAlloc');
+    if (hint) hint.style.display = '';
+  }
+  return total;
+}
+
+function collectDebitLines() {
+  const lines = [];
+  document.querySelectorAll('#debitAllocRows .debit-alloc-row').forEach(tr => {
+    const code = (tr.querySelector('.debit-alloc-acct')?.value || '').trim();
+    const amount = parseFloat(tr.querySelector('.debit-alloc-amt')?.value) || 0;
+    const description = (tr.querySelector('.debit-alloc-desc')?.value || '').trim();
+    if (!code || amount <= 0) return;
+    lines.push({ account_code: code, amount, description: description || undefined });
+  });
+  return lines;
+}
+
+function pickExpenseDebit(code, reason) {
+  if (useDebitAllocMode()) {
+    const empty = [...document.querySelectorAll('#debitAllocRows .debit-alloc-row')].find(tr => {
+      const c = tr.querySelector('.debit-alloc-acct')?.value;
+      const a = parseFloat(tr.querySelector('.debit-alloc-amt')?.value) || 0;
+      return !c && a <= 0;
+    });
+    if (empty) {
+      empty.querySelector('.debit-alloc-acct').value = code;
+      empty.querySelector('.debit-alloc-amt').focus();
+      if (reason) {
+        const d = empty.querySelector('.debit-alloc-desc');
+        if (d && !d.value) d.value = reason;
+      }
+    } else {
+      addDebitAllocRow(code, '', reason || '');
+    }
+  } else {
+    document.getElementById('fDebitFilter').value = code;
+    renderCounterpartOptions(code, code);
+  }
+  if (reason && (!fReason.value || fReason.dataset.auto === '1')) {
+    fReason.value = reason;
+    fReason.dataset.auto = '1';
+  }
+}
+
 function renderCounterpartOptions(filterText, preferred) {
   const sel = document.getElementById('fDebit');
+  if (!sel) return;
   const q = (filterText || '').trim().toLowerCase();
   const rows = counterpartAccounts.filter(a => {
     if (!q) return true;
@@ -158,16 +349,25 @@ function renderCounterpartOptions(filterText, preferred) {
   }
 }
 
+function refreshAllocSelectOptions() {
+  document.querySelectorAll('#debitAllocRows .debit-alloc-acct').forEach(sel => {
+    const cur = sel.value;
+    sel.innerHTML = accountOptionsHtml(cur);
+  });
+}
+
 async function loadCounterpartAccounts() {
   const res = await fetch('/api/sme/coa?counterpart=1&active=1');
   const json = await res.json();
   if (!json.success) {
-    document.getElementById('fDebit').innerHTML =
-      `<option value="">${json.error || 'Không tải được danh mục TK'}</option>`;
+    const el = document.getElementById('fDebit');
+    if (el) el.innerHTML = `<option value="">${json.error || 'Không tải được danh mục TK'}</option>`;
     return;
   }
   counterpartAccounts = json.data || [];
   renderCounterpartOptions('', DEFAULT_DEBIT);
+  refreshAllocSelectOptions();
+  renderExpenseQuickBtns();
 }
 
 async function loadList(){
@@ -211,8 +411,27 @@ document.getElementById('btnRenumber').onclick = async () => {
   alert(json.message || ('Đã đánh lại số cho ' + (json.count || '') + ' phiếu'));
   loadList();
 };
-document.getElementById('fDebitFilter').addEventListener('input', (e) => {
+document.getElementById('fDebitFilter')?.addEventListener('input', (e) => {
   renderCounterpartOptions(e.target.value);
+});
+document.getElementById('btnAddDebitRow')?.addEventListener('click', () => addDebitAllocRow('', '', ''));
+document.getElementById('debitAllocRows')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-rm-debit');
+  if (!btn) return;
+  const tbody = document.getElementById('debitAllocRows');
+  const rows = tbody.querySelectorAll('.debit-alloc-row');
+  if (rows.length <= 1) {
+    const tr = btn.closest('tr');
+    tr.querySelector('.debit-alloc-acct').value = '';
+    tr.querySelector('.debit-alloc-amt').value = '';
+    tr.querySelector('.debit-alloc-desc').value = '';
+  } else {
+    btn.closest('tr').remove();
+  }
+  refreshDebitAllocTotal();
+});
+document.getElementById('debitAllocRows')?.addEventListener('input', (e) => {
+  if (e.target.classList.contains('debit-alloc-amt')) refreshDebitAllocTotal();
 });
 
 function isFxPayMethod(v){
@@ -231,7 +450,7 @@ async function refreshCashBalHint(){
   if (!el || !window.loadSmeCashBalances) return;
   await window.loadSmeCashBalances({ as_of: fDate.value });
   const b = window.smeCashBalances || {};
-  const fmt = (n) => (Number(n) || 0).toLocaleString('vi-VN');
+  const fmtN = (n) => (Number(n) || 0).toLocaleString('vi-VN');
   const purpose = fPurpose.value;
   const isBuyFx = purpose === 'buy_fx';
   const pay = fPay.value;
@@ -241,14 +460,14 @@ async function refreshCashBalHint(){
   if (isCashSide) {
     el.style.display = '';
     el.innerHTML = `Số dư quỹ —
-      <b>1111</b> (VND): <b class="text-success">${fmt(b.a1111)}</b> ₫ ·
-      <b>1112</b> (NT): <b class="text-primary">${fmt(b.a1112)}</b> ₫`
+      <b>1111</b> (VND): <b class="text-success">${fmtN(b.a1111)}</b> ₫ ·
+      <b>1112</b> (NT): <b class="text-primary">${fmtN(b.a1112)}</b> ₫`
       + (isBuyFx ? '<div class="text-muted mt-1">Mua ngoại tệ: trừ <b>1111</b>, tăng <b>1112</b> — không yêu cầu đủ số dư 1112.</div>' : '');
   } else {
     el.style.display = '';
     el.innerHTML = `Số dư TGNH —
-      <b>1121</b> (VND): <b class="text-success">${fmt(b.a1121)}</b> ₫ ·
-      <b>1122</b> (NT): <b class="text-primary">${fmt(b.a1122)}</b> ₫`
+      <b>1121</b> (VND): <b class="text-success">${fmtN(b.a1121)}</b> ₫ ·
+      <b>1122</b> (NT): <b class="text-primary">${fmtN(b.a1122)}</b> ₫`
       + (isBuyFx ? '<div class="text-muted mt-1">Mua ngoại tệ: trừ <b>1121</b>, tăng <b>1122</b> — không yêu cầu đủ số dư 1122.</div>' : '');
   }
 }
@@ -256,11 +475,12 @@ function syncFxUi(){
   const purpose = fPurpose.value;
   const isAdv = purpose === 'supplier_advance';
   const isBuyFx = purpose === 'buy_fx';
+  const isNopNh = purpose === 'nop_ngan_hang';
+  const isExpense = purpose === 'expense_utilities';
   const payFx = isFxPayMethod(fPay.value);
   const defVnd = (window.smeBankPayAccounts && window.smeBankPayAccounts.default_bank_account) || '1121';
   const defFx = (window.smeBankPayAccounts && window.smeBankPayAccounts.default_fx_bank_account) || '1122';
 
-  // Loại nghiệp vụ bắt buộc FX → khóa checkbox
   if (isAdv || isBuyFx) {
     fUseFx.checked = true;
     fUseFx.disabled = true;
@@ -274,16 +494,32 @@ function syncFxUi(){
     wrapFxToggle.style.display = '';
   }
 
+  const wrapExp = document.getElementById('wrapExpenseQuick');
+  if (wrapExp) wrapExp.style.display = isExpense ? '' : 'none';
+  if (isExpense) renderExpenseQuickBtns();
+
   const fx = needsFx();
   fxFields.style.display = fx ? '' : 'none';
   wrapAmountVnd.style.display = fx ? 'none' : '';
 
+  const allocMode = useDebitAllocMode();
+  document.getElementById('wrapDebitAlloc').style.display = allocMode ? '' : 'none';
+  document.getElementById('wrapDebitSingle').style.display = allocMode ? 'none' : '';
+  const hintAmt = document.getElementById('hintAmountAlloc');
+  if (allocMode) {
+    fAmount.readOnly = true;
+    if (hintAmt) hintAmt.style.display = '';
+    ensureDebitAllocRows(isExpense ? 2 : 1);
+    refreshDebitAllocTotal();
+  } else {
+    fAmount.readOnly = false;
+    if (hintAmt) hintAmt.style.display = 'none';
+  }
+
   if (isBuyFx) {
-    // Chi VND mua ngoại tệ → Có 1111/1121, Nợ 1122/1112
     if (isFxPayMethod(fPay.value)) fPay.value = defVnd;
     [...fPay.options].forEach(o => {
-      const v = o.value;
-      o.disabled = isFxPayMethod(v);
+      o.disabled = isFxPayMethod(o.value);
     });
     lblPay.textContent = 'Nguồn tiền VND (TK Có)';
     hintPay.textContent = 'Nợ TK ngoại tệ (1122/1112) · Có tiền VND đã chi — mặc định STK VietQR.';
@@ -305,17 +541,32 @@ function syncFxUi(){
     }
     renderCounterpartOptions(fDebitFilter.value, '331');
     hintDebit.innerHTML = 'Tạm ứng NCC: mặc định <b>331</b>.';
+  } else if (isNopNh) {
+    [...fPay.options].forEach(o => { o.disabled = false; });
+    lblPay.textContent = 'Hình thức (TK Có)';
+    hintPay.textContent = 'Nộp tiền mặt vào NH: Nợ 1131 / Có 1111.';
+    hintDebit.innerHTML = 'Cố định <b>1131</b> tiền đang chuyển.';
+  } else if (isExpense) {
+    [...fPay.options].forEach(o => { o.disabled = false; });
+    lblPay.textContent = 'Hình thức (TK Có)';
+    hintPay.textContent = 'Có tiền mặt/NH = tổng các dòng phân bổ Nợ bên dưới.';
+    if (!fReason.value || fReason.dataset.auto === '1') {
+      fReason.value = 'Chi phí điện / nước / vận hành bộ phận';
+      fReason.dataset.auto = '1';
+    }
   } else {
     [...fPay.options].forEach(o => { o.disabled = false; });
     lblPay.textContent = 'Hình thức (TK Có)';
     hintPay.textContent = fx
       ? 'Chi từ quỹ/TGNH ngoại tệ — nhập số FC và tỷ giá ngày chi.'
-      : '';
-    if (fReason.dataset.auto === '1') {
+      : 'Thêm nhiều dòng Nợ để phân bổ số tiền theo từng tài khoản.';
+    if (fReason.dataset.auto === '1' && purpose === '') {
       fReason.value = '';
       delete fReason.dataset.auto;
     }
-    hintDebit.textContent = 'Hiển thị TK cấp 2 · 3 · 4 và cấp 1 không có TK con. TK tổng hợp không chọn được.';
+    if (!allocMode) {
+      hintDebit.innerHTML = 'Hiển thị TK cấp 2 · 3 · 4 và cấp 1 không có TK con.';
+    }
   }
   if (fx) updateFxPreview();
   refreshCashBalHint();
@@ -331,6 +582,11 @@ document.getElementById('fPurpose').addEventListener('change', syncFxUi);
 document.getElementById('fPay').addEventListener('change', syncFxUi);
 document.getElementById('fUseFx').addEventListener('change', syncFxUi);
 document.getElementById('fDate').addEventListener('change', refreshCashBalHint);
+document.getElementById('expenseQuickBtns')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-code]');
+  if (!btn || btn.disabled) return;
+  pickExpenseDebit(btn.dataset.code, btn.dataset.reason || '');
+});
 ['fAmountFc','fRate','fCur'].forEach(id => {
   document.getElementById(id).addEventListener('input', updateFxPreview);
   document.getElementById(id).addEventListener('change', updateFxPreview);
@@ -338,13 +594,14 @@ document.getElementById('fDate').addEventListener('change', refreshCashBalHint);
 
 document.getElementById('btnNew').onclick = async () => {
   document.getElementById('fDebitFilter').value = '';
-  document.getElementById('fPurpose').value = '';
+  document.getElementById('fPurpose').value = 'expense_utilities';
   fUseFx.checked = false;
   fUseFx.disabled = false;
   fAmountFc.value = '';
   fAmount.value = '';
   fReason.value = '';
   delete fReason.dataset.auto;
+  clearDebitAllocRows();
   if (window.fillSmePayMethodSelect) {
     await window.fillSmePayMethodSelect(fPay, {
       value: 'bank',
@@ -355,29 +612,49 @@ document.getElementById('btnNew').onclick = async () => {
   } else {
     fPay.value = 'bank';
   }
-  syncFxUi();
   if (!counterpartAccounts.length) await loadCounterpartAccounts();
-  else renderCounterpartOptions('', DEFAULT_DEBIT);
+  else {
+    renderCounterpartOptions('', DEFAULT_DEBIT);
+    renderExpenseQuickBtns();
+  }
+  syncFxUi();
   new bootstrap.Modal(document.getElementById('modalNew')).show();
 };
 document.getElementById('btnSave').onclick = async () => {
-  const debit = document.getElementById('fDebit').value;
   const purpose = fPurpose.value;
   const isAdv = purpose === 'supplier_advance';
   const isBuyFx = purpose === 'buy_fx';
   const isNopNh = purpose === 'nop_ngan_hang';
-  if (!debit && !isNopNh) return alert('Vui lòng chọn tài khoản đối ứng (Nợ)');
+  const isExpense = purpose === 'expense_utilities';
+  const allocMode = useDebitAllocMode();
+  const debitLines = allocMode ? collectDebitLines() : [];
+  const debit = document.getElementById('fDebit')?.value || '';
   const fx = needsFx();
+
+  if (allocMode) {
+    if (!debitLines.length) {
+      return alert('Thêm ít nhất một dòng: chọn tài khoản Nợ và nhập số tiền phân bổ > 0');
+    }
+    const missing = [...document.querySelectorAll('#debitAllocRows .debit-alloc-row')].some(tr => {
+      const c = (tr.querySelector('.debit-alloc-acct')?.value || '').trim();
+      const a = parseFloat(tr.querySelector('.debit-alloc-amt')?.value) || 0;
+      return (c && a <= 0) || (!c && a > 0);
+    });
+    if (missing) return alert('Mỗi dòng phải có đủ tài khoản Nợ và số tiền phân bổ');
+  } else if (!debit && !isNopNh) {
+    return alert('Vui lòng chọn tài khoản đối ứng (Nợ)');
+  }
+
   if (window.smeBankPayAccounts && window.smeBankPayAccounts.needs_choice) {
     const okPick = await window.warnSmeBankAccountChoiceIfNeeded();
     if (!okPick) return;
   }
-  let debitAcct = debit;
-  if (isAdv && !debit.startsWith('331')) debitAcct = '331';
+  let debitAcct = allocMode ? debitLines[0].account_code : debit;
+  if (isAdv && !String(debitAcct).startsWith('331')) debitAcct = '331';
   if (isNopNh) debitAcct = '1131';
   if (isBuyFx) {
-    if (debit.startsWith('1112')) debitAcct = debit;
-    else if (debit.startsWith('1122')) debitAcct = debit;
+    if (String(debit).startsWith('1112')) debitAcct = debit;
+    else if (String(debit).startsWith('1122')) debitAcct = debit;
     else debitAcct = (window.smeBankPayAccounts && window.smeBankPayAccounts.default_fx_bank_account) || '1122';
   }
   const payload = {
@@ -389,17 +666,21 @@ document.getElementById('btnSave').onclick = async () => {
     currency: fx ? fCur.value : 'VND',
     exchange_rate: fx ? (parseFloat(fRate.value) || 0) : 1,
     amount_fc: fx ? (parseFloat(fAmountFc.value) || 0) : 0,
-    amount: fx ? undefined : (parseFloat(fAmount.value) || 0),
-    purpose: isAdv ? 'supplier_advance' : null,
+    amount: fx ? undefined : (allocMode
+      ? debitLines.reduce((s, l) => s + l.amount, 0)
+      : (parseFloat(fAmount.value) || 0)),
+    purpose: isAdv ? 'supplier_advance' : (isExpense ? 'expense_utilities' : null),
   };
+  if (allocMode) payload.debit_lines = debitLines;
   if (isNopNh) {
     payload.purpose = 'nop_ngan_hang';
     payload.payment_method = 'cash';
     payload.debit_account = '1131';
+    delete payload.debit_lines;
   }
   const pay = String(fPay.value || '');
   const isBuyIntoFx = fx
-    && (debitAcct.startsWith('1122') || debitAcct.startsWith('1112'))
+    && (String(debitAcct).startsWith('1122') || String(debitAcct).startsWith('1112'))
     && (pay === 'cash' || pay === 'bank' || pay === '1111' || pay.startsWith('1121'));
   if ((isBuyFx || isBuyIntoFx) && !isNopNh) payload.purpose = 'buy_fx';
   if (isAdv) payload.purpose = 'supplier_advance';
@@ -408,8 +689,7 @@ document.getElementById('btnSave').onclick = async () => {
   if (!fx && !(payload.amount > 0)) return alert('Nhập số tiền');
   const payAmt = fx
     ? Math.round((parseFloat(fAmountFc.value) || 0) * (parseFloat(fRate.value) || 0))
-    : (parseFloat(fAmount.value) || 0);
-  // Mua ngoại tệ: chỉ kiểm số dư nguồn VND (1111/1121), không chặn vì 1122/1112
+    : (parseFloat(payload.amount) || 0);
   let balMethod = fPay.value;
   if (payload.purpose === 'buy_fx') {
     balMethod = (pay === 'cash' || pay === '1111' || pay.startsWith('1111'))
@@ -425,8 +705,10 @@ document.getElementById('btnSave').onclick = async () => {
   const json = await res.json();
   if(!json.success) return alert(json.error||'Lỗi');
   bootstrap.Modal.getInstance(document.getElementById('modalNew')).hide();
+  const nLines = (payload.debit_lines && payload.debit_lines.length) || 1;
   const tag = payload.purpose === 'buy_fx' ? ' (mua ngoại tệ)'
-    : (isNopNh ? ' (nộp NH · 1131)' : (isAdv ? ' (tạm ứng NCC)' : (fx ? ' (ngoại tệ)' : '')));
+    : (isNopNh ? ' (nộp NH · 1131)' : (isAdv ? ' (tạm ứng NCC)' : (fx ? ' (ngoại tệ)'
+      : (nLines > 1 ? ` (${nLines} TK Nợ)` : ''))));
   alert('Đã lập '+json.voucher_no + tag);
   loadList();
 };

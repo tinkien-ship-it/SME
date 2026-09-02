@@ -75,8 +75,21 @@ def _assign_service_codes(c, product_id, external_barcode=None):
     return code, barcode
 
 
-def _normalize_product_code(raw):
-    return (raw or '').strip().upper()
+SYSTEM_SUBSCRIPTION_CODES = frozenset({'DV001', 'DV002', 'DV003', 'DV004'})
+
+
+def _ensure_subscription_product_schema(conn):
+    from Services.subscription_service import _ensure_subscription_columns
+    _ensure_subscription_columns(conn)
+    try:
+        from Services.sme.deferred_revenue import ensure_product_revenue_columns
+        ensure_product_revenue_columns(conn)
+    except Exception:
+        pass
+
+
+def _is_system_subscription_code(code) -> bool:
+    return _normalize_product_code(code) in SYSTEM_SUBSCRIPTION_CODES
 
 
 def _product_code_taken(c, product_code, exclude_id=None):
@@ -318,7 +331,18 @@ def register_products_routes(app):
         try:
             # ==================== GET: TRUY VẤN DANH SÁCH ====================
             if request.method == 'GET':
-                q = request.args.get('q', '')
+                q = (request.args.get('q') or '').strip()
+                try:
+                    limit = int(request.args.get('limit') or (80 if q else 200))
+                except (TypeError, ValueError):
+                    limit = 80 if q else 200
+                limit = min(max(limit, 1), 500)
+                try:
+                    offset = int(request.args.get('offset') or 0)
+                except (TypeError, ValueError):
+                    offset = 0
+                offset = max(offset, 0)
+                like = f'%{q}%'
                 c.execute("""
                     SELECT 
                         p.*,
@@ -328,9 +352,12 @@ def register_products_routes(app):
                     LEFT JOIN inventory i ON p.id = i.product_id
                     WHERE p.name LIKE ? OR p.barcode LIKE ? OR p.product_code LIKE ?
                     ORDER BY p.id DESC
-                """, (f'%{q}%', f'%{q}%', f'%{q}%'))
+                    LIMIT ? OFFSET ?
+                """, (like, like, like, limit, offset))
                 products = c.fetchall()
-                return jsonify([dict(row) for row in products])
+                resp = jsonify([dict(row) for row in products])
+                resp.headers['Cache-Control'] = 'private, max-age=30' if not q else 'no-store'
+                return resp
 
             # Lấy dữ liệu JSON từ body
              # Lấy dữ liệu JSON từ body (dùng cho POST, PUT, DELETE)
@@ -367,6 +394,62 @@ def register_products_routes(app):
                     )
                     sqlite_commit(conn, label='products')
                     return jsonify({"success": True, "id": new_id, "product_code": code, "barcode": barcode})
+
+                if item_kind == 'subscription':
+                    _ensure_subscription_product_schema(conn)
+                    unit = (data.get('unit') or 'Gói/năm').strip()
+                    base_price = float(data.get('base_price') or 0)
+                    try:
+                        deferred_months = int(data.get('deferred_months') or 12)
+                    except (TypeError, ValueError):
+                        deferred_months = 12
+                    if deferred_months < 1:
+                        return jsonify({"success": False, "error": "Số tháng phân bổ DT phải >= 1"}), 400
+                    has_einvoice = 1 if str(data.get('has_einvoice', 0)).lower() in ('1', 'true') else 0
+                    revenue_account = (data.get('revenue_account') or '5113').strip() or '5113'
+                    hkd_sector = normalize_nn_code(
+                        (data.get('hkd_sector_code') or '').strip() or 'NN2',
+                        default='NN2',
+                    )
+                    if hkd_sector not in HKD_SECTORS:
+                        return jsonify({"success": False, "error": "Vui lòng chọn nhóm ngành (NN1–NN4)"}), 400
+                    new_code = _normalize_product_code(data.get('product_code'))
+                    if new_code and _product_code_taken(c, new_code):
+                        return jsonify({
+                            "success": False,
+                            "error": f"Mã gói subscription '{new_code}' đã tồn tại",
+                        }), 400
+
+                    c.execute("""
+                        INSERT INTO products (
+                            name, unit, base_price, price, product_type, hkd_sector_code,
+                            is_subscription_plan, has_einvoice, revenue_mode, deferred_months,
+                            revenue_account, sell_by_weight
+                        ) VALUES (?, ?, ?, ?, 'service', ?, 1, ?, 'deferred', ?, ?, 0)
+                    """, (
+                        name, unit, base_price, base_price, hkd_sector,
+                        has_einvoice, deferred_months, revenue_account,
+                    ))
+                    new_id = c.lastrowid
+                    c.execute(
+                        "INSERT OR IGNORE INTO inventory (product_id, quantity, avg_cost) VALUES (?, 0, 0)",
+                        (new_id,),
+                    )
+                    if new_code:
+                        c.execute(
+                            "UPDATE products SET product_code=?, barcode=? WHERE id=?",
+                            (new_code, f'{new_code}01', new_id),
+                        )
+                        code, barcode = new_code, f'{new_code}01'
+                    else:
+                        code, barcode = _assign_service_codes(c, new_id)
+                    sqlite_commit(conn, label='products')
+                    return jsonify({
+                        "success": True,
+                        "id": new_id,
+                        "product_code": code,
+                        "barcode": barcode,
+                    })
 
                 unit1 = data.get('unit1') or None
                 sell_by_weight = 1 if str(data.get('sell_by_weight', 0)) in ('1', 'true', True) else 0
@@ -420,13 +503,74 @@ def register_products_routes(app):
                     return jsonify({"success": False, "error": "Thiếu ID sản phẩm"}), 400
 
                 item_kind = (data.get('item_kind') or '').strip().lower()
-                c.execute("SELECT product_type FROM products WHERE id = ?", (product_id,))
+                c.execute(
+                    "SELECT product_type, product_code, COALESCE(is_subscription_plan, 0) AS is_subscription_plan "
+                    "FROM products WHERE id = ?",
+                    (product_id,),
+                )
                 row = c.fetchone()
                 current_type = (row[0] or '').strip() if row else ''
-                is_service = item_kind == 'service' or current_type == 'service'
+                is_sub_plan = bool(row and (row[2] if not hasattr(row, 'keys') else row['is_subscription_plan']))
+                is_service = (
+                    item_kind == 'service'
+                    or (current_type == 'service' and not is_sub_plan and item_kind != 'subscription')
+                )
+                is_sub = item_kind == 'subscription' or is_sub_plan
                 is_finished = item_kind == 'finished_goods' or current_type == 'finished_goods'
 
-                if is_service:
+                if is_sub:
+                    _ensure_subscription_product_schema(conn)
+                    hkd_sector = normalize_nn_code(
+                        (data.get('hkd_sector_code') or '').strip() or 'NN2',
+                        default='NN2',
+                    )
+                    if hkd_sector not in HKD_SECTORS:
+                        return jsonify({"success": False, "error": "Vui lòng chọn nhóm ngành (NN1–NN4)"}), 400
+                    base_price = float(data.get('base_price') or 0)
+                    try:
+                        deferred_months = int(data.get('deferred_months') or 12)
+                    except (TypeError, ValueError):
+                        deferred_months = 12
+                    if deferred_months < 1:
+                        return jsonify({"success": False, "error": "Số tháng phân bổ DT phải >= 1"}), 400
+                    has_einvoice = 1 if str(data.get('has_einvoice', 0)).lower() in ('1', 'true') else 0
+                    revenue_account = (data.get('revenue_account') or '5113').strip() or '5113'
+                    new_code = _normalize_product_code(data.get('product_code'))
+                    existing_code = _normalize_product_code(
+                        row[1] if row and not hasattr(row, 'keys') else (row['product_code'] if row else ''),
+                    )
+                    if new_code and _product_code_taken(c, new_code, product_id):
+                        return jsonify({"success": False, "error": f"Mã gói '{new_code}' đã tồn tại"}), 400
+                    if existing_code and _is_system_subscription_code(existing_code):
+                        if new_code and new_code != existing_code:
+                            return jsonify({
+                                "success": False,
+                                "error": f"Không đổi mã gói hệ thống {existing_code}.",
+                            }), 400
+
+                    unit = (data.get('unit') or 'Gói/năm').strip()
+                    c.execute("""
+                        UPDATE products SET
+                            name=?, unit=?, base_price=?, price=?,
+                            product_type='service', hkd_sector_code=?,
+                            is_subscription_plan=1, has_einvoice=?,
+                            revenue_mode='deferred', deferred_months=?, revenue_account=?,
+                            unit1=NULL, unit_ratio=1, sell_by_weight=0, weight_plu=NULL
+                        WHERE id=?
+                    """, (
+                        data['name'], unit, base_price, base_price,
+                        hkd_sector, has_einvoice, deferred_months, revenue_account,
+                        product_id,
+                    ))
+                    if new_code and not _is_system_subscription_code(existing_code):
+                        barcode = f"{new_code}01"
+                        c.execute(
+                            "UPDATE products SET product_code=?, barcode=? WHERE id=?",
+                            (new_code, barcode, product_id),
+                        )
+                    elif new_code and _is_system_subscription_code(existing_code):
+                        pass
+                elif is_service:
                     hkd_sector = normalize_nn_code(
                         (data.get('hkd_sector_code') or '').strip() or 'NN2',
                         default='NN2',
@@ -519,10 +663,19 @@ def register_products_routes(app):
                     return jsonify({"success": False, "error": "Thiếu ID sản phẩm"}), 400
 
                 if _is_subscription_plan_row(c, p_id):
-                    return jsonify({
-                        "success": False,
-                        "error": "Không thể xóa gói subscription hệ thống (DV001–DV004). Chỉ sửa tên/mã/giá trên form dịch vụ.",
-                    }), 400
+                    prow = c.execute(
+                        "SELECT product_code FROM products WHERE id = ?",
+                        (p_id,),
+                    ).fetchone()
+                    pcode = (prow[0] if prow and not hasattr(prow, 'keys') else (prow['product_code'] if prow else '')) or ''
+                    if _is_system_subscription_code(pcode):
+                        return jsonify({
+                            "success": False,
+                            "error": (
+                                f"Không thể xóa gói hệ thống {pcode}. "
+                                "Chỉ sửa tên/giá trên tab Gói subscription."
+                            ),
+                        }), 400
 
                 # --- Sửa lỗi max_id is not defined ---
                 res_max = c.execute("SELECT MAX(id) FROM products").fetchone()
@@ -691,7 +844,7 @@ def register_products_routes(app):
             pt = product_type
             if pt == 'materials':
                 barcode, barcode1 = f"{code}01", f"{code}02"
-            elif pt in ('fixed_asset', 'tools', 'service'):
+            elif pt in ('fixed_asset', 'intangible_asset', 'tools', 'service'):
                 barcode, barcode1 = code, None
             else:
                 barcode, barcode1 = f"{code}01", f"{code}02"

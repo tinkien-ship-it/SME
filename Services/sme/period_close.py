@@ -314,6 +314,76 @@ def run_period_close(
     }
 
 
+def _last_closed_period(fiscal_year: int, *, today=None) -> int:
+    """Kỳ cuối cùng đã hết (không gồm tháng hiện tại)."""
+    from datetime import date
+    today = today or date.today()
+    if fiscal_year < today.year:
+        return 12
+    if fiscal_year > today.year:
+        return 0
+    return max(0, today.month - 1)
+
+
+def catch_up_missing_period_closes(
+    conn: sqlite3.Connection,
+    *,
+    fiscal_year: int | None = None,
+    accounting_regime: str | None = None,
+    features: dict | None = None,
+    created_by: str | None = None,
+    replace_existing: bool = False,
+) -> dict[str, Any]:
+    """Bù các kỳ đã hết nhưng thiếu bút toán KCKQ (seed/lịch bỏ sót).
+
+    Chỉ tạo KCKQ khi kỳ có phát sinh P&L và chưa có bút toán kết chuyển.
+    """
+    from datetime import date
+
+    today = date.today()
+    fy = int(fiscal_year or today.year)
+    through = _last_closed_period(fy, today=today)
+    if through < 1:
+        return {'fiscal_year': fy, 'through_period': 0, 'closed': [], 'skipped': []}
+
+    closed: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+
+    for period in range(1, through + 1):
+        doc_id = fy * 100 + period
+        if _active_close_entry(conn, doc_id) and not replace_existing:
+            skipped.append({'period': period, 'reason': 'already_posted'})
+            continue
+        preview_lines, preview_meta = build_period_close_lines(
+            conn, fiscal_year=fy, period=period,
+        )
+        if not preview_lines:
+            skipped.append({'period': period, 'reason': 'nothing_to_close'})
+            continue
+        result = run_period_close(
+            conn,
+            fiscal_year=fy,
+            period=period,
+            accounting_regime=accounting_regime,
+            features=features,
+            created_by=created_by,
+            replace_existing=replace_existing,
+        )
+        item = {'period': period, **result}
+        if result.get('posted'):
+            closed.append(item)
+        else:
+            skipped.append(item)
+
+    return {
+        'fiscal_year': fy,
+        'through_period': through,
+        'closed': closed,
+        'skipped': skipped,
+        'posted_count': len(closed),
+    }
+
+
 DOC_YEAR_END = 'KCN'
 
 

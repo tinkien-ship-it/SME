@@ -168,7 +168,7 @@ function renderSuppliersTable(data) {
 function loadSuppliers() {
     const tbody = document.querySelector('#suppliersTable tbody');
     tbody.innerHTML = '<tr><td colspan="7" class="text-center">Đang tải...</td></tr>';
-    fetch('/api/suppliers')
+    fetch('/api/suppliers?limit=200')
         .then(r => r.ok ? r.json() : Promise.reject('Lỗi tải dữ liệu'))
         .then(data => {
             suppliers = data;
@@ -336,7 +336,9 @@ async function importSuppliers(event) {
 }
 
 // === INIT ===
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const loggedIn = await checkLogin();
+    if (!loggedIn) return;
     initSupplierTable();
     document.getElementById('btnClearSupplierColFilters')?.addEventListener('click', () => supplierTableCtrl?.clearColumnFilters());
     loadSuppliers();
@@ -346,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 // Kiểm tra đăng nhập trước khi gọi API
 function checkLogin() {
-    return fetch('/api/suppliers')
+    return fetch('/api/suppliers?limit=1')
         .then(r => {
             if (r.status === 403 || r.redirected) {
                 window.location.href = '/login';
@@ -359,11 +361,5 @@ function checkLogin() {
             return false;
         });
 }
-
-// Gọi trước khi load
-document.addEventListener('DOMContentLoaded', async () => {
-    const loggedIn = await checkLogin();
-    if (loggedIn) loadSuppliers();
-});
 </script>
 {% endblock %}

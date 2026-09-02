@@ -112,6 +112,22 @@ def costing_summary(
     except sqlite3.Error:
         pass
 
+    svc = {
+        'service_wip_open': 0.0,
+        'service_cogs_period': 0.0,
+        'service_delivered_count': 0,
+        'recent_service_jobs': [],
+    }
+    try:
+        from Services.sme.service_costing import service_costing_period_summary
+        svc = service_costing_period_summary(
+            conn, fiscal_year=fiscal_year, period=period,
+        )
+    except Exception:
+        pass
+
+    cogs_6323 = _f(_prefix_debit(act, '6323'))
+
     return {
         'fiscal_year': fiscal_year,
         'period': period,
@@ -127,9 +143,14 @@ def costing_summary(
         'fg_receipts_period': fg_in,
         'cogs_period': cogs_period,
         'cogs_ytd': cogs_ytd,
+        'cogs_6323_period': cogs_6323,
         'materials_movement': _f(_prefix_debit(act, '152')),
         'production_orders_active': prod_orders,
         'production_cost_period': prod_cost,
         'recent_orders': prod_rows,
-        'hint': 'Luồng full: 621/622/627 → 154 → 155 → (bán) 632/155',
+        'service_wip_open': svc.get('service_wip_open', 0),
+        'service_cogs_period': svc.get('service_cogs_period', 0),
+        'service_delivered_count': svc.get('service_delivered_count', 0),
+        'recent_service_jobs': svc.get('recent_service_jobs') or [],
+        'hint': 'TP: 621/622/627 → 154 → 155 → 6322. DV: 621/622/627 → 154 → (nghiệm thu) 6323',
     }

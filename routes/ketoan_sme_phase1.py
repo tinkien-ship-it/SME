@@ -9,6 +9,7 @@ from datetime import datetime
 from flask import jsonify, render_template, request, session
 
 from db_utils import get_db_connection, sqlite_commit
+from db.schema_helpers import table_cols as _table_cols
 
 logger = logging.getLogger(__name__)
 
@@ -45,12 +46,6 @@ _BLOCKED_PRODUCT_TYPES = frozenset({
 })
 _BLOCKED_CODE_PREFIXES = ('VT', 'TSCD', 'CCDC', 'DV')
 
-
-def _table_cols(conn: sqlite3.Connection, table: str) -> set[str]:
-    try:
-        return {r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()}
-    except sqlite3.Error:
-        return set()
 
 
 def _like_needles(q: str) -> list[str]:
@@ -579,10 +574,10 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
         prefixes = [p.strip() for p in prefixes_raw.split(',') if p.strip()] if prefixes_raw else []
         q = (request.args.get('q') or request.args.get('search') or '').strip()
         try:
-            limit = int(request.args.get('limit') or (40 if q else 800))
+            limit = int(request.args.get('limit') or (40 if q else 100))
         except (TypeError, ValueError):
-            limit = 40 if q else 800
-        limit = min(max(limit, 1), 800)
+            limit = 40 if q else 100
+        limit = min(max(limit, 1), 500)
         try:
             pcols = _table_cols(conn, 'products')
             icols = _table_cols(conn, 'inventory')
@@ -621,7 +616,7 @@ def register_sme_phase1_routes(app, *, login_required, require_sme_regime):
                 where.append('(' + ' OR '.join(ors) + ')')
 
             # Tìm theo q trên toàn bộ danh mục — không cắt 800 dòng trước khi lọc tên.
-            sql_limit = 2000 if q else 800
+            sql_limit = min(500 if q else 150, limit * 2)
             sql = f"""
                 SELECT p.id, p.name, p.unit, {type_expr} AS product_type,
                        {code_expr} AS product_code,

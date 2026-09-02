@@ -1,0 +1,1617 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Giá vốn dịch vụ{% endblock %}
+
+{% block sme_head %}
+<style>
+  .svc-money { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .svc-muted { color: #64748b; }
+</style>
+{% endblock %}
+
+{% block sme_breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-0">
+  <ol class="breadcrumb mb-0 small">
+    <li class="breadcrumb-item"><a href="{{ url_for('SME_dashboard') }}">Kế toán doanh nghiệp</a></li>
+    <li class="breadcrumb-item active">Giá vốn dịch vụ</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block sme_content %}
+<div class="container-fluid py-2 px-0">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+      <h3 class="fw-bold text-primary mb-1">
+        <i class="fas fa-handshake me-2"></i>Giá vốn dịch vụ
+        <span class="badge bg-primary fs-6 align-middle">Thông tư 99 · Tài khoản 154 → 6323</span>
+      </h3>
+      <p class="text-muted small mb-0">
+        Tập hợp nguyên vật liệu, nhân công trực tiếp, dịch vụ mua ngoài và chi phí sản xuất chung vào
+        <strong>tài khoản 154</strong> theo từng lệnh dịch vụ.
+        Khi nghiệm thu: <strong>Nợ 6323 / Có 154</strong> (toàn bộ hoặc một phần theo tỷ lệ hoàn thành).
+        Chi phí bán hàng (641) và quản lý doanh nghiệp (642) không được tính vào giá thành.
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-primary btn-sm" onclick="openStdModal()">
+        <i class="fas fa-ruler-combined me-1"></i>Định mức dịch vụ
+      </button>
+      <button type="button" class="btn btn-success btn-sm" onclick="openCreateModal()">
+        <i class="fas fa-plus me-1"></i>Lập lệnh dịch vụ
+      </button>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_costing') }}">Kế toán giá thành</a>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_production') }}">Sản xuất thành phẩm</a>
+    </div>
+  </div>
+
+  <ul class="nav nav-pills mb-3 gap-2" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-jobs" type="button">Lệnh dịch vụ</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-norms" type="button" onclick="loadStandards()">Định mức</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-outsource" type="button" onclick="loadOutsourceTab()">Thuê ngoài / gán HĐ</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-advance" type="button" onclick="loadAdvanceTab()">Ứng trước / gán PT</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-alloc" type="button">Phân bổ chi phí sản xuất chung</button></li>
+  </ul>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="tab-jobs">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <span class="fw-bold">Danh sách lệnh</span>
+          <div class="d-flex flex-wrap gap-2">
+            <input type="text" id="jobFrom" class="form-control form-control-sm keto-date-input" style="width:120px" placeholder="Từ ngày">
+            <input type="text" id="jobTo" class="form-control form-control-sm keto-date-input" style="width:120px" placeholder="Đến ngày">
+            <input type="text" id="jobQ" class="form-control form-control-sm" style="width:160px" placeholder="Số lệnh / tên dịch vụ">
+            <select id="jobStatus" class="form-select form-select-sm" style="width:170px">
+              <option value="">Tất cả tình trạng</option>
+              <option value="open">Mới lập</option>
+              <option value="in_progress">Đang thực hiện</option>
+              <option value="partial_delivered">Nghiệm thu một phần</option>
+              <option value="delivered">Đã nghiệm thu hết</option>
+              <option value="cancelled">Đã hủy</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-primary" onclick="loadJobs()"><i class="fas fa-filter"></i></button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Số lệnh</th>
+                <th>Ngày</th>
+                <th>Dịch vụ / Bộ phận</th>
+                <th class="text-end">Số lượng</th>
+                <th class="text-end">Tổng chi phí</th>
+                <th class="text-end">Chi phí dở dang (154)</th>
+                <th class="text-end">Giá vốn đã kết chuyển</th>
+                <th>Tình trạng</th>
+                <th class="text-end">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="jobBody"><tr><td colspan="9" class="text-center text-muted py-4">Đang tải…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-norms">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div>
+            <span class="fw-bold">Định mức giá vốn theo mã dịch vụ</span>
+            <div class="small text-muted">Thiết lập 1 lần → mỗi lệnh mới (khách khác) tự nhân × số lượng và hạch toán 621/622/627 → 154.</div>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary" onclick="openStdModal()">
+            <i class="fas fa-plus me-1"></i>Thêm / sửa định mức
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Dịch vụ</th>
+                <th class="text-end">NCTT / ĐV</th>
+                <th class="text-end">SXC định phí / ĐV</th>
+                <th class="text-end">SXC biến phí / ĐV</th>
+                <th class="text-end">Mua ngoài / ĐV</th>
+                <th class="text-end">Dòng NVL</th>
+                <th class="text-end">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="stdBody">
+              <tr><td colspan="7" class="text-center text-muted py-4">Chưa tải…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-outsource">
+      <div class="row g-3">
+        <div class="col-lg-5">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">1. Ghi thuê ngoài dự kiến (biết giá trước HĐ)</div>
+            <div class="card-body">
+              <p class="small text-muted">Hạch toán tạm: <strong>Nợ 627 / Có 331 → 154</strong> trên lệnh. Sau khi có HĐ sẽ gán để đối chiếu.</p>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Lệnh dịch vụ đang mở</label>
+                <select id="osJob" class="form-select form-select-sm"></select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">NCC / nhà thầu (dự kiến)</label>
+                <input type="text" id="osVendor" class="form-control form-control-sm" placeholder="Tên NCC">
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Số tiền trước VAT (₫)</label>
+                <input type="number" id="osAmount" class="form-control form-control-sm text-end" min="0" step="1000" value="0">
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Diễn giải</label>
+                <input type="text" id="osDesc" class="form-control form-control-sm" placeholder="VD: Thuê đội thi công hạng mục X">
+              </div>
+              <button type="button" class="btn btn-sm btn-primary" onclick="saveOutsourceProvisional()">Ghi dự kiến vào lệnh</button>
+              <hr>
+              <div class="fw-semibold small mb-2">Dự kiến chưa khớp HĐ</div>
+              <div class="table-responsive" style="max-height:280px;overflow:auto">
+                <table class="table table-sm align-middle mb-0">
+                  <thead class="table-light"><tr>
+                    <th>Lệnh</th><th>NCC</th><th class="text-end">Số tiền</th>
+                  </tr></thead>
+                  <tbody id="osProvBody"><tr><td colspan="3" class="text-muted text-center">—</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <span class="fw-bold">2. Gán hóa đơn NCC vào lệnh</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadOutsourceInvoices()">Tải lại HĐ</button>
+            </div>
+            <div class="card-body">
+              <div class="row g-2 mb-2">
+                <div class="col-md-8">
+                  <label class="form-label small fw-bold">Hóa đơn mua còn số chưa gán</label>
+                  <select id="osInvoice" class="form-select form-select-sm" onchange="onOsInvoiceChange()"></select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold">Còn lại gán được</label>
+                  <input type="text" id="osInvRemain" class="form-control form-control-sm bg-light" readonly>
+                </div>
+              </div>
+              <div class="small text-muted mb-2" id="osInvMeta"></div>
+              <div class="fw-semibold small mb-1">Phân bổ vào lệnh (khớp dòng dự kiến nếu chọn)</div>
+              <div class="table-responsive border rounded mb-2">
+                <table class="table table-sm mb-0 align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width:2rem"></th>
+                      <th>Lệnh / dịch vụ</th>
+                      <th>Dự kiến chưa khớp</th>
+                      <th class="text-end" style="width:9rem">Số gán (₫)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="osAllocBody"></tbody>
+                </table>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Ghi chú</label>
+                <input type="text" id="osAssignNote" class="form-control form-control-sm">
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="small">Tổng đang gán: <strong class="text-danger" id="osAllocTotal">0</strong> ₫</div>
+                <button type="button" class="btn btn-sm btn-success" onclick="assignOutsourceInvoice()">Gán hóa đơn vào lệnh đã chọn</button>
+              </div>
+              <hr>
+              <div class="fw-semibold small mb-2">Lịch sử gán gần đây</div>
+              <div class="table-responsive" style="max-height:200px;overflow:auto">
+                <table class="table table-sm mb-0">
+                  <thead class="table-light"><tr>
+                    <th>Ngày</th><th>HĐ</th><th>Lệnh</th><th class="text-end">Số tiền</th>
+                  </tr></thead>
+                  <tbody id="osHistBody"><tr><td colspan="4" class="text-muted text-center">—</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-advance">
+      <div class="row g-3">
+        <div class="col-lg-5">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white fw-bold">1. Lập phiếu thu ứng trước gắn lệnh</div>
+            <div class="card-body">
+              <p class="small text-muted">Khách ứng trước toàn bộ hoặc một phần: <strong>Nợ 112 / Có 131</strong> (phải thu). Gói phần mềm/năm (4 gói DV) dùng màn <a href="{{ url_for('SME_deferred_revenue') }}">Gói DV trả trước 3387</a>.</p>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Lệnh dịch vụ</label>
+                <select id="advJob" class="form-select form-select-sm"></select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Số tiền thu (₫)</label>
+                <input type="number" id="advAmount" class="form-control form-control-sm text-end" min="0" step="1000" value="0">
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Hình thức thu</label>
+                <select id="advPayMethod" class="form-select form-select-sm">
+                  <option value="bank">Chuyển khoản (112)</option>
+                  <option value="cash">Tiền mặt (111)</option>
+                </select>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Diễn giải</label>
+                <input type="text" id="advReason" class="form-control form-control-sm" placeholder="Thu trước hợp đồng dịch vụ A">
+              </div>
+              <button type="button" class="btn btn-sm btn-primary" onclick="saveServiceAdvance()">Lập PT &amp; gắn lệnh</button>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <span class="fw-bold">2. Gán phiếu thu đã lập</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadAdvanceReceipts()">Tải lại PT</button>
+            </div>
+            <div class="card-body">
+              <div class="row g-2 mb-2">
+                <div class="col-md-8">
+                  <label class="form-label small fw-bold">Phiếu thu còn số dư</label>
+                  <select id="advReceipt" class="form-select form-select-sm" onchange="onAdvReceiptChange()"></select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold">Còn gán được</label>
+                  <input type="text" id="advRcptRemain" class="form-control form-control-sm bg-light" readonly>
+                </div>
+              </div>
+              <div class="small text-muted mb-2" id="advRcptMeta"></div>
+              <div class="table-responsive border rounded mb-2">
+                <table class="table table-sm mb-0 align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width:2rem"></th>
+                      <th>Lệnh / dịch vụ</th>
+                      <th class="text-end" style="width:9rem">Số gán (₫)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="advRcptAllocBody"></tbody>
+                </table>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="small">Tổng gán: <strong class="text-danger" id="advRcptAllocTotal">0</strong> ₫</div>
+                <button type="button" class="btn btn-sm btn-success" onclick="assignAdvanceReceipt()">Gán PT vào lệnh</button>
+              </div>
+            </div>
+          </div>
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <span class="fw-bold">3. Gán giao dịch ngân hàng điện tử</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadAdvanceBankTxns()">Tải GD NH</button>
+            </div>
+            <div class="card-body">
+              <div class="row g-2 mb-2">
+                <div class="col-md-8">
+                  <label class="form-label small fw-bold">Giao dịch tiền vào</label>
+                  <select id="advBankTxn" class="form-select form-select-sm" onchange="onAdvBankChange()"></select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold">Còn gán được</label>
+                  <input type="text" id="advBankRemain" class="form-control form-control-sm bg-light" readonly>
+                </div>
+              </div>
+              <div class="small text-muted mb-2" id="advBankMeta"></div>
+              <p class="small text-muted mb-2">Hệ thống lập PT: <strong>Nợ 112 / Có 131</strong> rồi gắn lệnh.</p>
+              <div class="table-responsive border rounded mb-2">
+                <table class="table table-sm mb-0 align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width:2rem"></th>
+                      <th>Lệnh / dịch vụ</th>
+                      <th class="text-end" style="width:9rem">Số gán (₫)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="advBankAllocBody"></tbody>
+                </table>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="small">Tổng gán: <strong class="text-danger" id="advBankAllocTotal">0</strong> ₫</div>
+                <button type="button" class="btn btn-sm btn-success" onclick="assignAdvanceBank()">Gán GD NH → lập PT &amp; lệnh</button>
+              </div>
+              <hr>
+              <div class="fw-semibold small mb-2">Lịch sử gán thu trước</div>
+              <div class="table-responsive" style="max-height:180px;overflow:auto">
+                <table class="table table-sm mb-0">
+                  <thead class="table-light"><tr>
+                    <th>Ngày</th><th>PT / GD</th><th>Lệnh</th><th class="text-end">Số tiền</th>
+                  </tr></thead>
+                  <tbody id="advHistBody"><tr><td colspan="4" class="text-muted text-center">—</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-alloc">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white fw-bold">Phân bổ chi phí sản xuất chung vào các lệnh đang mở</div>
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label small fw-bold">Tổng tiền phân bổ</label>
+              <input type="number" id="allocAmount" class="form-control text-end" min="0" step="1000" value="0">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-bold">Tài khoản đối ứng (Có)</label>
+              <input type="text" id="allocCredit" class="form-control" value="1111">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-bold">Tiêu thức phân bổ</label>
+              <select id="allocBasis" class="form-select">
+                <option value="qty">Theo số lượng lệnh</option>
+                <option value="equal">Chia đều các lệnh</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold">Diễn giải</label>
+              <input type="text" id="allocDesc" class="form-control" placeholder="Điện, nước, khấu hao, lương quản lý vận hành…">
+            </div>
+            <div class="col-md-2">
+              <button type="button" class="btn btn-primary w-100" onclick="doAllocate()">Phân bổ</button>
+            </div>
+          </div>
+          <p class="small text-muted mt-2 mb-0">
+            Không dùng tài khoản 641 hoặc 642. Phân bổ ghi nhận qua tài khoản 627 rồi kết chuyển vào tài khoản 154 trên từng lệnh đang mở.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal lập lệnh -->
+<div class="modal fade" id="createJobModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Lập lệnh tính giá vốn dịch vụ</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-light border small mb-3">
+          Chi phí nhân công trực tiếp ghi <strong>Nợ 154 / Có 334</strong> (qua tập hợp 622).
+          Khi nghiệm thu hết trong kỳ → kết chuyển toàn bộ sang <strong>6323</strong>.
+          Khi nghiệm thu một phần → chỉ kết chuyển phần tương ứng, phần còn lại giữ trên 154.
+        </div>
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label fw-bold">Dịch vụ cung cấp <span class="text-danger">*</span></label>
+            <select id="svcProduct" class="form-select"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold">Số lượng / khối lượng</label>
+            <input type="number" id="svcQty" class="form-control text-end" min="0.001" step="any" value="1">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold">Ngày lập lệnh</label>
+            <input type="text" id="svcDate" class="form-control text-center keto-date-input" data-default-date="today" placeholder="dd/mm/yyyy">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label fw-bold">Khách hàng</label>
+            <input type="text" id="svcCustomer" class="form-control" placeholder="Tên khách hàng hoặc hợp đồng (tùy chọn)">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label fw-bold">Bộ phận trực tiếp thực hiện dịch vụ <span class="text-danger">*</span></label>
+            <input type="text" id="svcDepartment" class="form-control" list="deptList"
+                   placeholder="Ví dụ: Bộ phận bếp, Bộ phận pha chế…">
+            <datalist id="deptList"></datalist>
+          </div>
+          <div class="col-md-4" id="wrapManualLabor">
+            <label class="form-label fw-bold">Chi phí nhân công trực tiếp</label>
+            <input type="number" id="svcLabor" class="form-control text-end" min="0" step="1000" value="0">
+            <div class="form-text">Chỉ dùng khi không áp định mức (hoặc dịch vụ chưa có ĐM).</div>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="svcApplyNorms" checked onchange="onApplyNormsToggle()">
+              <label class="form-check-label fw-semibold" for="svcApplyNorms">
+                Áp định mức đã thiết lập và hạch toán tự động (621/622/627 → 154)
+              </label>
+            </div>
+            <div id="svcNormPreview" class="small border rounded p-2 mt-2 bg-light" style="display:none"></div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold">Ghi chú / số hợp đồng</label>
+            <input type="text" id="svcNote" class="form-control" placeholder="Mô tả ngắn gọn nội dung dịch vụ">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-success" onclick="createJob()">Lưu lệnh dịch vụ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal định mức -->
+<div class="modal fade" id="stdModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Định mức giá vốn dịch vụ (trên 1 đơn vị)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-light border small mb-3">
+          Định mức gắn với <strong>mã dịch vụ</strong>. Khi lập lệnh cho khách bất kỳ, hệ thống nhân định mức × số lượng lệnh rồi ghi sổ
+          Nợ 621/622/6271/6272 · kết chuyển 154. Chi phí thực tế phát sinh thêm vẫn có thể bổ sung trên lệnh.
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-8">
+            <label class="form-label fw-bold">Dịch vụ <span class="text-danger">*</span></label>
+            <select id="stdProduct" class="form-select" onchange="loadStdForm()"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold">Ghi chú</label>
+            <input type="text" id="stdNote" class="form-control" placeholder="VD: Gói bảo trì chuẩn">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold">NCTT / ĐV (622)</label>
+            <input type="number" id="stdLabor" class="form-control text-end" min="0" step="1000" value="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold">SXC định phí / ĐV (6271)</label>
+            <input type="number" id="stdOhFixed" class="form-control text-end" min="0" step="1000" value="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold">SXC biến phí / ĐV (6272)</label>
+            <input type="number" id="stdOhVar" class="form-control text-end" min="0" step="1000" value="0">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold">Mua ngoài / ĐV (627)</label>
+            <input type="number" id="stdOutsource" class="form-control text-end" min="0" step="1000" value="0">
+          </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="fw-bold">NVL / vật tư trên 1 đơn vị dịch vụ</div>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="addStdMatRow()">+ Thêm dòng NVL</button>
+        </div>
+        <div class="table-responsive border rounded">
+          <table class="table table-sm mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th style="width:45%">Vật tư</th>
+                <th style="width:18%">SL / ĐV dịch vụ</th>
+                <th style="width:22%">Đơn giá cố định (để trống = WAC)</th>
+                <th style="width:3rem"></th>
+              </tr>
+            </thead>
+            <tbody id="stdMatBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-danger me-auto" onclick="deleteStd()">Xóa định mức</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-primary" onclick="saveStd()">Lưu định mức</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal chi tiết -->
+<div class="modal fade" id="jobModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="jobModalTitle">Chi tiết lệnh dịch vụ</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="jobModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block sme_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+if (window.KetoDatePicker && typeof KetoDatePicker.ensureHooks === 'function') KetoDatePicker.ensureHooks();
+const money = n => Number(n || 0).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' ₫';
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const COST_TYPE_VI = {
+  material: 'Nguyên vật liệu trực tiếp',
+  labor: 'Nhân công trực tiếp',
+  outsource: 'Dịch vụ mua ngoài',
+  overhead: 'Chi phí sản xuất chung',
+};
+let serviceProducts = [];
+let materialProducts = [];
+let departments = [];
+let currentJob = null;
+let jobModal, createJobModal, stdModal;
+
+function isoFrom(id) {
+  if (window.KetoDatePicker && KetoDatePicker.getIsoValue) return KetoDatePicker.getIsoValue(id) || '';
+  return (document.getElementById(id)?.value || '').trim();
+}
+
+async function api(url, opts) {
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', ...(opts?.headers || {}) },
+    ...opts,
+  });
+  let json; try { json = await res.json(); } catch { throw new Error('Phản hồi không hợp lệ'); }
+  if (!res.ok || json.success === false) throw new Error(json.error || json.message || ('HTTP ' + res.status));
+  return json;
+}
+
+function statusBadge(s) {
+  const map = {
+    open: ['Mới lập', 'bg-secondary'],
+    in_progress: ['Đang thực hiện', 'bg-warning text-dark'],
+    partial_delivered: ['Nghiệm thu một phần', 'bg-info text-dark'],
+    delivered: ['Đã nghiệm thu hết', 'bg-success'],
+    cancelled: ['Đã hủy', 'bg-dark'],
+  };
+  const [lab, cls] = map[s] || [s, 'bg-light text-dark'];
+  return `<span class="badge ${cls}">${esc(lab)}</span>`;
+}
+
+function openCreateModal() {
+  document.getElementById('svcQty').value = 1;
+  document.getElementById('svcLabor').value = 0;
+  document.getElementById('svcCustomer').value = '';
+  document.getElementById('svcDepartment').value = '';
+  document.getElementById('svcNote').value = '';
+  document.getElementById('svcApplyNorms').checked = true;
+  document.getElementById('svcNormPreview').style.display = 'none';
+  onApplyNormsToggle();
+  refreshNormPreview();
+  createJobModal.show();
+}
+
+function productHasStd(pid) {
+  const p = serviceProducts.find(x => Number(x.id) === Number(pid));
+  return p && Number(p.has_standard) === 1;
+}
+
+function onApplyNormsToggle() {
+  const on = document.getElementById('svcApplyNorms').checked;
+  const pid = Number(document.getElementById('svcProduct').value || 0);
+  const has = productHasStd(pid);
+  document.getElementById('wrapManualLabor').style.display = (on && has) ? 'none' : '';
+  refreshNormPreview();
+}
+
+async function refreshNormPreview() {
+  const box = document.getElementById('svcNormPreview');
+  const on = document.getElementById('svcApplyNorms').checked;
+  const pid = Number(document.getElementById('svcProduct').value || 0);
+  const qty = Number(document.getElementById('svcQty').value || 0);
+  if (!on || !pid || qty <= 0) {
+    box.style.display = 'none';
+    return;
+  }
+  try {
+    const res = await api('/api/sme/service-costing/standards/preview', {
+      method: 'POST', body: JSON.stringify({ service_product_id: pid, qty }),
+    });
+    const prev = res.data || {};
+    if (!prev.has_standard) {
+      box.style.display = '';
+      box.innerHTML = '<span class="text-warning">Dịch vụ chưa có định mức — sẽ không tự hạch toán CP. Hãy thiết lập ở tab Định mức hoặc nhập NC thủ công.</span>';
+      document.getElementById('wrapManualLabor').style.display = '';
+      return;
+    }
+    const rows = (prev.lines || []).map(l =>
+      `<div class="d-flex justify-content-between gap-2"><span>${esc(l.label)}</span><span class="svc-money">${money(l.amount)}</span></div>`
+    ).join('');
+    box.style.display = '';
+    box.innerHTML = `<div class="fw-semibold mb-1">Ước tính theo định mức × ${qty}:</div>${rows}
+      <div class="d-flex justify-content-between border-top mt-1 pt-1 fw-bold"><span>Tổng</span><span class="text-danger">${money(prev.total)}</span></div>`;
+    document.getElementById('wrapManualLabor').style.display = 'none';
+  } catch (e) {
+    box.style.display = '';
+    box.innerHTML = `<span class="text-danger">${esc(e.message)}</span>`;
+  }
+}
+
+async function loadPickers() {
+  const [svc, mats, deps] = await Promise.all([
+    api('/api/sme/service-costing/products'),
+    api('/api/production/materials-for-service'),
+    api('/api/sme/service-costing/departments'),
+  ]);
+  serviceProducts = svc.data || [];
+  materialProducts = mats.data || [];
+  departments = deps.data || [];
+  const opts = serviceProducts.map(p => {
+    const tag = Number(p.has_standard) ? ' · có ĐM' : '';
+    return `<option value="${p.id}">[${esc(p.product_code || p.id)}] ${esc(p.name)}${tag}</option>`;
+  }).join('');
+  document.getElementById('svcProduct').innerHTML =
+    '<option value="">-- Chọn dịch vụ --</option>' + opts;
+  document.getElementById('stdProduct').innerHTML =
+    '<option value="">-- Chọn dịch vụ --</option>' + opts;
+  document.getElementById('deptList').innerHTML =
+    departments.map(d => `<option value="${esc(d)}"></option>`).join('');
+}
+
+document.getElementById('svcProduct')?.addEventListener('change', () => {
+  onApplyNormsToggle();
+});
+document.getElementById('svcQty')?.addEventListener('input', () => {
+  refreshNormPreview();
+});
+
+async function createJob() {
+  const pid = Number(document.getElementById('svcProduct').value || 0);
+  const qty = Number(document.getElementById('svcQty').value || 0);
+  const department = document.getElementById('svcDepartment').value.trim();
+  const apply_norms = document.getElementById('svcApplyNorms').checked;
+  if (!pid || qty <= 0) {
+    return Swal.fire('Thiếu thông tin', 'Vui lòng chọn dịch vụ và nhập số lượng lớn hơn 0', 'warning');
+  }
+  if (!department) {
+    return Swal.fire('Thiếu thông tin', 'Vui lòng nhập bộ phận trực tiếp thực hiện dịch vụ', 'warning');
+  }
+  try {
+    const res = await api('/api/sme/service-costing/jobs', {
+      method: 'POST',
+      body: JSON.stringify({
+        service_product_id: pid,
+        qty,
+        job_date: isoFrom('svcDate'),
+        customer_name: document.getElementById('svcCustomer').value.trim(),
+        department,
+        labor_cost: apply_norms && productHasStd(pid)
+          ? 0
+          : Number(document.getElementById('svcLabor').value || 0),
+        note: document.getElementById('svcNote').value.trim(),
+        apply_norms,
+      }),
+    });
+    createJobModal.hide();
+    Swal.fire({ icon: 'success', title: res.message || 'Đã lưu lệnh', timer: 2000, showConfirmButton: false });
+    await loadJobs();
+    openJob(res.data.id);
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function loadJobs() {
+  const qs = new URLSearchParams({
+    from: isoFrom('jobFrom'), to: isoFrom('jobTo'),
+    q: document.getElementById('jobQ').value.trim(),
+    status: document.getElementById('jobStatus').value,
+  });
+  try {
+    const res = await api('/api/sme/service-costing/jobs?' + qs.toString());
+    const rows = res.data || [];
+    const body = document.getElementById('jobBody');
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Chưa có lệnh dịch vụ</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(j => `
+      <tr>
+        <td class="fw-bold">${esc(j.voucher_no)}</td>
+        <td>${esc((j.job_date || '').slice(0,10))}</td>
+        <td>
+          ${esc(j.service_name)}
+          <div class="small svc-muted">${esc(j.service_code || '')}</div>
+          <div class="small text-primary">${esc(j.department || '')}</div>
+        </td>
+        <td class="text-end">${Number(j.qty || 0)}</td>
+        <td class="text-end svc-money">${money(j.total_cost)}</td>
+        <td class="text-end svc-money">${money(j.wip_balance)}</td>
+        <td class="text-end svc-money">${money(j.cogs_posted)}</td>
+        <td>${statusBadge(j.status)}</td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-primary" onclick="openJob(${j.id})">Chi tiết</button>
+        </td>
+      </tr>`).join('');
+  } catch (e) {
+    document.getElementById('jobBody').innerHTML =
+      `<tr><td colspan="9" class="text-danger text-center">${esc(e.message)}</td></tr>`;
+  }
+}
+
+async function openJob(id) {
+  try {
+    const res = await api('/api/sme/service-costing/jobs/' + id);
+    currentJob = res.data;
+    renderJobModal(currentJob);
+    jobModal.show();
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+function renderJobModal(j) {
+  const statusText = ({
+    open: 'Mới lập', in_progress: 'Đang thực hiện',
+    partial_delivered: 'Nghiệm thu một phần', delivered: 'Đã nghiệm thu hết', cancelled: 'Đã hủy',
+  })[j.status] || j.status;
+  document.getElementById('jobModalTitle').textContent =
+    `${j.voucher_no} · ${j.service_name || ''} · ${statusText}`;
+  const locked = j.status === 'delivered' || j.status === 'cancelled';
+  const canDeliver = !locked && Number(j.wip_balance || 0) > 0;
+  const costs = j.costs || [];
+  const deliveries = j.deliveries || [];
+  const matOpts = materialProducts.map(p =>
+    `<option value="${p.id}">[${esc(p.product_code || '')}] ${esc(p.name)} · tài khoản ${esc(p.inventory_account || '')}</option>`
+  ).join('');
+  const costRows = costs.map(c => `
+    <tr>
+      <td>${esc((c.cost_date || '').slice(0,10))}</td>
+      <td>${esc(COST_TYPE_VI[c.cost_type] || c.cost_type)}</td>
+      <td>${esc(c.description || c.material_name || '')}
+        ${Number(c.in_norm) ? '' : ' <span class="badge bg-danger">Vượt định mức</span>'}
+        ${c.match_status === 'provisional' || c.source_type === 'outsource_provisional'
+          ? (c.matched_invoice_id
+              ? ' <span class="badge bg-success">Đã khớp HĐ</span>'
+              : ' <span class="badge bg-warning text-dark">Thuê ngoài dự kiến</span>')
+          : ''}
+        ${c.source_type === 'inward_invoice' ? ' <span class="badge bg-info text-dark">Từ HĐ mua</span>' : ''}
+      </td>
+      <td class="text-end svc-money">${money(c.amount)}</td>
+      <td class="small">${esc(c.debit_collect_account || '')} / ${esc(c.credit_account || '')}</td>
+      <td class="small">${c.posted_to_wip ? 'Đã vào 154' : 'Chưa vào 154'}${c.posted_to_cogs ? ' · Đã sang giá vốn' : ''}</td>
+    </tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center">Chưa có chi phí</td></tr>';
+
+  const delivRows = deliveries.map(d => `
+    <tr>
+      <td>${esc((d.deliver_date || '').slice(0,10))}</td>
+      <td class="text-end">${Number(d.percent || 0).toLocaleString('vi-VN', {maximumFractionDigits: 2})}%</td>
+      <td class="text-end svc-money">${money(d.amount)}</td>
+      <td>${esc(d.note || '')}</td>
+    </tr>`).join('') || '<tr><td colspan="4" class="text-muted text-center">Chưa nghiệm thu lần nào</td></tr>';
+
+  document.getElementById('jobModalBody').innerHTML = `
+    <div class="row g-2 mb-3 small">
+      <div class="col-md-3"><strong>Khách hàng:</strong> ${esc(j.customer_name || '—')}</div>
+      <div class="col-md-3"><strong>Bộ phận thực hiện:</strong> ${esc(j.department || '—')}</div>
+      <div class="col-md-2"><strong>Số lượng:</strong> ${Number(j.qty || 0)} ${esc(j.unit || '')}</div>
+      <div class="col-md-2"><strong>Chi phí dở dang (154):</strong> <span class="svc-money">${money(j.wip_balance)}</span></div>
+      <div class="col-md-2"><strong>Giá vốn đã kết chuyển:</strong> <span class="svc-money">${money(j.cogs_posted)}</span></div>
+      <div class="col-md-2"><strong>Đã ứng trước:</strong> <span class="svc-money text-success">${money(j.advance_received || 0)}</span></div>
+    </div>
+    ${locked ? '' : `
+    <div class="border rounded p-3 mb-3 bg-light">
+      <div class="fw-bold mb-2">Thêm chi phí vào lệnh</div>
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small">Loại chi phí</label>
+          <select id="costType" class="form-select form-select-sm" onchange="toggleMatFields()">
+            <option value="material">Nguyên vật liệu trực tiếp (621)</option>
+            <option value="labor">Nhân công trực tiếp (622)</option>
+            <option value="outsource">Dịch vụ mua ngoài (627)</option>
+            <option value="overhead">Chi phí sản xuất chung (627)</option>
+          </select>
+        </div>
+        <div class="col-md-3 cost-mat">
+          <label class="form-label small">Vật tư / thành phẩm / hàng hóa</label>
+          <select id="costProduct" class="form-select form-select-sm"><option value="">-- Chọn --</option>${matOpts}</select>
+        </div>
+        <div class="col-md-2 cost-mat">
+          <label class="form-label small">Số lượng xuất</label>
+          <input type="number" id="costQty" class="form-control form-control-sm text-end" min="0" step="any" value="1">
+        </div>
+        <div class="col-md-2 cost-amt">
+          <label class="form-label small">Số tiền (đồng)</label>
+          <input type="number" id="costAmount" class="form-control form-control-sm text-end" min="0" step="1000" value="0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Tài khoản đối ứng (Có)</label>
+          <input type="text" id="costCredit" class="form-control form-control-sm" placeholder="Tự chọn">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Diễn giải</label>
+          <input type="text" id="costDesc" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+          <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" id="costInNorm" checked>
+            <label class="form-check-label small" for="costInNorm">Trong định mức bình thường</label>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <button type="button" class="btn btn-sm btn-success w-100" onclick="addCost(${j.id})">Ghi nhận chi phí</button>
+        </div>
+      </div>
+      <div class="form-text">Bỏ chọn «Trong định mức bình thường» → ghi thẳng Nợ 6323 (không giữ trên 154).</div>
+    </div>`}
+    <div class="table-responsive mb-3">
+      <table class="table table-sm align-middle">
+        <thead class="table-light"><tr>
+          <th>Ngày</th><th>Loại chi phí</th><th>Diễn giải</th><th class="text-end">Số tiền</th><th>Tài khoản</th><th>Tình trạng sổ</th>
+        </tr></thead>
+        <tbody>${costRows}</tbody>
+      </table>
+    </div>
+    <div class="fw-bold mb-2">Ứng trước / phiếu thu đã gắn</div>
+    <div class="table-responsive mb-3">
+      <table class="table table-sm align-middle">
+        <thead class="table-light"><tr>
+          <th>Ngày</th><th>PT</th><th class="text-end">Số tiền</th><th>TK Có</th><th>Ghi chú</th>
+        </tr></thead>
+        <tbody>${(j.advances || []).map(a => `
+          <tr>
+            <td>${esc((a.assign_date || '').slice(0,10))}</td>
+            <td>${esc(a.voucher_no || (a.bank_txn_id ? 'GD#' + a.bank_txn_id : '—'))}</td>
+            <td class="text-end svc-money">${money(a.amount)}</td>
+            <td>${esc(a.credit_account || '')}</td>
+            <td class="small">${esc(a.note || '')}</td>
+          </tr>`).join('') || '<tr><td colspan="5" class="text-muted text-center">Chưa gắn phiếu thu / GD NH</td></tr>'}</tbody>
+      </table>
+    </div>
+    <div class="fw-bold mb-2">Lịch sử nghiệm thu / kết chuyển giá vốn</div>
+    <div class="table-responsive mb-3">
+      <table class="table table-sm align-middle">
+        <thead class="table-light"><tr>
+          <th>Ngày nghiệm thu</th><th class="text-end">Tỷ lệ trên phần còn lại</th>
+          <th class="text-end">Số tiền kết chuyển</th><th>Ghi chú</th>
+        </tr></thead>
+        <tbody>${delivRows}</tbody>
+      </table>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      ${locked ? '' : `
+        ${!(j.costs || []).some(c => c.source_type === 'cost_standard') && productHasStd(j.service_product_id) ? `
+          <button class="btn btn-outline-success btn-sm" onclick="applyStdToJob(${j.id})">Áp định mức → ghi sổ</button>
+        ` : ''}
+        <button class="btn btn-outline-primary btn-sm" onclick="collectJob(${j.id})">Tập hợp lại vào tài khoản 154</button>
+        ${canDeliver ? `
+          <button class="btn btn-primary btn-sm" onclick="deliverJob(${j.id}, 100)">Nghiệm thu toàn bộ → 6323</button>
+          <button class="btn btn-outline-primary btn-sm" onclick="deliverPartial(${j.id})">Nghiệm thu một phần…</button>
+        ` : ''}
+        <button class="btn btn-outline-danger btn-sm" onclick="cancelJob(${j.id})">Hủy lệnh</button>
+      `}
+    </div>`;
+  toggleMatFields();
+}
+
+function toggleMatFields() {
+  const t = document.getElementById('costType')?.value;
+  document.querySelectorAll('.cost-mat').forEach(el => {
+    el.style.display = t === 'material' ? '' : 'none';
+  });
+  const credit = document.getElementById('costCredit');
+  if (!credit) return;
+  if (!credit.value) {
+    credit.placeholder = ({
+      material: '152 / 155 / 156',
+      labor: '3341',
+      outsource: '331',
+      overhead: '1111',
+    })[t] || '';
+  }
+}
+
+async function addCost(jobId) {
+  const cost_type = document.getElementById('costType').value;
+  const payload = {
+    cost_type,
+    description: document.getElementById('costDesc').value.trim(),
+    in_norm: document.getElementById('costInNorm').checked,
+    credit_account: document.getElementById('costCredit').value.trim() || null,
+    amount: Number(document.getElementById('costAmount').value || 0),
+  };
+  if (cost_type === 'material') {
+    payload.product_id = Number(document.getElementById('costProduct').value || 0);
+    payload.qty = Number(document.getElementById('costQty').value || 0);
+    if (!payload.product_id || payload.qty <= 0) {
+      return Swal.fire('Thiếu thông tin', 'Chọn vật tư và số lượng xuất lớn hơn 0', 'warning');
+    }
+  } else if (payload.amount <= 0) {
+    return Swal.fire('Thiếu số tiền', 'Nhập số tiền lớn hơn 0', 'warning');
+  }
+  try {
+    const res = await api(`/api/sme/service-costing/jobs/${jobId}/costs`, {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+    currentJob = res.data;
+    renderJobModal(currentJob);
+    loadJobs();
+    Swal.fire({ icon: 'success', title: res.message || 'Đã ghi nhận', timer: 1400, showConfirmButton: false });
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function collectJob(id) {
+  try {
+    const res = await api(`/api/sme/service-costing/jobs/${id}/collect`, { method: 'POST', body: '{}' });
+    currentJob = res.data; renderJobModal(currentJob); loadJobs();
+    Swal.fire({ icon: 'success', title: res.message, timer: 1400, showConfirmButton: false });
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function deliverJob(id, percent, amount, note) {
+  const body = {};
+  if (percent != null) body.percent = percent;
+  if (amount != null) body.amount = amount;
+  if (note) body.note = note;
+  const ok = await Swal.fire({
+    title: percent != null && percent < 100 ? 'Nghiệm thu một phần?' : 'Nghiệm thu toàn bộ?',
+    html: percent != null && percent < 100
+      ? `Kết chuyển <strong>${percent}%</strong> chi phí dở dang còn lại từ tài khoản 154 sang 6323. Phần còn lại giữ trên 154 chuyển kỳ sau.`
+      : 'Kết chuyển toàn bộ số dư tài khoản 154 của lệnh sang giá vốn dịch vụ (6323).',
+    icon: 'question', showCancelButton: true,
+    confirmButtonText: 'Xác nhận nghiệm thu', cancelButtonText: 'Hủy',
+  });
+  if (!ok.isConfirmed) return;
+  try {
+    const res = await api(`/api/sme/service-costing/jobs/${id}/deliver`, {
+      method: 'POST', body: JSON.stringify(body),
+    });
+    currentJob = res.data; renderJobModal(currentJob); loadJobs();
+    Swal.fire('Đã nghiệm thu', res.message || '', 'success');
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function deliverPartial(id) {
+  const wip = Number(currentJob?.wip_balance || 0);
+  const { value: form } = await Swal.fire({
+    title: 'Nghiệm thu một phần (kịch bản dở dang)',
+    html: `
+      <div class="text-start small">
+        <p class="mb-2">Chi phí dở dang còn lại trên tài khoản 154: <strong>${money(wip)}</strong></p>
+        <label class="form-label">Tỷ lệ nghiệm thu trên phần còn lại (%)</label>
+        <input id="swalPct" type="number" class="form-control mb-2" min="0.01" max="100" step="any" value="30">
+        <label class="form-label">Hoặc nhập số tiền kết chuyển (đồng)</label>
+        <input id="swalAmt" type="number" class="form-control mb-2" min="0" step="1000" placeholder="Để trống nếu dùng tỷ lệ">
+        <label class="form-label">Ghi chú (ví dụ: giai đoạn 1 / theo bảng chấm công)</label>
+        <input id="swalNote" type="text" class="form-control" placeholder="Căn cứ timesheet / % hoàn thành">
+      </div>`,
+    showCancelButton: true,
+    confirmButtonText: 'Nghiệm thu',
+    cancelButtonText: 'Đóng',
+    preConfirm: () => {
+      const percent = Number(document.getElementById('swalPct').value || 0);
+      const amountRaw = document.getElementById('swalAmt').value;
+      const amount = amountRaw === '' ? null : Number(amountRaw);
+      const note = document.getElementById('swalNote').value.trim();
+      if (amount != null && amount > 0) return { amount, note };
+      if (percent <= 0 || percent > 100) {
+        Swal.showValidationMessage('Tỷ lệ phải lớn hơn 0 và nhỏ hơn hoặc bằng 100');
+        return false;
+      }
+      return { percent, note };
+    },
+  });
+  if (!form) return;
+  await deliverJob(id, form.percent, form.amount, form.note);
+}
+
+async function cancelJob(id) {
+  const { value: reason } = await Swal.fire({
+    title: 'Hủy lệnh dịch vụ?', input: 'text', inputPlaceholder: 'Lý do hủy',
+    showCancelButton: true, confirmButtonText: 'Hủy lệnh', cancelButtonText: 'Đóng',
+  });
+  if (reason === undefined) return;
+  try {
+    const res = await api(`/api/sme/service-costing/jobs/${id}/cancel`, {
+      method: 'POST', body: JSON.stringify({ reason }),
+    });
+    currentJob = res.data; renderJobModal(currentJob); loadJobs();
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function doAllocate() {
+  const total_amount = Number(document.getElementById('allocAmount').value || 0);
+  if (total_amount <= 0) return Swal.fire('Thiếu số tiền', 'Nhập tổng tiền phân bổ lớn hơn 0', 'warning');
+  try {
+    const res = await api('/api/sme/service-costing/allocate', {
+      method: 'POST',
+      body: JSON.stringify({
+        total_amount,
+        credit_account: document.getElementById('allocCredit').value.trim() || '1111',
+        basis: document.getElementById('allocBasis').value,
+        description: document.getElementById('allocDesc').value.trim(),
+      }),
+    });
+    Swal.fire('Đã phân bổ', res.message || '', 'success');
+    loadJobs();
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function loadStandards() {
+  try {
+    const res = await api('/api/sme/service-costing/standards');
+    const rows = res.data || [];
+    const body = document.getElementById('stdBody');
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Chưa có định mức — bấm «Thêm / sửa định mức»</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map(s => `
+      <tr>
+        <td>
+          <div class="fw-semibold">${esc(s.service_name)}</div>
+          <div class="small text-muted">${esc(s.service_code || '')}</div>
+        </td>
+        <td class="text-end svc-money">${money(s.labor_std_per_unit)}</td>
+        <td class="text-end svc-money">${money(s.oh_fixed_std_per_unit)}</td>
+        <td class="text-end svc-money">${money(s.oh_variable_std_per_unit)}</td>
+        <td class="text-end svc-money">${money(s.outsource_std_per_unit)}</td>
+        <td class="text-end">${Number(s.material_count || 0)}</td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-primary" onclick="openStdModal(${s.service_product_id})">Sửa</button>
+        </td>
+      </tr>`).join('');
+  } catch (e) {
+    document.getElementById('stdBody').innerHTML =
+      `<tr><td colspan="7" class="text-danger text-center">${esc(e.message)}</td></tr>`;
+  }
+}
+
+function matOptionsHtml(selected) {
+  return '<option value="">-- Chọn vật tư --</option>' + materialProducts.map(p =>
+    `<option value="${p.id}" ${Number(selected) === Number(p.id) ? 'selected' : ''}>[${esc(p.product_code || '')}] ${esc(p.name)}</option>`
+  ).join('');
+}
+
+function addStdMatRow(mat) {
+  const tr = document.createElement('tr');
+  tr.className = 'std-mat-row';
+  tr.innerHTML = `
+    <td><select class="form-select form-select-sm std-mat-id">${matOptionsHtml(mat?.material_product_id)}</select></td>
+    <td><input type="number" class="form-control form-control-sm text-end std-mat-qty" min="0" step="any" value="${mat?.qty_per_unit ?? 1}"></td>
+    <td><input type="number" class="form-control form-control-sm text-end std-mat-uc" min="0" step="1000" placeholder="WAC" value="${mat?.unit_cost ?? ''}"></td>
+    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="this.closest('tr').remove()">&times;</button></td>`;
+  document.getElementById('stdMatBody').appendChild(tr);
+}
+
+function openStdModal(productId) {
+  document.getElementById('stdMatBody').innerHTML = '';
+  document.getElementById('stdLabor').value = 0;
+  document.getElementById('stdOhFixed').value = 0;
+  document.getElementById('stdOhVar').value = 0;
+  document.getElementById('stdOutsource').value = 0;
+  document.getElementById('stdNote').value = '';
+  if (productId) document.getElementById('stdProduct').value = String(productId);
+  stdModal.show();
+  if (productId) loadStdForm();
+}
+
+async function loadStdForm() {
+  const pid = Number(document.getElementById('stdProduct').value || 0);
+  document.getElementById('stdMatBody').innerHTML = '';
+  if (!pid) return;
+  try {
+    const res = await api('/api/sme/service-costing/standards/' + pid);
+    const s = res.data;
+    if (!s) {
+      addStdMatRow();
+      return;
+    }
+    document.getElementById('stdLabor').value = s.labor_std_per_unit || 0;
+    document.getElementById('stdOhFixed').value = s.oh_fixed_std_per_unit || 0;
+    document.getElementById('stdOhVar').value = s.oh_variable_std_per_unit || 0;
+    document.getElementById('stdOutsource').value = s.outsource_std_per_unit || 0;
+    document.getElementById('stdNote').value = s.note || '';
+    const mats = s.materials || [];
+    if (!mats.length) addStdMatRow();
+    else mats.forEach(addStdMatRow);
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function saveStd() {
+  const pid = Number(document.getElementById('stdProduct').value || 0);
+  if (!pid) return Swal.fire('Thiếu thông tin', 'Chọn dịch vụ', 'warning');
+  const materials = [...document.querySelectorAll('#stdMatBody .std-mat-row')].map(tr => ({
+    material_product_id: Number(tr.querySelector('.std-mat-id').value || 0),
+    qty_per_unit: Number(tr.querySelector('.std-mat-qty').value || 0),
+    unit_cost: tr.querySelector('.std-mat-uc').value === ''
+      ? null
+      : Number(tr.querySelector('.std-mat-uc').value || 0),
+  })).filter(m => m.material_product_id > 0 && m.qty_per_unit > 0);
+  try {
+    const res = await api('/api/sme/service-costing/standards', {
+      method: 'POST',
+      body: JSON.stringify({
+        service_product_id: pid,
+        labor_std_per_unit: Number(document.getElementById('stdLabor').value || 0),
+        oh_fixed_std_per_unit: Number(document.getElementById('stdOhFixed').value || 0),
+        oh_variable_std_per_unit: Number(document.getElementById('stdOhVar').value || 0),
+        outsource_std_per_unit: Number(document.getElementById('stdOutsource').value || 0),
+        note: document.getElementById('stdNote').value.trim(),
+        materials,
+      }),
+    });
+    await loadPickers();
+    await loadStandards();
+    Swal.fire({ icon: 'success', title: res.message || 'Đã lưu', timer: 1600, showConfirmButton: false });
+    stdModal.hide();
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function deleteStd() {
+  const pid = Number(document.getElementById('stdProduct').value || 0);
+  if (!pid) return;
+  const ok = await Swal.fire({
+    title: 'Xóa định mức?', icon: 'warning', showCancelButton: true,
+    confirmButtonText: 'Xóa', cancelButtonText: 'Hủy',
+  });
+  if (!ok.isConfirmed) return;
+  try {
+    await api('/api/sme/service-costing/standards/' + pid, { method: 'DELETE' });
+    await loadPickers();
+    await loadStandards();
+    stdModal.hide();
+    Swal.fire({ icon: 'success', title: 'Đã xóa', timer: 1200, showConfirmButton: false });
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function applyStdToJob(jobId) {
+  const ok = await Swal.fire({
+    title: 'Áp định mức?',
+    text: 'Ghi chi phí định mức × số lượng lệnh và hạch toán vào 154.',
+    icon: 'question', showCancelButton: true,
+    confirmButtonText: 'Áp dụng', cancelButtonText: 'Hủy',
+  });
+  if (!ok.isConfirmed) return;
+  try {
+    const res = await api(`/api/sme/service-costing/jobs/${jobId}/apply-standard`, {
+      method: 'POST', body: '{}',
+    });
+    currentJob = res.data;
+    renderJobModal(currentJob);
+    loadJobs();
+    Swal.fire('Đã áp định mức', res.message || '', 'success');
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+let osInvoices = [];
+let osProvisionals = [];
+let osOpenJobs = [];
+
+async function loadOutsourceTab() {
+  await Promise.all([
+    loadOutsourceJobs(),
+    loadOutsourceProvisionals(),
+    loadOutsourceInvoices(),
+    loadOutsourceHistory(),
+  ]);
+  renderOsAllocRows();
+}
+
+async function loadOutsourceJobs() {
+  try {
+    const res = await api('/api/sme/service-costing/jobs?status=');
+    osOpenJobs = (res.data || []).filter(j =>
+      ['open', 'in_progress', 'partial_delivered'].includes(j.status)
+    );
+    document.getElementById('osJob').innerHTML =
+      '<option value="">-- Chọn lệnh --</option>' +
+      osOpenJobs.map(j =>
+        `<option value="${j.id}">${esc(j.voucher_no)} · ${esc(j.service_name || '')} · ${esc(j.customer_name || '')}</option>`
+      ).join('');
+  } catch (e) { /* ignore */ }
+}
+
+async function loadOutsourceProvisionals() {
+  try {
+    const res = await api('/api/sme/service-costing/outsource/provisionals');
+    osProvisionals = res.data || [];
+    const body = document.getElementById('osProvBody');
+    if (!osProvisionals.length) {
+      body.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Không có dòng dự kiến chưa khớp</td></tr>';
+    } else {
+      body.innerHTML = osProvisionals.map(c => `
+        <tr>
+          <td class="small"><b>${esc(c.voucher_no)}</b><div class="text-muted">${esc(c.service_name || '')}</div></td>
+          <td class="small">${esc(c.vendor_name || '—')}</td>
+          <td class="text-end svc-money">${money(c.amount)}</td>
+        </tr>`).join('');
+    }
+    renderOsAllocRows();
+  } catch (e) {
+    document.getElementById('osProvBody').innerHTML =
+      `<tr><td colspan="3" class="text-danger">${esc(e.message)}</td></tr>`;
+  }
+}
+
+async function loadOutsourceInvoices() {
+  try {
+    const res = await api('/api/sme/service-costing/outsource/invoices?unassigned=1');
+    osInvoices = res.data || [];
+    const sel = document.getElementById('osInvoice');
+    sel.innerHTML = '<option value="">-- Chọn hóa đơn --</option>' +
+      osInvoices.map(i =>
+        `<option value="${i.id}">${esc(i.invoice_no || i.id)} · ${esc(i.seller_name || '')} · còn ${Number(i.remain_amount || 0).toLocaleString('vi-VN')}</option>`
+      ).join('');
+    onOsInvoiceChange();
+  } catch (e) {
+    document.getElementById('osInvoice').innerHTML =
+      `<option value="">${esc(e.message)}</option>`;
+  }
+}
+
+function onOsInvoiceChange() {
+  const id = Number(document.getElementById('osInvoice').value || 0);
+  const inv = osInvoices.find(x => Number(x.id) === id);
+  document.getElementById('osInvRemain').value = inv
+    ? Number(inv.remain_amount || 0).toLocaleString('vi-VN') + ' ₫'
+    : '';
+  document.getElementById('osInvMeta').textContent = inv
+    ? `Trước thuế: ${Number(inv.net_amount || 0).toLocaleString('vi-VN')} ₫ · VAT: ${Number(inv.tax_amount || 0).toLocaleString('vi-VN')} ₫ · Đã gán: ${Number(inv.assigned_amount || 0).toLocaleString('vi-VN')} ₫`
+    : '';
+}
+
+function renderOsAllocRows() {
+  const body = document.getElementById('osAllocBody');
+  if (!body) return;
+  // Mỗi lệnh mở 1 dòng; nếu có provisional thì gắn sẵn
+  const byJob = new Map();
+  osOpenJobs.forEach(j => {
+    byJob.set(j.id, { job: j, provisionals: [] });
+  });
+  osProvisionals.forEach(c => {
+    if (!byJob.has(c.job_id)) {
+      byJob.set(c.job_id, {
+        job: {
+          id: c.job_id, voucher_no: c.voucher_no,
+          service_name: c.service_name, customer_name: c.customer_name,
+        },
+        provisionals: [],
+      });
+    }
+    byJob.get(c.job_id).provisionals.push(c);
+  });
+  const rows = [...byJob.values()];
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Không có lệnh đang mở</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(({ job, provisionals }) => {
+    const provLabel = provisionals.length
+      ? provisionals.map(p =>
+          `#${p.id} ${Number(p.amount || 0).toLocaleString('vi-VN')} ₫${p.vendor_name ? ' · ' + esc(p.vendor_name) : ''}`
+        ).join('<br>')
+      : '<span class="text-muted">—</span>';
+    const defaultAmt = provisionals.length === 1 ? Number(provisionals[0].amount || 0) : 0;
+    const defaultProv = provisionals.length === 1 ? provisionals[0].id : '';
+    return `<tr class="os-alloc-row" data-job="${job.id}">
+      <td><input type="checkbox" class="form-check-input os-alloc-chk" onchange="refreshOsAllocTotal()"></td>
+      <td class="small">
+        <b>${esc(job.voucher_no)}</b>
+        <div class="text-muted">${esc(job.service_name || '')}</div>
+        <div class="text-muted">${esc(job.customer_name || '')}</div>
+      </td>
+      <td class="small">
+        ${provLabel}
+        ${provisionals.length > 1 ? `
+          <select class="form-select form-select-sm mt-1 os-alloc-prov">
+            <option value="">Không khớp dòng cụ thể</option>
+            ${provisionals.map(p =>
+              `<option value="${p.id}">#${p.id} · ${Number(p.amount || 0).toLocaleString('vi-VN')}</option>`
+            ).join('')}
+          </select>` : `<input type="hidden" class="os-alloc-prov" value="${defaultProv}">`}
+      </td>
+      <td><input type="number" class="form-control form-control-sm text-end os-alloc-amt" min="0" step="1000"
+                 value="${defaultAmt || ''}" oninput="refreshOsAllocTotal()"></td>
+    </tr>`;
+  }).join('');
+  refreshOsAllocTotal();
+}
+
+function refreshOsAllocTotal() {
+  let t = 0;
+  document.querySelectorAll('#osAllocBody .os-alloc-row').forEach(tr => {
+    if (!tr.querySelector('.os-alloc-chk')?.checked) return;
+    t += parseFloat(tr.querySelector('.os-alloc-amt')?.value) || 0;
+  });
+  const el = document.getElementById('osAllocTotal');
+  if (el) el.textContent = Number(t).toLocaleString('vi-VN');
+}
+
+async function saveOutsourceProvisional() {
+  const job_id = Number(document.getElementById('osJob').value || 0);
+  const amount = Number(document.getElementById('osAmount').value || 0);
+  if (!job_id || amount <= 0) {
+    return Swal.fire('Thiếu thông tin', 'Chọn lệnh và nhập số tiền > 0', 'warning');
+  }
+  try {
+    const res = await api('/api/sme/service-costing/outsource/provisional', {
+      method: 'POST',
+      body: JSON.stringify({
+        job_id,
+        amount,
+        vendor_name: document.getElementById('osVendor').value.trim(),
+        description: document.getElementById('osDesc').value.trim(),
+      }),
+    });
+    document.getElementById('osAmount').value = 0;
+    document.getElementById('osDesc').value = '';
+    await loadOutsourceProvisionals();
+    loadJobs();
+    Swal.fire({ icon: 'success', title: res.message || 'Đã ghi', timer: 1600, showConfirmButton: false });
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function assignOutsourceInvoice() {
+  const invoice_id = Number(document.getElementById('osInvoice').value || 0);
+  if (!invoice_id) return Swal.fire('Thiếu hóa đơn', 'Chọn hóa đơn NCC', 'warning');
+  const allocations = [];
+  document.querySelectorAll('#osAllocBody .os-alloc-row').forEach(tr => {
+    if (!tr.querySelector('.os-alloc-chk')?.checked) return;
+    const amount = Number(tr.querySelector('.os-alloc-amt')?.value || 0);
+    if (amount <= 0) return;
+    const provEl = tr.querySelector('.os-alloc-prov');
+    const provisional_cost_id = provEl && provEl.value ? Number(provEl.value) : null;
+    allocations.push({
+      job_id: Number(tr.dataset.job),
+      amount,
+      provisional_cost_id: provisional_cost_id || undefined,
+    });
+  });
+  if (!allocations.length) {
+    return Swal.fire('Thiếu phân bổ', 'Tick lệnh và nhập số tiền gán', 'warning');
+  }
+  try {
+    const res = await api('/api/sme/service-costing/outsource/assign', {
+      method: 'POST',
+      body: JSON.stringify({
+        invoice_id,
+        allocations,
+        note: document.getElementById('osAssignNote').value.trim(),
+      }),
+    });
+    document.getElementById('osAssignNote').value = '';
+    await loadOutsourceTab();
+    loadJobs();
+    Swal.fire('Đã gán hóa đơn', res.message || '', 'success');
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function loadOutsourceHistory() {
+  try {
+    const res = await api('/api/sme/service-costing/outsource/assignments');
+    const rows = res.data || [];
+    const body = document.getElementById('osHistBody');
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Chưa có lần gán</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.slice(0, 30).map(a => `
+      <tr>
+        <td class="small">${esc((a.assign_date || '').slice(0, 10))}</td>
+        <td class="small">${esc(a.invoice_no || a.invoice_id)}</td>
+        <td class="small">${esc(a.voucher_no)} · ${esc(a.service_name || '')}</td>
+        <td class="text-end svc-money">${money(a.amount)}</td>
+      </tr>`).join('');
+  } catch (e) { /* ignore */ }
+}
+
+let advOpenJobs = [];
+let advReceipts = [];
+let advBankTxns = [];
+
+async function loadAdvanceTab() {
+  await Promise.all([
+    loadAdvanceJobs(),
+    loadAdvanceReceipts(),
+    loadAdvanceBankTxns(),
+    loadAdvanceHistory(),
+  ]);
+  renderAdvRcptAllocRows();
+  renderAdvBankAllocRows();
+}
+
+async function loadAdvanceJobs() {
+  try {
+    const res = await api('/api/sme/service-costing/jobs?status=');
+    advOpenJobs = (res.data || []).filter(j =>
+      ['open', 'in_progress', 'partial_delivered'].includes(j.status)
+    );
+    const opts = advOpenJobs.map(j =>
+      `<option value="${j.id}">${esc(j.voucher_no)} · ${esc(j.service_name || '')} · ${esc(j.customer_name || '')}</option>`
+    ).join('');
+    document.getElementById('advJob').innerHTML = '<option value="">-- Chọn lệnh --</option>' + opts;
+  } catch (e) { /* ignore */ }
+}
+
+async function loadAdvanceReceipts() {
+  try {
+    const res = await api('/api/sme/service-costing/advances/receipts?unassigned=1');
+    advReceipts = res.data || [];
+    const sel = document.getElementById('advReceipt');
+    sel.innerHTML = '<option value="">-- Chọn phiếu thu --</option>' +
+      advReceipts.map(r =>
+        `<option value="${r.id}">${esc(r.voucher_no)} · ${esc(r.party_name || '')} · còn ${Number(r.remaining_amount || 0).toLocaleString('vi-VN')}</option>`
+      ).join('');
+    onAdvReceiptChange();
+  } catch (e) {
+    document.getElementById('advReceipt').innerHTML = `<option value="">${esc(e.message)}</option>`;
+  }
+}
+
+async function loadAdvanceBankTxns() {
+  try {
+    const res = await api('/api/sme/service-costing/advances/bank-txns');
+    advBankTxns = res.data || [];
+    const sel = document.getElementById('advBankTxn');
+    sel.innerHTML = '<option value="">-- Chọn giao dịch NH --</option>' +
+      advBankTxns.map(t =>
+        `<option value="${t.id}">${esc((t.transaction_date || '').slice(0, 10))} · ${esc(t.counterparty_name || '')} · ${Number(t.remain_amount || 0).toLocaleString('vi-VN')}</option>`
+      ).join('');
+    onAdvBankChange();
+  } catch (e) {
+    document.getElementById('advBankTxn').innerHTML = `<option value="">${esc(e.message)}</option>`;
+  }
+}
+
+function onAdvReceiptChange() {
+  const id = Number(document.getElementById('advReceipt').value || 0);
+  const r = advReceipts.find(x => Number(x.id) === id);
+  document.getElementById('advRcptRemain').value = r
+    ? Number(r.remaining_amount || 0).toLocaleString('vi-VN') + ' ₫' : '';
+  document.getElementById('advRcptMeta').textContent = r
+    ? `Ngày ${esc((r.voucher_date || '').slice(0, 10))} · Có ${esc(r.credit_account || '')} · Tổng PT: ${Number(r.amount || 0).toLocaleString('vi-VN')} ₫`
+    : '';
+}
+
+function onAdvBankChange() {
+  const id = Number(document.getElementById('advBankTxn').value || 0);
+  const t = advBankTxns.find(x => Number(x.id) === id);
+  document.getElementById('advBankRemain').value = t
+    ? Number(t.remain_amount || 0).toLocaleString('vi-VN') + ' ₫' : '';
+  document.getElementById('advBankMeta').textContent = t
+    ? esc((t.content || '').slice(0, 120)) : '';
+}
+
+function renderAdvRcptAllocRows() {
+  const body = document.getElementById('advRcptAllocBody');
+  if (!body) return;
+  if (!advOpenJobs.length) {
+    body.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Không có lệnh đang mở</td></tr>';
+    return;
+  }
+  body.innerHTML = advOpenJobs.map(j => `
+    <tr class="adv-rcpt-row" data-job="${j.id}">
+      <td><input type="checkbox" class="form-check-input adv-rcpt-chk" onchange="refreshAdvRcptTotal()"></td>
+      <td class="small"><b>${esc(j.voucher_no)}</b><div class="text-muted">${esc(j.service_name || '')}</div></td>
+      <td><input type="number" class="form-control form-control-sm text-end adv-rcpt-amt" min="0" step="1000" oninput="refreshAdvRcptTotal()"></td>
+    </tr>`).join('');
+  refreshAdvRcptTotal();
+}
+
+function renderAdvBankAllocRows() {
+  const body = document.getElementById('advBankAllocBody');
+  if (!body) return;
+  if (!advOpenJobs.length) {
+    body.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Không có lệnh đang mở</td></tr>';
+    return;
+  }
+  body.innerHTML = advOpenJobs.map(j => `
+    <tr class="adv-bank-row" data-job="${j.id}">
+      <td><input type="checkbox" class="form-check-input adv-bank-chk" onchange="refreshAdvBankTotal()"></td>
+      <td class="small"><b>${esc(j.voucher_no)}</b><div class="text-muted">${esc(j.service_name || '')}</div></td>
+      <td><input type="number" class="form-control form-control-sm text-end adv-bank-amt" min="0" step="1000" oninput="refreshAdvBankTotal()"></td>
+    </tr>`).join('');
+  refreshAdvBankTotal();
+}
+
+function refreshAdvRcptTotal() {
+  let t = 0;
+  document.querySelectorAll('#advRcptAllocBody .adv-rcpt-row').forEach(tr => {
+    if (!tr.querySelector('.adv-rcpt-chk')?.checked) return;
+    t += parseFloat(tr.querySelector('.adv-rcpt-amt')?.value) || 0;
+  });
+  const el = document.getElementById('advRcptAllocTotal');
+  if (el) el.textContent = Number(t).toLocaleString('vi-VN');
+}
+
+function refreshAdvBankTotal() {
+  let t = 0;
+  document.querySelectorAll('#advBankAllocBody .adv-bank-row').forEach(tr => {
+    if (!tr.querySelector('.adv-bank-chk')?.checked) return;
+    t += parseFloat(tr.querySelector('.adv-bank-amt')?.value) || 0;
+  });
+  const el = document.getElementById('advBankAllocTotal');
+  if (el) el.textContent = Number(t).toLocaleString('vi-VN');
+}
+
+async function saveServiceAdvance() {
+  const job_id = Number(document.getElementById('advJob').value || 0);
+  const amount = Number(document.getElementById('advAmount').value || 0);
+  if (!job_id) return Swal.fire('Thiếu lệnh', 'Chọn lệnh dịch vụ', 'warning');
+  if (!(amount > 0)) return Swal.fire('Thiếu số tiền', 'Nhập số tiền thu trước', 'warning');
+  try {
+    const res = await api('/api/sme/service-costing/advances/record', {
+      method: 'POST',
+      body: JSON.stringify({
+        job_id, amount,
+        credit_account: '131',
+        payment_method: document.getElementById('advPayMethod').value,
+        reason: document.getElementById('advReason').value.trim(),
+      }),
+    });
+    document.getElementById('advAmount').value = '0';
+    await loadAdvanceTab();
+    loadJobs();
+    Swal.fire('Đã lập PT', res.message || '', 'success');
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function assignAdvanceReceipt() {
+  const voucher_id = Number(document.getElementById('advReceipt').value || 0);
+  if (!voucher_id) return Swal.fire('Thiếu PT', 'Chọn phiếu thu', 'warning');
+  const allocations = [];
+  document.querySelectorAll('#advRcptAllocBody .adv-rcpt-row').forEach(tr => {
+    if (!tr.querySelector('.adv-rcpt-chk')?.checked) return;
+    const amt = parseFloat(tr.querySelector('.adv-rcpt-amt')?.value) || 0;
+    if (amt > 0) allocations.push({ job_id: Number(tr.dataset.job), amount: amt });
+  });
+  if (!allocations.length) return Swal.fire('Thiếu phân bổ', 'Tick lệnh và nhập số tiền', 'warning');
+  try {
+    const res = await api('/api/sme/service-costing/advances/assign-receipt', {
+      method: 'POST',
+      body: JSON.stringify({ voucher_id, allocations }),
+    });
+    await loadAdvanceTab();
+    loadJobs();
+    Swal.fire('Đã gán PT', res.message || '', 'success');
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function assignAdvanceBank() {
+  const bank_txn_id = Number(document.getElementById('advBankTxn').value || 0);
+  if (!bank_txn_id) return Swal.fire('Thiếu GD', 'Chọn giao dịch ngân hàng', 'warning');
+  const allocations = [];
+  document.querySelectorAll('#advBankAllocBody .adv-bank-row').forEach(tr => {
+    if (!tr.querySelector('.adv-bank-chk')?.checked) return;
+    const amt = parseFloat(tr.querySelector('.adv-bank-amt')?.value) || 0;
+    if (amt > 0) allocations.push({ job_id: Number(tr.dataset.job), amount: amt });
+  });
+  if (!allocations.length) return Swal.fire('Thiếu phân bổ', 'Tick lệnh và nhập số tiền', 'warning');
+  try {
+    const res = await api('/api/sme/service-costing/advances/assign-bank', {
+      method: 'POST',
+      body: JSON.stringify({
+        bank_txn_id, allocations,
+        credit_account: '131',
+      }),
+    });
+    await loadAdvanceTab();
+    loadJobs();
+    Swal.fire('Đã gán GD NH', res.message || '', 'success');
+  } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+}
+
+async function loadAdvanceHistory() {
+  try {
+    const res = await api('/api/sme/service-costing/advances/assignments');
+    const rows = res.data || [];
+    const body = document.getElementById('advHistBody');
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Chưa có lần gán</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.slice(0, 30).map(a => `
+      <tr>
+        <td class="small">${esc((a.assign_date || '').slice(0, 10))}</td>
+        <td class="small">${esc(a.receipt_no || (a.bank_txn_id ? 'GD#' + a.bank_txn_id : ''))}</td>
+        <td class="small">${esc(a.job_voucher_no)} · ${esc(a.service_name || '')}</td>
+        <td class="text-end svc-money">${money(a.amount)}</td>
+      </tr>`).join('');
+  } catch (e) { /* ignore */ }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  jobModal = new bootstrap.Modal(document.getElementById('jobModal'));
+  createJobModal = new bootstrap.Modal(document.getElementById('createJobModal'));
+  stdModal = new bootstrap.Modal(document.getElementById('stdModal'));
+  if (window.KetoDatePicker) { KetoDatePicker.scan(); }
+  try {
+    await loadPickers();
+    await loadJobs();
+  } catch (e) { Swal.fire('Lỗi tải dữ liệu', e.message, 'error'); }
+});
+</script>
+{% endblock %}

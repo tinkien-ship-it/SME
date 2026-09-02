@@ -24,6 +24,7 @@
     .type-goods { background: #fef3c7; color: #92400e; }
     .type-materials { background: #dbeafe; color: #1e40af; }
     .type-fixed_asset { background: #ede9fe; color: #5b21b6; }
+    .type-intangible_asset { background: #f3e8ff; color: #6b21a8; }
     .type-tools { background: #e0e7ff; color: #3730a3; }
     .type-service { background: #dcfce7; color: #166534; }
     .acct-hint { font-size: 10px; color: #64748b; font-weight: 600; }
@@ -270,7 +271,7 @@
                                 <th style="width:55px;">ID</th>
                                 <th style="width:70px;">Kho</th>
                                 <th style="width:165px; color:#b30000;" id="thLineType">Loại hàng</th>
-                                <th style="width:90px;" id="thAcctHint">Định khoản</th>
+                                <th style="width:140px;" id="thAcctHint">Định khoản</th>
                                 <th style="width:280px;">Tên hàng</th>
                                 <th style="width:60px;">ĐVT</th>
                                 <th style="width:60px;">Số Lượng</th>
@@ -351,10 +352,43 @@ const IS_SERVICE_MODE = IMPORT_MODE === 'service';
 const LINE_TYPE_OPTIONS = [
     { value: 'goods', label: 'Hàng hóa', transitLabel: 'Hàng đang đi đường (HH)', debit: '156', transitDebit: '151', needsWarehouse: true },
     { value: 'materials', label: 'Nguyên vật liệu', transitLabel: 'Hàng đang đi đường (NVL)', debit: '152', transitDebit: '151', needsWarehouse: true },
-    { value: 'fixed_asset', label: 'Tài sản cố định', transitLabel: 'TSCĐ đang đi đường', debit: '2112', transitDebit: '2411', needsWarehouse: false },
+    { value: 'fixed_asset', label: 'TSCĐ hữu hình', transitLabel: 'TSCĐ đang đi đường', debit: '2112', transitDebit: '2411', needsWarehouse: false, faKind: 'tangible' },
+    { value: 'intangible_asset', label: 'TSCĐ vô hình', transitLabel: 'TSCĐ VH đang đi đường', debit: '2133', transitDebit: '2411', needsWarehouse: false, faKind: 'intangible' },
     { value: 'tools', label: 'Công cụ dụng cụ', transitLabel: 'Hàng đang đi đường (CCDC)', debit: '153', transitDebit: '151', needsWarehouse: false },
     { value: 'service', label: 'Dịch vụ', transitLabel: 'Dịch vụ', debit: '642', transitDebit: '642', needsWarehouse: false },
 ];
+/** TK TSCĐ từ danh mục COA — load async; fallback seed nếu API lỗi. */
+let FA_COA_ACCOUNTS = {
+    tangible_assets: [
+        { code: '2111', name: 'Nhà cửa, vật kiến trúc' },
+        { code: '2112', name: 'Máy móc, thiết bị' },
+        { code: '2113', name: 'Phương tiện vận tải, truyền dẫn' },
+        { code: '2114', name: 'Thiết bị, dụng cụ quản lý' },
+        { code: '2115', name: 'Cây lâu năm, súc vật làm việc và cho sản phẩm' },
+        { code: '2118', name: 'TSCĐ hữu hình khác' },
+    ],
+    intangible_assets: [
+        { code: '2131', name: 'Quyền sử dụng đất' },
+        { code: '2132', name: 'Quyền phát hành' },
+        { code: '2133', name: 'Bản quyền, bằng sáng chế' },
+        { code: '2134', name: 'Nhãn hiệu, tên thương mại' },
+        { code: '2135', name: 'Chương trình phần mềm' },
+        { code: '2136', name: 'Giấy phép và giấy phép nhượng quyền' },
+        { code: '2138', name: 'TSCĐ vô hình khác' },
+    ],
+};
+async function loadFaCoaAccounts() {
+    try {
+        const res = await fetch('/api/sme/fixed-assets/coa-accounts');
+        const json = await res.json();
+        if (json.success && json.data) {
+            FA_COA_ACCOUNTS = {
+                tangible_assets: json.data.tangible_assets || FA_COA_ACCOUNTS.tangible_assets,
+                intangible_assets: json.data.intangible_assets || FA_COA_ACCOUNTS.intangible_assets,
+            };
+        }
+    } catch (e) { /* giữ fallback */ }
+}
 const EXPENSE_ACCT_OPTIONS = [
     { value: '642', label: '642 QLDN' },
     { value: '641', label: '641 BH' },
@@ -454,6 +488,42 @@ function normalizeLineType(raw) {
     return DEFAULT_LINE_TYPE;
 }
 
+function isIntangibleLineType(type) {
+    return normalizeLineType(type) === 'intangible_asset';
+}
+
+function isFaLineType(type) {
+    const t = normalizeLineType(type);
+    return t === 'fixed_asset' || t === 'intangible_asset';
+}
+
+function buildAssetAccountOptions(selected, type) {
+    const meta = lineTypeMeta(type);
+    const intangible = meta.faKind === 'intangible' || normalizeLineType(type) === 'intangible_asset';
+    const raw = intangible
+        ? (FA_COA_ACCOUNTS.intangible_assets || [])
+        : (FA_COA_ACCOUNTS.tangible_assets || []);
+    // Chỉ TK nhóm 211 / 213 — tuyệt đối không lẫn 156 (hàng hóa) hay TK khác
+    const prefix = intangible ? '213' : '211';
+    const accounts = raw.filter(a => {
+        const code = String((a && a.code) != null ? a.code : a || '').trim();
+        return code.startsWith(prefix);
+    });
+    if (!accounts.length) return `<option value="${intangible ? '2133' : '2112'}">${intangible ? '2133' : '2112'}</option>`;
+    const defaultCode = intangible ? '2133' : '2112';
+    let sel = String(selected || meta.debit || defaultCode).trim();
+    if (!sel.startsWith(prefix)) sel = defaultCode;
+    const opts = accounts.map(a => {
+        const code = a.code || a;
+        const name = a.name ? ` — ${a.name}` : '';
+        return `<option value="${code}" ${code === sel ? 'selected' : ''}>${code}${name}</option>`;
+    });
+    if (sel && !accounts.some(a => String(a.code || a) === sel) && sel.startsWith(prefix)) {
+        opts.unshift(`<option value="${sel}" selected>${sel}</option>`);
+    }
+    return opts.join('');
+}
+
 function lineTypeMeta(type) {
     const t = normalizeLineType(type);
     const base = LINE_TYPE_OPTIONS.find(o => o.value === t) || LINE_TYPE_OPTIONS[0];
@@ -525,6 +595,7 @@ function applyLineTypeUI(row) {
     const type = normalizeLineType(row.querySelector('.line-type-select')?.value);
     const meta = lineTypeMeta(type);
     const isSvc = type === 'service';
+    const isFa = isFaLineType(type);
     const whCell = row.querySelector('.warehouse-cell');
     const whSelect = row.querySelector('.warehouse-select');
     if (whCell) whCell.classList.toggle('wh-disabled', !meta.needsWarehouse);
@@ -534,24 +605,54 @@ function applyLineTypeUI(row) {
     });
     const hint = row.querySelector('.acct-hint');
     const expSel = row.querySelector('.expense-account-select');
+    const assetSel = row.querySelector('.asset-account-select');
     if (expSel) expSel.classList.toggle('d-none', !isSvc);
+
+    if (assetSel) {
+        if (isFa) {
+            // Chỉ hiện dropdown 211x/213x — không để sót chữ «Nợ 156»
+            const prev = assetSel.value;
+            assetSel.innerHTML = buildAssetAccountOptions(prev, type);
+            assetSel.classList.remove('d-none');
+            assetSel.style.display = '';
+            assetSel.onchange = null; // không cần sync hint (đã ẩn)
+        } else {
+            assetSel.classList.add('d-none');
+            assetSel.innerHTML = '';
+            assetSel.value = '';
+        }
+    }
+
     if (hint) {
-        hint.classList.toggle('d-none', isSvc);
-        if (meta.inTransit) {
-            const debitShow = meta.debit; // 151 hoặc 2411
-            hint.innerHTML = `<span class="text-primary fw-bold">Nợ ${debitShow}</span>`
+        if (isFa || isSvc) {
+            // TSCĐ / dịch vụ: không hiện nhãn Nợ 156 (hay bất kỳ TK hàng hóa)
+            hint.textContent = '';
+            hint.innerHTML = '';
+            hint.classList.add('d-none');
+            if (isFa && meta.inTransit) {
+                // Gợi ý nhỏ phía trên dropdown TK cuối (2411 → 211x), không dùng 156
+                hint.classList.remove('d-none');
+                hint.innerHTML = `<span class="text-primary fw-bold">Nợ ${meta.debit}</span>`
+                    + `<div class="small text-muted" style="font-size:.7rem;line-height:1.1">→ chọn TK TSCĐ bên dưới</div>`;
+            }
+        } else if (meta.inTransit) {
+            hint.classList.remove('d-none');
+            hint.innerHTML = `<span class="text-primary fw-bold">Nợ ${meta.debit}</span>`
                 + `<div class="small text-muted" style="font-size:.7rem;line-height:1.1">→ ${meta.finalDebit} khi về / đưa SD</div>`;
         } else {
+            hint.classList.remove('d-none');
             hint.textContent = `Nợ ${meta.debit}`;
         }
     }
+
     const typeSelect = row.querySelector('.line-type-select');
     if (typeSelect) {
         typeSelect.className = `line-type-select form-select form-select-sm border-0 type-${type}`
             + (meta.inTransit ? ' text-primary fw-semibold' : '');
+        const faAcct = isFa ? (assetSel?.value || meta.debit) : meta.debit;
         typeSelect.title = meta.inTransit
             ? `${meta.label} — hạch toán Nợ ${meta.debit}`
-            : `${meta.label} — Nợ ${meta.debit}`;
+            : `${meta.label} — Nợ ${faAcct}`;
     }
     const nameInput = row.querySelector('.product-name');
     if (nameInput) {
@@ -773,8 +874,9 @@ function addRow(data = {}) {
             <select class="line-type-select form-select form-select-sm border-0">${buildLineTypeOptions(lineType)}</select>
         </td>
         <td class="text-center">
-            <span class="acct-hint">Nợ ${lineTypeMeta(lineType).debit}</span>
+            <span class="acct-hint ${isFaLineType(lineType) || lineType === 'service' ? 'd-none' : ''}">${isFaLineType(lineType) || lineType === 'service' ? '' : `Nợ ${lineTypeMeta(lineType).debit}`}</span>
             <select class="expense-account-select form-select form-select-sm border-0 ${lineType === 'service' ? '' : 'd-none'}">${buildExpenseAcctOptions(data.expense_account || '642')}</select>
+            <select class="asset-account-select form-select form-select-sm border-0 ${isFaLineType(lineType) ? '' : 'd-none'}">${buildAssetAccountOptions(data.asset_account, lineType)}</select>
         </td>
         <td>
             <input type="text" class="product-name form-control form-control-sm border-0" value="${(data.invoice_name || '').replace(/"/g, '&quot;')}" placeholder="Gõ tên sản phẩm...">
@@ -1096,20 +1198,36 @@ function validateImportPaymentBalances() {
 }
 
 async function loadSuppliersList() {
-    try {
-        const res = await fetch('/api/suppliers');
-        if (!res.ok) return;
-        suppliersCache = await res.json();
-        const dl = document.getElementById('supplierOptions');
-        if (!dl) return;
+    const input = document.getElementById('supplierSearch');
+    if (!input) return;
+    let supplierTimer = null;
+    input.addEventListener('input', () => {
+        clearTimeout(supplierTimer);
+        supplierTimer = setTimeout(() => searchSuppliers(input.value), 280);
+    });
+}
+
+async function searchSuppliers(q) {
+    const term = String(q || '').trim();
+    const dl = document.getElementById('supplierOptions');
+    if (!dl) return;
+    if (term.length < 2) {
         dl.innerHTML = '';
-        (suppliersCache || []).forEach(s => {
+        return;
+    }
+    try {
+        const res = await fetch('/api/suppliers?q=' + encodeURIComponent(term) + '&limit=40');
+        if (!res.ok) return;
+        const rows = await res.json();
+        suppliersCache = Array.isArray(rows) ? rows : (rows.data || []);
+        dl.innerHTML = '';
+        suppliersCache.forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.name || '';
             dl.appendChild(opt);
         });
     } catch (e) {
-        console.warn('loadSuppliersList:', e);
+        console.warn('searchSuppliers:', e);
     }
 }
 
@@ -1157,6 +1275,11 @@ async function fetchNextImportNo() {
 
 // ====================== KHỞI TẠO ======================
 document.addEventListener('DOMContentLoaded', () => {
+    loadFaCoaAccounts().then(() => {
+        document.querySelectorAll('#itemsTable tbody tr.import-row').forEach(row => {
+            try { applyLineTypeUI(row); } catch (e) {}
+        });
+    });
     try {
         if (typeof flatpickr === 'function') {
             flatpickr('#importDate', { dateFormat: 'd/m/Y', defaultDate: 'today', locale: 'vn' });
@@ -1396,6 +1519,7 @@ async function loadImportForEdit(importId) {
                 qty: item.qty,
                 price: item.buyprice,
                 line_type: item.line_type || 'goods',
+                asset_account: item.asset_account || '',
                 expense_account: item.expense_account || '642',
                 warehouse_code: item.warehouse_code || d.warehouse_code || '',
                 tax_pct: item.tax_pct,
@@ -1732,6 +1856,9 @@ function getConsolidatedItems() {
             expense_account: isServiceLineType(lineType)
                 ? (tr.querySelector('.expense-account-select')?.value || '642')
                 : null,
+            asset_account: isFaLineType(lineType)
+                ? (tr.querySelector('.asset-account-select')?.value || (isIntangibleLineType(lineType) ? '2133' : '2112'))
+                : null,
             unit: tr.querySelector('.invoice-unit').value.trim(),
             qty: parseNumber(tr.querySelector('.qty').value),
             buyprice: parseNumber(tr.querySelector('.buy-price').value),
@@ -1849,7 +1976,7 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
                     unit1: it.wholesale_unit || null,
                     unit_ratio: it.ratio || 1,
                     price: it.sale_price || 0,
-                    product_type: it.line_type || 'goods',
+                    product_type: (it.line_type === 'intangible_asset' ? 'fixed_asset' : it.line_type) || 'goods',
                     barcode: it.barcode || '',
                     barcode1: it.barcode1 || ''
                 })

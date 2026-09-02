@@ -22,6 +22,7 @@ from Services.sme.journal_engine import ensure_sme_journal_ready
 from Services.sme.pl_expense_breakdown import (
     b02_expense_total,
     journal_expense_breakdown,
+    pl_account_detail_rows,
     trial_balance_pl_totals,
 )
 
@@ -57,7 +58,7 @@ def _reconcile_with_bctc_and_tb(
     profit_before_tax: Decimal,
     branch_code: str | None = None,
 ) -> dict[str, Any]:
-    """So khớu LN/B02 kỳ và DT/CP với bảng cân đối phát sinh."""
+    """Đối chiếu B02 với BCPS: mỗi TK bù trừ phát sinh Nợ↔Có (trước KCKQ)."""
     checks: list[dict[str, Any]] = []
     dt_from = datetime.strptime(date_from, '%Y-%m-%d')
     dt_to = datetime.strptime(date_to, '%Y-%m-%d')
@@ -66,13 +67,22 @@ def _reconcile_with_bctc_and_tb(
     tb = trial_balance_pl_totals(
         conn, date_from, date_to, branch_code=branch_code,
     )
-    tb_rev = _money(tb['revenue_net'])
+    # TT58 B02-DNSN mã 01 = DT bán hàng + thu nhập khác (511/515 − 521 + 711)
+    # TT99 B02-DN mã 10 = doanh thu thuần bán hàng (511/515 − 521)
+    if tt58:
+        tb_rev = _money(tb.get('revenue_and_income', 0) or (
+            _money(tb['revenue_net']) + _money(tb.get('other_income', 0))
+        ))
+        rev_label = 'DT & thu nhập thuần (BCPS: bù trừ Nợ/Có TK 511/515/711 − 521)'
+    else:
+        tb_rev = _money(tb['revenue_net'])
+        rev_label = 'Doanh thu thuần (BCPS: bù trừ Nợ/Có TK 511/515 − 521)'
     tb_exp = _money(tb['expense_total'])
     tb_pbt = _money(tb.get('profit_before_tax', 0))
 
-    _add_check(checks, 'tb_revenue', 'Doanh thu thuần (BCPS TK 511/515 − 521)', tb_rev, revenue_b02)
-    _add_check(checks, 'tb_expense', 'Tổng chi phí (BCPS TK chi phí 6x/8x)', tb_exp, expense_b02)
-    _add_check(checks, 'tb_profit', 'LN trước thuế (BCPS: DT − CP + TN khác)', tb_pbt, profit_before_tax)
+    _add_check(checks, 'tb_revenue', rev_label, tb_rev, revenue_b02)
+    _add_check(checks, 'tb_expense', 'Tổng chi phí (BCPS: bù trừ Nợ/Có TK chi phí)', tb_exp, expense_b02)
+    _add_check(checks, 'tb_profit', 'LN trước thuế (BCPS: DT net − CP net)', tb_pbt, profit_before_tax)
 
     pat_code = '20' if tt58 else '60'
     if (
@@ -85,16 +95,26 @@ def _reconcile_with_bctc_and_tb(
         b02_pat = _money(is_rep['totals']['profit_after_tax'])
         _add_check(checks, 'b02_full_year', f'B02 {fy} (LNST mã {pat_code})', b02_pat, net_profit)
 
-        bs = balance_sheet(conn, fiscal_year=fy, period_to=12)
-        bs_profit = _money(bs.get('current_year_profit', 0))
-        profit_line = '420' if tt58 else '421'
-        _add_check(
-            checks,
-            'balance_sheet_current_profit',
-            f'LN năm trên B01 (chỉ tiêu {profit_line})',
-            bs_profit,
-            net_profit,
-        )
+        # B01 chỉ tiêu LN năm chỉ gồm kỳ chưa KCKQ — không so với B02 cả năm nếu đã khóa sổ
+        closed_n = conn.execute(
+            """
+            SELECT COUNT(DISTINCT period) FROM sme_journal_entries
+            WHERE fiscal_year = ? AND document_type = 'KCKQ' AND status = 'posted'
+              AND reverses_id IS NULL
+            """,
+            (fy,),
+        ).fetchone()[0]
+        if not closed_n:
+            bs = balance_sheet(conn, fiscal_year=fy, period_to=12)
+            bs_profit = _money(bs.get('current_year_profit', 0))
+            profit_line = '420' if tt58 else '421'
+            _add_check(
+                checks,
+                'balance_sheet_current_profit',
+                f'LN năm trên B01 (chỉ tiêu {profit_line})',
+                bs_profit,
+                net_profit,
+            )
     elif dt_from.year == dt_to.year and dt_from.month == dt_to.month:
         pstart, _ = period_bounds(dt_from.year, dt_from.month)
         _, pend = period_bounds(dt_to.year, dt_to.month)
@@ -164,11 +184,21 @@ def compute_sme_pos_profit_report(
     net_profit = _money(by_code.get(pat_code, 0))
     expense_total_b02 = b02_expense_total(by_code) if not tt58 else _money(by_code.get('02', 0))
 
-    expense_detail = journal_expense_breakdown(
+    expense_buckets = journal_expense_breakdown(
         conn, date_from, date_to, branch_code=branch_code,
     )
-    detail_amounts = expense_detail.get('amounts') or {}
-    detail_labels = expense_detail.get('labels') or {}
+    account_detail = pl_account_detail_rows(
+        conn, date_from, date_to, branch_code=branch_code,
+    )
+    expense_accounts = account_detail.get('expense_accounts') or []
+    expense_detail = {
+        'source': 'bcps',
+        'label': 'Phân rã chi phí (Cân đối phát sinh)',
+        'rows': [{**acc, 'source': 'bcps'} for acc in expense_accounts],
+        'total': (account_detail.get('totals') or {}).get('expense_total', 0),
+        'account_count': len(expense_accounts),
+    }
+    detail_amounts = expense_buckets.get('amounts') or {}
 
     if not tt58:
         op_exp = {
@@ -202,33 +232,6 @@ def compute_sme_pos_profit_report(
         branch_code=branch_code,
     )
 
-    expense_rows = []
-    if not tt58:
-        for code, name in (
-            ('11', 'Giá vốn hàng bán (B02)'),
-            ('22', 'Chi phí tài chính (B02)'),
-            ('25', 'Chi phí bán hàng (B02)'),
-            ('26', 'Chi phí quản lý DN (B02)'),
-            ('32', 'Chi phí khác (B02)'),
-            ('51', 'Chi phí thuế TNDN (B02)'),
-        ):
-            expense_rows.append({
-                'key': f'b02_{code}',
-                'label': name,
-                'amount': float(_money(by_code.get(code, 0))),
-                'source': 'b02',
-            })
-    for key, label in detail_labels.items():
-        amt = float(detail_amounts.get(key, 0) or 0)
-        if amt <= 0:
-            continue
-        expense_rows.append({
-            'key': key,
-            'label': label,
-            'amount': amt,
-            'source': 'journal',
-        })
-
     b02_rows = [
         {
             'code': r['code'],
@@ -257,11 +260,8 @@ def compute_sme_pos_profit_report(
         'profit_before_tax': float(profit_before_tax),
         'net_profit': float(net_profit),
         'b02_rows': b02_rows,
-        'expense_detail': {
-            'rows': expense_rows,
-            'breakdown': detail_amounts,
-            'breakdown_total': expense_detail.get('total', 0),
-        },
+        'account_detail': account_detail,
+        'expense_detail': expense_detail,
         'reconciliation': reconciliation,
         'source': 'sme_journal_b02',
     }

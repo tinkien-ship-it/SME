@@ -14,13 +14,14 @@ def db_backend() -> str:
         return BACKEND_POSTGRES
     if raw == BACKEND_SQLITE:
         return BACKEND_SQLITE
-    url = (os.environ.get('DATABASE_URL') or '').strip().lower()
-    if (
-        url.startswith('postgres://')
-        or url.startswith('postgresql://')
-        or url.startswith('postgresql+psycopg://')
-    ):
-        return BACKEND_POSTGRES
+    for env_key in ('DATABASE_URL', 'SME_PG_URL'):
+        url = (os.environ.get(env_key) or '').strip().lower()
+        if (
+            url.startswith('postgres://')
+            or url.startswith('postgresql://')
+            or url.startswith('postgresql+psycopg://')
+        ):
+            return BACKEND_POSTGRES
     return BACKEND_SQLITE
 
 

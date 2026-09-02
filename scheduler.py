@@ -525,6 +525,29 @@ def init_schedulers(app, backup_root):
         coalesce=True,
     )
     backup_scheduler.add_job(
+        func=_scheduled_sme_costing_auto_close,
+        trigger="cron",
+        day=1,
+        hour=1,
+        minute=45,
+        id='sme_costing_auto_close_monthly',
+        name='sme_costing_auto_close_monthly',
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    backup_scheduler.add_job(
+        func=_scheduled_sme_period_close_catchup,
+        trigger="cron",
+        hour=2,
+        minute=30,
+        id='sme_period_close_catchup_daily',
+        name='sme_period_close_catchup_daily',
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    backup_scheduler.add_job(
         func=_scheduled_sme_vat_filing_alert,
         trigger="cron",
         day=1,
@@ -790,6 +813,35 @@ def _scheduled_sme_auto_posting():
         )
     except Exception as e:
         print(f"[{datetime.now()}] SME auto posting failed: {e}")
+
+
+def _scheduled_sme_costing_auto_close():
+    """Ngày 1 hàng tháng: chốt giá thành tháng trước (nếu tenant bật auto_close)."""
+    try:
+        from Services.sme.costing_period_close import run_costing_auto_close_for_all_tenants
+        result = run_costing_auto_close_for_all_tenants()
+        posted = sum(1 for r in result.get('results') or [] if r.get('posted'))
+        print(
+            f"[{datetime.now()}] SME costing auto-close {result.get('period')}/{result.get('fiscal_year')}: "
+            f"{posted}/{result.get('tenants', 0)} tenants posted"
+        )
+    except Exception as e:
+        print(f"[{datetime.now()}] SME costing auto-close failed: {e}")
+
+
+def _scheduled_sme_period_close_catchup():
+    """Hàng ngày: bù KCKQ các kỳ đã hết nhưng thiếu (server/lịch bỏ sót)."""
+    try:
+        from Services.sme.auto_posting import run_sme_period_close_catchup_for_all_tenants
+        result = run_sme_period_close_catchup_for_all_tenants()
+        posted = sum(int(r.get('posted_count') or 0) for r in result.get('results') or [])
+        if posted:
+            print(
+                f"[{datetime.now()}] SME period-close catch-up: "
+                f"{posted} KCKQ posted across {result.get('tenants', 0)} tenants"
+            )
+    except Exception as e:
+        print(f"[{datetime.now()}] SME period-close catch-up failed: {e}")
 
 
 def _scheduled_sme_vat_filing_alert():

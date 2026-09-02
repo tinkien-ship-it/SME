@@ -489,7 +489,7 @@ async function resetTpl() {
 (async () => {
   const cs = await (await fetch('/api/customers')).json();
   cl.innerHTML = (cs || []).map(c => `<option value="${c.id}">${c.company_name || c.name || ''}</option>`).join('');
-  const raw = await (await fetch('/api/products/manage')).json().catch(() => []);
+  const raw = await (await fetch('/api/products/manage?limit=200')).json().catch(() => []);
   PRODS = Array.isArray(raw) ? raw : (raw.products || raw.items || raw.data || []);
   prodList.innerHTML = PRODS.map(p => `<option value="${escAttr(p.name || '')}">`).join('');
   load();

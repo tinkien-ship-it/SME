@@ -131,6 +131,9 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="tab-service-btn" data-bs-toggle="tab" data-bs-target="#tabService" type="button" role="tab">Dịch vụ</button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-subscription-btn" data-bs-toggle="tab" data-bs-target="#tabSubscription" type="button" role="tab">Gói subscription</button>
+                </li>
             </ul>
 
             <div class="tab-content">
@@ -354,6 +357,61 @@
                         </div>
                     </form>
                 </div>
+
+                <!-- TAB GÓI SUBSCRIPTION -->
+                <div class="tab-pane fade" id="tabSubscription" role="tabpanel">
+                    <h5 id="subscriptionFormTitle" class="mb-3">Thêm Gói Subscription Mới</h5>
+                    <form id="subscriptionForm">
+                        <input type="hidden" id="subscriptionProductId">
+                        <div class="row g-2 mb-2 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Mã gói</small></label>
+                                <input type="text" class="form-control form-control-sm" id="subscriptionCode" placeholder="VD: DV005">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label mb-0"><small>Tên gói <span class="text-danger">*</span></small></label>
+                                <input type="text" class="form-control form-control-sm" id="subscriptionName" placeholder="VD: Phần mềm kế toán gói năm..." required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Đơn vị tính</small></label>
+                                <input type="text" class="form-control form-control-sm" id="subscriptionUnit" value="Gói/năm">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Giá gói (trước VAT) <span class="text-danger">*</span></small></label>
+                                <input type="text" class="form-control form-control-sm format-input" id="subscriptionPrice" value="0" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>Phân bổ DT (tháng)</small></label>
+                                <input type="number" class="form-control form-control-sm" id="subscriptionMonths" value="12" min="1" max="120">
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-2 align-items-end">
+                            <div class="col-md-2">
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="subscriptionEinvoice">
+                                    <label class="form-check-label" for="subscriptionEinvoice"><small>Có xuất HĐĐT</small></label>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label mb-0"><small>TK doanh thu</small></label>
+                                <input type="text" class="form-control form-control-sm" id="subscriptionRevenueAccount" value="5113" readonly>
+                            </div>
+                            <div class="col-md-8 d-flex justify-content-end">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="resetSubscriptionForm()">Hủy</button>
+                                <button type="submit" class="btn btn-sm btn-success ms-2">Lưu gói subscription</button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="subscriptionSector" value="NN2">
+                        <div class="row mt-1">
+                            <div class="col-md-12">
+                                <small class="form-text text-muted">
+                                    Gói subscription: thu tiền ghi <strong>3387</strong>, phân bổ doanh thu hàng tháng vào <strong>5113</strong>.
+                                    Mã tự sinh <strong>DV00x</strong> nếu để trống. Gói hệ thống <strong>DV001–DV004</strong> chỉ sửa tên/giá, không xóa.
+                                </small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -382,6 +440,7 @@
                     <span id="productColFilters" class="active-filters-badge d-none"></span>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearProductColFilters">Xóa lọc cột</button>
                 </div>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btnLoadMoreProducts" style="display:none">Tải thêm sản phẩm</button>
             </div>
             <div class="mobile-card-list" id="productsMobileList"></div>
         </div>
@@ -394,31 +453,41 @@
 <script src="{{ url_for('static', filename='js/import-barcode.js') }}?v=4"></script>
 <script>
 let products = [];
+let productOffset = 0;
+let productHasMore = true;
+const PRODUCT_PAGE = 150;
 let productId = null;
 let fgProductId = null;
 let serviceProductId = null;
+let subscriptionProductId = null;
 let searchTimeout;
 let stockFilter = 'all';
 let productTableCtrl = null;
 
 const LEGACY_G_TO_NN = { G1: 'NN1', G2: 'NN2', G3: 'NN3', G4: 'NN4' };
 const DEFAULT_SERVICE_SECTOR = 'NN2';
-
-function nnDisplayCode(code) {
-    if (!code) return '—';
-    return LEGACY_G_TO_NN[code] || code;
-}
-
-function isServiceProduct(p) {
-    return (p.product_type || '').trim() === 'service';
-}
+const SYSTEM_SUBSCRIPTION_CODES = ['DV001', 'DV002', 'DV003', 'DV004'];
 
 function isSubscriptionPlan(p) {
     return parseInt(p.is_subscription_plan || 0) === 1;
 }
 
+function isSystemSubscription(p) {
+    const code = (p.product_code || '').trim().toUpperCase();
+    return isSubscriptionPlan(p) && SYSTEM_SUBSCRIPTION_CODES.includes(code);
+}
+
+function isServiceProduct(p) {
+    return (p.product_type || '').trim() === 'service' && !isSubscriptionPlan(p);
+}
+
 function isFinishedGoodsProduct(p) {
     return (p.product_type || '').trim() === 'finished_goods';
+}
+
+function nnDisplayCode(code) {
+    if (!code) return '—';
+    return LEGACY_G_TO_NN[code] || code;
 }
 
 function defaultSector(p) {
@@ -454,6 +523,12 @@ function switchToFinishedTab() {
 
 function switchToServiceTab() {
     const btn = document.getElementById('tab-service-btn');
+    if (btn && window.bootstrap?.Tab) bootstrap.Tab.getOrCreateInstance(btn).show();
+    else if (btn) btn.click();
+}
+
+function switchToSubscriptionTab() {
+    const btn = document.getElementById('tab-subscription-btn');
     if (btn && window.bootstrap?.Tab) bootstrap.Tab.getOrCreateInstance(btn).show();
     else if (btn) btn.click();
 }
@@ -612,7 +687,7 @@ function renderProductRow(p) {
     const rowClass = isServiceProduct(p) ? '' : (qty <= 0 ? 'table-danger' : qty <= 5 ? 'table-warning' : '');
     const stockBadge = qty <= 0 ? 'danger' : qty <= 5 ? 'warning' : 'success';
     const stockText = qty <= 0 ? 'Hết' : qty <= 5 ? 'Sắp hết' : 'Còn';
-    const deleteBtn = isSubscriptionPlan(p)
+    const deleteBtn = isSystemSubscription(p)
         ? ''
         : `<button class="btn btn-sm btn-danger ms-1" onclick="deleteProduct(${p.id})">Xóa</button>`;
     const barcodeBtn = isServiceProduct(p)
@@ -642,7 +717,7 @@ function renderProductMobileCard(p) {
     const qty = parseFloat(p.quantity ?? 0) || 0;
     const stockBadge = qty <= 0 ? 'danger' : qty <= 5 ? 'warning' : 'success';
     const stockText = qty <= 0 ? 'Hết' : qty <= 5 ? 'Sắp hết' : 'Còn';
-    const deleteBtn = isSubscriptionPlan(p)
+    const deleteBtn = isSystemSubscription(p)
         ? ''
         : `<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">Xóa</button>`;
     const barcodeBtn = isServiceProduct(p)
@@ -694,7 +769,7 @@ function initProductTable() {
         defaultSort: { key: 'name', dir: 'asc' },
         columns: [
             { key: 'kind', label: 'Loại', filterType: 'select', width: '120px', align: 'center',
-              getValue: p => isServiceProduct(p) ? 'service' : (isFinishedGoodsProduct(p) ? 'finished_goods' : (isSubscriptionPlan(p) ? 'subscription' : 'goods')),
+              getValue: p => isSubscriptionPlan(p) ? 'subscription' : (isServiceProduct(p) ? 'service' : (isFinishedGoodsProduct(p) ? 'finished_goods' : 'goods')),
               filterOptions: [
                   { value: 'goods', label: 'Hàng hóa' },
                   { value: 'service', label: 'Dịch vụ' },
@@ -755,16 +830,30 @@ function showProductMsg(msg, isError) {
     }
 }
 
-async function loadProducts(filter = '') {
-    const url = filter
-        ? `/api/products/manage?q=${encodeURIComponent(filter)}&_t=${Date.now()}`
-        : `/api/products/manage?_t=${Date.now()}`;
+async function loadProducts(filter = '', reset = true) {
+    if (reset) {
+        productOffset = 0;
+        productHasMore = true;
+        products = [];
+    }
+    if (!productHasMore && !reset) return;
+    const q = encodeURIComponent(filter || '');
+    const url = `/api/products/manage?q=${q}&limit=${PRODUCT_PAGE}&offset=${productOffset}&_t=${Date.now()}`;
 
     const tbody = document.getElementById('productsTable');
     try {
         const data = await fetchJSON(url);
-        products = Array.isArray(data) ? data : (data.data || []);
+        const rows = Array.isArray(data) ? data : (data.data || []);
+        products = reset ? rows : products.concat(rows);
+        productHasMore = rows.length >= PRODUCT_PAGE;
+        productOffset += rows.length;
         renderProductsList(products);
+        const btn = document.getElementById('btnLoadMoreProducts');
+        if (btn) {
+            btn.style.display = productHasMore ? '' : 'none';
+            btn.disabled = false;
+            btn.textContent = productHasMore ? 'Tải thêm sản phẩm' : 'Đã tải hết';
+        }
     } catch (err) {
         document.getElementById('productsTable').innerHTML = '<tr><td colspan="9" class="text-center py-5 text-danger">Không tải được danh sách sản phẩm.</td></tr>';
         const mobile = document.getElementById('productsMobileList');
@@ -807,9 +896,31 @@ function editProduct(id) {
     if (!p) return;
     window.scrollTo(0, 0);
 
+    if (isSubscriptionPlan(p)) {
+        resetForm();
+        resetFinishedForm();
+        resetServiceForm();
+        subscriptionProductId = id;
+        switchToSubscriptionTab();
+        document.getElementById('subscriptionFormTitle').textContent = 'Sửa Gói Subscription';
+        document.getElementById('subscriptionProductId').value = id;
+        document.getElementById('subscriptionCode').value = p.product_code || '';
+        document.getElementById('subscriptionName').value = p.name || '';
+        document.getElementById('subscriptionUnit').value = p.unit || 'Gói/năm';
+        document.getElementById('subscriptionPrice').value = formatVND(p.base_price ?? p.price ?? 0);
+        document.getElementById('subscriptionMonths').value = parseInt(p.deferred_months || 12, 10) || 12;
+        document.getElementById('subscriptionEinvoice').checked = parseInt(p.has_einvoice || 0) === 1;
+        document.getElementById('subscriptionRevenueAccount').value = p.revenue_account || '5113';
+        document.getElementById('subscriptionSector').value = p.hkd_sector_code || DEFAULT_SERVICE_SECTOR;
+        const codeEl = document.getElementById('subscriptionCode');
+        if (codeEl) codeEl.readOnly = isSystemSubscription(p);
+        return;
+    }
+
     if (isServiceProduct(p)) {
         resetForm();
         resetFinishedForm();
+        resetSubscriptionForm();
         serviceProductId = id;
         switchToServiceTab();
         document.getElementById('serviceFormTitle').textContent = 'Sửa Dịch Vụ';
@@ -825,6 +936,7 @@ function editProduct(id) {
     if (isFinishedGoodsProduct(p)) {
         resetForm();
         resetServiceForm();
+        resetSubscriptionForm();
         fgProductId = id;
         switchToFinishedTab();
         document.getElementById('fgFormTitle').textContent = 'Sửa Thành Phẩm';
@@ -847,6 +959,7 @@ function editProduct(id) {
 
     resetServiceForm();
     resetFinishedForm();
+    resetSubscriptionForm();
     switchToGoodsTab();
     productId = id;
     document.getElementById('formTitle').textContent = 'Sửa Sản Phẩm';
@@ -882,6 +995,20 @@ function resetForm() {
     document.getElementById('sellByWeight').checked = false;
     document.getElementById('weightPlu').value = '';
     toggleWeightFields();
+}
+
+function resetSubscriptionForm() {
+    document.getElementById('subscriptionForm').reset();
+    document.getElementById('subscriptionFormTitle').textContent = 'Thêm Gói Subscription Mới';
+    document.getElementById('subscriptionProductId').value = '';
+    subscriptionProductId = null;
+    document.getElementById('subscriptionUnit').value = 'Gói/năm';
+    document.getElementById('subscriptionPrice').value = '0';
+    document.getElementById('subscriptionMonths').value = '12';
+    document.getElementById('subscriptionRevenueAccount').value = '5113';
+    document.getElementById('subscriptionSector').value = DEFAULT_SERVICE_SECTOR;
+    const codeEl = document.getElementById('subscriptionCode');
+    if (codeEl) codeEl.readOnly = false;
 }
 
 function resetServiceForm() {
@@ -1031,6 +1158,48 @@ document.getElementById('serviceForm').addEventListener('submit', async function
     }
 });
 
+document.getElementById('subscriptionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const data = {
+        id: document.getElementById('subscriptionProductId').value || undefined,
+        item_kind: 'subscription',
+        product_code: document.getElementById('subscriptionCode').value.trim().toUpperCase(),
+        name: document.getElementById('subscriptionName').value.trim(),
+        unit: document.getElementById('subscriptionUnit').value.trim() || 'Gói/năm',
+        base_price: parseNumberVN(document.getElementById('subscriptionPrice').value),
+        deferred_months: parseInt(document.getElementById('subscriptionMonths').value, 10) || 12,
+        has_einvoice: document.getElementById('subscriptionEinvoice').checked ? 1 : 0,
+        revenue_account: document.getElementById('subscriptionRevenueAccount').value.trim() || '5113',
+        hkd_sector_code: document.getElementById('subscriptionSector').value || DEFAULT_SERVICE_SECTOR,
+    };
+    if (!data.name) {
+        showProductMsg('Tên gói subscription không được để trống.', true);
+        return;
+    }
+    if (data.deferred_months < 1) {
+        showProductMsg('Số tháng phân bổ doanh thu phải >= 1.', true);
+        return;
+    }
+
+    try {
+        const res = await fetchJSON('/api/products/manage', {
+            method: data.id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.success) {
+            showProductMsg(data.id ? 'Cập nhật gói subscription thành công!' : 'Thêm gói subscription thành công!', false);
+            resetSubscriptionForm();
+            loadProducts(document.getElementById('searchInput').value.trim());
+            localStorage.setItem('product_price_updated', Date.now());
+        } else {
+            showProductMsg(res.error || 'Không lưu được gói subscription.', true);
+        }
+    } catch (err) {
+        showProductMsg(err.message || 'Lỗi kết nối server.', true);
+    }
+});
+
 async function deleteProduct(id) {
     if (!confirm('Xóa sản phẩm này? Dữ liệu sẽ mất vĩnh viễn!')) return;
     try {
@@ -1065,6 +1234,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     loadProducts();
 
+    document.getElementById('btnLoadMoreProducts')?.addEventListener('click', () => {
+        const btn = document.getElementById('btnLoadMoreProducts');
+        if (btn) { btn.disabled = true; btn.textContent = 'Đang tải...'; }
+        loadProducts(document.getElementById('searchInput').value.trim(), false);
+    });
+
     document.querySelectorAll('.format-input').forEach(input => {
         input.addEventListener('blur', () => formatInputNumber(input));
         input.addEventListener('focus', () => {
@@ -1077,11 +1252,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const fgBasePriceEl = document.getElementById('fgBasePrice');
     const fgPriceEl = document.getElementById('fgPrice');
     const servicePriceEl = document.getElementById('servicePrice');
+    const subscriptionPriceEl = document.getElementById('subscriptionPrice');
     if (basePriceEl) basePriceEl.value = formatVND(parseNumberVN(basePriceEl.value));
     if (priceEl) priceEl.value = formatVND(parseNumberVN(priceEl.value));
     if (fgBasePriceEl) fgBasePriceEl.value = formatVND(parseNumberVN(fgBasePriceEl.value));
     if (fgPriceEl) fgPriceEl.value = formatVND(parseNumberVN(fgPriceEl.value));
     if (servicePriceEl) servicePriceEl.value = formatVND(parseNumberVN(servicePriceEl.value));
+    if (subscriptionPriceEl) subscriptionPriceEl.value = formatVND(parseNumberVN(subscriptionPriceEl.value));
 
     function bindCatalogBarcodeScan(inputId, btnId, kind) {
         const bcInput = document.getElementById(inputId);

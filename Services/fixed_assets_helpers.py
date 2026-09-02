@@ -6,9 +6,137 @@ FIXED_ASSETS_TABLE = 'fixed_assets'
 TOOLS_TABLE = 'tools_supplies'
 LEGACY_TABLE = 'tai_san_co_dinh'
 
+INTANGIBLE_LINE_TYPE = 'intangible_asset'
+# Giữ để tương thích chỗ cũ; resolve mới chấp nhận mọi 211x/213x trong COA.
+INTANGIBLE_ASSET_ACCOUNTS = frozenset({'2131', '2132', '2133', '2134', '2135', '2136', '2138'})
+TANGIBLE_ASSET_ACCOUNTS = frozenset({'2111', '2112', '2113', '2114', '2115', '2118'})
+DEFAULT_INTANGIBLE_ASSET_ACCOUNT = '2133'
+DEFAULT_INTANGIBLE_ACCUM_ACCOUNT = '2143'
+DEFAULT_TANGIBLE_ASSET_ACCOUNT = '2112'
+DEFAULT_TANGIBLE_ACCUM_ACCOUNT = '2141'
+ASSET_CATEGORY_TANGIBLE = 'tangible'
+ASSET_CATEGORY_INTANGIBLE = 'intangible'
+
 STATUS_IN_STOCK = 'InStock'
 STATUS_ACTIVE = 'Active'
 STATUS_DISPOSED = 'Disposed'
+STATUS_CAPITAL = 'CapitalContributed'
+
+
+def is_intangible_line_type(line_type: str | None) -> bool:
+    return (line_type or '').strip().lower() == INTANGIBLE_LINE_TYPE
+
+
+def is_fixed_asset_line_type(line_type: str | None) -> bool:
+    lt = (line_type or '').strip().lower()
+    return lt in ('fixed_asset', INTANGIBLE_LINE_TYPE)
+
+
+def is_fa_asset_account_code(code: str | None) -> bool:
+    """Mã thuộc nhóm TSCĐ hữu hình (211) hoặc vô hình (213)."""
+    c = str(code or '').strip()
+    return bool(c) and (c.startswith('211') or c.startswith('213'))
+
+
+def accum_account_for_asset(asset_account: str | None) -> str:
+    code = str(asset_account or '').strip()
+    if code.startswith('213'):
+        return DEFAULT_INTANGIBLE_ACCUM_ACCOUNT
+    return DEFAULT_TANGIBLE_ACCUM_ACCOUNT
+
+
+def resolve_asset_accounts(
+    line_type: str | None,
+    asset_account: str | None = None,
+    *,
+    conn: sqlite3.Connection | None = None,
+) -> tuple[str, str, str]:
+    """Trả (asset_category, asset_account, accum_account).
+
+    Chấp nhận mọi TK postable thuộc 211… / 213… (kể cả TK con user tự tạo).
+    Nếu có ``conn`` thì kiểm tra tồn tại trong COA; không có thì tin theo prefix.
+    """
+    want_intangible = is_intangible_line_type(line_type)
+    acct = (asset_account or '').strip()
+
+    if acct:
+        if acct.startswith('213'):
+            want_intangible = True
+        elif acct.startswith('211'):
+            want_intangible = False
+        elif want_intangible:
+            acct = DEFAULT_INTANGIBLE_ASSET_ACCOUNT
+        else:
+            acct = DEFAULT_TANGIBLE_ASSET_ACCOUNT
+    else:
+        acct = (
+            DEFAULT_INTANGIBLE_ASSET_ACCOUNT
+            if want_intangible
+            else DEFAULT_TANGIBLE_ASSET_ACCOUNT
+        )
+
+    if conn is not None:
+        try:
+            from Services.sme.coa_service import get_account
+            from Services.sme.journal_engine import resolve_postable_account
+
+            acc = get_account(conn, acct, commit=False)
+            if not acc or not int(acc.get('is_active') or 0):
+                raise ValueError(f'TK tài sản {acct} không có trong danh mục hoặc đã ngừng')
+            # Cha tổng hợp → leaf mặc định / leaf đầu
+            if not int(acc.get('is_postable') or 0):
+                acct = resolve_postable_account(conn, acct)
+            if not is_fa_asset_account_code(acct):
+                raise ValueError(f'TK {acct} không thuộc nhóm 211 hoặc 213')
+            if want_intangible and not acct.startswith('213'):
+                raise ValueError('TSCĐ vô hình phải chọn TK 213x')
+            if not want_intangible and not acct.startswith('211'):
+                raise ValueError('TSCĐ hữu hình phải chọn TK 211x')
+        except ImportError:
+            pass
+
+    category = ASSET_CATEGORY_INTANGIBLE if want_intangible else ASSET_CATEGORY_TANGIBLE
+    accum = accum_account_for_asset(acct)
+    return category, acct, accum
+
+
+def list_purchase_fa_coa_accounts(conn: sqlite3.Connection) -> dict[str, list[dict]]:
+    """TK postable dưới 211 / 213 / 214 — dùng dropdown phiếu nhập & vòng đời TSCĐ."""
+    from Services.sme.coa_service import list_accounts
+
+    tangible = list_accounts(conn, parent_code='211', postable_only=True)
+    intangible = list_accounts(conn, parent_code='213', postable_only=True)
+    # Cấp 3+ (con của 2112, 2135…): bổ sung leaf thuộc cây 211/213
+    try:
+        from Services.sme.account_roles import list_postable_under_root
+        for root, bucket in (('211', tangible), ('213', intangible)):
+            seen = {str(a.get('code') or '') for a in bucket}
+            for leaf in list_postable_under_root(conn, root):
+                code = str(leaf.get('code') or '')
+                if code and code not in seen and code != root:
+                    bucket.append(leaf)
+                    seen.add(code)
+            bucket.sort(key=lambda a: str(a.get('code') or ''))
+    except Exception:
+        pass
+    accum = list_accounts(conn, parent_code='214', postable_only=True)
+    return {
+        'tangible_assets': tangible,
+        'intangible_assets': intangible,
+        'asset_accounts': sorted(
+            tangible + intangible, key=lambda a: str(a.get('code') or '')
+        ),
+        'accum_accounts': accum,
+    }
+
+
+def ensure_import_detail_asset_columns(conn) -> None:
+    cols = {r[1] for r in conn.execute('PRAGMA table_info(import_details)').fetchall()}
+    if 'asset_account' not in cols:
+        try:
+            conn.execute('ALTER TABLE import_details ADD COLUMN asset_account TEXT')
+        except sqlite3.Error as exc:
+            logging.warning('import_details.asset_account: %s', exc)
 
 
 def _table_exists(c, name):
@@ -74,6 +202,9 @@ def ensure_fixed_assets_schema(conn):
         ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
         ('branch_code', 'TEXT'),
         ('expense_account', "TEXT DEFAULT '642'"),
+        ('asset_category', "TEXT DEFAULT 'tangible'"),
+        ('asset_account', "TEXT DEFAULT '2112'"),
+        ('accum_account', "TEXT DEFAULT '2141'"),
     ):
         _add_col(c, FIXED_ASSETS_TABLE, col, typ)
 
@@ -134,6 +265,10 @@ def register_fixed_asset_from_import(
     so_thang_khau_hao: int | None = None,
     ngay_bat_dau_su_dung: str | None = None,
     capitalized_cost=None,
+    asset_category: str | None = None,
+    asset_account: str | None = None,
+    accum_account: str | None = None,
+    line_type: str | None = None,
 ):
     """Ghi nhận TSCĐ khi nhập kho — không qua tồn POS.
 
@@ -141,6 +276,23 @@ def register_fixed_asset_from_import(
     không gồm VAT đầu vào khấu trừ.
     """
     ensure_fixed_assets_schema(c.connection)
+    ensure_import_detail_asset_columns(c.connection)
+    category, asset_acct, accum_acct = resolve_asset_accounts(
+        line_type or asset_category,
+        asset_account,
+        conn=c.connection if hasattr(c, 'connection') else None,
+    )
+    if asset_category in (ASSET_CATEGORY_TANGIBLE, ASSET_CATEGORY_INTANGIBLE):
+        category = asset_category
+    if asset_account and is_fa_asset_account_code(asset_account.strip()):
+        asset_acct = asset_account.strip()
+        accum_acct = accum_account_for_asset(asset_acct)
+        if asset_acct.startswith('213'):
+            category = ASSET_CATEGORY_INTANGIBLE
+        elif asset_acct.startswith('211'):
+            category = ASSET_CATEGORY_TANGIBLE
+    if accum_account and accum_account.strip():
+        accum_acct = accum_account.strip()
     ma_ts = (product_code or f'TSCD{product_id:04d}').strip()
     qty_f = float(qty or 1) or 1.0
     unit_ex_vat = float(buyprice or 0)
@@ -190,6 +342,9 @@ def register_fixed_asset_from_import(
         'warehouse_code': warehouse_code or 'KHO_001',
         'so_luong': float(qty or 1),
         'branch_code': branch,
+        'asset_category': category,
+        'asset_account': asset_acct,
+        'accum_account': accum_acct,
     }
     # Một số DB cũ dùng so_chung_tu_kho thay voucher_no
     if 'voucher_no' not in cols and 'so_chung_tu_kho' in cols:

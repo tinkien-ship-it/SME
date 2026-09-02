@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
-from Services.sme.coa_seed_tt99 import SEED_VERSION, iter_seed_accounts
+from Services.sme.coa_seed_tt99 import OBSOLETE_SEED_CODES, SEED_VERSION, iter_seed_accounts
 from Services.sme.schema import ensure_sme_coa_schema
 from db_utils import sqlite_commit
 
@@ -163,6 +163,23 @@ def _apply_coa_seed(
             inserted += 1
 
     _refresh_postable_flags(c)
+
+    # Gỡ tiểu khoản seed cũ (08f điện·nước chi tiết) — gộp về 6271/6272 · 641 · 642
+    # Chạy sau refresh để is_postable=0 không bị ghi đè.
+    deactivated = 0
+    if OBSOLETE_SEED_CODES:
+        placeholders = ','.join('?' for _ in OBSOLETE_SEED_CODES)
+        c.execute(
+            f"""
+            UPDATE sme_chart_of_accounts
+            SET is_active = 0, is_postable = 0, updated_at = ?
+            WHERE is_custom = 0
+              AND code IN ({placeholders})
+            """,
+            (_now(), *OBSOLETE_SEED_CODES),
+        )
+        deactivated = c.rowcount if c.rowcount and c.rowcount > 0 else 0
+
     c.execute(
         """
         INSERT INTO sme_coa_seed_meta(key, value, updated_at) VALUES ('seed_version', ?, ?)
@@ -179,6 +196,7 @@ def _apply_coa_seed(
         'seed_version': SEED_VERSION,
         'inserted': inserted,
         'updated': updated,
+        'deactivated': deactivated,
         'count': count,
     }
 

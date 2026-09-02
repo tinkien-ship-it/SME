@@ -15,13 +15,14 @@ IMPORT_DOCUMENT_TYPE = 'PNK'
 # finished_goods chỉ qua SX (TK 155) — không phải dòng mua hàng SME
 STOCK_LINE_TYPES = frozenset({'goods', 'materials'})
 PURCHASE_LINE_TYPES = frozenset({
-    'goods', 'materials', 'service', 'fixed_asset', 'tools',
+    'goods', 'materials', 'service', 'fixed_asset', 'intangible_asset', 'tools',
 })
 BUSINESS_TYPE_LABELS = {
     'NHAP_KHO_HANG_HOA': 'Nhập kho hàng hóa',
     'NHAP_KHO_NVL': 'Nhập kho nguyên vật liệu',
     'MUA_DICH_VU': 'Mua dịch vụ',
     'MUA_TSCD': 'Mua TSCĐ',
+    'MUA_TSCD_VH': 'Mua TSCĐ vô hình',
     'MUA_CCDC': 'Mua CCDC',
 }
 # Thuế NK phân bổ vào nguyên giá (không áp dụng dịch vụ)
@@ -50,6 +51,8 @@ def _business_type_for_line(line_type: str | None) -> str | None:
     if lt == 'service':
         return 'MUA_DICH_VU'
     if lt == 'fixed_asset':
+        return 'MUA_TSCD'
+    if lt == 'intangible_asset':
         return 'MUA_TSCD'
     if lt == 'tools':
         return 'MUA_CCDC'
@@ -261,6 +264,10 @@ def sync_import_journals(
         select_parts.append("COALESCE(d.expense_account, '') AS expense_account")
     else:
         select_parts.append("'' AS expense_account")
+    if 'asset_account' in detail_cols:
+        select_parts.append("COALESCE(d.asset_account, '') AS asset_account")
+    else:
+        select_parts.append("'' AS asset_account")
     if 'product_name' in detail_cols:
         select_parts.append("COALESCE(d.product_name, '') AS detail_product_name")
     else:
@@ -311,6 +318,7 @@ def sync_import_journals(
             'env_tax_amount': _money(row['env_tax_amount']),
             'warehouse_code': row['warehouse_code'],
             'expense_account': (row['expense_account'] or '').strip() if 'expense_account' in row.keys() else '',
+            'account_code': (row['asset_account'] or '').strip() if row.get('asset_account') else '',
         })
 
     if not stock_rows:
@@ -454,6 +462,7 @@ def sync_import_journals(
                 'tax_pct': item['tax_pct'],
                 'warehouse_code': item['warehouse_code'],
                 'expense_account': item.get('expense_account') or '',
+                'account_code': item.get('account_code') or '',
                 'description': f"{desc_text}: {item['product_name']}",
             })
 

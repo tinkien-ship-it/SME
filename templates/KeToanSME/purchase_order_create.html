@@ -58,6 +58,34 @@
   const today=new Date().toISOString().slice(0,10);
   document.getElementById('poDate').value=today;
   let products=[];
+  let productSearchTimer=null;
+
+  function renderProdList(items){
+    document.getElementById('prodList').innerHTML=(items||[]).map(p=>{
+      const label=(p.product_code?p.product_code+' — ':'')+(p.name||'');
+      const buy=p.buyprice||p.avg_cost||p.base_price||0;
+      return `<option value="${(p.name||'').replace(/"/g,'&quot;')}" label="${label.replace(/"/g,'&quot;')}" data-buy="${buy}">`;
+    }).join('');
+  }
+
+  async function searchProducts(q){
+    const term=String(q||'').trim();
+    if(term.length<2){
+      renderProdList(products);
+      return products;
+    }
+    try{
+      const res=await fetch('/api/sme/products/brief?q='+encodeURIComponent(term)+'&limit=40');
+      const json=await res.json();
+      const hits=(json.data||[]).map(p=>({
+        ...p,
+        buyprice: Number(p.avg_cost||p.base_price||p.wholesale_price||0),
+      }));
+      products=hits;
+      renderProdList(hits);
+      return hits;
+    }catch(e){ return products; }
+  }
 
   function findProductByName(name){
     const n=String(name||'').trim().toLowerCase();
@@ -87,8 +115,13 @@
       tr.querySelector('.amt').textContent=money(q*p);
       sumAll();
     };
-    const bindProduct=()=>{
-      const hit=findProductByName(tr.querySelector('.name').value);
+    const bindProduct=async ()=>{
+      const nameVal=tr.querySelector('.name').value;
+      let hit=findProductByName(nameVal);
+      if(!hit && nameVal.trim().length>=2){
+        await searchProducts(nameVal);
+        hit=findProductByName(nameVal);
+      }
       if(hit){
         tr.querySelector('.pid').value=hit.id||'';
         tr.querySelector('.code').value=hit.product_code||hit.barcode||'';
@@ -104,6 +137,10 @@
     tr.querySelectorAll('.qty,.price').forEach(el=>el.addEventListener('input', recalc));
     tr.querySelector('.name').addEventListener('change', bindProduct);
     tr.querySelector('.name').addEventListener('blur', bindProduct);
+    tr.querySelector('.name').addEventListener('input', ()=>{
+      clearTimeout(productSearchTimer);
+      productSearchTimer=setTimeout(()=>searchProducts(tr.querySelector('.name').value), 280);
+    });
     tr.querySelector('.btnDel').addEventListener('click', ()=>{ tr.remove(); sumAll(); });
     recalc();
   }
@@ -147,19 +184,8 @@
   }
 
   async function loadProducts(){
-    try{
-      const res=await fetch('/api/sme/products/brief?limit=500');
-      const json=await res.json();
-      products=(json.data||[]).map(p=>({
-        ...p,
-        buyprice: Number(p.avg_cost||p.base_price||p.wholesale_price||0),
-      }));
-      document.getElementById('prodList').innerHTML=products.slice(0,500).map(p=>{
-        const label=(p.product_code?p.product_code+' — ':'')+(p.name||'');
-        const buy=p.buyprice||p.avg_cost||p.base_price||0;
-        return `<option value="${(p.name||'').replace(/"/g,'&quot;')}" label="${label.replace(/"/g,'&quot;')}" data-buy="${buy}">`;
-      }).join('');
-    }catch(e){ products=[]; }
+    products=[];
+    renderProdList([]);
   }
 
   async function loadOne(id){

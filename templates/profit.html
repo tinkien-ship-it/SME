@@ -17,6 +17,8 @@
         .flatpickr-calendar { z-index: 9999 !important; }
         .indent-sub { padding-left: 2rem !important; font-style: italic; color: #666; }
         .indent-b02 { padding-left: calc(0.5rem + var(--b02-level, 0) * 1.25rem); }
+        .pl-mono { font-family: ui-monospace, Consolas, monospace; font-weight: 600; font-size: .875rem; }
+        .pl-section td { background: #f1f5f9; font-weight: 700; }
         .recon-ok { background: #d1e7dd; color: #0f5132; }
         .recon-warn { background: #fff3cd; color: #664d03; }
     </style>
@@ -105,15 +107,18 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-sm table-hover mb-0" id="profitTable">
-                    <thead class="table-light">
+                    <thead class="table-light" id="profitTableHead">
                         <tr>
-                            <th class="text-start">Chỉ tiêu</th>
-                            <th class="text-end">Số tiền</th>
-                            <th class="text-end">Tỷ trọng / Doanh thu</th>
+                            <th class="text-start" style="width:90px;">Mã TK</th>
+                            <th class="text-start">Tên tài khoản / Chỉ tiêu</th>
+                            <th class="text-end">PS Nợ kỳ</th>
+                            <th class="text-end">PS Có kỳ</th>
+                            <th class="text-end">Số net</th>
+                            <th class="text-end d-none d-md-table-cell">Tỷ trọng</th>
                         </tr>
                     </thead>
                     <tbody id="detailBody">
-                        <tr><td colspan="3" class="text-center text-muted">Vui lòng chọn ngày để xem báo cáo...</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted">Vui lòng chọn ngày để xem báo cáo...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -158,7 +163,7 @@ function loadProfit() {
     const startISO = VNStringToISOString(startVN);
     const endISO = VNStringToISOString(endVN);
     const tbody = document.getElementById('detailBody');
-    tbody.innerHTML = '<tr><td colspan="3" class="text-center p-4"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4"><div class="spinner-border spinner-border-sm text-primary"></div> Đang tải...</td></tr>';
 
     fetch(`/api/reports/profit?from=${startISO}&to=${endISO}`)
     .then(r => r.json())
@@ -169,7 +174,7 @@ function loadProfit() {
     })
     .catch(err => {
         console.error("Fetch error:", err);
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger p-4">Lỗi tải dữ liệu! Vui lòng kiểm tra kết nối.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger p-4">Lỗi tải dữ liệu! Vui lòng kiểm tra kết nối.</td></tr>';
     });
 }
 
@@ -191,14 +196,20 @@ function renderSummary(data) {
     rateEl.className = netProfit >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
 }
 
+function moneyCell(v) {
+    const n = parseFloat(v) || 0;
+    if (!n) return '';
+    return n.toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+}
+
 function renderReconciliation(data) {
     const recon = data.reconciliation;
     if (!recon || !recon.checks || !recon.checks.length) return '';
     const allOk = recon.all_balanced === true;
-    let html = `<tr><td colspan="3" class="small ${allOk ? 'recon-ok' : 'recon-warn'} p-2">`;
+    let html = `<tr><td colspan="6" class="small ${allOk ? 'recon-ok' : 'recon-warn'} p-2">`;
     html += allOk
-        ? '<i class="fas fa-check-circle"></i> Đối chiếu B02/B01: khớp sổ nhật ký.'
-        : '<i class="fas fa-exclamation-triangle"></i> Đối chiếu B02/B01:';
+        ? '<i class="fas fa-check-circle"></i> Đối chiếu BCPS/B02: khớp sổ nhật ký (bù trừ Nợ/Có từng TK).'
+        : '<i class="fas fa-exclamation-triangle"></i> Đối chiếu BCPS/B02:';
     recon.checks.forEach(c => {
         const icon = c.balanced ? '✓' : '✗';
         html += `<div>${icon} ${c.label}: kỳ vọng ${formatVND(c.expected)}, báo cáo ${formatVND(c.actual)}`;
@@ -209,43 +220,95 @@ function renderReconciliation(data) {
     return html;
 }
 
+function renderBcpsAccountRow(row, revBase, netCls) {
+    const level = Math.max(0, (row.level || 1) - 1);
+    return `
+        <tr>
+            <td class="pl-mono">${row.account_code || ''}</td>
+            <td class="text-start indent-b02" style="--b02-level:${level}">${row.name || ''}</td>
+            <td class="text-end">${moneyCell(row.period_debit)}</td>
+            <td class="text-end">${moneyCell(row.period_credit)}</td>
+            <td class="text-end ${netCls}">${moneyCell(row.net)}</td>
+            <td class="text-end text-muted small d-none d-md-table-cell">${formatPercent(row.net, revBase)}</td>
+        </tr>`;
+}
+
 function renderB02Details(data) {
     const tbody = document.getElementById('detailBody');
+    const ad = data.account_detail || {};
+    const totals = ad.totals || {};
+    const revBase = totals.revenue_and_income || data.revenue || 0;
     tbody.innerHTML = renderReconciliation(data);
-    const rev = data.revenue || 0;
 
-    const detail = data.expense_detail || {};
-    const extra = (detail.rows || []).filter(r => r.source === 'journal' && r.amount > 0);
-    if (extra.length) {
-        tbody.innerHTML += `<tr class="table-secondary"><td colspan="3" class="fw-semibold small">Phân rã chi phí từ sổ nhật ký (lương, KH TSCĐ, CCDC…)</td></tr>`;
-        extra.forEach(row => {
-            tbody.innerHTML += `
-                <tr>
-                    <td class="text-start indent-sub">${row.label}</td>
-                    <td class="text-end text-muted">${formatVND(row.amount)}</td>
-                    <td class="text-end text-muted small">${formatPercent(row.amount, rev)}</td>
-                </tr>`;
+    const revenueRows = ad.revenue_accounts || (ad.rows || []).filter(
+        r => r.kind === 'account' && (r.side === 'revenue' || r.side === 'other_income' || r.side === 'contra_revenue')
+    );
+    if (revenueRows.length) {
+        tbody.innerHTML += `<tr class="table-secondary"><td colspan="6" class="fw-semibold small">
+            Doanh thu và thu nhập (theo Cân đối phát sinh)
+        </td></tr>`;
+        revenueRows.forEach(row => {
+            const side = row.side || 'revenue';
+            const netCls = side === 'contra_revenue' ? 'text-warning' : 'text-success';
+            tbody.innerHTML += renderBcpsAccountRow(row, revBase, netCls);
         });
+        tbody.innerHTML += `
+            <tr class="table-light">
+                <td colspan="2" class="fw-semibold">Cộng doanh thu và thu nhập thuần</td>
+                <td colspan="2"></td>
+                <td class="text-end fw-bold text-success">${moneyCell(totals.revenue_and_income)}</td>
+                <td class="d-none d-md-table-cell"></td>
+            </tr>`;
     }
 
-    tbody.innerHTML += `<tr class="table-secondary"><td colspan="3" class="fw-semibold small">Báo cáo kết quả HĐKD (B02 — TT99/TT58)</td></tr>`;
+    const expDetail = data.expense_detail || {};
+    const expenseRows = expDetail.rows || ad.expense_accounts || [];
+    if (expenseRows.length) {
+        tbody.innerHTML += `<tr class="table-secondary"><td colspan="6" class="fw-semibold small">
+            Phân rã chi phí từ sổ nhật ký (theo Cân đối phát sinh — bù trừ Nợ/Có từng TK)
+        </td></tr>`;
+        expenseRows.forEach(row => {
+            tbody.innerHTML += renderBcpsAccountRow(row, revBase, 'text-danger');
+        });
+        tbody.innerHTML += `
+            <tr class="table-light">
+                <td colspan="2" class="fw-semibold">Cộng chi phí</td>
+                <td colspan="2"></td>
+                <td class="text-end fw-bold text-danger">${moneyCell(expDetail.total || totals.expense_total)}</td>
+                <td class="d-none d-md-table-cell"></td>
+            </tr>`;
+    }
 
+    if (totals.profit_before_tax != null) {
+        tbody.innerHTML += `
+            <tr class="table-light">
+                <td colspan="2" class="fw-bold">Lợi nhuận trước thuế (DT net + TN khác − CP net)</td>
+                <td colspan="2"></td>
+                <td class="text-end fw-bold text-primary">${moneyCell(totals.profit_before_tax)}</td>
+                <td class="d-none d-md-table-cell"></td>
+            </tr>`;
+    }
+
+    const rev = data.revenue || 0;
+    tbody.innerHTML += `<tr class="table-secondary"><td colspan="6" class="fw-semibold small">Chỉ tiêu B02 pháp định (TT58/TT99 — đối chiếu)</td></tr>`;
     (data.b02_rows || []).forEach(row => {
         const level = row.level || 0;
         const indentCls = level > 1 ? 'indent-b02' : '';
         const cls = row.highlight ? 'text-primary fw-bold' : (row.bold ? 'fw-bold' : '');
         tbody.innerHTML += `
             <tr class="${row.bold || row.highlight ? 'table-light' : ''}">
+                <td class="pl-mono text-muted">${row.code || ''}</td>
                 <td class="text-start ${indentCls}" style="--b02-level:${Math.max(0, level - 1)}">${row.name}</td>
+                <td colspan="2"></td>
                 <td class="text-end ${cls}">${formatVND(row.amount)}</td>
-                <td class="text-end text-muted small">${formatPercent(row.amount, rev)}</td>
+                <td class="text-end text-muted small d-none d-md-table-cell">${formatPercent(row.amount, rev)}</td>
             </tr>
         `;
     });
 }
 
 function renderDetails(data) {
-    if (data.report_mode === 'b02' && data.b02_rows && data.b02_rows.length) {
+    if (data.report_mode === 'b02') {
         renderB02Details(data);
         return;
     }
@@ -286,9 +349,11 @@ function renderDetails(data) {
 
         tbody.innerHTML += `
             <tr class="${item.type === 'header' ? 'table-light' : ''}">
+                <td></td>
                 <td class="text-start">${labelHtml}</td>
+                <td colspan="2"></td>
                 <td class="text-end ${cellCls}">${formatVND(item.val)}</td>
-                <td class="text-end text-muted small">${formatPercent(item.val, rev)}</td>
+                <td class="text-end text-muted small d-none d-md-table-cell">${formatPercent(item.val, rev)}</td>
             </tr>
         `;
     });

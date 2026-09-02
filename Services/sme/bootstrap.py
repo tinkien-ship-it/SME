@@ -132,6 +132,31 @@ def ensure_sme_accounting_ready(
         ensure_import_settle_schema(conn, commit=False)
     except Exception:
         pass
+    try:
+        from Services.sme.service_costing import ensure_service_costing_schema
+        ensure_service_costing_schema(conn, commit=False)
+    except Exception:
+        pass
+    try:
+        from Services.sme.period_cost_allocation import ensure_period_cost_allocation_schema
+        ensure_period_cost_allocation_schema(conn, commit=False)
+    except Exception:
+        pass
+    try:
+        from Services.sme.costing_policy import ensure_costing_policy_schema
+        ensure_costing_policy_schema(conn, commit=False)
+    except Exception:
+        pass
+    try:
+        from Services.sme.product_cost_standards import ensure_product_cost_standards_schema
+        ensure_product_cost_standards_schema(conn, commit=False)
+    except Exception:
+        pass
+    try:
+        from Services.sme.deferred_revenue import ensure_deferred_revenue_schema
+        ensure_deferred_revenue_schema(conn, commit=False)
+    except Exception:
+        pass
 
     existing_meta: dict[str, str] = {}
     try:

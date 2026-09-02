@@ -27,7 +27,8 @@
         <div>
             <h4 class="fw-bold mb-1"><i class="fas fa-scale-balanced text-primary me-2"></i>Sổ cái &amp; Cân đối phát sinh</h4>
             <p class="text-muted small mb-0">
-                Liệt kê đủ hệ thống tài khoản TT99. Lọc theo chi nhánh trên thanh trên (Tất cả = hợp nhất pháp nhân).
+                Liệt kê đủ hệ thống tài khoản TT99. Mặc định: năm tài chính hiện hành
+                (từ đầu năm đến kỳ/ngày hiện tại). Lọc chi nhánh trên thanh trên (Tất cả = hợp nhất pháp nhân).
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
@@ -175,14 +176,15 @@
         fromSel.add(o1);
         toSel.add(o2);
     }
-    fromSel.value = String(now.getMonth() + 1);
+    // Mặc định: năm tài chính hiện hành (từ kỳ 1 → kỳ hiện tại)
+    fromSel.value = '1';
     toSel.value = String(now.getMonth() + 1);
 
     const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const last = new Date(y, now.getMonth() + 1, 0).getDate();
-    document.getElementById('ldFrom').value = `${y}-${m}-01`;
-    document.getElementById('ldTo').value = `${y}-${m}-${String(last).padStart(2, '0')}`;
+    const pad = (n) => String(n).padStart(2, '0');
+    // Sổ cái chi tiết: từ ngày đầu năm đến ngày hiện tại
+    document.getElementById('ldFrom').value = `${y}-01-01`;
+    document.getElementById('ldTo').value = `${y}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
     function money(v) {
         const n = Number(v || 0);

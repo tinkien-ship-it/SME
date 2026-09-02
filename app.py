@@ -550,6 +550,10 @@ register_ketoan_hkd_routes(app)
 # === Tính Giá Thành (Thành Phẩm) → routes/production.py ===
 from routes.production import register_production_routes
 register_production_routes(app)
+from routes.service_costing import register_service_costing_routes
+register_service_costing_routes(app)
+from routes.period_cost_allocation import register_period_cost_allocation_routes
+register_period_cost_allocation_routes(app)
 
 # === RENTAL routes → routes/rental.py ===
 from routes.rental import register_rental_routes

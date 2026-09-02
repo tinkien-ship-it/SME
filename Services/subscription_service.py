@@ -382,6 +382,11 @@ def ensure_subscription_products(conn=None):
         conn = get_main_db_connection()
     try:
         changed = _ensure_subscription_columns(conn)
+        try:
+            from Services.sme.deferred_revenue import ensure_product_revenue_columns
+            ensure_product_revenue_columns(conn)
+        except Exception:
+            pass
 
         codes = tuple(DEFAULT_SUBSCRIPTION_PLANS.keys())
         placeholders = ','.join('?' for _ in codes)
@@ -411,7 +416,9 @@ def ensure_subscription_products(conn=None):
                     SET is_subscription_plan = 1,
                         has_einvoice = COALESCE(has_einvoice, ?),
                         product_type = COALESCE(product_type, 'service'),
-                        hkd_sector_code = COALESCE(hkd_sector_code, 'G2')
+                        hkd_sector_code = COALESCE(hkd_sector_code, 'G2'),
+                        revenue_mode = 'deferred',
+                        deferred_months = COALESCE(deferred_months, 12)
                     WHERE product_code = ? AND COALESCE(is_subscription_plan, 0) = 0
                     """,
                     (1 if plan['has_einvoice'] else 0, code),
@@ -435,7 +442,9 @@ def ensure_subscription_products(conn=None):
                     SET is_subscription_plan = 1,
                         has_einvoice = COALESCE(has_einvoice, ?),
                         product_type = COALESCE(product_type, 'service'),
-                        hkd_sector_code = COALESCE(hkd_sector_code, 'G2')
+                        hkd_sector_code = COALESCE(hkd_sector_code, 'G2'),
+                        revenue_mode = 'deferred',
+                        deferred_months = COALESCE(deferred_months, 12)
                     WHERE id = ?
                     """,
                     (1 if plan['has_einvoice'] else 0, row['id']),
@@ -450,8 +459,9 @@ def ensure_subscription_products(conn=None):
                 """
                 INSERT INTO products (
                     product_code, barcode, name, unit, price, base_price,
-                    product_type, hkd_sector_code, is_subscription_plan, has_einvoice
-                ) VALUES (?, ?, ?, 'Gói/năm', ?, ?, 'service', 'G2', 1, ?)
+                    product_type, hkd_sector_code, is_subscription_plan, has_einvoice,
+                    revenue_mode, deferred_months
+                ) VALUES (?, ?, ?, 'Gói/năm', ?, ?, 'service', 'G2', 1, ?, 'deferred', 12)
                 """,
                 (
                     code, f'{code}01', plan['name'], plan['price'], plan['price'],

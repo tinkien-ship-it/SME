@@ -787,20 +787,36 @@ function checkSoDu(amount, paymentMethod) {
 
 // ====================== NCC — TẢI DANH SÁCH & TỰ ĐIỀN ======================
 async function loadSuppliersList() {
-    try {
-        const res = await fetch('/api/suppliers');
-        if (!res.ok) return;
-        suppliersCache = await res.json();
-        const dl = document.getElementById('supplierOptions');
-        if (!dl) return;
+    const input = document.getElementById('supplierSearch');
+    if (!input) return;
+    let supplierTimer = null;
+    input.addEventListener('input', () => {
+        clearTimeout(supplierTimer);
+        supplierTimer = setTimeout(() => searchSuppliers(input.value), 280);
+    });
+}
+
+async function searchSuppliers(q) {
+    const term = String(q || '').trim();
+    const dl = document.getElementById('supplierOptions');
+    if (!dl) return;
+    if (term.length < 2) {
         dl.innerHTML = '';
-        (suppliersCache || []).forEach(s => {
+        return;
+    }
+    try {
+        const res = await fetch('/api/suppliers?q=' + encodeURIComponent(term) + '&limit=40');
+        if (!res.ok) return;
+        const rows = await res.json();
+        suppliersCache = Array.isArray(rows) ? rows : (rows.data || []);
+        dl.innerHTML = '';
+        suppliersCache.forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.name || '';
             dl.appendChild(opt);
         });
     } catch (e) {
-        console.warn('loadSuppliersList:', e);
+        console.warn('searchSuppliers:', e);
     }
 }
 

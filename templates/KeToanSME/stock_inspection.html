@@ -56,7 +56,7 @@ async function voidSi(id){
   const json=await res.json(); if(!json.success) return alert(json.error||'Lỗi'); load();
 }
 btnNew.onclick=async()=>{
-  const res=await fetch('/api/sme/products/brief'); const json=await res.json();
+  const res=await fetch('/api/sme/products/brief?limit=100'); const json=await res.json();
   products=json.data||[];
   lines.innerHTML=products.slice(0,80).map(p=>`<tr data-id="${p.id}" data-name="${p.name.replace(/"/g,'&quot;')}">
     <td>${p.name}</td>

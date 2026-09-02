@@ -327,6 +327,7 @@ def register_inward_routes(app):
                 keyword=keyword or None,
                 status=status,
                 branch_code=branch_code,
+                limit=int(request.args.get('limit') or 120),
             )
 
             resp = jsonify({

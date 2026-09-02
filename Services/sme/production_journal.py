@@ -45,6 +45,67 @@ def _link_step(conn: sqlite3.Connection, order_id: int, step: str, journal_entry
     )
 
 
+def _material_cost_buckets(
+    conn: sqlite3.Connection,
+    order: dict[str, Any],
+    *,
+    fallback_total: float = 0,
+) -> dict[str, float]:
+    """Gom chi phí NVL theo TK kho 152/155/156 từ dòng phiếu SX."""
+    from Services.sme.inventory_ops import inventory_account_for_product
+
+    materials = order.get('materials') or []
+    if not materials and order.get('id'):
+        rows = conn.execute(
+            """
+            SELECT material_product_id, total_cost
+            FROM production_order_materials
+            WHERE order_id = ?
+            """,
+            (int(order['id']),),
+        ).fetchall()
+        materials = [
+            {'material_product_id': r[0], 'total_cost': r[1]}
+            for r in rows
+        ]
+
+    buckets: dict[str, float] = {}
+    for m in materials:
+        cost = float(m.get('total_cost') or 0)
+        if cost <= 0:
+            continue
+        pid = int(m['material_product_id'])
+        acc = m.get('inventory_account') or inventory_account_for_product(conn, pid)
+        buckets[str(acc)] = round(buckets.get(str(acc), 0) + cost, 2)
+
+    if not buckets and fallback_total > 0:
+        buckets['152'] = round(float(fallback_total), 2)
+    return buckets
+
+
+def _append_inv_credit_lines(
+    lines: list[dict],
+    *,
+    seq: int,
+    buckets: dict[str, float],
+    voucher_no: str,
+    label: str = 'xuất NVL',
+) -> int:
+    for acc in sorted(buckets.keys()):
+        amt = float(buckets[acc] or 0)
+        if amt <= 0:
+            continue
+        lines.append({
+            'sequence': seq,
+            'account_code': acc,
+            'debit': 0,
+            'credit': amt,
+            'description': f'{voucher_no}: {label} ({acc})',
+        })
+        seq += 1
+    return seq
+
+
 def post_production_journal(
     conn: sqlite3.Connection,
     order: dict[str, Any],
@@ -57,11 +118,15 @@ def post_production_journal(
     Khi lập lệnh SX (chưa nhập kho TP):
 
     ``full`` (TT99):
-      1) Tập hợp CP: Nợ 621/Có 152 · Nợ 622/Có 3341 · Nợ 627/Có 1111
+      1) Tập hợp CP: Nợ 621/Có 152|155|156 · Nợ 622/Có 3341 · Nợ 627/Có 1111
       2) Kết chuyển dở dang: Nợ 154 / Có 621+622+627
       (Bước Nợ 155 chỉ khi nhập kho thành phẩm — ``post_fg_receipt_journal``)
 
-    ``simple`` (siêu nhỏ): Nợ 154 / Có 152(+3341/+1111) — chờ nhập kho mới chuyển 155.
+    ``materials_only`` (giá tạm giữa kỳ):
+      Chỉ NVL: Nợ 621/Có kho → Nợ 154/Có 621.
+      NCTT/CPSXC định mức chỉ dùng để định giá nhập 155; cuối kỳ phân bổ thực tế 622/627.
+
+    ``simple`` (siêu nhỏ): Nợ 154 / Có 152|155|156 (+3341/+1111) — chờ nhập kho mới chuyển 155.
     """
     ensure_sme_journal_ready(conn, commit=False)
     ensure_production_journal_column(conn, commit=False)
@@ -79,15 +144,6 @@ def post_production_journal(
     labor = float(order.get('labor_cost') or 0)
     other = float(order.get('other_cost') or 0)
     total = float(order.get('total_cost') or (material + labor + other))
-    if total <= 0:
-        return None
-
-    credit_mat = material
-    credit_labor = labor
-    credit_other = other
-    credit_sum = credit_mat + credit_labor + credit_other
-    if abs(credit_sum - total) >= 0.01:
-        credit_mat = round(credit_mat + (total - credit_sum), 2)
 
     voucher_no = order.get('voucher_no') or f'SX{order_id}'
     date_s = str(order.get('production_date') or '')[:10]
@@ -95,21 +151,52 @@ def post_production_journal(
         raise ValueError('Thiếu ngày sản xuất để ghi sổ')
 
     mode = (costing_mode or order.get('costing_mode') or 'full').strip().lower()
-    if mode not in ('full', 'simple'):
+    if mode not in ('full', 'simple', 'materials_only'):
         mode = 'full'
 
-    if mode == 'simple':
+    if mode == 'materials_only':
+        if material <= 0:
+            return None
+        labor = 0.0
+        other = 0.0
+        total = material
+        result = _post_full_to_wip(
+            conn, order_id=order_id, voucher_no=voucher_no, date_s=date_s,
+            total=total, mat_buckets=_material_cost_buckets(conn, order, fallback_total=material),
+            credit_labor=0.0, credit_other=0.0,
+            finished_product_id=order.get('finished_product_id'),
+            created_by=created_by,
+        )
+    elif mode == 'simple':
+        if total <= 0:
+            return None
+        credit_mat = material
+        credit_labor = labor
+        credit_other = other
+        credit_sum = credit_mat + credit_labor + credit_other
+        if abs(credit_sum - total) >= 0.01:
+            credit_mat = round(credit_mat + (total - credit_sum), 2)
         result = _post_simple_wip(
             conn, order_id=order_id, voucher_no=voucher_no, date_s=date_s,
-            total=total, credit_mat=credit_mat, credit_labor=credit_labor,
-            credit_other=credit_other, finished_product_id=order.get('finished_product_id'),
+            total=total, mat_buckets=_material_cost_buckets(conn, order, fallback_total=credit_mat),
+            credit_labor=credit_labor, credit_other=credit_other,
+            finished_product_id=order.get('finished_product_id'),
             created_by=created_by,
         )
     else:
+        if total <= 0:
+            return None
+        credit_mat = material
+        credit_labor = labor
+        credit_other = other
+        credit_sum = credit_mat + credit_labor + credit_other
+        if abs(credit_sum - total) >= 0.01:
+            credit_mat = round(credit_mat + (total - credit_sum), 2)
         result = _post_full_to_wip(
             conn, order_id=order_id, voucher_no=voucher_no, date_s=date_s,
-            total=total, credit_mat=credit_mat, credit_labor=credit_labor,
-            credit_other=credit_other, finished_product_id=order.get('finished_product_id'),
+            total=total, mat_buckets=_material_cost_buckets(conn, order, fallback_total=credit_mat),
+            credit_labor=credit_labor, credit_other=credit_other,
+            finished_product_id=order.get('finished_product_id'),
             created_by=created_by,
         )
 
@@ -208,10 +295,11 @@ def post_fg_receipt_journal(
 
 
 def _post_simple_wip(
-    conn, *, order_id, voucher_no, date_s, total, credit_mat, credit_labor, credit_other,
+    conn, *, order_id, voucher_no, date_s, total, mat_buckets, credit_labor, credit_other,
     finished_product_id, created_by,
 ) -> dict[str, Any]:
     """Siêu nhỏ: tập hợp thẳng vào 154 (chờ nhập kho mới sang 155)."""
+    credit_mat = round(sum(float(v or 0) for v in mat_buckets.values()), 2)
     desc = f"Sản xuất {voucher_no} — CPSX dở dang (154)"
     lines: list[dict] = [{
         'sequence': 1, 'account_code': '154', 'debit': total, 'credit': 0,
@@ -219,11 +307,9 @@ def _post_simple_wip(
     }]
     seq = 2
     if credit_mat > 0:
-        lines.append({
-            'sequence': seq, 'account_code': '152', 'debit': 0, 'credit': credit_mat,
-            'description': f'{voucher_no}: xuất NVL',
-        })
-        seq += 1
+        seq = _append_inv_credit_lines(
+            lines, seq=seq, buckets=mat_buckets, voucher_no=voucher_no,
+        )
     if credit_labor > 0:
         lines.append({
             'sequence': seq, 'account_code': '3341', 'debit': 0, 'credit': credit_labor,
@@ -246,22 +332,24 @@ def _post_simple_wip(
 
 
 def _post_full_to_wip(
-    conn, *, order_id, voucher_no, date_s, total, credit_mat, credit_labor, credit_other,
+    conn, *, order_id, voucher_no, date_s, total, mat_buckets, credit_labor, credit_other,
     finished_product_id, created_by,
 ) -> dict[str, Any]:
     """Hai bước khi lập lệnh: tập hợp CP → 154. Chưa ghi 155."""
+    credit_mat = round(sum(float(v or 0) for v in mat_buckets.values()), 2)
     steps = []
 
     collect_lines: list[dict] = []
     seq = 1
     if credit_mat > 0:
-        collect_lines.extend([
-            {'sequence': seq, 'account_code': '621', 'debit': credit_mat, 'credit': 0,
-             'description': f'{voucher_no}: NVL trực tiếp'},
-            {'sequence': seq + 1, 'account_code': '152', 'debit': 0, 'credit': credit_mat,
-             'description': f'{voucher_no}: xuất NVL'},
-        ])
-        seq += 2
+        collect_lines.append({
+            'sequence': seq, 'account_code': '621', 'debit': credit_mat, 'credit': 0,
+            'description': f'{voucher_no}: NVL trực tiếp',
+        })
+        seq += 1
+        seq = _append_inv_credit_lines(
+            collect_lines, seq=seq, buckets=mat_buckets, voucher_no=voucher_no,
+        )
     if credit_labor > 0:
         collect_lines.extend([
             {'sequence': seq, 'account_code': '622', 'debit': credit_labor, 'credit': 0,

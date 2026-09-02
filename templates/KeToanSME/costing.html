@@ -4,7 +4,7 @@
 <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
   <div>
     <h4 class="fw-bold mb-1">Kế toán giá thành</h4>
-    <p class="text-muted small mb-0">Luồng TT99: 621/622/627 → 154 → 155 → 632</p>
+    <p class="text-muted small mb-0">Luồng TT99: TP 621/622/627 → 154 → 155 → 6322 · DV → 154 → 6323</p>
   </div>
   <div class="d-flex gap-2 align-items-end">
     <div><label class="form-label small mb-1">Năm</label><input type="number" id="y" class="form-control form-control-sm" style="width:100px"></div>
@@ -12,27 +12,45 @@
     <button class="btn btn-primary btn-sm" id="btnLoad">Xem</button>
     <a class="btn btn-outline-primary btn-sm" id="btnPrint" target="_blank">In bảng GT</a>
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_production') }}">Lệnh sản xuất</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_service_costing') }}">Giá vốn DV</a>
   </div>
 </div>
 <div class="row g-3 mb-3" id="cards"></div>
 <div class="row g-3 mb-3" id="cards2"></div>
+<div class="row g-3 mb-3" id="cardsSvc"></div>
 <div class="card border-0 shadow-sm mb-3">
   <div class="card-body">
-    <p class="mb-2 fw-semibold">Luồng sản xuất (chế độ đầy đủ):</p>
+    <p class="mb-2 fw-semibold">Luồng sản xuất thành phẩm:</p>
+    <ol class="small text-muted mb-2">
+      <li>Lập lệnh: tập hợp Nợ 621/Có 152·155·156 · Nợ 622/Có 3341 · Nợ 627/Có 1111</li>
+      <li>Kết chuyển dở dang: Nợ 154 / Có 621+622+627</li>
+      <li>Nhập kho TP: Nợ 155 / Có 154 · khi bán: Nợ 6322 / Có 155</li>
+    </ol>
+    <p class="mb-2 fw-semibold">Luồng giá vốn dịch vụ:</p>
     <ol class="small text-muted mb-0">
-      <li>Lập lệnh: tập hợp Nợ 621/Có 152 · Nợ 622/Có 3341 · Nợ 627/Có 1111</li>
-      <li>Kết chuyển dở dang: Nợ 154 / Có 621+622+627 (trạng thái <strong>Đang sản xuất</strong>)</li>
-      <li>Nhập kho thành phẩm theo đợt: Nợ 155 / Có 154 · khi bán: Nợ 632 / Có 155</li>
+      <li>Lệnh DV: NVL/NC/mua ngoài/chung → 621/622/627 → 154 (chi tiết theo lệnh)</li>
+      <li>Nghiệm thu / bàn giao: Nợ 6323 / Có 154 · vượt mức ghi thẳng 6323</li>
+      <li>641/642 không được tính vào giá thành dịch vụ</li>
     </ol>
   </div>
 </div>
-<div class="card border-0 shadow-sm">
+<div class="card border-0 shadow-sm mb-3">
   <div class="card-header bg-white fw-bold">Lệnh sản xuất gần đây</div>
   <div class="table-responsive">
     <table class="table table-sm mb-0"><thead class="table-light"><tr>
       <th>Số</th><th>Ngày</th><th class="text-end">Nguyên vật liệu</th><th class="text-end">Nhân công</th><th class="text-end">Chung</th>
       <th class="text-end">Tổng</th><th>Chế độ</th><th>Tình trạng</th>
     </tr></thead><tbody id="tbody"></tbody></table>
+  </div>
+</div>
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white fw-bold">Lệnh giá vốn dịch vụ gần đây</div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0"><thead class="table-light"><tr>
+      <th>Số</th><th>Ngày</th><th>Dịch vụ</th>
+      <th class="text-end">Tổng CP</th><th class="text-end">154 dở dang</th>
+      <th class="text-end">GV KC</th><th>Tình trạng</th>
+    </tr></thead><tbody id="tbodySvc"></tbody></table>
   </div>
 </div>
 {% endblock %}
@@ -59,13 +77,26 @@
         <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">621 nguyên vật liệu trực tiếp (phát sinh nợ)</div><div class="fs-5 fw-bold">${money(d.cp_621)}</div></div></div></div>
         <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">622 Nhân công (phát sinh nợ)</div><div class="fs-5 fw-bold">${money(d.cp_622)}</div></div></div></div>
         <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">627 Sản xuất chung (phát sinh nợ)</div><div class="fs-5 fw-bold">${money(d.cp_627)}</div></div></div></div>`;
-      tbody.innerHTML=(d.recent_orders||[]).map(r=>`<tr>
+      document.getElementById('cardsSvc').innerHTML=`
+        <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">DV — 154 dở dang (lệnh mở)</div><div class="fs-5 fw-bold">${money(d.service_wip_open)}</div></div></div></div>
+        <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">DV — GV nghiệm thu kỳ (job)</div><div class="fs-5 fw-bold text-danger">${money(d.service_cogs_period)}</div></div></div></div>
+        <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">6323 phát sinh nợ kỳ</div><div class="fs-5 fw-bold text-danger">${money(d.cogs_6323_period)}</div></div></div></div>`;
+      document.getElementById('tbody').innerHTML=(d.recent_orders||[]).map(r=>`<tr>
         <td class="fw-bold">${r.voucher_no||''}</td><td>${fmtDateVi(r.production_date)}</td>
         <td class="text-end">${money(r.material)}</td><td class="text-end">${money(r.labor)}</td>
         <td class="text-end">${money(r.other)}</td><td class="text-end fw-bold">${money(r.total_cost)}</td>
         <td><span class="badge bg-light text-dark border">${statusLabelVi(r.costing_mode||'full')}</span></td>
         <td><span class="badge bg-light text-dark border">${statusLabelVi(r.status)}</span></td>
-      </tr>`).join('')||'<tr><td colspan="8" class="text-muted text-center">Chưa có lệnh</td></tr>';    }catch(e){ document.getElementById('cards').innerHTML=`<div class="col-12 text-danger">${e.message}</div>`; }
+      </tr>`).join('')||'<tr><td colspan="8" class="text-muted text-center">Chưa có lệnh</td></tr>';
+      document.getElementById('tbodySvc').innerHTML=(d.recent_service_jobs||[]).map(r=>`<tr>
+        <td class="fw-bold">${r.voucher_no||''}</td><td>${fmtDateVi(r.job_date)}</td>
+        <td>${r.service_name||''}</td>
+        <td class="text-end">${money(r.total_cost)}</td>
+        <td class="text-end">${money(r.wip_balance)}</td>
+        <td class="text-end fw-bold">${money(r.cogs_posted)}</td>
+        <td><span class="badge bg-light text-dark border">${statusLabelVi(r.status)}</span></td>
+      </tr>`).join('')||'<tr><td colspan="7" class="text-muted text-center">Chưa có lệnh DV</td></tr>';
+    }catch(e){ document.getElementById('cards').innerHTML=`<div class="col-12 text-danger">${e.message}</div>`; }
   }
   function syncPrint(){ document.getElementById('btnPrint').href='/SME_costing/in?year='+yEl.value+'&period='+pEl.value; }
   document.getElementById('btnLoad').addEventListener('click', ()=>{ load(); syncPrint(); });

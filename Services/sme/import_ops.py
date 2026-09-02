@@ -313,7 +313,7 @@ def void_import(
         for item in items:
             it = dict(item)
             lt = str(it.get('line_type') or 'goods').strip().lower()
-            if lt in ('fixed_asset', 'tools', 'service'):
+            if lt in ('fixed_asset', 'intangible_asset', 'tools', 'service'):
                 continue
             pid = it.get('product_id')
             if not pid:

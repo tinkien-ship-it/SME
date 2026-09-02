@@ -9,6 +9,7 @@ from typing import Any
 from Services.fixed_assets_helpers import (
     FIXED_ASSETS_TABLE,
     STATUS_ACTIVE,
+    STATUS_CAPITAL,
     STATUS_DISPOSED,
     STATUS_IN_STOCK,
     ensure_fixed_assets_schema,
@@ -25,6 +26,7 @@ from db_utils import sqlite_commit
 
 MONEY_Q = Decimal('0.01')
 FORM_DISPOSAL = '02-TSCD'
+FORM_CAPITAL = 'GV-TSCD'
 FORM_DEP_TABLE = '06-TSCD'
 
 
@@ -72,6 +74,33 @@ def ensure_sme_fa_lifecycle_schema(conn: sqlite3.Connection, *, commit: bool = T
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS sme_fa_capital_contributions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            form_code TEXT NOT NULL DEFAULT 'GV-TSCD',
+            doc_no TEXT NOT NULL UNIQUE,
+            contribution_date TEXT NOT NULL,
+            asset_id INTEGER NOT NULL,
+            asset_code TEXT,
+            asset_name TEXT,
+            asset_account TEXT,
+            accum_account TEXT,
+            equity_account TEXT NOT NULL DEFAULT '4111',
+            original_cost REAL NOT NULL DEFAULT 0,
+            accum_dep REAL NOT NULL DEFAULT 0,
+            net_book REAL NOT NULL DEFAULT 0,
+            prior_status TEXT,
+            owner_name TEXT,
+            reason TEXT,
+            journal_entry_id INTEGER,
+            status TEXT NOT NULL DEFAULT 'posted',
+            created_by TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
     if commit:
         sqlite_commit(conn, label='fa_lifecycle')
 
@@ -96,6 +125,49 @@ def _cash_account(payment_method: str) -> str:
     return '1111'
 
 
+def _asset_accounts(asset: dict[str, Any]) -> tuple[str, str]:
+    category = str(asset.get('asset_category') or 'tangible').strip().lower()
+    asset_acct = str(asset.get('asset_account') or '').strip()
+    accum_acct = str(asset.get('accum_account') or '').strip()
+    if category == 'intangible' or asset_acct.startswith('213'):
+        return asset_acct or '2133', accum_acct or '2143'
+    return asset_acct or '2112', accum_acct or '2141'
+
+
+def list_fa_capital_coa_accounts(conn: sqlite3.Connection) -> dict[str, list[dict[str, Any]]]:
+    """TK cấp 2+ (có tên) phục vụ góp vốn / phiếu nhập TSCĐ — con của 211 / 213 / 214."""
+    from Services.fixed_assets_helpers import list_purchase_fa_coa_accounts
+
+    return list_purchase_fa_coa_accounts(conn)
+
+
+def _resolve_capital_accounts(
+    conn: sqlite3.Connection,
+    asset: dict[str, Any],
+    *,
+    asset_account: str | None = None,
+    accum_account: str | None = None,
+) -> tuple[str, str]:
+    from Services.sme.coa_service import get_account
+
+    default_asset, default_accum = _asset_accounts(asset)
+    asset_acct = (asset_account or default_asset).strip() or default_asset
+    accum_acct = (accum_account or default_accum).strip() or default_accum
+    for code, label in ((asset_acct, 'TK tài sản'), (accum_acct, 'TK hao mòn')):
+        acc = get_account(conn, code)
+        if not acc or not int(acc.get('is_active') or 0):
+            raise ValueError(f'{label} {code} không có trong danh mục tài khoản')
+    if asset_acct.startswith('213'):
+        if accum_acct != '2143':
+            raise ValueError('TK 213x phải đối ứng TK hao mòn 2143')
+    elif asset_acct.startswith('211'):
+        if accum_acct == '2143':
+            raise ValueError('TK 211x không dùng TK hao mòn 2143')
+    else:
+        raise ValueError('TK tài sản phải thuộc nhóm 211 hoặc 213')
+    return asset_acct, accum_acct
+
+
 def list_active_assets(
     conn: sqlite3.Connection,
     *,
@@ -112,6 +184,9 @@ def list_active_assets(
         extra += ', branch_code'
     if 'expense_account' in cols:
         extra += ', expense_account'
+    for col in ('asset_category', 'asset_account', 'accum_account'):
+        if col in cols:
+            extra += f', {col}'
     sql = f"""
         SELECT id, ma_tai_san, ten_tai_san, nguyen_gia_tinh_khau_hao, thue_gtgt,
                gia_mua_chua_thue, so_luong, so_thang_khau_hao, ngay_bat_dau_su_dung, tinh_trang
@@ -166,8 +241,8 @@ def update_asset_depreciation_period(
     if not row:
         raise ValueError('Không tìm thấy TSCĐ')
     d = dict(row)
-    if str(d.get('tinh_trang') or '') == STATUS_DISPOSED:
-        raise ValueError('TSCĐ đã thanh lý — không đổi thời hạn khấu hao')
+    if str(d.get('tinh_trang') or '') in (STATUS_DISPOSED, STATUS_CAPITAL):
+        raise ValueError('TSCĐ đã thanh lý hoặc đã góp vốn — không đổi thời hạn khấu hao')
     months = int(so_thang_khau_hao or 0)
     if months <= 0:
         raise ValueError('Số tháng khấu hao phải > 0')
@@ -236,6 +311,63 @@ def asset_book_values(
     }
 
 
+def batch_asset_book_values(
+    conn: sqlite3.Connection,
+    asset_ids: list[int],
+    *,
+    as_of: str | None = None,
+    assets_by_id: dict[int, dict[str, Any]] | None = None,
+) -> dict[int, dict[str, float]]:
+    """Hao mòn lũy kế theo lô — tránh N+1 trên danh sách TSCĐ."""
+    if not asset_ids:
+        return {}
+    ensure_sme_fa_lifecycle_schema(conn, commit=False)
+    date_s = (as_of or datetime.now().strftime('%Y-%m-%d'))[:10]
+    year, month = int(date_s[:4]), int(date_s[5:7])
+    if month == 12:
+        before_year, before_period = year + 1, 1
+    else:
+        before_year, before_period = year, month + 1
+
+    placeholders = ','.join('?' * len(asset_ids))
+    accum_rows = conn.execute(
+        f"""
+        SELECT asset_id, COALESCE(SUM(amount), 0) AS accum
+        FROM sme_auto_asset_postings
+        WHERE kind = 'DEPRECIATION'
+          AND asset_table = ?
+          AND asset_id IN ({placeholders})
+          AND (fiscal_year < ? OR (fiscal_year = ? AND period < ?))
+        GROUP BY asset_id
+        """,
+        (FIXED_ASSETS_TABLE, *asset_ids, before_year, before_year, before_period),
+    ).fetchall()
+    accum_map = {
+        int(r['asset_id'] if isinstance(r, sqlite3.Row) else r[0]): _money(
+            r['accum'] if isinstance(r, sqlite3.Row) else r[1]
+        )
+        for r in accum_rows
+    }
+
+    out: dict[int, dict[str, float]] = {}
+    for aid in asset_ids:
+        row = (assets_by_id or {}).get(aid)
+        if row is None:
+            r = conn.execute(
+                f'SELECT * FROM {FIXED_ASSETS_TABLE} WHERE id = ?', (aid,)
+            ).fetchone()
+            row = dict(r) if r else {}
+        cost = _money(_depreciable_cost(row)) if row else Decimal('0')
+        accum = min(accum_map.get(int(aid), Decimal('0')), cost)
+        net = cost - accum
+        out[int(aid)] = {
+            'accum_dep': _f(accum),
+            'net_book': _f(net),
+            'original_cost': _f(cost),
+        }
+    return out
+
+
 def dispose_fixed_asset(
     conn: sqlite3.Connection,
     *,
@@ -263,6 +395,8 @@ def dispose_fixed_asset(
     status = asset.get('tinh_trang')
     if status == STATUS_DISPOSED:
         raise ValueError('TSCĐ đã thanh lý trước đó')
+    if status == STATUS_CAPITAL:
+        raise ValueError('TSCĐ đã góp vốn trước đó')
 
     cost = _money(vals['original_cost'])
     accum = _money(vals['accum_dep'])
@@ -283,17 +417,18 @@ def dispose_fixed_asset(
     doc_no = _next_disposal_no(conn)
     desc = reason or f'Thanh lý TSCĐ {asset.get("ma_tai_san")}'
     cash_acc = _cash_account(payment_method)
+    asset_acct, accum_acct = _asset_accounts(asset)
 
     lines: list[dict] = []
     seq = 1
-    # Nợ 214 hao mòn
+    # Nợ 214x hao mòn
     if accum > 0:
         lines.append({
-            'sequence': seq, 'account_code': '2141',
+            'sequence': seq, 'account_code': accum_acct,
             'debit': float(accum), 'credit': 0, 'description': desc,
         })
         seq += 1
-    # Nợ 811 (lỗ) hoặc sẽ có Có 711 (lãi) — ghi phần GTCL còn lại / điều chỉnh
+    # Nợ 811 (lỗ) hoặc sẽ có Có 711 (lãi)
     if gain_loss < 0:
         loss = abs(gain_loss)
         if loss > 0:
@@ -309,10 +444,10 @@ def dispose_fixed_asset(
             'debit': float(proc), 'credit': 0, 'description': desc,
         })
         seq += 1
-    # Có 211 nguyên giá
+    # Có 211x/213x nguyên giá
     if cost > 0:
         lines.append({
-            'sequence': seq, 'account_code': '2111',
+            'sequence': seq, 'account_code': asset_acct,
             'debit': 0, 'credit': float(cost), 'description': desc,
         })
         seq += 1
@@ -446,6 +581,207 @@ def void_disposal(
     if commit:
         sqlite_commit(conn, label='fa_lifecycle')
     return get_disposal(conn, disposal_id)
+
+
+def _next_capital_no(conn: sqlite3.Connection) -> str:
+    row = conn.execute(
+        "SELECT doc_no FROM sme_fa_capital_contributions WHERE doc_no LIKE 'GV%' ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    if not row:
+        return 'GV000001'
+    raw = row[0] if not isinstance(row, sqlite3.Row) else row['doc_no']
+    digits = ''.join(ch for ch in str(raw) if ch.isdigit()) or '0'
+    return f'GV{int(digits) + 1:06d}'
+
+
+def contribute_fixed_asset_to_capital(
+    conn: sqlite3.Connection,
+    *,
+    asset_id: int,
+    contribution_date: str,
+    owner_name: str = '',
+    equity_account: str = '4111',
+    asset_account: str | None = None,
+    accum_account: str | None = None,
+    reason: str = '',
+    created_by: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Góp vốn bằng TSCĐ: Nợ 211x/213x · Có 214x · Có 4111 (GTCL)."""
+    ensure_sme_journal_ready(conn, commit=False)
+    ensure_sme_fa_lifecycle_schema(conn, commit=False)
+
+    date_s = str(contribution_date or '')[:10]
+    if not date_s:
+        raise ValueError('Thiếu ngày góp vốn')
+    vals = asset_book_values(conn, asset_id, as_of=date_s)
+    asset = vals['asset']
+    from Services.sme.branch_filter import assert_row_in_branch
+    assert_row_in_branch(conn, FIXED_ASSETS_TABLE, asset_id, label='TSCĐ')
+    status = str(asset.get('tinh_trang') or '')
+    if status == STATUS_DISPOSED:
+        raise ValueError('TSCĐ đã thanh lý — không góp vốn')
+    if status == STATUS_CAPITAL:
+        raise ValueError('TSCĐ đã góp vốn trước đó')
+    if status not in (STATUS_ACTIVE, STATUS_IN_STOCK):
+        raise ValueError('TSCĐ không ở trạng thái góp vốn được')
+
+    cost = _money(vals['original_cost'])
+    accum = _money(vals['accum_dep'])
+    net = _money(vals['net_book'])
+    if net <= 0:
+        raise ValueError('Giá trị còn lại phải > 0 để góp vốn')
+
+    asset_acct, accum_acct = _resolve_capital_accounts(
+        conn, asset, asset_account=asset_account, accum_account=accum_account,
+    )
+    equity_acct = (equity_account or '4111').strip() or '4111'
+    doc_no = _next_capital_no(conn)
+    desc = reason or f'Góp vốn TSCĐ {asset.get("ma_tai_san")}'
+
+    lines: list[dict] = []
+    seq = 1
+    if accum > 0:
+        lines.append({
+            'sequence': seq, 'account_code': accum_acct,
+            'debit': float(accum), 'credit': 0, 'description': desc,
+        })
+        seq += 1
+    if net > 0:
+        lines.append({
+            'sequence': seq, 'account_code': equity_acct,
+            'debit': float(net), 'credit': 0, 'description': desc,
+        })
+        seq += 1
+    if cost > 0:
+        lines.append({
+            'sequence': seq, 'account_code': asset_acct,
+            'debit': 0, 'credit': float(cost), 'description': desc,
+        })
+
+    asset_branch = (asset.get('branch_code') or '').strip().upper() or None
+    entry = post_journal_entry(
+        conn,
+        posting_date=date_s,
+        document_date=date_s,
+        document_type='GVTSCD',
+        document_no=doc_no,
+        document_id=int(asset_id),
+        business_type='GOP_VON_TSCD',
+        description=desc,
+        created_by=created_by,
+        branch_code=asset_branch,
+        lines=lines,
+    )
+
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO sme_fa_capital_contributions (
+            form_code, doc_no, contribution_date, asset_id, asset_code, asset_name,
+            asset_account, accum_account, equity_account,
+            original_cost, accum_dep, net_book, prior_status,
+            owner_name, reason, journal_entry_id, status,
+            created_by, created_at, updated_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'posted',?,?,?)
+        """,
+        (
+            FORM_CAPITAL, doc_no, date_s, int(asset_id),
+            asset.get('ma_tai_san'), asset.get('ten_tai_san'),
+            asset_acct, accum_acct, equity_acct,
+            float(cost), float(accum), float(net), status,
+            owner_name or '', desc, entry['id'],
+            created_by, _now(), _now(),
+        ),
+    )
+    contribution_id = cur.lastrowid
+    conn.execute(
+        f"UPDATE {FIXED_ASSETS_TABLE} SET tinh_trang = ? WHERE id = ?",
+        (STATUS_CAPITAL, int(asset_id)),
+    )
+    if commit:
+        sqlite_commit(conn, label='fa_lifecycle')
+    return get_capital_contribution(conn, contribution_id)
+
+
+def get_capital_contribution(conn: sqlite3.Connection, contribution_id: int) -> dict[str, Any] | None:
+    ensure_sme_fa_lifecycle_schema(conn, commit=False)
+    row = conn.execute(
+        'SELECT * FROM sme_fa_capital_contributions WHERE id = ?', (contribution_id,)
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def list_capital_contributions(
+    conn: sqlite3.Connection,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    branch_code: str | None = None,
+    limit: int = 200,
+) -> list[dict[str, Any]]:
+    ensure_sme_fa_lifecycle_schema(conn, commit=False)
+    from Services.sme.branches import DEFAULT_BRANCH_CODE
+
+    sql = f"""
+        SELECT c.* FROM sme_fa_capital_contributions c
+        LEFT JOIN {FIXED_ASSETS_TABLE} fa ON fa.id = c.asset_id
+        WHERE c.status != 'void'
+    """
+    params: list[Any] = []
+    if date_from:
+        sql += ' AND date(c.contribution_date) >= date(?)'
+        params.append(date_from[:10])
+    if date_to:
+        sql += ' AND date(c.contribution_date) <= date(?)'
+        params.append(date_to[:10])
+    code = (branch_code or '').strip().upper()
+    if code and code != 'ALL':
+        if code == DEFAULT_BRANCH_CODE:
+            sql += (
+                " AND (fa.branch_code IS NULL OR fa.branch_code = '' OR fa.branch_code = ?"
+                " OR c.asset_id IS NULL)"
+            )
+        else:
+            sql += ' AND fa.branch_code = ?'
+        params.append(code)
+    sql += ' ORDER BY c.contribution_date DESC, c.id DESC LIMIT ?'
+    params.append(int(limit))
+    return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+
+def void_capital_contribution(
+    conn: sqlite3.Connection,
+    contribution_id: int,
+    *,
+    reason: str = 'Hủy góp vốn TSCĐ',
+    created_by: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    from Services.sme.branch_filter import assert_row_in_branch
+    assert_row_in_branch(conn, 'sme_fa_capital_contributions', contribution_id, label='Góp vốn TSCĐ')
+    doc = get_capital_contribution(conn, contribution_id)
+    if not doc:
+        raise ValueError('Không tìm thấy chứng từ góp vốn')
+    if doc['status'] == 'void':
+        raise ValueError('Đã hủy')
+    if doc.get('journal_entry_id'):
+        reverse_journal_entry(
+            conn, int(doc['journal_entry_id']),
+            created_by=created_by, reason=reason,
+        )
+    prior = doc.get('prior_status') or STATUS_ACTIVE
+    conn.execute(
+        f"UPDATE {FIXED_ASSETS_TABLE} SET tinh_trang = ? WHERE id = ?",
+        (prior, int(doc['asset_id'])),
+    )
+    conn.execute(
+        "UPDATE sme_fa_capital_contributions SET status = 'void', reason = ?, updated_at = ? WHERE id = ?",
+        ((doc.get('reason') or '') + f' | {reason}', _now(), contribution_id),
+    )
+    if commit:
+        sqlite_commit(conn, label='fa_lifecycle')
+    return get_capital_contribution(conn, contribution_id)
 
 
 def depreciation_schedule(
@@ -686,18 +1022,24 @@ def create_fa_upgrade(
     created_by: str | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
-    """Biên bản bàn giao SC/nâng cấp hoàn thành — 03-TSCĐ + tăng nguyên giá 211."""
+    """Biên bản bàn giao SC/nâng cấp hoàn thành — 03-TSCĐ + tăng nguyên giá 211x/213x."""
     ensure_sme_journal_ready(conn, commit=False)
     ensure_sme_fa_docs_schema(conn, commit=False)
     vals = asset_book_values(conn, asset_id, as_of=doc_date)
     asset = vals['asset']
+    status = str(asset.get('tinh_trang') or '')
+    if status in (STATUS_DISPOSED, STATUS_CAPITAL):
+        raise ValueError('TSCĐ đã thanh lý hoặc đã góp vốn — không nâng cấp')
     amt = _money(amount)
     if amt <= 0:
         raise ValueError('Chi phí nâng cấp phải > 0')
     date_s = str(doc_date or '')[:10]
+    if not date_s:
+        raise ValueError('Thiếu ngày nâng cấp')
     doc_no = _next_fa_doc_no(conn, 'BBSC')
-    desc = content or f'Nâng cấp TSCĐ {asset.get("ma_tai_san")}'
+    desc = content or f'Nâng cấp / sửa chữa lớn TSCĐ {asset.get("ma_tai_san")}'
     cash = (cash_account or '1121').strip() or '1121'
+    asset_acct, _accum = _asset_accounts(asset)
     entry = post_journal_entry(
         conn,
         posting_date=date_s, document_date=date_s,
@@ -705,7 +1047,7 @@ def create_fa_upgrade(
         business_type='NANG_CAP_TSCD', description=desc, created_by=created_by,
         branch_code=(asset.get('branch_code') or None),
         lines=[
-            {'sequence': 1, 'account_code': '2111', 'debit': float(amt), 'credit': 0, 'description': desc},
+            {'sequence': 1, 'account_code': asset_acct, 'debit': float(amt), 'credit': 0, 'description': desc},
             {'sequence': 2, 'account_code': cash, 'debit': 0, 'credit': float(amt), 'description': desc},
         ],
     )
@@ -751,29 +1093,37 @@ def create_fa_revaluation(
     created_by: str | None = None,
     commit: bool = False,
 ) -> dict[str, Any]:
-    """Biên bản đánh giá lại TSCĐ — 04-TSCĐ + điều chỉnh 211 / 412 (hoặc 711/811)."""
+    """Biên bản đánh giá lại TSCĐ — 04-TSCĐ + điều chỉnh 211x/213x / 412 (hoặc 711/811)."""
     ensure_sme_journal_ready(conn, commit=False)
     ensure_sme_fa_docs_schema(conn, commit=False)
     vals = asset_book_values(conn, asset_id, as_of=doc_date)
     asset = vals['asset']
+    status = str(asset.get('tinh_trang') or '')
+    if status in (STATUS_DISPOSED, STATUS_CAPITAL):
+        raise ValueError('TSCĐ đã thanh lý hoặc đã góp vốn — không đánh giá lại')
     old = _money(vals['original_cost'])
     new = _money(new_cost)
+    if new < 0:
+        raise ValueError('Nguyên giá mới không được âm')
     diff = new - old
     if diff == 0:
         raise ValueError('Giá trị đánh giá lại không đổi')
     date_s = str(doc_date or '')[:10]
+    if not date_s:
+        raise ValueError('Thiếu ngày đánh giá lại')
     doc_no = _next_fa_doc_no(conn, 'BBDG')
     desc = content or f'Đánh giá lại TSCĐ {asset.get("ma_tai_san")}'
+    asset_acct, _accum = _asset_accounts(asset)
     if diff > 0:
         lines = [
-            {'sequence': 1, 'account_code': '2111', 'debit': float(diff), 'credit': 0, 'description': desc},
+            {'sequence': 1, 'account_code': asset_acct, 'debit': float(diff), 'credit': 0, 'description': desc},
             {'sequence': 2, 'account_code': '412', 'debit': 0, 'credit': float(diff), 'description': desc},
         ]
     else:
         loss = abs(diff)
         lines = [
             {'sequence': 1, 'account_code': '412', 'debit': float(loss), 'credit': 0, 'description': desc},
-            {'sequence': 2, 'account_code': '2111', 'debit': 0, 'credit': float(loss), 'description': desc},
+            {'sequence': 2, 'account_code': asset_acct, 'debit': 0, 'credit': float(loss), 'description': desc},
         ]
     # 412 có thể không postable — fallback 711/811
     try:

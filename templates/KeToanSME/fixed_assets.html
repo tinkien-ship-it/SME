@@ -1,29 +1,53 @@
 {% extends "KeToanSME/_layout.html" %}
-{% block title %}Danh mục tài sản cố định — Kế toán doanh nghiệp{% endblock %}
+{% block title %}Quản lý và khấu hao tài sản cố định — Kế toán doanh nghiệp{% endblock %}
 {% block sme_content %}
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
   <div>
-    <h4 class="fw-bold mb-1">Danh mục tài sản cố định</h4>
-    <p class="text-muted small mb-0">Thiết lập số tháng khấu hao · Trong kho → Đang sử dụng khi giao nhận hoặc chạy tự động kỳ</p>
+    <h4 class="fw-bold mb-1">Quản lý và khấu hao tài sản cố định</h4>
+    <p class="text-muted small mb-0">Khấu hao · Thanh lý · Nâng cấp · Đánh giá lại · Góp vốn</p>
   </div>
-  <div class="d-flex gap-2">
-    <select id="fStatus" class="form-select form-select-sm" style="width:200px">
+  <div class="d-flex gap-2 flex-wrap">
+    <select id="fStatus" class="form-select form-select-sm" style="width:220px">
       <option value="">Đang sử dụng và trong kho</option>
       <option value="InStock">Trong kho</option>
       <option value="Active">Đang sử dụng</option>
+      <option value="CapitalContributed">Đã góp vốn</option>
       <option value="Disposed">Đã thanh lý</option>
     </select>
+    <button type="button" class="btn btn-outline-danger btn-sm" id="btnDispose"><i class="fas fa-trash-can me-1"></i>Thanh lý</button>
+    <button type="button" class="btn btn-outline-warning btn-sm" id="btnUpgrade"><i class="fas fa-arrow-up me-1"></i>Điều chỉnh tăng</button>
+    <button type="button" class="btn btn-outline-info btn-sm" id="btnRevalueDown"><i class="fas fa-arrow-down me-1"></i>Điều chỉnh giảm</button>
+    <button type="button" class="btn btn-outline-success btn-sm" id="btnCapital"><i class="fas fa-hand-holding-usd me-1"></i>Góp vốn</button>
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_TSCD') }}">Tổng quan</a>
-    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_import') }}">Nhập tài sản cố định</a>
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('SME_import') }}">Nhập TSCĐ</a>
   </div>
 </div>
-<div class="card shadow-sm border-0"><div class="table-responsive">
+
+<div class="card shadow-sm border-0 mb-3"><div class="table-responsive">
 <table class="table table-sm mb-0"><thead class="table-light"><tr>
   <th>Mã</th><th>Tên</th><th>Chi nhánh</th><th class="text-end">Nguyên giá</th>
-  <th>Số tháng khấu hao</th><th>TK chi phí</th><th>Ngày bắt đầu sử dụng</th><th>Tình trạng</th><th></th>
+  <th>Loại</th><th>TK TS / HM</th><th>Số tháng KH</th><th>TK chi phí</th><th>Ngày bắt đầu</th><th>Tình trạng</th><th></th>
 </tr></thead><tbody id="tbody"></tbody></table>
 </div></div>
 
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
+    <span class="fw-semibold small">Chứng từ gần đây (thanh lý · nâng cấp · đánh giá lại · góp vốn)</span>
+    <div class="d-flex gap-2 align-items-center">
+      <input type="date" id="opsFrom" class="form-control form-control-sm" style="width:140px">
+      <input type="date" id="opsTo" class="form-control form-control-sm" style="width:140px">
+      <button type="button" class="btn btn-sm btn-outline-primary" id="btnOpsLoad">Tải</button>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0"><thead class="table-light"><tr>
+      <th>Loại</th><th>Số CT</th><th>Ngày</th><th>Mã TS</th><th>Tên</th>
+      <th class="text-end">Số tiền</th><th></th>
+    </tr></thead><tbody id="opsBody"></tbody></table>
+  </div>
+</div>
+
+{# ── Modal thiết lập KH ── #}
 <div class="modal fade" id="periodModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
   <div class="modal-header"><h5 class="modal-title">Thiết lập thời hạn khấu hao</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
@@ -37,7 +61,6 @@
     <div class="mb-2">
       <label class="form-label small">Ngày bắt đầu sử dụng</label>
       <input type="date" id="pStart" class="form-control" lang="vi">
-      <div class="form-text">Để trống nếu giữ nguyên ngày hiện tại.</div>
     </div>
     <div class="mb-2">
       <label class="form-label small">Tài khoản chi phí khấu hao</label>
@@ -55,67 +78,678 @@
     <button type="button" class="btn btn-primary" id="btnSavePeriod">Lưu</button>
   </div>
 </div></div></div>
+
+{# ── Modal góp vốn ── #}
+<div class="modal fade" id="capitalModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header bg-success text-white">
+    <h5 class="modal-title">Góp vốn bằng tài sản cố định</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+  </div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Tài sản *</label><select id="cAsset" class="form-select"></select></div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small">Nguyên giá</label><input id="cCost" class="form-control" readonly></div>
+      <div class="col-md-4"><label class="form-label small">Hao mòn LK</label><input id="cAccum" class="form-control" readonly></div>
+      <div class="col-md-4"><label class="form-label small">Giá trị góp vốn (GTCL)</label><input id="cNet" class="form-control fw-bold" readonly></div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-6"><label class="form-label small">TK tài sản</label><select id="cAssetAcct" class="form-select"></select></div>
+      <div class="col-md-6"><label class="form-label small">TK hao mòn</label><select id="cAccumAcct" class="form-select"></select></div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-6"><label class="form-label small">Ngày góp vốn *</label><input type="date" id="cDate" class="form-control"></div>
+      <div class="col-md-6"><label class="form-label small">TK vốn góp</label>
+        <select id="cEquity" class="form-select"><option value="4111">4111 — Vốn góp của chủ sở hữu</option></select>
+      </div>
+    </div>
+    <div class="mb-2"><label class="form-label small">Chủ sở hữu / thành viên góp vốn</label><input type="text" id="cOwner" class="form-control" placeholder="Họ tên hoặc tên tổ chức"></div>
+    <div class="mb-2"><label class="form-label small">Diễn giải</label><input type="text" id="cReason" class="form-control"></div>
+    <div class="alert alert-light border small mb-0">
+      <div class="fw-semibold mb-1">Xem trước bút toán</div>
+      <div id="cPreviewLines" class="font-monospace">—</div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+    <button type="button" class="btn btn-success" id="btnSaveCapital">Ghi sổ góp vốn</button>
+  </div>
+</div></div></div>
+
+{# ── Modal thanh lý ── #}
+<div class="modal fade" id="disposeModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header bg-danger text-white">
+    <h5 class="modal-title">Thanh lý / nhượng bán TSCĐ <span class="badge bg-light text-danger">02-TSCĐ</span></h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+  </div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Tài sản *</label><select id="dAsset" class="form-select"></select></div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small">Nguyên giá</label><input id="dCost" class="form-control" readonly></div>
+      <div class="col-md-4"><label class="form-label small">Hao mòn LK</label><input id="dAccum" class="form-control" readonly></div>
+      <div class="col-md-4"><label class="form-label small">GTCL</label><input id="dNet" class="form-control fw-bold" readonly></div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small">Ngày *</label><input type="date" id="dDate" class="form-control"></div>
+      <div class="col-md-4"><label class="form-label small">Hình thức</label>
+        <select id="dType" class="form-select">
+          <option value="scrap">Thanh lý / hủy</option>
+          <option value="sale">Nhượng bán</option>
+        </select>
+      </div>
+      <div class="col-md-4" id="dProceedsWrap"><label class="form-label small">Số tiền thu được</label>
+        <input type="number" id="dProceeds" class="form-control" min="0" step="1000" value="0">
+      </div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-6"><label class="form-label small">Thu vào</label>
+        <select id="dPay" class="form-select">
+          <option value="cash">Tiền mặt (1111)</option>
+          <option value="bank">Ngân hàng (1121)</option>
+          <option value="131">Phải thu (131)</option>
+        </select>
+      </div>
+      <div class="col-md-6"><label class="form-label small">Bên nhận / lý do</label><input type="text" id="dReason" class="form-control"></div>
+    </div>
+    <div class="alert alert-light border small mb-0">
+      <div class="fw-semibold mb-1">Xem trước bút toán</div>
+      <div id="dPreviewLines" class="font-monospace">—</div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+    <button type="button" class="btn btn-danger" id="btnSaveDispose">Ghi sổ thanh lý</button>
+  </div>
+</div></div></div>
+
+{# ── Modal điều chỉnh tăng (nâng cấp) ── #}
+<div class="modal fade" id="upgradeModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header bg-warning">
+    <h5 class="modal-title">Điều chỉnh tăng — sửa chữa / nâng cấp <span class="badge bg-dark">03-TSCĐ</span></h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  </div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Tài sản *</label><select id="uAsset" class="form-select"></select></div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small">Nguyên giá hiện tại</label><input id="uCost" class="form-control" readonly></div>
+      <div class="col-md-4"><label class="form-label small">Chi phí nâng cấp *</label><input type="number" id="uAmt" class="form-control" min="0" step="1000" value="0"></div>
+      <div class="col-md-4"><label class="form-label small">Nguyên giá sau điều chỉnh</label><input id="uNewCost" class="form-control fw-bold" readonly></div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small">Ngày *</label><input type="date" id="uDate" class="form-control"></div>
+      <div class="col-md-4"><label class="form-label small">Nguồn chi</label>
+        <select id="uCash" class="form-select">
+          <option value="1121">1121 — Tiền gửi NH</option>
+          <option value="1111">1111 — Tiền mặt</option>
+          <option value="331">331 — Phải trả NCC</option>
+        </select>
+      </div>
+      <div class="col-md-4"><label class="form-label small">TK tài sản (Nợ)</label><input id="uAssetAcct" class="form-control" readonly></div>
+    </div>
+    <div class="mb-2"><label class="form-label small">Nội dung</label><input type="text" id="uContent" class="form-control" placeholder="Sửa chữa lớn / nâng cấp hoàn thành"></div>
+    <div class="alert alert-light border small mb-0">
+      <div class="fw-semibold mb-1">Xem trước bút toán</div>
+      <div id="uPreviewLines" class="font-monospace">—</div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+    <button type="button" class="btn btn-warning" id="btnSaveUpgrade">Ghi sổ tăng nguyên giá</button>
+  </div>
+</div></div></div>
+
+{# ── Modal điều chỉnh giảm (đánh giá lại) ── #}
+<div class="modal fade" id="revalueModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header bg-info text-white">
+    <h5 class="modal-title">Điều chỉnh giảm — đánh giá lại <span class="badge bg-light text-info">04-TSCĐ</span></h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+  </div>
+  <div class="modal-body">
+    <div class="mb-2"><label class="form-label small">Tài sản *</label><select id="rAsset" class="form-select"></select></div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-4"><label class="form-label small">Nguyên giá sổ sách</label><input id="rOldCost" class="form-control" readonly></div>
+      <div class="col-md-4"><label class="form-label small">Nguyên giá đánh giá lại *</label><input type="number" id="rNewCost" class="form-control" min="0" step="1000"></div>
+      <div class="col-md-4"><label class="form-label small">Giảm nguyên giá</label><input id="rDiff" class="form-control fw-bold text-danger" readonly></div>
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-md-6"><label class="form-label small">Ngày *</label><input type="date" id="rDate" class="form-control"></div>
+      <div class="col-md-6"><label class="form-label small">TK tài sản (Có)</label><input id="rAssetAcct" class="form-control" readonly></div>
+    </div>
+    <div class="mb-2"><label class="form-label small">Nội dung</label><input type="text" id="rContent" class="form-control" placeholder="Đánh giá lại thấp hơn giá trị sổ sách"></div>
+    <div class="alert alert-light border small mb-0">
+      <div class="fw-semibold mb-1">Xem trước bút toán</div>
+      <div id="rPreviewLines" class="font-monospace">—</div>
+      <div class="text-muted mt-1">Nợ 412 (hoặc 811 nếu không có 412) / Có TK tài sản</div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+    <button type="button" class="btn btn-info text-white" id="btnSaveRevalue">Ghi sổ giảm nguyên giá</button>
+  </div>
+</div></div></div>
 {% endblock %}
+
 {% block sme_scripts %}
 <script>
-const fmt = (n) => (typeof moneyVi === 'function' ? moneyVi(n, false) : Number(n || 0).toLocaleString('vi-VN'));
-let periodModal;
-async function load(){
-  try {
-    const q = fStatus.value ? ('?status=' + encodeURIComponent(fStatus.value)) : '';
+(function () {
+  'use strict';
+  const el = (id) => document.getElementById(id);
+  const fmt = (n) => (typeof moneyVi === 'function' ? moneyVi(n, false) : Number(n || 0).toLocaleString('vi-VN'));
+  const todayISO = () => (typeof SmeUiVi !== 'undefined' && SmeUiVi.todayISO ? SmeUiVi.todayISO() : new Date().toISOString().slice(0, 10));
+  const branchLbl = (c) => (typeof branchLabelVi === 'function' ? branchLabelVi(c) : (c || 'HQ'));
+  const statusLbl = (c) => (typeof statusLabelVi === 'function' ? statusLabelVi(c) : (c || '—'));
+  const dateLbl = (c) => (typeof fmtDateVi === 'function' ? fmtDateVi(c) : (c || '—'));
+
+  let periodModal, capitalModal, disposeModal, upgradeModal, revalueModal;
+  let faCoaAccounts = { tangible_assets: [], intangible_assets: [], accum_accounts: [] };
+  let assetCache = [];
+
+  function coaOptionLabel(a) { return `${a.code} — ${a.name || ''}`; }
+
+  function defaultAccumForAsset(assetCode) {
+    const code = String(assetCode || '').trim();
+    if (code.startsWith('213')) return '2143';
+    return '2141';
+  }
+
+  function fillAssetAccountSelect(sel, selected) {
+    if (!sel) return;
+    const selCode = String(selected || '').trim();
+    const tangible = faCoaAccounts.tangible_assets || [];
+    const intangible = faCoaAccounts.intangible_assets || [];
+    const parts = [];
+    if (tangible.length) {
+      parts.push('<optgroup label="TSCĐ hữu hình (211)">');
+      parts.push(...tangible.map(a =>
+        `<option value="${a.code}" ${a.code === selCode ? 'selected' : ''}>${coaOptionLabel(a)}</option>`
+      ));
+      parts.push('</optgroup>');
+    }
+    if (intangible.length) {
+      parts.push('<optgroup label="TSCĐ vô hình (213)">');
+      parts.push(...intangible.map(a =>
+        `<option value="${a.code}" ${a.code === selCode ? 'selected' : ''}>${coaOptionLabel(a)}</option>`
+      ));
+      parts.push('</optgroup>');
+    }
+    sel.innerHTML = parts.length ? parts.join('') : '<option value="">— Chưa có TK —</option>';
+    if (selCode && sel.querySelector('option[value="' + selCode.replace(/"/g, '\\"') + '"]')) sel.value = selCode;
+  }
+
+  function fillAccountSelect(sel, accounts, selected) {
+    if (!sel) return;
+    const list = accounts || [];
+    const selCode = String(selected || '').trim();
+    sel.innerHTML = list.length
+      ? list.map(a => `<option value="${a.code}" ${a.code === selCode ? 'selected' : ''}>${coaOptionLabel(a)}</option>`).join('')
+      : '<option value="">—</option>';
+    if (selCode && list.some(a => a.code === selCode)) sel.value = selCode;
+  }
+
+  async function loadFaCoaAccounts() {
+    const res = await fetch('/api/sme/fixed-assets/coa-accounts');
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || 'Không tải được danh mục TK');
+    faCoaAccounts = json.data || faCoaAccounts;
+  }
+
+  async function fetchAssets(asOf) {
+    const q = asOf ? ('?as_of=' + encodeURIComponent(asOf)) : '';
     const res = await fetch('/api/sme/fixed-assets/list' + q);
     const json = await res.json();
-    if (!json.success) {
-      tbody.innerHTML = `<tr><td colspan="9" class="text-danger">${json.error || 'Không tải được dữ liệu'}</td></tr>`;
+    if (!json.success) throw new Error(json.error || 'Không tải được TSCĐ');
+    assetCache = json.data || [];
+    return assetCache;
+  }
+
+  function fillAssetSelect(sel, assets) {
+    if (!sel) return;
+    sel.innerHTML = (assets || []).map(a =>
+      `<option value="${a.id}"
+        data-cost="${a.original_cost || 0}"
+        data-accum="${a.accum_dep || 0}"
+        data-net="${a.net_book || 0}"
+        data-asset="${a.asset_account || '2112'}"
+        data-accum-acct="${a.accum_account || '2141'}"
+        data-category="${a.asset_category || 'tangible'}">
+        ${a.ma_tai_san} — ${a.ten_tai_san} [${branchLbl(a.branch_code)}]
+      </option>`
+    ).join('') || '<option value="">Không có TSCĐ khả dụng</option>';
+  }
+
+  function selectedOpt(sel) {
+    return sel && sel.selectedOptions && sel.selectedOptions[0] ? sel.selectedOptions[0] : null;
+  }
+
+  // ── Danh mục ──
+  async function load() {
+    const tbody = el('tbody');
+    const fStatus = el('fStatus');
+    try {
+      const q = fStatus && fStatus.value ? ('?status=' + encodeURIComponent(fStatus.value)) : '';
+      const res = await fetch('/api/sme/fixed-assets/list' + q);
+      const json = await res.json();
+      if (!json.success) {
+        tbody.innerHTML = `<tr><td colspan="11" class="text-danger">${json.error || 'Lỗi'}</td></tr>`;
+        return;
+      }
+      const rows = json.data || [];
+      tbody.innerHTML = rows.map(r => `<tr>
+        <td class="fw-bold">${r.ma_tai_san || ''}</td>
+        <td>${r.ten_tai_san || ''}</td>
+        <td class="small">${branchLbl(r.branch_code)}</td>
+        <td class="text-end">${fmt(r.original_cost || r.nguyen_gia_tinh_khau_hao || 0)}</td>
+        <td class="small">${r.asset_category === 'intangible' ? 'Vô hình' : 'Hữu hình'}</td>
+        <td class="small">${r.asset_account || '2112'} / ${r.accum_account || '2141'}</td>
+        <td class="fw-semibold">${r.so_thang_khau_hao || '—'}</td>
+        <td class="small">${r.expense_account || '642'}</td>
+        <td class="small">${dateLbl(r.ngay_bat_dau_su_dung)}</td>
+        <td>${statusLbl(r.tinh_trang)}</td>
+        <td class="text-nowrap">
+          ${r.tinh_trang !== 'Disposed' && r.tinh_trang !== 'CapitalContributed'
+            ? `<button type="button" class="btn btn-sm btn-outline-primary btn-period">Thiết lập KH</button>`
+            : '<span class="text-muted small">—</span>'}
+        </td>
+      </tr>`).join('') || '<tr><td colspan="11" class="text-muted text-center">Chưa có TSCĐ</td></tr>';
+      [...tbody.querySelectorAll('tr')].forEach((tr, i) => {
+        const btn = tr.querySelector('.btn-period');
+        if (btn && rows[i]) btn.addEventListener('click', () => openPeriod(rows[i]));
+      });
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="11" class="text-danger">${e.message || 'Lỗi'}</td></tr>`;
+    }
+  }
+
+  function openPeriod(r) {
+    el('pId').value = r.id;
+    el('pLabel').textContent = (r.ma_tai_san || '') + ' — ' + (r.ten_tai_san || '');
+    el('pMonths').value = r.so_thang_khau_hao || 36;
+    el('pStart').value = (r.ngay_bat_dau_su_dung || '').toString().slice(0, 10);
+    el('pExp').value = r.expense_account || '642';
+    periodModal.show();
+  }
+
+  // ── Ops list ──
+  async function loadOps() {
+    const body = el('opsBody');
+    const from = el('opsFrom').value;
+    const to = el('opsTo').value;
+    try {
+      const [disp, docs, caps] = await Promise.all([
+        fetch('/api/sme/fa-disposal?' + new URLSearchParams({ from, to })).then(r => r.json()),
+        fetch('/api/sme/fa-docs').then(r => r.json()),
+        fetch('/api/sme/fa-capital-contribution?' + new URLSearchParams({ from, to })).then(r => r.json()),
+      ]);
+      const rows = [];
+      (disp.data || []).forEach(r => rows.push({
+        kind: 'Thanh lý', kindClass: 'text-danger', doc_no: r.doc_no, date: r.disposal_date,
+        asset_code: r.asset_code, asset_name: r.asset_name,
+        amount: r.proceeds || r.net_book || 0,
+        voidUrl: '/api/sme/fa-disposal/' + r.id + '/void', id: r.id, status: r.status,
+      }));
+      (docs.data || []).filter(r => {
+        const d = (r.doc_date || '').slice(0, 10);
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+        return r.doc_type === 'upgrade' || r.doc_type === 'revaluation';
+      }).forEach(r => rows.push({
+        kind: r.doc_type === 'upgrade' ? 'Nâng cấp (+)' : 'Đánh giá lại',
+        kindClass: r.doc_type === 'upgrade' ? 'text-warning' : 'text-info',
+        doc_no: r.doc_no, date: r.doc_date,
+        asset_code: r.asset_code, asset_name: r.asset_name,
+        amount: Math.abs(r.amount || 0) || r.new_cost || 0,
+        voidUrl: '/api/sme/fa-docs/' + r.id + '/void', id: r.id, status: r.status,
+      }));
+      (caps.data || []).forEach(r => rows.push({
+        kind: 'Góp vốn', kindClass: 'text-success', doc_no: r.doc_no, date: r.contribution_date,
+        asset_code: r.asset_code, asset_name: r.asset_name, amount: r.net_book || 0,
+        voidUrl: '/api/sme/fa-capital-contribution/' + r.id + '/void', id: r.id, status: r.status,
+      }));
+      rows.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+      body.innerHTML = rows.length ? rows.map(r => `<tr>
+        <td class="small fw-semibold ${r.kindClass}">${r.kind}</td>
+        <td class="fw-bold">${r.doc_no || ''}</td>
+        <td class="small">${dateLbl(r.date)}</td>
+        <td>${r.asset_code || ''}</td>
+        <td>${r.asset_name || ''}</td>
+        <td class="text-end">${fmt(r.amount)}</td>
+        <td>${r.status !== 'void'
+          ? `<button type="button" class="btn btn-sm btn-outline-secondary btn-void-op" data-url="${r.voidUrl}">Hủy</button>`
+          : '<span class="text-muted small">Đã hủy</span>'}</td>
+      </tr>`).join('') : '<tr><td colspan="7" class="text-muted text-center py-3">Chưa có chứng từ</td></tr>';
+      body.querySelectorAll('.btn-void-op').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Hủy chứng từ và đảo bút toán?')) return;
+          const res = await fetch(btn.dataset.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+          const j = await res.json();
+          if (!j.success) return alert(j.error || 'Lỗi');
+          loadOps();
+          load();
+        });
+      });
+    } catch (e) {
+      body.innerHTML = `<tr><td colspan="7" class="text-danger">${e.message || 'Lỗi'}</td></tr>`;
+    }
+  }
+
+  // ── Góp vốn ──
+  function syncCapitalAccountSelects(o) {
+    const defaultAsset = o?.dataset.asset || '2112';
+    const defaultAccum = o?.dataset.accumAcct || defaultAccumForAsset(defaultAsset);
+    fillAssetAccountSelect(el('cAssetAcct'), defaultAsset);
+    fillAccountSelect(el('cAccumAcct'), faCoaAccounts.accum_accounts, defaultAccum);
+  }
+
+  function updateCapitalPreview() {
+    const preview = el('cPreviewLines');
+    if (!preview) return;
+    const o = selectedOpt(el('cAsset'));
+    if (!o || !o.value) {
+      preview.textContent = '—';
       return;
     }
-    const rows = json.data || [];
-    tbody.innerHTML = rows.map(r => `<tr>
-      <td class="fw-bold">${r.ma_tai_san || ''}</td>
-      <td>${r.ten_tai_san || ''}</td>
-      <td class="small">${branchLabelVi(r.branch_code)}</td>
-      <td class="text-end">${fmt(r.original_cost || r.nguyen_gia_tinh_khau_hao || 0)}</td>
-      <td class="fw-semibold">${r.so_thang_khau_hao || '—'}</td>
-      <td class="small">${r.expense_account || '642'}</td>
-      <td class="small">${fmtDateVi(r.ngay_bat_dau_su_dung)}</td>
-      <td>${statusLabelVi(r.tinh_trang)}</td>
-      <td class="text-nowrap">
-        ${r.tinh_trang !== 'Disposed'
-          ? `<button type="button" class="btn btn-sm btn-outline-primary btn-period">Thiết lập khấu hao</button>`
-          : '<span class="text-muted small">—</span>'}
-      </td>
-    </tr>`).join('') || '<tr><td colspan="9" class="text-muted text-center">Chưa có tài sản cố định — nhập qua phiếu nhập kho</td></tr>';
-    [...tbody.querySelectorAll('tr')].forEach((tr, i) => {
-      const btn = tr.querySelector('.btn-period');
-      if (btn && rows[i]) btn.addEventListener('click', () => openPeriod(rows[i]));
-    });
-  } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-danger">${e.message || 'Lỗi tải danh mục'}</td></tr>`;
+    const cost = Number(o.dataset.cost || 0);
+    const accum = Number(o.dataset.accum || 0);
+    const net = Number(o.dataset.net || 0);
+    const assetAcct = el('cAssetAcct').value || o.dataset.asset || '2112';
+    const accumAcct = el('cAccumAcct').value || o.dataset.accumAcct || '2141';
+    const equity = el('cEquity').value || '4111';
+    el('cCost').value = fmt(cost);
+    el('cAccum').value = fmt(accum);
+    el('cNet').value = fmt(net);
+    const lines = [];
+    if (accum > 0) lines.push(`Nợ ${accumAcct}: ${fmt(accum)}`);
+    if (net > 0) lines.push(`Nợ ${equity}: ${fmt(net)}`);
+    if (cost > 0) lines.push(`&nbsp;&nbsp;Có ${assetAcct}: ${fmt(cost)}`);
+    preview.innerHTML = lines.join('<br>') || '—';
   }
-}
-function openPeriod(r){
-  pId.value = r.id;
-  pLabel.textContent = (r.ma_tai_san || '') + ' — ' + (r.ten_tai_san || '');
-  pMonths.value = r.so_thang_khau_hao || 36;
-  pStart.value = (r.ngay_bat_dau_su_dung || '').toString().slice(0, 10);
-  pExp.value = r.expense_account || '642';
-  periodModal.show();
-}
-btnSavePeriod.onclick = async () => {
-  const body = { so_thang_khau_hao: Number(pMonths.value || 0), expense_account: pExp.value };
-  if (pStart.value) body.ngay_bat_dau_su_dung = pStart.value;
-  const res = await fetch('/api/sme/fixed-assets/' + pId.value + '/period', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+
+  function syncCapitalAsset() {
+    const o = selectedOpt(el('cAsset'));
+    if (!o || !o.value) {
+      el('cCost').value = el('cAccum').value = el('cNet').value = '';
+      el('cAssetAcct').innerHTML = el('cAccumAcct').innerHTML = '<option value="">—</option>';
+      if (el('cPreviewLines')) el('cPreviewLines').textContent = '—';
+      return;
+    }
+    syncCapitalAccountSelects(o);
+    updateCapitalPreview();
+  }
+
+  function onAssetAccountChange() {
+    const suggested = defaultAccumForAsset(el('cAssetAcct').value);
+    if (suggested && (faCoaAccounts.accum_accounts || []).some(a => a.code === suggested)) {
+      el('cAccumAcct').value = suggested;
+    }
+    updateCapitalPreview();
+  }
+
+  // ── Thanh lý ──
+  function updateDisposePreview() {
+    const preview = el('dPreviewLines');
+    if (!preview) return;
+    const o = selectedOpt(el('dAsset'));
+    if (!o || !o.value) { preview.textContent = '—'; return; }
+    const cost = Number(o.dataset.cost || 0);
+    const accum = Number(o.dataset.accum || 0);
+    const net = Number(o.dataset.net || 0);
+    const assetAcct = o.dataset.asset || '2112';
+    const accumAcct = o.dataset.accumAcct || '2141';
+    const dtype = el('dType').value;
+    let proc = dtype === 'sale' ? Number(el('dProceeds').value || 0) : 0;
+    if (proc < 0) proc = 0;
+    const gain = proc - net;
+    el('dCost').value = fmt(cost);
+    el('dAccum').value = fmt(accum);
+    el('dNet').value = fmt(net);
+    const payMap = { cash: '1111', bank: '1121', '131': '131' };
+    const cashAcc = payMap[el('dPay').value] || '1111';
+    const lines = [];
+    if (accum > 0) lines.push(`Nợ ${accumAcct}: ${fmt(accum)}`);
+    if (gain < 0 && Math.abs(gain) > 0) lines.push(`Nợ 811: ${fmt(Math.abs(gain))}`);
+    if (proc > 0) lines.push(`Nợ ${cashAcc}: ${fmt(proc)}`);
+    if (cost > 0) lines.push(`&nbsp;&nbsp;Có ${assetAcct}: ${fmt(cost)}`);
+    if (gain > 0) lines.push(`&nbsp;&nbsp;Có 711: ${fmt(gain)}`);
+    preview.innerHTML = lines.join('<br>') || '—';
+  }
+
+  function syncDisposeAsset() {
+    const wrap = el('dProceedsWrap');
+    if (wrap) wrap.style.display = el('dType').value === 'sale' ? '' : 'none';
+    if (el('dType').value !== 'sale') el('dProceeds').value = 0;
+    updateDisposePreview();
+  }
+
+  // ── Nâng cấp ──
+  function updateUpgradePreview() {
+    const preview = el('uPreviewLines');
+    if (!preview) return;
+    const o = selectedOpt(el('uAsset'));
+    if (!o || !o.value) { preview.textContent = '—'; return; }
+    const cost = Number(o.dataset.cost || 0);
+    const amt = Number(el('uAmt').value || 0);
+    const assetAcct = o.dataset.asset || '2112';
+    const cash = el('uCash').value || '1121';
+    el('uCost').value = fmt(cost);
+    el('uNewCost').value = fmt(cost + Math.max(0, amt));
+    el('uAssetAcct').value = assetAcct;
+    if (amt > 0) {
+      preview.innerHTML = `Nợ ${assetAcct}: ${fmt(amt)}<br>&nbsp;&nbsp;Có ${cash}: ${fmt(amt)}`;
+    } else {
+      preview.textContent = '—';
+    }
+  }
+
+  // ── Đánh giá lại giảm ──
+  function updateRevaluePreview() {
+    const preview = el('rPreviewLines');
+    if (!preview) return;
+    const o = selectedOpt(el('rAsset'));
+    if (!o || !o.value) { preview.textContent = '—'; return; }
+    const oldCost = Number(o.dataset.cost || 0);
+    let newCost = Number(el('rNewCost').value || 0);
+    if (newCost > oldCost) {
+      // Chỉ cho điều chỉnh giảm trên modal này
+      newCost = oldCost;
+      el('rNewCost').value = oldCost;
+    }
+    const diff = oldCost - newCost;
+    const assetAcct = o.dataset.asset || '2112';
+    el('rOldCost').value = fmt(oldCost);
+    el('rDiff').value = fmt(diff);
+    el('rAssetAcct').value = assetAcct;
+    if (diff > 0) {
+      preview.innerHTML = `Nợ 412 (hoặc 811): ${fmt(diff)}<br>&nbsp;&nbsp;Có ${assetAcct}: ${fmt(diff)}`;
+    } else {
+      preview.textContent = '—';
+    }
+  }
+
+  function syncRevalueAsset() {
+    const o = selectedOpt(el('rAsset'));
+    if (!o) return;
+    const cost = Number(o.dataset.cost || 0);
+    el('rNewCost').value = cost;
+    el('rNewCost').max = cost;
+    updateRevaluePreview();
+  }
+
+  // ── Bind ──
+  document.addEventListener('DOMContentLoaded', () => {
+    periodModal = new bootstrap.Modal(el('periodModal'));
+    capitalModal = new bootstrap.Modal(el('capitalModal'));
+    disposeModal = new bootstrap.Modal(el('disposeModal'));
+    upgradeModal = new bootstrap.Modal(el('upgradeModal'));
+    revalueModal = new bootstrap.Modal(el('revalueModal'));
+
+    const t = todayISO();
+    el('opsFrom').value = t.slice(0, 8) + '01';
+    el('opsTo').value = t;
+
+    el('fStatus').onchange = load;
+    el('btnOpsLoad').onclick = loadOps;
+
+    el('btnSavePeriod').onclick = async () => {
+      const body = { so_thang_khau_hao: Number(el('pMonths').value || 0), expense_account: el('pExp').value };
+      if (el('pStart').value) body.ngay_bat_dau_su_dung = el('pStart').value;
+      const res = await fetch('/api/sme/fixed-assets/' + el('pId').value + '/period', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      if (!json.success) return alert(json.error || 'Không lưu được');
+      periodModal.hide();
+      load();
+    };
+
+    // Capital
+    el('btnCapital').onclick = async () => {
+      el('cDate').value = todayISO();
+      try {
+        await loadFaCoaAccounts();
+        fillAssetSelect(el('cAsset'), await fetchAssets(el('cDate').value));
+        syncCapitalAsset();
+        capitalModal.show();
+      } catch (e) { alert(e.message || 'Lỗi'); }
+    };
+    el('cDate').onchange = async () => {
+      fillAssetSelect(el('cAsset'), await fetchAssets(el('cDate').value));
+      syncCapitalAsset();
+    };
+    el('cAsset').onchange = syncCapitalAsset;
+    el('cAssetAcct').onchange = onAssetAccountChange;
+    el('cAccumAcct').onchange = updateCapitalPreview;
+    el('cEquity').onchange = updateCapitalPreview;
+    el('btnSaveCapital').onclick = async () => {
+      if (!el('cAsset').value) return alert('Chọn tài sản');
+      if (!el('cAssetAcct').value || !el('cAccumAcct').value) return alert('Chọn TK tài sản và TK hao mòn');
+      const res = await fetch('/api/sme/fa-capital-contribution', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          asset_id: parseInt(el('cAsset').value, 10),
+          date: el('cDate').value,
+          owner_name: el('cOwner').value,
+          equity_account: el('cEquity').value,
+          asset_account: el('cAssetAcct').value,
+          accum_account: el('cAccumAcct').value,
+          reason: el('cReason').value,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) return alert(json.error || 'Không ghi sổ được');
+      capitalModal.hide();
+      alert('Đã góp vốn ' + (json.data?.doc_no || ''));
+      load(); loadOps();
+    };
+
+    // Dispose
+    el('btnDispose').onclick = async () => {
+      el('dDate').value = todayISO();
+      try {
+        fillAssetSelect(el('dAsset'), await fetchAssets(el('dDate').value));
+        syncDisposeAsset();
+        disposeModal.show();
+      } catch (e) { alert(e.message || 'Lỗi'); }
+    };
+    el('dDate').onchange = async () => {
+      fillAssetSelect(el('dAsset'), await fetchAssets(el('dDate').value));
+      syncDisposeAsset();
+    };
+    el('dAsset').onchange = updateDisposePreview;
+    el('dType').onchange = syncDisposeAsset;
+    el('dProceeds').oninput = updateDisposePreview;
+    el('dPay').onchange = updateDisposePreview;
+    el('btnSaveDispose').onclick = async () => {
+      if (!el('dAsset').value) return alert('Chọn tài sản');
+      const res = await fetch('/api/sme/fa-disposal', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          asset_id: parseInt(el('dAsset').value, 10),
+          date: el('dDate').value,
+          disposal_type: el('dType').value,
+          proceeds: parseFloat(el('dProceeds').value) || 0,
+          payment_method: el('dPay').value,
+          reason: el('dReason').value,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) return alert(json.error || 'Không ghi sổ được');
+      disposeModal.hide();
+      alert('Đã thanh lý ' + (json.data?.doc_no || ''));
+      load(); loadOps();
+    };
+
+    // Upgrade
+    el('btnUpgrade').onclick = async () => {
+      el('uDate').value = todayISO();
+      el('uAmt').value = 0;
+      try {
+        fillAssetSelect(el('uAsset'), await fetchAssets(el('uDate').value));
+        updateUpgradePreview();
+        upgradeModal.show();
+      } catch (e) { alert(e.message || 'Lỗi'); }
+    };
+    el('uAsset').onchange = updateUpgradePreview;
+    el('uAmt').oninput = updateUpgradePreview;
+    el('uCash').onchange = updateUpgradePreview;
+    el('btnSaveUpgrade').onclick = async () => {
+      if (!el('uAsset').value) return alert('Chọn tài sản');
+      const amt = parseFloat(el('uAmt').value) || 0;
+      if (amt <= 0) return alert('Chi phí nâng cấp phải > 0');
+      const res = await fetch('/api/sme/fa-docs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          doc_type: 'upgrade',
+          asset_id: parseInt(el('uAsset').value, 10),
+          date: el('uDate').value,
+          amount: amt,
+          cash_account: el('uCash').value,
+          content: el('uContent').value,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) return alert(json.error || 'Không ghi sổ được');
+      upgradeModal.hide();
+      alert('Đã điều chỉnh tăng ' + (json.data?.doc_no || ''));
+      load(); loadOps();
+    };
+
+    // Revalue down
+    el('btnRevalueDown').onclick = async () => {
+      el('rDate').value = todayISO();
+      try {
+        fillAssetSelect(el('rAsset'), await fetchAssets(el('rDate').value));
+        syncRevalueAsset();
+        revalueModal.show();
+      } catch (e) { alert(e.message || 'Lỗi'); }
+    };
+    el('rAsset').onchange = syncRevalueAsset;
+    el('rNewCost').oninput = updateRevaluePreview;
+    el('btnSaveRevalue').onclick = async () => {
+      if (!el('rAsset').value) return alert('Chọn tài sản');
+      const o = selectedOpt(el('rAsset'));
+      const oldCost = Number(o?.dataset.cost || 0);
+      const newCost = parseFloat(el('rNewCost').value);
+      if (isNaN(newCost) || newCost < 0) return alert('Nguyên giá mới không hợp lệ');
+      if (newCost >= oldCost) return alert('Điều chỉnh giảm: nguyên giá mới phải thấp hơn sổ sách');
+      const res = await fetch('/api/sme/fa-docs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          doc_type: 'revaluation',
+          asset_id: parseInt(el('rAsset').value, 10),
+          date: el('rDate').value,
+          new_cost: newCost,
+          content: el('rContent').value || 'Đánh giá lại thấp hơn giá trị sổ sách',
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) return alert(json.error || 'Không ghi sổ được');
+      revalueModal.hide();
+      alert('Đã điều chỉnh giảm ' + (json.data?.doc_no || ''));
+      load(); loadOps();
+    };
+
+    load();
+    loadOps();
   });
-  const json = await res.json();
-  if (!json.success) return alert(json.error || 'Không lưu được');
-  periodModal.hide();
-  load();
-};
-document.addEventListener('DOMContentLoaded', () => {
-  periodModal = new bootstrap.Modal(document.getElementById('periodModal'));
-  fStatus.onchange = load;
-  load();
-});
+})();
 </script>
 {% endblock %}

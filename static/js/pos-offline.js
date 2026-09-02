@@ -6,6 +6,7 @@
     const DB_VER = 1;
     const OUTBOX_KEY = 'keto_pos_outbox_backup';
     const SYNCED_RETENTION_DAYS = 7;
+    const CATALOG_TTL_MS = 5 * 60 * 1000;
 
     let dbPromise = null;
     let online = typeof navigator !== 'undefined' ? navigator.onLine : true;
@@ -287,6 +288,15 @@
 
     async function syncCatalog(opts) {
         opts = opts || {};
+        if (!opts.force && isOnline()) {
+            const meta = await getCatalogMeta();
+            if (meta && meta.count > 0 && meta.updated_at) {
+                const ts = Date.parse(meta.updated_at);
+                if (!Number.isNaN(ts) && (Date.now() - ts) < CATALOG_TTL_MS) {
+                    return { success: true, count: meta.count, cached: true };
+                }
+            }
+        }
         if (!isOnline()) return { success: false, offline: true };
         const includeMenu = !!opts.includeMenu;
         try {

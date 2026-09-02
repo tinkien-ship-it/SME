@@ -170,7 +170,15 @@ def register_customers_routes(app):
                         (like, like, like, like, like, like, like),
                     )
                 else:
-                    c.execute("SELECT * FROM customers ORDER BY id ASC")
+                    try:
+                        limit = int(request.args.get('limit') or 200)
+                    except (TypeError, ValueError):
+                        limit = 200
+                    limit = min(max(limit, 1), 500)
+                    c.execute(
+                        "SELECT * FROM customers ORDER BY id ASC LIMIT ?",
+                        (limit,),
+                    )
                 return jsonify([_enrich_customer_row(conn, row) for row in c.fetchall()])
 
             data = request.get_json() or {}

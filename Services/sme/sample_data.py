@@ -697,7 +697,9 @@ def seed_sample_journals(
 ) -> dict[str, Any]:
     """Seed nhật ký + master data mẫu trên ``conn`` (DB tenant)."""
     year = fiscal_year or datetime.now().year
-    # Đóng kỳ đến tháng trước (giữ tháng hiện tại mở) — tối đa 6 nếu năm demo đầy đủ
+    # Tháng cuối có bút toán mẫu (range 2..7 bên dưới)
+    sample_journal_through = 7
+    # Đóng kỳ đến tháng trước (giữ tháng hiện tại mở)
     now = datetime.now()
     if close_through is None:
         if year < now.year:
@@ -707,6 +709,14 @@ def seed_sample_journals(
         else:
             close_through = 0
     close_through = max(0, min(12, int(close_through)))
+    # Seed ghi nhật ký T2–T7: phải kết chuyển mọi tháng đã hết kỳ có dữ liệu mẫu
+    if year < now.year:
+        close_through = max(close_through, sample_journal_through)
+    elif year == now.year and now.month > 1:
+        close_through = max(
+            close_through,
+            min(sample_journal_through, now.month - 1),
+        )
 
     ensure_sme_accounting_ready(conn, accounting_regime='SME_TT99', commit=False)
     _ensure_ops_tables(conn)

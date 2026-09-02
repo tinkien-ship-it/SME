@@ -126,16 +126,21 @@ def register_suppliers_orders_routes(app):
                 q = request.args.get('q', '')
                 if q:
                     like = f"%{q}%"
+                    try:
+                        lim = min(int(request.args.get('limit') or 80), 200)
+                    except (TypeError, ValueError):
+                        lim = 80
                     c.execute(
                         "SELECT id, code, name, phone, email, address, note, tax_code "
                         "FROM suppliers WHERE code LIKE ? OR name LIKE ? OR phone LIKE ? OR tax_code LIKE ? "
-                        "ORDER BY name LIMIT 500",
-                        (like,)*4,
+                        "ORDER BY name LIMIT ?",
+                        (like, like, like, like, lim),
                     )
                 else:
                     c.execute(
                         "SELECT id, code, name, phone, email, address, note, tax_code "
-                        "FROM suppliers ORDER BY name LIMIT 500"
+                        "FROM suppliers ORDER BY name LIMIT ?",
+                        (min(int(request.args.get('limit') or 100), 500),),
                     )
                 resp = jsonify([dict(row) for row in c.fetchall()])
                 resp.headers['Cache-Control'] = 'private, max-age=60'

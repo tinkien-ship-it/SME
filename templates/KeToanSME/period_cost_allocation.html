@@ -1,0 +1,698 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}Giá thành 3 phương án — định mức & chốt kỳ{% endblock %}
+
+{% block sme_head %}
+<style>
+  .pca-money { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .pca-locked { border-left: 4px solid #dc2626; }
+  .pca-auto { border-left: 4px solid #059669; }
+  .method-card { cursor: pointer; border: 2px solid #e5e7eb; border-radius: .5rem; padding: 1rem; height: 100%; }
+  .method-card.active { border-color: #0d6efd; background: #f0f7ff; }
+  .method-card.disabled { opacity: .55; cursor: not-allowed; }
+</style>
+{% endblock %}
+
+{% block sme_breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-0">
+  <ol class="breadcrumb mb-0 small">
+    <li class="breadcrumb-item"><a href="{{ url_for('SME_dashboard') }}">Kế toán doanh nghiệp</a></li>
+    <li class="breadcrumb-item active">Giá thành 3 phương án</li>
+  </ol>
+</nav>
+{% endblock %}
+
+{% block sme_content %}
+<div class="container-fluid py-2 px-0">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+      <h3 class="fw-bold text-primary mb-1"><i class="fas fa-balance-scale me-2"></i>Giá thành — 3 phương án</h3>
+      <p class="text-muted small mb-0">
+        Chọn <strong>1 phương án</strong> cho kỳ · định mức NVL/NCTT/CPSXC riêng từng PA ·
+        nhập kho giá tạm · chốt cuối tháng (công thức DD TT99). PA2 giữ cho DN nhỏ.
+      </p>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('SME_production') }}">Lệnh sản xuất</a>
+  </div>
+
+  <div id="policyBanner" class="alert alert-light border small py-2 mb-3"></div>
+
+  <ul class="nav nav-pills mb-3 gap-2 flex-wrap" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-policy" type="button">1. Chính sách kỳ</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-std-pa1" type="button">ĐM PA1</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-std-pa2" type="button">ĐM PA2</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-std-pa3" type="button">ĐM PA3</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-close" type="button">2. Chốt cuối tháng</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-history" type="button">Lịch sử chốt</button></li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- POLICY -->
+    <div class="tab-pane fade show active" id="tab-policy">
+      <div class="row g-3 mb-3" id="methodCards"></div>
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white fw-bold">Tham số &amp; chế độ chốt</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label small fw-bold">Công suất bình thường / tháng (PA1)</label>
+              <input type="number" id="setCap" class="form-control" min="1" step="1" value="500">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold">Ngày làm việc / tháng</label>
+              <input type="number" id="setDays" class="form-control" min="1" step="1" value="25">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold">Bộ phận</label>
+              <input type="text" id="setDept" class="form-control" value="Bộ phận sản xuất">
+            </div>
+            <div class="col-md-3">
+              <div class="form-check mt-4">
+                <input class="form-check-input" type="checkbox" id="setRequireFg">
+                <label class="form-check-label small" for="setRequireFg">Chặn nhập kho đến khi chốt (hiếm dùng)</label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check form-switch mt-2">
+                <input class="form-check-input" type="checkbox" id="setAutoClose">
+                <label class="form-check-label fw-bold" for="setAutoClose">
+                  Tự động hạch toán / chốt giá thành cuối tháng
+                </label>
+              </div>
+              <div class="form-text">
+                Bật: ngày 1 tháng sau hệ thống tự chốt kỳ trước (lấy 622/627 trên sổ).
+                Tắt: chỉ chốt thủ công tại tab «Chốt cuối tháng».
+                Nếu auto chạy khi sổ chưa đủ — dùng «Đảo chốt» hoặc «Chạy lại thủ công» sau khi hoàn sổ.
+              </div>
+            </div>
+            <div class="col-12 d-flex gap-2 flex-wrap">
+              <button type="button" class="btn btn-primary" id="btnSavePolicy" onclick="savePolicy()">Lưu chính sách (chọn phương án)</button>
+              <button type="button" class="btn btn-outline-secondary" onclick="unlockPolicy()">Mở khóa (khi không còn lệnh SX)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STANDARDS PA1/2/3 -->
+    <div class="tab-pane fade" id="tab-std-pa1" data-method="normal_capacity"></div>
+    <div class="tab-pane fade" id="tab-std-pa2" data-method="actual"></div>
+    <div class="tab-pane fade" id="tab-std-pa3" data-method="standard_provisional"></div>
+
+    <!-- CLOSE -->
+    <div class="tab-pane fade" id="tab-close">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white fw-bold">Chốt giá thành tháng (công thức DD TT99)</div>
+        <div class="card-body">
+          <p class="small text-muted">
+            Tổng GT thực tế nhập kho = DD đầu kỳ + CPSX phát sinh − DD cuối kỳ − ghi giảm.
+            Hệ thống lấy 622/627 từ sổ (có thể sửa tay).
+          </p>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-2"><label class="form-label small fw-bold">Năm</label><input type="number" id="closeFy" class="form-control"></div>
+            <div class="col-md-2"><label class="form-label small fw-bold">Tháng</label><select id="closePeriod" class="form-select"></select></div>
+            <div class="col-md-2"><label class="form-label small fw-bold">622 (NC)</label><input type="number" id="closeLabor" class="form-control text-end" step="1000" placeholder="Tự lấy sổ"></div>
+            <div class="col-md-2"><label class="form-label small fw-bold">6271 Định phí</label><input type="number" id="closeOhF" class="form-control text-end" step="1000" placeholder="Tự lấy sổ"></div>
+            <div class="col-md-2"><label class="form-label small fw-bold">6272 Biến phí</label><input type="number" id="closeOhV" class="form-control text-end" step="1000" value="0"></div>
+            <div class="col-md-2"><label class="form-label small fw-bold">Ghi giảm</label><input type="number" id="closeRed" class="form-control text-end" step="1000" value="0"></div>
+            <div class="col-12 d-flex gap-2 flex-wrap">
+              <button type="button" class="btn btn-outline-primary" onclick="previewClose()">Xem trước chốt</button>
+              <button type="button" class="btn btn-success" id="btnClose" onclick="doClose()" disabled>Chốt &amp; ghi sổ</button>
+              <button type="button" class="btn btn-outline-warning" id="btnReverseClose" onclick="doReverseClose()" disabled>Đảo chốt</button>
+              <button type="button" class="btn btn-warning" id="btnReclose" onclick="doReclose()" disabled>Chạy lại thủ công</button>
+            </div>
+            <div class="col-12">
+              <div id="closeStatusHint" class="small text-muted"></div>
+            </div>
+          </div>
+        </div>
+      </div>      <div id="closeSummary" class="row g-3 mb-3"></div>
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white fw-bold">Điều chỉnh giá tạm (155 ↔ 154)</div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr>
+              <th>Lệnh</th><th class="text-end">SL nhập</th><th class="text-end">NC/SXC tạm</th>
+              <th class="text-end">NC/SXC thực</th><th class="text-end">Chênh lệch</th><th>Hướng</th>
+            </tr></thead>
+            <tbody id="varianceBody"><tr><td colspan="6" class="text-center text-muted py-3">Chưa xem trước</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="tab-pane fade" id="tab-history">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white fw-bold d-flex justify-content-between">
+          <span>Lịch sử chốt kỳ</span>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadHistory()">Tải lại</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr>
+              <th>Kỳ</th><th>PA</th><th class="text-end">DD đầu</th><th class="text-end">CPSX kỳ</th>
+              <th class="text-end">DD cuối</th><th class="text-end">GT đơn vị</th><th>Auto</th>
+            </tr></thead>
+            <tbody id="histBody"><tr><td colspan="7" class="text-center text-muted py-3">…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal định mức -->
+<div class="modal fade" id="stdModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Định mức sản phẩm (nguyên vật liệu · nhân công · sản xuất chung)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-3">
+        <input type="hidden" id="stdMethod">
+        <div class="row g-3 mb-2">
+          <div class="col-lg-6">
+            <label class="form-label fw-bold">Thành phẩm</label>
+            <select id="stdFg" class="form-select form-select-lg"></select>
+          </div>
+          <div class="col-lg-2">
+            <label class="form-label fw-bold">Hệ số quy đổi</label>
+            <input type="number" id="stdEq" class="form-control form-control-lg" value="1" min="0.0001" step="any">
+            <div class="form-text">Dùng khi quy đổi công suất nhiều sản phẩm</div>
+          </div>
+          <div class="col-lg-4">
+            <label class="form-label fw-bold">Ghi chú</label>
+            <input type="text" id="stdNote" class="form-control form-control-lg" placeholder="Tùy chọn">
+          </div>
+        </div>
+
+        <div class="border rounded-3 p-3 mb-3 bg-light">
+          <div class="fw-bold mb-2">Chi phí định mức trên 1 đơn vị thành phẩm (giá tạm)</div>
+          <div class="row g-3">
+            <div class="col-lg-4">
+              <label class="form-label fw-bold" for="stdLabor">
+                Chi phí nhân công trực tiếp (TK 622)
+              </label>
+              <div class="input-group input-group-lg">
+                <input type="number" id="stdLabor" class="form-control text-end" min="0" step="1000" value="0">
+                <span class="input-group-text">đ / sản phẩm</span>
+              </div>
+              <div class="form-text">Định mức lương / nhân công trực tiếp phân xưởng</div>
+            </div>
+            <div class="col-lg-4">
+              <label class="form-label fw-bold" for="stdOhF">
+                Chi phí sản xuất chung — Định phí (TK 6271)
+              </label>
+              <div class="input-group input-group-lg">
+                <input type="number" id="stdOhF" class="form-control text-end" min="0" step="1000" value="0">
+                <span class="input-group-text">đ / sản phẩm</span>
+              </div>
+              <div class="form-text">Khấu hao, thuê mặt bằng, chi phí cố định… (phân bổ theo công suất bình thường)</div>
+            </div>
+            <div class="col-lg-4">
+              <label class="form-label fw-bold" for="stdOhV">
+                Chi phí sản xuất chung — Biến phí (TK 6272)
+              </label>
+              <div class="input-group input-group-lg">
+                <input type="number" id="stdOhV" class="form-control text-end" min="0" step="1000" value="0">
+                <span class="input-group-text">đ / sản phẩm</span>
+              </div>
+              <div class="form-text">Điện, nước, vật tư phụ theo sản lượng… (phân bổ hết theo thực tế)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <div class="fw-bold">Chi phí nguyên liệu, vật liệu trực tiếp (TK 621)</div>
+            <div class="form-text mb-0">Định mức số lượng vật tư tiêu hao cho 1 đơn vị thành phẩm</div>
+          </div>
+          <button type="button" class="btn btn-outline-primary" onclick="addMatRow()">
+            <i class="fas fa-plus me-1"></i>Thêm nguyên vật liệu
+          </button>
+        </div>
+        <div class="table-responsive border rounded">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="min-width: 280px">Nguyên vật liệu / bán thành phẩm</th>
+                <th class="text-end" style="width: 180px">Số lượng định mức / 1 sản phẩm</th>
+                <th style="width: 72px"></th>
+              </tr>
+            </thead>
+            <tbody id="stdMatBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer px-4">
+        <button type="button" class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-primary btn-lg" onclick="saveStandard()">Lưu định mức</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block sme_scripts %}
+<script>
+const METHODS = [
+  { id: 'normal_capacity', label: 'PA1 — Công suất bình thường (TT99)', hint: 'Phân bổ NC/SXC theo suất ÷ CS; dưới CS → 632. Khuyến nghị.' },
+  { id: 'actual', label: 'PA2 — Phân bổ toàn bộ thực tế', hint: 'Chia hết 622/627 theo SL quy đổi. Dành cho DN nhỏ (có thể đội giá khi dưới CS).' },
+  { id: 'standard_provisional', label: 'PA3 — Giá định mức + điều chỉnh', hint: 'Giữa kỳ nhập 155 theo ĐM; cuối kỳ điều chỉnh về thực tế (engine PA1).' },
+];
+let policy = {};
+let selectedMethod = 'normal_capacity';
+let closePreview = null;
+let fgOptions = [];
+let matOptions = [];
+
+async function api(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    ...opts,
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || j.success === false) throw new Error(j.error || res.statusText);
+  return j;
+}
+const money = v => Number(v || 0).toLocaleString('vi-VN');
+
+function renderMethodCards() {
+  const locked = !!(policy.policy_locked || policy.has_production_orders);
+  const box = document.getElementById('methodCards');
+  box.innerHTML = METHODS.map(m => {
+    const active = selectedMethod === m.id;
+    const dis = locked && !active;
+    return `<div class="col-md-4">
+      <div class="method-card ${active ? 'active' : ''} ${dis ? 'disabled' : ''}"
+           onclick="${dis ? '' : `selectMethod('${m.id}')`}">
+        <div class="fw-bold mb-1">${m.label}</div>
+        <div class="small text-muted">${m.hint}</div>
+        ${active ? '<span class="badge bg-primary mt-2">Đang chọn</span>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectMethod(id) {
+  if (policy.policy_locked || policy.has_production_orders) {
+    if (id !== policy.allocation_method) {
+      Swal.fire('Đã khóa', 'Đã có lệnh SX — không đổi phương án được.', 'warning');
+      return;
+    }
+  }
+  selectedMethod = id;
+  renderMethodCards();
+}
+
+async function loadPolicy() {
+  const j = await api('/api/sme/costing-settings');
+  policy = j.data || {};
+  selectedMethod = policy.allocation_method || 'normal_capacity';
+  document.getElementById('setCap').value = policy.normal_capacity_month || 500;
+  document.getElementById('setDays').value = policy.working_days_month || 25;
+  document.getElementById('setDept').value = policy.department_name || '';
+  document.getElementById('setRequireFg').checked = !!Number(policy.require_finalize_before_fg);
+  document.getElementById('setAutoClose').checked = !!Number(policy.auto_close);
+  renderMethodCards();
+  const locked = !!(policy.policy_locked || policy.has_production_orders);
+  document.getElementById('policyBanner').className =
+    `alert small py-2 mb-3 ${locked ? 'alert-warning pca-locked' : (policy.auto_close ? 'alert-success pca-auto' : 'alert-light border')}`;
+  document.getElementById('policyBanner').innerHTML =
+    `<strong>Phương án đang áp dụng:</strong> ${policy.allocation_method_label || selectedMethod}
+     · <strong>${locked ? 'Đã khóa' : 'Chưa khóa'}</strong>
+     · Chốt: <strong>${policy.auto_close ? 'TỰ ĐỘNG' : 'THỦ CÔNG'}</strong>`;
+  document.getElementById('btnSavePolicy').disabled = false;
+}
+
+async function savePolicy() {
+  try {
+    const j = await api('/api/sme/costing-settings', {
+      method: 'POST',
+      body: JSON.stringify({
+        allocation_method: selectedMethod,
+        normal_capacity_month: Number(document.getElementById('setCap').value || 500),
+        working_days_month: Number(document.getElementById('setDays').value || 25),
+        department_name: document.getElementById('setDept').value,
+        require_finalize_before_fg: document.getElementById('setRequireFg').checked,
+        auto_close: document.getElementById('setAutoClose').checked,
+      }),
+    });
+    policy = j.data || policy;
+    await Swal.fire('Thành công', j.message || 'Đã lưu', 'success');
+    loadPolicy();
+  } catch (e) {
+    Swal.fire('Lỗi', e.message, 'error');
+  }
+}
+
+async function unlockPolicy() {
+  try {
+    const j = await api('/api/sme/costing-settings/unlock', { method: 'POST', body: '{}' });
+    await Swal.fire('OK', j.message, 'success');
+    loadPolicy();
+  } catch (e) {
+    Swal.fire('Lỗi', e.message, 'error');
+  }
+}
+
+function stdPaneHtml(method, title) {
+  return `
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+        <span>${title} — định mức nguyên vật liệu (621), nhân công (622), sản xuất chung (6271/6272)</span>
+        <button type="button" class="btn btn-sm btn-primary" onclick="openStdModal('${method}')">+ Thêm / sửa định mức</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light"><tr>
+            <th>Thành phẩm</th>
+            <th class="text-end">Nhân công trực tiếp<br><span class="fw-normal text-muted">(622) / SP</span></th>
+            <th class="text-end">SXC định phí<br><span class="fw-normal text-muted">(6271) / SP</span></th>
+            <th class="text-end">SXC biến phí<br><span class="fw-normal text-muted">(6272) / SP</span></th>
+            <th class="text-end">Hệ số quy đổi</th>
+            <th class="text-end">Số dòng NVL (621)</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="stdBody-${method}"><tr><td colspan="7" class="text-center text-muted py-3">Bấm tab này để tải danh sách định mức</td></tr></tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function loadStandards(method) {
+  const body = document.getElementById('stdBody-' + method);
+  if (!body) return;
+  try {
+    const j = await api('/api/sme/cost-standards/' + method);
+    const rows = j.data || [];
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">Chưa có định mức — bấm Thêm / sửa</td></tr>`;
+      return;
+    }
+    body.innerHTML = rows.map(r => `<tr>
+      <td><div class="fw-semibold">${esc(r.finished_name)}</div><div class="small text-muted">${esc(r.product_code || '')}</div></td>
+      <td class="text-end pca-money">${money(r.labor_std_per_unit)}</td>
+      <td class="text-end pca-money">${money(r.oh_fixed_std_per_unit)}</td>
+      <td class="text-end pca-money">${money(r.oh_variable_std_per_unit)}</td>
+      <td class="text-end">${r.equivalent_factor}</td>
+      <td class="text-end">${r.material_count || 0}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-outline-primary" onclick="openStdModal('${method}', ${r.finished_product_id})">Sửa</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="delStd('${method}', ${r.finished_product_id})">Xóa</button>
+      </td>
+    </tr>`).join('');
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="7" class="text-danger text-center py-3">${esc(e.message)}</td></tr>`;
+  }
+}
+
+function esc(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function loadPickers() {
+  const [fg, mat] = await Promise.all([
+    api('/api/production/finished-products'),
+    api('/api/production/materials'),
+  ]);
+  fgOptions = fg.data || [];
+  matOptions = mat.data || [];
+  document.getElementById('stdFg').innerHTML = fgOptions.map(p =>
+    `<option value="${p.id}">${esc(p.name)} (${esc(p.product_code || '')})</option>`
+  ).join('');
+}
+
+function addMatRow(mid = '', qty = 1) {
+  const opts = matOptions.map(p =>
+    `<option value="${p.id}" ${String(p.id) === String(mid) ? 'selected' : ''}>${esc(p.name)}</option>`
+  ).join('');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><select class="form-select mat-id">${opts}</select></td>
+    <td><input type="number" class="form-control text-end mat-qty" value="${qty}" min="0" step="any"></td>
+    <td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()" title="Xóa dòng">Xóa</button></td>`;
+  document.getElementById('stdMatBody').appendChild(tr);
+}
+
+async function openStdModal(method, productId) {
+  document.getElementById('stdMethod').value = method;
+  document.getElementById('stdMatBody').innerHTML = '';
+  document.getElementById('stdLabor').value = 0;
+  document.getElementById('stdOhF').value = 0;
+  document.getElementById('stdOhV').value = 0;
+  document.getElementById('stdEq').value = 1;
+  document.getElementById('stdNote').value = '';
+  if (productId) {
+    document.getElementById('stdFg').value = productId;
+    try {
+      const j = await api(`/api/sme/cost-standards/${method}/${productId}`);
+      const d = j.data;
+      document.getElementById('stdLabor').value = d.labor_std_per_unit || 0;
+      document.getElementById('stdOhF').value = d.oh_fixed_std_per_unit || 0;
+      document.getElementById('stdOhV').value = d.oh_variable_std_per_unit || 0;
+      document.getElementById('stdEq').value = d.equivalent_factor || 1;
+      document.getElementById('stdNote').value = d.note || '';
+      (d.materials || []).forEach(m => addMatRow(m.material_product_id, m.qty_per_unit));
+    } catch (_) { addMatRow(); }
+  } else {
+    addMatRow();
+  }
+  new bootstrap.Modal(document.getElementById('stdModal')).show();
+}
+
+async function saveStandard() {
+  const method = document.getElementById('stdMethod').value;
+  const materials = [...document.querySelectorAll('#stdMatBody tr')].map(tr => ({
+    material_product_id: Number(tr.querySelector('.mat-id').value),
+    qty_per_unit: Number(tr.querySelector('.mat-qty').value || 0),
+  })).filter(x => x.material_product_id && x.qty_per_unit > 0);
+  try {
+    await api('/api/sme/cost-standards/' + method, {
+      method: 'POST',
+      body: JSON.stringify({
+        finished_product_id: Number(document.getElementById('stdFg').value),
+        labor_std_per_unit: Number(document.getElementById('stdLabor').value || 0),
+        oh_fixed_std_per_unit: Number(document.getElementById('stdOhF').value || 0),
+        oh_variable_std_per_unit: Number(document.getElementById('stdOhV').value || 0),
+        equivalent_factor: Number(document.getElementById('stdEq').value || 1),
+        note: document.getElementById('stdNote').value,
+        materials,
+      }),
+    });
+    bootstrap.Modal.getInstance(document.getElementById('stdModal')).hide();
+    loadStandards(method);
+    Swal.fire({ icon: 'success', title: 'Đã lưu', timer: 1200, showConfirmButton: false });
+  } catch (e) {
+    Swal.fire('Lỗi', e.message, 'error');
+  }
+}
+
+async function delStd(method, pid) {
+  const ok = await Swal.fire({ title: 'Xóa định mức?', showCancelButton: true, confirmButtonText: 'Xóa' });
+  if (!ok.isConfirmed) return;
+  try {
+    await api(`/api/sme/cost-standards/${method}/${pid}`, { method: 'DELETE' });
+    loadStandards(method);
+  } catch (e) {
+    Swal.fire('Lỗi', e.message, 'error');
+  }
+}
+
+function initClosePeriod() {
+  const now = new Date();
+  document.getElementById('closeFy').value = now.getFullYear();
+  const sel = document.getElementById('closePeriod');
+  sel.innerHTML = Array.from({ length: 12 }, (_, i) =>
+    `<option value="${i + 1}" ${i + 1 === now.getMonth() + 1 ? 'selected' : ''}>Tháng ${i + 1}</option>`
+  ).join('');
+}
+
+async function previewClose() {
+  try {
+    const payload = {
+      fiscal_year: Number(document.getElementById('closeFy').value),
+      period: Number(document.getElementById('closePeriod').value),
+      cost_reductions: Number(document.getElementById('closeRed').value || 0),
+    };
+    const lab = document.getElementById('closeLabor').value;
+    const ohf = document.getElementById('closeOhF').value;
+    const ohv = document.getElementById('closeOhV').value;
+    if (lab !== '') payload.labor_amount = Number(lab);
+    if (ohf !== '') payload.oh_fixed_amount = Number(ohf);
+    if (ohv !== '') payload.oh_variable_amount = Number(ohv);
+    const j = await api('/api/sme/costing-period-close/preview', { method: 'POST', body: JSON.stringify(payload) });
+    closePreview = j.data;
+    const d = closePreview;
+    if (d.collected_from_gl) {
+      if (lab === '') document.getElementById('closeLabor').value = d.labor_amount;
+      if (ohf === '') document.getElementById('closeOhF').value = d.oh_fixed_amount;
+    }
+    document.getElementById('closeSummary').innerHTML = [
+      ['DD đầu kỳ', d.wip_opening],
+      ['CPSX phát sinh', d.period_production_cost],
+      ['DD cuối kỳ', d.wip_closing],
+      ['SL nhập kho', d.fg_qty_received],
+      ['Tổng GT thực tế', d.actual_total_cost],
+      ['GT đơn vị', d.actual_unit_cost],
+      ['Idle → 632', (d.labor_idle || 0) + (d.oh_fixed_idle || 0)],
+    ].map(([k, v]) => `<div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body py-2">
+      <div class="small text-muted">${k}</div><div class="pca-money fs-5">${money(v)}</div></div></div></div>`).join('');
+    const vars = d.variance_lines || [];
+    document.getElementById('varianceBody').innerHTML = vars.length
+      ? vars.map(v => `<tr>
+          <td><code>${esc(v.voucher_no)}</code></td>
+          <td class="text-end">${v.qty_received}</td>
+          <td class="text-end">${money(v.provisional_conversion)}</td>
+          <td class="text-end">${money(v.actual_conversion)}</td>
+          <td class="text-end pca-money">${money(v.variance)}</td>
+          <td>${v.direction === 'supplement' ? 'Bổ sung' : 'Đảo'}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="6" class="text-center text-muted py-3">Không có chênh lệch giá tạm</td></tr>`;
+    document.getElementById('btnClose').disabled = !!d.already_closed;
+    document.getElementById('btnReverseClose').disabled = !d.already_closed;
+    document.getElementById('btnReclose').disabled = false;
+    const hint = document.getElementById('closeStatusHint');
+    if (d.already_closed) {
+      const ec = d.existing_close || {};
+      hint.innerHTML = `<span class="text-warning fw-bold">Kỳ đã chốt</span>
+        (#${ec.id || '—'}${ec.auto_posted ? ', <em>tự động ngày 1</em>' : ''}).
+        ${esc(d.reclose_hint || '')}
+        Sau khi bổ sung chi phí / hoàn sổ tháng trước → dùng <strong>Chạy lại thủ công</strong>.`;
+    } else {
+      hint.textContent = 'Kỳ chưa chốt — có thể chốt thủ công ngay, hoặc để hệ thống tự chốt ngày 1 (nếu bật auto).';
+      document.getElementById('btnClose').disabled = false;
+    }
+  } catch (e) {
+    Swal.fire('Lỗi', e.message, 'error');
+  }
+}
+
+async function doClose() {
+  if (!closePreview) return;
+  const conf = await Swal.fire({ title: 'Chốt giá thành kỳ này?', showCancelButton: true, confirmButtonText: 'Chốt & ghi sổ' });
+  if (!conf.isConfirmed) return;
+  try {
+    const payload = closePayload();
+    const j = await api('/api/sme/costing-period-close/post', { method: 'POST', body: JSON.stringify(payload) });
+    await Swal.fire('Thành công', j.message, 'success');
+    previewClose();
+    loadHistory();
+  } catch (e) {
+    Swal.fire('Lỗi', e.message, 'error');
+  }
+}
+
+function closePayload() {
+  return {
+    fiscal_year: Number(document.getElementById('closeFy').value),
+    period: Number(document.getElementById('closePeriod').value),
+    labor_amount: Number(document.getElementById('closeLabor').value || 0),
+    oh_fixed_amount: Number(document.getElementById('closeOhF').value || 0),
+    oh_variable_amount: Number(document.getElementById('closeOhV').value || 0),
+    cost_reductions: Number(document.getElementById('closeRed').value || 0),
+    close_idle_now: true,
+  };
+}
+
+async function doReverseClose() {
+  const fy = Number(document.getElementById('closeFy').value);
+  const period = Number(document.getElementById('closePeriod').value);
+  const conf = await Swal.fire({
+    title: 'Đảo chốt kỳ này?',
+    html: 'Đảo bút toán phân bổ / điều chỉnh giá tạm, trả lệnh về giá tạm. Sau đó có thể chốt lại khi sổ đã đủ.',
+    showCancelButton: true,
+    confirmButtonText: 'Đảo chốt',
+    icon: 'warning',
+  });
+  if (!conf.isConfirmed) return;
+  try {
+    const j = await api('/api/sme/costing-period-close/reverse', {
+      method: 'POST',
+      body: JSON.stringify({ fiscal_year: fy, period }),
+    });
+    await Swal.fire('Đã đảo', j.message, 'success');
+    document.getElementById('closeLabor').value = '';
+    document.getElementById('closeOhF').value = '';
+    previewClose();
+    loadHistory();
+  } catch (e) {
+    Swal.fire('Lỗi', e.message, 'error');
+  }
+}
+
+async function doReclose() {
+  const conf = await Swal.fire({
+    title: 'Chạy lại thủ công?',
+    html: 'Hệ thống sẽ <strong>đảo lần chốt hiện tại</strong> (nếu có) rồi <strong>chốt lại</strong> theo 622/627 trên sổ lúc này — dùng khi auto ngày 1 chạy sớm hoặc còn chi phí chưa vào sổ.',
+    showCancelButton: true,
+    confirmButtonText: 'Đảo & chốt lại',
+    icon: 'question',
+  });
+  if (!conf.isConfirmed) return;
+  try {
+    const j = await api('/api/sme/costing-period-close/reclose', {
+      method: 'POST',
+      body: JSON.stringify(closePayload()),
+    });
+    await Swal.fire('Thành công', j.message, 'success');
+    previewClose();
+    loadHistory();
+  } catch (e) {
+    Swal.fire('Lỗi', e.message, 'error');
+  }
+}
+
+async function loadHistory() {
+  const body = document.getElementById('histBody');
+  try {
+    const j = await api('/api/sme/costing-period-close');
+    const rows = j.data || [];
+    body.innerHTML = rows.length ? rows.map(r => `<tr>
+      <td>${r.period}/${r.fiscal_year}</td>
+      <td><code>${esc(r.allocation_method)}</code></td>
+      <td class="text-end">${money(r.wip_opening)}</td>
+      <td class="text-end">${money(r.period_production_cost)}</td>
+      <td class="text-end">${money(r.wip_closing)}</td>
+      <td class="text-end pca-money">${money(r.actual_unit_cost)}</td>
+      <td>${r.status === 'closed' ? (r.auto_posted ? 'Auto' : 'Tay') : esc(r.status)}</td>
+    </tr>`).join('') : `<tr><td colspan="7" class="text-center text-muted py-3">Chưa có lần chốt</td></tr>`;
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="7" class="text-danger text-center">${esc(e.message)}</td></tr>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('tab-std-pa1').innerHTML = stdPaneHtml('normal_capacity', 'PA1');
+  document.getElementById('tab-std-pa2').innerHTML = stdPaneHtml('actual', 'PA2');
+  document.getElementById('tab-std-pa3').innerHTML = stdPaneHtml('standard_provisional', 'PA3');
+  initClosePeriod();
+  // Tuần tự: tránh 3–4 request ghi schema SQLite song song → database is locked
+  try {
+    await loadPickers();
+    await loadPolicy();
+    await loadHistory();
+  } catch (e) {
+    console.error(e);
+  }
+  const loadedStd = {};
+  document.querySelectorAll('[data-bs-toggle="pill"]').forEach(btn => {
+    btn.addEventListener('shown.bs.tab', ev => {
+      const t = ev.target.getAttribute('data-bs-target');
+      const map = {
+        '#tab-std-pa1': 'normal_capacity',
+        '#tab-std-pa2': 'actual',
+        '#tab-std-pa3': 'standard_provisional',
+      };
+      if (map[t]) {
+        if (!loadedStd[map[t]]) {
+          loadedStd[map[t]] = true;
+          loadStandards(map[t]);
+        }
+      }
+      if (t === '#tab-history') loadHistory();
+    });
+  });
+});
+</script>
+{% endblock %}

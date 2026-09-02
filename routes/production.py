@@ -24,6 +24,11 @@ from Services.production_costing import (
 logger = logging.getLogger(__name__)
 
 
+def _ensure_production_schema(conn, *, commit: bool = False) -> None:
+    from Services.schema_cache import ensure_schema_once
+    ensure_schema_once(conn, 'production', ensure_production_schema, commit=commit)
+
+
 def register_production_routes(app):
     @app.route('/ketoan_hkd/production')
     @app.route('/production')
@@ -50,7 +55,7 @@ def register_production_routes(app):
             pass
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             order = get_production_order(conn, order_id)
             if not order:
                 return 'Không tìm thấy phiếu sản xuất', 404
@@ -69,7 +74,7 @@ def register_production_routes(app):
     def api_production_finished_products():
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             return jsonify({
                 'success': True,
                 'data': list_finished_products(conn, request.args.get('q', '')),
@@ -85,13 +90,15 @@ def register_production_routes(app):
     def api_production_materials():
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             return jsonify({
                 'success': True,
                 'data': list_material_products(
                     conn,
                     request.args.get('q', ''),
                     code_prefix=request.args.get('code_prefix', ''),
+                    include_fg_goods=request.args.get('include_fg_goods', '').lower()
+                    in ('1', 'true', 'yes', 'on'),
                 ),
             })
         except Exception as exc:
@@ -106,7 +113,7 @@ def register_production_routes(app):
     def api_production_bom_list():
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             return jsonify({'success': True, 'data': list_boms(conn)})
         except Exception as exc:
             logger.exception('bom list: %s', exc)
@@ -119,7 +126,7 @@ def register_production_routes(app):
     def api_production_bom_get(finished_product_id):
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             bom = get_bom(conn, finished_product_id)
             if not bom:
                 return jsonify({'success': False, 'error': 'Chưa có định mức'}), 404
@@ -143,7 +150,7 @@ def register_production_routes(app):
 
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             bom = save_bom(
                 conn,
                 fg_id,
@@ -164,7 +171,7 @@ def register_production_routes(app):
     def api_production_bom_delete(finished_product_id):
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             delete_bom(conn, finished_product_id)
             return jsonify({'success': True, 'message': 'Đã xóa định mức'})
         except Exception as exc:
@@ -186,7 +193,7 @@ def register_production_routes(app):
 
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             lines = preview_materials(
                 conn, fg_id, qty, data.get('materials') or data.get('material_overrides'),
             )
@@ -226,7 +233,7 @@ def register_production_routes(app):
     def api_production_orders_list():
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             try:
                 from Services.sme.production_journal import ensure_production_journal_column
                 ensure_production_journal_column(conn, commit=True)
@@ -251,7 +258,7 @@ def register_production_routes(app):
     def api_production_order_get(order_id):
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             order = get_production_order(conn, order_id)
             if not order:
                 return jsonify({'success': False, 'error': 'Không tìm thấy phiếu'}), 404
@@ -280,7 +287,7 @@ def register_production_routes(app):
 
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             sme = False
             try:
                 from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
@@ -305,6 +312,7 @@ def register_production_routes(app):
                 created_by=username,
                 allow_negative_stock=bool(data.get('allow_negative_stock')),
                 defer_fg_receipt=defer_fg,
+                use_method_standards=sme,
             )
             journal_info = None
             try:
@@ -317,7 +325,9 @@ def register_production_routes(app):
                         commit=False,
                     )
                     journal_info = post_production_journal(
-                        conn, order, created_by=username, commit=True,
+                        conn, order, created_by=username,
+                        costing_mode='materials_only',
+                        commit=True,
                     )
                     if journal_info and not journal_info.get('skipped'):
                         order = get_production_order(conn, order['id']) or order
@@ -365,7 +375,7 @@ def register_production_routes(app):
             pass
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             qty = float(data.get('qty') or data.get('qty_received') or 0)
             result = receive_finished_goods(
                 conn,
@@ -438,7 +448,7 @@ def register_production_routes(app):
         data = request.get_json(silent=True) or {}
         conn = get_db_connection()
         try:
-            ensure_production_schema(conn)
+            _ensure_production_schema(conn)
             order = cancel_production_order(
                 conn,
                 order_id,

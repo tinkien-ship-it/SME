@@ -85,6 +85,55 @@ def _active_sale_entries(conn: sqlite3.Connection, sale_id: int) -> list[int]:
     return [int(row[0]) for row in rows]
 
 
+def _is_service_product_type(product_type: str | None) -> bool:
+    return str(product_type or '').strip().lower() in (
+        'service', 'services', 'dich_vu', 'dv',
+    )
+
+
+def _sale_revenue_buckets(
+    conn: sqlite3.Connection,
+    sale_id: int,
+) -> tuple[Decimal, Decimal, Decimal, Decimal]:
+    """Phân loại DT theo dòng: hàng hóa (5111), DV ngay (5113), DV hoãn (3387), VAT."""
+    cols = _table_columns(conn, 'sale_items')
+    if not {'quantity', 'price'}.issubset(cols):
+        return Decimal('0.00'), Decimal('0.00'), Decimal('0.00'), Decimal('0.00')
+    discount_expr = 'COALESCE(si.discount_pct, 0)' if 'discount_pct' in cols else '0'
+    from Services.sme.deferred_revenue import ensure_product_revenue_columns
+    ensure_product_revenue_columns(conn)
+    rows = conn.execute(
+        f"""
+        SELECT COALESCE(p.product_type, 'goods') AS product_type,
+               COALESCE(p.is_subscription_plan, 0) AS is_subscription_plan,
+               COALESCE(p.revenue_mode, 'immediate') AS revenue_mode,
+               si.quantity, si.price, {discount_expr} AS discount_pct,
+               COALESCE(si.tax_pct, 0) AS tax_pct
+        FROM sale_items si
+        LEFT JOIN products p ON p.id = si.product_id
+        WHERE si.sale_id = ?
+        """,
+        (int(sale_id),),
+    ).fetchall()
+    goods = service = deferred = vat = Decimal('0.00')
+    for row in rows:
+        subtotal = float(row[3] or 0) * float(row[4] or 0)
+        discount = round(subtotal * (float(row[5] or 0) / 100))
+        taxable = subtotal - discount
+        line_vat = round(taxable * (float(row[6] or 0) / 100))
+        net = _money(taxable)
+        vat += _money(line_vat)
+        pt = str(row[0] or '').strip().lower()
+        if _is_service_product_type(pt):
+            if int(row[1] or 0) == 1 or str(row[2] or '').strip().lower() == 'deferred':
+                deferred += net
+            else:
+                service += net
+        else:
+            goods += net
+    return goods, service, deferred, vat
+
+
 def _sale_vat(conn: sqlite3.Connection, sale_id: int, business_line: str) -> Decimal:
     """Tính lại VAT theo đúng công thức checkout POS; F&B hiện chưa lưu VAT dòng."""
     cols = _table_columns(conn, 'sale_items')
@@ -208,7 +257,6 @@ def _build_revenue_lines(
         revenue = total - invoice_vat
         pct_vat, pct_cit = Decimal('0.00'), Decimal('0.00')
 
-    revenue_account = '5113' if business_line == 'fb_service' else rule['credit_account_code']
     partner_id = _partner_id_for_sale(conn, sale)
     common = {
         'partner_type': 'customer',
@@ -224,13 +272,52 @@ def _build_revenue_lines(
         'description': 'Thu tiền/phải thu khách hàng',
     }]
     if revenue > 0:
-        lines.append({
-            **common,
-            'account_code': revenue_account,
-            'debit': 0,
-            'credit': revenue,
-            'description': 'Doanh thu bán hàng và cung cấp dịch vụ',
-        })
+        if business_line == 'fb_service':
+            lines.append({
+                **common,
+                'account_code': '5113',
+                'debit': 0,
+                'credit': revenue,
+                'description': 'Doanh thu cung cấp dịch vụ',
+            })
+        else:
+            goods_rev, service_rev, deferred_rev, _ = _sale_revenue_buckets(
+                conn, int(sale['id']),
+            )
+            bucket_sum = goods_rev + service_rev + deferred_rev
+            if bucket_sum > 0 and abs(bucket_sum - revenue) <= Decimal('0.02'):
+                if goods_rev > 0:
+                    lines.append({
+                        **common,
+                        'account_code': rule['credit_account_code'],
+                        'debit': 0,
+                        'credit': goods_rev,
+                        'description': 'Doanh thu bán hàng',
+                    })
+                if service_rev > 0:
+                    lines.append({
+                        **common,
+                        'account_code': '5113',
+                        'debit': 0,
+                        'credit': service_rev,
+                        'description': 'Doanh thu cung cấp dịch vụ',
+                    })
+                if deferred_rev > 0:
+                    lines.append({
+                        **common,
+                        'account_code': '3387',
+                        'debit': 0,
+                        'credit': deferred_rev,
+                        'description': 'Doanh thu nhận trước (gói dịch vụ)',
+                    })
+            else:
+                lines.append({
+                    **common,
+                    'account_code': rule['credit_account_code'],
+                    'debit': 0,
+                    'credit': revenue,
+                    'description': 'Doanh thu bán hàng và cung cấp dịch vụ',
+                })
     if invoice_vat > 0:
         lines.append({
             **common,
@@ -421,6 +508,23 @@ def sync_sale_journals(
     posting_date = str(sale['date'] or '')[:10]
     document_no = sale['sale_no'] if 'sale_no' in sale.keys() else None
     description = f"Bán hàng {document_no or ('#' + str(sale_id))}"
+
+    provision_result: dict = {}
+    try:
+        from Services.sme.pos_service_sale import provision_service_jobs_for_sale
+        provision_result = provision_service_jobs_for_sale(
+            conn,
+            sale_id,
+            created_by=created_by or '',
+            replace_existing=replace_existing,
+            commit=False,
+        )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            'provision_service_jobs_for_sale sale %s: %s', sale_id, exc,
+        )
+
     business_type, revenue_lines = _build_revenue_lines(conn, sale)
     from Services.sme.branch_filter import warehouse_branch_or_session
     wh_code = None
@@ -473,8 +577,19 @@ def sync_sale_journals(
             branch_code=branch,
             lines=cogs_lines,
         ))
+
+    # Giá vốn dịch vụ TT99: nghiệm thu job gắn hóa đơn → Nợ 6323 / Có 154
+    try:
+        from Services.sme.service_costing import deliver_jobs_for_sale
+        deliver_jobs_for_sale(
+            conn, sale_id, created_by=created_by, commit=False,
+        )
+    except Exception:
+        pass
+
     return {
         'posted': bool(posted),
         'entry_ids': [item['id'] for item in posted],
         'reversed_entry_ids': reversed_ids,
+        'service_jobs': provision_result,
     }

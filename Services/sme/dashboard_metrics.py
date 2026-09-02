@@ -286,14 +286,15 @@ def physical_inventory_value(conn: sqlite3.Connection) -> float:
             row = conn.execute(
                 f"""
                 SELECT COALESCE(SUM(
-                    COALESCE(
-                        (SELECT SUM(sm.quantity) FROM stock_moves sm WHERE sm.product_id = i.product_id),
-                        i.quantity,
-                        0
-                    ) * COALESCE(i.avg_cost, 0)
+                    COALESCE(sm.qty_sum, i.quantity, 0) * COALESCE(i.avg_cost, 0)
                 ), 0)
                 FROM inventory i
                 JOIN products p ON p.id = i.product_id
+                LEFT JOIN (
+                    SELECT product_id, COALESCE(SUM(quantity), 0) AS qty_sum
+                    FROM stock_moves
+                    GROUP BY product_id
+                ) sm ON sm.product_id = i.product_id
                 WHERE {_TRADABLE_PRODUCT_SQL}
                 """
             ).fetchone()
@@ -580,8 +581,7 @@ def hr_hub_metrics(
     salary_payable = _sum_balance(bals, ('334',), normal='credit')
     social_ins = _sum_balance(bals, ('3383', '338'), normal='credit')
     advance = _sum_balance(bals, ('141',), normal='debit')
-    # CP nhân công / lương thường vào 6271, 6411, 6421 — lấy PS Nợ các TK bắt đầu 62x/64x có 'lương' khó;
-    # dùng tăng Có 334 làm proxy chi phí lương ghi nhận
+    # CP nhân công: proxy qua phát sinh Có 334
     salary_accrued = _sum_activity(activity, ('334',), side='credit')
     salary_paid = _sum_activity(activity, ('334',), side='debit')
 

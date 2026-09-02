@@ -228,6 +228,7 @@ _TENANT_TABLE_EXTRAS = [
     ('import_details', 'product_code', 'TEXT'),
     ('import_details', 'unit', 'TEXT'),
     ('import_details', 'line_type', "TEXT DEFAULT 'goods'"),
+    ('import_details', 'asset_account', 'TEXT'),
     ('employees', 'attendance_code', 'TEXT'),
 ]
 
@@ -330,7 +331,40 @@ def apply_schema_migrations(conn):
                 print(f'[MIGRATE] journal_mode={mode} (mong doi WAL)')
     except Exception as e:
         print(f'[MIGRATE] WAL: {e}')
+    try:
+        ensure_query_indexes(conn)
+    except Exception as e:
+        print(f'[MIGRATE] query indexes: {e}')
     conn.commit()
+
+
+def ensure_query_indexes(conn) -> None:
+    """Index phục vụ list API (HĐ mua, phiếu nhập, danh mục) — idempotent."""
+    from db.schema_helpers import execute_ddl, table_exists
+
+    specs = [
+        ('idx_import_details_import_id', 'import_details', 'import_id'),
+        ('idx_import_bill_no', 'import', 'bill_no'),
+        ('idx_import_from_invoice_id', 'import', 'from_invoice_id'),
+        ('idx_import_date', 'import', 'date'),
+        ('idx_import_supplier_id', 'import', 'supplier_id'),
+        ('idx_supplier_invoice_date', 'supplier_invoice', 'invoice_date'),
+        ('idx_supplier_invoice_no', 'supplier_invoice', 'invoice_no'),
+        ('idx_products_name', 'products', 'name'),
+        ('idx_suppliers_name', 'suppliers', 'name'),
+        ('idx_sje_posting_date', 'sme_journal_entries', 'posting_date'),
+        ('idx_sjl_entry_id', 'sme_journal_lines', 'entry_id'),
+        ('idx_sjl_account_code', 'sme_journal_lines', 'account_code'),
+        ('idx_stock_moves_product_id', 'stock_moves', 'product_id'),
+        ('idx_sale_items_sale_id', 'sale_items', 'sale_id'),
+    ]
+    for idx_name, table, column in specs:
+        if not table_exists(conn, table):
+            continue
+        try:
+            execute_ddl(conn, f'CREATE INDEX IF NOT EXISTS {idx_name} ON {table} ({column})')
+        except Exception as e:
+            print(f'[MIGRATE] index {idx_name}: {e}')
 
 
 def ensure_tenant_db_schema(conn):

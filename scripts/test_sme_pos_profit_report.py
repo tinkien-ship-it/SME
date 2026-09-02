@@ -58,9 +58,10 @@ def run(db_path: str, year: int) -> bool:
     tb = recon.get('trial_balance') or {}
     if tb:
         print(
-            f"  BCPS: DT thuần={tb.get('revenue_net', 0):,.0f} | "
+            f"  BCPS: DT+TN net={tb.get('revenue_and_income', tb.get('revenue_net', 0)):,.0f} "
+            f"(511 net={tb.get('revenue_net', 0):,.0f} + 711={tb.get('other_income', 0):,.0f}) | "
             f"CP={tb.get('expense_total', 0):,.0f} | "
-            f"LN gộp={tb.get('profit_before_tax', 0):,.0f}"
+            f"LN={tb.get('profit_before_tax', 0):,.0f}"
         )
         unmapped = tb.get('unmapped_accounts') or []
         if unmapped:
