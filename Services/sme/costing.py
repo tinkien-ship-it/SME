@@ -7,6 +7,8 @@ from typing import Any
 
 from Services.sme.bctc_report import _closing_balances, _period_activity
 from Services.sme.journal_engine import ensure_sme_journal_ready
+from db.dialect import is_postgres
+from db.schema_helpers import table_cols, table_exists
 
 MONEY_Q = Decimal('0.01')
 
@@ -68,30 +70,39 @@ def costing_summary(
     prod_cost = 0.0
     prod_rows = []
     try:
-        row = conn.execute(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='production_orders'"
-        ).fetchone()
-        if row and row[0]:
+        if table_exists(conn, 'production_orders'):
             prod_orders = int(conn.execute(
                 "SELECT COUNT(*) FROM production_orders WHERE COALESCE(status,'') NOT IN ('cancelled','draft')"
             ).fetchone()[0] or 0)
-            cost_row = conn.execute(
-                """
-                SELECT COALESCE(SUM(COALESCE(total_cost, total_material_cost, 0)), 0)
-                FROM production_orders
-                WHERE COALESCE(status,'') NOT IN ('cancelled','draft')
-                  AND strftime('%Y', production_date) = ?
-                  AND CAST(strftime('%m', production_date) AS INTEGER) = ?
-                """,
-                (str(fiscal_year), int(period)),
-            ).fetchone()
+            if is_postgres():
+                cost_row = conn.execute(
+                    """
+                    SELECT COALESCE(SUM(COALESCE(total_cost, total_material_cost, 0)), 0)
+                    FROM production_orders
+                    WHERE COALESCE(status,'') NOT IN ('cancelled','draft')
+                      AND EXTRACT(YEAR FROM production_date::timestamp) = ?
+                      AND EXTRACT(MONTH FROM production_date::timestamp) = ?
+                    """,
+                    (int(fiscal_year), int(period)),
+                ).fetchone()
+            else:
+                cost_row = conn.execute(
+                    """
+                    SELECT COALESCE(SUM(COALESCE(total_cost, total_material_cost, 0)), 0)
+                    FROM production_orders
+                    WHERE COALESCE(status,'') NOT IN ('cancelled','draft')
+                      AND strftime('%Y', production_date) = ?
+                      AND CAST(strftime('%m', production_date) AS INTEGER) = ?
+                    """,
+                    (str(fiscal_year), int(period)),
+                ).fetchone()
             prod_cost = float(cost_row[0] or 0)
             try:
                 from Services.sme.production_journal import ensure_production_journal_column
                 ensure_production_journal_column(conn, commit=False)
             except Exception:
                 pass
-            cols = {r[1] for r in conn.execute('PRAGMA table_info(production_orders)').fetchall()}
+            cols = table_cols(conn, 'production_orders')
             mode_expr = "COALESCE(costing_mode,'full')" if 'costing_mode' in cols else "'full'"
             jid_expr = 'journal_entry_id' if 'journal_entry_id' in cols else 'NULL'
             prod_rows = [dict(r) for r in conn.execute(

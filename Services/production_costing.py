@@ -34,7 +34,7 @@ _MATERIAL_TYPES = _BOM_INPUT_TYPES  # alias
 _FINISHED_TYPES = ('finished_goods',)
 
 
-def ensure_production_schema(conn: sqlite3.Connection) -> None:
+def ensure_production_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
     c = conn.cursor()
     c.executescript(
         """
@@ -99,7 +99,8 @@ def ensure_production_schema(conn: sqlite3.Connection) -> None:
         """
     )
     # Giai đoạn 2: chi phí nhân công / chi phí khác cộng vào giá thành
-    cols = {r[1] for r in c.execute("PRAGMA table_info(production_orders)").fetchall()}
+    from db.schema_helpers import table_cols
+    cols = table_cols(conn, 'production_orders')
     for col, decl in (
         ('labor_cost', 'REAL DEFAULT 0'),
         ('other_cost', 'REAL DEFAULT 0'),
@@ -139,7 +140,8 @@ def ensure_production_schema(conn: sqlite3.Connection) -> None:
             ON production_fg_receipts(order_id);
         """
     )
-    sqlite_commit(conn, label='production_costing')
+    if commit:
+        sqlite_commit(conn, label='production_costing')
 
 
 def _qty_f(val) -> float:

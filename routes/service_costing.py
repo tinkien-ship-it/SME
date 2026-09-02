@@ -38,10 +38,7 @@ def register_service_costing_routes(app):
     def api_service_costing_products():
         conn = get_db_connection()
         try:
-            from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
-                list_service_products,
-            )
+            from Services.sme.service_costing import list_service_products
             _ensure_service_costing_schema(conn, commit=True)
             return jsonify({
                 'success': True,
@@ -58,10 +55,7 @@ def register_service_costing_routes(app):
     def api_service_costing_jobs_list():
         conn = get_db_connection()
         try:
-            from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
-                list_service_jobs,
-            )
+            from Services.sme.service_costing import list_service_jobs
             _ensure_service_costing_schema(conn, commit=True)
             rows = list_service_jobs(
                 conn,
@@ -82,10 +76,7 @@ def register_service_costing_routes(app):
     def api_service_costing_job_get(job_id):
         conn = get_db_connection()
         try:
-            from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
-                get_service_job,
-            )
+            from Services.sme.service_costing import get_service_job
             _ensure_service_costing_schema(conn, commit=True)
             job = get_service_job(conn, job_id)
             if not job:
@@ -324,10 +315,7 @@ def register_service_costing_routes(app):
     def api_service_costing_standards_list():
         conn = get_db_connection()
         try:
-            from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
-                list_service_cost_standards,
-            )
+            from Services.sme.service_costing import list_service_cost_standards
             _ensure_service_costing_schema(conn, commit=True)
             return jsonify({'success': True, 'data': list_service_cost_standards(conn)})
         except Exception as exc:
@@ -342,7 +330,6 @@ def register_service_costing_routes(app):
         conn = get_db_connection()
         try:
             from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
                 get_service_cost_standard,
                 preview_service_cost_standard,
             )
@@ -479,10 +466,7 @@ def register_service_costing_routes(app):
     def api_service_outsource_provisionals():
         conn = get_db_connection()
         try:
-            from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
-                list_outsource_provisionals,
-            )
+            from Services.sme.service_costing import list_outsource_provisionals
             _ensure_service_costing_schema(conn, commit=True)
             unmatched = str(request.args.get('unmatched', '1')).lower() not in (
                 '0', 'false', 'no',
@@ -543,10 +527,7 @@ def register_service_costing_routes(app):
     def api_service_outsource_invoices():
         conn = get_db_connection()
         try:
-            from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
-                list_outsource_invoices,
-            )
+            from Services.sme.service_costing import list_outsource_invoices
             _ensure_service_costing_schema(conn, commit=True)
             unassigned = str(request.args.get('unassigned', '1')).lower() not in (
                 '0', 'false', 'no',
@@ -570,10 +551,7 @@ def register_service_costing_routes(app):
     def api_service_outsource_assignments():
         conn = get_db_connection()
         try:
-            from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
-                list_outsource_assignments,
-            )
+            from Services.sme.service_costing import list_outsource_assignments
             _ensure_service_costing_schema(conn, commit=True)
             inv = request.args.get('invoice_id')
             job = request.args.get('job_id')
@@ -639,10 +617,7 @@ def register_service_costing_routes(app):
     def api_service_advance_receipts():
         conn = get_db_connection()
         try:
-            from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
-                list_advance_receipts,
-            )
+            from Services.sme.service_costing import list_advance_receipts
             _ensure_service_costing_schema(conn, commit=True)
             job_id = request.args.get('job_id')
             rows = list_advance_receipts(
@@ -665,10 +640,7 @@ def register_service_costing_routes(app):
     def api_service_advance_bank_txns():
         conn = get_db_connection()
         try:
-            from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
-                list_unmatched_bank_inflows,
-            )
+            from Services.sme.service_costing import list_unmatched_bank_inflows
             _ensure_service_costing_schema(conn, commit=True)
             rows = list_unmatched_bank_inflows(
                 conn,
@@ -819,10 +791,7 @@ def register_service_costing_routes(app):
     def api_service_advance_assignments():
         conn = get_db_connection()
         try:
-            from Services.sme.service_costing import (
-                _ensure_service_costing_schema,
-                list_service_advance_assignments,
-            )
+            from Services.sme.service_costing import list_service_advance_assignments
             _ensure_service_costing_schema(conn, commit=True)
             job_id = request.args.get('job_id')
             voucher_id = request.args.get('voucher_id')
