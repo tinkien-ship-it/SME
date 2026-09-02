@@ -70,6 +70,9 @@
                     <span class="badge bg-success text-white p-1 px-2">Nhập tay HĐ chi phí</span>
                     rồi <strong>Phân bổ chi phí</strong> vào phiếu nhập hàng tương ứng.
                     <br>
+                    NCC có thể ghi <strong>số đơn đặt hàng</strong> vào mục <strong>GChu</strong> trên hóa đơn XML — hệ thống tự khớp đơn mua.
+                    Nếu HĐ không có ghi chú PO, dùng <strong>Gán ĐĐH</strong> hoặc lập phiếu nhập từ <a href="/SME_purchase_order_list">danh sách đơn mua</a>.
+                    <br>
                     Đối với dịch vụ hoặc hàng dùng ngay như Dịch vụ ăn uống, văn phòng phẩm,...: Hãy nhấn nút <strong class="text-danger border-bottom border-danger">Hạch Toán</strong>.
                 </p>
             </div>
@@ -111,6 +114,7 @@
                         <th class="ps-4 py-3">Ngày HĐ</th>
                         <th>Số hóa đơn / Ký hiệu</th>
                         <th>Nhà cung cấp / MST</th>
+                        <th class="text-center">Đơn mua</th>
                         <th class="text-end">Tổng tiền thanh toán</th>
                         <th class="text-center">Trạng thái</th>
                         <th class="text-center pe-4">Thao tác</th>
@@ -455,7 +459,7 @@ async function loadInvoices() {
     }
 
     const tbody = document.getElementById('invoiceTableBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
 
     try {
         const qs = params.toString();
@@ -466,7 +470,7 @@ async function loadInvoices() {
 
         const data = result.data || [];
         if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Không tìm thấy dữ liệu hóa đơn</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted">Không tìm thấy dữ liệu hóa đơn</td></tr>';
             return;
         }
 
@@ -505,8 +509,30 @@ async function loadInvoices() {
                 statusHtml = '<span class="badge bg-warning-subtle text-warning border border-warning status-badge">CHỜ XỬ LÝ</span>';
             }
 
+            const poNo = inv.po_no || inv.po_no_matched || '';
+            const poId = inv.po_id || '';
+            const poSource = inv.po_match_source || '';
+            let poHtml = '<span class="text-muted small">—</span>';
+            if (poNo) {
+                const srcBadge = poSource === 'gchu'
+                    ? '<span class="badge bg-info text-dark ms-1" title="Khớp từ GChu">GChu</span>'
+                    : (poSource === 'manual' ? '<span class="badge bg-secondary ms-1">Gán tay</span>' : '');
+                poHtml = `<a href="/SME_purchase_order_create?id=${poId}" class="text-decoration-none fw-bold">${poNo}</a>${srcBadge}`;
+            } else if (!isProcessed && inv.gchu) {
+                poHtml = `<span class="text-muted small" title="${(inv.gchu || '').replace(/"/g, '&quot;')}">Chưa khớp</span>`;
+            }
+
             // Action Buttons
             let actionHtml = '';
+            if (!isProcessed && !poNo) {
+                actionHtml += `
+                    <button class="btn btn-sm btn-outline-primary shadow-sm px-2 fw-bold me-1"
+                            onclick="openLinkPoModal(${inv.id}, '${(inv.seller_name || '').replace(/'/g, "\\'")}')"
+                            title="Gán đơn mua thủ công">
+                        <i class="fas fa-link me-1"></i> Gán ĐĐH
+                    </button>
+                `;
+            }
             if (isLanded && !isImported) {
                 actionHtml = `
                     <button class="btn btn-sm btn-outline-danger shadow-sm px-3 fw-bold me-1"
@@ -521,8 +547,8 @@ async function loadInvoices() {
                     </button>
                 `;
             } else {
-                actionHtml = `
-                    <button class="btn btn-sm btn-primary shadow-sm px-3 fw-bold me-1" onclick="goToImport('${inv.id}')">
+                actionHtml += `
+                    <button class="btn btn-sm btn-primary shadow-sm px-3 fw-bold me-1" onclick="goToImport('${inv.id}', '${poId || ''}')">
                         <i class="fas fa-plus me-1"></i> Lập Phiếu Nhập
                     </button>
                     <button class="btn btn-sm btn-warning shadow-sm px-3 fw-bold me-1"
@@ -556,6 +582,7 @@ async function loadInvoices() {
                         <div class="fw-bold ${isProcessed ? 'text-muted' : ''}" style="font-size: 0.9rem;">${inv.seller_name || '—'}</div>
                         <div class="text-muted small"><i class="fas fa-fingerprint me-1"></i>${inv.seller_tax_code || '—'}</div>
                     </td>
+                    <td class="text-center">${poHtml}</td>
                     <td class="text-end fw-bold ${isProcessed ? 'text-muted' : 'text-dark'} pe-4">
                         ${new Intl.NumberFormat('vi-VN', {style: 'currency', currency: 'VND'}).format(inv.total || 0)}
                     </td>
@@ -569,7 +596,7 @@ async function loadInvoices() {
 
     } catch (err) {
         console.error("Lỗi loadInvoices:", err);
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 text-danger">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-danger">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
     }
 }
 
@@ -704,8 +731,58 @@ function importPageUrl() {
     return '/SME_import';
 }
 
-function goToImport(invoiceId) {
-    window.location.href = `${importPageUrl()}?invoice_id=${invoiceId}`;
+function goToImport(invoiceId, poId) {
+    let url = `${importPageUrl()}?invoice_id=${invoiceId}`;
+    if (poId) url += `&po_id=${encodeURIComponent(poId)}`;
+    window.location.href = url;
+}
+
+async function openLinkPoModal(invoiceId, sellerName) {
+    let options = '<option value="">— Chọn đơn mua —</option>';
+    try {
+        const res = await fetch('/api/sme/purchase-orders/picker?limit=40');
+        const json = await res.json();
+        (json.data || []).forEach(po => {
+            options += `<option value="${po.id}">${po.po_no} — ${po.supplier_name || ''} (${Number(po.total_amount || 0).toLocaleString('vi-VN')} đ)</option>`;
+        });
+    } catch (e) {
+        console.warn('po picker', e);
+    }
+    const { value: poId } = await Swal.fire({
+        title: 'Gán đơn đặt hàng',
+        html: `
+            <p class="small text-muted mb-2">HĐ: <strong>${sellerName || ''}</strong></p>
+            <label class="form-label small fw-bold">Chọn đơn mua</label>
+            <select id="swalPoPick" class="form-select">${options}</select>
+            <div class="mt-2 text-muted small">Hoặc nhập mã PO:</div>
+            <input id="swalPoNo" class="form-control form-control-sm mt-1" placeholder="PO#000001">
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Gán',
+        cancelButtonText: 'Hủy',
+        preConfirm: () => {
+            const pick = document.getElementById('swalPoPick').value;
+            const manual = (document.getElementById('swalPoNo').value || '').trim();
+            if (!pick && !manual) {
+                Swal.showValidationMessage('Chọn đơn hoặc nhập mã PO');
+                return false;
+            }
+            return { po_id: pick || null, po_no: manual || null };
+        }
+    });
+    if (!poId) return;
+    const res = await fetch(`/api/sme/invoices/inward/${invoiceId}/link-po`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(poId),
+    });
+    const data = await res.json();
+    if (!data.success) {
+        Swal.fire('Lỗi', data.error || 'Không gán được', 'error');
+        return;
+    }
+    Swal.fire('Đã gán', `Đơn ${data.data?.po_no || ''}`, 'success');
+    loadInvoices();
 }
 
 function goToServiceImport(invoiceId) {

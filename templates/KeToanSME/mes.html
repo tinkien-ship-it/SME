@@ -1,0 +1,86 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}MES — Điều hành sản xuất{% endblock %}
+
+{% block sme_breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-0">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('SME_dashboard') }}">Tổng quan</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('SME_san_xuat_gia_thanh') }}">Sản xuất &amp; giá thành</a></li>
+        <li class="breadcrumb-item active">MES</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block sme_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h4 class="fw-bold text-dark mb-1"><i class="fas fa-tablet-alt text-danger me-2"></i>MES — Hệ thống điều hành sản xuất</h4>
+        <p class="text-muted mb-0">Tầm nhìn vi mô thời gian thực (giây / phút / ca): cầu nối giữa kế hoạch MRP/ERP và shop floor.</p>
+    </div>
+    <span class="badge text-bg-danger align-self-center">Quyền: Trưởng Phòng Sản Xuất · Admin</span>
+</div>
+
+<div class="alert alert-warning border-0 shadow-sm">
+    <strong>Board điều hành:</strong> theo dõi WO đang ở công đoạn nào, ai làm, máy nào chạy; Good / Scrap; cảnh báo nghẽn.
+    Dữ liệu từ cùng Work Order do MRP phát hành (released) — không lệnh riêng.
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-danger mb-2"><i class="fas fa-qrcode fa-lg"></i></div>
+                <h6 class="fw-bold">Realtime tracking</h6>
+                <p class="small text-muted mb-0">Quét QR/Barcode hoặc kiosk Start/Stop theo công đoạn.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-primary mb-2"><i class="fas fa-tachometer-alt fa-lg"></i></div>
+                <h6 class="fw-bold">OEE &amp; thiết bị</h6>
+                <p class="small text-muted mb-0">Availability × Performance × Quality theo work center.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-success mb-2"><i class="fas fa-check-double fa-lg"></i></div>
+                <h6 class="fw-bold">QC &amp; phế phẩm</h6>
+                <p class="small text-muted mb-0">Good / Scrap / nguyên nhân; FQC trước nhập kho 155.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-secondary mb-2"><i class="fas fa-user-clock fa-lg"></i></div>
+                <h6 class="fw-bold">Nhân công</h6>
+                <p class="small text-muted mb-0">Giờ công thực tế theo op → nguồn phân bổ TK 622.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white fw-semibold">Lối tắt vận hành</div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-danger" href="{{ url_for('SME_production') }}">
+                <i class="fas fa-industry me-1"></i> Lệnh SX &amp; nhận thành phẩm
+            </a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('SME_period_cost_allocation') }}">
+                <i class="fas fa-balance-scale me-1"></i> Định mức &amp; chốt kỳ
+            </a>
+            <a class="btn btn-outline-dark" href="{{ url_for('SME_costing') }}">
+                <i class="fas fa-calculator me-1"></i> Kế toán giá thành
+            </a>
+        </div>
+        <p class="small text-muted mt-3 mb-0">
+            Andon / mobile board và kiosk sẽ poll API live-board trên trang này. Trưởng SX đăng nhập được đưa thẳng vào MES.
+        </p>
+    </div>
+</div>
+{% endblock %}

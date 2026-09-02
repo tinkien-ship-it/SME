@@ -425,12 +425,41 @@ async function load() {
     <td>${crmFmtDate(r.signed_date)}</td>
     <td class="crm-actions-cell"><div class="crm-actions">
       <button class="btn btn-sm btn-outline-secondary" onclick="openC({id:${r.id}})">Sửa</button>
+      ${!r.sale_id ? `<button class="btn btn-sm btn-success" onclick="convertContract(${r.id})">Tạo đơn bán</button>` : `<a class="btn btn-sm btn-outline-success" href="/sale?order_id=${r.sale_id}">Đơn #${r.sale_id}</a>`}
       <button class="btn btn-sm btn-outline-primary" onclick="sendContractEmail(${r.id})">Gửi email</button>
       <a class="btn btn-sm btn-outline-primary" target="_blank" href="/api/crm/contracts/${r.id}/print">In</a>
       <a class="btn btn-sm btn-outline-success" href="/api/crm/contracts/${r.id}/export">Xuất</a>
       <button class="btn btn-sm btn-outline-danger" onclick="del(${r.id})">Xóa</button>
     </div></td>
   </tr>`).join('') : '<tr><td colspan="6" class="crm-empty">Chưa có hợp đồng</td></tr>';
+}
+
+async function convertContract(id) {
+  if (!id) return;
+  const ok = confirm(
+    'Tạo đơn bán từ hợp đồng?\n\n' +
+    '• SME: hoàn tất đơn (trừ kho + ghi sổ) như POS\n' +
+    '• Có thể xuất HĐĐT ngay sau đó'
+  );
+  if (!ok) return;
+  const issue = confirm('Xuất hóa đơn điện tử ngay sau khi tạo đơn?');
+  const d = await (await fetch(`/api/crm/contracts/${id}/convert-sale`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ issue_invoice: issue ? 1 : 0, loai_hdon: 1 }),
+  })).json();
+  if (d.error) { alert(d.error); return; }
+  let msg = d.already
+    ? ('Đơn đã gắn: ' + (d.sale_no || d.sale_id))
+    : ('Đã tạo đơn ' + (d.sale_no || ('#' + d.sale_id)) + (d.completed ? ' — đã hoàn tất (kho + sổ)' : ' — chờ POS'));
+  if (d.invoice) {
+    msg += d.invoice.success
+      ? ('\nHĐĐT: ' + (d.invoice.invoice_no || 'OK'))
+      : ('\nHĐĐT: ' + (d.invoice.error || 'không xuất được'));
+  }
+  alert(msg);
+  if (d.completed) location.href = '/SME_order';
+  else location.href = '/sale?order_id=' + d.sale_id;
 }
 
 async function sendContractEmail(id) {

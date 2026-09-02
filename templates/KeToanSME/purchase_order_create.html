@@ -9,6 +9,7 @@
     </div>
     <div class="d-flex gap-2">
       <button type="button" class="btn btn-outline-secondary btn-sm" id="btnConfirm" style="display:none">Xác nhận</button>
+      <button type="button" class="btn btn-outline-primary btn-sm" id="btnSendEmail" style="display:none"><i class="fas fa-envelope me-1"></i> Gửi NCC</button>
       <a class="btn btn-outline-success btn-sm" id="btnImport" style="display:none" href="#"><i class="fas fa-boxes me-1"></i> Nhập kho</a>
       <button type="button" class="btn btn-outline-danger btn-sm" id="btnCancel" style="display:none">Hủy đơn</button>
       <button type="button" class="btn btn-primary btn-sm" id="btnSave">Lưu</button>
@@ -16,8 +17,9 @@
   </div>
   <div class="card border-0 shadow-sm mb-3"><div class="card-body">
     <input type="hidden" id="poId">
+    <input type="hidden" id="supId">
     <div class="row g-2">
-      <div class="col-md-3"><label class="form-label small">Số ĐH</label><input id="poNo" class="form-control form-control-sm" readonly placeholder="Tự sinh"></div>
+      <div class="col-md-3"><label class="form-label small">Số ĐH</label><input id="poNo" class="form-control form-control-sm" readonly placeholder="PO#000001"></div>
       <div class="col-md-3"><label class="form-label small">Ngày ĐH *</label><input type="date" id="poDate" class="form-control form-control-sm"></div>
       <div class="col-md-3"><label class="form-label small">Ngày nhận dự kiến</label><input type="date" id="expDate" class="form-control form-control-sm"></div>
       <div class="col-md-3"><label class="form-label small">Trạng thái</label><input id="poStatus" class="form-control form-control-sm" readonly value="draft"></div>
@@ -25,6 +27,8 @@
       <datalist id="supList"></datalist>
       <div class="col-md-3"><label class="form-label small">Mã số thuế</label><input id="supTax" class="form-control form-control-sm"></div>
       <div class="col-md-3"><label class="form-label small">Mã NCC</label><input id="supCode" class="form-control form-control-sm"></div>
+      <div class="col-md-6"><label class="form-label small">Email NCC (gửi đơn)</label><input type="email" id="supEmail" class="form-control form-control-sm" placeholder="email@ncc.vn"></div>
+      <div class="col-md-6"><label class="form-label small">&nbsp;</label><p id="sentInfo" class="small text-muted mb-0"></p></div>
       <div class="col-12"><label class="form-label small">Ghi chú</label><textarea id="note" class="form-control form-control-sm" rows="2"></textarea></div>
     </div>
   </div></div>
@@ -59,6 +63,15 @@
   document.getElementById('poDate').value=today;
   let products=[];
   let productSearchTimer=null;
+  let supplierList=[];
+
+  function bindSupplierFields(hit){
+    if(!hit) return;
+    document.getElementById('supId').value=hit.id||'';
+    document.getElementById('supTax').value=hit.tax_code||'';
+    document.getElementById('supCode').value=hit.code||'';
+    if(hit.email) document.getElementById('supEmail').value=hit.email;
+  }
 
   function renderProdList(items){
     document.getElementById('prodList').innerHTML=(items||[]).map(p=>{
@@ -171,14 +184,13 @@
 
   async function loadSuppliers(){
     try{
-      const res=await fetch('/api/suppliers');
+      const res=await fetch('/api/suppliers?limit=200');
       const rows=await res.json();
-      const list=Array.isArray(rows)?rows:(rows.data||[]);
-      document.getElementById('supList').innerHTML=list.map(s=>`<option value="${s.name||''}">`).join('');
+      supplierList=Array.isArray(rows)?rows:(rows.data||[]);
+      document.getElementById('supList').innerHTML=supplierList.map(s=>`<option value="${s.name||''}">`).join('');
       const nameEl=document.getElementById('supName');
       nameEl.addEventListener('change', ()=>{
-        const hit=list.find(s=>s.name===nameEl.value);
-        if(hit){ document.getElementById('supTax').value=hit.tax_code||''; document.getElementById('supCode').value=hit.code||''; }
+        bindSupplierFields(supplierList.find(s=>s.name===nameEl.value));
       });
     }catch(e){}
   }
@@ -200,13 +212,20 @@
     document.getElementById('expDate').value=(d.expected_date||'').slice(0,10);
     document.getElementById('poStatus').value=d.status||'draft';
     document.getElementById('supName').value=d.supplier_name||'';
+    document.getElementById('supId').value=d.supplier_id||'';
     document.getElementById('supTax').value=d.supplier_tax_code||'';
     document.getElementById('supCode').value=d.supplier_code||'';
+    document.getElementById('supEmail').value=d.supplier_email||'';
     document.getElementById('note').value=d.note||'';
+    const sentEl=document.getElementById('sentInfo');
+    if(d.sent_at){
+      sentEl.textContent='Đã gửi email: '+d.sent_to_email+' · '+d.sent_at;
+    } else sentEl.textContent='';
     tbody.innerHTML='';
     (d.lines||[]).forEach(addRow);
     if(!d.lines||!d.lines.length) addRow();
     document.getElementById('btnConfirm').style.display = d.status==='draft' ? '' : 'none';
+    document.getElementById('btnSendEmail').style.display = d.status!=='cancelled' ? '' : 'none';
     document.getElementById('btnCancel').style.display = (d.status==='draft'||d.status==='confirmed') ? '' : 'none';
     const canImport = ['draft','confirmed','partial'].includes(d.status);
     const btnImp = document.getElementById('btnImport');
@@ -219,6 +238,7 @@
       po_date: document.getElementById('poDate').value,
       expected_date: document.getElementById('expDate').value,
       supplier_name: document.getElementById('supName').value.trim(),
+      supplier_id: document.getElementById('supId').value ? Number(document.getElementById('supId').value) : null,
       supplier_tax_code: document.getElementById('supTax').value.trim(),
       supplier_code: document.getElementById('supCode').value.trim(),
       note: document.getElementById('note').value.trim(),
@@ -250,6 +270,27 @@
   }
   document.getElementById('btnConfirm').addEventListener('click', ()=>setStatus('confirmed'));
   document.getElementById('btnCancel').addEventListener('click', ()=>{ if(confirm('Hủy đơn này?')) setStatus('cancelled'); });
+
+  document.getElementById('btnSendEmail').addEventListener('click', async ()=>{
+    const id=document.getElementById('poId').value;
+    if(!id){ alert('Lưu đơn trước khi gửi email'); return; }
+    const to=document.getElementById('supEmail').value.trim();
+    if(!to){ alert('Nhập email NCC hoặc cập nhật email trong danh mục NCC'); return; }
+    const res=await fetch('/api/sme/purchase-orders/'+id+'/send-email',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to_email:to}),
+    });
+    const data=await res.json();
+    if(!data.success){
+      const msg=data.error||'Lỗi';
+      if(msg.includes('cấu hình email')||msg.includes('SMTP')){
+        if(confirm(msg+'\n\nMở trang Thiết lập email?')) location.href='/thiet-lap';
+      } else alert(msg);
+      return;
+    }
+    alert('Đã gửi đơn tới '+data.data.to_email);
+    loadOne(id);
+  });
 
   Promise.all([loadSuppliers(), loadProducts()]).then(()=>{
     if(editId) loadOne(editId); else addRow();

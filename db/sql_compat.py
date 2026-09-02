@@ -443,7 +443,7 @@ def _rewrite_coalesce_nullif_trim(sql: str) -> str:
 
 
 def _rewrite_date_fn_calls(sql: str) -> str:
-    """date(expr) → LEFT(CAST(text), 10) — một lần expr (không nhân đôi placeholder ?).
+    """date(expr) → substr(CAST(text), 1, 10) — portable SQLite + PG; một lần expr.
 
     Không dùng BTRIM bọc ngoài (tránh lỗi kiểu); TRIM bên trong đã ép text.
     """
@@ -473,7 +473,7 @@ def _rewrite_date_fn_calls(sql: str) -> str:
             out.append(inner)
         else:
             # Không split theo ',' — COALESCE/NULLIF bên trong cũng có dấu phẩy
-            out.append(f"LEFT(CAST(({inner}) AS text), 10)")
+            out.append(f"substr(CAST(({inner}) AS text), 1, 10)")
         i = j
     return ''.join(out)
 

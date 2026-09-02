@@ -115,6 +115,7 @@ def normalize_supplier_invoice_payload(raw_data):
             'SHDon': (ttchung.findtext('SHDon') if ttchung is not None else '') or '',
             'NLap': (ttchung.findtext('NLap') if ttchung is not None else '') or '',
             'KHHDon': (ttchung.findtext('KHHDon') if ttchung is not None else '') or '',
+            'GChu': (ttchung.findtext('GChu') if ttchung is not None else '') or '',
             'NBanTen': (nban.findtext('Ten') if nban is not None else '') or '',
             'NBanMST': (nban.findtext('MST') if nban is not None else '') or '',
             'NBanDChi': (nban.findtext('DChi') if nban is not None else '') or '',
@@ -147,10 +148,17 @@ def normalize_supplier_invoice_payload(raw_data):
             if mapped:
                 normalized_lines.append(mapped)
 
+    tt_gchu = ''
+    tt_raw = data.get('TTChung')
+    if isinstance(tt_raw, dict):
+        tt_gchu = tt_raw.get('GChu') or tt_raw.get('gChu') or ''
     header = {
         'SHDon': str(data.get('SHDon') or data.get('shDon') or data.get('SoHDon') or '').strip(),
         'NLap': str(data.get('NLap') or data.get('nLap') or data.get('NgayLap') or '').strip(),
         'KHHDon': str(data.get('KHHDon') or data.get('khHDon') or data.get('Serial') or '').strip(),
+        'GChu': str(
+            data.get('GChu') or data.get('gChu') or data.get('gchu') or tt_gchu or ''
+        ).strip(),
         'NBanTen': str(data.get('NBanTen') or data.get('NBan_Ten') or data.get('nBanTen') or '').strip(),
         'NBanMST': str(data.get('NBanMST') or data.get('NBan_MST') or data.get('nBanMST') or '').strip(),
         'NBanDChi': str(data.get('NBanDChi') or data.get('NBan_DChi') or data.get('nBanDChi') or '').strip(),
@@ -539,11 +547,30 @@ def create_manual_supplier_invoice(conn, payload: dict) -> dict:
 
 
 _INWARD_LIST_SCHEMA_READY = 'inward_list_schema_v1'
+_INWARD_PO_SCHEMA_READY = 'inward_po_link_v1'
+
+
+def ensure_supplier_invoice_po_schema(conn) -> None:
+    """Cột liên kết đơn mua trên HĐ NCC (đọc GChu hoặc gán thủ công)."""
+    from db.schema_helpers import add_column_if_missing
+    from db_utils import sqlite_is_ready, sqlite_mark_ready
+
+    if sqlite_is_ready(conn, _INWARD_PO_SCHEMA_READY):
+        return
+    from Services.sme.purchase_order import ensure_purchase_order_schema
+
+    ensure_purchase_order_schema(conn, commit=False)
+    add_column_if_missing(conn, 'supplier_invoice', 'po_id', 'INTEGER')
+    add_column_if_missing(conn, 'supplier_invoice', 'gchu', 'TEXT')
+    add_column_if_missing(conn, 'supplier_invoice', 'po_no_matched', 'TEXT')
+    add_column_if_missing(conn, 'supplier_invoice', 'po_match_source', 'TEXT')
+    sqlite_mark_ready(conn, _INWARD_PO_SCHEMA_READY)
 
 
 def ensure_inward_list_schema(conn) -> None:
     from db_utils import sqlite_is_ready, sqlite_mark_ready
 
+    ensure_supplier_invoice_po_schema(conn)
     if sqlite_is_ready(conn, _INWARD_LIST_SCHEMA_READY):
         return
     ensure_import_service_schema(conn)
@@ -551,9 +578,11 @@ def ensure_inward_list_schema(conn) -> None:
 
 
 def _inward_invoice_day_sql() -> str:
-    return (
-        "LEFT(COALESCE(NULLIF(BTRIM(CAST(si.invoice_date AS text)), ''), "
-        "CAST(si.date AS text)), 10)"
+    from db.dialect import sql_ymd_prefix
+
+    # YYYY-MM-DD portable (SQLite không có LEFT / BTRIM)
+    return sql_ymd_prefix(
+        "COALESCE(NULLIF(trim(CAST(si.invoice_date AS text)), ''), CAST(si.date AS text))"
     )
 
 
@@ -621,9 +650,12 @@ def list_inward_invoices(
             si.id, si.invoice_no, si.serial, si.invoice_date, si.date,
             si.seller_name, si.seller_tax_code, si.amount, si.tax_amount,
             si.total, si.status, si.pdf_url, si.address,
+            si.po_id, si.po_no_matched, si.gchu, si.po_match_source,
+            po.po_no AS po_no,
             CASE WHEN sb.bill_no IS NOT NULL THEN 1 ELSE 0 END AS has_import,
             CASE WHEN si.status = 'accounted' OR sv.invoice_id IS NOT NULL THEN 1 ELSE 0 END AS has_accounted
         FROM supplier_invoice si
+        LEFT JOIN sme_purchase_orders po ON po.id = si.po_id
         LEFT JOIN (
             SELECT DISTINCT TRIM(COALESCE(bill_no, '')) AS bill_no
             FROM import

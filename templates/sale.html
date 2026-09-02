@@ -312,6 +312,13 @@
                             <input type="text" id="customerPassport" class="form-control form-control-sm" placeholder="Số hộ chiếu" autocomplete="off">
                         </div>
                     </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <label class="small text-muted fw-bold mb-1">Ghi chú</label>
+                            <input type="text" id="customerOrderNote" class="form-control form-control-sm" maxlength="255"
+                                   placeholder="Nhập Số Đơn đặt hàng hoặc Số Hợp Đồng" autocomplete="off">
+                        </div>
+                    </div>
                     <div id="customerSuggestions" class="list-group position-absolute shadow-lg d-none" style="z-index: 1100; left: 12px; right: 12px;"></div>
                 </div>
             </div>
@@ -571,7 +578,8 @@ function saveDraft() {
         address: document.getElementById('customerAddress')?.value || '',
         tax_code: document.getElementById('customerTaxCode')?.value || '',
         budget_unit_code: document.getElementById('customerBudgetCode')?.value?.trim() || '',
-        passport_no: document.getElementById('customerPassport')?.value?.trim() || ''
+        passport_no: document.getElementById('customerPassport')?.value?.trim() || '',
+        note: document.getElementById('customerOrderNote')?.value?.trim() || ''
     };
     const storagePayload = {
         cart: cart,
@@ -630,6 +638,7 @@ function restoreFromStorage() {
             document.getElementById('customerTaxCode').value = c.tax_code || '';
             document.getElementById('customerBudgetCode').value = c.budget_unit_code || '';
             document.getElementById('customerPassport').value = c.passport_no || '';
+            document.getElementById('customerOrderNote').value = c.note || '';
         }
 
         if (editingOrderId && typeof setEditModeUI === "function") setEditModeUI();
@@ -647,7 +656,7 @@ function resetCustomerToDefault() {
     const fieldsToEmpty = [
         'customerCompany', 'customerPhone', 'customerMobile', 
         'customerEmail', 'customerAddress', 'customerTaxCode',
-        'customerBudgetCode', 'customerPassport'
+        'customerBudgetCode', 'customerPassport', 'customerOrderNote'
     ];
 
     // 1. Duyệt và xóa an toàn dữ liệu các trường rỗng
@@ -1305,6 +1314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             tax_code: document.getElementById('customerTaxCode')?.value || '',
             budget_unit_code: document.getElementById('customerBudgetCode')?.value?.trim() || '',
             passport_no: document.getElementById('customerPassport')?.value?.trim() || '',
+            note: document.getElementById('customerOrderNote')?.value?.trim() || '',
             payment_method: document.querySelector('input[name="payMethod"]:checked')?.value || '111'
         };
     }
@@ -1743,6 +1753,7 @@ function initCustomerSearch() {
             document.getElementById('customerTaxCode').value = data.tax_code || '';
             document.getElementById('customerBudgetCode').value = data.budget_unit_code || '';
             document.getElementById('customerPassport').value = data.passport_no || '';
+            document.getElementById('customerOrderNote').value = data.note || '';
             if (data.tax_pct != null) document.getElementById('taxPct').value = data.tax_pct;
             setEditModeUI();
             updateCart();

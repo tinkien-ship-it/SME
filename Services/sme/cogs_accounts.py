@@ -65,6 +65,25 @@ def cogs_accounts_for_line(
     return 'cogs.goods.domestic', 'inv.goods', 'GV HH nội địa'
 
 
+def inventory_tk_for_product_type(product_type: str | None = None) -> str:
+    """Fallback cũ theo loại SP — báo cáo tồn kho ưu tiên TK sổ cái (xem inventory_account_for_product)."""
+    pt = (product_type or 'goods').strip().lower()
+    if pt in ('recipe', 'raw_materials', 'materials', 'material', 'nvl'):
+        return '152'
+    if pt in ('finished_goods', 'finished', 'thanh_pham', 'ready_made', 'thanhpham'):
+        return '155'
+    return '156'
+
+
+def inventory_tk_label(tk: str | None) -> str:
+    t = (tk or '').strip()
+    return {
+        '152': 'Nguyên vật liệu (152)',
+        '155': 'Thành phẩm (155)',
+        '156': 'Hàng hóa (156)',
+    }.get(t, 'Hàng tồn kho')
+
+
 def cogs_spoilage_account() -> str:
     """Hao hụt / mất mát — role (resolve → 6328 hoặc leaf DN chọn)."""
     return COGS_SPOILAGE_ROLE

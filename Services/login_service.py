@@ -855,15 +855,22 @@ def send_otp_sms(phone, otp_code):
 def login_redirect_target(user_role, tenant_id):
     """Xác định endpoint redirect sau đăng nhập."""
     from Services.sme_roles import ESS_HOME_ROLES, is_sme_role
-    if str(user_role or '').strip() in ESS_HOME_ROLES:
+    role = str(user_role or '').strip()
+    if role in ESS_HOME_ROLES:
         return 'hrm_ess_portal'
-    if user_role in ('admin*', 'manager*') and tenant_id is not None:
+    if role in ('admin*', 'manager*') and tenant_id is not None:
         return 'rental_service'
-    if user_role in ('adminFB', 'managerFB') and tenant_id is not None:
+    if role in ('adminFB', 'managerFB') and tenant_id is not None:
         return 'F_and_B_service'
-    if is_sme_role(user_role) and tenant_id is not None:
+    if role == 'production_manager' and tenant_id is not None:
+        return 'SME_mes'
+    if role == 'purchasing_manager' and tenant_id is not None:
+        return 'SME_mrp'
+    if role == 'chief_accountant' and tenant_id is not None:
+        return 'SME_mrp'
+    if is_sme_role(role) and tenant_id is not None:
         return 'SME_dashboard'
-    if user_role == 'master' and tenant_id is None:
+    if role == 'master' and tenant_id is None:
         return 'master_settings'
     return 'sale'
 
@@ -877,6 +884,8 @@ def login_redirect_fallback_path(user_role, tenant_id, target: str | None = None
         'rental_service': '/rental_service',
         'F_and_B_service': '/F_and_B_service',
         'SME_dashboard': '/SME_dashboard',
+        'SME_mrp': '/SME_mrp',
+        'SME_mes': '/SME_mes',
         'master_settings': '/master/settings',
         'sale': '/sale',
     }

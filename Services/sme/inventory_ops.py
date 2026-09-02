@@ -156,8 +156,152 @@ def _next_no(conn: sqlite3.Connection, table: str, col: str, prefix: str) -> str
     return f'{prefix}{int(digits) + 1:06d}'
 
 
-def inventory_account_for_product(conn: sqlite3.Connection, product_id: int) -> str:
-    """TK kho theo product_type."""
+def normalize_inventory_tk(account_code: str | None) -> str | None:
+    """Chuẩn hóa mã TK → 152 / 155 / 156 (bỏ qua CCDC/TSCĐ)."""
+    code = (account_code or '').strip()
+    if not code:
+        return None
+    for prefix in ('152', '155', '156'):
+        if code == prefix or code.startswith(prefix):
+            return prefix
+    return None
+
+
+def _table_has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
+    try:
+        from db.schema_helpers import column_exists
+        return bool(column_exists(conn, table, column))
+    except Exception:
+        try:
+            rows = conn.execute(f'PRAGMA table_info({table})').fetchall()
+            names = {(r[1] if not isinstance(r, sqlite3.Row) else r['name']) for r in rows}
+            return column in names
+        except Exception:
+            return False
+
+
+def _table_exists(conn: sqlite3.Connection, name: str) -> bool:
+    try:
+        from db.dialect import table_exists
+        return bool(table_exists(conn, name))
+    except Exception:
+        try:
+            row = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                (name,),
+            ).fetchone()
+            return bool(row)
+        except Exception:
+            return False
+
+
+def inventory_accounts_by_product(
+    conn: sqlite3.Connection,
+    product_ids: list[int] | None = None,
+) -> dict[int, str]:
+    """Map product_id → TK kho từ sổ cái (định khoản nhập/xuất 152/155/156).
+
+    Ưu tiên TK có phát sinh Nợ lớn nhất (nhập kho); không suy từ product_type.
+    """
+    out: dict[int, str] = {}
+    if not _table_exists(conn, 'sme_journal_lines'):
+        return out
+    if not _table_has_column(conn, 'sme_journal_lines', 'product_id'):
+        return out
+    if not _table_has_column(conn, 'sme_journal_lines', 'account_code'):
+        return out
+
+    where = [
+        'product_id IS NOT NULL',
+        "(account_code LIKE '152%' OR account_code LIKE '155%' OR account_code LIKE '156%')",
+    ]
+    params: list[Any] = []
+    if product_ids is not None:
+        ids = [int(x) for x in product_ids if x is not None]
+        if not ids:
+            return out
+        placeholders = ','.join('?' for _ in ids)
+        where.append(f'product_id IN ({placeholders})')
+        params.extend(ids)
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT product_id, account_code,
+                   COALESCE(SUM(debit), 0) AS debit_sum,
+                   COALESCE(SUM(credit), 0) AS credit_sum,
+                   MAX(id) AS last_line_id
+            FROM sme_journal_lines
+            WHERE {' AND '.join(where)}
+            GROUP BY product_id, account_code
+            """,
+            tuple(params),
+        ).fetchall()
+    except sqlite3.Error:
+        return out
+
+    # product_id -> best (debit, credit, last_line_id, tk)
+    best: dict[int, tuple[float, float, int, str]] = {}
+    for r in rows:
+        d = dict(r) if isinstance(r, sqlite3.Row) else {
+            'product_id': r[0], 'account_code': r[1],
+            'debit_sum': r[2], 'credit_sum': r[3], 'last_line_id': r[4],
+        }
+        pid = int(d['product_id'] or 0)
+        tk = normalize_inventory_tk(d.get('account_code'))
+        if not pid or not tk:
+            continue
+        score = (
+            float(d.get('debit_sum') or 0),
+            float(d.get('credit_sum') or 0),
+            int(d.get('last_line_id') or 0),
+            tk,
+        )
+        prev = best.get(pid)
+        if prev is None or score[:3] > prev[:3]:
+            best[pid] = score
+
+    for pid, score in best.items():
+        out[pid] = score[3]
+    return out
+
+
+def _inventory_account_from_import_voucher(conn: sqlite3.Connection, product_id: int) -> str | None:
+    """Fallback: TK theo dòng phiếu nhập gần nhất (line_type → TK định khoản), không theo products.product_type."""
+    if not _table_exists(conn, 'import_details'):
+        return None
+    has_lt = _table_has_column(conn, 'import_details', 'line_type')
+    has_aa = _table_has_column(conn, 'import_details', 'asset_account')
+    if not has_lt and not has_aa:
+        return None
+    lt_expr = "COALESCE(d.line_type, '')" if has_lt else "''"
+    aa_expr = "COALESCE(d.asset_account, '')" if has_aa else "''"
+    try:
+        row = conn.execute(
+            f"""
+            SELECT {lt_expr} AS line_type, {aa_expr} AS asset_account
+            FROM import_details d
+            WHERE d.product_id = ?
+            ORDER BY d.id DESC
+            LIMIT 1
+            """,
+            (int(product_id),),
+        ).fetchone()
+    except sqlite3.Error:
+        return None
+    if not row:
+        return None
+    lt = row[0] if not isinstance(row, sqlite3.Row) else row['line_type']
+    aa = row[1] if not isinstance(row, sqlite3.Row) else row['asset_account']
+    try:
+        from Services.sme.import_transit import final_inventory_account
+        return normalize_inventory_tk(final_inventory_account(str(lt or ''), str(aa or '') or None))
+    except Exception:
+        return None
+
+
+def _inventory_account_from_product_type_fallback(conn: sqlite3.Connection, product_id: int) -> str:
+    """Chỉ dùng khi chưa có định khoản / phiếu nhập — giữ tương thích dữ liệu cũ."""
     try:
         row = conn.execute(
             "SELECT COALESCE(product_type, 'goods') FROM products WHERE id = ?",
@@ -176,6 +320,23 @@ def inventory_account_for_product(conn: sqlite3.Connection, product_id: int) -> 
     if pt in ('fixed_asset', 'tscd'):
         return '211'
     return '156'
+
+
+def inventory_account_for_product(conn: sqlite3.Connection, product_id: int) -> str:
+    """TK kho theo số tài khoản đã định khoản (152/155/156), không ưu tiên product_type.
+
+    1) Sổ cái sme_journal_lines (Nợ/Có 152|155|156 + product_id)
+    2) Dòng phiếu nhập gần nhất (line_type → TK quy tắc định khoản)
+    3) Fallback product_type (dữ liệu cũ / chưa phát sinh)
+    """
+    pid = int(product_id)
+    mapped = inventory_accounts_by_product(conn, [pid])
+    if pid in mapped:
+        return mapped[pid]
+    from_import = _inventory_account_from_import_voucher(conn, pid)
+    if from_import:
+        return from_import
+    return _inventory_account_from_product_type_fallback(conn, pid)
 
 
 def _avg_cost(conn: sqlite3.Connection, product_id: int) -> float:

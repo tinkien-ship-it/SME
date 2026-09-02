@@ -853,8 +853,20 @@ def delete_quote(conn: sqlite3.Connection, quote_id: int) -> None:
     conn.execute('DELETE FROM crm_quotes WHERE id = ?', (quote_id,))
 
 
-def convert_quote_to_sale(conn: sqlite3.Connection, quote_id: int) -> dict:
-    """Tạo đơn bán (sale) từ báo giá đã chấp nhận / draft."""
+def convert_quote_to_sale(
+    conn: sqlite3.Connection,
+    quote_id: int,
+    *,
+    complete: bool | None = None,
+    payment_method: str | None = None,
+    issue_invoice: bool = False,
+    invoice_loai_hdon: int = 1,
+    created_by: str | None = None,
+) -> dict:
+    """Tạo đơn bán từ báo giá.
+
+    SME: mặc định hoàn tất như POS (trừ kho + ghi sổ). HKD: mặc định pending.
+    """
     ready(conn)
     q = get_quote(conn, quote_id)
     if not q:
@@ -872,15 +884,31 @@ def convert_quote_to_sale(conn: sqlite3.Connection, quote_id: int) -> dict:
     if not cust:
         raise ValueError('Khách hàng không tồn tại')
 
-    name = (cust.get('company_name') or cust.get('name') or '').strip()
+    from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
+
+    profile = {}
+    try:
+        profile = get_current_tenant_profile() or {}
+    except Exception:
+        profile = {}
+    regime = profile.get('accounting_regime')
+    sme = is_sme_regime(regime)
+    if complete is None:
+        complete = sme
+
+    name = (cust.get('name') or cust.get('company_name') or '').strip()
+    company = (cust.get('company_name') or '').strip()
     total = _f(q.get('total'))
-    note = f"Từ báo giá {q.get('quote_no') or quote_id}"
+    note = (q.get('notes') or '').strip() or f"Từ báo giá {q.get('quote_no') or quote_id}"
+    from Services.sme.crm_sale_fulfill import _map_payment_method
+    pay = _map_payment_method(payment_method)
 
     sale_cols = {r[1] for r in conn.execute('PRAGMA table_info(sale)').fetchall()}
-    insert_cols = ['date', 'total_amount', 'customer_name', 'status']
-    params: list[Any] = [total, name, 'pending']
+    sale_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    insert_cols = ['date', 'total_amount', 'customer_name', 'status', 'payment_method']
+    params: list[Any] = [sale_date, total, name or company or 'Khách hàng', 'pending', pay]
     for col, val in (
-        ('company_name', cust.get('company_name')),
+        ('company_name', company or None),
         ('tax_code', cust.get('tax_code')),
         ('address', cust.get('address')),
         ('email', cust.get('email')),
@@ -888,18 +916,22 @@ def convert_quote_to_sale(conn: sqlite3.Connection, quote_id: int) -> dict:
         ('customer_id', q['customer_id']),
         ('note', note),
         ('tax_amount', _f(q.get('tax_amount'))),
+        ('business_line', 'crm'),
     ):
         if col in sale_cols:
             insert_cols.append(col)
             params.append(val)
 
     cols_sql = ', '.join(insert_cols)
-    ph = ["datetime('now','localtime')"] + ['?'] * (len(insert_cols) - 1)
+    ph = ', '.join(['?'] * len(insert_cols))
     cur = conn.execute(
-        f"INSERT INTO sale ({cols_sql}) VALUES ({', '.join(ph)})",
+        f"INSERT INTO sale ({cols_sql}) VALUES ({ph})",
         params,
     )
     sale_id = int(cur.lastrowid)
+    ref_doc = f"ĐH{str(sale_id).zfill(6)}"
+    if 'sale_no' in sale_cols:
+        conn.execute('UPDATE sale SET sale_no = ? WHERE id = ?', (ref_doc, sale_id))
 
     item_cols = {r[1] for r in conn.execute('PRAGMA table_info(sale_items)').fetchall()}
     for it in q['items']:
@@ -907,7 +939,8 @@ def convert_quote_to_sale(conn: sqlite3.Connection, quote_id: int) -> dict:
         price = _f(it.get('unit_price'))
         pid = it.get('product_id')
         pname = (it.get('product_name') or '').strip()
-        line_total = _f(it.get('line_total')) or round(qty * price, 2)
+        tax_rate = _f(it.get('tax_rate'))
+        line_total = _f(it.get('line_total')) or round(qty * price * (1 + tax_rate / 100.0), 2)
         icols = ['sale_id', 'product_id', 'quantity', 'price']
         ivals: list[Any] = [sale_id, pid, qty, price]
         for col, val in (
@@ -916,6 +949,10 @@ def convert_quote_to_sale(conn: sqlite3.Connection, quote_id: int) -> dict:
             ('unit', it.get('unit')),
             ('line_total', line_total),
             ('UseSaleUnit', 0),
+            ('discount_pct', 0),
+            ('tax_pct', tax_rate),
+            ('cost_price', 0),
+            ('unit_ratio', 1),
         ):
             if col in item_cols:
                 icols.append(col)
@@ -939,13 +976,215 @@ def convert_quote_to_sale(conn: sqlite3.Connection, quote_id: int) -> dict:
             """,
             (sale_id, _now(), _now(), total, q['opportunity_id']),
         )
+    # Link contracts sharing this quote
+    try:
+        conn.execute(
+            "UPDATE crm_contracts SET sale_id = ?, updated_at = ? WHERE quote_id = ? AND COALESCE(sale_id, 0) = 0",
+            (sale_id, _now(), quote_id),
+        )
+    except sqlite3.Error:
+        pass
+
     conn.execute(
         """
         UPDATE customers SET crm_lifecycle='active', crm_updated_at=? WHERE id=?
         """,
         (_now(), q['customer_id']),
     )
-    return {'sale_id': sale_id, 'already': False}
+
+    result: dict[str, Any] = {
+        'sale_id': sale_id,
+        'sale_no': ref_doc,
+        'already': False,
+        'completed': False,
+        'sme': sme,
+    }
+
+    if complete:
+        from Services.sme.crm_sale_fulfill import fulfill_sale_like_pos
+        fulfill = fulfill_sale_like_pos(
+            conn,
+            sale_id,
+            payment_method=pay,
+            created_by=created_by,
+            accounting_regime=regime,
+            features=profile.get('features'),
+        )
+        result['completed'] = True
+        result['fulfill'] = fulfill
+        result['sale_no'] = fulfill.get('sale_no') or ref_doc
+
+    result['issue_invoice_requested'] = bool(issue_invoice and complete)
+    result['invoice_loai_hdon'] = int(invoice_loai_hdon or 1)
+    return result
+
+
+def convert_contract_to_sale(
+    conn: sqlite3.Connection,
+    contract_id: int,
+    *,
+    complete: bool | None = None,
+    payment_method: str | None = None,
+    issue_invoice: bool = False,
+    invoice_loai_hdon: int = 1,
+    created_by: str | None = None,
+) -> dict:
+    """Tạo đơn bán từ hợp đồng CRM — cùng mạch hoàn tất như báo giá (SME)."""
+    from Services import crm_ops
+
+    ready(conn)
+    ct = crm_ops.get_contract(conn, int(contract_id))
+    if not ct:
+        raise ValueError('Không tìm thấy hợp đồng')
+    if ct.get('sale_id'):
+        return {'sale_id': int(ct['sale_id']), 'already': True}
+    if not ct.get('customer_id'):
+        raise ValueError('Hợp đồng chưa gắn khách hàng')
+    items = ct.get('items') or []
+    if not items:
+        raise ValueError('Hợp đồng chưa có dòng hàng — không tạo được đơn bán')
+
+    cust = _row(
+        conn.execute('SELECT * FROM customers WHERE id = ?', (ct['customer_id'],)).fetchone()
+    )
+    if not cust:
+        raise ValueError('Khách hàng không tồn tại')
+
+    from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
+
+    profile = {}
+    try:
+        profile = get_current_tenant_profile() or {}
+    except Exception:
+        profile = {}
+    regime = profile.get('accounting_regime')
+    sme = is_sme_regime(regime)
+    if complete is None:
+        complete = sme
+
+    name = (cust.get('name') or cust.get('company_name') or '').strip()
+    company = (cust.get('company_name') or '').strip()
+    total = _f(ct.get('amount') or ct.get('total'))
+    note_parts = [
+        f"Theo HĐ {ct.get('contract_no') or contract_id}",
+        (ct.get('notes') or '').strip(),
+    ]
+    note = ' — '.join(p for p in note_parts if p)
+    from Services.sme.crm_sale_fulfill import _map_payment_method
+    pay = _map_payment_method(payment_method or ct.get('payment_method'))
+
+    sale_cols = {r[1] for r in conn.execute('PRAGMA table_info(sale)').fetchall()}
+    sale_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    insert_cols = ['date', 'total_amount', 'customer_name', 'status', 'payment_method']
+    params: list[Any] = [sale_date, total, name or company or 'Khách hàng', 'pending', pay]
+    for col, val in (
+        ('company_name', company or None),
+        ('tax_code', cust.get('tax_code') or ct.get('customer_tax_code')),
+        ('address', cust.get('address') or ct.get('customer_address')),
+        ('email', cust.get('email') or ct.get('customer_email')),
+        ('customer_phone', cust.get('phone') or ct.get('customer_phone')),
+        ('customer_id', ct['customer_id']),
+        ('note', note),
+        ('tax_amount', _f(ct.get('tax_amount'))),
+        ('business_line', 'crm'),
+    ):
+        if col in sale_cols:
+            insert_cols.append(col)
+            params.append(val)
+
+    cur = conn.execute(
+        f"INSERT INTO sale ({', '.join(insert_cols)}) VALUES ({', '.join('?' for _ in insert_cols)})",
+        params,
+    )
+    sale_id = int(cur.lastrowid)
+    ref_doc = f"ĐH{str(sale_id).zfill(6)}"
+    if 'sale_no' in sale_cols:
+        conn.execute('UPDATE sale SET sale_no = ? WHERE id = ?', (ref_doc, sale_id))
+
+    item_cols = {r[1] for r in conn.execute('PRAGMA table_info(sale_items)').fetchall()}
+    for it in items:
+        qty = _f(it.get('qty')) or 1
+        price = _f(it.get('unit_price'))
+        pid = it.get('product_id')
+        pname = (it.get('product_name') or '').strip()
+        tax_rate = _f(it.get('tax_rate'))
+        line_total = _f(it.get('line_total')) or round(qty * price * (1 + tax_rate / 100.0), 2)
+        icols = ['sale_id', 'product_id', 'quantity', 'price']
+        ivals: list[Any] = [sale_id, pid, qty, price]
+        for col, val in (
+            ('product_name', pname),
+            ('item_name', pname),
+            ('unit', it.get('unit')),
+            ('line_total', line_total),
+            ('UseSaleUnit', 0),
+            ('discount_pct', 0),
+            ('tax_pct', tax_rate),
+            ('cost_price', 0),
+            ('unit_ratio', 1),
+        ):
+            if col in item_cols:
+                icols.append(col)
+                ivals.append(val)
+        conn.execute(
+            f"INSERT INTO sale_items ({', '.join(icols)}) VALUES ({', '.join('?' for _ in icols)})",
+            ivals,
+        )
+
+    conn.execute(
+        """
+        UPDATE crm_contracts SET sale_id=?, status=CASE
+            WHEN status IN ('draft', 'sent') THEN 'active'
+            ELSE status
+        END, updated_at=? WHERE id=?
+        """,
+        (sale_id, _now(), int(contract_id)),
+    )
+    if ct.get('quote_id'):
+        conn.execute(
+            """
+            UPDATE crm_quotes SET status='converted', sale_id=?, updated_at=?
+            WHERE id=? AND COALESCE(sale_id, 0)=0
+            """,
+            (sale_id, _now(), int(ct['quote_id'])),
+        )
+    if ct.get('opportunity_id'):
+        conn.execute(
+            """
+            UPDATE crm_opportunities SET stage='won', sale_id=?, closed_at=?, updated_at=?, amount=?
+            WHERE id=?
+            """,
+            (sale_id, _now(), _now(), total, ct['opportunity_id']),
+        )
+    conn.execute(
+        "UPDATE customers SET crm_lifecycle='active', crm_updated_at=? WHERE id=?",
+        (_now(), ct['customer_id']),
+    )
+
+    result: dict[str, Any] = {
+        'sale_id': sale_id,
+        'sale_no': ref_doc,
+        'already': False,
+        'completed': False,
+        'sme': sme,
+        'contract_id': int(contract_id),
+    }
+    if complete:
+        from Services.sme.crm_sale_fulfill import fulfill_sale_like_pos
+        fulfill = fulfill_sale_like_pos(
+            conn,
+            sale_id,
+            payment_method=pay,
+            created_by=created_by,
+            accounting_regime=regime,
+            features=profile.get('features'),
+        )
+        result['completed'] = True
+        result['fulfill'] = fulfill
+        result['sale_no'] = fulfill.get('sale_no') or ref_doc
+
+    result['issue_invoice_requested'] = bool(issue_invoice and complete)
+    result['invoice_loai_hdon'] = int(invoice_loai_hdon or 1)
+    return result
 
 
 # ── Customer CRM profile / 360 ─────────────────────────────────────────

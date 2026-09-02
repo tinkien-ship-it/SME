@@ -11,6 +11,12 @@ from db_utils import sqlite_commit
 MONEY_Q = Decimal('0.01')
 STATUSES = ('draft', 'confirmed', 'partial', 'received', 'cancelled')
 
+# PO#000001 (chuẩn) hoặc PO20250723001 (đơn cũ) trong GChu HĐ NCC
+_PO_HASH_RE = re.compile(r'(?i)\bPO\s*#\s*(\d{1,8})\b')
+_PO_COMPACT_RE = re.compile(r'(?i)\bPO(\d{8})(\d{2,5})\b')
+_PO_SPACED_RE = re.compile(r'(?i)\bPO\s*[-./]?\s*(\d{8})\s*[-./]?\s*(\d{1,5})\b')
+_PO_GENERIC_RE = re.compile(r'(?i)\b(PO[A-Z0-9][A-Z0-9-]{4,22})\b')
+
 
 def _money(val) -> Decimal:
     if val is None:
@@ -75,13 +81,17 @@ def ensure_purchase_order_schema(conn: sqlite3.Connection, *, commit: bool = Tru
     )
     from Services.sme.branch_filter import ensure_branch_column
     ensure_branch_column(conn, 'sme_purchase_orders')
-    line_cols = {r[1] for r in conn.execute('PRAGMA table_info(sme_purchase_order_lines)').fetchall()}
-    if 'received_qty' not in line_cols:
+    from db.schema_helpers import add_column_if_missing, table_cols
+    line_cols = table_cols(conn, 'sme_purchase_order_lines')
+    if 'received_qty' not in {c.lower() for c in line_cols}:
         conn.execute(
             'ALTER TABLE sme_purchase_order_lines ADD COLUMN received_qty REAL NOT NULL DEFAULT 0'
         )
+    add_column_if_missing(conn, 'sme_purchase_orders', 'sent_at', 'TEXT')
+    add_column_if_missing(conn, 'sme_purchase_orders', 'sent_to_email', 'TEXT')
     try:
-        imp_cols = {r[1] for r in conn.execute('PRAGMA table_info(import)').fetchall()}
+        from db.schema_helpers import table_cols as _tc
+        imp_cols = {c.lower() for c in _tc(conn, 'import')}
         if 'po_id' not in imp_cols:
             conn.execute('ALTER TABLE import ADD COLUMN po_id INTEGER')
     except sqlite3.Error:
@@ -91,21 +101,257 @@ def ensure_purchase_order_schema(conn: sqlite3.Connection, *, commit: bool = Tru
         sqlite_commit(conn, label='purchase_order')
 
 
-def _next_po_no(conn: sqlite3.Connection, po_date: str) -> str:
-    ymd = (po_date or datetime.now().strftime('%Y-%m-%d'))[:10].replace('-', '')
-    prefix = f'PO{ymd}'
+def normalize_po_no(po_no: str | None) -> str | None:
+    """Chuẩn hóa mã PO → PO#000001."""
+    if not po_no:
+        return None
+    s = re.sub(r'\s+', '', str(po_no).strip().upper())
+    m = re.match(r'^PO#(\d+)$', s)
+    if m:
+        return f'PO#{int(m.group(1)):06d}'
+    return str(po_no).strip().upper() or None
+
+
+def extract_po_no_from_text(text: str | None) -> str | None:
+    """Trích số đơn đặt hàng từ GChu / ghi chú trên HĐ XML NCC."""
+    if not text:
+        return None
+    s = str(text).strip()
+    if not s:
+        return None
+    m = _PO_HASH_RE.search(s)
+    if m:
+        return f'PO#{int(m.group(1)):06d}'
+    m = _PO_COMPACT_RE.search(s)
+    if m:
+        return f'PO{m.group(1)}{int(m.group(2)):03d}'
+    m = _PO_SPACED_RE.search(s)
+    if m:
+        return f'PO{m.group(1)}{int(m.group(2)):03d}'
+    m = _PO_GENERIC_RE.search(s)
+    if m:
+        raw = re.sub(r'[^A-Z0-9#]', '', m.group(1).upper())
+        if raw.startswith('PO#'):
+            num = raw[3:]
+            if num.isdigit():
+                return f'PO#{int(num):06d}'
+        if raw.startswith('PO') and len(raw) >= 10:
+            return raw
+    return None
+
+
+def extract_gchu_from_invoice_payload(data: dict | None) -> str:
+    """Lấy GChu từ payload Mắt Bảo / JSON đã parse."""
+    if not isinstance(data, dict):
+        return ''
+    for key in ('GChu', 'gChu', 'gchu', 'GHI_CHU', 'ghiChu'):
+        val = data.get(key)
+        if val not in (None, ''):
+            return str(val).strip()
+    tt = data.get('TTChung')
+    if isinstance(tt, dict):
+        for key in ('GChu', 'gChu', 'gchu'):
+            val = tt.get(key)
+            if val not in (None, ''):
+                return str(val).strip()
+    return ''
+
+
+def lookup_po_id_by_po_no(
+    conn: sqlite3.Connection,
+    po_no: str,
+    *,
+    supplier_tax_code: str | None = None,
+) -> int | None:
+    """Tìm id đơn mua theo mã PO (ưu tiên khớp MST NCC nếu có)."""
+    ensure_purchase_order_schema(conn, commit=False)
+    po_no = normalize_po_no(po_no) or (po_no or '').strip().upper()
+    if not po_no:
+        return None
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT id, supplier_tax_code FROM sme_purchase_orders
+        WHERE UPPER(TRIM(po_no)) = ?
+        ORDER BY id DESC
+        LIMIT 5
+        """,
+        (po_no,),
+    ).fetchall()
+    if not rows:
+        return None
+    tax = (supplier_tax_code or '').strip()
+    if tax:
+        for row in rows:
+            po_tax = (row['supplier_tax_code'] or '').strip()
+            if po_tax and po_tax == tax:
+                return int(row['id'])
+    return int(rows[0]['id'])
+
+
+def match_po_from_gchu(
+    conn: sqlite3.Connection,
+    gchu: str | None,
+    *,
+    supplier_tax_code: str | None = None,
+) -> dict[str, Any]:
+    """Khớp đơn mua từ GChu — trả po_id / po_no nếu tìm được."""
+    note = (gchu or '').strip()
+    po_no = extract_po_no_from_text(note)
+    if not po_no:
+        return {'po_id': None, 'po_no': None, 'gchu': note, 'source': None}
+    po_id = lookup_po_id_by_po_no(conn, po_no, supplier_tax_code=supplier_tax_code)
+    return {
+        'po_id': po_id,
+        'po_no': po_no,
+        'gchu': note,
+        'source': 'gchu' if po_id else None,
+    }
+
+
+def link_supplier_invoice_po(
+    conn: sqlite3.Connection,
+    invoice_id: int,
+    *,
+    po_id: int | None = None,
+    po_no: str | None = None,
+    gchu: str | None = None,
+    source: str = 'manual',
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Gán / bỏ gán đơn mua trên HĐ NCC (tự động từ GChu hoặc thủ công)."""
+    from Services.inward_invoice_helpers import ensure_supplier_invoice_po_schema
+
+    ensure_supplier_invoice_po_schema(conn)
+    conn.row_factory = sqlite3.Row
     row = conn.execute(
-        "SELECT po_no FROM sme_purchase_orders WHERE po_no LIKE ? ORDER BY id DESC LIMIT 1",
-        (prefix + '%',),
+        "SELECT id, seller_tax_code, po_id FROM supplier_invoice WHERE id = ?",
+        (int(invoice_id),),
     ).fetchone()
-    seq = 1
-    if row:
-        last = row[0] if not isinstance(row, sqlite3.Row) else row['po_no']
-        try:
-            seq = int(str(last)[len(prefix):]) + 1
-        except ValueError:
-            seq = 1
-    return f'{prefix}{seq:03d}'
+    if not row:
+        raise ValueError('Không tìm thấy hóa đơn mua')
+
+    resolved_id = int(po_id) if po_id not in (None, '', 0, '0') else None
+    matched_no = normalize_po_no(po_no) or (po_no or '').strip().upper() or None
+    note = (gchu or '').strip()
+
+    if resolved_id is None and matched_no:
+        resolved_id = lookup_po_id_by_po_no(
+            conn, matched_no, supplier_tax_code=row['seller_tax_code'],
+        )
+    elif resolved_id is not None:
+        po_row = conn.execute(
+            "SELECT po_no FROM sme_purchase_orders WHERE id = ?", (resolved_id,),
+        ).fetchone()
+        if not po_row:
+            raise ValueError('Không tìm thấy đơn đặt hàng')
+        matched_no = str(
+            po_row['po_no'] if isinstance(po_row, sqlite3.Row) else po_row[0]
+        ).strip().upper()
+
+    if resolved_id is None and source != 'manual':
+        conn.execute(
+            """
+            UPDATE supplier_invoice SET
+                gchu = COALESCE(NULLIF(?, ''), gchu)
+            WHERE id = ?
+            """,
+            (note, int(invoice_id)),
+        )
+        if commit:
+            sqlite_commit(conn, label='invoice_po_gchu')
+        return {'po_id': None, 'po_no': matched_no, 'gchu': note, 'source': None}
+
+    conn.execute(
+        """
+        UPDATE supplier_invoice SET
+            po_id = ?,
+            po_no_matched = ?,
+            gchu = COALESCE(NULLIF(?, ''), gchu),
+            po_match_source = ?
+        WHERE id = ?
+        """,
+        (
+            resolved_id,
+            matched_no,
+            note,
+            source if resolved_id else None,
+            int(invoice_id),
+        ),
+    )
+    if commit:
+        sqlite_commit(conn, label='invoice_po_link')
+    return {
+        'po_id': resolved_id,
+        'po_no': matched_no,
+        'gchu': note,
+        'source': source if resolved_id else None,
+    }
+
+
+def apply_gchu_po_match_to_invoice_store(
+    conn: sqlite3.Connection,
+    inv_store: dict,
+    *,
+    invoice_id: int | None = None,
+    seller_tax_code: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Đọc GChu từ payload HĐ, khớp PO và lưu vào supplier_invoice nếu có invoice_id."""
+    from Services.inward_invoice_helpers import ensure_supplier_invoice_po_schema
+
+    ensure_supplier_invoice_po_schema(conn)
+    gchu = extract_gchu_from_invoice_payload(inv_store)
+    tax = seller_tax_code or inv_store.get('NBanMST') or inv_store.get('nBanMST')
+    matched = match_po_from_gchu(conn, gchu, supplier_tax_code=tax)
+    if invoice_id and (matched.get('po_id') or gchu):
+        cols = {c[1] for c in conn.execute('PRAGMA table_info(supplier_invoice)').fetchall()}
+        if 'po_id' in cols:
+            existing = conn.execute(
+                "SELECT po_id, po_match_source FROM supplier_invoice WHERE id = ?",
+                (int(invoice_id),),
+            ).fetchone()
+            keep_manual = (
+                existing
+                and existing[0]
+                and len(existing) > 1
+                and (existing[1] or '') == 'manual'
+            )
+            if not keep_manual and matched.get('po_id'):
+                link_supplier_invoice_po(
+                    conn,
+                    int(invoice_id),
+                    po_id=int(matched['po_id']),
+                    po_no=matched.get('po_no'),
+                    gchu=gchu,
+                    source='gchu',
+                    commit=False,
+                )
+            elif gchu and not keep_manual:
+                conn.execute(
+                    "UPDATE supplier_invoice SET gchu = ? WHERE id = ? AND COALESCE(gchu, '') = ''",
+                    (gchu, int(invoice_id)),
+                )
+    if commit:
+        sqlite_commit(conn, label='invoice_po_auto')
+    inv_store['GChu'] = gchu
+    if matched.get('po_id'):
+        inv_store['po_id'] = matched['po_id']
+        inv_store['po_no'] = matched.get('po_no')
+    return matched
+
+
+def _next_po_no(conn: sqlite3.Connection, po_date: str | None = None) -> str:
+    """Sinh số đơn PO#000001, PO#000002, … (tăng dần toàn hệ thống)."""
+    max_seq = 0
+    for row in conn.execute(
+        "SELECT po_no FROM sme_purchase_orders WHERE po_no LIKE 'PO#%'",
+    ).fetchall():
+        po = row[0] if not isinstance(row, sqlite3.Row) else row['po_no']
+        m = re.match(r'(?i)^PO#(\d+)$', str(po or '').strip())
+        if m:
+            max_seq = max(max_seq, int(m.group(1)))
+    return f'PO#{max_seq + 1:06d}'
 
 
 def _row_to_dict(row) -> dict:
@@ -133,6 +379,16 @@ def get_purchase_order(conn: sqlite3.Connection, po_id: int) -> dict[str, Any] |
     ).fetchall()
     data = dict(head)
     data['lines'] = [dict(x) for x in lines]
+    try:
+        from Services import crm_email as crm_mail
+        data['supplier_email'] = crm_mail.resolve_supplier_email(
+            conn,
+            supplier_id=data.get('supplier_id'),
+            supplier_name=data.get('supplier_name'),
+            supplier_tax_code=data.get('supplier_tax_code'),
+        )
+    except Exception:
+        data['supplier_email'] = ''
     return data
 
 
@@ -199,6 +455,7 @@ def list_purchase_orders(
             'ordered_qty': 0.0, 'received_qty': 0.0, 'receive_pct': 0.0,
         }))
     billed: dict[int, float] = {}
+    invoiced: dict[int, float] = {}
     try:
         imp_cols = {c[1] for c in conn.execute('PRAGMA table_info(import)').fetchall()}
         if ids and 'po_id' in imp_cols:
@@ -214,6 +471,20 @@ def list_purchase_orders(
             ).fetchall():
                 d = dict(ln)
                 billed[int(d['po_id'])] = float(d['billed'] or 0)
+        si_cols = {c[1] for c in conn.execute('PRAGMA table_info(supplier_invoice)').fetchall()}
+        if ids and 'po_id' in si_cols:
+            ph = ','.join('?' * len(ids))
+            for ln in conn.execute(
+                f"""
+                SELECT po_id, COALESCE(SUM(total), 0) AS invoiced
+                FROM supplier_invoice
+                WHERE po_id IN ({ph})
+                GROUP BY po_id
+                """,
+                ids,
+            ).fetchall():
+                d = dict(ln)
+                invoiced[int(d['po_id'])] = float(d['invoiced'] or 0)
         elif ids:
             # Fallback: ghi chú [PNK#id] trên đơn
             for r in rows:
@@ -232,17 +503,23 @@ def list_purchase_orders(
     for r in rows:
         total = float(r.get('total_amount') or 0)
         bill = billed.get(int(r['id']), 0.0)
+        inv_amt = invoiced.get(int(r['id']), 0.0)
         r['billed_amount'] = bill
+        r['invoiced_amount'] = inv_amt
         r['billed_pct'] = round(100.0 * bill / total, 1) if total else 0.0
+        r['invoiced_pct'] = round(100.0 * inv_amt / total, 1) if total else 0.0
         recv_pct = float(r.get('receive_pct') or 0)
         qty_ok = recv_pct >= 99.5
         amt_ok = abs(bill - total) <= max(1.0, total * 0.02) if total else bill <= 0.5
+        inv_ok = abs(inv_amt - total) <= max(1.0, total * 0.02) if total else inv_amt <= 0.5
         if r.get('status') == 'cancelled':
             r['match_status'] = 'cancelled'
-        elif recv_pct <= 0.05 and bill <= 0.5:
+        elif recv_pct <= 0.05 and bill <= 0.5 and inv_amt <= 0.5:
             r['match_status'] = 'open'
         elif qty_ok and amt_ok and bill > 0:
             r['match_status'] = 'matched'
+        elif qty_ok and inv_ok and inv_amt > 0 and bill <= 0.5:
+            r['match_status'] = 'invoiced_only'
         elif qty_ok and bill <= 0.5:
             r['match_status'] = 'unbilled'
         elif not qty_ok:
@@ -726,4 +1003,73 @@ def purchasing_hub_metrics(
         'monthly': monthly,
         'suppliers': suppliers,
         'open_orders': recent_open,
+    }
+
+
+def send_purchase_order_email(
+    conn: sqlite3.Connection,
+    po_id: int,
+    *,
+    to_email: str | None = None,
+    subject: str | None = None,
+    created_by: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """Gửi đơn đặt hàng cho NCC qua SMTP tenant (Thiết lập / CRM)."""
+    from Services import crm_email as crm_mail
+
+    po = get_purchase_order(conn, po_id)
+    if not po:
+        raise ValueError('Không tìm thấy đơn đặt hàng')
+    if po.get('status') == 'cancelled':
+        raise ValueError('Đơn đã hủy — không gửi email')
+    dest = (to_email or '').strip() or crm_mail.resolve_supplier_email(
+        conn,
+        supplier_id=po.get('supplier_id'),
+        supplier_name=po.get('supplier_name'),
+        supplier_tax_code=po.get('supplier_tax_code'),
+    )
+    if not dest:
+        raise ValueError(
+            'NCC chưa có email. Cập nhật email trong danh mục NCC hoặc nhập email nhận.'
+        )
+    subj, text, html = crm_mail.build_purchase_order_email(
+        po, business_name=crm_mail._business_name(conn),
+    )
+    if subject:
+        subj = str(subject).strip() or subj
+    ok, err, source = crm_mail.send_tenant_email(
+        conn, dest, subj, text, html_body=html,
+    )
+    crm_mail.log_crm_email(
+        conn, kind='purchase_order', ref_id=po_id, to_email=dest,
+        subject=subj, status='ok' if ok else 'error', error=err,
+    )
+    if ok:
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute(
+            """
+            UPDATE sme_purchase_orders
+            SET sent_at = ?, sent_to_email = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (now, dest, now, po_id),
+        )
+        if po.get('status') == 'draft':
+            conn.execute(
+                "UPDATE sme_purchase_orders SET status = 'confirmed', updated_at = ? WHERE id = ?",
+                (now, po_id),
+            )
+    if commit:
+        sqlite_commit(conn, label='po_email')
+    if not ok:
+        raise ValueError(err or 'Gửi email thất bại')
+    out = get_purchase_order(conn, po_id) or po
+    return {
+        'po_id': po_id,
+        'to_email': dest,
+        'subject': subj,
+        'source': source,
+        'sent_at': out.get('sent_at'),
+        'sent_by': created_by,
     }

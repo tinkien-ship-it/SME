@@ -183,9 +183,9 @@ def apply_currency_to_matbao_payload(payload: dict, sale_data: dict | None) -> d
     payload = dict(payload)
     payload['DVTTe'] = sale.get('_einvoice_currency_numeric', 704)
     payload['TGia'] = float(sale.get('_einvoice_exchange_rate') or 1)
-    notes = sale.get('_einvoice_notes') or ''
+    notes = (sale.get('_einvoice_notes') or '').strip()
     if notes:
-        payload['GChu'] = notes
+        payload['GChu'] = notes[:255]
     pay = sale.get('_einvoice_payment_method')
     if pay:
         payload['HTTToan'] = pay

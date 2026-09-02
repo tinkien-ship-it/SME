@@ -1801,6 +1801,10 @@ async function loadInvoiceFromServer(invoiceId) {
         document.getElementById('taxCode').value = data.NBanMST || '';
         document.getElementById('supplierAddress').value = data.NBanDChi || '';
         document.getElementById('fromInvoiceId').value = invoiceId;
+        if (data.po_id) {
+            document.getElementById('fromPoId').value = data.po_id;
+            toast('Đã khớp đơn mua ' + (data.po_no || data.po_id) + ' từ GChu HĐ', 'info');
+        }
         document.getElementById('bill_no').value = data.SHDon || '';
         if (data.NLap) {
             let d = data.NLap.split('T')[0];

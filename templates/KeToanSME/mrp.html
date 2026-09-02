@@ -1,0 +1,80 @@
+{% extends "KeToanSME/_layout.html" %}
+{% block title %}MRP — Kế hoạch nhu cầu NVL{% endblock %}
+
+{% block sme_breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-0">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('SME_dashboard') }}">Tổng quan</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('SME_san_xuat_gia_thanh') }}">Sản xuất &amp; giá thành</a></li>
+        <li class="breadcrumb-item active">MRP</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block sme_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h4 class="fw-bold text-dark mb-1"><i class="fas fa-project-diagram text-primary me-2"></i>MRP — Lập kế hoạch nhu cầu nguyên vật liệu</h4>
+        <p class="text-muted mb-0">Tầm nhìn vĩ mô (ngày / tuần / tháng): cần sản xuất·mua cái gì, bao nhiêu, khi nào.</p>
+    </div>
+    <span class="badge text-bg-primary align-self-center">Quyền: Trưởng Phòng Mua · Kế Toán Trưởng · Admin</span>
+</div>
+
+<div class="alert alert-info border-0 shadow-sm">
+    <strong>Ba câu hỏi MRP:</strong> Cần gì? Bao nhiêu? Khi nào cần?
+    Hệ thống tính từ BOM, tồn kho khả dụng (ưu tiên TK 152), đơn hàng / kế hoạch dự trữ → đề xuất lệnh sản xuất và đề xuất mua (PO).
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-primary mb-2"><i class="fas fa-cubes fa-lg"></i></div>
+                <h6 class="fw-bold">Nhu cầu NVL</h6>
+                <p class="small text-muted mb-0">Explode BOM × SL kế hoạch − ATP tồn 152 (và reservation) → net requirement.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-success mb-2"><i class="fas fa-cart-plus fa-lg"></i></div>
+                <h6 class="fw-bold">Đề xuất mua (PO)</h6>
+                <p class="small text-muted mb-0">Tự động gợi ý vật tư / số lượng / ngày cần để không đứt dây chuyền.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-warning mb-2"><i class="fas fa-calendar-alt fa-lg"></i></div>
+                <h6 class="fw-bold">Lịch SX tổng thể (MPS)</h6>
+                <p class="small text-muted mb-0">Ngày bắt đầu / hoàn thành lệnh sản xuất (planned → firm → release sang MES).</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white fw-semibold">Lối tắt nghiệp vụ liên quan</div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary" href="{{ url_for('SME_purchase_order_list') }}">
+                <i class="fas fa-file-invoice me-1"></i> Đơn mua hàng
+            </a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('SME_production') }}">
+                <i class="fas fa-industry me-1"></i> BOM &amp; lệnh SX
+            </a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('SME_dashboard_warehouse') }}">
+                <i class="fas fa-warehouse me-1"></i> Tổng quan kho
+            </a>
+            <a class="btn btn-outline-dark" href="{{ url_for('SME_costing') }}">
+                <i class="fas fa-calculator me-1"></i> Giá thành
+            </a>
+        </div>
+        <p class="small text-muted mt-3 mb-0">
+            Engine MRP (net-change, pegging SO↔WO, exception) gắn trang này trên cùng spine Work Order với MES — không tách hệ thống sau này.
+        </p>
+    </div>
+</div>
+{% endblock %}

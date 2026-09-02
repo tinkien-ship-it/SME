@@ -245,6 +245,7 @@ def register_ketoan_sme_routes(app):
     from auth import login_required
     from helpers import parse_date
     from Services.tenant_profile import require_sme_regime
+    from Services.sme_roles import require_mrp_access, require_mes_access
 
     @app.before_request
     def _guard_sme_regime_pages():
@@ -2207,6 +2208,22 @@ def register_ketoan_sme_routes(app):
         """Sản xuất & giá thành SME — UI riêng (không dùng KeToanHKD/production)."""
         return render_template('KeToanSME/production.html')
 
+    @app.route('/SME_mrp')
+    @login_required
+    @require_sme_regime
+    @require_mrp_access
+    def SME_mrp():
+        """MRP — Kế hoạch nhu cầu nguyên vật liệu (tầm nhìn ngày/tuần/tháng)."""
+        return render_template('KeToanSME/mrp.html')
+
+    @app.route('/SME_mes')
+    @login_required
+    @require_sme_regime
+    @require_mes_access
+    def SME_mes():
+        """MES — Điều hành sản xuất realtime tại xưởng."""
+        return render_template('KeToanSME/mes.html')
+
     @app.route('/SME_service_costing')
     @login_required
     @require_sme_regime
@@ -2885,6 +2902,17 @@ def register_ketoan_sme_routes(app):
                 po_id = int(po_id) if po_id not in (None, '', 0, '0') else None
             except (TypeError, ValueError):
                 po_id = None
+            if not po_id and from_invoice_id:
+                from Services.inward_invoice_helpers import ensure_supplier_invoice_po_schema
+                ensure_supplier_invoice_po_schema(conn)
+                si_cols = {col[1] for col in c.execute('PRAGMA table_info(supplier_invoice)').fetchall()}
+                if 'po_id' in si_cols:
+                    inv_po = c.execute(
+                        "SELECT po_id FROM supplier_invoice WHERE id = ?",
+                        (int(from_invoice_id),),
+                    ).fetchone()
+                    if inv_po and inv_po[0]:
+                        po_id = int(inv_po[0])
 
             c.execute("SELECT name, address FROM suppliers WHERE id = ?", (supplier_id,))
             sup_row = c.fetchone()
@@ -4333,6 +4361,86 @@ def register_ketoan_sme_routes(app):
         if not view:
             return jsonify({'success': False, 'error': 'API HĐ mua chưa sẵn sàng'}), 500
         return view()
+
+    @app.route('/api/sme/invoices/inward/<int:invoice_id>/link-po', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_inward_invoice_link_po(invoice_id):
+        """Gán thủ công đơn mua cho HĐ NCC (khi GChu không có số PO)."""
+        conn = get_db_connection()
+        try:
+            from Services.sme.purchase_order import link_supplier_invoice_po
+            payload = request.get_json() or {}
+            po_id = payload.get('po_id')
+            po_no = payload.get('po_no')
+            if po_id in (None, '', 0, '0') and not (po_no or '').strip():
+                return jsonify({'success': False, 'error': 'Cần po_id hoặc po_no'}), 400
+            data = link_supplier_invoice_po(
+                conn,
+                invoice_id,
+                po_id=int(po_id) if po_id not in (None, '', 0, '0') else None,
+                po_no=(po_no or '').strip() or None,
+                source='manual',
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            logging.error('link-po invoice %s: %s', invoice_id, e, exc_info=True)
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/invoices/inward/<int:invoice_id>/unlink-po', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_inward_invoice_unlink_po(invoice_id):
+        """Bỏ liên kết đơn mua trên HĐ NCC."""
+        conn = get_db_connection()
+        try:
+            from Services.inward_invoice_helpers import ensure_supplier_invoice_po_schema
+            ensure_supplier_invoice_po_schema(conn)
+            conn.execute(
+                """
+                UPDATE supplier_invoice SET
+                    po_id = NULL, po_no_matched = NULL, po_match_source = NULL
+                WHERE id = ?
+                """,
+                (int(invoice_id),),
+            )
+            sqlite_commit(conn, label='invoice_po_unlink')
+            return jsonify({'success': True})
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/purchase-orders/picker', methods=['GET'])
+    @login_required
+    @require_sme_regime
+    def api_sme_po_picker():
+        """Danh sách đơn mua mở để gán thủ công trên HĐ."""
+        conn = get_db_connection()
+        try:
+            from Services.sme.purchase_order import list_purchase_orders
+            q = (request.args.get('q') or '').strip() or None
+            rows = list_purchase_orders(
+                conn,
+                keyword=q,
+                status=None,
+                limit=min(int(request.args.get('limit') or 30), 100),
+            )
+            open_rows = [
+                r for r in rows
+                if r.get('status') not in ('cancelled', 'received')
+            ]
+            return jsonify({'success': True, 'data': open_rows[:30]})
+        finally:
+            conn.close()
 
     # --------------------------------------------------------------------------
     # Danh mục tài khoản SME (TT99) — tách biệt HKD
@@ -5828,6 +5936,33 @@ def register_ketoan_sme_routes(app):
             data = set_purchase_order_status(conn, po_id, payload.get('status') or '')
             sqlite_commit(conn, label='sme_write')
             return jsonify({'success': True, 'data': data})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/purchase-orders/<int:po_id>/send-email', methods=['POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_po_send_email(po_id):
+        conn = get_db_connection()
+        try:
+            from Services.sme.branch_filter import assert_row_in_branch
+            from Services.sme.purchase_order import send_purchase_order_email
+            assert_row_in_branch(conn, 'sme_purchase_orders', po_id, label='Đơn mua hàng')
+            payload = request.get_json(silent=True) or {}
+            info = send_purchase_order_email(
+                conn, po_id,
+                to_email=payload.get('to_email'),
+                subject=payload.get('subject'),
+                created_by=session.get('user_name') or session.get('username'),
+                commit=True,
+            )
+            return jsonify({'success': True, 'data': info})
         except ValueError as e:
             conn.rollback()
             return jsonify({'success': False, 'error': str(e)}), 400

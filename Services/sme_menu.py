@@ -155,9 +155,21 @@ SME_MENU_GROUPS = (
     {
         'id': 'production', 'section': 'accounting', 'label': 'Sản xuất và giá thành',
         'icon': 'fas fa-industry', 'color': 'danger', 'endpoint': 'SME_san_xuat_gia_thanh',
-        'description': 'Lệnh sản xuất, phân bổ nguyên vật liệu và tính giá thành',
+        'description': 'MRP kế hoạch NVL, MES điều hành xưởng, giá thành TT99',
         'items': (
-            {'endpoint': 'SME_production', 'label': 'Sản xuất', 'icon': 'fas fa-industry'},
+            {
+                'endpoint': 'SME_mrp',
+                'label': 'MRP — Kế hoạch nhu cầu NVL',
+                'icon': 'fas fa-project-diagram',
+                'access': 'mrp',
+            },
+            {
+                'endpoint': 'SME_mes',
+                'label': 'MES — Điều hành sản xuất',
+                'icon': 'fas fa-tablet-alt',
+                'access': 'mes',
+            },
+            {'endpoint': 'SME_production', 'label': 'Lệnh sản xuất & BOM', 'icon': 'fas fa-industry'},
             {'endpoint': 'SME_period_cost_allocation', 'label': 'Giá thành 3 phương án (ĐM & chốt kỳ)', 'icon': 'fas fa-balance-scale'},
             {'endpoint': 'SME_service_costing', 'label': 'Giá vốn dịch vụ', 'icon': 'fas fa-handshake'},
             {'endpoint': 'SME_deferred_revenue', 'label': 'Gói DV trả trước (3387)', 'icon': 'fas fa-calendar-alt'},
@@ -288,7 +300,14 @@ def _endpoint_registered(endpoint: str | None) -> bool:
         return True
 
 
-def _item_allowed(item: dict, regime: str, *, show_bctc: bool = True) -> bool:
+def _item_allowed(
+    item: dict,
+    regime: str,
+    *,
+    show_bctc: bool = True,
+    user_role: str | None = None,
+    permissions=None,
+) -> bool:
     allowed = item.get('regimes')
     if allowed and regime not in allowed:
         return False
@@ -296,11 +315,25 @@ def _item_allowed(item: dict, regime: str, *, show_bctc: bool = True) -> bool:
         return False
     if not _endpoint_registered(item.get('endpoint')):
         return False
+    access = item.get('access')
+    if access == 'mrp':
+        from Services.sme_roles import can_access_mrp
+        if not can_access_mrp(user_role, permissions):
+            return False
+    elif access == 'mes':
+        from Services.sme_roles import can_access_mes
+        if not can_access_mes(user_role, permissions):
+            return False
     return True
 
 
-def get_sme_menu_groups(accounting_regime: str | None = None):
-    """Trả menu đã xen tiêu đề phân khu; lọc item theo chế độ TT58/TT99 + PP thuế."""
+def get_sme_menu_groups(
+    accounting_regime: str | None = None,
+    *,
+    user_role: str | None = None,
+    permissions=None,
+):
+    """Trả menu đã xen tiêu đề phân khu; lọc item theo chế độ TT58/TT99 + PP thuế + quyền MRP/MES."""
     regime = _normalize_menu_regime(accounting_regime)
     if accounting_regime is None:
         try:
@@ -312,6 +345,20 @@ def get_sme_menu_groups(accounting_regime: str | None = None):
                 )
         except Exception:
             pass
+
+    if user_role is None:
+        try:
+            from Services.sme_roles import current_session_role
+            user_role = current_session_role()
+        except Exception:
+            user_role = None
+    if permissions is None:
+        try:
+            from flask import has_request_context, session
+            if has_request_context():
+                permissions = (session.get('user') or {}).get('permissions')
+        except Exception:
+            permissions = None
 
     show_bctc = True
     if regime == 'SME_MICRO_TT58':
@@ -335,7 +382,10 @@ def get_sme_menu_groups(accounting_regime: str | None = None):
             g = dict(group)
             items = tuple(
                 i for i in (g.get('items') or ())
-                if _item_allowed(i, regime, show_bctc=show_bctc)
+                if _item_allowed(
+                    i, regime, show_bctc=show_bctc,
+                    user_role=user_role, permissions=permissions,
+                )
             )
             # Ẩn nhóm nếu endpoint hub chưa đăng ký
             if g.get('endpoint') and not _endpoint_registered(g.get('endpoint')):

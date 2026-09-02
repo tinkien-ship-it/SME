@@ -510,14 +510,97 @@ def register_crm_routes(app):
     def api_crm_quote_convert(quote_id):
         conn = _conn()
         try:
-            result = crm_svc.convert_quote_to_sale(conn, quote_id)
+            payload = request.get_json(silent=True) or {}
+            complete = payload.get('complete')
+            if complete is not None:
+                complete = str(complete).lower() in ('1', 'true', 'yes')
+            else:
+                complete = None
+            issue_invoice = str(payload.get('issue_invoice') or '').lower() in ('1', 'true', 'yes')
+            result = crm_svc.convert_quote_to_sale(
+                conn,
+                quote_id,
+                complete=complete,
+                payment_method=payload.get('payment_method'),
+                issue_invoice=issue_invoice,
+                invoice_loai_hdon=int(payload.get('loai_hdon') or 1),
+                created_by=_actor(),
+            )
             sqlite_commit(conn, label='crm_quote_to_sale')
+            if result.get('issue_invoice_requested') and result.get('sale_id'):
+                from Services.sme.crm_sale_fulfill import try_issue_einvoice
+                result['invoice'] = try_issue_einvoice(
+                    int(result['sale_id']),
+                    loai_hdon=int(result.get('invoice_loai_hdon') or 1),
+                )
             return jsonify({'success': True, **result})
         except ValueError as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             return jsonify({'error': str(e)}), 400
         except sqlite3.Error as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             return jsonify({'error': str(e)}), 500
         except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return jsonify({'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/crm/contracts/<int:cid>/convert-sale', methods=['POST'])
+    @login_required
+    def api_crm_contract_convert(cid):
+        conn = _conn()
+        try:
+            payload = request.get_json(silent=True) or {}
+            complete = payload.get('complete')
+            if complete is not None:
+                complete = str(complete).lower() in ('1', 'true', 'yes')
+            else:
+                complete = None
+            issue_invoice = str(payload.get('issue_invoice') or '').lower() in ('1', 'true', 'yes')
+            result = crm_svc.convert_contract_to_sale(
+                conn,
+                cid,
+                complete=complete,
+                payment_method=payload.get('payment_method'),
+                issue_invoice=issue_invoice,
+                invoice_loai_hdon=int(payload.get('loai_hdon') or 1),
+                created_by=_actor(),
+            )
+            sqlite_commit(conn, label='crm_contract_to_sale')
+            if result.get('issue_invoice_requested') and result.get('sale_id'):
+                from Services.sme.crm_sale_fulfill import try_issue_einvoice
+                result['invoice'] = try_issue_einvoice(
+                    int(result['sale_id']),
+                    loai_hdon=int(result.get('invoice_loai_hdon') or 1),
+                )
+            return jsonify({'success': True, **result})
+        except ValueError as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return jsonify({'error': str(e)}), 400
+        except sqlite3.Error as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return jsonify({'error': str(e)}), 500
+        except Exception as e:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             return jsonify({'error': str(e)}), 500
         finally:
             conn.close()

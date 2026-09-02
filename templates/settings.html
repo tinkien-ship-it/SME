@@ -418,6 +418,13 @@
                                             <option value="adminSME99">Quản Trị Viên SME (TT99)</option>
                                             </optgroup>
                                             {% endif %}
+                                            {% if tenant_is_sme %}
+                                            <optgroup label="Vận hành sản xuất / mua hàng (MRP · MES)">
+                                            <option value="purchasing_manager">Trưởng Phòng Mua (MRP)</option>
+                                            <option value="chief_accountant">Kế Toán Trưởng (MRP)</option>
+                                            <option value="production_manager">Trưởng Phòng Sản Xuất (MES)</option>
+                                            </optgroup>
+                                            {% endif %}
                                             <optgroup label="Tương thích (user cũ)" id="legacySmeRoleGroup" hidden>
                                             <option value="accountantSME">Kế Toán SME</option>
                                             <option value="managerSME">Quản lý SME</option>
@@ -427,6 +434,12 @@
                                             <option value="master">Master</option>
                                             {% endif %}
                                         </select>
+                                        {% if tenant_is_sme %}
+                                        <div class="form-text" id="mrpMesRoleHint">
+                                            <strong>MRP</strong> (Trưởng Phòng Mua, Kế Toán Trưởng, Admin): kế hoạch NVL / đề xuất mua / MPS.
+                                            <strong>MES</strong> (Trưởng Phòng Sản Xuất, Admin): điều hành xưởng realtime — không dùng chung trang MRP.
+                                        </div>
+                                        {% endif %}
                                         {% if _is_tt58 %}
                                         <div class="form-text">User TT58 dùng <strong>đầy đủ</strong> nghiệp vụ mua/bán/kế toán như TT99 (kèm L/C, ngoại tệ, mẫu chứng từ…); đồng thời bắt buộc sổ &amp; biểu mẫu DNSN theo trường hợp thuế đã chọn. BCTC hiện khi Trường hợp 2 hoặc 4.</div>
                                         {% elif _is_tt99 %}
@@ -470,6 +483,24 @@
                                             <input class="form-check-input perm-cb" type="checkbox" value="view_reports" id="p_rep">
                                             <label class="form-check-label" for="p_rep">Xem báo cáo & doanh thu</label>
                                         </div>
+                                        {% if tenant_is_sme %}
+                                        <hr class="my-3">
+                                        <p class="small fw-bold text-secondary mb-2">SẢN XUẤT — MRP / MES</p>
+                                        <div class="perm-check form-check">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="view_mrp" id="p_mrp">
+                                            <label class="form-check-label" for="p_mrp">
+                                                Truy cập MRP (kế hoạch NVL)
+                                                <span class="text-muted fw-normal d-block small">Mặc định theo role Trưởng Phòng Mua / Kế Toán Trưởng / Admin</span>
+                                            </label>
+                                        </div>
+                                        <div class="perm-check form-check">
+                                            <input class="form-check-input perm-cb" type="checkbox" value="view_mes" id="p_mes">
+                                            <label class="form-check-label" for="p_mes">
+                                                Truy cập MES (điều hành SX)
+                                                <span class="text-muted fw-normal d-block small">Mặc định theo role Trưởng Phòng Sản Xuất / Admin</span>
+                                            </label>
+                                        </div>
+                                        {% endif %}
                                         <hr class="my-3">
                                         <p class="small fw-bold text-secondary mb-2">NHÂN SỰ / ESS</p>
                                         <div class="perm-check form-check border border-info rounded p-2 bg-info bg-opacity-10">
@@ -1299,6 +1330,9 @@ const ROLE_LABELS = {
     accountantSME: ['bg-info', 'Kế toán SME'],
     accountantSME58: ['bg-info', 'Kế toán SME (TT58)'],
     accountantSME99: ['bg-info', 'Kế toán SME (TT99)'],
+    purchasing_manager: ['bg-success', 'Trưởng Phòng Mua'],
+    chief_accountant: ['bg-warning', 'Kế Toán Trưởng'],
+    production_manager: ['bg-danger', 'Trưởng Phòng SX'],
 };
 const FIRM_ROLE_LABELS = {
     owner: ['bg-primary', 'Chủ đơn vị'],

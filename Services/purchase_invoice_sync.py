@@ -522,6 +522,20 @@ def prepare_invoice_data(inv: dict) -> tuple | None:
         except Exception as enrich_exc:
             logger.debug('enrich DSHHDVu skip: %s', enrich_exc)
 
+        try:
+            from Services.sme.purchase_order import (
+                extract_gchu_from_invoice_payload,
+                extract_po_no_from_text,
+            )
+            gchu = extract_gchu_from_invoice_payload(inv_store)
+            if gchu:
+                inv_store['GChu'] = gchu
+                po_hint = extract_po_no_from_text(gchu)
+                if po_hint:
+                    inv_store['_po_no_hint'] = po_hint
+        except Exception as po_exc:
+            logger.debug('gchu enrich skip: %s', po_exc)
+
         xml_data = json.dumps(inv_store, ensure_ascii=False)
 
         return (
@@ -566,6 +580,14 @@ def _persist_invoices_rows(conn: sqlite3.Connection, invoices: list[dict]) -> di
     skip_count = 0
     updated_count = 0
     bad_count = 0
+    po_matched = 0
+
+    from Services.inward_invoice_helpers import ensure_supplier_invoice_po_schema
+    from Services.sme.purchase_order import apply_gchu_po_match_to_invoice_store
+
+    ensure_supplier_invoice_po_schema(conn)
+    si_cols = {c[1] for c in cursor.execute('PRAGMA table_info(supplier_invoice)').fetchall()}
+    has_po_cols = 'po_id' in si_cols
 
     for inv in invoices or []:
         row_data = prepare_invoice_data(inv)
@@ -576,18 +598,28 @@ def _persist_invoices_rows(conn: sqlite3.Connection, invoices: list[dict]) -> di
             bad_count += 1
             continue
 
+        inv_store = {}
+        try:
+            inv_store = json.loads(row_data[12] or '{}')
+        except Exception:
+            inv_store = dict(inv) if isinstance(inv, dict) else {}
+
         cursor.execute(
             """
-            SELECT id, total, tax_amount, amount, pdf_url FROM supplier_invoice
+            SELECT id, total, tax_amount, amount, pdf_url, po_id, po_match_source FROM supplier_invoice
             WHERE seller_tax_code = ? AND serial = ? AND invoice_no = ?
             """,
             (row_data[4], row_data[1], row_data[2]),
         )
         existing = cursor.fetchone()
         if existing:
-            ex_id = existing[0] if not isinstance(existing, sqlite3.Row) else existing['id']
-            cursor.execute(
-                """
+            if isinstance(existing, sqlite3.Row):
+                ex_id = int(existing['id'])
+                keep_manual = bool(existing['po_id']) and (existing['po_match_source'] or '') == 'manual'
+            else:
+                ex_id = int(existing[0])
+                keep_manual = len(existing) > 6 and existing[5] and (existing[6] or '') == 'manual'
+            update_sql = """
                 UPDATE supplier_invoice SET
                     invoice_date = ?,
                     seller_name = ?,
@@ -599,33 +631,66 @@ def _persist_invoices_rows(conn: sqlite3.Connection, invoices: list[dict]) -> di
                     total = ?,
                     xml_data = ?,
                     pdf_url = COALESCE(NULLIF(?, ''), pdf_url)
+            """
+            update_vals = [
+                row_data[0], row_data[3], row_data[5], row_data[6], row_data[7],
+                row_data[8], row_data[9], row_data[10], row_data[12],
+                row_data[14] or '',
+            ]
+            if has_po_cols:
+                gchu = inv_store.get('GChu') or ''
+                if gchu:
+                    update_sql += ", gchu = COALESCE(NULLIF(?, ''), gchu)"
+                    update_vals.append(gchu)
+            update_sql += """
                 WHERE id = ?
                   AND COALESCE(status, 'new') IN ('new', '', 'pending')
-                """,
-                (
-                    row_data[0], row_data[3], row_data[5], row_data[6], row_data[7],
-                    row_data[8], row_data[9], row_data[10], row_data[12],
-                    row_data[14] or '',
-                    ex_id,
-                ),
-            )
+            """
+            update_vals.append(ex_id)
+            cursor.execute(update_sql, tuple(update_vals))
             if cursor.rowcount:
                 updated_count += 1
+                if has_po_cols:
+                    if not keep_manual:
+                        m = apply_gchu_po_match_to_invoice_store(
+                            conn, inv_store, invoice_id=ex_id,
+                            seller_tax_code=row_data[4], commit=False,
+                        )
+                        if m.get('po_id'):
+                            po_matched += 1
             else:
                 skip_count += 1
             continue
 
+        insert_cols = [
+            'invoice_date', 'serial', 'invoice_no', 'seller_name', 'seller_tax_code',
+            'amount', 'discount_percent', 'discount_amount', 'tax_percent', 'tax_amount',
+            'total', 'status', 'xml_data', 'date', 'pdf_url',
+        ]
+        insert_vals = list(row_data)
+        if has_po_cols:
+            gchu = inv_store.get('GChu') or ''
+            po_hint = inv_store.get('_po_no_hint') or inv_store.get('po_no')
+            insert_cols.extend(['gchu', 'po_no_matched'])
+            insert_vals.extend([gchu, po_hint])
+
+        placeholders = ','.join('?' * len(insert_cols))
         cursor.execute(
-            """
-            INSERT INTO supplier_invoice (
-                invoice_date, serial, invoice_no, seller_name, seller_tax_code,
-                amount, discount_percent, discount_amount, tax_percent, tax_amount,
-                total, status, xml_data, date, pdf_url
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            f"""
+            INSERT INTO supplier_invoice ({', '.join(insert_cols)})
+            VALUES ({placeholders})
             """,
-            row_data,
+            tuple(insert_vals),
         )
+        new_id = int(cursor.lastrowid)
         new_count += 1
+        if has_po_cols and new_id:
+            m = apply_gchu_po_match_to_invoice_store(
+                conn, inv_store, invoice_id=new_id,
+                seller_tax_code=row_data[4], commit=False,
+            )
+            if m.get('po_id'):
+                po_matched += 1
 
     return {
         'total_received': len(invoices or []),
@@ -633,6 +698,7 @@ def _persist_invoices_rows(conn: sqlite3.Connection, invoices: list[dict]) -> di
         'updated': updated_count,
         'duplicates_skipped': skip_count,
         'invalid_skipped': bad_count,
+        'po_matched': po_matched,
     }
 
 

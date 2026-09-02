@@ -94,6 +94,17 @@ BACKEND_SQLITE = 'sqlite'
 BACKEND_POSTGRES = 'postgres'
 
 
+def sql_ymd_prefix(expr: str) -> str:
+    """Lấy YYYY-MM-DD từ cột ngày/giờ — portable SQLite + PostgreSQL.
+
+    Dùng ``substr(CAST(... AS text), 1, 10)`` thay cho ``LEFT(...)`` (SQLite không có LEFT).
+    """
+    e = (expr or '').strip()
+    if not e:
+        raise ValueError('sql_ymd_prefix: expr trống')
+    return f'substr(CAST(({e}) AS text), 1, 10)'
+
+
 def table_exists(conn, name: str) -> bool:
     bk = getattr(conn, '_sme_backend', None) or db_backend()
     if bk == BACKEND_POSTGRES:

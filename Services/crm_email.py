@@ -119,7 +119,7 @@ def resolve_send_config(conn: sqlite3.Connection) -> tuple[dict[str, Any] | None
             'source': 'system',
         }, None
     return None, (
-        'Chưa cấu hình email gửi. Vào CRM → Cấu hình → Email doanh nghiệp '
+        'Chưa cấu hình email gửi. Vào Thiết lập hệ thống (/thiet-lap) → Email doanh nghiệp '
         'hoặc cấu hình SMTP hệ thống trên VPS (.env).'
     )
 
@@ -186,9 +186,9 @@ def test_tenant_smtp(conn: sqlite3.Connection, to_email: str | None = None) -> t
     return send_with_config(
         cfg,
         dest,
-        '[KETO CRM] Kiểm tra cấu hình email doanh nghiệp',
-        'Email thử từ CRM. Nếu nhận được thư này, SMTP đã hoạt động.',
-        html_body='<p>Email thử từ <b>CRM</b>. SMTP doanh nghiệp hoạt động.</p>',
+        '[KETO] Kiểm tra cấu hình email doanh nghiệp',
+        'Email thử từ hệ thống KETO. Nếu nhận được thư này, SMTP đã hoạt động.',
+        html_body='<p>Email thử từ <b>KETO</b>. SMTP doanh nghiệp hoạt động.</p>',
     )
 
 
@@ -358,3 +358,130 @@ def log_crm_email(
         )
     except sqlite3.Error as exc:
         logger.warning('crm_email_logs: %s', exc)
+
+
+def _business_name(conn: sqlite3.Connection) -> str:
+    try:
+        row = conn.execute(
+            "SELECT COALESCE(business_name, '') AS n FROM business_info LIMIT 1"
+        ).fetchone()
+        if row:
+            d = _row(row)
+            return (d.get('n') or '').strip()
+    except sqlite3.Error:
+        pass
+    return ''
+
+
+def resolve_supplier_email(
+    conn: sqlite3.Connection,
+    *,
+    supplier_id: int | None = None,
+    supplier_name: str | None = None,
+    supplier_tax_code: str | None = None,
+) -> str:
+    """Email NCC — ưu tiên supplier_id, fallback theo MST / tên."""
+    try:
+        if supplier_id:
+            row = conn.execute(
+                "SELECT COALESCE(email, '') AS email FROM suppliers WHERE id = ?",
+                (int(supplier_id),),
+            ).fetchone()
+            em = (_row(row).get('email') or '').strip()
+            if em:
+                return em
+        tax = (supplier_tax_code or '').strip()
+        if tax:
+            row = conn.execute(
+                """
+                SELECT email FROM suppliers
+                WHERE TRIM(COALESCE(tax_code, '')) = ?
+                  AND TRIM(COALESCE(email, '')) != ''
+                LIMIT 1
+                """,
+                (tax,),
+            ).fetchone()
+            em = (_row(row).get('email') or '').strip()
+            if em:
+                return em
+        name = (supplier_name or '').strip()
+        if name:
+            row = conn.execute(
+                """
+                SELECT email FROM suppliers
+                WHERE TRIM(name) = ?
+                  AND TRIM(COALESCE(email, '')) != ''
+                LIMIT 1
+                """,
+                (name,),
+            ).fetchone()
+            em = (_row(row).get('email') or '').strip()
+            if em:
+                return em
+    except sqlite3.Error:
+        pass
+    return ''
+
+
+def build_purchase_order_email(
+    po: dict,
+    *,
+    business_name: str = '',
+) -> tuple[str, str, str]:
+    """subject, text, html — đơn đặt hàng gửi NCC."""
+    po_no = po.get('po_no') or ''
+    sup = po.get('supplier_name') or 'Quý NCC'
+    po_date = (po.get('po_date') or '')[:10]
+    exp = (po.get('expected_date') or '')[:10]
+    biz = (business_name or '').strip() or 'Chúng tôi'
+    subject = f'Đơn đặt hàng {po_no} — {biz}'
+    lines = po.get('lines') or []
+    rows_txt = []
+    rows_html = []
+    for i, ln in enumerate(lines, 1):
+        name = ln.get('product_name') or ''
+        unit = ln.get('unit') or ''
+        qty = ln.get('qty') or 0
+        price = ln.get('unit_price') or 0
+        amt = float(qty or 0) * float(price or 0)
+        rows_txt.append(
+            f'{i}. {name} | {unit} | SL {_money(qty)} | ĐG {_money(price)} | TT {_money(amt)}'
+        )
+        rows_html.append(
+            f'<tr><td>{i}</td><td>{name}</td><td>{unit}</td>'
+            f'<td style="text-align:right">{_money(qty)}</td>'
+            f'<td style="text-align:right">{_money(price)}</td>'
+            f'<td style="text-align:right">{_money(amt)}</td></tr>'
+        )
+    total = po.get('total_amount') or 0
+    note = po.get('note') or '—'
+    exp_line = f'Ngày giao dự kiến: {exp}\n' if exp else ''
+    text = (
+        f'Kính gửi {sup},\n\n'
+        f'{biz} gửi đơn đặt hàng số {po_no} ngày {po_date}.\n'
+        f'{exp_line}\n'
+        + '\n'.join(rows_txt)
+        + f'\n\nTổng giá trị: {_money(total)} đ\n'
+        f'Ghi chú: {note}\n\n'
+        f'Vui lòng xác nhận đơn và thông báo khi giao hàng / xuất hóa đơn.\n'
+        f'Khi xuất HĐ, vui lòng ghi số đơn {po_no} vào mục GChu (ghi chú) trên hóa đơn điện tử.\n\nTrân trọng.'
+    )
+    html = f"""
+    <div style="font-family:Arial,sans-serif;font-size:14px;color:#111">
+      <p>Kính gửi <b>{sup}</b>,</p>
+      <p><b>{biz}</b> gửi <b>Đơn đặt hàng {po_no}</b> ngày {po_date}.</p>
+      {f'<p>Ngày giao dự kiến: <b>{exp}</b></p>' if exp else ''}
+      <table style="border-collapse:collapse;width:100%;margin:12px 0" border="1" cellpadding="6">
+        <thead style="background:#f1f5f9"><tr>
+          <th>STT</th><th>Hàng hóa</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th>
+        </tr></thead>
+        <tbody>{''.join(rows_html) or '<tr><td colspan="6">—</td></tr>'}</tbody>
+      </table>
+      <p><b>Tổng giá trị: {_money(total)} đ</b></p>
+      <p>Ghi chú: {note}</p>
+      <p>Vui lòng xác nhận đơn và thông báo khi giao hàng / xuất hóa đơn.</p>
+      <p><em>Khi xuất HĐ, vui lòng ghi số đơn <b>{po_no}</b> vào mục <b>GChu</b> (ghi chú) trên hóa đơn điện tử.</em></p>
+      <p>Trân trọng.</p>
+    </div>
+    """
+    return subject, text, html

@@ -708,7 +708,10 @@ def register_inventory_routes(app):
             raw_data = raw_data.strip()
 
             # ===== SUCCESS =====
-            from Services.inward_invoice_helpers import normalize_supplier_invoice_payload
+            from Services.inward_invoice_helpers import (
+                ensure_supplier_invoice_po_schema,
+                normalize_supplier_invoice_payload,
+            )
             try:
                 data = normalize_supplier_invoice_payload(raw_data)
             except ValueError as norm_err:
@@ -716,6 +719,28 @@ def register_inventory_routes(app):
                     data = json.loads(raw_data)
                 else:
                     return jsonify({'success': False, 'error': str(norm_err)}), 400
+
+            ensure_supplier_invoice_po_schema(conn)
+            po_id = row['po_id'] if 'po_id' in row.keys() else None
+            po_no = row['po_no_matched'] if 'po_no_matched' in row.keys() else None
+            gchu_db = row['gchu'] if 'gchu' in row.keys() else None
+            if gchu_db and not data.get('GChu'):
+                data['GChu'] = gchu_db
+            if po_id:
+                data['po_id'] = int(po_id)
+                data['po_no'] = po_no or data.get('po_no')
+            else:
+                from Services.sme.purchase_order import apply_gchu_po_match_to_invoice_store
+                matched = apply_gchu_po_match_to_invoice_store(
+                    conn,
+                    data,
+                    invoice_id=int(invoice_id),
+                    seller_tax_code=data.get('NBanMST'),
+                    commit=True,
+                )
+                if matched.get('po_id'):
+                    data['po_id'] = int(matched['po_id'])
+                    data['po_no'] = matched.get('po_no')
 
             return jsonify({
                 'success': True,
@@ -3569,9 +3594,11 @@ def register_inventory_routes(app):
             return jsonify({"success": False, "error": "Định dạng ngày không hợp lệ"}), 400
 
         # So sánh theo ngày ISO (text) — tránh lệch kiểu date/timestamp trên Postgres
+        # substr portable SQLite + PG (SQLite không có LEFT)
+        from db.dialect import sql_ymd_prefix
         d0 = start_date_str[:10]
         d1 = end_date_str[:10]
-        sm_day = "LEFT(CAST(sm.date AS text), 10)"
+        sm_day = sql_ymd_prefix('sm.date')
 
         try:
             conn = get_db_connection()
@@ -3584,6 +3611,7 @@ def register_inventory_routes(app):
                     p.name AS product_name,
                     p.product_code AS product_code,
                     COALESCE(p.unit, 'Cái') AS unit_name,
+                    COALESCE(p.product_type, 'goods') AS product_type,
                 
                     COALESCE(SUM(CASE 
                         WHEN {sm_day} < ? AND sm.type IN ('import', 'RETURN_SALE', 'DELETE_SALE', 'SALE', 'export', 'RETURN_IMPORT', 'DELETE_IMPORT', 'export_for_use', 'export_material', 'adjustment') THEN sm.quantity
@@ -3621,9 +3649,9 @@ def register_inventory_routes(app):
 
                 FROM products p
                 LEFT JOIN stock_moves sm ON p.id = sm.product_id
-                WHERE COALESCE(p.product_type, 'goods') != 'service'
+                WHERE COALESCE(p.product_type, 'goods') NOT IN ('service', 'fixed_asset', 'tools', 'subscription')
                   AND UPPER(COALESCE(p.product_code, '')) NOT LIKE 'DV%'
-                GROUP BY p.id, p.name, p.product_code, COALESCE(p.unit, 'Cái')
+                GROUP BY p.id, p.name, p.product_code, COALESCE(p.unit, 'Cái'), COALESCE(p.product_type, 'goods')
                 ORDER BY p.name
             """, (
                 d0, d0,
@@ -3635,6 +3663,11 @@ def register_inventory_routes(app):
 
             rows = c.fetchall()
             report = []
+            from Services.sme.cogs_accounts import inventory_tk_label
+            from Services.sme.inventory_ops import inventory_accounts_by_product, inventory_account_for_product
+
+            pids = [int(r['product_id']) for r in rows if r['product_id'] is not None]
+            acc_map = inventory_accounts_by_product(conn, pids)
 
             for r in rows:
                 beg_qty = float(r['beginning_quantity'])
@@ -3646,22 +3679,28 @@ def register_inventory_routes(app):
 
                 end_qty = beg_qty + imp_qty - exp_qty
                 end_val = beg_val + imp_val - exp_val
+                ptype = (r['product_type'] or 'goods')
+                pid = int(r['product_id'])
+                inv_tk = acc_map.get(pid) or inventory_account_for_product(conn, pid)
 
                 report.append({
                     "product_id": r['product_id'],
                     "product_code": r['product_code'] or "",
                     "product_name": r['product_name'],
                     "unit_name": r['unit_name'],
-                
+                    "product_type": ptype,
+                    "inv_account": inv_tk,
+                    "inv_account_label": inventory_tk_label(inv_tk),
+
                     "beginning_quantity": beg_qty,
                     "beginning_value": max(0.0, beg_val),
-                
+
                     "import_quantity": imp_qty,
                     "import_value": imp_val,
-                
+
                     "export_quantity": exp_qty,
                     "export_value": exp_val,
-                
+
                     "ending_quantity": end_qty,
                     "ending_value": max(0.0, end_val)
                 })
@@ -3669,7 +3708,13 @@ def register_inventory_routes(app):
             return jsonify({
                 "success": True,
                 "period": f"{start_date_str} → {end_date_str}",
-                "data": report
+                "data": report,
+                "tabs": [
+                    {"key": "all", "account": "", "title": "Báo Cáo Tồn Kho Tổng Hợp", "label": "Tổng hợp"},
+                    {"key": "152", "account": "152", "title": "Báo Cáo Tồn Kho Vật Tư, Nguyên Vật Liệu", "label": "TK 152 — NVL"},
+                    {"key": "155", "account": "155", "title": "Báo Cáo Tồn Kho Thành Phẩm", "label": "TK 155 — TP"},
+                    {"key": "156", "account": "156", "title": "Báo Cáo Tồn Kho Hàng Hóa", "label": "TK 156 — HH"},
+                ],
             })
 
         except Exception as e:

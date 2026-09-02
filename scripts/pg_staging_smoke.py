@@ -175,7 +175,7 @@ def main():
         ("SELECT date('now','localtime')", 'TO_CHAR'),
         ("WHERE date(v.punched_at) = date('now', 'localtime')", 'TO_CHAR'),
         ("date('now', 'localtime', '-30 day')", 'INTERVAL'),
-        ("AND date(v.punched_at) = date(?)", 'LEFT(CAST'),
+        ("AND date(v.punched_at) = date(?)", 'substr(CAST'),
         ("GROUP_CONCAT(x.account_code, ', ')", 'string_agg'),
     ]:
         out = rewrite_sql_for_postgres(sql)

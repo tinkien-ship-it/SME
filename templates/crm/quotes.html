@@ -385,10 +385,35 @@ async function sendQuoteEmail(id) {
 
 async function convertQuote(id) {
   id = id || document.getElementById('quoteId').value;
-  if (!id || !confirm('Tạo đơn bán hàng từ báo giá này?')) return;
-  const d = await (await fetch(`/api/crm/quotes/${id}/convert-sale`, {method:'POST'})).json();
+  if (!id) return;
+  const ok = confirm(
+    'Tạo đơn bán từ báo giá?\n\n' +
+    '• SME: hoàn tất đơn (trừ kho + ghi sổ) như POS\n' +
+    '• Có thể xuất HĐĐT ngay sau đó\n\n' +
+    'Bấm OK để tiếp tục.'
+  );
+  if (!ok) return;
+  const issue = confirm('Xuất hóa đơn điện tử ngay sau khi tạo đơn?');
+  const d = await (await fetch(`/api/crm/quotes/${id}/convert-sale`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ issue_invoice: issue ? 1 : 0, loai_hdon: 1 }),
+  })).json();
   if (d.error) { alert(d.error); return; }
-  location.href = '/sale?order_id=' + d.sale_id;
+  let msg = d.already
+    ? ('Đơn đã tồn tại: ' + (d.sale_no || d.sale_id))
+    : ('Đã tạo đơn ' + (d.sale_no || ('#' + d.sale_id)) + (d.completed ? ' — đã hoàn tất (kho + sổ)' : ' — chờ thanh toán trên POS'));
+  if (d.invoice) {
+    msg += d.invoice.success
+      ? ('\nHĐĐT: ' + (d.invoice.invoice_no || 'OK'))
+      : ('\nHĐĐT: ' + (d.invoice.error || 'không xuất được'));
+  }
+  alert(msg);
+  if (d.completed) {
+    location.href = '/SME_order';
+  } else {
+    location.href = '/sale?order_id=' + d.sale_id;
+  }
 }
 
 async function delQuote(id) {

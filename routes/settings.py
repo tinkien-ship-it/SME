@@ -2009,11 +2009,19 @@ Trân trọng,
                 return jsonify({"success": False, "error": err}), 400
 
             from auth import normalize_permissions
-            from Services.sme_roles import ESS_PORTAL_PERMISSION
+            from Services.sme_roles import (
+                ESS_PORTAL_PERMISSION,
+                VIEW_MES_PERMISSION,
+                VIEW_MRP_PERMISSION,
+            )
             perm_list = normalize_permissions(permissions)
             role_str = str(role or '').strip()
             if role_str in ('employee', 'staff_field') and ESS_PORTAL_PERMISSION not in perm_list:
                 perm_list.append(ESS_PORTAL_PERMISSION)
+            if role_str in ('purchasing_manager', 'chief_accountant') and VIEW_MRP_PERMISSION not in perm_list:
+                perm_list.append(VIEW_MRP_PERMISSION)
+            if role_str == 'production_manager' and VIEW_MES_PERMISSION not in perm_list:
+                perm_list.append(VIEW_MES_PERMISSION)
             permissions = ','.join(perm_list)
 
             if user_id:  # ================== CẬP NHẬT ==================
@@ -3512,6 +3520,40 @@ Trân trọng,
                 'KeToanSME/_layout.html' if setup_is_sme else 'KeToanHKD/_layout.html'
             ),
         )
+
+    @app.route('/api/settings/email', methods=['GET', 'PUT'])
+    @admin_or_store_setup_required
+    def api_settings_email():
+        """SMTP doanh nghiệp — dùng chung báo giá, đơn mua, chiến dịch."""
+        from Services import crm_email as crm_mail
+        from db_utils import sqlite_commit
+        conn = get_db_connection()
+        try:
+            if request.method == 'GET':
+                return jsonify({'success': True, 'smtp': crm_mail.get_tenant_smtp_public(conn)})
+            smtp = crm_mail.save_tenant_smtp(conn, request.get_json() or {})
+            sqlite_commit(conn, label='tenant_smtp_save')
+            return jsonify({'success': True, 'smtp': smtp})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/settings/email/test', methods=['POST'])
+    @admin_or_store_setup_required
+    def api_settings_email_test():
+        from Services import crm_email as crm_mail
+        conn = get_db_connection()
+        try:
+            data = request.get_json() or {}
+            ok, err = crm_mail.test_tenant_smtp(conn, data.get('to_email'))
+            if not ok:
+                return jsonify({'success': False, 'error': err or 'Gửi thử thất bại'}), 400
+            return jsonify({'success': True, 'message': 'Đã gửi email thử'})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
 
     @app.route('/settings')
     @tenant_settings_required

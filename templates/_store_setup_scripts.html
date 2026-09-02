@@ -164,10 +164,81 @@ document.getElementById('storeSetupForm').addEventListener('submit', async (e) =
     }
 });
 
+function fillTenantSmtp(s) {
+    s = s || {};
+    const el = id => document.getElementById(id);
+    if (!el('smtpEnabled')) return;
+    el('smtpEnabled').checked = !!s.enabled;
+    el('smtpServer').value = s.server || '';
+    el('smtpPort').value = s.port || 587;
+    el('smtpSender').value = s.sender || '';
+    el('smtpFromName').value = s.from_name || '';
+    el('smtpPassword').value = '';
+    el('smtpPassword').placeholder = s.password_set
+        ? '******** (đã lưu — nhập mới để đổi)' : 'Mật khẩu ứng dụng';
+    el('smtpTestTo').value = s.sender || '';
+    el('smtpStatus').textContent = s.configured
+        ? 'Đã cấu hình — có thể gửi báo giá / đơn mua / CRM.'
+        : (s.enabled ? 'Đã bật nhưng thiếu server / email / mật khẩu.' : 'Chưa bật — sẽ dùng SMTP hệ thống nếu có.');
+}
+
+async function loadTenantSmtp() {
+    try {
+        const res = await fetch('/api/settings/email');
+        const data = await res.json();
+        if (data.success) fillTenantSmtp(data.smtp);
+        else if (data.enabled !== undefined) fillTenantSmtp(data);
+    } catch (e) { /* ignore */ }
+}
+
+document.getElementById('btnSaveSmtp')?.addEventListener('click', async () => {
+    const body = {
+        enabled: document.getElementById('smtpEnabled').checked,
+        server: document.getElementById('smtpServer').value,
+        port: document.getElementById('smtpPort').value,
+        sender: document.getElementById('smtpSender').value,
+        from_name: document.getElementById('smtpFromName').value,
+    };
+    const pw = (document.getElementById('smtpPassword').value || '').trim();
+    if (pw) body.password = pw;
+    try {
+        const res = await fetch('/api/settings/email', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!data.success) {
+            notifyUser('Lỗi', data.error || 'Không lưu được', 'error');
+            return;
+        }
+        fillTenantSmtp(data.smtp);
+        notifyUser('Đã lưu', 'Cấu hình email doanh nghiệp', 'success');
+    } catch (err) {
+        notifyUser('Lỗi', err.message || 'Lỗi kết nối', 'error');
+    }
+});
+
+document.getElementById('btnTestSmtp')?.addEventListener('click', async () => {
+    try {
+        const res = await fetch('/api/settings/email/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to_email: document.getElementById('smtpTestTo').value }),
+        });
+        const data = await res.json();
+        if (!data.success) notifyUser('Lỗi', data.error || 'Gửi thử thất bại', 'error');
+        else notifyUser('Thành công', data.message || 'Đã gửi email thử', 'success');
+    } catch (err) {
+        notifyUser('Lỗi', err.message || 'Lỗi kết nối', 'error');
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     syncBankSelectFromInputs();
     updateQrPreview();
     loadVietqrStatus();
+    loadTenantSmtp();
     ['bank_code_input', 'bank_account_input'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', updateQrPreview);
     });
