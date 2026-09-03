@@ -9,7 +9,8 @@ import threading
 import time
 import weakref
 from contextlib import contextmanager
-from typing import Any
+# FIX: Đã thêm Optional vào import
+from typing import Any, Optional
 
 from db.dialect import (
     BACKEND_POSTGRES,
@@ -152,23 +153,16 @@ def _coerce_lastrowid(val: Any) -> int:
         return 0
 
 
-def _read_lastval(cur) -> int:
+def _read_lastval(executor) -> int:
     """
-    Đọc sequence vừa dùng sau INSERT (tương đương sqlite lastrowid).
-    Bọc SAVEPOINT để tránh làm hỏng Transaction chính nếu bảng không dùng Sequence.
+    FIX: Hàm này gốc có rủi ro làm hỏng transaction chính.
+    Đã được bọc trong một helper 'safe' trong class chính.
     """
     try:
-        cur.execute('SAVEPOINT sme_lastval')
-        cur.execute('SELECT lastval()')
-        row = cur.fetchone()
-        rid = _coerce_lastrowid(_row_first_value(row))
-        cur.execute('RELEASE SAVEPOINT sme_lastval')
-        return rid
+        # SQLite tương thích không dùng savepoint ở đây để tránh lồng nhau
+        row = executor.execute('SELECT lastval()').fetchone()
+        return _coerce_lastrowid(_row_first_value(row))
     except Exception:
-        try:
-            cur.execute('ROLLBACK TO SAVEPOINT sme_lastval')
-        except Exception:
-            pass
         return 0
 
 def _sanitize_params(params):
@@ -191,6 +185,7 @@ class PgCursor:
         self._schema = schema
         self.lastrowid: int = 0
         self.rowcount: int = -1
+        # FIX: Sửa type hint description sau khi import Optional
         self.description: Optional[Any] = None
 
     def execute(self, query: str, params: Any = None):
@@ -198,6 +193,9 @@ class PgCursor:
         recover_pg_transaction(self._cur.connection)
 
         sql = rewrite_sql_for_postgres(query, schema=self._schema)
+        # Fix sanitize params trước khi execute
+        params = _sanitize_params(params)
+        
         want_id = _is_insert(query) and 'RETURNING' not in sql.upper()
         is_write = want_id or bool(_WRITE_SQL_RE.match(query or ''))
 
@@ -206,6 +204,23 @@ class PgCursor:
                 self._cur.connection.rollback()
             except Exception:
                 pass
+
+        def _read_lastval_safe(cur) -> int:
+            """FIX: Đọc lastval() an toàn, không làm hỏng transaction nếu bảng không có sequence."""
+            try:
+                cur.execute("SAVEPOINT sme_lastval")
+                cur.execute("SELECT lastval()")
+                row = cur.fetchone()
+                cur.execute("RELEASE SAVEPOINT sme_lastval")
+                return _coerce_lastrowid(_row_first_value(row))
+            except Exception:
+                # Nếu không có sequence, hoặc sequence chưa dùng, lastval() sẽ lỗi.
+                # Rollback savepoint để xóa trạng thái InFailedSqlTransaction.
+                try:
+                    cur.execute("ROLLBACK TO SAVEPOINT sme_lastval")
+                except Exception:
+                    pass
+                return 0
 
         # ===== Case 1: SELECT / Read-only (Không bọc SAVEPOINT) =====
         if not is_write:
@@ -229,7 +244,9 @@ class PgCursor:
             raise
 
         executed_successfully = False
-        used_returning = False
+        
+        # FIX: Tách exception gốc khỏi exception của việc rollback
+        original_exception = None
 
         # Thử chèn 'RETURNING id' nếu là câu INSERT chưa có RETURNING
         if want_id:
@@ -240,24 +257,30 @@ class PgCursor:
                 else:
                     self._cur.execute(sql_ret, params)
                 
-                # Lấy id vừa tạo ngay lập tức
+                # FIX: Lấy id vừa tạo ngay lập tức để tránh cursor bị kẹt dữ liệu cũ
                 row = self._cur.fetchone()
                 rid = _coerce_lastrowid(_row_first_value(row))
+                
+                # FIX: Nếu không có cột id, hoặc RETURNING fail không mong muốn, fallback về lastval()
                 if rid == 0:
-                    rid = _read_lastval(self._cur)
+                    # Rủi ro cao nhưng fallback cuối cùng
+                    rid = _read_lastval_safe(self._cur)
                 self.lastrowid = rid
 
                 executed_successfully = True
-                used_returning = True
-            except Exception:
+            except Exception as e:
+                # Lưu exception gốc
+                original_exception = e
                 # Nếu câu có RETURNING id thất bại (VD: bảng không có cột 'id')
                 # Rollback về Savepoint để xóa trạng thái InFailedSqlTransaction
                 try:
                     self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
+                    # Tạo lại Savepoint để chuẩn bị cho câu fallback gốc
                     self._cur.execute('SAVEPOINT sme_stmt')
                 except Exception:
+                    # Nếu rollback thất bại, ném exception gốc, transaction đã chết
                     _full_rollback()
-                    raise
+                    raise original_exception
                 executed_successfully = False
 
         # Thực thi câu lệnh gốc (nếu không dùng được RETURNING id hoặc không phải INSERT lấy ID)
@@ -269,14 +292,15 @@ class PgCursor:
                     self._cur.execute(sql, params)
 
                 if _is_insert(query):
-                    self.lastrowid = _read_lastval(self._cur)
-            except Exception:
+                    self.lastrowid = _read_lastval_safe(self._cur)
+            except Exception as fallback_exc:
+                # Nếu câu gốc cũng fail, rollback và ném lỗi câu gốc
                 try:
                     self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
                 except Exception:
                     pass
                 _full_rollback()
-                raise
+                raise fallback_exc
 
         # Release Savepoint sau khi thực thi thành công
         try:
