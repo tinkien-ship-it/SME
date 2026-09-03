@@ -13,6 +13,7 @@ import logging
 import sqlite3
 from datetime import datetime
 from db.dialect import table_exists
+from Services.sme.journal_schema import ensure_sme_journal_schema
 
 from db_utils import (
     begin_immediate,
@@ -266,7 +267,7 @@ def reconcile_missing_sale_accounting(
         nhưng journal thực tế bị thiếu.
     """
 
-    ensure_accounting_queue_schema(conn, commit=False)
+    ensure_accounting_queue_schema(conn, commit=True)
 
     try:
         batch_size = int(batch_size or 100)
@@ -288,14 +289,26 @@ def reconcile_missing_sale_accounting(
             'reason': 'sale_table_missing',
         }
 
-    if not table_exists(conn, 'sme_journal_entries'):
+    try:
+        ensure_sme_journal_schema(
+            conn,
+            commit=True,
+        )
+
+    except Exception as exc:
+        logger.exception(
+            'Không thể khởi tạo SME journal schema: %s',
+            exc,
+        )
+
         return {
-            'success': True,
+            'success': False,
             'scanned': 0,
             'enqueued': 0,
             'skipped': 0,
-            'errors': 0,
-            'reason': 'sme_journal_entries_missing',
+            'errors': 1,
+            'reason': 'sme_journal_schema_init_failed',
+            'error': str(exc),
         }
 
     # ---------------------------------------------------------

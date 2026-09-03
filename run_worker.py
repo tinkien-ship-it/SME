@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+import logging.handlers
 import os
 import sqlite3
 import subprocess
