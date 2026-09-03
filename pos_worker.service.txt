@@ -1,16 +1,14 @@
-[cite: 1]
-Description=POS System Background Worker (Scheduler)
+[Unit]
+Description=KETO POS Worker
 After=network.target
 
-[cite: 1]
-# PHÂN VÙNG CHẠY NGẦM
+[Service]
+Type=simple
 User=root
-Group=root
 WorkingDirectory=/root/pos
-ExecStart=/root/pos/venv/bin/python3 run_worker.py
+ExecStart=/root/pos/venv/bin/python /root/pos/pos_worker.py
 Restart=always
-RestartSec=5s
+RestartSec=3
 
-[cite: 1]
-# PHÂN VÙNG KÍCH HOẠT KHI BOOT
+[Install]
 WantedBy=multi-user.target

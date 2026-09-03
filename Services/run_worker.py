@@ -79,6 +79,35 @@ try:
 except ValueError:
     _DEFAULT_QUEUE_SEC = 30
 
+# Accounting reconciliation:
+# định kỳ tìm completed sale bị thiếu bút toán và đưa lại vào queue.
+try:
+    _RECONCILE_INTERVAL_SEC = int(
+        os.environ.get(
+            'SME_ACCOUNTING_RECONCILE_SEC',
+            '300',
+        ) or 300
+    )
+except ValueError:
+    _RECONCILE_INTERVAL_SEC = 300
+
+try:
+    _RECONCILE_BATCH_SIZE = int(
+        os.environ.get(
+            'SME_ACCOUNTING_RECONCILE_BATCH',
+            '100',
+        ) or 100
+    )
+except ValueError:
+    _RECONCILE_BATCH_SIZE = 100
+
+_RECONCILE_BATCH_SIZE = max(
+    1,
+    min(_RECONCILE_BATCH_SIZE, 1000),
+)
+
+_reconcile_tick_lock = None
+
 def _env_truthy(name: str) -> bool:
     return (os.environ.get(name) or '').strip().lower() in ('1', 'true', 'yes', 'on')
 
@@ -290,6 +319,28 @@ def _job_accounting_queue():
     finally:
         _queue_tick_lock.release()
 
+def _job_accounting_reconcile():
+    """
+    Named reconciliation job.
+
+    Không cho 2 tick reconcile chạy chồng nhau trong cùng worker.
+    """
+    global _reconcile_tick_lock
+
+    if _reconcile_tick_lock is None:
+        _reconcile_tick_lock = threading.Lock()
+
+    if not _reconcile_tick_lock.acquire(blocking=False):
+        logger.debug(
+            'accounting_reconcile: tick trước chưa xong — bỏ qua'
+        )
+        return
+
+    try:
+        _reconcile_missing_sale_accounting()
+    finally:
+        _reconcile_tick_lock.release()
+
 def check_tenant_expirations():
     today = datetime.now().strftime('%Y-%m-%d')
     def _write():
@@ -416,6 +467,128 @@ def _collect_tenant_db_paths() -> list[str]:
                 _add(row['db_path'] if isinstance(row, sqlite3.Row) else row[0])
         except Exception: pass
     return out
+
+def _reconcile_missing_sale_accounting():
+    """
+    Safety-net kế toán.
+
+    Quét từng tenant DB để tìm:
+        sale.status = completed
+        nhưng chưa có active SALE journal.
+
+    Chỉ enqueue; accounting queue worker sẽ ghi sổ.
+
+    Nếu DB đang bận thì bỏ qua tenant ở tick này.
+    Tick 5 phút sau sẽ thử lại.
+    """
+
+    try:
+        tenant_dbs = _collect_tenant_db_paths()
+
+        if not tenant_dbs:
+            return
+
+        total_scanned = 0
+        total_enqueued = 0
+        total_skipped = 0
+        total_errors = 0
+
+        for db_path in tenant_dbs:
+            try:
+                with open_sqlite(
+                    db_path,
+                    timeout=_QUEUE_PROCESS_TIMEOUT_SEC,
+                ) as conn:
+                    conn.row_factory = sqlite3.Row
+
+                    from Services.accounting_queue import (
+                        reconcile_missing_sale_accounting,
+                    )
+
+                    result = reconcile_missing_sale_accounting(
+                        conn,
+                        batch_size=_RECONCILE_BATCH_SIZE,
+                        created_by='pos_worker_reconcile',
+                    )
+
+                    scanned = int(
+                        result.get('scanned') or 0
+                    )
+                    enqueued = int(
+                        result.get('enqueued') or 0
+                    )
+                    skipped = int(
+                        result.get('skipped') or 0
+                    )
+                    errors = int(
+                        result.get('errors') or 0
+                    )
+
+                    total_scanned += scanned
+                    total_enqueued += enqueued
+                    total_skipped += skipped
+                    total_errors += errors
+
+                    if enqueued or errors:
+                        logger.info(
+                            'accounting_reconcile [%s]: '
+                            'scanned=%d enqueued=%d '
+                            'skipped=%d errors=%d',
+                            os.path.basename(db_path),
+                            scanned,
+                            enqueued,
+                            skipped,
+                            errors,
+                        )
+
+            except OPERATIONAL_ERROR as exc:
+                msg = str(exc).lower()
+
+                if (
+                    'locked' in msg
+                    or 'busy' in msg
+                    or 'timeout' in msg
+                ):
+                    logger.debug(
+                        'accounting_reconcile skip busy %s',
+                        os.path.basename(db_path),
+                    )
+                    continue
+
+                logger.warning(
+                    'accounting_reconcile [%s] DB error: %s',
+                    os.path.basename(db_path),
+                    exc,
+                )
+
+            except Exception as exc:
+                logger.warning(
+                    'accounting_reconcile [%s] skip: %s',
+                    os.path.basename(db_path),
+                    exc,
+                    exc_info=True,
+                )
+
+            if _QUEUE_YIELD_SEC > 0:
+                time.sleep(_QUEUE_YIELD_SEC)
+
+        if total_enqueued or total_errors:
+            logger.info(
+                'accounting_reconcile total: '
+                'scanned=%d enqueued=%d '
+                'skipped=%d errors=%d',
+                total_scanned,
+                total_enqueued,
+                total_skipped,
+                total_errors,
+            )
+
+    except Exception as exc:
+        logger.error(
+            'accounting_reconcile worker error: %s',
+            exc,
+            exc_info=True,
+        )
 
 def _db_has_pending_accounting_jobs(db_path: str) -> bool | None:
     try:
@@ -544,13 +717,45 @@ def start_worker():
         replace_existing=True,
     )
 
+    # Interval mặc định 5 phút:
+    # tìm completed sale bị thiếu accounting journal.
+    reconcile_interval = max(
+        60,
+        _RECONCILE_INTERVAL_SEC,
+    )
+
+    scheduler.add_job(
+        func=_job_accounting_reconcile,
+        trigger=IntervalTrigger(
+            seconds=reconcile_interval,
+        ),
+        id='accounting_reconcile_worker',
+        name='accounting_reconcile_worker',
+        replace_existing=True,
+    )
+
     # 4. Bắt đầu Scheduler
     scheduler.start()
-    
+
+    # Chạy reconcile ngay một lần khi worker khởi động.
+    # Không cần chờ interval 5 phút đầu tiên.
+    try:
+        _job_accounting_reconcile()
+    except Exception as exc:
+        logger.warning(
+            'Initial accounting reconcile failed: %s',
+            exc,
+            exc_info=True,
+        )
+
     logger.info(
-        'Schedulers started (pid=%s, accounting_queue every %ss)',
+        'Schedulers started '
+        '(pid=%s, accounting_queue=%ss, '
+        'accounting_reconcile=%ss, reconcile_batch=%s)',
         os.getpid(),
         queue_interval,
+        reconcile_interval,
+        _RECONCILE_BATCH_SIZE,
     )
 
     # 5. GIỮ PROCESS SỐNG MÃI MÃI (CHỜ SCHEDULER CHẠY)

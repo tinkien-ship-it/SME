@@ -12,6 +12,7 @@ import json
 import logging
 import sqlite3
 from datetime import datetime
+from db.dialect import table_exists
 
 from db_utils import (
     begin_immediate,
@@ -151,31 +152,261 @@ def enqueue_accounting_job(
         return cursor.lastrowid
 
     if commit:
-        return sqlite_write_retry(_enqueue, label='enqueue_accounting_job')
+        return sqlite_write_retry(
+            _enqueue,
+            label='enqueue_accounting_job',
+        )
 
+    # ---------------------------------------------------------
+    # commit=False:
+    # Caller đang quản lý transaction.
+    # Logic phải giống hoàn toàn nhánh commit=True.
+    # ---------------------------------------------------------
     existing = conn.execute(
-        "SELECT id FROM accounting_jobs WHERE sale_id = ? AND job_type = ? AND status IN ('pending', 'processing')",
+        """
+        SELECT id
+        FROM accounting_jobs
+        WHERE sale_id = ?
+          AND job_type = ?
+          AND status IN ('pending', 'processing')
+        """,
         (sale_id, job_type),
     ).fetchone()
+
     if existing:
+        existing_id = (
+            existing['id']
+            if hasattr(existing, 'keys')
+            else existing[0]
+        )
+
         if replace_existing:
             conn.execute(
-                "UPDATE accounting_jobs SET status = 'cancelled' WHERE id = ?",
-                (existing[0] if not isinstance(existing, sqlite3.Row) else existing['id'],),
+                """
+                UPDATE accounting_jobs
+                SET status = 'cancelled'
+                WHERE id = ?
+                """,
+                (existing_id,),
             )
         else:
             return None
 
+    # Giống nhánh commit=True:
+    # completed job cũ thì không tạo lại,
+    # trừ khi caller chủ động replace.
+    done = conn.execute(
+        """
+        SELECT id
+        FROM accounting_jobs
+        WHERE sale_id = ?
+          AND job_type = ?
+          AND status = 'completed'
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (sale_id, job_type),
+    ).fetchone()
+
+    if done and not replace_existing:
+        return None
+
     features_json = json.dumps(features) if features else None
+
     cursor = conn.execute(
         """
-        INSERT INTO accounting_jobs (sale_id, job_type, status, accounting_regime, created_by, replace_existing, features_json)
+        INSERT INTO accounting_jobs
+        (
+            sale_id,
+            job_type,
+            status,
+            accounting_regime,
+            created_by,
+            replace_existing,
+            features_json
+        )
         VALUES (?, ?, 'pending', ?, ?, ?, ?)
         """,
-        (sale_id, job_type, accounting_regime, created_by, 1 if replace_existing else 0, features_json),
+        (
+            sale_id,
+            job_type,
+            accounting_regime,
+            created_by,
+            1 if replace_existing else 0,
+            features_json,
+        ),
     )
+
     return cursor.lastrowid
 
+def reconcile_missing_sale_accounting(
+    conn,
+    *,
+    batch_size: int = 100,
+    accounting_regime: str | None = None,
+    features: dict | None = None,
+    created_by: str = 'pos_worker_reconcile',
+) -> dict:
+    """
+    Safety-net cho Accounting Queue.
+
+    Tìm các sale:
+      - status = completed
+      - chưa có bút toán SALE_REVENUE / SALE_COGS đang posted
+      - chưa có job pending / processing / retry
+
+    Sau đó enqueue sale_journal để worker xử lý.
+
+    Journal thực tế là nguồn xác nhận cuối cùng, không phải trạng thái
+    completed của accounting_jobs.
+
+    replace_existing=True chỉ được dùng sau khi đã xác nhận sale
+    không có active journal, nhờ đó có thể phục hồi trường hợp:
+        accounting_jobs = completed
+        nhưng journal thực tế bị thiếu.
+    """
+
+    ensure_accounting_queue_schema(conn, commit=False)
+
+    try:
+        batch_size = int(batch_size or 100)
+    except (TypeError, ValueError):
+        batch_size = 100
+
+    batch_size = max(1, min(batch_size, 1000))
+
+    # ---------------------------------------------------------
+    # 1. Kiểm tra schema.
+    # ---------------------------------------------------------
+    if not table_exists(conn, 'sale'):
+        return {
+            'success': True,
+            'scanned': 0,
+            'enqueued': 0,
+            'skipped': 0,
+            'errors': 0,
+            'reason': 'sale_table_missing',
+        }
+
+    if not table_exists(conn, 'sme_journal_entries'):
+        return {
+            'success': True,
+            'scanned': 0,
+            'enqueued': 0,
+            'skipped': 0,
+            'errors': 0,
+            'reason': 'sme_journal_entries_missing',
+        }
+
+    # ---------------------------------------------------------
+    # 2. Tìm completed sale chưa thực sự được ghi sổ.
+    #
+    # Chỉ cần có một active SALE journal là xem sale đã được
+    # sale_journal xử lý. Không yêu cầu bắt buộc có SALE_COGS,
+    # vì sale dịch vụ có thể không phát sinh COGS.
+    #
+    # Đồng thời bỏ qua sale đang có job sống để không phá job
+    # worker đang xử lý.
+    # ---------------------------------------------------------
+    rows = conn.execute(
+        """
+        SELECT s.id
+        FROM sale s
+        WHERE LOWER(TRIM(COALESCE(s.status, ''))) = 'completed'
+
+          AND NOT EXISTS (
+              SELECT 1
+              FROM sme_journal_entries je
+              WHERE je.document_id = s.id
+                AND je.document_type IN ('SALE_REVENUE', 'SALE_COGS')
+                AND LOWER(TRIM(COALESCE(je.status, ''))) = 'posted'
+                AND je.reverses_id IS NULL
+          )
+
+          AND NOT EXISTS (
+              SELECT 1
+              FROM accounting_jobs aj
+              WHERE aj.sale_id = s.id
+                AND aj.job_type = 'sale_journal'
+                AND aj.status IN ('pending', 'processing', 'retry')
+          )
+
+        ORDER BY s.id ASC
+        LIMIT ?
+        """,
+        (batch_size,),
+    ).fetchall()
+
+    scanned = len(rows)
+    enqueued = 0
+    skipped = 0
+    error_count = 0
+    error_details = []
+
+    # ---------------------------------------------------------
+    # 3. Enqueue từng sale bị thiếu.
+    # ---------------------------------------------------------
+    for row in rows:
+        try:
+            sale_id = int(
+                row['id']
+                if hasattr(row, 'keys')
+                else row[0]
+            )
+
+            job_id = enqueue_accounting_job(
+                conn,
+                sale_id,
+                job_type='sale_journal',
+                accounting_regime=accounting_regime,
+                created_by=created_by,
+
+                # Query phía trên đã xác nhận không có active
+                # journal. Cho phép vượt qua completed job cũ.
+                replace_existing=True,
+
+                features=features,
+                commit=False,
+            )
+
+            if job_id is not None:
+                enqueued += 1
+            else:
+                skipped += 1
+
+        except Exception as exc:
+            error_count += 1
+
+            if len(error_details) < 20:
+                error_details.append({
+                    'sale_id': (
+                        row['id']
+                        if hasattr(row, 'keys')
+                        else row[0]
+                    ),
+                    'error': str(exc),
+                })
+
+            logging.exception(
+                'Accounting reconcile enqueue failed sale_id=%s',
+                (
+                    row['id']
+                    if hasattr(row, 'keys')
+                    else row[0]
+                ),
+            )
+
+    # Commit toàn bộ batch một lần.
+    conn.commit()
+
+    return {
+        'success': True,
+        'scanned': scanned,
+        'enqueued': enqueued,
+        'skipped': skipped,
+        'errors': error_count,
+        'error_details': error_details,
+    }
 
 def ensure_sale_accounting_posted(
     conn: sqlite3.Connection,
