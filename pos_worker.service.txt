@@ -1,0 +1,16 @@
+[cite: 1]
+Description=POS System Background Worker (Scheduler)
+After=network.target
+
+[cite: 1]
+# PHÂN VÙNG CHẠY NGẦM
+User=root
+Group=root
+WorkingDirectory=/root/pos
+ExecStart=/root/pos/venv/bin/python3 run_worker.py
+Restart=always
+RestartSec=5s
+
+[cite: 1]
+# PHÂN VÙNG KÍCH HOẠT KHI BOOT
+WantedBy=multi-user.target
