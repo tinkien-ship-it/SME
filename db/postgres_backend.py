@@ -176,7 +176,6 @@ class PgCursor:
     def execute(self, query: str, params: Any = None):
         from db_utils import recover_pg_transaction
         recover_pg_transaction(self._cur.connection)
-
         sql = rewrite_sql_for_postgres(query, schema=self._schema)
         want_id = _is_insert(query) and 'RETURNING' not in sql.upper()
         is_write = want_id or bool(_WRITE_SQL_RE.match(query or ''))
@@ -187,7 +186,8 @@ class PgCursor:
             except Exception:
                 pass
 
-        # SELECT / đọc: không bọc SAVEPOINT
+        # SELECT / đọc: không bọc SAVEPOINT — RELEASE sẽ nuốt result → fetchone lỗi
+        # "command status: RELEASE" và worker treo / Nginx 504.
         if not is_write:
             try:
                 if params is None:
@@ -198,13 +198,13 @@ class PgCursor:
                 self.rowcount = getattr(self._cur, 'rowcount', -1)
                 return self
             except Exception:
+                # Postgres: lỗi 1 câu → abort cả transaction; phải rollback
+                # nếu không request sau báo "current transaction is aborted"
                 _full_rollback()
                 raise
 
-        # ===== Phần ghi (có SAVEPOINT) =====
         try:
             self._cur.execute('SAVEPOINT sme_stmt')
-
             used_returning = False
             if want_id:
                 try:
@@ -220,43 +220,37 @@ class PgCursor:
                         self._cur.execute('SAVEPOINT sme_stmt')
                     except Exception:
                         _full_rollback()
-                        raise
+                        self._cur.execute('SAVEPOINT sme_stmt')
                     used_returning = False
-
             if not used_returning:
                 if params is None:
                     self._cur.execute(sql)
                 else:
                     self._cur.execute(sql, params)
-
-            # Lấy lastrowid nếu là INSERT
             if _is_insert(query):
                 if used_returning:
                     row = self._cur.fetchone()
                     rid = _coerce_lastrowid(_row_first_value(row))
+                    # RETURNING id = NULL (cột id không có DEFAULT/SERIAL) → thử lastval
                     if rid == 0:
                         rid = _read_lastval(self._cur)
                     self.lastrowid = rid
                 else:
                     self.lastrowid = _read_lastval(self._cur)
-
-            # RELEASE SAVEPOINT
             try:
                 self._cur.execute('RELEASE SAVEPOINT sme_stmt')
             except Exception:
+                # Transaction đã abort trước RELEASE — rollback sạch rồi báo lỗi gốc
                 _full_rollback()
                 raise
-
             self.description = getattr(self._cur, 'description', None)
             self.rowcount = getattr(self._cur, 'rowcount', -1)
             return self
-
         except Exception:
             try:
                 self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
             except Exception:
-                pass
-            _full_rollback()
+                _full_rollback()
             raise
 
     def executemany(self, query: str, params_seq):
