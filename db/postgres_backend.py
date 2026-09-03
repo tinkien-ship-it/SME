@@ -269,7 +269,7 @@ class PgCursor:
                     self._cur.execute(sql, params)
 
                 if _is_insert(query):
-                    self.lastrowid = _read_lastval_safe(self._cur)
+                    self.lastrowid = _read_lastval(self._cur)
             except Exception:
                 try:
                     self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
