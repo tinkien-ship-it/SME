@@ -152,14 +152,34 @@ def _coerce_lastrowid(val: Any) -> int:
         return 0
 
 
-def _read_lastval(executor) -> int:
-    """Đọc sequence vừa dùng sau INSERT (tương đương sqlite lastrowid)."""
+def _read_lastval(cur) -> int:
+    """
+    Đọc sequence vừa dùng sau INSERT (tương đương sqlite lastrowid).
+    Bọc SAVEPOINT để tránh làm hỏng Transaction chính nếu bảng không dùng Sequence.
+    """
     try:
-        row = executor.execute('SELECT lastval()').fetchone()
-        return _coerce_lastrowid(_row_first_value(row))
+        cur.execute('SAVEPOINT sme_lastval')
+        cur.execute('SELECT lastval()')
+        row = cur.fetchone()
+        rid = _coerce_lastrowid(_row_first_value(row))
+        cur.execute('RELEASE SAVEPOINT sme_lastval')
+        return rid
     except Exception:
+        try:
+            cur.execute('ROLLBACK TO SAVEPOINT sme_lastval')
+        except Exception:
+            pass
         return 0
 
+def _sanitize_params(params):
+    """Chuyển đổi các chuỗi rỗng '' thành None để PostgreSQL nhận diện là NULL."""
+    if params is None:
+        return None
+    if isinstance(params, (list, tuple)):
+        return type(params)(None if p == "" else p for p in params)
+    if isinstance(params, dict):
+        return {k: (None if v == "" else v) for k, v in params.items()}
+    return params
 
 class PgCursor:
     """Cursor psycopg — rewrite SQL SQLite → PostgreSQL + lastrowid."""
@@ -169,9 +189,9 @@ class PgCursor:
     def __init__(self, cur, schema: str):
         self._cur = cur
         self._schema = schema
-        self.lastrowid = 0
-        self.rowcount = -1
-        self.description = None
+        self.lastrowid: int = 0
+        self.rowcount: int = -1
+        self.description: Optional[Any] = None
 
     def execute(self, query: str, params: Any = None):
         from db_utils import recover_pg_transaction
@@ -187,7 +207,7 @@ class PgCursor:
             except Exception:
                 pass
 
-        # SELECT / đọc: không bọc SAVEPOINT
+        # ===== Case 1: SELECT / Read-only (Không bọc SAVEPOINT) =====
         if not is_write:
             try:
                 if params is None:
@@ -201,66 +221,73 @@ class PgCursor:
                 _full_rollback()
                 raise
 
-        # ===== Phần ghi (có SAVEPOINT) =====
+        # ===== Case 2: WRITE Operations (Bọc trong SAVEPOINT) =====
         try:
             self._cur.execute('SAVEPOINT sme_stmt')
+        except Exception:
+            _full_rollback()
+            raise
 
-            used_returning = False
-            if want_id:
+        executed_successfully = False
+        used_returning = False
+
+        # Thử chèn 'RETURNING id' nếu là câu INSERT chưa có RETURNING
+        if want_id:
+            try:
+                sql_ret = sql.rstrip().rstrip(';') + ' RETURNING id'
+                if params is None:
+                    self._cur.execute(sql_ret)
+                else:
+                    self._cur.execute(sql_ret, params)
+                
+                # Lấy id vừa tạo ngay lập tức
+                row = self._cur.fetchone()
+                rid = _coerce_lastrowid(_row_first_value(row))
+                if rid == 0:
+                    rid = _read_lastval_safe(self._cur)
+                self.lastrowid = rid
+
+                executed_successfully = True
+                used_returning = True
+            except Exception:
+                # Nếu câu có RETURNING id thất bại (VD: bảng không có cột 'id')
+                # Rollback về Savepoint để xóa trạng thái InFailedSqlTransaction
                 try:
-                    sql_ret = sql.rstrip().rstrip(';') + ' RETURNING id'
-                    if params is None:
-                        self._cur.execute(sql_ret)
-                    else:
-                        self._cur.execute(sql_ret, params)
-                    used_returning = True
+                    self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
+                    self._cur.execute('SAVEPOINT sme_stmt')
                 except Exception:
-                    # Thử lại bằng câu gốc (không RETURNING)
-                    try:
-                        self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
-                        self._cur.execute('SAVEPOINT sme_stmt')
-                    except Exception:
-                        _full_rollback()
-                        raise
-                    used_returning = False
+                    _full_rollback()
+                    raise
+                executed_successfully = False
 
-            if not used_returning:
+        # Thực thi câu lệnh gốc (nếu không dùng được RETURNING id hoặc không phải INSERT lấy ID)
+        if not executed_successfully:
+            try:
                 if params is None:
                     self._cur.execute(sql)
                 else:
                     self._cur.execute(sql, params)
 
-            # Lấy lastrowid nếu là INSERT
-            if _is_insert(query):
-                if used_returning:
-                    row = self._cur.fetchone()
-                    rid = _coerce_lastrowid(_row_first_value(row))
-                    if rid == 0:
-                        rid = _read_lastval(self._cur)
-                    self.lastrowid = rid
-                else:
-                    self.lastrowid = _read_lastval(self._cur)
-
-            # RELEASE SAVEPOINT
-            try:
-                self._cur.execute('RELEASE SAVEPOINT sme_stmt')
+                if _is_insert(query):
+                    self.lastrowid = _read_lastval_safe(self._cur)
             except Exception:
-                # Transaction đã abort trước RELEASE → rollback sạch rồi báo lỗi gốc
+                try:
+                    self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
+                except Exception:
+                    pass
                 _full_rollback()
                 raise
 
-            self.description = getattr(self._cur, 'description', None)
-            self.rowcount = getattr(self._cur, 'rowcount', -1)
-            return self
-
+        # Release Savepoint sau khi thực thi thành công
+        try:
+            self._cur.execute('RELEASE SAVEPOINT sme_stmt')
         except Exception:
-            # Bất kỳ lỗi nào cũng phải rollback sạch connection
-            try:
-                self._cur.execute('ROLLBACK TO SAVEPOINT sme_stmt')
-            except Exception:
-                pass
-            _full_rollback()  # ← luôn rollback full để connection sạch
+            _full_rollback()
             raise
+
+        self.description = getattr(self._cur, 'description', None)
+        self.rowcount = getattr(self._cur, 'rowcount', -1)
+        return self
 
     def executemany(self, query: str, params_seq):
         from db_utils import recover_pg_transaction

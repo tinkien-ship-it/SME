@@ -21,7 +21,9 @@ KEY_LOT_OPS = 'inventory_lot_ops_tracking'  # '1' = theo dõi lô vận hành kh
 
 
 def _get_setting(conn: sqlite3.Connection, key: str, default: str = '') -> str:
-    row = conn.execute('SELECT value FROM settings WHERE key = ?', (key,)).fetchone()
+    from db.dialect import is_postgres
+    placeholder = '%s' if is_postgres() else '?'
+    row = conn.execute(f'SELECT value FROM settings WHERE key = {placeholder}', (key,)).fetchone()
     if not row:
         return default
     val = row[0] if not hasattr(row, 'keys') else row['value']
