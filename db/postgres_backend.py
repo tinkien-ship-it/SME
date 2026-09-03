@@ -244,7 +244,7 @@ class PgCursor:
                 row = self._cur.fetchone()
                 rid = _coerce_lastrowid(_row_first_value(row))
                 if rid == 0:
-                    rid = _read_lastval_safe(self._cur)
+                    rid = _read_lastval(self._cur)
                 self.lastrowid = rid
 
                 executed_successfully = True
