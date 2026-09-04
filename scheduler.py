@@ -87,6 +87,15 @@ _RECONCILE_BATCH_SIZE = max(
 
 _reconcile_tick_lock = None
 
+try:
+    _ACCOUNTING_STUCK_MINUTES = int(
+        os.environ.get('SME_ACCOUNTING_STUCK_MINUTES', '10') or 10
+    )
+except ValueError:
+    _ACCOUNTING_STUCK_MINUTES = 10
+
+_ACCOUNTING_STUCK_MINUTES = max(2, min(_ACCOUNTING_STUCK_MINUTES, 1440))
+
 
 def _env_truthy(name: str) -> bool:
     return (os.environ.get(name) or '').strip().lower() in ('1', 'true', 'yes', 'on')
@@ -695,11 +704,13 @@ def init_schedulers(app, backup_root):
     logger.info(
         'Schedulers started '
         '(pid=%s, accounting_queue=%ss, '
-        'accounting_reconcile=%ss, reconcile_batch=%s)',
+        'accounting_reconcile=%ss, reconcile_batch=%s, '
+        'accounting_stuck=%smin)',
         os.getpid(),
         max(5, _DEFAULT_QUEUE_SEC),
         max(60, _RECONCILE_INTERVAL_SEC),
         _RECONCILE_BATCH_SIZE,
+        _ACCOUNTING_STUCK_MINUTES,
     )
     return expiry_scheduler, backup_scheduler
 
@@ -1023,7 +1034,31 @@ def _reconcile_missing_sale_accounting():
 
                     from Services.accounting_queue import (
                         reconcile_missing_sale_accounting,
+                        recover_accounting_queue_health,
                     )
+
+                    watchdog = recover_accounting_queue_health(
+                        conn,
+                        stale_minutes=_ACCOUNTING_STUCK_MINUTES,
+                        accounting_regime=accounting_regime,
+                        features=features,
+                        created_by='scheduler_watchdog',
+                    )
+
+                    if (
+                        watchdog.get('recovered')
+                        or watchdog.get('completed')
+                        or watchdog.get('errors')
+                    ):
+                        logger.info(
+                            'accounting_watchdog [%s]: '
+                            'recovered=%d completed=%d skipped=%d errors=%d',
+                            tenant_id,
+                            int(watchdog.get('recovered') or 0),
+                            int(watchdog.get('completed') or 0),
+                            int(watchdog.get('skipped') or 0),
+                            int(watchdog.get('errors') or 0),
+                        )
 
                     result = reconcile_missing_sale_accounting(
                         conn,

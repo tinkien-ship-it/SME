@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from db.dialect import table_exists
 from Services.sme.journal_schema import ensure_sme_journal_schema
 
@@ -240,6 +240,349 @@ def enqueue_accounting_job(
 
     return cursor.lastrowid
 
+
+def _row_value(row, key: str, index: int | None = None, default=None):
+    """Đọc sqlite3.Row / dict / tuple mà không phụ thuộc backend."""
+    if row is None:
+        return default
+    try:
+        if hasattr(row, 'keys') and key in row.keys():
+            return row[key]
+    except Exception:
+        pass
+    if index is not None:
+        try:
+            return row[index]
+        except Exception:
+            pass
+    return default
+
+
+def _parse_job_datetime(value) -> datetime | None:
+    """Parse timestamp SQLite/PostgreSQL (có/không timezone) cho watchdog."""
+    raw = str(value or '').strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace('Z', '+00:00'))
+    except (TypeError, ValueError):
+        pass
+    for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S'):
+        try:
+            return datetime.strptime(raw[:26], fmt)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _is_stale_started_at(value, *, stale_minutes: int) -> bool:
+    dt = _parse_job_datetime(value)
+    if dt is None:
+        return True
+    now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.now()
+    return now - dt >= timedelta(minutes=max(1, int(stale_minutes or 10)))
+
+
+def _has_active_sale_revenue(conn, sale_id: int) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1
+        FROM sme_journal_entries
+        WHERE document_id = ?
+          AND document_type = 'SALE_REVENUE'
+          AND LOWER(TRIM(COALESCE(status, ''))) = 'posted'
+          AND reverses_id IS NULL
+        LIMIT 1
+        """,
+        (int(sale_id),),
+    ).fetchone()
+    return bool(row)
+
+
+def _archive_status_conflicts(
+    conn,
+    *,
+    sale_id: int,
+    job_type: str,
+    target_status: str,
+    keep_id: int,
+) -> int:
+    """
+    Schema cũ có UNIQUE(sale_id, job_type, status).
+    Archive dòng cũ đang chiếm cùng status trước khi chuyển job hiện tại.
+    """
+    rows = conn.execute(
+        """
+        SELECT id
+        FROM accounting_jobs
+        WHERE sale_id = ?
+          AND job_type = ?
+          AND status = ?
+          AND id <> ?
+        ORDER BY id
+        """,
+        (int(sale_id), str(job_type), str(target_status), int(keep_id)),
+    ).fetchall()
+
+    count = 0
+    for row in rows:
+        old_id = int(_row_value(row, 'id', 0))
+        conn.execute(
+            "UPDATE accounting_jobs SET status = ? WHERE id = ?",
+            (f'archived_{target_status}_{old_id}', old_id),
+        )
+        count += 1
+    return count
+
+
+def _revive_job_for_missing_revenue(
+    conn,
+    *,
+    sale_id: int,
+    accounting_regime: str | None,
+    features: dict | None,
+    created_by: str,
+) -> int | None:
+    """
+    Tái sử dụng job failed/completed cũ thay vì INSERT vô hạn.
+    replace_existing=1 để journal dở dang (vd chỉ có SALE_COGS) được rebuild trọn bộ.
+    """
+    features_json = json.dumps(
+        features if isinstance(features, dict) else {},
+        ensure_ascii=False,
+    )
+
+    old = conn.execute(
+        """
+        SELECT id, status
+        FROM accounting_jobs
+        WHERE sale_id = ?
+          AND job_type = 'sale_journal'
+          AND status IN ('failed', 'completed')
+        ORDER BY
+          CASE WHEN status = 'completed' THEN 0 ELSE 1 END,
+          id DESC
+        LIMIT 1
+        """,
+        (int(sale_id),),
+    ).fetchone()
+
+    if old:
+        job_id = int(_row_value(old, 'id', 0))
+        _archive_status_conflicts(
+            conn,
+            sale_id=int(sale_id),
+            job_type='sale_journal',
+            target_status='retry',
+            keep_id=job_id,
+        )
+        conn.execute(
+            """
+            UPDATE accounting_jobs
+            SET status = 'retry',
+                attempts = 0,
+                last_error = NULL,
+                started_at = NULL,
+                completed_at = NULL,
+                accounting_regime = ?,
+                created_by = ?,
+                replace_existing = 1,
+                features_json = ?
+            WHERE id = ?
+            """,
+            (accounting_regime, created_by, features_json, job_id),
+        )
+        return job_id
+
+    return enqueue_accounting_job(
+        conn,
+        int(sale_id),
+        job_type='sale_journal',
+        accounting_regime=accounting_regime,
+        created_by=created_by,
+        replace_existing=True,
+        features=features,
+        commit=False,
+    )
+
+
+def recover_accounting_queue_health(
+    conn,
+    *,
+    stale_minutes: int = 10,
+    accounting_regime: str | None = None,
+    features: dict | None = None,
+    created_by: str = 'scheduler_watchdog',
+) -> dict:
+    """
+    Watchdog tự chữa Accounting Queue.
+
+    - processing quá lâu + chưa có SALE_REVENUE -> retry lại chính job đó.
+    - failed + chưa có SALE_REVENUE -> retry lại chính job đó.
+    - processing/failed nhưng SALE_REVENUE đã posted -> chuẩn hóa completed.
+    - recovery luôn replace_existing=1 để xử lý journal dở dang an toàn.
+    """
+    ensure_accounting_queue_schema(conn, commit=False)
+    conn.row_factory = sqlite3.Row
+
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM accounting_jobs
+        WHERE job_type = 'sale_journal'
+          AND status IN ('processing', 'failed')
+        ORDER BY sale_id, id DESC
+        """
+    ).fetchall()
+
+    recovered = 0
+    completed = 0
+    skipped = 0
+    errors = 0
+    details: list[dict] = []
+    handled_sales: set[int] = set()
+
+    features_json = json.dumps(
+        features if isinstance(features, dict) else {},
+        ensure_ascii=False,
+    )
+
+    for job in rows:
+        try:
+            job_id = int(_row_value(job, 'id', 0))
+            sale_id = int(_row_value(job, 'sale_id', 1))
+            status = str(_row_value(job, 'status', 3, '') or '').strip().lower()
+
+            if sale_id in handled_sales:
+                continue
+
+            sale = conn.execute(
+                "SELECT id, status FROM sale WHERE id = ? LIMIT 1",
+                (sale_id,),
+            ).fetchone()
+            if not sale or str(_row_value(sale, 'status', 1, '') or '').strip().lower() != 'completed':
+                skipped += 1
+                handled_sales.add(sale_id)
+                continue
+
+            has_revenue = _has_active_sale_revenue(conn, sale_id)
+
+            if status == 'processing':
+                started_at = _row_value(job, 'started_at', 7)
+                if not has_revenue and not _is_stale_started_at(
+                    started_at,
+                    stale_minutes=stale_minutes,
+                ):
+                    skipped += 1
+                    handled_sales.add(sale_id)
+                    continue
+
+            if has_revenue:
+                _archive_status_conflicts(
+                    conn,
+                    sale_id=sale_id,
+                    job_type='sale_journal',
+                    target_status='completed',
+                    keep_id=job_id,
+                )
+                conn.execute(
+                    """
+                    UPDATE accounting_jobs
+                    SET status = 'completed',
+                        completed_at = ?,
+                        last_error = NULL
+                    WHERE id = ?
+                    """,
+                    (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), job_id),
+                )
+                completed += 1
+                handled_sales.add(sale_id)
+                continue
+
+            live = conn.execute(
+                """
+                SELECT id
+                FROM accounting_jobs
+                WHERE sale_id = ?
+                  AND job_type = 'sale_journal'
+                  AND status IN ('pending', 'retry')
+                  AND id <> ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (sale_id, job_id),
+            ).fetchone()
+            if live:
+                skipped += 1
+                handled_sales.add(sale_id)
+                continue
+
+            _archive_status_conflicts(
+                conn,
+                sale_id=sale_id,
+                job_type='sale_journal',
+                target_status='retry',
+                keep_id=job_id,
+            )
+
+            previous_error = str(_row_value(job, 'last_error', 5, '') or '').strip()
+            note = (
+                f'watchdog recovery: {status}'
+                + (f' | previous: {previous_error[:350]}' if previous_error else '')
+            )
+
+            conn.execute(
+                """
+                UPDATE accounting_jobs
+                SET status = 'retry',
+                    attempts = 0,
+                    last_error = ?,
+                    started_at = NULL,
+                    completed_at = NULL,
+                    accounting_regime = COALESCE(?, accounting_regime),
+                    created_by = ?,
+                    replace_existing = 1,
+                    features_json = ?
+                WHERE id = ?
+                """,
+                (
+                    note[:500],
+                    accounting_regime,
+                    created_by,
+                    features_json,
+                    job_id,
+                ),
+            )
+            recovered += 1
+            handled_sales.add(sale_id)
+
+        except Exception as exc:
+            errors += 1
+            if len(details) < 20:
+                details.append({
+                    'job_id': _row_value(job, 'id', 0),
+                    'sale_id': _row_value(job, 'sale_id', 1),
+                    'error': str(exc),
+                })
+            logger.warning(
+                'accounting watchdog failed job=%s sale=%s: %s',
+                _row_value(job, 'id', 0),
+                _row_value(job, 'sale_id', 1),
+                exc,
+                exc_info=True,
+            )
+
+    conn.commit()
+    return {
+        'success': errors == 0,
+        'recovered': recovered,
+        'completed': completed,
+        'skipped': skipped,
+        'errors': errors,
+        'details': details,
+    }
+
+
 def reconcile_missing_sale_accounting(
     conn,
     *,
@@ -375,19 +718,12 @@ def reconcile_missing_sale_accounting(
                 else row[0]
             )
 
-            job_id = enqueue_accounting_job(
+            job_id = _revive_job_for_missing_revenue(
                 conn,
-                sale_id,
-                job_type='sale_journal',
+                sale_id=sale_id,
                 accounting_regime=accounting_regime,
-                created_by=created_by,
-
-                # Query phía trên đã xác nhận không có active
-                # journal. Cho phép vượt qua completed job cũ.
-                replace_existing=True,
-
                 features=features,
-                commit=False,
+                created_by=created_by,
             )
 
             if job_id is not None:
@@ -580,6 +916,13 @@ def _process_one_job(conn: sqlite3.Connection, job: sqlite3.Row) -> str:
     )
 
     if result.get('posted') or result.get('reason') in _SKIP_REASONS:
+        _archive_status_conflicts(
+            conn,
+            sale_id=int(sale_id),
+            job_type='sale_journal',
+            target_status='completed',
+            keep_id=int(job_id),
+        )
         conn.execute(
             "UPDATE accounting_jobs SET status = 'completed', completed_at = ?, last_error = NULL WHERE id = ?",
             (now, job_id),
@@ -641,6 +984,14 @@ def process_accounting_jobs(conn: sqlite3.Connection, *, batch_size: int = BATCH
             try:
                 def _fail():
                     begin_immediate(conn, label='accounting_job_fail')
+                    if new_status == 'failed':
+                        _archive_status_conflicts(
+                            conn,
+                            sale_id=int(sale_id),
+                            job_type='sale_journal',
+                            target_status='failed',
+                            keep_id=int(job_id),
+                        )
                     conn.execute(
                         "UPDATE accounting_jobs SET status = ?, last_error = ?, attempts = ? WHERE id = ?",
                         (new_status, error_msg, attempts, job_id),
