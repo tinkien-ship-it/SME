@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Any
 
 from Services.sme.payment_method import normalize_sale_payment_method
+from Services.sme.account_roles import resolve_posting_account
 
 from Services.sme.journal_engine import (
     get_posting_rule,
@@ -70,73 +71,28 @@ def _product_revenue_class(
     return 'HH'
 
 
-def _revenue_account_for_class(
-    revenue_class: str,
-) -> str:
+def _revenue_role_for_class(revenue_class: str) -> str:
     return {
-        'HH': '5111',
-        'TP': '5112',
-        'DV': '5113',
-        'BDSDT': '5117',
+        'HH': 'revenue.goods',
+        'TP': 'revenue.fg',
+        'DV': 'revenue.service',
+        'BDSDT': 'revenue.investment_property',
     }[revenue_class]
 
 
+def resolve_revenue_posting_account(
+    conn: sqlite3.Connection,
+    revenue_class: str,
+) -> str:
+    """Resolve TK doanh thu qua Account Roles/COA hiện hành.
 
-
-def _account_is_postable(conn: sqlite3.Connection, account_code: str) -> bool:
-    """True khi tài khoản tồn tại, đang dùng (nếu có is_active) và được phép ghi sổ."""
-    code = str(account_code or '').strip()
-    if not code:
-        return False
-
-    cols = _table_columns(conn, 'sme_chart_of_accounts')
-    if not cols or 'code' not in cols:
-        return False
-
-    select_cols = []
-    if 'is_postable' in cols:
-        select_cols.append('is_postable')
-    if 'is_active' in cols:
-        select_cols.append('is_active')
-
-    if not select_cols:
-        return bool(conn.execute(
-            "SELECT code FROM sme_chart_of_accounts WHERE code = ? LIMIT 1",
-            (code,),
-        ).fetchone())
-
-    row = conn.execute(
-        f"SELECT {', '.join(select_cols)} FROM sme_chart_of_accounts "
-        "WHERE code = ? LIMIT 1",
-        (code,),
-    ).fetchone()
-    if not row:
-        return False
-
-    data = dict(row) if hasattr(row, 'keys') else {
-        name: row[i] for i, name in enumerate(select_cols)
-    }
-    if 'is_active' in data and not bool(data.get('is_active')):
-        return False
-    if 'is_postable' in data and not bool(data.get('is_postable')):
-        return False
-    return True
-
-
-def resolve_revenue_account(conn: sqlite3.Connection, preferred_code: str) -> str:
+    sale_journal không tự fallback tài khoản. Quy tắc leaf/default và
+    fallback 511 được tập trung tại account_roles.resolve_posting_account().
     """
-    Ưu tiên TK doanh thu cấp 2; nếu tenant không dùng cấp 2 thì fallback TK 511.
-    """
-    preferred = str(preferred_code or '').strip()
-    if preferred and _account_is_postable(conn, preferred):
-        return preferred
-    if _account_is_postable(conn, '511'):
-        return '511'
-    raise ValueError(
-        'Không có tài khoản doanh thu được phép ghi sổ: '
-        f'{preferred or "(trống)"} hoặc 511'
+    return resolve_posting_account(
+        conn,
+        _revenue_role_for_class(revenue_class),
     )
-
 
 def _money(value: Any) -> Decimal:
     return Decimal(str(value or 0)).quantize(Decimal('0.01'))
@@ -613,7 +569,7 @@ def _build_revenue_lines(
             lines.append({
                 **common,
 
-                'account_code': resolve_revenue_account(conn, '5113'),
+                'account_code': resolve_revenue_posting_account(conn, 'DV'),
 
                 'debit': 0,
                 'credit': revenue,
@@ -675,7 +631,7 @@ def _build_revenue_lines(
                     lines.append({
                         **common,
 
-                        'account_code': resolve_revenue_account(conn, '5111'),
+                        'account_code': resolve_revenue_posting_account(conn, 'HH'),
 
                         'debit': 0,
                         'credit': goods_rev,
@@ -693,7 +649,7 @@ def _build_revenue_lines(
                     lines.append({
                         **common,
 
-                        'account_code': resolve_revenue_account(conn, '5112'),
+                        'account_code': resolve_revenue_posting_account(conn, 'TP'),
 
                         'debit': 0,
                         'credit': finished_rev,
@@ -711,7 +667,7 @@ def _build_revenue_lines(
                     lines.append({
                         **common,
 
-                        'account_code': resolve_revenue_account(conn, '5113'),
+                        'account_code': resolve_revenue_posting_account(conn, 'DV'),
 
                         'debit': 0,
                         'credit': service_rev,
@@ -729,7 +685,7 @@ def _build_revenue_lines(
                     lines.append({
                         **common,
 
-                        'account_code': resolve_revenue_account(conn, '5117'),
+                        'account_code': resolve_revenue_posting_account(conn, 'BDSDT'),
 
                         'debit': 0,
                         'credit': bdsdt_rev,

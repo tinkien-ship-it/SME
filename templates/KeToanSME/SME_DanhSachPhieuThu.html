@@ -106,8 +106,9 @@
         <option value="">Đang tải danh mục…</option>
       </select>
       <div class="text-muted acct-filter-hint mt-1" id="hintCredit">
-        Hiển thị TK cấp 2 · 3 · 4 và cấp 1 không có TK con (kèm tên).
-        TK tổng hợp không chọn được — hãy chọn TK chi tiết.
+        Chỉ các tài khoản đang được phép ghi sổ mới có thể chọn.
+        Nếu doanh nghiệp không sử dụng tài khoản cấp 2, có thể hạch toán trực tiếp
+        vào tài khoản cấp 1 được cấu hình cho phép ghi sổ.
       </div>
     </div>
     <div class="mb-2"><label class="form-label small fw-semibold">Lý do</label><input type="text" id="fReason" class="form-control" placeholder="VD: Thu USD vào TK 1122…"></div>
@@ -147,7 +148,7 @@ function renderCounterpartOptions(filterText, preferred) {
   sel.innerHTML = rows.map(a => {
     const postable = Number(a.is_postable) === 1;
     const disabled = postable ? '' : ' disabled';
-    const suffix = postable ? '' : ' — (tổng hợp)';
+    const suffix = postable ? '' : ' — (không ghi sổ trực tiếp)';
     const label = `${padLabel(a.level)}${a.code} — ${a.name || ''}${suffix}`;
     return `<option value="${a.code}"${disabled}>${label}</option>`;
   }).join('');

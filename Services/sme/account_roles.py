@@ -12,7 +12,7 @@ from typing import Any
 from db_utils import sqlite_commit
 from Services.sme.coa_service import ensure_sme_coa_ready, get_account
 
-ROLES_SEED_VERSION = 'account_roles_v3_2026-08'
+ROLES_SEED_VERSION = 'account_roles_v4_2026-09'
 
 DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
     {
@@ -93,6 +93,14 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'default_account': '5113',
         'label': 'Doanh thu dịch vụ',
         'description': 'DT cung cấp dịch vụ',
+        'category': 'revenue',
+    },
+    {
+        'role_key': 'revenue.investment_property',
+        'root_hint': '5117',
+        'default_account': '5117',
+        'label': 'Doanh thu kinh doanh bất động sản đầu tư',
+        'description': 'DT kinh doanh bất động sản đầu tư',
         'category': 'revenue',
     },
     {
@@ -192,6 +200,19 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'category': 'tax',
     },
 ]
+
+
+
+# Fallback có kiểm soát cho các vai trò doanh thu.
+# Giữ root chuyên biệt 5111/5112/5113/5117 để không resolve nhầm nhóm.
+# Chỉ khi root chuyên biệt không còn leaf postable và TK 511 đã được
+# COA tự động chuyển thành postable thì role mới fallback về 511.
+ROLE_PARENT_FALLBACKS: dict[str, str] = {
+    'revenue.goods': '511',
+    'revenue.fg': '511',
+    'revenue.service': '511',
+    'revenue.investment_property': '511',
+}
 
 
 def _now() -> str:
@@ -767,6 +788,27 @@ def resolve_posting_account(
 
     if _is_postable_active(conn, root_hint):
         return root_hint
+
+    # Fallback cha có kiểm soát theo role.
+    # Ví dụ: khi 5111/5112/5113/5117 không còn được ghi sổ và
+    # hệ thống COA đã tự chuyển 511 thành postable, role doanh thu
+    # mới được phép resolve về 511.
+    if role:
+        fallback_parent = ROLE_PARENT_FALLBACKS.get(raw)
+        if fallback_parent and _is_postable_active(conn, fallback_parent):
+            if role.get('default_account') != fallback_parent:
+                try:
+                    conn.execute(
+                        """
+                        UPDATE sme_account_roles
+                        SET default_account = ?, updated_at = ?
+                        WHERE role_key = ?
+                        """,
+                        (fallback_parent, _now(), role['role_key']),
+                    )
+                except sqlite3.Error:
+                    pass
+            return fallback_parent
 
     raise ValueError(
         f'Không tìm thấy tài khoản ghi sổ cho '
