@@ -342,7 +342,7 @@ def renumber_journal_entries(
 
 
 def _apply_balance_delta(
-    c: sqlite3.Cursor,
+    c,
     *,
     account_code: str,
     fiscal_year: int,
@@ -352,21 +352,50 @@ def _apply_balance_delta(
     sign: int = 1,
 ) -> None:
     """Cộng/trừ phát sinh kỳ vào sme_account_balances (sign=-1 khi đảo)."""
+
     d = float(debit * sign)
     cr = float(credit * sign)
+
     c.execute(
         """
         INSERT INTO sme_account_balances (
-            account_code, fiscal_year, period,
-            period_debit, period_credit, closing_debit, closing_credit
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(account_code, fiscal_year, period) DO UPDATE SET
-            period_debit = period_debit + excluded.period_debit,
-            period_credit = period_credit + excluded.period_credit,
-            closing_debit = closing_debit + excluded.closing_debit,
-            closing_credit = closing_credit + excluded.closing_credit
+            account_code,
+            fiscal_year,
+            period,
+            period_debit,
+            period_credit,
+            closing_debit,
+            closing_credit
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+
+        ON CONFLICT(account_code, fiscal_year, period)
+        DO UPDATE SET
+            period_debit =
+                sme_account_balances.period_debit
+                + excluded.period_debit,
+
+            period_credit =
+                sme_account_balances.period_credit
+                + excluded.period_credit,
+
+            closing_debit =
+                sme_account_balances.closing_debit
+                + excluded.closing_debit,
+
+            closing_credit =
+                sme_account_balances.closing_credit
+                + excluded.closing_credit
         """,
-        (account_code, fiscal_year, period, d, cr, d, cr),
+        (
+            account_code,
+            fiscal_year,
+            period,
+            d,
+            cr,
+            d,
+            cr,
+        ),
     )
 
 
