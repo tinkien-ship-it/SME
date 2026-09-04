@@ -253,8 +253,11 @@ def reconcile_missing_sale_accounting(
 
     Tìm các sale:
       - status = completed
-      - chưa có bút toán SALE_REVENUE / SALE_COGS đang posted
+      - chưa có bút toán SALE_REVENUE đang posted
       - chưa có job pending / processing / retry
+
+    SALE_COGS không được dùng làm dấu hiệu "đã hạch toán xong", vì có thể
+    xảy ra trạng thái dở dang: SALE_COGS đã có nhưng SALE_REVENUE bị lỗi.
 
     Sau đó enqueue sale_journal để worker xử lý.
 
@@ -267,7 +270,7 @@ def reconcile_missing_sale_accounting(
         nhưng journal thực tế bị thiếu.
     """
 
-    ensure_accounting_queue_schema(conn, commit=True)
+    ensure_accounting_queue_schema(conn, commit=False)
 
     try:
         batch_size = int(batch_size or 100)
@@ -290,13 +293,17 @@ def reconcile_missing_sale_accounting(
         }
 
     try:
+        from Services.sme.journal_schema import (
+            ensure_sme_journal_schema,
+        )
+
         ensure_sme_journal_schema(
             conn,
             commit=True,
         )
 
     except Exception as exc:
-        logger.exception(
+        logging.exception(
             'Không thể khởi tạo SME journal schema: %s',
             exc,
         )
@@ -314,9 +321,10 @@ def reconcile_missing_sale_accounting(
     # ---------------------------------------------------------
     # 2. Tìm completed sale chưa thực sự được ghi sổ.
     #
-    # Chỉ cần có một active SALE journal là xem sale đã được
-    # sale_journal xử lý. Không yêu cầu bắt buộc có SALE_COGS,
-    # vì sale dịch vụ có thể không phát sinh COGS.
+    # SALE_REVENUE là bút toán bắt buộc để xác nhận sale đã được
+    # hạch toán doanh thu. Không được coi SALE_COGS đơn lẻ là hoàn tất,
+    # vì sale có thể đã ghi giá vốn nhưng bị lỗi ở bước doanh thu.
+    # SALE_COGS không bắt buộc vì sale dịch vụ có thể không phát sinh COGS.
     #
     # Đồng thời bỏ qua sale đang có job sống để không phá job
     # worker đang xử lý.
@@ -331,7 +339,7 @@ def reconcile_missing_sale_accounting(
               SELECT 1
               FROM sme_journal_entries je
               WHERE je.document_id = s.id
-                AND je.document_type IN ('SALE_REVENUE', 'SALE_COGS')
+                AND je.document_type = 'SALE_REVENUE'
                 AND LOWER(TRIM(COALESCE(je.status, ''))) = 'posted'
                 AND je.reverses_id IS NULL
           )
