@@ -37,39 +37,47 @@ def _norm_name(raw) -> str:
 def _table_cols(conn: sqlite3.Connection, table: str) -> set[str]:
     try:
         return {r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()}
-    except sqlite3.Error:
+    except Exception:
         return set()
 
-
 def _customer_name_by_id(conn: sqlite3.Connection, pid: int) -> str | None:
+    # Chọn cột theo schema thật của từng tenant; không giả định có company_name.
+    cols = _table_cols(conn, 'customers')
+    if not cols or 'name' not in cols:
+        return None
+    fields = ['name']
+    if 'company_name' in cols:
+        fields.append('company_name')
     try:
         row = conn.execute(
-            'SELECT name, company_name FROM customers WHERE id = ?', (pid,)
+            f"SELECT {', '.join(fields)} FROM customers WHERE id = ?", (pid,)
         ).fetchone()
-    except sqlite3.Error:
+    except Exception:
         return None
     if not row:
         return None
-    d = dict(row)
+    d = _row_dict(row)
     return _norm_name(d.get('company_name') or d.get('name')) or None
-
 
 def _supplier_name_by_id(conn: sqlite3.Connection, pid: int) -> str | None:
+    # PostgreSQL sẽ lỗi UndefinedColumn nếu tenant không có company_name.
+    # Vì vậy chỉ SELECT các cột thực sự tồn tại.
+    cols = _table_cols(conn, 'suppliers')
+    if not cols or 'name' not in cols:
+        return None
+    fields = ['name']
+    if 'company_name' in cols:
+        fields.append('company_name')
     try:
         row = conn.execute(
-            'SELECT name, company_name FROM suppliers WHERE id = ?', (pid,)
+            f"SELECT {', '.join(fields)} FROM suppliers WHERE id = ?", (pid,)
         ).fetchone()
-    except sqlite3.Error:
-        row = None
-        try:
-            row = conn.execute('SELECT name FROM suppliers WHERE id = ?', (pid,)).fetchone()
-        except sqlite3.Error:
-            return None
+    except Exception:
+        return None
     if not row:
         return None
-    d = dict(row)
+    d = _row_dict(row)
     return _norm_name(d.get('company_name') or d.get('name')) or None
-
 
 def _sale_party_name(conn: sqlite3.Connection, sale_id: int | None) -> str | None:
     if not sale_id:
