@@ -5,6 +5,8 @@ import sqlite3
 from decimal import Decimal
 from typing import Any
 
+from Services.sme.payment_method import normalize_sale_payment_method
+
 from Services.sme.journal_engine import (
     get_posting_rule,
     post_journal_entry,
@@ -226,7 +228,7 @@ def _build_revenue_lines(
     conn: sqlite3.Connection,
     sale: sqlite3.Row,
 ) -> tuple[str, list[dict]]:
-    payment_code = str(sale['payment_method'] or '111')
+    payment_code = normalize_sale_payment_method(sale['payment_method'])
     mapping = PAYMENT_RULES.get(payment_code)
     if not mapping:
         raise ValueError(f'Phương thức thanh toán bán hàng không hỗ trợ: {payment_code}')
