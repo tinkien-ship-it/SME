@@ -20,6 +20,67 @@ PAYMENT_RULES = {
     '131': ('BAN_HANG_CONG_NO', 'CREDIT'),
 }
 
+def _product_revenue_class(
+    *,
+    product_type: str | None,
+    product_code: str | None,
+) -> str:
+    code = str(product_code or '').strip().upper()
+
+    # Kiểm tra prefix đặc thù trước
+    if code.startswith('BDSDT'):
+        return 'BDSDT'
+
+    if code.startswith('HH'):
+        return 'HH'
+
+    if code.startswith('TP'):
+        return 'TP'
+
+    if code.startswith('DV'):
+        return 'DV'
+
+    # Fallback cho dữ liệu cũ
+    pt = str(product_type or '').strip().lower()
+
+    if pt in (
+        'investment_property',
+        'bat_dong_san_dau_tu',
+        'bdsdt',
+    ):
+        return 'BDSDT'
+
+    if pt in (
+        'service',
+        'services',
+        'dich_vu',
+        'dv',
+    ):
+        return 'DV'
+
+    if pt in (
+        'finished_goods',
+        'finished_good',
+        'finished_product',
+        'thanh_pham',
+        'tp',
+    ):
+        return 'TP'
+
+    return 'HH'
+
+
+def _revenue_account_for_class(
+    revenue_class: str,
+) -> str:
+    return {
+        'HH': '5111',
+        'TP': '5112',
+        'DV': '5113',
+        'BDSDT': '5117',
+    }[revenue_class]
+
+
 
 def _money(value: Any) -> Decimal:
     return Decimal(str(value or 0)).quantize(Decimal('0.01'))
@@ -96,44 +157,171 @@ def _is_service_product_type(product_type: str | None) -> bool:
 def _sale_revenue_buckets(
     conn: sqlite3.Connection,
     sale_id: int,
-) -> tuple[Decimal, Decimal, Decimal, Decimal]:
-    """Phân loại DT theo dòng: hàng hóa (5111), DV ngay (5113), DV hoãn (3387), VAT."""
+) -> tuple[
+    Decimal,
+    Decimal,
+    Decimal,
+    Decimal,
+    Decimal,
+    Decimal,
+]:
+    """
+    Phân loại doanh thu POS theo từng dòng:
+
+    HH...    -> 5111: Doanh thu bán hàng hóa
+    TP...    -> 5112: Doanh thu bán thành phẩm
+    DV...    -> 5113: Doanh thu cung cấp dịch vụ
+    BDSDT... -> 5117: Doanh thu kinh doanh BĐS đầu tư
+    deferred -> 3387: Doanh thu chưa thực hiện
+
+    Việc phân loại HH/TP/DV/BDSDT chỉ dựa trên products.product_code.
+    barcode không được dùng để quyết định tài khoản kế toán.
+
+    Trả về:
+        (goods, finished, service, bdsdt, deferred, vat)
+    """
+
     cols = _table_columns(conn, 'sale_items')
+
     if not {'quantity', 'price'}.issubset(cols):
-        return Decimal('0.00'), Decimal('0.00'), Decimal('0.00'), Decimal('0.00')
-    discount_expr = 'COALESCE(si.discount_pct, 0)' if 'discount_pct' in cols else '0'
-    from Services.sme.deferred_revenue import ensure_product_revenue_columns
+        zero = Decimal('0.00')
+        return zero, zero, zero, zero, zero, zero
+
+    discount_expr = (
+        'COALESCE(si.discount_pct, 0)'
+        if 'discount_pct' in cols
+        else '0'
+    )
+
+    from Services.sme.deferred_revenue import (
+        ensure_product_revenue_columns,
+    )
+
     ensure_product_revenue_columns(conn)
+
+    product_cols = _table_columns(conn, 'products')
+
+    # product_code là mã nghiệp vụ/kế toán chuẩn để phân loại doanh thu.
+    # Không dùng barcode làm fallback vì barcode có thể là mã riêng in trên bao bì.
+    if 'product_code' not in product_cols:
+        raise ValueError(
+            "Bảng products thiếu cột product_code; "
+            "không thể phân loại tài khoản doanh thu POS theo HH/TP/DV/BDSDT."
+        )
+
+    product_code_expr = "COALESCE(p.product_code, '')"
+
     rows = conn.execute(
         f"""
-        SELECT COALESCE(p.product_type, 'goods') AS product_type,
-               COALESCE(p.is_subscription_plan, 0) AS is_subscription_plan,
-               COALESCE(p.revenue_mode, 'immediate') AS revenue_mode,
-               si.quantity, si.price, {discount_expr} AS discount_pct,
-               COALESCE(si.tax_pct, 0) AS tax_pct
+        SELECT
+            COALESCE(p.product_type, 'goods') AS product_type,
+            {product_code_expr} AS product_code,
+            COALESCE(p.is_subscription_plan, 0) AS is_subscription_plan,
+            COALESCE(p.revenue_mode, 'immediate') AS revenue_mode,
+            si.quantity,
+            si.price,
+            {discount_expr} AS discount_pct,
+            COALESCE(si.tax_pct, 0) AS tax_pct
         FROM sale_items si
-        LEFT JOIN products p ON p.id = si.product_id
+        LEFT JOIN products p
+               ON p.id = si.product_id
         WHERE si.sale_id = ?
         """,
         (int(sale_id),),
     ).fetchall()
-    goods = service = deferred = vat = Decimal('0.00')
+
+    goods = Decimal('0.00')
+    finished = Decimal('0.00')
+    service = Decimal('0.00')
+    bdsdt = Decimal('0.00')
+    deferred = Decimal('0.00')
+    vat = Decimal('0.00')
+
     for row in rows:
-        subtotal = float(row[3] or 0) * float(row[4] or 0)
-        discount = round(subtotal * (float(row[5] or 0) / 100))
+        product_type = str(row[0] or '').strip().lower()
+        product_code = str(row[1] or '').strip().upper()
+
+        is_subscription = int(row[2] or 0)
+        revenue_mode = str(row[3] or '').strip().lower()
+
+        quantity = float(row[4] or 0)
+        price = float(row[5] or 0)
+        discount_pct = float(row[6] or 0)
+        tax_pct = float(row[7] or 0)
+
+        subtotal = quantity * price
+        discount = round(
+            subtotal * discount_pct / 100
+        )
         taxable = subtotal - discount
-        line_vat = round(taxable * (float(row[6] or 0) / 100))
+
+        line_vat = round(
+            taxable * tax_pct / 100
+        )
+
         net = _money(taxable)
         vat += _money(line_vat)
-        pt = str(row[0] or '').strip().lower()
-        if _is_service_product_type(pt):
-            if int(row[1] or 0) == 1 or str(row[2] or '').strip().lower() == 'deferred':
-                deferred += net
-            else:
-                service += net
-        else:
+
+        # Doanh thu nhận trước ưu tiên trước phân loại 511x.
+        if (
+            is_subscription == 1
+            or revenue_mode == 'deferred'
+        ):
+            deferred += net
+            continue
+
+        # -------------------------------------------------
+        # PHÂN LOẠI DOANH THU THEO PREFIX MÃ SẢN PHẨM
+        # -------------------------------------------------
+
+        # Phải kiểm tra BDSDT trước các prefix khác.
+        if product_code.startswith('BDSDT'):
+            bdsdt += net
+
+        elif product_code.startswith('TP'):
+            finished += net
+
+        elif product_code.startswith('DV'):
+            service += net
+
+        elif product_code.startswith('HH'):
             goods += net
-    return goods, service, deferred, vat
+
+        # -------------------------------------------------
+        # FALLBACK CHO DỮ LIỆU CŨ
+        # -------------------------------------------------
+
+        elif product_type in (
+            'investment_property',
+            'bat_dong_san_dau_tu',
+            'bdsdt',
+        ):
+            bdsdt += net
+
+        elif product_type in (
+            'finished_goods',
+            'finished_good',
+            'finished_product',
+            'thanh_pham',
+            'tp',
+        ):
+            finished += net
+
+        elif _is_service_product_type(product_type):
+            service += net
+
+        else:
+            # Dữ liệu cũ không xác định -> hàng hóa
+            goods += net
+
+    return (
+        goods,
+        finished,
+        service,
+        bdsdt,
+        deferred,
+        vat,
+    )
 
 
 def _sale_vat(conn: sqlite3.Connection, sale_id: int, business_line: str) -> Decimal:
@@ -228,137 +416,409 @@ def _build_revenue_lines(
     conn: sqlite3.Connection,
     sale: sqlite3.Row,
 ) -> tuple[str, list[dict]]:
-    payment_code = normalize_sale_payment_method(sale['payment_method'])
+    payment_code = normalize_sale_payment_method(
+        sale['payment_method']
+    )
+
     mapping = PAYMENT_RULES.get(payment_code)
     if not mapping:
-        raise ValueError(f'Phương thức thanh toán bán hàng không hỗ trợ: {payment_code}')
+        raise ValueError(
+            f'Phương thức thanh toán bán hàng không hỗ trợ: '
+            f'{payment_code}'
+        )
+
     business_type, payment_method = mapping
-    rule = get_posting_rule(conn, business_type, payment_method, commit=False)
+
+    rule = get_posting_rule(
+        conn,
+        business_type,
+        payment_method,
+        commit=False,
+    )
+
     if not rule:
-        raise ValueError(f'Chưa có quy tắc định khoản {business_type}/{payment_method}')
+        raise ValueError(
+            f'Chưa có quy tắc định khoản '
+            f'{business_type}/{payment_method}'
+        )
 
     total = _money(sale['total_amount'])
+
     if total <= 0:
         return business_type, []
-    business_line = str(sale['business_line'] or 'pos') if 'business_line' in sale.keys() else 'pos'
 
+    business_line = (
+        str(sale['business_line'] or 'pos')
+        if 'business_line' in sale.keys()
+        else 'pos'
+    )
+
+    # ---------------------------------------------------------
+    # Xác định phương pháp thuế
+    # ---------------------------------------------------------
     from Services.sme.regime_profile import get_ledger_profile
+
     profile = get_ledger_profile(conn)
-    tax_def = profile.get('tt58_tax_method_def') or {}
-    use_pct_vat = bool(profile.get('is_tt58_micro') and tax_def.get('vat_mode') == 'pct_revenue')
+
+    tax_def = (
+        profile.get('tt58_tax_method_def')
+        or {}
+    )
+
+    use_pct_vat = bool(
+        profile.get('is_tt58_micro')
+        and tax_def.get('vat_mode') == 'pct_revenue'
+    )
 
     if use_pct_vat:
-        # TT58 % DT: toàn bộ thanh toán = doanh thu; thuế = % × DT (không tách VAT HĐ)
+        # TT58 % doanh thu:
+        # Toàn bộ giá thanh toán là doanh thu,
+        # không tách VAT trên hóa đơn.
         revenue = total
         invoice_vat = Decimal('0.00')
-        pct_vat, pct_cit = _tt58_pct_revenue_tax(conn, sale, revenue)
-    else:
-        invoice_vat = _sale_vat(conn, int(sale['id']), business_line)
-        if invoice_vat > total:
-            raise ValueError(f'Thuế GTGT {invoice_vat} lớn hơn tổng thanh toán {total}')
-        revenue = total - invoice_vat
-        pct_vat, pct_cit = Decimal('0.00'), Decimal('0.00')
 
-    partner_id = _partner_id_for_sale(conn, sale)
+        pct_vat, pct_cit = _tt58_pct_revenue_tax(
+            conn,
+            sale,
+            revenue,
+        )
+
+    else:
+        invoice_vat = _sale_vat(
+            conn,
+            int(sale['id']),
+            business_line,
+        )
+
+        if invoice_vat > total:
+            raise ValueError(
+                f'Thuế GTGT {invoice_vat} '
+                f'lớn hơn tổng thanh toán {total}'
+            )
+
+        revenue = total - invoice_vat
+
+        pct_vat = Decimal('0.00')
+        pct_cit = Decimal('0.00')
+
+    # ---------------------------------------------------------
+    # Thông tin đối tượng
+    # ---------------------------------------------------------
+    partner_id = _partner_id_for_sale(
+        conn,
+        sale,
+    )
+
     common = {
         'partner_type': 'customer',
         'partner_id': partner_id,
-        'tax_code': sale['tax_code'] if 'tax_code' in sale.keys() else None,
-        'vat_invoice_no': sale['invoice_number'] if 'invoice_number' in sale.keys() else None,
+
+        'tax_code': (
+            sale['tax_code']
+            if 'tax_code' in sale.keys()
+            else None
+        ),
+
+        'vat_invoice_no': (
+            sale['invoice_number']
+            if 'invoice_number' in sale.keys()
+            else None
+        ),
     }
+
+    # ---------------------------------------------------------
+    # Dòng Nợ:
+    #
+    # 111 / 112 / 131 tùy phương thức thanh toán
+    # ---------------------------------------------------------
     lines = [{
         **common,
+
         'account_code': rule['debit_account_code'],
+
         'debit': total,
         'credit': 0,
-        'description': 'Thu tiền/phải thu khách hàng',
+
+        'description': (
+            'Thu tiền/phải thu khách hàng'
+        ),
     }]
+
+    # ---------------------------------------------------------
+    # DOANH THU
+    # ---------------------------------------------------------
     if revenue > 0:
+
+        # -----------------------------------------------------
+        # F&B được xem là dịch vụ
+        # -----------------------------------------------------
         if business_line == 'fb_service':
+
             lines.append({
                 **common,
+
                 'account_code': '5113',
+
                 'debit': 0,
                 'credit': revenue,
-                'description': 'Doanh thu cung cấp dịch vụ',
+
+                'description': (
+                    'Doanh thu cung cấp dịch vụ'
+                ),
             })
+
         else:
-            goods_rev, service_rev, deferred_rev, _ = _sale_revenue_buckets(
-                conn, int(sale['id']),
+            # -------------------------------------------------
+            # Phân loại doanh thu theo sản phẩm POS
+            #
+            # HH...    -> 5111
+            # TP...    -> 5112
+            # DV...    -> 5113
+            # BDSDT... -> 5117
+            # deferred -> 3387
+            # -------------------------------------------------
+
+            (
+                goods_rev,
+                finished_rev,
+                service_rev,
+                bdsdt_rev,
+                deferred_rev,
+                _bucket_vat,
+            ) = _sale_revenue_buckets(
+                conn,
+                int(sale['id']),
             )
-            bucket_sum = goods_rev + service_rev + deferred_rev
-            if bucket_sum > 0 and abs(bucket_sum - revenue) <= Decimal('0.02'):
+
+            bucket_sum = (
+                goods_rev
+                + finished_rev
+                + service_rev
+                + bdsdt_rev
+                + deferred_rev
+            )
+
+            # -------------------------------------------------
+            # Đảm bảo tổng doanh thu đã phân loại khớp
+            # doanh thu kế toán.
+            #
+            # Sai lệch <= 0.02 cho phép do làm tròn.
+            # -------------------------------------------------
+            if (
+                bucket_sum > 0
+                and abs(
+                    bucket_sum - revenue
+                ) <= Decimal('0.02')
+            ):
+
+                # ---------------------------------------------
+                # HH -> 5111
+                # ---------------------------------------------
                 if goods_rev > 0:
+
                     lines.append({
                         **common,
-                        'account_code': rule['credit_account_code'],
+
+                        'account_code': '5111',
+
                         'debit': 0,
                         'credit': goods_rev,
-                        'description': 'Doanh thu bán hàng',
+
+                        'description': (
+                            'Doanh thu bán hàng hóa'
+                        ),
                     })
-                if service_rev > 0:
+
+                # ---------------------------------------------
+                # TP -> 5112
+                # ---------------------------------------------
+                if finished_rev > 0:
+
                     lines.append({
                         **common,
+
+                        'account_code': '5112',
+
+                        'debit': 0,
+                        'credit': finished_rev,
+
+                        'description': (
+                            'Doanh thu bán thành phẩm'
+                        ),
+                    })
+
+                # ---------------------------------------------
+                # DV -> 5113
+                # ---------------------------------------------
+                if service_rev > 0:
+
+                    lines.append({
+                        **common,
+
                         'account_code': '5113',
+
                         'debit': 0,
                         'credit': service_rev,
-                        'description': 'Doanh thu cung cấp dịch vụ',
+
+                        'description': (
+                            'Doanh thu cung cấp dịch vụ'
+                        ),
                     })
-                if deferred_rev > 0:
+
+                # ---------------------------------------------
+                # BDSDT -> 5117
+                # ---------------------------------------------
+                if bdsdt_rev > 0:
+
                     lines.append({
                         **common,
+
+                        'account_code': '5117',
+
+                        'debit': 0,
+                        'credit': bdsdt_rev,
+
+                        'description': (
+                            'Doanh thu kinh doanh '
+                            'bất động sản đầu tư'
+                        ),
+                    })
+
+                # ---------------------------------------------
+                # Doanh thu chưa thực hiện -> 3387
+                # ---------------------------------------------
+                if deferred_rev > 0:
+
+                    lines.append({
+                        **common,
+
                         'account_code': '3387',
+
                         'debit': 0,
                         'credit': deferred_rev,
-                        'description': 'Doanh thu nhận trước (gói dịch vụ)',
+
+                        'description': (
+                            'Doanh thu chưa thực hiện'
+                        ),
                     })
+
             else:
-                lines.append({
-                    **common,
-                    'account_code': rule['credit_account_code'],
-                    'debit': 0,
-                    'credit': revenue,
-                    'description': 'Doanh thu bán hàng và cung cấp dịch vụ',
-                })
+                # -------------------------------------------------
+                # KHÔNG fallback về 511 hoặc
+                # rule['credit_account_code'].
+                #
+                # Nếu không phân loại được thì báo lỗi
+                # để tránh ghi sai tài khoản doanh thu.
+                # -------------------------------------------------
+                raise ValueError(
+                    'Không thể phân loại đầy đủ doanh thu POS '
+                    'theo HH/TP/DV/BDSDT. '
+                    f'sale_id={sale["id"]}; '
+                    f'revenue={revenue}; '
+                    f'bucket_sum={bucket_sum}; '
+                    f'HH={goods_rev}; '
+                    f'TP={finished_rev}; '
+                    f'DV={service_rev}; '
+                    f'BDSDT={bdsdt_rev}; '
+                    f'deferred={deferred_rev}'
+                )
+
+    # ---------------------------------------------------------
+    # VAT đầu ra theo hóa đơn
+    # ---------------------------------------------------------
     if invoice_vat > 0:
+
         lines.append({
             **common,
-            'account_code': rule.get('vat_account_code') or '33311',
+
+            'account_code': (
+                rule.get('vat_account_code')
+                or '33311'
+            ),
+
             'debit': 0,
             'credit': invoice_vat,
-            'description': 'Thuế GTGT đầu ra',
+
+            'description': (
+                'Thuế GTGT đầu ra'
+            ),
         })
-    # TT58: ghi nhận nghĩa vụ thuế % DT (Nợ CP thuế / Có 3331 / 3334)
+
+    # ---------------------------------------------------------
+    # TT58:
+    # Thuế GTGT tính theo % doanh thu
+    #
+    # Nợ 811 / Có 33311
+    # ---------------------------------------------------------
     if pct_vat > 0:
+
         lines.append({
             **common,
+
             'account_code': '811',
+
             'debit': pct_vat,
             'credit': 0,
-            'description': 'Thuế GTGT theo tỷ lệ % trên doanh thu (TT58)',
+
+            'description': (
+                'Thuế GTGT theo tỷ lệ % '
+                'trên doanh thu (TT58)'
+            ),
         })
+
         lines.append({
             **common,
-            'account_code': rule.get('vat_account_code') or '33311',
+
+            'account_code': (
+                rule.get('vat_account_code')
+                or '33311'
+            ),
+
             'debit': 0,
             'credit': pct_vat,
-            'description': 'Thuế GTGT phải nộp % DT (TT58)',
+
+            'description': (
+                'Thuế GTGT phải nộp '
+                '% DT (TT58)'
+            ),
         })
+
+    # ---------------------------------------------------------
+    # TT58:
+    # Thuế TNDN tính theo % doanh thu
+    #
+    # Nợ 821 / Có 3334
+    # ---------------------------------------------------------
     if pct_cit > 0:
+
         lines.append({
             **common,
+
             'account_code': '821',
+
             'debit': pct_cit,
             'credit': 0,
-            'description': 'Thuế TNDN theo tỷ lệ % trên doanh thu (TT58)',
+
+            'description': (
+                'Thuế TNDN theo tỷ lệ % '
+                'trên doanh thu (TT58)'
+            ),
         })
+
         lines.append({
             **common,
+
             'account_code': '3334',
+
             'debit': 0,
             'credit': pct_cit,
-            'description': 'Thuế TNDN phải nộp % DT (TT58)',
+
+            'description': (
+                'Thuế TNDN phải nộp '
+                '% DT (TT58)'
+            ),
         })
+
     return business_type, lines
 
 
