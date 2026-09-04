@@ -115,7 +115,7 @@ def trial_balance(
 ) -> dict[str, Any]:
     """Bảng cân đối phát sinh theo hệ thống TK pháp định.
 
-    - Liệt kê toàn bộ tài khoản đang hiệu lực (cấp 1 và mọi TK con).
+    - Hiển thị tài khoản đang hiệu lực; số liệu vẫn tổng hợp cả TK con đã ngừng sử dụng.
     - Số liệu TK cha = cộng dồn phát sinh/dư của toàn bộ cấp con (+ ghi trực tiếp nếu có).
     - Dòng Tổng chỉ cộng các TK cấp 1 để tránh đếm trùng.
     - branch_code: lọc theo chi nhánh (None/ALL = hợp nhất pháp nhân).
@@ -126,16 +126,38 @@ def trial_balance(
         raise ValueError('period_from không được lớn hơn period_to')
 
     conn.row_factory = sqlite3.Row
-    acc_sql = """
-        SELECT code, name, normal_balance, is_postable, account_class, level,
-               parent_code, legal_source
-        FROM sme_chart_of_accounts
-        WHERE is_active = 1
-    """
-    if postable_only:
-        acc_sql += " AND is_postable = 1"
-    acc_sql += " ORDER BY code"
-    accounts = [dict(r) for r in conn.execute(acc_sql).fetchall()]
+
+    # -------------------------------------------------------------
+    # Tách "cây COA để tổng hợp" và "danh sách tài khoản để hiển thị".
+    #
+    # QUAN TRỌNG:
+    # - Tài khoản đã ngừng sử dụng (is_active=0) vẫn phải nằm trong cây
+    #   để số liệu lịch sử của nó tiếp tục roll-up lên tài khoản cha.
+    # - Chỉ danh sách hiển thị mới lọc is_active/postable_only.
+    #
+    # Ví dụ: 5111 từng có phát sinh, sau đó người dùng tắt 5111 và hệ
+    # thống cho phép ghi trực tiếp 511. Bảng CĐPS phải vẫn cộng số cũ
+    # của 5111 vào 511 mà không sửa bút toán lịch sử.
+    # -------------------------------------------------------------
+    all_accounts = [
+        dict(r)
+        for r in conn.execute(
+            """
+            SELECT code, name, normal_balance, is_postable, is_active,
+                   account_class, level, parent_code, legal_source
+            FROM sme_chart_of_accounts
+            ORDER BY code
+            """
+        ).fetchall()
+    ]
+    all_by_code = {a['code']: a for a in all_accounts}
+
+    accounts = [
+        dict(a)
+        for a in all_accounts
+        if int(a.get('is_active') or 0) == 1
+        and (not postable_only or int(a.get('is_postable') or 0) == 1)
+    ]
     by_code = {a['code']: a for a in accounts}
 
     opening_direct = _activity_before_period(
@@ -145,25 +167,32 @@ def trial_balance(
         conn, fiscal_year, period_from, period_to, branch_code=branch_code,
     )
 
-    # TK có phát sinh nhưng chưa có trong COA (lệch danh mục) — vẫn liệt kê cuối bảng.
+    # TK có phát sinh nhưng thật sự không tồn tại trong COA mới là orphan.
+    # TK chỉ bị inactive KHÔNG được xem là orphan, vì vẫn cần parent_code
+    # để cộng dồn lịch sử lên tài khoản cha.
     orphan_codes = sorted(
-        (set(opening_direct) | set(period_direct)) - set(by_code)
+        (set(opening_direct) | set(period_direct)) - set(all_by_code)
     )
     for code in orphan_codes:
-        accounts.append({
+        orphan = {
             'code': code,
             'name': f'(Ngoài danh mục) {code}',
             'normal_balance': 'debit',
             'is_postable': 1,
+            'is_active': 1,
             'account_class': None,
             'level': max(1, len(str(code)) - 2),
             'parent_code': None,
             'legal_source': 'orphan',
-        })
+        }
+        all_accounts.append(orphan)
+        all_by_code[code] = orphan
+        accounts.append(dict(orphan))
         by_code[code] = accounts[-1]
 
+    # Cây quan hệ phải xây từ TOÀN BỘ COA, kể cả tài khoản inactive.
     children: dict[str, list[str]] = {}
-    for acc in accounts:
+    for acc in all_accounts:
         parent = acc.get('parent_code')
         if parent:
             children.setdefault(parent, []).append(acc['code'])
@@ -184,7 +213,8 @@ def trial_balance(
             memo[code] = {'debit': debit, 'credit': credit}
             return memo[code]
 
-        for acc in accounts:
+        # Tính roll-up trên toàn bộ cây COA, kể cả tài khoản inactive.
+        for acc in all_accounts:
             total(acc['code'])
         return memo
 
