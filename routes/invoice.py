@@ -6,6 +6,7 @@ import logging
 import os
 import sqlite3
 import time
+import threading
 import traceback
 import urllib3
 import xml.etree.ElementTree as ET
@@ -76,6 +77,10 @@ VIETTEL_CONFIG = {
 _invoice_scheduler_started = False
 _invoice_scheduler = None
 _batch_invoice_job_fn = None
+
+# Chặn nhiều auto-invoice worker chạy đồng thời trong cùng Gunicorn worker.
+# Đây là lớp bảo vệ bổ sung; worker này chỉ chạy một lượt, KHÔNG tự Timer lặp.
+_auto_invoice_worker_lock = threading.Lock()
 
 
 def start_invoice_batch_scheduler():
@@ -382,22 +387,25 @@ def register_invoice_routes(app):
             conn.close()
 
     #======================================================================= Kết Thúc Phần Giả Lập==============================================================================#
-    #==== API XUẤT HÓA ĐƠN TỰ ĐỘNG CHẠY NGẦM HOẠT ĐANG ĐỘNG TỐT - CHƯA SỬ DỤNG TRONG APP====#
+    #==== API XUẤT HÓA ĐƠN TỰ ĐỘNG — ONE-SHOT WORKER, KHÔNG TỰ NHÂN TIMER ====#
     @app.route('/api/invoice/auto-process', methods=['POST'])
     @login_required
     def api_auto_process_invoices():
         """
-        API tích hợp: Tự động quét và xuất hóa đơn ngầm.
-        Chỉ chạy khi invoice_settings.is_active=1 và auto_issue_invoice=1
+        Quét tối đa 20 đơn và xuất hóa đơn trong một background worker duy nhất.
+
+        FIX PostgreSQL pool:
+        - Không dùng vòng threading.Timer tự gọi lại sau 3 giây.
+        - Background thread dựng app_context riêng và giữ đúng tenant/db_path.
+        - Không giữ DB connection trong lúc gọi API HĐĐT / gửi email.
+        - Mỗi đoạn đọc/ghi DB mở connection ngắn và luôn close() trong finally.
         """
         conn = None
         try:
+            # Chỉ đọc cấu hình trong request hiện tại.
             conn = get_db_connection()
             conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-
-            # 1. Kiểm tra cấu hình
-            config_row = cursor.execute("""
+            config_row = conn.execute("""
                 SELECT * FROM invoice_settings
                 WHERE is_active = 1 AND auto_issue_invoice = 1
             """).fetchone()
@@ -410,93 +418,156 @@ def register_invoice_routes(app):
 
             config = dict(config_row)
 
-            # =============================
-            # Worker xử lý ngầm
-            # =============================
-            def background_invoice_worker(cfg):
+            # Capture tenant context TRƯỚC khi request kết thúc.
+            from db_utils import resolve_db_path
+            worker_db_path = resolve_db_path()
+            worker_tenant_id = (
+                getattr(g, 'tenant_id', None)
+                or session.get('tenant_id')
+                or session.get('username')
+            )
 
-                worker_conn = None
+            # Tránh bấm endpoint liên tục tạo nhiều thread trong cùng process.
+            if _auto_invoice_worker_lock.locked():
+                return jsonify({
+                    "success": True,
+                    "already_running": True,
+                    "message": "Worker xuất hóa đơn đang chạy."
+                }), 202
+
+            def background_invoice_worker(cfg, db_path, tenant_id):
+                if not _auto_invoice_worker_lock.acquire(blocking=False):
+                    logging.info(
+                        "Auto invoice worker đang chạy trong pid=%s — bỏ qua worker trùng.",
+                        os.getpid(),
+                    )
+                    return
 
                 try:
-                    worker_conn = get_db_connection()
-                    worker_conn.row_factory = sqlite3.Row
-                    worker_cur = worker_conn.cursor()
+                    # Background thread KHÔNG có request context.
+                    # Tạo app_context và gắn lại tenant để get_db_connection()
+                    # mở đúng schema tenant thay vì rơi về main/public.
+                    with app.app_context():
+                        g.db_path = db_path
+                        if tenant_id:
+                            g.tenant_id = tenant_id
 
-                    # Lấy 20 đơn chưa có hóa đơn
-                    pending_sales = worker_cur.execute("""
-                        SELECT id FROM sale
-                        WHERE status = 'completed'
-                          AND COALESCE(invoice_status, '') NOT IN ('draft', 'issued')
-                          AND (invoice_number IS NULL OR invoice_number = '')
-                          AND COALESCE(invoice_id, '') = ''
-                        ORDER BY id ASC
-                        LIMIT 20
-                    """).fetchall()
-
-                    if not pending_sales:
-                        logging.info("Worker: Không còn đơn cần xuất hóa đơn.")
-                        return
-
-                    provider_key = (cfg.get('provider_name') or 'matbao').strip().lower()
-                    try:
-                        service = create_einvoice_service(cfg, matbao_cls=MatbaoProvider)
-                    except Exception as factory_err:
-                        logging.error("Worker: không khởi tạo provider %s: %s", provider_key, factory_err)
-                        return
-
-                    for row in pending_sales:
-
-                        sale_id = row['id']
-
+                        worker_conn = None
                         try:
-                            if worker_conn is None:
-                                worker_conn = get_db_connection()
-                                worker_conn.row_factory = sqlite3.Row
-                                worker_cur = worker_conn.cursor()
+                            # 1) Chỉ lấy danh sách ID rồi đóng connection ngay.
+                            worker_conn = get_db_connection()
+                            worker_conn.row_factory = sqlite3.Row
+                            pending_sales = worker_conn.execute("""
+                                SELECT id FROM sale
+                                WHERE status = 'completed'
+                                  AND COALESCE(invoice_status, '') NOT IN ('draft', 'issued')
+                                  AND (invoice_number IS NULL OR invoice_number = '')
+                                  AND COALESCE(invoice_id, '') = ''
+                                ORDER BY id ASC
+                                LIMIT 20
+                            """).fetchall()
+                            pending_ids = [row['id'] for row in pending_sales]
+                        finally:
+                            if worker_conn is not None:
+                                try:
+                                    worker_conn.close()
+                                except Exception:
+                                    pass
+                                worker_conn = None
 
-                            # Lấy thông tin đơn hàng
-                            sale_row = worker_cur.execute(
-                                "SELECT * FROM sale WHERE id = ?",
-                                (sale_id,)
-                            ).fetchone()
+                        if not pending_ids:
+                            logging.info("Worker: Không còn đơn cần xuất hóa đơn.")
+                            return
 
-                            if not sale_row:
-                                logging.error(f"Worker: Không tìm thấy sale {sale_id}")
-                                continue
+                        provider_key = (cfg.get('provider_name') or 'matbao').strip().lower()
+                        try:
+                            service = create_einvoice_service(
+                                cfg,
+                                matbao_cls=MatbaoProvider,
+                            )
+                        except Exception as factory_err:
+                            logging.error(
+                                "Worker: không khởi tạo provider %s: %s",
+                                provider_key,
+                                factory_err,
+                            )
+                            return
 
-                            sale = dict(sale_row)
+                        # Login/provider call diễn ra KHÔNG giữ DB connection.
+                        inner = getattr(service, '_inner', service)
+                        if hasattr(inner, '_get_token') and not inner._get_token():
+                            logging.error(
+                                "Worker: Không đăng nhập được provider %s",
+                                provider_key,
+                            )
+                            return
 
-                            # Lấy items (FIX giống API gốc)
-                            items_rows = worker_cur.execute("""
-                                SELECT p.name, si.quantity, si.price,
-                                       CASE WHEN si.UseSaleUnit = 1
-                                            THEN p.unit1
-                                            ELSE p.unit
-                                       END as unit
-                                FROM sale_items si
-                                JOIN products p ON si.product_id = p.id
-                                WHERE si.sale_id = ?
-                            """, (sale_id,)).fetchall()
-
-                            items = [dict(r) for r in items_rows]
-
-                            if not items:
-                                logging.error(f"Worker: Sale {sale_id} không có sản phẩm")
-                                continue
-
-                            # Login token (Mắt Bão) nếu provider hỗ trợ
-                            inner = getattr(service, '_inner', service)
-                            if hasattr(inner, '_get_token') and not inner._get_token():
-                                logging.error("Worker: Không đăng nhập được provider %s", provider_key)
-                                break
-
-                            worker_conn.close()
+                        for sale_id in pending_ids:
+                            sale = None
+                            items = []
                             worker_conn = None
 
-                            # Gọi API xuất hóa đơn chính thức (giống luồng Mắt Bão)
-                            result = service.issue(sale, items, loai_hdon=1)
+                            try:
+                                # 2) Đọc sale/items thật nhanh rồi trả connection.
+                                try:
+                                    worker_conn = get_db_connection()
+                                    worker_conn.row_factory = sqlite3.Row
+                                    worker_cur = worker_conn.cursor()
 
-                            if result.get('success'):
+                                    sale_row = worker_cur.execute(
+                                        "SELECT * FROM sale WHERE id = ?",
+                                        (sale_id,),
+                                    ).fetchone()
+
+                                    if not sale_row:
+                                        logging.error(
+                                            "Worker: Không tìm thấy sale %s",
+                                            sale_id,
+                                        )
+                                        continue
+
+                                    sale = dict(sale_row)
+
+                                    items_rows = worker_cur.execute("""
+                                        SELECT p.name, si.quantity, si.price,
+                                               CASE WHEN si.UseSaleUnit = 1
+                                                    THEN p.unit1
+                                                    ELSE p.unit
+                                               END AS unit
+                                        FROM sale_items si
+                                        JOIN products p ON si.product_id = p.id
+                                        WHERE si.sale_id = ?
+                                    """, (sale_id,)).fetchall()
+                                    items = [dict(r) for r in items_rows]
+                                finally:
+                                    if worker_conn is not None:
+                                        try:
+                                            worker_conn.close()
+                                        except Exception:
+                                            pass
+                                        worker_conn = None
+
+                                if not items:
+                                    logging.error(
+                                        "Worker: Sale %s không có sản phẩm",
+                                        sale_id,
+                                    )
+                                    continue
+
+                                # 3) Gọi provider không giữ DB connection.
+                                result = service.issue(
+                                    sale,
+                                    items,
+                                    loai_hdon=1,
+                                )
+
+                                if not result.get('success'):
+                                    logging.error(
+                                        "Worker: Xuất hóa đơn thất bại cho sale %s: %s",
+                                        sale_id,
+                                        result.get('error'),
+                                    )
+                                    continue
 
                                 invoice_no = result.get('invoice_no')
                                 pdf_url = result.get('pdf_url')
@@ -504,44 +575,64 @@ def register_invoice_routes(app):
                                 invoice_date = _resolve_invoice_date(sale, result)
                                 tax_auth_status = result.get('tax_authority_status')
 
-                                from db_utils import begin_immediate, sqlite_write_retry
+                                # 4) Persist ngắn: mở -> transaction -> commit -> close.
+                                from db_utils import sqlite_write_retry
+
                                 worker_conn = get_db_connection()
                                 worker_conn.row_factory = sqlite3.Row
                                 worker_cur = worker_conn.cursor()
 
-                                def _worker_persist():
-                                    begin_immediate(worker_conn, label='auto_issue_persist')
-                                    worker_cur.execute("""
-                                        UPDATE sale
-                                        SET invoice_number = ?,
-                                            invoice_status = 'issued',
-                                            invoice_pdf_url = ?,
-                                            invoice_xml_file = ?,
-                                            invoice_provider = ?,
-                                            invoice_date = ?,
-                                            tax_authority_status = ?,
-                                            updated_at = CURRENT_TIMESTAMP
-                                        WHERE id = ?
-                                    """, (
-                                        invoice_no,
-                                        pdf_url,
-                                        xml_url,
-                                        provider_key,
-                                        invoice_date,
-                                        tax_auth_status,
-                                        sale_id,
-                                    ))
-                                    sqlite_commit(worker_conn, label='auto_issue_persist')
+                                try:
+                                    def _worker_persist():
+                                        begin_immediate(
+                                            worker_conn,
+                                            label='auto_issue_persist',
+                                        )
+                                        worker_cur.execute("""
+                                            UPDATE sale
+                                            SET invoice_number = ?,
+                                                invoice_status = 'issued',
+                                                invoice_pdf_url = ?,
+                                                invoice_xml_file = ?,
+                                                invoice_provider = ?,
+                                                invoice_date = ?,
+                                                tax_authority_status = ?,
+                                                updated_at = CURRENT_TIMESTAMP
+                                            WHERE id = ?
+                                        """, (
+                                            invoice_no,
+                                            pdf_url,
+                                            xml_url,
+                                            provider_key,
+                                            invoice_date,
+                                            tax_auth_status,
+                                            sale_id,
+                                        ))
+                                        sqlite_commit(
+                                            worker_conn,
+                                            label='auto_issue_persist',
+                                        )
 
-                                sqlite_write_retry(_worker_persist, label='auto_issue_persist')
+                                    sqlite_write_retry(
+                                        _worker_persist,
+                                        label='auto_issue_persist',
+                                    )
+                                finally:
+                                    if worker_conn is not None:
+                                        try:
+                                            worker_conn.close()
+                                        except Exception:
+                                            pass
+                                        worker_conn = None
 
                                 logging.info(
-                                    f"Worker: Đã xuất hóa đơn {invoice_no} cho sale {sale_id}"
+                                    "Worker: Đã xuất hóa đơn %s cho sale %s",
+                                    invoice_no,
+                                    sale_id,
                                 )
 
-                                # Gửi email
-                                customer_email = sale.get('email', '').strip()
-
+                                # 5) Email cũng không giữ DB connection.
+                                customer_email = (sale.get('email') or '').strip()
                                 if customer_email:
                                     try:
                                         send_invoice_email(
@@ -553,73 +644,75 @@ def register_invoice_routes(app):
                                         )
                                     except Exception as email_err:
                                         logging.error(
-                                            f"⚠️ Hóa đơn {invoice_no} xuất thành công nhưng gửi email lỗi: {str(email_err)}"
+                                            "⚠️ Hóa đơn %s xuất thành công nhưng gửi email lỗi: %s",
+                                            invoice_no,
+                                            email_err,
                                         )
 
-                            else:
+                            except Exception as sale_exc:
                                 logging.error(
-                                    f"Worker: Xuất hóa đơn thất bại cho sale {sale_id}: {result.get('error')}"
+                                    "Worker Error sale %s: %s",
+                                    sale_id,
+                                    sale_exc,
+                                    exc_info=True,
                                 )
+                                if worker_conn is not None:
+                                    try:
+                                        worker_conn.rollback()
+                                    except Exception:
+                                        pass
+                                    try:
+                                        worker_conn.close()
+                                    except Exception:
+                                        pass
+                                    worker_conn = None
 
-                        except Exception as e:
+                        logging.info(
+                            "Auto invoice worker hoàn tất pid=%s tenant=%s processed=%s",
+                            os.getpid(),
+                            tenant_id,
+                            len(pending_ids),
+                        )
 
-                            logging.error(
-                                f"Worker Error sale {sale_id}: {str(e)}",
-                                exc_info=True
-                            )
-
-                            if worker_conn:
-                                worker_conn.rollback()
-
-                    # Chạy tiếp sau 3 giây
-                    threading.Timer(
-                        3.0,
-                        background_invoice_worker,
-                        args=[cfg]
-                    ).start()
-
-                except Exception as e:
+                except Exception as worker_exc:
                     logging.error(
-                        f"Worker critical error: {str(e)}",
-                        exc_info=True
+                        "Worker critical error: %s",
+                        worker_exc,
+                        exc_info=True,
                     )
-
                 finally:
-                    if worker_conn:
-                        worker_conn.close()
-
-            # =============================
-            # Khởi động worker
-            # =============================
+                    _auto_invoice_worker_lock.release()
 
             thread = threading.Thread(
                 target=background_invoice_worker,
-                args=(config,)
+                args=(config, worker_db_path, worker_tenant_id),
+                name=f"auto-invoice-{worker_tenant_id or 'tenant'}",
+                daemon=True,
             )
-
-            thread.daemon = True
             thread.start()
 
             return jsonify({
                 "success": True,
-                "message": "Worker tự động xuất hóa đơn đã khởi động."
-            })
+                "message": "Worker xuất hóa đơn đã khởi động một lượt."
+            }), 202
 
-        except Exception as e:
-
+        except Exception as exc:
             logging.error(
-                f"API auto-process error: {str(e)}",
-                exc_info=True
+                "API auto-process error: %s",
+                exc,
+                exc_info=True,
             )
-
             return jsonify({
                 "success": False,
-                "error": str(e)
+                "error": str(exc)
             }), 500
 
         finally:
-            if conn:
-                conn.close()
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     # ====================== ADAPTER CHO MẮT BÃO ======================
 
