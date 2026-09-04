@@ -349,6 +349,7 @@ def _job_accounting_reconcile():
 
     try:
         _reconcile_missing_sale_accounting()
+        _reconcile_sale_revenue_account_integrity()
     finally:
         _reconcile_tick_lock.release()
 
@@ -1181,6 +1182,143 @@ def _db_has_pending_accounting_jobs(db_path: str) -> bool | None:
         if 'lock' in msg or 'deadlock' in msg or 'timeout' in msg:
             return None
         return False
+
+
+
+def _reconcile_sale_revenue_account_integrity():
+    """
+    Safety-net cho SALE_REVENUE cũ có Có 511.
+
+    Nếu COA hiện tại cho phép hạch toán trực tiếp 511 thì giữ nguyên.
+    Nếu loại sản phẩm yêu cầu 5111/5112/5113/5117 đang postable,
+    reverse journal cũ và rebuild từ products.product_code.
+
+    Không tự đổi journal lịch sử 511x -> 511 khi người dùng đổi COA.
+    """
+    try:
+        tenant_dbs = _collect_tenant_db_paths()
+        if not tenant_dbs:
+            return
+
+        total_scanned = total_rebuilt = total_valid_511 = total_errors = 0
+
+        for db_path in tenant_dbs:
+            profile = _load_tenant_accounting_profile(db_path)
+            tenant_id = (
+                profile.get('tenant_id')
+                or os.path.splitext(os.path.basename(db_path))[0]
+            )
+            accounting_regime = profile.get('accounting_regime')
+            features = profile.get('features') or {}
+
+            if not str(accounting_regime or '').strip().upper().startswith('SME'):
+                continue
+            if not bool(features.get('accounting_enabled')):
+                continue
+            if not bool(features.get('journal_posting')):
+                continue
+
+            try:
+                with open_sqlite(db_path, timeout=_QUEUE_PROCESS_TIMEOUT_SEC) as conn:
+                    conn.row_factory = sqlite3.Row
+
+                    rows = conn.execute(
+                        """
+                        SELECT DISTINCT e.document_id AS sale_id, e.id AS entry_id
+                        FROM sme_journal_entries e
+                        JOIN sme_journal_lines l ON l.journal_entry_id = e.id
+                        WHERE e.document_type = 'SALE_REVENUE'
+                          AND e.status = 'posted'
+                          AND e.reverses_id IS NULL
+                          AND TRIM(COALESCE(l.account_code, '')) = '511'
+                          AND COALESCE(l.credit, 0) > 0
+                        ORDER BY e.id
+                        LIMIT ?
+                        """,
+                        (_RECONCILE_BATCH_SIZE,),
+                    ).fetchall()
+
+                    from Services.sme.sale_journal import (
+                        _build_revenue_lines,
+                        sync_sale_journals,
+                    )
+
+                    for row in rows:
+                        total_scanned += 1
+                        sale_id = int(row['sale_id'])
+                        entry_id = int(row['entry_id'])
+
+                        try:
+                            sale = conn.execute(
+                                "SELECT * FROM sale WHERE id = ?",
+                                (sale_id,),
+                            ).fetchone()
+                            if not sale or str(sale['status'] or '').lower() != 'completed':
+                                continue
+
+                            _, expected_lines = _build_revenue_lines(conn, sale)
+                            expected_accounts = {
+                                str(line.get('account_code') or '').strip()
+                                for line in expected_lines
+                                if float(line.get('credit') or 0) > 0
+                                and str(line.get('account_code') or '').strip().startswith('511')
+                            }
+
+                            if expected_accounts == {'511'}:
+                                total_valid_511 += 1
+                                continue
+
+                            result = sync_sale_journals(
+                                conn,
+                                sale_id,
+                                accounting_regime=accounting_regime,
+                                created_by='scheduler_integrity',
+                                replace_existing=True,
+                                features=features,
+                            )
+                            conn.commit()
+
+                            if result.get('posted'):
+                                total_rebuilt += 1
+                                logger.warning(
+                                    'accounting_integrity [%s]: rebuilt sale_id=%s '
+                                    'old_entry=%s expected=%s',
+                                    tenant_id, sale_id, entry_id,
+                                    sorted(expected_accounts),
+                                )
+
+                        except Exception as exc:
+                            conn.rollback()
+                            total_errors += 1
+                            logger.warning(
+                                'accounting_integrity [%s]: sale_id=%s error=%s',
+                                tenant_id, sale_id, exc, exc_info=True,
+                            )
+
+            except OPERATIONAL_ERROR as exc:
+                msg = str(exc).lower()
+                if 'locked' in msg or 'busy' in msg or 'timeout' in msg:
+                    logger.debug('accounting_integrity [%s]: DB busy, skip', tenant_id)
+                    continue
+                total_errors += 1
+                logger.warning(
+                    'accounting_integrity [%s] DB error: %s',
+                    tenant_id, exc, exc_info=True,
+                )
+            except Exception as exc:
+                total_errors += 1
+                logger.warning(
+                    'accounting_integrity [%s] error: %s',
+                    tenant_id, exc, exc_info=True,
+                )
+
+        logger.info(
+            'accounting_integrity total: scanned=%d rebuilt=%d valid_511=%d errors=%d',
+            total_scanned, total_rebuilt, total_valid_511, total_errors,
+        )
+    except Exception as exc:
+        logger.error('accounting_integrity worker error: %s', exc, exc_info=True)
+
 
 
 def _process_accounting_queue(app=None):
