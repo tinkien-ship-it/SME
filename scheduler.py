@@ -9,6 +9,7 @@ Quan trọng (SQLite):
 from __future__ import annotations
 
 import atexit
+import json
 import logging
 import os
 import sqlite3
@@ -55,6 +56,36 @@ try:
     _DEFAULT_QUEUE_SEC = int(os.environ.get('SME_ACCOUNTING_QUEUE_SEC', '30') or 30)
 except ValueError:
     _DEFAULT_QUEUE_SEC = 30
+
+
+# Accounting reconciliation:
+# định kỳ tìm completed sale bị thiếu bút toán và đưa lại vào queue.
+try:
+    _RECONCILE_INTERVAL_SEC = int(
+        os.environ.get(
+            'SME_ACCOUNTING_RECONCILE_SEC',
+            '300',
+        ) or 300
+    )
+except ValueError:
+    _RECONCILE_INTERVAL_SEC = 300
+
+try:
+    _RECONCILE_BATCH_SIZE = int(
+        os.environ.get(
+            'SME_ACCOUNTING_RECONCILE_BATCH',
+            '100',
+        ) or 100
+    )
+except ValueError:
+    _RECONCILE_BATCH_SIZE = 100
+
+_RECONCILE_BATCH_SIZE = max(
+    1,
+    min(_RECONCILE_BATCH_SIZE, 1000),
+)
+
+_reconcile_tick_lock = None
 
 
 def _env_truthy(name: str) -> bool:
@@ -302,6 +333,24 @@ def _job_accounting_queue():
         _process_accounting_queue(_accounting_app_ref)
     finally:
         _queue_tick_lock.release()
+
+
+def _job_accounting_reconcile():
+    """Named reconciliation job — chống chồng tick trong cùng process."""
+    import threading
+
+    global _reconcile_tick_lock
+    if _reconcile_tick_lock is None:
+        _reconcile_tick_lock = threading.Lock()
+
+    if not _reconcile_tick_lock.acquire(blocking=False):
+        logger.debug('accounting_reconcile: tick trước chưa xong — bỏ qua')
+        return
+
+    try:
+        _reconcile_missing_sale_accounting()
+    finally:
+        _reconcile_tick_lock.release()
 
 
 def _job_crm_reminders():
@@ -581,6 +630,17 @@ def init_schedulers(app, backup_root):
         coalesce=True,
         replace_existing=True,
     )
+
+    backup_scheduler.add_job(
+        func=_job_accounting_reconcile,
+        trigger="interval",
+        seconds=max(60, _RECONCILE_INTERVAL_SEC),
+        id='accounting_reconcile_worker',
+        name='accounting_reconcile_worker',
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
     backup_scheduler.add_job(
         func=_job_crm_reminders,
         trigger='cron',
@@ -606,6 +666,16 @@ def init_schedulers(app, backup_root):
     backup_scheduler.start()
     _backup_scheduler = backup_scheduler
 
+    # Chạy reconcile ngay khi scheduler leader khởi động.
+    try:
+        _job_accounting_reconcile()
+    except Exception as exc:
+        logger.warning(
+            'Initial accounting reconcile failed: %s',
+            exc,
+            exc_info=True,
+        )
+
     # Invoice batch 17:00 — cùng leadership, không start ở mọi worker
     try:
         from routes.invoice import start_invoice_batch_scheduler
@@ -622,9 +692,13 @@ def init_schedulers(app, backup_root):
 
     atexit.register(_shutdown)
     logger.info(
-        'Schedulers started (pid=%s, accounting_queue every %ss)',
+        'Schedulers started '
+        '(pid=%s, accounting_queue=%ss, '
+        'accounting_reconcile=%ss, reconcile_batch=%s)',
         os.getpid(),
         max(5, _DEFAULT_QUEUE_SEC),
+        max(60, _RECONCILE_INTERVAL_SEC),
+        _RECONCILE_BATCH_SIZE,
     )
     return expiry_scheduler, backup_scheduler
 
@@ -714,6 +788,322 @@ def _collect_tenant_db_paths() -> list[str]:
     return out
 
 
+
+def _load_tenant_accounting_profile(
+    db_path: str,
+) -> dict:
+    """
+    Đọc accounting profile của tenant từ registry.
+
+    tenants.settings / tenants.master_settings là JSON.
+    Runtime settings ưu tiên hơn master settings.
+    """
+
+    profile = {
+        'tenant_id': None,
+        'accounting_regime': None,
+        'features': {},
+        'accounting_enabled': False,
+        'journal_posting': False,
+    }
+
+    try:
+        target_abs = os.path.abspath(db_path)
+
+        with open_sqlite(
+            REGISTRY_PATH,
+            timeout=_QUEUE_PROBE_TIMEOUT_SEC,
+        ) as reg:
+            reg.row_factory = sqlite3.Row
+            rows = reg.execute(
+                """
+                SELECT
+                    tenant_id,
+                    db_path,
+                    settings,
+                    master_settings,
+                    is_active
+                FROM tenants
+                WHERE is_active = 1
+                  AND db_path IS NOT NULL
+                  AND TRIM(db_path) != ''
+                """
+            ).fetchall()
+
+        matched = None
+
+        for row in rows:
+            raw_path = str(row['db_path'] or '').strip()
+            if not raw_path:
+                continue
+
+            candidate_abs = os.path.abspath(
+                raw_path
+                if os.path.isabs(raw_path)
+                else os.path.join(BASE_DIR, raw_path)
+            )
+
+            if candidate_abs == target_abs:
+                matched = row
+                break
+
+        if matched is None:
+            logger.warning(
+                'accounting_profile: không tìm thấy tenant cho DB %s',
+                os.path.basename(db_path),
+            )
+            return profile
+
+        profile['tenant_id'] = str(
+            matched['tenant_id'] or ''
+        ).strip() or None
+
+        settings = {}
+        master_settings = {}
+
+        raw_settings = matched['settings']
+        if raw_settings:
+            try:
+                parsed = json.loads(raw_settings)
+                if isinstance(parsed, dict):
+                    settings = parsed
+            except Exception as exc:
+                logger.warning(
+                    'accounting_profile [%s]: settings JSON lỗi: %s',
+                    profile['tenant_id'],
+                    exc,
+                )
+
+        raw_master = matched['master_settings']
+        if raw_master:
+            try:
+                parsed = json.loads(raw_master)
+                if isinstance(parsed, dict):
+                    master_settings = parsed
+            except Exception as exc:
+                logger.warning(
+                    'accounting_profile [%s]: master_settings JSON lỗi: %s',
+                    profile['tenant_id'],
+                    exc,
+                )
+
+        accounting_regime = (
+            settings.get('accounting_regime')
+            or master_settings.get('accounting_regime')
+        )
+
+        features = {}
+
+        master_features = master_settings.get('features')
+        if isinstance(master_features, dict):
+            features.update(master_features)
+
+        runtime_features = settings.get('features')
+        if isinstance(runtime_features, dict):
+            features.update(runtime_features)
+
+        profile['accounting_regime'] = (
+            str(accounting_regime).strip()
+            if accounting_regime
+            else None
+        )
+        profile['features'] = features
+        profile['accounting_enabled'] = bool(
+            features.get('accounting_enabled')
+        )
+        profile['journal_posting'] = bool(
+            features.get('journal_posting')
+        )
+
+        return profile
+
+    except Exception as exc:
+        logger.warning(
+            'accounting_profile [%s] load failed: %s',
+            os.path.basename(db_path),
+            exc,
+            exc_info=True,
+        )
+        return profile
+
+
+def _repair_pending_accounting_job_profile(
+    conn,
+    *,
+    accounting_regime: str | None,
+    features: dict | None,
+) -> int:
+    """
+    Đồng bộ profile kế toán hiện tại vào job sale_journal pending/retry.
+
+    Không sửa completed/cancelled/processing.
+    """
+
+    if not accounting_regime:
+        return 0
+
+    features_json = json.dumps(
+        features if isinstance(features, dict) else {},
+        ensure_ascii=False,
+    )
+
+    cursor = conn.execute(
+        """
+        UPDATE accounting_jobs
+        SET accounting_regime = ?,
+            features_json = ?
+        WHERE job_type = 'sale_journal'
+          AND status IN ('pending', 'retry')
+        """,
+        (
+            accounting_regime,
+            features_json,
+        ),
+    )
+    conn.commit()
+    return int(cursor.rowcount or 0)
+
+
+def _reconcile_missing_sale_accounting():
+    """
+    Safety-net: quét tenant SME đã bật Accounting + Journal Posting,
+    tìm sale completed chưa có active SALE journal và enqueue lại.
+    """
+
+    try:
+        tenant_dbs = _collect_tenant_db_paths()
+        if not tenant_dbs:
+            return
+
+        total_scanned = 0
+        total_enqueued = 0
+        total_skipped = 0
+        total_errors = 0
+
+        for db_path in tenant_dbs:
+            try:
+                profile = _load_tenant_accounting_profile(db_path)
+
+                tenant_id = (
+                    profile.get('tenant_id')
+                    or os.path.splitext(os.path.basename(db_path))[0]
+                )
+                accounting_regime = profile.get('accounting_regime')
+                features = profile.get('features') or {}
+                regime_upper = str(accounting_regime or '').strip().upper()
+
+                if not regime_upper.startswith('SME'):
+                    logger.debug(
+                        'accounting_reconcile [%s]: skip non-SME regime=%s',
+                        tenant_id,
+                        accounting_regime,
+                    )
+                    continue
+
+                if not bool(features.get('accounting_enabled')):
+                    logger.debug(
+                        'accounting_reconcile [%s]: skip accounting_disabled',
+                        tenant_id,
+                    )
+                    continue
+
+                if not bool(features.get('journal_posting')):
+                    logger.debug(
+                        'accounting_reconcile [%s]: skip journal_posting_disabled',
+                        tenant_id,
+                    )
+                    continue
+
+                with open_sqlite(
+                    db_path,
+                    timeout=_QUEUE_PROCESS_TIMEOUT_SEC,
+                ) as conn:
+                    conn.row_factory = sqlite3.Row
+
+                    from Services.accounting_queue import (
+                        reconcile_missing_sale_accounting,
+                    )
+
+                    result = reconcile_missing_sale_accounting(
+                        conn,
+                        batch_size=_RECONCILE_BATCH_SIZE,
+                        accounting_regime=accounting_regime,
+                        features=features,
+                        created_by='scheduler_reconcile',
+                    )
+
+                    scanned = int(result.get('scanned') or 0)
+                    enqueued = int(result.get('enqueued') or 0)
+                    skipped = int(result.get('skipped') or 0)
+                    errors = int(result.get('errors') or 0)
+                    reason = result.get('reason')
+
+                    total_scanned += scanned
+                    total_enqueued += enqueued
+                    total_skipped += skipped
+                    total_errors += errors
+
+                    logger.info(
+                        'accounting_reconcile [%s]: '
+                        'regime=%s scanned=%d enqueued=%d '
+                        'skipped=%d errors=%d reason=%s',
+                        tenant_id,
+                        accounting_regime,
+                        scanned,
+                        enqueued,
+                        skipped,
+                        errors,
+                        reason,
+                    )
+
+            except OPERATIONAL_ERROR as exc:
+                msg = str(exc).lower()
+
+                if (
+                    'locked' in msg
+                    or 'busy' in msg
+                    or 'timeout' in msg
+                ):
+                    logger.debug(
+                        'accounting_reconcile skip busy %s',
+                        os.path.basename(db_path),
+                    )
+                    continue
+
+                logger.warning(
+                    'accounting_reconcile [%s] DB error: %s',
+                    os.path.basename(db_path),
+                    exc,
+                )
+
+            except Exception as exc:
+                logger.warning(
+                    'accounting_reconcile [%s] skip: %s',
+                    os.path.basename(db_path),
+                    exc,
+                    exc_info=True,
+                )
+
+            if _QUEUE_YIELD_SEC > 0:
+                time.sleep(_QUEUE_YIELD_SEC)
+
+        logger.info(
+            'accounting_reconcile total: '
+            'scanned=%d enqueued=%d skipped=%d errors=%d',
+            total_scanned,
+            total_enqueued,
+            total_skipped,
+            total_errors,
+        )
+
+    except Exception as exc:
+        logger.error(
+            'accounting_reconcile worker error: %s',
+            exc,
+            exc_info=True,
+        )
+
+
 def _db_has_pending_accounting_jobs(db_path: str) -> bool | None:
     """
     True = có job; False = không; None = không kiểm tra được (locked / lỗi) → bỏ qua.
@@ -742,58 +1132,168 @@ def _db_has_pending_accounting_jobs(db_path: str) -> bool | None:
         return False
 
 
-def _process_accounting_queue(app):
-    """Background worker: chỉ xử lý DB có job pending; nhường khóa nếu đang bận."""
+def _process_accounting_queue(app=None):
+    """
+    Background worker accounting queue:
+    - chỉ xử lý DB có pending/retry;
+    - đọc đúng tenant accounting profile từ registry;
+    - repair job cũ thiếu regime/features;
+    - giữ job nếu tenant chưa bật SME accounting;
+    - nhường khóa khi DB bận.
+    """
+
+    _ = app  # giữ tương thích chữ ký cũ
+
     try:
         tenant_dbs = _collect_tenant_db_paths()
         if not tenant_dbs:
             return
 
-        # Round-robin nhẹ theo giây để không luôn đụng cùng vài DB đầu danh sách
         if len(tenant_dbs) > _QUEUE_MAX_DBS_PER_TICK:
-            offset = int(time.time() / max(5, _DEFAULT_QUEUE_SEC)) % len(tenant_dbs)
+            offset = (
+                int(time.time() / max(5, _DEFAULT_QUEUE_SEC))
+                % len(tenant_dbs)
+            )
             rotated = tenant_dbs[offset:] + tenant_dbs[:offset]
         else:
             rotated = tenant_dbs
 
         processed_dbs = 0
+
         for db_path in rotated:
             if processed_dbs >= _QUEUE_MAX_DBS_PER_TICK:
                 break
 
             pending = _db_has_pending_accounting_jobs(db_path)
+
             if pending is None:
-                logger.debug('accounting_queue skip busy %s', os.path.basename(db_path))
+                logger.debug(
+                    'accounting_queue skip busy %s',
+                    os.path.basename(db_path),
+                )
                 continue
+
             if not pending:
                 continue
 
             try:
-                with open_sqlite(db_path, timeout=_QUEUE_PROCESS_TIMEOUT_SEC) as conn:
+                profile = _load_tenant_accounting_profile(db_path)
+
+                tenant_id = (
+                    profile.get('tenant_id')
+                    or os.path.splitext(os.path.basename(db_path))[0]
+                )
+                accounting_regime = profile.get('accounting_regime')
+                features = profile.get('features') or {}
+                regime_upper = str(accounting_regime or '').strip().upper()
+
+                if not regime_upper.startswith('SME'):
+                    logger.warning(
+                        'accounting_queue [%s]: pending jobs nhưng '
+                        'tenant không phải SME (regime=%s) — giữ job',
+                        tenant_id,
+                        accounting_regime,
+                    )
+                    continue
+
+                if not bool(features.get('accounting_enabled')):
+                    logger.warning(
+                        'accounting_queue [%s]: pending jobs nhưng '
+                        'accounting_enabled=false — giữ job',
+                        tenant_id,
+                    )
+                    continue
+
+                if not bool(features.get('journal_posting')):
+                    logger.warning(
+                        'accounting_queue [%s]: pending jobs nhưng '
+                        'journal_posting=false — giữ job',
+                        tenant_id,
+                    )
+                    continue
+
+                with open_sqlite(
+                    db_path,
+                    timeout=_QUEUE_PROCESS_TIMEOUT_SEC,
+                ) as conn:
                     conn.row_factory = sqlite3.Row
-                    from Services.accounting_queue import process_accounting_jobs
-                    result = process_accounting_jobs(conn, batch_size=_QUEUE_BATCH_SIZE)
-                    if result.get('processed') or result.get('failed'):
+
+                    repaired = _repair_pending_accounting_job_profile(
+                        conn,
+                        accounting_regime=accounting_regime,
+                        features=features,
+                    )
+
+                    if repaired:
                         logger.info(
-                            'accounting_queue [%s]: processed=%d failed=%d',
-                            os.path.basename(db_path),
-                            result.get('processed', 0),
-                            result.get('failed', 0),
+                            'accounting_queue [%s]: '
+                            'repaired_profile=%d regime=%s',
+                            tenant_id,
+                            repaired,
+                            accounting_regime,
                         )
+
+                    from Services.accounting_queue import (
+                        process_accounting_jobs,
+                    )
+
+                    result = process_accounting_jobs(
+                        conn,
+                        batch_size=_QUEUE_BATCH_SIZE,
+                    )
+
+                    if (
+                        result.get('processed')
+                        or result.get('failed')
+                        or result.get('skipped')
+                    ):
+                        logger.info(
+                            'accounting_queue [%s]: '
+                            'processed=%d failed=%d skipped=%d',
+                            tenant_id,
+                            int(result.get('processed') or 0),
+                            int(result.get('failed') or 0),
+                            int(result.get('skipped') or 0),
+                        )
+
                 processed_dbs += 1
-            except OPERATIONAL_ERROR as e:
-                if 'locked' in str(e).lower():
-                    logger.debug('accounting_queue skip locked %s', os.path.basename(db_path))
+
+            except OPERATIONAL_ERROR as exc:
+                msg = str(exc).lower()
+
+                if (
+                    'locked' in msg
+                    or 'busy' in msg
+                    or 'timeout' in msg
+                ):
+                    logger.debug(
+                        'accounting_queue skip locked/busy %s',
+                        os.path.basename(db_path),
+                    )
                 else:
-                    logger.debug('accounting_queue skip %s: %s', db_path, e)
-            except Exception as e:
-                logger.debug('accounting_queue skip %s: %s', db_path, e)
+                    logger.warning(
+                        'accounting_queue [%s] DB error: %s',
+                        os.path.basename(db_path),
+                        exc,
+                    )
+
+            except Exception as exc:
+                logger.warning(
+                    'accounting_queue [%s] error: %s',
+                    os.path.basename(db_path),
+                    exc,
+                    exc_info=True,
+                )
 
             if _QUEUE_YIELD_SEC > 0:
                 time.sleep(_QUEUE_YIELD_SEC)
 
-    except Exception as e:
-        logger.error('accounting_queue worker error: %s', e)
+    except Exception as exc:
+        logger.error(
+            'accounting_queue worker error: %s',
+            exc,
+            exc_info=True,
+        )
 
 
 def _scheduled_sme_auto_posting():
