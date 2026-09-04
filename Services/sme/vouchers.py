@@ -944,6 +944,292 @@ def create_payment(
     }
 
 
+
+def ensure_sale_receipt_voucher(
+    conn: sqlite3.Connection,
+    sale_id: int,
+    *,
+    created_by: str | None = None,
+    commit: bool = False,
+) -> dict[str, Any]:
+    """
+    Đảm bảo Phiếu Thu SME 01-TT cho sale đã completed và đã thực thu.
+
+    Quan trọng:
+    - 111 / Tiền mặt  -> tạo Phiếu Thu SME.
+    - 112 / Chuyển khoản -> tạo Phiếu Thu SME.
+    - 131 / Công nợ -> KHÔNG tạo Phiếu Thu vì chưa thực thu.
+    - Hàm này KHÔNG post thêm journal mới cho sale 111/112.
+      SALE_REVENUE đã ghi Nợ 111/112 - Có doanh thu; tạo thêm PT journal
+      sẽ làm ghi nhận tiền hai lần.
+    - Phiếu Thu được lưu trong sme_vouchers với source_type='sale',
+      source_id=sale_id và journal_entry_id=NULL.
+    - Idempotent: một sale chỉ có tối đa một receipt voucher active.
+    """
+    from Services.sme.payment_method import (
+        normalize_sale_payment_method,
+        payment_method_label,
+    )
+
+    ensure_sme_voucher_schema(conn, commit=False)
+
+    old_factory = getattr(conn, "row_factory", None)
+    try:
+        conn.row_factory = sqlite3.Row
+    except Exception:
+        pass
+
+    sale = conn.execute(
+        "SELECT * FROM sale WHERE id = ?",
+        (int(sale_id),),
+    ).fetchone()
+    if not sale:
+        raise ValueError(f"Không tìm thấy sale #{sale_id}")
+
+    sale_d = dict(sale) if hasattr(sale, "keys") else {}
+    status = str(sale_d.get("status") or "").strip().lower()
+    if status != "completed":
+        return {
+            "created": False,
+            "reason": "sale_not_completed",
+            "sale_id": int(sale_id),
+        }
+
+    payment_code = normalize_sale_payment_method(
+        sale_d.get("payment_method"),
+    )
+    if payment_code == "131":
+        return {
+            "created": False,
+            "reason": "credit_sale_no_receipt",
+            "sale_id": int(sale_id),
+            "payment_method": payment_code,
+        }
+
+    if payment_code not in ("111", "112"):
+        return {
+            "created": False,
+            "reason": "unsupported_payment_method",
+            "sale_id": int(sale_id),
+            "payment_method": payment_code,
+        }
+
+    existing = conn.execute(
+        """
+        SELECT *
+        FROM sme_vouchers
+        WHERE voucher_type = 'receipt'
+          AND source_type = 'sale'
+          AND source_id = ?
+          AND COALESCE(status, 'posted') != 'void'
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (int(sale_id),),
+    ).fetchone()
+    if existing:
+        row = dict(existing) if hasattr(existing, "keys") else {}
+        return {
+            "created": False,
+            "existing": True,
+            "sale_id": int(sale_id),
+            "voucher_id": row.get("id"),
+            "voucher_no": row.get("voucher_no"),
+            "payment_method": payment_code,
+        }
+
+    # Tìm SALE_REVENUE đang active để lấy đúng tài khoản đã hạch toán.
+    revenue_entry = conn.execute(
+        """
+        SELECT id, posting_date, document_no, branch_code
+        FROM sme_journal_entries
+        WHERE document_id = ?
+          AND document_type = 'SALE_REVENUE'
+          AND status = 'posted'
+          AND reverses_id IS NULL
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (int(sale_id),),
+    ).fetchone()
+
+    revenue_entry_id = None
+    branch_code = None
+    debit_account = "1111" if payment_code == "111" else "1121"
+    credit_account = "511"
+
+    if revenue_entry:
+        erow = dict(revenue_entry) if hasattr(revenue_entry, "keys") else {}
+        revenue_entry_id = erow.get("id")
+        branch_code = erow.get("branch_code")
+
+        # Lấy đúng TK Nợ tiền và TK Có doanh thu từ journal hiện hữu.
+        debit_row = conn.execute(
+            """
+            SELECT account_code
+            FROM sme_journal_lines
+            WHERE entry_id = ?
+              AND COALESCE(debit, 0) > 0
+              AND (
+                    account_code LIKE '111%'
+                 OR account_code LIKE '112%'
+              )
+            ORDER BY sequence, id
+            LIMIT 1
+            """,
+            (revenue_entry_id,),
+        ).fetchone()
+        if debit_row:
+            debit_account = str(
+                debit_row[0]
+                if not hasattr(debit_row, "keys")
+                else debit_row["account_code"]
+            )
+
+        credit_row = conn.execute(
+            """
+            SELECT account_code
+            FROM sme_journal_lines
+            WHERE entry_id = ?
+              AND COALESCE(credit, 0) > 0
+              AND account_code LIKE '511%'
+            ORDER BY sequence, id
+            LIMIT 1
+            """,
+            (revenue_entry_id,),
+        ).fetchone()
+        if credit_row:
+            credit_account = str(
+                credit_row[0]
+                if not hasattr(credit_row, "keys")
+                else credit_row["account_code"]
+            )
+
+    amount = float(sale_d.get("total_amount") or 0)
+    if amount <= 0:
+        return {
+            "created": False,
+            "reason": "sale_amount_not_positive",
+            "sale_id": int(sale_id),
+        }
+
+    voucher_date = str(
+        sale_d.get("date")
+        or sale_d.get("created_at")
+        or _now()
+    )[:10]
+    if not voucher_date:
+        voucher_date = _now()[:10]
+
+    voucher_no = _next_voucher_no(conn, "receipt")
+    sale_no = str(
+        sale_d.get("sale_no")
+        or sale_d.get("order_code")
+        or sale_id
+    )
+    party_name = str(
+        sale_d.get("customer_name")
+        or sale_d.get("company_name")
+        or "Khách hàng"
+    )
+    party_address = str(sale_d.get("address") or "")
+    party_tax_code = str(sale_d.get("tax_code") or "")
+    label = payment_method_label(payment_code)
+    reason = f"Thu tiền bán hàng {sale_no} - {label}"
+
+    cols = {
+        r[1]
+        for r in conn.execute(
+            "PRAGMA table_info(sme_vouchers)"
+        ).fetchall()
+    }
+
+    fields = [
+        "voucher_type",
+        "form_code",
+        "voucher_no",
+        "voucher_date",
+        "party_name",
+        "party_address",
+        "party_tax_code",
+        "amount",
+        "debit_account",
+        "credit_account",
+        "reason",
+        "reference_document",
+        "source_type",
+        "source_id",
+        "journal_entry_id",
+        "status",
+        "created_by",
+        "created_at",
+        "updated_at",
+        "branch_code",
+    ]
+    vals: list[Any] = [
+        "receipt",
+        VOUCHER_FORM_RECEIPT,
+        voucher_no,
+        voucher_date,
+        party_name,
+        party_address,
+        party_tax_code,
+        amount,
+        debit_account,
+        credit_account,
+        reason,
+        sale_no,
+        "sale",
+        int(sale_id),
+        None,  # Không link journal để renumber/void PT không tác động SALE_REVENUE.
+        "posted",
+        created_by,
+        _now(),
+        _now(),
+        branch_code,
+    ]
+
+    if "currency" in cols:
+        fields.extend(["currency", "exchange_rate", "amount_fc"])
+        vals.extend(["VND", 1.0, 0.0])
+
+    if "purpose" in cols:
+        fields.append("purpose")
+        vals.append("sale_receipt")
+
+    placeholders = ", ".join("?" for _ in fields)
+    cur = conn.execute(
+        f"""
+        INSERT INTO sme_vouchers ({", ".join(fields)})
+        VALUES ({placeholders})
+        """,
+        vals,
+    )
+
+    voucher_id = getattr(cur, "lastrowid", None)
+
+    if commit:
+        sqlite_commit(conn, label="sale_receipt_voucher")
+
+    try:
+        conn.row_factory = old_factory
+    except Exception:
+        pass
+
+    return {
+        "created": True,
+        "existing": False,
+        "sale_id": int(sale_id),
+        "voucher_id": voucher_id,
+        "voucher_no": voucher_no,
+        "payment_method": payment_code,
+        "payment_label": label,
+        "amount": amount,
+        "debit_account": debit_account,
+        "credit_account": credit_account,
+        "sale_revenue_entry_id": revenue_entry_id,
+    }
+
 def list_vouchers(
     conn: sqlite3.Connection,
     *,

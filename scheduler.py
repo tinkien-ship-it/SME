@@ -1032,6 +1032,57 @@ def _reconcile_missing_sale_accounting():
                         created_by='scheduler_reconcile',
                     )
 
+                    # -------------------------------------------------
+                    # Safety-net chứng từ bán hàng.
+                    #
+                    # Chạy độc lập với Accounting Journal:
+                    # - 111: đảm bảo Phiếu Thu tiền mặt
+                    # - 112: đảm bảo Phiếu Thu chuyển khoản
+                    # - 131: đảm bảo Công nợ
+                    #
+                    # Không phụ thuộc việc sale đã có journal hay chưa.
+                    # -------------------------------------------------
+                    from Services.sme.sale_financial_documents import (
+                        reconcile_completed_sale_documents,
+                    )
+
+                    doc_result = reconcile_completed_sale_documents(
+                        conn,
+                        batch_size=_RECONCILE_BATCH_SIZE,
+                        created_by='scheduler_reconcile',
+                    )
+
+                    doc_scanned = int(
+                        doc_result.get('scanned') or 0
+                    )
+                    doc_created = int(
+                        doc_result.get('created') or 0
+                    )
+                    doc_existing = int(
+                        doc_result.get('existing') or 0
+                    )
+                    doc_errors = int(
+                        doc_result.get('errors') or 0
+                    )
+
+                    logger.info(
+                        'sale_documents [%s]: '
+                        'scanned=%d created=%d '
+                        'existing=%d errors=%d',
+                        tenant_id,
+                        doc_scanned,
+                        doc_created,
+                        doc_existing,
+                        doc_errors,
+                    )
+
+                    if doc_errors:
+                        logger.warning(
+                            'sale_documents [%s] details=%s',
+                            tenant_id,
+                            doc_result.get('details'),
+                        )
+
                     scanned = int(result.get('scanned') or 0)
                     enqueued = int(result.get('enqueued') or 0)
                     skipped = int(result.get('skipped') or 0)
