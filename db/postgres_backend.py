@@ -76,78 +76,28 @@ def get_pool() -> ConnectionPool:
     _require_psycopg()
     with _POOL_GUARD:
         if _POOL is None:
-            # Mỗi Gunicorn worker là một process và có một pool riêng.
-            # Pool 4..50 với 5 workers có thể giữ tối thiểu 20 và lý thuyết
-            # mở tới 250 connection. Mặc định mới ưu tiên pool nhỏ, co giãn.
-            min_size = int(os.environ.get('SME_PG_POOL_MIN', '1') or 1)
-            max_size = int(os.environ.get('SME_PG_POOL_MAX', '8') or 8)
-            timeout = float(os.environ.get('SME_PG_POOL_TIMEOUT', '5') or 5)
-            max_idle = float(os.environ.get('SME_PG_POOL_MAX_IDLE', '60') or 60)
-            max_lifetime = float(
-                os.environ.get('SME_PG_POOL_MAX_LIFETIME', '1800') or 1800
-            )
-
-            min_size = max(0, min_size)
-            max_size = max(1, max_size)
-            if min_size > max_size:
-                min_size = max_size
-
+            # Gunicorn 4 worker + scheduler + CRM song song — cần pool đủ lớn
+            min_size = int(os.environ.get('SME_PG_POOL_MIN', '4') or 4)
+            max_size = int(os.environ.get('SME_PG_POOL_MAX', '50') or 50)
+            timeout = float(os.environ.get('SME_PG_POOL_TIMEOUT', '15') or 15)
             kwargs = {
                 'conninfo': database_url(),
                 'min_size': min_size,
                 'max_size': max_size,
-                'timeout': max(0.5, timeout),
+                'timeout': timeout,
                 'kwargs': {
                     'row_factory': compat_row_factory,
                     'autocommit': False,
                     'connect_timeout': 10,
                 },
                 'open': True,
-                'max_idle': max(1.0, max_idle),
-                'max_lifetime': max(60.0, max_lifetime),
             }
-
+            # Kiểm tra connection khi lấy từ pool (psycopg_pool ≥ 3.1)
             check_fn = getattr(ConnectionPool, 'check_connection', None)
             if check_fn is not None:
                 kwargs['check'] = check_fn
-
-            try:
-                _POOL = ConnectionPool(**kwargs)
-            except TypeError:
-                # Tương thích psycopg_pool cũ.
-                kwargs.pop('max_idle', None)
-                kwargs.pop('max_lifetime', None)
-                _POOL = ConnectionPool(**kwargs)
-
-            logger.info(
-                'PostgreSQL pool initialized pid=%s min=%s max=%s timeout=%ss',
-                os.getpid(), min_size, max_size, max(0.5, timeout),
-            )
+            _POOL = ConnectionPool(**kwargs)
         return _POOL
-
-
-
-def _pool_stats(pool=None) -> dict:
-    """Lấy thống kê pool an toàn để chẩn đoán PoolTimeout."""
-    target = pool or _POOL
-    if target is None:
-        return {}
-    try:
-        getter = getattr(target, 'get_stats', None)
-        return dict(getter() or {}) if getter else {}
-    except Exception:
-        return {}
-
-
-def _log_pool_state(level: int, message: str, *, pool=None, schema: str | None = None) -> None:
-    logger.log(
-        level,
-        '%s (pid=%s schema=%s stats=%s)',
-        message,
-        os.getpid(),
-        schema or '?',
-        _pool_stats(pool),
-    )
 
 
 def reset_pg_pool() -> None:
@@ -410,8 +360,8 @@ class PgCursor:
         return getattr(self._cur, name)
 
 
-def _pool_putconn_finalizer(pool_obj, conn_obj) -> None:
-    """Safety net: trả connection về ĐÚNG pool đã checkout khi wrapper bị GC."""
+def _pool_putconn_finalizer(conn_obj) -> None:
+    """Safety net: nếu quên close() vẫn trả connection về pool khi GC."""
     try:
         if conn_obj is None:
             return
@@ -421,13 +371,7 @@ def _pool_putconn_finalizer(pool_obj, conn_obj) -> None:
             conn_obj.rollback()
         except Exception:
             pass
-        if pool_obj is not None:
-            try:
-                pool_obj.putconn(conn_obj)
-                return
-            except Exception:
-                pass
-        conn_obj.close()
+        get_pool().putconn(conn_obj)
     except Exception:
         try:
             conn_obj.close()
@@ -441,41 +385,23 @@ class PgConnection:
     __slots__ = (
         '__weakref__',
         '_conn', '_schema', '_sme_backend', '_sme_pg_schema', '_closed', '_from_pool',
-        '_pool', '_finalizer', 'lastrowid', 'row_factory',
+        '_finalizer', 'lastrowid', 'row_factory',
     )
 
-    def __init__(self, conn, schema: str, *, from_pool: bool = True, pool=None):
+    def __init__(self, conn, schema: str, *, from_pool: bool = True):
         self._conn = conn
         self._schema = sanitize_pg_schema(schema)
         self._sme_backend = BACKEND_POSTGRES
         self._sme_pg_schema = self._schema
         self._closed = False
         self._from_pool = from_pool
-        self._pool = pool
         self._finalizer = None
         self.lastrowid = 0
         self.row_factory = None
         self._set_search_path()
-
-        # SET search_path với autocommit=False mở transaction. Commit ngay vì
-        # ở đây chưa có nghiệp vụ; tránh checkout xong đã "idle in transaction".
-        try:
-            self._conn.commit()
-        except Exception:
-            try:
-                self._conn.rollback()
-            except Exception:
-                pass
-            raise
-
         if from_pool:
             try:
-                self._finalizer = weakref.finalize(
-                    self,
-                    _pool_putconn_finalizer,
-                    pool,
-                    conn,
-                )
+                self._finalizer = weakref.finalize(self, _pool_putconn_finalizer, conn)
             except TypeError:
                 # Class không hỗ trợ weakref — bỏ safety net, vẫn dùng được
                 self._finalizer = None
@@ -552,37 +478,25 @@ class PgConnection:
             self._finalizer = None
         conn = self._conn
         if self._from_pool:
-            # Rollback trước khi trả pool để không giữ transaction/request cũ.
-            # Luôn trả về CHÍNH pool đã checkout connection này.
-            pool = self._pool
+            # Luôn rollback trước khi trả pool — tránh connection "aborted" làm hỏng request sau
             try:
                 if not getattr(conn, 'closed', False):
                     try:
                         conn.rollback()
                     except Exception:
                         pass
-                    if pool is not None:
-                        pool.putconn(conn)
-                    else:
-                        conn.close()
-                elif pool is not None:
+                    get_pool().putconn(conn)
+                else:
                     try:
-                        pool.putconn(conn, close=True)
+                        get_pool().putconn(conn, close=True)
                     except TypeError:
-                        pool.putconn(conn)
+                        get_pool().putconn(conn)
             except Exception as exc:
-                logger.warning(
-                    'putconn failed pid=%s schema=%s: %s',
-                    os.getpid(),
-                    self._schema,
-                    exc,
-                )
+                logger.warning('putconn failed: %s', exc)
                 try:
                     conn.close()
                 except Exception:
                     pass
-            finally:
-                self._pool = None
             return
         try:
             conn.rollback()
@@ -645,72 +559,27 @@ def open_pg_request(schema: str):
 
 
 def open_pg(schema: str | None = None, *, db_path: str | None = None, tenant_id: str | None = None):
-    """Mở connection Postgres với search_path = schema tenant.
-
-    PoolTimeout không reset pool đang phục vụ request khác. Reset pool khi còn
-    connection checked-out có thể làm ownership rối và gây lỗi dây chuyền.
-    """
+    """Mở connection Postgres với search_path = schema tenant."""
     _require_psycopg()
     from psycopg_pool import PoolTimeout
 
-    sch = sanitize_pg_schema(
-        schema or pg_schema_from_db_path(db_path, tenant_id=tenant_id)
-    )
+    sch = schema or pg_schema_from_db_path(db_path, tenant_id=tenant_id)
     pool = get_pool()
-
     try:
         raw = pool.getconn()
     except PoolTimeout:
-        _log_pool_state(
-            logging.ERROR,
-            'PoolTimeout khi checkout PostgreSQL; giữ nguyên pool và retry 1 lần',
-            pool=pool,
-            schema=sch,
-        )
-
-        try:
-            check_pool = getattr(pool, 'check', None)
-            if callable(check_pool):
-                check_pool()
-        except Exception as exc:
-            logger.warning('PostgreSQL pool.check failed: %s', exc)
-
-        retry_delay = float(
-            os.environ.get('SME_PG_POOL_RETRY_DELAY', '0.25') or 0.25
-        )
-        time.sleep(max(0.05, min(retry_delay, 2.0)))
-
-        try:
-            raw = pool.getconn()
-        except PoolTimeout:
-            _log_pool_state(
-                logging.ERROR,
-                'PoolTimeout lần 2; không reset pool để tránh ảnh hưởng request khác',
-                pool=pool,
-                schema=sch,
-            )
-            raise
-
+        # Pool bị leak / connection treo — reset một lần rồi thử lại
+        logger.error('PoolTimeout — reset PostgreSQL pool rồi thử lại (schema=%s)', sch)
+        close_pg_pool()
+        pool = get_pool()
+        raw = pool.getconn()
     try:
-        return PgConnection(raw, sch, from_pool=True, pool=pool)
+        return PgConnection(raw, sch, from_pool=True)
     except Exception:
         try:
-            if not getattr(raw, 'closed', False):
-                try:
-                    raw.rollback()
-                except Exception:
-                    pass
-                pool.putconn(raw)
-            else:
-                try:
-                    pool.putconn(raw, close=True)
-                except TypeError:
-                    pool.putconn(raw)
+            pool.putconn(raw)
         except Exception:
-            try:
-                raw.close()
-            except Exception:
-                pass
+            pass
         raise
 
 
@@ -747,22 +616,11 @@ def ensure_pg_schema(schema: str) -> None:
 
 
 def close_pg_pool() -> None:
-    """Đóng pool hiện tại khi shutdown / thao tác quản trị chủ động."""
     global _POOL
     with _POOL_GUARD:
-        pool = _POOL
-        if pool is None:
-            return
-
-        _log_pool_state(
-            logging.INFO,
-            'Closing PostgreSQL pool',
-            pool=pool,
-        )
-
-        # Tách global trước khi close để checkout mới không lấy pool đang đóng.
-        _POOL = None
-        try:
-            pool.close()
-        except Exception as exc:
-            logger.warning('close PostgreSQL pool failed: %s', exc)
+        if _POOL is not None:
+            try:
+                _POOL.close()
+            except Exception:
+                pass
+            _POOL = None
