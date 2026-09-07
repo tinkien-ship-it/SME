@@ -196,10 +196,12 @@
         <div class="col-lg-2"><label class="form-label">ĐVT tài sản</label><input class="form-control bg-light fw-semibold" id="saleAssetUnit" readonly></div>
         <div class="col-lg-2"><label class="form-label">Số lượng bán</label><input class="form-control bg-light" id="saleAssetQty" value="1" readonly></div>
         <div class="col-lg-4"><label class="form-label fw-semibold">Tổng giá chuyển nhượng chưa VAT</label><input type="number" min="0" step="1000" class="form-control" id="saleNetAmount"></div>
-        <div class="col-lg-4"><label class="form-label fw-semibold">Giá đất được trừ khi tính thuế GTGT</label><input type="number" min="0" step="1000" class="form-control" id="saleLandDeduction"><div class="form-text">Nhập theo hồ sơ/căn cứ pháp lý đủ điều kiện; không tự lấy nguyên giá BĐS.</div></div>
+        <div class="col-lg-4"><label class="form-label fw-semibold">Phần giá trị chuyển nhượng quyền sử dụng đất không tính thuế GTGT</label><input type="number" min="0" step="1000" class="form-control" id="saleLandDeduction"><div class="form-text">Nhập theo hồ sơ/căn cứ pháp lý đủ điều kiện; không tự lấy nguyên giá BĐS.</div></div>
+        <div class="col-lg-2"><label class="form-label fw-semibold">ĐVT phần QSDĐ</label><select class="form-select" id="saleLandUnit"><option value="">Để trống</option><option value="Lô">Lô</option><option value="m²">m²</option></select><div class="form-text">Trống/Lô → SL mặc định 1.</div></div>
+        <div class="col-lg-2"><label class="form-label fw-semibold">SL / diện tích QSDĐ</label><input type="number" min="0.000001" step="0.01" class="form-control" id="saleLandQty" value="1" readonly><div class="form-text" id="saleLandQtyHelp">Mặc định 1.</div></div>
         <div class="col-lg-4"><label class="form-label">Thuế suất GTGT phần chịu thuế</label><select class="form-select" id="saleVatRate"><option value="10">10%</option><option value="8">8%</option><option value="5">5%</option><option value="0">0%</option></select></div>
 
-        <div class="col-lg-3"><label class="form-label">Giá tính thuế GTGT</label><input class="form-control bg-light" id="saleVatBase" readonly><div class="form-text">= Giá chuyển nhượng chưa VAT − Giá đất được trừ</div></div>
+        <div class="col-lg-3"><label class="form-label">Giá tính thuế GTGT</label><input class="form-control bg-light" id="saleVatBase" readonly><div class="form-text">= Giá chuyển nhượng chưa VAT − Phần giá trị QSDĐ không tính thuế GTGT</div></div>
         <div class="col-lg-3"><label class="form-label">Tiền VAT</label><input class="form-control bg-light" id="saleVatAmount" readonly></div>
         <div class="col-lg-3"><label class="form-label">Tổng thanh toán</label><input class="form-control bg-light fw-semibold" id="saleGross" readonly></div>
         <div class="col-lg-3"><label class="form-label">Thanh toán</label><select class="form-select" id="salePayment"><option value="111">Tiền mặt</option><option value="112">Chuyển khoản</option><option value="131">Công nợ</option></select></div>
@@ -217,12 +219,13 @@
         <div class="col-12"><label class="form-label">Diễn giải</label><textarea class="form-control" id="saleNote" rows="3"></textarea></div>
         <div class="col-12"><div class="border rounded p-3 bg-light">
           <div class="fw-semibold mb-2">Nội dung dự kiến trên HĐĐT</div>
-          <div class="small"><strong>Dòng hàng hóa/dịch vụ:</strong> <span id="saleInvoiceTransferLine"></span></div>
-          <div class="small mt-1"><strong>Dòng ghi chú:</strong> <span id="saleInvoiceLandNote"></span></div>
-          <div class="small mt-2 text-muted">Thuế GTGT tính trên giá chuyển nhượng trừ giá đất được trừ; giá đất được trừ không truyền như một hàng hóa KCT riêng.</div>
+          <div class="small"><strong>Dòng 1:</strong> <span id="saleInvoiceTransferLine"></span></div>
+          <div class="small mt-1"><strong>Dòng 2:</strong> <span id="saleInvoiceLandNote"></span><div class="text-muted ms-3" id="saleInvoiceLandDetail"></div></div>
+          <div class="small mt-1"><strong>Dòng 3 - ghi chú:</strong> <span id="saleInvoiceSummaryNote"></span></div>
+          <div class="small mt-2 text-muted">Phần giá trị chuyển nhượng quyền sử dụng đất không tính thuế GTGT được truyền riêng theo mapping Mắt Bão với KCT (TSuat=-1); doanh thu kế toán vẫn là toàn bộ giá chuyển nhượng.</div>
         </div></div>
         <div class="col-12"><div class="alert alert-light border mb-0" id="salePostingPreview"></div></div>
-        <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="saleIssueInvoice" checked><label class="form-check-label" for="saleIssueInvoice">Phát hành HĐĐT ngay sau khi ghi nhận</label></div></div>
+        <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="saleIssueInvoice" checked><label class="form-check-label" for="saleIssueInvoice">Tạo bản nháp HĐĐT sau khi ghi nhận để kiểm tra trước khi phát hành chính thức</label></div></div>
       </div>
       <div class="alert d-none mt-3" id="saleResult"></div>
     </div>
@@ -389,8 +392,29 @@ function saleInvoiceNames(address){
   const a=cleanBdsdtAddress(address)||'[Địa chỉ]';
   return {
     transfer:`Chuyển nhượng bất động sản tại ${a}`,
-    landNote:`Giá đất được trừ khi tính thuế GTGT`
+    landNote:`Phần giá trị chuyển nhượng quyền sử dụng đất không tính thuế GTGT`
   };
+}
+function getSaleLandPresentation(){
+  const unit=v('saleLandUnit');
+  let qty=1;
+  if(unit==='m²'){
+    qty=n('saleLandQty');
+  }
+  return {unit, qty};
+}
+function updateSaleLandUnitUi(){
+  const unit=v('saleLandUnit');
+  const qtyEl=document.getElementById('saleLandQty');
+  const helpEl=document.getElementById('saleLandQtyHelp');
+  if(qtyEl){
+    const isArea=unit==='m²';
+    qtyEl.readOnly=!isArea;
+    if(!isArea) qtyEl.value='1';
+    else if(!(Number(qtyEl.value)>0)) qtyEl.value='1';
+  }
+  if(helpEl) helpEl.textContent=unit==='m²'?'Nhập số m² thực tế; đơn giá tự tính = giá trị QSDĐ / số m².':'Số lượng mặc định 1.';
+  updateSalePreview();
 }
 function updateSalePreview(){
   const $=id=>document.getElementById(id);
@@ -408,12 +432,18 @@ function updateSalePreview(){
   if(transferEl) transferEl.textContent=invoiceNames.transfer;
   const landNoteEl=$('saleInvoiceLandNote');
   if(landNoteEl) landNoteEl.textContent=`${invoiceNames.landNote}: ${money(land)} đồng - Bất động sản tại ${cleanBdsdtAddress(v('salePropertyAddress'))||'[Địa chỉ]'}`;
+  const landPresentation=getSaleLandPresentation();
+  const landUnitPrice=landPresentation.qty>0?land/landPresentation.qty:0;
+  const landDetailEl=$('saleInvoiceLandDetail');
+  if(landDetailEl) landDetailEl.textContent=`ĐVT: ${landPresentation.unit||'(trống)'} · SL: ${landPresentation.qty||0} · Đơn giá: ${money(landUnitPrice)} · Thành tiền: ${money(land)} · KCT`;
+  const summaryNoteEl=$('saleInvoiceSummaryNote');
+  if(summaryNoteEl) summaryNoteEl.textContent=`Chuyển nhượng BĐS. Giá chuyển nhượng chưa thuế GTGT: ${money(net)} đồng; ${invoiceNames.landNote}: ${money(land)} đồng; Giá tính thuế GTGT: ${money(base)} đồng.`;
   const profitEl=$('saleProfitPreview'); if(profitEl) profitEl.textContent=money(net-carrying);
 
   const pm=v('salePayment');
   const postingEl=$('salePostingPreview');
   if(postingEl){
-    postingEl.innerHTML=`<strong>Doanh thu:</strong> Nợ ${pm} ${money(gross)} · Có 5117 ${money(net)}${vat?` · Có 33311 ${money(vat)}`:''}.<br><strong>Ghi giảm:</strong> Nợ 2147 (hao mòn) + Nợ 632 (GTCL) · Có 217. Giá đất được trừ chỉ dùng xác định VAT, không làm giảm doanh thu 5117.`;
+    postingEl.innerHTML=`<strong>Doanh thu:</strong> Nợ ${pm} ${money(gross)} · Có 5117 ${money(net)}${vat?` · Có 33311 ${money(vat)}`:''}.<br><strong>Ghi giảm:</strong> Nợ 2147 (hao mòn) + Nợ 632 (GTCL) · Có 217. Phần giá trị QSDĐ không tính thuế GTGT chỉ dùng xác định giá tính VAT, không làm giảm doanh thu 5117.`;
   }else{
     console.warn('[BDSDT] Không tìm thấy #salePostingPreview; bỏ qua phần preview, không chặn nghiệp vụ bán.');
   }
@@ -443,7 +473,10 @@ window.openSaleModal = async function openSaleModal(id,code,name,address,assetUn
 
   setValue('saleNetAmount','');
   setValue('saleLandDeduction',0);
+  setValue('saleLandUnit','');
+  setValue('saleLandQty',1);
   setValue('saleNote',saleTransferDescription(address));
+  updateSaleLandUnitUi();
 
   const resultEl=$('saleResult');
   if(resultEl){
@@ -506,6 +539,8 @@ window.submitPropertySale = async function submitPropertySale(ev){
     const propertyId=readText('salePropertyId');
     const net=readNumber('saleNetAmount');
     const land=readNumber('saleLandDeduction');
+    const landUnit=readText('saleLandUnit');
+    const landQty=landUnit==='m²'?readNumber('saleLandQty'):1;
     const rate=readNumber('saleVatRate');
     const address=readText('salePropertyAddress');
     const assetUnit=readText('saleAssetUnit')||'BĐS';
@@ -513,13 +548,15 @@ window.submitPropertySale = async function submitPropertySale(ev){
     if(!propertyId) throw new Error('Thiếu mã BĐSĐT.');
     if(!address) throw new Error('BĐSĐT chưa có địa chỉ. Hãy bấm Sửa và cập nhật địa chỉ trước khi bán.');
     if(net<=0) throw new Error('Giá chuyển nhượng phải lớn hơn 0.');
-    if(land<0 || land>net) throw new Error('Giá đất được trừ phải từ 0 đến tổng giá chuyển nhượng chưa VAT.');
+    if(land<0 || land>net) throw new Error('Phần giá trị QSDĐ không tính thuế GTGT phải từ 0 đến tổng giá chuyển nhượng chưa VAT.');
+    if(landUnit==='m²' && !(landQty>0)) throw new Error('Khi ĐVT phần QSDĐ là m², số m² thực tế phải lớn hơn 0.');
+    const landUnitPrice=landQty>0?land/landQty:land;
 
     const taxable=Math.max(0,net-land);
     const vat=rate>0?Math.round(taxable*rate/100):0;
     const propertyName=readText('salePropertyName');
     const buildingName=`Phần giá trị chuyển nhượng thuộc giá tính thuế GTGT - ${propertyName || address}`;
-    const landName=`Giá đất được trừ khi tính thuế GTGT - ${propertyName || address}`;
+    const landName=`Phần giá trị chuyển nhượng quyền sử dụng đất không tính thuế GTGT - ${propertyName || address}`;
 
     setStage('Bước 1/3: Đang chuẩn bị sản phẩm bán BĐSĐT...');
     const productResp=await fetch(`/api/sme/investment-properties/${propertyId}/pos-products`,{
@@ -536,7 +573,7 @@ window.submitPropertySale = async function submitPropertySale(ev){
         product_name:buildingName, discount_pct:0, tax_pct:rate
       },
       {
-        product_id:saleProductId, quantity:1, price:land, unit:'Lô',
+        product_id:saleProductId, quantity:landQty, price:landUnitPrice, unit:landUnit,
         product_name:landName, discount_pct:0, tax_pct:-1
       }
     ];
@@ -565,6 +602,9 @@ window.submitPropertySale = async function submitPropertySale(ev){
         unit_price:net,
         net_amount:net,
         deductible_land_value:land,
+        land_invoice_unit:landUnit,
+        land_invoice_quantity:landQty,
+        land_invoice_unit_price:landUnitPrice,
         vat_taxable_amount:taxable,
         vat_rate:rate,
         vat_amount:vat,
@@ -572,7 +612,7 @@ window.submitPropertySale = async function submitPropertySale(ev){
         payment_method:readText('salePayment'),
         note:readText('saleNote'),
         invoice_transfer_description:saleInvoiceNames(address).transfer,
-        invoice_land_deduction_note:`Giá đất được trừ khi tính thuế GTGT: ${money(land)} đồng - Bất động sản tại ${address}`,
+        invoice_land_deduction_note:`Phần giá trị chuyển nhượng quyền sử dụng đất không tính thuế GTGT: ${money(land)} đồng - Bất động sản tại ${address}`,
         invoice_tax_basis:'TRANSFER_PRICE_MINUS_DEDUCTIBLE_LAND_VALUE'
       }
     };
@@ -588,21 +628,21 @@ window.submitPropertySale = async function submitPropertySale(ev){
     const saleId=Number(saleData.sale_id||saleData.id||0);
     if(!saleId) throw new Error('Checkout thành công nhưng không trả về sale_id.');
 
-    let invoiceText='';
+    let invoiceHtml='';
     if(document.getElementById('saleIssueInvoice')?.checked){
-      setStage(`Bước 3/3: Đã tạo ĐH${String(saleId).padStart(6,'0')}, đang phát hành HĐĐT...`);
+      setStage(`Bước 3/3: Đã tạo ĐH${String(saleId).padStart(6,'0')}, đang tạo bản nháp HĐĐT để kiểm tra...`);
       const invResp=await fetch(`/api/invoice/issue/${saleId}`,{
         method:'POST',
         headers:{'Content-Type':'application/json','Accept':'application/json'},
-        body:'{}'
+        body:JSON.stringify({loai_hdon:0})
       });
-      await parseJson(invResp);
-      invoiceText='; HĐĐT đã được xử lý';
+      const invData=await parseJson(invResp);
+      const pdfLink=invData.pdf_url?` <a class="btn btn-sm btn-outline-primary ms-2" href="${invData.pdf_url}" target="_blank" rel="noopener">Xem PDF nháp</a>`:'';
+      invoiceHtml=`<div class="mt-2"><strong>Đã tạo HĐĐT nháp.</strong>${pdfLink} <button type="button" class="btn btn-sm btn-danger ms-2" onclick="publishBdsdtDraft(${saleId})">Xác nhận phát hành chính thức</button></div><div class="small text-muted mt-1">Hãy kiểm tra người mua, ĐVT, số lượng, đơn giá, phần QSDĐ KCT, VAT và tổng thanh toán trước khi phát hành.</div>`;
     }
 
     result.className='alert alert-success mt-3';
-    result.innerHTML=`Đã ghi nhận bán <strong>ĐH${String(saleId).padStart(6,'0')}</strong>. Doanh thu: <strong>${money(net)}</strong>; giá tính VAT: <strong>${money(taxable)}</strong>${invoiceText}.`;
-    setTimeout(()=>location.reload(),1500);
+    result.innerHTML=`Đã ghi nhận bán <strong>ĐH${String(saleId).padStart(6,'0')}</strong>. Doanh thu: <strong>${money(net)}</strong>; giá tính VAT: <strong>${money(taxable)}</strong>.${invoiceHtml}`;
   }catch(e){
     console.error('[BDSDT SALE ERROR]',e);
     result.className='alert alert-danger mt-3';
@@ -614,6 +654,18 @@ window.submitPropertySale = async function submitPropertySale(ev){
   }
   return false;
 }
+window.publishBdsdtDraft = async function publishBdsdtDraft(saleId){
+  if(!confirm('Phát hành chính thức HĐĐT này? Sau khi phát hành không thể sửa như bản nháp.')) return;
+  const result=document.getElementById('saleResult');
+  try{
+    if(result){ result.className='alert alert-info mt-3'; result.textContent='Đang phát hành HĐĐT chính thức...'; }
+    const data=await jsonFetch(`/api/invoice/publish-draft/${saleId}`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const pdfLink=data.pdf_url?` <a class="btn btn-sm btn-outline-primary ms-2" href="${data.pdf_url}" target="_blank" rel="noopener">Xem HĐĐT</a>`:'';
+    if(result){ result.className='alert alert-success mt-3'; result.innerHTML=`Đã phát hành HĐĐT chính thức <strong>${data.invoice_no||''}</strong>.${pdfLink}`; }
+  }catch(e){
+    if(result){ result.className='alert alert-danger mt-3'; result.textContent=e.message||String(e); }
+  }
+};
 async function stopLeasePlan(id){
   if(!confirm('Dừng kế hoạch cho thuê hiện tại? Các bút toán đã phát sinh vẫn được giữ nguyên.')) return;
   try{await jsonFetch(`/api/sme/investment-properties/${id}/lease-plan/stop`,{method:'POST'}); location.reload();}catch(e){alert(e.message);}
@@ -720,6 +772,7 @@ console.info('[BDSDT] DOM state', {
   saleModal: !!document.getElementById('salePropertyModal'),
   bootstrapModal: !!(window.bootstrap && window.bootstrap.Modal)
 });
-['saleNetAmount','saleLandDeduction','saleVatRate','salePayment'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateSalePreview));
+['saleNetAmount','saleLandDeduction','saleLandQty','saleVatRate','salePayment'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateSalePreview));
+document.getElementById('saleLandUnit')?.addEventListener('change',updateSaleLandUnitUi);
 </script>
 {% endblock %}

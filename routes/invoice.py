@@ -1052,7 +1052,13 @@ def register_invoice_routes(app):
                     "THHDVu": str(item.get('name') or item.get('product_name', '')),
                     "DVTinh": (
                         str(item.get('unit') or '')
-                        if display_only else ("" if is_note else str(item.get('unit') or 'Cái'))
+                        if display_only else (
+                            "" if is_note else (
+                                str(item.get('unit') or '')
+                                if item.get('invoice_allow_blank_unit')
+                                else str(item.get('unit') or 'Cái')
+                            )
+                        )
                     ),
                     "SLuong": display_qty,
                     "DGia": display_price,
@@ -1066,9 +1072,9 @@ def register_invoice_routes(app):
                 })
 
                 # Chỉ dòng kinh tế TChat!=4 mới tham gia tổng HĐ.
-                # Nhờ vậy BĐSĐT có:
-                #   4 tỷ @0% + 6 tỷ @10% = 10 tỷ trước VAT, VAT 600 triệu.
-                # Dòng display-only 10 tỷ không bị cộng lần hai.
+                # Với BĐSĐT theo mapping Mắt Bão:
+                #   phần giá tính thuế chịu VAT + phần QSDĐ TSuat=-1 (KCT)
+                #   = tổng giá chuyển nhượng trước VAT; dòng TChat=4 không tham gia tổng.
                 if not is_note:
                     total_untaxed += amount_after
                     total_tax_amount += tax_val
@@ -1081,9 +1087,8 @@ def register_invoice_routes(app):
                 return {"success": False, "error": "Không thể xác thực với hệ thống Mắt Bão."}
 
             dsh_hd_vu, total_untaxed, total_tax = self._prepare_dsh_hd_vu(items)
-            # BĐSĐT phương án A: "Cộng tiền hàng" = giá tính thuế, nhưng tổng thanh toán
-            # vẫn bao gồm phần giá đất không tính VAT. Metadata này chỉ tồn tại nội bộ KETO,
-            # không được gửi như một dòng tiền độc lập sang Mắt Bão.
+            # Mặc định tổng thanh toán = tổng trước thuế + VAT.
+            # Giữ hỗ trợ override cho các nghiệp vụ/provider legacy khác nếu item có metadata này.
             total_payment = round(total_untaxed + total_tax, 2)
             for _item in items:
                 if _item.get('invoice_total_payment_override') is not None:
@@ -1387,12 +1392,10 @@ def register_invoice_routes(app):
         """
         Lấy dòng HĐĐT.
 
-        BĐSĐT: sale_items vẫn giữ 2 snapshot để kế toán tách giá trị chịu VAT và
-        giá đất được trừ, nhưng HĐĐT KHÔNG coi quyền sử dụng đất là một hàng hóa
-        KCT riêng. Hóa đơn thể hiện:
-          - Giá chuyển nhượng BĐS (chưa VAT): toàn bộ giá chuyển nhượng;
-          - Giá đất được trừ khi tính VAT: dòng ghi chú;
-          - VAT = (giá chuyển nhượng - giá đất được trừ) * thuế suất.
+        BĐSĐT: sale_items giữ snapshot kế toán; payload HĐĐT được chuyển theo
+        JSON mẫu Mắt Bão: phần giá tính thuế là dòng TChat=1 chịu VAT, phần giá trị
+        chuyển nhượng QSDĐ không tính thuế GTGT là TChat=1/TSuat=-1 (KCT),
+        sau đó một dòng TChat=4 diễn giải tổng hợp.
         """
         has_bdsdt = cursor.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='sme_investment_properties'"
@@ -1408,7 +1411,9 @@ def register_invoice_routes(app):
                     COALESCE(si.discount_pct, 0) AS discount_pct,
                     COALESCE(si.tax_pct, 0) AS tax_pct,
                     CASE
-                        -- Ưu tiên ĐVT gốc lúc ghi nhận BĐSĐT (Căn/Lô/m2/...).
+                        -- Dòng QSDĐ KCT dùng đúng ĐVT người dùng chọn khi bán: trống/Lô/m².
+                        WHEN COALESCE(si.tax_pct, 0) < 0 THEN COALESCE(si.unit, '')
+                        -- Dòng phần BĐS chịu thuế vẫn ưu tiên ĐVT gốc lúc ghi nhận.
                         WHEN NULLIF(TRIM(COALESCE(idt.unit, '')), '') IS NOT NULL THEN idt.unit
                         WHEN NULLIF(TRIM(COALESCE(si.unit, '')), '') IS NOT NULL
                              AND UPPER(TRIM(si.unit)) NOT IN ('BĐS', 'BDS') THEN si.unit
@@ -1443,11 +1448,17 @@ def register_invoice_routes(app):
                     float(r.get('quantity') or 0) * float(r.get('price') or 0)
                     for r in prop_rows
                 ), 2)
+                land_rows = [r for r in prop_rows if float(r.get('tax_pct') or 0) < 0]
                 land_value = round(sum(
                     float(r.get('quantity') or 0) * float(r.get('price') or 0)
-                    for r in prop_rows
-                    if float(r.get('tax_pct') or 0) < 0
+                    for r in land_rows
                 ), 2)
+                land_row = land_rows[0] if land_rows else {}
+                land_quantity = float(land_row.get('quantity') or 1)
+                if land_quantity <= 0:
+                    land_quantity = 1.0
+                land_unit = str(land_row.get('unit') or '').strip()
+                land_unit_price = round(land_value / land_quantity, 6) if land_quantity else land_value
                 taxable_rows = [r for r in prop_rows if float(r.get('tax_pct') or 0) >= 0]
                 taxable_base = round(max(0.0, transfer_price - land_value), 2)
                 vat_rate = next(
@@ -1457,15 +1468,16 @@ def register_invoice_routes(app):
                 )
                 vat_amount = round(taxable_base * vat_rate / 100.0, 2)
 
-                # BĐSĐT - PHƯƠNG ÁN A (test Mắt Bão):
-                #   1) 10 tỷ giá chuyển nhượng: TChat=4, CHỈ ghi chú bằng chữ.
-                #   2) 4 tỷ giá đất được trừ: TChat=4, CHỈ ghi chú bằng chữ.
-                #   3) 6 tỷ giá tính thuế: TChat=1, 10%, VAT 600 triệu.
-                # Header:
-                #   TgThTien = 6 tỷ; TgTThue = 600 triệu; TgTTTBSo = 10,6 tỷ.
-                # Mục tiêu là kiểm tra Mắt Bão có chấp nhận tổng thanh toán đặc thù BĐS
-                # mà không buộc 4 tỷ vào bucket 0%/KCT/KKKNT hay không.
-                transfer_label = "Giá chuyển nhượng bất động sản chưa VAT"
+                # BĐSĐT - mapping theo JSON mẫu Mắt Bão cung cấp, rút gọn còn 3 dòng:
+                #   1) Phần giá tính thuế GTGT: TChat=1, TSuat=thuế suất (vd 10%).
+                #   2) Phần giá trị chuyển nhượng QSDĐ không tính thuế GTGT:
+                #      TChat=1, TSuat=-1 (KCT), TThue=0.
+                #   3) Một dòng diễn giải tổng hợp: TChat=4, toàn bộ trường số = 0, TSuat=-2.
+                # Header được cộng tự nhiên từ 2 dòng kinh tế:
+                #   TgThTien = giá tính thuế + giá đất = giá chuyển nhượng chưa VAT;
+                #   TgTThue  = VAT trên giá tính thuế;
+                #   TgTTTBSo = TgThTien + TgTThue.
+                transfer_label = "Chuyển nhượng bất động sản"
                 if prop_name:
                     transfer_label += f": {prop_name}"
                 if address:
@@ -1473,31 +1485,11 @@ def register_invoice_routes(app):
 
                 transfer_text = f"{transfer_price:,.0f}".replace(",", ".")
                 land_text = f"{land_value:,.0f}".replace(",", ".")
+                taxable_text = f"{taxable_base:,.0f}".replace(",", ".")
 
                 legal_items = [{
-                    # Ghi chú thuần văn bản; tuyệt đối không truyền số để tránh renderer cộng vào summary.
-                    "name": f"{transfer_label}: {transfer_text} đồng",
-                    "product_code": "",
-                    "quantity": 0,
-                    "price": 0,
-                    "discount_pct": 0,
-                    "tax_pct": 0,
-                    "unit": "",
-                    "invoice_tchat": 4,
-                    "invoice_total_payment_override": round(transfer_price + vat_amount, 2),
-                }, {
-                    # Ghi chú thuần văn bản cho phần giá đất được trừ.
-                    "name": f"(-) Giá đất được trừ khi tính thuế GTGT: {land_text} đồng",
-                    "product_code": "",
-                    "quantity": 0,
-                    "price": 0,
-                    "discount_pct": 0,
-                    "tax_pct": 0,
-                    "unit": "",
-                    "invoice_tchat": 4,
-                }, {
-                    # Dòng kinh tế duy nhất tham gia cơ sở VAT.
-                    "name": "Giá tính thuế GTGT (Giá chuyển nhượng - Giá đất được trừ)",
+                    # Dòng 1: phần kinh tế chịu VAT — 6 tỷ @10% => VAT 600 triệu.
+                    "name": f"{transfer_label} (phần giá tính thuế GTGT)",
                     "product_code": prop_rows[0].get('product_code') or 'BDSDT',
                     "quantity": 1,
                     "price": taxable_base,
@@ -1506,6 +1498,33 @@ def register_invoice_routes(app):
                     "unit": str(prop_rows[0].get('unit') or '').strip() or 'BĐS',
                     "invoice_tchat": 1,
                     "tax_amount_override": vat_amount,
+                }, {
+                    # Dòng 2: phần giá trị QSDĐ không tính thuế GTGT theo mapping Mắt Bão.
+                    # TSuat=-1 (KCT), không phải thuế suất 0%.
+                    "name": "Phần giá trị chuyển nhượng quyền sử dụng đất không tính thuế GTGT",
+                    "product_code": "GDTRU",
+                    "quantity": land_quantity,
+                    "price": land_unit_price,
+                    "discount_pct": 0,
+                    "tax_pct": -1,
+                    "unit": land_unit,
+                    "invoice_tchat": 1,
+                    "invoice_allow_blank_unit": True,
+                    "tax_amount_override": 0,
+                }, {
+                    # Dòng 3: chỉ một dòng diễn giải tổng hợp; TChat=4 nên không tham gia tổng.
+                    "name": (
+                        f"Chuyển nhượng BĐS. Giá chuyển nhượng chưa thuế GTGT: {transfer_text} đồng; "
+                        f"Phần giá trị chuyển nhượng quyền sử dụng đất không tính thuế GTGT: {land_text} đồng; "
+                        f"Giá tính thuế GTGT: {taxable_text} đồng."
+                    ),
+                    "product_code": "Diengiai",
+                    "quantity": 0,
+                    "price": 0,
+                    "discount_pct": 0,
+                    "tax_pct": 0,
+                    "unit": "",
+                    "invoice_tchat": 4,
                 }]
                 return legal_items + other_rows
 

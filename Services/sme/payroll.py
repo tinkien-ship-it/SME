@@ -552,7 +552,7 @@ def preview_payroll_grid(
             COALESCE(s.contract_salary, 0) AS sd_contract_salary
         FROM employees e
         LEFT JOIN salary_detail s ON e.id = s.employee_id AND s.month = ? AND s.year = ?
-        WHERE e.status = 1
+        WHERE e.status = '1'
     """
     try:
         rows = conn.execute(query, (month, year)).fetchall()
@@ -580,7 +580,7 @@ def preview_payroll_grid(
                 s.total_deduct, s.final_amount, s.date as record_date
             FROM employees e
             LEFT JOIN salary_detail s ON e.id = s.employee_id AND s.month = ? AND s.year = ?
-            WHERE e.status = 1
+            WHERE e.status = '1'
             """,
             (month, year),
         ).fetchall()

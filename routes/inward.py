@@ -178,9 +178,10 @@ def register_inward_routes(app):
         """
         data = request.get_json(silent=True) or {}
         month_str = data.get('month')
-        source = (data.get('source') or SOURCE_PORTAL).strip().lower()
-        if source not in (SOURCE_PORTAL, SOURCE_TCT, SOURCE_BOTH):
-            source = SOURCE_PORTAL
+        # Đồng bộ mặc định theo luồng DEMO Mắt Bão đã test thực tế:
+        # Bearer token + GET /hoa-don-dau-vao/load-data-tct.
+        # Không dùng /load-data (portal) vì trên DEMO có thể timeout/trả rỗng.
+        source = SOURCE_TCT
 
         if not month_str:
             return jsonify({"success": False, "error": "Vui lòng chọn tháng đồng bộ"}), 400
@@ -202,26 +203,10 @@ def register_inward_routes(app):
                     ),
                 }), 400
 
+            # Luồng đồng bộ thường không ép login eTax/captcha. API DEMO Mắt Bão
+            # tự xác thực bằng Bearer token; chỉ endpoint login-tct riêng mới dùng captcha.
             login_first = False
             captcha = None
-            if source in (SOURCE_TCT, SOURCE_BOTH):
-                cvalue = str(data.get('cvalue') or '').strip()
-                ckey = str(data.get('ckey') or data.get('key') or '').strip()
-                want_login = bool(data.get('login')) or bool(cvalue and ckey)
-                if want_login:
-                    if not cvalue or not ckey:
-                        return jsonify({
-                            'success': False,
-                            'need_captcha': True,
-                            'error': 'Vui lòng lấy và nhập captcha CQT trước khi đồng bộ cổng thuế',
-                        }), 400
-                    login_first = True
-                    captcha = {
-                        'cvalue': cvalue,
-                        'ckey': ckey,
-                        'password': data.get('password'),
-                        'username': data.get('username'),
-                    }
 
             # Đóng connection request-scoped TRƯỚC khi gọi Matbao (timeout ~90s).
             # Giữ SQLite mở suốt lúc chờ HTTP → database is locked trên /api/settings/esign.

@@ -551,20 +551,27 @@ _INWARD_PO_SCHEMA_READY = 'inward_po_link_v1'
 
 
 def ensure_supplier_invoice_po_schema(conn) -> None:
-    """Cột liên kết đơn mua trên HĐ NCC (đọc GChu hoặc gán thủ công)."""
+    """Cột liên kết đơn mua trên HĐ NCC (đọc GChu hoặc gán thủ công).
+
+    Không return chỉ dựa vào schema-ready flag: tenant chuyển SQLite -> PostgreSQL
+    có thể mang trạng thái ready cũ trong khi schema PostgreSQL thực tế còn thiếu cột.
+    Các helper dưới đây đều idempotent nên luôn kiểm tra/đảm bảo schema thật trước
+    khi query danh sách hóa đơn đầu vào sử dụng si.po_id.
+    """
     from db.schema_helpers import add_column_if_missing
     from db_utils import sqlite_is_ready, sqlite_mark_ready
-
-    if sqlite_is_ready(conn, _INWARD_PO_SCHEMA_READY):
-        return
     from Services.sme.purchase_order import ensure_purchase_order_schema
 
+    # Luôn kiểm tra schema thực tế. Đây là chủ ý để tự chữa tenant PostgreSQL
+    # chưa migrate đủ dù _INWARD_PO_SCHEMA_READY đã từng được đánh dấu.
     ensure_purchase_order_schema(conn, commit=False)
     add_column_if_missing(conn, 'supplier_invoice', 'po_id', 'INTEGER')
     add_column_if_missing(conn, 'supplier_invoice', 'gchu', 'TEXT')
     add_column_if_missing(conn, 'supplier_invoice', 'po_no_matched', 'TEXT')
     add_column_if_missing(conn, 'supplier_invoice', 'po_match_source', 'TEXT')
-    sqlite_mark_ready(conn, _INWARD_PO_SCHEMA_READY)
+
+    if not sqlite_is_ready(conn, _INWARD_PO_SCHEMA_READY):
+        sqlite_mark_ready(conn, _INWARD_PO_SCHEMA_READY)
 
 
 def ensure_inward_list_schema(conn) -> None:

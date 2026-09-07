@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -31,9 +32,15 @@ SOURCE_TCT = 'tct'
 SOURCE_BOTH = 'both'
 VALID_SOURCES = frozenset({SOURCE_PORTAL, SOURCE_TCT, SOURCE_BOTH})
 
-# Tải HĐ mua: đúng 1 tháng/request (đầu → cuối tháng). Không chia phase.
-FULL_MONTH_TIMEOUT_SEC = 120
-FULL_MONTH_RETRY_TIMEOUT_SEC = 180
+# Mắt Bão Purchase Invoice API — theo tài liệu chính thức.
+MATBAO_PURCHASE_PROD_BASE_URL = 'https://api-hoadondauvao.matbao.in'
+MATBAO_PURCHASE_DEMO_BASE_URL = 'https://demo-api-hoadondauvao.matbao.in'
+
+# Ưu tiên tải trọn tháng; nếu provider chậm thì chia nhỏ để tránh request web bị treo.
+FULL_MONTH_TIMEOUT_SEC = 60
+CHUNK_DAYS = 7
+CHUNK_TIMEOUT_SEC = 60
+DAY_TIMEOUT_SEC = 60
 
 
 def _month_range(month_str: str) -> tuple[str, str]:
@@ -50,12 +57,36 @@ def _month_range(month_str: str) -> tuple[str, str]:
 
 
 def resolve_purchase_base_url(config: dict) -> str:
-    """Ưu tiên purchase_api_url; fallback api_url (cùng host nếu MB gộp API)."""
-    for key in ('purchase_api_url', 'api_url'):
-        url = (config.get(key) or '').strip().rstrip('/')
-        if url:
-            return url
-    raise ValueError('Thiếu API URL hóa đơn đầu vào (purchase_api_url / api_url)')
+    """Resolve host Purchase Invoice API của Mắt Bão.
+
+    Giai đoạn hiện tại ưu tiên môi trường DEMO:
+    - Nếu `purchase_api_url` đã cấu hình thì dùng nguyên giá trị đó.
+    - Nếu chưa cấu hình, mặc định dùng DEMO:
+      https://demo-api-hoadondauvao.matbao.in
+    - Không tự động đổi DEMO -> production.
+    - Không fallback mù sang `api_url` của HĐĐT đầu ra vì đây là API khác.
+
+    Khi Mắt Bão cấp tài khoản production chính thức, chỉ cần đổi
+    `purchase_api_url` trong Settings sang:
+    https://api-hoadondauvao.matbao.in
+    """
+    cfg = config or {}
+
+    purchase_url = str(cfg.get('purchase_api_url') or '').strip().rstrip('/')
+    if purchase_url:
+        logger.info('[matbao] Purchase API host: %s', purchase_url)
+        return purchase_url
+
+    legacy_api_url = str(cfg.get('api_url') or '').strip().rstrip('/')
+    if legacy_api_url and 'hoadondauvao.matbao.in' in legacy_api_url.lower():
+        logger.info('[matbao] Dùng legacy Purchase API host từ api_url: %s', legacy_api_url)
+        return legacy_api_url
+
+    logger.info(
+        '[matbao] Chưa cấu hình purchase_api_url; dùng Purchase API DEMO mặc định: %s',
+        MATBAO_PURCHASE_DEMO_BASE_URL,
+    )
+    return MATBAO_PURCHASE_DEMO_BASE_URL
 
 
 class MatbaoPurchaseProvider:
@@ -252,11 +283,11 @@ class MatbaoPurchaseProvider:
             return {'success': False, 'error': str(exc), 'need_captcha': False}
 
     def _build_load_payload(self, path: str, from_date: str, to_date: str) -> dict:
-        """Theo Matbao Purchase Inv API.docx.
+        """Payload Mắt Bão.
 
-        typeDataPDF=0: không nhúng PDF Base64 (tài liệu mặc định).
-        typeDataPDF=1 làm response cực lớn → demo API hay ReadTimeout.
-        PDF lấy sau qua LinkDownloadPDF khi cần.
+        Luồng TCT giữ đúng cấu hình đã được test thực tế:
+        GET + JSON body, no=0, loaihoadon=-1, typeDataPDF=1.
+        Luồng portal vẫn giữ typeSearchDate=2 khi được gọi tường minh.
         """
         payload = {
             'comName': '',
@@ -267,12 +298,11 @@ class MatbaoPurchaseProvider:
             'trangthai': -1,
             'pattern': '',
             'serial': '',
-            'typeDataPDF': 0,
+            'typeDataPDF': 1,
         }
         if path.endswith('load-data-tct'):
             payload['loaihoadon'] = -1
         else:
-            # 2 = tìm theo ngày lập (đồng bộ theo tháng kế toán)
             payload['typeSearchDate'] = 2
         return payload
 
@@ -312,69 +342,97 @@ class MatbaoPurchaseProvider:
             logger.error('[%s] Lỗi %s: %s', self.name, path, exc)
             return {'success': False, 'error': str(exc), 'invoices': []}
 
+    @staticmethod
+    def _date_chunks(from_date: str, to_date: str, days: int = CHUNK_DAYS):
+        """Chia khoảng ngày inclusive thành các cửa sổ nhỏ."""
+        start = parser.parse(str(from_date)[:10]).replace(hour=0, minute=0, second=0, microsecond=0)
+        end = parser.parse(str(to_date)[:10]).replace(hour=0, minute=0, second=0, microsecond=0)
+        step = max(1, int(days or 1))
+        cur = start
+        while cur <= end:
+            chunk_end = min(cur + timedelta(days=step - 1), end)
+            yield cur.strftime('%Y-%m-%d'), chunk_end.strftime('%Y-%m-%d 23:59:59')
+            cur = chunk_end + timedelta(days=1)
+
+    @staticmethod
+    def _dedupe_invoice_rows(rows: list[dict]) -> list[dict]:
+        """Khử trùng theo MST + ký hiệu + số HĐ."""
+        seen = set()
+        out = []
+        for inv in rows or []:
+            if not isinstance(inv, dict):
+                continue
+            key = (
+                str(inv.get('NBanMST') or '').strip(),
+                str(inv.get('KHHDon') or '').strip(),
+                str(inv.get('SHDon') or '').strip(),
+            )
+            if not any(key):
+                try:
+                    key = ('__raw__', json.dumps(inv, ensure_ascii=False, sort_keys=True))
+                except Exception:
+                    key = ('__id__', id(inv))
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(inv)
+        return out
+
     def _load_invoices(self, path: str, from_date: str, to_date: str) -> dict:
-        """Tải trọn 1 tháng (fromDate → toDate) trong một request."""
+        """
+        Theo đúng tài liệu Mắt Bão: GET /hoa-don-dau-vao/load-data hoặc load-data-tct.
+        Giữ nguyên JSON payload. Nếu trọn tháng ReadTimeout thì chia 7 ngày,
+        và chỉ chia tiếp từng ngày đối với chunk vẫn timeout.
+        """
         logger.info(
             '[%s] Load %s TRỌN THÁNG: %s → %s (timeout=%ss)',
             self.name, path, from_date, to_date, FULL_MONTH_TIMEOUT_SEC,
         )
-        whole = self._load_invoices_once(
-            path, from_date, to_date, timeout=FULL_MONTH_TIMEOUT_SEC,
-        )
-
-        if not whole.get('success') and whole.get('timeout'):
-            logger.info(
-                '[%s] Trọn tháng timeout — thử lại 1 lần (timeout=%ss)',
-                self.name, FULL_MONTH_RETRY_TIMEOUT_SEC,
-            )
-            whole = self._load_invoices_once(
-                path, from_date, to_date, timeout=FULL_MONTH_RETRY_TIMEOUT_SEC,
-            )
-
-        phase = {
-            'phase': 1,
-            'from': from_date,
-            'to': to_date,
-            'ok': bool(whole.get('success')),
-            'mode': 'full_month',
-        }
-
+        whole = self._load_invoices_once(path, from_date, to_date, timeout=FULL_MONTH_TIMEOUT_SEC)
+        full_phase = {'phase': 1, 'from': from_date, 'to': to_date, 'ok': bool(whole.get('success')), 'mode': 'full_month'}
         if whole.get('success'):
             count = int(whole.get('count') or len(whole.get('invoices') or []))
-            phase['count'] = count
-            logger.info(
-                '[%s] Trọn tháng OK — %s HĐ (%s → %s)',
-                self.name, count, from_date[:10], to_date[:10],
-            )
-            return {
-                'success': True,
-                'invoices': whole.get('invoices') or [],
-                'count': count,
-                'warnings': [],
-                'need_login': False,
-                'phases': [phase],
-                'phases_ok': 1,
-                'phases_total': 1,
-                'partial': False,
-                'mode': 'full_month',
-            }
+            full_phase['count'] = count
+            return {'success': True, 'invoices': whole.get('invoices') or [], 'count': count, 'warnings': [], 'need_login': False, 'phases': [full_phase], 'phases_ok': 1, 'phases_total': 1, 'partial': False, 'mode': 'full_month'}
+        if not whole.get('timeout'):
+            full_phase['error'] = whole.get('error')
+            return {'success': False, 'error': whole.get('error') or 'load-data thất bại', 'need_login': bool(whole.get('need_login')), 'timeout': False, 'invoices': [], 'phases': [full_phase], 'phases_ok': 0, 'phases_total': 1, 'mode': 'full_month'}
+        full_phase['error'] = whole.get('error')
+        logger.warning('[%s] Trọn tháng timeout — chuyển sang tải theo cửa sổ %s ngày', self.name, CHUNK_DAYS)
+        merged=[]; warnings=[]; phases=[full_phase]; phases_ok=0; phase_no=1; need_login=False
+        for chunk_from, chunk_to in self._date_chunks(from_date, to_date, CHUNK_DAYS):
+            phase_no += 1
+            logger.info('[%s] Chunk %s: %s → %s (timeout=%ss)', self.name, phase_no, chunk_from, chunk_to, CHUNK_TIMEOUT_SEC)
+            res=self._load_invoices_once(path, chunk_from, chunk_to, timeout=CHUNK_TIMEOUT_SEC)
+            if res.get('success'):
+                rows=res.get('invoices') or []; merged.extend(rows); phases_ok += 1
+                phases.append({'phase': phase_no,'from':chunk_from,'to':chunk_to,'ok':True,'count':len(rows),'mode':'chunk'})
+                continue
+            need_login = need_login or bool(res.get('need_login'))
+            if not res.get('timeout'):
+                err=res.get('error') or 'load-data chunk thất bại'
+                warnings.append(f'{chunk_from[:10]}→{chunk_to[:10]}: {err}')
+                phases.append({'phase':phase_no,'from':chunk_from,'to':chunk_to,'ok':False,'error':err,'mode':'chunk'})
+                continue
+            logger.warning('[%s] Chunk timeout %s→%s — chia tiếp từng ngày', self.name, chunk_from[:10], chunk_to[:10])
+            phases.append({'phase':phase_no,'from':chunk_from,'to':chunk_to,'ok':False,'error':res.get('error'),'mode':'chunk'})
+            for day_from, day_to in self._date_chunks(chunk_from, chunk_to, 1):
+                phase_no += 1
+                day_res=self._load_invoices_once(path, day_from, day_to, timeout=DAY_TIMEOUT_SEC)
+                day_phase={'phase':phase_no,'from':day_from,'to':day_to,'ok':bool(day_res.get('success')),'mode':'day'}
+                if day_res.get('success'):
+                    rows=day_res.get('invoices') or []; merged.extend(rows); phases_ok += 1; day_phase['count']=len(rows)
+                else:
+                    err=day_res.get('error') or 'load-data ngày thất bại'; day_phase['error']=err; warnings.append(f'{day_from[:10]}: {err}'); need_login = need_login or bool(day_res.get('need_login'))
+                phases.append(day_phase)
+        unique=self._dedupe_invoice_rows(merged)
+        if unique:
+            return {'success':True,'invoices':unique,'count':len(unique),'warnings':warnings,'need_login':need_login,'phases':phases,'phases_ok':phases_ok,'phases_total':len(phases),'partial':bool(warnings),'mode':'chunked'}
+        err='; '.join(warnings) if warnings else (whole.get('error') or 'Mắt Bão timeout và không tải được dữ liệu khi chia nhỏ')
+        return {'success':False,'error':err,'need_login':need_login,'timeout':True,'invoices':[],'warnings':warnings,'phases':phases,'phases_ok':phases_ok,'phases_total':len(phases),'partial':False,'mode':'chunked'}
 
-        phase['error'] = whole.get('error')
-        logger.warning('[%s] Trọn tháng FAIL: %s', self.name, whole.get('error'))
-        return {
-            'success': False,
-            'error': whole.get('error') or 'load-data thất bại',
-            'need_login': bool(whole.get('need_login')),
-            'timeout': bool(whole.get('timeout')),
-            'invoices': [],
-            'phases': [phase],
-            'phases_ok': 0,
-            'phases_total': 1,
-            'mode': 'full_month',
-        }
-
-    def fetch_invoices(self, month_str: str, source: str = SOURCE_PORTAL) -> dict:
-        source = (source or SOURCE_PORTAL).strip().lower()
+    def fetch_invoices(self, month_str: str, source: str = SOURCE_TCT) -> dict:
+        source = (source or SOURCE_TCT).strip().lower()
         if source not in VALID_SOURCES:
             return {'success': False, 'error': f'Nguồn không hợp lệ: {source}', 'invoices': []}
 
@@ -586,7 +644,8 @@ def _persist_invoices_rows(conn: sqlite3.Connection, invoices: list[dict]) -> di
     from Services.sme.purchase_order import apply_gchu_po_match_to_invoice_store
 
     ensure_supplier_invoice_po_schema(conn)
-    si_cols = {c[1] for c in cursor.execute('PRAGMA table_info(supplier_invoice)').fetchall()}
+    from db.schema_helpers import table_cols
+    si_cols = set(table_cols(conn, 'supplier_invoice'))
     has_po_cols = 'po_id' in si_cols
 
     for inv in invoices or []:
@@ -707,7 +766,7 @@ def sync_month_to_db(
     config: dict,
     month_str: str,
     *,
-    source: str = SOURCE_PORTAL,
+    source: str = SOURCE_TCT,
     login_first: bool = False,
     captcha: dict | None = None,
 ) -> dict[str, Any]:
@@ -769,7 +828,7 @@ def sync_month_to_db(
     return {
         'success': True,
         'message': (
-            f'Đồng bộ thành công tháng {month_str} (trọn tháng)'
+            f'Đồng bộ thành công tháng {month_str}'
             + (' — một số nguồn lỗi, đã lưu phần tải được' if result.get('partial') else '')
         ),
         'summary': summary,
