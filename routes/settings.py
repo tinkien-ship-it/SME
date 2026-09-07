@@ -4481,36 +4481,44 @@ Trân trọng,
                     else:
                         values[field] = old.get(field, '')
 
-                sql = """
-                    INSERT OR REPLACE INTO invoice_settings (
-                        provider_name, api_url, purchase_api_url, username, password, api_key, app_secret,
-                        serial_number, tax_code, invoice_series, invoice_type,
-                        sign_service_url, misa_has_code,
-                        minvoice_cctbao_id, minvoice_has_code,
-                        etax_password, etax_cvalue, etax_ckey,
-                        auto_issue_invoice, auto_issue_schedule, auto_sync_purchase,
-                        pxk_internal_series, pxk_agency_series,
-                        auto_issue_pxk_internal, auto_issue_pxk_agency,
-                        is_active, updated_at
-                    ) VALUES (
-                        :provider_name, :api_url, :purchase_api_url, :username, :password, :api_key, :app_secret,
-                        :serial_number, :tax_code, :invoice_series, :invoice_type,
-                        :sign_service_url, :misa_has_code,
-                        :minvoice_cctbao_id, :minvoice_has_code,
-                        :etax_password, :etax_cvalue, :etax_ckey,
-                        :auto_issue_invoice, :auto_issue_schedule, :auto_sync_purchase,
-                        :pxk_internal_series, :pxk_agency_series,
-                        :auto_issue_pxk_internal, :auto_issue_pxk_agency,
-                        :is_active, datetime('now')
-                    )
-                """
+                # Portable SQLite/PostgreSQL: không dùng INSERT OR REPLACE / :named params.
+                # db backend của KETO đã hỗ trợ placeholder "?" trên cả hai runtime.
+                columns = [
+                    'provider_name', 'api_url', 'purchase_api_url', 'username', 'password', 'api_key', 'app_secret',
+                    'serial_number', 'tax_code', 'invoice_series', 'invoice_type',
+                    'sign_service_url', 'misa_has_code',
+                    'minvoice_cctbao_id', 'minvoice_has_code',
+                    'etax_password', 'etax_cvalue', 'etax_ckey',
+                    'auto_issue_invoice', 'auto_issue_schedule', 'auto_sync_purchase',
+                    'pxk_internal_series', 'pxk_agency_series',
+                    'auto_issue_pxk_internal', 'auto_issue_pxk_agency',
+                    'is_active',
+                ]
 
                 begin_immediate(conn, label='save_esign_settings')
                 cursor.execute(
                     "UPDATE invoice_settings SET is_active = 0, auto_issue_schedule = 0 WHERE provider_name != ?",
                     (provider_name,),
                 )
-                cursor.execute(sql, values)
+
+                if row:
+                    set_clause = ', '.join(f"{col} = ?" for col in columns if col != 'provider_name')
+                    params = [values[col] for col in columns if col != 'provider_name']
+                    params.append(provider_name)
+                    cursor.execute(
+                        f"UPDATE invoice_settings SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE provider_name = ?",
+                        params,
+                    )
+                else:
+                    insert_cols = ', '.join(columns)
+                    placeholders = ', '.join('?' for _ in columns)
+                    params = [values[col] for col in columns]
+                    cursor.execute(
+                        f"INSERT INTO invoice_settings ({insert_cols}, updated_at) "
+                        f"VALUES ({placeholders}, CURRENT_TIMESTAMP)",
+                        params,
+                    )
+
                 sqlite_commit(conn, label='settings')
 
             sqlite_write_retry(_persist, label='save_esign_settings')
