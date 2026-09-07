@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from email.message import EmailMessage
 from io import BytesIO
+from flask_login import login_required, current_user
 
 import pandas as pd
 import requests
@@ -4127,10 +4128,11 @@ Trân trọng,
             cleared = purge_tenant_business_data(conn)
             reseed_tenant_defaults(conn)
 
-            username = getattr(current_user, 'username', None) or session.get('username') or 'Unknown'
-            logging.warning(
-                'Tenant database purged by %s (tenant=%s, tables=%s, ip=%s)',
-                username, tenant_id, len(cleared), request.remote_addr,
+            username = (
+                getattr(current_user, 'username', None)
+                or session.get('username')
+                or (session.get('user') or {}).get('username')
+                or 'Unknown'
             )
 
             try:

@@ -6,7 +6,6 @@ from decimal import Decimal
 from typing import Any
 
 from Services.sme.payment_method import normalize_sale_payment_method
-from Services.sme.account_roles import resolve_posting_account
 
 from Services.sme.journal_engine import (
     get_posting_rule,
@@ -26,73 +25,26 @@ def _product_revenue_class(
     product_type: str | None,
     product_code: str | None,
 ) -> str:
+    """Phân loại doanh thu theo loại sản phẩm đã lưu trên danh mục."""
     code = str(product_code or '').strip().upper()
-
-    # Kiểm tra prefix đặc thù trước
-    if code.startswith('BDSDT'):
-        return 'BDSDT'
-
-    if code.startswith('HH'):
-        return 'HH'
-
-    if code.startswith('TP'):
-        return 'TP'
-
-    if code.startswith('DV'):
-        return 'DV'
-
-    # Fallback cho dữ liệu cũ
     pt = str(product_type or '').strip().lower()
 
-    if pt in (
-        'investment_property',
-        'bat_dong_san_dau_tu',
-        'bdsdt',
+    if code.startswith('BDSDT') or pt in (
+        'investment_property', 'bat_dong_san_dau_tu', 'bdsdt',
     ):
-        return 'BDSDT'
+        return 'INVESTMENT_PROPERTY'
 
     if pt in (
-        'service',
-        'services',
-        'dich_vu',
-        'dv',
+        'finished_goods', 'finished_good', 'finished_product',
+        'thanh_pham', 'thanhpham',
     ):
-        return 'DV'
+        return 'FINISHED_GOODS'
 
-    if pt in (
-        'finished_goods',
-        'finished_good',
-        'finished_product',
-        'thanh_pham',
-        'tp',
-    ):
-        return 'TP'
+    if pt in ('service', 'services', 'dich_vu', 'dv'):
+        return 'SERVICE'
 
-    return 'HH'
+    return 'GOODS'
 
-
-def _revenue_role_for_class(revenue_class: str) -> str:
-    return {
-        'HH': 'revenue.goods',
-        'TP': 'revenue.fg',
-        'DV': 'revenue.service',
-        'BDSDT': 'revenue.investment_property',
-    }[revenue_class]
-
-
-def resolve_revenue_posting_account(
-    conn: sqlite3.Connection,
-    revenue_class: str,
-) -> str:
-    """Resolve TK doanh thu qua Account Roles/COA hiện hành.
-
-    sale_journal không tự fallback tài khoản. Quy tắc leaf/default và
-    fallback 511 được tập trung tại account_roles.resolve_posting_account().
-    """
-    return resolve_posting_account(
-        conn,
-        _revenue_role_for_class(revenue_class),
-    )
 
 def _money(value: Any) -> Decimal:
     return Decimal(str(value or 0)).quantize(Decimal('0.01'))
@@ -178,16 +130,16 @@ def _sale_revenue_buckets(
     Decimal,
 ]:
     """
-    Phân loại doanh thu POS theo từng dòng:
+    Phân loại doanh thu POS theo products.product_type.
 
-    HH...    -> 5111: Doanh thu bán hàng hóa
-    TP...    -> 5112: Doanh thu bán thành phẩm
-    DV...    -> 5113: Doanh thu cung cấp dịch vụ
-    BDSDT... -> 5117: Doanh thu kinh doanh BĐS đầu tư
-    deferred -> 3387: Doanh thu chưa thực hiện
+    goods               -> 5111: Doanh thu bán hàng hóa
+    finished_goods      -> 5112: Doanh thu bán thành phẩm
+    service             -> 5113: Doanh thu cung cấp dịch vụ
+    investment_property -> 5117: Doanh thu kinh doanh BĐS đầu tư
+    deferred            -> 3387: Doanh thu chưa thực hiện
 
-    Việc phân loại HH/TP/DV/BDSDT chỉ dựa trên products.product_code.
-    barcode không được dùng để quyết định tài khoản kế toán.
+    product_code chỉ được dùng để nhận diện mã nghiệp vụ BDSDT.
+    barcode không tham gia phân loại tài khoản kế toán.
 
     Trả về:
         (goods, finished, service, bdsdt, deferred, vat)
@@ -213,12 +165,11 @@ def _sale_revenue_buckets(
 
     product_cols = _table_columns(conn, 'products')
 
-    # product_code là mã nghiệp vụ/kế toán chuẩn để phân loại doanh thu.
-    # Không dùng barcode làm fallback vì barcode có thể là mã riêng in trên bao bì.
+    # product_code chỉ phục vụ nhận diện mã nghiệp vụ đặc thù BDSDT.
     if 'product_code' not in product_cols:
         raise ValueError(
             "Bảng products thiếu cột product_code; "
-            "không thể phân loại tài khoản doanh thu POS theo HH/TP/DV/BDSDT."
+            "không thể nhận diện mã nghiệp vụ BDSDT."
         )
 
     product_code_expr = "COALESCE(p.product_code, '')"
@@ -269,7 +220,7 @@ def _sale_revenue_buckets(
 
         line_vat = round(
             taxable * tax_pct / 100
-        )
+        ) if tax_pct > 0 else 0
 
         net = _money(taxable)
         vat += _money(line_vat)
@@ -282,48 +233,18 @@ def _sale_revenue_buckets(
             deferred += net
             continue
 
-        # -------------------------------------------------
-        # PHÂN LOẠI DOANH THU THEO PREFIX MÃ SẢN PHẨM
-        # -------------------------------------------------
-
-        # Phải kiểm tra BDSDT trước các prefix khác.
-        if product_code.startswith('BDSDT'):
+        # Phân loại tập trung theo product_type; mã BDSDT là ngoại lệ nghiệp vụ.
+        revenue_class = _product_revenue_class(
+            product_type=product_type,
+            product_code=product_code,
+        )
+        if revenue_class == 'INVESTMENT_PROPERTY':
             bdsdt += net
-
-        elif product_code.startswith('TP'):
+        elif revenue_class == 'FINISHED_GOODS':
             finished += net
-
-        elif product_code.startswith('DV'):
+        elif revenue_class == 'SERVICE':
             service += net
-
-        elif product_code.startswith('HH'):
-            goods += net
-
-        # -------------------------------------------------
-        # FALLBACK CHO DỮ LIỆU CŨ
-        # -------------------------------------------------
-
-        elif product_type in (
-            'investment_property',
-            'bat_dong_san_dau_tu',
-            'bdsdt',
-        ):
-            bdsdt += net
-
-        elif product_type in (
-            'finished_goods',
-            'finished_good',
-            'finished_product',
-            'thanh_pham',
-            'tp',
-        ):
-            finished += net
-
-        elif _is_service_product_type(product_type):
-            service += net
-
         else:
-            # Dữ liệu cũ không xác định -> hàng hóa
             goods += net
 
     return (
@@ -356,7 +277,9 @@ def _sale_vat(conn: sqlite3.Connection, sale_id: int, business_line: str) -> Dec
         subtotal = float(row[0] or 0) * float(row[1] or 0)
         discount = round(subtotal * (float(row[2] or 0) / 100))
         taxable = subtotal - discount
-        vat += _money(round(taxable * (float(row[3] or 0) / 100)))
+        tax_pct = float(row[3] or 0)
+        if tax_pct > 0:
+            vat += _money(round(taxable * (tax_pct / 100)))
     return vat
 
 
@@ -569,7 +492,7 @@ def _build_revenue_lines(
             lines.append({
                 **common,
 
-                'account_code': resolve_revenue_posting_account(conn, 'DV'),
+                'account_code': '5113',
 
                 'debit': 0,
                 'credit': revenue,
@@ -583,11 +506,11 @@ def _build_revenue_lines(
             # -------------------------------------------------
             # Phân loại doanh thu theo sản phẩm POS
             #
-            # HH...    -> 5111
-            # TP...    -> 5112
-            # DV...    -> 5113
-            # BDSDT... -> 5117
-            # deferred -> 3387
+            # goods               -> 5111
+            # finished_goods      -> 5112
+            # service             -> 5113
+            # investment_property -> 5117
+            # deferred            -> 3387
             # -------------------------------------------------
 
             (
@@ -624,14 +547,14 @@ def _build_revenue_lines(
             ):
 
                 # ---------------------------------------------
-                # HH -> 5111
+                # Hàng hóa -> 5111
                 # ---------------------------------------------
                 if goods_rev > 0:
 
                     lines.append({
                         **common,
 
-                        'account_code': resolve_revenue_posting_account(conn, 'HH'),
+                        'account_code': '5111',
 
                         'debit': 0,
                         'credit': goods_rev,
@@ -642,14 +565,14 @@ def _build_revenue_lines(
                     })
 
                 # ---------------------------------------------
-                # TP -> 5112
+                # Thành phẩm -> 5112
                 # ---------------------------------------------
                 if finished_rev > 0:
 
                     lines.append({
                         **common,
 
-                        'account_code': resolve_revenue_posting_account(conn, 'TP'),
+                        'account_code': '5112',
 
                         'debit': 0,
                         'credit': finished_rev,
@@ -660,14 +583,14 @@ def _build_revenue_lines(
                     })
 
                 # ---------------------------------------------
-                # DV -> 5113
+                # Dịch vụ -> 5113
                 # ---------------------------------------------
                 if service_rev > 0:
 
                     lines.append({
                         **common,
 
-                        'account_code': resolve_revenue_posting_account(conn, 'DV'),
+                        'account_code': '5113',
 
                         'debit': 0,
                         'credit': service_rev,
@@ -678,14 +601,14 @@ def _build_revenue_lines(
                     })
 
                 # ---------------------------------------------
-                # BDSDT -> 5117
+                # Bất động sản đầu tư -> 5117
                 # ---------------------------------------------
                 if bdsdt_rev > 0:
 
                     lines.append({
                         **common,
 
-                        'account_code': resolve_revenue_posting_account(conn, 'BDSDT'),
+                        'account_code': '5117',
 
                         'debit': 0,
                         'credit': bdsdt_rev,
@@ -724,14 +647,14 @@ def _build_revenue_lines(
                 # -------------------------------------------------
                 raise ValueError(
                     'Không thể phân loại đầy đủ doanh thu POS '
-                    'theo HH/TP/DV/BDSDT. '
+                    'theo loại sản phẩm. '
                     f'sale_id={sale["id"]}; '
                     f'revenue={revenue}; '
                     f'bucket_sum={bucket_sum}; '
-                    f'HH={goods_rev}; '
-                    f'TP={finished_rev}; '
-                    f'DV={service_rev}; '
-                    f'BDSDT={bdsdt_rev}; '
+                    f'goods={goods_rev}; '
+                    f'finished_goods={finished_rev}; '
+                    f'service={service_rev}; '
+                    f'investment_property={bdsdt_rev}; '
                     f'deferred={deferred_rev}'
                 )
 
@@ -841,7 +764,7 @@ def _cogs_accounts_for_product_type(product_type: str | None, move_type: str) ->
 
 
 def _build_cogs_lines(conn: sqlite3.Connection, sale_id: int) -> list[dict]:
-    # Gom theo loại hàng để xuất đúng 156/152/155 (TP sản xuất)
+    # Gom theo loại hàng để xuất đúng tài khoản tồn kho 156/152/155
     try:
         rows = conn.execute(
             """
@@ -1061,9 +984,29 @@ def sync_sale_journals(
     except Exception:
         pass
 
+    # BĐSĐT: chỉ kích hoạt khi sale dùng đúng sale_product_id.
+    # Với BĐSĐT, lỗi ghi giảm 217 phải làm accounting job thất bại thay vì nuốt lỗi.
+    bdsdt_disposal: dict = {}
+    has_bdsdt_register = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='sme_investment_properties'"
+    ).fetchone()
+    if has_bdsdt_register:
+        bdsdt_sale = conn.execute(
+            """SELECT 1 FROM sale_items si
+               JOIN sme_investment_properties ip ON ip.sale_product_id = si.product_id
+               WHERE si.sale_id = ? LIMIT 1""",
+            (sale_id,),
+        ).fetchone()
+        if bdsdt_sale:
+            from Services.sme.investment_property import sync_property_disposals_for_sale
+            bdsdt_disposal = sync_property_disposals_for_sale(
+                conn, sale_id, created_by=created_by,
+            )
+
     return {
         'posted': bool(posted),
         'entry_ids': [item['id'] for item in posted],
         'reversed_entry_ids': reversed_ids,
         'service_jobs': provision_result,
+        'bdsdt_disposal': bdsdt_disposal,
     }

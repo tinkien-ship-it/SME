@@ -1,0 +1,725 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h4 class="mb-0">Bất động sản đầu tư</h4>
+      <small class="text-muted">Quản lý BĐSĐT · cho thuê/bán trực tiếp tại đây · không cần qua màn hình POS</small>
+    </div>
+    <a class="btn btn-primary" href="/SME_import"><i class="bi bi-plus-lg"></i> Mua / ghi tăng BĐSĐT</a>
+  </div>
+
+  <div class="alert alert-info shadow-sm small">
+    <strong>Cho thuê từng kỳ:</strong> Nợ 111/112/131 · Có 5117 · Có 33311.
+    <strong class="ms-2">Thu trước nhiều kỳ:</strong> Nợ 111/112 · Có 3387 · Có 33311; cuối kỳ Nợ 3387/Có 5117.
+    <strong class="ms-2">Bán:</strong> doanh thu 5117 + VAT và tự ghi giảm 217/2147/632.
+  </div>
+
+  <div class="table-responsive bg-white rounded shadow-sm">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr>
+        <th>Mã</th><th>Tên BĐSĐT</th><th>Địa chỉ</th><th>Ngày ghi nhận</th>
+        <th class="text-end">Nguyên giá</th><th class="text-end">HM/Suy giảm</th>
+        <th class="text-end">GT còn lại</th><th>ĐVT gốc</th><th>Khai thác / kế hoạch</th><th>Trạng thái</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for p in properties %}
+        {% set plan = p.lease_plan %}
+        <tr>
+          <td><strong>{{ p.property_code }}</strong></td>
+          <td>{{ p.property_name }}</td><td>{{ p.address or '—' }}</td>
+          <td>{{ p.acquisition_date or '' }}</td>
+          <td class="text-end">{{ '{:,.0f}'.format(p.original_cost or 0) }}</td>
+          <td class="text-end">{{ '{:,.0f}'.format((p.accumulated_depreciation or 0)+(p.impairment_amount or 0)) }}</td>
+          <td class="text-end fw-semibold">{{ '{:,.0f}'.format(p.carrying_amount or p.original_cost or 0) }}</td>
+          <td><strong>{{ p.asset_unit or 'BĐS' }}</strong><div class="small text-muted">SL gốc: {{ p.original_quantity or 1 }}</div></td>
+          <td>
+            {% if plan %}
+              <span class="badge text-bg-primary">{{ 'Thu trước nhiều kỳ' if plan.revenue_mode == 'PREPAID' else 'Theo tháng/từng kỳ' }}</span>
+              <div class="small mt-1">{{ plan.start_date }} → {{ plan.end_date }} · {{ plan.months }} tháng</div>
+              {% if plan.auto_depreciation %}<div class="small text-muted">KH: {{ '{:,.0f}'.format(plan.monthly_depreciation_amount or 0) }}/tháng · {{ plan.posted_depreciation_periods or 0 }}/{{ plan.months }}</div>{% endif %}
+              {% if plan.revenue_mode == 'PREPAID' and plan.auto_revenue_recognition %}<div class="small text-muted">PB DT: ~{{ '{:,.0f}'.format(plan.monthly_revenue_amount or 0) }}/tháng · {{ plan.posted_revenue_periods or 0 }}/{{ plan.months }}</div>{% endif %}
+            {% else %}<span class="text-muted small">Chưa thiết lập cho thuê</span>{% endif %}
+          </td>
+          <td><span class="badge bg-{{ 'success' if p.status=='ACTIVE' else 'secondary' }}">{{ p.status }}</span></td>
+          <td class="text-nowrap">
+            {% if p.status=='ACTIVE' %}
+            <div class="btn-group">
+              <button type="button" class="btn btn-sm btn-success" onclick='window.openLeaseModal({{ p.id }}, {{ p.property_code|tojson }}, {{ p.property_name|tojson }}, {{ (p.address or "")|tojson }}, {{ (p.asset_unit or "BĐS")|tojson }}, {{ p.original_quantity or 1 }})'>Cho thuê</button>
+              <button type="button" class="btn btn-sm btn-outline-dark js-bdsdt-edit"
+                data-id="{{ p.id }}"
+                data-code="{{ p.property_code|e }}"
+                data-name="{{ p.property_name|e }}"
+                data-address="{{ (p.address or '')|e }}"
+                data-note="{{ (p.note or '')|e }}">Sửa</button>
+              <button type="button" class="btn btn-sm btn-outline-primary js-bdsdt-sale"
+                data-id="{{ p.id }}"
+                data-code="{{ p.property_code|e }}"
+                data-name="{{ p.property_name|e }}"
+                data-address="{{ (p.address or '')|e }}"
+                data-unit="{{ (p.asset_unit or 'BĐS')|e }}"
+                data-qty="{{ p.original_quantity or 1 }}"
+                data-original="{{ p.original_cost or 0 }}"
+                data-dep="{{ p.accumulated_depreciation or 0 }}"
+                data-impair="{{ p.impairment_amount or 0 }}"
+                data-carrying="{{ p.carrying_amount or p.original_cost or 0 }}">Bán tài sản</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" onclick="simpleAction({{p.id}},'depreciation','Số tiền khấu hao thủ công')">Khấu hao thủ công</button></li>
+                <li><button class="dropdown-item" onclick="simpleAction({{p.id}},'impairment','Mức suy giảm')">Suy giảm</button></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><button class="dropdown-item text-danger" onclick="stopLeasePlan({{p.id}})">Dừng kế hoạch cho thuê</button></li>
+              </ul>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="10" class="text-center text-muted py-5">Chưa có BĐSĐT</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- CHO THUÊ: kế hoạch + giao dịch thực tế -->
+<div class="modal fade" id="leasePlanModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header">
+      <div><h5 class="modal-title">Cho thuê BĐSĐT</h5><div class="small text-muted" id="leasePropertyTitle"></div></div>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="leasePropertyId"><input type="hidden" id="leasePropertyAddress">
+      <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#leasePlanTab">Kế hoạch cho thuê</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#leaseTxnTab">Lập giao dịch / hóa đơn</button></li>
+      </ul>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="leasePlanTab">
+          <div class="alert alert-warning py-2 small">Theo kỳ → 5117 khi giao dịch phát sinh. Thu trước nhiều kỳ → 3387 khi thu, scheduler phân bổ 3387 → 5117.</div>
+          <div class="row g-3">
+            <div class="col-lg-4"><label class="form-label">Mục đích sử dụng</label><select class="form-select" id="usagePurpose"><option value="RENTAL">Cho thuê / đang khai thác</option><option value="BOTH">Vừa cho thuê vừa giữ tăng giá</option></select></div>
+            <div class="col-lg-4"><label class="form-label">Ngày bắt đầu</label><input type="date" class="form-control" id="leaseStartDate"></div>
+            <div class="col-lg-4"><label class="form-label">Số tháng / kỳ</label><input type="number" min="1" max="600" class="form-control" id="leaseMonths" value="12"></div>
+            <div class="col-12"><label class="form-label fw-semibold">Hình thức doanh thu</label>
+              <div class="row g-2">
+                <div class="col-lg-6"><label class="border rounded p-3 w-100"><input class="form-check-input me-2" type="radio" name="revenueMode" value="DIRECT_MONTHLY" checked><strong>Theo tháng / từng kỳ</strong><div class="small text-muted">Giao dịch kỳ: 111/112/131 → 5117 + 33311.</div></label></div>
+                <div class="col-lg-6"><label class="border rounded p-3 w-100"><input class="form-check-input me-2" type="radio" name="revenueMode" value="PREPAID"><strong>Thu trước nhiều kỳ</strong><div class="small text-muted">Thu: 111/112 → 3387 + 33311; cuối kỳ 3387 → 5117.</div></label></div>
+              </div>
+            </div>
+            <div class="col-lg-6" id="monthlyRentBox"><label class="form-label">Tiền thuê chưa VAT / kỳ</label><input type="number" min="0" step="1000" class="form-control" id="monthlyRentAmount" value="0"></div>
+            <div class="col-lg-6 d-none" id="prepaidBox"><label class="form-label">Tổng tiền thuê chưa VAT thu trước</label><input type="number" min="0" step="1000" class="form-control" id="prepaidNetAmount" value="0"></div>
+            <div class="col-lg-6"><label class="form-label">Tổng khấu hao trong thời gian thuê</label><input type="number" min="0" step="1000" class="form-control" id="depreciationTotal" value="0"></div>
+            <div class="col-lg-6"><label class="form-label">Khấu hao dự kiến / tháng</label><input type="text" class="form-control bg-light" id="monthlyDepPreview" readonly></div>
+            <div class="col-lg-6"><div class="form-check form-switch mt-4"><input class="form-check-input" type="checkbox" id="autoDepreciation" checked><label class="form-check-label" for="autoDepreciation">Tự động khấu hao cuối kỳ</label></div></div>
+            <div class="col-lg-6 d-none" id="autoRevenueBox"><div class="form-check form-switch mt-4"><input class="form-check-input" type="checkbox" id="autoRevenueRecognition" checked><label class="form-check-label" for="autoRevenueRecognition">Tự động phân bổ 3387 → 5117</label></div><div class="small text-muted" id="monthlyRevenuePreview"></div></div>
+            <div class="col-12"><label class="form-label">Ghi chú kế hoạch</label><textarea class="form-control" id="leaseNote" rows="2"></textarea></div>
+          </div>
+          <div class="d-flex justify-content-between mt-3">
+            <button class="btn btn-outline-secondary" type="button" onclick="processDueNow()">Xử lý các kỳ đã đến hạn</button>
+            <button class="btn btn-outline-primary" type="button" onclick="saveLeasePlan(false)">Lưu kế hoạch</button>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="leaseTxnTab">
+          <div class="row g-3">
+            <div class="col-lg-6"><label class="form-label">Khách hàng / người thuê</label><input class="form-control" id="leaseCustomerName"></div>
+            <div class="col-lg-6"><label class="form-label">Tên công ty (nếu có)</label><input class="form-control" id="leaseCompanyName"></div>
+            <div class="col-lg-4"><label class="form-label">Mã số thuế</label><input class="form-control" id="leaseTaxCode"></div>
+            <div class="col-lg-4"><label class="form-label">Email nhận hóa đơn</label><input type="email" class="form-control" id="leaseEmail"></div>
+            <div class="col-lg-4"><label class="form-label">Điện thoại</label><input class="form-control" id="leasePhone"></div>
+            <div class="col-12"><label class="form-label">Địa chỉ người mua</label><input class="form-control" id="leaseCustomerAddress"></div>
+            <div class="col-lg-3"><label class="form-label">ĐVT tài sản gốc</label><input class="form-control bg-light" id="leaseAssetUnit" readonly></div>
+            <div class="col-lg-3"><label class="form-label">SL tài sản gốc</label><input class="form-control bg-light" id="leaseAssetQty" readonly></div>
+            <div class="col-lg-3"><label class="form-label">Từ ngày</label><input type="date" class="form-control" id="leasePeriodFrom"></div>
+            <div class="col-lg-3"><label class="form-label">Đến ngày</label><input type="date" class="form-control" id="leasePeriodTo"></div>
+            <div class="col-lg-3"><label class="form-label fw-semibold">ĐVT tính thuê</label><select class="form-select" id="leaseBillingUnit"><option>Tháng</option><option>Kỳ</option><option>Quý</option><option>Năm</option><option>Ngày</option></select></div>
+            <div class="col-lg-3"><label class="form-label fw-semibold">Số kỳ xuất HĐ</label><input type="number" min="0.01" step="0.01" class="form-control" id="leaseBillingQty" value="1"></div>
+            <div class="col-lg-3"><label class="form-label fw-semibold">Đơn giá / kỳ</label><input type="number" min="0" step="1000" class="form-control" id="leaseUnitPrice"></div>
+            <div class="col-lg-3"><label class="form-label">VAT</label><select class="form-select" id="leaseVatRate"><option value="10">10%</option><option value="8">8%</option><option value="5">5%</option><option value="0">0%</option><option value="-1">KCT</option></select></div>
+            <div class="col-lg-4"><label class="form-label">Thanh toán</label><select class="form-select" id="leasePayment"><option value="111">Tiền mặt</option><option value="112">Chuyển khoản</option><option value="131">Công nợ</option></select></div>
+            <div class="col-lg-4"><label class="form-label">Tiền thuế</label><input class="form-control bg-light" id="leaseVatAmount" readonly></div>
+            <div class="col-lg-4"><label class="form-label">Tổng thanh toán</label><input class="form-control bg-light fw-semibold" id="leaseGross" readonly></div>
+            <div class="col-12"><label class="form-label">Nội dung hóa đơn / diễn giải</label><textarea class="form-control" id="leaseTxnNote" rows="2"></textarea></div>
+            <div class="col-12"><div class="alert alert-light border mb-0" id="leasePostingPreview"></div></div>
+            <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="leaseIssueInvoice" checked><label class="form-check-label" for="leaseIssueInvoice">Phát hành HĐĐT ngay sau khi ghi nhận</label></div></div>
+          </div>
+          <div class="text-end mt-3"><button class="btn btn-success" type="button" id="leaseTxnSubmit" onclick="submitLeaseTransaction()">Ghi nhận giao dịch & xử lý</button></div>
+          <div class="alert d-none mt-3" id="leaseResult"></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- SỬA THÔNG TIN BĐSĐT -->
+<div class="modal fade" id="editPropertyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <div><h5 class="modal-title">Sửa thông tin BĐSĐT</h5><div class="small text-muted" id="editPropertyCode"></div></div>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editPropertyId">
+      <div class="row g-3">
+        <div class="col-12"><label class="form-label">Tên BĐSĐT</label><input class="form-control" id="editPropertyName"></div>
+        <div class="col-12"><label class="form-label fw-semibold">Địa chỉ BĐSĐT</label><input class="form-control" id="editPropertyAddress" placeholder="Ví dụ: 37 Vạn Tượng, Phường Chợ Lớn, Thành phố Hồ Chí Minh"></div>
+        <div class="col-12"><label class="form-label">Ghi chú</label><textarea class="form-control" id="editPropertyNote" rows="3"></textarea></div>
+      </div>
+      <div class="alert d-none mt-3" id="editPropertyResult"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+      <button type="button" class="btn btn-primary" id="editPropertySave">Lưu cập nhật</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- BÁN BĐSĐT -->
+<div class="modal fade" id="salePropertyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><div><h5 class="modal-title">Bán bất động sản đầu tư</h5><div class="small text-muted" id="salePropertyTitle"></div></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="salePropertyId">
+      <input type="hidden" id="salePropertyName">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label fw-semibold">Địa chỉ BĐSĐT chuyển nhượng</label>
+          <input class="form-control bg-light fw-semibold" id="salePropertyAddress" readonly>
+        </div>
+        <div class="col-lg-6"><label class="form-label">Người mua</label><input class="form-control" id="saleCustomerName"></div>
+        <div class="col-lg-6"><label class="form-label">Tên công ty (nếu có)</label><input class="form-control" id="saleCompanyName"></div>
+        <div class="col-lg-4"><label class="form-label">Mã số thuế</label><input class="form-control" id="saleTaxCode"></div>
+        <div class="col-lg-4"><label class="form-label">Email nhận hóa đơn</label><input type="email" class="form-control" id="saleEmail"></div>
+        <div class="col-lg-4"><label class="form-label">Điện thoại</label><input class="form-control" id="salePhone"></div>
+        <div class="col-12"><label class="form-label">Địa chỉ người mua</label><input class="form-control" id="saleCustomerAddress"></div>
+
+        <div class="col-lg-2"><label class="form-label">ĐVT tài sản</label><input class="form-control bg-light fw-semibold" id="saleAssetUnit" readonly></div>
+        <div class="col-lg-2"><label class="form-label">Số lượng bán</label><input class="form-control bg-light" id="saleAssetQty" value="1" readonly></div>
+        <div class="col-lg-4"><label class="form-label fw-semibold">Tổng giá chuyển nhượng chưa VAT</label><input type="number" min="0" step="1000" class="form-control" id="saleNetAmount"></div>
+        <div class="col-lg-4"><label class="form-label fw-semibold">Giá đất được trừ khi tính thuế GTGT</label><input type="number" min="0" step="1000" class="form-control" id="saleLandDeduction"><div class="form-text">Nhập theo hồ sơ/căn cứ pháp lý đủ điều kiện; không tự lấy nguyên giá BĐS.</div></div>
+        <div class="col-lg-4"><label class="form-label">Thuế suất GTGT phần chịu thuế</label><select class="form-select" id="saleVatRate"><option value="10">10%</option><option value="8">8%</option><option value="5">5%</option><option value="0">0%</option></select></div>
+
+        <div class="col-lg-3"><label class="form-label">Giá tính thuế GTGT</label><input class="form-control bg-light" id="saleVatBase" readonly><div class="form-text">= Giá chuyển nhượng chưa VAT − Giá đất được trừ</div></div>
+        <div class="col-lg-3"><label class="form-label">Tiền VAT</label><input class="form-control bg-light" id="saleVatAmount" readonly></div>
+        <div class="col-lg-3"><label class="form-label">Tổng thanh toán</label><input class="form-control bg-light fw-semibold" id="saleGross" readonly></div>
+        <div class="col-lg-3"><label class="form-label">Thanh toán</label><select class="form-select" id="salePayment"><option value="111">Tiền mặt</option><option value="112">Chuyển khoản</option><option value="131">Công nợ</option></select></div>
+
+        <div class="col-12"><div class="card bg-light"><div class="card-body py-2">
+          <div class="row small">
+            <div class="col-md-3">Nguyên giá: <strong id="saleOriginalCost">0</strong></div>
+            <div class="col-md-3">Hao mòn lũy kế: <strong id="saleAccumDep">0</strong></div>
+            <div class="col-md-3">Suy giảm: <strong id="saleImpairment">0</strong></div>
+            <div class="col-md-3">Giá trị còn lại: <strong id="saleCarrying">0</strong></div>
+          </div>
+          <div class="mt-2">Lãi/lỗ dự kiến trước chi phí khác: <strong id="saleProfitPreview">0</strong></div>
+        </div></div></div>
+
+        <div class="col-12"><label class="form-label">Diễn giải</label><textarea class="form-control" id="saleNote" rows="3"></textarea></div>
+        <div class="col-12"><div class="border rounded p-3 bg-light">
+          <div class="fw-semibold mb-2">Nội dung dự kiến trên HĐĐT</div>
+          <div class="small"><strong>Dòng hàng hóa/dịch vụ:</strong> <span id="saleInvoiceTransferLine"></span></div>
+          <div class="small mt-1"><strong>Dòng ghi chú:</strong> <span id="saleInvoiceLandNote"></span></div>
+          <div class="small mt-2 text-muted">Thuế GTGT tính trên giá chuyển nhượng trừ giá đất được trừ; giá đất được trừ không truyền như một hàng hóa KCT riêng.</div>
+        </div></div>
+        <div class="col-12"><div class="alert alert-light border mb-0" id="salePostingPreview"></div></div>
+        <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="saleIssueInvoice" checked><label class="form-check-label" for="saleIssueInvoice">Phát hành HĐĐT ngay sau khi ghi nhận</label></div></div>
+      </div>
+      <div class="alert d-none mt-3" id="saleResult"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button><button type="button" class="btn btn-primary" id="saleSubmit">Ghi nhận bán & xử lý</button></div>
+  </div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+console.info('[BDSDT] investment_properties script loaded');
+window.__BDSDT_SCRIPT_LOADED__ = true;
+const moneyFmt = new Intl.NumberFormat('vi-VN');
+let leaseModal, saleModal;
+let saleClientUuid = null;
+let saleSubmitting = false;
+const newBdsdtUuid = () => (
+  (window.crypto && typeof window.crypto.randomUUID === 'function')
+    ? window.crypto.randomUUID()
+    : `bdsdt-${Date.now()}-${Math.random().toString(16).slice(2)}`
+);
+const n = id => Number(document.getElementById(id)?.value || 0);
+const v = id => (document.getElementById(id)?.value || '').trim();
+const selectedRevenueMode = () => document.querySelector('input[name="revenueMode"]:checked')?.value || 'DIRECT_MONTHLY';
+const money = x => moneyFmt.format(Number(x || 0));
+
+async function ensureBootstrapModal(){
+  if(window.bootstrap && window.bootstrap.Modal) return window.bootstrap.Modal;
+  // Không yêu cầu F5: nếu bundle chưa có khi trang được điều hướng/render động,
+  // thử dùng bundle script đã khai báo trên layout; nếu chưa chạy xong thì chờ.
+  for(let i=0;i<40;i++){
+    if(window.bootstrap && window.bootstrap.Modal) return window.bootstrap.Modal;
+    await new Promise(resolve=>setTimeout(resolve,50));
+  }
+  throw new Error('Bootstrap Modal chưa sẵn sàng. Kiểm tra bootstrap.bundle.js trên base.html.');
+}
+async function jsonFetch(url, options={}){
+  const r = await fetch(url, options);
+  const d = await r.json().catch(()=>({success:false,error:`HTTP ${r.status}`}));
+  if (!r.ok || d.success === false) throw new Error(d.error || `HTTP ${r.status}`);
+  return d;
+}
+async function ensureProducts(id){
+  return jsonFetch(`/api/sme/investment-properties/${id}/pos-products`, {method:'POST'});
+}
+async function issueInvoice(saleId){
+  return jsonFetch(`/api/invoice/issue/${saleId}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({})});
+}
+async function checkout(payload){
+  return jsonFetch('/api/cart/checkout', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+}
+function showResult(id, ok, html){
+  const el=document.getElementById(id);
+  if(!el){
+    console.warn(`[BDSDT] showResult target missing: #${id}`, html);
+    return false;
+  }
+  el.className=`alert mt-3 ${ok?'alert-success':'alert-danger'}`;
+  el.innerHTML=html;
+  return true;
+}
+function updateLeaseUi(){
+  const prepaid=selectedRevenueMode()==='PREPAID';
+  document.getElementById('monthlyRentBox')?.classList.toggle('d-none',prepaid);
+  document.getElementById('prepaidBox')?.classList.toggle('d-none',!prepaid);
+  document.getElementById('autoRevenueBox')?.classList.toggle('d-none',!prepaid);
+  const months=Math.max(1,n('leaseMonths'));
+  const depEl=document.getElementById('monthlyDepPreview'); if(depEl) depEl.value=money(n('depreciationTotal')/months);
+  const revEl=document.getElementById('monthlyRevenuePreview');
+  if(prepaid && revEl) revEl.textContent=`Dự kiến phân bổ: ${money(n('prepaidNetAmount')/months)} / kỳ (chưa VAT).`;
+  updateLeaseTxnPreview();
+}
+function updateLeaseTxnPreview(){
+  const qty=n('leaseBillingQty'), unitPrice=n('leaseUnitPrice'), net=qty*unitPrice, rate=n('leaseVatRate'), vat=rate>0?Math.round(net*rate/100):0, gross=net+vat;
+  const vatEl=document.getElementById('leaseVatAmount'); if(vatEl) vatEl.value=money(vat);
+  const grossEl=document.getElementById('leaseGross'); if(grossEl) grossEl.value=money(gross);
+  const prepaid=selectedRevenueMode()==='PREPAID', pm=v('leasePayment');
+  const postingEl=document.getElementById('leasePostingPreview');
+  if(!postingEl){
+    console.warn('[BDSDT] missing #leasePostingPreview; bỏ qua preview, không chặn modal cho thuê.');
+    return false;
+  }
+  postingEl.innerHTML=prepaid
+    ? `<strong>Dự kiến:</strong> Nợ ${pm} ${money(gross)} · Có 3387 ${money(net)}${vat?` · Có 33311 ${money(vat)}`:''}. Scheduler phân bổ N3387/C5117.`
+    : `<strong>Dự kiến:</strong> Nợ ${pm} ${money(gross)} · Có 5117 ${money(net)}${vat?` · Có 33311 ${money(vat)}`:''}.`;
+  return true;
+}
+window.openLeaseModal = async function openLeaseModal(id,code,name,address,assetUnit,assetQty){
+  document.getElementById('leasePropertyId').value=id;
+  document.getElementById('leasePropertyAddress').value=address||'';
+  document.getElementById('leaseAssetUnit').value=assetUnit||'BĐS';
+  document.getElementById('leaseAssetQty').value=assetQty||1;
+  document.getElementById('leasePropertyTitle').textContent=`${code} — ${name}${address?' · '+address:''}`;
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('leaseStartDate').value=today;
+  document.getElementById('leasePeriodFrom').value=today;
+  const d=await jsonFetch(`/api/sme/investment-properties/${id}/lease-plan`);
+  const p=d.data;
+  if(p){
+    document.getElementById('usagePurpose').value=p.usage_purpose||'RENTAL';
+    document.getElementById('leaseStartDate').value=p.start_date||today;
+    document.getElementById('leaseMonths').value=p.months||12;
+    const radio=document.querySelector(`input[name="revenueMode"][value="${p.revenue_mode||'DIRECT_MONTHLY'}"]`); if(radio) radio.checked=true;
+    document.getElementById('monthlyRentAmount').value=p.monthly_rent_amount||0;
+    document.getElementById('prepaidNetAmount').value=p.prepaid_net_amount||0;
+    document.getElementById('depreciationTotal').value=p.depreciation_total||0;
+    document.getElementById('autoDepreciation').checked=!!p.auto_depreciation;
+    document.getElementById('autoRevenueRecognition').checked=!!p.auto_revenue_recognition;
+    document.getElementById('leaseNote').value=p.note||'';
+    const planNet=p.revenue_mode==='PREPAID'?(p.prepaid_net_amount||0):(p.monthly_rent_amount||0);
+    document.getElementById('leaseBillingQty').value=p.revenue_mode==='PREPAID'?(p.months||1):1;
+    document.getElementById('leaseUnitPrice').value=p.revenue_mode==='PREPAID'?(planNet/Math.max(1,p.months||1)):planNet;
+  }
+  updateLeaseUi();
+  leaseModal=bootstrap.Modal.getOrCreateInstance(document.getElementById('leasePlanModal')); leaseModal.show();
+}
+async function saveLeasePlan(reload=true){
+  const id=v('leasePropertyId');
+  const payload={usage_purpose:v('usagePurpose'),revenue_mode:selectedRevenueMode(),start_date:v('leaseStartDate'),months:n('leaseMonths'),monthly_rent_amount:n('monthlyRentAmount'),prepaid_net_amount:n('prepaidNetAmount'),depreciation_total:n('depreciationTotal'),auto_depreciation:document.getElementById('autoDepreciation').checked,auto_revenue_recognition:document.getElementById('autoRevenueRecognition').checked,note:v('leaseNote')};
+  const d=await jsonFetch(`/api/sme/investment-properties/${id}/lease-plan`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(reload) location.reload();
+  return d;
+}
+async function submitLeaseTransaction(){
+  const btn=document.getElementById('leaseTxnSubmit'); btn.disabled=true;
+  try{
+    const id=v('leasePropertyId'), mode=selectedRevenueMode(), qty=n('leaseBillingQty'), unitPrice=n('leaseUnitPrice'), net=qty*unitPrice, rate=n('leaseVatRate');
+    if(qty<=0 || unitPrice<=0 || net<=0) throw new Error('Số kỳ và đơn giá thuê phải lớn hơn 0.');
+    if(mode==='PREPAID' && v('leasePayment')==='131') throw new Error('Thu trước nhiều kỳ chỉ ghi 3387 khi thực tế đã thu tiền. Hãy chọn Tiền mặt hoặc Chuyển khoản.');
+    await saveLeasePlan(false);
+    const p=await ensureProducts(id);
+    const productId=mode==='PREPAID'?p.lease_deferred_product_id:p.lease_product_id;
+    const from=v('leasePeriodFrom'), to=v('leasePeriodTo');
+    const note=v('leaseTxnNote') || `Tiền thuê BĐSĐT ${document.getElementById('leasePropertyTitle').textContent}${from?` từ ${from}`:''}${to?` đến ${to}`:''}`;
+    const billingUnit=v('leaseBillingUnit');
+    const clientUuid=(crypto.randomUUID?crypto.randomUUID():`bdsdt-${Date.now()}-${Math.random()}`);
+    const s=await checkout({
+      status:'completed',client_uuid:clientUuid,
+      items:[{product_id:productId,quantity:qty,price:unitPrice,unit:billingUnit,
+              product_name:`Tiền thuê BĐSĐT ${document.getElementById('leasePropertyTitle').textContent}${from?` từ ${from}`:''}${to?` đến ${to}`:''}`,
+              discount_pct:0,tax_pct:rate}],
+      payment_method:v('leasePayment'),customer_name:v('leaseCustomerName'),company_name:v('leaseCompanyName'),
+      tax_code:v('leaseTaxCode'),email:v('leaseEmail'),customer_phone:v('leasePhone'),address:v('leaseCustomerAddress'),note,
+      bdsdt_context:{property_id:Number(id),transaction_type:mode==='PREPAID'?'LEASE_PREPAID':'LEASE_DIRECT',
+        lease_plan_id:null,period_from:from||null,period_to:to||null,contract_no:null,
+        billing_unit:billingUnit,billing_quantity:qty,unit_price:unitPrice,
+        recognition_periods:mode==='PREPAID'?Math.max(1,n('leaseMonths')):1,
+        recognition_amount_per_period:mode==='PREPAID'?net/Math.max(1,n('leaseMonths')):net,
+        net_amount:net,vat_rate:rate,vat_taxable_amount:net,
+        vat_amount:rate>0?Math.round(net*rate/100):0,gross_amount:net+(rate>0?Math.round(net*rate/100):0),
+        payment_method:v('leasePayment'),note}
+    });
+    let inv=null;
+    if(document.getElementById('leaseIssueInvoice').checked) inv=await issueInvoice(s.sale_id);
+    showResult('leaseResult',true,`Đã ghi nhận giao dịch <strong>ĐH${String(s.sale_id).padStart(6,'0')}</strong>${inv?' và đã xử lý phát hành HĐĐT':''}. Không mở POS.`);
+  }catch(e){showResult('leaseResult',false,e.message);}finally{btn.disabled=false;}
+}
+function cleanBdsdtAddress(address){ return String(address||'').trim().replace(/^[,\s]+|[,\s]+$/g,''); }
+function saleTransferDescription(address){
+  const a=cleanBdsdtAddress(address)||'[Địa chỉ]';
+  return `Chuyển nhượng nhà và đất tại địa chỉ ${a} (Ghi chi tiết theo Giấy chứng nhận quyền sử dụng đất, quyền sở hữu nhà ở: diện tích đất..., diện tích sàn xây dựng...)`;
+}
+function saleInvoiceNames(address){
+  const a=cleanBdsdtAddress(address)||'[Địa chỉ]';
+  return {
+    transfer:`Chuyển nhượng bất động sản tại ${a}`,
+    landNote:`Giá đất được trừ khi tính thuế GTGT`
+  };
+}
+function updateSalePreview(){
+  const $=id=>document.getElementById(id);
+  const net=n('saleNetAmount'), land=n('saleLandDeduction'), rate=n('saleVatRate');
+  const carryingEl=$('saleCarrying');
+  const carrying=Number(carryingEl?.dataset?.value||0);
+  const base=Math.max(0,net-land), vat=rate>0?Math.round(base*rate/100):0, gross=net+vat;
+
+  const vatBaseEl=$('saleVatBase'); if(vatBaseEl) vatBaseEl.value=money(base);
+  const vatAmountEl=$('saleVatAmount'); if(vatAmountEl) vatAmountEl.value=money(vat);
+  const grossEl=$('saleGross'); if(grossEl) grossEl.value=money(gross);
+
+  const invoiceNames=saleInvoiceNames(v('salePropertyAddress'));
+  const transferEl=$('saleInvoiceTransferLine');
+  if(transferEl) transferEl.textContent=invoiceNames.transfer;
+  const landNoteEl=$('saleInvoiceLandNote');
+  if(landNoteEl) landNoteEl.textContent=`${invoiceNames.landNote}: ${money(land)} đồng - Bất động sản tại ${cleanBdsdtAddress(v('salePropertyAddress'))||'[Địa chỉ]'}`;
+  const profitEl=$('saleProfitPreview'); if(profitEl) profitEl.textContent=money(net-carrying);
+
+  const pm=v('salePayment');
+  const postingEl=$('salePostingPreview');
+  if(postingEl){
+    postingEl.innerHTML=`<strong>Doanh thu:</strong> Nợ ${pm} ${money(gross)} · Có 5117 ${money(net)}${vat?` · Có 33311 ${money(vat)}`:''}.<br><strong>Ghi giảm:</strong> Nợ 2147 (hao mòn) + Nợ 632 (GTCL) · Có 217. Giá đất được trừ chỉ dùng xác định VAT, không làm giảm doanh thu 5117.`;
+  }else{
+    console.warn('[BDSDT] Không tìm thấy #salePostingPreview; bỏ qua phần preview, không chặn nghiệp vụ bán.');
+  }
+}
+window.openSaleModal = async function openSaleModal(id,code,name,address,assetUnit,assetQty,original,dep,impair,carrying){
+  const $=key=>document.getElementById(key);
+  const setValue=(key,val)=>{ const el=$(key); if(el) el.value=(val ?? ''); else console.warn('[BDSDT OPEN] missing #'+key); };
+  const setText=(key,val)=>{ const el=$(key); if(el) el.textContent=(val ?? ''); else console.warn('[BDSDT OPEN] missing #'+key); };
+
+  setValue('salePropertyId',id);
+  setValue('salePropertyName',name||'');
+  setValue('salePropertyAddress',address||'');
+  setValue('saleAssetUnit',assetUnit||'BĐS');
+  setValue('saleAssetQty',1);
+  setText('salePropertyTitle',`${code} — ${name}${address?' · '+address:''}`);
+  setText('saleOriginalCost',money(original));
+  setText('saleAccumDep',money(dep));
+  setText('saleImpairment',money(impair));
+
+  const carryingEl=$('saleCarrying');
+  if(carryingEl){
+    carryingEl.textContent=money(carrying);
+    carryingEl.dataset.value=carrying||0;
+  }else{
+    console.warn('[BDSDT OPEN] missing #saleCarrying');
+  }
+
+  setValue('saleNetAmount','');
+  setValue('saleLandDeduction',0);
+  setValue('saleNote',saleTransferDescription(address));
+
+  const resultEl=$('saleResult');
+  if(resultEl){
+    resultEl.className='alert d-none mt-3';
+    resultEl.textContent='';
+  }else{
+    console.warn('[BDSDT OPEN] missing #saleResult; modal vẫn tiếp tục mở');
+  }
+
+  saleClientUuid=newBdsdtUuid();
+  saleSubmitting=false;
+  try{ updateSalePreview(); }catch(e){ console.warn('[BDSDT] updateSalePreview failed but sale modal continues',e); }
+
+  const modalEl=$('salePropertyModal');
+  if(!modalEl) throw new Error('Không tìm thấy #salePropertyModal trong DOM.');
+  const Modal=await ensureBootstrapModal();
+  saleModal=Modal.getOrCreateInstance(modalEl);
+  saleModal.show();
+  console.info('[BDSDT OPEN] sale modal shown', {id,address});
+  return false;
+}
+window.submitPropertySale = async function submitPropertySale(ev){
+  if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+  if(saleSubmitting) return false;
+
+  const btn=document.getElementById('saleSubmit');
+  let result=document.getElementById('saleResult');
+  if(!btn){ console.error('[BDSDT SALE] missing #saleSubmit'); return false; }
+  if(!result){
+    result=document.createElement('div');
+    result.id='saleResult';
+    result.className='alert d-none mt-3';
+    const body=document.querySelector('#salePropertyModal .modal-body');
+    if(body) body.appendChild(result);
+  }
+  if(!result){ console.error('[BDSDT SALE] missing modal body/result'); return false; }
+
+  const setStage=(msg,ok=true)=>{
+    result.className=`alert mt-3 ${ok?'alert-info':'alert-danger'}`;
+    result.textContent=msg;
+    console.log('[BDSDT SALE]',msg);
+  };
+  const readNumber=(id)=>Number(document.getElementById(id)?.value||0);
+  const readText=(id)=>String(document.getElementById(id)?.value||'').trim();
+  const parseJson=async(resp)=>{
+    const text=await resp.text();
+    let data={};
+    try{ data=text?JSON.parse(text):{}; }
+    catch(_){ throw new Error(`Phản hồi không phải JSON (HTTP ${resp.status}): ${text.slice(0,300)}`); }
+    if(!resp.ok || data.success===false) throw new Error(data.error||data.message||`HTTP ${resp.status}`);
+    return data;
+  };
+
+  saleSubmitting=true;
+  btn.disabled=true;
+  const oldText=btn.innerHTML;
+  btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+
+  try{
+    const propertyId=readText('salePropertyId');
+    const net=readNumber('saleNetAmount');
+    const land=readNumber('saleLandDeduction');
+    const rate=readNumber('saleVatRate');
+    const address=readText('salePropertyAddress');
+    const assetUnit=readText('saleAssetUnit')||'BĐS';
+
+    if(!propertyId) throw new Error('Thiếu mã BĐSĐT.');
+    if(!address) throw new Error('BĐSĐT chưa có địa chỉ. Hãy bấm Sửa và cập nhật địa chỉ trước khi bán.');
+    if(net<=0) throw new Error('Giá chuyển nhượng phải lớn hơn 0.');
+    if(land<0 || land>net) throw new Error('Giá đất được trừ phải từ 0 đến tổng giá chuyển nhượng chưa VAT.');
+
+    const taxable=Math.max(0,net-land);
+    const vat=rate>0?Math.round(taxable*rate/100):0;
+    const propertyName=readText('salePropertyName');
+    const buildingName=`Phần giá trị chuyển nhượng thuộc giá tính thuế GTGT - ${propertyName || address}`;
+    const landName=`Giá đất được trừ khi tính thuế GTGT - ${propertyName || address}`;
+
+    setStage('Bước 1/3: Đang chuẩn bị sản phẩm bán BĐSĐT...');
+    const productResp=await fetch(`/api/sme/investment-properties/${propertyId}/pos-products`,{
+      method:'POST',
+      headers:{'Accept':'application/json'}
+    });
+    const productData=await parseJson(productResp);
+    const saleProductId=Number(productData.sale_product_id||0);
+    if(!saleProductId) throw new Error('API pos-products không trả về sale_product_id.');
+
+    const items=[
+      {
+        product_id:saleProductId, quantity:1, price:taxable, unit:assetUnit,
+        product_name:buildingName, discount_pct:0, tax_pct:rate
+      },
+      {
+        product_id:saleProductId, quantity:1, price:land, unit:'Lô',
+        product_name:landName, discount_pct:0, tax_pct:-1
+      }
+    ];
+
+    if(!saleClientUuid) saleClientUuid=newBdsdtUuid();
+
+    const payload={
+      status:'completed',
+      client_uuid:saleClientUuid,
+      items:items,
+      payment_method:readText('salePayment'),
+      customer_name:readText('saleCustomerName'),
+      company_name:readText('saleCompanyName'),
+      tax_code:readText('saleTaxCode'),
+      email:readText('saleEmail'),
+      customer_phone:readText('salePhone'),
+      address:readText('saleCustomerAddress'),
+      note:readText('saleNote'),
+      bdsdt_context:{
+        property_id:Number(propertyId),
+        property_name:propertyName,
+        property_address:address,
+        transaction_type:'SALE',
+        billing_unit:assetUnit,
+        billing_quantity:1,
+        unit_price:net,
+        net_amount:net,
+        deductible_land_value:land,
+        vat_taxable_amount:taxable,
+        vat_rate:rate,
+        vat_amount:vat,
+        gross_amount:net+vat,
+        payment_method:readText('salePayment'),
+        note:readText('saleNote'),
+        invoice_transfer_description:saleInvoiceNames(address).transfer,
+        invoice_land_deduction_note:`Giá đất được trừ khi tính thuế GTGT: ${money(land)} đồng - Bất động sản tại ${address}`,
+        invoice_tax_basis:'TRANSFER_PRICE_MINUS_DEDUCTIBLE_LAND_VALUE'
+      }
+    };
+
+    setStage('Bước 2/3: Đang ghi nhận đơn bán và hạch toán...');
+    console.log('[BDSDT SALE] checkout payload',payload);
+    const checkoutResp=await fetch('/api/cart/checkout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const saleData=await parseJson(checkoutResp);
+    const saleId=Number(saleData.sale_id||saleData.id||0);
+    if(!saleId) throw new Error('Checkout thành công nhưng không trả về sale_id.');
+
+    let invoiceText='';
+    if(document.getElementById('saleIssueInvoice')?.checked){
+      setStage(`Bước 3/3: Đã tạo ĐH${String(saleId).padStart(6,'0')}, đang phát hành HĐĐT...`);
+      const invResp=await fetch(`/api/invoice/issue/${saleId}`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:'{}'
+      });
+      await parseJson(invResp);
+      invoiceText='; HĐĐT đã được xử lý';
+    }
+
+    result.className='alert alert-success mt-3';
+    result.innerHTML=`Đã ghi nhận bán <strong>ĐH${String(saleId).padStart(6,'0')}</strong>. Doanh thu: <strong>${money(net)}</strong>; giá tính VAT: <strong>${money(taxable)}</strong>${invoiceText}.`;
+    setTimeout(()=>location.reload(),1500);
+  }catch(e){
+    console.error('[BDSDT SALE ERROR]',e);
+    result.className='alert alert-danger mt-3';
+    result.textContent=e && e.message ? e.message : String(e);
+  }finally{
+    saleSubmitting=false;
+    btn.disabled=false;
+    btn.innerHTML=oldText;
+  }
+  return false;
+}
+async function stopLeasePlan(id){
+  if(!confirm('Dừng kế hoạch cho thuê hiện tại? Các bút toán đã phát sinh vẫn được giữ nguyên.')) return;
+  try{await jsonFetch(`/api/sme/investment-properties/${id}/lease-plan/stop`,{method:'POST'}); location.reload();}catch(e){alert(e.message);}
+}
+async function processDueNow(){
+  try{const d=await jsonFetch(`/api/sme/investment-properties/${v('leasePropertyId')}/process-due`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); const x=d.data||{}; alert(`Đã xử lý. Khấu hao: ${x.depreciation_posted||0}; phân bổ doanh thu: ${x.revenue_recognition_posted||0}; bỏ qua đã có: ${x.skipped_existing||0}.`);}catch(e){alert(e.message);}
+}
+async function simpleAction(id,action,label){
+  const amount=prompt(label); if(!amount) return;
+  try{await jsonFetch(`/api/sme/investment-properties/${id}/${action}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:Number(String(amount).replace(/[^0-9.-]/g,'')),date:new Date().toISOString().slice(0,10)})}); location.reload();}catch(e){alert(e.message);}
+}
+// Capture-phase handler: bắt nút trước các handler navigation/AJAX khác của layout.
+document.addEventListener('click', function(ev){
+  const btn=ev.target.closest && ev.target.closest('#saleSubmit');
+  if(!btn) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  ev.stopImmediatePropagation();
+  console.info('[BDSDT] saleSubmit CLICK captured');
+  const resultBox=document.getElementById('saleResult');
+  if(resultBox){
+    resultBox.className='alert alert-info mt-3';
+    resultBox.textContent='Đã nhận lệnh xác nhận bán. Đang kiểm tra dữ liệu...';
+  }
+  if(typeof window.submitPropertySale !== 'function'){
+    const box=document.getElementById('saleResult');
+    if(box){
+      box.className='alert alert-danger mt-3';
+      box.textContent='JavaScript bán BĐSĐT chưa được khởi tạo.';
+    }
+    return;
+  }
+  window.submitPropertySale(ev);
+}, true);
+
+let editPropertyModal = null;
+document.addEventListener('click', function(ev){
+  const btn=ev.target.closest && ev.target.closest('.js-bdsdt-edit');
+  if(!btn) return;
+  ev.preventDefault(); ev.stopPropagation();
+
+  const setValue=(id,val)=>{ const el=document.getElementById(id); if(el) el.value=val??''; else console.warn('[BDSDT EDIT] missing #'+id); };
+  const setText=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val??''; else console.warn('[BDSDT EDIT] missing #'+id); };
+  setValue('editPropertyId',btn.dataset.id||'');
+  setText('editPropertyCode',btn.dataset.code||'');
+  setValue('editPropertyName',btn.dataset.name||'');
+  setValue('editPropertyAddress',btn.dataset.address||'');
+  setValue('editPropertyNote',btn.dataset.note||'');
+
+  const result=document.getElementById('editPropertyResult');
+  if(result){ result.className='alert d-none mt-3'; result.textContent=''; }
+  else console.warn('[BDSDT EDIT] missing #editPropertyResult');
+
+  const modalEl=document.getElementById('editPropertyModal');
+  if(!modalEl){
+    console.error('[BDSDT EDIT] missing #editPropertyModal');
+    return;
+  }
+  ensureBootstrapModal().then(Modal=>{
+    editPropertyModal=Modal.getOrCreateInstance(modalEl);
+    editPropertyModal.show();
+  }).catch(err=>alert(err.message||String(err)));
+});
+document.getElementById('editPropertySave')?.addEventListener('click', async function(){
+  const btn=this, id=v('editPropertyId');
+  const name=v('editPropertyName'), address=v('editPropertyAddress'), note=v('editPropertyNote');
+  if(!name){ showResult('editPropertyResult',false,'Tên BĐSĐT không được để trống.'); return; }
+  if(!address){ showResult('editPropertyResult',false,'Địa chỉ BĐSĐT không được để trống.'); return; }
+  btn.disabled=true;
+  try{
+    await jsonFetch(`/api/sme/investment-properties/${id}`,{
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({property_name:name,address:address,note:note})
+    });
+    showResult('editPropertyResult',true,'Đã cập nhật thông tin BĐSĐT.');
+    setTimeout(()=>location.reload(),500);
+  }catch(e){ showResult('editPropertyResult',false,e.message||String(e)); }
+  finally{ btn.disabled=false; }
+});
+
+// Delegated handler: hoạt động cả khi bảng được render/thay DOM sau khi điều hướng,
+ // không phụ thuộc inline onclick hoặc việc phải reload trang.
+document.addEventListener('click', function(ev){
+  const btn=ev.target.closest('.js-bdsdt-sale');
+  if(!btn) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  window.openSaleModal(
+    Number(btn.dataset.id), btn.dataset.code||'', btn.dataset.name||'',
+    btn.dataset.address||'', btn.dataset.unit||'BĐS', Number(btn.dataset.qty||1),
+    Number(btn.dataset.original||0), Number(btn.dataset.dep||0),
+    Number(btn.dataset.impair||0), Number(btn.dataset.carrying||0)
+  ).catch(err=>{
+    console.error('[BDSDT OPEN SALE]',err);
+    alert(err && err.message ? err.message : String(err));
+  });
+});
+
+document.querySelectorAll('input[name="revenueMode"]').forEach(x=>x.addEventListener('change',updateLeaseUi));
+['leaseMonths','depreciationTotal','prepaidNetAmount','monthlyRentAmount'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateLeaseUi));
+['leaseBillingQty','leaseUnitPrice','leaseBillingUnit','leaseVatRate','leasePayment'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateLeaseTxnPreview));
+console.info('[BDSDT] DOM state', {
+  saleSubmit: !!document.getElementById('saleSubmit'),
+  saleModal: !!document.getElementById('salePropertyModal'),
+  bootstrapModal: !!(window.bootstrap && window.bootstrap.Modal)
+});
+['saleNetAmount','saleLandDeduction','saleVatRate','salePayment'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateSalePreview));
+</script>
+{% endblock %}

@@ -78,6 +78,15 @@ def _assign_service_codes(c, product_id, external_barcode=None):
 SYSTEM_SUBSCRIPTION_CODES = frozenset({'DV001', 'DV002', 'DV003', 'DV004'})
 
 
+def _normalize_product_code(code) -> str:
+    """Chuẩn hóa mã sản phẩm dùng nội bộ cho so sánh/kiểm tra.
+
+    Giữ nguyên ký tự '-' để các mã BDSDTxxxxxx-THUE / -THUE-TRUOC không bị biến dạng.
+    Chỉ trim khoảng trắng và chuẩn hóa chữ hoa.
+    """
+    return str(code or '').strip().upper()
+
+
 def _ensure_subscription_product_schema(conn):
     from Services.subscription_service import _ensure_subscription_columns
     _ensure_subscription_columns(conn)

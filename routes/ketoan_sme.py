@@ -2785,12 +2785,23 @@ def register_ketoan_sme_routes(app):
 
             def _normalize_line_type(raw):
                 t = str(raw or 'goods').strip().lower()
-                if t in ('raw_materials', 'nvl'):
-                    return 'materials'
-                if t in ('ready_made', 'hang_hoa', 'finished_goods'):
-                    # finished_goods chỉ qua SX — mua vào = hàng hóa (156)
+                aliases = {
+                    'raw_materials': 'materials',
+                    'nvl': 'materials',
+                    'ready_made': 'goods',
+                    'hang_hoa': 'goods',
+                    'investment_property': 'investment_property',
+                    'bdsdt': 'investment_property',
+                    'bat_dong_san_dau_tu': 'investment_property',
+                }
+                t = aliases.get(t, t)
+                if t == 'finished_goods':
+                    # Thành phẩm chỉ qua SX — mua vào = hàng hóa (156)
                     return 'goods'
-                if t in ('goods', 'materials', 'fixed_asset', 'intangible_asset', 'tools', 'service'):
+                if t in (
+                    'goods', 'materials', 'fixed_asset', 'intangible_asset',
+                    'tools', 'service', 'investment_property',
+                ):
                     return t
                 return 'goods'
 
@@ -3317,6 +3328,7 @@ def register_ketoan_sme_routes(app):
             items_for_json = []
             fixed_assets_created = 0
             tools_created = 0
+            investment_properties_created = 0
             total_import_tax_vnd = Decimal('0.00')
             total_excise_tax_vnd = Decimal('0.00')
             total_env_tax_vnd = Decimal('0.00')
@@ -3469,6 +3481,7 @@ def register_ketoan_sme_routes(app):
                     'fixed_asset': 'MUA_TSCD',
                     'intangible_asset': 'MUA_TSCD',
                     'tools': 'MUA_CCDC',
+                    'investment_property': 'MUA_BDSDT',
                 }
                 desc_label = BUSINESS_TYPE_LABELS.get(
                     _lt_to_biz.get(line_type, 'NHAP_KHO_HANG_HOA'), line_type
@@ -3504,6 +3517,57 @@ def register_ketoan_sme_routes(app):
                         'invoice_product_type': 'service',
                         'warehouse_code': warehouse_code,
                         'expense_account': exp_acct or '642',
+                        'line_total': float(line_total_payment_vnd),
+                    })
+                    continue
+
+                if line_type == 'investment_property':
+                    # BĐSĐT theo dõi ở register riêng; không tạo products, tồn kho hay stock_moves.
+                    # import_journal sẽ resolve role asset.investment_property theo COA hiện hành.
+                    asset_acct = asset_acct or 'asset.investment_property'
+                    insert_import_detail_row(c, import_id, {
+                        'import_id': import_id,
+                        'product_id': None,
+                        'qty': float(qty_in),
+                        'buyprice': float(price_original),
+                        'subtotal': float(line_subtotal_vnd),
+                        'discount': float(line_disc_vnd),
+                        'tax': float(line_vat_vnd),
+                        'cost_price': float(line_inventory_value_vnd / qty_in) if qty_in else 0,
+                        'tax_pct': float(tax_p),
+                        'discount_pct': float(disc_p),
+                        'import_tax_pct': float(import_tax_p),
+                        'import_tax_amount': float(line_import_tax_vnd),
+                        'excise_tax_pct': float(excise_tax_p),
+                        'excise_tax_amount': float(line_excise_tax_vnd),
+                        'env_tax_pct': float(env_tax_p),
+                        'env_tax_amount': float(line_env_tax_vnd),
+                        'payment_amt': float(line_total_payment_vnd),
+                        'product_name': inv_name or 'Bất động sản đầu tư',
+                        'unit': unit_in or 'BĐS',
+                        'line_type': 'investment_property',
+                        'warehouse_code': warehouse_code,
+                        'expense_account': None,
+                        'asset_account': asset_acct,
+                    })
+                    items_for_json.append({
+                        'product_id': None,
+                        'product_name': inv_name or 'Bất động sản đầu tư',
+                        'unit': unit_in or 'BĐS',
+                        'qty': float(qty_in),
+                        'buyprice': float(price_original),
+                        'discount_pct': float(disc_p),
+                        'tax_pct': float(tax_p),
+                        'import_tax_pct': float(import_tax_p),
+                        'import_tax_amount': float(line_import_tax_vnd),
+                        'excise_tax_pct': float(excise_tax_p),
+                        'excise_tax_amount': float(line_excise_tax_vnd),
+                        'env_tax_pct': float(env_tax_p),
+                        'env_tax_amount': float(line_env_tax_vnd),
+                        'line_type': 'investment_property',
+                        'invoice_product_type': 'investment_property',
+                        'warehouse_code': warehouse_code,
+                        'asset_account': asset_acct,
                         'line_total': float(line_total_payment_vnd),
                     })
                     continue
@@ -3798,6 +3862,9 @@ def register_ketoan_sme_routes(app):
                 exchange_rate=exchange_rate,
             )
             accounting_tx_ids = list(journal_result.get('entry_ids') or [])
+            investment_properties_created = int(
+                journal_result.get('investment_properties_created') or 0
+            )
 
             # Cập nhật trạng thái HĐ đầu vào
             if from_invoice_id:
@@ -3860,6 +3927,8 @@ def register_ketoan_sme_routes(app):
                 "journal_sync": journal_result,
                 "fixed_assets_created": fixed_assets_created,
                 "tools_created": tools_created,
+                "investment_properties_created": investment_properties_created,
+                "investment_properties": journal_result.get('investment_properties') or [],
                 "purchase_order": po_result,
                 "currency": currency,
                 "tax_code": tax_code,
@@ -4892,6 +4961,107 @@ def register_ketoan_sme_routes(app):
                 entity_label=result.get('entry_no'),
                 old_data=result.get('old'),
                 new_data=result.get('new'),
+            )
+            return jsonify({'success': True, 'data': result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/journal/<int:entry_id>/description', methods=['PATCH'])
+    @login_required
+    @require_sme_regime
+    def api_sme_journal_description_update(entry_id):
+        """Sửa riêng diễn giải, kể cả kỳ đã khóa; tuyệt đối không đổi định khoản/số dư."""
+        payload = request.get_json(silent=True) or {}
+        conn = get_db_connection()
+        try:
+            from Services.audit_log import write_audit
+            from Services.sme.branch_filter import assert_row_in_branch
+            from Services.sme.description_templates import update_entry_descriptions
+            assert_row_in_branch(conn, 'sme_journal_entries', entry_id, label='Bút toán')
+            actor = (session.get('user') or {}).get('username') or session.get('user_name') or session.get('username')
+            line_map = {}
+            for item in (payload.get('lines') or []):
+                if item.get('id') is not None:
+                    line_map[int(item['id'])] = item.get('description') or ''
+            before = conn.execute(
+                'SELECT description FROM sme_journal_entries WHERE id=?', (entry_id,)
+            ).fetchone()
+            result = update_entry_descriptions(
+                conn, entry_id=entry_id,
+                header_description=payload.get('description'),
+                line_descriptions=line_map,
+                reason=(payload.get('reason') or 'Sửa diễn giải bút toán'),
+                updated_by=actor,
+            )
+            sqlite_commit(conn, label='sme_description_update')
+            write_audit(
+                'update', 'sme_journal',
+                f"Sửa diễn giải bút toán {result.get('entry_no') or entry_id}",
+                entity_type='sme_journal_description', entity_id=entry_id,
+                entity_label=result.get('entry_no'),
+                old_data={'description': before[0] if before else ''},
+                new_data={'description': payload.get('description'), 'lines': payload.get('lines') or []},
+            )
+            return jsonify({'success': True, 'data': result})
+        except ValueError as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            conn.rollback()
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            conn.close()
+
+    @app.route('/api/sme/accounting-description-templates', methods=['GET', 'POST'])
+    @login_required
+    @require_sme_regime
+    def api_sme_accounting_description_templates():
+        conn = get_db_connection()
+        try:
+            from Services.audit_log import write_audit
+            from Services.sme.description_templates import list_templates, reset_template, save_template
+            if request.method == 'GET':
+                return jsonify({'success': True, 'data': list_templates(conn)})
+            payload = request.get_json(silent=True) or {}
+            actor = (session.get('user') or {}).get('username') or session.get('user_name') or session.get('username')
+            action = str(payload.get('action') or 'save').strip().lower()
+            if action == 'reset':
+                result = reset_template(
+                    conn,
+                    business_type=payload.get('business_type'),
+                    template_scope=payload.get('template_scope') or 'header',
+                    updated_by=actor,
+                )
+                audit_summary = (
+                    f"Khôi phục mẫu diễn giải mặc định "
+                    f"{result['business_type']} / {result['template_scope']}"
+                )
+            else:
+                result = save_template(
+                    conn,
+                    business_type=payload.get('business_type'),
+                    template_scope=payload.get('template_scope') or 'header',
+                    template_text=payload.get('template_text'),
+                    active=payload.get('active', True),
+                    updated_by=actor,
+                )
+                audit_summary = (
+                    f"Cập nhật mẫu diễn giải "
+                    f"{result['business_type']} / {result['template_scope']}"
+                )
+            sqlite_commit(conn, label='sme_description_template')
+            write_audit(
+                'settings', 'sme_journal',
+                audit_summary,
+                entity_type='sme_description_template',
+                entity_id=f"{result['business_type']}:{result['template_scope']}",
+                new_data=result,
             )
             return jsonify({'success': True, 'data': result})
         except ValueError as e:

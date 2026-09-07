@@ -1010,30 +1010,68 @@ def register_invoice_routes(app):
                 # 3. Thành tiền sau chiết khấu (Đây là giá trị để tính thuế)
                 amount_after = round(amount_before - disc_amount, 2)
             
-                # 4. Tính tiền thuế dựa trên thuế suất của dòng
+                # 4. Tính tiền thuế. Riêng BĐSĐT có giá đất được trừ:
+                #    giá chuyển nhượng vẫn là giá trị trước thuế trên hóa đơn,
+                #    nhưng VAT chỉ tính trên (giá chuyển nhượng - giá đất được trừ).
                 tax_val = 0.0
-                if tax_pct > 0:
+                if item.get('tax_amount_override') is not None:
+                    tax_val = round(float(item.get('tax_amount_override') or 0), 2)
+                elif tax_pct > 0:
                     tax_val = round(amount_after * (tax_pct / 100), 2)
 
+                tchat = int(item.get('invoice_tchat') or 1)
+                is_note = (tchat == 4)
+                display_only = bool(item.get('invoice_display_only')) and is_note
+
+                # TChat=4 bình thường: dòng ghi chú, không số liệu.
+                # BĐSĐT display-only: vẫn là TChat=4 để KHÔNG cộng vào tổng/tax summary,
+                # nhưng truyền các cột số nhằm hiển thị "Giá chuyển nhượng chưa VAT" 10 tỷ.
+                if display_only:
+                    display_qty = float(item.get('invoice_display_quantity') or qty or 0)
+                    display_price = float(item.get('invoice_display_price') or price or 0)
+                    display_amount = round(float(
+                        item.get('invoice_display_amount')
+                        if item.get('invoice_display_amount') is not None
+                        else display_qty * display_price
+                    ), 2)
+                    display_tax_pct = int(float(item.get('invoice_display_tax_pct') or 0))
+                    display_tax = round(float(item.get('invoice_display_tax_amount') or 0), 2)
+                    display_total = round(display_amount + display_tax, 2)
+                else:
+                    display_qty = 0 if is_note else qty
+                    display_price = 0 if is_note else price
+                    display_amount = 0 if is_note else amount_after
+                    display_tax_pct = -2 if is_note else int(tax_pct)
+                    display_tax = 0 if is_note else tax_val
+                    display_total = 0 if is_note else round(amount_after + tax_val, 2)
+
                 dsh_hd_vu.append({
-                    "TChat": 1, # 1: Hàng hóa/Dịch vụ
+                    "TChat": tchat,
                     "STT": i + 1,
                     "MHHDVu": str(item.get('product_code') or ''),
                     "THHDVu": str(item.get('name') or item.get('product_name', '')),
-                    "DVTinh": str(item.get('unit') or 'Cái'),
-                    "SLuong": qty,
-                    "DGia": price,
-                    "ThTienChuaCK": amount_before,
-                    "TLCKhau": discount_pct,
-                    "STCKhau": disc_amount,
-                    "ThTien": amount_after,
-                    "TSuat": int(tax_pct), # Mắt Bão yêu cầu số nguyên (Int32)
-                    "TThue": tax_val,
-                    "TgTien": round(amount_after + tax_val, 2)
+                    "DVTinh": (
+                        str(item.get('unit') or '')
+                        if display_only else ("" if is_note else str(item.get('unit') or 'Cái'))
+                    ),
+                    "SLuong": display_qty,
+                    "DGia": display_price,
+                    "ThTienChuaCK": display_amount,
+                    "TLCKhau": 0 if is_note else discount_pct,
+                    "STCKhau": 0 if is_note else disc_amount,
+                    "ThTien": display_amount,
+                    "TSuat": display_tax_pct,
+                    "TThue": display_tax,
+                    "TgTien": display_total
                 })
 
-                total_untaxed += amount_after
-                total_tax_amount += tax_val
+                # Chỉ dòng kinh tế TChat!=4 mới tham gia tổng HĐ.
+                # Nhờ vậy BĐSĐT có:
+                #   4 tỷ @0% + 6 tỷ @10% = 10 tỷ trước VAT, VAT 600 triệu.
+                # Dòng display-only 10 tỷ không bị cộng lần hai.
+                if not is_note:
+                    total_untaxed += amount_after
+                    total_tax_amount += tax_val
 
             return dsh_hd_vu, round(total_untaxed, 2), round(total_tax_amount, 2)
 
@@ -1043,6 +1081,14 @@ def register_invoice_routes(app):
                 return {"success": False, "error": "Không thể xác thực với hệ thống Mắt Bão."}
 
             dsh_hd_vu, total_untaxed, total_tax = self._prepare_dsh_hd_vu(items)
+            # BĐSĐT phương án A: "Cộng tiền hàng" = giá tính thuế, nhưng tổng thanh toán
+            # vẫn bao gồm phần giá đất không tính VAT. Metadata này chỉ tồn tại nội bộ KETO,
+            # không được gửi như một dòng tiền độc lập sang Mắt Bão.
+            total_payment = round(total_untaxed + total_tax, 2)
+            for _item in items:
+                if _item.get('invoice_total_payment_override') is not None:
+                    total_payment = round(float(_item.get('invoice_total_payment_override') or 0), 2)
+                    break
             url_create = f"{self.base_url}/api/invoice/create-invoice"
             loai = _normalize_loai_hdon(loai_hdon, default=1)
             buyer_fields = extract_buyer_invoice_fields(sale_data)
@@ -1075,11 +1121,14 @@ def register_invoice_routes(app):
                 "DSHHDVu": dsh_hd_vu,
                 "TgThTien": total_untaxed,
                 "TgTThue": total_tax,
-                "TgTTTBSo": round(total_untaxed + total_tax, 2),
+                "TgTTTBSo": total_payment,
                 "TgTTTBChu": "",
                 "KTraMTChieuTrung": 2 if replace_unpublished else 1,
                 "MTChieu": str(sale_data.get('sale_no') or "").strip()
             }, sale_data)
+
+            # Không đưa mã TK 111/112 lên HĐĐT.
+            payload["HTTToan"] = "TM/CK"
 
             result = self._send_request(url_create, [payload])
             if result.get('success'):
@@ -1172,6 +1221,11 @@ def register_invoice_routes(app):
                 return {"success": False, "error": "Lỗi xác thực hệ thống."}
 
             dsh_hd_vu, total_untaxed, total_tax = self._prepare_dsh_hd_vu(items)
+            total_payment = round(total_untaxed + total_tax, 2)
+            for _item in items:
+                if _item.get('invoice_total_payment_override') is not None:
+                    total_payment = round(float(_item.get('invoice_total_payment_override') or 0), 2)
+                    break
             url_create = f"{self.base_url}/api/invoice/create-invoice"
             buyer_fields = extract_buyer_invoice_fields(sale_data)
             # Cùng default/strip với issue() — tránh lệch mẫu/ký hiệu khi Settings trống
@@ -1230,11 +1284,14 @@ def register_invoice_routes(app):
                 "DSHHDVu": dsh_hd_vu,
                 "TgThTien": total_untaxed,
                 "TgTThue": total_tax,
-                "TgTTTBSo": round(total_untaxed + total_tax, 2),
+                "TgTTTBSo": total_payment,
                 "TgTTTBChu": "",
                 "KTraMTChieuTrung": 0,
                 "MTChieu": mt_chieu,
             }, sale_data)
+
+            # HĐ thay thế/điều chỉnh cũng hiển thị TM/CK.
+            payload["HTTToan"] = "TM/CK"
 
             return self._send_request(url_create, [payload])
 
@@ -1327,6 +1384,133 @@ def register_invoice_routes(app):
         return bool(inv_no) and status == 'issued'
 
     def _fetch_sale_invoice_items(cursor, sale_id):
+        """
+        Lấy dòng HĐĐT.
+
+        BĐSĐT: sale_items vẫn giữ 2 snapshot để kế toán tách giá trị chịu VAT và
+        giá đất được trừ, nhưng HĐĐT KHÔNG coi quyền sử dụng đất là một hàng hóa
+        KCT riêng. Hóa đơn thể hiện:
+          - Giá chuyển nhượng BĐS (chưa VAT): toàn bộ giá chuyển nhượng;
+          - Giá đất được trừ khi tính VAT: dòng ghi chú;
+          - VAT = (giá chuyển nhượng - giá đất được trừ) * thuế suất.
+        """
+        has_bdsdt = cursor.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='sme_investment_properties'"
+        ).fetchone()
+
+        if has_bdsdt:
+            rows = cursor.execute("""
+                SELECT
+                    si.product_id,
+                    COALESCE(si.product_name, p.name) AS name,
+                    COALESCE(p.product_code, 'DV') AS product_code,
+                    si.quantity, si.price,
+                    COALESCE(si.discount_pct, 0) AS discount_pct,
+                    COALESCE(si.tax_pct, 0) AS tax_pct,
+                    CASE
+                        -- Ưu tiên ĐVT gốc lúc ghi nhận BĐSĐT (Căn/Lô/m2/...).
+                        WHEN NULLIF(TRIM(COALESCE(idt.unit, '')), '') IS NOT NULL THEN idt.unit
+                        WHEN NULLIF(TRIM(COALESCE(si.unit, '')), '') IS NOT NULL
+                             AND UPPER(TRIM(si.unit)) NOT IN ('BĐS', 'BDS') THEN si.unit
+                        WHEN si.UseSaleUnit = 1
+                             AND NULLIF(TRIM(COALESCE(p.unit1, '')), '') IS NOT NULL THEN p.unit1
+                        ELSE COALESCE(NULLIF(TRIM(p.unit), ''), 'BĐS')
+                    END AS unit,
+                    ip.id AS property_id,
+                    ip.property_name,
+                    COALESCE(ip.address, '') AS property_address,
+                    ip.import_detail_id
+                FROM sale_items si
+                LEFT JOIN products p ON si.product_id = p.id
+                LEFT JOIN sme_investment_properties ip ON ip.sale_product_id = si.product_id
+                LEFT JOIN import_details idt ON idt.id = ip.import_detail_id
+                WHERE si.sale_id = ?
+                ORDER BY si.rowid ASC
+            """, (sale_id,)).fetchall()
+            items = [dict(r) for r in rows]
+
+            bds_rows = [r for r in items if r.get('property_id') is not None]
+            other_rows = [r for r in items if r.get('property_id') is None]
+            if bds_rows:
+                # Một sale BĐSĐT chỉ xử lý một tài sản; 2 sale_items không phải 2 tài sản.
+                prop_id = bds_rows[0].get('property_id')
+                prop_rows = [r for r in bds_rows if r.get('property_id') == prop_id]
+                address = str(prop_rows[0].get('property_address') or '').strip()
+                prop_name = str(prop_rows[0].get('property_name') or '').strip()
+                location = address or prop_name
+
+                transfer_price = round(sum(
+                    float(r.get('quantity') or 0) * float(r.get('price') or 0)
+                    for r in prop_rows
+                ), 2)
+                land_value = round(sum(
+                    float(r.get('quantity') or 0) * float(r.get('price') or 0)
+                    for r in prop_rows
+                    if float(r.get('tax_pct') or 0) < 0
+                ), 2)
+                taxable_rows = [r for r in prop_rows if float(r.get('tax_pct') or 0) >= 0]
+                taxable_base = round(max(0.0, transfer_price - land_value), 2)
+                vat_rate = next(
+                    (float(r.get('tax_pct') or 0) for r in taxable_rows
+                     if float(r.get('tax_pct') or 0) > 0),
+                    0.0,
+                )
+                vat_amount = round(taxable_base * vat_rate / 100.0, 2)
+
+                # BĐSĐT - PHƯƠNG ÁN A (test Mắt Bão):
+                #   1) 10 tỷ giá chuyển nhượng: TChat=4, CHỈ ghi chú bằng chữ.
+                #   2) 4 tỷ giá đất được trừ: TChat=4, CHỈ ghi chú bằng chữ.
+                #   3) 6 tỷ giá tính thuế: TChat=1, 10%, VAT 600 triệu.
+                # Header:
+                #   TgThTien = 6 tỷ; TgTThue = 600 triệu; TgTTTBSo = 10,6 tỷ.
+                # Mục tiêu là kiểm tra Mắt Bão có chấp nhận tổng thanh toán đặc thù BĐS
+                # mà không buộc 4 tỷ vào bucket 0%/KCT/KKKNT hay không.
+                transfer_label = "Giá chuyển nhượng bất động sản chưa VAT"
+                if prop_name:
+                    transfer_label += f": {prop_name}"
+                if address:
+                    transfer_label += f" tại {address}"
+
+                transfer_text = f"{transfer_price:,.0f}".replace(",", ".")
+                land_text = f"{land_value:,.0f}".replace(",", ".")
+
+                legal_items = [{
+                    # Ghi chú thuần văn bản; tuyệt đối không truyền số để tránh renderer cộng vào summary.
+                    "name": f"{transfer_label}: {transfer_text} đồng",
+                    "product_code": "",
+                    "quantity": 0,
+                    "price": 0,
+                    "discount_pct": 0,
+                    "tax_pct": 0,
+                    "unit": "",
+                    "invoice_tchat": 4,
+                    "invoice_total_payment_override": round(transfer_price + vat_amount, 2),
+                }, {
+                    # Ghi chú thuần văn bản cho phần giá đất được trừ.
+                    "name": f"(-) Giá đất được trừ khi tính thuế GTGT: {land_text} đồng",
+                    "product_code": "",
+                    "quantity": 0,
+                    "price": 0,
+                    "discount_pct": 0,
+                    "tax_pct": 0,
+                    "unit": "",
+                    "invoice_tchat": 4,
+                }, {
+                    # Dòng kinh tế duy nhất tham gia cơ sở VAT.
+                    "name": "Giá tính thuế GTGT (Giá chuyển nhượng - Giá đất được trừ)",
+                    "product_code": prop_rows[0].get('product_code') or 'BDSDT',
+                    "quantity": 1,
+                    "price": taxable_base,
+                    "discount_pct": 0,
+                    "tax_pct": vat_rate,
+                    "unit": str(prop_rows[0].get('unit') or '').strip() or 'BĐS',
+                    "invoice_tchat": 1,
+                    "tax_amount_override": vat_amount,
+                }]
+                return legal_items + other_rows
+
+            return items
+
         items_rows = cursor.execute("""
             SELECT
                 COALESCE(si.product_name, p.name) AS name,
@@ -4721,7 +4905,10 @@ def register_invoice_routes(app):
             "company_name": sale.get("company_name") or (""),
             "address": sale.get("address") or (""),
             "customer_phone": sale.get("customer_phone") or (""),
-            "payment_method": sale.get("payment_method", "TM/CK"),
+            "payment_method": (
+                "TM/CK" if str(sale.get("payment_method") or "").strip() in ("111", "112", "")
+                else str(sale.get("payment_method") or "TM/CK").strip()
+            ),
             "items": items
         }
 
@@ -4975,4 +5162,3 @@ def register_invoice_routes(app):
     # Job 17:00 — không start ở đây (mọi Gunicorn worker sẽ nhân đôi).
     # init_schedulers() gọi start_invoice_batch_scheduler() sau khi giành leadership.
     _batch_invoice_job_fn = run_scheduled_batch_invoice
-

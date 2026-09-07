@@ -354,6 +354,7 @@ const LINE_TYPE_OPTIONS = [
     { value: 'materials', label: 'Nguyên vật liệu', transitLabel: 'Hàng đang đi đường (NVL)', debit: '152', transitDebit: '151', needsWarehouse: true },
     { value: 'fixed_asset', label: 'TSCĐ hữu hình', transitLabel: 'TSCĐ đang đi đường', debit: '2112', transitDebit: '2411', needsWarehouse: false, faKind: 'tangible' },
     { value: 'intangible_asset', label: 'TSCĐ vô hình', transitLabel: 'TSCĐ VH đang đi đường', debit: '2133', transitDebit: '2411', needsWarehouse: false, faKind: 'intangible' },
+    { value: 'investment_property', label: 'Bất động sản đầu tư', transitLabel: 'BĐSĐT đang hình thành/đi đường', debit: '217', transitDebit: '241', needsWarehouse: false, faKind: 'investment_property' },
     { value: 'tools', label: 'Công cụ dụng cụ', transitLabel: 'Hàng đang đi đường (CCDC)', debit: '153', transitDebit: '151', needsWarehouse: false },
     { value: 'service', label: 'Dịch vụ', transitLabel: 'Dịch vụ', debit: '642', transitDebit: '642', needsWarehouse: false },
 ];
@@ -484,6 +485,7 @@ function normalizeLineType(raw) {
     let t = String(raw || DEFAULT_LINE_TYPE).trim().toLowerCase();
     if (t === 'raw_materials' || t === 'nvl') return 'materials';
     if (t === 'ready_made' || t === 'hang_hoa' || t === 'finished_goods') return 'goods';
+    if (t === 'bdsdt' || t === 'bat_dong_san_dau_tu') return 'investment_property';
     if (LINE_TYPE_OPTIONS.some(o => o.value === t)) return t;
     return DEFAULT_LINE_TYPE;
 }
@@ -496,14 +498,25 @@ function isFaLineType(type) {
     const t = normalizeLineType(type);
     return t === 'fixed_asset' || t === 'intangible_asset';
 }
+function isInvestmentPropertyLineType(type) {
+    return normalizeLineType(type) === 'investment_property';
+}
+function isAssetLineType(type) {
+    return isFaLineType(type) || isInvestmentPropertyLineType(type);
+}
 
 function buildAssetAccountOptions(selected, type) {
+    const t = normalizeLineType(type);
+    if (t === 'investment_property') {
+        // Không hard-code leaf 217x: gửi role để backend tự resolve theo COA hiện hành.
+        // Nếu DN chỉ dùng 217 và 217 postable -> 217; nếu mở 217x -> leaf/default postable.
+        return '<option value="asset.investment_property" selected>Tự động — BĐSĐT (217 → TK cấp chi tiết đang dùng)</option>';
+    }
     const meta = lineTypeMeta(type);
-    const intangible = meta.faKind === 'intangible' || normalizeLineType(type) === 'intangible_asset';
+    const intangible = meta.faKind === 'intangible' || t === 'intangible_asset';
     const raw = intangible
         ? (FA_COA_ACCOUNTS.intangible_assets || [])
         : (FA_COA_ACCOUNTS.tangible_assets || []);
-    // Chỉ TK nhóm 211 / 213 — tuyệt đối không lẫn 156 (hàng hóa) hay TK khác
     const prefix = intangible ? '213' : '211';
     const accounts = raw.filter(a => {
         const code = String((a && a.code) != null ? a.code : a || '').trim();
@@ -595,7 +608,7 @@ function applyLineTypeUI(row) {
     const type = normalizeLineType(row.querySelector('.line-type-select')?.value);
     const meta = lineTypeMeta(type);
     const isSvc = type === 'service';
-    const isFa = isFaLineType(type);
+    const isFa = isAssetLineType(type);
     const whCell = row.querySelector('.warehouse-cell');
     const whSelect = row.querySelector('.warehouse-select');
     if (whCell) whCell.classList.toggle('wh-disabled', !meta.needsWarehouse);
@@ -874,9 +887,9 @@ function addRow(data = {}) {
             <select class="line-type-select form-select form-select-sm border-0">${buildLineTypeOptions(lineType)}</select>
         </td>
         <td class="text-center">
-            <span class="acct-hint ${isFaLineType(lineType) || lineType === 'service' ? 'd-none' : ''}">${isFaLineType(lineType) || lineType === 'service' ? '' : `Nợ ${lineTypeMeta(lineType).debit}`}</span>
+            <span class="acct-hint ${isAssetLineType(lineType) || lineType === 'service' ? 'd-none' : ''}">${isAssetLineType(lineType) || lineType === 'service' ? '' : `Nợ ${lineTypeMeta(lineType).debit}`}</span>
             <select class="expense-account-select form-select form-select-sm border-0 ${lineType === 'service' ? '' : 'd-none'}">${buildExpenseAcctOptions(data.expense_account || '642')}</select>
-            <select class="asset-account-select form-select form-select-sm border-0 ${isFaLineType(lineType) ? '' : 'd-none'}">${buildAssetAccountOptions(data.asset_account, lineType)}</select>
+            <select class="asset-account-select form-select form-select-sm border-0 ${isAssetLineType(lineType) ? '' : 'd-none'}">${buildAssetAccountOptions(data.asset_account, lineType)}</select>
         </td>
         <td>
             <input type="text" class="product-name form-control form-control-sm border-0" value="${(data.invoice_name || '').replace(/"/g, '&quot;')}" placeholder="Gõ tên sản phẩm...">
@@ -1860,8 +1873,8 @@ function getConsolidatedItems() {
             expense_account: isServiceLineType(lineType)
                 ? (tr.querySelector('.expense-account-select')?.value || '642')
                 : null,
-            asset_account: isFaLineType(lineType)
-                ? (tr.querySelector('.asset-account-select')?.value || (isIntangibleLineType(lineType) ? '2133' : '2112'))
+            asset_account: isAssetLineType(lineType)
+                ? (tr.querySelector('.asset-account-select')?.value || (isInvestmentPropertyLineType(lineType) ? 'asset.investment_property' : (isIntangibleLineType(lineType) ? '2133' : '2112')))
                 : null,
             unit: tr.querySelector('.invoice-unit').value.trim(),
             qty: parseNumber(tr.querySelector('.qty').value),
@@ -1967,7 +1980,7 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang lưu...';
 
         for (const it of items) {
-            if (it.line_type === 'service') continue;
+            if (it.line_type === 'service' || it.line_type === 'investment_property') continue;
             const upsertRes = await fetch('/api/products/upsert', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2083,6 +2096,7 @@ document.getElementById('btnSaveImport').addEventListener('click', async functio
             }
             if (result.fixed_assets_created) parts.push(`Tài sản cố định: ${result.fixed_assets_created}`);
             if (result.tools_created) parts.push(`Công cụ dụng cụ: ${result.tools_created}`);
+            if (result.investment_properties_created) parts.push(`BĐSĐT: ${result.investment_properties_created}`);
             if (result.journal_entry_ids?.length) parts.push(`NK: ${result.journal_entry_ids.length} bút toán`);
             toast(
                 (editId ? 'Cập nhật thành công!' : 'Lưu thành công!')

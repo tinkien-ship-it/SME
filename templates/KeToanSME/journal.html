@@ -13,6 +13,12 @@
     .jl-row:hover { background: #f8fafc; }
     .jl-detail-table td, .jl-detail-table th { font-size: .875rem; }
     .jl-amount { text-align: right; white-space: nowrap; }
+    .dt-list { max-height: 58vh; overflow-y: auto; }
+    .dt-item { cursor: pointer; border-left: 3px solid transparent; }
+    .dt-item:hover { background: #f8fafc; }
+    .dt-item.active { background: #eef6ff; border-left-color: #0d6efd; }
+    .dt-token { font-family: ui-monospace, Consolas, monospace; }
+    .dt-preview { min-height: 74px; white-space: pre-wrap; }
 </style>
 {% endblock %}
 
@@ -35,6 +41,10 @@
         <a href="{{ url_for('SME_chart_of_accounts') }}" class="btn btn-outline-primary btn-sm">
             <i class="fas fa-sitemap me-1"></i> Danh mục tài khoản
         </a>
+        <button type="button" class="btn btn-outline-info btn-sm" id="btnDescriptionTemplates"
+                title="Thiết lập mẫu diễn giải cho các nghiệp vụ phát sinh sau này">
+            <i class="fas fa-wand-magic-sparkles me-1"></i> Mẫu diễn giải
+        </button>
         <button type="button" class="btn btn-outline-warning btn-sm" id="btnRenumber"
                 title="Đánh lại số BT liên tục theo ngày ghi sổ">
             <i class="fas fa-sort-numeric-down me-1"></i> Đánh lại số
@@ -115,6 +125,105 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalDescriptionTemplates" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title mb-0">
+                        <i class="fas fa-wand-magic-sparkles text-info me-2"></i>Mẫu diễn giải hạch toán
+                    </h5>
+                    <div class="small text-muted mt-1">
+                        Áp dụng cho nghiệp vụ phát sinh sau này. Không tự sửa diễn giải của bút toán đã ghi sổ.
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-lg-4">
+                        <div class="input-group input-group-sm mb-2">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="search" class="form-control" id="dtSearch"
+                                   placeholder="Tìm nghiệp vụ...">
+                        </div>
+                        <div class="list-group dt-list border rounded" id="dtTemplateList">
+                            <div class="text-muted small text-center p-4">Đang tải…</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-8">
+                        <div id="dtEmpty" class="text-muted text-center py-5">
+                            Chọn một nghiệp vụ bên trái để thiết lập.
+                        </div>
+                        <div id="dtEditor" class="d-none">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                <div>
+                                    <div class="fw-bold" id="dtBusinessLabel">—</div>
+                                    <span class="small text-muted" id="dtBusinessType"></span>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="dtActive" checked>
+                                    <label class="form-check-label" for="dtActive">Sử dụng mẫu này</label>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small mb-1">Phạm vi</label>
+                                    <select class="form-select form-select-sm" id="dtScope">
+                                        <option value="header">Diễn giải bút toán</option>
+                                        <option value="debit_line">Diễn giải dòng Nợ</option>
+                                        <option value="credit_line">Diễn giải dòng Có</option>
+                                        <option value="receipt">Diễn giải Phiếu Thu</option>
+                                        <option value="debt">Diễn giải công nợ</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label small mb-1">Trạng thái mẫu</label>
+                                    <div class="form-control form-control-sm bg-light" id="dtDefaultState">—</div>
+                                </div>
+                            </div>
+
+                            <label class="form-label fw-semibold">Nội dung mẫu diễn giải</label>
+                            <textarea class="form-control" id="dtText" rows="4"
+                                      placeholder="Ví dụ: Phân bổ doanh thu cho thuê {property_name} kỳ {period_key}"></textarea>
+
+                            <div class="mt-3">
+                                <div class="small fw-semibold mb-2">Chèn nhanh biến</div>
+                                <div class="d-flex flex-wrap gap-1" id="dtTokens"></div>
+                                <div class="form-text">
+                                    Biến không có dữ liệu tại nghiệp vụ cụ thể sẽ được giữ nguyên để dễ phát hiện cấu hình thiếu.
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="form-label fw-semibold">Xem trước</label>
+                                <div class="border rounded bg-light p-3 dt-preview" id="dtPreview">—</div>
+                            </div>
+
+                            <div class="alert alert-light border small mt-3 mb-0">
+                                <i class="fas fa-circle-info me-1"></i>
+                                Thay đổi mẫu chỉ ảnh hưởng bút toán tạo mới. Bút toán lịch sử vẫn giữ nguyên diễn giải đã lưu.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="dtReset" disabled>
+                    <i class="fas fa-rotate-left me-1"></i> Khôi phục mặc định KETO
+                </button>
+                <div>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="dtSave" disabled>
+                        <i class="fas fa-save me-1"></i> Lưu thiết lập
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="modalDetail" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -149,6 +258,15 @@
                 </div>
             </div>
             <div class="modal-footer flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-info btn-sm d-none" id="btnEditDescription">
+                    <i class="fas fa-align-left me-1"></i> Sửa diễn giải
+                </button>
+                <button type="button" class="btn btn-info btn-sm d-none" id="btnSaveDescription">
+                    <i class="fas fa-save me-1"></i> Lưu diễn giải
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btnCancelDescription">
+                    Hủy sửa diễn giải
+                </button>
                 <button type="button" class="btn btn-outline-primary btn-sm d-none" id="btnEdit">
                     <i class="fas fa-pen me-1"></i> Sửa
                 </button>
@@ -215,6 +333,7 @@
     let currentId = null;
     let currentEntry = null;
     let editing = false;
+    let editingDescription = false;
     let detailModal = null;
 
     function money(v) {
@@ -239,8 +358,54 @@
         return map[t] || t || '—';
     }
 
+    const businessTypeLabels = {
+        THU_CONG: 'Bút toán thủ công',
+        SALE_REVENUE: 'Ghi nhận doanh thu bán hàng',
+        SALE_COGS: 'Ghi nhận giá vốn hàng bán',
+        BAN_HANG_TM: 'Bán hàng thu tiền mặt',
+        BAN_HANG_CK: 'Bán hàng thu qua ngân hàng',
+        BAN_HANG_CONG_NO: 'Bán hàng chưa thu tiền',
+        GIA_VON_BAN_HANG: 'Ghi nhận giá vốn hàng bán',
+        GIAM_TRU_DOANH_THU: 'Ghi nhận khoản giảm trừ doanh thu',
+        TRA_HANG_BAN: 'Hàng bán bị trả lại',
+        THU_TIEN: 'Thu tiền',
+        CHI_TIEN: 'Chi tiền',
+        THANH_TOAN_NCC_NK: 'Thanh toán công nợ nhà cung cấp',
+        NHAP_KHO_HANG_HOA: 'Nhập kho hàng hóa',
+        NHAP_KHO_NVL: 'Nhập kho nguyên vật liệu',
+        SAN_XUAT_TP: 'Nhập kho thành phẩm sản xuất',
+        MUA_DICH_VU: 'Mua dịch vụ',
+        MUA_CCDC: 'Mua công cụ, dụng cụ',
+        MUA_TSCD: 'Mua tài sản cố định',
+        KHAU_HAO_TSCD: 'Khấu hao tài sản cố định',
+        PHAN_BO_CCDC: 'Phân bổ công cụ, dụng cụ',
+        PHAN_BO_CPTT: 'Phân bổ chi phí trả trước',
+        TRICH_LUONG: 'Trích tiền lương phải trả',
+        TRICH_KPCD: 'Trích kinh phí công đoàn',
+        TRICH_DU_PHONG: 'Trích lập dự phòng',
+        THUE_TAI_CHINH: 'Thuê tài chính',
+        PHAN_PHOI_LN: 'Phân phối lợi nhuận',
+        MUA_BDSDT: 'Mua bất động sản đầu tư',
+        BDSDT_LEASE_DIRECT: 'Cho thuê bất động sản đầu tư từng kỳ',
+        BDSDT_LEASE_PREPAID: 'Thu trước tiền thuê bất động sản đầu tư',
+        BDSDT_REVENUE_RECOGNITION: 'Phân bổ doanh thu cho thuê bất động sản đầu tư',
+        BDSDT_DEPRECIATION: 'Khấu hao bất động sản đầu tư',
+        BDSDT_IMPAIRMENT: 'Ghi nhận suy giảm giá trị bất động sản đầu tư',
+        BDSDT_SALE: 'Bán bất động sản đầu tư',
+        BDSDT_TRANSFER_TO_FA: 'Chuyển bất động sản đầu tư sang tài sản cố định',
+        BDSDT_TRANSFER_TO_INVENTORY: 'Chuyển bất động sản đầu tư sang hàng tồn kho'
+    };
+
+    function businessTypeLabel(bt) {
+        const key = String(bt || '').trim().toUpperCase();
+        if (!key) return '—';
+        return businessTypeLabels[key] || key.replaceAll('_', ' ').toLocaleLowerCase('vi')
+            .replace(/(^|\s)\S/g, c => c.toLocaleUpperCase('vi'));
+    }
+
     function hideActionBtns() {
-        ['btnEdit', 'btnSaveEdit', 'btnCancelEdit', 'btnDelete', 'btnReverse'].forEach((id) => {
+        ['btnEditDescription', 'btnSaveDescription', 'btnCancelDescription',
+         'btnEdit', 'btnSaveEdit', 'btnCancelEdit', 'btnDelete', 'btnReverse'].forEach((id) => {
             document.getElementById(id).classList.add('d-none');
         });
     }
@@ -325,7 +490,7 @@
             <div class="col-md-3"><strong>Chi nhánh:</strong> ${e.branch_code || 'HQ'}</div>
             <div class="col-md-3"><strong>Chứng từ:</strong> ${e.document_no || '—'}</div>
             <div class="col-md-3"><strong>Trạng thái:</strong> ${statusBadge(e.status)}</div>
-            <div class="col-md-3"><strong>Nghiệp vụ:</strong> ${e.business_type || '—'}</div>
+            <div class="col-md-3"><strong>Nghiệp vụ:</strong> ${businessTypeLabel(e.business_type)}</div>
             <div class="col-md-9"><strong>Kỳ sổ:</strong> ${lockHint}</div>
             <div class="col-12"><strong>Diễn giải:</strong> ${e.description || '—'}</div>
         `;
@@ -377,11 +542,17 @@
 
     function setActionButtons(e) {
         hideActionBtns();
+        if (editingDescription) {
+            document.getElementById('btnSaveDescription').classList.remove('d-none');
+            document.getElementById('btnCancelDescription').classList.remove('d-none');
+            return;
+        }
         if (editing) {
             document.getElementById('btnSaveEdit').classList.remove('d-none');
             document.getElementById('btnCancelEdit').classList.remove('d-none');
             return;
         }
+        document.getElementById('btnEditDescription').classList.remove('d-none');
         if (e.can_edit) document.getElementById('btnEdit').classList.remove('d-none');
         if (e.can_delete) document.getElementById('btnDelete').classList.remove('d-none');
         if (e.can_reverse) document.getElementById('btnReverse').classList.remove('d-none');
@@ -391,6 +562,7 @@
         currentId = id;
         currentEntry = null;
         editing = false;
+        editingDescription = false;
         if (!detailModal) detailModal = new bootstrap.Modal(document.getElementById('modalDetail'));
         document.getElementById('detailTitle').textContent = 'Đang tải…';
         document.getElementById('detailLines').innerHTML = '';
@@ -410,6 +582,86 @@
             document.getElementById('detailTitle').textContent = 'Lỗi';
             document.getElementById('detailMeta').innerHTML =
                 `<div class="col-12 text-danger">${err.message}</div>`;
+        }
+    }
+
+    function renderDescriptionEdit(e) {
+        document.getElementById('detailMeta').innerHTML = `
+            <div class="col-md-3"><strong>Ngày ghi:</strong> ${fmtDateVi(e.posting_date)}</div>
+            <div class="col-md-3"><strong>Chứng từ:</strong> ${e.document_no || '—'}</div>
+            <div class="col-md-6"><strong>Nghiệp vụ:</strong> ${businessTypeLabel(e.business_type)}</div>
+            <div class="col-12">
+                <label class="form-label small mb-1 fw-semibold">Diễn giải chung</label>
+                <textarea id="descEditHeader" class="form-control form-control-sm" rows="2"></textarea>
+            </div>
+            <div class="col-12 small text-muted">
+                Chỉ sửa nội dung diễn giải. Không thay tài khoản, số tiền, ngày ghi sổ hoặc số dư;
+                có thể sửa cả khi kỳ đã khóa và hệ thống vẫn ghi nhật ký kiểm tra.
+            </div>
+        `;
+        document.getElementById('descEditHeader').value = e.description || '';
+        const lines = e.lines || [];
+        document.getElementById('detailLines').innerHTML = lines.map((ln, idx) => `
+            <tr class="desc-edit-line" data-line-id="${Number(ln.id) || 0}">
+                <td>${ln.sequence || (idx + 1)}</td>
+                <td class="jl-mono">${ln.account_code || ''}</td>
+                <td><input class="form-control form-control-sm desc-line-text"></td>
+                <td class="jl-amount">${Number(ln.debit) ? money(ln.debit) : ''}</td>
+                <td class="jl-amount">${Number(ln.credit) ? money(ln.credit) : ''}</td>
+                <td class="small">${ln.partner_type || ''}${ln.partner_id ? (' #' + ln.partner_id) : ''}</td>
+            </tr>
+        `).join('');
+        document.querySelectorAll('#detailLines tr.desc-edit-line').forEach((tr, idx) => {
+            tr.querySelector('.desc-line-text').value = (lines[idx] && lines[idx].description) || '';
+        });
+        document.getElementById('detailTotalDebit').textContent = money(e.total_debit);
+        document.getElementById('detailTotalCredit').textContent = money(e.total_credit);
+    }
+
+    function startDescriptionEdit() {
+        if (!currentEntry) return;
+        editing = false;
+        editingDescription = true;
+        renderDescriptionEdit(currentEntry);
+        setActionButtons(currentEntry);
+    }
+
+    function cancelDescriptionEdit() {
+        if (!currentEntry) return;
+        editingDescription = false;
+        renderDetailView(currentEntry);
+        setActionButtons(currentEntry);
+    }
+
+    async function saveDescriptionEdit() {
+        if (!currentId || !currentEntry) return;
+        const lines = [];
+        document.querySelectorAll('#detailLines tr.desc-edit-line').forEach((tr) => {
+            const id = Number(tr.dataset.lineId || 0);
+            if (!id) return;
+            lines.push({
+                id,
+                description: tr.querySelector('.desc-line-text')?.value || ''
+            });
+        });
+        const payload = {
+            description: document.getElementById('descEditHeader')?.value || '',
+            lines,
+            reason: 'Sửa diễn giải bút toán từ nhật ký'
+        };
+        try {
+            const res = await fetch('/api/sme/journal/' + currentId + '/description', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const json = await parseJson(res);
+            if (!json.success) throw new Error(json.error || 'Không lưu được diễn giải');
+            editingDescription = false;
+            await openDetail(currentId);
+            loadList();
+        } catch (e) {
+            alert(e.message);
         }
     }
 
@@ -617,11 +869,214 @@
     document.getElementById('jlQ').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') loadList();
     });
+    document.getElementById('btnEditDescription').addEventListener('click', startDescriptionEdit);
+    document.getElementById('btnCancelDescription').addEventListener('click', cancelDescriptionEdit);
+    document.getElementById('btnSaveDescription').addEventListener('click', saveDescriptionEdit);
     document.getElementById('btnEdit').addEventListener('click', startEdit);
     document.getElementById('btnCancelEdit').addEventListener('click', cancelEdit);
     document.getElementById('btnSaveEdit').addEventListener('click', saveEdit);
     document.getElementById('btnDelete').addEventListener('click', deleteCurrent);
     document.getElementById('btnReverse').addEventListener('click', reverseCurrent);
+
+
+    // ───────────────── Mẫu diễn giải hạch toán ─────────────────
+    const dtScopeLabels = {
+        header: 'Diễn giải chung',
+        debit_line: 'Diễn giải dòng Nợ',
+        credit_line: 'Diễn giải dòng Có',
+        receipt: 'Diễn giải Phiếu Thu',
+        debt: 'Diễn giải công nợ'
+    };
+    const dtTokenSamples = {
+        document_no: 'PT000125',
+        invoice_no: '0000123',
+        customer_name: 'Công ty ABC',
+        supplier_name: 'Nhà cung cấp XYZ',
+        property_code: 'BDSDT000002',
+        property_name: 'Tòa nhà Nguyễn Trãi',
+        period_key: '2026-09',
+        period_from: '01/09/2026',
+        period_to: '31/08/2027',
+        payment_method: 'Chuyển khoản',
+        amount: '120.000.000',
+        tax_amount: '12.000.000',
+        warehouse_name: 'Kho chính',
+        note: 'Theo hợp đồng số 12/2026',
+        posting_date: '30/09/2026',
+        plan_id: '2'
+    };
+    const dtTokenOrder = [
+        'document_no','invoice_no','customer_name','supplier_name',
+        'property_code','property_name','period_key','period_from','period_to',
+        'payment_method','amount','tax_amount','warehouse_name','posting_date','note'
+    ];
+    let dtTemplates = [];
+    let dtCurrent = null;
+    let dtModal = null;
+
+    function dtEsc(v) {
+        return String(v ?? '').replace(/[&<>"']/g, ch => ({
+            '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+        }[ch]));
+    }
+    function dtLabel(item) {
+        return item.business_label || businessTypeLabel(item.business_type);
+    }
+    function dtRenderPreview() {
+        const text = document.getElementById('dtText')?.value || '';
+        const rendered = text.replace(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g, (m, key) => (
+            Object.prototype.hasOwnProperty.call(dtTokenSamples, key) ? dtTokenSamples[key] : m
+        ));
+        document.getElementById('dtPreview').textContent = rendered || '—';
+    }
+    function dtRenderTokens() {
+        const box = document.getElementById('dtTokens');
+        box.innerHTML = dtTokenOrder.map(key => (
+            `<button type="button" class="btn btn-outline-secondary btn-sm dt-token" data-token="${key}">
+                {${key}}
+            </button>`
+        )).join('');
+    }
+    function dtRenderList() {
+        const q = (document.getElementById('dtSearch')?.value || '').trim().toLocaleLowerCase('vi');
+        const rows = dtTemplates.filter(x => {
+            const hay = (dtLabel(x) + ' ' + (x.business_type || '')).toLocaleLowerCase('vi');
+            return !q || hay.includes(q);
+        });
+        const list = document.getElementById('dtTemplateList');
+        if (!rows.length) {
+            list.innerHTML = '<div class="text-muted small text-center p-4">Không có mẫu phù hợp.</div>';
+            return;
+        }
+        list.innerHTML = rows.map((x, idx) => {
+            const key = `${x.business_type}::${x.template_scope}`;
+            const curKey = dtCurrent ? `${dtCurrent.business_type}::${dtCurrent.template_scope}` : '';
+            const active = key === curKey ? ' active' : '';
+            const state = Number(x.active) ? 'Đang dùng' : 'Tạm tắt';
+            return `<button type="button" class="list-group-item list-group-item-action dt-item${active}"
+                            data-key="${dtEsc(key)}">
+                <div class="d-flex justify-content-between gap-2">
+                    <div class="fw-semibold small">${dtEsc(dtLabel(x))}</div>
+                    <span class="badge ${Number(x.active) ? 'text-bg-success' : 'text-bg-secondary'}">${state}</span>
+                </div>
+                <div class="small text-muted mt-1">${dtEsc(x.scope_label || dtScopeLabels[x.template_scope] || x.template_scope || 'Diễn giải chung')}</div>
+            </button>`;
+        }).join('');
+    }
+    function dtOpenItem(item) {
+        dtCurrent = item;
+        document.getElementById('dtEmpty').classList.add('d-none');
+        document.getElementById('dtEditor').classList.remove('d-none');
+        document.getElementById('dtBusinessLabel').textContent = dtLabel(item);
+        document.getElementById('dtBusinessType').textContent = '';
+        document.getElementById('dtScope').value = item.template_scope || 'header';
+        document.getElementById('dtActive').checked = !!Number(item.active);
+        document.getElementById('dtText').value = item.template_text || '';
+        document.getElementById('dtDefaultState').textContent =
+            item.is_system_default ? 'Đang dùng mặc định KETO' : 'Đã tùy chỉnh';
+        document.getElementById('dtReset').disabled = !item.has_system_default;
+        document.getElementById('dtSave').disabled = false;
+        dtRenderPreview();
+        dtRenderList();
+    }
+    async function dtLoadTemplates(selectKey) {
+        const res = await fetch('/api/sme/accounting-description-templates');
+        const json = await parseJson(res);
+        if (!json.success) throw new Error(json.error || 'Không tải được mẫu diễn giải');
+        dtTemplates = json.data || [];
+        dtRenderList();
+        if (selectKey) {
+            const found = dtTemplates.find(x => `${x.business_type}::${x.template_scope}` === selectKey);
+            if (found) dtOpenItem(found);
+        } else if (dtTemplates.length && !dtCurrent) {
+            dtOpenItem(dtTemplates[0]);
+        }
+    }
+    async function dtOpenModal() {
+        if (!dtModal) dtModal = new bootstrap.Modal(document.getElementById('modalDescriptionTemplates'));
+        document.getElementById('dtTemplateList').innerHTML =
+            '<div class="text-muted small text-center p-4">Đang tải…</div>';
+        document.getElementById('dtEditor').classList.add('d-none');
+        document.getElementById('dtEmpty').classList.remove('d-none');
+        dtCurrent = null;
+        dtModal.show();
+        try {
+            await dtLoadTemplates();
+        } catch (e) {
+            document.getElementById('dtTemplateList').innerHTML =
+                `<div class="text-danger small p-3">${dtEsc(e.message)}</div>`;
+        }
+    }
+    async function dtSaveCurrent() {
+        if (!dtCurrent) return;
+        const templateText = (document.getElementById('dtText').value || '').trim();
+        if (!templateText) return alert('Mẫu diễn giải không được để trống.');
+        const scope = document.getElementById('dtScope').value || 'header';
+        const payload = {
+            action: 'save',
+            business_type: dtCurrent.business_type,
+            template_scope: scope,
+            template_text: templateText,
+            active: document.getElementById('dtActive').checked
+        };
+        const res = await fetch('/api/sme/accounting-description-templates', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const json = await parseJson(res);
+        if (!json.success) throw new Error(json.error || 'Không lưu được mẫu diễn giải');
+        alert('Đã lưu mẫu diễn giải. Chỉ áp dụng cho nghiệp vụ phát sinh sau thời điểm này.');
+        dtCurrent = null;
+        await dtLoadTemplates(`${payload.business_type}::${scope}`);
+    }
+    async function dtResetCurrent() {
+        if (!dtCurrent || !dtCurrent.has_system_default) return;
+        if (!confirm('Khôi phục mẫu mặc định KETO cho nghiệp vụ này?')) return;
+        const payload = {
+            action: 'reset',
+            business_type: dtCurrent.business_type,
+            template_scope: dtCurrent.template_scope || 'header'
+        };
+        const res = await fetch('/api/sme/accounting-description-templates', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const json = await parseJson(res);
+        if (!json.success) throw new Error(json.error || 'Không khôi phục được mẫu mặc định');
+        dtCurrent = null;
+        await dtLoadTemplates(`${payload.business_type}::${payload.template_scope}`);
+    }
+
+    dtRenderTokens();
+    document.getElementById('btnDescriptionTemplates').addEventListener('click', dtOpenModal);
+    document.getElementById('dtSearch').addEventListener('input', dtRenderList);
+    document.getElementById('dtTemplateList').addEventListener('click', ev => {
+        const btn = ev.target.closest('[data-key]');
+        if (!btn) return;
+        const item = dtTemplates.find(x => `${x.business_type}::${x.template_scope}` === btn.dataset.key);
+        if (item) dtOpenItem(item);
+    });
+    document.getElementById('dtTokens').addEventListener('click', ev => {
+        const btn = ev.target.closest('[data-token]');
+        if (!btn) return;
+        const ta = document.getElementById('dtText');
+        const token = `{${btn.dataset.token}}`;
+        const start = ta.selectionStart ?? ta.value.length;
+        const end = ta.selectionEnd ?? ta.value.length;
+        ta.value = ta.value.slice(0, start) + token + ta.value.slice(end);
+        ta.focus();
+        ta.selectionStart = ta.selectionEnd = start + token.length;
+        dtRenderPreview();
+    });
+    document.getElementById('dtText').addEventListener('input', dtRenderPreview);
+    document.getElementById('dtSave').addEventListener('click', async () => {
+        try { await dtSaveCurrent(); } catch (e) { alert(e.message); }
+    });
+    document.getElementById('dtReset').addEventListener('click', async () => {
+        try { await dtResetCurrent(); } catch (e) { alert(e.message); }
+    });
 
     loadList();
 })();

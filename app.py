@@ -579,6 +579,10 @@ register_settings_routes(app)
 from routes.ketoan_sme import register_ketoan_sme_routes
 register_ketoan_sme_routes(app)
 
+# === BẤT ĐỘNG SẢN ĐẦU TƯ (BĐSĐT) SME ===
+from Services.sme.investment_property_routes import register_investment_property_routes
+register_investment_property_routes(app)
+
 # === PRODUCTS routes → routes/products.py ===
 from routes.products import register_products_routes
 register_products_routes(app)

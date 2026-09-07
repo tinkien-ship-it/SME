@@ -168,7 +168,7 @@ DEFAULT_WAREHOUSES = (
 INVENTORY_TRACKED_LINE_TYPES = frozenset({'goods', 'materials'})
 
 # TSCĐ / CCDC: sổ riêng, không qua tồn POS
-ASSET_REGISTER_LINE_TYPES = frozenset({'fixed_asset', 'intangible_asset', 'tools'})
+ASSET_REGISTER_LINE_TYPES = frozenset({'fixed_asset', 'intangible_asset', 'tools', 'investment_property'})
 
 
 def tracks_retail_inventory(line_type):
@@ -551,8 +551,10 @@ def insert_import_detail_row(c, import_id, fields):
 def is_service_detail_row(row):
     """Dòng dịch vụ: chỉ lưu trên import_details (product_id NULL hoặc line_type=service)."""
     lt = (row.get('line_type') or '').strip().lower()
-    if lt == 'service':
-        return True
+    # line_type đã có thì phải tôn trọng loại nghiệp vụ. BĐSĐT/TSCĐ/CCDC
+    # được phép product_id=NULL nhưng không được bị nhận nhầm thành dịch vụ.
+    if lt:
+        return lt == 'service'
     pid = row.get('product_id')
     return pid is None or pid == '' or pid == 0
 
@@ -816,15 +818,17 @@ def build_service_line_insert_fields(import_id, item, extra_cost, total_base_for
 def is_service_line_payload(item):
     """Nhận diện dòng dịch vụ từ payload frontend."""
     line_type = (item.get('line_type') or '').strip().lower()
-    if line_type == 'service':
-        return True
+
+    if line_type:
+        return line_type == 'service'
+
     pid = item.get('product_id')
     try:
         pid_int = int(pid) if pid not in (None, '') else 0
     except (TypeError, ValueError):
         pid_int = 0
-    return pid_int <= 0
 
+    return pid_int <= 0
 
 def calc_import_detail_line_amounts(
     quantity,

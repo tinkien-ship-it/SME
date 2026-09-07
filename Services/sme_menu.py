@@ -200,6 +200,7 @@ SME_MENU_GROUPS = (
         'items': (
             {'endpoint': 'SME_TSCD', 'label': 'Tổng quan tài sản cố định', 'icon': 'fas fa-chart-pie'},
             {'endpoint': 'SME_fixed_assets', 'label': 'Quản lý và khấu hao TSCĐ', 'icon': 'fas fa-building'},
+            {'endpoint': 'SME_investment_properties', 'label': 'Bất động sản đầu tư', 'icon': 'fas fa-city'},
             {'endpoint': 'SME_CCDC', 'label': 'Tổng quan công cụ dụng cụ', 'icon': 'fas fa-chart-pie'},
             {'endpoint': 'SME_tools', 'label': 'Danh mục công cụ dụng cụ', 'icon': 'fas fa-screwdriver-wrench'},
             {'endpoint': 'SME_prepaid', 'label': 'Chi phí trả trước (TK 242)', 'icon': 'fas fa-calendar-check'},

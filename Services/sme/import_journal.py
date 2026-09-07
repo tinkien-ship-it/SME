@@ -15,7 +15,7 @@ IMPORT_DOCUMENT_TYPE = 'PNK'
 # finished_goods chỉ qua SX (TK 155) — không phải dòng mua hàng SME
 STOCK_LINE_TYPES = frozenset({'goods', 'materials'})
 PURCHASE_LINE_TYPES = frozenset({
-    'goods', 'materials', 'service', 'fixed_asset', 'intangible_asset', 'tools',
+    'goods', 'materials', 'service', 'fixed_asset', 'intangible_asset', 'tools', 'investment_property',
 })
 BUSINESS_TYPE_LABELS = {
     'NHAP_KHO_HANG_HOA': 'Nhập kho hàng hóa',
@@ -24,6 +24,7 @@ BUSINESS_TYPE_LABELS = {
     'MUA_TSCD': 'Mua TSCĐ',
     'MUA_TSCD_VH': 'Mua TSCĐ vô hình',
     'MUA_CCDC': 'Mua CCDC',
+    'MUA_BDSDT': 'Mua bất động sản đầu tư',
 }
 # Thuế NK phân bổ vào nguyên giá (không áp dụng dịch vụ)
 IMPORT_TAX_BUSINESS_TYPES = frozenset({
@@ -56,6 +57,8 @@ def _business_type_for_line(line_type: str | None) -> str | None:
         return 'MUA_TSCD'
     if lt == 'tools':
         return 'MUA_CCDC'
+    if lt == 'investment_property':
+        return 'MUA_BDSDT'
     return 'NHAP_KHO_HANG_HOA'
 
 
@@ -293,7 +296,7 @@ def sync_import_journals(
         if not b_type:
             continue
         # Hàng hóa/NVL/TSCĐ/CCDC cần product_id; dịch vụ cho phép NULL
-        needs_product = b_type != 'MUA_DICH_VU'
+        needs_product = b_type not in ('MUA_DICH_VU', 'MUA_BDSDT')
         if needs_product and not row['product_id']:
             continue
         subtotal = _money(row['subtotal'])
@@ -318,7 +321,11 @@ def sync_import_journals(
             'env_tax_amount': _money(row['env_tax_amount']),
             'warehouse_code': row['warehouse_code'],
             'expense_account': (row['expense_account'] or '').strip() if 'expense_account' in row.keys() else '',
-            'account_code': (row['asset_account'] or '').strip() if row.get('asset_account') else '',
+            'account_code': (
+                (row['asset_account'] or '').strip()
+                if ('asset_account' in row.keys() and row['asset_account'])
+                else ('asset.investment_property' if b_type == 'MUA_BDSDT' else '')
+            ),
         })
 
     if not stock_rows:
@@ -370,6 +377,7 @@ def sync_import_journals(
         groups.setdefault(item['business_type'], []).append(item)
 
     posted: list[dict] = []
+    bdsdt_entry_id: int | None = None
     for b_type, items in groups.items():
         inventory_lines = []
         vat_total = Decimal('0.00')
@@ -466,9 +474,12 @@ def sync_import_journals(
                 'description': f"{desc_text}: {item['product_name']}",
             })
 
+        # BĐSĐT dùng rule thanh toán/VAT của mua TSCĐ làm template, còn TK tài sản
+        # được resolve bằng role asset.investment_property. Journal vẫn ghi business_type MUA_BDSDT.
+        rule_business_type = 'MUA_TSCD' if b_type == 'MUA_BDSDT' else b_type
         _rule, journal_lines = build_import_stock_lines(
             conn,
-            business_type=b_type,
+            business_type=rule_business_type,
             payment_method=pay_method,
             inventory_lines=inventory_lines,
             vat_amount=vat_total,
@@ -487,7 +498,7 @@ def sync_import_journals(
         wh0 = (inventory_lines[0].get('warehouse_code') if inventory_lines else None) or None
         branch = warehouse_branch_or_session(conn, wh0)
         doc_type = 'HMDD' if in_transit else IMPORT_DOCUMENT_TYPE
-        posted.append(post_journal_entry(
+        _posted_entry = post_journal_entry(
             conn,
             posting_date=posting_date or '',
             document_date=bill_date or posting_date,
@@ -503,7 +514,24 @@ def sync_import_journals(
             created_by=created_by,
             branch_code=branch,
             lines=journal_lines,
-        ))
+        )
+        posted.append(_posted_entry)
+        if b_type == 'MUA_BDSDT':
+            bdsdt_entry_id = int(_posted_entry['id'])
+
+    investment_properties = {'created': 0, 'items': []}
+    # Register được tạo trong cùng transaction với journal. Không tạo khi còn 241/đi đường.
+    if not in_transit:
+        try:
+            from Services.sme.investment_property import sync_properties_from_import
+            investment_properties = sync_properties_from_import(
+                conn, import_id, source_journal_entry_id=bdsdt_entry_id, created_by=created_by
+            )
+        except Exception:
+            # Có dòng BĐSĐT thì lỗi register phải rollback toàn bộ, không được để journal mồ côi.
+            has_bdsdt = any(item.get('business_type') == 'MUA_BDSDT' for item in stock_rows)
+            if has_bdsdt:
+                raise
 
     return {
         'posted': bool(posted),
@@ -512,4 +540,6 @@ def sync_import_journals(
         'import_type': resolved_import_type,
         'in_transit': in_transit,
         'receipt_stage': stage or (STAGE_IN_TRANSIT if in_transit else 'RECEIVED'),
+        'investment_properties_created': int(investment_properties.get('created') or 0),
+        'investment_properties': investment_properties.get('items') or [],
     }

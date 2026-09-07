@@ -412,6 +412,7 @@ def post_journal_entry(
     currency: str = 'VND',
     exchange_rate: float | Decimal = 1,
     description: str = '',
+    description_context: dict[str, Any] | None = None,
     reference_document: str | None = None,
     created_by: str | None = None,
     entry_uuid: str | None = None,
@@ -428,6 +429,21 @@ def post_journal_entry(
     """
     # Không được commit ngầm: caller có thể đang ghi kho/chứng từ cùng transaction.
     ensure_sme_journal_ready(conn, commit=False)
+    # Template diễn giải là lớp metadata dùng chung; tuyệt đối không tham gia
+    # quyết định tài khoản/số tiền. Nếu chưa cấu hình template, giữ nguyên
+    # diễn giải production do caller truyền vào.
+    from Services.sme.description_templates import render_description
+    _desc_bt = business_type or document_type
+    _ctx = dict(description_context or {})
+    _ctx.setdefault('document_no', document_no or '')
+    _ctx.setdefault('document_type', document_type or '')
+    _ctx.setdefault('business_type', business_type or '')
+    _ctx.setdefault('posting_date', posting_date or '')
+    _ctx.setdefault('reference_document', reference_document or '')
+    description = render_description(
+        conn, business_type=_desc_bt,
+        scope='header', context=_ctx, fallback=str(description or ''),
+    )
     if not lines:
         raise ValueError('Bút toán phải có ít nhất một dòng')
 
@@ -481,7 +497,19 @@ def post_journal_entry(
             'tax_code': raw.get('tax_code'),
             'tax_rate': raw.get('tax_rate'),
             'vat_invoice_no': raw.get('vat_invoice_no'),
-            'description': raw.get('description') or description,
+            'description': render_description(
+                conn,
+                business_type=_desc_bt,
+                scope='debit_line' if debit > 0 else 'credit_line',
+                context={
+                    **_ctx,
+                    'account_code': code,
+                    'debit': float(debit),
+                    'credit': float(credit),
+                    'sequence': int(raw.get('sequence') or i),
+                },
+                fallback=str(raw.get('description') or description or ''),
+            ),
         })
 
     if not prepared:

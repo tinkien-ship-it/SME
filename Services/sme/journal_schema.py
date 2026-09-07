@@ -152,8 +152,11 @@ def _apply_journal_schema(conn: sqlite3.Connection) -> None:
 
 
 def ensure_sme_journal_schema(conn: sqlite3.Connection, *, commit: bool = True) -> None:
+    from Services.sme.description_templates import ensure_description_template_schema
     from db_utils import sqlite_is_ready, sqlite_mark_ready, with_sqlite_write
     from db.schema_helpers import add_column_if_missing
+
+    ensure_description_template_schema(conn, commit=False)
 
     # Luôn bổ sung cột legacy dù flag đã sẵn (tenant cũ).
     add_column_if_missing(conn, 'sme_journal_entries', 'branch_code', 'TEXT')

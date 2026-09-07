@@ -12,7 +12,7 @@ from typing import Any
 from db_utils import sqlite_commit
 from Services.sme.coa_service import ensure_sme_coa_ready, get_account
 
-ROLES_SEED_VERSION = 'account_roles_v4_2026-09'
+ROLES_SEED_VERSION = 'account_roles_v4_2026-09-bdsdt'
 
 DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
     {
@@ -99,9 +99,41 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'role_key': 'revenue.investment_property',
         'root_hint': '5117',
         'default_account': '5117',
-        'label': 'Doanh thu kinh doanh bất động sản đầu tư',
-        'description': 'DT kinh doanh bất động sản đầu tư',
+        'label': 'Doanh thu bất động sản đầu tư',
+        'description': 'Doanh thu bán/cho thuê BĐSĐT; tự rơi về 511 nếu DN không mở 5117',
         'category': 'revenue',
+    },
+    {
+        'role_key': 'cogs.investment_property',
+        'root_hint': '6327',
+        'default_account': '6327',
+        'label': 'Giá vốn bất động sản đầu tư',
+        'description': 'Giá vốn/khấu hao/chi phí trực tiếp BĐSĐT; tự rơi về 632 nếu cần',
+        'category': 'cogs',
+    },
+    {
+        'role_key': 'asset.investment_property',
+        'root_hint': '217',
+        'default_account': '217',
+        'label': 'Bất động sản đầu tư',
+        'description': 'Nguyên giá BĐSĐT; nếu DN mở TK con 217x thì tự chọn leaf postable/default',
+        'category': 'asset',
+    },
+    {
+        'role_key': 'accum_depr.investment_property',
+        'root_hint': '2147',
+        'default_account': '2147',
+        'label': 'Hao mòn bất động sản đầu tư',
+        'description': 'Hao mòn BĐSĐT; tự rơi về 214 nếu DN không mở 2147',
+        'category': 'asset',
+    },
+    {
+        'role_key': 'vat.input.investment_property',
+        'root_hint': '1332',
+        'default_account': '1332',
+        'label': 'Thuế GTGT đầu vào BĐSĐT',
+        'description': 'VAT đầu vào BĐSĐT/TSCĐ; tự rơi về 133 nếu DN không mở 1332',
+        'category': 'tax',
     },
     {
         'role_key': 'cash.till.vnd',
@@ -200,19 +232,6 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'category': 'tax',
     },
 ]
-
-
-
-# Fallback có kiểm soát cho các vai trò doanh thu.
-# Giữ root chuyên biệt 5111/5112/5113/5117 để không resolve nhầm nhóm.
-# Chỉ khi root chuyên biệt không còn leaf postable và TK 511 đã được
-# COA tự động chuyển thành postable thì role mới fallback về 511.
-ROLE_PARENT_FALLBACKS: dict[str, str] = {
-    'revenue.goods': '511',
-    'revenue.fg': '511',
-    'revenue.service': '511',
-    'revenue.investment_property': '511',
-}
 
 
 def _now() -> str:
@@ -722,6 +741,15 @@ def on_account_deactivated(conn: sqlite3.Connection, code: str, *, commit: bool 
         sqlite_commit(conn, label='account_roles')
 
 
+ROLE_PARENT_FALLBACKS: dict[str, tuple[str, ...]] = {
+    'revenue.investment_property': ('511',),
+    'cogs.investment_property': ('632',),
+    'asset.investment_property': (),
+    'accum_depr.investment_property': ('214',),
+    'vat.input.investment_property': ('133',),
+}
+
+
 def resolve_posting_account(
     conn: sqlite3.Connection,
     role_or_code: str,
@@ -786,29 +814,18 @@ def resolve_posting_account(
                     pass
             return leaf
 
+    # Vai trò chuyên biệt có thể rơi về TK cha chuẩn khi DN không mở TK chi tiết.
+    # Chỉ dùng TK cha nếu chính TK cha đang active + postable; không bypass quy tắc parent/child.
+    if role:
+        for parent_root in ROLE_PARENT_FALLBACKS.get(role['role_key'], ()):
+            if _is_postable_active(conn, parent_root):
+                return parent_root
+            leaf = _resolve_leaf_under_root(conn, parent_root)
+            if leaf:
+                return leaf
+
     if _is_postable_active(conn, root_hint):
         return root_hint
-
-    # Fallback cha có kiểm soát theo role.
-    # Ví dụ: khi 5111/5112/5113/5117 không còn được ghi sổ và
-    # hệ thống COA đã tự chuyển 511 thành postable, role doanh thu
-    # mới được phép resolve về 511.
-    if role:
-        fallback_parent = ROLE_PARENT_FALLBACKS.get(raw)
-        if fallback_parent and _is_postable_active(conn, fallback_parent):
-            if role.get('default_account') != fallback_parent:
-                try:
-                    conn.execute(
-                        """
-                        UPDATE sme_account_roles
-                        SET default_account = ?, updated_at = ?
-                        WHERE role_key = ?
-                        """,
-                        (fallback_parent, _now(), role['role_key']),
-                    )
-                except sqlite3.Error:
-                    pass
-            return fallback_parent
 
     raise ValueError(
         f'Không tìm thấy tài khoản ghi sổ cho '

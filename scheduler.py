@@ -507,6 +507,80 @@ def backup_database(backup_root):
         print(f"Lỗi hệ thống Backup (Tổng quát): {e}")
 
 
+
+def _scheduled_bdsdt_periodic():
+    """Catch-up BĐSĐT đã đến hạn; cô lập hoàn toàn với queue/reconcile hiện hữu."""
+    as_of = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    try:
+        tenant_dbs = _collect_tenant_db_paths()
+        for db_path in tenant_dbs:
+            try:
+                profile = _load_tenant_accounting_profile(db_path)
+                regime = str(profile.get('accounting_regime') or '').strip().upper()
+                features = profile.get('features') or {}
+
+                # Giữ cùng gate an toàn với hệ kế toán SME hiện hữu.
+                if not regime.startswith('SME'):
+                    continue
+                if not bool(features.get('accounting_enabled')):
+                    continue
+                if not bool(features.get('journal_posting')):
+                    continue
+
+                with open_sqlite(
+                    db_path,
+                    timeout=_QUEUE_PROCESS_TIMEOUT_SEC,
+                ) as conn:
+                    from db_utils import begin_immediate, sqlite_commit, rollback_quietly
+                    try:
+                        begin_immediate(conn, label='bdsdt_periodic')
+                        from Services.sme.investment_property import run_due_lease_plans
+                        result = run_due_lease_plans(
+                            conn,
+                            as_of=as_of,
+                            created_by='scheduler',
+                        )
+                        sqlite_commit(conn, label='bdsdt_periodic')
+                    except Exception:
+                        rollback_quietly(conn)
+                        raise
+
+                if (
+                    result.get('depreciation_posted')
+                    or result.get('revenue_recognition_posted')
+                ):
+                    logger.info(
+                        'bdsdt_periodic [%s]: as_of=%s depreciation=%s revenue=%s',
+                        profile.get('tenant_id') or os.path.basename(db_path),
+                        as_of,
+                        result.get('depreciation_posted'),
+                        result.get('revenue_recognition_posted'),
+                    )
+
+            except OPERATIONAL_ERROR as exc:
+                msg = str(exc).lower()
+                if 'locked' in msg or 'busy' in msg or 'timeout' in msg:
+                    logger.debug(
+                        'bdsdt_periodic skip busy %s',
+                        os.path.basename(db_path),
+                    )
+                    continue
+                logger.warning(
+                    'bdsdt_periodic [%s] DB error: %s',
+                    os.path.basename(db_path),
+                    exc,
+                )
+            except Exception as exc:
+                logger.warning(
+                    'bdsdt_periodic [%s] skip: %s',
+                    os.path.basename(db_path),
+                    exc,
+                    exc_info=True,
+                )
+    except Exception as exc:
+        logger.warning('bdsdt_periodic worker failed: %s', exc, exc_info=True)
+
+
 def init_schedulers(app, backup_root):
     """Khởi tạo APScheduler một lần / một process leader.
 
@@ -630,6 +704,19 @@ def init_schedulers(app, backup_root):
         max_instances=1,
         coalesce=True,
     )
+    # BĐSĐT: 01:20 hằng ngày, xử lý các kỳ đã kết thúc đến ngày hôm trước.
+    backup_scheduler.add_job(
+        func=_scheduled_bdsdt_periodic,
+        trigger="cron",
+        hour=1,
+        minute=20,
+        id='bdsdt_periodic_daily',
+        name='bdsdt_periodic_daily',
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+
     backup_scheduler.add_job(
         func=_job_accounting_queue,
         trigger="interval",
