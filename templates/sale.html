@@ -506,6 +506,59 @@
     let einvoiceProvider = '';
     const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
 
+    function isPosOnline() {
+        if (window.PosOffline && typeof PosOffline.isOnline === 'function') {
+            return !!PosOffline.isOnline();
+        }
+        return navigator.onLine !== false;
+    }
+
+    async function validateCartProductIdsBeforeSubmit() {
+        // Offline: cho phép tiếp tục; backend sẽ xác nhận lại khi queue đồng bộ.
+        if (!isPosOnline()) return true;
+
+        const ids = [...new Set(
+            cart.map(item => parseInt(item.id, 10)).filter(id => Number.isInteger(id) && id > 0)
+        )];
+        if (!ids.length) return true;
+
+        try {
+            const response = await fetch('/api/pos/products/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ product_ids: ids }),
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error || 'Không kiểm tra được danh mục');
+
+            const missing = new Set((result.missing_ids || []).map(Number));
+            if (!missing.size) return true;
+
+            const staleItems = cart.filter(item => missing.has(Number(item.id)));
+            const staleNames = staleItems.map(item => item.name || `ID ${item.id}`);
+
+            // Không gửi ID stale vào checkout của tenant hiện tại.
+            cart = cart.filter(item => !missing.has(Number(item.id)));
+            updateCart();
+
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Danh mục sản phẩm đã thay đổi',
+                html: 'Đã loại khỏi giỏ các mục không còn tồn tại trên server:<br><b>' +
+                      staleNames.map(escapeHtml).join('<br>') +
+                      '</b><br><small>Vui lòng tìm/chọn lại sản phẩm trước khi thanh toán.</small>',
+            });
+            return false;
+        } catch (err) {
+            // Lỗi mạng/preflight không được phá khả năng bán offline.
+            console.warn('POS product validation skipped:', err);
+            return true;
+        }
+    }
+
     function invoiceModeStorageKey() {
         return einvoiceProvider
             ? `${INVOICE_MODE_KEY}_${einvoiceProvider}`
@@ -564,8 +617,9 @@
 
 // ==================== LOCAL STORAGE LOGIC ====================
 
-function saveDraft() {
+async function saveDraft() {
     if (cart.length === 0) return;
+    if (!(await validateCartProductIdsBeforeSubmit())) return;
     const payload = getOrderData();
     payload.status = 'draft';
     
@@ -881,13 +935,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function handleBarcodeScan(barcode) {
         try {
-            const result = window.PosOffline
-                ? await PosOffline.scanBarcode(barcode)
-                : await fetch('/api/scan', {
+            let result;
+            if (window.PosOffline && PosOffline.isOnline()) {
+                try {
+                    const r = await fetch('/api/scan', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ barcode: barcode })
+                    });
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    result = await r.json();
+                } catch (err) {
+                    console.warn('Live barcode scan failed, fallback offline cache:', err);
+                    result = await PosOffline.scanBarcode(barcode);
+                }
+            } else if (window.PosOffline) {
+                result = await PosOffline.scanBarcode(barcode);
+            } else {
+                result = await fetch('/api/scan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
                     body: JSON.stringify({ barcode: barcode })
                 }).then(function (r) { return r.json(); });
+            }
             if (result.success) {
                 const p = result.data;
                 const qty = p.qty || result.parsed?.weight_kg || 1;
@@ -1083,7 +1155,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             useUnit1: false,
             maxQty: pendingWeightProduct.maxQty || 9999,
             qty: weight,
-            sellByWeight: true
+            sellByWeight: true,
+            product_type: pendingWeightProduct.product_type || 'goods',
+            isService: false
         });
         successSound.play();
         clearPendingWeightProduct();
@@ -1102,14 +1176,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             const q = searchInput.value.trim();
             if (q.length < 1) { resultsDiv.style.display = 'none'; return; }
             let products = [];
-            if (window.PosOffline) {
-                products = await PosOffline.searchProducts(q);
-                if (!products.length && PosOffline.isOnline()) {
-                    const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
+            if (window.PosOffline && PosOffline.isOnline()) {
+                // Online: server/tenant hiện tại là nguồn danh mục authoritative.
+                // Chỉ fallback cache khi request mạng thật sự lỗi; KHÔNG fallback khi server trả 0 kết quả.
+                try {
+                    const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
                     products = await r.json();
+                } catch (err) {
+                    console.warn('Live product search failed, fallback offline cache:', err);
+                    products = await PosOffline.searchProducts(q);
                 }
+            } else if (window.PosOffline) {
+                products = await PosOffline.searchProducts(q);
             } else {
-                const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
+                const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
                 products = await r.json();
             }
             resultsDiv.innerHTML = '';
@@ -1144,7 +1225,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         div.innerHTML = `<div><strong>${p.name}</strong>${weightBadge}${serviceBadge} (${unit})</div><div class="text-primary">${priceLabel} | ${stockLabel}</div>`;
         div.onclick = () => {
             if (isWeightProduct) {
-                setPendingWeightProduct({ id: p.id, name: p.name, price: price, unit: unit, maxQty: stock });
+                setPendingWeightProduct({
+                    id: p.id,
+                    name: p.name,
+                    price: price,
+                    unit: unit,
+                    maxQty: stock,
+                    product_type: p.product_type || 'goods'
+                });
                 searchInput.value = '';
                 resultsDiv.style.display = 'none';
                 if (!scalePort && scaleConfig.enabled) connectScale();
@@ -1326,6 +1414,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function checkout() {
         if (cart.length === 0) return;
         if (!validateCustomer()) return;
+        if (!(await validateCartProductIdsBeforeSubmit())) return;
         const data = getOrderData();
         if (data.payment_method === '112') {
             data.status = 'pending';
