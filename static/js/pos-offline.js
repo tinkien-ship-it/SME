@@ -3,7 +3,7 @@
     'use strict';
 
     const DB_NAME = 'keto_pos_offline_v1';
-    const DB_VER = 1;
+    const DB_VER = 2;
     const OUTBOX_KEY = 'keto_pos_outbox_backup';
     const SYNCED_RETENTION_DAYS = 7;
     const CATALOG_TTL_MS = 5 * 60 * 1000;
@@ -21,10 +21,26 @@
 
     function resolveTenantKey(opts) {
         opts = opts || {};
-        if (opts.tenantKey) return String(opts.tenantKey);
+
+        if (opts.tenantKey) {
+            const fromOpts = String(opts.tenantKey).trim();
+            if (fromOpts) return fromOpts;
+        }
+
         const meta = document.querySelector('meta[name="keto-tenant-id"]');
-        if (meta && meta.content) return String(meta.content).trim();
-        // Không lấy segment path (/sale) làm tenant — sẽ lệch khi đổi URL.
+        if (meta && meta.content) {
+            const fromMeta = String(meta.content).trim();
+            if (fromMeta) return fromMeta;
+        }
+
+        // Fallback an toàn cho các trang đang truyền tenant_id trên query string.
+        // Không lấy segment path (/sale) làm tenant vì có thể gây lẫn dữ liệu.
+        try {
+            const qs = new URLSearchParams(global.location ? global.location.search : '');
+            const fromQuery = String(qs.get('tenant_id') || '').trim();
+            if (fromQuery) return fromQuery;
+        } catch (e) { /* ignore */ }
+
         return 'default';
     }
 
@@ -69,22 +85,37 @@
             const req = indexedDB.open(DB_NAME, DB_VER);
             req.onupgradeneeded = function (ev) {
                 const db = ev.target.result;
+                const oldVersion = ev.oldVersion || 0;
+
+                // v2: catalog/menu phải tách theo tenant.
+                // Xóa cache v1 vì keyPath cũ chỉ là "id", có thể trộn sản phẩm giữa các tenant.
+                if (oldVersion < 2) {
+                    if (db.objectStoreNames.contains('catalog')) db.deleteObjectStore('catalog');
+                    if (db.objectStoreNames.contains('menu')) db.deleteObjectStore('menu');
+                }
+
                 if (!db.objectStoreNames.contains('catalog')) {
-                    const cat = db.createObjectStore('catalog', { keyPath: 'id' });
+                    const cat = db.createObjectStore('catalog', { keyPath: ['tenant', 'id'] });
+                    cat.createIndex('tenant', 'tenant', { unique: false });
                     cat.createIndex('name', 'name', { unique: false });
                     cat.createIndex('barcode', 'barcode', { unique: false });
                     cat.createIndex('barcode1', 'barcode1', { unique: false });
                     cat.createIndex('product_code', 'product_code', { unique: false });
                     cat.createIndex('weight_plu', 'weight_plu', { unique: false });
                 }
+
                 if (!db.objectStoreNames.contains('menu')) {
-                    db.createObjectStore('menu', { keyPath: 'id' });
+                    const menu = db.createObjectStore('menu', { keyPath: ['tenant', 'id'] });
+                    menu.createIndex('tenant', 'tenant', { unique: false });
                 }
+
                 if (!db.objectStoreNames.contains('outbox')) {
                     const ob = db.createObjectStore('outbox', { keyPath: 'client_uuid' });
                     ob.createIndex('status', 'status', { unique: false });
                     ob.createIndex('created_at', 'created_at', { unique: false });
+                    ob.createIndex('tenant', 'tenant', { unique: false });
                 }
+
                 if (!db.objectStoreNames.contains('meta')) {
                     db.createObjectStore('meta', { keyPath: 'key' });
                 }
@@ -141,6 +172,26 @@
         });
     }
 
+    function tenantMetaKey(name) {
+        return String(name) + ':' + tenantKey;
+    }
+
+    async function deleteTenantRows(store) {
+        const all = await idbGetAll(store);
+        for (const row of all) {
+            if (!row || row.tenant !== tenantKey) continue;
+            if (store === 'catalog' || store === 'menu') {
+                await idbDelete(store, [tenantKey, row.id]);
+            }
+        }
+    }
+
+    function onlyCurrentTenant(rows) {
+        return (rows || []).filter(function (row) {
+            return row && row.tenant === tenantKey;
+        });
+    }
+
     function fold(s) {
         const mapFrom = 'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ'
             + 'ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ';
@@ -178,7 +229,7 @@
     async function lookupWeightProductLocal(plu) {
         const key = String(plu || '').trim();
         if (!key) return null;
-        const all = await idbGetAll('catalog');
+        const all = onlyCurrentTenant(await idbGetAll('catalog'));
         const stripped = key.replace(/^0+/, '') || key;
         for (let i = 0; i < all.length; i++) {
             const p = all[i];
@@ -290,7 +341,8 @@
         opts = opts || {};
         if (!opts.force && isOnline()) {
             const meta = await getCatalogMeta();
-            if (meta && meta.count > 0 && meta.updated_at) {
+            // count = 0 cũng là một snapshot hợp lệ của tenant.
+            if (meta && meta.updated_at) {
                 const ts = Date.parse(meta.updated_at);
                 if (!Number.isNaN(ts) && (Date.now() - ts) < CATALOG_TTL_MS) {
                     return { success: true, count: meta.count, cached: true };
@@ -305,47 +357,69 @@
             });
             const data = await res.json();
             if (!data.success) throw new Error(data.error || 'Không tải danh mục');
-            for (const p of (data.products || [])) {
-                await idbPut('catalog', p);
+
+            const products = Array.isArray(data.products) ? data.products : [];
+            const menuRows = Array.isArray(data.menu) ? data.menu : [];
+
+            // Server trả snapshot đầy đủ của tenant hiện tại:
+            // xóa snapshot cũ của chính tenant này rồi nạp lại.
+            await deleteTenantRows('catalog');
+            for (const p of products) {
+                await idbPut('catalog', Object.assign({}, p, { tenant: tenantKey }));
             }
+
             if (includeMenu) {
-                for (const m of (data.menu || [])) {
-                    await idbPut('menu', m);
+                await deleteTenantRows('menu');
+                for (const m of menuRows) {
+                    await idbPut('menu', Object.assign({}, m, { tenant: tenantKey }));
                 }
             }
+
             if (data.scale_config) {
                 scaleConfig = data.scale_config;
-                await idbPut('meta', { key: 'scale_config', tenant: tenantKey, config: scaleConfig });
+                await idbPut('meta', {
+                    key: tenantMetaKey('scale_config'),
+                    tenant: tenantKey,
+                    config: scaleConfig
+                });
             }
+
+            const catalogCount = Number.isFinite(Number(data.count))
+                ? Number(data.count)
+                : products.length;
+
             await idbPut('meta', {
-                key: 'catalog',
-                updated_at: data.updated_at,
-                count: data.count,
+                key: tenantMetaKey('catalog'),
+                updated_at: data.updated_at || new Date().toISOString(),
+                count: catalogCount,
                 tenant: tenantKey,
             });
+
             document.dispatchEvent(new CustomEvent('pos-catalog-synced', {
-                detail: { count: data.count, updated_at: data.updated_at },
+                detail: { count: catalogCount, updated_at: data.updated_at, tenant: tenantKey },
             }));
-            return { success: true, count: data.count };
+
+            return { success: true, count: catalogCount };
         } catch (e) {
             return { success: false, error: String(e.message || e) };
         }
     }
 
     async function getCatalogMeta() {
-        const meta = await idbGet('meta', 'catalog');
-        return meta || null;
+        const meta = await idbGet('meta', tenantMetaKey('catalog'));
+        if (meta && meta.tenant === tenantKey) return meta;
+        return null;
     }
 
     async function loadCachedScaleConfig() {
-        const row = await idbGet('meta', 'scale_config');
-        if (row && row.config) scaleConfig = row.config;
+        const row = await idbGet('meta', tenantMetaKey('scale_config'));
+        if (row && row.tenant === tenantKey && row.config) scaleConfig = row.config;
     }
 
     async function searchProducts(q) {
         const needle = String(q || '').trim();
         if (!needle) return [];
-        const all = await idbGetAll('catalog');
+        const all = onlyCurrentTenant(await idbGetAll('catalog'));
         if (!all.length) return [];
         const qf = fold(needle);
         const qLower = needle.toLowerCase();
@@ -376,7 +450,7 @@
     async function lookupBarcodeLocal(barcode) {
         const code = String(barcode || '').trim();
         if (!code) return null;
-        const all = await idbGetAll('catalog');
+        const all = onlyCurrentTenant(await idbGetAll('catalog'));
         for (let i = 0; i < all.length; i++) {
             const p = all[i];
             if (String(p.barcode || '') === code || String(p.barcode1 || '') === code) {
@@ -459,12 +533,11 @@
     async function getPendingOutbox() {
         const all = await idbGetAll('outbox');
         return all.filter(function (x) {
-            const t = x.tenant || 'default';
-            // Bản cũ gán tenant = 'sale' (lấy từ pathname) — vẫn đồng bộ.
-            const tenantOk = t === tenantKey || t === 'sale' || t === 'default' || !x.tenant;
-            return tenantOk && (x.status === 'pending' || x.status === 'error');
+            return x &&
+                x.tenant === tenantKey &&
+                (x.status === 'pending' || x.status === 'error');
         }).sort(function (a, b) {
-            return String(a.created_at).localeCompare(String(b.created_at));
+            return String(a.created_at || '').localeCompare(String(b.created_at || ''));
         });
     }
 
@@ -485,6 +558,9 @@
     async function retryOutboxItem(clientUuid) {
         const item = await idbGet('outbox', clientUuid);
         if (!item) return { ok: false, error: 'Không tìm thấy' };
+        if (item.tenant !== tenantKey) {
+            return { ok: false, error: 'Đơn offline không thuộc tenant hiện tại' };
+        }
         item.status = 'pending';
         item.last_error = null;
         await idbPut('outbox', item);
@@ -586,6 +662,15 @@
     }
 
     async function replayOutboxItem(item) {
+        if (!item || item.tenant !== tenantKey) {
+            return {
+                ok: false,
+                retryable: false,
+                error: 'Bỏ qua đơn offline không thuộc tenant hiện tại',
+                item: item
+            };
+        }
+
         item.attempts = (item.attempts || 0) + 1;
         // Chuẩn hóa payload cũ đã xếp hàng (có thể còn order_id draft).
         if (item.kind !== 'pos_update') {
@@ -683,7 +768,7 @@
             }
             const all = await idbGetAll('outbox');
             backupOutboxLocal(all.filter(function (x) {
-                return (!x.tenant || x.tenant === tenantKey) && (x.status === 'pending' || x.status === 'error');
+                return x && x.tenant === tenantKey && (x.status === 'pending' || x.status === 'error');
             }));
             await purgeOldSyncedOutbox();
         } finally {
@@ -875,7 +960,7 @@
     async function cacheFbSale(tableId, saleData) {
         if (!tableId) return;
         await idbPut('meta', {
-            key: 'fb_sale_' + tableId,
+            key: tenantMetaKey('fb_sale_' + tableId),
             table_id: tableId,
             sale_id: saleData.sale_id,
             items: saleData.items || [],
@@ -887,7 +972,7 @@
 
     async function getCachedFbSale(tableId) {
         if (!tableId) return null;
-        const row = await idbGet('meta', 'fb_sale_' + tableId);
+        const row = await idbGet('meta', tenantMetaKey('fb_sale_' + tableId));
         if (row && row.tenant && row.tenant !== tenantKey) return null;
         return row;
     }
