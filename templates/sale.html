@@ -1133,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function createResultRow(p, isUnit1, isWeightProduct, isService = false) {
         const price = isUnit1 ? (p.sale_price || (p.base_price * p.unit_ratio)) : p.base_price;
-        const unit = isUnit1 ? p.unit1 : (p.unit || 'kg');
+        const unit = isUnit1 ? (p.unit1 || '') : (p.unit || (isService ? '' : (isWeightProduct ? 'kg' : 'Cái')));
         const stock = isService ? null : (isUnit1 ? Math.floor(p.quantity / p.unit_ratio) : p.quantity);
         const div = document.createElement('div');
         div.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center cursor-pointer';
@@ -1290,6 +1290,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             return {
                 product_id: item.id,
+                // Snapshot đúng nội dung người dùng đang bán/xuất HĐ tại POS.
+                product_name: item.name || '',
+                unit: item.unit ?? '',
+                product_type: item.product_type || 'goods',
                 quantity: item.qty,
                 price: item.price,
                 UseSaleUnit: item.useUnit1 ? 1 : 0,

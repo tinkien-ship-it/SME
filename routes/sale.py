@@ -800,6 +800,16 @@ def register_sale_routes(app):
                 merged[pid]["hkd_sector"] = snapshot_item_hkd_sector(
                     product_type, row['hkd_sector_code'], 'pos',
                 )
+                client_name = str(item.get("product_name") or item.get("name") or "").strip()
+                snapshot_name = client_name or str(row['name'] or '').strip() or None
+                if "unit" in item:
+                    # unit='' là chủ ý hợp lệ (dịch vụ/BĐSĐT), không tự đổi sang ĐVT khác.
+                    snapshot_unit = str(item.get("unit") or "").strip()
+                else:
+                    snapshot_unit = str(
+                        (row['unit1'] if use_unit1 else row['unit']) or ''
+                    ).strip()
+
                 merged[pid]["details"].append({
                     "qty_input": qty_input,
                     "price": price,
@@ -808,9 +818,8 @@ def register_sale_routes(app):
                     "avg_cost": float(row['avg_cost']),
                     "discount_pct": discount_pct,
                     "tax_pct": tax_pct,
-                    # Snapshot dòng bán do client gửi (BĐSĐT cần tên/ĐVT riêng cho từng dòng).
-                    "product_name": str(item.get("product_name") or item.get("name") or "").strip() or None,
-                    "unit": str(item.get("unit") or "").strip() or None,
+                    "product_name": snapshot_name,
+                    "unit": snapshot_unit,
                 })
 
             # Tạo hoặc cập nhật bảng sale — liên kết CRM (customer_id + trạng thái mua hàng)
@@ -895,51 +904,6 @@ def register_sale_routes(app):
                     insert_pos_sale_item(
                         cursor, sale_id, pid, d, info.get("hkd_sector"),
                     )
-
-                    # BĐSĐT: ép lưu snapshot product_name/unit vào CHÍNH dòng sale_items vừa tạo.
-                    # Không dùng last_insert_rowid() vì helper có thể thực hiện SQL nội bộ.
-                    if d.get("product_name") or d.get("unit"):
-                        _si = cursor.execute(
-                            """
-                            SELECT rowid, product_name, unit
-                            FROM sale_items
-                            WHERE sale_id = ? AND product_id = ?
-                            ORDER BY rowid DESC
-                            LIMIT 1
-                            """,
-                            (sale_id, pid),
-                        ).fetchone()
-                        if not _si:
-                            raise RuntimeError(
-                                f"Không tìm thấy sale_items vừa ghi (sale_id={sale_id}, product_id={pid})"
-                            )
-                        _si_rowid = _si["rowid"] if hasattr(_si, "keys") else _si[0]
-
-                        if d.get("product_name"):
-                            cursor.execute(
-                                "UPDATE sale_items SET product_name = ? WHERE rowid = ?",
-                                (d["product_name"], _si_rowid),
-                            )
-                        if d.get("unit"):
-                            cursor.execute(
-                                "UPDATE sale_items SET unit = ? WHERE rowid = ?",
-                                (d["unit"], _si_rowid),
-                            )
-
-                        _check = cursor.execute(
-                            "SELECT product_name, unit FROM sale_items WHERE rowid = ?",
-                            (_si_rowid,),
-                        ).fetchone()
-                        _saved_name = _check["product_name"] if hasattr(_check, "keys") else _check[0]
-                        _saved_unit = _check["unit"] if hasattr(_check, "keys") else _check[1]
-                        if d.get("product_name") and str(_saved_name or "").strip() != str(d["product_name"]).strip():
-                            raise RuntimeError(
-                                f"Không lưu được sale_items.product_name (sale_id={sale_id}, rowid={_si_rowid})"
-                            )
-                        if d.get("unit") and str(_saved_unit or "").strip() != str(d["unit"]).strip():
-                            raise RuntimeError(
-                                f"Không lưu được sale_items.unit (sale_id={sale_id}, rowid={_si_rowid})"
-                            )
 
             # Xử lý khi status = 'completed'
             if status == 'completed':
@@ -1270,6 +1234,15 @@ def register_sale_routes(app):
                 merged[pid]["hkd_sector"] = snapshot_item_hkd_sector(
                     product_type, p.get('hkd_sector_code'), 'pos',
                 )
+                client_name = str(item.get("product_name") or item.get("name") or "").strip()
+                snapshot_name = client_name or str(p.get('name') or '').strip() or None
+                if "unit" in item:
+                    snapshot_unit = str(item.get("unit") or "").strip()
+                else:
+                    snapshot_unit = str(
+                        (p.get('unit1') if use_unit1 else p.get('unit')) or ''
+                    ).strip()
+
                 merged[pid]["details"].append({
                     "qty_input": qty_input,
                     "price": price,
@@ -1278,9 +1251,8 @@ def register_sale_routes(app):
                     "avg_cost": float(p['avg_cost']),
                     "discount_pct": discount_pct,
                     "tax_pct": tax_pct,
-                    # Giữ snapshot tên/ĐVT khi sửa đơn.
-                    "product_name": str(item.get("product_name") or item.get("name") or "").strip() or None,
-                    "unit": str(item.get("unit") or "").strip() or None,
+                    "product_name": snapshot_name,
+                    "unit": snapshot_unit,
                 })
             # Cập nhật bảng sale với total_amount mới
             update_sql = """
@@ -1313,50 +1285,6 @@ def register_sale_routes(app):
                         cursor, sale_id, pid, d, info.get("hkd_sector"),
                     )
 
-                    # BĐSĐT: ép lưu snapshot product_name/unit vào CHÍNH dòng sale_items vừa tạo.
-                    # Không dùng last_insert_rowid() vì helper có thể thực hiện SQL nội bộ.
-                    if d.get("product_name") or d.get("unit"):
-                        _si = cursor.execute(
-                            """
-                            SELECT rowid, product_name, unit
-                            FROM sale_items
-                            WHERE sale_id = ? AND product_id = ?
-                            ORDER BY rowid DESC
-                            LIMIT 1
-                            """,
-                            (sale_id, pid),
-                        ).fetchone()
-                        if not _si:
-                            raise RuntimeError(
-                                f"Không tìm thấy sale_items vừa ghi (sale_id={sale_id}, product_id={pid})"
-                            )
-                        _si_rowid = _si["rowid"] if hasattr(_si, "keys") else _si[0]
-
-                        if d.get("product_name"):
-                            cursor.execute(
-                                "UPDATE sale_items SET product_name = ? WHERE rowid = ?",
-                                (d["product_name"], _si_rowid),
-                            )
-                        if d.get("unit"):
-                            cursor.execute(
-                                "UPDATE sale_items SET unit = ? WHERE rowid = ?",
-                                (d["unit"], _si_rowid),
-                            )
-
-                        _check = cursor.execute(
-                            "SELECT product_name, unit FROM sale_items WHERE rowid = ?",
-                            (_si_rowid,),
-                        ).fetchone()
-                        _saved_name = _check["product_name"] if hasattr(_check, "keys") else _check[0]
-                        _saved_unit = _check["unit"] if hasattr(_check, "keys") else _check[1]
-                        if d.get("product_name") and str(_saved_name or "").strip() != str(d["product_name"]).strip():
-                            raise RuntimeError(
-                                f"Không lưu được sale_items.product_name (sale_id={sale_id}, rowid={_si_rowid})"
-                            )
-                        if d.get("unit") and str(_saved_unit or "").strip() != str(d["unit"]).strip():
-                            raise RuntimeError(
-                                f"Không lưu được sale_items.unit (sale_id={sale_id}, rowid={_si_rowid})"
-                            )
             # Xử lý khi new_status = 'completed'
             if new_status == 'completed':
                 px_items = []

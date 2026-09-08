@@ -94,7 +94,7 @@ def snapshot_item_hkd_sector(product_type, hkd_sector_code, business_line='pos')
 
 
 def insert_pos_sale_item(cursor, sale_id, product_id, detail, hkd_sector_code=None):
-    """Ghi sale_items; thêm hkd_sector_code nếu cột tồn tại."""
+    """Ghi sale_items; snapshot tên/ĐVT của dòng bán và nhóm HKD nếu cột tồn tại."""
     cols = [
         'sale_id', 'product_id', 'quantity', 'price', 'cost_price',
         'UseSaleUnit', 'unit_ratio', 'discount_pct', 'tax_pct',
@@ -104,6 +104,16 @@ def insert_pos_sale_item(cursor, sale_id, product_id, detail, hkd_sector_code=No
         1 if detail['use_unit1'] else 0, detail['ratio'],
         detail['discount_pct'], detail['tax_pct'],
     ]
+
+    # Snapshot chứng từ phải nằm ngay trên sale_items, không phụ thuộc tên/ĐVT products về sau.
+    # Cho phép unit='' vì ĐVT rỗng là hợp lệ với một số dòng dịch vụ/BĐSĐT.
+    if table_has_column(cursor, 'sale_items', 'product_name'):
+        cols.append('product_name')
+        vals.append(detail.get('product_name'))
+    if table_has_column(cursor, 'sale_items', 'unit'):
+        cols.append('unit')
+        vals.append(detail.get('unit'))
+
     if hkd_sector_code and table_has_column(cursor, 'sale_items', 'hkd_sector_code'):
         cols.append('hkd_sector_code')
         vals.append(hkd_sector_code)
