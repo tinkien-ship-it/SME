@@ -109,14 +109,17 @@
     <table class="table-main">
         <thead>
             <tr>
-                <th width="4%">STT</th>
-                <th width="28%">Tên hàng hóa, dịch vụ</th>
-                <th width="8%">ĐVT</th>
-                <th width="8%">SL</th>
+                <th width="3%">STT</th>
+                <th width="24%">Tên hàng hóa, dịch vụ</th>
+                <th width="6%">ĐVT</th>
+                <th width="6%">SL</th>
                 <th width="10%">Đơn giá</th>
-                <th width="13%">Tổng tiền</th>
-                <th width="11%">C.Khấu</th>
-                <th width="18%">Thành tiền</th>
+                <th width="10%">Tiền hàng</th>
+                <th width="6%">% CK</th>
+                <th width="9%">Tiền CK</th>
+                <th width="7%">Thuế suất</th>
+                <th width="9%">Tiền thuế</th>
+                <th width="10%">Thành tiền</th>
             </tr>
         </thead>
         <tbody>
@@ -127,24 +130,24 @@
                 <td style="text-align: center;">{{ item.display_unit }}</td>
                 <td style="text-align: center;">{{ "{:,.1f}".format(item.quantity|float).replace(',', '.') }}</td>
                 <td style="text-align: right;">{{ "{:,.0f}".format(item.sold_price|float).replace(',', '.') }}</td>
-                
-                <td style="text-align: right;">
-                    {{ "{:,.0f}".format(item.line_subtotal|float).replace(',', '.') }}
+                <td style="text-align: right;">{{ "{:,.0f}".format(item.line_subtotal|float).replace(',', '.') }}</td>
+                <td style="text-align: center;">{{ "{:g}".format(item.discount_pct|float) }}%</td>
+                <td style="text-align: right;">{{ "{:,.0f}".format(item.line_discount|float).replace(',', '.') }}</td>
+                <td style="text-align: center;">
+                    {% if item.tax_pct|float == -1 %}KCT
+                    {% elif item.tax_pct|float == -2 %}KKKNT
+                    {% elif item.tax_pct|float < 0 %}—
+                    {% else %}{{ "{:g}".format(item.tax_pct|float) }}%
+                    {% endif %}
                 </td>
-
-                <td style="text-align: right;">
-                    {{ "{:,.0f}".format(item.line_discount|float).replace(',', '.') }}
-                </td>
-
-                <td style="text-align: right; font-weight: bold;">
-                    {{ "{:,.0f}".format(item.line_total|float).replace(',', '.') }}
-                </td>
+                <td style="text-align: right;">{{ "{:,.0f}".format(item.line_tax_amount|float).replace(',', '.') }}</td>
+                <td style="text-align: right; font-weight: bold;">{{ "{:,.0f}".format(item.line_total|float).replace(',', '.') }}</td>
             </tr>
             {% endfor %}
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="7" style="text-align: right; font-weight: bold; text-transform: uppercase;">Tổng cộng thanh toán (VNĐ):</td>
+                <td colspan="10" style="text-align: right; font-weight: bold; text-transform: uppercase;">Tổng cộng thanh toán (VNĐ):</td>
                 <td style="text-align: right; font-weight: bold; border-top: 2px solid #000;">
                     {{ "{:,.0f}".format(sale.total_amount|float).replace(',', '.') }}
                 </td>

@@ -1613,45 +1613,59 @@ def register_sale_routes(app):
             discount_pct = float(sale.get('discount_pct') or 0)
 
             # 2. LẤY CHI TIẾT HÀNG HÓA & DỊCH VỤ
-            # Sử dụng COALESCE để nếu p.name NULL (hàng nhập tay/dịch vụ) thì lấy si.product_name
+            # sale_items là snapshot/chứng từ gốc:
+            # - Tên hàng hóa/dịch vụ = sale_items.product_name
+            # - ĐVT = sale_items.unit
+            # - %CK / thuế suất = sale_items.discount_pct / sale_items.tax_pct
+            # Không lấy lại tên/ĐVT hiện tại từ products vì có thể khác chứng từ đã bán/xuất HĐ.
             c.execute("""
-                SELECT 
-                    si.quantity, 
+                SELECT
+                    si.quantity,
                     si.price AS sold_price,
-                    si.UseSaleUnit,
-                    COALESCE(p.name, si.product_name) AS product_name,
-                    p.unit AS base_unit,
-                    p.unit1 AS wholesale_unit,
-                    si.unit AS manual_unit
+                    si.product_name AS product_name,
+                    si.unit AS display_unit,
+                    si.discount_pct AS item_discount_pct,
+                    si.tax_pct AS item_tax_pct,
+                    si.line_total AS stored_line_total
                 FROM sale_items si
-                LEFT JOIN products p ON si.product_id = p.id
                 WHERE si.sale_id = ?
                 ORDER BY si.rowid
             """, (sale_id,))
-        
+
             items = []
             for row in c.fetchall():
                 item = dict(row)
-            
-                # Logic chọn đơn vị hiển thị (Cải tiến để lấy được unit từ rental_service)
-                if item.get('manual_unit'):
-                    item['display_unit'] = item['manual_unit']
-                elif item.get('UseSaleUnit') == 1 and item.get('wholesale_unit'):
-                    item['display_unit'] = item['wholesale_unit']
-                else:
-                    item['display_unit'] = item.get('base_unit') or 'Cái'
-            
-                # TÍNH TOÁN TÀI CHÍNH TỪNG DÒNG (Giữ đúng logic chiết khấu % của bạn)
+
+                item['product_name'] = (item.get('product_name') or '').strip() or '—'
+                # Hiển thị đúng snapshot ĐVT của sale_items; không fallback products.unit/unit1.
+                item['display_unit'] = (item.get('display_unit') or '').strip()
+
                 qty = float(item.get('quantity') or 0)
                 price = float(item.get('sold_price') or 0)
-            
+                item_discount_pct = float(
+                    item.get('item_discount_pct')
+                    if item.get('item_discount_pct') is not None
+                    else discount_pct
+                )
+                item_tax_pct = float(item.get('item_tax_pct') or 0)
+
                 line_subtotal = qty * price
-                line_discount = line_subtotal * (discount_pct / 100)
-            
+                line_discount = round(line_subtotal * item_discount_pct / 100)
+                line_after_discount = line_subtotal - line_discount
+                line_tax_amount = round(line_after_discount * item_tax_pct / 100) if item_tax_pct > 0 else 0
+                computed_total = line_after_discount + line_tax_amount
+                stored_total = item.get('stored_line_total')
+
+                item['discount_pct'] = item_discount_pct
+                item['tax_pct'] = item_tax_pct
                 item['line_subtotal'] = line_subtotal
                 item['line_discount'] = line_discount
-                item['line_total'] = line_subtotal - line_discount
-            
+                item['line_tax_amount'] = line_tax_amount
+                item['line_total'] = (
+                    float(stored_total)
+                    if stored_total is not None and float(stored_total or 0) > 0
+                    else computed_total
+                )
                 items.append(item)
 
             # 3. ĐỊNH DẠNG NGÀY THÁNG

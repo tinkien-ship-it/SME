@@ -4,12 +4,96 @@
 <meta charset="utf-8">
 <title>Phiếu thu {{ voucher_no }} — 01-TT</title>
 {% include "KeToanSME/_print_styles.html" %}
+<style>
+/* TT99: cụm Quyển số/Số/Nợ/Có canh phải như mẫu 01-TT */
+.receipt-number-block{
+  width: 245px;
+  margin: 2px 0 14px auto;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.receipt-number-row{
+  display:grid;
+  grid-template-columns: 72px minmax(0,1fr);
+  column-gap:6px;
+  align-items:baseline;
+}
+.receipt-number-label{ text-align:left; white-space:nowrap; }
+.receipt-number-value{ text-align:left; min-width:0; overflow-wrap:anywhere; }
+
+/* 5 ô chữ ký: canh giữa, không để tên/chức danh phá bố cục */
+.sign{
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:6px;
+  width:100%;
+  align-items:start;
+}
+.sign > div{
+  width:100% !important;
+  max-width:none !important;
+  min-width:0 !important;
+  margin:0 !important;
+  padding:0 3px !important;
+  text-align:center !important;
+  box-sizing:border-box;
+}
+.sign .sign-title,
+.sign .muted{
+  display:block !important;
+  width:100% !important;
+  max-width:100% !important;
+  text-align:center !important;
+}
+.sign .sign-title{
+  font-weight:700;
+  font-size:11px;
+  line-height:1.15;
+  white-space:nowrap !important;
+}
+.sign .muted{
+  margin-top:2px;
+  font-size:9px;
+  line-height:1.15;
+  white-space:nowrap !important;
+}
+.sign .sign-space{
+  display:block !important;
+  width:100% !important;
+  height:72px !important;
+  min-height:72px !important;
+}
+.sign-name{
+  display:block;
+  width:100% !important;
+  max-width:100% !important;
+  margin:0 auto;
+  padding:0 2px;
+  text-align:center !important;
+  font-weight:700;
+  line-height:1.15;
+  white-space:normal;
+  overflow-wrap:normal;
+  word-break:normal;
+  box-sizing:border-box;
+}
+@media print{
+  .receipt-number-block{width:245px;}
+  .sign{grid-template-columns:repeat(5,minmax(0,1fr)) !important; gap:4px !important;}
+  .sign > div{width:100% !important; max-width:none !important;}
+  .sign .sign-title{font-size:10px !important;}
+  .sign .muted{font-size:8.5px !important;}
+}
+</style>
+
 </head>
 <body>
 {% with print_label='IN PHIẾU THU' %}{% include "KeToanSME/_print_toolbar.html" %}{% endwith %}
 <div class="print-container">
   {% set amount_raw = receipt.amount|float %}
   {% set formatted_money = "{:,.0f}".format(amount_raw).replace(',', '.') %}
+  {% set voucher_year = (receipt.voucher_date|string)[:4] %}
+  {% set book_no = '01/' ~ voucher_year %}
 
   <table class="header-table">
     <tr>
@@ -20,31 +104,40 @@
       </td>
       <td class="mau-so">
         <div class="fw-bold"><strong>Mẫu số 01 - TT</strong></div>
-        <div class="muted">(Ban hành kèm theo Thông tư số 99/2025/TT-BTC<br>áp dụng doanh nghiệp / siêu nhỏ Thông tư 58)</div>
+        <div class="muted">(Kèm theo Thông tư số 99/2025/TT-BTC<br>ngày 27 tháng 10 năm 2025 của Bộ trưởng Bộ Tài chính)</div>
       </td>
     </tr>
   </table>
 
   <div class="title">PHIẾU THU</div>
   <div class="date-line">{{ receipt.voucher_date|format_vn_date_long }}</div>
-  <div class="number-line">Số: <strong>{{ voucher_no }}</strong></div>
+  <div class="receipt-number-block">
+    <div class="receipt-number-row"><span class="receipt-number-label">Quyển số:</span><strong class="receipt-number-value">{{ book_no }}</strong></div>
+    <div class="receipt-number-row"><span class="receipt-number-label">Số:</span><strong class="receipt-number-value">{{ voucher_no }}</strong></div>
+    <div class="receipt-number-row"><span class="receipt-number-label">Nợ:</span><strong class="receipt-number-value">{{ receipt.debit_account }}</strong></div>
+    <div class="receipt-number-row"><span class="receipt-number-label">Có:</span><strong class="receipt-number-value">{{ receipt.credit_account }}</strong></div>
+  </div>
 
   <div class="row">Họ và tên người nộp tiền: <strong>{{ receipt.party_name }}</strong></div>
   <div class="row">Địa chỉ: {{ receipt.party_address or '' }}</div>
-  <div class="row">Lý do thu: {{ receipt.reason or '' }}</div>
-  <div class="row">Số tiền: <strong>{{ formatted_money }} đ</strong>
-    (Nợ {{ receipt.debit_account }} / Có {{ receipt.credit_account }})</div>
-  <div class="row">Bằng chữ: <em>{{ amount_raw|so_thanh_chu|capitalize }}.</em></div>
-  <div class="row">Kèm theo: {{ receipt.attached_docs or 0 }} chứng từ gốc</div>
+  <div class="row">Lý do nộp: {{ receipt.reason or '' }}</div>
+  <div class="row">Số tiền: <strong>{{ formatted_money }} đ</strong> (Viết bằng chữ): <em>{{ amount_raw|so_thanh_chu|capitalize }}.</em></div>
+  <div class="row">Kèm theo: {{ receipt.attached_docs or 0 }} Chứng từ gốc{% if receipt.reference_document %}: {{ receipt.reference_document }}{% endif %}</div>
 
   <div class="text-end fst-italic mt-3" style="padding-right:40px;">{{ receipt.voucher_date|format_vn_date_long }}</div>
 
   <div class="sign">
-    <div><span class="sign-title">Giám đốc</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
+    <div><span class="sign-title">Giám đốc</span><span class="muted">(Ký, họ tên, đóng dấu)</span><div class="sign-space"></div>{% set director_name = info.representative_name or '' %}<div class="sign-name" style="font-size: {{ '10px' if director_name|length > 32 else ('11px' if director_name|length > 24 else '12px') }};">{{ director_name }}</div></div>
     <div><span class="sign-title">Kế toán trưởng</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
     <div><span class="sign-title">Người nộp tiền</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
+    <div><span class="sign-title">Người lập phiếu</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
     <div><span class="sign-title">Thủ quỹ</span><span class="muted">(Ký, họ tên)</span><div class="sign-space"></div></div>
   </div>
+
+  <div class="row mt-2">Đã nhận đủ số tiền (viết bằng chữ): <em>{{ amount_raw|so_thanh_chu|capitalize }}.</em></div>
+  <div class="row">+ Tỷ giá ngoại tệ (vàng bạc, đá quý): ...............................................................</div>
+  <div class="row">+ Số tiền quy đổi: ............................................................................................</div>
+  <div class="small muted mt-2">(Liên gửi ra ngoài phải đóng dấu)</div>
 </div>
 </body>
 </html>
