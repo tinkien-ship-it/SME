@@ -28,6 +28,17 @@ CASES = [
     ("SELECT IFNULL(MAX(id),0) FROM sale", 'COALESCE'),
     ("COALESCE(s.sale_no, 'DH' || printf('%06d', s.id))", 'lpad'),
     ("ORDER BY s.date DESC, si.rowid", 'si.id'),
+    (
+        "SELECT rowid, product_name, unit FROM sale_items "
+        "WHERE sale_id = ? AND product_id = ? ORDER BY rowid DESC LIMIT 1",
+        "SELECT id AS rowid",
+    ),
+    ("UPDATE sale_items SET unit = ? WHERE rowid = ?", "WHERE id = %s"),
+    (
+        "SELECT COALESCE(id, rowid) AS sale_item_id FROM sale_items "
+        "WHERE COALESCE(id, rowid) = ?",
+        "COALESCE(id, id)",
+    ),
     ("ORDER BY fullname COLLATE NOCASE", 'fullname'),
     ("WHERE date(v.punched_at) = date('now', 'localtime')", "TO_CHAR"),
     ("date('now', 'localtime', '-30 day')", 'INTERVAL'),
@@ -57,6 +68,50 @@ for sql, needle in CASES:
         failed += 1
     else:
         print(f'OK: {sql[:50]}...')
+
+# Regression: bare rowid trong sale_items
+_rowid_select = rewrite_sql_for_postgres(
+    "SELECT rowid, product_name, unit FROM sale_items "
+    "WHERE sale_id = ? AND product_id = ? ORDER BY rowid DESC LIMIT 1",
+    schema='t_demo',
+)
+if (
+    'SELECT id AS rowid' not in _rowid_select
+    or 'ORDER BY id DESC' not in _rowid_select
+    or _rowid_select.count('%s') != 2
+):
+    print(f'FAIL sale_items bare rowid SELECT:\n  -> {_rowid_select!r}')
+    failed += 1
+else:
+    print('OK: sale_items bare rowid SELECT -> id AS rowid...')
+
+_rowid_where = rewrite_sql_for_postgres(
+    "UPDATE sale_items SET product_name = ? WHERE rowid = ?",
+    schema='t_demo',
+)
+if 'WHERE id = %s' not in _rowid_where or 'rowid' in _rowid_where.lower():
+    print(f'FAIL sale_items bare rowid WHERE:\n  -> {_rowid_where!r}')
+    failed += 1
+else:
+    print('OK: sale_items bare rowid WHERE -> id...')
+
+_rowid_coalesce = rewrite_sql_for_postgres(
+    "SELECT COALESCE(id, rowid) AS sale_item_id FROM sale_items "
+    "WHERE COALESCE(id, rowid) = ?",
+    schema='t_demo',
+)
+if 'COALESCE(id, id)' not in _rowid_coalesce or 'rowid' in _rowid_coalesce.lower():
+    print(f'FAIL sale_items COALESCE(id,rowid):\n  -> {_rowid_coalesce!r}')
+    failed += 1
+else:
+    print('OK: sale_items COALESCE(id,rowid) -> COALESCE(id,id)...')
+
+_legacy_rowid = rewrite_sql_for_postgres("SELECT rowid FROM legacy_table", schema='t_demo')
+if 'rowid' not in _legacy_rowid.lower():
+    print(f'FAIL rowid scope guard:\n  -> {_legacy_rowid!r}')
+    failed += 1
+else:
+    print('OK: bare rowid ngoài sale_items không bị rewrite...')
 
 # Idempotent: rewrite lần 2 không biến %s → %%s (0 placeholders)
 once = rewrite_sql_for_postgres(

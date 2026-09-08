@@ -200,6 +200,26 @@ _ROWID_COL = re.compile(r'\b([a-zA-Z_][\w]*)\.rowid\b', re.IGNORECASE)
 _BARE_ROWID_ORDER = re.compile(r'\bORDER\s+BY\s+rowid\b', re.IGNORECASE)
 
 
+def _rewrite_sale_items_bare_rowid(sql: str) -> str:
+    """Rewrite bare ``rowid`` of ``sale_items`` to PostgreSQL ``id``.
+
+    ``SELECT rowid, ...`` keeps the output alias ``rowid`` because legacy
+    callers still read ``row['rowid']`` from CompatRow.
+    """
+    if not re.search(r'\bsale_items\b', sql, re.IGNORECASE):
+        return sql
+
+    alias_marker = '__KETO_COMPAT_ROWID_ALIAS__'
+    text = re.sub(
+        r'(\bSELECT\s+(?:DISTINCT\s+)?)rowid\b',
+        rf'\1id AS {alias_marker}',
+        sql,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r'(?<!\.)\browid\b', 'id', text, flags=re.IGNORECASE)
+    return text.replace(alias_marker, 'rowid')
+
+
 def _quote_ident(name: str) -> str:
     n = str(name or '').strip().strip('`"')
     return f'"{n}"'
@@ -739,6 +759,7 @@ def rewrite_sql_for_postgres(sql: str, *, schema: str = 'public') -> str:
     text = _COLLATE_NOCASE.sub('', text)
     text = _ROWID_COL.sub(r'\1.id', text)
     text = _BARE_ROWID_ORDER.sub('ORDER BY id', text)
+    text = _rewrite_sale_items_bare_rowid(text)
 
     text = _adapt_params(text)
 
