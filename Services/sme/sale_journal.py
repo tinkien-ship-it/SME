@@ -758,9 +758,41 @@ def _build_revenue_lines(
 
 
 def _cogs_accounts_for_product_type(product_type: str | None, move_type: str) -> tuple[str, str, str]:
-    """Trả (TK GV, TK kho, nhãn) — bán nội địa."""
+    """Trả (role giá vốn, role kho đối ứng, diễn giải giá vốn) — bán nội địa."""
     from Services.sme.cogs_accounts import cogs_accounts_for_line
     return cogs_accounts_for_line(product_type, move_type, channel='domestic')
+
+
+def _account_name_for_role(conn: sqlite3.Connection, role_or_code: str) -> str:
+    """Lấy đúng tên tài khoản ghi sổ sau khi resolve role -> leaf postable."""
+    raw = str(role_or_code or '').strip()
+    if not raw:
+        return ''
+
+    try:
+        from Services.sme.account_roles import resolve_posting_account
+        from Services.sme.coa_service import get_account
+
+        account_code = resolve_posting_account(conn, raw)
+        account = get_account(conn, account_code, commit=False)
+        if account:
+            name = str(account.get('name') or '').strip()
+            if name:
+                return name
+        return account_code
+    except Exception:
+        # Không làm hỏng bút toán chỉ vì không đọc được tên tài khoản.
+        return raw
+
+
+def _normalize_order_document_no(value: object) -> str | None:
+    """Chuẩn hóa tiền tố số đơn hàng thành 'ĐH' trong bút toán SME."""
+    document_no = str(value or '').strip()
+    if not document_no:
+        return None
+    if document_no[:2].lower() == 'đh':
+        return 'ĐH' + document_no[2:]
+    return document_no
 
 
 def _build_cogs_lines(conn: sqlite3.Connection, sale_id: int) -> list[dict]:
@@ -805,24 +837,29 @@ def _build_cogs_lines(conn: sqlite3.Connection, sale_id: int) -> list[dict]:
             continue
         move_type = row[0]
         product_type = row[1] if len(row) > 2 else 'goods'
-        debit_code, credit_code, label = _cogs_accounts_for_product_type(product_type, move_type)
-        lines.extend([
-            {
+        debit_code, credit_code, cogs_label = _cogs_accounts_for_product_type(
+            product_type,
+            move_type,
+        )
+
+        lines.append({
+            'sequence': sequence,
+            'account_code': debit_code,
+            'debit': amount,
+            'credit': 0,
+            'description': cogs_label,
+        })
+        sequence += 1
+
+        if credit_code:
+            lines.append({
                 'sequence': sequence,
-                'account_code': debit_code,
-                'debit': amount,
-                'credit': 0,
-                'description': f'{label}',
-            },
-            {
-                'sequence': sequence + 1,
                 'account_code': credit_code,
                 'debit': 0,
                 'credit': amount,
-                'description': f'Xuất kho {label}',
-            },
-        ])
-        sequence += 2
+                'description': _account_name_for_role(conn, credit_code),
+            })
+            sequence += 1
     return lines
 
 
@@ -903,7 +940,9 @@ def sync_sale_journals(
         }
 
     posting_date = str(sale['date'] or '')[:10]
-    document_no = sale['sale_no'] if 'sale_no' in sale.keys() else None
+    document_no = _normalize_order_document_no(
+        sale['sale_no'] if 'sale_no' in sale.keys() else None
+    )
     description = f"Bán hàng {document_no or ('#' + str(sale_id))}"
 
     provision_result: dict = {}
@@ -968,7 +1007,7 @@ def sync_sale_journals(
             document_no=document_no,
             document_id=sale_id,
             business_type='GIA_VON_BAN_HANG',
-            description=f'{description.lower()}',
+            description=description,
             reference_document=document_no,
             created_by=created_by,
             branch_code=branch,

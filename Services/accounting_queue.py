@@ -27,7 +27,7 @@ from db_utils import (
 logger = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = 5
-BATCH_SIZE = 5  # Giữ batch nhỏ — background worker không giữ khóa SQLite lâu
+BATCH_SIZE = 2  # Ưu tiên độ phản hồi POS: worker chỉ xử lý ít job mỗi nhịp
 _ACCT_QUEUE_FLAG = 'accounting_queue_schema_v1'
 
 _SKIP_REASONS = frozenset({
@@ -889,23 +889,41 @@ def get_sale_accounting_status(conn: sqlite3.Connection, sale_id: int) -> dict:
 
 
 def _process_one_job(conn: sqlite3.Connection, job: sqlite3.Row) -> str:
-    """Xử lý 1 job trong **một** transaction (BEGIN IMMEDIATE → ghi sổ → cập nhật status → COMMIT)."""
+    """Xử lý 1 job với pha claim ngắn, rồi mới mở transaction ghi sổ.
+
+    Mục tiêu: không giữ BEGIN IMMEDIATE từ lúc đổi trạng thái job đến hết toàn bộ
+    phần chuẩn bị. Transaction ghi sổ vẫn atomic; POS chỉ cạnh tranh write-lock trong
+    đúng khoảng thời gian journal thực sự được ghi.
+    """
     from Services.sme.sale_journal import sync_sale_journals
 
     job_id = job['id']
     sale_id = job['sale_id']
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    started_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    begin_immediate(conn, label='accounting_job')
-    conn.execute(
-        "UPDATE accounting_jobs SET status = 'processing', started_at = ?, attempts = attempts + 1 WHERE id = ?",
-        (now, job_id),
+    # Pha 1: claim job thật nhanh rồi COMMIT ngay. WHERE trạng thái giúp tránh
+    # hai worker cùng claim một job nếu scheduler vô tình chạy chồng.
+    begin_immediate(conn, label='accounting_job_claim')
+    claimed = conn.execute(
+        """
+        UPDATE accounting_jobs
+        SET status = 'processing', started_at = ?, attempts = attempts + 1
+        WHERE id = ? AND status IN ('pending', 'retry')
+        """,
+        (started_at, job_id),
     )
+    if getattr(claimed, 'rowcount', 1) == 0:
+        sqlite_commit(conn, label='accounting_job_claim')
+        return 'skipped'
+    sqlite_commit(conn, label='accounting_job_claim')
 
+    # Chuẩn bị dữ liệu ngoài write transaction.
     features = None
     if job['features_json']:
         features = json.loads(job['features_json'])
 
+    # Pha 2: transaction kế toán riêng. Giữ atomic cho toàn bộ journal của sale.
+    begin_immediate(conn, label='accounting_posting')
     result = sync_sale_journals(
         conn,
         sale_id,
@@ -915,6 +933,7 @@ def _process_one_job(conn: sqlite3.Connection, job: sqlite3.Row) -> str:
         features=features,
     )
 
+    completed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     if result.get('posted') or result.get('reason') in _SKIP_REASONS:
         _archive_status_conflicts(
             conn,
@@ -925,7 +944,7 @@ def _process_one_job(conn: sqlite3.Connection, job: sqlite3.Row) -> str:
         )
         conn.execute(
             "UPDATE accounting_jobs SET status = 'completed', completed_at = ?, last_error = NULL WHERE id = ?",
-            (now, job_id),
+            (completed_at, job_id),
         )
         sqlite_commit(conn, label='accounting_queue')
         return 'processed'
@@ -936,7 +955,6 @@ def _process_one_job(conn: sqlite3.Connection, job: sqlite3.Row) -> str:
     )
     sqlite_commit(conn, label='accounting_queue')
     return 'skipped'
-
 
 def process_accounting_jobs(conn: sqlite3.Connection, *, batch_size: int = BATCH_SIZE) -> dict:
     """

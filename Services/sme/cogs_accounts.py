@@ -49,20 +49,20 @@ def cogs_accounts_for_line(
     is_service = pt in ('service', 'services', 'dich_vu', 'dv')
 
     if is_service:
-        return 'cogs.service.processing', '', 'dịch vụ'
+        return 'cogs.service.processing', '', 'Giá vốn dịch vụ'
 
     if ch == CHANNEL_EXPORT:
         if is_finished:
-            return 'cogs.fg.export', 'inv.finished', 'GV TP xuất khẩu'
+            return 'cogs.fg.export', 'inv.finished', 'Giá vốn thành phẩm xuất khẩu'
         if is_material:
-            return 'cogs.fg.export', 'inv.materials', 'GV NVL xuất khẩu'
-        return 'cogs.goods.export', 'inv.goods', 'GV HH xuất khẩu'
+            return 'cogs.fg.export', 'inv.materials', 'Giá vốn nguyên liệu, vật liệu xuất khẩu'
+        return 'cogs.goods.export', 'inv.goods', 'Giá vốn hàng hóa xuất khẩu'
 
     if is_finished:
-        return 'cogs.fg.domestic', 'inv.finished', 'GV TP nội địa'
+        return 'cogs.fg.domestic', 'inv.finished', 'Giá vốn thành phẩm bán trong nước'
     if is_material:
-        return 'cogs.fg.domestic', 'inv.materials', 'GV NVL / chế biến nội địa'
-    return 'cogs.goods.domestic', 'inv.goods', 'GV HH nội địa'
+        return 'cogs.fg.domestic', 'inv.materials', 'Giá vốn nguyên liệu, vật liệu sử dụng cho chế biến'
+    return 'cogs.goods.domestic', 'inv.goods', 'Giá vốn hàng hóa bán trong nước'
 
 
 def inventory_tk_for_product_type(product_type: str | None = None) -> str:

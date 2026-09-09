@@ -426,19 +426,25 @@ def _fb_finalize_checkout(cursor, sale_id, table_id, customer_name, payment_meth
     cursor.execute(
         "UPDATE tables SET current_sale_id = NULL, status = 'Available' WHERE id = ?", (table_id,))
 
+    return final_total, sale_no
+
+
+def _enqueue_fb_sale_accounting(conn, sale_id: int, *, replace_existing: bool = False) -> None:
+    """Chỉ enqueue kế toán sau khi sale F&B đã COMMIT; không chặn checkout."""
     try:
         from Services.accounting_queue import ensure_sale_accounting_posted
+        profile = get_current_tenant_profile()
         ensure_sale_accounting_posted(
-            cursor.connection,
-            sale_id,
-            accounting_regime=get_current_tenant_profile().get('accounting_regime'),
-            features=get_current_tenant_profile().get('features'),
+            conn,
+            int(sale_id),
+            accounting_regime=profile.get('accounting_regime'),
+            features=profile.get('features'),
             created_by=session.get('user_name') or (session.get('user') or {}).get('username'),
-            sync_now=True,
+            replace_existing=replace_existing,
+            sync_now=False,
         )
     except Exception as exc:
-        logger.warning('ensure accounting F&B sale %s: %s', sale_id, exc)
-    return final_total, sale_no
+        logger.warning('enqueue accounting F&B sale %s: %s', sale_id, exc)
 
 
 def complete_fb_bank_payment(sale_id):
@@ -492,6 +498,7 @@ def complete_fb_bank_payment(sale_id):
             cursor, sale_id, table_id, customer_name, payment_method, sale_date, is_einvoice, items
         )
         sqlite_commit(conn, label='fb_write')
+        _enqueue_fb_sale_accounting(conn, sale_id)
         return {"success": True, "sale_id": sale_id}
 
     try:
@@ -857,22 +864,7 @@ def register_fb_routes(app):
             if client_uuid:
                 existing = find_sale_by_client_uuid(conn, client_uuid)
                 if existing and str(existing.get('status') or '').lower() == 'completed':
-                    try:
-                        from Services.accounting_queue import ensure_sale_accounting_posted
-                        profile = get_current_tenant_profile()
-                        ensure_sale_accounting_posted(
-                            conn,
-                            int(existing['id']),
-                            accounting_regime=profile.get('accounting_regime'),
-                            features=profile.get('features'),
-                            created_by=session.get('user_name') or (session.get('user') or {}).get('username'),
-                            sync_now=True,
-                        )
-                    except Exception as acct_exc:
-                        logger.warning(
-                            'ensure_sale_accounting_posted F&B dedupe sale %s: %s',
-                            existing.get('id'), acct_exc,
-                        )
+                    _enqueue_fb_sale_accounting(conn, int(existing['id']))
                     return jsonify({
                         "success": True,
                         "sale_id": existing['id'],
@@ -962,6 +954,7 @@ def register_fb_routes(app):
                         pass
 
                 sqlite_commit(conn, label='fb_write')
+                _enqueue_fb_sale_accounting(conn, sale_id)
                 return {
                     "success": True,
                     "sale_id": sale_id,

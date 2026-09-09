@@ -575,7 +575,7 @@ def complete_pos_bank_payment(sale_id):
                 accounting_regime=profile.get('accounting_regime'),
                 features=profile.get('features'),
                 created_by=session.get('user_name'),
-                sync_now=True,
+                sync_now=False,
             )
         except Exception as acct_exc:
             logging.warning('ensure_sale_accounting_posted bank pay sale %s: %s', sale_id, acct_exc)
@@ -700,7 +700,7 @@ def register_sale_routes(app):
                                 features=profile.get('features'),
                                 created_by=session.get('user_name'),
                                 replace_existing=False,
-                                sync_now=True,
+                                sync_now=False,
                             )
                         except Exception as acct_exc:
                             logging.warning(
@@ -1007,7 +1007,7 @@ def register_sale_routes(app):
                         features=profile.get('features'),
                         created_by=session.get('user_name'),
                         replace_existing=old_status == 'completed',
-                        sync_now=True,
+                        sync_now=False,
                     )
                 except Exception as acct_exc:
                     logging.warning(
@@ -1417,7 +1417,7 @@ def register_sale_routes(app):
                     features=profile.get('features'),
                     created_by=session.get('user_name'),
                     replace_existing=old_status != 'draft',
-                    sync_now=True,
+                    sync_now=False,
                 )
             except Exception as acct_exc:
                 logging.warning(
