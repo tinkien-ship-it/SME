@@ -1301,44 +1301,151 @@ def register_invoice_routes(app):
             return self._send_request(url_create, [payload])
 
         def _send_request(self, url, payload):
-            """Gửi request chính thức đến Mắt Bão và xử lý kết quả trả về"""
+            """
+            Gửi request đến Mắt Bão và chuẩn hóa response.
+
+            Mắt Bão có trường hợp create-invoice trả errorCode=201 ở lớp ngoài
+            nhưng phần tử data lại trả errorCode=200 + dữ liệu hóa đơn với thông báo
+            "Mã Số [...] đã tồn tại". Đây là tình huống retry/idempotency: hóa đơn
+            đã được tạo ở provider, vì vậy phải recover dữ liệu thay vì báo thất bại.
+            """
             try:
                 headers = self._get_headers()
                 res = requests.post(url, json=payload, headers=headers, timeout=30, verify=False)
                 res_data = res.json()
 
-                logging.info(f"Matbao Response: {res_data}")
+                logging.info("Matbao Response: %s", res_data)
 
-                # Kiểm tra mã lỗi từ Mắt Bão (có thể là errorCode hoặc ErrorCode tùy API)
-                error_code = res_data.get('errorCode') or res_data.get('ErrorCode')
-                if error_code != 200:
+                def _code(obj):
+                    if not isinstance(obj, dict):
+                        return None
+                    value = obj.get('errorCode')
+                    if value is None:
+                        value = obj.get('ErrorCode')
+                    try:
+                        return int(value)
+                    except (TypeError, ValueError):
+                        return None
+
+                def _message(obj):
+                    if not isinstance(obj, dict):
+                        return ''
+                    return str(obj.get('message') or obj.get('Message') or '').strip()
+
+                def _actual_from_item(item):
+                    if not isinstance(item, dict):
+                        return {}
+                    nested = item.get('data')
+                    if not isinstance(nested, dict):
+                        nested = item.get('Data')
+                    return nested if isinstance(nested, dict) else item
+
+                data_obj = res_data.get('data')
+                if data_obj is None:
+                    data_obj = res_data.get('Data')
+
+                if isinstance(data_obj, list):
+                    item = data_obj[0] if data_obj else {}
+                elif isinstance(data_obj, dict):
+                    item = data_obj
+                else:
+                    item = {}
+
+                actual = _actual_from_item(item)
+                outer_code = _code(res_data)
+                item_code = _code(item)
+                outer_msg = _message(res_data)
+                item_msg = _message(item)
+                combined_msg = f"{outer_msg} {item_msg}".lower()
+
+                # Thành công thông thường: errorCode=200 ở lớp ngoài.
+                normal_success = outer_code == 200
+
+                # Idempotent recovery:
+                # create-invoice có thể báo lỗi lớp ngoài vì MTChieu đã tồn tại,
+                # trong khi item bên trong errorCode=200 và chứa chính hóa đơn đã tạo.
+                invoice_no = (
+                    actual.get('shDon')
+                    or actual.get('SHDon')
+                    or actual.get('SO')
+                    or actual.get('No')
+                ) if isinstance(actual, dict) else None
+                pdf_url = (
+                    actual.get('urlDownloadPDF') or actual.get('PDFUrl')
+                ) if isinstance(actual, dict) else None
+                xml_url = (
+                    actual.get('urlDownloadXML') or actual.get('XMLUrl')
+                ) if isinstance(actual, dict) else None
+
+                duplicate_msg = (
+                    'đã tồn tại' in combined_msg
+                    or 'da ton tai' in combined_msg
+                    or 'already exist' in combined_msg
+                    or 'already exists' in combined_msg
+                )
+                recovered_existing = (
+                    outer_code != 200
+                    and item_code == 200
+                    and duplicate_msg
+                    and bool(invoice_no)
+                    and bool(pdf_url or xml_url)
+                )
+
+                if not normal_success and not recovered_existing:
                     return {
                         "success": False,
-                        "error": res_data.get('message') or res_data.get('Message') or "Lỗi không xác định từ Mắt Bão"
+                        "error": outer_msg or item_msg or "Lỗi không xác định từ Mắt Bão",
+                        "provider_error_code": outer_code,
                     }
 
-                data_list = res_data.get('data') or res_data.get('Data') or []
-                if not data_list:
-                    return {"success": False, "error": "API trả về thành công nhưng không có dữ liệu hóa đơn."}
+                if not actual:
+                    return {
+                        "success": False,
+                        "error": "API trả về thành công nhưng không có dữ liệu hóa đơn."
+                    }
 
-                # Lấy object hóa đơn đầu tiên trong mảng trả về
-                item = data_list[0] if isinstance(data_list, list) else data_list
-                actual = item.get('data', {}) if isinstance(item.get('data'), dict) else item
+                if recovered_existing:
+                    logging.warning(
+                        "Matbao idempotent recovery: hóa đơn đã tồn tại; "
+                        "invoice_no=%s MTChieu=%s outer_code=%s item_code=%s",
+                        invoice_no,
+                        actual.get('mtChieu') or actual.get('MTChieu') or '',
+                        outer_code,
+                        item_code,
+                    )
+
+                try:
+                    total_amount = float(actual.get('tgTTTBSo') or actual.get('TgTTTBSo') or 0)
+                except (TypeError, ValueError):
+                    total_amount = 0.0
 
                 return {
                     "success": True,
-                    "invoice_id": str(actual.get('InvID') or actual.get('maSoHDon') or ''),
-                    "invoice_no": str(actual.get('shDon') or actual.get('SO') or actual.get('No') or ''),
-                    "pdf_url": actual.get('urlDownloadPDF') or actual.get('PDFUrl'),
-                    "xml_url": actual.get('urlDownloadXML') or actual.get('XMLUrl'),
-                    "invoice_date": str(actual.get('nLap') or actual.get('ArisingDate') or '')[:10],
-                    "tax_authority_status": actual.get('tenTThaiHDon') or actual.get('TenTTHDon') or 'Chưa Gửi CQT',
-                    "total_amount": float(actual.get('tgTTTBSo') or actual.get('TgTTTBSo') or 0),
+                    "recovered_existing": recovered_existing,
+                    "already_exists_at_provider": recovered_existing,
+                    "invoice_id": str(
+                        actual.get('InvID')
+                        or actual.get('maSoHDon')
+                        or actual.get('MaSoHDon')
+                        or ''
+                    ),
+                    "invoice_no": str(invoice_no or ''),
+                    "pdf_url": pdf_url,
+                    "xml_url": xml_url,
+                    "invoice_date": str(
+                        actual.get('nLap') or actual.get('NLap') or actual.get('ArisingDate') or ''
+                    )[:10],
+                    "tax_authority_status": (
+                        actual.get('tenTThaiHDon')
+                        or actual.get('TenTTHDon')
+                        or 'Chưa Gửi CQT'
+                    ),
+                    "total_amount": total_amount,
                     "tax_code": actual.get('nMua_MST') or actual.get('NMua_MST'),
-                    "address": actual.get('nMua_DChi') or actual.get('NMua_DChi')
+                    "address": actual.get('nMua_DChi') or actual.get('NMua_DChi'),
                 }
             except Exception as e:
-                logging.error(f"❌ _send_request error: {str(e)}")
+                logging.error("❌ _send_request error: %s", str(e), exc_info=True)
                 return {"success": False, "error": f"Lỗi kết nối Mắt Bão: {str(e)}"}
 
     def _normalize_loai_hdon(value, default=1):

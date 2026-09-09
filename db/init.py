@@ -253,6 +253,43 @@ def ensure_products_schema(conn):
     conn.commit()
 
 
+def ensure_outward_invoice_id_text(conn):
+    """
+    PostgreSQL: outward_invoices.invoice_id là ID hóa đơn bên nhà cung cấp,
+    phải là TEXT. Một số schema migrate cũ đã tạo BIGINT/INTEGER.
+    SQLite không cần đổi kiểu vì SQLite cho phép lưu giá trị động.
+    """
+    from db.dialect import is_postgres
+    from db.schema_helpers import table_exists
+
+    if not is_postgres() or not table_exists(conn, 'outward_invoices'):
+        return
+
+    row = conn.execute(
+        """
+        SELECT data_type
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'outward_invoices'
+          AND column_name = 'invoice_id'
+        LIMIT 1
+        """
+    ).fetchone()
+    if not row:
+        return
+
+    data_type = row[0] if not hasattr(row, 'keys') else row['data_type']
+    if str(data_type).lower() not in ('text', 'character varying', 'character'):
+        conn.execute(
+            """
+            ALTER TABLE outward_invoices
+            ALTER COLUMN invoice_id TYPE TEXT
+            USING invoice_id::text
+            """
+        )
+        print('[MIGRATE] outward_invoices.invoice_id: %s -> TEXT' % data_type)
+
+
 def apply_schema_migrations(conn):
     """
     Migrate schema đầy đủ cho MỘT file SQLite (main hoặc tenant).
@@ -261,6 +298,11 @@ def apply_schema_migrations(conn):
     c = conn.cursor()
     ensure_products_schema(conn)
     ensure_invoice_settings_schema(conn)
+    _migrate_guard(
+        conn,
+        'outward_invoices.invoice_id TEXT',
+        lambda: ensure_outward_invoice_id_text(conn),
+    )
     _migrate_guard(conn, 'fb schema', lambda: __import__(
         'Services.fb_schema', fromlist=['ensure_fb_schema']
     ).ensure_fb_schema(conn, commit=False))
