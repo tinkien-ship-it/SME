@@ -20,7 +20,7 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'root_hint': '6321',
         'default_account': '6321',
         'label': 'Giá vốn hàng hóa (nội địa)',
-        'description': 'GV HH bán trong nước — mặc định 6321; mở 63211… nếu cần tách',
+        'description': 'Giá vốn hàng hóa bán trong nước — mặc định 6321; mở 63211… nếu cần tách',
         'category': 'cogs',
     },
     {
@@ -28,7 +28,7 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'root_hint': '6321',
         'default_account': '6321',
         'label': 'Giá vốn hàng hóa (xuất khẩu)',
-        'description': 'GV HH xuất khẩu — mặc định 6321; mở 63212… nếu cần tách',
+        'description': 'Giá vốn hàng hóa xuất khẩu — mặc định 6321; mở 63212… nếu cần tách',
         'category': 'cogs',
     },
     {
@@ -36,7 +36,7 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'root_hint': '6322',
         'default_account': '6322',
         'label': 'Giá vốn thành phẩm (nội địa)',
-        'description': 'GV TP bán trong nước — mặc định 6322',
+        'description': 'Giá vốn thành phẩm bán trong nước — mặc định 6322',
         'category': 'cogs',
     },
     {
@@ -44,7 +44,7 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'root_hint': '6322',
         'default_account': '6322',
         'label': 'Giá vốn thành phẩm (xuất khẩu)',
-        'description': 'GV TP xuất khẩu — mặc định 6322',
+        'description': 'Giá vốn thành phẩm xuất khẩu — mặc định 6322',
         'category': 'cogs',
     },
     {
@@ -52,7 +52,7 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'root_hint': '6323',
         'default_account': '6323',
         'label': 'Giá vốn dịch vụ',
-        'description': 'GV dịch vụ — mặc định 6323',
+        'description': 'Giá vốn dịch vụ — mặc định 6323',
         'category': 'cogs',
     },
     {
@@ -60,7 +60,7 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'root_hint': '6323',
         'default_account': '6323',
         'label': 'Giá vốn dịch vụ khác',
-        'description': 'GV dịch vụ khác — mặc định 6323; mở TK con nếu cần tách',
+        'description': 'Giá vốn dịch vụ khác — mặc định 6323; mở TK con nếu cần tách',
         'category': 'cogs',
     },
     {
@@ -76,7 +76,7 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'root_hint': '5111',
         'default_account': '5111',
         'label': 'Doanh thu hàng hóa',
-        'description': 'DT bán hàng hóa',
+        'description': 'Doanh thu bán hàng hóa',
         'category': 'revenue',
     },
     {
@@ -84,7 +84,7 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'root_hint': '5112',
         'default_account': '5112',
         'label': 'Doanh thu thành phẩm',
-        'description': 'DT bán thành phẩm',
+        'description': 'Doanh thu bán thành phẩm',
         'category': 'revenue',
     },
     {
@@ -92,7 +92,7 @@ DEFAULT_ACCOUNT_ROLES: list[dict[str, str]] = [
         'root_hint': '5113',
         'default_account': '5113',
         'label': 'Doanh thu dịch vụ',
-        'description': 'DT cung cấp dịch vụ',
+        'description': 'Doanh thu cung cấp dịch vụ',
         'category': 'revenue',
     },
     {

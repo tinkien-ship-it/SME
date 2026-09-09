@@ -812,7 +812,7 @@ def _build_cogs_lines(conn: sqlite3.Connection, sale_id: int) -> list[dict]:
                 'account_code': debit_code,
                 'debit': amount,
                 'credit': 0,
-                'description': f'Giá vốn {label}',
+                'description': f'{label}',
             },
             {
                 'sequence': sequence + 1,
@@ -968,7 +968,7 @@ def sync_sale_journals(
             document_no=document_no,
             document_id=sale_id,
             business_type='GIA_VON_BAN_HANG',
-            description=f'Giá vốn {description.lower()}',
+            description=f'{description.lower()}',
             reference_document=document_no,
             created_by=created_by,
             branch_code=branch,
