@@ -68,6 +68,25 @@ def _rows(cur) -> list[dict]:
     return [_row(r) for r in cur.fetchall()]
 
 
+def _table_columns(conn, table_name: str) -> set[str]:
+    """Portable column introspection for SQLite/PostgreSQL."""
+    from db_utils import is_postgres
+    name = str(table_name or '').strip()
+    if not name:
+        return set()
+    if is_postgres():
+        rows = conn.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = current_schema() AND table_name = ?
+            """,
+            (name,),
+        ).fetchall()
+        return {str(_row(r).get('column_name') or '').strip() for r in rows if _row(r).get('column_name')}
+    return {str(r[1]) for r in conn.execute(f'PRAGMA table_info("{name}")').fetchall()}
+
+
 def normalize_phone_digits(phone: str | None) -> str:
     """Chuẩn hóa SĐT để so khớp (bỏ ký tự; 84xxxxxxxxx → 0xxxxxxxxx)."""
     digits = ''.join(c for c in str(phone or '') if c.isdigit())
@@ -1306,76 +1325,154 @@ def customer_360(conn: sqlite3.Connection, customer_id: int) -> dict:
         conn, int(customer_id), cust.get('crm_lifecycle'),
     )
 
+    # Đơn hàng: chỉ SELECT các cột thực sự tồn tại để không làm PostgreSQL
+    # chuyển transaction sang trạng thái aborted khi schema tenant cũ thiếu cột.
     sales = []
     try:
-        sales = _rows(
-            conn.execute(
-                """
-                SELECT id, date, sale_no, total_amount, status, customer_name, payment_method
-                FROM sale
-                WHERE customer_id = ?
-                   OR TRIM(COALESCE(customer_name,'')) = TRIM(COALESCE(?,''))
-                   OR TRIM(COALESCE(company_name,'')) = TRIM(COALESCE(?,''))
-                ORDER BY id DESC LIMIT 50
-                """,
-                (customer_id, cust.get('name'), cust.get('company_name') or cust.get('name')),
-            )
-        )
-    except sqlite3.Error:
-        sales = _rows(
-            conn.execute(
-                """
-                SELECT id, date, total_amount, status, customer_name
-                FROM sale WHERE customer_id = ? ORDER BY id DESC LIMIT 50
-                """,
-                (customer_id,),
-            )
-        )
-
-    debt = {'balance': 0.0, 'summary': {}}
-    party_name = (cust.get('company_name') or cust.get('name') or '').strip()
-    try:
-        from Services.sme.debt_ledger import ar_customer_detail
-
-        detail = ar_customer_detail(conn, party_name)
-        summary = detail.get('summary') or {}
-        debt = {
-            'balance': _f(summary.get('remaining') or summary.get('balance') or detail.get('balance')),
-            'summary': summary,
-        }
+        sale_cols = _table_columns(conn, 'sale')
+        if sale_cols:
+            wanted = ['id', 'date', 'sale_no', 'total_amount', 'status', 'customer_name', 'payment_method']
+            select_cols = [c for c in wanted if c in sale_cols]
+            if 'id' not in select_cols:
+                select_cols.insert(0, 'id')
+            where_parts, params = [], []
+            if 'customer_id' in sale_cols:
+                where_parts.append('customer_id = ?')
+                params.append(int(customer_id))
+            if 'customer_name' in sale_cols and (cust.get('name') or '').strip():
+                where_parts.append("TRIM(COALESCE(customer_name,'')) = TRIM(COALESCE(?,''))")
+                params.append((cust.get('name') or '').strip())
+            if 'company_name' in sale_cols and (cust.get('company_name') or cust.get('name') or '').strip():
+                where_parts.append("TRIM(COALESCE(company_name,'')) = TRIM(COALESCE(?,''))")
+                params.append((cust.get('company_name') or cust.get('name') or '').strip())
+            if where_parts:
+                sales = _rows(conn.execute(
+                    f"SELECT {', '.join(select_cols)} FROM sale WHERE " + ' OR '.join(where_parts) +
+                    ' ORDER BY id DESC LIMIT 50', params
+                ))
     except Exception:
-        try:
-            row = conn.execute(
-                """
-                SELECT COALESCE(SUM(COALESCE(remaining, unpaid, debit - credit, 0)), 0) AS bal
-                FROM cong_no
-                WHERE TRIM(COALESCE(customer_name,'')) IN (?, ?)
-                """,
-                (
-                    (cust.get('name') or '').strip(),
-                    party_name,
-                ),
-            ).fetchone()
-            debt = {'balance': _f(_row(row).get('bal')), 'summary': {}}
-        except sqlite3.Error:
-            pass
+        sales = []
 
+    debt = {'balance': 0.0, 'summary': {}, 'source': 'none'}
+    party_name = (cust.get('company_name') or cust.get('name') or '').strip()
+    customer_name = (cust.get('name') or '').strip()
+
+    try:
+        from Services.tenant_profile import get_current_tenant_profile, is_sme_regime
+        profile = get_current_tenant_profile() or {}
+        regime = profile.get('accounting_regime')
+        sme = bool(is_sme_regime(regime))
+    except Exception:
+        sme = False
+
+    if sme:
+        try:
+            from Services.sme.debt_ledger import ar_customer_detail
+            detail = ar_customer_detail(conn, party_name) or {}
+            summary = detail.get('summary') or {}
+            balance_raw = summary.get('remaining')
+            if balance_raw is None:
+                balance_raw = summary.get('balance')
+            if balance_raw is None:
+                balance_raw = detail.get('balance')
+            debt = {
+                'balance': max(_f(balance_raw), 0.0),
+                'summary': summary,
+                'source': summary.get('source') or detail.get('source') or 'gl',
+            }
+        except Exception as exc:
+            debt = {
+                'balance': 0.0,
+                'summary': {'account_code': '131', 'source': 'unavailable', 'error': str(exc)},
+                'source': 'unavailable',
+            }
+    else:
+        try:
+            cols = _table_columns(conn, 'cong_no')
+            if not cols:
+                raise RuntimeError('Bảng cong_no chưa tồn tại')
+            if 'remaining_amount' in cols:
+                amount_expr = 'COALESCE(remaining_amount, 0)'
+            elif 'unpaid_amount' in cols and 'paid_amount' in cols:
+                amount_expr = 'COALESCE(unpaid_amount, 0) - COALESCE(paid_amount, 0)'
+            else:
+                raise RuntimeError('Bảng cong_no thiếu cột số dư công nợ')
+            where_parts, params = [], []
+            if 'customer_id' in cols:
+                where_parts.append('customer_id = ?')
+                params.append(int(customer_id))
+            if 'customer_name' in cols:
+                names = []
+                for value in (customer_name, party_name):
+                    if value and value not in names:
+                        names.append(value)
+                if names:
+                    where_parts.append("TRIM(COALESCE(customer_name, '')) IN (" + ','.join('?' for _ in names) + ')')
+                    params.extend(names)
+            if where_parts:
+                sql = 'SELECT COALESCE(SUM(' + amount_expr + '), 0) AS bal FROM cong_no WHERE ' + ' OR '.join(where_parts)
+                row = conn.execute(sql, params).fetchone()
+                balance = max(_f(_row(row).get('bal')), 0.0)
+            else:
+                balance = 0.0
+            debt = {
+                'balance': balance,
+                'summary': {'remaining': balance, 'account_code': '131', 'source': 'cong_no'},
+                'source': 'cong_no',
+            }
+        except Exception as exc:
+            debt = {
+                'balance': 0.0,
+                'summary': {'account_code': '131', 'source': 'unavailable', 'error': str(exc)},
+                'source': 'unavailable',
+            }
+
+    # Hóa đơn: outward_invoices giữa các tenant có schema khác nhau.
+    # Không hard-code invoice_number/invoice_date/customer_id vì PG sẽ lỗi UndefinedColumn.
     invoices = []
     try:
-        invoices = _rows(
-            conn.execute(
-                """
-                SELECT id, invoice_number, invoice_date, total_amount, status, customer_name
-                FROM outward_invoices
-                WHERE customer_id = ?
-                   OR TRIM(COALESCE(customer_name,'')) = TRIM(COALESCE(?,''))
-                ORDER BY id DESC LIMIT 30
-                """,
-                (customer_id, cust.get('company_name') or cust.get('name')),
-            )
-        )
-    except sqlite3.Error:
-        pass
+        inv_cols = _table_columns(conn, 'outward_invoices')
+        if inv_cols:
+            aliases = []
+            aliases.append('id' if 'id' in inv_cols else 'NULL AS id')
+            if 'invoice_number' in inv_cols:
+                aliases.append('invoice_number')
+            elif 'invoice_no' in inv_cols:
+                aliases.append('invoice_no AS invoice_number')
+            elif 'shdon' in inv_cols:
+                aliases.append('shdon AS invoice_number')
+            else:
+                aliases.append("'' AS invoice_number")
+
+            if 'invoice_date' in inv_cols:
+                aliases.append('invoice_date')
+            elif 'date' in inv_cols:
+                aliases.append('date AS invoice_date')
+            elif 'created_at' in inv_cols:
+                aliases.append('created_at AS invoice_date')
+            else:
+                aliases.append('NULL AS invoice_date')
+
+            aliases.append('total_amount' if 'total_amount' in inv_cols else '0 AS total_amount')
+            aliases.append('status' if 'status' in inv_cols else "'' AS status")
+            aliases.append('customer_name' if 'customer_name' in inv_cols else "'' AS customer_name")
+
+            where_parts, params = [], []
+            if 'customer_id' in inv_cols:
+                where_parts.append('customer_id = ?')
+                params.append(int(customer_id))
+            if 'customer_name' in inv_cols and party_name:
+                where_parts.append("TRIM(COALESCE(customer_name,'')) = TRIM(COALESCE(?,''))")
+                params.append(party_name)
+            if where_parts:
+                order_col = 'id' if 'id' in inv_cols else ('invoice_date' if 'invoice_date' in inv_cols else '1')
+                invoices = _rows(conn.execute(
+                    f"SELECT {', '.join(aliases)} FROM outward_invoices WHERE " +
+                    ' OR '.join(where_parts) + f' ORDER BY {order_col} DESC LIMIT 30',
+                    params,
+                ))
+    except Exception:
+        invoices = []
 
     tickets, contracts, surveys = [], [], []
     try:
@@ -1394,12 +1491,10 @@ def customer_360(conn: sqlite3.Connection, customer_id: int) -> dict:
         'sales': sales,
         'debt': debt,
         'invoices': invoices,
-        'leads': _rows(
-            conn.execute(
-                'SELECT * FROM crm_leads WHERE customer_id = ? ORDER BY id DESC',
-                (customer_id,),
-            )
-        ),
+        'leads': _rows(conn.execute(
+            'SELECT * FROM crm_leads WHERE customer_id = ? ORDER BY id DESC',
+            (customer_id,),
+        )),
         'tickets': tickets,
         'contracts': contracts,
         'surveys': surveys,

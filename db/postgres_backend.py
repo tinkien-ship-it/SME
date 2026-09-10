@@ -32,6 +32,7 @@ except ImportError:  # pragma: no cover
     ConnectionPool = None  # type: ignore
 
 _POOL: ConnectionPool | None = None
+_POOL_PID: int | None = None
 _POOL_GUARD = threading.Lock()
 _SCHEMA_LOCKS_GUARD = threading.Lock()
 _SCHEMA_LOCKS: dict[str, threading.RLock] = {}
@@ -72,19 +73,33 @@ def _require_psycopg() -> None:
 
 
 def get_pool() -> ConnectionPool:
-    global _POOL
+    global _POOL, _POOL_PID
     _require_psycopg()
+    current_pid = os.getpid()
     with _POOL_GUARD:
+        # PostgreSQL pool/socket không được dùng chung qua fork.
+        if _POOL is not None and _POOL_PID != current_pid:
+            logger.warning(
+                'Phát hiện PostgreSQL pool kế thừa qua fork (old_pid=%s, pid=%s); tạo pool riêng.',
+                _POOL_PID, current_pid,
+            )
+            _POOL = None
+            _POOL_PID = None
+
         if _POOL is None:
-            # Gunicorn 4 worker + scheduler + CRM song song — cần pool đủ lớn
-            min_size = int(os.environ.get('SME_PG_POOL_MIN', '4') or 4)
-            max_size = int(os.environ.get('SME_PG_POOL_MAX', '50') or 50)
-            timeout = float(os.environ.get('SME_PG_POOL_TIMEOUT', '15') or 15)
+            # Pool là per-worker: 4 workers x max 10 = tối đa khoảng 40 connections.
+            min_size = int(os.environ.get('SME_PG_POOL_MIN', '1') or 1)
+            max_size = int(os.environ.get('SME_PG_POOL_MAX', '10') or 10)
+            timeout = float(os.environ.get('SME_PG_POOL_TIMEOUT', '10') or 10)
+            max_idle = float(os.environ.get('SME_PG_POOL_MAX_IDLE', '300') or 300)
+            max_lifetime = float(os.environ.get('SME_PG_POOL_MAX_LIFETIME', '1800') or 1800)
             kwargs = {
                 'conninfo': database_url(),
                 'min_size': min_size,
                 'max_size': max_size,
                 'timeout': timeout,
+                'max_idle': max_idle,
+                'max_lifetime': max_lifetime,
                 'kwargs': {
                     'row_factory': compat_row_factory,
                     'autocommit': False,
@@ -92,13 +107,12 @@ def get_pool() -> ConnectionPool:
                 },
                 'open': True,
             }
-            # Kiểm tra connection khi lấy từ pool (psycopg_pool ≥ 3.1)
             check_fn = getattr(ConnectionPool, 'check_connection', None)
             if check_fn is not None:
                 kwargs['check'] = check_fn
             _POOL = ConnectionPool(**kwargs)
+            _POOL_PID = current_pid
         return _POOL
-
 
 def reset_pg_pool() -> None:
     """Đóng pool (sau migrate hang / leak) rồi tạo lại lần get tiếp theo."""
@@ -568,11 +582,13 @@ def open_pg(schema: str | None = None, *, db_path: str | None = None, tenant_id:
     try:
         raw = pool.getconn()
     except PoolTimeout:
-        # Pool bị leak / connection treo — reset một lần rồi thử lại
-        logger.error('PoolTimeout — reset PostgreSQL pool rồi thử lại (schema=%s)', sch)
-        close_pg_pool()
-        pool = get_pool()
-        raw = pool.getconn()
+        # Không reset/close toàn pool khi một request timeout: các request khác
+        # có thể đang dùng connection của pool và sẽ bị biến thành BAD.
+        logger.error(
+            'PostgreSQL PoolTimeout (schema=%s, pid=%s) — giữ nguyên pool để bảo vệ request đang chạy',
+            sch, os.getpid(),
+        )
+        raise
     try:
         return PgConnection(raw, sch, from_pool=True)
     except Exception:
@@ -616,7 +632,7 @@ def ensure_pg_schema(schema: str) -> None:
 
 
 def close_pg_pool() -> None:
-    global _POOL
+    global _POOL, _POOL_PID
     with _POOL_GUARD:
         if _POOL is not None:
             try:

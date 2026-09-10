@@ -393,14 +393,72 @@ def list_visits(
     return out
 
 
+def list_scheduled_visits(
+    conn: sqlite3.Connection,
+    *,
+    visit_date: str | None = None,
+    owner: str | None = None,
+    limit: int = 200,
+) -> list[dict]:
+    """Lịch hẹn theo customers.crm_next_contact_at cho ngày được chọn.
+
+    Trả thêm trạng thái check-in/check-out trong cùng ngày để trang quản lý
+    không phải ghép dữ liệu ở phía trình duyệt.
+    """
+    ensure_crm_schema(conn, commit=False)
+    target_date = (visit_date or _today()).strip()[:10]
+    sql = """
+        SELECT c.id AS customer_id,
+               c.name AS customer_name,
+               c.company_name AS customer_company,
+               c.phone AS customer_phone,
+               c.crm_owner AS owner,
+               c.crm_next_contact_at AS scheduled_at,
+               MIN(CASE WHEN v.check_type = 'in' THEN v.punched_at END) AS check_in_at,
+               MAX(CASE WHEN v.check_type = 'out' THEN v.punched_at END) AS check_out_at,
+               MAX(CASE WHEN v.check_type = 'out' THEN v.note END) AS meeting_note
+        FROM customers c
+        LEFT JOIN crm_visit_checkins v
+          ON v.customer_id = c.id
+         AND substr(COALESCE(v.punched_at, ''), 1, 10) = ?
+        WHERE substr(COALESCE(c.crm_next_contact_at, ''), 1, 10) = ?
+    """
+    params: list[Any] = [target_date, target_date]
+    if owner:
+        sql += ' AND LOWER(TRIM(COALESCE(c.crm_owner, ''))) = LOWER(TRIM(?))'
+        params.append(owner.strip())
+    sql += """
+        GROUP BY c.id, c.name, c.company_name, c.phone, c.crm_owner, c.crm_next_contact_at
+        ORDER BY c.crm_next_contact_at ASC, c.id ASC
+        LIMIT ?
+    """
+    params.append(int(limit))
+
+    items: list[dict] = []
+    for r in _rows(conn.execute(sql, params)):
+        r['customer_label'] = _customer_label(r)
+        r['representative'] = _customer_representative(r)
+        r['customer_phone'] = str(r.get('customer_phone') or '').strip()
+        if r.get('check_out_at'):
+            r['visit_status'] = 'done'
+        elif r.get('check_in_at'):
+            r['visit_status'] = 'open'
+        else:
+            r['visit_status'] = 'scheduled'
+        items.append(r)
+    return items
+
+
 def list_visit_sessions_today(
     conn: sqlite3.Connection,
     *,
     owner: str | None = None,
+    visit_date: str | None = None,
     limit: int = 50,
 ) -> list[dict]:
-    """Gom phiên in+out trong ngày cho dashboard."""
+    """Gom phiên in+out theo ngày. Mặc định là hôm nay."""
     ensure_crm_schema(conn, commit=False)
+    target_date = (visit_date or _today()).strip()[:10]
     sql = """
         SELECT v.visit_session_id,
                MAX(v.customer_id) AS customer_id,
@@ -413,9 +471,9 @@ def list_visit_sessions_today(
                MAX(c.phone) AS customer_phone
         FROM crm_visit_checkins v
         LEFT JOIN customers c ON c.id = v.customer_id
-        WHERE date(v.punched_at) = date('now', 'localtime')
+        WHERE substr(COALESCE(v.punched_at, ''), 1, 10) = ?
     """
-    params: list[Any] = []
+    params: list[Any] = [target_date]
     if owner:
         sql += ' AND LOWER(TRIM(v.owner)) = LOWER(TRIM(?))'
         params.append(owner.strip())

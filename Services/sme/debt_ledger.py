@@ -35,8 +35,28 @@ def _norm_name(raw) -> str:
 
 
 def _table_cols(conn: sqlite3.Connection, table: str) -> set[str]:
+    """Lấy cột của bảng trên cả SQLite và PostgreSQL, theo schema tenant hiện tại."""
     try:
-        return {r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()}
+        from db_utils import is_postgres
+        if is_postgres():
+            rows = conn.execute(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = ?
+                ORDER BY ordinal_position
+                """,
+                (str(table),),
+            ).fetchall()
+            cols = set()
+            for r in rows:
+                d = _row_dict(r)
+                value = d.get('column_name') if d else (r[0] if r else None)
+                if value:
+                    cols.add(str(value))
+            return cols
+        return {str(r[1]) for r in conn.execute(f'PRAGMA table_info({table})').fetchall()}
     except Exception:
         return set()
 
@@ -96,7 +116,7 @@ def _sale_party_name(conn: sqlite3.Connection, sale_id: int | None) -> str | Non
         row = conn.execute(
             f"SELECT {', '.join(fields)} FROM sale WHERE id = ?", (int(sale_id),)
         ).fetchone()
-    except sqlite3.Error:
+    except Exception:
         return None
     if not row:
         return None
@@ -117,7 +137,7 @@ def _import_supplier_name(conn: sqlite3.Connection, import_id: int | None) -> st
             """,
             (int(import_id),),
         ).fetchone()
-    except sqlite3.Error:
+    except Exception:
         return None
     if not row:
         return None
@@ -151,7 +171,7 @@ def _resolve_ar_name(conn: sqlite3.Connection, jl: dict, je: dict) -> str | None
                 name = _norm_name(d.get('company_name') or d.get('customer_name'))
                 if name:
                     return name
-        except sqlite3.Error:
+        except Exception:
             pass
     return None
 
@@ -326,36 +346,51 @@ def _ar_open_totals(
     *,
     branch: str | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Gom công nợ bán còn mở (cong_no) theo tên KH — khớp bảng chi tiết."""
-    from Services.sme.cong_no_ops import ensure_cong_no_schema, remaining_sql, sync_remaining_from_unpaid
+    """Open-item phải thu nếu tenant có cong_no.
+
+    Với SME, đây chỉ là dữ liệu chi tiết/fallback. Số dư kế toán chính thức
+    vẫn lấy từ TK 131 trong sme_journal_lines.
+    """
+    from Services.sme.cong_no_ops import remaining_sql
     from Services.sme.branches import sale_branch_filter_sql
 
-    ensure_cong_no_schema(conn, commit=False)
-    try:
-        sync_remaining_from_unpaid(conn)
-    except sqlite3.Error:
-        pass
+    cn_cols = _table_cols(conn, 'cong_no')
+    required = {'customer_name', 'unpaid_amount', 'sale_id'}
+    if not required.issubset(cn_cols):
+        return {}
 
-    rem = remaining_sql('cn')
-    sbf, sbp = sale_branch_filter_sql(conn, branch, alias='s')
+    sale_cols = _table_cols(conn, 'sale')
+    has_sale = bool(sale_cols and 'id' in sale_cols)
+    paid_expr = 'COALESCE(cn.paid_amount, 0)' if 'paid_amount' in cn_cols else '0'
+    rem = f'(COALESCE(cn.unpaid_amount, 0) - {paid_expr})'
+
+    cn_company = "NULLIF(TRIM(cn.company_name), '')" if 'company_name' in cn_cols else "NULL"
+    sale_company = "NULLIF(TRIM(s.company_name), '')" if has_sale and 'company_name' in sale_cols else "NULL"
+    company_expr = f"COALESCE({cn_company}, {sale_company})"
+
+    sbf, sbp = ('', [])
+    if has_sale:
+        sbf, sbp = sale_branch_filter_sql(conn, branch, alias='s')
+
+    join_sql = 'LEFT JOIN sale s ON s.id = cn.sale_id' if has_sale else ''
     out: dict[str, dict[str, Any]] = {}
     try:
         rows = conn.execute(
             f"""
             SELECT
                 cn.customer_name,
-                COALESCE(NULLIF(TRIM(cn.company_name), ''), s.company_name) AS company_name,
+                {company_expr} AS company_name,
                 cn.unpaid_amount AS total_debt,
-                COALESCE(cn.paid_amount, 0) AS paid_amount,
+                {paid_expr} AS paid_amount,
                 ({rem}) AS remaining
             FROM cong_no cn
-            LEFT JOIN sale s ON s.id = cn.sale_id
+            {join_sql}
             WHERE ({rem}) > 0.5
             {sbf}
             """,
             sbp,
         ).fetchall()
-    except sqlite3.Error:
+    except Exception:
         return out
 
     for r in rows:
@@ -376,7 +411,6 @@ def _ar_open_totals(
         if d.get('company_name'):
             slot['company_name'] = _norm_name(d.get('company_name'))
     return out
-
 
 def _ap_open_totals(
     conn: sqlite3.Connection,
@@ -402,7 +436,7 @@ def _ap_open_totals(
             """,
             ibp,
         ).fetchall()
-    except sqlite3.Error:
+    except Exception:
         return out
 
     for r in rows:
@@ -443,30 +477,43 @@ def list_ar_customers(
     *,
     branch: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Danh sách KH còn nợ — số hiển thị khớp tổng bảng chi tiết (cong_no), fallback GL."""
-    open_map = _ar_open_totals(conn, branch=branch)
-    gl_map = _gl_ar_balances(conn, branch=branch)
+    """Danh sách KH còn nợ SME.
 
-    names = set(open_map) | {n for n, g in gl_map.items() if g.get('remaining', 0) > 0.5}
+    Ưu tiên tuyệt đối số dư TK 131 (GL). cong_no chỉ fallback khi bút toán
+    chưa tồn tại, để không làm mất dấu khoản mở trong giai đoạn chuyển đổi.
+    """
+    gl_map = _gl_ar_balances(conn, branch=branch)
+    open_map = _ar_open_totals(conn, branch=branch)
+
+    names = set(gl_map) | set(open_map)
     out: list[dict[str, Any]] = []
     for name in sorted(names, key=lambda x: x.casefold()):
-        if name in open_map and open_map[name]['remaining'] > 0.5:
-            slot = open_map[name]
+        gl = gl_map.get(name) or {}
+        gl_has_activity = abs(_f(gl.get('total'))) + abs(_f(gl.get('paid'))) > 0.5
+        if gl_has_activity:
+            bal = max(_f(gl.get('remaining')), 0.0)
+            if bal <= 0.5:
+                continue
             out.append({
                 'customer_name': name,
-                'company_name': slot.get('company_name') or '',
+                'company_name': (open_map.get(name) or {}).get('company_name') or '',
                 'account_code': '131',
-                'balance': round(slot['remaining'], 0),
+                'balance': round(bal, 0),
+                'source': 'gl',
             })
-        elif gl_map.get(name, {}).get('remaining', 0) > 0.5:
+            continue
+
+        open_slot = open_map.get(name) or {}
+        bal = max(_f(open_slot.get('remaining')), 0.0)
+        if bal > 0.5:
             out.append({
                 'customer_name': name,
-                'company_name': '',
+                'company_name': open_slot.get('company_name') or '',
                 'account_code': '131',
-                'balance': round(gl_map[name]['remaining'], 0),
+                'balance': round(bal, 0),
+                'source': 'open_item_fallback',
             })
     return out
-
 
 def ledger_open_totals(
     conn: sqlite3.Connection,
@@ -485,90 +532,138 @@ def ar_customer_detail(
     *,
     branch: str | None = None,
 ) -> dict[str, Any]:
-    """Chi tiết phải thu một KH: summary theo 131 + các khoản cong_no còn mở."""
+    """Chi tiết phải thu SME.
+
+    Nguồn sự thật: TK 131 trong sổ nhật ký SME.
+    Bảng cong_no (nếu tenant có) chỉ phục vụ danh sách open-item/đối chiếu.
+    """
     ensure_sme_journal_ready(conn, commit=False)
-    from Services.sme.cong_no_ops import ensure_cong_no_schema, remaining_sql, sync_remaining_from_unpaid
     from Services.sme.branches import sale_branch_filter_sql
 
-    ensure_cong_no_schema(conn, commit=False)
-    try:
-        sync_remaining_from_unpaid(conn)
-    except sqlite3.Error:
-        pass
-
     target = _norm_name(customer_name)
-    rem = remaining_sql('cn')
-    sbf, sbp = sale_branch_filter_sql(conn, branch, alias='s')
     gl_map = _gl_ar_balances(conn, branch=branch)
-
-    records = []
-    sql_records = f"""
-        SELECT
-            cn.debt_id,
-            -- Số đơn hàng (ĐH…); không dùng số phiếu XK/PX
-            COALESCE(NULLIF(TRIM(s.sale_no), ''), NULLIF(TRIM(cn.sale_no), '')) AS sale_no,
-            cn.date_of_debt,
-            cn.customer_name,
-            cn.sale_id,
-            COALESCE(NULLIF(TRIM(cn.company_name), ''), s.company_name) AS company_name,
-            cn.unpaid_amount AS total_debt,
-            COALESCE(cn.paid_amount, 0) AS paid_amount,
-            ({rem}) AS remaining,
-            COALESCE(cn.debit_account, '131') AS account_code,
-            COALESCE(s.sale_type, '') AS sale_type
-        FROM cong_no cn
-        LEFT JOIN sale s ON cn.sale_id = s.id
-        WHERE ({rem}) > 0.5
-          {sbf}
-          AND (
-            TRIM(COALESCE(cn.customer_name, '')) = ?
-            OR TRIM(COALESCE(cn.company_name, '')) = ?
-            OR TRIM(COALESCE(s.customer_name, '')) = ?
-            OR TRIM(COALESCE(s.company_name, '')) = ?
-          )
-        ORDER BY cn.date_of_debt ASC, cn.debt_id ASC
-    """
-    params = [*sbp, target, target, target, target]
-    for r in conn.execute(sql_records, params).fetchall():
-        d = _row_dict(r)
-        d['total_debt'] = _f(d.get('total_debt'))
-        d['paid_amount'] = _f(d.get('paid_amount'))
-        d['remaining'] = _f(d.get('remaining'))
-        # Ẩn mã XK cũ trên cột Số đơn hàng (phiếu XK chỉ ở trang xuất kho)
-        sn = _norm_name(d.get('sale_no'))
-        if sn.upper().startswith('XK'):
-            d['export_voucher_no'] = sn
-            d['sale_no'] = f"ĐH{int(d['sale_id']):06d}" if d.get('sale_id') else sn
-        records.append(d)
-
     gl = gl_map.get(target) or {'total': 0.0, 'paid': 0.0, 'remaining': 0.0}
     total_debit = _f(gl.get('total'))
     total_credit = _f(gl.get('paid'))
     gl_remaining = _f(gl.get('remaining'))
+    gl_has_activity = abs(total_debit) + abs(total_credit) > 0.5
 
-    if records:
-        summary = _summary_from_records(
-            records,
-            total_key='total_debt',
-            paid_key='paid_amount',
-            remaining_key='remaining',
-            account_code='131',
-            source='cong_no',
+    records: list[dict[str, Any]] = []
+    cn_cols = _table_cols(conn, 'cong_no')
+    sale_cols = _table_cols(conn, 'sale')
+    required = {'customer_name', 'unpaid_amount', 'sale_id'}
+
+    if required.issubset(cn_cols):
+        has_sale = bool(sale_cols and 'id' in sale_cols)
+        paid_expr = 'COALESCE(cn.paid_amount, 0)' if 'paid_amount' in cn_cols else '0'
+        rem = f'(COALESCE(cn.unpaid_amount, 0) - {paid_expr})'
+
+        debt_id_expr = 'cn.debt_id' if 'debt_id' in cn_cols else 'cn.sale_id'
+        sale_no_cn = "NULLIF(TRIM(cn.sale_no), '')" if 'sale_no' in cn_cols else "NULL"
+        sale_no_s = "NULLIF(TRIM(s.sale_no), '')" if has_sale and 'sale_no' in sale_cols else "NULL"
+        sale_no_expr = f"COALESCE({sale_no_s}, {sale_no_cn})"
+        date_expr = 'cn.date_of_debt' if 'date_of_debt' in cn_cols else (
+            's.date' if has_sale and 'date' in sale_cols else 'NULL'
         )
-    else:
+        cn_company = "NULLIF(TRIM(cn.company_name), '')" if 'company_name' in cn_cols else "NULL"
+        sale_company = "NULLIF(TRIM(s.company_name), '')" if has_sale and 'company_name' in sale_cols else "NULL"
+        company_expr = f"COALESCE({cn_company}, {sale_company})"
+        account_expr = "COALESCE(cn.debit_account, '131')" if 'debit_account' in cn_cols else "'131'"
+        sale_type_expr = "COALESCE(s.sale_type, '')" if has_sale and 'sale_type' in sale_cols else "''"
+
+        match_parts = ["TRIM(COALESCE(cn.customer_name, '')) = ?"]
+        match_params = [target]
+        if 'company_name' in cn_cols:
+            match_parts.append("TRIM(COALESCE(cn.company_name, '')) = ?")
+            match_params.append(target)
+        if has_sale and 'customer_name' in sale_cols:
+            match_parts.append("TRIM(COALESCE(s.customer_name, '')) = ?")
+            match_params.append(target)
+        if has_sale and 'company_name' in sale_cols:
+            match_parts.append("TRIM(COALESCE(s.company_name, '')) = ?")
+            match_params.append(target)
+
+        sbf, sbp = ('', [])
+        if has_sale:
+            sbf, sbp = sale_branch_filter_sql(conn, branch, alias='s')
+        join_sql = 'LEFT JOIN sale s ON cn.sale_id = s.id' if has_sale else ''
+
+        sql_records = f"""
+            SELECT
+                {debt_id_expr} AS debt_id,
+                {sale_no_expr} AS sale_no,
+                {date_expr} AS date_of_debt,
+                cn.customer_name,
+                cn.sale_id,
+                {company_expr} AS company_name,
+                cn.unpaid_amount AS total_debt,
+                {paid_expr} AS paid_amount,
+                ({rem}) AS remaining,
+                {account_expr} AS account_code,
+                {sale_type_expr} AS sale_type
+            FROM cong_no cn
+            {join_sql}
+            WHERE ({rem}) > 0.5
+              {sbf}
+              AND ({' OR '.join(match_parts)})
+            ORDER BY date_of_debt ASC, debt_id ASC
+        """
+        try:
+            params = [*sbp, *match_params]
+            for r in conn.execute(sql_records, params).fetchall():
+                d = _row_dict(r)
+                d['total_debt'] = _f(d.get('total_debt'))
+                d['paid_amount'] = _f(d.get('paid_amount'))
+                d['remaining'] = _f(d.get('remaining'))
+                sn = _norm_name(d.get('sale_no'))
+                if sn.upper().startswith('XK'):
+                    d['export_voucher_no'] = sn
+                    d['sale_no'] = f"ĐH{int(d['sale_id']):06d}" if d.get('sale_id') else sn
+                records.append(d)
+        except Exception:
+            records = []
+
+    open_summary = _summary_from_records(
+        records,
+        total_key='total_debt',
+        paid_key='paid_amount',
+        remaining_key='remaining',
+        account_code='131',
+        source='open_item',
+    ) if records else {
+        'total': 0.0, 'paid': 0.0, 'remaining': 0.0,
+        'account_code': '131', 'source': 'open_item',
+    }
+
+    if gl_has_activity:
         summary = {
             'total': round(total_debit, 0),
             'paid': round(total_credit, 0),
             'remaining': round(max(gl_remaining, 0.0), 0),
             'account_code': '131',
-            'source': 'gl' if abs(total_debit) + abs(total_credit) > 0.5 else 'cong_no',
+            'source': 'gl',
         }
+    else:
+        # Chỉ fallback trong giai đoạn bút toán SME chưa được tạo.
+        summary = {
+            'total': round(_f(open_summary.get('total')), 0),
+            'paid': round(_f(open_summary.get('paid')), 0),
+            'remaining': round(max(_f(open_summary.get('remaining')), 0.0), 0),
+            'account_code': '131',
+            'source': 'open_item_fallback' if records else 'gl',
+        }
+
     summary['gl_total'] = round(total_debit, 0)
     summary['gl_paid'] = round(total_credit, 0)
     summary['gl_remaining'] = round(max(gl_remaining, 0.0), 0)
+    summary['open_item_total'] = round(_f(open_summary.get('total')), 0)
+    summary['open_item_paid'] = round(_f(open_summary.get('paid')), 0)
+    summary['open_item_remaining'] = round(max(_f(open_summary.get('remaining')), 0.0), 0)
+    summary['reconciled'] = abs(
+        _f(summary['gl_remaining']) - _f(summary['open_item_remaining'])
+    ) <= 0.5 if records and gl_has_activity else None
 
     return {'summary': summary, 'records': records}
-
 
 def list_ap_suppliers(
     conn: sqlite3.Connection,
@@ -761,7 +856,7 @@ def ar_print_ledger(
         biz = conn.execute('SELECT * FROM business_info LIMIT 1').fetchone()
         if biz:
             info = dict(biz)
-    except sqlite3.Error:
+    except Exception:
         pass
 
     return {
@@ -869,7 +964,7 @@ def ap_print_ledger(
         biz = conn.execute('SELECT * FROM business_info LIMIT 1').fetchone()
         if biz:
             info = dict(biz)
-    except sqlite3.Error:
+    except Exception:
         pass
 
     closing = run if rows else opening + tot_co - tot_no

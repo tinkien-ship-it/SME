@@ -216,11 +216,15 @@ def register_crm_routes(app):
                 visit_date=vdate,
                 limit=int(request.args.get('limit') or 100),
             )
-            payload = {'items': items}
-            today = datetime.now().strftime('%Y-%m-%d')
-            if request.args.get('sessions') == '1' and (not vdate or vdate == today):
+            payload = {
+                'items': items,
+                'appointments': crm_visits.list_scheduled_visits(
+                    conn, visit_date=vdate, owner=owner, limit=200,
+                ),
+            }
+            if request.args.get('sessions') == '1':
                 payload['sessions_today'] = crm_visits.list_visit_sessions_today(
-                    conn, owner=owner,
+                    conn, owner=owner, visit_date=vdate,
                 )
             return jsonify(payload)
         except Exception as e:

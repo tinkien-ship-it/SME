@@ -67,8 +67,9 @@ _default_max_requests = '3000' if _backend == 'postgres' else '500'
 max_requests = int(os.getenv('GUNICORN_MAX_REQUESTS', _default_max_requests))
 max_requests_jitter = int(os.getenv('GUNICORN_MAX_REQUESTS_JITTER', '200' if _backend == 'postgres' else '50'))
 
-# PG: preload giảm cold-start bootstrap; SQLite: tắt (scheduler leader gate trong app.py)
-_default_preload = '1' if _backend == 'postgres' else '0'
+# Không preload app: PostgreSQL pool/socket phải được tạo riêng sau khi Gunicorn fork worker.
+# SQLite cũng giữ preload tắt để lifecycle nhất quán.
+_default_preload = '0'
 preload_app = os.getenv('GUNICORN_PRELOAD', _default_preload).strip().lower() in ('1', 'true', 'yes')
 
 accesslog = os.getenv('GUNICORN_ACCESS_LOG', '-')

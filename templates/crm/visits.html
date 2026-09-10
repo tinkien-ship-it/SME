@@ -17,7 +17,9 @@
     </div>
     <div class="col-md-3">
       <label class="form-label small">Nhân viên phụ trách</label>
-      <input id="fOwner" class="form-control form-control-sm" placeholder="tên đăng nhập">
+      <select id="fOwner" class="form-select form-select-sm">
+        <option value="">Tất cả nhân viên</option>
+      </select>
     </div>
     <div class="col-md-3">
       <button class="crm-btn crm-btn-primary" onclick="loadVisits()"><i class="fas fa-sync"></i> Tải</button>
@@ -25,8 +27,21 @@
   </div>
 </div>
 
+
 <div class="crm-panel mb-3">
-  <div class="crm-panel-hd"><h2>Phiên gặp khách hôm nay</h2></div>
+  <div class="crm-panel-hd"><h2>Lịch hẹn trong ngày</h2></div>
+  <div class="crm-panel-bd p-0">
+    <table class="table crm-table mb-0">
+      <thead><tr>
+        <th>Giờ hẹn</th><th>Tên công ty / Khách hàng</th><th>Người đại diện</th><th>Nhân viên phụ trách</th><th>Trạng thái</th>
+      </tr></thead>
+      <tbody id="tbAppointments"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="crm-panel mb-3">
+  <div class="crm-panel-hd"><h2>Phiên gặp khách theo ngày</h2></div>
   <div class="crm-panel-bd p-0">
     <table class="table crm-table mb-0">
       <thead><tr>
@@ -52,44 +67,82 @@
 {% block crm_scripts %}
 <script>
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
-
 function todayIso(){
   const d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-
+function ownerLabel(u){
+  const full=(u.full_name||u.name||'').trim();
+  const user=(u.username||u.user_name||'').trim();
+  return full && user && full!==user ? `${full} (${user})` : (full||user||'');
+}
+async function loadOwners(){
+  try{
+    const res=await fetch('/api/crm/assignable-users', {cache:'no-store'});
+    const d=await res.json();
+    if(!res.ok || d.error) throw new Error(d.error||'Không tải được nhân viên');
+    const arr=d.items||d.sales_staff||d.assignable_users||[];
+    const cur=fOwner.value;
+    fOwner.innerHTML='<option value="">Tất cả nhân viên</option>'+arr.map(u=>{
+      const value=(u.username||u.user_name||u.owner||'').trim();
+      return value?`<option value="${esc(value)}">${esc(ownerLabel(u))}</option>`:'';
+    }).join('');
+    if([...fOwner.options].some(o=>o.value===cur)) fOwner.value=cur;
+  }catch(e){ console.error('loadOwners',e); }
+}
+function statusBadge(st){
+  if(st==='done') return '<span class="badge bg-success">Đã gặp</span>';
+  if(st==='open') return '<span class="badge bg-warning text-dark">Đang gặp</span>';
+  return '<span class="badge bg-info text-dark">Đã hẹn</span>';
+}
 async function loadVisits(){
   const date=fDate.value||todayIso();
   const owner=fOwner.value.trim();
   let url='/api/crm/visits?sessions=1&date='+encodeURIComponent(date);
   if(owner) url+='&owner='+encodeURIComponent(owner);
-  const d=await(await fetch(url)).json();
-  if(d.error){ alert(d.error); return; }
+  try{
+    const res=await fetch(url,{cache:'no-store'});
+    const d=await res.json();
+    if(!res.ok || d.error) throw new Error(d.error||'Không tải được dữ liệu gặp khách');
 
-  const sessions=d.sessions_today||[];
-  tbSessions.innerHTML=sessions.length?sessions.map(s=>`<tr>
-    <td><a href="/crm/customer/${s.customer_id}">${esc(s.customer_label)}</a>
-      ${s.customer_phone?`<div class="small text-muted">${esc(s.customer_phone)}</div>`:''}</td>
-    <td class="small">${esc(s.representative||'—')}</td>
-    <td>${esc(s.owner)}</td>
-    <td>${esc(crmFmtTime(s.check_in_at))}</td>
-    <td>${esc(s.check_out_at ? crmFmtTime(s.check_out_at) : '—')}</td>
-    <td class="small">${esc(s.meeting_note||'—')}</td>
-    <td>${s.status==='done'?'<span class="badge bg-success">Đã gặp</span>':'<span class="badge bg-warning text-dark">Đang gặp</span>'}</td>
-  </tr>`).join(''):'<tr><td colspan="7" class="crm-empty">Không có phiên gặp trong ngày</td></tr>';
+    const ap=d.appointments||[];
+    tbAppointments.innerHTML=ap.length?ap.map(a=>`<tr>
+      <td>${esc(crmFmtTime(a.scheduled_at))}</td>
+      <td><a href="/crm/customer/${a.customer_id}">${esc(a.customer_label)}</a>${a.customer_phone?`<div class="small text-muted">${esc(a.customer_phone)}</div>`:''}</td>
+      <td class="small">${esc(a.representative||'—')}</td>
+      <td>${esc(a.owner||'—')}</td>
+      <td>${statusBadge(a.visit_status)}</td>
+    </tr>`).join(''):'<tr><td colspan="5" class="crm-empty">Không có lịch hẹn trong ngày</td></tr>';
 
-  const items=d.items||[];
-  tbVisits.innerHTML=items.length?items.map(v=>`<tr>
-    <td>${esc(crmFmtDateTime(v.punched_at))}</td>
-    <td>${v.check_type==='in'?'<span class="badge bg-success">Vào</span>':'<span class="badge bg-secondary">Ra</span>'}</td>
-    <td><a href="/crm/customer/${v.customer_id}">${esc(v.customer_label)}</a></td>
-    <td class="small">${esc(v.representative||'—')}</td>
-    <td>${esc(v.owner)}</td>
-    <td class="small">${esc(v.note||'—')}</td>
-  </tr>`).join(''):'<tr><td colspan="6" class="crm-empty">—</td></tr>';
+    const sessions=d.sessions_today||[];
+    tbSessions.innerHTML=sessions.length?sessions.map(s=>`<tr>
+      <td><a href="/crm/customer/${s.customer_id}">${esc(s.customer_label)}</a>${s.customer_phone?`<div class="small text-muted">${esc(s.customer_phone)}</div>`:''}</td>
+      <td class="small">${esc(s.representative||'—')}</td>
+      <td>${esc(s.owner)}</td>
+      <td>${esc(crmFmtTime(s.check_in_at))}</td>
+      <td>${esc(s.check_out_at ? crmFmtTime(s.check_out_at) : '—')}</td>
+      <td class="small">${esc(s.meeting_note||'—')}</td>
+      <td>${s.status==='done'?'<span class="badge bg-success">Đã gặp</span>':'<span class="badge bg-warning text-dark">Đang gặp</span>'}</td>
+    </tr>`).join(''):'<tr><td colspan="7" class="crm-empty">Không có phiên gặp trong ngày</td></tr>';
+
+    const items=d.items||[];
+    tbVisits.innerHTML=items.length?items.map(v=>`<tr>
+      <td>${esc(crmFmtDateTime(v.punched_at))}</td>
+      <td>${v.check_type==='in'?'<span class="badge bg-success">Vào</span>':'<span class="badge bg-secondary">Ra</span>'}</td>
+      <td><a href="/crm/customer/${v.customer_id}">${esc(v.customer_label)}</a></td>
+      <td class="small">${esc(v.representative||'—')}</td>
+      <td>${esc(v.owner)}</td>
+      <td class="small">${esc(v.note||'—')}</td>
+    </tr>`).join(''):'<tr><td colspan="6" class="crm-empty">—</td></tr>';
+  }catch(e){
+    console.error(e);
+    alert(e.message||String(e));
+  }
 }
 
 document.getElementById('fDate').value=todayIso();
-loadVisits();
+fDate.addEventListener('change',loadVisits);
+fOwner.addEventListener('change',loadVisits);
+(async()=>{ await loadOwners(); await loadVisits(); })();
 </script>
 {% endblock %}

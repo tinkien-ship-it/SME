@@ -208,6 +208,228 @@
         font-size: 0.9rem;
     }
 
+
+    /* ==================== FIT SCREEN / RESPONSIVE POS ==================== */
+    /*
+       Desktop: giữ toàn bộ POS trong chiều cao màn hình.
+       - Cột trái: ô tìm kiếm + giỏ hàng co giãn theo viewport.
+       - Cột phải: nếu màn hình thấp thì chỉ cột thanh toán cuộn, không làm cả trang dài.
+       Mobile/tablet nhỏ: trở lại cuộn trang bình thường.
+    */
+    @media (min-width: 992px) {
+        .pos-container {
+            height: calc(100dvh - 72px);
+            min-height: 560px;
+            padding: 8px 12px 10px;
+            overflow: hidden;
+        }
+
+        .pos-container > .row {
+            height: 100%;
+            min-height: 0;
+            --bs-gutter-y: 0;
+        }
+
+        .pos-container > .row > .col-lg-8,
+        .pos-container > .row > .col-lg-4 {
+            height: 100%;
+            min-height: 0;
+        }
+
+        .pos-container > .row > .col-lg-8 {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pos-container > .row > .col-lg-8 > .search-section,
+        .pos-container > .row > .col-lg-8 > .scale-panel {
+            flex: 0 0 auto;
+        }
+
+        .pos-container > .row > .col-lg-8 > .card {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 0;
+            overflow: hidden;
+        }
+
+        .pos-container > .row > .col-lg-8 > .card > .card-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        #cartItems {
+            height: 100%;
+            max-height: none;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        .pos-container > .row > .col-lg-4 {
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-bottom: 4px;
+            scrollbar-width: thin;
+            overscroll-behavior: contain;
+        }
+
+        .payment-card {
+            position: static;
+            top: auto;
+        }
+
+        .pos-container .card {
+            margin-bottom: 8px;
+        }
+
+        .pos-container .card-header {
+            padding: 8px 12px;
+        }
+
+        .pos-container .card-body {
+            padding: 10px 12px;
+        }
+
+        .pos-container .form-control,
+        .pos-container .form-select {
+            min-height: 34px;
+        }
+
+        .pos-container .btn-pos {
+            height: 50px;
+            font-size: 1rem;
+        }
+
+        .pos-container .total-price {
+            font-size: 1.55rem;
+            padding-top: 8px;
+        }
+
+        .pos-container #printModeGroup .form-text {
+            font-size: 0.68rem;
+            line-height: 1.2;
+            margin-top: 3px;
+        }
+
+        .pos-container .mt-4 {
+            margin-top: 0.75rem !important;
+        }
+
+        .pos-container .mb-4 {
+            margin-bottom: 0.75rem !important;
+        }
+    }
+
+    /* Laptop 1366x768 / màn hình chiều cao thấp: nén thêm khoảng trắng */
+    @media (min-width: 992px) and (max-height: 820px) {
+        .pos-container {
+            height: calc(100dvh - 62px);
+            padding-top: 6px;
+            padding-bottom: 6px;
+        }
+
+        .search-section {
+            margin-bottom: 8px !important;
+        }
+
+        .search-input {
+            padding: 8px 14px;
+        }
+
+        .btn-camera {
+            padding-left: 14px;
+            padding-right: 14px;
+        }
+
+        .pos-container .card-header {
+            padding: 6px 10px;
+            font-size: 0.9rem;
+        }
+
+        .pos-container .card-body {
+            padding: 8px 10px;
+        }
+
+        .pos-container .row.g-2 {
+            --bs-gutter-y: 0.35rem;
+        }
+
+        .pos-container .mb-3 {
+            margin-bottom: 0.55rem !important;
+        }
+
+        .pos-container .mb-2 {
+            margin-bottom: 0.4rem !important;
+        }
+
+        .pos-container .mt-3 {
+            margin-top: 0.5rem !important;
+        }
+
+        .pos-container label.small,
+        .pos-container .form-text {
+            font-size: 0.7rem !important;
+        }
+
+        .pos-container .form-control,
+        .pos-container .form-select {
+            min-height: 31px;
+            padding-top: 0.22rem;
+            padding-bottom: 0.22rem;
+        }
+
+        .pos-container .btn-pos {
+            height: 44px;
+            font-size: 0.92rem;
+        }
+
+        .pos-container .total-price {
+            font-size: 1.4rem;
+            padding-top: 6px;
+        }
+
+        .cart-item {
+            padding: 7px 9px;
+            margin-bottom: 6px;
+        }
+
+        .cart-item-header {
+            margin-bottom: 5px;
+            padding-bottom: 4px;
+        }
+
+        .input-pos-sm {
+            height: 29px;
+        }
+    }
+
+    /* Mobile/tablet: cho trang cuộn tự nhiên, không ép chiều cao viewport */
+    @media (max-width: 991.98px) {
+        .pos-container {
+            height: auto;
+            min-height: 0;
+            overflow: visible;
+        }
+
+        .pos-container > .row > [class*="col-"] {
+            height: auto;
+            overflow: visible;
+        }
+
+        .payment-card {
+            position: static;
+        }
+
+        #cartItems {
+            height: auto;
+            max-height: 45vh;
+        }
+    }
+
     @media (max-width: 767.98px) {
         .pos-container { padding: 8px; }
         #cartItems { height: auto; max-height: 45vh; }
@@ -359,6 +581,23 @@
                         </div>
                     </div>
 
+                    <div class="mb-3" id="printModeGroup">
+                        <label class="small text-muted fw-bold mb-1 d-block">IN BILL SAU THANH TOÁN</label>
+                        <div class="btn-group w-100" role="group" aria-label="Chế độ in bill">
+                            <input type="radio" class="btn-check" name="printMode" id="printNone" value="none">
+                            <label class="btn btn-outline-secondary btn-sm" for="printNone">Không in</label>
+
+                            <input type="radio" class="btn-check" name="printMode" id="printManual" value="manual">
+                            <label class="btn btn-outline-primary btn-sm" for="printManual">Thủ công</label>
+
+                            <input type="radio" class="btn-check" name="printMode" id="printAuto" value="auto">
+                            <label class="btn btn-outline-success btn-sm" for="printAuto">Tự động</label>
+                        </div>
+                        <div class="form-text">
+                            Tự động: bill được gửi tới lệnh in ngay sau thanh toán. Muốn bỏ hộp thoại in, chạy Chrome với <code>--kiosk-printing</code>.
+                        </div>
+                    </div>
+
                     <div class="total-price d-flex justify-content-between align-items-baseline">
                         <span class="fs-6 text-dark fw-normal">TỔNG CỘNG</span>
                         <span id="total">0đ</span>
@@ -425,7 +664,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
-<script src="{{ url_for('static', filename='js/pos-offline.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='js/pos-offline.js') }}?v=5"></script>
 <script>
     let cart = [];
     let editingOrderId = null;
@@ -500,69 +739,66 @@
     let lastStableWeight = 0;
     let pendingWeightProduct = null;
 
-    const CART_STORAGE_KEY = 'pos_cart_v1';
+    const CART_STORAGE_KEY = 'pos_cart_v2';
+    const LEGACY_CART_STORAGE_KEY = 'pos_cart_v1';
+
+    function currentPosTenantKey() {
+        if (window.PosOffline && typeof PosOffline.getTenantKey === 'function') {
+            const key = String(PosOffline.getTenantKey() || '').trim();
+            if (key) return key;
+        }
+        try {
+            const qs = new URLSearchParams(window.location.search || '');
+            const q = String(qs.get('tenant_id') || '').trim();
+            if (q) return q;
+        } catch (_) {}
+        return 'default';
+    }
+
+    function cartStorageKey() {
+        return CART_STORAGE_KEY + ':' + currentPosTenantKey();
+    }
+
     const AUTO_INVOICE_KEY = 'auto_issue_invoice';
     const INVOICE_MODE_KEY = 'invoice_issue_mode';
+    const PRINT_MODE_KEY = 'pos_print_mode';
     let einvoiceProvider = '';
     const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
-
-    function isPosOnline() {
-        if (window.PosOffline && typeof PosOffline.isOnline === 'function') {
-            return !!PosOffline.isOnline();
-        }
-        return navigator.onLine !== false;
-    }
-
-    async function validateCartProductIdsBeforeSubmit() {
-        // Offline: cho phép tiếp tục; backend sẽ xác nhận lại khi queue đồng bộ.
-        if (!isPosOnline()) return true;
-
-        const ids = [...new Set(
-            cart.map(item => parseInt(item.id, 10)).filter(id => Number.isInteger(id) && id > 0)
-        )];
-        if (!ids.length) return true;
-
-        try {
-            const response = await fetch('/api/pos/products/validate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin',
-                body: JSON.stringify({ product_ids: ids }),
-            });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-            const result = await response.json();
-            if (!result.success) throw new Error(result.error || 'Không kiểm tra được danh mục');
-
-            const missing = new Set((result.missing_ids || []).map(Number));
-            if (!missing.size) return true;
-
-            const staleItems = cart.filter(item => missing.has(Number(item.id)));
-            const staleNames = staleItems.map(item => item.name || `ID ${item.id}`);
-
-            // Không gửi ID stale vào checkout của tenant hiện tại.
-            cart = cart.filter(item => !missing.has(Number(item.id)));
-            updateCart();
-
-            await Swal.fire({
-                icon: 'warning',
-                title: 'Danh mục sản phẩm đã thay đổi',
-                html: 'Đã loại khỏi giỏ các mục không còn tồn tại trên server:<br><b>' +
-                      staleNames.map(escapeHtml).join('<br>') +
-                      '</b><br><small>Vui lòng tìm/chọn lại sản phẩm trước khi thanh toán.</small>',
-            });
-            return false;
-        } catch (err) {
-            // Lỗi mạng/preflight không được phá khả năng bán offline.
-            console.warn('POS product validation skipped:', err);
-            return true;
-        }
-    }
 
     function invoiceModeStorageKey() {
         return einvoiceProvider
             ? `${INVOICE_MODE_KEY}_${einvoiceProvider}`
             : INVOICE_MODE_KEY;
+    }
+
+    function getPrintMode() {
+        const checked = document.querySelector('input[name="printMode"]:checked')?.value;
+        if (checked === 'none' || checked === 'manual' || checked === 'auto') {
+            return checked;
+        }
+        const saved = localStorage.getItem(PRINT_MODE_KEY);
+        return (saved === 'none' || saved === 'manual' || saved === 'auto')
+            ? saved
+            : 'auto';
+    }
+
+    function applyPrintMode(mode) {
+        const safeMode = (mode === 'none' || mode === 'manual' || mode === 'auto')
+            ? mode
+            : 'auto';
+        document.querySelectorAll('input[name="printMode"]').forEach(radio => {
+            radio.checked = radio.value === safeMode;
+        });
+        localStorage.setItem(PRINT_MODE_KEY, safeMode);
+    }
+
+    function initPrintMode() {
+        applyPrintMode(localStorage.getItem(PRINT_MODE_KEY) || 'auto');
+        document.querySelectorAll('input[name="printMode"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (radio.checked) localStorage.setItem(PRINT_MODE_KEY, radio.value);
+            });
+        });
     }
 
     function defaultIssueLoaiHdon() {
@@ -617,9 +853,8 @@
 
 // ==================== LOCAL STORAGE LOGIC ====================
 
-async function saveDraft() {
+function saveDraft() {
     if (cart.length === 0) return;
-    if (!(await validateCartProductIdsBeforeSubmit())) return;
     const payload = getOrderData();
     payload.status = 'draft';
     
@@ -640,7 +875,7 @@ async function saveDraft() {
         order_id: editingOrderId,
         customer: customerData
     };
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(storagePayload));
+    localStorage.setItem(cartStorageKey(), JSON.stringify(storagePayload));
 
     // Gọi API lưu server (hoặc hàng đợi offline)
     const draftUrl = editingOrderId ? `/api/sale/update_item/${editingOrderId}` : '/api/cart/checkout';
@@ -650,7 +885,7 @@ async function saveDraft() {
             Swal.fire('Lỗi', (res && res.error) || 'Không lưu được đơn tạm', 'error');
             return;
         }
-        localStorage.removeItem(CART_STORAGE_KEY);
+        localStorage.removeItem(cartStorageKey());
         if (res.queued) {
             Swal.fire({ icon: 'info', title: 'Đã lưu offline', text: res.message || 'Đơn tạm sẽ đồng bộ khi có mạng', timer: 3500 });
             cart = [];
@@ -674,7 +909,8 @@ async function saveDraft() {
 }
 
 function restoreFromStorage() {
-    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
+    const raw = localStorage.getItem(cartStorageKey());
     if (!raw) return;
 
     try {
@@ -740,7 +976,8 @@ function resetCustomerToDefault() {
 
     // 4. Đảm bảo dọn sạch mọi dấu vết dữ liệu cũ trong LocalStorage
     if (typeof CART_STORAGE_KEY !== 'undefined') {
-        localStorage.removeItem(CART_STORAGE_KEY);
+        localStorage.removeItem(cartStorageKey());
+        localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
     } else {
         localStorage.removeItem('cart_items'); // Dự phòng key mặc định nếu biến toàn cục chưa load
     }
@@ -935,31 +1172,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function handleBarcodeScan(barcode) {
         try {
-            let result;
-            if (window.PosOffline && PosOffline.isOnline()) {
-                try {
-                    const r = await fetch('/api/scan', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({ barcode: barcode })
-                    });
-                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                    result = await r.json();
-                } catch (err) {
-                    console.warn('Live barcode scan failed, fallback offline cache:', err);
-                    result = await PosOffline.scanBarcode(barcode);
-                }
-            } else if (window.PosOffline) {
-                result = await PosOffline.scanBarcode(barcode);
-            } else {
-                result = await fetch('/api/scan', {
+            const result = window.PosOffline
+                ? await PosOffline.scanBarcode(barcode)
+                : await fetch('/api/scan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
                     body: JSON.stringify({ barcode: barcode })
                 }).then(function (r) { return r.json(); });
-            }
             if (result.success) {
                 const p = result.data;
                 const qty = p.qty || result.parsed?.weight_kg || 1;
@@ -1155,9 +1374,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             useUnit1: false,
             maxQty: pendingWeightProduct.maxQty || 9999,
             qty: weight,
-            sellByWeight: true,
-            product_type: pendingWeightProduct.product_type || 'goods',
-            isService: false
+            sellByWeight: true
         });
         successSound.play();
         clearPendingWeightProduct();
@@ -1176,21 +1393,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const q = searchInput.value.trim();
             if (q.length < 1) { resultsDiv.style.display = 'none'; return; }
             let products = [];
-            if (window.PosOffline && PosOffline.isOnline()) {
-                // Online: server/tenant hiện tại là nguồn danh mục authoritative.
-                // Chỉ fallback cache khi request mạng thật sự lỗi; KHÔNG fallback khi server trả 0 kết quả.
-                try {
-                    const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
-                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                    products = await r.json();
-                } catch (err) {
-                    console.warn('Live product search failed, fallback offline cache:', err);
-                    products = await PosOffline.searchProducts(q);
-                }
-            } else if (window.PosOffline) {
+            if (window.PosOffline) {
                 products = await PosOffline.searchProducts(q);
+                if (!products.length && PosOffline.isOnline()) {
+                    const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
+                    products = await r.json();
+                }
             } else {
-                const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
+                const r = await fetch(`/api/products?q=${encodeURIComponent(q)}`);
                 products = await r.json();
             }
             resultsDiv.innerHTML = '';
@@ -1214,7 +1424,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function createResultRow(p, isUnit1, isWeightProduct, isService = false) {
         const price = isUnit1 ? (p.sale_price || (p.base_price * p.unit_ratio)) : p.base_price;
-        const unit = isUnit1 ? (p.unit1 || '') : (p.unit || (isService ? '' : (isWeightProduct ? 'kg' : 'Cái')));
+        const unit = isUnit1 ? p.unit1 : (p.unit || 'kg');
         const stock = isService ? null : (isUnit1 ? Math.floor(p.quantity / p.unit_ratio) : p.quantity);
         const div = document.createElement('div');
         div.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center cursor-pointer';
@@ -1225,14 +1435,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         div.innerHTML = `<div><strong>${p.name}</strong>${weightBadge}${serviceBadge} (${unit})</div><div class="text-primary">${priceLabel} | ${stockLabel}</div>`;
         div.onclick = () => {
             if (isWeightProduct) {
-                setPendingWeightProduct({
-                    id: p.id,
-                    name: p.name,
-                    price: price,
-                    unit: unit,
-                    maxQty: stock,
-                    product_type: p.product_type || 'goods'
-                });
+                setPendingWeightProduct({ id: p.id, name: p.name, price: price, unit: unit, maxQty: stock });
                 searchInput.value = '';
                 resultsDiv.style.display = 'none';
                 if (!scalePort && scaleConfig.enabled) connectScale();
@@ -1378,10 +1581,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             return {
                 product_id: item.id,
-                // Snapshot đúng nội dung người dùng đang bán/xuất HĐ tại POS.
-                product_name: item.name || '',
-                unit: item.unit ?? '',
-                product_type: item.product_type || 'goods',
                 quantity: item.qty,
                 price: item.price,
                 UseSaleUnit: item.useUnit1 ? 1 : 0,
@@ -1411,10 +1610,136 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    async function checkout() {
+    
+
+document.addEventListener('DOMContentLoaded', function () {
+    initPrintMode();
+});
+
+function armPrintWindowAutoClose(printWindow) {
+    // Trang in được mở bằng JavaScript nên trình duyệt cho phép window.close().
+    // Gắn afterprint sau khi trang bill tải xong: bấm In hoặc Hủy hộp thoại in
+    // đều sẽ đóng tab/cửa sổ bill và quay về POS.
+    if (!printWindow || printWindow.closed) return;
+
+    const attachAfterPrint = () => {
+        try {
+            if (printWindow.closed) return;
+
+            printWindow.addEventListener('afterprint', function closePrintedBill() {
+                setTimeout(() => {
+                    try {
+                        if (!printWindow.closed) printWindow.close();
+                    } catch (_) {}
+                }, 100);
+            }, { once: true });
+        } catch (_) {
+            // Nếu trình duyệt tạm thời chưa cho truy cập window khi đang điều hướng,
+            // không làm hỏng luồng thanh toán/in.
+        }
+    };
+
+    try {
+        printWindow.addEventListener('load', attachAfterPrint);
+    } catch (_) {}
+}
+
+
+function autoPrintSaleBill(saleId, ts) {
+    if (!saleId) return;
+
+    const oldFrame = document.getElementById('hiddenPrintFrame');
+    if (oldFrame) oldFrame.remove();
+
+    const frame = document.createElement('iframe');
+    frame.id = 'hiddenPrintFrame';
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '1px';
+    frame.style.height = '1px';
+    frame.style.border = '0';
+    frame.style.opacity = '0';
+    frame.src = `/sale/print/${saleId}?v=${ts}`;
+
+    let cleanupTimer = null;
+    const cleanup = () => {
+        if (cleanupTimer) clearTimeout(cleanupTimer);
+        setTimeout(() => {
+            try { frame.remove(); } catch (_) {}
+        }, 250);
+    };
+
+    frame.onload = () => {
+        try {
+            const printWin = frame.contentWindow;
+            if (!printWin) {
+                cleanup();
+                return;
+            }
+
+            // Chrome thường: tự mở hộp thoại Print.
+            // Chrome --kiosk-printing: gửi thẳng tới máy in mà không cần bấm Print.
+            printWin.addEventListener('afterprint', cleanup, { once: true });
+
+            // Chờ layout/font/ảnh bill ổn định trước khi in.
+            setTimeout(() => {
+                try {
+                    printWin.focus();
+                    printWin.print();
+                } catch (_) {
+                    cleanup();
+                }
+            }, 250);
+
+            // Fallback: tránh iframe ẩn tồn tại mãi nếu browser không phát afterprint.
+            cleanupTimer = setTimeout(cleanup, 60000);
+        } catch (_) {
+            cleanup();
+        }
+    };
+
+    document.body.appendChild(frame);
+}
+
+async function handleStaleProductResponse(res) {
+    if (!res || !(res.stale_catalog || res.code === 'STALE_PRODUCT')) return false;
+
+    const missing = new Set((res.missing_ids || [])
+        .map(function (x) { return parseInt(x, 10); })
+        .filter(function (x) { return Number.isFinite(x); }));
+    if (res.product_id != null) {
+        const pid = parseInt(res.product_id, 10);
+        if (Number.isFinite(pid)) missing.add(pid);
+    }
+
+    if (missing.size) {
+        cart = cart.filter(function (item) {
+            return !missing.has(parseInt(item.product_id != null ? item.product_id : item.id, 10));
+        });
+        updateCart();
+    }
+
+    localStorage.removeItem(cartStorageKey());
+    localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
+
+    const ids = Array.from(missing);
+    const suffix = ids.length ? ' (ID: ' + ids.join(', ') + ')' : '';
+    if (typeof Swal !== 'undefined') {
+        await Swal.fire({
+            icon: 'warning',
+            title: 'Danh mục sản phẩm đã thay đổi',
+            html: 'POS đã làm mới danh mục và loại sản phẩm không còn hợp lệ khỏi giỏ' +
+                  suffix + '.<br>Vui lòng chọn lại sản phẩm rồi thanh toán.',
+        });
+    }
+    return true;
+}
+
+async function checkout() {
         if (cart.length === 0) return;
         if (!validateCustomer()) return;
-        if (!(await validateCartProductIdsBeforeSubmit())) return;
         const data = getOrderData();
         if (data.payment_method === '112') {
             data.status = 'pending';
@@ -1448,6 +1773,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
                 if (!res.success) {
+                    if (await handleStaleProductResponse(res)) return;
                     Swal.fire('Lỗi', res.error || 'Không tạo được đơn CK', 'error');
                     return;
                 }
@@ -1486,9 +1812,13 @@ async function processOrder(data) {
     }
 
     const ts = new Date().getTime();
+    const printMode = getPrintMode();
 
-    const printWindow = window.open('', '_blank');
+    // Chỉ mở tab chờ ở chế độ in thủ công.
+    // Auto dùng iframe ẩn; None không mở bất kỳ trang in nào.
+    const printWindow = printMode === 'manual' ? window.open('', '_blank') : null;
     if (printWindow) {
+        armPrintWindowAutoClose(printWindow);
         printWindow.document.write('<html><head><title>KETO POS</title></head><body style="font-family:sans-serif; text-align:center; padding-top:50px; color:#555;"><h3>Đang xử lý đơn hàng, vui lòng chờ...</h3></body></html>');
     }
 
@@ -1512,6 +1842,10 @@ async function processOrder(data) {
         }
         if (!res.success) {
             if (printWindow) printWindow.close();
+            if (await handleStaleProductResponse(res)) {
+                if (btn) btn.disabled = false;
+                return;
+            }
             throw new Error(res.error || 'Không thể xử lý đơn hàng');
         }
 
@@ -1576,28 +1910,22 @@ async function processOrder(data) {
             .catch(() => {});
         }
 
-        if (res.auto_print === 1) {
-            if (printWindow) printWindow.close();
-
-            if (res.sale_id) {
-                let hiddenFrame = document.getElementById('hiddenPrintFrame');
-                if (!hiddenFrame) {
-                    hiddenFrame = document.createElement('iframe');
-                    hiddenFrame.id = 'hiddenPrintFrame';
-                    hiddenFrame.style.position = 'fixed';
-                    hiddenFrame.style.width = '0';
-                    hiddenFrame.style.height = '0';
-                    hiddenFrame.style.border = 'none';
-                    document.body.appendChild(hiddenFrame);
+        if (res.sale_id) {
+            if (printMode === 'auto') {
+                // Tự gọi print. Với Chrome --kiosk-printing sẽ in thẳng không cần bấm nút.
+                autoPrintSaleBill(res.sale_id, ts);
+            } else if (printMode === 'manual') {
+                // Mở bill để người dùng xem/in. Sau khi in xong tab tự đóng.
+                if (printWindow) {
+                    printWindow.location.href = `/sale/print/${res.sale_id}?v=${ts}`;
+                } else {
+                    const fallbackPrintWindow = window.open(`/sale/print/${res.sale_id}?v=${ts}`, '_blank');
+                    armPrintWindowAutoClose(fallbackPrintWindow);
                 }
-                hiddenFrame.src = `/sale/print/${res.sale_id}?v=${ts}`;
             }
-        } else {
-            if (res.sale_id && printWindow) {
-                printWindow.location.href = `/sale/print/${res.sale_id}?v=${ts}`;
-            } else if (res.sale_id && !printWindow) {
-                window.open(`/sale/print/${res.sale_id}?v=${ts}`, '_blank');
-            }
+            // printMode === 'none': không mở/in bill.
+        } else if (printWindow) {
+            printWindow.close();
         }
 
         // Làm sạch giỏ hàng hiện tại

@@ -781,7 +781,18 @@ def register_sale_routes(app):
 
                 row = fetch_product_for_checkout(cursor, pid, warehouse_codes=_pos_wh_codes)
                 if not row:
-                    raise Exception(f"Sản phẩm ID {pid} không tồn tại.")
+                    rollback_quietly(conn)
+                    return jsonify({
+                        "success": False,
+                        "code": "STALE_PRODUCT",
+                        "stale_catalog": True,
+                        "product_id": pid,
+                        "missing_ids": [pid],
+                        "error": (
+                            f"Sản phẩm ID {pid} không còn tồn tại trong danh mục hiện tại. "
+                            "POS đã yêu cầu làm mới dữ liệu sản phẩm."
+                        ),
+                    }), 409
 
                 product_type = row['product_type'] or 'goods'
                 ratio = float(row['unit_ratio'] or 1)

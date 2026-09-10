@@ -411,6 +411,20 @@
         return null;
     }
 
+    async function refreshCatalogAfterStale(data) {
+        const result = await syncCatalog({ force: true, includeMenu: false });
+        document.dispatchEvent(new CustomEvent('pos-stale-product', {
+            detail: {
+                tenant: tenantKey,
+                product_id: data && data.product_id,
+                missing_ids: (data && data.missing_ids) || [],
+                refreshed: !!(result && result.success),
+                refresh_error: result && result.error ? result.error : null,
+            },
+        }));
+        return result;
+    }
+
     async function loadCachedScaleConfig() {
         const row = await idbGet('meta', tenantMetaKey('scale_config'));
         if (row && row.tenant === tenantKey && row.config) scaleConfig = row.config;
@@ -590,6 +604,17 @@
                 if (res.ok && data.success) {
                     return Object.assign({ offline: false, queued: false }, data);
                 }
+                // Catalog/giỏ cũ: server là nguồn sự thật. Làm mới cache ngay, không enqueue.
+                if (res.status === 409 && (data.code === 'STALE_PRODUCT' || data.stale_catalog)) {
+                    await refreshCatalogAfterStale(data);
+                    return Object.assign({
+                        success: false,
+                        offline: false,
+                        queued: false,
+                        stale_catalog: true,
+                        error: data.error || 'Danh mục sản phẩm đã thay đổi.',
+                    }, data);
+                }
                 // Lỗi nghiệp vụ (4xx) — không xếp hàng đợi
                 if (res.status >= 400 && res.status < 500) {
                     return Object.assign({
@@ -720,6 +745,13 @@
         }
 
         const errMsg = data.error || data.message || ('HTTP ' + res.status);
+        if (res.status === 409 && (data.code === 'STALE_PRODUCT' || data.stale_catalog)) {
+            await refreshCatalogAfterStale(data);
+            item.status = 'error';
+            item.last_error = errMsg;
+            await idbPut('outbox', item);
+            return { ok: false, retryable: false, error: errMsg, data: data, item: item };
+        }
         if (isRetryableSyncFailure(res, data, errMsg)) {
             item.status = 'pending';
             item.last_error = errMsg;
@@ -979,6 +1011,7 @@
 
     global.PosOffline = {
         init: init,
+        getTenantKey: function () { return tenantKey; },
         isOnline: isOnline,
         syncCatalog: syncCatalog,
         getCatalogMeta: getCatalogMeta,
