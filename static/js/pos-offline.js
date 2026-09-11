@@ -746,11 +746,20 @@
 
         const errMsg = data.error || data.message || ('HTTP ' + res.status);
         if (res.status === 409 && (data.code === 'STALE_PRODUCT' || data.stale_catalog)) {
+            // Permanent conflict: this queued sale references products no longer in the current catalog.
+            // Remove it instead of status=error, because getPendingOutbox() also replays error rows.
             await refreshCatalogAfterStale(data);
-            item.status = 'error';
-            item.last_error = errMsg;
-            await idbPut('outbox', item);
-            return { ok: false, retryable: false, error: errMsg, data: data, item: item };
+            const staleUuid = item.client_uuid;
+            const staleLabel = item.label;
+            await removeOutboxItem(staleUuid);
+            document.dispatchEvent(new CustomEvent('pos-offline-stale-discarded', {
+                detail: {
+                    client_uuid: staleUuid, label: staleLabel, tenant: tenantKey,
+                    product_id: data && data.product_id,
+                    missing_ids: (data && data.missing_ids) || [], error: errMsg
+                }
+            }));
+            return { ok: false, retryable: false, permanent: true, removed: true, error: errMsg, data: data, item: item };
         }
         if (isRetryableSyncFailure(res, data, errMsg)) {
             item.status = 'pending';
@@ -787,8 +796,9 @@
                         processed++;
                         syncedItems.push(r.item);
                     } else {
-                        errors.push({ client_uuid: item.client_uuid, error: r.error, label: item.label });
-                        if (r.retryable) break; // dừng, lần sau thử tiếp
+                        errors.push({ client_uuid: item.client_uuid, error: r.error, label: item.label, permanent: !!r.permanent, removed: !!r.removed });
+                        // permanent=true was already removed; continue with the next queued sale.
+                        if (r.retryable) break; // lỗi tạm thời: dừng, lần sau thử tiếp
                     }
                 } catch (e) {
                     item.status = 'pending';
