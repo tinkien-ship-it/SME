@@ -88,12 +88,13 @@ def _maybe_migrate_tenant_db(db_path):
             print(f'[MIGRATE] tenant DB {normalized}: {e}')
         # Lỗi khác: đánh dấu để không spam mỗi request
         _tenant_schema_migrated.add(normalized)
+
+
 def ensure_tenants_dir():
     tenants_dir = os.path.join(BASE_DIR, 'tenants')
     os.makedirs(tenants_dir, exist_ok=True)
-    # Đảm bảo quyền (nếu cần)
-    # os.chmod(tenants_dir, 0o755)  # tùy theo user chạy
     return tenants_dir
+
 
 def _ensure_users_extra_columns(cursor):
     from db.schema_helpers import add_column_if_missing
@@ -150,7 +151,6 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
             extra=settings_json,
         )
     elif sme:
-        # Đảm bảo settings SME không còn DT/NN HKD
         settings_json = build_tenant_settings(
             business_line=business_line or settings_json.get('business_line') or 'pos',
             accounting_regime=accounting_regime,
@@ -172,11 +172,9 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
     support_password = kwargs.get('support_password') or customer_password
     owner_role = role_for_business_line(business_line, accounting_regime)
     support_role = support_role_for_business_line(business_line, accounting_regime)
-    # Chủ tenant SME (managerSME*): thiết lập + xem nhật ký; không có quyền admin/settings
     from Services.sme_roles import is_sme_manager_role
     owner_permissions = 'view_audit_log' if is_sme_manager_role(owner_role) else ''
 
-    # 1. Copy Database mẫu
     if os.path.exists(os.path.join(BASE_DIR, 'database.db')):
         shutil.copy2(os.path.join(BASE_DIR, 'database.db'), tenant_db_path)
     else:
@@ -185,7 +183,6 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
         else:
             raise Exception("Không tìm thấy file database.db mẫu")
 
-    # 2. Xử lý Database con của Tenant
     conn_tenant = open_sqlite(tenant_db_path)
     try:
         cursor_tenant = conn_tenant.cursor()
@@ -267,7 +264,6 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
     finally:
         conn_tenant.close()
 
-    # 3. Cập nhật Registry (Main Database)
     import json
     rel_db_path = os.path.join('tenants', f"{tenant_id}.db")
     settings_payload = dict(settings_json)
@@ -373,6 +369,7 @@ def init_tenant_database(tenant_id: str, business_name: str, phone: str, **kwarg
 
     return tenant_db_path
 
+
 def get_tenant_db_path(tenant_id: str):
     if not tenant_id:
         return None
@@ -389,8 +386,8 @@ def get_tenant_db_path(tenant_id: str):
     _tenant_path_cache[tenant_id] = (now, data)
     return data
 
+
 def load_tenant():
-    # Asset / SW — không chạm registry SQLite (tránh storm khi nhiều tab poll SW).
     path_raw = (request.path or '').strip()
     if (
         path_raw.startswith('/static/')
@@ -412,9 +409,6 @@ def load_tenant():
         'sw-pos.js',
     ]
 
-    # Trang / API Master luôn dùng database.db (registry). Không lấy
-    # last_tenant_id từ session — nếu không, get_db_connection() trỏ nhầm
-    # sang DB tenant (không có bảng tenants) → list/toggle 2FA hỏng.
     if first_part == 'master' or path.startswith('api/master'):
         g.tenant_id = None
         g.db_path = MAIN_DB_PATH
@@ -424,7 +418,6 @@ def load_tenant():
 
     tenant_data = None
 
-    # Firm đang làm sổ DN thuê — db_path đã set trong session
     if session.get('firm_viewing_client') and session.get('db_path'):
         raw_path = session['db_path']
         g.db_path = os.path.join(BASE_DIR, raw_path) if not os.path.isabs(raw_path) else raw_path
@@ -436,7 +429,6 @@ def load_tenant():
         g.is_main_tenant = False
         return
 
-    # Firm đang làm sổ Kế toán SME nội bộ (sổ DVKT)
     if session.get('firm_viewing_own_books') and session.get('firm_tenant_id'):
         fid = session['firm_tenant_id']
         tenant_data = get_tenant_db_path(fid)
@@ -448,7 +440,6 @@ def load_tenant():
             g.is_main_tenant = False
             return
 
-    # Firm đã login, chưa chọn sổ — meta DB firm
     if session.get('firm_tenant_id') and session.get('db_path') and not session.get('firm_viewing_client') and not session.get('firm_viewing_own_books'):
         fid = session['firm_tenant_id']
         tenant_data = get_tenant_db_path(fid)
@@ -460,46 +451,35 @@ def load_tenant():
             g.is_main_tenant = False
             return
 
-    # Bước 1: Kiểm tra trên URL
     if first_part and first_part not in excluded:
         tenant_data = get_tenant_db_path(first_part)
         if tenant_data:
             g.tenant_id = first_part
-            # SỬA TẠI ĐÂY: Ép về đường dẫn tuyệt đối
             raw_path = tenant_data['db_path']
             g.db_path = os.path.join(BASE_DIR, raw_path) if not os.path.isabs(raw_path) else raw_path
-            
             g.tenant_info = tenant_data
             g.is_main_tenant = False
             session['last_tenant_id'] = first_part
             return
 
-    # Bước 2: Kiểm tra trong Session
     stored_id = session.get('last_tenant_id')
     if stored_id:
         tenant_data = get_tenant_db_path(stored_id)
         if tenant_data:
             g.tenant_id = stored_id
-            # SỬA TẠI ĐÂY: Ép về đường dẫn tuyệt đối
             raw_path = tenant_data['db_path']
             g.db_path = os.path.join(BASE_DIR, raw_path) if not os.path.isabs(raw_path) else raw_path
-            
             g.tenant_info = tenant_data
             g.is_main_tenant = False
             return
 
-    # Bước 3: Mặc định (Main System)
     g.tenant_id = None
     g.db_path = os.path.join(BASE_DIR, 'database.db')
     g.tenant_info = None
     g.is_main_tenant = True
 
+
 def add_user_to_mapping(username: str, email: str, tenant_id: str):
-    """
-    Thêm hoặc cập nhật mapping giữa user và tenant trong Master DB.
-    - username: thường là số điện thoại
-    - email: email của user (có thể rỗng)
-    """
     if not username or not tenant_id:
         print(f"WARNING: add_user_to_mapping - username hoặc tenant_id bị thiếu")
         return False
@@ -521,18 +501,14 @@ def add_user_to_mapping(username: str, email: str, tenant_id: str):
         print(f"ERROR: add_user_to_mapping thất bại: {e}")
         return False
 
+
 def update_user_email_in_mapping(old_email: str, new_email: str, username: str, tenant_id: str):
-    """
-    Cập nhật email khi user thay đổi email.
-    - Nếu username đã tồn tại trong tenant → chỉ UPDATE email (không thay đổi username)
-    - Nếu chưa tồn tại → INSERT bình thường
-    """
     if not username or not tenant_id:
         print("WARNING: update_user_email_in_mapping - username hoặc tenant_id bị thiếu")
         return False
 
     if old_email and old_email.strip().lower() == new_email.strip().lower():
-        return True  # Email không thay đổi
+        return True
 
     try:
         def _write():
@@ -557,6 +533,7 @@ def update_user_email_in_mapping(old_email: str, new_email: str, username: str, 
         print(f"ERROR: update_user_email_in_mapping thất bại: {e}")
         return False
 
+
 def get_tenant_by_username(username: str, active_only=True):
     if not username:
         return None
@@ -573,6 +550,7 @@ def get_tenant_by_username(username: str, active_only=True):
         """
         row = conn.execute(query, (username,)).fetchone()
         return dict(row) if row else None
+
 
 def init_tenant(app):
     @app.before_request
@@ -619,13 +597,14 @@ def init_tenant(app):
             'user_can_tenant_settings': user_can_access_tenant_settings(),
         }
 
+
 def init_tenant_middleware(app, get_db_connection_fn=None):
     """Middleware session — luôn dùng get_db_connection từ db_utils."""
     connect_db = get_db_connection_fn or get_db_connection
+
     @app.before_request
     def check_session_and_device():
         # ==================== 1. Loại trừ các trang công khai ====================
-        # Đã cập nhật chính xác tên các hàm xử lý luồng 2FA để tránh bị chặn nhầm trên VPS
         public_endpoints = [
             'login',
             'static',
@@ -668,12 +647,10 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             'keto_pos_intro',
             'sw_pos',
         ]
-        
-        # Phòng hờ request.endpoint bị None khi truy cập file tĩnh lỗi hoặc các route không tồn tại
-        if not request.endpoint or request.endpoint in public_endpoints:
-            return None  # Cho phép đi tiếp (Bỏ qua kiểm tra bảo mật)
 
-        # Đường dẫn auth công khai (phòng endpoint đổi tên / 404 có path)
+        if not request.endpoint or request.endpoint in public_endpoints:
+            return None
+
         path = request.path or ''
         if path.startswith((
             '/login', '/send-otp', '/verify-otp', '/verify-totp',
@@ -687,21 +664,19 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
             '/api/crm/inbound/',
         )) or path in ('/sw-pos.js',) or path.endswith('/sw-pos.js'):
             return None
-        # Multi-tenant public lead / webhook: /{tenant}/lead , /{tenant}/api/crm/...
+
         if (
             '/api/crm/inbound-lead' in path
             or '/api/crm/public-lead' in path
             or '/api/crm/inbound/' in path
             or path.rstrip('/').endswith('/lead')
         ):
-            # Cho phép /lead và /{tenant_id}/lead (không nhầm /crm/...)
             parts = [p for p in path.split('/') if p]
             if parts == ['lead'] or (len(parts) == 2 and parts[1] == 'lead'):
                 return None
             if 'api' in parts and 'crm' in parts:
                 if parts[-1] in ('inbound-lead', 'public-lead'):
                     return None
-                # /api/crm/inbound/<channel>
                 try:
                     i = parts.index('inbound')
                     if i >= 2 and parts[i - 1] == 'crm' and i + 1 < len(parts):
@@ -714,9 +689,7 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
         session_token = session.get('session_token')
         db_path = session.get('db_path')
 
-        # NẾU CHƯA ĐĂNG NHẬP: Chặn đứng ngay lập tức, dọn rác và đá về trang login chính
         if not user_data or not session_token or not db_path:
-            # Đang chờ OTP/2FA/TOTP — giữ pending_auth; Master → /verify-totp
             if session.get('pending_auth'):
                 auth = session.get('pending_auth') or {}
                 role = str((auth.get('user') or {}).get('role') or '').strip()
@@ -729,20 +702,18 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
                     return redirect(url_for('login_2fa'))
                 except Exception:
                     return redirect('/login-2fa')
-            session.clear()  # Dọn sạch session tạm hoặc session lỗi nếu có
-            # API phải trả JSON — không redirect HTML (tránh fetch().json() vỡ)
+            session.clear()
             if request.path.startswith('/api/') or request.accept_mimetypes.best == 'application/json':
                 return jsonify({"success": False, "error": "Unauthorized — vui lòng đăng nhập lại"}), 401
             try:
                 response = redirect(url_for('login'))
             except Exception:
                 response = redirect('/login')
-            response.delete_cookie('session') # Xóa triệt để cookie để trình duyệt reset trạng thái sạch
+            response.delete_cookie('session')
             return response
 
-        # 🌟 ĐỒNG BỘ ĐƯỜNG DẪN: Bảo đảm g.db_path luôn là đường dẫn tuyệt đối ổn định trên VPS Linux
+        # Đồng bộ đường dẫn tuyệt đối
         if not os.path.isabs(db_path):
-            BASE_DIR = os.path.abspath(os.path.dirname(__file__))
             g.db_path = os.path.join(BASE_DIR, db_path)
         else:
             g.db_path = db_path
@@ -842,7 +813,6 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
                 except Exception:
                     pass
 
-        # Role employee (Cổng ESS) — không được vào POS / sale / dashboard
         from Services.hrm.ess_access import ess_portal_path_allowed, is_ess_portal_only_user
         ess_role = str(session.get('role') or (user_data or {}).get('role') or '').strip()
         if is_ess_portal_only_user(ess_role):
@@ -857,29 +827,48 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
                     return redirect('/hrm/ess')
 
         # ==================== 3. Kiểm tra Single Session (Đá thiết bị cũ) ====================
+        # Áp dụng cho mọi role, kể cả master. Master luôn validate trên MAIN_DB_PATH.
         try:
-            # Master / Firm xem client — token lưu ở registry (firm_users) hoặc DB gốc
-            validate_db_path = g.db_path
-            if session.get('master_viewing_tenant') and session.get('role') == 'master':
+            role = str(session.get('role') or (user_data or {}).get('role') or '').strip()
+            is_master = role == 'master'
+            is_firm_user = bool(session.get('firm_user_id') and session.get('firm_tenant_id'))
+
+            if is_firm_user:
+                validate_db_path = MAIN_DB_PATH
+            elif is_master:
+                # Master (kể cả đang xem tenant) luôn lấy token từ main registry
                 validate_db_path = session.get('master_home_db_path') or MAIN_DB_PATH
                 if not os.path.isabs(validate_db_path):
                     validate_db_path = os.path.join(BASE_DIR, validate_db_path)
-            elif session.get('firm_user_id') and session.get('firm_tenant_id'):
-                validate_db_path = MAIN_DB_PATH
+            else:
+                validate_db_path = g.db_path
 
             user_id = user_data['id']
-            cache_key = (os.path.abspath(validate_db_path), user_id, session_token)
+            abs_validate = os.path.abspath(validate_db_path)
+            cache_key = (abs_validate, user_id, session_token)
             now_ts = time.time()
             cached = _session_token_cache.get(cache_key)
+
             if cached and (now_ts - cached[0]) < _SESSION_TOKEN_CACHE_TTL_SEC:
                 db_token = cached[1]
             else:
                 db_token = None
-                if session.get('firm_user_id') and session.get('firm_tenant_id'):
+                if is_firm_user:
                     conn = get_main_db_connection()
                     try:
                         row = conn.execute(
                             "SELECT last_session_id FROM firm_users WHERE id = ?",
+                            (user_id,),
+                        ).fetchone()
+                        db_token = row[0] if row else None
+                    finally:
+                        conn.close()
+                elif is_master:
+                    # Master: luôn đọc từ main DB, không phụ thuộc g.db_path
+                    conn = get_main_db_connection()
+                    try:
+                        row = conn.execute(
+                            "SELECT last_session_id FROM users WHERE id = ?",
                             (user_id,),
                         ).fetchone()
                         db_token = row[0] if row else None
@@ -903,33 +892,29 @@ def init_tenant_middleware(app, get_db_connection_fn=None):
                             db_token = row[0] if row else None
                         finally:
                             conn.close()
+
                 _session_token_cache[cache_key] = (now_ts, db_token)
-                # Giữ cache nhỏ — tránh phình khi nhiều user
                 if len(_session_token_cache) > 256:
                     cutoff = now_ts - _SESSION_TOKEN_CACHE_TTL_SEC
                     for k, (ts, _) in list(_session_token_cache.items()):
                         if ts < cutoff:
                             _session_token_cache.pop(k, None)
 
-            # Nếu Token trong DB đã đổi (do một thiết bị khác đăng nhập sau và chiếm quyền sở hữu)
+            # Token trong DB đã đổi → đá phiên hiện tại
             if db_token is not None and db_token != session_token:
-                session.clear()  # Xóa sạch dữ liệu phiên làm việc hiện tại của trình duyệt này
+                session.clear()
                 if request.path.startswith('/api/'):
                     return jsonify({
                         "success": False,
                         "error": "Phiên đăng nhập đã bị thay thế trên thiết bị khác — vui lòng đăng nhập lại",
                     }), 401
-                
-                # Tạo phản hồi chuyển hướng an toàn cứng chống lặp vòng lặp (ERR_TOO_MANY_REDIRECTS)
+
                 try:
                     response = redirect(url_for('login'))
                 except Exception:
                     response = redirect('/login')
-                
-                # Cưỡng bức trình duyệt xóa cookie session cũ ngay lập tức
+
                 response.delete_cookie('session')
-                
-                # Sử dụng flash để thông báo trực quan cho người dùng biết lý do bị đẩy ra ngoài
                 flash("Tài khoản của bạn đã được đăng nhập ở một thiết bị hoặc trình duyệt khác!", "danger")
                 return response
 
