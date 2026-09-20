@@ -63,7 +63,7 @@ def ensure_registry_tables(conn=None):
     try:
         for name, ddl in REGISTRY_TABLES_DDL.items():
             existed = table_exists(conn, name)
-            sql = convert_sqlite_ddl(ddl) if is_postgres() else ddl
+            sql = convert_sqlite_ddl(ddl) if getattr(conn, '_sme_backend', None) == 'postgres' else ddl
             conn.execute(sql)
             if not existed:
                 created.append(name)

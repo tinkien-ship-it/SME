@@ -847,7 +847,7 @@ def _collect_tenant_db_paths() -> list[str]:
 
     if is_postgres():
         try:
-            with open_sqlite(REGISTRY_PATH, timeout=_QUEUE_PROBE_TIMEOUT_SEC) as reg:
+            with get_main_db_connection() as reg:
                 rows = reg.execute(
                     "SELECT db_path, tenant_id FROM tenants "
                     "WHERE db_path IS NOT NULL AND TRIM(db_path) != ''"
@@ -874,7 +874,7 @@ def _collect_tenant_db_paths() -> list[str]:
 
     if os.path.isfile(REGISTRY_PATH):
         try:
-            with open_sqlite(REGISTRY_PATH, timeout=_QUEUE_PROBE_TIMEOUT_SEC) as reg:
+            with get_main_db_connection() as reg:
                 rows = reg.execute(
                     "SELECT db_path FROM tenants WHERE db_path IS NOT NULL AND TRIM(db_path) != ''"
                 ).fetchall()
