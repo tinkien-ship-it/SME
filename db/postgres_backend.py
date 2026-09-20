@@ -85,9 +85,6 @@ def get_pool() -> ConnectionPool:
             )
             _POOL = None
             _POOL_PID = None
-            # Cache schema của process cha không còn đáng tin sau fork.
-            _SCHEMA_READY.clear()
-            _SCHEMA_LOCKS.clear()
 
         if _POOL is None:
             # Pool là per-worker: 4 workers x max 10 = tối đa khoảng 40 connections.

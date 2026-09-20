@@ -413,9 +413,7 @@ def open_sqlite(db_path, *, timeout: float | None = None):
     ``sqlite3.connect`` thô — ``with sqlite3.connect(...)`` KHÔNG đóng file trên
     Python, dễ giữ khóa giữa các worker Gunicorn.
     """
-    # Registry là SQLite ngay cả khi tenant dùng PostgreSQL.
-    # Không định tuyến MAIN_DB_PATH sang schema public/t_registry.
-    if is_postgres() and not paths_same_db(db_path, MAIN_DB_PATH):
+    if is_postgres():
         from db.postgres_backend import ensure_pg_schema, open_pg
         from db.dialect import pg_schema_from_db_path
         schema = pg_schema_from_db_path(db_path)
@@ -529,14 +527,10 @@ def resolve_pg_schema() -> str:
 def _open_db_for_path(db_path: str, *, request_scoped: bool = False):
     if is_postgres():
         from db.postgres_backend import open_pg, open_pg_request, ensure_pg_schema
-        # Registry/master luôn ở schema public (hoặc SME_PG_REGISTRY_SCHEMA),
-        # kể cả khi request đang giữ g.tenant_id từ tenant trước đó.
-        tenant_id = (
-            getattr(g, 'tenant_id', None)
-            if has_request_context() and not paths_same_db(db_path, MAIN_DB_PATH)
-            else None
+        schema = pg_schema_from_db_path(
+            db_path,
+            tenant_id=getattr(g, 'tenant_id', None) if has_request_context() else None,
         )
-        schema = pg_schema_from_db_path(db_path, tenant_id=tenant_id)
         if schema != 'public':
             ensure_pg_schema(schema)
         if request_scoped:
@@ -659,7 +653,7 @@ def resolve_db_path():
     2. session['db_path'] (dự phòng khi g chưa gán)
     3. MAIN_DB_PATH (hệ thống chính)
     """
-    db_path = getattr(g, "db_path", None) if has_request_context() else None
+    db_path = getattr(g, "db_path", None)
     if not db_path and has_request_context():
         try:
             db_path = session.get("db_path")
@@ -739,10 +733,22 @@ def close_request_db():
 
 
 def get_main_db_connection():
-    """Registry SQLite độc lập với backend nghiệp vụ của tenant.
+    """Kết nối main/registry database (tenants, mapping, login history).
 
-    Caller phải đóng connection hoặc dùng ``with``. Không cache proxy PG.
+    Trong Flask request: cache trên ``g._sme_main_db`` (teardown trả pool).
+    Ngoài request: caller PHẢI ``with get_main_db_connection()`` hoặc ``.close()``.
     """
+    if is_postgres():
+        from db.postgres_backend import open_pg, open_pg_request
+        schema = pg_schema_from_db_path(MAIN_DB_PATH)
+        if has_request_context():
+            cached = getattr(g, '_sme_main_db', None)
+            if cached is not None:
+                return cached
+            conn = open_pg_request(schema)
+            g._sme_main_db = conn
+            return conn
+        return open_pg(schema=schema)
     return open_sqlite(MAIN_DB_PATH)
 
 
