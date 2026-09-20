@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import re
+import sqlite3
 from typing import Any
 
 _PARAM_RE = re.compile(r'\?(?=(?:[^\']*\'[^\']*\')*[^\']*$)')
@@ -105,15 +106,44 @@ def sql_ymd_prefix(expr: str) -> str:
     return f'substr(CAST(({e}) AS text), 1, 10)'
 
 
+def _connection_backend(conn) -> str:
+    """Prefer the actual connection over the global deployment setting.
+
+    Registry/legacy SQLite connections can coexist with PostgreSQL tenants.
+    """
+    if isinstance(conn, sqlite3.Connection):
+        return BACKEND_SQLITE
+    for attr in ('_conn', '_connection', 'connection', 'raw_connection'):
+        inner = getattr(conn, attr, None)
+        if isinstance(inner, sqlite3.Connection):
+            return BACKEND_SQLITE
+    marked = getattr(conn, '_sme_backend', None)
+    if marked in (BACKEND_SQLITE, BACKEND_POSTGRES):
+        return marked
+    module = type(conn).__module__.lower()
+    if module.startswith('sqlite3'):
+        return BACKEND_SQLITE
+    if module.startswith('psycopg') or module.startswith('psycopg2'):
+        return BACKEND_POSTGRES
+    return db_backend()
+
+
+def _safe_sqlite_identifier(name: str) -> str:
+    """Quote an identifier for SQLite PRAGMA; never interpolate unchecked SQL."""
+    if not isinstance(name, str) or not name or '\x00' in name:
+        raise ValueError('Invalid SQLite table name')
+    return '"' + name.replace('"', '""') + '"'
+
+
 def table_exists(conn, name: str) -> bool:
-    bk = getattr(conn, '_sme_backend', None) or db_backend()
+    bk = _connection_backend(conn)
     if bk == BACKEND_POSTGRES:
         schema = getattr(conn, '_sme_pg_schema', None) or 'public'
         row = conn.execute(
             """
             SELECT 1
             FROM information_schema.tables
-            WHERE table_schema = %s AND table_name = %s
+            WHERE table_schema = ? AND table_name = ?
             LIMIT 1
             """,
             (schema, name),
@@ -127,14 +157,14 @@ def table_exists(conn, name: str) -> bool:
 
 
 def column_names(conn, table: str) -> set[str]:
-    bk = getattr(conn, '_sme_backend', None) or db_backend()
+    bk = _connection_backend(conn)
     if bk == BACKEND_POSTGRES:
         schema = getattr(conn, '_sme_pg_schema', None) or 'public'
         rows = conn.execute(
             """
             SELECT column_name
             FROM information_schema.columns
-            WHERE table_schema = %s AND table_name = %s
+            WHERE table_schema = ? AND table_name = ?
             """,
             (schema, table),
         ).fetchall()
@@ -147,7 +177,7 @@ def column_names(conn, table: str) -> set[str]:
             else:
                 out.add(str(r[0]))
         return {c for c in out if c}
-    rows = conn.execute(f'PRAGMA table_info({table})').fetchall()
+    rows = conn.execute(f'PRAGMA table_info({_safe_sqlite_identifier(table)})').fetchall()
     cols: set[str] = set()
     for r in rows:
         if isinstance(r, dict):
