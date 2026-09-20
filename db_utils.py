@@ -527,10 +527,14 @@ def resolve_pg_schema() -> str:
 def _open_db_for_path(db_path: str, *, request_scoped: bool = False):
     if is_postgres():
         from db.postgres_backend import open_pg, open_pg_request, ensure_pg_schema
-        schema = pg_schema_from_db_path(
-            db_path,
-            tenant_id=getattr(g, 'tenant_id', None) if has_request_context() else None,
+        # Registry/master luôn ở schema public (hoặc SME_PG_REGISTRY_SCHEMA),
+        # kể cả khi request đang giữ g.tenant_id từ tenant trước đó.
+        tenant_id = (
+            getattr(g, 'tenant_id', None)
+            if has_request_context() and not paths_same_db(db_path, MAIN_DB_PATH)
+            else None
         )
+        schema = pg_schema_from_db_path(db_path, tenant_id=tenant_id)
         if schema != 'public':
             ensure_pg_schema(schema)
         if request_scoped:
@@ -653,7 +657,7 @@ def resolve_db_path():
     2. session['db_path'] (dự phòng khi g chưa gán)
     3. MAIN_DB_PATH (hệ thống chính)
     """
-    db_path = getattr(g, "db_path", None)
+    db_path = getattr(g, "db_path", None) if has_request_context() else None
     if not db_path and has_request_context():
         try:
             db_path = session.get("db_path")

@@ -41,7 +41,13 @@ def _maybe_migrate_tenant_db(db_path):
         return
     from db.dialect import is_postgres, pg_schema_from_db_path
     if is_postgres():
-        schema = pg_schema_from_db_path(db_path)
+        # Khớp chính xác schema mà get_db_connection() mở trong request.
+        # Không dùng tenant_id khi đang migrate registry/main DB.
+        schema = pg_schema_from_db_path(
+            db_path,
+            tenant_id=(getattr(g, 'tenant_id', None)
+                       if not paths_same_db(db_path, MAIN_DB_PATH) else None),
+        )
         cache_key = f'pg:{schema}'
         if cache_key in _tenant_schema_migrated:
             return
